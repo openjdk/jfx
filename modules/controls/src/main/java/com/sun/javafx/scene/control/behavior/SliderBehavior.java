@@ -138,24 +138,6 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         slider.setValue(Utils.clamp(slider.getMin(), (position * (slider.getMax() - slider.getMin())) + slider.getMin(), slider.getMax()));
     }
 
-    private double snapValueToTicks(double val) {
-        final Slider slider = getNode();
-        double v = val;
-        double tickSpacing = 0;
-        // compute the nearest tick to this value
-        if (slider.getMinorTickCount() != 0) {
-            tickSpacing = slider.getMajorTickUnit() / (Math.max(slider.getMinorTickCount(),0)+1);
-        } else {
-            tickSpacing = slider.getMajorTickUnit();
-        }
-        int prevTick = (int)((v - slider.getMin())/ tickSpacing);
-        double prevTickValue = (prevTick) * tickSpacing + slider.getMin();
-        double nextTickValue = (prevTick + 1) * tickSpacing + slider.getMin();
-        v = Utils.nearest(prevTickValue, v, nextTickValue);
-        return Utils.clamp(slider.getMin(), v, slider.getMax());
-    }
-
-
     /**
      * When thumb is released valueChanging should be set to false.
      */
@@ -164,9 +146,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         slider.setValueChanging(false);
         // RT-15207 When snapToTicks is true, slider value calculated in drag
         // is then snapped to the nearest tick on mouse release.
-        if (slider.isSnapToTicks()) {
-            slider.setValue(snapValueToTicks(slider.getValue()));
-        }
+        slider.adjustValue(slider.getValue());
     }
 
     void home() {

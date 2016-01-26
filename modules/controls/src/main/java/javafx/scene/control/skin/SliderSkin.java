@@ -161,6 +161,9 @@ public class SliderSkin extends SkinBase<Slider> {
                 }
             }
         });
+        registerChangeListener(control.snapToTicksProperty(), e -> {
+            control.adjustValue(control.getValue());
+        });
     }
 
 
