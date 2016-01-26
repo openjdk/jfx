@@ -25,7 +25,9 @@
 
 package test.javafx.scene.control;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import test.com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.tk.Toolkit;
@@ -831,5 +833,58 @@ public class TableViewMouseInputTest {
             assertEquals(0, cell.getRow());
             assertEquals("Expected Last Name column, but got " + cell.getTableColumn().getText(), lastNameCol, cell.getTableColumn());
         }
+    }
+
+    @Test public void test_jdk_8147823() {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(data);
+
+        sm = table.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        table.getColumns().addAll(firstNameCol);
+
+        AtomicInteger hitCount = new AtomicInteger();
+        sm.getSelectedItems().addListener((ListChangeListener)c -> {
+            hitCount.incrementAndGet();
+
+            // The overarching issue this test ensures is that we do not end up with a null in the items list.
+            // Because of the nature of the bug, we copy the items into a temporary list, and analyse that for nulls
+            List<?> copy = new ArrayList<>(sm.getSelectedItems());
+            assertFalse(copy.contains(null));
+        });
+
+        // select all
+        VirtualFlowTestUtils.clickOnRow(table, 0, true, KeyModifier.getShortcutKey());
+        assertEquals(1, hitCount.get());
+        VirtualFlowTestUtils.clickOnRow(table, 1, true, KeyModifier.getShortcutKey());
+        assertEquals(2, hitCount.get());
+        VirtualFlowTestUtils.clickOnRow(table, 2, true, KeyModifier.getShortcutKey());
+        assertEquals(3, hitCount.get());
+        assertEquals(3, sm.getSelectedIndices().size());
+        isSelected(0,1,2);
+
+        // start deselecting, row 1, and then row 0
+        VirtualFlowTestUtils.clickOnRow(table, 1, true, KeyModifier.getShortcutKey());
+        assertEquals(4, hitCount.get());
+        VirtualFlowTestUtils.clickOnRow(table, 0, true, KeyModifier.getShortcutKey());
+        assertEquals(5, hitCount.get());
+
+        // we should not have null / -1 selected, we should have row 2 selected
+        assertEquals(1, sm.getSelectedIndices().size());
+        isSelected(2);
+        isNotSelected(-1, 0, 1);
+
+        assertNotNull(sm.getSelectedItems().get(0));
+        assertNotNull(sm.getSelectedItem());
     }
 }

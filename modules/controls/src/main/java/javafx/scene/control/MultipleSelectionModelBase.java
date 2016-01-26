@@ -93,6 +93,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                     }
                 }
 
+                selectedIndicesSeq.reset();
                 if (hasRealChangeOccurred) {
                     if (selectedItemChange != null) {
                         selectedItemsSeq.callObservers(selectedItemChange);

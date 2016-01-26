@@ -25,6 +25,8 @@
 
 package test.javafx.scene.control;
 
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -40,20 +42,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Cell;
-import javafx.scene.control.FocusModel;
-import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.control.ScrollBar;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableColumnBaseShim;
-import javafx.scene.control.TableFocusModel;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTableCell;
-import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTablePosition;
-import javafx.scene.control.TreeTableRow;
-import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 
 import javafx.scene.layout.VBox;
@@ -62,6 +50,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeTableViewMouseInputTest {
@@ -1020,5 +1012,62 @@ public class TreeTableViewMouseInputTest {
             assertEquals(0, cell.getRow());
             assertEquals(lastNameCol, cell.getTableColumn());
         }
+    }
+
+    @Test public void test_jdk_8147823() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        TreeTableView<Person> table = new TreeTableView<>();
+
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        table.getColumns().addAll(firstNameCol);
+
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        AtomicInteger hitCount = new AtomicInteger();
+        sm.getSelectedItems().addListener((ListChangeListener)c -> {
+            hitCount.incrementAndGet();
+
+            // The overarching issue this test ensures is that we do not end up with a null in the items list.
+            // Because of the nature of the bug, we copy the items into a temporary list, and analyse that for nulls
+            List<?> copy = new ArrayList<>(sm.getSelectedItems());
+            assertFalse(copy.contains(null));
+        });
+
+        // select all
+        VirtualFlowTestUtils.clickOnRow(table, 0, true, KeyModifier.getShortcutKey());
+        assertEquals(1, hitCount.get());
+        VirtualFlowTestUtils.clickOnRow(table, 1, true, KeyModifier.getShortcutKey());
+        assertEquals(2, hitCount.get());
+        VirtualFlowTestUtils.clickOnRow(table, 2, true, KeyModifier.getShortcutKey());
+        assertEquals(3, hitCount.get());
+        assertEquals(3, sm.getSelectedIndices().size());
+        isSelected(0,1,2);
+
+        // start deselecting, row 1, and then row 0
+        VirtualFlowTestUtils.clickOnRow(table, 1, true, KeyModifier.getShortcutKey());
+        assertEquals(4, hitCount.get());
+        VirtualFlowTestUtils.clickOnRow(table, 0, true, KeyModifier.getShortcutKey());
+        assertEquals(5, hitCount.get());
+
+        // we should not have null / -1 selected, we should have row 2 selected
+        assertEquals(1, sm.getSelectedIndices().size());
+        isSelected(2);
+        isNotSelected(-1, 0, 1);
+
+        assertNotNull(sm.getSelectedItems().get(0));
+        assertNotNull(sm.getSelectedItem());
     }
 }
