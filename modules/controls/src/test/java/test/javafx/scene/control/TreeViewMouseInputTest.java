@@ -25,12 +25,9 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.tk.Toolkit;
@@ -53,6 +50,9 @@ import test.com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+
+import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeViewMouseInputTest {
@@ -463,5 +463,52 @@ public class TreeViewMouseInputTest {
         assertFalse(treeView.isFocused());
 
         sl.dispose();
+    }
+
+    @Test public void test_jdk_8147823() {
+        final int items = 3;
+        root.getChildren().clear();
+        root.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        treeView.setRoot(root);
+        treeView.setShowRoot(false);
+        treeView.setFocusTraversable(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        AtomicInteger hitCount = new AtomicInteger();
+        sm.getSelectedItems().addListener((ListChangeListener<TreeItem<String>>) c -> {
+            hitCount.incrementAndGet();
+
+            // The overarching issue this test ensures is that we do not end up with a null in the items list.
+            // Because of the nature of the bug, we copy the items into a temporary list, and analyse that for nulls
+            List<TreeItem<String>> copy = new ArrayList<>(sm.getSelectedItems());
+            assertFalse(copy.contains(null));
+        });
+
+        // select all
+        VirtualFlowTestUtils.clickOnRow(treeView, 0, KeyModifier.getShortcutKey());
+        assertEquals(1, hitCount.get());
+        VirtualFlowTestUtils.clickOnRow(treeView, 1, KeyModifier.getShortcutKey());
+        assertEquals(2, hitCount.get());
+        VirtualFlowTestUtils.clickOnRow(treeView, 2, KeyModifier.getShortcutKey());
+        assertEquals(3, hitCount.get());
+        assertEquals(3, sm.getSelectedIndices().size());
+        isSelected(0,1,2);
+
+        // start deselecting, row 1, and then row 0
+        VirtualFlowTestUtils.clickOnRow(treeView, 1, KeyModifier.getShortcutKey());
+        assertEquals(4, hitCount.get());
+        VirtualFlowTestUtils.clickOnRow(treeView, 0, KeyModifier.getShortcutKey());
+        assertEquals(5, hitCount.get());
+
+        // we should not have null / -1 selected, we should have row 2 selected
+        assertEquals(1, sm.getSelectedIndices().size());
+        isSelected(2);
+        isNotSelected(-1, 0, 1);
+
+        assertNotNull(sm.getSelectedItems().get(0));
+        assertNotNull(sm.getSelectedItem());
     }
 }

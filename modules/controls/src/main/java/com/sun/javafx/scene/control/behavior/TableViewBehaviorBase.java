@@ -624,18 +624,18 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
 
     protected void alsoSelectLeftCell() {
-        updateCellHorizontalSelection(-1, () -> {
-            getSelectionModel().selectLeftCell();
-        });
+        TableSelectionModel sm = getSelectionModel();
+        if (sm == null || !sm.isCellSelectionEnabled()) return;
 
+        updateCellHorizontalSelection(-1, () -> getSelectionModel().selectLeftCell());
         onSelectLeftCell.run();
     }
 
     protected void alsoSelectRightCell() {
-        updateCellHorizontalSelection(1, () -> {
-            getSelectionModel().selectRightCell();
-        });
+        TableSelectionModel sm = getSelectionModel();
+        if (sm == null || !sm.isCellSelectionEnabled()) return;
 
+        updateCellHorizontalSelection(1, () -> getSelectionModel().selectRightCell());
         onSelectRightCell.run();
     }
 
