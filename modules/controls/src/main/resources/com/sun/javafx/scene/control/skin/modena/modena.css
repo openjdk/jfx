@@ -503,7 +503,7 @@ is being used to size a border should also be in pixels.
 .tree-view:disabled,
 .table-view:disabled,
 .tree-table-view:disabled,
-.tab-pane:disabled,
+/*.tab-pane:disabled,  / Removed for JDK-8144983 */
 .titled-pane:disabled > .title,
 .accordion:disabled > .titled-pane > .title,
 .tab-pane > .tab-header-area > .headers-region > .tab:disabled,
