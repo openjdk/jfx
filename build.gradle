@@ -392,6 +392,12 @@ ext.IS_HEADLESS_TEST = Boolean.parseBoolean(HEADLESS_TEST);
 defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
+// Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
+// These tests should be protected with :
+//    assumeTrue(Boolean.getBoolean("unstable.test"));
+defineProperty("UNSTABLE_TEST", "false")
+ext.IS_UNSTABLE_TEST = Boolean.parseBoolean(UNSTABLE_TEST);
+
 // Specify the build configuration (Release, Debug, or DebugNative)
 defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
@@ -1245,6 +1251,8 @@ allprojects {
             systemProperty 'com.sun.javafx.gestures.rotate', 'true'
             systemProperty 'com.sun.javafx.gestures.scroll', 'true'
         }
+
+        systemProperty 'unstable.test', IS_UNSTABLE_TEST
     }
 
     compileTestJava {

@@ -88,6 +88,10 @@
 
 #USE_ROBOT = true
 
+# Specifies whether to run unstable tests, that are not suitable for automated builds
+
+#UNSTABLE_TEST = false
+
 # Specifies whether to run system tests that depend on AWT.
 # This flag is ignored if FULL_TEST is false.
 
