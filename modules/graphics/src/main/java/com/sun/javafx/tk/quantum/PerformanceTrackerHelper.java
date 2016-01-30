@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,6 @@ package com.sun.javafx.tk.quantum;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.impl.PrismSettings;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -100,45 +98,15 @@ abstract class PerformanceTrackerHelper {
         private long firstTime;
         private long lastTime;
 
-        private final Method logEventMethod;
-        private final Method outputLogMethod;
-        private final Method getStartTimeMethod;
-        private final Method setStartTimeMethod;
-
-        public PerformanceTrackerDefaultImpl() throws ClassNotFoundException,
-                                                      NoSuchMethodException {
-            final Class perfLoggerClass =
-                    Class.forName("sun.misc.PerformanceLogger", true, null);
-
-            logEventMethod =
-                    perfLoggerClass.getMethod("setTime", String.class);
-            outputLogMethod =
-                    perfLoggerClass.getMethod("outputLog");
-            getStartTimeMethod =
-                    perfLoggerClass.getMethod("getStartTime");
-            setStartTimeMethod =
-                    perfLoggerClass.getMethod("setStartTime", String.class,
-                                              long.class);
-        }
-
         @Override
         public void logEvent(final String s) {
             final long time = System.currentTimeMillis();
             if (firstTime == 0) {
                 firstTime = time;
             }
-
-            try {
-                logEventMethod.invoke(
-                        null,
-                        "JavaFX> " + s + " ("
+            PerformanceLogger.setTime("JavaFX> " + s + " ("
                         + (time - firstTime) + "ms total, "
                         + (time - lastTime) + "ms)");
-            } catch (IllegalAccessException ex) {
-            } catch (IllegalArgumentException ex) {
-            } catch (InvocationTargetException ex) {
-            }
-
             lastTime = time;
         }
 
@@ -148,10 +116,7 @@ abstract class PerformanceTrackerHelper {
             logLaunchTime();
 
             // Output the log
-            try {
-                outputLogMethod.invoke(null);
-            } catch (Exception e) {
-            }
+            PerformanceLogger.outputLog();
         }
 
         @Override
@@ -162,7 +127,7 @@ abstract class PerformanceTrackerHelper {
         private void logLaunchTime() {
             try {
                 // Attempt to log launchTime, if not set already
-                if ((Long) getStartTimeMethod.invoke(null) <= 0) {
+                if (PerformanceLogger.getStartTime() <= 0) {
                     // Standalone apps record launch time as sysprop
                     String launchTimeString = AccessController.doPrivileged(
                             (PrivilegedAction<String>) () -> System.getProperty("launchTime"));
@@ -170,8 +135,7 @@ abstract class PerformanceTrackerHelper {
                     if (launchTimeString != null
                             && !launchTimeString.equals("")) {
                         long launchTime = Long.parseLong(launchTimeString);
-                        setStartTimeMethod.invoke(
-                                null, "LaunchTime", launchTime);
+                        PerformanceLogger.setStartTime("LaunchTime", launchTime);
                     }
                 }
             } catch (Throwable t) {
