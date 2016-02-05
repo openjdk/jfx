@@ -104,7 +104,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         if (property1 instanceof ObservableValue) {
             ((ObservableValue) property1).removeListener(binding);
         }
-        if (property2 instanceof Observable) {
+        if (property2 instanceof ObservableValue) {
             ((ObservableValue) property2).removeListener(binding);
         }
     }

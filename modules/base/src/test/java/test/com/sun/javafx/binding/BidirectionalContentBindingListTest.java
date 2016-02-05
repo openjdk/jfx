@@ -279,4 +279,10 @@ public class BidirectionalContentBindingListTest {
         op1.set(0, 1);
         assertEquals(1, op2.get(0).intValue());
     }
+
+    @Test
+    public void testUnbindWrongMethod() {
+        Bindings.bindContentBidirectional(op1, op2);
+        Bindings.unbindBidirectional(op1, op2);
+    }
 }
