@@ -855,7 +855,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setSansSerifFontFamily("SansSerif");
     settings.setFixedFontFamily("Monospaced");
 //    settings->setShowsURLsInToolTips(true);
-
+    RuntimeEnabledFeatures::sharedFeatures().setCSSRegionsEnabled(true);
     page->setDeviceScaleFactor(devicePixelScale);
 
     dynamic_cast<FrameLoaderClientJava*>(&page->mainFrame().loader().client())->setFrame(&page->mainFrame());
