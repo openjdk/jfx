@@ -655,6 +655,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                         case "TextField":
                         case "ToggleButton":
                         case "ToolBar":
+                        default:
                             customMenuItem.setHideOnClick(false);
                             break;
                     }

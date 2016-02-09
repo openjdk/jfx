@@ -281,12 +281,10 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             double spaceRequested = 0;
             double extraSpace = 0;
             for (Content c: contentRegions) {
-                double max = 0;
-                double min = 0;
-                if (c != null) {
-                    max = horizontal ? c.maxWidth(-1) : c.maxHeight(-1);
-                    min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
-                }
+                if (c == null) continue;
+
+                double max = horizontal ? c.maxWidth(-1) : c.maxHeight(-1);
+                double min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
 
                 if (c.getArea() >= max) {
                     // Add the space that needs to be distributed to the others

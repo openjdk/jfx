@@ -1072,7 +1072,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 actualNewScrollOffset = newScrollOffset;
             }
 
-            if (actualNewScrollOffset != scrollOffset) {
+            if (Math.abs(actualNewScrollOffset - scrollOffset) > 0.001) {
                 scrollOffset = actualNewScrollOffset;
                 headersRegion.requestLayout();
             }
@@ -1247,6 +1247,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                                 behavior.closeTab(tab);
                                 setOnMousePressed(null);
                             }
+                            break;
                         }
                         default: super.executeAccessibleAction(action, parameters);
                     }
@@ -1602,10 +1603,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      * TabContentRegion: each tab has one to contain the tab's content node
      *
      **************************************************************************/
-    class TabContentRegion extends StackPane {
+    static class TabContentRegion extends StackPane {
 
-        private TraversalEngine engine;
-        private Direction direction = Direction.NEXT;
         private Tab tab;
 
         private InvalidationListener tabContentListener = valueModel -> {
@@ -1851,7 +1850,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
     } /* End TabControlButtons*/
 
-    class TabMenuItem extends RadioMenuItem {
+    static class TabMenuItem extends RadioMenuItem {
         Tab tab;
 
         private InvalidationListener disableListener = new InvalidationListener() {

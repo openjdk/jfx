@@ -53,14 +53,6 @@ import static javafx.scene.input.KeyCode.*;
 public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private final InputMap<ListView<T>> listViewInputMap;
 
-    /**
-     * Indicates that a keyboard key has been pressed which represents the
-     * event (this could be space bar for example). As long as keyDown is true,
-     * we are also armed, and will ignore mouse events related to arming.
-     * Note this is made package private solely for the sake of testing.
-     */
-    private boolean keyDown;
-
     private final EventHandler<KeyEvent> keyEventListener = e -> {
         if (!e.isConsumed()) {
             // RT-12751: we want to keep an eye on the user holding down the shift key,

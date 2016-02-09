@@ -49,7 +49,7 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
 
     private final InputMap<Spinner<T>> spinnerInputMap;
 
-    private final int STEP_AMOUNT = 1;
+    private static final int STEP_AMOUNT = 1;
 
     private boolean isIncrementing = false;
 

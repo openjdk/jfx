@@ -811,7 +811,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
         private StackPane rightArrow;
         private ToggleGroup indicatorButtons;
         private Label pageInformation;
-        private double previousWidth = -1;
         private double minButtonSize = -1;
 
         public NavigationControl() {
@@ -1236,10 +1235,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             pageInformation.setVisible(isPageInformationVisible());
 
             // Determine the number of indicators we can fit within the pagination width.
-//            if (snapSize(getWidth()) != previousWidth) {
-                layoutPageIndicators();
-//            }
-            previousWidth = getWidth();
+            layoutPageIndicators();
 
             HPos controlBoxHPos = controlBox.getAlignment().getHpos();
             VPos controlBoxVPos = controlBox.getAlignment().getVpos();

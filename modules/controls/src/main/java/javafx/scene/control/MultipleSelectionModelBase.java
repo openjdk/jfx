@@ -180,7 +180,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         atomicityCount++;
     }
     void stopAtomic() {
-        atomicityCount = Math.max(0, --atomicityCount);
+        atomicityCount = Math.max(0, atomicityCount - 1);
     }
 
 

@@ -322,7 +322,6 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 Utils.boundedSize(graphic.prefWidth(-1), graphic.minWidth(-1), graphic.maxWidth(-1));
 
         // Now add on the graphic, gap, and padding as appropriate
-        final Node graphic = labeled.getGraphic();
         if (isIgnoreGraphic()) {
             return textWidth + widthPadding;
         } else if (isIgnoreText()) {
@@ -711,10 +710,9 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 /* Avoid the content in text.getText() as it can contain ellipses
                  * for clipping
                  */
-                if (labeled != null) {
-                    String text = labeled.getText();
-                    if (text != null && !text.isEmpty()) return text;
-                }
+                String text = labeled.getText();
+                if (text != null && !text.isEmpty()) return text;
+                
                 /* Use the graphic as last resource. Note that this implementation
                  * does not attempt to combine the label and graphics if both
                  * are being displayed

@@ -550,7 +550,6 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
             // find size of spare box that fits inside indicator radius
             double squareBoxHalfWidth = Math.ceil(Math.sqrt((indicatorRadius * indicatorRadius) / 2));
-            double squareBoxHalfWidth2 = indicatorRadius * (Math.sqrt(2)/2);
 
             tick.setLayoutX(centerX - squareBoxHalfWidth);
             tick.setLayoutY(centerY - squareBoxHalfWidth);

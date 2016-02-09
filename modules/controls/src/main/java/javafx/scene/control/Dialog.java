@@ -294,7 +294,7 @@ public class Dialog<R> implements EventTarget {
         Toolkit.getToolkit().checkFxUserThread();
 
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWING));
-        if( getWidth() == Double.NaN && getHeight() == Double.NaN ) {
+        if (Double.isNaN(getWidth()) && Double.isNaN(getHeight())) {
             dialog.sizeToScene();
         }
 
@@ -329,7 +329,7 @@ public class Dialog<R> implements EventTarget {
         }
 
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWING));
-        if( getWidth() == Double.NaN && getHeight() == Double.NaN ) {
+        if (Double.isNaN(getWidth()) && Double.isNaN(getHeight())) {
             dialog.sizeToScene();
         }
 

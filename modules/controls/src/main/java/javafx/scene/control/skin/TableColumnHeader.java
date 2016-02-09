@@ -157,7 +157,7 @@ public class TableColumnHeader extends Region {
         changeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
         changeListenerHandler.registerChangeListener(sceneProperty(), e -> updateScene());
 
-        if (getTableColumn() != null && skin != null) {
+        if (getTableColumn() != null) {
             updateSortPosition();
             skin.getSortOrder().addListener(weakSortOrderListener);
             skin.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
@@ -670,9 +670,8 @@ public class TableColumnHeader extends Region {
             // this works fine.
             if (i < sortPos) {
                 Region spacer = new Region();
-                double rp = sortPos == 1 ? 1 : 1;
                 double lp = sortPos == 1 ? 1 : 0;
-                spacer.setPadding(new Insets(0, rp, 0, lp));
+                spacer.setPadding(new Insets(0, 1, 0, lp));
                 sortOrderDots.getChildren().add(spacer);
             }
         }

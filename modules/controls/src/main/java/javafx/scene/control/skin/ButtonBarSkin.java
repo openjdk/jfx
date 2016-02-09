@@ -162,7 +162,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
             throw new IllegalStateException("ButtonBar buttonOrder string can not be null"); //$NON-NLS-1$
         }
 
-        if (buttonOrder == ButtonBar.BUTTON_ORDER_NONE) {
+        if (buttonOrder.equals(ButtonBar.BUTTON_ORDER_NONE)) {
             // when using BUTTON_ORDER_NONE, we just lay out the buttons in the
             // order they are specified, but we do right-align the buttons by
             // inserting a dynamic spacer.

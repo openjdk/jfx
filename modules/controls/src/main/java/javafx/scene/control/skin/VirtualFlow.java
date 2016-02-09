@@ -1545,7 +1545,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 T cell = cells.get(i);
                 assert cell != null;
                 double actualLayoutY = getCellPosition(cell);
-                if (actualLayoutY != layoutY) {
+                if (Math.abs(actualLayoutY - layoutY) > 0.001) {
                     // we need to shift the cell to layoutY
                     positionCell(cell, layoutY);
                 }
@@ -2025,11 +2025,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 if (index > maxCellCount) {
                     final PlatformLogger logger = Logging.getControlsLogger();
                     if (logger.isLoggable(PlatformLogger.Level.INFO)) {
-                        if (startCell != null) {
-                            logger.info("index exceeds maxCellCount. Check size calculations for " + startCell.getClass());
-                        } else {
-                            logger.info("index exceeds maxCellCount");
-                        }
+                        logger.info("index exceeds maxCellCount. Check size calculations for " + startCell.getClass());
                     }
                     return filledWithNonEmpty;
                 }
@@ -2515,11 +2511,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
-        if (cell == null) {
-            Callback<VirtualFlow<T>, T> cellFactory = getCellFactory();
-            if (cellFactory != null) {
-                cell = cellFactory.call(this);
-            }
+        Callback<VirtualFlow<T>, T> cellFactory = getCellFactory();
+        if (cellFactory != null) {
+            cell = cellFactory.call(this);
         }
 
         if (cell != null) {
