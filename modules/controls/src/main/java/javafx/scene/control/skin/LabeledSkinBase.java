@@ -707,7 +707,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                  */
                 String text = labeled.getText();
                 if (text != null && !text.isEmpty()) return text;
-                
+
                 /* Use the graphic as last resource. Note that this implementation
                  * does not attempt to combine the label and graphics if both
                  * are being displayed
