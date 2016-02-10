@@ -277,12 +277,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             } else {
                 getChildren().setAll(graphic, text);
             }
-
-            // RT-37420
-            graphic.impl_processCSS(false);
-
         }
-
     }
 
     /**
