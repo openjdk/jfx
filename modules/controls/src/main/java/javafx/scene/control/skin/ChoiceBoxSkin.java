@@ -239,7 +239,6 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         // open button width/height
         double obw = openButton.prefWidth(-1);
 
-        ChoiceBox<T> control = getSkinnable();
         label.resizeRelocate(x, y, w, h);
         openButton.resize(obw, openButton.prefHeight(-1));
         positionInArea(openButton, (x+w) - obw,

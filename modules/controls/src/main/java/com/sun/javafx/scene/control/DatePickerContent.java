@@ -580,7 +580,6 @@ public class DatePickerContent extends VBox {
     }
 
     private String formatMonth(YearMonth yearMonth) {
-        Locale locale = getLocale();
         Chronology chrono = getPrimaryChronology();
         try {
             ChronoLocalDate cDate = chrono.date(yearMonth.atDay(1));
@@ -602,7 +601,6 @@ public class DatePickerContent extends VBox {
     }
 
     private String formatYear(YearMonth yearMonth) {
-        Locale locale = getLocale();
         Chronology chrono = getPrimaryChronology();
         try {
             DateTimeFormatter formatter = yearFormatter;

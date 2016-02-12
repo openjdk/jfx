@@ -1011,7 +1011,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             List<Key> keys = new ArrayList<Key>(20);
 
             InputStream boardFile = FXVKSkin.class.getResourceAsStream(boardFileName);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(boardFile));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(boardFile, "UTF-8"));
             String line;
             // A pointer to the current column. This will be incremented for every string
             // of text, or space.

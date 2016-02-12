@@ -90,15 +90,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     protected ContextMenu contextMenu;
 
-    /**
-     * Used to keep track of the most recent key event. This is used when
-     * handling InputCharacter actions.
-     */
-    private KeyEvent lastEvent;
-
-    private InvalidationListener textListener = observable -> {
-        invalidateBidi();
-    };
+    private InvalidationListener textListener = observable -> invalidateBidi();
 
     private final InputMap<T> inputMap;
 
@@ -126,7 +118,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // only on certain platforms, so we create the following predicates that filters out the mapping when the
         // control is not in the correct state / on the correct platform
         final Predicate<KeyEvent> validWhenEditable = e -> !c.isEditable();
-        final Predicate<KeyEvent> validOnMac = e -> !PlatformUtil.isMac();
         final Predicate<KeyEvent> validOnWindows = e -> !PlatformUtil.isWindows();
         final Predicate<KeyEvent> validOnLinux = e -> !PlatformUtil.isLinux();
 
@@ -293,6 +284,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                         case RIGHT: newCode = KP_RIGHT; break;
                         case UP:    newCode = KP_UP;    break;
                         case DOWN:  newCode = KP_DOWN;  break;
+                        default:
                     }
                     if (newCode != null) {
                         KeyBinding newkb = new KeyBinding(newCode).shift(kb.getShift())

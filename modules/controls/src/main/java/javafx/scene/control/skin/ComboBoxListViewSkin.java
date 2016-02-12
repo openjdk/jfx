@@ -185,6 +185,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             control.fireEvent(new ActionEvent());
         });
         registerChangeListener(control.editableProperty(), e -> updateEditable());
+
+        // Refer to JDK-8095306
+        if (comboBox.isShowing()) {
+            show();
+        }
     }
 
 

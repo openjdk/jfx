@@ -360,17 +360,21 @@ public final class CategoryAxis extends Axis<String> {
         final double newFirstPos = calculateNewFirstPos(length, newCategorySpacing);
         double tickLabelRotation = getTickLabelRotation();
         if (length >= 0) {
-            double requiredLengthToDisplay = calculateRequiredSize(side.isVertical(),tickLabelRotation);
+            double requiredLengthToDisplay = calculateRequiredSize(side.isVertical(), tickLabelRotation);
             if (requiredLengthToDisplay > length) {
-                // change text to vertical
-                tickLabelRotation = 90;
+                // try to rotate the text to increase the density
+                if (side.isHorizontal() && tickLabelRotation != 90) {
+                    tickLabelRotation = 90;
+                }
+                if (side.isVertical() && tickLabelRotation != 0) {
+                    tickLabelRotation = 0;
+                }
             }
         }
         return new Object[]{allDataCategories, newCategorySpacing, newFirstPos, tickLabelRotation};
     }
 
     private double calculateRequiredSize(boolean axisVertical, double tickLabelRotation) {
-        double requiredLengthToDisplay = Double.MAX_VALUE;
         // Calculate the max space required between categories labels
         double maxReqTickGap = 0;
         double last = 0;

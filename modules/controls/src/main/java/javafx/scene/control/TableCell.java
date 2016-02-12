@@ -541,9 +541,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             return;
         }
 
-        boolean isFocusedNow = fm != null && fm.isFocused(index, getTableColumn());
-
-        setFocused(isFocusedNow);
+        setFocused(fm.isFocused(index, getTableColumn()));
     }
 
     private void updateEditing() {

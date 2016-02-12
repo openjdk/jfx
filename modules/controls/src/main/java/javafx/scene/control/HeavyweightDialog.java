@@ -51,7 +51,7 @@ class HeavyweightDialog extends FXDialog {
 
     final Stage stage = new Stage() {
         @Override public void centerOnScreen() {
-            Window owner = getOwner();
+            Window owner = HeavyweightDialog.this.getOwner();
             if (owner != null) {
                 positionStage();
             } else {

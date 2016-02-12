@@ -769,8 +769,8 @@ public class DialogPane extends Pane {
         final Button button = new Button(buttonType.getText());
         final ButtonData buttonData = buttonType.getButtonData();
         ButtonBar.setButtonData(button, buttonData);
-        button.setDefaultButton(buttonType != null && buttonData.isDefaultButton());
-        button.setCancelButton(buttonType != null && buttonData.isCancelButton());
+        button.setDefaultButton(buttonData.isDefaultButton());
+        button.setCancelButton(buttonData.isCancelButton());
         button.addEventHandler(ActionEvent.ACTION, ae -> {
             if (ae.isConsumed()) return;
             if (dialog != null) {
@@ -853,7 +853,6 @@ public class DialogPane extends Pane {
         final double leftPadding = snappedLeftInset();
         final double topPadding = snappedTopInset();
         final double rightPadding = snappedRightInset();
-        final double bottomPadding = snappedBottomInset();
 
         // create the nodes up front so we can work out sizing
         final Node header = getActualHeader();

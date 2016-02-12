@@ -66,7 +66,8 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     }
 
     public static <T> void setAnchor(Control control, T anchor, boolean isDefaultAnchor) {
-        if (control != null && anchor == null) {
+        if (control == null) return;
+        if (anchor == null) {
             removeAnchor(control);
         } else {
             control.getProperties().put(ANCHOR_PROPERTY_KEY, anchor);

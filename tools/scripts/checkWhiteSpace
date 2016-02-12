@@ -156,7 +156,12 @@ process_files() {
         echo "Found $fails whitespace or executable issues"
         echo
         echo "To correct, use"
-        echo "   bash ${MYDIR}/checkWhiteSpace -F"
+        if [ "$allrepo" ]
+        then
+            echo "   bash ${MYDIR}/checkWhiteSpace -a -F"
+        else
+            echo "   bash ${MYDIR}/checkWhiteSpace -F"
+        fi
         echo
         exit 1
     elif [ "$fails" -ne 0 -a "$fixfiles" ]

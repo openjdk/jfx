@@ -530,10 +530,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             return;
         }
 
-        boolean isFocusedNow = fm != null &&
-                            fm.isFocused(getIndex(), getTableColumn());
-
-        setFocused(isFocusedNow);
+        setFocused(fm.isFocused(getIndex(), getTableColumn()));
     }
 
     private void updateEditing() {

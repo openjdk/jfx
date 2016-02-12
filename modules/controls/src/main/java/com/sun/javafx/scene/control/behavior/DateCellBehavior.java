@@ -85,6 +85,7 @@ public class DateCellBehavior extends BehaviorBase<DateCell> {
                 case DOWN:  dpc.goToDayCell(cell, +1, ChronoUnit.WEEKS, true); break;
                 case LEFT:  dpc.goToDayCell(cell, rtl ? +1 : -1, ChronoUnit.DAYS,  true); break;
                 case RIGHT: dpc.goToDayCell(cell, rtl ? -1 : +1, ChronoUnit.DAYS,  true); break;
+                default:
             }
         }
     }

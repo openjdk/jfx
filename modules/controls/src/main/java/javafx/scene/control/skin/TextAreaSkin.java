@@ -98,7 +98,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     final private TextArea textArea;
 
     // *** NOTE: Multiple node mode is not yet fully implemented *** //
-    private final boolean USE_MULTIPLE_NODES = false;
+    private static final boolean USE_MULTIPLE_NODES = false;
 
     private final TextAreaBehavior behavior;
 
