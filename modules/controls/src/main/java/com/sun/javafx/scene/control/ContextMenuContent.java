@@ -32,6 +32,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -1210,6 +1211,9 @@ public class ContextMenuContent extends Region {
 
             if (label != null) {
                 ((Label)label).textProperty().unbind();
+                label.styleProperty().unbind();
+                label.idProperty().unbind();
+                Bindings.unbindContent(label.getStyleClass(), item.getStyleClass());
             }
 
             left = null;
@@ -1258,10 +1262,13 @@ public class ContextMenuContent extends Region {
 
                 // --- add text to center column
                 label = new MenuLabel(item, this);  // make this a menulabel to handle mnemonics fire()
-                label.setStyle(item.getStyle());
 
-                // bind to text property in menu item
+                // set up bindings from the MenuItem into the Label
                 ((Label)label).textProperty().bind(item.textProperty());
+                label.styleProperty().bind(item.styleProperty());
+                label.idProperty().bind(item.styleProperty());
+                Bindings.bindContent(label.getStyleClass(), item.getStyleClass());
+
 
                 label.setMouseTransparent(true);
                 getChildren().add(label);
