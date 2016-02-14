@@ -54,7 +54,7 @@ public final class ImageView_cssMethods_Test extends CssMethodsTestBase {
                 public boolean equals(final Object expected,
                                       final Object actual) {
                     return ((actual instanceof Image)
-                               && ((Image) actual).impl_getUrl().equals(expected));
+                               && ((Image) actual).getUrl().equals(expected));
                 }
             };
 

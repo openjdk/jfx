@@ -405,7 +405,7 @@ public class JavaSourceExporter {
             nodeCode.append(indent + "try {\n");
             nodeCode.append(indent + "    " + materialName + ".setDiffuseMap("+toString(material.getDiffuseMap())+");\n");
             nodeCode.append(indent + "} catch (NullPointerException npe) {\n");
-            nodeCode.append(indent + "    System.err.println(\"Could not load texture resource ["+material.getDiffuseMap().impl_getUrl()+"]\");\n");
+            nodeCode.append(indent + "    System.err.println(\"Could not load texture resource ["+material.getDiffuseMap().getUrl()+"]\");\n");
             nodeCode.append(indent + "}\n");
         }
         if (material.getBumpMap() != null) {
@@ -421,7 +421,7 @@ public class JavaSourceExporter {
     }
 
     private String toString(Image image) {
-        String url = image.impl_getUrl();
+        String url = image.getUrl();
         if (url.startsWith(baseUrl)) {
             return  "new Image("+className+".class.getResource(\""+url.substring(baseUrl.length())+"\").toExternalForm())";
         } else {

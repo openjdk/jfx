@@ -435,7 +435,7 @@ final class QuantumClipboard implements TKClipboard {
             return false;
         }
 
-        String url = image.impl_getUrl();
+        String url = image.getUrl();
         if (url == null || PixelUtils.supportedFormatType(url)) {
             com.sun.prism.Image prismImage =
                         (com.sun.prism.Image)image.impl_getPlatformImage();

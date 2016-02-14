@@ -95,7 +95,7 @@ public class CursorTest {
         assertTrue(cursor instanceof ImageCursor);
 
         final Image cursorImage = ((ImageCursor) cursor).getImage();
-        assertEquals(imageUrl, cursorImage.impl_getUrl());
+        assertEquals(imageUrl, cursorImage.getUrl());
     }
 
     @Test(expected=NullPointerException.class)

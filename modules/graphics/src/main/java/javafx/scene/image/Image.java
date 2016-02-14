@@ -47,8 +47,6 @@ import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import com.sun.javafx.runtime.async.AsyncOperation;
@@ -158,12 +156,16 @@ public class Image {
     private final String url;
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Returns the url used to fetch the pixel data contained in the Image instance,
+     * if specified in the constructor. If no url is provided in the constructor (for
+     * instance, if the Image is constructed from an
+     * {@link #Image(InputStream) InputStream}), this method will return null.
+     *
+     * @return a String containing the URL used to fetch the pixel data for this
+     *      Image instance.
+     * @since 9
      */
-    // SB-dependency: RT-21216 has been filed to track this
-    @Deprecated
-    public final String impl_getUrl() {
+    public final String getUrl() {
         return url;
     }
 
@@ -804,7 +806,7 @@ public class Image {
                 loader = loadImage(impl_source, getRequestedWidth(), getRequestedHeight(),
                                    isPreserveRatio(), isSmooth());
             } else {
-                loader = loadImage(impl_getUrl(), getRequestedWidth(), getRequestedHeight(),
+                loader = loadImage(getUrl(), getRequestedWidth(), getRequestedHeight(),
                                    isPreserveRatio(), isSmooth());
             }
             finishImage(loader);

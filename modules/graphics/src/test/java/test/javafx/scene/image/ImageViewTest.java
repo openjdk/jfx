@@ -37,7 +37,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Comparator;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
@@ -115,7 +114,7 @@ public final class ImageViewTest {
 
         final ImageView newImageView = new ImageView(url);
 
-        assertEquals(url, newImageView.getImage().impl_getUrl());
+        assertEquals(url, newImageView.getImage().getUrl());
     }
 
     @Test

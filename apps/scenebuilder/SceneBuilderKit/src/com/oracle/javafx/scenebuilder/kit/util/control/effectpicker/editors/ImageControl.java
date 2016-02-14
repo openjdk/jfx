@@ -168,7 +168,7 @@ public class ImageControl extends GridPane {
         }
 
         editor_label.setText(labelString);
-        editor_textfield.setText(initVal == null ? "" : Deprecation.getUrl(initVal)); //NOI18N
+        editor_textfield.setText(initVal == null ? "" : initVal.getUrl()); //NOI18N
         setValue(initVal);
     }
 }

@@ -541,7 +541,7 @@ public class CssValueConverter {
         StringBuilder builder = new StringBuilder();
         if (property.equals("-fx-background-image")) { //NOI18N
             Image p = bi.getImage();
-            builder.append(Deprecation.getUrl(p));
+            builder.append(p.getUrl());
         } else {
             if (property.equals("-fx-background-position")) {             //NOI18N
                 double left = 0, right = 0, top = 0, bottom = 0;
@@ -609,7 +609,7 @@ public class CssValueConverter {
         StringBuilder builder = new StringBuilder();
         if (property.equals("-fx-border-image")) { //NOI18N
             Image p = bi.getImage();
-            builder.append(Deprecation.getUrl(p));
+            builder.append(p.getUrl());
         } else {
             if (property.equals("-fx-background-position")) {             //NOI18N
 

@@ -385,7 +385,7 @@ public class Tooltip extends PopupControl {
                             final ImageView imageView = (ImageView)graphicNode;
                             final Image image = imageView.getImage();
                             if (image != null) {
-                                final String imageViewUrl = image.impl_getUrl();
+                                final String imageViewUrl = image.getUrl();
                                 if (url.equals(imageViewUrl)) return;
                             }
 
@@ -413,7 +413,7 @@ public class Tooltip extends PopupControl {
                     if (graphic instanceof ImageView) {
                         final Image image = ((ImageView)graphic).getImage();
                         if (image != null) {
-                            return image.impl_getUrl();
+                            return image.getUrl();
                         }
                     }
                     return null;

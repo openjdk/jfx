@@ -78,7 +78,7 @@ public final class Node_cssMethods_Test extends CssMethodsTestBase {
                                        ((ImageCursor) actual).getImage();
 
                                if ((cursorImage != null)
-                                       && cursorImage.impl_getUrl().equals(
+                                       && cursorImage.getUrl().equals(
                                                   TEST_CURSOR_URL)) {
                                    return true;
                                }

@@ -294,7 +294,7 @@ class GlassSystemMenu implements TKSystemMenu {
             Image     im = iv.getImage();
             if (im == null) return null;
 
-            String    url          = im.impl_getUrl();
+            String    url          = im.getUrl();
 
             if (url == null || PixelUtils.supportedFormatType(url)) {
                 com.sun.prism.Image pi = (com.sun.prism.Image)im.impl_getPlatformImage();

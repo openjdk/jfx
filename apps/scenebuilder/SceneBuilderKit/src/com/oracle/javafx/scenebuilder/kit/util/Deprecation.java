@@ -139,11 +139,6 @@ public class Deprecation {
 //    public static void setTraversalEngine(Parent parent, TraversalEngine engine) {
 //        parent.setImpl_traversalEngine(engine);
 //    }
-    // Deprecated stuff in Image
-    // RT-21216 : Promote impl_getUrl to public API
-    public static String getUrl(Image image) {
-        return image.impl_getUrl();
-    }
 
 //    // RT-21217 : Promote impl_fromPlatformImage to public API
 //    public static Image fromPlatformImage(Object platformImage) {

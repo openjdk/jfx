@@ -34,7 +34,6 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.test.PropertyInvalidationCounter;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -68,7 +67,7 @@ public final class ImageTest {
 
         final Image image = new Image(url);
 
-        assertEquals(url, image.impl_getUrl());
+        assertEquals(url, image.getUrl());
         verifyLoadedImage(image, 0, 0, false, false, 100, 200);
     }
 
@@ -79,7 +78,7 @@ public final class ImageTest {
 
         final Image image = new Image(url, 200, 400, true, true);
 
-        assertEquals(url, image.impl_getUrl());
+        assertEquals(url, image.getUrl());
         verifyLoadedImage(image, 200, 400, true, true, 300, 100);
     }
 
@@ -494,7 +493,7 @@ public final class ImageTest {
 
         final Image image = new Image(url);
 
-        assertEquals(resolvedUrl, image.impl_getUrl());
+        assertEquals(resolvedUrl, image.getUrl());
         verifyLoadedImage(image, 0, 0, false, false, 100, 200);
     }
 
@@ -506,7 +505,7 @@ public final class ImageTest {
 
         final Image image = new Image(url);
 
-        assertEquals(resolvedUrl, image.impl_getUrl());
+        assertEquals(resolvedUrl, image.getUrl());
         verifyLoadedImage(image, 0, 0, false, false, 100, 200);
     }
 

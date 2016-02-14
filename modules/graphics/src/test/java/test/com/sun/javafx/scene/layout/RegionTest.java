@@ -331,7 +331,7 @@ public class RegionTest {
 //        for (int i=0; i<images.size(); i++) {
 //            BackgroundImage image = images.get(i);
 ////             TODO: fix this - expected is file:/... actual is jar:file:/...
-////            assertEquals(expectedUrls[i], image.getImage().impl_getUrl());
+////            assertEquals(expectedUrls[i], image.getImage().getUrl());
 //            assertEquals(expectedRepeats[i].getRepeatX(), image.getRepeatX());
 //            assertEquals(expectedRepeats[i].getRepeatY(), image.getRepeatY());
 //            assertEquals(expectedPositions[i].getTop(), image.getTop(), 0.01);
@@ -446,7 +446,7 @@ public class RegionTest {
 //
 //        for (int i=0; i<images.size(); i++) {
 //            BorderImage image = images.get(i);
-//            assertEquals(expectedUrls[i], image.getImage().impl_getUrl());
+//            assertEquals(expectedUrls[i], image.getImage().getUrl());
 //            assertEquals(expectedRepeats[i].getRepeatX(), image.getRepeatX());
 //            assertEquals(expectedRepeats[i].getRepeatY(), image.getRepeatY());
 //            assertEquals(expectedSlices[i].getTop(), image.getTopSlice(),0.01);

@@ -32,7 +32,6 @@
 
 package com.oracle.javafx.scenebuilder.kit.metadata.util;
 
-import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.net.URL;
 import javafx.scene.image.Image;
 
@@ -53,10 +52,10 @@ public class DesignImage {
 
     public DesignImage(Image image) {
         assert image != null;
-        assert Deprecation.getUrl(image) != null;
+        assert image.getUrl() != null;
 
         this.image = image;
-        this.location = Deprecation.getUrl(image);
+        this.location = image.getUrl();
     }
 
     public Image getImage() {
