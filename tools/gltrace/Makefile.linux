@@ -50,7 +50,7 @@ $(DEST)/gltrace: $(HDRS) $(GLTRACE_SRCS)
 
 JAVA    = $(JDK)/bin/java
 JVMOPTS =
-JAVAFX  = /opt/javafx/lib/ext/jfxrt.jar
+JAVAFX  = /opt/javafx/lib/jfxrt.jar
 JFXOPTS =
 
 RUNJFX  = $(JAVA) $(JVMOPTS) $(JFXOPTS)

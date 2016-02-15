@@ -307,8 +307,18 @@ defineProperty("javaBuildNumber", javaVersionInfo[1])
 
 loadProperties("$projectDir/build.properties")
 
-def String closedCacheStubRuntime = cygpath("$projectDir") + "/../caches/sdk/rt"
-defineProperty("STUB_RUNTIME", BUILD_CLOSED ? closedCacheStubRuntime : cygpath("$JDK_HOME/jre"))
+// Look for stub runtime in either old (JDK 8u) or new (JDK 9) dir layout
+
+def cachesSdkRtDir = file("../caches/sdk/rt")
+def hasRtDir = cachesSdkRtDir.isDirectory()
+def String closedCacheStubRuntime = cygpath("$projectDir") + "/../caches/sdk" + (hasRtDir ? "/rt" : "")
+
+def jdkHomeJreDir = file("$JDK_HOME/jre")
+def hasJreDir = jdkHomeJreDir.isDirectory()
+def String jreStubRuntime = cygpath("$JDK_HOME") + (hasJreDir ? "/jre" : "")
+
+defineProperty("STUB_RUNTIME", BUILD_CLOSED ? closedCacheStubRuntime : jreStubRuntime)
+
 defineProperty("LIBRARY_STUB", IS_MAC ? "$STUB_RUNTIME/lib" :
                                IS_WINDOWS ? "$STUB_RUNTIME/bin" :
                                "$STUB_RUNTIME/lib/$OS_ARCH")
@@ -347,6 +357,7 @@ defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
 
 // COMPILE_JFR specifies whether to build code that logs to JRockit Flight Recorder
+// FIXME: change this to also allow JDK 9 boot jdk
 defineProperty("COMPILE_JFR", Boolean.toString(file("$JDK_HOME/jre/lib/jfr.jar").exists()))
 ext.IS_COMPILE_JFR = Boolean.parseBoolean(COMPILE_JFR)
 
@@ -419,6 +430,14 @@ ext.IS_USE_DEPEND = Boolean.parseBoolean(USE_DEPEND)
 // Specifies whether to use the "incremental" option when compiling Java sources
 defineProperty("INCREMENTAL", "false")
 ext.IS_INCREMENTAL = Boolean.parseBoolean(INCREMENTAL)
+
+// Specifies whether to include the Null3D pipeline (for perf debugging)
+defineProperty("INCLUDE_NULL3D", "false")
+ext.IS_INCLUDE_NULL3D = Boolean.parseBoolean(INCLUDE_NULL3D)
+
+// Specifies whether to include the ES2 pipeline if available
+defineProperty("INCLUDE_ES2", IS_WINDOWS ? "false" : "true")
+ext.IS_INCLUDE_ES2 = Boolean.parseBoolean(INCLUDE_ES2)
 
 // Specifies whether to generate code coverage statistics when running tests
 defineProperty("JCOV", "false")
@@ -518,11 +537,8 @@ ext.DO_BUILD_SDK_FOR_TEST = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
 defineProperty("TEST_SDK", JDK_HOME)
 ext.TEST_SDK_DIR = file(TEST_SDK)
 
-def rtDir = new File(TEST_SDK_DIR, "rt")
-if (!rtDir.directory) {
-    rtDir = new File(TEST_SDK_DIR, "jre")
-}
-ext.jfxrtJarFromSdk = new File(rtDir, "lib/ext/jfxrt.jar").absolutePath
+def rtDir = TEST_SDK_DIR
+ext.jfxrtJarFromSdk = new File(rtDir, "lib/jfxrt.jar").absolutePath
 if (!DO_BUILD_SDK_FOR_TEST && !file(jfxrtJarFromSdk).exists()) {
     fail ("BUILD_SDK_FOR_TEST is set to false, but there\'s no jfxrt.jar at the expected paths in TEST_SDK($TEST_SDK_DIR)\n"
             + "TEST_SDK should point at either JavaFX SDK location or JDK location\n"
@@ -862,6 +878,7 @@ logger.quiet("jdk version: ${jdkVersion}")
 logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersion}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
+logger.quiet("STUB_RUNTIME: $STUB_RUNTIME")
 logger.quiet("CONF: $CONF")
 logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
@@ -1122,7 +1139,13 @@ task verifyJava() {
 // Task to check whether jfxrt.jar is present in the JDK
 task checkJfxrtJar {
     doLast {
+        // The following path is correct when using 8u as boot jdk
         def jfxrtFile = new File("$JDK_HOME/jre/lib/ext/jfxrt.jar");
+        if (jfxrtFile.exists()) {
+            fail("$jfxrtFile must be removed before building sdk")
+        }
+        // The following path is correct when using 9 (pre-jigsaw) as boot jdk
+        jfxrtFile = new File("$JDK_HOME/lib/jfxrt.jar");
         if (jfxrtFile.exists()) {
             fail("$jfxrtFile must be removed before building sdk")
         }
@@ -1223,7 +1246,7 @@ allprojects {
 
     // Compile and run tests against the jfxrt.jar in the built sdk of the host machine
     def sdkDir = "${rootProject.buildDir}/sdk"
-    def jfxrtJar = "$sdkDir/rt/lib/ext/jfxrt.jar"
+    def jfxrtJar = "$sdkDir/lib/jfxrt.jar"
     def testJfxrtJar = DO_BUILD_SDK_FOR_TEST ? jfxrtJar : jfxrtJarFromSdk
 
     // At the moment the ASM library shipped with Gradle that is used to
@@ -1768,6 +1791,7 @@ project(":fxml") {
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+        // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
     }
 }
@@ -2958,20 +2982,24 @@ compileTargets { t ->
     def targetProperties = project.ext[t.upper]
     def sdkDirName = targetProperties.sdkDirName
     def library = targetProperties.library
+
+    def isWindows = IS_WINDOWS && t.name == "win";
+    def isMac = IS_MAC && t.name == "mac";
+
     // The jfxrt task is responsible for creating the jfxrt.jar. A developer may
     // have multiple SDK's on their system at any one time, depending on which
     // cross compiles they have done. For example, I might have:
-    //      build/ios-sdk/rt/lib/ext/jfxrt.jar
-    //      build/armhf-sdk/rt/lib/ext/jfxrt.jar
+    //      build/ios-sdk/lib/jfxrt.jar
+    //      build/armhf-sdk/lib/jfxrt.jar
     // and so forth. The default host build will always install into 'sdk'
     // allowing for uses where a known sdk path is needed (like IDEs)
-    //      build/sdk/rt/lib/ext/jfxrt.jar
+    //      build/sdk/lib/jfxrt.jar
     // This arrangement allows for multiple independent SDKs to
     // exist on a developer's system.
     def jfxrtTask = task("jfxrt$t.capital", type: Jar) {
         group = "Basic"
         description = "Creates the jfxrt.jar for the $t.name target"
-        archiveName = "build/${sdkDirName}/rt/lib/ext/jfxrt.jar";
+        archiveName = "build/${sdkDirName}/lib/jfxrt.jar";
         includeEmptyDirs = false
         from("modules/base/build/classes/main",
              "modules/base/build/resources/main",
@@ -2989,57 +3017,76 @@ compileTargets { t ->
              "modules/media/build/resources/main")
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
 
-        if (!IS_MAC) {
-            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/osx/**",
+        // Exclude obsolete, experimental, or non-shipping code
+        exclude("version.rc")
+        exclude("com/sun/glass/ui/swt")
+        exclude("com/sun/javafx/tools/ant")
+        exclude("com/javafx/main")
+        if (!IS_INCLUDE_NULL3D) {
+            exclude ("com/sun/prism/null3d")
+        }
+        if (!IS_INCLUDE_ES2) {
+               exclude("com/sun/prism/es2",
+                       "com/sun/scenario/effect/impl/es2")
+        }
+
+        // Exclude platform-specific classes for other platforms
+
+        if (!isMac) {
+            exclude ("com/sun/media/jfxmediaimpl/platform/osx",
                      "com/sun/prism/es2/MacGL*",
                      "com/sun/glass/events/mac",
                      "com/sun/glass/ui/mac",
-                     "com/sun/prism/es2/gl/mac"
                      )
         }
-        if (!IS_WINDOWS) {
+
+        if (!isWindows) {
             exclude ("**/*.hlsl",
                      "com/sun/glass/ui/win",
                      "com/sun/prism/d3d",
-                     "com/sun/prism/es2/gl/win",
                      "com/sun/prism/es2/WinGL*",
                      "com/sun/scenario/effect/impl/hw/d3d"
                      )
         }
+
         if (!targetProperties.includeGTK) { //usually IS_LINUX
             exclude (
                      "com/sun/glass/ui/gtk",
                      "com/sun/prism/es2/EGL*",
-                     "com/sun/prism/es2/gl/eglfb",
-                     "com/sun/prism/es2/gl/eglx11",
-                     "com/sun/prism/es2/gl/x11",
                      "com/sun/prism/es2/X11GL*"
                      )
         }
+
         if (!targetProperties.includeEGL) {
             exclude ("com/sun/prism/es2/EGL*")
         }
+
         if (!targetProperties.includeLens) {
             exclude ("com/sun/glass/ui/lens")
         }
-        /* Note: Monocle is used in the test harness, and so should
-         * not be excluded until the deploy phase
+
+        // FIXME: Figure out what to do with Monocle
+        /*
         if (!targetProperties.includeMonocle) {
             exclude ("com/sun/glass/ui/monocle")
+            exclude("com/sun/prism/es2/Monocle*")
         }
         */
-        if (!targetProperties.includeNull3d) {
-            // "com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
-            exclude ("com/sun/prism/null3d")
-        }
+
         if (t.name != 'ios') {
-            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/ios/**",
+            exclude ("com/sun/media/jfxmediaimpl/platform/ios",
                      "com/sun/glass/ui/ios",
                      "com/sun/prism/es2/IOS*"
                      )
         }
+
         if (t.name != 'android' && t.name != 'dalvik') {
-            exclude ("com/sun/glass/ui/android/*")
+            exclude ("com/sun/glass/ui/android")
+        }
+
+        // Filter out other platform-specific classes
+        if (targetProperties.containsKey('jfxrtJarExcludes')) {
+            exclude(targetProperties.jfxrtJarExcludes)
         }
 
         if (t.name == 'android') {
@@ -3057,10 +3104,6 @@ compileTargets { t ->
 
         exclude("**/javafx/embed/swt/**")
 
-        if (!targetProperties.includeSWT) {
-            exclude("com/sun/glass/ui/swt")
-        }
-
         if (!targetProperties.includeSwing) {
             exclude("javafx/embed/swing")
         }
@@ -3068,11 +3111,6 @@ compileTargets { t ->
                 "PrismLoaderBackend*", // More decora stuff
                 "**/*.stg",    // any glue files for decora must be excluded
                 "**/*.java");  // Builder java files are in build/classes and should be excluded
-
-        // Filter out platform specific Java sources (glass) when compiling for other targets
-        if (targetProperties.containsKey('jfxrtJarExcludes')) {
-            exclude(targetProperties.jfxrtJarExcludes)
-        }
 
         dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
     }
@@ -3090,7 +3128,7 @@ compileTargets { t ->
         enabled = COMPILE_SWT
         group = "Basic"
         description = "Creates the jfxswt.jar for the $t.name target"
-        archiveName = "build/${sdkDirName}/rt/lib/jfxswt.jar";
+        archiveName = "build/${sdkDirName}/lib/jfxswt.jar";
         includeEmptyDirs = false
         from("modules/swt/build/classes/main");
         include("**/javafx/embed/swt/**")
@@ -3125,11 +3163,14 @@ compileTargets { t ->
         description = "Creates the SDK for $t.name"
         doLast {
             // TODO instead of using copy everywhere, I probably want to use "sync" instead?
-            // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
+            // Copy all of the .dll / .so / .dylib native libraries into build/sdk/lib/
             copy {
                 def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
                 from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
-                def libs = ['font', 'prism', 'prismSW', 'prismES2', 'glass', 'iio']
+                def libs = ['font', 'prism', 'prismSW', 'glass', 'iio']
+                if (IS_INCLUDE_ES2) {
+                    libs += ['prismES2'];
+                }
                 if (IS_COMPILE_PANGO) {
                     libs += ['fontFreetype', 'fontPango'];
                 }
@@ -3183,11 +3224,11 @@ compileTargets { t ->
                 }
 
                 def libDest = targetProperties.libDest
-                into ("build/${sdkDirName}/rt/$libDest")
+                into ("build/${sdkDirName}/$libDest")
             }
 
             // Create the javafx.properties file
-            final File javafxProperties = file("build/${sdkDirName}/rt/lib/javafx.properties")
+            final File javafxProperties = file("build/${sdkDirName}/lib/javafx.properties")
             javafxProperties.delete()
             javafxProperties << "javafx.version=$RELEASE_VERSION_SHORT";
             javafxProperties << "\n"
@@ -3204,7 +3245,7 @@ compileTargets { t ->
 
             // Embedded builds define this file as well
             if (targetProperties.containsKey("javafxPlatformProperties")) {
-                final File javafxPlatformProperties = file("build/${sdkDirName}/rt/lib/javafx.platform.properties")
+                final File javafxPlatformProperties = file("build/${sdkDirName}/lib/javafx.platform.properties")
                 javafxPlatformProperties.delete()
                 javafxPlatformProperties << targetProperties.javafxPlatformProperties
                 javafxPlatformProperties << "\n"
@@ -3259,7 +3300,7 @@ compileTargets { t ->
     if (generateSymbols) {
         def exportedSymbolsTask = project.task("exportedSymbols${t.capital}", type: ExportedSymbolsTask, dependsOn: sdkTask, group: "Build") {
             description = "Generates exported symbols file for iOS build (from .a libraries)"
-            def libDirName = "build/${sdkDirName}/rt/$targetProperties.libDest"
+            def libDirName = "build/${sdkDirName}/$targetProperties.libDest"
             libDir = file("$libDirName")
             outputFile = file("$libDirName/exported.symbols")
             excludes = targetProperties.generateSymbolsExcludes
@@ -3309,9 +3350,10 @@ project(":apps") {
 
         // override the apps build.xml with an explicit pointer to our jar.
         def sdkDirName = rootProject.ext[t.upper].sdkDirName
-        def jfxrtJar = "${rootProject.buildDir}/${sdkDirName}/rt/lib/ext/jfxrt.jar"
+        def jfxrtJar = "${rootProject.buildDir}/${sdkDirName}/lib/jfxrt.jar"
 
         def appsJar = project.task("appsJar${t.capital}") {
+            dependsOn(sdk)
             doLast() {
               ant.properties['targetBld'] = "$t.name"
               if (!rootProject.ext[t.upper].compileSwing) {
@@ -3368,7 +3410,7 @@ compileTargets { t ->
     def exportDir = "${project.buildDir}/${targetProperties.exportDirName}"
     def exportSDKDir = "${exportDir}/sdk"
     def bundleDir = "${project.buildDir}/${targetProperties.bundleDirName}"
-    def jfxrtJar = "$sdkDir/rt/lib/ext/jfxrt.jar"
+    def jfxrtJar = "$sdkDir/lib/jfxrt.jar"
 
     def isWindows = false
     if (IS_WINDOWS && t.name == "win") {
@@ -3400,12 +3442,6 @@ compileTargets { t ->
 
                 if (isWindows) {
                     exclude '**/prism_es2.dll'
-                }
-
-                eachFile {details ->
-                    if (details.path.startsWith('rt/')) {
-                        details.path = "./" + details.path.substring(3);
-                    }
                 }
             }
 

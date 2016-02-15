@@ -313,7 +313,7 @@ project(":web") {
                 def props = project.ext["DALVIK"]
                 copy {
                     from ("modules/web/build/libs/webview/dalvik/${props.library(props.webview.lib)}")
-                    into ("build/dalvik-sdk/rt/${props.libDest}")
+                    into ("build/dalvik-sdk/${props.libDest}")
                 }
             }
         }
@@ -391,22 +391,22 @@ project(":graphics") {
                     from(
                          "modules/graphics/build/libs/activity/dalvik/${props.library(props.activity.lib)}"
                     )
-                    into ("build/dalvik-sdk/rt/${props.libDest}")
+                    into ("build/dalvik-sdk/${props.libDest}")
                 }
                 copy {
                     from ("modules/graphics/build/libs/${props.jfxdvklib}")
-                    into ("build/dalvik-sdk/rt/lib/ext")
+                    into ("build/dalvik-sdk/lib")
                 }
 /*
                 copy {
                     from ("modules/compat/build/libs/compat.jar")
-                    into ("build/dalvik-sdk/rt/lib/ext")
+                    into ("build/dalvik-sdk/lib")
                 }
 */
                 if (compileNativeText) {
                     copy {
                         from ("modules/graphics/build/libs/fontNativeFreetype/dalvik")
-                        into ("build/dalvik-sdk/rt/${props.libDest}")
+                        into ("build/dalvik-sdk/${props.libDest}")
                     }
                 }
             }
@@ -455,8 +455,8 @@ allprojects {
     afterEvaluate {
         sdkDalvik {
             doLast {
-                ant.jar(update: "true", destfile: "build/dalvik-sdk/rt/lib/ext/jfxrt.jar",
-                    basedir: "build/dalvik-sdk/rt/lib", includes: "*.properties")
+                ant.jar(update: "true", destfile: "build/dalvik-sdk/lib/jfxrt.jar",
+                    basedir: "build/dalvik-sdk/lib", includes: "*.properties")
             }
         }
     }

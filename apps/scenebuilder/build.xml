@@ -29,7 +29,7 @@
             failonerror="true"
             >
         <classpath>
-            <pathelement location="../../build/sdk/rt/lib/ext/jfxrt.jar"/>
+            <pathelement location="../../build/sdk/lib/jfxrt.jar"/>
             <pathelement location="SceneBuilderApp/dist/SceneBuilderApp.jar"/>
             <pathelement location="SceneBuilderKit/dist/SceneBuilderKit.jar"/>
          </classpath>

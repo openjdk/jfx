@@ -90,7 +90,7 @@ ARMV6SF.includeGTK = true
 
 ARMV6SF.javafxPlatformDefault="monocle"
 
-// Libraries end up in the sdk/rt/lib/arm directory for arm builds
+// Libraries end up in the sdk/lib/arm directory for arm builds
 ARMV6SF.arch = "arm"
 ARMV6SF.libDest = "lib/arm"
 

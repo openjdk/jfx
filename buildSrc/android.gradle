@@ -231,7 +231,7 @@ project(":graphics") {
                 if (compileNativeText) {
                     copy {
                         from ("modules/graphics/build/libs/fontNativeFreetype/android")
-                        into ("build/android-sdk/rt/$ANDROID.libDest")
+                        into ("build/android-sdk/$ANDROID.libDest")
                     }
                 }
             }
@@ -323,7 +323,7 @@ project(":web") {
                 }
                 copy {
                     from ("modules/web/build/libs/webview/android/${props.library(props.webview.lib)}")
-                    into ("build/android-sdk/rt/${props.libDest}")
+                    into ("build/android-sdk/${props.libDest}")
                 }
             }
         }

@@ -170,11 +170,11 @@ public class NativeLibLoader {
                 String osName = System.getProperty("os.name");
                 String relativeDir = null;
                 if (osName.startsWith("Windows")) {
-                    relativeDir = "../../bin";
+                    relativeDir = "../bin";
                 } else if (osName.startsWith("Mac")) {
-                    relativeDir = "..";
+                    relativeDir = ".";
                 } else if (osName.startsWith("Linux")) {
-                    relativeDir = "../" + System.getProperty("os.arch");
+                    relativeDir = "./" + System.getProperty("os.arch");
                 }
 
                 // Location of native libraries relative to jar file

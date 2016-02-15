@@ -496,7 +496,7 @@ if (isJava()) {
         chomp($productDir = `cygpath -m \"$productDir\"`);
     }
 
-    my $classpath = "$productDir/sdk/rt/lib/ext/jfxrt.jar;$productDir/test/drt.jar";
+    my $classpath = "$productDir/sdk/lib/jfxrt.jar;$productDir/test/drt.jar";
     my $libpath = "$productDir/test";
     if (!isCygwin()) {
         #normalize class path
@@ -505,7 +505,7 @@ if (isJava()) {
     }
     if (isDarwin()) {
         # Mac apparently needs this variable set
-        $ENV{'DYLD_LIBRARY_PATH'} = "$productDir/sdk/rt/lib";
+        $ENV{'DYLD_LIBRARY_PATH'} = "$productDir/sdk/lib";
     }
     if (isLinux()) {
         # Set LD_LIBRARY_PATH to allow libDumpRenderTreeJava.so
@@ -513,7 +513,7 @@ if (isJava()) {
        $_ = `arch`;
        my $arch = /x86_64/ ? "amd64" : "i386";
         $ENV{'LD_LIBRARY_PATH'} =
-                canonpath("$productDir/sdk/rt/lib/$arch");
+                canonpath("$productDir/sdk/lib/$arch");
     }
 
     @dumpToolJava = ("$javaHome/bin/java",

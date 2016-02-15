@@ -49,7 +49,7 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/../caches/sdk/rt/lib/ext/jfxrt.jar!/" />
+          <root url="jar://$MODULE_DIR$/../caches/sdk/lib/jfxrt.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
