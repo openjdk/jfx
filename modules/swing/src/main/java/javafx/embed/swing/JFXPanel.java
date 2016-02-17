@@ -79,6 +79,7 @@ import sun.awt.AppContext;
 import sun.awt.CausedFocusEvent;
 import sun.awt.SunToolkit;
 import sun.java2d.SunGraphics2D;
+import sun.java2d.SurfaceData;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -648,6 +649,23 @@ public class JFXPanel extends JComponent {
                 e.getCaret().getInsertionIndex());
     }
 
+    // FIXME: once we move to JDK 9 as the boot JDK we should remove the
+    // reflection code from this method, consider changing it to
+    // use double rather than int, and account for the possibility of
+    // a different scale factor in X and Y.
+    private int getDefaultScale(SurfaceData surfaceData) {
+        /*
+        double scale = surfaceData.getDefaultScaleX();
+        */
+        double scale = 1;
+        try {
+            Method meth = SurfaceData.class.getMethod("getDefaultScaleX");
+            scale = (Double)meth.invoke(surfaceData);
+        } catch (Exception ex) {
+        }
+
+        return (int)Math.round(scale);
+    }
 
     /**
      * Overrides the {@link javax.swing.JComponent#paintComponent(Graphics)}
@@ -689,7 +707,7 @@ public class JFXPanel extends JComponent {
 
             int newScaleFactor = scaleFactor;
             if (g instanceof SunGraphics2D) {
-                newScaleFactor = ((SunGraphics2D)g).surfaceData.getDefaultScale();
+                newScaleFactor = getDefaultScale(((SunGraphics2D)g).surfaceData);
             }
             if (scaleFactor != newScaleFactor) {
                 createResizePixelBuffer(newScaleFactor);
