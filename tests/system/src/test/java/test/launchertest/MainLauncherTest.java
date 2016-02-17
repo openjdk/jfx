@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -132,14 +132,15 @@ public class MainLauncherTest {
             assumeTrue(PlatformUtil.isLinux());
         }
 
-        final String classpath = System.getProperty("java.class.path");
-        ProcessBuilder builder;
-        if (testPldrName != null) {
-            builder = new ProcessBuilder("java", "-cp", classpath,
-                    "-Djavafx.preloader=" + testPldrName, testAppName);
-        } else {
-            builder = new ProcessBuilder("java", "-cp", classpath, testAppName);
-        }
+        final ArrayList<String> cmd =
+                test.util.Util.createApplicationLaunchCommand(
+                        testAppName,
+                        testPldrName,
+                        null
+                        );
+
+        final ProcessBuilder builder = new ProcessBuilder(cmd);
+
         if (headless) {
             // Set DISPLAY variable to empty to run in headless mode on Linux
             builder.environment().put("DISPLAY", "");

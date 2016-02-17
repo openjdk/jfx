@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,13 @@
 
 package test.util;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -32,6 +39,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import junit.framework.AssertionFailedError;
+import org.junit.Assert;
 
 /**
  * Utility methods for life-cycle testing
@@ -148,4 +156,66 @@ public class Util {
         }
     }
 
+    private static String getJfxrtDir(final String classpath) {
+        final String jfxrt = "jfxrt.jar";
+        String cp = classpath;
+        int idx = cp.replace('\\', '/').indexOf("/" + jfxrt);
+        if (idx >= 0) {
+            cp = cp.substring(0, idx);
+            idx = cp.lastIndexOf(File.pathSeparator);
+            if (idx >= 0) {
+                cp = cp.substring(idx, cp.length());
+            }
+            return cp;
+        }
+        return null;
+    }
+
+    public static ArrayList<String> createApplicationLaunchCommand(
+            String testAppName,
+            String testPldrName,
+            String testPolicy) throws IOException {
+
+        final String classpath = System.getProperty("java.class.path");
+        final String libraryPath = System.getProperty("java.library.path");
+
+        final String workerJavaCmd = System.getProperty("worker.java.cmd");
+        final Boolean workerDebug = Boolean.getBoolean("worker.debug");
+
+        final ArrayList<String> cmd = new ArrayList<>(30);
+
+        if (workerJavaCmd != null) {
+            cmd.add(workerJavaCmd);
+        } else {
+            cmd.add("java");
+        }
+
+        String jfxdir = getJfxrtDir(classpath);
+        Assert.assertNotNull("failed to find jfxdir",jfxdir);
+        cmd.add("-Djava.ext.dirs=" + jfxdir);
+
+        cmd.add("-cp");
+        cmd.add(classpath);
+
+        if (testPldrName != null) {
+            cmd.add("-Djavafx.preloader=" + testPldrName);
+        }
+
+        if (testPolicy != null) {
+            cmd.add("-Djava.security.manager");
+            cmd.add("-Djava.security.policy=" + testPolicy);
+        }
+
+        cmd.add(testAppName);
+
+        if (workerDebug) {
+            System.err.println("Child cmd is");
+            cmd.stream().forEach((s) -> {
+                System.err.println(" " + s);
+            });
+            System.err.println("Child cmd: end");
+        }
+
+        return cmd;
+    }
 }

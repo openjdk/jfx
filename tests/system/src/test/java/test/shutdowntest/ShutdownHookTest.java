@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package test.shutdowntest;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -50,10 +51,16 @@ public class ShutdownHookTest {
         final int port = service.getLocalPort();
 
         // Launch the test app
-        final String classpath = System.getProperty("java.class.path");
+        final ArrayList<String> cmd
+                = test.util.Util.createApplicationLaunchCommand(
+                        testAppName,
+                        null,
+                        null
+                );
+        // and add our argument
+        cmd.add(String.valueOf(port));
         ProcessBuilder builder;
-        builder = new ProcessBuilder("java", "-cp", classpath, testAppName,
-                String.valueOf(port));
+        builder = new ProcessBuilder(cmd);
         builder.redirectError(ProcessBuilder.Redirect.INHERIT);
         builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         Process process = builder.start();
