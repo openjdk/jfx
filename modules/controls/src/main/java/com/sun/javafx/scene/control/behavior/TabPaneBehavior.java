@@ -58,12 +58,12 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
             new KeyMapping(RIGHT, e -> rtl(tabPane, this::selectPreviousTab, this::selectNextTab)),
             new KeyMapping(HOME, e -> {
                 if (getNode().isFocused()) {
-                    moveSelection(0, 1);
+                    moveSelection(-1, 1);
                 }
             }),
             new KeyMapping(END, e -> {
                 if (getNode().isFocused()) {
-                    moveSelection(getNode().getTabs().size() - 1, -1);
+                    moveSelection(getNode().getTabs().size(), -1);
                 }
             }),
             new KeyMapping(new KeyBinding(PAGE_UP).ctrl(), e -> selectPreviousTab()),
@@ -117,6 +117,8 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
 
     private void moveSelection(int startIndex, int delta) {
         final TabPane tabPane = getNode();
+        if (tabPane.getTabs().isEmpty()) return;
+
         int tabIndex = findValidTab(startIndex, delta);
         if (tabIndex > -1) {
             final SelectionModel<Tab> selectionModel = tabPane.getSelectionModel();
