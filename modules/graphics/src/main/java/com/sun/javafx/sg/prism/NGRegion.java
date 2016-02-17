@@ -1575,8 +1575,10 @@ public class NGRegion extends NGGroup {
                     final double segmentLength = dashLength + gapLength;
                     final double divided = lineLength / segmentLength;
                     final double numSegments = (int) divided;
-                    final double dashCumulative = numSegments * dashLength;
-                    gapLength = (lineLength - dashCumulative) / numSegments;
+                    if (numSegments > 0) {
+                        final double dashCumulative = numSegments * dashLength;
+                        gapLength = (lineLength - dashCumulative) / numSegments;
+                    }
                     array = new double[] {dashLength, gapLength};
                     dashOffset = (float) (dashLength*.6);
                 } else {
