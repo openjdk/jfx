@@ -48,14 +48,23 @@ import javafx.stage.Stage;
  *
  * @sampleName Inner Shadow
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/visual_effects.htm#JFXTE191 JavaFX Visual Effects
  * @playground sample.fill (name="Text Fill")
  * @playground innerShadow.radius (name="Inner Shadow Radius", min=0, max=20)
  * @playground innerShadow.offsetX (name="Inner Shadow Offset X", min=-10, max=10)
  * @playground innerShadow.offsetY (name="Inner Shadow Offset Y", min=-10, max=10)
  * @playground innerShadow.color (name="Inner Shadow Color")
+ *
  * @see javafx.scene.effect.InnerShadow
  * @see javafx.scene.effect.Effect
+ * @see javafx.scene.layout.StackPane
  * @embedded
+ *
+ * @related /Graphics 2d/Digital Clock
+ * @related /Graphics 2d/Effects/Drop Shadow
+ * @related /Graphics 2d/Effects/Gaussian Blur
+ * @related /Graphics 2d/Effects/Reflection
+ * @related /Graphics 2d/Effects/Sepia Tone
  */
 public class InnerShadowApp extends Application {
 

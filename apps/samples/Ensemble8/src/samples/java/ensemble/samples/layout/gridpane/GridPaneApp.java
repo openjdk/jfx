@@ -61,26 +61,42 @@ import javafx.stage.Stage;
  *
  * @sampleName GridPane
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/layout-tutorial/index.html JavaFX Layouts
+ * @see javafx.scene.control.Label
+ * @see javafx.scene.layout.ColumnConstraints
  * @see javafx.scene.layout.GridPane
- * @related /Controls/Text/Simple Label
+ * @see javafx.scene.layout.RowConstraints
  * @embedded
+ *
+ * @related /Layout/AnchorPane
+ * @related /Layout/BorderPane
+ * @related /Layout/FlowPane
+ * @related /Layout/HBox
+ * @related /Controls/Text/Simple Label
+ * @related /Layout/StackPane
+ * @related /Layout/TilePane
+ * @related /Layout/VBox
  */
 public class GridPaneApp extends Application {
-
-    private static final Image ICON_48 = new Image(GridPaneApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
 
     public Parent createContent() {
         VBox vbox = new VBox();
 
-        Label gridPerCaption = new Label("GridPane content placement by influencing row and column percentages.");
+        String percent =
+            "Content placement by influencing row and column percentages.";
+        Label gridPerCaption = new Label(percent);
         gridPerCaption.setWrapText(true);
         GridPane gridPer = createGridPanePercentage();
 
-        Label gridRCInfoCaption = new Label("GridPane content placement by influencing the rows and columns themselves:");
+        String them =
+            "Content placement by influencing the rows and columns themselves:";
+        Label gridRCInfoCaption = new Label(them);
         gridRCInfoCaption.setWrapText(true);
         GridPane gridRCInfo = createGridPaneRCInfo();
 
-        Label gridConstCaption = new Label("GridPane content placement by specifying rows and columns:");
+        String specify =
+            "Content placement by specifying rows and columns:";
+        Label gridConstCaption = new Label(specify);
         gridConstCaption.setWrapText(true);
         GridPane gridConst = createGridPaneConst();
 
@@ -135,9 +151,10 @@ public class GridPaneApp extends Application {
         return grid;
     }
 
-    //The resulting GridPane places the child by influencing the rows and columns themselves
-    //via GridRowInfo and GridColumnInfo. This grid uses the preferred
-    //width/height and max/min width/height.
+    // The resulting GridPane places the child by influencing the
+    // rows and columns themselves
+    // via GridRowInfo and GridColumnInfo. This grid uses the preferred
+    // width/height and max/min width/height.
     private GridPane createGridPaneRCInfo() {
         GridPane grid = new GridPane();
         grid.setPadding(new Insets(8, 8, 8, 8));
@@ -163,6 +180,8 @@ public class GridPaneApp extends Application {
         GridPane.setHalignment(rating, HPos.RIGHT);
         Label ratingValue = new Label("Excellent");
 
+        String IMAGE = "/ensemble/samples/shared-resources/icon-48x48.png";
+        Image ICON_48 = new Image(getClass().getResourceAsStream(IMAGE));
         ImageView imageView = new ImageView(ICON_48);
         GridPane.setHalignment(imageView, HPos.CENTER);
 
@@ -174,11 +193,12 @@ public class GridPaneApp extends Application {
         GridPane.setConstraints(imageView, 2, 1);
         GridPane.setConstraints(rating, 0, 2);
         GridPane.setConstraints(ratingValue, 1, 2);
-        grid.getChildren().addAll(category, categoryValue, company, companyValue, imageView, rating, ratingValue);
+        grid.getChildren().addAll(category, categoryValue, company,
+                                  companyValue, imageView, rating, ratingValue);
         return grid;
     }
 
-    //grid1 places the child by specifying the rows and columns in GridPane.setConstraints()
+    // Places child by specifying rows & columns in GridPane.setConstraints()
     private GridPane createGridPaneConst() {
         GridPane grid = new GridPane();
         grid.setHgap(4);

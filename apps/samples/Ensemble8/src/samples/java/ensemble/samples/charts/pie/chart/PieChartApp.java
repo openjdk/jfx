@@ -47,7 +47,7 @@ import javafx.stage.Stage;
  *
  * @sampleName Pie Chart
  * @preview preview.png
- * @see javafx.scene.chart.PieChart
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground chart.clockwise
  * @playground chart.labelLineLength
@@ -58,7 +58,10 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.PieChart
  * @embedded
+ *
+ * @related /Charts/Pie/Drilldown Pie Chart
  */
 public class PieChartApp extends Application {
 

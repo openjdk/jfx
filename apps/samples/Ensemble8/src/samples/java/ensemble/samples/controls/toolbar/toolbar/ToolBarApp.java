@@ -43,8 +43,14 @@ import javafx.stage.Stage;
  *
  * @sampleName Tool Bar
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
+ * @see javafx.scene.control.Button
  * @see javafx.scene.control.ToolBar
  * @embedded
+ *
+ * @related /Media/Advanced Media
+ * @related /Layout/BorderPane
+ * @related /Controls/Toolbar/Styled Tool Bar
  */
 public class ToolBarApp extends Application {
 

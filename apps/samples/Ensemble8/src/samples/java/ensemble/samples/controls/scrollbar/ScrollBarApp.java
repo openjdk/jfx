@@ -49,8 +49,14 @@ import javafx.stage.Stage;
  *
  * @sampleName ScrollBar
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.ScrollBar
+ * @see javafx.scene.shape.Circle
+ * @see javafx.scene.shape.Rectangle
  * @embedded
+ *
+ * @related /Graphics 2d/Display Shelf
+ * @related /Controls/HTML Editor
  */
 public class ScrollBarApp extends Application {
     private Circle circle;
@@ -65,31 +71,38 @@ public class ScrollBarApp extends Application {
     private static final int circleRadius = 90;
 
     public Parent createContent() {
-        Rectangle bg = new Rectangle(xBarWidth+yBarWidth,xBarHeight+yBarHeight,Color.rgb(90,90,90));
-        Rectangle box = new Rectangle (100,100,Color.rgb(150,150,150));
+        Rectangle bg = new Rectangle(xBarWidth + yBarWidth,
+                                     xBarHeight + yBarHeight,
+                                     Color.rgb(90,90,90));
+        Rectangle box = new Rectangle(100, 100, Color.rgb(150,150,150));
         box.setTranslateX(147);
         box.setTranslateY(147);
 
-        //create moveable circle
-        circle = new Circle(45,45, circleRadius,  Color.rgb(90,210,210));
+        // create moveable circle
+        circle = new Circle(45,45, circleRadius, Color.rgb(90,210,210));
         circle.setOpacity(0.4);
         circle.relocate(0,15);
 
-        //create horizontal scrollbar
-        xscrollBar = horizontalScrollBar(-1,-1,xBarWidth,xBarHeight,xBarWidth,xBarHeight);
+        // create horizontal scrollbar
+        final ChangeListener<Number> xValueListener =
+            (ObservableValue<? extends Number> observable,
+             Number oldValue, Number newValue) -> {
+                // changes the x position of the circle
+                setScrollValueX(xscrollBar.getValue(), circle);
+            };
+        xscrollBar = horizontalScrollBar();
         xscrollBar.setUnitIncrement(20.0);
-        xscrollBar.valueProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
-            //changes the x position of the circle
-            setScrollValueX(xscrollBar.getValue(), circle);
-        });
-
-        //create vertical scrollbar
-        yscrollBar = verticalScrollBar(-1,-1,yBarWidth,yBarHeight,yBarWidth,yBarHeight);
-        yscrollBar.setUnitIncrement(20.0);
-        yscrollBar.valueProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
-            //changes the y position of the circle
+        xscrollBar.valueProperty().addListener(xValueListener);
+        // create vertical scrollbar
+        final ChangeListener<Number> yValueListener =
+            (ObservableValue<? extends Number> observable,
+             Number oldValue, Number newValue) -> {
+            // changes the y position of the circle
             setScrollValueY(yscrollBar.getValue(), circle);
-        });
+        };
+        yscrollBar = verticalScrollBar();
+        yscrollBar.setUnitIncrement(20.0);
+        yscrollBar.valueProperty().addListener(yValueListener);
 
         //shift position of vertical scrollbar to right side of scene
         yscrollBar.setTranslateX(yBarHeight);
@@ -101,33 +114,33 @@ public class ScrollBarApp extends Application {
         return group;
     }
 
-    //Create a ScrollBar with given parameters
-    private ScrollBar horizontalScrollBar(double minw, double minh, double prefw, double prefh, double maxw, double maxh) {
+    // Create a ScrollBar with given parameters
+    private ScrollBar horizontalScrollBar() {
         final ScrollBar scrollBar = new ScrollBar();
-        scrollBar.setMinSize(minw, minh);
-        scrollBar.setPrefSize(prefw, prefh);
-        scrollBar.setMaxSize(maxw, maxh);
+        scrollBar.setMinSize(-1, -1);
+        scrollBar.setPrefSize(xBarWidth, xBarHeight);
+        scrollBar.setMaxSize(xBarWidth, xBarHeight);
         scrollBar.setVisibleAmount(50);
         scrollBar.setMax(xBarWidth-(2*circleRadius));
         return scrollBar;
     }
 
-    //Create a ScrollBar with given parameters
-    private ScrollBar verticalScrollBar(double minw, double minh, double prefw, double prefh, double maxw, double maxh) {
+    // Create a ScrollBar with given parameters
+    private ScrollBar verticalScrollBar() {
         final ScrollBar scrollBar = new ScrollBar();
-        scrollBar.setMinSize(minw, minh);
-        scrollBar.setPrefSize(prefw, prefh);
-        scrollBar.setMaxSize(maxw, maxh);
+        scrollBar.setMinSize(-1, -1);
+        scrollBar.setPrefSize(yBarWidth, yBarHeight);
+        scrollBar.setMaxSize(yBarWidth, yBarHeight);
         scrollBar.setVisibleAmount(50);
         scrollBar.setMax(yBarHeight-(2*circleRadius));
         return scrollBar;
     }
-    //Updates x values
+    // Updates x values
     private void setScrollValueX(double v, Circle circle) {
         this.xscrollValue = v;
         circle.relocate(xscrollValue, yscrollValue);
     }
-    //Updates x values
+    // Updates x values
     private void setScrollValueY(double v, Circle circle) {
         this.yscrollValue = v+xBarHeight;
         circle.relocate(xscrollValue, yscrollValue);

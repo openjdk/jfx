@@ -43,8 +43,16 @@ import javafx.stage.Stage;
  *
  * @sampleName Key Stroke Motion
  * @preview preview.png
- * @see javafx.scene.input.KeyEvent
+ * @docUrl http://docs.oracle.com/javase/8/javafx/events-tutorial/events.htm#JFXED117 JavaFX Events
  * @see javafx.animation.Interpolator
+ * @see javafx.scene.input.KeyEvent
+ * @see javafx.scene.input.MouseEvent
+ * @see javafx.scene.layout.Region
+ *
+ * @related /Graphics 2d/Effects/Drop Shadow
+ * @related /Animation/Interpolator
+ * @related /Scenegraph/Events/KeyEvent
+ * @related /Scenegraph/Events/MouseEvent
  */
 public class KeyStrokeMotionApp extends Application {
 

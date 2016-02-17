@@ -46,11 +46,7 @@ import javafx.stage.Stage;
  *
  * @sampleName Candle Stick Chart
  * @preview preview.png
- * @see javafx.scene.chart.NumberAxis
- * @see javafx.scene.chart.XYChart
  * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
- * @related /Charts/Scatter/Scatter Chart
- * @related /Charts/Scatter/Advanced Scatter Chart
  * @highlight
  * @playground chart.data
  * @playground - (name="xAxis")
@@ -99,6 +95,13 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.NumberAxis
+ * @see javafx.scene.chart.XYChart
+ * @see javafx.scene.shape.LineTo
+ * @see javafx.scene.shape.MoveTo
+ *
+ * @related /Charts/Scatter/Scatter Chart
+ * @related /Charts/Line/Stock Line Chart
  */
 public class CandleStickChartApp extends Application {
 
@@ -132,9 +135,9 @@ public class CandleStickChartApp extends Application {
             {26, 25, 35, 38, 20, 21.4},
             {27, 24, 12, 30, 8,  19.6},
             {28, 23, 44, 46, 15, 22.2},
-            {29, 28, 18, 30, 12, 23},
-            {30, 28, 18, 30, 12, 23.2},
-            {31, 28, 18, 30, 12, 22}
+            {29, 30, 18, 38, 14, 23},
+            {30, 28, 16, 36, 12, 21.2},
+            {31, 26, 14, 30, 10, 20}
     };
 
     private CandleStickChart chart;
@@ -153,9 +156,10 @@ public class CandleStickChartApp extends Application {
         XYChart.Series<Number,Number> series = new XYChart.Series<Number,Number>();
         for (int i=0; i< data.length; i++) {
             double[] day = data[i];
-            series.getData().add(
-                new XYChart.Data<Number,Number>(day[0],day[1],new CandleStickExtraValues(day[2],day[3],day[4],day[5]))
-            );
+            final CandleStickExtraValues extras =
+                new CandleStickExtraValues(day[2],day[3],day[4],day[5]);
+            series.getData().add(new XYChart.Data<Number,Number>(day[0],day[1],
+                                                                 extras));
         }
         ObservableList<XYChart.Series<Number,Number>> data = chart.getData();
         if (data == null) {

@@ -34,10 +34,10 @@ package ensemble.samples.controls.menu;
 import javafx.application.Application;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -59,9 +59,14 @@ import javafx.stage.Stage;
  *
  * @sampleName Menu
  * @preview preview.png
- * @see javafx.scene.control.MenuBar
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.Menu
+ * @see javafx.scene.control.MenuBar
  * @see javafx.scene.control.MenuItem
+ * @see javafx.scene.input.KeyCombination
+ *
+ * @related /Controls/DatePicker
+ * @related /Graphics 2d/Images/Image Creation
  */
 public class MenuApp extends Application {
 
@@ -71,21 +76,21 @@ public class MenuApp extends Application {
         final String os = System.getProperty("os.name");
         VBox vbox = new VBox(20);
         vbox.setPrefSize(300, 100);
-        final Label outputLabel = new Label();
         final MenuBar menuBar = new MenuBar();
 
-        //Sub menus for Options->Submenu 1
+        // Sub menus for Options->Submenu 1
         MenuItem menu111 = new MenuItem("blah");
         final MenuItem menu112 = new MenuItem("foo");
         final CheckMenuItem menu113 = new CheckMenuItem("Show \"foo\" item");
         menu113.setSelected(true);
         menu113.selectedProperty().addListener((Observable valueModel) -> {
             menu112.setVisible(menu113.isSelected());
-            System.err.println("MenuItem \"foo\" is now " + (menu112.isVisible() ? "" : "not") + " visible.");
         });
         // Options->Submenu 1 submenu
-        Menu menu11 = new Menu("Submenu 1",
-                new ImageView(new Image(MenuApp.class.getResourceAsStream("/ensemble/samples/shared-resources/menuInfo.png"))));
+        final String INFO = "/ensemble/samples/shared-resources/menuInfo.png";
+        final Image INFO_MENU_IMAGE =
+            new Image(getClass().getResourceAsStream(INFO));
+        Menu menu11 = new Menu("Submenu 1", new ImageView(INFO_MENU_IMAGE));
         menu11.getItems().addAll(menu111, menu112, menu113);
         // Options->Submenu 2 submenu
         MenuItem menu121 = new MenuItem("Item 1");
@@ -94,12 +99,13 @@ public class MenuApp extends Application {
         menu12.getItems().addAll(menu121, menu122);
 
         // Options->Change Text
-        final String change[] = {"Change Text", "Change Back"};
+        final String change[] = { "Change Text", "Change Back" };
         final MenuItem menu13 = new MenuItem(change[0]);
         menu13.setAccelerator(KeyCombination.keyCombination("Shortcut+C"));
         menu13.setOnAction((ActionEvent t) -> {
-            menu13.setText((menu13.getText().equals(change[0])) ? change[1] : change[0]);
-            outputLabel.setText(((MenuItem) t.getTarget()).getText() + " - action called");
+            final String menuText =
+                menu13.getText().equals(change[0]) ? change[1] : change[0];
+            menu13.setText(menuText);
         });
 
         // Options menu
@@ -110,9 +116,11 @@ public class MenuApp extends Application {
         if (os != null && os.startsWith("Mac")) {
             Menu systemMenuBarMenu = new Menu("MenuBar Options");
 
-            final CheckMenuItem useSystemMenuBarCB = new CheckMenuItem("Use System Menu Bar (works only when MenuApp is run outside of Ensemble)");
+            final String check = "Use System Menu Bar (Only works on Mac)";
+            final CheckMenuItem useSystemMenuBarCB = new CheckMenuItem(check);
             useSystemMenuBarCB.setSelected(true);
-            menuBar.useSystemMenuBarProperty().bindBidirectional(useSystemMenuBarCB.selectedProperty());
+            BooleanProperty selectedCB = useSystemMenuBarCB.selectedProperty();
+            menuBar.useSystemMenuBarProperty().bindBidirectional(selectedCB);
             systemMenuBarMenu.getItems().add(useSystemMenuBarCB);
 
             menuBar.getMenus().add(systemMenuBarMenu);
@@ -123,9 +131,12 @@ public class MenuApp extends Application {
             hbox.getChildren().add(sysMenuLabel);
             vbox.getChildren().add(hbox);
             sysMenuLabel.setVisible((menuBar.getHeight() == 0));
-            menuBar.heightProperty().addListener((ObservableValue<? extends Number> ov, Number t, Number t1) -> {
-                sysMenuLabel.setVisible((menuBar.getHeight() == 0));
-            });
+            ChangeListener<? super Number> heightListener =
+                (ObservableValue<? extends Number> ov,
+                        Number old, Number now) -> {
+                    sysMenuLabel.setVisible((menuBar.getHeight() == 0));
+                };
+            menuBar.heightProperty().addListener(heightListener);
         }
 
         vbox.getChildren().addAll(menuBar);

@@ -65,10 +65,12 @@ public class DigitalClock extends Parent {
             digits[i].setLayoutY(-1);
             Rectangle background;
             if (i < 6) {
-                background = createBackground(Color.web("#a39f91"), Color.web("#FFFFFF"));
+                background = createBackground(Color.web("#a39f91"),
+                                              Color.web("#FFFFFF"));
                 digits[i].setFill(Color.web("#000000"));
             } else {
-                background = createBackground(Color.web("#bdbeb3"), Color.web("#FF0000"));
+                background = createBackground(Color.web("#bdbeb3"),
+                                              Color.web("#FF0000"));
                 digits[i].setFill(Color.web("#FFFFFF"));
             }
             digitsGroup[i] = new Group(background, digits[i]);

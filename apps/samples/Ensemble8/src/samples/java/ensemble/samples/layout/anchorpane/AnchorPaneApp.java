@@ -47,19 +47,31 @@ import javafx.stage.Stage;
  *
  * @sampleName AnchorPane
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/layout-tutorial/index.html JavaFX Layouts
+ * @see javafx.scene.control.Button
+ * @see javafx.scene.control.Label
  * @see javafx.scene.layout.AnchorPane
- * @see javafx.collections.ObservableList
- * @related /Controls/Text/Simple Label
+ * @see javafx.scene.image.ImageView
  * @embedded
+ *
+ * @related /Layout/BorderPane
+ * @related /Layout/FlowPane
+ * @related /Layout/GridPane
+ * @related /Layout/HBox
+ * @related /Graphics 2d/Images/Image Creation
+ * @related /Controls/Text/Simple Label
+ * @related /Layout/StackPane
+ * @related /Layout/TilePane
+ * @related /Layout/VBox
  */
 public class AnchorPaneApp extends Application {
-
-    private static final Image ICON_48 = new Image(AnchorPaneApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
 
     public Parent createContent() {
         AnchorPane anchorPane = new AnchorPane();
 
         Label label1 = new Label("We are all in an AnchorPane.");
+        String IMAGE = "/ensemble/samples/shared-resources/icon-48x48.png";
+        Image ICON_48 = new Image(getClass().getResourceAsStream(IMAGE));
         ImageView imageView = new ImageView(ICON_48);
         Button button1 = new Button("Submit");
 

@@ -51,10 +51,11 @@ import javafx.stage.Stage;
  *
  * @sampleName Radial Gradient
  * @preview preview.png
+ * @see javafx.scene.paint.Color
+ * @see javafx.scene.paint.Paint
  * @see javafx.scene.paint.RadialGradient
  * @see javafx.scene.shape.Shape
- * @see javafx.scene.paint.Paint
- * @see javafx.scene.paint.Color
+ *
  * @related /Graphics 2d/Paints/Color
  * @related /Graphics 2d/Paints/Linear Gradient
  */

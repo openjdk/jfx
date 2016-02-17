@@ -35,7 +35,6 @@ package ensemble.samples.charts.pie.drilldown;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.PieChart;
@@ -51,25 +50,26 @@ import javafx.stage.Stage;
  *
  * @sampleName Drilldown Pie Chart
  * @preview preview.png
- * @see javafx.event.EventHandler
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @see javafx.scene.chart.PieChart
  * @see javafx.scene.input.MouseEvent
+ *
+ * @related /Charts/Pie/Drilldown Pie Chart
  */
 public class DrilldownPieChartApp extends Application {
 
-    PieChart.Data A, B, C, D;
     private ObservableList<Data> data;
 
     public Parent createContent() {
-        data = FXCollections.observableArrayList(
-                    A = new PieChart.Data("A", 20),
-                    B = new PieChart.Data("B", 30),
-                    C = new PieChart.Data("C", 10),
-                    D = new PieChart.Data("D", 40)
-                );
-        PieChart pie = new PieChart(data);
-        pie.getStylesheets().add(DrilldownPieChartApp.class
-                .getResource("DrilldownChart.css").toExternalForm());
+        Data A, B, C, D;
+        data = FXCollections.observableArrayList(A = new Data("A", 20),
+                                                 B = new Data("B", 30),
+                                                 C = new Data("C", 10),
+                                                 D = new Data("D", 40));
+        final PieChart pie = new PieChart(data);
+        final String drillDownChartCss =
+            getClass().getResource("DrilldownChart.css").toExternalForm();
+        pie.getStylesheets().add(drillDownChartCss);
 
         setDrilldownData(pie, A, "a");
         setDrilldownData(pie, B, "b");
@@ -78,14 +78,15 @@ public class DrilldownPieChartApp extends Application {
         return pie;
     }
 
-    private void setDrilldownData(final PieChart pie, PieChart.Data data, final String labelPrefix) {
+    private void setDrilldownData(final PieChart pie, final Data data,
+                                  final String labelPrefix) {
         data.getNode().setOnMouseClicked((MouseEvent t) -> {
             pie.setData(FXCollections.observableArrayList(
-                    new PieChart.Data(labelPrefix + "-1", 7),
-                    new PieChart.Data(labelPrefix + "-2", 2),
-                    new PieChart.Data(labelPrefix + "-3", 5),
-                    new PieChart.Data(labelPrefix + "-4", 3),
-                    new PieChart.Data(labelPrefix + "-5", 2)));
+                    new Data(labelPrefix + "-1", 7),
+                    new Data(labelPrefix + "-2", 2),
+                    new Data(labelPrefix + "-3", 5),
+                    new Data(labelPrefix + "-4", 3),
+                    new Data(labelPrefix + "-5", 2)));
         });
     }
 

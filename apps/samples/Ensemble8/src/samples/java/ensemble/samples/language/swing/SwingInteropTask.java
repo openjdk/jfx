@@ -34,6 +34,7 @@ package ensemble.samples.language.swing;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
 import javafx.concurrent.Task;
 
 public class SwingInteropTask extends Task<Process> {
@@ -45,19 +46,20 @@ public class SwingInteropTask extends Task<Process> {
 
     @Override
     protected Process call() throws Exception {
-        String javaHome = System.getProperty("java.home");
-        String javaCommand = javaHome + File.separator + "bin" + File.separator + "java";
+        String home = System.getProperty("java.home");
+        String java = home + File.separator + "bin" + File.separator + "java";
         String classpath = System.getProperty("java.class.path");
         String className = SwingInterop.class.getCanonicalName();
 
         List<String> command = new ArrayList<>();
-        command.add(javaCommand);
+        command.add(java);
         command.add("-cp");
         command.add(classpath);
         command.add(className);
+
         ProcessBuilder pb = new ProcessBuilder(command);
         proc = pb.start();
-        //Assuming there is little output to stdout, stderr
+        // Assuming there is little output to stdout, stderr
         proc.waitFor();
 
         return proc;
@@ -69,5 +71,4 @@ public class SwingInteropTask extends Task<Process> {
             proc.destroy();
         }
     }
-
 }

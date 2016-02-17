@@ -33,7 +33,7 @@ package ensemble.samples.controls.text.textvalidator;
 
 import javafx.scene.Parent;
 
-public class ValidationResult extends Parent{
+public class ValidationResult extends Parent {
     public enum Type { ERROR, WARNING, SUCCESS }
     private final String message;
     private final Type type;

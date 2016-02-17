@@ -55,13 +55,15 @@ public class Candle extends Group {
         Tooltip.install(bar, tooltip);
     }
 
-    public void setSeriesAndDataStyleClasses(String seriesStyleClass, String dataStyleClass) {
+    public void setSeriesAndDataStyleClasses(String seriesStyleClass,
+                                             String dataStyleClass) {
         this.seriesStyleClass = seriesStyleClass;
         this.dataStyleClass = dataStyleClass;
         updateStyleClasses();
     }
 
-    public void update(double closeOffset, double highOffset, double lowOffset, double candleWidth) {
+    public void update(double closeOffset, double highOffset,
+                       double lowOffset, double candleWidth) {
         openAboveClose = closeOffset > 0;
         updateStyleClasses();
         highLowLine.setStartY(highOffset);
@@ -70,23 +72,29 @@ public class Candle extends Group {
             candleWidth = bar.prefWidth(-1);
         }
         if (openAboveClose) {
-            bar.resizeRelocate(-candleWidth / 2, 0, candleWidth, closeOffset);
+            bar.resizeRelocate(-candleWidth / 2, 0,
+                               candleWidth, closeOffset);
         } else {
-            bar.resizeRelocate(-candleWidth / 2, closeOffset, candleWidth, closeOffset * -1);
+            bar.resizeRelocate(-candleWidth / 2, closeOffset,
+                               candleWidth, -closeOffset);
         }
     }
 
     public void updateTooltip(double open, double close, double high, double low) {
         TooltipContent tooltipContent = (TooltipContent) tooltip.getGraphic();
         tooltipContent.update(open, close, high, low);
-//                    tooltip.setText("Open: "+open+"\nClose: "+close+"\nHigh: "+high+"\nLow: "+low);
     }
 
     private void updateStyleClasses() {
-        getStyleClass().setAll("candlestick-candle", seriesStyleClass, dataStyleClass);
-        highLowLine.getStyleClass().setAll("candlestick-line", seriesStyleClass, dataStyleClass,
-                openAboveClose ? "open-above-close" : "close-above-open");
-        bar.getStyleClass().setAll("candlestick-bar", seriesStyleClass, dataStyleClass,
-                openAboveClose ? "open-above-close" : "close-above-open");
+        final String aboveClose =
+            openAboveClose ? "open-above-close" : "close-above-open";
+        getStyleClass().setAll("candlestick-candle",
+                               seriesStyleClass, dataStyleClass);
+        highLowLine.getStyleClass().setAll("candlestick-line",
+                                           seriesStyleClass, dataStyleClass,
+                                           aboveClose);
+        bar.getStyleClass().setAll("candlestick-bar",
+                                   seriesStyleClass, dataStyleClass,
+                                   aboveClose);
     }
 }

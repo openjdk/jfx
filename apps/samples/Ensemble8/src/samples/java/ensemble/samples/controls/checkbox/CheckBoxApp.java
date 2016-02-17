@@ -44,9 +44,14 @@ import javafx.stage.Stage;
  *
  * @sampleName Check Box
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.CheckBox
- * @related /Controls/Radio Button
+ * @see javafx.scene.layout.VBox
  * @embedded
+ *
+ * @related /Controls/Radio Button
+ * @related /Animation/Timeline
+ * @related /Layout/VBox
  */
 public class CheckBoxApp extends Application {
 

@@ -52,26 +52,32 @@ import javafx.stage.Stage;
  *
  * @sampleName WebView
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/embedded-browser-tutorial/overview.htm#JFXWV135 Using JavaFX WebView Component
  * @see javafx.scene.web.WebView
  * @see javafx.scene.web.WebEngine
- * @related /Controls/HTML Editor
  * @conditionalFeatures WEB
+ *
+ * @related /Controls/HTML Editor
+ * @related /Language/SwingInterop
  */
 public class WebViewApp extends Application {
 
-    public static final String DEFAULT_URL = "http://www.oracle.com/us/index.html";
 
     public Parent createContent() {
 
         WebView webView = new WebView();
 
         final WebEngine webEngine = webView.getEngine();
+        final String DEFAULT_URL = "http://www.oracle.com/us/index.html";
         webEngine.load(DEFAULT_URL);
 
         final TextField locationField = new TextField(DEFAULT_URL);
-        webEngine.locationProperty().addListener((ObservableValue<? extends String> observable, String oldValue, String newValue) -> {
-            locationField.setText(newValue);
-        });
+        final ChangeListener<String> changeListener =
+            (ObservableValue<? extends String> observable,
+             String oldValue, String newValue) -> {
+                locationField.setText(newValue);
+            };
+        webEngine.locationProperty().addListener(changeListener);
         EventHandler<ActionEvent> goAction = (ActionEvent event) -> {
             webEngine.load(locationField.getText().startsWith("http://")
                     ? locationField.getText()
@@ -89,7 +95,7 @@ public class WebViewApp extends Application {
         hBox.getChildren().setAll(locationField, goButton);
         HBox.setHgrow(locationField, Priority.ALWAYS);
 
-        VBox vBox = new VBox(5);
+        final VBox vBox = new VBox(5);
         vBox.getChildren().setAll(hBox, webView);
         vBox.setPrefSize(800, 400);
         VBox.setVgrow(webView, Priority.ALWAYS);

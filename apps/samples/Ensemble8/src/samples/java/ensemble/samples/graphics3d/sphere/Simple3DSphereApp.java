@@ -64,27 +64,7 @@ import javafx.util.Duration;
  * self illumination map.
  * @sampleName 3D Sphere
  * @preview preview.png
- * @see javafx.scene.paint.PhongMaterial
- * @see javafx.scene.shape.Sphere
- * @see javafx.animation.Animation
- * @see javafx.animation.Interpolator
- * @see javafx.animation.RotateTransition
- * @see javafx.beans.binding.Bindings
- * @see javafx.beans.property.BooleanProperty
- * @see javafx.beans.property.DoubleProperty
- * @see javafx.beans.property.SimpleBooleanProperty
- * @see javafx.beans.property.SimpleDoubleProperty
- * @see javafx.scene.AmbientLight
- * @see javafx.scene.Group
- * @see javafx.scene.PerspectiveCamera
- * @see javafx.scene.PointLight
- * @see javafx.scene.SceneAntialiasing
- * @see javafx.scene.SubScene
- * @see javafx.scene.image.Image
- * @see javafx.scene.paint.Color
- * @see javafx.scene.transform.Rotate
- * @see javafx.scene.transform.Translate
- * @see javafx.util.Duration
+ * @docUrl http://docs.oracle.com/javase/8/javafx/graphics-tutorial/javafx-3d-graphics.htm#JFXGR256 JavaFX 3D Graphics
  * @playground - (name="Material")
  * @playground material.diffuseColor
  * @playground diffuseMap
@@ -100,7 +80,20 @@ import javafx.util.Duration;
  * @playground - (name="Sphere")
  * @playground earth.drawMode
  * @playground earth.cullFace
+ *
+ * @see javafx.scene.AmbientLight
+ * @see javafx.scene.PerspectiveCamera
+ * @see javafx.scene.PointLight
+ * @see javafx.scene.SceneAntialiasing
+ * @see javafx.scene.paint.PhongMaterial
+ * @see javafx.scene.shape.Sphere
+ * @see javafx.scene.transform.Rotate
  * @conditionalFeatures SCENE3D
+ *
+ * @related /Graphics 3d/Xylophone
+ * @related /Graphics 3d/3D Box
+ * @related /Graphics 3d/3D Cubes
+ * @related /Graphics 3d/3D Sphere System
  */
 public class Simple3DSphereApp extends Application {
 
@@ -116,10 +109,11 @@ public class Simple3DSphereApp extends Application {
 
     public Parent createContent() throws Exception {
 
-        Image dImage = new Image(Simple3DSphereApp.class.getResource("earth-d.jpg").toExternalForm());
-        Image nImage = new Image(Simple3DSphereApp.class.getResource("earth-n.jpg").toExternalForm());
-        Image sImage = new Image(Simple3DSphereApp.class.getResource("earth-s.jpg").toExternalForm());
-        Image siImage = new Image(Simple3DSphereApp.class.getResource("earth-l.jpg").toExternalForm());
+        String base = "/ensemble/samples/graphics3d/sphere/earth-";
+        Image dImage = new Image(getClass().getResource(base + "d.jpg").toString());
+        Image nImage = new Image(getClass().getResource(base + "n.jpg").toString());
+        Image sImage = new Image(getClass().getResource(base + "s.jpg").toString());
+        Image siImage = new Image(getClass().getResource(base + "l.jpg").toString());
 
         material = new PhongMaterial();
         material.setDiffuseColor(Color.WHITE);
@@ -167,7 +161,8 @@ public class Simple3DSphereApp extends Application {
         rt.play();
 
         // Use a SubScene
-        SubScene subScene = new SubScene(root, 400, 300, true, SceneAntialiasing.BALANCED);
+        SubScene subScene = new SubScene(root, 400, 300,
+                                         true, SceneAntialiasing.BALANCED);
         subScene.setFill(Color.TRANSPARENT);
         subScene.setCamera(camera);
 

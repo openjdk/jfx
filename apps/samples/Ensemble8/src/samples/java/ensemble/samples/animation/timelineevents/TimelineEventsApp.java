@@ -56,63 +56,70 @@ import javafx.util.Duration;
  *
  * @sampleName Timeline Events
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @see javafx.animation.KeyFrame
  * @see javafx.animation.KeyValue
  * @see javafx.animation.Timeline
- * @see javafx.util.Duration
  * @see javafx.event.ActionEvent
  * @see javafx.event.EventHandler
+ * @see javafx.util.Duration
+ *
+ * @related /Layout/StackPane
  * @related /Animation/Timeline
  */
 public class TimelineEventsApp extends Application {
-    //main timeline
+    // main timeline
     private Timeline timeline;
     private AnimationTimer timer;
-    //variable for storing actual frame
-    private Integer i=0;
+    // variable for storing animation relative frame count
+    private int frameCount = 0;
 
     public Parent createContent() {
-        //create a circle with effect
+        // create a circle with effect
         final Circle circle = new Circle(20,  Color.rgb(156,216,255));
         circle.setEffect(new Lighting());
-        //create a text inside a circle
-        final Text text = new Text (i.toString());
+        // create a text inside a circle
+        final Text text = new Text(Integer.toString(frameCount));
         text.setStroke(Color.BLACK);
-        //create a layout for circle with text inside
+        // create a layout for circle with text inside
         final StackPane stack = new StackPane();
         stack.getChildren().addAll(circle, text);
         stack.setLayoutX(30);
         stack.setLayoutY(30);
-        //create a timeline for moving the circle
+        // parent content
+        final Pane pane = new Pane(stack);
+        pane.setPrefSize(300, 100);
+        pane.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+
+        // create a timeline for moving the circle
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.setAutoReverse(true);
-        //one can add a specific action when each frame is started. There are one or more frames during
-        // executing one KeyFrame depending on set Interpolator.
+        // Add a specific action when each frame is started.
+        // There are one or more frames during executing one
+        // KeyFrame depending on the set Interpolator.
         timer = new AnimationTimer() {
             @Override
             public void handle(long l) {
-                text.setText(i.toString());
-                i++;
+                text.setText(String.format("%d", frameCount++));
             }
         };
-        //create a keyValue with factory: scaling the circle 2times
+        // create a keyValue with factory: scaling the circle 2times
         KeyValue keyValueX = new KeyValue(stack.scaleXProperty(), 2);
         KeyValue keyValueY = new KeyValue(stack.scaleYProperty(), 2);
-        //create a keyFrame, the keyValue is reached at time 2s
+        // create a keyFrame, the keyValue is reached at time 2s
         Duration duration = Duration.seconds(2);
-        //one can add a specific action when the keyframe is reached
+        // add a specific action when the keyframe is reached
         EventHandler<ActionEvent> onFinished = (ActionEvent t) -> {
             stack.setTranslateX(java.lang.Math.random() * 200);
-            //reset counter
-            i = 0;
+            // reset counter
+            frameCount = 0;
         };
-        KeyFrame keyFrame = new KeyFrame(duration, onFinished , keyValueX, keyValueY);
-        //add the keyframe to the timeline
+        KeyFrame keyFrame = new KeyFrame(duration, onFinished,
+                                         keyValueX, keyValueY);
+        // add the keyframe to the timeline
         timeline.getKeyFrames().add(keyFrame);
-        Pane pane = new Pane(stack);
-        pane.setPrefSize(300, 100);
-        pane.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+
         return pane;
     }
 

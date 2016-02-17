@@ -45,8 +45,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Arc
  * @preview preview.png
- * @see javafx.scene.shape.Shape
- * @see javafx.scene.paint.Color
  * @related /Graphics 2d/Shapes/Circle
  * @related /Graphics 2d/Shapes/Ellipse
  * @playground arc1.fill (name="Arc1 Fill")
@@ -56,7 +54,20 @@ import javafx.stage.Stage;
  * @playground arc2.strokeWidth (name="Arc 2 Stroke Width", min=0, max=5)
  * @playground arc2.radiusX (name="Arc 2 Radius X", min=0, max=50)
  * @playground arc2.radiusY (name="Arc 2 Radius Y", min=0, max=50)
+ * @see javafx.scene.shape.Arc
+ * @see javafx.scene.shape.Shape
+ * @see javafx.scene.paint.Color
  * @embedded
+ *
+ * @related /Graphics 2d/Shapes/Circle
+ * @related /Graphics 2d/Shapes/Cubic Curve
+ * @related /Graphics 2d/Shapes/Ellipse
+ * @related /Graphics 2d/Shapes/Line
+ * @related /Graphics 2d/Shapes/Path
+ * @related /Graphics 2d/Shapes/Polygon
+ * @related /Graphics 2d/Shapes/Polyline
+ * @related /Graphics 2d/Shapes/Quad Curve
+ * @related /Graphics 2d/Shapes/Rectangle
  */
 public class ArcApp extends Application {
 

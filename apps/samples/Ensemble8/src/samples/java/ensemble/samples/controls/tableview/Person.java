@@ -40,9 +40,9 @@ public class Person {
     private StringProperty lastName;
     private StringProperty email;
 
-    public Person(String fName, String lName, String email) {
-        this.firstName = new SimpleStringProperty(fName);
-        this.lastName = new SimpleStringProperty(lName);
+    public Person(String first, String last, String email) {
+        this.firstName = new SimpleStringProperty(first);
+        this.lastName = new SimpleStringProperty(last);
         this.email = new SimpleStringProperty(email);
     }
 

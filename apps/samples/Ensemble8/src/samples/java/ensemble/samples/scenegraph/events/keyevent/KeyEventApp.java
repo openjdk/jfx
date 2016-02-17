@@ -34,7 +34,6 @@ package ensemble.samples.scenegraph.events.keyevent;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;
@@ -50,24 +49,33 @@ import javafx.stage.Stage;
  *
  * @sampleName KeyEvent
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/events-tutorial/events.htm#JFXED117 JavaFX Events
+ * @see javafx.collections.ListChangeListener
+ * @see javafx.scene.control.ListView
  * @see javafx.scene.input.KeyCode
  * @see javafx.scene.input.KeyEvent
- * @see javafx.event.EventHandler
  * @embedded
+ *
+ * @related /Scenegraph/Events/Key Stroke Motion
+ * @related /Scenegraph/Events/MouseEvent
+ * @related /Controls/Listview/Simple ListView
  */
 public class KeyEventApp extends Application {
 
     public Parent createContent() {
-        //create a console for logging key events
-        final ListView<String> console = new ListView<String>(FXCollections.<String>observableArrayList());
-        // listen on the console items and remove old ones when we get over 20 items
-        console.getItems().addListener((ListChangeListener.Change<? extends String> change) -> {
+        // create a console for logging key events
+        final ListView<String> console =
+            new ListView<String>(FXCollections.<String>observableArrayList());
+        // listen on console items and remove old ones when we get over 20 items
+        ListChangeListener<? super String> listener =
+                (ListChangeListener.Change<? extends String> change) -> {
             while (change.next()) {
                 if (change.getList().size() > 20.0) {
                     change.getList().remove(0);
                 }
             }
-        });
+        };
+        console.getItems().addListener(listener);
         console.setPrefHeight(150);
         console.setMaxHeight(ListView.USE_PREF_SIZE);
 
@@ -75,7 +83,7 @@ public class KeyEventApp extends Application {
         final TextField textBox = new TextField();
         textBox.setPromptText("Write here");
         textBox.setStyle("-fx-font-size: 34;");
-        //add a key listeners
+        // add a key listeners
         textBox.setOnKeyPressed((KeyEvent ke) -> {
             console.getItems().add("Key Pressed: " + ke.getText());
         });

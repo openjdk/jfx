@@ -37,6 +37,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 /**
@@ -44,9 +45,13 @@ import javafx.stage.Stage;
  *
  * @sampleName Colored Buttons
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.Button
- * @related /Controls/Button/Graphic Button
+ * @see javafx.scene.paint.Color
  * @embedded
+ *
+ * @related /Controls/Button/Graphic Button
+ * @related /Controls/Button/Pill Button
  */
 public class ColorButtonApp extends Application {
 
@@ -55,27 +60,17 @@ public class ColorButtonApp extends Application {
         hBox.setSpacing(5);
         for (int i = 0; i < 7; i++) {
             Button b = new Button("Color");
-            b.setStyle("-fx-base: rgb(" + (10 * i) + "," + (20 * i) + "," + (10 * i) + ");");
+            b.setStyle(String.format("-fx-base: rgb(%d,%d,%d);",
+                                     (10 * i), (20 * i), (10 * i)));
             hBox.getChildren().add(b);
         }
         HBox hBox2 = new HBox();
         hBox2.setSpacing(5);
         hBox2.setTranslateY(30);
-        Button red = new Button("Red");
-        red.setStyle("-fx-base: red;");
-        Button orange = new Button("Orange");
-        orange.setStyle("-fx-base: orange;");
-        Button yellow = new Button("Yellow");
-        yellow.setStyle("-fx-base: yellow;");
-        Button green = new Button("Green");
-        green.setStyle("-fx-base: green;");
-        Button blue = new Button("Blue");
-        blue.setStyle("-fx-base: rgb(30,170,255);");
-        Button indigo = new Button("Indigo");
-        indigo.setStyle("-fx-base: blue;");
-        Button violet = new Button("Violet");
-        violet.setStyle("-fx-base: purple;");
-        hBox2.getChildren().addAll(red, orange, yellow, green, blue, indigo, violet);
+        hBox2.getChildren().addAll(getButton("Red"), getButton("Orange"),
+                                   getButton("Yellow"), getButton("Green"),
+                                   getButton("Blue"), getButton("Indigo"),
+                                   getButton("Violet"));
 
         VBox vBox = new VBox(20);
         vBox.getChildren().addAll(hBox, hBox2);
@@ -83,6 +78,12 @@ public class ColorButtonApp extends Application {
         vBox.setMaxSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
         vBox.setMinSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
         return vBox;
+    }
+
+    protected Button getButton(String name) {
+        Button button = new Button(name);
+        button.setStyle(String.format("-fx-base: %s;", name.toLowerCase()));
+        return button;
     }
 
     @Override public void start(Stage primaryStage) throws Exception {

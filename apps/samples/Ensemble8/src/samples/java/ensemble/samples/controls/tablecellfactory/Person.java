@@ -43,18 +43,26 @@ public class Person {
         private final StringProperty lastName;
         private final StringProperty email;
 
-        public Person(boolean invited, String fName, String lName, String email) {
+        public Person(boolean invited, String first, String last, String email) {
             this.invited = new SimpleBooleanProperty(invited);
-            this.firstName = new SimpleStringProperty(fName);
-            this.lastName = new SimpleStringProperty(lName);
+            this.firstName = new SimpleStringProperty(first);
+            this.lastName = new SimpleStringProperty(last);
             this.email = new SimpleStringProperty(email);
         }
 
-        public BooleanProperty invitedProperty() { return invited; }
+        public BooleanProperty invitedProperty() {
+            return invited;
+        }
 
-        public StringProperty firstNameProperty() { return firstName; }
+        public StringProperty firstNameProperty() {
+            return firstName;
+        }
 
-        public StringProperty lastNameProperty() { return lastName; }
+        public StringProperty lastNameProperty() {
+            return lastName;
+        }
 
-        public StringProperty emailProperty() { return email; }
+        public StringProperty emailProperty() {
+            return email;
+        }
 }

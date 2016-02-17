@@ -38,7 +38,6 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -46,11 +45,10 @@ import javafx.scene.control.Button;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.*;
+import javafx.scene.shape.Path;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -59,13 +57,17 @@ import javafx.util.Duration;
  *
  * @sampleName Puzzle Pieces
  * @preview preview.png
- * @see javafx.scene.shape.Path
+ * @see javafx.scene.control.Button
+ * @see javafx.scene.effect.DropShadow
  * @see javafx.scene.image.Image
  * @see javafx.scene.image.ImageView
- * @see javafx.scene.control.Button
  * @see javafx.scene.layout.Pane
- * @see javafx.scene.input.MouseEvent
- * @see javafx.scene.effect.DropShadow
+ * @see javafx.scene.shape.Path
+ *
+ * @related /Graphics 2d/Effects/Drop Shadow
+ * @related /Scenegraph/Events/Key Stroke Motion
+ * @related /Scenegraph/Events/Multi-Touch
+ * @related /Graphics 2d/Stopwatch
  */
 public class PuzzlePiecesApp extends Application {
 
@@ -73,8 +75,8 @@ public class PuzzlePiecesApp extends Application {
 
     public Parent createContent() {
         // load puzzle image
-        Image image = new Image(PuzzlePiecesApp.class.getResourceAsStream(
-                "/ensemble/samples/shared-resources/PuzzlePieces-picture.jpg"));
+        String URL = "/ensemble/samples/shared-resources/PuzzlePieces-picture.jpg";
+        Image image = new Image(getClass().getResourceAsStream(URL));
         int numOfColumns = (int) (image.getWidth() / Piece.SIZE);
         int numOfRows = (int) (image.getHeight() / Piece.SIZE);
         // create desk
@@ -109,9 +111,9 @@ public class PuzzlePiecesApp extends Application {
                         * (desk.getHeight() - Piece.SIZE + 30f)
                         - 15f - piece.getCorrectY();
                 timeline.getKeyFrames().add(
-                        new KeyFrame(Duration.seconds(1),
-                                new KeyValue(piece.translateXProperty(), shuffleX),
-                                new KeyValue(piece.translateYProperty(), shuffleY)));
+                    new KeyFrame(Duration.seconds(1),
+                            new KeyValue(piece.translateXProperty(), shuffleX),
+                            new KeyValue(piece.translateYProperty(), shuffleY)));
             }
             timeline.playFromStart();
         });

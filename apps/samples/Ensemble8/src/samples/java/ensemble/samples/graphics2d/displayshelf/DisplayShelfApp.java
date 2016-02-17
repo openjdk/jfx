@@ -43,39 +43,35 @@ import javafx.stage.Stage;
  *
  * @sampleName Display Shelf
  * @preview preview.png
+ * @see javafx.scene.control.ScrollBar
  * @see javafx.scene.effect.PerspectiveTransform
  * @see javafx.scene.effect.Reflection
- * @see javafx.scene.control.ScrollBar
- * @see javafx.scene.input.MouseEvent
  * @see javafx.scene.input.KeyEvent
+ * @see javafx.scene.input.MouseEvent
+ *
+ * @related /Graphics 2d/Bouncing Balls
+ * @related /Graphics 2d/Effects/Reflection
  */
 public class DisplayShelfApp extends Application {
     private static final double WIDTH = 450, HEIGHT = 480;
     private Timeline animation;
 
     public Parent createContent() {
-         // load images
+        // load images
         Image[] images = new Image[14];
-       images[0] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal1.jpg").toExternalForm(), false);
-        images[1] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal2.jpg").toExternalForm(), false);
-        images[2] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal3.jpg").toExternalForm(), false);
-        images[3] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal4.jpg").toExternalForm(), false);
-        images[4] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal5.jpg").toExternalForm(), false);
-        images[5] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal6.jpg").toExternalForm(), false);
-        images[6] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal7.jpg").toExternalForm(), false);
-        images[7] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal8.jpg").toExternalForm(), false);
-        images[8] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal9.jpg").toExternalForm(), false);
-        images[9] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal10.jpg").toExternalForm(), false);
-        images[10] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal11.jpg").toExternalForm(), false);
-        images[11] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal12.jpg").toExternalForm(), false);
-        images[12] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal13.jpg").toExternalForm(), false);
-        images[13] = new Image(DisplayShelfApp.class.getResource("/ensemble/samples/shared-resources/Animal14.jpg").toExternalForm(), false);
+        for (int i = 0; i < 14; i++) {
+            String str =
+                String.format("/ensemble/samples/shared-resources/Animal%d.jpg",
+                              (i + 1));
+            String url = getClass().getResource(str).toExternalForm();
+            images[i] = new Image(url);
+        }
         // create display shelf
         DisplayShelf displayShelf = new DisplayShelf(images);
         displayShelf.setPrefSize(WIDTH, HEIGHT);
 
-        String displayShelfCss = DisplayShelfApp.class.getResource("DisplayShelf.css").toExternalForm();
-        displayShelf.getStylesheets().add(displayShelfCss);
+        String css = getClass().getResource("DisplayShelf.css").toExternalForm();
+        displayShelf.getStylesheets().add(css);
         return displayShelf;
     }
 

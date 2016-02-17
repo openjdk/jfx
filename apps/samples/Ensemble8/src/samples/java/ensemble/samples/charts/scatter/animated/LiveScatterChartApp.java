@@ -38,12 +38,12 @@ import javafx.animation.SequentialTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.ScatterChart;
 import javafx.scene.chart.XYChart;
+import javafx.scene.chart.XYChart.Data;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -53,10 +53,13 @@ import javafx.util.Duration;
  *
  * @sampleName Live Scatter Chart
  * @preview preview.png
- * @see javafx.scene.chart.ScatterChart
- * @see javafx.scene.chart.NumberAxis
- * @see javafx.animation.Timeline
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @see javafx.animation.SequentialTransition
+ * @see javafx.animation.Timeline
+ * @see javafx.scene.chart.NumberAxis
+ * @see javafx.scene.chart.ScatterChart
+ *
+ * @related /Charts/Scatter/Scatter Chart
  */
 public class LiveScatterChartApp extends Application {
 
@@ -65,44 +68,45 @@ public class LiveScatterChartApp extends Application {
     private SequentialTransition animation;
 
     public LiveScatterChartApp() {
+        // create initial frames
+        final KeyFrame initialFrames =
+            new KeyFrame(Duration.millis(60),
+                         (ActionEvent actionEvent) -> {
+                             final Number nextY =
+                                Math.sin(Math.toRadians(nextX)) * 100;
+                             final Data<Number,Number> data =
+                                new Data<Number, Number>(nextX, nextY);
+                             series.getData().add(data);
+                             nextX += 10;
+                         });
+        Timeline initial = new Timeline(initialFrames);
+        initial.setCycleCount(200);
+
+        // create follow-on frames
+        final KeyFrame followingFrames =
+            new KeyFrame(Duration.millis(60),
+                         (ActionEvent actionEvent) -> {
+                             final Number nextY =
+                                 Math.sin(Math.toRadians(nextX)) * 100;
+                             final Data<Number,Number> data =
+                             new Data<Number, Number>(nextX, nextY);
+                             series.getData().add(data);
+                             if (series.getData().size() > 54) {
+                                 series.getData().remove(0);
+                             }
+                             nextX += 10;
+                         });
+        Timeline following = new Timeline(followingFrames);
+        following.setCycleCount(Animation.INDEFINITE);
+
         // create animation
-        Timeline timeline1 = new Timeline();
-        timeline1.getKeyFrames().add(
-            new KeyFrame(Duration.millis(20), (ActionEvent actionEvent) -> {
-                series.getData().add(new XYChart.Data<Number, Number>(
-                        nextX,
-                        Math.sin(Math.toRadians(nextX)) * 100
-                ));
-                nextX += 10;
-        })
-        );
-        timeline1.setCycleCount(200);
-        Timeline timeline2 = new Timeline();
-        timeline2.getKeyFrames().add(
-                new KeyFrame(Duration.millis(50), (ActionEvent actionEvent) -> {
-                    series.getData().add(new XYChart.Data<Number, Number>(
-                            nextX,
-                            Math.sin(Math.toRadians(nextX)) * 100
-                    ));
-                    if (series.getData().size() > 54) {
-                        series.getData().remove(0);
-                    }
-                    nextX += 10;
-        })
-        );
-        timeline2.setCycleCount(Animation.INDEFINITE);
-        animation = new SequentialTransition();
-        animation.getChildren().addAll(timeline1,timeline2);
+        animation = new SequentialTransition(initial, following);
     }
 
     public Parent createContent() {
         final NumberAxis xAxis = new NumberAxis();
-        xAxis.setForceZeroInRange(false);
         final NumberAxis yAxis = new NumberAxis(-100, 100, 10);
-        final ScatterChart<Number, Number> sc = new ScatterChart<>(xAxis, yAxis);
-        // setup chart
-        sc.getStylesheets().add(LiveScatterChartApp.class.getResource("LiveScatterChart.css").toExternalForm());
-        sc.setTitle("Animated Sine Wave ScatterChart");
+        xAxis.setForceZeroInRange(false);
         xAxis.setLabel("X Axis");
         xAxis.setAnimated(false);
         yAxis.setLabel("Y Axis");
@@ -111,7 +115,15 @@ public class LiveScatterChartApp extends Application {
         series = new ScatterChart.Series<>();
         series.setName("Sine Wave");
         series.getData().add(new ScatterChart.Data<Number, Number>(5d, 5d));
+        // setup chart
+        final String liveScatterChartCss =
+            getClass().getResource("LiveScatterChart.css").toExternalForm();
+        final ScatterChart<Number, Number> sc =
+            new ScatterChart<>(xAxis, yAxis);
         sc.getData().add(series);
+        sc.getStylesheets().add(liveScatterChartCss);
+        sc.setTitle("Animated Sine Wave ScatterChart");
+
         return sc;
     }
 

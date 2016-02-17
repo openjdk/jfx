@@ -33,12 +33,12 @@ package ensemble.samples.language.observablelist;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Parent;
@@ -62,6 +62,9 @@ import javafx.stage.Stage;
  * @see javafx.collections.ListChangeListener
  * @see javafx.collections.ObservableList
  * @embedded
+ *
+ * @related /Controls/Button/Colored Buttons
+ * @related /Scenegraph/Events/KeyEvent
  */
 public class ObservableListApp extends Application {
 
@@ -72,36 +75,40 @@ public class ObservableListApp extends Application {
             listData.add(i);
         }
 
-        //create observable list from this list of integers by static method of FXCollections class
-        final ObservableList<Integer> list = FXCollections.<Integer>observableList(listData);
+        // create observable list from this list of integers by static method
+        // of FXCollections class
+        final ObservableList<Integer> list =
+                FXCollections.<Integer>observableList(listData);
 
-        //create text for showing observable list content
+        // create text for showing observable list content
         final Text textList = new Text(0, 0, list.toString());
         textList.setStyle("-fx-font-size: 16;");
         textList.setTextOrigin(VPos.TOP);
         textList.setTextAlignment(TextAlignment.CENTER);
 
-        //create text field for showing  message
+        // create text field for showing  message
         final Text textMessage = new Text(0, 0, "Add a listener");
         textMessage.setStyle("-fx-font-size: 16;");
         textMessage.setTextOrigin(VPos.TOP);
         textMessage.setTextAlignment(TextAlignment.CENTER);
 
-        //create button for adding random integer to random position in observable list
+        // create button adding random integer to random position in list
         Button buttonAddNumber = new Button("Replace random integer");
         buttonAddNumber.setPrefSize(190, 45);
         buttonAddNumber.setOnAction((ActionEvent t) -> {
-            int randomIndex = (int) (Math.round(Math.random() * (list.size() - 1)));
+            int randomIndex = (int) (Math.round(Math.random() *
+                                                (list.size() - 1)));
             int randomNumber = (int) (Math.round(Math.random() * 10));
             list.set(randomIndex, randomNumber);
-            //actualise content of the text to see the result
+            // actualise content of the text to see the result
             textList.setText(list.toString());
         });
 
-        //create button for adding listener
+        // create button for adding listener
         Button buttonAdd = new Button("Add list listener");
         buttonAdd.setPrefSize(190, 45);
-        final ListChangeListener<Integer> listener = (ListChangeListener.Change<? extends Integer> c) -> {
+        final ListChangeListener<Integer> listener =
+                (ListChangeListener.Change<? extends Integer> c) -> {
             while (c.next()) {
                 textMessage.setText("replacement on index " + c.getFrom());
             }
@@ -112,11 +119,11 @@ public class ObservableListApp extends Application {
             textMessage.setText("listener added");
         });
 
-        //create a button for removing the listener
+        // create a button for removing the listener
         Button buttonRemove = new Button("Remove list listener");
         buttonRemove.setPrefSize(190, 45);
         buttonRemove.setOnAction((ActionEvent t) -> {
-            //remove the listener
+            // remove the listener
             list.removeListener(listener);
             textMessage.setText("listener removed");
         });
@@ -134,6 +141,7 @@ public class ObservableListApp extends Application {
         vBoxTop.getChildren().addAll(textMessage, buttonAdd, buttonRemove);
         vBoxBottom.getChildren().addAll(buttonAddNumber, textList);
         outerVBox.getChildren().addAll(vBoxTop, vBoxBottom);
+
         return outerVBox;
     }
 

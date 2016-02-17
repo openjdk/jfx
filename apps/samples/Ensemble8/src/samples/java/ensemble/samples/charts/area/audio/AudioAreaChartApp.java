@@ -37,6 +37,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.NumberAxis.DefaultFormatter;
 import javafx.scene.chart.XYChart;
 import javafx.scene.media.AudioSpectrumListener;
 import javafx.scene.media.Media;
@@ -58,6 +59,8 @@ import javafx.stage.Stage;
  * @see javafx.scene.media.MediaPlayer
  * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @conditionalFeatures MEDIA
+ *
+ * @related /Charts/Bar/Audio Bar Chart
  */
 public class AudioAreaChartApp extends Application {
 
@@ -70,7 +73,8 @@ public class AudioAreaChartApp extends Application {
             System.getProperty("demo.play.audio", "true"));
 
     public AudioAreaChartApp() {
-        audioSpectrumListener = (double timestamp, double duration, float[] magnitudes, float[] phases) -> {
+        audioSpectrumListener = (double timestamp, double duration,
+                                 float[] magnitudes, float[] phases) -> {
             for (int i = 0; i < series1Data.length; i++) {
                 series1Data[i].setYValue(magnitudes[i] + 60);
             }
@@ -78,31 +82,41 @@ public class AudioAreaChartApp extends Application {
     }
 
     public void play() {
-        startAudio();
+        audioMediaPlayer.play();
     }
 
     @Override
     public void stop() {
-        stopAudio();
+        audioMediaPlayer.pause();
     }
 
     public Parent createContent() {
         final NumberAxis xAxis = new NumberAxis(0, 128, 8);
         final NumberAxis yAxis = new NumberAxis(0, 50, 10);
         final AreaChart<Number, Number> ac = new AreaChart<>(xAxis, yAxis);
+        final String audioAreaChartCss =
+            getClass().getResource("AudioAreaChart.css").toExternalForm();
+
+        // setup media
+        final Media audioMedia = new Media(AUDIO_URI);
+        audioMediaPlayer = new MediaPlayer(audioMedia);
+        audioMediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+        audioMediaPlayer.setAudioSpectrumListener(audioSpectrumListener);
+
         // setup chart
-        ac.getStylesheets().add(AudioAreaChartApp.class
-                .getResource("AudioAreaChart.css").toExternalForm());
+        ac.getStylesheets().add(audioAreaChartCss);
         ac.setLegendVisible(false);
         ac.setTitle("Live Audio Spectrum Data");
         ac.setAnimated(false);
         xAxis.setLabel("Frequency Bands");
         yAxis.setLabel("Magnitudes");
-        yAxis.setTickLabelFormatter(new NumberAxis.DefaultFormatter(yAxis, null, "dB"));
+        yAxis.setTickLabelFormatter(new DefaultFormatter(yAxis, null, "dB"));
+
         // add starting data
         XYChart.Series<Number, Number> series = new XYChart.Series<>();
         series.setName("Audio Spectrum");
-        //noinspection unchecked
+
+        // noinspection unchecked
         series1Data = new XYChart.Data[(int) xAxis.getUpperBound()];
         for (int i = 0; i < series1Data.length; i++) {
             series1Data[i] = new XYChart.Data<Number, Number>(i, 50);
@@ -110,29 +124,6 @@ public class AudioAreaChartApp extends Application {
         }
         ac.getData().add(series);
         return ac;
-    }
-
-    private void startAudio() {
-        if (PLAY_AUDIO) {
-            getAudioMediaPlayer().
-                    setAudioSpectrumListener(audioSpectrumListener);
-            getAudioMediaPlayer().play();
-        }
-    }
-
-    private void stopAudio() {
-        if (getAudioMediaPlayer().getAudioSpectrumListener() == audioSpectrumListener) {
-            getAudioMediaPlayer().pause();
-        }
-    }
-
-    private MediaPlayer getAudioMediaPlayer() {
-        if (audioMediaPlayer == null) {
-            Media audioMedia = new Media(AUDIO_URI);
-            audioMediaPlayer = new MediaPlayer(audioMedia);
-            audioMediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
-        }
-        return audioMediaPlayer;
     }
 
     @Override public void start(Stage primaryStage) throws Exception {

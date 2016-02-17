@@ -48,15 +48,16 @@ import javafx.stage.Stage;
  *
  * @sampleName Pill Button
  * @preview preview.png
- *
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.ToggleButton
- * @related /Controls/Button/Toggle Button
+ * @see javafx.scene.control.ToggleGroup
+ *
+ * @related /Controls/DatePicker
+ * @related /Controls/Toggle Button
  */
 public class PillButtonApp extends Application {
 
     public Parent createContent() {
-        String pillButtonCss = PillButtonApp.class.getResource("PillButton.css").toExternalForm();
-
         // create 3 toggle buttons and a toogle group for them
         ToggleButton tb1 = new ToggleButton("Left");
         tb1.setPrefSize(76, 45);
@@ -78,13 +79,18 @@ public class PillButtonApp extends Application {
         // enforce rule that one of the ToggleButtons must be selected at any
         // time (that is, it is not valid to have zero ToggleButtons selected).
         // (Fix for RT-34920 that considered this to be a bug)
-        group.selectedToggleProperty().addListener((ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) -> {
-            if (newValue == null) {
-                group.selectToggle(oldValue);
-            }
-        });
+        final ChangeListener<Toggle> listener =
+            (ObservableValue<? extends Toggle> observable,
+             Toggle old, Toggle now) -> {
+                if (now == null) {
+                    group.selectToggle(old);
+                }
+            };
+        group.selectedToggleProperty().addListener(listener);
 
-        HBox hBox = new HBox();
+        final String pillButtonCss =
+            getClass().getResource("PillButton.css").toExternalForm();
+        final HBox hBox = new HBox();
         hBox.setAlignment(Pos.CENTER);
         hBox.getChildren().addAll(tb1, tb2, tb3);
         hBox.getStylesheets().add(pillButtonCss);

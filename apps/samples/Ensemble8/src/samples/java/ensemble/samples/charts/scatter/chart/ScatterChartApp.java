@@ -34,13 +34,13 @@ package ensemble.samples.charts.scatter.chart;
 
 
 import javafx.application.Application;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.ScatterChart;
 import javafx.scene.chart.XYChart;
-import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart.Data;
+import javafx.scene.chart.XYChart.Series;
 import javafx.stage.Stage;
 
 
@@ -51,10 +51,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Scatter Chart
  * @preview preview.png
- * @see javafx.scene.chart.ScatterChart
- * @see javafx.scene.chart.NumberAxis
- * @related /Charts/Line/Line Chart
- * @related /Charts/Area/Area Chart
  * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
@@ -103,7 +99,13 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.NumberAxis
+ * @see javafx.scene.chart.ScatterChart
+ * @see javafx.scene.chart.XYChart
  * @embedded
+ *
+ * @related /Charts/Area/Area Chart
+ * @related /Charts/Line/Line Chart
  */
 public class ScatterChartApp extends Application {
 
@@ -114,21 +116,20 @@ public class ScatterChartApp extends Application {
     public Parent createContent() {
         xAxis = new NumberAxis("X-Axis", 0d, 8.0d, 1.0d);
         yAxis = new NumberAxis("Y-Axis", 0.0d, 5.0d, 1.0d);
-        ObservableList<XYChart.Series> data = FXCollections.observableArrayList(
-            new ScatterChart.Series("Series 1", FXCollections.<ScatterChart.Data>observableArrayList(
-                new XYChart.Data(0.2, 3.5),
-                new XYChart.Data(0.7, 4.6),
-                new XYChart.Data(1.8, 1.7),
-                new XYChart.Data(2.1, 2.8),
-                new XYChart.Data(4.0, 2.2),
-                new XYChart.Data(4.1, 2.6),
-                new XYChart.Data(4.5, 2.0),
-                new XYChart.Data(6.0, 3.0),
-                new XYChart.Data(7.0, 2.0),
-                new XYChart.Data(7.8, 4.0)
-            ))
-        );
-        chart = new ScatterChart(xAxis, yAxis, data);
+        final Series<Number, Number> series = new Series<>();
+        series.setName("Series 1");
+        series.getData().addAll(new Data(0.2, 3.5),
+                                new Data(0.7, 4.6),
+                                new Data(1.8, 1.7),
+                                new Data(2.1, 2.8),
+                                new Data(4.0, 2.2),
+                                new Data(4.1, 2.6),
+                                new Data(4.5, 2.0),
+                                new Data(6.0, 3.0),
+                                new Data(7.0, 2.0),
+                                new Data(7.8, 4.0));
+        chart = new ScatterChart(xAxis, yAxis);
+        chart.getData().add(series);
         return chart;
     }
 

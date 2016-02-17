@@ -40,16 +40,17 @@ public class MoneyFormatCell extends ListCell<Number> {
     public void updateItem(Number item, boolean empty) {
         super.updateItem(item, empty);
 
+        if (item == null) {
+            setText("");
+            return;
+        }
+
         // format the number as if it were a monetary value using the
         // formatting relevant to the current locale. This would format
         // 43.68 as "$43.68", and -23.67 as "($23.67)"
-        setText(item == null ? "" : NumberFormat.getCurrencyInstance().format(item));
-
-        if (item != null) {
-            double value = item.doubleValue();
-
-            setTextFill(value == 0 ? Color.BLACK
-                    : value < 0 ? Color.RED : Color.GREEN);
-        }
+        double value = item.doubleValue();
+        setText(NumberFormat.getCurrencyInstance().format(value));
+        setTextFill(value == 0 ?
+                    Color.BLACK : value < 0 ? Color.RED : Color.GREEN);
     }
 }

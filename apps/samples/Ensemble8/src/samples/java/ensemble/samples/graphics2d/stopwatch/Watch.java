@@ -31,13 +31,11 @@
  */
 package ensemble.samples.graphics2d.stopwatch;
 
-import java.io.InputStream;
 import java.text.DecimalFormat;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.effect.GaussianBlur;
@@ -247,13 +245,15 @@ public class Watch extends Parent {
         double minutesHandAngle = ((360 / 60.0) * mins);
         minutesDial.setAngle(minutesHandAngle);
 
-        String timeString = twoPlaces.format(mins) + ":" + twoPlaces.format(seconds) + "." + twoPlaces.format(tenths);
+        String timeString = twoPlaces.format(mins) + ":" +
+                            twoPlaces.format(seconds) + "." +
+                            twoPlaces.format(tenths);
         digitalClock.refreshDigits(timeString);
     }
 
     //IMAGE handling
     public Image loadImage() {
-        InputStream is = Watch.class.getResourceAsStream("/ensemble/samples/shared-resources/stopwatch.png");
-        return new Image(is);
+        String URL = "/ensemble/samples/shared-resources/stopwatch.png";
+        return new Image(getClass().getResourceAsStream(URL));
     }
 }

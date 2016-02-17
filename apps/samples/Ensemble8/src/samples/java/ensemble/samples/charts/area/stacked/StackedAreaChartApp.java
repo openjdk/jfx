@@ -37,8 +37,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.chart.StackedAreaChart;
 import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.StackedAreaChart;
 import javafx.stage.Stage;
 
 
@@ -47,9 +47,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Stacked Area Chart
  * @preview preview.png
- * @see javafx.scene.chart.StackedAreaChart
- * @see javafx.scene.chart.NumberAxis
- * @related /Charts/Area/Area Chart
  * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
@@ -98,7 +95,14 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.NumberAxis
+ * @see javafx.scene.chart.StackedAreaChart
  * @highlight
+ *
+ *
+ * @related /Charts/Area/Area Chart
+ * @related /Charts/Area/Audio Area Chart
+ * @related /Charts/Area/Curve-Fitted Area Chart
  */
 public class StackedAreaChartApp extends Application {
 
@@ -110,8 +114,10 @@ public class StackedAreaChartApp extends Application {
         xAxis = new NumberAxis("X Values", 1.0d, 9.0d, 2.0d);
         yAxis = new NumberAxis("Y Values", 0.0d, 30.0d, 2.0d);
 
-        ObservableList<StackedAreaChart.Series> areaChartData = FXCollections.observableArrayList(
-                new StackedAreaChart.Series("Series 1",FXCollections.observableArrayList(
+        ObservableList<StackedAreaChart.Series> areaChartData =
+            FXCollections.observableArrayList(
+                new StackedAreaChart.Series("Series 1",
+                                            FXCollections.observableArrayList(
                     new StackedAreaChart.Data(0,4),
                     new StackedAreaChart.Data(2,5),
                     new StackedAreaChart.Data(4,4),
@@ -119,7 +125,8 @@ public class StackedAreaChartApp extends Application {
                     new StackedAreaChart.Data(8,6),
                     new StackedAreaChart.Data(10,8)
                 )),
-                new StackedAreaChart.Series("Series 2", FXCollections.observableArrayList(
+                new StackedAreaChart.Series("Series 2",
+                                            FXCollections.observableArrayList(
                     new StackedAreaChart.Data(0,8),
                     new StackedAreaChart.Data(2,2),
                     new StackedAreaChart.Data(4,9),
@@ -127,7 +134,8 @@ public class StackedAreaChartApp extends Application {
                     new StackedAreaChart.Data(8,5),
                     new StackedAreaChart.Data(10,7)
                 )),
-                new StackedAreaChart.Series("Series 3", FXCollections.observableArrayList(
+                new StackedAreaChart.Series("Series 3",
+                                            FXCollections.observableArrayList(
                     new StackedAreaChart.Data(0,2),
                     new StackedAreaChart.Data(2,5),
                     new StackedAreaChart.Data(4,8),

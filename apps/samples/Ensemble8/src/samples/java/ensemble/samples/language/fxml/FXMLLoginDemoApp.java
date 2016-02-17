@@ -35,6 +35,7 @@ package ensemble.samples.language.fxml;
 import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -50,17 +51,14 @@ import javafx.scene.Parent;
  *
  * @sampleName FXML Login Demo
  * @preview preview.png
- * @see java.util.HashMap
- * @see java.util.Map
- * @see java.io.InputStream
- * @see java.util.logging.Level
- * @see java.util.logging.Logger
+ * @docUrl http://docs.oracle.com/javase/8/javafx/fxml-tutorial/why_use_fxml.htm#JFXMG137 JavaFX UI with FXML
  * @see javafx.fxml.FXML
  * @see javafx.fxml.FXMLLoader
  * @see javafx.fxml.Initializable
  * @see javafx.fxml.JavaFXBuilderFactory
- * @see javafx.stage.Stage
  * @embedded
+ *
+ * @related /Language/String Binding
  */
 
 public class FXMLLoginDemoApp extends Application {
@@ -106,19 +104,21 @@ public class FXMLLoginDemoApp extends Application {
 
     private void gotoProfile() {
         try {
-            ProfileController profile = (ProfileController) replaceSceneContent("Profile.fxml");
+            ProfileController profile =
+                (ProfileController)replaceSceneContent("Profile.fxml");
             profile.setApp(this);
         } catch (Exception ex) {
-            Logger.getLogger(FXMLLoginDemoApp.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
         }
     }
 
     private void gotoLogin() {
         try {
-            LoginController login = (LoginController) replaceSceneContent("Login.fxml");
+            LoginController login =
+                (LoginController)replaceSceneContent("Login.fxml");
             login.setApp(this);
         } catch (Exception ex) {
-            Logger.getLogger(FXMLLoginDemoApp.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -128,6 +128,7 @@ public class FXMLLoginDemoApp extends Application {
         loader.setBuilderFactory(new JavaFXBuilderFactory());
         loader.setLocation(FXMLLoginDemoApp.class.getResource(fxml));
         AnchorPane page;
+
         try {
             page = (AnchorPane) loader.load(in);
         } finally {
@@ -135,6 +136,7 @@ public class FXMLLoginDemoApp extends Application {
         }
         root.getChildren().removeAll();
         root.getChildren().addAll(page);
-        return (Initializable) loader.getController();
+
+        return (Initializable)loader.getController();
     }
 }

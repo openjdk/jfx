@@ -43,17 +43,16 @@ import javafx.stage.Stage;
  *
  * @sampleName Brick Breaker
  * @preview preview.png
- * @see javafx.scene.image.Image
- * @see javafx.scene.image.ImageView
- * @see javafx.util.Duration
  * @see javafx.animation.KeyFrame
  * @see javafx.animation.KeyValue
  * @see javafx.animation.Timeline
- * @see javafx.application.Application
- * @see javafx.application.Platform
  * @see javafx.collections.ObservableList
  * @see javafx.geometry.Rectangle2D
  * @see javafx.geometry.VPos
+ * @see javafx.scene.image.Image
+ * @see javafx.scene.image.ImageView
+ * @see javafx.util.Duration
+ * @related /Graphics 2d/Images/Image Creation
  */
 
 public class BrickBreakerApp extends Application {

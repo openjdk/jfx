@@ -51,18 +51,25 @@ import javafx.stage.Stage;
  *
  * @sampleName Image Operation
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/graphics-tutorial/image_ops.htm#JFXGR238 JavaFX Image Operations
  * @playground gridSize (name="Grid Size", min=0, max=10)
  * @playground hueFactor (name="Hue Factor", min=0, max=32)
  * @playground hueOffset (name="Hue Offset", min=0, max=360)
  * @see javafx.scene.image.Image
  * @see javafx.scene.image.ImageView
+ * @see javafx.scene.image.PixelWriter
+ * @see javafx.scene.image.WritableImage
+ *
+ * @related /Graphics 2d/Images/Image Creation
+ * @related /Graphics 2d/Images/Image Properties
  */
 public class ImageOperationApp extends Application {
     private SimpleDoubleProperty gridSize = new SimpleDoubleProperty(3.0);
     private SimpleDoubleProperty hueFactor = new SimpleDoubleProperty(12.0);
     private SimpleDoubleProperty hueOffset = new SimpleDoubleProperty(240.0);
 
-       private static void renderImage(WritableImage img, double gridSize, double hueFactor, double hueOffset) {
+       private static void renderImage(WritableImage img, double gridSize,
+                                       double hueFactor, double hueOffset) {
         PixelWriter pw = img.getPixelWriter();
         double w = img.getWidth();
         double h = img.getHeight();
@@ -74,29 +81,33 @@ public class ImageOperationApp extends Application {
             for (int x = 0; x < w; x++) {
                 xRatio = x/w;
                 yRatio = y/h;
-                hue = Math.sin(yRatio*(gridSize*Math.PI))*Math.sin(xRatio*(gridSize*Math.PI))*Math.tan(hueFactor/20.0)*360.0 + hueOffset;
+                hue = Math.sin(yRatio*(gridSize*Math.PI)) *
+                      Math.sin(xRatio*(gridSize*Math.PI)) *
+                      Math.tan(hueFactor / 20.0) * 360.0 + hueOffset;
                 Color c = Color.hsb(hue, 1.0, 1.0);
                 pw.setColor(x, y, c);
             }
         }
     }
     public Parent createContent() {
-         StackPane root = new StackPane();
+        StackPane root = new StackPane();
         final WritableImage img = new WritableImage(200, 200);
         gridSize.addListener((Observable observable) -> {
-            renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
+            renderImage(img, gridSize.doubleValue(),
+                        hueFactor.doubleValue(), hueOffset.doubleValue());
          });
         hueFactor.addListener((Observable observable) -> {
-            renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
+            renderImage(img, gridSize.doubleValue(),
+                        hueFactor.doubleValue(), hueOffset.doubleValue());
          });
         hueOffset.addListener((Observable observable) -> {
-            renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
+            renderImage(img, gridSize.doubleValue(),
+                        hueFactor.doubleValue(), hueOffset.doubleValue());
          });
         renderImage(img, 3.0, 12.0, 240.0);
 
         ImageView view = new ImageView(img);
-
-         root.getChildren().add(view);
+        root.getChildren().add(view);
 
         return root;
     }
@@ -109,5 +120,7 @@ public class ImageOperationApp extends Application {
     /** Java main for when running without JavaFX launcher
      * @param args command line arguments
      */
-    public static void main(String[] args) { launch(args); }
+    public static void main(String[] args) {
+        launch(args);
+    }
 }

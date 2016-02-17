@@ -34,7 +34,7 @@ package ensemble.samples.scenegraph.events.mouseevent;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
+import javafx.geometry.Dimension2D;
 import javafx.geometry.Point2D;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
@@ -60,70 +60,78 @@ import javafx.stage.Stage;
  *
  * @sampleName MouseEvent
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/events-tutorial/events.htm#JFXED117 JavaFX Events
  * @see javafx.scene.Cursor
  * @see javafx.scene.input.MouseEvent
- * @see javafx.event.EventHandler
+ * @see javafx.scene.input.ScrollEvent
+ * @see javafx.scene.paint.LinearGradient
+ * @see javafx.scene.paint.RadialGradient
+ * @see javafx.scene.shape.Circle
+ *
+ * @related /Scenegraph/Events/Cursor
+ * @related /Scenegraph/Events/Gesture Event
+ * @related /Scenegraph/Events/KeyEvent
+ * @related /Scenegraph/Events/Key Stroke Motion
+ * @related /Scenegraph/Events/Multi-Touch
  */
 public class MouseEventApp extends Application {
 
-    private final static int RECT_WIDTH = 310;
-    private final static int RECT_HEIGHT = 150;
-    private final static int CONSOLE_WIDTH = RECT_WIDTH;
-    private final static int CONSOLE_HEIGHT = 80;
-    private final static int SMALL_CIRCLE_STARTX = 50;
-    private final static int SMALL_CIRCLE_STARTY = 50;
-    private final static int BIG_CIRCLE_STARTX = 180;
-    private final static int BIG_CIRCLE_STARTY = 50;
-    //create a console for logging mouse events
-    final ListView<String> console = new ListView<>();
-    //create a observableArrayList of logged events that will be listed in console
-    final ObservableList<String> consoleObservableList = FXCollections.observableArrayList();
-
-    {
-        //set up the console
-        console.setItems(consoleObservableList);
-        console.setLayoutY(RECT_HEIGHT + 5);
-        console.setPrefSize(CONSOLE_WIDTH, CONSOLE_HEIGHT);
-    }
-    //create a rectangle in which our circles can move
-    final Rectangle rectangle = new Rectangle(RECT_WIDTH, RECT_HEIGHT, new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
-                new Stop(1, Color.rgb(156, 216, 255)),
-                new Stop(0, Color.rgb(156, 216, 255, 0.5))
-            }));
-    //variables for storing initial position before drag of circle
+    private final Dimension2D rectSize = new Dimension2D(310.0, 150.0);
+    private final Dimension2D consoleSize = new Dimension2D(310.0, 150.0);
+    private final Point2D smallStart = new Point2D(50.0, 50.0);
+    private final Point2D bigStart = new Point2D(180.0, 50.0);
+    // variables for storing initial position before drag of circle
     private double initX;
     private double initY;
     private Point2D dragAnchor;
+    // create a observableArrayList of logged events listed in the console
+    final ObservableList<String> consoleObservableList =
+        FXCollections.observableArrayList();
 
     public Parent createContent() {
-        rectangle.setStroke(Color.BLACK);
-        // create circle with method listed below: paramethers: name of the circle, color of the circle, radius
-        final Circle circleSmall = createCircle("Blue circle", Color.DODGERBLUE, 25);
-        circleSmall.setTranslateX(SMALL_CIRCLE_STARTX);
-        circleSmall.setTranslateY(SMALL_CIRCLE_STARTY);
+        // create a rectangle in which our circles can move
+        Stop[] stops = new Stop[] {
+            new Stop(1, Color.rgb(156, 216, 255)),
+            new Stop(0, Color.rgb(156, 216, 255, 0.5))
+        };
+        Rectangle rect = new Rectangle(rectSize.getWidth(), rectSize.getHeight(),
+                                       new LinearGradient(0, 0, 0, 1,
+                                                          true,
+                                                          CycleMethod.NO_CYCLE,
+                                                          stops));
+        rect.setStroke(Color.BLACK);
+        // create circle with method listed below:
+        // paramethers: name of the circle, color of the circle, radius
+        final Circle circleSmall = createCircle("Blue", Color.DODGERBLUE, 25);
+        circleSmall.setTranslateX(smallStart.getX());
+        circleSmall.setTranslateY(smallStart.getY());
         // and a second, bigger circle
-        final Circle circleBig = createCircle("Orange circle", Color.CORAL, 40);
-        circleBig.setTranslateX(BIG_CIRCLE_STARTX);
-        circleBig.setTranslateY(BIG_CIRCLE_STARTY);
+        final Circle circleBig = createCircle("Orange", Color.CORAL, 40);
+        circleBig.setTranslateX(bigStart.getX());
+        circleBig.setTranslateY(bigStart.getY());
         // we can set mouse event to any node, also on the rectangle
-        rectangle.setOnMouseMoved((MouseEvent me) -> {
-            //log mouse move to console, method listed below
+        rect.setOnMouseMoved((MouseEvent me) -> {
+            // log mouse move to console, method listed below
             showOnConsole("Mouse moved, x: " + me.getX() + ", y: " + me.getY());
         });
 
-        rectangle.setOnScroll((ScrollEvent event) -> {
+        rect.setOnScroll((ScrollEvent event) -> {
             double translateX = event.getDeltaX();
             double translateY = event.getDeltaY();
             // reduce the deltas for the circles to stay in the screen
             for (Circle c : new Circle[]{circleSmall, circleBig}) {
-                if (c.getTranslateX() + translateX + c.getRadius() > RECT_WIDTH) {
-                    translateX = RECT_WIDTH - c.getTranslateX() - c.getRadius();
+                if (c.getTranslateX() + translateX + c.getRadius() >
+                        rectSize.getWidth()) {
+                    translateX = rectSize.getWidth() -
+                        c.getTranslateX() - c.getRadius();
                 }
                 if (c.getTranslateX() + translateX - c.getRadius() < 0) {
                     translateX = -c.getTranslateX() + c.getRadius();
                 }
-                if (c.getTranslateY() + translateY + c.getRadius() > RECT_HEIGHT) {
-                    translateY = RECT_HEIGHT - c.getTranslateY() - c.getRadius();
+                if (c.getTranslateY() + translateY + c.getRadius() >
+                        rectSize.getHeight()) {
+                    translateY = rectSize.getHeight() -
+                        c.getTranslateY() - c.getRadius();
                 }
                 if (c.getTranslateY() + translateY - c.getRadius() < 0) {
                     translateY = -c.getTranslateY() + c.getRadius();
@@ -135,45 +143,65 @@ public class MouseEventApp extends Application {
                 c.setTranslateY(c.getTranslateY() + translateY);
             }
             // log event
-            showOnConsole("Scrolled, deltaX: " + event.getDeltaX()
-                    + ", deltaY: " + event.getDeltaY());
+            showOnConsole("Scrolled, deltaX: " + event.getDeltaX() +
+                          ", deltaY: " + event.getDeltaY());
         });
-        return new Group(rectangle, circleBig, circleSmall, console);
+        // create a console for logging mouse events
+        final ListView<String> console = new ListView<>();
+        // set up the console
+        console.setItems(consoleObservableList);
+        console.setLayoutY(rectSize.getHeight() + 5);
+        console.setPrefSize(consoleSize.getWidth(), consoleSize.getHeight());
+
+        return new Group(rect, circleBig, circleSmall, console);
     }
 
-    private Circle createCircle(final String name, final Color color, int radius) {
-        //create a circle with desired name,  color and radius
-        final Circle circle = new Circle(radius, new RadialGradient(0, 0, 0.2, 0.3, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
-                    new Stop(0, Color.rgb(250, 250, 255)),
-                    new Stop(1, color)
-                }));
-        //add a shadow effect
+    private Circle createCircle(final String name, final Color color,
+                                int radius) {
+        // create a circle with desired name,  color and radius
+        final Stop[] stops = new Stop[] {
+            new Stop(0, Color.rgb(250, 250, 255)),
+            new Stop(1, color)
+        };
+        final Circle circle = new Circle(radius,
+                                         new RadialGradient(0, 0, 0.2, 0.3, 1,
+                                                            true,
+                                                            CycleMethod.NO_CYCLE,
+                                                            stops));
+        // add a shadow effect
         circle.setEffect(new InnerShadow(7, color.darker().darker()));
-        //change a cursor when it is over circle
+        // change a cursor when it is over circle
         circle.setCursor(Cursor.HAND);
-        //add a mouse listeners
+        // add a mouse listeners
         circle.setOnMouseClicked((MouseEvent me) -> {
-            showOnConsole("Clicked on" + name + ", " + me.getClickCount() + "times");
-            //the event will be passed only to the circle which is on front
+            final int count = me.getClickCount();
+            final String message = String.format("Clicked on %s %d %s",
+                                                 name, count,
+                                                 (count > 1 ? "times" : "time"));
+            showOnConsole(message);
+            // the event will be passed only to the circle which is on front
             me.consume();
         });
         circle.setOnMouseDragged((MouseEvent me) -> {
             double dragX = me.getSceneX() - dragAnchor.getX();
             double dragY = me.getSceneY() - dragAnchor.getY();
-            //calculate new position of the circle
+            // calculate new position of the circle
             double newXPosition = initX + dragX;
             double newYPosition = initY + dragY;
-            //if new position do not exceeds borders of the rectangle, translate to this position
-            if ((newXPosition >= circle.getRadius()) && (newXPosition <= RECT_WIDTH - circle.getRadius())) {
+            // if new position do not exceeds borders of the rectangle,
+            // translate to this position
+            if ((newXPosition >= circle.getRadius()) &&
+                    (newXPosition <= rectSize.getWidth() - circle.getRadius())) {
                 circle.setTranslateX(newXPosition);
             }
-            if ((newYPosition >= circle.getRadius()) && (newYPosition <= RECT_HEIGHT - circle.getRadius())) {
+            if ((newYPosition >= circle.getRadius()) &&
+                    (newYPosition <= rectSize.getHeight() - circle.getRadius())) {
                 circle.setTranslateY(newYPosition);
             }
-            showOnConsole(name + " was dragged (x:" + dragX + ", y:" + dragY + ")");
+            showOnConsole(name + " dragged (x:" + dragX + ", y:" + dragY + ")");
         });
         circle.setOnMouseEntered((MouseEvent me) -> {
-            //change the z-coordinate of the circle
+            // change the z-coordinate of the circle
             circle.toFront();
             showOnConsole("Mouse entered " + name);
         });
@@ -181,7 +209,7 @@ public class MouseEventApp extends Application {
             showOnConsole("Mouse exited " + name);
         });
         circle.setOnMousePressed((MouseEvent me) -> {
-            //when mouse is pressed, store initial position
+            // when mouse is pressed, store initial position
             initX = circle.getTranslateX();
             initY = circle.getTranslateY();
             dragAnchor = new Point2D(me.getSceneX(), me.getSceneY());
@@ -195,7 +223,8 @@ public class MouseEventApp extends Application {
     }
 
     private void showOnConsole(String text) {
-        //if there is 8 items in list, delete first log message, shift other logs and  add a new one to end position
+        // if there is 8 items in list, delete first log message,
+        // shift other logs and  add a new one to end position
         if (consoleObservableList.size() == 8) {
             consoleObservableList.remove(0);
         }

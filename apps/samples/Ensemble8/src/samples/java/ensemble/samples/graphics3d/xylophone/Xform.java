@@ -35,7 +35,7 @@ import javafx.scene.Group;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 
-class Xform extends Group {
+public class Xform extends Group {
 
     final Rotate rx = new Rotate(0, Rotate.X_AXIS);
     final Rotate ry = new Rotate(0, Rotate.Y_AXIS);

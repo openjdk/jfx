@@ -36,8 +36,6 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -51,9 +49,13 @@ import javafx.util.Duration;
  *
  * @sampleName Progress Indicator
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.ProgressIndicator
- * @related /Controls/Progress Bar
+ * @see javafx.scene.layout.GridPane
  * @embedded
+ *
+ * @related /Layout/GridPane
+ * @related /Controls/Progress Bar
  */
 public class ProgressIndicatorApp extends Application {
     final Timeline timeline = new Timeline();
@@ -64,17 +66,14 @@ public class ProgressIndicatorApp extends Application {
         ProgressIndicator p1 = new ProgressIndicator();
         p1.setPrefSize(50, 50);
 
-        ProgressIndicator p2 = new ProgressIndicator();
+        ProgressIndicator p2 = new ProgressIndicator(0.25);
         p2.setPrefSize(50, 50);
-        p2.setProgress(0.25F);
 
-        ProgressIndicator p3 = new ProgressIndicator();
+        ProgressIndicator p3 = new ProgressIndicator(0.5);
         p3.setPrefSize(50, 50);
-        p3.setProgress(0.5F);
 
-        ProgressIndicator p4 = new ProgressIndicator();
+        ProgressIndicator p4 = new ProgressIndicator(1.0);
         p4.setPrefSize(50, 50);
-        p4.setProgress(1.0F);
 
         // styled ProgressIndicator
         final ProgressIndicator p5 = new ProgressIndicator();
@@ -82,7 +81,10 @@ public class ProgressIndicatorApp extends Application {
         p5.styleProperty().bind(Bindings.createStringBinding(
                 () -> {
                     final double percent = p5.getProgress();
-                    if (percent < 0) return null; // progress bar went indeterminate
+                    if (percent < 0) {
+                        // progress bar went indeterminate
+                        return null;
+                    }
                     //
                     // poor man's gradient for stops: red, yellow 50%, green
                     // Based on http://en.wikibooks.org/wiki/Color_Theory/Color_gradient#Linear_RGB_gradient_with_6_segments
@@ -110,7 +112,9 @@ public class ProgressIndicatorApp extends Application {
                             break;
 
                     }
-                    final String style = String.format("-fx-progress-color: rgb(%d,%d,%d)", r, g, b);
+                    final String style =
+                        String.format("-fx-progress-color: rgb(%d,%d,%d)",
+                                      r, g, b);
                     return style;
                 },
                 p5.progressProperty()

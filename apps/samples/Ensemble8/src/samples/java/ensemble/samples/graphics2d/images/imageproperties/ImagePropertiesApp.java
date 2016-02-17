@@ -48,31 +48,34 @@ import javafx.stage.Stage;
  *
  * @sampleName Image Properties
  * @preview preview.png
- * @related /Graphics 2d/Images/Image Creation
+ * @docUrl http://docs.oracle.com/javase/8/javafx/graphics-tutorial/image_ops.htm#JFXGR238 JavaFX Image Operations
  * @see javafx.scene.image.Image
  * @see javafx.scene.image.ImageView
  * @embedded
+ *
+ * @related /Graphics 2d/Images/Image Creation
+ * @related /Graphics 2d/Images/Image Operation
  */
 public class ImagePropertiesApp extends Application {
 
-    private static final String url = ImagePropertiesApp.class.getResource("/ensemble/samples/shared-resources/sanfran.jpg").toString();
-
     public Parent createContent() {
-        //we can set image properties directly during creation
+        // we can set image properties directly during creation
+        String resource = "/ensemble/samples/shared-resources/sanfran.jpg";
+        String url = getClass().getResource(resource).toString();
         ImageView sample1 = new ImageView(new Image(url, 30, 70, false, true));
 
         ImageView sample2 = new ImageView(new Image(url));
-        //image can be resized to preferred width
+        // image can be resized to preferred width
         sample2.setFitWidth(200);
         sample2.setPreserveRatio(true);
 
         ImageView sample3 = new ImageView(new Image(url));
-        //image can be resized to preferred height
+        // image can be resized to preferred height
         sample3.setFitHeight(20);
         sample3.setPreserveRatio(true);
 
         ImageView sample4 = new ImageView(new Image(url));
-        //one can resize image without preserving ratio between height and width
+        // one can resize image without preserving ratio between height and width
         sample4.setFitWidth(40);
         sample4.setFitHeight(80);
         sample4.setPreserveRatio(false);
@@ -81,14 +84,14 @@ public class ImagePropertiesApp extends Application {
         ImageView sample5 = new ImageView(new Image(url));
         sample5.setFitHeight(60);
         sample5.setPreserveRatio(true);
-        //viewport is used for displaying the part of image
+        // viewport is used for displaying the part of image
         Rectangle2D rectangle2D = new Rectangle2D(50, 200, 120, 60);
         sample5.setViewport(rectangle2D);
-        //add the imageviews to layout
+        // add the imageviews to layout
         HBox hBox = new HBox();
         hBox.setSpacing(10);
         hBox.getChildren().addAll(sample1, sample3, sample4, sample5);
-        //show the layout
+        // show the layout
         VBox vb = new VBox(10);
         vb.setAlignment(Pos.CENTER);
         vb.getChildren().addAll(hBox, sample2);

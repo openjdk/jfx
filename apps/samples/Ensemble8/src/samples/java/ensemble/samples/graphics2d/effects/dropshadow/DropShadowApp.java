@@ -48,13 +48,21 @@ import javafx.stage.Stage;
  *
  * @sampleName Drop Shadow
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/visual_effects.htm#JFXTE191 JavaFX Visual Effects
  * @playground dropShadow.radius (name="Drop Shadow Radius", min=0, max=20)
  * @playground dropShadow.offsetX (name="Drop Shadow Offset X", min=-10, max=10)
  * @playground dropShadow.offsetY (name="Drop Shadow Offset Y", min=-10, max=10)
  * @playground dropShadow.spread (name="Drop Shadow Spread", min=0, max=1)
  * @playground dropShadow.color (name="Drop Shadow Color")
+ *
  * @see javafx.scene.effect.DropShadow
  * @see javafx.scene.effect.Effect
+ * @see javafx.scene.layout.StackPane
+ *
+ * @related /Graphics 2d/Effects/Gaussian Blur
+ * @related /Graphics 2d/Effects/Inner Shadow
+ * @related /Graphics 2d/Effects/Reflection
+ * @related /Graphics 2d/Effects/Sepia Tone
  */
 public class DropShadowApp extends Application {
 

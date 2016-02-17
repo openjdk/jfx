@@ -50,10 +50,16 @@ import javafx.stage.Stage;
  *
  * @sampleName Audio Clip
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/media-tutorial/overview.htm#JFXMD101 Using JavaFX Media
+ * @see javafx.scene.layout.StackPane
  * @see javafx.scene.media.AudioClip
- * @related /Graphics 3d/Xylophone
  * @highlight
  * @conditionalFeatures WEB, MEDIA
+ *
+ * @related /Media/Alpha Media Player
+ * @related /Media/Overlay Media Player
+ * @related /Media/Streaming Media Player
+ * @related /Graphics 3d/Xylophone
  */
 public class AudioClipApp extends Application {
     public Parent createContent() {
@@ -69,14 +75,14 @@ public class AudioClipApp extends Application {
         final Group content = new Group(
                 r1,
                 r2,
-                createKey(Color.PURPLE, xStart + 0 * xOffset, barWidth, 100, "/ensemble/samples/shared-resources/Note1.wav"),
-                createKey(Color.BLUEVIOLET, xStart + 1 * xOffset, barWidth, 95, "/ensemble/samples/shared-resources/Note2.wav"),
-                createKey(Color.BLUE, xStart + 2 * xOffset, barWidth, 90, "/ensemble/samples/shared-resources/Note3.wav"),
-                createKey(Color.GREEN, xStart + 3 * xOffset, barWidth, 85, "/ensemble/samples/shared-resources/Note4.wav"),
-                createKey(Color.GREENYELLOW, xStart + 4 * xOffset, barWidth, 80, "/ensemble/samples/shared-resources/Note5.wav"),
-                createKey(Color.YELLOW, xStart + 5 * xOffset, barWidth, 75, "/ensemble/samples/shared-resources/Note6.wav"),
-                createKey(Color.ORANGE, xStart + 6 * xOffset, barWidth, 70, "/ensemble/samples/shared-resources/Note7.wav"),
-                createKey(Color.RED, xStart + 7 * xOffset, barWidth, 65, "/ensemble/samples/shared-resources/Note8.wav"));
+                createKey(Color.PURPLE, xStart + 0 * xOffset, barWidth, 1),
+                createKey(Color.BLUEVIOLET, xStart + 1 * xOffset, barWidth, 2),
+                createKey(Color.BLUE, xStart + 2 * xOffset, barWidth, 3),
+                createKey(Color.GREEN, xStart + 3 * xOffset, barWidth, 4),
+                createKey(Color.GREENYELLOW, xStart + 4 * xOffset, barWidth, 5),
+                createKey(Color.YELLOW, xStart + 5 * xOffset, barWidth, 6),
+                createKey(Color.ORANGE, xStart + 6 * xOffset, barWidth, 7),
+                createKey(Color.RED, xStart + 7 * xOffset, barWidth, 8));
 
         // A StackPane by default centers its children, here we extend it to
         // scale the content to fill the StackPane first.
@@ -96,7 +102,13 @@ public class AudioClipApp extends Application {
         return root;
     }
 
-    public static Rectangle createKey(Color color, double x, double width, double height, String sound) {
+    public static Rectangle createKey(Color color, double x,
+                                      double width, int note) {
+        String sound =
+            String.format("/ensemble/samples/shared-resources/Note%d.wav",
+                          note);
+
+        double height = 100 - ((note - 1) * 5);
         // create a audio clip that this key will play
         final AudioClip barNote = new AudioClip(
                 AudioClipApp.class.getResource(sound).toExternalForm());

@@ -36,13 +36,16 @@ import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.NumberAxis.DefaultFormatter;
 import javafx.scene.chart.XYChart;
+import javafx.scene.chart.XYChart.Data;
+import javafx.scene.chart.XYChart.Series;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -52,15 +55,21 @@ import javafx.util.Duration;
  *
  * @sampleName Stock Line Chart
  * @preview preview.png
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @see javafx.scene.chart.LineChart
  * @see javafx.scene.chart.NumberAxis
- * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
+ * @see javafx.scene.chart.XYChart
+ *
+ * @related /Charts/Area/Area Chart
+ * @related /Charts/Line/Category Line Chart
+ * @related /Charts/Line/Line Chart
+ * @related /Charts/Scatter/Scatter Chart
  */
 public class StockLineChartApp extends Application {
 
     private LineChart<Number, Number> chart;
-    private XYChart.Series<Number, Number> hourDataSeries;
-    private XYChart.Series<Number, Number> minuteDataSeries;
+    private Series<Number, Number> hourDataSeries;
+    private Series<Number, Number> minuteDataSeries;
     private NumberAxis xAxis;
     private Timeline animation;
     private double hours = 0;
@@ -70,16 +79,18 @@ public class StockLineChartApp extends Application {
     private double y = 10;
 
     public StockLineChartApp() {
+        // 6 minutes data per frame
+        final KeyFrame frame =
+            new KeyFrame(Duration.millis(1000 / 60),
+                         (ActionEvent actionEvent) -> {
+                             for (int count = 0; count < 6; count++) {
+                                 nextTime();
+                                 plotTime();
+                             }
+                         });
         // create timeline to add new data every 60th of second
         animation = new Timeline();
-        animation.getKeyFrames()
-                .add(new KeyFrame(Duration.millis(1000 / 60), (ActionEvent actionEvent) -> {
-                     // 6 minutes data per frame
-                    for (int count = 0; count < 6; count++) {
-                        nextTime();
-                        plotTime();
-                    }
-        }));
+        animation.getKeyFrames().add(frame);
         animation.setCycleCount(Animation.INDEFINITE);
     }
 
@@ -88,7 +99,9 @@ public class StockLineChartApp extends Application {
         final NumberAxis yAxis = new NumberAxis(0, 100, 10);
         chart = new LineChart<>(xAxis, yAxis);
         // setup chart
-        chart.getStylesheets().add(StockLineChartApp.class.getResource("StockLineChart.css").toExternalForm());
+        final String stockLineChartCss =
+            getClass().getResource("StockLineChart.css").toExternalForm();
+        chart.getStylesheets().add(stockLineChartCss);
         chart.setCreateSymbols(false);
         chart.setAnimated(false);
         chart.setLegendVisible(false);
@@ -96,18 +109,17 @@ public class StockLineChartApp extends Application {
         xAxis.setLabel("Time");
         xAxis.setForceZeroInRange(false);
         yAxis.setLabel("Share Price");
-        yAxis
-                .setTickLabelFormatter(new NumberAxis.DefaultFormatter(yAxis, "$", null));
+        yAxis.setTickLabelFormatter(new DefaultFormatter(yAxis, "$", null));
         // add starting data
-        hourDataSeries = new XYChart.Series<>();
+        hourDataSeries = new Series<>();
         hourDataSeries.setName("Hourly Data");
-        minuteDataSeries = new XYChart.Series<>();
+        minuteDataSeries = new Series<>();
         minuteDataSeries.setName("Minute Data");
         // create some starting data
-        hourDataSeries.getData()
-                .add(new XYChart.Data<Number, Number>(timeInHours, prevY));
-        minuteDataSeries.getData()
-                .add(new XYChart.Data<Number, Number>(timeInHours, prevY));
+        hourDataSeries.getData().add(new Data<Number, Number>(timeInHours,
+                                                              prevY));
+        minuteDataSeries.getData().add(new Data<Number, Number>(timeInHours,
+                                                                prevY));
         for (double m = 0; m < (60); m++) {
             nextTime();
             plotTime();
@@ -136,8 +148,8 @@ public class StockLineChartApp extends Application {
             while (y < 10 || y > 90) {
                 y = y - 10 + (Math.random() * 20);
             }
-            hourDataSeries.getData()
-                    .add(new XYChart.Data<Number, Number>(timeInHours, prevY));
+            hourDataSeries.getData().add(new Data<Number, Number>(timeInHours,
+                                                                  prevY));
             // after 25hours delete old data
             if (timeInHours > 25) {
                 hourDataSeries.getData().remove(0);
@@ -150,22 +162,25 @@ public class StockLineChartApp extends Application {
         }
         double min = (timeInHours % 1);
         double randomPickVariance = Math.random();
+        final ObservableList<Data<Number,Number>> minuteList =
+            minuteDataSeries.getData();
+
         if (randomPickVariance < 0.3) {
             double minY = prevY + ((y - prevY) * min) - 4 + (Math.random() * 8);
-            minuteDataSeries.getData().add(new XYChart.Data<Number, Number>(timeInHours, minY));
+            minuteList.add(new Data<Number, Number>(timeInHours, minY));
         } else if (randomPickVariance < 0.7) {
             double minY = prevY + ((y - prevY) * min) - 6 + (Math.random() * 12);
-            minuteDataSeries.getData().add(new XYChart.Data<Number, Number>(timeInHours, minY));
+            minuteList.add(new Data<Number, Number>(timeInHours, minY));
         } else if (randomPickVariance < 0.95) {
             double minY = prevY + ((y - prevY) * min) - 10 + (Math.random() * 20);
-            minuteDataSeries.getData().add(new XYChart.Data<Number, Number>(timeInHours, minY));
+            minuteList.add(new Data<Number, Number>(timeInHours, minY));
         } else {
             double minY = prevY + ((y - prevY) * min) - 15 + (Math.random() * 30);
-            minuteDataSeries.getData().add(new XYChart.Data<Number, Number>(timeInHours, minY));
+            minuteList.add(new Data<Number, Number>(timeInHours, minY));
         }
         // after 25hours delete old data
         if (timeInHours > 25) {
-            minuteDataSeries.getData().remove(0);
+            minuteList.remove(0);
         }
     }
 

@@ -38,6 +38,7 @@ import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.NumberAxis.DefaultFormatter;
 import javafx.scene.chart.XYChart;
 import javafx.scene.media.AudioSpectrumListener;
 import javafx.scene.media.Media;
@@ -50,8 +51,8 @@ import javafx.stage.Stage;
  *
  * @sampleName Audio Bar Chart
  * @preview preview.png
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @see javafx.scene.chart.BarChart
- * @see javafx.scene.chart.Chart
  * @see javafx.scene.chart.CategoryAxis
  * @see javafx.scene.chart.NumberAxis
  * @see javafx.scene.chart.XYChart
@@ -59,19 +60,26 @@ import javafx.stage.Stage;
  * @see javafx.scene.media.Media
  * @see javafx.scene.media.MediaPlayer
  * @conditionalFeatures WEB, MEDIA
+ *
+ * @related /Charts/Bar/Bar Chart
+ * @related /Charts/Bar/Horizontal Bar Chart
+ * @related /Charts/Bar/Image Bar Chart
+ * @related /Charts/Bar/Stacked Bar Chart
  */
 public class AudioBarChartApp extends Application {
 
     private XYChart.Data<String, Number>[] series1Data;
     private AudioSpectrumListener audioSpectrumListener;
-    private static final String AUDIO_URI = System.getProperty("demo.audio.url",
+    private static final String AUDIO_URI =
+        System.getProperty("demo.audio.url",
             "http://download.oracle.com/otndocs/products/javafx/oow2010-2.flv");
     private MediaPlayer audioMediaPlayer;
     private static final boolean PLAY_AUDIO = Boolean.parseBoolean(
             System.getProperty("demo.play.audio", "true"));
 
     public AudioBarChartApp() {
-        audioSpectrumListener = (double timestamp, double duration, float[] magnitudes, float[] phases) -> {
+        audioSpectrumListener = (double timestamp, double duration,
+                                 float[] magnitudes, float[] phases) -> {
             for (int i = 0; i < series1Data.length; i++) {
                 series1Data[i].setYValue(magnitudes[i] + 60);
             }
@@ -91,7 +99,9 @@ public class AudioBarChartApp extends Application {
         final CategoryAxis xAxis = new CategoryAxis();
         final NumberAxis yAxis = new NumberAxis(0, 50, 10);
         final BarChart<String, Number> bc = new BarChart<>(xAxis, yAxis);
-        bc.getStylesheets().add(AudioBarChartApp.class.getResource("AudioBarChart.css").toExternalForm());
+        final String audioBarChartCss =
+            getClass().getResource("AudioBarChart.css").toExternalForm();
+        bc.getStylesheets().add(audioBarChartCss);
         bc.setLegendVisible(false);
         bc.setAnimated(false);
         bc.setBarGap(0);
@@ -101,7 +111,7 @@ public class AudioBarChartApp extends Application {
         bc.setTitle("Live Audio Spectrum Data");
         xAxis.setLabel("Frequency Bands");
         yAxis.setLabel("Magnitudes");
-        yAxis.setTickLabelFormatter(new NumberAxis.DefaultFormatter(yAxis, null, "dB"));
+        yAxis.setTickLabelFormatter(new DefaultFormatter(yAxis, null, "dB"));
         // add starting data
         XYChart.Series<String, Number> series1 = new XYChart.Series<>();
         series1.setName("Data Series 1");

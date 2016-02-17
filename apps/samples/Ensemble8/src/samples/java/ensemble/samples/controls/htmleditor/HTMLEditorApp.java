@@ -33,7 +33,6 @@ package ensemble.samples.controls.htmleditor;
 
 import javafx.application.Application;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -51,18 +50,17 @@ import javafx.stage.Stage;
  *
  * @sampleName HTML Editor
  * @preview preview.png
- * @see javafx.scene.web.HTMLEditor
- * @see javafx.scene.control.ScrollPane
- * @see javafx.scene.control.ScrollPane.ScrollBarPolicy
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.Button
- * @see javafx.event.ActionEvent
- * @see javafx.event.EventHandler
- * @see javafx.geometry.Pos
  * @see javafx.scene.control.Label
+ * @see javafx.scene.control.ScrollPane
  * @see javafx.scene.layout.VBox
+ * @see javafx.scene.web.HTMLEditor
+ * @conditionalFeatures WEB
+ *
+ * @related /Graphics2d/Colorful Circles
  * @related /Controls/Text/Simple Label
  * @related /Controls/WebView
- * @conditionalFeatures WEB
  */
 public class HTMLEditorApp extends Application {
 

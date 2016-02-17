@@ -47,12 +47,16 @@ import javafx.stage.Stage;
  *
  * @sampleName HyperLink
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.Hyperlink
+ * @see javafx.scene.image.ImageView
  * @embedded
+ *
+ * @related /Language/FXML Login Demo
+ * @related /Graphics 2d/Images/Image Creation
+ * @related /Controls/WebView
  */
 public class HyperLinkApp extends Application {
-
-    private static final Image ICON_48 = new Image(HyperLinkApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
 
     public Parent createContent() {
         HBox hbox = new HBox(18);
@@ -62,6 +66,8 @@ public class HyperLinkApp extends Application {
         vbox.setSpacing(5);
         vbox.setAlignment(Pos.CENTER_LEFT);
 
+        String IMAGE_48 = "/ensemble/samples/shared-resources/icon-48x48.png";
+        Image ICON_48 = new Image(getClass().getResourceAsStream(IMAGE_48));
         ImageView iv = new ImageView(ICON_48);
         Hyperlink h1 = new Hyperlink("Hyperlink");
         h1.setPrefWidth(80);

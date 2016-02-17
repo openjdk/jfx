@@ -51,8 +51,10 @@ import javafx.util.Duration;
  *
  * @sampleName Parallel Transition
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @see javafx.animation.ParallelTransition
  * @see javafx.animation.Transition
+ *
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
  * @related /Animation/Transitions/Path Transition
@@ -66,10 +68,10 @@ import javafx.util.Duration;
  */
 public class ParallelTransitionApp extends Application {
 
-    private ParallelTransition parallelTransition;
+    private ParallelTransition parallel;
 
     public Parent createContent() {
-        Pane root = new Pane();
+        final Pane root = new Pane();
         root.setPrefSize(400, 200);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
@@ -81,44 +83,46 @@ public class ParallelTransitionApp extends Application {
         rect.setTranslateX(50);
         rect.setTranslateY(75);
         root.getChildren().add(rect);
+
         // create parallel transition to do all 4 transitions at the same time
-        FadeTransition fadeTrans = new FadeTransition(Duration.seconds(3), rect);
-        fadeTrans.setFromValue(1);
-        fadeTrans.setToValue(0.3);
-        fadeTrans.setAutoReverse(true);
+        FadeTransition fade = new FadeTransition(Duration.seconds(3), rect);
+        fade.setFromValue(1);
+        fade.setToValue(0.3);
+        fade.setAutoReverse(true);
 
-        TranslateTransition translateTran = new TranslateTransition(Duration.seconds(2));
-        translateTran.setFromX(50);
-        translateTran.setToX(320);
-        translateTran.setCycleCount(2);
-        translateTran.setAutoReverse(true);
+        TranslateTransition translate =
+            new TranslateTransition(Duration.seconds(2));
+        translate.setFromX(50);
+        translate.setToX(320);
+        translate.setCycleCount(2);
+        translate.setAutoReverse(true);
 
-        RotateTransition rotateTran = new RotateTransition(Duration.seconds(3));
-        rotateTran.setByAngle(180);
-        rotateTran.setCycleCount(4);
-        rotateTran.setAutoReverse(true);
+        RotateTransition rotate = new RotateTransition(Duration.seconds(3));
+        rotate.setByAngle(180);
+        rotate.setCycleCount(4);
+        rotate.setAutoReverse(true);
 
-        ScaleTransition scaleTran = new ScaleTransition(Duration.seconds(2));
-        scaleTran.setToX(2);
-        scaleTran.setToY(2);
-        scaleTran.setCycleCount(2);
-        scaleTran.setAutoReverse(true);
+        ScaleTransition scale = new ScaleTransition(Duration.seconds(2));
+        scale.setToX(2);
+        scale.setToY(2);
+        scale.setCycleCount(2);
+        scale.setAutoReverse(true);
 
-        parallelTransition = new ParallelTransition(rect, fadeTrans,
-                translateTran, rotateTran, scaleTran);
-        parallelTransition.setCycleCount(Timeline.INDEFINITE);
-        parallelTransition.setAutoReverse(true);
+        parallel = new ParallelTransition(rect,
+                                          fade, translate, rotate, scale);
+        parallel.setCycleCount(Timeline.INDEFINITE);
+        parallel.setAutoReverse(true);
 
         return root;
     }
 
     public void play() {
-        parallelTransition.play();
+        parallel.play();
     }
 
     @Override
     public void stop() {
-        parallelTransition.stop();
+        parallel.stop();
     }
 
     @Override

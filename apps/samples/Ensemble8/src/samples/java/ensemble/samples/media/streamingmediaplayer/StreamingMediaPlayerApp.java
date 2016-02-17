@@ -44,26 +44,34 @@ import javafx.stage.Stage;
  *
  * @sampleName Streaming Media Player
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/media-tutorial/overview.htm#JFXMD101 Using JavaFX Media
  * @see javafx.scene.media.MediaPlayer
  * @see javafx.scene.media.Media
+ * @conditionalFeatures WEB, MEDIA
+ *
  * @related /Media/Advanced Media
  * @related /Media/Alpha Media Player
  * @related /Media/Overlay Media Player
- * @conditionalFeatures WEB, MEDIA
  */
 public class StreamingMediaPlayerApp extends Application {
 
-    private String streamingMediaPlayerCss = StreamingMediaPlayerApp.class.getResource("StreamingMediaPlayer.css").toExternalForm();
-    private static final String MEDIA_URL = "http://download.oracle.com/otndocs/javafx/JavaRap_ProRes_H264_768kbit_Widescreen.mp4";
     private MediaPlayer mediaPlayer;
 
     public Parent createContent() {
+        final String MEDIA_URL =
+            "http://download.oracle.com/otndocs/javafx/" +
+            "JavaRap_ProRes_H264_768kbit_Widescreen.mp4";
+        final String streamingMediaPlayerCss =
+            getClass().getResource("StreamingMediaPlayer.css").toExternalForm();
+        final double mediaWidth  = 480;
+        final double mediaHeight = 360;
+
         mediaPlayer = new MediaPlayer(new Media(MEDIA_URL));
         mediaPlayer.setAutoPlay(true);
         PlayerPane playerPane = new PlayerPane(mediaPlayer);
-        playerPane.setMinSize(480, 360);
-        playerPane.setPrefSize(480, 360);
-        playerPane.setMaxSize(480, 360);
+        playerPane.setMinSize(mediaWidth, mediaHeight);
+        playerPane.setPrefSize(mediaWidth, mediaHeight);
+        playerPane.setMaxSize(mediaWidth, mediaHeight);
         playerPane.getStylesheets().add(streamingMediaPlayerCss);
 
         return playerPane;
@@ -71,11 +79,13 @@ public class StreamingMediaPlayerApp extends Application {
 
     public void play() {
         MediaPlayer.Status status = mediaPlayer.getStatus();
-        if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
+        if (status == MediaPlayer.Status.UNKNOWN ||
+                status == MediaPlayer.Status.HALTED) {
             return;
         }
-        if (status == MediaPlayer.Status.PAUSED || status == MediaPlayer.Status.STOPPED ||
-            status == MediaPlayer.Status.READY) {
+        if (status == MediaPlayer.Status.PAUSED ||
+                status == MediaPlayer.Status.STOPPED ||
+                status == MediaPlayer.Status.READY) {
             mediaPlayer.play();
         }
     }

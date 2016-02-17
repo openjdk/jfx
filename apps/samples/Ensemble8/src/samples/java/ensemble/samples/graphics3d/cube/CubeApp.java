@@ -51,19 +51,21 @@ import javafx.util.Duration;
  *
  * @sampleName 3D Cubes
  * @preview preview.png
- * @see javafx.scene.shape.Box
- * @see javafx.scene.paint.PhongMaterial
+ * @docUrl http://docs.oracle.com/javase/8/javafx/graphics-tutorial/javafx-3d-graphics.htm#JFXGR256 JavaFX 3D Graphics
  * @see javafx.scene.PerspectiveCamera
  * @see javafx.scene.SubScene
  * @see javafx.scene.SceneAntialiasing
  * @see javafx.scene.paint.Color
+ * @see javafx.scene.paint.PhongMaterial
+ * @see javafx.scene.shape.Box
  * @see javafx.scene.transform.Rotate
  * @see javafx.scene.transform.Translate
- * @see javafx.animation.KeyFrame
- * @see javafx.animation.KeyValue
- * @see javafx.animation.Timeline
- * @see javafx.util.Duration
  * @conditionalFeatures SCENE3D
+ *
+ * @related /Graphics 3d/Xylophone
+ * @related /Graphics 3d/3D Box
+ * @related /Graphics 3d/3D Sphere
+ * @related /Graphics 3d/3D Sphere System
  */
 public class CubeApp extends Application {
 
@@ -101,7 +103,8 @@ public class CubeApp extends Application {
         Group root = new Group();
         root.getChildren().addAll(c, c2, c3);
 
-        SubScene subScene = new SubScene(root, 640, 480, true, SceneAntialiasing.BALANCED);
+        SubScene subScene = new SubScene(root, 640, 480,
+                                         true, SceneAntialiasing.BALANCED);
         subScene.setCamera(camera);
 
         return new Group(subScene);

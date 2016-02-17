@@ -32,6 +32,7 @@
 package ensemble.samples.graphics2d.images.imagecreation;
 
 import javafx.application.Application;
+import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
@@ -45,23 +46,28 @@ import javafx.stage.Stage;
  *
  * @sampleName Image Creation
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/graphics-tutorial/image_ops.htm#JFXGR238 JavaFX Image Operations
  * @see javafx.scene.image.Image
  * @see javafx.scene.image.ImageView
+ *
+ * @related /Graphics 2d/Images/Image Operation
+ * @related /Graphics 2d/Images/Image Properties
  */
 public class ImageCreationApp extends Application {
 
-    private static final Image ICON_48 = new Image(ImageCreationApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
-
     public Parent createContent() {
         // load and display a image resource from classpath
+        String URL = "/ensemble/samples/shared-resources/icon-48x48.png";
+        Image ICON_48 = new Image(getClass().getResourceAsStream(URL));
         ImageView sample1 = new ImageView(ICON_48);
+
         // load and display a image resource from url
-        ImageView sample2 = new ImageView(
-                new Image("http://java.com/images/jv0h.jpg", 400, 100, true, true));
-        //show both images
-        VBox vb = new VBox(10);
-        vb.getChildren().addAll(sample1, sample2);
-        return vb;
+        Image JV0H = new Image("http://java.com/images/jv0h.jpg",
+                               400, 100, true, true);
+        ImageView sample2 = new ImageView(JV0H);
+
+        // show both images
+        return new Group(new VBox(10, sample1, sample2));
     }
 
     @Override

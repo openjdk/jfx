@@ -49,10 +49,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Line Chart
  * @preview preview.png
- * @see javafx.scene.chart.LineChart
- * @see javafx.scene.chart.NumberAxis
- * @related /Charts/Area/Area Chart
- * @related /Charts/Scatter/Scatter Chart
  * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
@@ -101,7 +97,15 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.LineChart
+ * @see javafx.scene.chart.NumberAxis
+ * @see javafx.scene.chart.XYChart
  * @embedded
+ *
+ * @related /Charts/Area/Area Chart
+ * @related /Charts/Line/Category Line Chart
+ * @related /Charts/Scatter/Scatter Chart
+ * @related /Charts/Line/Stock Line Chart
  */
 public class LineChartApp extends Application {
 
@@ -112,22 +116,23 @@ public class LineChartApp extends Application {
     public Parent createContent() {
         xAxis = new NumberAxis("Values for X-Axis", 0, 3, 1);
         yAxis = new NumberAxis("Values for Y-Axis", 0, 3, 1);
-        ObservableList<XYChart.Series<Double,Double>> lineChartData = FXCollections.observableArrayList(
-            new LineChart.Series<>("Series 1", FXCollections.observableArrayList(
-                new XYChart.Data<>(0.0, 1.0),
-                new XYChart.Data<>(1.2, 1.4),
-                new XYChart.Data<>(2.2, 1.9),
-                new XYChart.Data<>(2.7, 2.3),
-                new XYChart.Data<>(2.9, 0.5)
-            )),
-            new LineChart.Series<>("Series 2", FXCollections.observableArrayList(
-                new XYChart.Data<>(0.0, 1.6),
-                new XYChart.Data<>(0.8, 0.4),
-                new XYChart.Data<>(1.4, 2.9),
-                new XYChart.Data<>(2.1, 1.3),
-                new XYChart.Data<>(2.6, 0.9)
-            ))
-        );
+        ObservableList<XYChart.Series<Double,Double>> lineChartData =
+            FXCollections.observableArrayList(
+                new LineChart.Series<>("Series 1",
+                                       FXCollections.observableArrayList(
+                    new XYChart.Data<>(0.0, 1.0),
+                    new XYChart.Data<>(1.2, 1.4),
+                    new XYChart.Data<>(2.2, 1.9),
+                    new XYChart.Data<>(2.7, 2.3),
+                    new XYChart.Data<>(2.9, 0.5))),
+                new LineChart.Series<>("Series 2",
+                                       FXCollections.observableArrayList(
+                    new XYChart.Data<>(0.0, 1.6),
+                    new XYChart.Data<>(0.8, 0.4),
+                    new XYChart.Data<>(1.4, 2.9),
+                    new XYChart.Data<>(2.1, 1.3),
+                    new XYChart.Data<>(2.6, 0.9)))
+            );
         chart = new LineChart(xAxis, yAxis, lineChartData);
         return chart;
     }

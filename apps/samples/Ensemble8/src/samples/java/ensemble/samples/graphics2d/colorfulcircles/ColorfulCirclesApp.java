@@ -63,12 +63,18 @@ import javafx.util.Duration;
  *
  * @sampleName Colorful Circles
  * @preview preview.png
+ *
+ * @see javafx.animation.Timeline
+ * @see javafx.scene.Group
  * @see javafx.scene.effect.BlendMode
  * @see javafx.scene.effect.BoxBlur
- * @see javafx.scene.shape.Circle
- * @see javafx.scene.Group
+ * @see javafx.scene.paint.Color
+ * @see javafx.scene.paint.CycleMethod
  * @see javafx.scene.paint.LinearGradient
- * @see javafx.animation.Timeline
+ * @see javafx.scene.shape.Circle
+ *
+ * @related /Graphics 2d/Canvas Fireworks
+ * @related /Graphics 2d/Effects/Gaussian Blur
  */
 public class ColorfulCirclesApp extends Application {
 
@@ -108,7 +114,8 @@ public class ColorfulCirclesApp extends Application {
         layer3.setEffect(new BoxBlur(10, 10, 3));
         // create a rectangle size of window with colored gradient
         Rectangle colors = new Rectangle(WIDTH, HEIGHT,
-                new LinearGradient(0f, 1f, 1f, 0f, true, CycleMethod.NO_CYCLE, new Stop(0, Color.web("#f8bd55")),
+                new LinearGradient(0f, 1f, 1f, 0f, true, CycleMethod.NO_CYCLE,
+                                   new Stop(0, Color.web("#f8bd55")),
                 new Stop(0.14f, Color.web("#c0fe56")),
                 new Stop(0.28f, Color.web("#5dfbc1")),
                 new Stop(0.43f, Color.web("#64c2f8")),

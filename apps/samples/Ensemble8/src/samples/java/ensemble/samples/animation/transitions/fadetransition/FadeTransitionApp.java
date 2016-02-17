@@ -47,8 +47,10 @@ import javafx.util.Duration;
  *
  * @sampleName Fade Transition
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @see javafx.animation.FadeTransition
  * @see javafx.animation.Transition
+ *
  * @related /Animation/Transitions/Fill Transition
  * @related /Animation/Transitions/Parallel Transition
  * @related /Animation/Transitions/Path Transition
@@ -62,7 +64,7 @@ import javafx.util.Duration;
  */
 public class FadeTransitionApp extends Application {
 
-    private FadeTransition fadeTransition;
+    private FadeTransition fade;
 
     public Parent createContent() {
         Pane root = new Pane();
@@ -76,22 +78,22 @@ public class FadeTransitionApp extends Application {
         rect.setFill(Color.DODGERBLUE);
         root.getChildren().add(rect);
 
-        fadeTransition = new FadeTransition(Duration.seconds(4), rect);
-        fadeTransition.setFromValue(1);
-        fadeTransition.setToValue(0.2);
-        fadeTransition.setCycleCount(Timeline.INDEFINITE);
-        fadeTransition.setAutoReverse(true);
+        fade = new FadeTransition(Duration.seconds(4), rect);
+        fade.setFromValue(1);
+        fade.setToValue(0.2);
+        fade.setCycleCount(Timeline.INDEFINITE);
+        fade.setAutoReverse(true);
 
         return root;
     }
 
     public void play() {
-        fadeTransition.play();
+        fade.play();
     }
 
     @Override
     public void stop() {
-        fadeTransition.stop();
+        fade.stop();
     }
 
     @Override

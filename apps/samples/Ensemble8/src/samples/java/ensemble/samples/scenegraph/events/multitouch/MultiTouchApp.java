@@ -42,20 +42,22 @@ import javafx.stage.Stage;
  *
  * @sampleName Multi-Touch
  * @preview preview.png
- * @related /Scenegraph/Events/Gesture Event
- * @see javafx.scene.input.MouseEvent
- * @see javafx.event.EventHandler
- * @see javafx.scene.input.RotateEvent
- * @see javafx.scene.input.ZoomEvent
+ * @docUrl http://docs.oracle.com/javase/8/javafx/events-tutorial/events.htm#JFXED117 JavaFX Events
  * @see javafx.scene.effect.BlurType
  * @see javafx.scene.effect.DropShadow
- * @see javafx.scene.image.Image
  * @see javafx.scene.image.ImageView
- * @see javafx.scene.layout.Region
+ * @see javafx.scene.input.MouseEvent
+ * @see javafx.scene.input.RotateEvent
+ * @see javafx.scene.input.ZoomEvent
  * @see javafx.scene.layout.StackPane
  * @see javafx.scene.paint.Color
  * @see javafx.scene.shape.Rectangle
  * @embedded
+ *
+ * @related /Scenegraph/Events/Cursor
+ * @related /Scenegraph/Events/Gesture Event
+ * @related /Scenegraph/Events/KeyEvent
+ * @related /Scenegraph/Events/Key Stroke Motion
  */
 public class MultiTouchApp extends Application {
 

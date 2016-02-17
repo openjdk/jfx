@@ -46,8 +46,7 @@ import javafx.stage.Stage;
  *
  * @sampleName Bidi
  * @preview preview.png
- * @see javafx.scene.text.Text
- * @see javafx.scene.text.TextFlow
+ * @docUrl http://docs.oracle.com/javase/8/javafx/user-interface-tutorial/text.htm#JFXUI734 Using JavaFX Text
  * @playground text1.strikethrough (name="He said... strikethrough")
  * @playground text1.underline (name="He said... underline")
  * @playground text1.fill (name="He said... fill")
@@ -60,8 +59,18 @@ import javafx.stage.Stage;
  * @playground text2.rotate (name="...to me. rotate", min=-180, max=180)
  * @playground text2.translateX (name="...to me. translateX")
  * @playground text2.translateY (name="...to me. translateY")
+ * @see javafx.scene.text.Text
+ * @see javafx.scene.text.TextFlow
  * @embedded
  *
+ * @related /Controls/Text/Advanced Label
+ * @related /Controls/Text/Inset Text
+ * @related /Controls/Text/Search Box
+ * @related /Controls/Text/Simple Label
+ * @related /Controls/Text/Text Field
+ * @related /Controls/Text/TextFlow
+ * @related /Controls/Text/Text Formatter
+ * @related /Controls/Text/Text Validator
  */
 public class BidiApp extends Application {
 
@@ -69,7 +78,6 @@ public class BidiApp extends Application {
     Text text2;
 
     public Parent createContent() {
-        TextFlow textFlow = new TextFlow();
         Font font = new Font("Tahoma", 48);
         text1 = new Text("He said \u0627\u0644\u0633\u0644\u0627\u0645");
         text1.setFill(Color.RED);
@@ -77,11 +85,8 @@ public class BidiApp extends Application {
         text2 = new Text(" \u0639\u0644\u064a\u0643\u0645 to me.");
         text2.setFill(Color.BLUE);
         text2.setFont(font);
-        textFlow.getChildren().addAll(text1, text2);
 
-        Group group = new Group(textFlow);
-
-        return group;
+        return new Group(new TextFlow(text1, text2));
     }
 
     @Override

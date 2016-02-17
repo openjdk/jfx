@@ -44,9 +44,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Line
  * @preview preview.png
- * @see javafx.scene.shape.Line
- * @see javafx.scene.shape.Shape
- * @see javafx.scene.paint.Color
  * @playground exampleLine.startX  (min=50, max=550)
  * @playground exampleLine.startY  (min=50, max=350)
  * @playground exampleLine.endX (min=50, max=550)
@@ -56,7 +53,20 @@ import javafx.stage.Stage;
  * @playground exampleLine.strokeLineCap
  * @playground exampleLine.getStrokeDashArray
  * @playground exampleLine.strokeDashOffset (min=0, max=500)
+ * @see javafx.scene.shape.Line
+ * @see javafx.scene.shape.Shape
+ * @see javafx.scene.paint.Color
  * @embedded
+ *
+ * @related /Graphics 2d/Shapes/Arc
+ * @related /Graphics 2d/Shapes/Circle
+ * @related /Graphics 2d/Shapes/Cubic Curve
+ * @related /Graphics 2d/Shapes/Ellipse
+ * @related /Graphics 2d/Shapes/Path
+ * @related /Graphics 2d/Shapes/Polygon
+ * @related /Graphics 2d/Shapes/Polyline
+ * @related /Graphics 2d/Shapes/Quad Curve
+ * @related /Graphics 2d/Shapes/Rectangle
  */
 public class LineApp extends Application {
 
@@ -107,5 +117,7 @@ public class LineApp extends Application {
      * Java main for when running without JavaFX launcher
      * @param args command line arguments
      */
-    public static void main(String[] args) { launch(args); }
+    public static void main(String[] args) {
+        launch(args);
+    }
 }

@@ -59,7 +59,9 @@ public class Dial extends Parent {
     private int numOfMarks;
     private int numOfMinorMarks;
 
-    public Dial(double radius, boolean hasNumbers, int numOfMarks, int numOfMinorMarks, Color color, boolean hasEffect) {
+    public Dial(double radius, boolean hasNumbers,
+                int numOfMarks, int numOfMinorMarks,
+                Color color, boolean hasEffect) {
         this.color = color;
         this.radius = radius;
         this.numOfMarks = numOfMarks;
@@ -77,7 +79,9 @@ public class Dial extends Parent {
                 handEffectGroup);
     }
 
-    public Dial(double radius, boolean hasNumbers, int numOfMarks, int numOfMinorMarks, String name, Color color, boolean hasEffect) {
+    public Dial(double radius, boolean hasNumbers,
+                int numOfMarks, int numOfMinorMarks, String name,
+                Color color, boolean hasEffect) {
         this(radius, hasNumbers, numOfMarks, numOfMinorMarks, color, hasEffect);
         configureName(name);
         getChildren().add(this.name);
@@ -99,7 +103,8 @@ public class Dial extends Parent {
     }
 
     private Rectangle createTic(double angle, double width, double height) {
-        Rectangle rectangle = new Rectangle(-width / 2, -height / 2, width, height);
+        Rectangle rectangle = new Rectangle(-width / 2, -height / 2,
+                                            width, height);
         rectangle.setFill(Color.rgb(10, 10, 10));
         rectangle.setRotate(angle);
         rectangle.setLayoutX(radius * Math.cos(Math.toRadians(angle)));
@@ -144,8 +149,12 @@ public class Dial extends Parent {
     private void configureHand() {
         Circle circle = new Circle(0, 0, radius / 18);
         circle.setFill(color);
-        Rectangle rectangle1 = new Rectangle(-0.5 - radius / 140, +radius / 7 - radius / 1.08, radius / 70 + 1, radius / 1.08);
-        Rectangle rectangle2 = new Rectangle(-0.5 - radius / 140, +radius / 3.5 - radius / 7, radius / 70 + 1, radius / 7);
+        Rectangle rectangle1 = new Rectangle(-0.5 - radius / 140,
+                                             radius / 7 - radius / 1.08,
+                                             radius / 70 + 1, radius / 1.08);
+        Rectangle rectangle2 = new Rectangle(-0.5 - radius / 140,
+                                             radius / 3.5 - radius / 7,
+                                             radius / 70 + 1, radius / 7);
         rectangle1.setFill(color);
         rectangle2.setFill(Color.BLACK);
         hand.getChildren().addAll(circle, rectangle1, rectangle2);

@@ -34,10 +34,12 @@ package ensemble.samples.language.swing;
 
 import java.util.Arrays;
 import java.util.List;
+
+import javax.swing.table.AbstractTableModel;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.chart.BarChart;
-import javax.swing.table.AbstractTableModel;
 
 /**
  * SampleTableModel
@@ -103,9 +105,11 @@ public class SampleTableModel extends AbstractTableModel {
         if (bcData == null) {
             bcData = FXCollections.<BarChart.Series>observableArrayList();
             for (int row = 0; row < getRowCount(); row++) {
-                ObservableList<BarChart.Data> series = FXCollections.<BarChart.Data>observableArrayList();
+                ObservableList<BarChart.Data> series =
+                    FXCollections.<BarChart.Data>observableArrayList();
                 for (int column = 0; column < getColumnCount(); column++) {
-                    series.add(new BarChart.Data(getColumnName(column), getValueAt(row, column)));
+                    series.add(new BarChart.Data(getColumnName(column),
+                                                 getValueAt(row, column)));
                 }
                 bcData.add(new BarChart.Series(series));
             }

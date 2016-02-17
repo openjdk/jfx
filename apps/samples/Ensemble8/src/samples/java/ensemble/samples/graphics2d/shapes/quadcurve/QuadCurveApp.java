@@ -45,9 +45,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Quad Curve
  * @preview preview.png
- * @see javafx.scene.shape.QuadCurve
- * @see javafx.scene.shape.Shape
- * @see javafx.scene.paint.Color
  * @playground quadCurve.fill (name="Quad Curve Fill")
  * @playground quadCurve.stroke (name="Quad Curve Stroke")
  * @playground quadCurve.startX (name="Quad Curve Start X", min=0, max=170)
@@ -56,11 +53,25 @@ import javafx.stage.Stage;
  * @playground quadCurve.controlY (name="Quad Curve Control Y", min=0, max=90)
  * @playground quadCurve.endX (name="Quad Curve End X", min=10, max=180)
  * @playground quadCurve.endY (name="Quad Curve End Y", min=10, max=80)
+ * @see javafx.scene.layout.Region
+ * @see javafx.scene.shape.QuadCurve
+ * @see javafx.scene.shape.Shape
+ * @see javafx.scene.paint.Color
  * @embedded
+ *
+ * @related /Graphics 2d/Shapes/Arc
+ * @related /Graphics 2d/Shapes/Circle
+ * @related /Graphics 2d/Shapes/Cubic Curve
+ * @related /Graphics 2d/Shapes/Ellipse
+ * @related /Graphics 2d/Shapes/Line
+ * @related /Graphics 2d/Shapes/Path
+ * @related /Graphics 2d/Shapes/Polygon
+ * @related /Graphics 2d/Shapes/Polyline
+ * @related /Graphics 2d/Shapes/Rectangle
  */
 public class QuadCurveApp extends Application {
-        // Create quadCurve shape
-        QuadCurve quadCurve = new QuadCurve();
+    // Create quadCurve shape
+    QuadCurve quadCurve = new QuadCurve();
 
     public Parent createContent() {
         Pane root = new Pane();
