@@ -47,13 +47,19 @@ import javafx.stage.Stage;
  * @sampleName Node Properties
  * @preview preview.png
  * @see javafx.scene.Node
- * @related /Scenegraph/Custom Node
+ * @see javafx.scene.layout.Pane
+ * @see javafx.scene.paint.Color
+ * @see javafx.scene.shape.Rectangle
  * @playground rectA.translateX (name="Rectangle A translate X", min=0, max=50)
  * @playground rectB.translateX (name="Rectangle B translate X", min=0, max=50)
  * @playground rectC.translateX (name="Rectangle C translate X", min=0, max=50)
  * @playground rectA.opacity (name="Rectangle A Opacity", min=0, max=1)
  * @playground rectB.opacity (name="Rectangle B Opacity", min=0, max=1)
  * @playground rectC.opacity (name="Rectangle C Opacity", min=0, max=1)
+ *
+ * @related /Scenegraph/Custom Node
+ * @related /Graphics 2d/Shapes/Rectangle
+ * @related /Scenegraph/Stage
  */
 public class NodePropertiesApp extends Application {
 

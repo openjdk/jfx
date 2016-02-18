@@ -48,23 +48,29 @@ import javafx.stage.Stage;
  *
  * @sampleName Accordion
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.Accordion
+ * @see javafx.scene.control.Button
+ * @see javafx.scene.control.TitledPane
+ * @see javafx.scene.shape.Rectangle
+ * @embedded
+ *
  * @related /Controls/Toggle Button
  * @related /Controls/Toolbar/Tool Bar
- * @embedded
  */
 public class AccordionApp extends Application {
 
     public Parent createContent() {
-        TitledPane t1 = new TitledPane("Node 1", new Button("Button"));
-        TitledPane t2 = new TitledPane("Node 2", new Text("String"));
-        TitledPane t3 = new TitledPane("Node 3", new Rectangle(120, 50, Color.RED));
         Accordion accordion = new Accordion();
-        accordion.getPanes().add(t1);
-        accordion.getPanes().add(t2);
-        accordion.getPanes().add(t3);
+        accordion.getPanes().addAll(new TitledPane("Control",
+                                                   new Button("Press")),
+                                    new TitledPane("String",
+                                                   new Text("Hello World.")),
+                                    new TitledPane("Shape",
+                                                   new Rectangle(120, 50,
+                                                                 Color.RED)));
         accordion.setMinSize(100, 100);
-        accordion.setPrefSize(200, 400);
+        accordion.setPrefSize(100, 200);
         return accordion;
     }
 

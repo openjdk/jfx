@@ -43,6 +43,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
@@ -52,14 +53,22 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import java.io.InputStream;
+
 /**
  * Some implementations of tabs using the TabPane class.
  *
  * @sampleName TabPane
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.Tab
  * @see javafx.scene.control.TabPane
+ * @see javafx.scene.control.ToggleGroup
+ * @see javafx.scene.control.Tooltip
  * @embedded
+ *
+ * @related /Controls/DatePicker
+ * @related /Graphics 2d/Images/Image Creation
  */
 public class TabPaneApp extends Application {
 
@@ -90,10 +99,9 @@ public class TabPaneApp extends Application {
         // Initial tab with buttons for experimenting
         tab1.setText("Tab 1");
         tab1.setTooltip(new Tooltip("Tab 1 Tooltip"));
-        final Image image = new Image(getClass().getResourceAsStream("tab_16.png"));
-        final ImageView imageView = new ImageView();
-        imageView.setImage(image);
-        tab1.setGraphic(imageView);
+        final InputStream png = getClass().getResourceAsStream("tab_16.png");
+        final Image image = new Image(png);
+        tab1.setGraphic(new ImageView(image));
 
         setUpControlButtons(vbox);
         tab1.setContent(vbox);
@@ -109,14 +117,16 @@ public class TabPaneApp extends Application {
         vboxLongTab.getChildren().add(explainRadios);
         ToggleGroup closingPolicy = new ToggleGroup();
 
-        for (TabPane.TabClosingPolicy policy : TabPane.TabClosingPolicy.values()) {
+        for (TabClosingPolicy policy : TabClosingPolicy.values()) {
             final RadioButton radioButton = new RadioButton(policy.name());
             radioButton.setMnemonicParsing(false);
             radioButton.setToggleGroup(closingPolicy);
             radioButton.setOnAction((ActionEvent event) -> {
-                tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.valueOf(radioButton.getText()));
+                final TabClosingPolicy radioPolicy =
+                TabClosingPolicy.valueOf(radioButton.getText());
+                tabPane.setTabClosingPolicy(radioPolicy);
             });
-            if (policy.name().equals(TabPane.TabClosingPolicy.SELECTED_TAB.name())) {
+            if (policy.name().equals(TabClosingPolicy.SELECTED_TAB.name())) {
                 radioButton.setSelected(true);
             }
             vboxLongTab.getChildren().add(radioButton);
@@ -149,7 +159,7 @@ public class TabPaneApp extends Application {
         vboxTab3.getChildren().add(cb);
         tab3.setContent(vboxTab3);
         tabPane.getTabs().add(tab3);
-        //Internal Tabs
+        // Internal Tabs
         internalTab.setText("Internal Tabs");
         setupInternalTab();
         tabPane.getTabs().add(internalTab);
@@ -183,7 +193,8 @@ public class TabPaneApp extends Application {
         internalTabPane.getStyleClass().add(TabPane.STYLE_CLASS_FLOATING);
         internalTabPane.setSide(Side.LEFT);
 
-        internalTabPane.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+        internalTabPane.setPrefSize(Region.USE_COMPUTED_SIZE,
+                                    Region.USE_COMPUTED_SIZE);
         final Tab innerTab = new Tab();
         innerTab.setText("Tab 1");
         final VBox innerVbox = new VBox();

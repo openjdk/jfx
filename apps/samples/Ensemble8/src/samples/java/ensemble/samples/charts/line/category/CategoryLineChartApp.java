@@ -41,15 +41,11 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.stage.Stage;
 
-
 /**
  * A line chart demonstrating a CategoryAxis implementation.
  *
  * @sampleName Category Line Chart
  * @preview preview.png
- * @see javafx.scene.chart.CategoryAxis
- * @see javafx.scene.chart.LineChart
- * @see javafx.scene.chart.NumberAxis
  * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
@@ -94,10 +90,17 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.CategoryAxis
+ * @see javafx.scene.chart.LineChart
+ * @see javafx.scene.chart.NumberAxis
+ *
+ * @related /Charts/Line/Line Chart
+ * @related /Charts/Line/Stock Line Chart
  */
 public class CategoryLineChartApp extends Application {
 
-    private static final String[] CATEGORIES = {"Alpha", "Beta", "RC1", "RC2", "1.0", "1.1"};
+    private static final String[] CATEGORIES = { "Alpha", "Beta", "RC1", "RC2",
+                                                 "1.0", "1.1" };
     private LineChart<String, Number> chart;
     private CategoryAxis xAxis;
     private NumberAxis yAxis;

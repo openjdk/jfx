@@ -47,8 +47,10 @@ import javafx.util.Duration;
  *
  * @sampleName Stroke Transition
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @see javafx.animation.StrokeTransition
  * @see javafx.animation.Transition
+ *
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
  * @related /Animation/Transitions/Parallel Transition
@@ -62,10 +64,10 @@ import javafx.util.Duration;
  */
 public class StrokeTransitionApp extends Application {
 
-    private StrokeTransition strokeTransition;
+    private StrokeTransition stroke;
 
     public Parent createContent() {
-        Pane root = new Pane();
+        final Pane root = new Pane();
         root.setPrefSize(200, 200);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
@@ -78,20 +80,21 @@ public class StrokeTransitionApp extends Application {
         rect.setStrokeWidth(10);
         root.getChildren().add(rect);
 
-        strokeTransition = new StrokeTransition(Duration.seconds(3), rect, Color.RED, Color.DODGERBLUE);
-        strokeTransition.setCycleCount(Timeline.INDEFINITE);
-        strokeTransition.setAutoReverse(true);
+        stroke = new StrokeTransition(Duration.seconds(3), rect,
+                                      Color.RED, Color.DODGERBLUE);
+        stroke.setCycleCount(Timeline.INDEFINITE);
+        stroke.setAutoReverse(true);
 
         return root;
     }
 
     public void play() {
-        strokeTransition.play();
+        stroke.play();
     }
 
     @Override
     public void stop() {
-        strokeTransition.stop();
+        stroke.stop();
     }
 
     @Override

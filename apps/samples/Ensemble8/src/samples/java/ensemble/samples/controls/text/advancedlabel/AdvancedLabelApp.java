@@ -48,41 +48,51 @@ import javafx.stage.Stage;
  *
  * @sampleName Advanced Label
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/user-interface-tutorial/text.htm#JFXUI734 Using JavaFX Text
+ * @see javafx.scene.control.ContentDisplay
  * @see javafx.scene.control.Label
- * @related /Controls/Text/Simple Label
+ * @see javafx.scene.image.Image
+ * @see javafx.scene.image.ImageView
+ * @see javafx.scene.layout.VBox
+ *
+ * @related /Controls/Text/Bidi
+ * @related /Controls/Text/Inset Text
  * @related /Controls/Button/Graphic Button
+ * @related /Controls/Text/Search Box
+ * @related /Controls/Text/Simple Label
+ * @related /Controls/Text/Text Field
+ * @related /Controls/Text/TextFlow
+ * @related /Controls/Text/Text Formatter
+ * @related /Controls/Text/Text Validator
  */
 public class AdvancedLabelApp extends Application {
-private static final Image ICON_48 = new Image(AdvancedLabelApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
 
     public Parent createContent() {
-        VBox box = new VBox(2);
-        box.setAlignment(Pos.CENTER);
-
+        String URL = "/ensemble/samples/shared-resources/icon-48x48.png";
+        Image ICON_48 = new Image(getClass().getResourceAsStream(URL));
         ImageView imageView = new ImageView(ICON_48);
-        Label label = new Label("Image above", imageView);
-        label.setContentDisplay(ContentDisplay.TOP);
-        box.getChildren().add(label);
+        Label above = new Label("Image above", imageView);
+        above.setContentDisplay(ContentDisplay.TOP);
 
         imageView = new ImageView(ICON_48);
-        label = new Label("Image on the right", imageView);
-        label.setContentDisplay(ContentDisplay.RIGHT);
-        box.getChildren().add(label);
+        Label right = new Label("Image on the right", imageView);
+        right.setContentDisplay(ContentDisplay.RIGHT);
 
         imageView = new ImageView(ICON_48);
-        label = new Label("Image below", imageView);
-        label.setContentDisplay(ContentDisplay.BOTTOM);
-        box.getChildren().add(label);
+        Label below = new Label("Image below", imageView);
+        below.setContentDisplay(ContentDisplay.BOTTOM);
 
         imageView = new ImageView(ICON_48);
-        label = new Label("Image on the left", imageView);
-        label.setContentDisplay(ContentDisplay.LEFT);
-        box.getChildren().add(label);
+        Label left = new Label("Image on the left", imageView);
+        left.setContentDisplay(ContentDisplay.LEFT);
 
         imageView = new ImageView(ICON_48);
-        label = new Label("Image centered", imageView);
-        label.setContentDisplay(ContentDisplay.CENTER);
-        box.getChildren().add(label);
+        Label centered = new Label("Image centered", imageView);
+        centered.setContentDisplay(ContentDisplay.CENTER);
+
+        final VBox box = new VBox(2);
+        box.setAlignment(Pos.CENTER);
+        box.getChildren().addAll(above, right, below, left, centered);
         return box;
     }
 

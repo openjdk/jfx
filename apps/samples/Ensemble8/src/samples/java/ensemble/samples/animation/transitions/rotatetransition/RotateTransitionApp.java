@@ -47,8 +47,10 @@ import javafx.util.Duration;
  *
  * @sampleName Rotate Transition
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @see javafx.animation.RotateTransition
  * @see javafx.animation.Transition
+ *
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
  * @related /Animation/Transitions/Parallel Transition
@@ -62,7 +64,7 @@ import javafx.util.Duration;
  */
 public class RotateTransitionApp extends Application {
 
-    private RotateTransition rotateTransition;
+    private RotateTransition rotate;
 
     public Parent createContent() {
         Pane root = new Pane();
@@ -76,22 +78,22 @@ public class RotateTransitionApp extends Application {
         rect.setFill(Color.ORANGE);
         root.getChildren().add(rect);
 
-        rotateTransition = new RotateTransition(Duration.seconds(4), rect);
-        rotateTransition.setFromAngle(0);
-        rotateTransition.setToAngle(720);
-        rotateTransition.setCycleCount(Timeline.INDEFINITE);
-        rotateTransition.setAutoReverse(true);
+        rotate = new RotateTransition(Duration.seconds(4), rect);
+        rotate.setFromAngle(0);
+        rotate.setToAngle(720);
+        rotate.setCycleCount(Timeline.INDEFINITE);
+        rotate.setAutoReverse(true);
 
         return root;
     }
 
     public void play() {
-        rotateTransition.play();
+        rotate.play();
     }
 
     @Override
     public void stop() {
-        rotateTransition.stop();
+        rotate.stop();
     }
 
     @Override

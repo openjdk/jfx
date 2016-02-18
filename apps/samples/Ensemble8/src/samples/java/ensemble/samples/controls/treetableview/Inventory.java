@@ -48,9 +48,15 @@ public class Inventory {
             this.notes = new SimpleStringProperty(notes);
         }
 
-        public StringProperty nameProperty() { return name; }
+        public StringProperty nameProperty() {
+            return name;
+        }
 
-        public StringProperty notesProperty() { return notes; }
+        public StringProperty notesProperty() {
+            return notes;
+        }
 
-        public ObjectProperty<Data> dataProperty() { return data; }
+        public ObjectProperty<Data> dataProperty() {
+            return data;
+        }
 }

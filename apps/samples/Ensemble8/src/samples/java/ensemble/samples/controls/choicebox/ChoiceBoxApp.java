@@ -44,8 +44,11 @@ import javafx.stage.Stage;
  *
  * @sampleName ChoiceBox
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.ChoiceBox
  * @embedded
+ *
+ * @related /Controls/Radio Button
  */
 public class ChoiceBoxApp extends Application {
 

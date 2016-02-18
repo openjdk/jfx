@@ -35,6 +35,7 @@ package ensemble.samples.charts.bar.horizontal;
 import java.util.Arrays;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
@@ -50,9 +51,7 @@ import javafx.stage.Stage;
  *
  * @sampleName Horizontal Bar Chart
  * @preview preview.png
- * @see javafx.scene.chart.BarChart
- * @see javafx.scene.chart.CategoryAxis
- * @see javafx.scene.chart.NumberAxis
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
  * @playground xAxis.autoRanging
@@ -96,6 +95,14 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.BarChart
+ * @see javafx.scene.chart.CategoryAxis
+ * @see javafx.scene.chart.NumberAxis
+ *
+ * @related /Charts/Bar/Audio Bar Chart
+ * @related /Charts/Bar/Bar Chart
+ * @related /Charts/Bar/Image Bar Chart
+ * @related /Charts/Bar/Stacked Bar Chart
  */
 public class HorizontalBarChartApp extends Application {
 
@@ -105,13 +112,14 @@ public class HorizontalBarChartApp extends Application {
 
     public Parent createContent() {
         final String[] years = {"2007", "2008", "2009"};
+        final ObservableList<String> categories =
+            FXCollections.<String>observableArrayList(Arrays.asList(years));
         xAxis = new NumberAxis();
         yAxis = new CategoryAxis();
         chart = new BarChart<>(xAxis, yAxis);
         chart.setTitle("Horizontal Bar Chart Example");
         yAxis.setLabel("Year");
-        yAxis.setCategories(FXCollections.<String>observableArrayList(Arrays
-                .asList(years)));
+        yAxis.setCategories(categories);
         xAxis.setLabel("Price");
 
         // add starting data

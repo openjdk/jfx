@@ -35,7 +35,6 @@ import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.ContentDisplay;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
@@ -45,17 +44,22 @@ import javafx.stage.Stage;
  *
  * @sampleName Graphic Button
  * @preview preview.png
- *
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.Button
- * @related /Controls/Button/Colored Buttons
+ * @see javafx.scene.image.ImageView
  * @embedded
- */
+ *
+ * @related /Controls/Button/Colored Buttons
+ * @related /Controls/Button/Pill Button
+*/
 public class GraphicButtonApp extends Application {
-    private static final Image ICON_48 = new Image(GraphicButtonApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
+
     public Parent createContent() {
-        ImageView imageView = new ImageView(ICON_48);
-        Button button = new Button("button", imageView);
-        button.setContentDisplay(ContentDisplay.LEFT);
+        final String URL = "/ensemble/samples/shared-resources/icon-48x48.png";
+        final Image ICON_48 = new Image(getClass().getResourceAsStream(URL));
+        final ImageView imageView = new ImageView(ICON_48);
+        final Button button = new Button("Press", imageView);
+
         return button;
     }
 
@@ -67,5 +71,7 @@ public class GraphicButtonApp extends Application {
     /** Java main for when running without JavaFX launcher
      * @param args command line arguments
      */
-    public static void main(String[] args) { launch(args); }
+    public static void main(String[] args) {
+        launch(args);
+    }
 }

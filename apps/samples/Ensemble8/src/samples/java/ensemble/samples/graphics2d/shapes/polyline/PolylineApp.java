@@ -45,17 +45,26 @@ import javafx.stage.Stage;
  *
  * @sampleName Polyline
  * @preview preview.png
- * @see javafx.scene.shape.Polyline
- * @see javafx.scene.shape.Shape
- * @see javafx.scene.paint.Color
  * @playground polyline1.fill (name="Polyline 1 Fill")
  * @playground polyline1.stroke (name="Polyline 1 Stroke")
  * @playground polyline2.stroke (name="Polyline 2 Stroke")
+ * @see javafx.scene.shape.Polyline
+ * @see javafx.scene.shape.Shape
+ * @see javafx.scene.paint.Color
  * @embedded
+ *
+ * @related /Graphics 2d/Shapes/Arc
+ * @related /Graphics 2d/Shapes/Circle
+ * @related /Graphics 2d/Shapes/Cubic Curve
+ * @related /Graphics 2d/Shapes/Ellipse
+ * @related /Graphics 2d/Shapes/Line
+ * @related /Graphics 2d/Shapes/Path
+ * @related /Graphics 2d/Shapes/Polygon
+ * @related /Graphics 2d/Shapes/Quad Curve
+ * @related /Graphics 2d/Shapes/Rectangle
  */
 public class PolylineApp extends Application {
     // Unclosed triangle
-
     Polyline polyline1 = new Polyline(new double[]{
                 45, 10,
                 10, 80,

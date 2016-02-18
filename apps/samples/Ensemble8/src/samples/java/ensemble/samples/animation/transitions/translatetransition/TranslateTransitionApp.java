@@ -48,8 +48,10 @@ import javafx.util.Duration;
  *
  * @sampleName Translate Transition
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @see javafx.animation.TranslateTransition
  * @see javafx.animation.Transition
+ *
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
  * @related /Animation/Transitions/Parallel Transition
@@ -62,10 +64,10 @@ import javafx.util.Duration;
  */
 public class TranslateTransitionApp extends Application {
 
-    private TranslateTransition translateTransition;
+    private TranslateTransition translate;
 
     public Parent createContent() {
-        Pane root = new Pane();
+        final Pane root = new Pane();
         root.setPrefSize(245, 80);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
@@ -74,22 +76,22 @@ public class TranslateTransitionApp extends Application {
         circle.setTranslateX(20);
         circle.setTranslateY(20);
         root.getChildren().add(circle);
-        translateTransition = new TranslateTransition(Duration.seconds(4), circle);
-        translateTransition.setFromX(20);
-        translateTransition.setToX(220);
-        translateTransition.setCycleCount(Timeline.INDEFINITE);
-        translateTransition.setAutoReverse(true);
+        translate = new TranslateTransition(Duration.seconds(4), circle);
+        translate.setFromX(20);
+        translate.setToX(220);
+        translate.setCycleCount(Timeline.INDEFINITE);
+        translate.setAutoReverse(true);
 
         return root;
     }
 
     public void play() {
-        translateTransition.play();
+        translate.play();
     }
 
     @Override
     public void stop() {
-        translateTransition.stop();
+        translate.stop();
     }
 
     @Override

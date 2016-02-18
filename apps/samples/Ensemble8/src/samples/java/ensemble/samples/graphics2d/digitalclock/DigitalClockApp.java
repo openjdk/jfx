@@ -49,17 +49,24 @@ import javafx.stage.Stage;
  * @preview preview.png
  *
  * @see javafx.scene.effect.Glow
+ * @see javafx.scene.effect.InnerShadow
  * @see javafx.scene.shape.Polygon
  * @see javafx.scene.transform.Shear
+ *
+ * @related /Graphics 2d/Effects/Gaussian Blur
+ * @related /Graphics 2d/Effects/Inner Shadow
  */
 public class DigitalClockApp extends Application {
+    public static final String IMAGE =
+        "/ensemble/samples/shared-resources/DigitalClock-background.png";
 
     private Clock clock;
 
     public Parent createContent() {
         Group root = new Group();
         // background image
-        ImageView background = new ImageView(new Image(getClass().getResourceAsStream("/ensemble/samples/shared-resources/DigitalClock-background.png")));
+        String url = getClass().getResource(IMAGE).toExternalForm();
+        ImageView background = new ImageView(new Image(url));
         // digital clock
         clock = new Clock(Color.ORANGERED, Color.rgb(50, 50, 50));
         clock.setLayoutX(45);

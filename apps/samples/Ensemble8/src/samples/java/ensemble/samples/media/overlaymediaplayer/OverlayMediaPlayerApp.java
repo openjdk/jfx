@@ -45,22 +45,28 @@ import javafx.stage.Stage;
  *
  * @sampleName Overlay Media Player
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/media-tutorial/overview.htm#JFXMD101 Using JavaFX Media
  * @see javafx.scene.media.MediaPlayer
  * @see javafx.scene.media.Media
- * @related /Media/Advanced Media
- * @related /Media/Alpha Media Player
- * @related /Media/Streaming Media Player
  * @conditionalFeatures WEB, MEDIA
+ *
+ * @related /Media/Alpha Media Player
+ * @related /Media/Overlay Media Player
+ * @related /Media/Streaming Media Player
  */
 public class OverlayMediaPlayerApp extends Application {
 
-    private String overlayMediaPlayerCss = OverlayMediaPlayerApp.class.getResource("OverlayMediaPlayer.css").toExternalForm();
-    private static final String MEDIA_URL = "http://download.oracle.com/otndocs/javafx/JavaRap_ProRes_H264_768kbit_Widescreen.mp4";
     private MediaPlayer mediaPlayer;
-    final double mediaWidth = 480;
-    final double mediaHeight = 270;
 
     public Parent createContent() {
+        final String MEDIA_URL =
+            "http://download.oracle.com/otndocs/javafx/" +
+            "JavaRap_ProRes_H264_768kbit_Widescreen.mp4";
+        final String overlayMediaPlayerCss =
+            getClass().getResource("OverlayMediaPlayer.css").toExternalForm();
+        final double mediaWidth = 480;
+        final double mediaHeight = 270;
+
         mediaPlayer = new MediaPlayer(new Media(MEDIA_URL));
         mediaPlayer.setAutoPlay(true);
         PlayerPane playerPane = new PlayerPane(mediaPlayer);
@@ -74,11 +80,13 @@ public class OverlayMediaPlayerApp extends Application {
 
     public void play() {
         MediaPlayer.Status status = mediaPlayer.getStatus();
-        if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
+        if (status == MediaPlayer.Status.UNKNOWN ||
+                status == MediaPlayer.Status.HALTED) {
             return;
         }
-        if (status == MediaPlayer.Status.PAUSED || status == MediaPlayer.Status.STOPPED ||
-            status == MediaPlayer.Status.READY) {
+        if (status == MediaPlayer.Status.PAUSED ||
+                status == MediaPlayer.Status.STOPPED ||
+                status == MediaPlayer.Status.READY) {
             mediaPlayer.play();
         }
     }

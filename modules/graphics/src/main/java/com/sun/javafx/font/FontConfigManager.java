@@ -338,7 +338,7 @@ class FontConfigManager {
      * 2) A java properties style file which describes which of these files
      * to use for the logical fonts.
      * Optionally a system property can be used to set the directory
-     * else it will default to "{FXHOME}/rt/lib/fonts".
+     * else it will default to "{FXHOME}/lib/fonts".
      */
     private static class EmbeddedFontSupport {
 

@@ -35,7 +35,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.control.Control;
@@ -46,7 +45,8 @@ public abstract class ValidatorPane<C extends Control> extends Region {
     /**
      * The content for the validator pane is the control it should work with.
      */
-    private ObjectProperty<C> content = new SimpleObjectProperty<C>(this, "content", null);
+    private ObjectProperty<C> content =
+        new SimpleObjectProperty<C>(this, "content", null);
 
     public final C getContent() {
         return content.get();
@@ -62,7 +62,8 @@ public abstract class ValidatorPane<C extends Control> extends Region {
     /**
      * The validator
      */
-    private ObjectProperty<Validator<C>> validator = new SimpleObjectProperty<Validator<C>>(this, "validator");
+    private ObjectProperty<Validator<C>> validator =
+        new SimpleObjectProperty<Validator<C>>(this, "validator");
 
     public final Validator<C> getValidator() {
         return validator.get();
@@ -78,7 +79,8 @@ public abstract class ValidatorPane<C extends Control> extends Region {
     /**
      * The validation result
      */
-    private ReadOnlyObjectWrapper<ValidationResult> validationResult = new ReadOnlyObjectWrapper<ValidationResult>(this, "validationResult");
+    private ReadOnlyObjectWrapper<ValidationResult> validationResult =
+        new ReadOnlyObjectWrapper<ValidationResult>(this, "validationResult");
 
     public final ValidationResult getValidationResult() {
         return validationResult.get();
@@ -91,7 +93,8 @@ public abstract class ValidatorPane<C extends Control> extends Region {
      * The event handler
      */
     private ObjectProperty<EventHandler<ValidationEvent>> onValidation =
-            new SimpleObjectProperty<EventHandler<ValidationEvent>>(this, "onValidation");
+        new SimpleObjectProperty<EventHandler<ValidationEvent>>(this,
+                                                                "onValidation");
 
     public final EventHandler<ValidationEvent> getOnValidation() {
         return onValidation.get();
@@ -106,7 +109,8 @@ public abstract class ValidatorPane<C extends Control> extends Region {
     }
 
     public ValidatorPane() {
-        content.addListener((ObservableValue<? extends Control> ov, Control oldValue, Control newValue) -> {
+        content.addListener((ObservableValue<? extends Control> ov,
+                             Control oldValue, Control newValue) -> {
             if (oldValue != null) {
                 getChildren().remove(oldValue);
             }

@@ -43,16 +43,20 @@ import javafx.stage.Stage;
  *
  * @sampleName Advanced Media
  * @preview preview.png
- * @see javafx.scene.media.MediaPlayer
+ * @docUrl http://docs.oracle.com/javase/8/javafx/media-tutorial/overview.htm#JFXMD101 Using JavaFX Media
  * @see javafx.scene.media.Media
+ * @see javafx.scene.media.MediaPlayer
+ * @conditionalFeatures WEB, MEDIA
+ *
  * @related /Media/Alpha Media Player
  * @related /Media/Overlay Media Player
  * @related /Media/Streaming Media Player
- * @conditionalFeatures WEB, MEDIA
  */
 public class AdvancedMediaApp extends Application {
 
-    private static final String MEDIA_URL = "http://download.oracle.com/otndocs/products/javafx/oow2010-2.flv";
+    private static final String MEDIA_URL =
+        "http://download.oracle.com/otndocs/products/javafx/oow2010-2.flv";
+
     private MediaPlayer mediaPlayer;
     private MediaControl mediaControl;
 

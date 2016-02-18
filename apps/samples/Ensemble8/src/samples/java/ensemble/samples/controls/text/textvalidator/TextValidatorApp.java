@@ -46,19 +46,28 @@ import javafx.stage.Stage;
  *
  * @sampleName Text Validator
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/user-interface-tutorial/text.htm#JFXUI734 Using JavaFX Text
  * @see javafx.scene.control.TextField
+ *
+ * @related /Controls/Text/Advanced Label
+ * @related /Controls/Text/Bidi
+ * @related /Controls/Text/Inset Text
+ * @related /Controls/Text/Search Box
+ * @related /Controls/Text/Simple Label
+ * @related /Controls/Text/TextFlow
  * @related /Controls/Text/Text Field
+ * @related /Controls/Text/Text Formatter
  */
 public class TextValidatorApp extends Application {
 
     public Parent createContent() {
-        String validatorCss = TextValidatorApp.class.getResource("Validators.css").toExternalForm();
 
         TextField dateField = new TextField();
         dateField.setPromptText("Enter a Large Number");
         dateField.setMaxHeight(TextField.USE_PREF_SIZE);
 
-        TextInputValidatorPane<TextField> pane = new TextInputValidatorPane<TextField>();
+        TextInputValidatorPane<TextField> pane =
+            new TextInputValidatorPane<TextField>();
         pane.setContent(dateField);
         pane.setValidator((TextField control) -> {
             try {
@@ -68,18 +77,22 @@ public class TextValidatorApp extends Application {
                 }
                 double d = Double.parseDouble(text);
                 if (d < 1000) {
-                    return new ValidationResult("Should be > 1000", ValidationResult.Type.WARNING);
+                    return new ValidationResult("Should be > 1000",
+                                                ValidationResult.Type.WARNING);
                 }
                 return null; // succeeded
             } catch (Exception e) {
                 // failed
-                return new ValidationResult("Bad number", ValidationResult.Type.ERROR);
+                return new ValidationResult("Bad number",
+                                            ValidationResult.Type.ERROR);
             }
         });
 
-        StackPane rootSP = new StackPane();
+        final StackPane rootSP = new StackPane();
         rootSP.setPadding(new Insets(12));
         rootSP.getChildren().add(pane);
+        final String validatorCss =
+            getClass().getResource("Validators.css").toExternalForm();
         pane.getStylesheets().add(validatorCss);
         return rootSP;
     }

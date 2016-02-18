@@ -54,6 +54,7 @@ import javafx.util.Duration;
  *
  * @sampleName Interpolator
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @playground - (name="LINEAR")
  * @playground circle1.opacity (min=0, max=1)
  * @playground circle1.fill
@@ -75,6 +76,11 @@ import javafx.util.Duration;
  * @see javafx.animation.Timeline
  * @see javafx.util.Duration
  * @embedded
+ *
+ * @related /Graphics 2d/Bouncing Balls
+ * @related /Graphics 2d/Display Shelf
+ * @related /Scenegraph/Events/Key Stroke Motion
+ * @related /Graphics 3d/Xylophone
  */
 public class InterpolatorApp extends Application {
 
@@ -91,49 +97,46 @@ public class InterpolatorApp extends Application {
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
 
-        //create circles by method createMovingCircle listed below
-        //default interpolator
-        circle1 = createMovingCircle(Interpolator.LINEAR, 0, Color.RED);
-        //circle slows down when reached both ends of trajectory
-        circle2 = createMovingCircle(Interpolator.EASE_BOTH, 35, Color.VIOLET);
-        //circle slows down in the beginning of animation
-        circle3 = createMovingCircle(Interpolator.EASE_IN, 70, Color.BLUE);
-        //circle slows down in the end of animation
-        circle4 = createMovingCircle(Interpolator.EASE_OUT, 105, Color.YELLOW);
-        //one can define own behaviour of interpolator by spline method
-        circle5 = createMovingCircle(Interpolator.SPLINE(0.5, 0.1, 0.1, 0.5), 140, Color.GREEN);
+        // create circles by method createMovingCircle listed below
+        // default interpolator
+        circle1 = createMovingCircle(Interpolator.LINEAR,
+                                     1, 0.7, Color.RED);
+        // circle slows down when reached both ends of trajectory
+        circle2 = createMovingCircle(Interpolator.EASE_BOTH,
+                                     2, 0.45, Color.VIOLET);
+        // circle slows down in the beginning of animation
+        circle3 = createMovingCircle(Interpolator.EASE_IN,
+                                     3, 0.2, Color.BLUE);
+        // circle slows down in the end of animation
+        circle4 = createMovingCircle(Interpolator.EASE_OUT,
+                                     4, 0.35, Color.YELLOW);
+        // one can define own behaviour of interpolator by spline method
+        circle5 = createMovingCircle(Interpolator.SPLINE(0.5, 0.1, 0.1, 0.5),
+                                     5, 0.7, Color.GREEN);
 
-        // set initial opacities
-        circle1.setOpacity(0.7);
-        circle2.setOpacity(0.45);
-        circle3.setOpacity(0.20);
-        circle4.setOpacity(0.35);
-        circle5.setOpacity(0.7);
-
-        root.getChildren().addAll(
-                circle1,
-                circle2,
-                circle3,
-                circle4,
-                circle5);
+        root.getChildren().addAll(circle1, circle2, circle3, circle4, circle5);
         return root;
     }
 
-    private Circle createMovingCircle(Interpolator interpolator, double centerY, Color color) {
-        //create a transparent circle
+    private Circle createMovingCircle(Interpolator interpolator, int which,
+                                      double opacity, Color color) {
+        // create a transparent circle
         Circle circle = new Circle(45, 45, 40, color);
-        circle.setOpacity(0);
-        circle.setCenterY(centerY + 40);
-        //add effect
+        // set initial opacity
+        circle.setOpacity(opacity);
+        circle.setCenterY((which * 35) + 5);
+        // add effect
         circle.setEffect(new Lighting());
-        //create a timeline for moving the circle
+        // create a timeline for moving the circle
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.setAutoReverse(true);
-        //create a keyValue for horizontal translation of circle to the position 155px with given interpolator
-        KeyValue keyValue = new KeyValue(circle.translateXProperty(), 155, interpolator);
-        //create a keyFrame with duration 4s
+        // create a keyValue for horizontal translation of circle to
+        // the position 155px with given interpolator
+        KeyValue keyValue = new KeyValue(circle.translateXProperty(), 155,
+                                         interpolator);
+        // create a keyFrame with duration 4s
         KeyFrame keyFrame = new KeyFrame(Duration.seconds(4), keyValue);
-        //add the keyframe to the timeline
+        // add the keyframe to the timeline
         timeline.getKeyFrames().add(keyFrame);
         return circle;
     }

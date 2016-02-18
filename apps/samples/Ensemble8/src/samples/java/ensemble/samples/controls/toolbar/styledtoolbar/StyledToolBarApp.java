@@ -47,13 +47,20 @@ import javafx.stage.Stage;
  *
  * @sampleName Styled Tool Bar
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
+ * @see javafx.scene.control.Button
+ * @see javafx.scene.control.Slider
  * @see javafx.scene.control.ToolBar
+ *
+ * @related /Media/Advanced Media
  * @related /Controls/Toolbar/Tool Bar
  */
 public class StyledToolBarApp extends Application {
 
     private ToolBar createToolBar(String id) {
-        ToolBar toolBar = new ToolBar(new Button("Button 1"), new Button("Button 2"), new Slider());
+        ToolBar toolBar = new ToolBar(new Button("Button 1"),
+                                      new Button("Button 2"),
+                                      new Slider());
         toolBar.setId(id);
         return toolBar;
     }
@@ -61,16 +68,16 @@ public class StyledToolBarApp extends Application {
     public Parent createContent() {
         ToolBar standardToolbar = createToolBar("standard");
 
-        String styledToolBarCss = StyledToolBarApp.class.getResource("StyledToolBar.css").toExternalForm();
-
         ToolBar darkToolbar = createToolBar("dark");
+        final String styledToolBarCss =
+            getClass().getResource("StyledToolBar.css").toExternalForm();
         darkToolbar.getStylesheets().add(styledToolBarCss);
 
         ToolBar blueToolbar = createToolBar("blue");
         blueToolbar.getStylesheets().add(styledToolBarCss);
-        VBox vBox = new VBox(10, standardToolbar, darkToolbar, blueToolbar);
-        vBox.setPadding(new Insets(10));
-        return vBox;
+        final VBox box = new VBox(10, standardToolbar, darkToolbar, blueToolbar);
+        box.setPadding(new Insets(10));
+        return box;
     }
 
     @Override

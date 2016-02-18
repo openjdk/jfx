@@ -46,9 +46,21 @@ import javafx.stage.Stage;
  *
  * @sampleName HBox
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/layout-tutorial/index.html JavaFX Layouts
+ * @see javafx.scene.control.Button
+ * @see javafx.scene.control.Label
+ * @see javafx.scene.control.TextField
  * @see javafx.scene.layout.HBox
- * @related /Controls/Text/Text Field
  * @embedded
+ *
+ * @related /Layout/AnchorPane
+ * @related /Layout/BorderPane
+ * @related /Layout/FlowPane
+ * @related /Layout/GridPane
+ * @related /Layout/StackPane
+ * @related /Controls/Text/Text Field
+ * @related /Layout/TilePane
+ * @related /Layout/VBox
  */
 public class HBoxApp extends Application {
 

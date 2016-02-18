@@ -36,6 +36,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.chart.XYChart.Data;
 import javafx.stage.Stage;
 
 /**
@@ -43,9 +44,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Curve-Fitted Area Chart
  * @preview preview.png
- * @see javafx.scene.chart.AreaChart
- * @see javafx.scene.chart.NumberAxis
- * @related /Charts/Area/Area Chart
  * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
@@ -92,6 +90,15 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.AreaChart
+ * @see javafx.scene.chart.NumberAxis
+ * @see javafx.scene.shape.CubicCurveTo
+ * @see javafx.scene.shape.LineTo
+ * @see javafx.scene.shape.MoveTo
+ *
+ * @related /Charts/Area/Area Chart
+ * @related /Charts/Area/Audio Area Chart
+ * @related /Charts/Area/Stacked Area Chart
  */
 public class CurveFittedAreaChartApp extends Application {
 
@@ -100,6 +107,14 @@ public class CurveFittedAreaChartApp extends Application {
     private NumberAxis yAxis;
 
     public Parent createContent() {
+        final String curveFittedChartCss =
+            getClass().getResource("CurveFittedAreaChart.css").toExternalForm();
+        final XYChart.Series<Number, Number> series = new XYChart.Series<>();
+        series.getData().addAll(new Data<Number, Number>(0, 950),
+                                new Data<Number, Number>(2000, 100),
+                                new Data<Number, Number>(5000, 200),
+                                new Data<Number, Number>(7500, 180),
+                                new Data<Number, Number>(10000, 100));
         xAxis = new NumberAxis(0, 10000, 2500);
         yAxis = new NumberAxis(0, 1000, 200);
         chart = new CurveFittedAreaChart(xAxis, yAxis);
@@ -108,16 +123,9 @@ public class CurveFittedAreaChartApp extends Application {
         chart.setVerticalGridLinesVisible(false);
         chart.setAlternativeColumnFillVisible(false);
         chart.setAlternativeRowFillVisible(false);
-        final XYChart.Series<Number, Number> series = new XYChart.Series<>();
-        series.getData().addAll(
-                new XYChart.Data<Number, Number>(0, 950),
-                new XYChart.Data<Number, Number>(2000, 100),
-                new XYChart.Data<Number, Number>(5000, 200),
-                new XYChart.Data<Number, Number>(7500, 180),
-                new XYChart.Data<Number, Number>(10000, 100));
-        chart.getData().add(series);
-        String curveFittedChartCss = CurveFittedAreaChartApp.class.getResource("CurveFittedAreaChart.css").toExternalForm();
         chart.getStylesheets().add(curveFittedChartCss);
+        chart.getData().add(series);
+
         return chart;
     }
 

@@ -34,7 +34,6 @@ package ensemble.samples.scenegraph.events.gestureevent;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -63,34 +62,27 @@ import javafx.stage.Stage;
  *
  * @sampleName Gesture Event
  * @preview preview.png
- * @related /Scenegraph/Events/MouseEvent
- * @related /Scenegraph/Events/Multi-Touch
+ * @docUrl http://docs.oracle.com/javase/8/javafx/events-tutorial/events.htm#JFXED117 JavaFX Events
+ * @see javafx.scene.control.ListView
  * @see javafx.scene.input.RotateEvent
  * @see javafx.scene.input.ScrollEvent
  * @see javafx.scene.input.SwipeEvent
  * @see javafx.scene.input.TouchEvent
  * @see javafx.scene.input.ZoomEvent
- * @see javafx.scene.Cursor
- * @see javafx.collections.FXCollections
- * @see javafx.collections.ObservableList
- * @see javafx.event.EventHandler
- * @see javafx.scene.control.ListView
- * @see javafx.scene.layout.VBox
- * @see javafx.scene.paint.Color
- * @see javafx.scene.paint.CycleMethod
- * @see javafx.scene.paint.LinearGradient
- * @see javafx.scene.paint.Stop
  * @see javafx.scene.shape.Rectangle
- * @see javafx.scene.layout.Pane
  * @embedded
+ *
+ * @related /Scenegraph/Events/Key Stroke Motion
+ * @related /Scenegraph/Events/MouseEvent
+ * @related /Scenegraph/Events/Multi-Touch
  */
 public class GestureEventApp extends Application {
 
-    private final static int SAMPLE_SCREEN_WIDTH = 400;
-    private final static int SAMPLE_SCREEN_HEIGHT = 380;
+    private final static int SCREEN_WIDTH = 400;
+    private final static int SCREEN_HEIGHT = 380;
     private final static int CONSOLE_WIDTH = 400;
     private final static int CONSOLE_HEIGHT = 80;
-    private final static int BORDER_HEIGHT = SAMPLE_SCREEN_HEIGHT - CONSOLE_HEIGHT;
+    private final static int BORDER_HEIGHT = SCREEN_HEIGHT - CONSOLE_HEIGHT;
 
     // some offset minus BORDER_HEIGHT so it's not off in the corner
     private final static int SMALL_REC_Y = 20 - BORDER_HEIGHT;
@@ -102,7 +94,8 @@ public class GestureEventApp extends Application {
     final ListView<String> console = new ListView<>();
 
     //create a observableArrayList of logged events that will be listed in console
-    final ObservableList<String> consoleObservableList = FXCollections.observableArrayList();
+    final ObservableList<String> consoleObservableList =
+                            FXCollections.observableArrayList();
 
     private String lastEvent = "";
     private int lastEventCount = 0;
@@ -115,13 +108,14 @@ public class GestureEventApp extends Application {
         console.setMaxSize(ListView.USE_PREF_SIZE, ListView.USE_PREF_SIZE);
         VBox root = new VBox();
         root.setSpacing(2);
-        root.setPrefSize(SAMPLE_SCREEN_WIDTH, SAMPLE_SCREEN_HEIGHT);
-        root.setMinSize(SAMPLE_SCREEN_WIDTH, SAMPLE_SCREEN_HEIGHT);
-        root.setMaxSize(SAMPLE_SCREEN_WIDTH, SAMPLE_SCREEN_HEIGHT);
+        root.setPrefSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        root.setMinSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        root.setMaxSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 
         Rectangle border = new Rectangle(400, BORDER_HEIGHT);
         border.setStroke(Color.GRAY);
-        border.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
+        border.setFill(new LinearGradient(0, 0, 0, 1, true,
+                                          CycleMethod.NO_CYCLE, new Stop[]{
                     new Stop(1, Color.rgb(156, 216, 255)),
                     new Stop(0, Color.rgb(156, 216, 255, 0.5))
                 }));
@@ -139,7 +133,9 @@ public class GestureEventApp extends Application {
 
     private Rectangle createRectangle() {
         final Rectangle smallRec = new Rectangle(100, 100, 100, 100);
-        LinearGradient gradient1 = new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
+        LinearGradient gradient1 = new LinearGradient(0, 0, 0, 1, true,
+                                                      CycleMethod.NO_CYCLE,
+                                                      new Stop[]{
                     new Stop(0, Color.ANTIQUEWHITE),
                     new Stop(1, Color.CORAL)
                 });
@@ -167,7 +163,9 @@ public class GestureEventApp extends Application {
         }
     }
 
-    private void setEventListeners(final Node listeningNode, final Rectangle rec, final String msgPrefix) {
+    private void setEventListeners(final Node listeningNode,
+                                   final Rectangle rec,
+                                   final String msgPrefix) {
         listeningNode.setOnSwipeDown((SwipeEvent se) -> {
             showOnConsole(msgPrefix + "SwipeDown event");
             se.consume();
@@ -198,10 +196,12 @@ public class GestureEventApp extends Application {
             double translateX = event.getDeltaX();
             double translateY = event.getDeltaY();
 
-            if ((rec.getTranslateX() + translateX > 0) && (rec.getTranslateX() + translateX < 300)) {
+            if ((rec.getTranslateX() + translateX > 0) &&
+                    (rec.getTranslateX() + translateX < 300)) {
                 rec.setTranslateX(rec.getTranslateX() + translateX);
             }
-            if ((rec.getTranslateY() + translateY > SMALL_REC_Y - 20) && (rec.getTranslateY() + translateY < 180 + SMALL_REC_Y)) {
+            if ((rec.getTranslateY() + translateY > SMALL_REC_Y - 20) &&
+                    (rec.getTranslateY() + translateY < 180 + SMALL_REC_Y)) {
                 rec.setTranslateY(rec.getTranslateY() + translateY);
             }
             showOnConsole(msgPrefix + "Scroll event");

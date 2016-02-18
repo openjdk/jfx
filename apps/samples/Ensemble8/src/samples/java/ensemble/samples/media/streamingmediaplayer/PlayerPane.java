@@ -33,9 +33,9 @@ package ensemble.samples.media.streamingmediaplayer;
 
 import javafx.animation.ParallelTransition;
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -78,8 +78,10 @@ public class PlayerPane extends BorderPane {
         }
         super.layoutChildren();
         if (mediaView != null) {
-            mediaView.setTranslateX((((Pane) getCenter()).getWidth() - mediaView.prefWidth(-1)) / 2);
-            mediaView.setTranslateY((((Pane) getCenter()).getHeight() - mediaView.prefHeight(-1)) / 2);
+            mediaView.setTranslateX((((Pane)getCenter()).getWidth() -
+                                     mediaView.prefWidth(-1)) / 2);
+            mediaView.setTranslateY((((Pane)getCenter()).getHeight() -
+                                     mediaView.prefHeight(-1)) / 2);
         }
     }
 
@@ -95,7 +97,8 @@ public class PlayerPane extends BorderPane {
 
     @Override
     protected double computePrefWidth(double height) {
-        return Math.max(mp.getMedia().getWidth(), mediaBottomBar.prefWidth(height));
+        return Math.max(mp.getMedia().getWidth(),
+                        mediaBottomBar.prefWidth(height));
     }
 
     @Override
@@ -131,8 +134,9 @@ public class PlayerPane extends BorderPane {
         BorderPane.setAlignment(mediaTopBar, Pos.CENTER);
 
 
-        mp.currentTimeProperty().addListener((ObservableValue<? extends Duration> observable,
-                                              Duration oldValue, Duration newValue) -> {
+        ReadOnlyObjectProperty<Duration> time = mp.currentTimeProperty();
+        time.addListener((ObservableValue<? extends Duration> observable,
+                          Duration oldValue, Duration newValue) -> {
             updateValues();
         });
         mp.setOnPlaying(() -> {
@@ -164,7 +168,9 @@ public class PlayerPane extends BorderPane {
         timeSlider.setId("media-slider");
         timeSlider.setMinWidth(240);
         timeSlider.setMaxWidth(Double.MAX_VALUE);
-        timeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
+
+        final DoubleProperty value = timeSlider.valueProperty();
+        value.addListener((ObservableValue<? extends Number> observable,
                                                 Number old, Number now) -> {
             if (timeSlider.isValueChanging()) {
                 // multiply duration by percentage calculated by slider position
@@ -254,22 +260,29 @@ public class PlayerPane extends BorderPane {
         mediaBottomBar.setId("bottom");
         mediaBottomBar.setSpacing(0);
         mediaBottomBar.setAlignment(Pos.CENTER);
-        mediaBottomBar.getChildren().addAll(backButton, stopButton, playButton, pauseButton, forwardButton);
+        mediaBottomBar.getChildren().addAll(backButton, stopButton, playButton,
+                                            pauseButton, forwardButton);
         BorderPane.setAlignment(mediaBottomBar, Pos.CENTER);
         setBottom(mediaBottomBar);
     }
 
     protected void updateValues() {
-        if (playTime != null && timeSlider != null && volumeSlider != null && duration != null) {
+        if (playTime != null && timeSlider != null &&
+                volumeSlider != null && duration != null) {
             Platform.runLater(() -> {
                 Duration currentTime = mp.getCurrentTime();
                 playTime.setText(formatTime(currentTime, duration));
                 timeSlider.setDisable(duration.isUnknown());
-                if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO) && !timeSlider.isValueChanging()) {
-                    timeSlider.setValue(currentTime.divide(duration).toMillis() * 100.0);
+                if (!timeSlider.isDisabled() &&
+                        duration.greaterThan(Duration.ZERO) &&
+                        !timeSlider.isValueChanging()) {
+                    double relativeTime =
+                        currentTime.divide(duration).toMillis() * 100.0;
+                    timeSlider.setValue(relativeTime);
                 }
                 if (!volumeSlider.isValueChanging()) {
-                    volumeSlider.setValue((int) Math.round(mp.getVolume() * 100));
+                    int relativeVolume = (int)Math.round(mp.getVolume() * 100);
+                    volumeSlider.setValue(relativeVolume);
                 }
             });
         }
@@ -282,7 +295,8 @@ public class PlayerPane extends BorderPane {
             intElapsed -= elapsedHours * 60 * 60;
         }
         int elapsedMinutes = intElapsed / 60;
-        int elapsedSeconds = intElapsed - elapsedHours * 60 * 60 - elapsedMinutes * 60;
+        int elapsedSeconds = intElapsed -
+            elapsedHours * 60 * 60 - elapsedMinutes * 60;
 
         if (duration.greaterThan(Duration.ZERO)) {
             int intDuration = (int) Math.floor(duration.toSeconds());
@@ -291,7 +305,8 @@ public class PlayerPane extends BorderPane {
                 intDuration -= durationHours * 60 * 60;
             }
             int durationMinutes = intDuration / 60;
-            int durationSeconds = intDuration - durationHours * 60 * 60 - durationMinutes * 60;
+            int durationSeconds = intDuration -
+                durationHours * 60 * 60 - durationMinutes * 60;
 
             if (durationHours > 0) {
                 return String.format("%d:%02d:%02d",

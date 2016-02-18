@@ -32,13 +32,12 @@
 package ensemble.samples.media.alphamediaplayer;
 
 import javafx.application.Application;
-import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
@@ -46,22 +45,21 @@ import javafx.stage.Stage;
  *
  * @sampleName Alpha Media Player
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/media-tutorial/overview.htm#JFXMD101 Using JavaFX Media
  * @see javafx.scene.media.MediaPlayer
  * @see javafx.scene.media.Media
- * @related /Media/Advanced Media
- * @related /Media/Overlay Media Player
- * @related /Media/Streaming Media Player
  * @playground arthPos (name="Arth Position", min=-100, max=100)
  * @playground fierPos (name="Fier Position", min=-100, max=100)
  * @playground arthRate (name="Arth Rate", min=0.1, max=1)
  * @playground fierRate (name="Fier Rate", min=0.1, max=1)
  * @conditionalFeatures WEB, MEDIA
+ *
+ * @related /Media/Advanced Media
+ * @related /Media/Overlay Media Player
+ * @related /Media/Streaming Media Player
  */
 public class AlphaMediaPlayerApp extends Application {
 
-    private String alphaMediaPlayerCss = AlphaMediaPlayerApp.class.getResource("AlphaMediaPlayer.css").toExternalForm();
-    private static final String ARTH_URL = "http://download.oracle.com/otndocs/products/javafx/arth_512.flv";
-    private static final String FIER_URL = "http://download.oracle.com/otndocs/products/javafx/fier_512.flv";
     PlanetaryPlayerPane planetaryPlayerPane;
     private MediaPlayer arthPlayer;
     private MediaPlayer fierPlayer;
@@ -71,6 +69,10 @@ public class AlphaMediaPlayerApp extends Application {
     SimpleDoubleProperty fierRate = new SimpleDoubleProperty(1.0);
 
     public Parent createContent() {
+        String ARTH_URL =
+            "http://download.oracle.com/otndocs/products/javafx/arth_512.flv";
+        String FIER_URL =
+            "http://download.oracle.com/otndocs/products/javafx/fier_512.flv";
         arthPlayer = new MediaPlayer(new Media(ARTH_URL));
         arthPlayer.setAutoPlay(true);
         fierPlayer = new MediaPlayer(new Media(FIER_URL));
@@ -92,8 +94,10 @@ public class AlphaMediaPlayerApp extends Application {
             fierPlayer.setRate(fierRate.doubleValue());
         });
 
-        planetaryPlayerPane = new PlanetaryPlayerPane(arthPlayer, fierPlayer);
+        String alphaMediaPlayerCss =
+            getClass().getResource("AlphaMediaPlayer.css").toExternalForm();
 
+        planetaryPlayerPane = new PlanetaryPlayerPane(arthPlayer, fierPlayer);
         planetaryPlayerPane.setMinSize(480, 320);
         planetaryPlayerPane.setPrefSize(480, 320);
         planetaryPlayerPane.setMaxSize(480, 320);
@@ -103,10 +107,13 @@ public class AlphaMediaPlayerApp extends Application {
 
     public void play() {
         MediaPlayer.Status status = fierPlayer.getStatus();
-        if (status == MediaPlayer.Status.UNKNOWN || status == MediaPlayer.Status.HALTED) {
+        if (status == MediaPlayer.Status.UNKNOWN ||
+                status == MediaPlayer.Status.HALTED) {
             return;
         }
-        if (status == MediaPlayer.Status.PAUSED || status == MediaPlayer.Status.STOPPED || status == MediaPlayer.Status.READY) {
+        if (status == MediaPlayer.Status.PAUSED ||
+                status == MediaPlayer.Status.STOPPED ||
+                status == MediaPlayer.Status.READY) {
             fierPlayer.play();
             arthPlayer.play();
         }

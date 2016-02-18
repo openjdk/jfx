@@ -46,6 +46,7 @@ import javafx.stage.Stage;
  *
  * @sampleName Reflection
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/visual_effects.htm#JFXTE191 JavaFX Visual Effects
  * @playground reflection.bottomOpacity (name="Reflection Bottom Opacity", min=0, max=1)
  * @playground reflection.topOpacity (name="Reflection Top Opacity", min=0, max=1)
  * @playground reflection.fraction (name="Reflection Fraction", min=0, max=1)
@@ -54,19 +55,27 @@ import javafx.stage.Stage;
  * @see javafx.scene.effect.Reflection
  * @see javafx.scene.effect.Effect
  * @embedded
+ *
+ * @related /Graphics 2d/Bouncing Balls
+ * @related /Graphics 2d/Canvas Fireworks
+ * @related /Graphics 2d/Display Shelf
+ * @related /Graphics 2d/Effects/Drop Shadow
+ * @related /Graphics 2d/Effects/Gaussian Blur
+ * @related /Graphics 2d/Effects/Inner Shadow
+ * @related /Graphics 2d/Effects/Sepia Tone
  */
 public class ReflectionApp extends Application {
 
-    private static final Image BOAT = new Image(ReflectionApp.class.getResourceAsStream("/ensemble/samples/shared-resources/boat.jpg"));
     private Reflection reflection = new Reflection();
 
     public Parent createContent() {
-        Group root = new Group();
-        ImageView sample = new ImageView(BOAT);
+        String BOAT = "/ensemble/samples/shared-resources/boat.jpg";
+        Image image = new Image(getClass().getResourceAsStream(BOAT));
+        ImageView sample = new ImageView(image);
         sample.setPreserveRatio(true);
         sample.setEffect(reflection);
-        root.getChildren().add(sample);
-        return root;
+
+        return new Group(sample);
     }
 
     @Override

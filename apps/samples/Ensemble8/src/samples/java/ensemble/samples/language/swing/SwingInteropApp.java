@@ -33,7 +33,6 @@ package ensemble.samples.language.swing;
 
 import javafx.application.Application;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -46,9 +45,7 @@ import javafx.stage.Stage;
  *
  * @sampleName SwingInterop
  * @preview preview.png
- * @see javafx.application.Application
- * @see javafx.stage.Stage
- * @see javafx.scene.Scene
+ * @docUrl http://docs.oracle.com/javase/8/javafx/interoperability-tutorial/fx_swing.htm#JFXIP561 JavaFX-Swing Interoperability
  * @see javafx.scene.chart.BarChart
  * @see javafx.scene.chart.CategoryAxis
  * @see javafx.scene.chart.Chart
@@ -57,6 +54,11 @@ import javafx.stage.Stage;
  * @see javafx.scene.web.WebEngine
  * @see javafx.scene.web.WebView
  * @conditionalFeatures SWING
+ *
+ * @related /Charts/Scatter/Scatter Chart
+ * @related /Charts/Bar/Stacked Bar Chart
+ * @related /Language/String Binding
+ * @related /Controls/WebView
  */
 public class SwingInteropApp extends Application {
 

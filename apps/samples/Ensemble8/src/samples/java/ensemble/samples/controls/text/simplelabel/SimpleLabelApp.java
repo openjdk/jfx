@@ -46,19 +46,29 @@ import javafx.stage.Stage;
  *
  * @sampleName Simple Label
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/user-interface-tutorial/text.htm#JFXUI734 Using JavaFX Text
  * @see javafx.scene.control.Label
+ * @see javafx.scene.image.Image
+ * @see javafx.scene.image.ImageView
+ * @embedded
+ *
  * @related /Controls/Text/Advanced Label
  * @related /Controls/Button/Graphic Button
  * @related /Controls/Text/Inset Text
- * @embedded
+ * @related /Controls/Text/Inset Text
+ * @related /Controls/Text/Search Box
+ * @related /Controls/Text/Text Field
+ * @related /Controls/Text/TextFlow
+ * @related /Controls/Text/Text Formatter
+ * @related /Controls/Text/Text Validator
  */
 public class SimpleLabelApp extends Application {
 
-    private static final Image ICON_48 = new Image(SimpleLabelApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
-
     public Parent createContent() {
+        String URL = "/ensemble/samples/shared-resources/icon-48x48.png";
+        Image ICON_48 = new Image(getClass().getResourceAsStream(URL));
         ImageView imageView = new ImageView(ICON_48);
-        Label label = new Label("A simple label with a graphic on the left.", imageView);
+        Label label = new Label("Label with a graphic on the left.", imageView);
         label.setContentDisplay(ContentDisplay.LEFT);
         return label;
     }

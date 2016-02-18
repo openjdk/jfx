@@ -45,9 +45,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Cubic Curve
  * @preview preview.png
- * @see javafx.scene.shape.CubicCurve
- * @see javafx.scene.shape.Shape
- * @see javafx.scene.paint.Color
  * @playground cubicCurve.fill (name="Cubic Curve Fill")
  * @playground cubicCurve.stroke (name="Cubic Curve Stroke")
  * @playground cubicCurve.startX (name="Cubic Curve Start X", min=0, max=170)
@@ -58,7 +55,20 @@ import javafx.stage.Stage;
  * @playground cubicCurve.controlY2 (name="Cubic Curve Control Y2", min=0, max=90)
  * @playground cubicCurve.endX (name="Cubic Curve End X", min=10, max=180)
  * @playground cubicCurve.endY (name="Cubic Curve End Y", min=0, max=80)
+ * @see javafx.scene.shape.CubicCurve
+ * @see javafx.scene.shape.Shape
+ * @see javafx.scene.paint.Color
  * @embedded
+ *
+ * @related /Graphics 2d/Shapes/Arc
+ * @related /Graphics 2d/Shapes/Circle
+ * @related /Graphics 2d/Shapes/Ellipse
+ * @related /Graphics 2d/Shapes/Line
+ * @related /Graphics 2d/Shapes/Path
+ * @related /Graphics 2d/Shapes/Polygon
+ * @related /Graphics 2d/Shapes/Polyline
+ * @related /Graphics 2d/Shapes/Quad Curve
+ * @related /Graphics 2d/Shapes/Rectangle
  */
 public class CubicCurveApp extends Application {
 

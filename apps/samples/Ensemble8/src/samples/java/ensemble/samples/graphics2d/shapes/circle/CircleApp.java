@@ -45,17 +45,25 @@ import javafx.stage.Stage;
  *
  * @sampleName Circle
  * @preview preview.png
- * @see javafx.scene.shape.Circle
- * @see javafx.scene.shape.Shape
- * @see javafx.scene.paint.Color
- * @related /Graphics 2d/Shapes/Arc
- * @related /Graphics 2d/Shapes/Ellipse
  * @playground circle1.fill (name="Circle 1 Fill")
  * @playground circle1.radius (name="Circle 1 Radius", min=10, max=40)
  * @playground circle2.stroke (name="Circle 1 Stroke")
  * @playground circle2.strokeWidth (name="Circle 2 Stroke Width", min=1, max=5)
  * @playground circle2.radius (name="Circle 2 Radius", min=10, max=40)
+ * @see javafx.scene.shape.Circle
+ * @see javafx.scene.shape.Shape
+ * @see javafx.scene.paint.Color
  * @embedded
+ *
+ * @related /Graphics 2d/Shapes/Arc
+ * @related /Graphics 2d/Shapes/Cubic Curve
+ * @related /Graphics 2d/Shapes/Ellipse
+ * @related /Graphics 2d/Shapes/Line
+ * @related /Graphics 2d/Shapes/Path
+ * @related /Graphics 2d/Shapes/Polygon
+ * @related /Graphics 2d/Shapes/Polyline
+ * @related /Graphics 2d/Shapes/Quad Curve
+ * @related /Graphics 2d/Shapes/Rectangle
  */
 public class CircleApp extends Application {
 

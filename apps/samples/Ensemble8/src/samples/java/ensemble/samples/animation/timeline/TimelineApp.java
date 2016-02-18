@@ -35,10 +35,8 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -51,8 +49,11 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -61,39 +62,39 @@ import javafx.util.Duration;
  *
  * @sampleName Timeline
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @see javafx.animation.KeyFrame
  * @see javafx.animation.KeyValue
  * @see javafx.animation.Timeline
+ * @see javafx.scene.layout.HBox
+ * @see javafx.scene.layout.VBox
  * @see javafx.util.Duration
- * @related /Animation/Timeline Events
  * @embedded
+ *
+ * @related /Layout/HBox
+ * @related /Animation/Timeline Events
+ * @related /Layout/VBox
  */
 public class TimelineApp extends Application {
 
     private Timeline timeline;
 
     public Parent createContent() {
-        Pane root = new Pane();
+        final Pane root = new Pane();
         root.setPrefSize(253, 100);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
 
-        //create a circle
+        // create a circle
         final Circle circle = new Circle(25, 25, 20, Color.web("1c89f4"));
         circle.setEffect(new Lighting());
 
-        //create a timeline for moving the circle
+        // create a timeline for moving the circle
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.setAutoReverse(true);
 
-        //one can start/pause/stop/play animation by
-        //timeline.play();
-        //timeline.pause();
-        //timeline.stop();
-        //timeline.playFromStart();
-
-        //add the following keyframes to the timeline
+        // add the following keyframes to the timeline
         timeline.getKeyFrames().addAll(new KeyFrame(Duration.ZERO,
                 new KeyValue(circle.translateXProperty(), 0)),
                 new KeyFrame(new Duration(4000),
@@ -103,54 +104,69 @@ public class TimelineApp extends Application {
         return root;
     }
 
+    /*
+     * one can start/pause/stop/play animation by
+     * timeline.play();
+     * timeline.pause();
+     * timeline.stop();
+     * timeline.playFromStart();
+     */
     private VBox createNavigation() {
-        //method for creating navigation panel
-        //start/stop/pause/play from start buttons
+        // method for creating navigation panel
+        // start/stop/pause/play from start buttons
         Button buttonStart = new Button("Start");
         buttonStart.setOnAction((ActionEvent t) -> {
-            //start timeline
+            // start timeline
             timeline.play();
         });
         Button buttonStop = new Button("Stop");
         buttonStop.setOnAction((ActionEvent t) -> {
-            //stop timeline
+            // stop timeline
             timeline.stop();
         });
         Button buttonPlayFromStart = new Button("Restart");
         buttonPlayFromStart.setOnAction((ActionEvent t) -> {
-            //play from start
+            // play from start
             timeline.playFromStart();
         });
         Button buttonPause = new Button("Pause");
         buttonPause.setOnAction((ActionEvent t) -> {
-            //pause from start
+            // pause from start
             timeline.pause();
         });
-        //text showing current time
-        final Text currentRateText = new Text("Current time: 0 ms");
-        currentRateText.setBoundsType(TextBoundsType.VISUAL);
+        // text showing current time
+        final TextFlow flow = new TextFlow();
+        final Text current = new Text("Current time: ");
+        final Text rate = new Text();
+        final Text ms = new Text(" ms");
+        current.setBoundsType(TextBoundsType.VISUAL);
+        ms.setBoundsType(TextBoundsType.VISUAL);
+        rate.setFont(Font.font("Courier", FontWeight.BOLD, 14));
+        rate.setText(String.format("%4d", 0));
         timeline.currentTimeProperty().addListener((Observable ov) -> {
-            int time = (int) timeline.getCurrentTime().toMillis();
-            currentRateText.setText("Current time: " + time + " ms");
+            rate.setText(String.format("%4.0f",
+                                       timeline.getCurrentTime().toMillis()));
         });
-        //Autoreverse checkbox
+        flow.getChildren().addAll(current, rate, ms);
+        // Autoreverse checkbox
         final CheckBox checkBoxAutoReverse = new CheckBox("Auto Reverse");
         checkBoxAutoReverse.setSelected(true);
         checkBoxAutoReverse.selectedProperty().addListener((Observable ov) -> {
             timeline.setAutoReverse(checkBoxAutoReverse.isSelected());
         });
-        //add all navigation to layout
+        // add all navigation to layout
         HBox hBox1 = new HBox(10);
-        hBox1.setPadding(new Insets(0, 0, 0, 5));
-        hBox1.getChildren().addAll(buttonStart, buttonPause, buttonStop, buttonPlayFromStart);
+        hBox1.setPadding(new Insets(5, 10, 0, 5));
+        hBox1.getChildren().addAll(buttonStart, buttonPause,
+                                   buttonStop, buttonPlayFromStart);
         hBox1.setAlignment(Pos.CENTER_LEFT);
-        HBox hBox2 = new HBox(10);
-        hBox2.setPadding(new Insets(0, 0, 0, 5));
-        hBox2.getChildren().addAll(checkBoxAutoReverse, currentRateText);
-        hBox2.setAlignment(Pos.CENTER_LEFT);
-        VBox vBox = new VBox(10);
+        VBox controls = new VBox(10);
+        controls.setPadding(new Insets(0, 0, 0, 5));
+        controls.getChildren().addAll(checkBoxAutoReverse, flow);
+        controls.setAlignment(Pos.CENTER_LEFT);
+        VBox vBox = new VBox(20);
         vBox.setLayoutY(60);
-        vBox.getChildren().addAll(hBox1, hBox2);
+        vBox.getChildren().addAll(hBox1, controls);
         return vBox;
     }
 

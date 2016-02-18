@@ -32,12 +32,12 @@
 package ensemble.samples.scenegraph.events.keystrokemotion;
 
 import java.util.Random;
+
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.VPos;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyEvent;
@@ -50,9 +50,6 @@ import javafx.util.Duration;
 
 public class LettersPane extends Region {
 
-    private static final Font FONT_DEFAULT = new Font(Font.getDefault().getFamily(), 200);
-    private static final Random RANDOM = new Random();
-    private static final Interpolator INTERPOLATOR = Interpolator.SPLINE(0.295, 0.800, 0.305, 1.000);
     private Text pressText;
 
     public LettersPane() {
@@ -84,29 +81,43 @@ public class LettersPane extends Region {
     @Override
     protected void layoutChildren() {
         // center press keys text
-        pressText.setLayoutX((getWidth() - pressText.getLayoutBounds().getWidth()) / 2);
+        pressText.setLayoutX((getWidth() -
+                              pressText.getLayoutBounds().getWidth()) / 2);
     }
 
     private void createLetter(String c) {
+        final Font font = new Font(Font.getDefault().getFamily(), 200);
         final Text letter = new Text(c);
         letter.setFill(Color.BLACK);
-        letter.setFont(FONT_DEFAULT);
+        letter.setFont(font);
         letter.setTextOrigin(VPos.TOP);
-        letter.setTranslateX((getWidth() - letter.getBoundsInLocal().getWidth()) / 2);
-        letter.setTranslateY((getHeight() - letter.getBoundsInLocal().getHeight()) / 2);
+        letter.setTranslateX((getWidth() -
+                              letter.getBoundsInLocal().getWidth()) / 2);
+        letter.setTranslateY((getHeight() -
+                              letter.getBoundsInLocal().getHeight()) / 2);
         getChildren().add(letter);
         // over 3 seconds move letter to random position and fade it out
+        final Interpolator interp = Interpolator.SPLINE(0.295, 0.800,
+                                                        0.305, 1.000);
         final Timeline timeline = new Timeline();
         timeline.getKeyFrames().add(
                 new KeyFrame(Duration.seconds(3), (ActionEvent event) -> {
                     // we are done remove us from scene
                     getChildren().remove(letter);
-        },
-                new KeyValue(letter.translateXProperty(), getRandom(0.0f, getWidth() - letter.getBoundsInLocal().getWidth()), INTERPOLATOR),
-                new KeyValue(letter.translateYProperty(), getRandom(0.0f, getHeight() - letter.getBoundsInLocal().getHeight()), INTERPOLATOR),
+                },
+                new KeyValue(letter.translateXProperty(),
+                             getRandom(0.0f, getWidth() -
+                                       letter.getBoundsInLocal().getWidth()),
+                             interp),
+                new KeyValue(letter.translateYProperty(),
+                             getRandom(0.0f, getHeight() -
+                                       letter.getBoundsInLocal().getHeight()),
+                             interp),
                 new KeyValue(letter.opacityProperty(), 0f)));
         timeline.play();
     }
+
+    private static final Random RANDOM = new Random();
 
     private static float getRandom(double min, double max) {
         return (float) (RANDOM.nextFloat() * (max - min) + min);

@@ -47,8 +47,19 @@ import javafx.stage.Stage;
  *
  * @sampleName StackPane
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/layout-tutorial/index.html JavaFX Layouts
  * @see javafx.scene.layout.StackPane
+ * @see javafx.scene.shape.Ellipse
+ * @see javafx.scene.shape.Rectangle
  * @embedded
+ *
+ * @related /Layout/AnchorPane
+ * @related /Layout/BorderPane
+ * @related /Layout/FlowPane
+ * @related /Layout/GridPane
+ * @related /Layout/HBox
+ * @related /Layout/TilePane
+ * @related /Layout/VBox
  */
 public class StackPaneApp extends Application {
 

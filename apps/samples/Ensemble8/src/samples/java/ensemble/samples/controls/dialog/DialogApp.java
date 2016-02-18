@@ -33,6 +33,7 @@ package ensemble.samples.controls.dialog;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Parent;
@@ -59,8 +60,13 @@ import javafx.stage.Stage;
  * A sample that demonstrates the Dialog control.
  *
  * @sampleName DialogApp
+ * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.Dialog
- * @related /Controls/Dialog
+ * @see javafx.scene.control.TextArea
+ *
+ * @related /Language/FXML Login Demo
+ * @related /Controls/SpinnerApp
  */
 public class DialogApp extends Application {
 

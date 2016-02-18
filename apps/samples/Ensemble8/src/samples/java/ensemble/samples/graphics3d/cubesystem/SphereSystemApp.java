@@ -51,19 +51,22 @@ import javafx.util.Duration;
  *
  * @sampleName 3D Sphere System
  * @preview preview.png
- * @see javafx.scene.shape.Sphere
+ * @docUrl http://docs.oracle.com/javase/8/javafx/graphics-tutorial/javafx-3d-graphics.htm#JFXGR256 JavaFX 3D Graphics
+ * @see javafx.animation.KeyFrame
+ * @see javafx.animation.Timeline
+ * @see javafx.scene.PerspectiveCamera
+ * @see javafx.scene.SceneAntialiasing
+ * @see javafx.scene.paint.Color
  * @see javafx.scene.paint.PhongMaterial
+ * @see javafx.scene.shape.Sphere
  * @see javafx.scene.transform.Rotate
  * @see javafx.scene.transform.Translate
- * @see javafx.scene.paint.Color
- * @see javafx.scene.PerspectiveCamera
- * @see javafx.scene.SubScene
- * @see javafx.scene.SceneAntialiasing
- * @see javafx.animation.KeyFrame
- * @see javafx.animation.KeyValue
- * @see javafx.animation.Timeline
- * @see javafx.util.Duration
  * @conditionalFeatures SCENE3D
+ *
+ * @related /Graphics 3d/Xylophone
+ * @related /Graphics 3d/3D Box
+ * @related /Graphics 3d/3D Cubes
+ * @related /Graphics 3d/3D Sphere
  */
 public class SphereSystemApp extends Application {
 
@@ -190,7 +193,8 @@ public class SphereSystemApp extends Application {
         camera.setFarClip(1500);
         camera.getTransforms().add(new Translate(0, 0, -900));
 
-        SubScene subScene = new SubScene(sceneRoot, 640, 480, true, SceneAntialiasing.BALANCED);
+        SubScene subScene = new SubScene(sceneRoot, 640, 480,
+                                         true, SceneAntialiasing.BALANCED);
         subScene.setCamera(camera);
 
         return new Group(subScene);
@@ -207,7 +211,8 @@ public class SphereSystemApp extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        primaryStage.setScene(new Scene(createContent(), 640, 480, true, SceneAntialiasing.BALANCED));
+        primaryStage.setScene(new Scene(createContent(), 640, 480,
+                                        true, SceneAntialiasing.BALANCED));
         primaryStage.show();
         play();
     }

@@ -47,6 +47,15 @@ import javafx.stage.Stage;
  * @sampleName Cursor
  * @preview preview.png
  * @see javafx.scene.Cursor
+ * @see javafx.scene.control.Label
+ * @see javafx.scene.layout.TilePane
+ *
+ * @related /Scenegraph/Events/Key Stroke Motion
+ * @related /Scenegraph/Events/MouseEvent
+ * @related /Scenegraph/Node Properties
+ * @related /Graphics 2d/Shapes/Polygon
+ * @related /Scenegraph/Stage
+ * @related /Layout/TilePane
  */
 public class CursorApp extends Application {
 

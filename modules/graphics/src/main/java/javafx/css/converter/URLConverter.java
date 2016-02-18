@@ -200,7 +200,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
                 //
                 // Just because we're running with a SecurityManager doesn't mean the jfxrt jar path is
                 // a jar: URL. But the code in StyleManager wants it to be. So if we have
-                // file:/blah/rt/lib/ext/jfxrt.jar make it jar:file:/blah/rt/lib/ext/jfxrt.jar!/
+                // file:/blah/lib/jfxrt.jar make it jar:file:/blah/lib/jfxrt.jar!/
                 //
                 // If the path doesn't end with .jar, then we are just dealing with a normal file: path
                 //

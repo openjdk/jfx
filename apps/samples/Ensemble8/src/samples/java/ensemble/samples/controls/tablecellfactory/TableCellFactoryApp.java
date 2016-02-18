@@ -50,31 +50,30 @@ import javafx.util.StringConverter;
  *
  * @sampleName TableCellFactory
  * @preview preview.png
- * @see javafx.scene.control.TableCell
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
+ * @see javafx.beans.property.BooleanProperty
+ * @see javafx.beans.property.StringProperty
  * @see javafx.scene.control.TableColumn
  * @see javafx.scene.control.TableView
  * @see javafx.scene.control.cell.CheckBoxTableCell
  * @see javafx.scene.control.cell.PropertyValueFactory
  * @see javafx.scene.control.cell.TextFieldTableCell
- * @see javafx.util.StringConverter
- * @see javafx.collections.FXCollections
- * @see javafx.collections.ObservableList
- * @see javafx.beans.property.BooleanProperty
- * @see javafx.beans.property.SimpleBooleanProperty
- * @see javafx.beans.property.SimpleStringProperty
- * @see javafx.beans.property.StringProperty
- * @related /Controls/TableView
  * @embedded
+ *
+ * @related /Language/Concurrency/Service
+ * @related /Controls/TableView
+ * @related /Language/Concurrency/Task
+ * @related /Controls/TreeTableView
  */
 public class TableCellFactoryApp extends Application {
 
     public Parent createContent() {
         final ObservableList<Person> data = FXCollections.observableArrayList(
-                new Person(true, "Jacob", "Smith", "jacob.smith@example.com"),
-                new Person(false, "Isabella", "Johnson", "isabella.johnson@example.com"),
-                new Person(true, "Ethan", "Williams", "ethan.williams@example.com"),
-                new Person(true, "Emma", "Jones", "emma.jones@example.com"),
-                new Person(false, "Michael", "Brown", "michael.brown@example.com"));
+                new Person(true,  "Jacob", "Smith", "jacob.smith@example.com"),
+                new Person(false, "Sue", "Jones", "sue@example.com"),
+                new Person(true,  "Ethan", "Fox", "ethan.fox@example.com"),
+                new Person(true,  "Emma", "Jones", "emma.jones@example.com"),
+                new Person(false, "Mike", "Brown", "mike.brown@example.com"));
         StringConverter<Object> sc = new StringConverter<Object>() {
             @Override
             public String toString(Object t) {

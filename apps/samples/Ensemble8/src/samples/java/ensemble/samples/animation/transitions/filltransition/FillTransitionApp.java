@@ -47,8 +47,10 @@ import javafx.util.Duration;
  *
  * @sampleName Fill Transition
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @see javafx.animation.FillTransition
  * @see javafx.animation.Transition
+ *
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Parallel Transition
  * @related /Animation/Transitions/Path Transition
@@ -62,10 +64,10 @@ import javafx.util.Duration;
  */
 public class FillTransitionApp extends Application {
 
-    private FillTransition fillTransition;
+    private FillTransition fill;
 
     public Parent createContent() {
-        Pane root = new Pane();
+        final Pane root = new Pane();
         root.setPrefSize(105, 105);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
@@ -76,19 +78,20 @@ public class FillTransitionApp extends Application {
         rect.setFill(Color.DODGERBLUE);
         root.getChildren().add(rect);
 
-        fillTransition = new FillTransition(Duration.seconds(3), rect, Color.RED, Color.DODGERBLUE);
-        fillTransition.setCycleCount(Timeline.INDEFINITE);
-        fillTransition.setAutoReverse(true);
+        fill = new FillTransition(Duration.seconds(3), rect,
+                                  Color.RED, Color.DODGERBLUE);
+        fill.setCycleCount(Timeline.INDEFINITE);
+        fill.setAutoReverse(true);
         return root;
     }
 
     public void play() {
-        fillTransition.play();
+        fill.play();
     }
 
     @Override
     public void stop() {
-        fillTransition.stop();
+        fill.stop();
     }
 
     @Override

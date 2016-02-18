@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package test.sandbox;
 
 import com.sun.javafx.PlatformUtil;
-import java.io.File;
+import java.util.ArrayList;
 import junit.framework.AssertionFailedError;
 import org.junit.Test;
 
@@ -43,19 +43,6 @@ public class SandboxAppTest {
     private static final String className = SandboxAppTest.class.getName();
     private static final String pkgName = className.substring(0, className.lastIndexOf("."));
 
-    private String getJfxrtDir(final String classpath) {
-        final String jfxrt = "jfxrt.jar";
-        String cp = classpath;
-        int idx = cp.replace('\\', '/').indexOf("/" + jfxrt);
-        assertTrue("No " + jfxrt + " in classpath", idx >= 0);
-        cp = cp.substring(0, idx);
-        idx = cp.lastIndexOf(File.pathSeparator);
-        if (idx >= 0) {
-            cp = cp.substring(idx, cp.length());
-        }
-        return cp;
-    }
-
     private static String getTestPolicyFile() {
         return SandboxAppTest.class.getResource("test.policy").toExternalForm();
     }
@@ -66,16 +53,16 @@ public class SandboxAppTest {
 
     private void runSandboxedApp(String appName, int exitCode) throws Exception {
         final String testAppName = pkgName + ".app." + appName;
-        final String classpath = System.getProperty("java.class.path");
-        final String jfxrtDir = getJfxrtDir(classpath);
         final String testPolicy = getTestPolicyFile();
-        ProcessBuilder builder;
-        builder = new ProcessBuilder("java",
-                "-Djava.ext.dirs=" + jfxrtDir,
-                "-Djava.security.manager",
-                "-Djava.security.policy=" + testPolicy,
-                "-cp", classpath,
-                testAppName);
+
+        final ArrayList<String> cmd =
+                test.util.Util.createApplicationLaunchCommand(
+                        testAppName,
+                        null,
+                        testPolicy
+                );
+
+        final ProcessBuilder builder = new ProcessBuilder(cmd);
         builder.redirectError(ProcessBuilder.Redirect.INHERIT);
         builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         Process process = builder.start();

@@ -47,13 +47,22 @@ import javafx.stage.Stage;
  *
  * @sampleName TilePane
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/layout-tutorial/index.html JavaFX Layouts
+ * @see javafx.scene.control.Button
+ * @see javafx.scene.image.ImageView
  * @see javafx.scene.layout.TilePane
- * @related /Graphics 2d/Images/Image Creation
  * @embedded
+ *
+ * @related /Layout/AnchorPane
+ * @related /Layout/BorderPane
+ * @related /Layout/FlowPane
+ * @related /Layout/GridPane
+ * @related /Layout/HBox
+ * @related /Graphics 2d/Images/Image Creation
+ * @related /Layout/StackPane
+ * @related /Layout/VBox
  */
 public class TilePaneApp extends Application {
-
-    private static final Image ICON_48 = new Image(TilePaneApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
 
     public Parent createContent() {
         Pane root = new Pane();
@@ -65,6 +74,8 @@ public class TilePaneApp extends Application {
         tilePane.setPrefColumns(2); //preferred columns
         tilePane.setAlignment(Pos.CENTER);
 
+        String IMAGE = "/ensemble/samples/shared-resources/icon-48x48.png";
+        Image ICON_48 = new Image(getClass().getResourceAsStream(IMAGE));
         Button[] buttons = new Button[6];
         for (int j = 0; j < buttons.length; j++) {
             buttons[j] = new Button("button" + (j + 1), new ImageView(ICON_48));

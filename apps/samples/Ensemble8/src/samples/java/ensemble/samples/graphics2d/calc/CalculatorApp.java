@@ -34,9 +34,9 @@ package ensemble.samples.graphics2d.calc;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
+import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.Group;
 import javafx.scene.paint.Color;
 
 
@@ -46,22 +46,17 @@ import javafx.scene.paint.Color;
  * @sampleName Calculator
  * @preview preview.png
  *
- * @see javafx.application.Application
- * @see javafx.stage.Stage
- * @see javafx.scene.Scene
- * @see javafx.scene.Group
- * @see javafx.scene.Parent
+ * @see javafx.scene.input.KeyEvent
+ * @see javafx.scene.input.MouseEvent
  * @see javafx.scene.paint.Color
  * @see javafx.scene.paint.CycleMethod
  * @see javafx.scene.paint.LinearGradient
  * @see javafx.scene.paint.Stop
- * @see javafx.scene.input.KeyEvent
- * @see javafx.scene.input.MouseEvent
  * @see javafx.scene.shape.Rectangle
  * @see javafx.scene.text.Font
  * @see javafx.scene.text.Text
- * @see javafx.event.EventHandler
- * @see javafx.geometry.VPos
+ * @related /Graphics 2d/Brick Breaker
+ * @related /Graphics 2d/Paints/Linear Gradient
  * @embedded
  */
 

@@ -47,8 +47,10 @@ import javafx.util.Duration;
  *
  * @sampleName Scale Transition
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/visual-effects-tutorial/animations.htm#JFXTE149 JavaFX Transitions & Animation
  * @see javafx.animation.ScaleTransition
  * @see javafx.animation.Transition
+ *
  * @related /Animation/Transitions/Fade Transition
  * @related /Animation/Transitions/Fill Transition
  * @related /Animation/Transitions/Parallel Transition
@@ -62,10 +64,10 @@ import javafx.util.Duration;
  */
 public class ScaleTransitionApp extends Application {
 
-    private ScaleTransition scaleTransition;
+    private ScaleTransition scale;
 
     public Parent createContent() {
-        Pane root = new Pane();
+        final Pane root = new Pane();
         root.setPrefSize(180, 180);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
@@ -75,22 +77,22 @@ public class ScaleTransitionApp extends Application {
         rect.setArcWidth(15);
         rect.setFill(Color.ORANGE);
         root.getChildren().add(rect);
-        scaleTransition = new ScaleTransition(Duration.seconds(4), rect);
-        scaleTransition.setToX(3);
-        scaleTransition.setToY(3);
-        scaleTransition.setCycleCount(Timeline.INDEFINITE);
-        scaleTransition.setAutoReverse(true);
+        scale = new ScaleTransition(Duration.seconds(4), rect);
+        scale.setToX(3);
+        scale.setToY(3);
+        scale.setCycleCount(Timeline.INDEFINITE);
+        scale.setAutoReverse(true);
 
         return root;
     }
 
     public void play() {
-        scaleTransition.play();
+        scale.play();
     }
 
     @Override
     public void stop() {
-        scaleTransition.stop();
+        scale.stop();
     }
 
     @Override

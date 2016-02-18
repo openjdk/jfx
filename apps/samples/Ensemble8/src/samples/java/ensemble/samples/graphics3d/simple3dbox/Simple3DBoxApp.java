@@ -48,22 +48,30 @@ import javafx.stage.Stage;
 /**
  * A sample that shows a 3D box and uses a perspective camera for rendering the
  * scene.
- * Hint: Switch to Line draw mode to see how cullFace property works.
+ *
+ * Explore: Switch to Line draw mode to see how cullFace property works.
  *
  * @sampleName 3D Box
  * @preview preview.png
- * @see javafx.scene.shape.Box
- * @see javafx.scene.PerspectiveCamera
- * @see javafx.scene.paint.PhongMaterial
- * @see javafx.scene.paint.Color
- * @see javafx.scene.transform.Rotate
- * @see javafx.scene.transform.Translate
- * @see javafx.scene.SceneAntialiasing
- * @see javafx.scene.SubScene
+ * @docUrl http://docs.oracle.com/javase/8/javafx/graphics-tutorial/javafx-3d-graphics.htm#JFXGR256 JavaFX 3D Graphics
  * @playground testBox.drawMode
  * @playground testBox.cullFace
  * @playground material.diffuseColor
+ *
+ * @see javafx.scene.PerspectiveCamera
+ * @see javafx.scene.SceneAntialiasing
+ * @see javafx.scene.SubScene
+ * @see javafx.scene.paint.Color
+ * @see javafx.scene.paint.PhongMaterial
+ * @see javafx.scene.shape.Box
+ * @see javafx.scene.transform.Rotate
+ * @see javafx.scene.transform.Translate
  * @conditionalFeatures SCENE3D
+ *
+ * @related /Graphics 3d/Xylophone
+ * @related /Graphics 3d/3D Cubes
+ * @related /Graphics 3d/3D Sphere
+ * @related /Graphics 3d/3D Sphere System
  */
 public class Simple3DBoxApp extends Application {
 
@@ -91,7 +99,8 @@ public class Simple3DBoxApp extends Application {
         root.getChildren().add(testBox);
 
         // Use a SubScene
-        SubScene subScene = new SubScene(root, 300, 300, true, SceneAntialiasing.BALANCED);
+        SubScene subScene = new SubScene(root, 300, 300,
+                                         true, SceneAntialiasing.BALANCED);
         subScene.setFill(Color.TRANSPARENT);
         subScene.setCamera(camera);
 

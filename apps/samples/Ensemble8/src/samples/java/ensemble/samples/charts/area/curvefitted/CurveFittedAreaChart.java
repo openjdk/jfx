@@ -52,10 +52,11 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
     }
     @Override protected void layoutPlotChildren() {
         super.layoutPlotChildren();
-        for (int seriesIndex = 0; seriesIndex < getDataSize(); seriesIndex++) {
-            final XYChart.Series<Number, Number> series = getData().get(seriesIndex);
-            final Path seriesLine = (Path) ((Group) series.getNode()).getChildren().get(1);
-            final Path fillPath = (Path) ((Group) series.getNode()).getChildren().get(0);
+        for (int index = 0; index < getDataSize(); index++) {
+            final XYChart.Series<Number, Number> series = getData().get(index);
+            final Group seriesGroup = (Group)series.getNode();
+            final Path seriesLine = (Path)seriesGroup.getChildren().get(1);
+            final Path fillPath = (Path)seriesGroup.getChildren().get(0);
             smooth(seriesLine.getElements(), fillPath.getElements());
         }
     }
@@ -65,18 +66,20 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
         return (data != null) ? data.size() : 0;
     }
 
-    private static void smooth(ObservableList<PathElement> strokeElements, ObservableList<PathElement> fillElements) {
-        // as we do not have direct access to the data, first recreate the list of all the data points we have
-        final Point2D[] dataPoints = new Point2D[strokeElements.size()];
+    private static void smooth(ObservableList<PathElement> strokeElements,
+                               ObservableList<PathElement> fillElements) {
+        // as we do not have direct access to the data, first recreate
+        // the list of all the data points we have
+        final Point2D[] points = new Point2D[strokeElements.size()];
         for (int i = 0; i < strokeElements.size(); i++) {
             final PathElement element = strokeElements.get(i);
             if (element instanceof MoveTo) {
                 final MoveTo move = (MoveTo) element;
-                dataPoints[i] = new Point2D(move.getX(), move.getY());
+                points[i] = new Point2D(move.getX(), move.getY());
             } else if (element instanceof LineTo) {
                 final LineTo line = (LineTo) element;
                 final double x = line.getX(), y = line.getY();
-                dataPoints[i] = new Point2D(x, y);
+                points[i] = new Point2D(x, y);
             }
         }
         // next we need to know the zero Y value
@@ -84,27 +87,27 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
         // now clear and rebuild elements
         strokeElements.clear();
         fillElements.clear();
-        Pair<Point2D[], Point2D[]> result = calcCurveControlPoints(dataPoints);
-        Point2D[] firstControlPoints = result.getKey();
-        Point2D[] secondControlPoints = result.getValue();
+        Pair<Point2D[], Point2D[]> controls = curveControlPoints(points);
+        Point2D[] firstControls = controls.getKey();
+        Point2D[] secondControls = controls.getValue();
         // start both paths
-        strokeElements.add(new MoveTo(dataPoints[0].getX(), dataPoints[0].getY()));
-        fillElements.add(new MoveTo(dataPoints[0].getX(), zeroY));
-        fillElements.add(new LineTo(dataPoints[0].getX(), dataPoints[0].getY()));
+        strokeElements.add(new MoveTo(points[0].getX(), points[0].getY()));
+        fillElements.add(new MoveTo(points[0].getX(), zeroY));
+        fillElements.add(new LineTo(points[0].getX(), points[0].getY()));
         // add curves
-        for (int i = 1; i < dataPoints.length; i++) {
+        for (int i = 1; i < points.length; i++) {
             final int ci = i - 1;
             strokeElements.add(new CubicCurveTo(
-                    firstControlPoints[ci].getX(), firstControlPoints[ci].getY(),
-                    secondControlPoints[ci].getX(), secondControlPoints[ci].getY(),
-                    dataPoints[i].getX(), dataPoints[i].getY()));
+                    firstControls[ci].getX(), firstControls[ci].getY(),
+                    secondControls[ci].getX(), secondControls[ci].getY(),
+                    points[i].getX(), points[i].getY()));
             fillElements.add(new CubicCurveTo(
-                    firstControlPoints[ci].getX(), firstControlPoints[ci].getY(),
-                    secondControlPoints[ci].getX(), secondControlPoints[ci].getY(),
-                    dataPoints[i].getX(), dataPoints[i].getY()));
+                    firstControls[ci].getX(), firstControls[ci].getY(),
+                    secondControls[ci].getX(), secondControls[ci].getY(),
+                    points[i].getX(), points[i].getY()));
         }
         // end the paths
-        fillElements.add(new LineTo(dataPoints[dataPoints.length - 1].getX(), zeroY));
+        fillElements.add(new LineTo(points[points.length - 1].getX(), zeroY));
         fillElements.add(new ClosePath());
     }
 
@@ -114,23 +117,24 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
      * @param dataPoints Input data Bezier spline points.
      * @return The spline points
      */
-    public static Pair<Point2D[], Point2D[]> calcCurveControlPoints(Point2D[] dataPoints) {
+    public static Pair<Point2D[], Point2D[]> curveControlPoints(Point2D[] data) {
         Point2D[] firstControlPoints;
         Point2D[] secondControlPoints;
-        int n = dataPoints.length - 1;
+        int n = data.length - 1;
         if (n == 1) { // Special case: Bezier curve should be a straight line.
             firstControlPoints = new Point2D[1];
             // 3P1 = 2P0 + P3
             firstControlPoints[0] = new Point2D(
-                    (2 * dataPoints[0].getX() + dataPoints[1].getX()) / 3,
-                    (2 * dataPoints[0].getY() + dataPoints[1].getY()) / 3);
+                    (2 * data[0].getX() + data[1].getX()) / 3,
+                    (2 * data[0].getY() + data[1].getY()) / 3);
 
             secondControlPoints = new Point2D[1];
             // P2 = 2P1 – P0
             secondControlPoints[0] = new Point2D(
-                    2 * firstControlPoints[0].getX() - dataPoints[0].getX(),
-                    2 * firstControlPoints[0].getY() - dataPoints[0].getY());
-            return new Pair<Point2D[], Point2D[]>(firstControlPoints, secondControlPoints);
+                    2 * firstControlPoints[0].getX() - data[0].getX(),
+                    2 * firstControlPoints[0].getY() - data[0].getY());
+            return new Pair<Point2D[], Point2D[]>(firstControlPoints,
+                                                  secondControlPoints);
         }
 
         // Calculate first Bezier control points
@@ -139,19 +143,19 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
 
         // Set right hand side X values
         for (int i = 1; i < n - 1; ++i) {
-            rhs[i] = 4 * dataPoints[i].getX() + 2 * dataPoints[i + 1].getX();
+            rhs[i] = 4 * data[i].getX() + 2 * data[i + 1].getX();
         }
-        rhs[0] = dataPoints[0].getX() + 2 * dataPoints[1].getX();
-        rhs[n - 1] = (8 * dataPoints[n - 1].getX() + dataPoints[n].getX()) / 2.0;
+        rhs[0] = data[0].getX() + 2 * data[1].getX();
+        rhs[n - 1] = (8 * data[n - 1].getX() + data[n].getX()) / 2.0;
         // Get first control points X-values
         double[] x = GetFirstControlPoints(rhs);
 
         // Set right hand side Y values
         for (int i = 1; i < n - 1; ++i) {
-            rhs[i] = 4 * dataPoints[i].getY() + 2 * dataPoints[i + 1].getY();
+            rhs[i] = 4 * data[i].getY() + 2 * data[i + 1].getY();
         }
-        rhs[0] = dataPoints[0].getY() + 2 * dataPoints[1].getY();
-        rhs[n - 1] = (8 * dataPoints[n - 1].getY() + dataPoints[n].getY()) / 2.0;
+        rhs[0] = data[0].getY() + 2 * data[1].getY();
+        rhs[n - 1] = (8 * data[n - 1].getY() + data[n].getY()) / 2.0;
         // Get first control points Y-values
         double[] y = GetFirstControlPoints(rhs);
 
@@ -163,14 +167,17 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
             firstControlPoints[i] = new Point2D(x[i], y[i]);
             // Second control point
             if (i < n - 1) {
-                secondControlPoints[i] = new Point2D(2 * dataPoints[i + 1].getX() - x[i + 1], 2
-                        * dataPoints[i + 1].getY() - y[i + 1]);
+                secondControlPoints[i] =
+                    new Point2D(2 * data[i + 1].getX() - x[i + 1],
+                                2 * data[i + 1].getY() - y[i + 1]);
             } else {
-                secondControlPoints[i] = new Point2D((dataPoints[n].getX() + x[n - 1]) / 2,
-                        (dataPoints[n].getY() + y[n - 1]) / 2);
+                secondControlPoints[i] =
+                    new Point2D((data[n].getX() + x[n - 1]) / 2,
+                                (data[n].getY() + y[n - 1]) / 2);
             }
         }
-        return new Pair<Point2D[], Point2D[]>(firstControlPoints, secondControlPoints);
+        return new Pair<Point2D[], Point2D[]>(firstControlPoints,
+                                              secondControlPoints);
     }
 
     /**

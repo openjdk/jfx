@@ -40,7 +40,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.util.Arrays;
@@ -49,8 +48,11 @@ import java.util.Arrays;
  * A sample that demonstrates the Spinner control.
  *
  * @sampleName SpinnerApp
+ * @preview preview.png
  * @see javafx.scene.control.Spinner
- * @related /Controls/Spinner
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
+ *
+ * @related /Controls/DialogApp
  */
 public class SpinnerApp extends Application {
 
@@ -124,6 +126,8 @@ public class SpinnerApp extends Application {
         doubleBlock.setLayoutY(100);
         stringBlock.setLayoutY(200);
 
-        return new VBox(25, intBlock, doubleBlock, stringBlock);
+        Group group = new Group(intBlock, doubleBlock, stringBlock);
+        // group.getChildren().addAll();
+        return group;
     }
 }

@@ -32,9 +32,10 @@
 package ensemble.samples.media.advancedmedia;
 
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -69,10 +70,6 @@ public class MediaControl extends BorderPane {
     private Label playTime;
     private Slider volumeSlider;
     private HBox mediaBar;
-    private final Image PlayButtonImage = new Image(MediaControl.class.getResourceAsStream("/ensemble/samples/shared-resources/playbutton.png"));
-    private final Image PauseButtonImage = new Image(MediaControl.class.getResourceAsStream("/ensemble/samples/shared-resources/pausebutton.png"));
-    ImageView imageViewPlay = new ImageView(PlayButtonImage);
-    ImageView imageViewPause = new ImageView(PauseButtonImage);
     private Pane mvPane;
     private Stage newStage;
     private boolean fullScreen = false;
@@ -85,8 +82,10 @@ public class MediaControl extends BorderPane {
         }
         super.layoutChildren();
         if (mediaView != null && getCenter() != null) {
-            mediaView.setTranslateX((((Pane) getCenter()).getWidth() - mediaView.prefWidth(-1)) / 2);
-            mediaView.setTranslateY((((Pane) getCenter()).getHeight() - mediaView.prefHeight(-1)) / 2);
+            mediaView.setTranslateX((((Pane)getCenter()).getWidth() -
+                                     mediaView.prefWidth(-1)) / 2);
+            mediaView.setTranslateY((((Pane)getCenter()).getHeight() -
+                                     mediaView.prefHeight(-1)) / 2);
         }
     }
 
@@ -136,6 +135,12 @@ public class MediaControl extends BorderPane {
         final Button playButton = new Button();
         playButton.setMinWidth(Control.USE_PREF_SIZE);
 
+        String PLAY  = "/ensemble/samples/shared-resources/playbutton.png";
+        String PAUSE = "/ensemble/samples/shared-resources/pausebutton.png";
+        Image PlayButton  = new Image(getClass().getResourceAsStream(PLAY));
+        Image PauseButton = new Image(getClass().getResourceAsStream(PAUSE));
+        ImageView imageViewPlay  = new ImageView(PlayButton);
+        ImageView imageViewPause = new ImageView(PauseButton);
         playButton.setGraphic(imageViewPlay);
         playButton.setOnAction((ActionEvent e) -> {
             updateValues();
@@ -164,8 +169,9 @@ public class MediaControl extends BorderPane {
                 mp.pause();
             }
         });
-        mp.currentTimeProperty().addListener((ObservableValue<? extends Duration> observable,
-                                              Duration oldValue, Duration newValue) -> {
+        ReadOnlyObjectProperty<Duration> time = mp.currentTimeProperty();
+        time.addListener((ObservableValue<? extends Duration> observable,
+                          Duration oldValue, Duration newValue) -> {
             updateValues();
         });
         mp.setOnPlaying(() -> {
@@ -207,10 +213,11 @@ public class MediaControl extends BorderPane {
         timeSlider = new Slider();
         timeSlider.setMinWidth(30);
         timeSlider.setMaxWidth(Double.MAX_VALUE);
-
         HBox.setHgrow(timeSlider, Priority.ALWAYS);
-        timeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
-                                                Number old, Number now) -> {
+
+        DoubleProperty timeValue = timeSlider.valueProperty();
+        timeValue.addListener((ObservableValue<? extends Number> observable,
+                               Number old , Number now) -> {
             if (timeSlider.isValueChanging()) {
                 // multiply duration by percentage calculated by slider position
                 if (duration != null) {
@@ -242,8 +249,9 @@ public class MediaControl extends BorderPane {
             public void handle(ActionEvent event) {
                 if (!fullScreen) {
                     newStage = new Stage();
-                    newStage.fullScreenProperty().addListener((ObservableValue<? extends Boolean> ov,
-                                                               Boolean t, Boolean t1) -> {
+                    ReadOnlyBooleanProperty full = newStage.fullScreenProperty();
+                    full.addListener((ObservableValue<? extends Boolean> ov,
+                                      Boolean old, Boolean now) -> {
                         onFullScreen();
                     });
                     final BorderPane borderPane = new BorderPane() {
@@ -251,15 +259,21 @@ public class MediaControl extends BorderPane {
                         protected void layoutChildren() {
                             if (mediaView != null && getBottom() != null) {
                                 mediaView.setFitWidth(getWidth());
-                                mediaView.setFitHeight(getHeight() - getBottom().prefHeight(-1));
+                                double height = getHeight() -
+                                                getBottom().prefHeight(-1);
+                                mediaView.setFitHeight(height);
                             }
                             super.layoutChildren();
                             if (mediaView != null) {
-                                if (getCenter() != null) { //if smaller pane has content
-                                    double xval = (((Pane) getCenter()).getWidth() -
-                                                   mediaView.prefWidth(-1)) / 2;
-                                    double yval = (((Pane) getCenter()).getHeight() -
-                                                   mediaView.prefHeight(-1)) / 2;
+                                final Pane center = (Pane)getCenter();
+                                if (center != null) { //if smaller pane has content
+                                    double width  = center.getWidth() -
+                                                    mediaView.prefWidth(-1);
+                                    double height = center.getHeight() -
+                                                    mediaView.prefHeight(-1);
+                                    double xval   = width / 2.0;
+                                    double yval   = height / 2.0;
+
                                     mediaView.setTranslateX(xval);
                                     mediaView.setTranslateY(yval);
                                 }
@@ -304,8 +318,10 @@ public class MediaControl extends BorderPane {
         volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
         volumeSlider.valueProperty().addListener((Observable ov) -> {
         });
-        volumeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
-                                                  Number oldValue, Number newValue) -> {
+
+        final DoubleProperty volume = volumeSlider.valueProperty();
+        volume.addListener((ObservableValue<? extends Number> observable,
+                            Number old, Number now) -> {
             mp.setVolume(volumeSlider.getValue() / 100.0);
         });
         mediaBar.getChildren().add(volumeSlider);
@@ -332,17 +348,22 @@ public class MediaControl extends BorderPane {
     }
 
     protected void updateValues() {
-        if (playTime != null && timeSlider != null && volumeSlider != null && duration != null) {
+        if (playTime != null && timeSlider != null &&
+                volumeSlider != null && duration != null) {
             Platform.runLater(() -> {
-                Duration currentTime = mp.getCurrentTime();
-                playTime.setText(formatTime(currentTime, duration));
+                Duration now = mp.getCurrentTime();
+                playTime.setText(formatTime(now, duration));
                 timeSlider.setDisable(duration.isUnknown());
-                if (!timeSlider.isDisabled() && duration.greaterThan(Duration.ZERO) &&
+                if (!timeSlider.isDisabled() &&
+                        duration.greaterThan(Duration.ZERO) &&
                         !timeSlider.isValueChanging()) {
-                    timeSlider.setValue(currentTime.divide(duration).toMillis() * 100.0);
+                    final double value =
+                        now.divide(duration).toMillis() * 100.0;
+                    timeSlider.setValue(value);
                 }
                 if (!volumeSlider.isValueChanging()) {
-                    volumeSlider.setValue((int) Math.round(mp.getVolume() * 100));
+                    final int value = (int)Math.round(mp.getVolume() * 100);
+                    volumeSlider.setValue(value);
                 }
             });
         }
@@ -355,7 +376,8 @@ public class MediaControl extends BorderPane {
             intElapsed -= elapsedHours * 60 * 60;
         }
         int elapsedMinutes = intElapsed / 60;
-        int elapsedSeconds = intElapsed - elapsedHours * 60 * 60 - elapsedMinutes * 60;
+        int elapsedSeconds = intElapsed - elapsedHours * 60 * 60 -
+                                          elapsedMinutes * 60;
 
         if (duration.greaterThan(Duration.ZERO)) {
             int intDuration = (int) Math.floor(duration.toSeconds());
@@ -364,7 +386,8 @@ public class MediaControl extends BorderPane {
                 intDuration -= durationHours * 60 * 60;
             }
             int durationMinutes = intDuration / 60;
-            int durationSeconds = intDuration - durationHours * 60 * 60 - durationMinutes * 60;
+            int durationSeconds = intDuration - durationHours * 60 * 60 -
+                                                durationMinutes * 60;
 
             if (durationHours > 0) {
                 return String.format("%d:%02d:%02d/%d:%02d:%02d",

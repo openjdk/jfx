@@ -156,7 +156,8 @@ public class PlanetaryPlayerPane extends BorderPane {
         forwardButton.setId("forward-button");
         forwardButton.setOnAction(forwardAction);
 
-        mediaBottomBar.getChildren().addAll(backButton, stopButton, playButton, pauseButton, forwardButton);
+        mediaBottomBar.getChildren().addAll(backButton, stopButton, playButton,
+                                            pauseButton, forwardButton);
         setBottom(mediaBottomBar);
     }
 
@@ -168,7 +169,8 @@ public class PlanetaryPlayerPane extends BorderPane {
         mediaViewer2.setTranslateX(tx);
     }
 
-    private static Group createViewer(final MediaPlayer player, final double scale, boolean blur) {
+    private static Group createViewer(final MediaPlayer player,
+                                      final double scale, boolean blur) {
         Group mediaGroup = new Group();
 
         final MediaView mediaView = new MediaView(player);

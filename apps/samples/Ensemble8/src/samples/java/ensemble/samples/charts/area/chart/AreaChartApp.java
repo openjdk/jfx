@@ -51,8 +51,6 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.chart.AreaChart
  * @see javafx.scene.chart.NumberAxis
- * @related /Charts/Line/Line Chart
- * @related /Charts/Scatter/Scatter Chart
  * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
@@ -102,6 +100,12 @@ import javafx.stage.Stage;
  * @playground chart.title
  * @playground chart.titleSide
  * @embedded
+ *
+ * @related /Charts/Area/Audio Area Chart
+ * @related /Charts/Area/Curve-Fitted Area Chart
+ * @related /Charts/Line/Line Chart
+ * @related /Charts/Scatter/Scatter Chart
+ * @related /Charts/Area/Stacked Area Chart
  */
 public class AreaChartApp extends Application {
 
@@ -114,8 +118,10 @@ public class AreaChartApp extends Application {
         xAxis.setLabel("X Values");
         yAxis = new NumberAxis();
         yAxis.setLabel("Y Values");
-        ObservableList<AreaChart.Series> areaChartData = FXCollections.observableArrayList(
-                new AreaChart.Series("Series 1",FXCollections.observableArrayList(
+        ObservableList<AreaChart.Series> areaChartData =
+            FXCollections.observableArrayList(
+                new AreaChart.Series("Series 1",
+                                     FXCollections.observableArrayList(
                     new AreaChart.Data(0,4),
                     new AreaChart.Data(2,5),
                     new AreaChart.Data(4,4),
@@ -123,7 +129,8 @@ public class AreaChartApp extends Application {
                     new AreaChart.Data(8,6),
                     new AreaChart.Data(10,8)
                 )),
-                new AreaChart.Series("Series 2", FXCollections.observableArrayList(
+                new AreaChart.Series("Series 2",
+                                     FXCollections.observableArrayList(
                     new AreaChart.Data(0,8),
                     new AreaChart.Data(2,2),
                     new AreaChart.Data(4,9),
@@ -131,7 +138,8 @@ public class AreaChartApp extends Application {
                     new AreaChart.Data(8,5),
                     new AreaChart.Data(10,7)
                 )),
-                new AreaChart.Series("Series 3", FXCollections.observableArrayList(
+                new AreaChart.Series("Series 3",
+                                     FXCollections.observableArrayList(
                     new AreaChart.Data(0,2),
                     new AreaChart.Data(2,5),
                     new AreaChart.Data(4,8),

@@ -46,12 +46,13 @@ import javafx.stage.Stage;
  *
  * @sampleName Color
  * @preview preview.png
- * @see javafx.scene.shape.Shape
  * @see javafx.scene.paint.Color
  * @see javafx.scene.paint.Paint
- * @related /Graphics 2d/Paints/Radial Gradient
- * @related /Graphics 2d/Paints/Linear Gradient
+ * @see javafx.scene.shape.Shape
  * @embedded
+ *
+ * @related /Graphics 2d/Paints/Linear Gradient
+ * @related /Graphics 2d/Paints/Radial Gradient
  */
 public class ColorApp extends Application {
 

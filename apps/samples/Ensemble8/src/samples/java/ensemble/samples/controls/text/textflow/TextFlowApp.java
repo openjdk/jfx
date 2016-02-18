@@ -56,10 +56,7 @@ import javafx.stage.Stage;
  *
  * @sampleName TextFlow
  * @preview preview.png
- * @see javafx.scene.text.Font
- * @see javafx.scene.text.FontPosture
- * @see javafx.scene.text.Text
- * @see javafx.scene.text.TextFlow
+ * @docUrl http://docs.oracle.com/javase/8/javafx/user-interface-tutorial/text.htm#JFXUI734 Using JavaFX Text
  * @playground textHello.strikethrough (name="Hello strikethrough")
  * @playground textHello.underline (name="Hello underline")
  * @playground textHello.fill (name="Hello fill")
@@ -78,21 +75,35 @@ import javafx.stage.Stage;
  * @playground textWorld.rotate (name="World rotate", min=-180, max=180)
  * @playground textWorld.translateX (name="World translateX")
  * @playground textWorld.translateY (name="World translateY")
+ * @see javafx.scene.text.Font
+ * @see javafx.scene.text.FontPosture
+ * @see javafx.scene.text.Text
+ * @see javafx.scene.text.TextFlow
  * @embedded
  * @highlight
+ *
+ * @related /Controls/Text/Advanced Label
+ * @related /Controls/Text/Bidi
+ * @related /Controls/Text/Inset Text
+ * @related /Controls/Button/Graphic Button
+ * @related /Controls/Text/Search Box
+ * @related /Controls/Text/Simple Label
+ * @related /Controls/Text/Text Field
+ * @related /Controls/Text/Text Formatter
+ * @related /Controls/Text/Text Validator
  */
 public class TextFlowApp extends Application {
 
-    private static Image image = new Image(TextFlowApp.class.getResource("/ensemble/samples/shared-resources/oracle.png").toExternalForm());
     private TextFlow textFlow;
     private Text textHello;
     private Text textBold;
     private Text textWorld;
+
     public Parent createContent() {
         String family = "Helvetica";
         double size = 20;
 
-        //Simple example
+        // Simple example
         textFlow = new TextFlow();
         textHello = new Text("Hello ");
         textHello.setFont(Font.font(family, size));
@@ -102,8 +113,8 @@ public class TextFlowApp extends Application {
         textWorld.setFont(Font.font(family, FontPosture.ITALIC, size));
         textFlow.getChildren().addAll(textHello, textBold, textWorld);
 
-        //Example with embedded objects
-        TextFlow textFlowEmbedObj = new TextFlow();
+        // Example with embedded objects
+        TextFlow embeddedFlow = new TextFlow();
         Text textEO1 = new Text("Lets have ");
         textEO1.setFont(Font.font(family, size));
         Text textEO2 = new Text("embedded objects: a Rectangle ");
@@ -115,16 +126,19 @@ public class TextFlowApp extends Application {
         Text textEO3 = new Text(", then a button ");
         Button button = new Button("click me");
         Text textEO4 = new Text(", and finally an image ");
+        String URL = "/ensemble/samples/shared-resources/oracle.png";
+        Image image = new Image(getClass().getResourceAsStream(URL));
         ImageView imageView = new ImageView(image);
         Text textEO5 = new Text(".");
         textEO5.setFont(Font.font(family, size));
 
-        textFlowEmbedObj.getChildren().addAll(textEO1, textEO2, rect, textEO3, button, textEO4, imageView, textEO5);
+        embeddedFlow.getChildren().addAll(textEO1, textEO2, rect, textEO3,
+                                        button, textEO4, imageView, textEO5);
 
-        VBox vbox = new VBox(18);
+        final VBox vbox = new VBox(18);
         VBox.setMargin(textFlow, new Insets(5, 5, 0, 5));
-        VBox.setMargin(textFlowEmbedObj, new Insets(0, 5, 5, 5));
-        vbox.getChildren().addAll(textFlow, textFlowEmbedObj);
+        VBox.setMargin(embeddedFlow, new Insets(0, 5, 5, 5));
+        vbox.getChildren().addAll(textFlow, embeddedFlow);
 
         return vbox;
     }

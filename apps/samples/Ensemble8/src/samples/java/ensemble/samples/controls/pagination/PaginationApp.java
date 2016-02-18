@@ -32,8 +32,8 @@
 package ensemble.samples.controls.pagination;
 
 import javafx.application.Application;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -45,15 +45,21 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 
 /**
  * A sample that demonstrates pagination.
  *
  * @sampleName Pagination
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
+ * @see javafx.scene.control.Button
  * @see javafx.scene.control.Pagination
+ * @see javafx.scene.image.ImageView
  * @embedded
+ *
+ * @related /Graphics 2d/Display Shelf
+ * @related /Graphics 2d/Images/Image Creation
+ * @related /Controls/Button/Pill Button
  */
 public class PaginationApp extends Application {
 
@@ -63,24 +69,26 @@ public class PaginationApp extends Application {
     public Parent createContent() {
         VBox outerBox = new VBox();
         outerBox.setAlignment(Pos.CENTER);
-        //Images for our pages
-        images[0] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal1.jpg").toExternalForm(), false);
-        images[1] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal2.jpg").toExternalForm(), false);
-        images[2] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal3.jpg").toExternalForm(), false);
-        images[3] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal4.jpg").toExternalForm(), false);
-        images[4] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal5.jpg").toExternalForm(), false);
-        images[5] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal6.jpg").toExternalForm(), false);
-        images[6] = new Image(PaginationApp.class.getResource("/ensemble/samples/shared-resources/Animal7.jpg").toExternalForm(), false);
+        // Images for our pages
+        for (int i = 0; i < images.length; i++) {
+            String str =
+                String.format("/ensemble/samples/shared-resources/Animal%d.jpg",
+                              (i + 1));
+            String url = getClass().getResource(str).toExternalForm();
+            images[i] = new Image(url, false);
+        }
 
         pagination = new Pagination(7);
-        pagination.setPageFactory((Integer pageIndex) -> createAnimalPage(pageIndex));
-        //Style can be numeric page indicators or bullet indicators
+        pagination.setPageFactory((Integer pageIndex) ->
+                                  createAnimalPage(pageIndex));
+        // Style can be numeric page indicators or bullet indicators
         Button styleButton = new Button("Toggle pagination style");
         styleButton.setOnAction((ActionEvent me) -> {
-            if (!pagination.getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
-                pagination.getStyleClass().add(Pagination.STYLE_CLASS_BULLET);
+            ObservableList<String> styleClass = pagination.getStyleClass();
+            if (!styleClass.contains(Pagination.STYLE_CLASS_BULLET)) {
+                styleClass.add(Pagination.STYLE_CLASS_BULLET);
             } else {
-                pagination.getStyleClass().remove(Pagination.STYLE_CLASS_BULLET);
+                styleClass.remove(Pagination.STYLE_CLASS_BULLET);
             }
         });
 

@@ -45,8 +45,12 @@ import javafx.stage.Stage;
  *
  * @sampleName TreeView
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
+ * @see javafx.scene.control.TreeItem
  * @see javafx.scene.control.TreeView
  * @embedded
+ *
+ * @related /Controls/TreeTableView
  */
 public class TreeViewApp extends Application {
 

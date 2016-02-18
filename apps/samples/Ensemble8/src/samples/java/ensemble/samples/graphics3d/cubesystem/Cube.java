@@ -45,40 +45,50 @@ public class Cube extends Group {
     public Cube(double size, Color color, double shade) {
         getTransforms().addAll(rz, ry, rx);
         // back face
-        Rectangle rec1 = new Rectangle(size, size, color.deriveColor(0.0, 1.0, (1 - 0.5 * shade), 1.0));
-        rec1.setTranslateX(-0.5 * size);
-        rec1.setTranslateY(-0.5 * size);
-        rec1.setTranslateZ(0.5 * size);
+        Rectangle r1 = new Rectangle(size, size,
+                                     color.deriveColor(0.0, 1.0,
+                                                       (1 - 0.5 * shade), 1.0));
+        r1.setTranslateX(-0.5 * size);
+        r1.setTranslateY(-0.5 * size);
+        r1.setTranslateZ(0.5 * size);
         // bottom face
-        Rectangle rec2 = new Rectangle(size, size, color.deriveColor(0.0, 1.0, (1 - 0.4 * shade), 1.0));
-        rec2.setTranslateX(-0.5 * size);
-        rec2.setTranslateY(0);
-        rec2.setRotationAxis(Rotate.X_AXIS);
-        rec2.setRotate(90);
+        Rectangle r2 = new Rectangle(size, size,
+                                     color.deriveColor(0.0, 1.0,
+                                                       (1 - 0.4 * shade), 1.0));
+        r2.setTranslateX(-0.5 * size);
+        r2.setTranslateY(0);
+        r2.setRotationAxis(Rotate.X_AXIS);
+        r2.setRotate(90);
         // right face
-        Rectangle rec3 = new Rectangle(size, size, color.deriveColor(0.0, 1.0, (1 - 0.3 * shade), 1.0));
-        rec3.setTranslateX(-1 * size);
-        rec3.setTranslateY(-0.5 * size);
-        rec3.setRotationAxis(Rotate.Y_AXIS);
-        rec3.setRotate(90);
+        Rectangle r3 = new Rectangle(size, size,
+                                     color.deriveColor(0.0, 1.0,
+                                                       (1 - 0.3 * shade), 1.0));
+        r3.setTranslateX(-1 * size);
+        r3.setTranslateY(-0.5 * size);
+        r3.setRotationAxis(Rotate.Y_AXIS);
+        r3.setRotate(90);
         // left face
-        Rectangle rec4 = new Rectangle(size, size, color.deriveColor(0.0, 1.0, (1 - 0.2 * shade), 1.0));
-        rec4.setTranslateX(0);
-        rec4.setTranslateY(-0.5 * size);
-        rec4.setRotationAxis(Rotate.Y_AXIS);
-        rec4.setRotate(90);
+        Rectangle r4 = new Rectangle(size, size,
+                                     color.deriveColor(0.0, 1.0,
+                                                       (1 - 0.2 * shade), 1.0));
+        r4.setTranslateX(0);
+        r4.setTranslateY(-0.5 * size);
+        r4.setRotationAxis(Rotate.Y_AXIS);
+        r4.setRotate(90);
         // top face
-        Rectangle rec5 = new Rectangle(size, size, color.deriveColor(0.0, 1.0, (1 - 0.1 * shade), 1.0));
-        rec5.setTranslateX(-0.5 * size);
-        rec5.setTranslateY(-1 * size);
-        rec5.setRotationAxis(Rotate.X_AXIS);
-        rec5.setRotate(90);
+        Rectangle r5 = new Rectangle(size, size,
+                                     color.deriveColor(0.0, 1.0,
+                                                       (1 - 0.1 * shade), 1.0));
+        r5.setTranslateX(-0.5 * size);
+        r5.setTranslateY(-1 * size);
+        r5.setRotationAxis(Rotate.X_AXIS);
+        r5.setRotate(90);
         // front face
-        Rectangle rec6 = new Rectangle(size, size, color);
-        rec6.setTranslateX(-0.5 * size);
-        rec6.setTranslateY(-0.5 * size);
-        rec6.setTranslateZ(-0.5 * size);
+        Rectangle r6 = new Rectangle(size, size, color);
+        r6.setTranslateX(-0.5 * size);
+        r6.setTranslateY(-0.5 * size);
+        r6.setTranslateZ(-0.5 * size);
 
-        getChildren().addAll(rec1, rec2, rec3, rec4, rec5, rec6);
+        getChildren().addAll(r1, r2, r3, r4, r5, r6);
     }
 }

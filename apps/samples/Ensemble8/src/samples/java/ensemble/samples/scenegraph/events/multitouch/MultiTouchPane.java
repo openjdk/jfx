@@ -48,16 +48,20 @@ public class MultiTouchPane extends Region {
         clipRect.setSmooth(false);
         setClip(clipRect);
 
-        Image post = new Image(MultiTouchApp.class.getResource("/ensemble/samples/shared-resources/warning.png").toExternalForm(), false);
+        final String WARNING = "/ensemble/samples/shared-resources/warning.png";
+        final String ANIMAL1 = "/ensemble/samples/shared-resources/Animal1.jpg";
+        final String ANIMAL2 = "/ensemble/samples/shared-resources/Animal2.jpg";
+        final String ANIMAL3 = "/ensemble/samples/shared-resources/Animal3.jpg";
+        Image post = new Image(getClass().getResourceAsStream(WARNING));
         postView = new ImageView(post);
 
-        img[0] = new Image(MultiTouchApp.class.getResource("/ensemble/samples/shared-resources/Animal1.jpg").toExternalForm(), false);
-        img[1] = new Image(MultiTouchApp.class.getResource("/ensemble/samples/shared-resources/Animal2.jpg").toExternalForm(), false);
-        img[2] = new Image(MultiTouchApp.class.getResource("/ensemble/samples/shared-resources/Animal3.jpg").toExternalForm(), false);
+        img[0] = new Image(getClass().getResourceAsStream(ANIMAL1));
+        img[1] = new Image(getClass().getResourceAsStream(ANIMAL2));
+        img[2] = new Image(getClass().getResourceAsStream(ANIMAL3));
 
         getChildren().add(postView);
 
-        for (int i = 0; i <= 2; i++) {
+        for (int i = 0; i < img.length; i++) {
             MultiTouchImageView iv = new MultiTouchImageView(img[i]);
             getChildren().add(iv);
         }

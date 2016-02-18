@@ -41,6 +41,7 @@ import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.embed.swing.JFXPanel;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -62,7 +63,17 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import javax.swing.*;
+
+import javax.swing.JApplet;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTabbedPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -79,9 +90,9 @@ import javax.swing.table.DefaultTableCellRenderer;
  */
 public class SwingInterop extends JApplet {
 
-    private static final int PANEL_WIDTH_INT = 675;
-    private static final int PANEL_HEIGHT_INT = 400;
-    private static final int TABLE_PANEL_HEIGHT_INT = 100;
+    private static final int PANEL_WIDTH = 675;
+    private static final int PANEL_HEIGHT = 400;
+    private static final int TABLE_PANEL_HEIGHT = 100;
     private static JFXPanel chartFxPanel;
     private static JFXPanel browserFxPanel;
     private static SampleTableModel tableModel;
@@ -93,7 +104,7 @@ public class SwingInterop extends JApplet {
         tableModel = new SampleTableModel();
         // create javafx panel for charts
         chartFxPanel = new JFXPanel();
-        chartFxPanel.setPreferredSize(new Dimension(PANEL_WIDTH_INT, PANEL_HEIGHT_INT));
+        chartFxPanel.setPreferredSize(new Dimension(PANEL_WIDTH, PANEL_HEIGHT));
 
         // create javafx panel for browser
         browserFxPanel = new JFXPanel();
@@ -111,7 +122,8 @@ public class SwingInterop extends JApplet {
             table.getColumnModel().getColumn(i).setCellRenderer(renderer);
         }
         JScrollPane tablePanel = new JScrollPane(table);
-        tablePanel.setPreferredSize(new Dimension(PANEL_WIDTH_INT, TABLE_PANEL_HEIGHT_INT));
+        tablePanel.setPreferredSize(new Dimension(PANEL_WIDTH,
+                                                  TABLE_PANEL_HEIGHT));
 
         JPanel chartTablePanel = new JPanel();
         chartTablePanel.setLayout(new BorderLayout());
@@ -142,7 +154,9 @@ public class SwingInterop extends JApplet {
             @Override
             public void run() {
                 try {
-                    UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
+                    final String ui =
+                        "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel";
+                    UIManager.setLookAndFeel(ui);
                 } catch (Exception e) {}
 
                 JFrame frame = new JFrame("JavaFX in Swing");
@@ -171,7 +185,9 @@ public class SwingInterop extends JApplet {
 
     private BarChart createBarChart() {
         CategoryAxis xAxis = new CategoryAxis();
-        xAxis.setCategories(FXCollections.<String>observableArrayList(tableModel.getColumnNames()));
+        ObservableList<String> xCategories =
+            FXCollections.observableArrayList(tableModel.getColumnNames());
+        xAxis.setCategories(xCategories);
         xAxis.setLabel("Year");
 
         double tickUnit = tableModel.getTickUnit();
@@ -180,77 +196,90 @@ public class SwingInterop extends JApplet {
         yAxis.setTickUnit(tickUnit);
         yAxis.setLabel("Units Sold");
 
-        final BarChart bChart = new BarChart(xAxis, yAxis, tableModel.getBarChartData());
-        tableModel.addTableModelListener(new TableModelListener() {
-
-            @Override
-            public void tableChanged(TableModelEvent e) {
+        final BarChart bChart = new BarChart(xAxis, yAxis,
+                                             tableModel.getBarChartData());
+        final TableModelListener tableListener = (TableModelEvent e) -> {
                 if (e.getType() == TableModelEvent.UPDATE) {
                     final int row = e.getFirstRow();
                     final int column = e.getColumn();
-                    final Object value = ((SampleTableModel) e.getSource()).getValueAt(row, column);
+                    final Object value =
+                        ((SampleTableModel) e.getSource()).getValueAt(row,
+                                                                      column);
                     Platform.runLater(new Runnable() {
                         @Override
                         public void run() {
-                            XYChart.Series<String, Number> s = (XYChart.Series<String, Number>) bChart.getData().get(row);
+                            XYChart.Series<String, Number> s =
+                                (XYChart.Series<String, Number>)
+                                    bChart.getData().get(row);
                             BarChart.Data data = s.getData().get(column);
                             data.setYValue(value);
                         }
                     });
                 }
-            }
-        });
+            };
+        tableModel.addTableModelListener(tableListener);
         return bChart;
     }
 
     private Pane createBrowser() {
-        Double widthDouble = new Integer(PANEL_WIDTH_INT).doubleValue();
-        Double heightDouble = new Integer(PANEL_HEIGHT_INT).doubleValue();
+        Double widthDouble = new Integer(PANEL_WIDTH).doubleValue();
+        Double heightDouble = new Integer(PANEL_HEIGHT).doubleValue();
         WebView view = new WebView();
         view.setMinSize(widthDouble, heightDouble);
         view.setPrefSize(widthDouble, heightDouble);
         final WebEngine eng = view.getEngine();
-        final Label warningLabel = new Label("Do you need to specify web proxy information?");
+        final String message = "Do you need to specify web proxy information?";
+        final Label warningLabel = new Label(message);
         eng.load("http://www.oracle.com/us/index.html");
 
-        ChangeListener handler = new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+        final ChangeListener<Number> handler =
+            (ObservableValue<? extends Number> observable,
+             Number oldValue, Number newValue) -> {
                 if (warningLabel.isVisible()) {
                     warningLabel.setVisible(false);
                 }
-            }
-        };
+            };
         eng.getLoadWorker().progressProperty().addListener(handler);
 
-        final TextField locationField = new TextField("http://www.oracle.com/us/index.html");
+        final String url = "http://www.oracle.com/us/index.html";
+        final TextField locationField = new TextField(url);
         locationField.setMaxHeight(Double.MAX_VALUE);
         Button goButton = new Button("Go");
         goButton.setMinWidth(Button.USE_PREF_SIZE);
         goButton.setDefaultButton(true);
-        EventHandler<ActionEvent> goAction = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                eng.load(locationField.getText().startsWith("http://") ? locationField.getText()
-                        : "http://" + locationField.getText());
-            }
-        };
+        EventHandler<ActionEvent> goAction = (ActionEvent event) -> {
+                eng.load(locationField.getText().startsWith("http://") ?
+                         locationField.getText() :
+                         "http://" + locationField.getText());
+            };
         goButton.setOnAction(goAction);
         locationField.setOnAction(goAction);
-        eng.locationProperty().addListener(new ChangeListener<String>() {
-            @Override public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+        final ChangeListener<String> webListener =
+            (ObservableValue<? extends String> observable,
+             String oldValue, String newValue) -> {
                 locationField.setText(newValue);
-            }
-        });
+            };
+        eng.locationProperty().addListener(webListener);
         GridPane grid = new GridPane();
         grid.setPadding(new Insets(5));
         grid.setVgap(5);
         grid.setHgap(5);
-        GridPane.setConstraints(locationField, 0, 0, 1, 1, HPos.CENTER, VPos.CENTER, Priority.ALWAYS, Priority.SOMETIMES);
+        GridPane.setConstraints(locationField, 0, 0, 1, 1,
+                                HPos.CENTER, VPos.CENTER,
+                                Priority.ALWAYS, Priority.SOMETIMES);
         GridPane.setConstraints(goButton, 1, 0);
-        GridPane.setConstraints(view, 0, 1, 2, 1, HPos.CENTER, VPos.CENTER, Priority.ALWAYS, Priority.ALWAYS);
-        GridPane.setConstraints(warningLabel, 0, 2, 2, 1, HPos.CENTER, VPos.CENTER, Priority.ALWAYS, Priority.SOMETIMES);
+        GridPane.setConstraints(view, 0, 1, 2, 1,
+                                HPos.CENTER, VPos.CENTER,
+                                Priority.ALWAYS, Priority.ALWAYS);
+        GridPane.setConstraints(warningLabel, 0, 2, 2, 1,
+                                HPos.CENTER, VPos.CENTER,
+                                Priority.ALWAYS, Priority.SOMETIMES);
         grid.getColumnConstraints().addAll(
-                new ColumnConstraints(widthDouble - 200, widthDouble - 200, Double.MAX_VALUE, Priority.ALWAYS, HPos.CENTER, true),
-                new ColumnConstraints(40, 40, 40, Priority.NEVER, HPos.CENTER, true));
+                new ColumnConstraints(widthDouble - 200, widthDouble - 200,
+                                      Double.MAX_VALUE, Priority.ALWAYS,
+                                      HPos.CENTER, true),
+                new ColumnConstraints(40, 40, 40,
+                                      Priority.NEVER, HPos.CENTER, true));
         grid.getChildren().addAll(locationField, goButton, warningLabel, view);
         return grid;
     }
@@ -259,9 +288,13 @@ public class SwingInterop extends JApplet {
         private static final DecimalFormat formatter = new DecimalFormat("#.0");
 
         @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected,
+                                                       boolean hasFocus,
+                                                       int row, int column) {
             value = formatter.format((Number) value);
-            return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            return super.getTableCellRendererComponent(table, value, isSelected,
+                                                       hasFocus, row, column);
         }
     }
 }

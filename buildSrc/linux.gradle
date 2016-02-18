@@ -34,7 +34,7 @@ LINUX.compileSwing = true;
 LINUX.compileSWT = true;
 LINUX.compileFXPackager = true;
 
-// Libraries end up in the sdk/rt/lib/$OS_ARCH directory for Linux
+// Libraries end up in the sdk/lib/$OS_ARCH directory for Linux
 LINUX.libDest = "lib/$OS_ARCH"
 
 // Lambda for naming the generated libs

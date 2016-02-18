@@ -51,49 +51,57 @@ import javafx.stage.Stage;
  *
  * @sampleName Toggle Button
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
+ * @see javafx.scene.control.Label
+ * @see javafx.scene.control.Toggle
  * @see javafx.scene.control.ToggleButton
+ * @see javafx.scene.control.ToggleGroup
+ * @see javafx.scene.layout.GridPane
+ * @embedded
+ *
  * @related /Controls/ChoiceBox
  * @related /Controls/Accordion
  * @related /Controls/Toolbar/Tool Bar
- * @embedded
  */
 public class ToggleButtonApp extends Application {
-    private final static double TOGGLEBUTTON_WIDTH = 72;
-    private final static double TOGGLEBUTTON_HEIGHT = 40;
+
     public Parent createContent() {
         // create label to show result of selected toggle button
         final Label label = new Label();
         label.setStyle("-fx-font-size: 2em;");
         label.setAlignment(Pos.CENTER);
-        // create 3 toggle buttons and a toogle group for them
-        final ToggleButton tb1 = new ToggleButton("Cat");
-        tb1.setMinSize(TOGGLEBUTTON_WIDTH, TOGGLEBUTTON_HEIGHT);
-        final ToggleButton tb2 = new ToggleButton("Dog");
-        tb2.setMinSize(TOGGLEBUTTON_WIDTH, TOGGLEBUTTON_HEIGHT);
-        final ToggleButton tb3 = new ToggleButton("Horse");
-        tb3.setMinSize(TOGGLEBUTTON_WIDTH, TOGGLEBUTTON_HEIGHT);
         ToggleGroup group = new ToggleGroup();
-        tb1.setToggleGroup(group);
-        tb2.setToggleGroup(group);
-        tb3.setToggleGroup(group);
-        group.selectedToggleProperty().addListener((ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) -> {
-            if (selectedToggle != null) {
-                label.setText(((ToggleButton) selectedToggle).getText());
-            } else {
-                label.setText("...");
-            }
-        });
+        // create 3 toggle buttons and a toogle group for them
+        final ToggleButton cat = new ToggleButton("Cat");
+        final ToggleButton dog = new ToggleButton("Dog");
+        final ToggleButton horse = new ToggleButton("Horse");
+        cat.setMinSize(72, 40);
+        dog.setMinSize(72, 40);
+        horse.setMinSize(72, 40);
+        cat.setToggleGroup(group);
+        dog.setToggleGroup(group);
+        horse.setToggleGroup(group);
+        final ChangeListener<Toggle> changeListener =
+            (ObservableValue<? extends Toggle> observable,
+             Toggle oldValue, Toggle selectedToggle) -> {
+                if (selectedToggle != null) {
+                    label.setText(((ToggleButton) selectedToggle).getText());
+                } else {
+                    label.setText("...");
+                }
+            };
+        group.selectedToggleProperty().addListener(changeListener);
         // select the first button to start with
-        group.selectToggle(tb1);
+        group.selectToggle(cat);
         // add buttons and label to grid and set their positions
-        GridPane.setConstraints(tb1, 0, 0);
-        GridPane.setConstraints(tb2, 1, 0);
-        GridPane.setConstraints(tb3, 2, 0);
+        GridPane.setConstraints(cat, 0, 0);
+        GridPane.setConstraints(dog, 1, 0);
+        GridPane.setConstraints(horse, 2, 0);
         GridPane.setConstraints(label, 0, 1, 3, 1, HPos.CENTER, VPos.BASELINE);
-        GridPane grid = new GridPane();
+        final GridPane grid = new GridPane();
         grid.setVgap(20);
         grid.setHgap(12);
-        grid.getChildren().addAll(tb1, tb2, tb3, label);
+        grid.getChildren().addAll(cat, dog, horse, label);
         grid.setAlignment(Pos.CENTER);
         return grid;
     }

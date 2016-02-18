@@ -50,15 +50,19 @@ import javafx.stage.Stage;
  *
  * @sampleName ColorPicker
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
+ * @see javafx.scene.control.Button
  * @see javafx.scene.control.ColorPicker
+ * @see javafx.scene.control.Label
+ *
+ * @related /Controls/DatePicker
  */
 public class ColorPickerApp extends Application {
 
     public Parent createContent() {
         final ColorPicker colorPicker = new ColorPicker(Color.GREEN);
         final Label coloredText = new Label("Colors");
-        Font font = new Font(53);
-        coloredText.setFont(font);
+        coloredText.setFont(new Font(53));
         final Button coloredButton = new Button("Colored Control");
         Color c = colorPicker.getValue();
         coloredText.setTextFill(c);
@@ -81,7 +85,8 @@ public class ColorPickerApp extends Application {
     }
 
     private String createRGBString(Color c) {
-        return "-fx-base: rgb(" + (c.getRed() * 255) + "," + (c.getGreen() * 255) + "," + (c.getBlue() * 255) + ");";
+        return String.format("-fx-base: rgb(%f,%f,%f);", (c.getRed() * 255),
+                             (c.getGreen() * 255), (c.getBlue() * 255));
     }
 
     @Override

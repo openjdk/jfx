@@ -43,9 +43,14 @@ import javafx.stage.Stage;
  *
  * @sampleName Progress Bar
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.ProgressBar
- * @related /Controls/Progress Indicator
+ * @see javafx.scene.control.ProgressIndicator
  * @embedded
+ *
+ * @related /Controls/Progress Indicator
+ * @related /Language/Concurrency/Service
+ * @related /Language/Concurrency/Task
  */
 public class ProgressBarApp extends Application {
 
@@ -66,24 +71,21 @@ public class ProgressBarApp extends Application {
         p3.setLayoutY(y);
 
         y = 15;
-        ProgressBar p4 = new ProgressBar();
+        ProgressBar p4 = new ProgressBar(0.25);
         p4.setLayoutX(215);
         p4.setLayoutY(y);
-        p4.setProgress(0.25);
 
         y += SPACING;
-        ProgressBar p5 = new ProgressBar();
+        ProgressBar p5 = new ProgressBar(0.50);
         p5.setPrefWidth(150);
         p5.setLayoutX(215);
         p5.setLayoutY(y);
-        p5.setProgress(0.50);
 
         y += SPACING;
-        ProgressBar p6 = new ProgressBar();
+        ProgressBar p6 = new ProgressBar(1);
         p6.setPrefWidth(200);
         p6.setLayoutX(215);
         p6.setLayoutY(y);
-        p6.setProgress(1);
 
         Group group = new Group();
         group.getChildren().addAll(p1,p2,p3,p4,p5,p6);

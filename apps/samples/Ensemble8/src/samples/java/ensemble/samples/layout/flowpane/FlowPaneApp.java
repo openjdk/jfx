@@ -45,18 +45,30 @@ import javafx.stage.Stage;
  *
  * @sampleName FlowPane
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/layout-tutorial/index.html JavaFX Layouts
+ * @see javafx.scene.image.ImageView
  * @see javafx.scene.layout.FlowPane
- * @related /Graphics 2d/Images/Image Creation
  * @embedded
+ *
+ * @related /Layout/AnchorPane
+ * @related /Layout/BorderPane
+ * @related /Layout/GridPane
+ * @related /Layout/HBox
+ * @related /Graphics 2d/Images/Image Creation
+ * @related /Layout/StackPane
+ * @related /Layout/TilePane
+ * @related /Layout/VBox
  */
 public class FlowPaneApp extends Application {
 
-    private static final Image ICON_48 = new Image(FlowPaneApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
-    private static final Image ICON_68 = new Image(FlowPaneApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-68x68.png"));
-    private static final Image ICON_88 = new Image(FlowPaneApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-88x88.png"));
-    private static int ITEMS = 3;
-
     public Parent createContent() {
+        final int ITEMS = 3;
+        String IMAGE_48 = "/ensemble/samples/shared-resources/icon-48x48.png";
+        String IMAGE_68 = "/ensemble/samples/shared-resources/icon-68x68.png";
+        String IMAGE_88 = "/ensemble/samples/shared-resources/icon-88x88.png";
+        Image ICON_48 = new Image(getClass().getResourceAsStream(IMAGE_48));
+        Image ICON_68 = new Image(getClass().getResourceAsStream(IMAGE_68));
+        Image ICON_88 = new Image(getClass().getResourceAsStream(IMAGE_88));
         FlowPane flowPane = new FlowPane(Orientation.HORIZONTAL, 4, 2);
         flowPane.setPrefWrapLength(240); //preferred wraplength
 
@@ -68,7 +80,9 @@ public class FlowPaneApp extends Application {
             imageViews48[i] = new ImageView(ICON_48);
             imageViews68[i] = new ImageView(ICON_68);
             imageViews88[i] = new ImageView(ICON_88);
-            flowPane.getChildren().addAll(imageViews48[i], imageViews68[i], imageViews88[i]);
+            flowPane.getChildren().addAll(imageViews48[i],
+                                          imageViews68[i],
+                                          imageViews88[i]);
         }
         return flowPane;
     }

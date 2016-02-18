@@ -33,7 +33,7 @@ package ensemble.samples.charts.bar.stacked;
 
 
 import javafx.application.Application;
-import static javafx.collections.FXCollections.*;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -48,10 +48,7 @@ import javafx.stage.Stage;
  *
  * @sampleName Stacked Bar Chart
  * @preview preview.png
- * @see javafx.scene.chart.StackedBarChart
- * @see javafx.scene.chart.CategoryAxis
- * @see javafx.scene.chart.NumberAxis
- * @related /Charts/Bar/Bar Chart
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
  * @playground xAxis.autoRanging
@@ -94,6 +91,14 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.CategoryAxis
+ * @see javafx.scene.chart.NumberAxis
+ * @see javafx.scene.chart.StackedBarChart
+ *
+ * @related /Charts/Bar/Audio Bar Chart
+ * @related /Charts/Bar/Bar Chart
+ * @related /Charts/Bar/Horizontal Bar Chart
+ * @related /Charts/Bar/Image Bar Chart
  */
 public class StackedBarChartApp extends Application {
 
@@ -102,28 +107,28 @@ public class StackedBarChartApp extends Application {
     private NumberAxis yAxis;
 
     public Parent createContent() {
-        String[] years = {"2007", "2008", "2009"};
-        xAxis = new CategoryAxis(observableArrayList(years));
+        final String[] years = {"2007", "2008", "2009"};
+        xAxis = new CategoryAxis(FXCollections.observableArrayList(years));
         yAxis = new NumberAxis("Units Sold", 0.0d, 10000.0d, 1000.0d);
 
-        ObservableList<StackedBarChart.Series> barChartData =
-                observableArrayList(
+        final ObservableList<StackedBarChart.Series> barChartData =
+                FXCollections.observableArrayList(
                     new StackedBarChart.Series("Region 1",
-                        observableArrayList(
+                        FXCollections.observableArrayList(
                             new StackedBarChart.Data(years[0], 567d),
                             new StackedBarChart.Data(years[1], 1292d),
                             new StackedBarChart.Data(years[2], 1292d)
                         )
                     ),
                     new StackedBarChart.Series("Region 2",
-                        observableArrayList(
+                        FXCollections.observableArrayList(
                             new StackedBarChart.Data(years[0], 956),
                             new StackedBarChart.Data(years[1], 1665),
                             new StackedBarChart.Data(years[2], 2559)
                         )
                     ),
                     new StackedBarChart.Series("Region 3",
-                        observableArrayList(
+                        FXCollections.observableArrayList(
                             new StackedBarChart.Data(years[0], 1154),
                             new StackedBarChart.Data(years[1], 1927),
                             new StackedBarChart.Data(years[2], 2774)

@@ -33,6 +33,7 @@ package ensemble.samples.controls.listview.listviewcellfactory;
 
 import javafx.application.Application;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ListCell;
@@ -41,6 +42,8 @@ import javafx.scene.control.SelectionMode;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import java.util.Arrays;
+
 /**
  * A simple implementation of the ListView control that uses a CellFactory to
  * customize the ListView cell contents. Positive values in the list are green,
@@ -48,26 +51,30 @@ import javafx.util.Callback;
  *
  * @sampleName ListViewCellFactory
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.ListView
  * @see javafx.scene.control.SelectionModel
+ * @embedded
+ *
  * @related /Controls/Listview/HorizontalListView
  * @related /Controls/Listview/Simple ListView
- * @embedded
  */
 public class ListViewCellFactoryApp extends Application {
 
     public Parent createContent() {
-         final ListView<Number> listView = new ListView<>();
-        listView.setItems(FXCollections.<Number>observableArrayList(
-                100.00, -12.34, 33.01, 71.00, 23000.00, -6.00, 0, 42223.00, -12.05, 500.00,
-                430000.00, 1.00, -4.00, 1922.01, -90.00, 11111.00, 3901349.00, 12.00, -1.00, -2.00,
-                15.00, 47.50, 12.11
-
-        ));
-
-        listView.setCellFactory((ListView<java.lang.Number> list) -> new MoneyFormatCell());
+        final Number[] data = {
+            100.00, -12.34, 33.01,71.00, 23000.00, -6.00, 0, 42223.00, -12.05,
+            500.00, 430000.00, 1.00, -4.00, 1922.01, -90.00, 11111.00,
+            3901349.00, 12.00, -1.00, -2.00, 15.00, 47.50, 12.11
+        };
+        final ObservableList<Number> numbers =
+            FXCollections.<Number>observableArrayList(Arrays.asList(data));
+        final ListView<Number> listView = new ListView<>(numbers);
 
         listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        listView.setCellFactory((ListView<java.lang.Number> list) ->
+                                new MoneyFormatCell());
+
         return listView;
     }
 

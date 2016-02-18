@@ -50,14 +50,25 @@ import javafx.stage.Stage;
  *
  * @sampleName BorderPane
  * @preview preview.png
+ * @docUrl http://docs.oracle.com/javase/8/javafx/layout-tutorial/index.html JavaFX Layouts
+ * @see javafx.scene.control.Button
+ * @see javafx.scene.control.Label
+ * @see javafx.scene.control.ToolBar
+ * @see javafx.scene.image.ImageView
  * @see javafx.scene.layout.BorderPane
- * @related /Controls/Text/Simple Label
- * @related /Graphics 2d/Images/Image Creation
  * @embedded
+ *
+ * @related /Layout/AnchorPane
+ * @related /Layout/FlowPane
+ * @related /Layout/GridPane
+ * @related /Layout/HBox
+ * @related /Graphics 2d/Images/Image Creation
+ * @related /Controls/Text/Simple Label
+ * @related /Layout/StackPane
+ * @related /Layout/TilePane
+ * @related /Layout/VBox
  */
 public class BorderPaneApp extends Application {
-
-    private static final Image ICON_48 = new Image(BorderPaneApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
 
     public Parent createContent() {
          BorderPane borderPane = new BorderPane();
@@ -87,6 +98,8 @@ public class BorderPaneApp extends Application {
         //Center content
         Label centerLabel = new Label("Center area.");
         centerLabel.setWrapText(true);
+        String IMAGE = "/ensemble/samples/shared-resources/icon-48x48.png";
+        Image ICON_48 = new Image(getClass().getResourceAsStream(IMAGE));
         ImageView imageView = new ImageView(ICON_48);
 
         //Using AnchorPane only to position items in the center

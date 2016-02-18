@@ -61,27 +61,31 @@ public class SanFranciscoFireworks extends Pane {
     public SanFranciscoFireworks() {
         // create a color palette of 180 colors
         colors = new Paint[181];
-        colors[0] = new RadialGradient(0, 0, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE,
-                new Stop(0, Color.WHITE),
-                new Stop(0.2, Color.hsb(59, 0.38, 1)),
-                new Stop(0.6, Color.hsb(59, 0.38, 1, 0.1)),
-                new Stop(1, Color.hsb(59, 0.38, 1, 0)));
+        colors[0] =
+            new RadialGradient(0, 0, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE,
+            new Stop(0, Color.WHITE),
+            new Stop(0.2, Color.hsb(59, 0.38, 1)),
+            new Stop(0.6, Color.hsb(59, 0.38, 1, 0.1)),
+            new Stop(1, Color.hsb(59, 0.38, 1, 0)));
         for (int h = 0; h < 360; h += 2) {
-            colors[1 + (h / 2)] = new RadialGradient(0, 0, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE,
-                    new Stop(0, Color.WHITE),
-                    new Stop(0.2, Color.hsb(h, 1, 1)),
-                    new Stop(0.6, Color.hsb(h, 1, 1, 0.1)),
-                    new Stop(1, Color.hsb(h, 1, 1, 0)));
+            colors[1 + (h / 2)] =
+                new RadialGradient(0, 0, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.WHITE),
+                new Stop(0.2, Color.hsb(h, 1, 1)),
+                new Stop(0.6, Color.hsb(h, 1, 1, 0.1)),
+                new Stop(1, Color.hsb(h, 1, 1, 0)));
         }
         // create canvas
-        canvas = new Canvas(IMAGE_WIDTH, IMAGE_HEIGHT);
+        final String IMAGE = "/ensemble/samples/shared-resources/sf.jpg";
+        String url = getClass().getResource(IMAGE).toExternalForm();
 
+        canvas = new Canvas(IMAGE_WIDTH, IMAGE_HEIGHT);
         canvas.setBlendMode(BlendMode.ADD);
         canvas.setEffect(new Reflection(0, 0.4, 0.15, 0));
-        background = new ImageView(getClass().getResource("/ensemble/samples/shared-resources/sf.jpg").toExternalForm());
+        background = new ImageView(url);
         getChildren().addAll(background, canvas);
+
         // create animation timer that will be called every frame
-        // final AnimationTimer timer = new AnimationTimer() {
         timer = new AnimationTimer() {
             @Override
             public void handle(long now) {
@@ -170,13 +174,11 @@ public class SanFranciscoFireworks extends Pane {
             double randomVelocity = 4 + Math.random() * 4;
             double particleAngle = i * angle;
             newParticles.add(
-                    new Particle(
-                    firework.posX, firework.posY,
-                    Math.cos(particleAngle) * randomVelocity, Math.sin(particleAngle) * randomVelocity,
-                    0, 0,
-                    colors[color],
-                    8,
-                    true, shouldExplodeChildren, true));
+                    new Particle(firework.posX, firework.posY,
+                                 Math.cos(particleAngle) * randomVelocity,
+                                 Math.sin(particleAngle) * randomVelocity,
+                                 0, 0, colors[color], 8, true,
+                                 shouldExplodeChildren, true));
         }
     }
 
@@ -186,13 +188,12 @@ public class SanFranciscoFireworks extends Pane {
             double randomVelocity = 2 + Math.random() * 2;
             double particleAngle = count * angle;
             newParticles.add(
-                    new Particle(
-                    firework.posX, firework.posY,
-                    Math.cos(particleAngle) * randomVelocity, Math.sin(particleAngle) * randomVelocity,
-                    0, 0,
-                    firework.color,
-                    4,
-                    true, false, false));
+                    new Particle(firework.posX, firework.posY,
+                                 Math.cos(particleAngle) * randomVelocity,
+                                 Math.sin(particleAngle) * randomVelocity,
+                                 0, 0, firework.color, 4, true,
+                                 false, false));
         }
     }
 }
+

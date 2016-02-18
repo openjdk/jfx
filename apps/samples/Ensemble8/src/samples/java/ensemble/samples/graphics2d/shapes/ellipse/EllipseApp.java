@@ -45,11 +45,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Ellipse
  * @preview preview.png
- * @see javafx.scene.shape.Ellipse
- * @see javafx.scene.shape.Shape
- * @see javafx.scene.paint.Color
- * @related /Graphics 2d/Shapes/Circle
- * @related /Graphics 2d/Shapes/Arc
  * @playground ellipse1.fill (name="Ellipse 1 Fill")
  * @playground ellipse1.radiusX (name="Ellipse 1 Width", min=10, max=40)
  * @playground ellipse1.radiusY (name="Ellipse 1 Height", min=10, max=45)
@@ -57,7 +52,20 @@ import javafx.stage.Stage;
  * @playground ellipse2.strokeWidth (name="Ellipse 2 Stroke Width", min=1, max=5)
  * @playground ellipse2.radiusX (name="Ellipse 2 Width", min=10, max=40)
  * @playground ellipse2.radiusY (name="Ellipse 2 Height", min=10, max=45)
+ * @see javafx.scene.shape.Ellipse
+ * @see javafx.scene.shape.Shape
+ * @see javafx.scene.paint.Color
  * @embedded
+ *
+ * @related /Graphics 2d/Shapes/Arc
+ * @related /Graphics 2d/Shapes/Circle
+ * @related /Graphics 2d/Shapes/Cubic Curve
+ * @related /Graphics 2d/Shapes/Line
+ * @related /Graphics 2d/Shapes/Path
+ * @related /Graphics 2d/Shapes/Polygon
+ * @related /Graphics 2d/Shapes/Polyline
+ * @related /Graphics 2d/Shapes/Quad Curve
+ * @related /Graphics 2d/Shapes/Rectangle
  */
 public class EllipseApp extends Application {
 

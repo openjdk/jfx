@@ -44,21 +44,23 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.effect.DropShadow
  * @see javafx.scene.effect.GaussianBlur
- * @see javafx.scene.effect.Light
  * @see javafx.scene.effect.Lighting
- * @see javafx.scene.image.Image
  * @see javafx.scene.image.ImageView
  * @see javafx.scene.shape.Circle
- * @see javafx.scene.Group
  * @see javafx.scene.shape.Ellipse
- * @see javafx.scene.shape.Rectangle
- * @see javafx.scene.text.Font
  * @see javafx.scene.text.Text
  * @see javafx.scene.text.TextAlignment
  * @see javafx.scene.text.TextBoundsType
  * @see javafx.scene.transform.Rotate
- * @see javafx.util.Duration
  * @embedded
+ *
+ * @related /Scenegraph/Advanced Stage
+ * @related /Graphics 2d/Shapes/Circle
+ * @related /Graphics 2d/Effects/Drop Shadow
+ * @related /Graphics 2d/Effects/Gaussian Blur
+ * @related /Animation/Timeline
+ * @related /Graphics 3d/Xylophone
+ * @related /Graphics 3d/3D Sphere
  */
 public class StopWatchApp extends Application {
     private Watch watch;

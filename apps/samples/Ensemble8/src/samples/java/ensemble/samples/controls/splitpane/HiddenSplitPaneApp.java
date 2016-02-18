@@ -43,22 +43,28 @@ import javafx.stage.Stage;
  *
  * @sampleName Hidden SplitPane
  * @preview preview.png
+ * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
  * @see javafx.scene.control.SplitPane
+ * @see javafx.scene.layout.Region
  * @embedded
+ *
+ * @related /Language/SwingInterop
+ * @related /Language/Concurrency/Task
  */
 public class HiddenSplitPaneApp extends Application {
 
     public Parent createContent() {
-        String hidingSplitPaneCss = HiddenSplitPaneApp.class.getResource("HiddenSplitPane.css").toExternalForm();
+        Region region1 = new Region();
+        Region region2 = new Region();
+        Region region3 = new Region();
+        region1.getStyleClass().add("rounded");
+        region2.getStyleClass().add("rounded");
+        region3.getStyleClass().add("rounded");
 
         final SplitPane splitPane = new SplitPane();
+        final String hidingSplitPaneCss =
+            getClass().getResource("HiddenSplitPane.css").toExternalForm();
         splitPane.setId("hiddenSplitter");
-        Region region1 = new Region();
-        region1.getStyleClass().add("rounded");
-        Region region2 = new Region();
-        region2.getStyleClass().add("rounded");
-        Region region3 = new Region();
-        region3.getStyleClass().add("rounded");
         splitPane.getItems().addAll(region1, region2, region3);
         splitPane.setDividerPositions(0.33, 0.66);
         splitPane.getStylesheets().add(hidingSplitPaneCss);

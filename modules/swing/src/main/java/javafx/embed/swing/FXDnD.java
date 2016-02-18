@@ -477,7 +477,12 @@ final class FXDnD {
 
             SwingFXUtils.runOnEDTAndWait(FXDnD.this, () -> {
                 if (target != dt) {
+                    // FIXME: once we switch to JDK 9 as the boot JDK
+                    // we need to re-implement the following using
+                    // available API.
+                    /*
                     if (ctx != null) ctx.removeNotify();
+                    */
                     ctx = null;
 
                     currentAction = dropAction = DnDConstants.ACTION_NONE;
@@ -486,7 +491,12 @@ final class FXDnD {
                 if (target != null) {
                     if (ctx == null) {
                         ctx = target.getDropTargetContext();
+                        // FIXME: once we switch to JDK 9 as the boot JDK
+                        // we need to re-implement the following using
+                        // available API.
+                        /*
                         ctx.addNotify(FXDropTargetContextPeer.this);
+                        */
                     }
 
                     DropTargetListener dtl = (DropTargetListener)target;
@@ -508,7 +518,12 @@ final class FXDnD {
 
                 dt = mapper.object;
                 if (dt == null) {
+                    // FIXME: once we switch to JDK 9 as the boot JDK
+                    // we need to re-implement the following using
+                    // available API.
+                    /*
                     if (ctx != null) ctx.removeNotify();
+                    */
                     ctx = null;
 
                     currentAction = dropAction = DnDConstants.ACTION_NONE;
@@ -517,7 +532,12 @@ final class FXDnD {
                     // This must be done to ensure that the data isn't being
                     // cached in AWT. Otherwise subsequent DnD operations will
                     // see the old data only.
+                    // FIXME: once we switch to JDK 9 as the boot JDK
+                    // we need to re-implement the following using
+                    // available API.
+                    /*
                     if (ctx != null) ctx.removeNotify();
+                    */
                     ctx = null;
                 }
 

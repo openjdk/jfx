@@ -52,12 +52,6 @@ import javafx.stage.Stage;
  *
  * @sampleName Bar Chart
  * @preview preview.png
- * @see javafx.scene.chart.BarChart
- * @see javafx.scene.chart.CategoryAxis
- * @see javafx.scene.chart.NumberAxis
- * @related /Charts/Area/Area Chart
- * @related /Charts/Line/Line Chart
- * @related /Charts/Scatter/Scatter Chart
  * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
@@ -101,7 +95,18 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
+ * @see javafx.scene.chart.BarChart
+ * @see javafx.scene.chart.CategoryAxis
+ * @see javafx.scene.chart.NumberAxis
  * @embedded
+ *
+ * @related /Charts/Area/Area Chart
+ * @related /Charts/Bar/Audio Bar Chart
+ * @related /Charts/Bar/Horizontal Bar Chart
+ * @related /Charts/Bar/Image Bar Chart
+ * @related /Charts/Line/Line Chart
+ * @related /Charts/Scatter/Scatter Chart
+ * @related /Charts/Bar/Stacked Bar Chart
  */
 public class BarChartApp extends Application {
 
@@ -114,23 +119,24 @@ public class BarChartApp extends Application {
         xAxis = new CategoryAxis();
         xAxis.setCategories(FXCollections.<String>observableArrayList(years));
         yAxis = new NumberAxis("Units Sold", 0.0d, 3000.0d, 1000.0d);
-        ObservableList<BarChart.Series> barChartData = FXCollections.observableArrayList(
-            new BarChart.Series("Apples", FXCollections.observableArrayList(
-               new BarChart.Data(years[0], 567d),
-               new BarChart.Data(years[1], 1292d),
-               new BarChart.Data(years[2], 1292d)
-            )),
-            new BarChart.Series("Lemons", FXCollections.observableArrayList(
-               new BarChart.Data(years[0], 956),
-               new BarChart.Data(years[1], 1665),
-               new BarChart.Data(years[2], 2559)
-            )),
-            new BarChart.Series("Oranges", FXCollections.observableArrayList(
-               new BarChart.Data(years[0], 1154),
-               new BarChart.Data(years[1], 1927),
-               new BarChart.Data(years[2], 2774)
-            ))
-        );
+        ObservableList<BarChart.Series> barChartData =
+            FXCollections.observableArrayList(
+                new BarChart.Series("Apples",
+                                    FXCollections.observableArrayList(
+                    new BarChart.Data(years[0], 567d),
+                    new BarChart.Data(years[1], 1292d),
+                    new BarChart.Data(years[2], 1292d))),
+                new BarChart.Series("Lemons",
+                                    FXCollections.observableArrayList(
+                    new BarChart.Data(years[0], 956),
+                    new BarChart.Data(years[1], 1665),
+                    new BarChart.Data(years[2], 2559))),
+                new BarChart.Series("Oranges",
+                                    FXCollections.observableArrayList(
+                    new BarChart.Data(years[0], 1154),
+                    new BarChart.Data(years[1], 1927),
+                    new BarChart.Data(years[2], 2774)))
+            );
         chart = new BarChart(xAxis, yAxis, barChartData, 25.0d);
         return chart;
     }

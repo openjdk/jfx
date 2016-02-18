@@ -45,15 +45,24 @@ import javafx.stage.Stage;
  *
  * @sampleName Polygon
  * @preview preview.png
+ * @playground polygon1.fill (name="Polygon 1 Fill")
+ * @playground polygon2.stroke (name="Polygon 2 Stroke")
  * @see javafx.scene.shape.Polygon
  * @see javafx.scene.shape.Shape
  * @see javafx.scene.paint.Color
- * @playground polygon1.fill (name="Polygon 1 Fill")
- * @playground polygon2.stroke (name="Polygon 2 Stroke")
  * @embedded
+ *
+ * @related /Graphics 2d/Shapes/Arc
+ * @related /Graphics 2d/Shapes/Circle
+ * @related /Graphics 2d/Shapes/Cubic Curve
+ * @related /Graphics 2d/Shapes/Ellipse
+ * @related /Graphics 2d/Shapes/Line
+ * @related /Graphics 2d/Shapes/Path
+ * @related /Graphics 2d/Shapes/Polyline
+ * @related /Graphics 2d/Shapes/Quad Curve
+ * @related /Graphics 2d/Shapes/Rectangle
  */
 public class PolygonApp extends Application {
-
     // Will be a simple red-filled triangle
     private Polygon polygon1 = new Polygon(new double[]{
             45 , 10 ,
