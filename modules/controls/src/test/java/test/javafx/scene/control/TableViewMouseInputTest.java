@@ -66,7 +66,7 @@ import static org.junit.Assert.*;
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TableViewMouseInputTest {
     private TableView<String> tableView;
-    private TableView.TableViewSelectionModel<?> sm;
+    private TableView.TableViewSelectionModel<String> sm;
     private TableView.TableViewFocusModel<String> fm;
 
     private final TableColumn<String, String> col0 = new TableColumn<>("col0");
@@ -619,7 +619,7 @@ public class TableViewMouseInputTest {
         TableView<Person> table = new TableView<>();
         table.setItems(data);
 
-        sm = table.getSelectionModel();
+        TableView.TableViewSelectionModel<Person> sm = table.getSelectionModel();
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -682,7 +682,7 @@ public class TableViewMouseInputTest {
         TableView<Person> table = new TableView<>();
         table.setItems(data);
 
-        sm = table.getSelectionModel();
+        TableView.TableViewSelectionModel<Person> sm = table.getSelectionModel();
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -760,7 +760,7 @@ public class TableViewMouseInputTest {
         TableView<Person> table = new TableView<>();
         table.setItems(data);
 
-        sm = table.getSelectionModel();
+        TableView.TableViewSelectionModel<Person> sm = table.getSelectionModel();
         sm.setCellSelectionEnabled(cellSelection);
         sm.setSelectionMode(singleSelection ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
 
@@ -845,7 +845,7 @@ public class TableViewMouseInputTest {
         TableView<Person> table = new TableView<>();
         table.setItems(data);
 
-        sm = table.getSelectionModel();
+        TableView.TableViewSelectionModel<Person> sm = table.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         TableColumn firstNameCol = new TableColumn("First Name");

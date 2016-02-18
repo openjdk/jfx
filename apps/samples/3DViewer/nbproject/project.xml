@@ -6,12 +6,10 @@
             <name>3DViewer</name>
             <explicit-platform explicit-source-supported="true"/>
             <source-roots>
-                <root id="src.java.dir"/>
-                <root id="src.resources.dir"/>
+                <root id="src.dir"/>
+                <root id="resources.dir"/>
             </source-roots>
-            <test-roots>
-                <root id="test.java.dir"/>
-            </test-roots>
+            <test-roots/>
         </data>
     </configuration>
 </project>
