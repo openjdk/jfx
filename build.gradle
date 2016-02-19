@@ -3525,7 +3525,11 @@ task checkrepo() {
     doLast {
         logger.info("checking for whitespace (open)");
         exec {
-            commandLine  'bash', 'tools/scripts/checkWhiteSpace'
+            if (IS_WINDOWS) {
+                commandLine  'bash', 'tools/scripts/checkWhiteSpace'
+            } else {
+                commandLine  'bash', 'tools/scripts/checkWhiteSpace', '-x'
+            }
         }
     }
 }
@@ -3534,7 +3538,11 @@ task checkrepoall() {
     doLast {
         logger.info("checking for all whitespace (open)");
         exec {
-            commandLine  'bash', 'tools/scripts/checkWhiteSpace', '-a'
+            if (IS_WINDOWS) {
+                commandLine  'bash', 'tools/scripts/checkWhiteSpace', '-a'
+            } else {
+                commandLine  'bash', 'tools/scripts/checkWhiteSpace', '-x', '-a'
+            }
         }
     }
 }

@@ -12,6 +12,7 @@ Usage: $0 [-avSF] [-r <spec>]
   -S           : read file list from stdin
   -F           : fix files
   -r <spec>    : mercurial revision spec
+  -x           : check for the executable bit (not on windows)
 EOF
     exit 1
 }
@@ -25,12 +26,16 @@ allrepo=''
 fixfiles=''
 readstdin=''
 revisionspec=''
+executablecheck=''
 
-while getopts ":avFSVr:" opt;
+tofixargs="-F"
+
+while getopts ":avFSVxr:" opt;
 do
     case $opt in
     a)
         allrepo='true'
+        tofixargs="${tofixargs} -a"
         ;;
     S)
         readstdin='true'
@@ -47,6 +52,10 @@ do
         ;;
     r)
         revisionspec="$OPTARG"
+        ;;
+    x)
+        executablecheck='true'
+        tofixargs="${tofixargs} -x"
         ;;
     \?)
         echo "Invalid argument $OPTARG"
@@ -70,7 +79,7 @@ match_extension() {
 
 fix_file() {
     endstatus=1
-    if [ -x "${file}" ]
+    if [ "$executablecheck" -a -x "${file}" ]
     then
         chmod a-x "${file}"
         echo "${file}: execute corrected"
@@ -104,7 +113,7 @@ fix_file() {
 check_file() {
     file="$1"
     message=':'
-    if [ -x "${file}" ]
+    if [ "$executablecheck" -a -x "${file}" ]
     then
        message="executable:"
     fi
@@ -156,12 +165,7 @@ process_files() {
         echo "Found $fails whitespace or executable issues"
         echo
         echo "To correct, use"
-        if [ "$allrepo" ]
-        then
-            echo "   bash ${MYDIR}/checkWhiteSpace -a -F"
-        else
-            echo "   bash ${MYDIR}/checkWhiteSpace -F"
-        fi
+        echo "   bash ${MYDIR}/checkWhiteSpace ${tofixargs}"
         echo
         exit 1
     elif [ "$fails" -ne 0 -a "$fixfiles" ]
