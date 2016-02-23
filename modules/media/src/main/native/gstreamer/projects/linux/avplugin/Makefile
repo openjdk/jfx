@@ -10,8 +10,8 @@ SRCBASE_DIR = ../../../plugins
 DIRLIST = av
 
 ifneq ($(strip $(VERSION)),)
-TARGET = $(BUILD_DIR)/lib$(BASE_NAME)-$(VERSION).so
-OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin-$(VERSION)
+TARGET = $(BUILD_DIR)/lib$(BASE_NAME)$(SUFFIX)-$(VERSION).so
+OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/$(BASE_NAME)$(SUFFIX)-$(VERSION)
 else
 TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
 OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin

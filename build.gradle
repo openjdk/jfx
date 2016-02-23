@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2392,7 +2392,21 @@ project(":media") {
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
                                              "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}",
-                                              IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                             "SUFFIX=", IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                    }
+                                }
+                            }
+
+                            project.ext.libav.ffmpeg.versions.each { version ->
+                                def libavDir = "${project.ext.libav.ffmpeg.basedir}-${version}"
+                                File dir = file(libavDir)
+                                if (dir.exists()) {
+                                    exec {
+                                        commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
+                                        args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
+                                             "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
+                                             "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}",
+                                             "SUFFIX=-ffmpeg", IS_64 ? "ARCH=x64" : "ARCH=x32")
                                     }
                                 }
                             }
