@@ -25,16 +25,22 @@
 
 package javafx.scene.control.cell;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Cell;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ListView;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 
@@ -305,7 +311,10 @@ class CellUtils {
         comboBox.converterProperty().bind(converter);
         comboBox.setMaxWidth(Double.MAX_VALUE);
 
-        // setup listeners to properly commit any changes back into the data model
+        // setup listeners to properly commit any changes back into the data model.
+        // First listener attempts to commit or cancel when the ENTER or ESC keys are released.
+        // This is applicable in cases where the ComboBox is editable, and the user has
+        // typed some input, and also when the ComboBox popup is showing.
         comboBox.addEventFilter(KeyEvent.KEY_RELEASED, e -> {
             if (e.getCode() == KeyCode.ENTER) {
                 tryComboBoxCommit(comboBox, cell);
@@ -313,11 +322,29 @@ class CellUtils {
                 cell.cancelEdit();
             }
         });
+
+        // Second listener attempts to commit when the user is in the editor of
+        // the ComboBox, and moves focus away.
         comboBox.getEditor().focusedProperty().addListener(o -> {
             if (!comboBox.isFocused()) {
                 tryComboBoxCommit(comboBox, cell);
             }
         });
+
+        // Third listener makes an assumption about the skin being used, and attempts to add
+        // a listener to the ListView within it, such that when the user mouse clicks on a
+        // on an item, that is immediately committed and the cell exits the editing mode.
+        boolean success = listenToComboBoxSkin(comboBox, cell);
+        if (!success) {
+            comboBox.skinProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    boolean successInListener = listenToComboBoxSkin(comboBox, cell);
+                    if (successInListener) {
+                        comboBox.skinProperty().removeListener(this);
+                    }
+                }
+            });
+        }
 
         return comboBox;
     }
@@ -330,5 +357,18 @@ class CellUtils {
         } else {
             cell.commitEdit(comboBox.getValue());
         }
+    }
+
+    private static <T> boolean listenToComboBoxSkin(final ComboBox<T> comboBox, final Cell<T> cell) {
+        Skin<?> skin = comboBox.getSkin();
+        if (skin != null && skin instanceof ComboBoxListViewSkin) {
+            ComboBoxListViewSkin cbSkin = (ComboBoxListViewSkin) skin;
+            Node popupContent = cbSkin.getPopupContent();
+            if (popupContent != null && popupContent instanceof ListView) {
+                popupContent.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> cell.commitEdit(comboBox.getValue()));
+                return true;
+            }
+        }
+        return false;
     }
 }
