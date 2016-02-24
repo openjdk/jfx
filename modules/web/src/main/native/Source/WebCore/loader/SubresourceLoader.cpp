@@ -160,10 +160,26 @@ void SubresourceLoader::willSendRequest(ResourceRequest& newRequest, const Resou
             memoryCache()->revalidationFailed(m_resource);
         }
 
+#if PLATFORM(JAVA)
+        // Current Main frame is in Provisinal state i.e its started network request, but yet to get network response
+        // In Some case, the current document which is about to be replaced (Not Active document loader) will request for
+        // sub-resource mainly javascript files will cause to execute or loaded to the active document loader (which is in provisional state).
+        if ((m_documentLoader->frame() && m_documentLoader->frame()->loader().state() == FrameStateProvisional) &&
+                (m_resource->type() != CachedResource::Type::MainResource)) {
+            if (!(m_documentLoader->frame()->loader().documentLoader()->cachedResourceLoader().canRequest(m_resource->type(), newRequest.url(), options()))) {
+                cancel();
+                return;
+            }
+        } else if (!m_documentLoader->cachedResourceLoader().canRequest(m_resource->type(), newRequest.url(), options())) {
+            cancel();
+            return;
+        }
+#else
         if (!m_documentLoader->cachedResourceLoader().canRequest(m_resource->type(), newRequest.url(), options())) {
             cancel();
             return;
         }
+#endif
         if (m_resource->isImage() && m_documentLoader->cachedResourceLoader().shouldDeferImageLoad(newRequest.url())) {
             cancel();
             return;
