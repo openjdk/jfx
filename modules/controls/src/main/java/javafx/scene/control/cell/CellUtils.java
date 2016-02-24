@@ -34,6 +34,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 
@@ -303,12 +304,31 @@ class CellUtils {
         ComboBox<T> comboBox = new ComboBox<T>(items);
         comboBox.converterProperty().bind(converter);
         comboBox.setMaxWidth(Double.MAX_VALUE);
-        comboBox.showingProperty().addListener(o -> {
-            // when the comboBox is hidden, commit the current selection into the cell
-            if (!comboBox.isShowing()) {
-                cell.commitEdit(comboBox.getSelectionModel().getSelectedItem());
+
+        // setup listeners to properly commit any changes back into the data model
+        comboBox.addEventFilter(KeyEvent.KEY_RELEASED, e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                tryComboBoxCommit(comboBox, cell);
+            } else if (e.getCode() == KeyCode.ESCAPE) {
+                cell.cancelEdit();
             }
         });
+        comboBox.getEditor().focusedProperty().addListener(o -> {
+            if (!comboBox.isFocused()) {
+                tryComboBoxCommit(comboBox, cell);
+            }
+        });
+
         return comboBox;
+    }
+
+    private static <T> void tryComboBoxCommit(ComboBox<T> comboBox, Cell<T> cell) {
+        StringConverter<T> sc = comboBox.getConverter();
+        if (comboBox.isEditable() && sc != null) {
+            T value = sc.fromString(comboBox.getEditor().getText());
+            cell.commitEdit(value);
+        } else {
+            cell.commitEdit(comboBox.getValue());
+        }
     }
 }
