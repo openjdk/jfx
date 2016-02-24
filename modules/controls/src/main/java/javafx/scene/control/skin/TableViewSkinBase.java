@@ -89,9 +89,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     private static final double GOLDEN_RATIO_MULTIPLIER = 0.618033987;
 
-    private static final String EMPTY_TABLE_TEXT = ControlResources.getString("TableView.noContent");
-    private static final String NO_COLUMNS_TEXT = ControlResources.getString("TableView.noColumns");
-
     // RT-34744 : IS_PANNABLE will be false unless
     // javafx.scene.control.skin.TableViewSkin.pannable
     // is set to true. This is done in order to make TableView functional
@@ -107,6 +104,11 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
      * Internal Fields                                                         *
      *                                                                         *
      **************************************************************************/
+
+    // JDK-8090129: These constants should not be static, because the
+    // Locale may change between instances.
+    private final String EMPTY_TABLE_TEXT = ControlResources.getString("TableView.noContent");
+    private final String NO_COLUMNS_TEXT = ControlResources.getString("TableView.noColumns");
 
     VirtualFlow<I> flow;
 

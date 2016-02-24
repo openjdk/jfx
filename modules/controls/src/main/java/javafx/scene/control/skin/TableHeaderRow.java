@@ -72,16 +72,17 @@ public class TableHeaderRow extends StackPane {
      *                                                                         *
      **************************************************************************/
 
-    private static final String MENU_SEPARATOR =
-            ControlResources.getString("TableView.nestedColumnControlMenuSeparator");
-
-
 
     /***************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
      **************************************************************************/
+
+    // JDK-8090129: This constant should not be static, because the
+    // Locale may change between instances.
+    private final String MENU_SEPARATOR =
+            ControlResources.getString("TableView.nestedColumnControlMenuSeparator");
 
     private final VirtualFlow flow;
     private final TableViewSkinBase<?,?,?,?,?> tableSkin;

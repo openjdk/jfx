@@ -81,14 +81,6 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
      *                                                                         *
      **************************************************************************/
 
-    private static final String DONE = ControlResources.getString("ProgressIndicator.doneString");
-
-    /** doneText is just used to know the size of done as that is the biggest text we need to allow for */
-    private static final Text doneText = new Text(DONE);
-    static {
-        doneText.getStyleClass().add("text");
-    }
-
 
 
     /***************************************************************************
@@ -96,6 +88,13 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
      * Private fields                                                          *
      *                                                                         *
      **************************************************************************/
+
+    // JDK-8090129: This constant should not be static, because the
+    // Locale may change between instances.
+    private final String DONE = ControlResources.getString("ProgressIndicator.doneString");
+
+    /** doneText is just used to know the size of done as that is the biggest text we need to allow for */
+    private final Text doneText = new Text(DONE);
 
     final Duration CLIPPED_DELAY = new Duration(300);
     final Duration UNCLIPPED_DELAY = new Duration(0);
@@ -126,6 +125,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         super(control);
 
         this.control = control;
+
+        doneText.getStyleClass().add("text");
 
         // register listeners
         registerChangeListener(control.indeterminateProperty(), e -> initialize());

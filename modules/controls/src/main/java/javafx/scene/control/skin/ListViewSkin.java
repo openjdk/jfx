@@ -75,8 +75,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      *                                                                         *
      **************************************************************************/
 
-    private static final String EMPTY_LIST_TEXT = ControlResources.getString("ListView.noContent");
-
     // RT-34744 : IS_PANNABLE will be false unless
     // javafx.scene.control.skin.ListViewSkin.pannable
     // is set to true. This is done in order to make ListView functional
@@ -92,6 +90,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      * Internal Fields                                                         *
      *                                                                         *
      **************************************************************************/
+
+    // JDK-8090129: This constant should not be static, because the
+    // Locale may change between instances.
+    private static final String EMPTY_LIST_TEXT = ControlResources.getString("ListView.noContent");
 
     private final VirtualFlow<ListCell<T>> flow;
 
