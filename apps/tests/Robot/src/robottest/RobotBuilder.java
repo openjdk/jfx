@@ -199,7 +199,7 @@ public class RobotBuilder {
     }
 
 
-   public void robotKeyTest(final TextField field, final TextField result) {
+    public void robotKeyTest(final TextField field, final TextField result) {
         field.requestFocus();
         new AnimationTimer() {
             long startTime = System.nanoTime();
@@ -289,20 +289,20 @@ public class RobotBuilder {
 
     public void robotPixelTest(final TextField result, Stage currentStage){
 
-    Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0,
-            rec1.getBoundsInParent().getWidth(),
+        Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0,
+                        rec1.getBoundsInParent().getWidth(),
                         rec1.getBoundsInParent().getHeight()));
-    int x = 53 + (int) bounds.getMinX();
-    int y = 53 + (int) bounds.getMinY();
-    int answer = assertPixelEquals(x, y, Color.RED) +
+        int x = 53 + (int) bounds.getMinX();
+        int y = 53 + (int) bounds.getMinY();
+        int answer = assertPixelEquals(x, y, Color.RED) +
                      assertPixelEquals(x + 40, y, Color.BLUE) +
                      assertPixelEquals(x + 80, y, Color.YELLOW) +
                      assertPixelEquals(x + 120, y, Color.GREEN);
-    if (answer == 4) {
-        result.setText("Passed");
-    } else {
-        result.setText("Failed");
-    }
+        if (answer == 4) {
+            result.setText("Passed");
+        } else {
+            result.setText("Failed");
+        }
 
     }
 

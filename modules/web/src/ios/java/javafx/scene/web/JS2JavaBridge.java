@@ -122,13 +122,13 @@ class JS2JavaBridge {
              getJavaBridge()).append("['").append(jsName).append("'])");
 
         Integer jsId = (Integer) webEngine.executeScript(sb.toString());
-    if (jsId != null) {
+        if (jsId != null) {
             exportedObjectsByJSIds.put(jsId.toString(), jsObj);
             jsIdsByExportedObjects.put(jsObj, jsId.toString());
-    }
-    else {
+        }
+        else {
             System.out.println("[JVDBG] Error, jsId = null for "+jsName);
-    }
+        }
         log("populateObject<<executeScript");
     }
 

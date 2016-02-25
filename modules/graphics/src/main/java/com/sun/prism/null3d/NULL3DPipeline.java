@@ -102,7 +102,7 @@ public class NULL3DPipeline extends GraphicsPipeline {
     public boolean supportsShaderType(ShaderType type) {
         switch (type) {
             case HLSL: return PlatformUtil.isWindows();
-        case GLSL: return !PlatformUtil.isWindows();
+            case GLSL: return !PlatformUtil.isWindows();
             default: return false;
         }
     }

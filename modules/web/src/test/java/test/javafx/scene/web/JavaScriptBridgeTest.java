@@ -462,13 +462,13 @@ public class JavaScriptBridgeTest extends TestBase {
             MyExceptionHelper test = new MyExceptionHelper();
             bind("test", test);
             try {
-        String script =
-            "try { " +
-            "    test.throwException2(); " +
-            "} catch (e) { " +
-            "    document.body.textContent = e; " +
-            "}";
-        web.executeScript(script);
+                String script =
+                    "try { " +
+                    "    test.throwException2(); " +
+                    "} catch (e) { " +
+                    "    document.body.textContent = e; " +
+                    "}";
+                web.executeScript(script);
             } catch (JSException e) {
                 fail("caught unexpected exception: " + e);
             }
@@ -482,9 +482,9 @@ public class JavaScriptBridgeTest extends TestBase {
         public void throwException() throws MyException {
             throw new MyException();
         }
-    public void throwException2() {
-        throw new RuntimeException("TheRuntimeException");
-    }
+        public void throwException2() {
+            throw new RuntimeException("TheRuntimeException");
+        }
     }
 
 

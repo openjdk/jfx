@@ -132,13 +132,13 @@ static void releaseReasources() {
         GLASS_LOG_FINER("IDirectFBDisplayLayer->Release(primaryLayer =%p)",
                         primaryLayer);
         primaryLayer->Release(primaryLayer);
-    primaryLayer = NULL;
+        primaryLayer = NULL;
     }
     if (dfb != NULL) {
         GLASS_LOG_FINE("Releasing DFB interface");
         GLASS_LOG_FINER("IDirectFB->Release(dfb=%p)", dfb);
         dfb->Release(dfb);
-    dfb = NULL;
+        dfb = NULL;
     }
 
     DEBUG_FUNC_EXIT();

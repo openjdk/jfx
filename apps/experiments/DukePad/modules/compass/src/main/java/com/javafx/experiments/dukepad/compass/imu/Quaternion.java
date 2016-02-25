@@ -132,29 +132,29 @@ public class Quaternion {
     static Vec3d toEuler(Quaternion q) {
         Vec3d v = new Vec3d();
 
-    // fix roll near poles with this tolerance
-    double pole = Math.PI / 2.0 - 0.05;
+        // fix roll near poles with this tolerance
+        double pole = Math.PI / 2.0 - 0.05;
 
-    v.y = Math.asin(2.0 * (q.getW() * q.getY() - q.getX() * q.getZ()));
+        v.y = Math.asin(2.0 * (q.getW() * q.getY() - q.getX() * q.getZ()));
 
-    if ((v.y < pole) && (v.y > -pole)) {
+        if ((v.y < pole) && (v.y > -pole)) {
             v.x = Math.atan2(2.0 * (q.getY() * q.getZ() + q.getW() * q.getX()),
                 1.0 - 2.0 * (q.getX() * q.getX() + q.getY() * q.getY()));
-    }
+        }
 
-    v.z = Math.atan2(2.0 * (q.getX() * q.getY() + q.getW() * q.getZ()),
+        v.z = Math.atan2(2.0 * (q.getX() * q.getY() + q.getW() * q.getZ()),
             1.0 - 2.0 * (q.getY() * q.getY() + q.getZ() * q.getZ()));
 
         return v;
     }
 
     static Quaternion fromEuler(Vec3d v) {
-    double cosX2 = Math.cos(v.x / 2.0);
-    double sinX2 = Math.sin(v.x / 2.0);
-    double cosY2 = Math.cos(v.y / 2.0);
-    double sinY2 = Math.sin(v.y / 2.0);
-    double cosZ2 = Math.cos(v.z / 2.0);
-    double sinZ2 = Math.sin(v.z / 2.0);
+        double cosX2 = Math.cos(v.x / 2.0);
+        double sinX2 = Math.sin(v.x / 2.0);
+        double cosY2 = Math.cos(v.y / 2.0);
+        double sinY2 = Math.sin(v.y / 2.0);
+        double cosZ2 = Math.cos(v.z / 2.0);
+        double sinZ2 = Math.sin(v.z / 2.0);
 
         Quaternion q = new Quaternion(
             cosX2 * cosY2 * cosZ2 + sinX2 * sinY2 * sinZ2,

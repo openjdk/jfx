@@ -224,7 +224,7 @@ public class Rectangle2D {
             bits = 31L * bits + Double.doubleToLongBits(minY);
             bits = 31L * bits + Double.doubleToLongBits(width);
             bits = 31L * bits + Double.doubleToLongBits(height);
-        hash = (int) (bits ^ (bits >> 32));
+            hash = (int) (bits ^ (bits >> 32));
         }
         return hash;
     }

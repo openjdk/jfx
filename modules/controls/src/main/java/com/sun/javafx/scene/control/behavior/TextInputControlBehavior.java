@@ -442,7 +442,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private void nextCharacterVisually(boolean moveRight) {
         if (isMixed()) {
             TextInputControlSkin<?> skin = (TextInputControlSkin<?>)textInputControl.getSkin();
-        skin.moveCaret(TextUnit.CHARACTER, moveRight ? Direction.RIGHT : Direction.LEFT, false);
+            skin.moveCaret(TextUnit.CHARACTER, moveRight ? Direction.RIGHT : Direction.LEFT, false);
         } else if (moveRight != isRTLText()) {
             textInputControl.forward();
         } else {

@@ -61,19 +61,19 @@ final class ListChangeBuilder<E> {
         int from = 0;
         int to = list.size() - 1;
 
-    while (from <= to) {
-        int changeIdx  = (from + to) / 2;
+        while (from <= to) {
+            int changeIdx  = (from + to) / 2;
             SubChange<E> change = list.get(changeIdx);
 
-        if (idx >= change.to) {
-        from = changeIdx + 1;
+            if (idx >= change.to) {
+                from = changeIdx + 1;
             } else if (idx < change.from) {
-        to = changeIdx - 1;
+                to = changeIdx - 1;
             } else {
-        return changeIdx;
+                return changeIdx;
             }
-    }
-    return ~from;
+        }
+        return ~from;
     }
 
     private void insertUpdate(int pos) {

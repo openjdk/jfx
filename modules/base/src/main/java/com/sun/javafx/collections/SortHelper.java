@@ -44,28 +44,28 @@ public class SortHelper {
     public <T extends Comparable<? super T>> int[] sort(List<T> list) {
         T[] a = (T[]) Array.newInstance(Comparable.class, list.size());
         try {
-    a = list.toArray(a);
+            a = list.toArray(a);
         } catch (ArrayStoreException e) {
             // this means this is not comparable (used without generics)
             throw new ClassCastException();
         }
-    int[] result = sort(a);
-    ListIterator<T> i = list.listIterator();
-    for (int j=0; j<a.length; j++) {
-        i.next();
-        i.set((T)a[j]);
-    }
+        int[] result = sort(a);
+        ListIterator<T> i = list.listIterator();
+        for (int j=0; j<a.length; j++) {
+            i.next();
+            i.set((T)a[j]);
+        }
         return result;
     }
 
     public <T> int[] sort(List<T> list, Comparator<? super T> c) {
-    Object[] a = list.toArray();
-    int[] result = sort(a, (Comparator)c);
-    ListIterator i = list.listIterator();
-    for (int j=0; j<a.length; j++) {
-        i.next();
-        i.set(a[j]);
-    }
+        Object[] a = list.toArray();
+        int[] result = sort(a, (Comparator)c);
+        ListIterator i = list.listIterator();
+        for (int j=0; j<a.length; j++) {
+            i.next();
+            i.set(a[j]);
+        }
         return result;
     }
 
@@ -88,7 +88,7 @@ public class SortHelper {
     public <T> int[] sort(T[] a, int fromIndex, int toIndex,
                 Comparator<? super T> c) {
         rangeCheck(a.length, fromIndex, toIndex);
-    T[] aux = (T[])copyOfRange(a, fromIndex, toIndex);
+        T[] aux = (T[])copyOfRange(a, fromIndex, toIndex);
         int[] result = initPermutation(a.length);
         if (c==null)
             mergeSort(aux, a, fromIndex, toIndex, -fromIndex);
@@ -101,7 +101,7 @@ public class SortHelper {
 
     public int[] sort(int[] a, int fromIndex, int toIndex) {
         rangeCheck(a.length, fromIndex, toIndex);
-    int[] aux = (int[])copyOfRange(a, fromIndex, toIndex);
+        int[] aux = (int[])copyOfRange(a, fromIndex, toIndex);
         int[] result = initPermutation(a.length);
         mergeSort(aux, a, fromIndex, toIndex, -fromIndex);
         reversePermutation = null;
@@ -154,13 +154,13 @@ public class SortHelper {
                   int low,
                   int high,
                   int off) {
-    int length = high - low;
+        int length = high - low;
 
-    // Insertion sort on smallest arrays
+        // Insertion sort on smallest arrays
         if (length < INSERTIONSORT_THRESHOLD) {
             for (int i=low; i<high; i++)
                 for (int j=i; j>low &&
-             ((Comparable) dest[j-1]).compareTo(dest[j])>0; j--)
+                     ((Comparable) dest[j-1]).compareTo(dest[j])>0; j--)
                     swap(dest, j, j-1);
             return;
         }
@@ -205,13 +205,13 @@ public class SortHelper {
                   int low,
                   int high,
                   int off) {
-    int length = high - low;
+        int length = high - low;
 
-    // Insertion sort on smallest arrays
+        // Insertion sort on smallest arrays
         if (length < INSERTIONSORT_THRESHOLD) {
             for (int i=low; i<high; i++)
                 for (int j=i; j>low &&
-             ((Comparable) dest[j-1]).compareTo(dest[j])>0; j--)
+                     ((Comparable) dest[j-1]).compareTo(dest[j])>0; j--)
                     swap(dest, j, j-1);
             return;
         }
@@ -252,15 +252,15 @@ public class SortHelper {
                   Object[] dest,
                   int low, int high, int off,
                   Comparator c) {
-    int length = high - low;
+        int length = high - low;
 
-    // Insertion sort on smallest arrays
-    if (length < INSERTIONSORT_THRESHOLD) {
-        for (int i=low; i<high; i++)
-        for (int j=i; j>low && c.compare(dest[j-1], dest[j])>0; j--)
-            swap(dest, j, j-1);
-        return;
-    }
+        // Insertion sort on smallest arrays
+        if (length < INSERTIONSORT_THRESHOLD) {
+            for (int i=low; i<high; i++)
+            for (int j=i; j>low && c.compare(dest[j-1], dest[j])>0; j--)
+                swap(dest, j, j-1);
+            return;
+        }
 
         // Recursively sort halves of dest into src
         int destLow  = low;
@@ -295,9 +295,9 @@ public class SortHelper {
     }
 
     private void swap(int[] x, int a, int b) {
-    int t = x[a];
-    x[a] = x[b];
-    x[b] = t;
+        int t = x[a];
+        x[a] = x[b];
+        x[b] = t;
         permutation[reversePermutation[a]] = b;
         permutation[reversePermutation[b]] = a;
         int tp = reversePermutation[a];
@@ -306,9 +306,9 @@ public class SortHelper {
     }
 
     private void swap(Object[] x, int a, int b) {
-    Object t = x[a];
-    x[a] = x[b];
-    x[b] = t;
+        Object t = x[a];
+        x[a] = x[b];
+        x[b] = t;
         permutation[reversePermutation[a]] = b;
         permutation[reversePermutation[b]] = a;
         int tp = reversePermutation[a];
