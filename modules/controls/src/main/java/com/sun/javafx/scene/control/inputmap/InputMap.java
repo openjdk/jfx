@@ -441,7 +441,14 @@ public class InputMap<N extends Node> implements EventHandler<Event> {
     }
 
     private void removeMapping(Mapping<?> mapping) {
-        // TODO
+        EventType<?> et = mapping.getEventType();
+        if (this.eventTypeMappings.containsKey(et)) {
+            List<?> _eventTypeMappings = this.eventTypeMappings.get(et);
+            _eventTypeMappings.remove(mapping);
+
+            // TODO remove the event handler in the root if there are no more mappings of this type
+            // anywhere in the input map tree
+        }
     }
 
     private void addEventHandler(EventType et) {
