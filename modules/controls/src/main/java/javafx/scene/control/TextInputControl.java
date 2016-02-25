@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1215,6 +1215,7 @@ public abstract class TextInputControl extends Control {
         StringConverter<T> converter = formatter.getValueConverter();
         if (converter != null) {
             String text = converter.toString(value);
+            if (text == null) text = "";
             replaceText(0, getLength(), text, text.length(), text.length());
         }
     }
