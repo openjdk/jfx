@@ -56,6 +56,10 @@ def ccFlags = [
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def linkFlags = ["-shared", commonFlags].flatten()
 
+if (IS_DEBUG_NATIVE) {
+    linkFlags += "-g"
+}
+
 // Create $buildDir/linux_tools.properties file and load props from it
 setupTools("linux_tools",
     { propFile ->
