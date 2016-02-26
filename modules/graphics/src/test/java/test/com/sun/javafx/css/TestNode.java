@@ -97,7 +97,7 @@ public class TestNode extends TestNodeBase {
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-        new ArrayList<CssMetaData<? extends Styleable, ?>>(TestNodeBase.getClassCssMetaData());
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(TestNodeBase.getClassCssMetaData());
             styleables.add(XYZZY);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }

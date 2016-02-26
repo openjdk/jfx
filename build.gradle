@@ -2443,7 +2443,7 @@ project(":media") {
                     }
                 }
 
-            def buildGlib = task("build${t.capital}Glib", dependsOn: [buildResources]) {
+                def buildGlib = task("build${t.capital}Glib", dependsOn: [buildResources]) {
                     enabled = IS_COMPILE_MEDIA
                     doLast {
                         exec {

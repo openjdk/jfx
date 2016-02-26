@@ -30,7 +30,7 @@ import javafx.util.Duration;
 public class AnimationDummy extends AnimationImpl {
 
     public AnimationDummy(Duration duration) {
-            super.setCycleDuration(duration);
+        super.setCycleDuration(duration);
     }
 
     @Override

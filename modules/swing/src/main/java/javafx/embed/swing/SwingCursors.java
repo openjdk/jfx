@@ -85,7 +85,7 @@ class SwingCursors {
             case H_RESIZE:
                 return Cursor.getPredefinedCursor(Cursor.W_RESIZE_CURSOR);
             case E_RESIZE:
-            return Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR);
+                return Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR);
             case OPEN_HAND:
             case CLOSED_HAND:
             case HAND:

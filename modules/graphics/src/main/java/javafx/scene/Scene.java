@@ -4093,7 +4093,7 @@ public class Scene implements EventTarget {
         private void process(KeyEvent e) {
             final Node sceneFocusOwner = getFocusOwner();
             final EventTarget eventTarget =
-                    (sceneFocusOwner != null) ? sceneFocusOwner
+                    (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner
                                               : Scene.this;
 
             // send the key event to the current focus owner or to scene if

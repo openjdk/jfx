@@ -104,7 +104,7 @@ public class Dimension2D {
             long bits = 7L;
             bits = 31L * bits + Double.doubleToLongBits(getWidth());
             bits = 31L * bits + Double.doubleToLongBits(getHeight());
-        hash = (int) (bits ^ (bits >> 32));
+            hash = (int) (bits ^ (bits >> 32));
         }
         return hash;
     }

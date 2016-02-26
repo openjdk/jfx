@@ -1306,7 +1306,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
         private void concatTransform(Affine3D at) {
             xform.concatenate(at);
-    }
+        }
 
         private void translate(double dx, double dy) {
             xform.translate(dx, dy);
@@ -1487,7 +1487,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
         void paint(Graphics g) {
             if (g != null) {
-            CompositeMode oldCompositeMode = g.getCompositeMode();
+                CompositeMode oldCompositeMode = g.getCompositeMode();
                 switch (state.getCompositeOperation()) {
                     // decode operations that don't require Blend first
                     case COMPOSITE_COPY:

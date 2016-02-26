@@ -95,25 +95,25 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     Element inputLine;
 
     public String getPendingInput() {
-    String text = null;
-    while (pendingInput != getInputLine() && text == null) {
-        if (isSpanNode(pendingInput)) {
-        text = grabInput((Element) pendingInput);
-        if (text.length() == 0)
-            text = null;
-        } else if (isBreakNode(pendingInput)) {
-        text = "\n";
-        } else if (pendingInput instanceof Text) {
-        text = ((Text) pendingInput).getData();
-        if (text.length() == 0)
-            text = null;
-        } else {
-        //WTDebug.println("UNEXPECTED NODE: "+WTDebug.pnode(pendingInput));
-        }
+        String text = null;
+        while (pendingInput != getInputLine() && text == null) {
+            if (isSpanNode(pendingInput)) {
+                text = grabInput((Element) pendingInput);
+                if (text.length() == 0)
+                    text = null;
+            } else if (isBreakNode(pendingInput)) {
+                text = "\n";
+            } else if (pendingInput instanceof Text) {
+                text = ((Text) pendingInput).getData();
+                if (text.length() == 0)
+                    text = null;
+            } else {
+                //WTDebug.println("UNEXPECTED NODE: "+WTDebug.pnode(pendingInput));
+            }
         pendingInput = pendingInput.getNextSibling();
-    }
-    setOutputPosition(pendingInput);
-    return text;
+        }
+        setOutputPosition(pendingInput);
+        return text;
     }
 
     Document documentNode;

@@ -85,7 +85,7 @@ public class HighlightRegion extends Rectangle2D {
             long bits = 7L;
             bits = 31L * bits + super.hashCode();
             bits = 31L * bits + tkScene.hashCode();
-              hash = (int) (bits ^ (bits >> 32));
+            hash = (int) (bits ^ (bits >> 32));
         }
         return hash;
     }

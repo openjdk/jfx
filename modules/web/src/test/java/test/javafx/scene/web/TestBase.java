@@ -282,7 +282,7 @@ public class TestBase implements ChangeListener, InvalidationListener {
      * Allows to override default load timeout value (in milliseconds).
      */
     protected int getLoadTimeOut() {
-    return LOAD_TIMEOUT;
+        return LOAD_TIMEOUT;
     }
 
     public void waitLoadFinished() {

@@ -88,7 +88,7 @@
             kCGLPFAColorSize, 32,
             kCGLPFAAlphaSize, 8,
             kCGLPFADepthSize, depth,
-        kCGLPFAAllowOfflineRenderers, // lets OpenGL know this context is offline renderer aware
+            kCGLPFAAllowOfflineRenderers, // lets OpenGL know this context is offline renderer aware
             (CGLPixelFormatAttribute)0
         };
         GLint npix = 0;

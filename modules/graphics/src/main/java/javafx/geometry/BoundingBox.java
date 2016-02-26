@@ -197,7 +197,7 @@ public class BoundingBox extends Bounds {
             bits = 31L * bits + Double.doubleToLongBits(getWidth());
             bits = 31L * bits + Double.doubleToLongBits(getHeight());
             bits = 31L * bits + Double.doubleToLongBits(getDepth());
-        hash = (int) (bits ^ (bits >> 32));
+            hash = (int) (bits ^ (bits >> 32));
         }
         return hash;
     }
