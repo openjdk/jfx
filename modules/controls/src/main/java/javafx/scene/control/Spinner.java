@@ -544,6 +544,7 @@ public class Spinner<T> extends Control {
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<>(this, "editor");
             textField = new FakeFocusTextField();
+            textField.tooltipProperty().bind(tooltipProperty());
             editor.set(textField);
         }
         return editor.getReadOnlyProperty();
