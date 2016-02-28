@@ -147,8 +147,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     private Rectangle tabHeaderAreaClipRect;
     private Tab selectedTab;
     private boolean isSelectingTab;
-    private double maxw = 0.0d;
-    private double maxh = 0.0d;
 
     private final TabPaneBehavior behavior;
 
@@ -274,6 +272,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         // The TabPane can only be as wide as it widest content width.
+        double maxw = 0.0;
         for (TabContentRegion contentRegion: tabContentRegions) {
             maxw = Math.max(maxw, snapSize(contentRegion.prefWidth(-1)));
         }
@@ -290,6 +289,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         // The TabPane can only be as high as it highest content height.
+        double maxh = 0.0;
         for (TabContentRegion contentRegion: tabContentRegions) {
             maxh = Math.max(maxh, snapSize(contentRegion.prefHeight(-1)));
         }
