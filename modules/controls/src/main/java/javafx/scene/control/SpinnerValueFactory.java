@@ -720,6 +720,8 @@ public abstract class SpinnerValueFactory<T> {
             });
 
             valueProperty().addListener((o, oldValue, newValue) -> {
+                if (newValue == null) return;
+
                 // when the value is set, we need to react to ensure it is a
                 // valid value (and if not, blow up appropriately)
                 if (newValue < getMin()) {

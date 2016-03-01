@@ -1274,7 +1274,7 @@ public class SpinnerTest {
     /***************************************************************************
      *                                                                         *
      * Tests for bugs                                                          *
-     *                                                                         *                                                                         *
+     *                                                                         *
      **************************************************************************/
 
     @Test public void test_rt_39655_decrement() {
@@ -1291,5 +1291,11 @@ public class SpinnerTest {
         intSpinner.getEditor().setText("7");
         intSpinner.increment();
         assertEquals(8, (int) intSpinner.getValue());
+    }
+
+    @Test public void test_jdk_8150962() {
+        Spinner<Double> spinner = new Spinner<>(-100, 100, 0, 0.5);
+        spinner.getValueFactory().setValue(null);
+        assertNull(spinner.getValue());
     }
 }
