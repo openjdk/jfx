@@ -27,6 +27,7 @@ package test.com.sun.javafx.fxml.builder;
 import com.sun.javafx.fxml.builder.ProxyBuilder;
 import java.util.Arrays;
 import java.util.List;
+import javafx.beans.NamedArg;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.StageStyle;
@@ -248,5 +249,71 @@ public class ProxyBuilderTest {
     public static class ShortMethodNames {
         public void get() {}
         public void set() {}
+    }
+
+    public static class SameArgNames {
+        public boolean intIntCalled;
+        public boolean doubleDoubleCalled;
+
+        public SameArgNames(@NamedArg("a") int a, @NamedArg("b") int b) {
+            intIntCalled = true;
+        }
+        public SameArgNames(@NamedArg("a") double a, @NamedArg("b") double b) {
+            doubleDoubleCalled = true;
+        }
+        public void setC(int c) {}
+    }
+
+    public static class SameArgNames2 {
+        public boolean intIntCalled;
+        public boolean doubleDoubleCalled;
+
+        public SameArgNames2(@NamedArg("a") double a, @NamedArg("b") double b) {
+            doubleDoubleCalled = true;
+        }
+        public SameArgNames2(@NamedArg("a") int a, @NamedArg("b") int b) {
+            intIntCalled = true;
+        }
+        public void setC(int c) {}
+    }
+
+    private Object createObject(Class clazz, String a, String b, String c) {
+        ProxyBuilder pb = new ProxyBuilder(clazz);
+        pb.put("a", a);
+        pb.put("b", b);
+        if (c != null) {
+            pb.put("c", c);
+        }
+        return pb.build();
+    }
+
+    private void check_JDK_8146325(String a, String b, String c, boolean resInt, boolean resDouble) {
+        SameArgNames result = (SameArgNames) createObject(SameArgNames.class, a, b, c);
+        assertEquals(resInt, result.intIntCalled);
+        assertEquals(resDouble, result.doubleDoubleCalled);
+
+        SameArgNames2 result2 = (SameArgNames2) createObject(SameArgNames2.class, a, b, c);
+        assertEquals(resInt, result2.intIntCalled);
+        assertEquals(resDouble, result2.doubleDoubleCalled);
+    }
+
+    @Test
+    public void test_JDK_8146325_IntExact() {
+        check_JDK_8146325("123", "456", null, true, false);
+    }
+
+    @Test
+    public void test_JDK_8146325_IntSetter() {
+        check_JDK_8146325("123", "456", "789", true, false);
+    }
+
+    @Test
+    public void test_JDK_8146325_DoubleExact() {
+        check_JDK_8146325("123", "456.1", null, false, true);
+    }
+
+    @Test
+    public void test_JDK_8146325_DoubleSetter() {
+        check_JDK_8146325("123", "456.1", "789", false, true);
     }
 }
