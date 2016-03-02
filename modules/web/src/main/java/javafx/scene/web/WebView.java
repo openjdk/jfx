@@ -948,29 +948,29 @@ final public class WebView extends Parent {
     }
 
     // event handling
-    
+
     // To handle stage pulse we need to know if currently webview and
     // tree is visible or not
     private boolean isTreeReallyVisible() {
         if (getScene() == null) {
             return false;
         }
-        
+
         final Window window = getScene().getWindow();
-        
+
         if (window == null) {
             return false;
         }
-        
+
         boolean iconified = (window instanceof Stage) ? ((Stage)window).isIconified() : false;
-        
+
         return impl_isTreeVisible()
                && window.isShowing()
                && window.getWidth() > 0
                && window.getHeight() > 0
-               && !iconified;     
+               && !iconified;
     }
-    
+
     private void handleStagePulse() {
         // The stage pulse occurs before the scene pulse.
         // Here the page content is updated before CSS/Layout/Sync pass
@@ -989,7 +989,7 @@ final public class WebView extends Parent {
         if (page == null) return;
 
         boolean reallyVisible = isTreeReallyVisible();
-        
+
         if (reallyVisible) {
             if (page.isDirty()) {
                 Scene.impl_setAllowPGAccess(true);
