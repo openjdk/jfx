@@ -840,6 +840,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setLoadsImagesAutomatically(true);
     settings.setMinimumFontSize(0);
     settings.setMinimumLogicalFontSize(5);
+    // FIXME(arunprsad): Will be addressed in JDK-8148129.
+    settings.setAcceleratedCompositingEnabled(false);
     settings.setScriptEnabled(true);
     settings.setJavaScriptCanOpenWindowsAutomatically(true);
     settings.setPluginsEnabled(usePlugins);
