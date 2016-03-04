@@ -25,6 +25,7 @@
 
 package com.sun.webkit.dom;
 
+import com.sun.webkit.Invoker;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import netscape.javascript.JSException;
@@ -49,6 +50,7 @@ class JSObject extends netscape.javascript.JSObject {
 
     @Override
     public Object eval(String s) throws JSException {
+        Invoker.getInvoker().checkEventThread();
         return evalImpl(peer, peer_type, s);
     }
     private static native Object evalImpl(long peer, int peer_type,
@@ -56,6 +58,7 @@ class JSObject extends netscape.javascript.JSObject {
 
     @Override
     public Object getMember(String name) {
+        Invoker.getInvoker().checkEventThread();
         return getMemberImpl(peer, peer_type, name);
     }
     private static native Object getMemberImpl(long peer, int peer_type,
@@ -63,6 +66,7 @@ class JSObject extends netscape.javascript.JSObject {
 
     @Override
     public void setMember(String name, Object value) throws JSException {
+        Invoker.getInvoker().checkEventThread();
         setMemberImpl(peer, peer_type, name, value,
                       AccessController.getContext());
     }
@@ -72,6 +76,7 @@ class JSObject extends netscape.javascript.JSObject {
 
     @Override
     public void removeMember(String name) throws JSException {
+        Invoker.getInvoker().checkEventThread();
         removeMemberImpl(peer, peer_type, name);
     }
     private static native void removeMemberImpl(long peer, int peer_type,
@@ -79,6 +84,7 @@ class JSObject extends netscape.javascript.JSObject {
 
     @Override
     public Object getSlot(int index) throws JSException {
+        Invoker.getInvoker().checkEventThread();
         return getSlotImpl(peer, peer_type, index);
     }
     private static native Object getSlotImpl(long peer, int peer_type,
@@ -86,6 +92,7 @@ class JSObject extends netscape.javascript.JSObject {
 
     @Override
     public void setSlot(int index, Object value) throws JSException {
+        Invoker.getInvoker().checkEventThread();
         setSlotImpl(peer, peer_type, index, value,
                     AccessController.getContext());
     }
@@ -95,6 +102,7 @@ class JSObject extends netscape.javascript.JSObject {
 
     @Override
     public Object call(String methodName, Object... args) throws JSException {
+        Invoker.getInvoker().checkEventThread();
         return callImpl(peer, peer_type, methodName, args,
                         AccessController.getContext());
     }
@@ -104,6 +112,7 @@ class JSObject extends netscape.javascript.JSObject {
 
     @Override
     public String toString() {
+        Invoker.getInvoker().checkEventThread();
         return toStringImpl(peer, peer_type);
     }
     private static native String toStringImpl(long peer, int peer_type);

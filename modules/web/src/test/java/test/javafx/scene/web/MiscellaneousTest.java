@@ -127,6 +127,23 @@ public class MiscellaneousTest extends TestBase {
         });
     }
 
+    // JDK-8133775
+    @Test(expected = IllegalStateException.class) public void testDOMObjectThreadOwnership() {
+          class IllegalStateExceptionChecker {
+              public Object resultObject;
+              public void start() {
+                 WebEngine engine = new WebEngine();
+                 // Get DOM object from JavaFX Application Thread.
+                 resultObject = engine.executeScript("document.createElement('span')");
+              }
+           }
+           IllegalStateExceptionChecker obj = new IllegalStateExceptionChecker();
+           submit(obj::start);
+           // Try accessing the resultObject created in JavaFX Application Thread
+           // from someother thread. It should throw an exception.
+           obj.resultObject.toString();
+     }
+
     private WebEngine createWebEngine() {
         return submit(() -> new WebEngine());
     }

@@ -58,7 +58,7 @@ public final class PrismInvoker extends Invoker {
         return Toolkit.getToolkit().isFxUserThread();
     }
 
-    @Override protected void checkEventThread() {
+    @Override public void checkEventThread() {
         Toolkit.getToolkit().checkFxUserThread();
     }
 
