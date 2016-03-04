@@ -157,7 +157,8 @@ extern HMODULE _priv_gst_dll_handle;
 #include <link.h>
 #include <dlfcn.h>
 
-static const int AVCODEC_EXPLICIT_VERSIONS[] = { 53, 54, 55 };
+static const int AVCODEC_EXPLICIT_VERSIONS[] = { 53, 54, 55, 56 };
+static const int AVCODEC_FFMPEG_EXPLICIT_VERSIONS[] = { 56 };
 
 typedef unsigned (*avcodec_version_proto)();
 
@@ -1308,6 +1309,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
   gchar *filename_partial;
 #ifdef LINUX
   void *avcHandle = NULL;
+  gboolean isAVCFFMPEG = FALSE;
 #endif // LINUX
 #endif // GSTREAMER_LITE
 
@@ -1382,6 +1384,22 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
               g_free(libname);
           }
 
+          // Look for libavcodec-ffmpeg if libavcodec is not available
+          if (avcHandle == NULL)
+          {
+              vi = (sizeof(AVCODEC_FFMPEG_EXPLICIT_VERSIONS)/sizeof(AVCODEC_FFMPEG_EXPLICIT_VERSIONS[0]));
+              while(!avcHandle && --vi >= 0)
+              {
+                int version = AVCODEC_FFMPEG_EXPLICIT_VERSIONS[vi];
+                gchar* libname = g_strdup_printf("libavcodec-ffmpeg.so.%d", version);
+                avcHandle = dlopen(libname, RTLD_NOW);
+                g_free(libname);
+              }
+
+              if (avcHandle)
+                isAVCFFMPEG = TRUE;
+          }
+
           if (avcHandle)
           {
               dlclose(avcHandle);
@@ -1392,7 +1410,10 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
               if (g_stat (filename, &file_status) < 0) // Not available, create a versioned filename
               {
                   g_free(filename);
-                  filename = g_strdup_printf("%s-%d%s", filename_partial, AVCODEC_EXPLICIT_VERSIONS[vi], GST_EXTRA_MODULE_SUFFIX);
+                  if (isAVCFFMPEG)
+                    filename = g_strdup_printf("%s-ffmpeg-%d%s", filename_partial, AVCODEC_FFMPEG_EXPLICIT_VERSIONS[vi], GST_EXTRA_MODULE_SUFFIX);
+                  else
+                    filename = g_strdup_printf("%s-%d%s", filename_partial, AVCODEC_EXPLICIT_VERSIONS[vi], GST_EXTRA_MODULE_SUFFIX);
               }
           }
           else
