@@ -996,6 +996,17 @@ public class TableColumnHeader extends Region {
         return getHeight();
     }
 
+    // Used to test whether this column header properly represents the given column.
+    // In particular, whether it has child column headers for all child columns
+    boolean represents(TableColumnBase<?, ?> column) {
+        if (!column.getColumns().isEmpty()) {
+            // this column has children, but we are in a TableColumnHeader instance,
+            // so the match is bad.
+            return false;
+        }
+        return column == getTableColumn();
+    }
+
 
 
     /***************************************************************************

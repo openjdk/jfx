@@ -33,6 +33,7 @@ import java.lang.reflect.Modifier;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -40,6 +41,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import javafx.beans.NamedArg;
 import javafx.util.Builder;
 import sun.reflect.misc.ConstructorUtil;
@@ -117,10 +119,33 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
                     + " the constructor is not properly annotated.");
         }
 
-        constructors = constructorsMap.keySet();
+        constructors = new TreeSet<>(constructorComparator);
+        constructors.addAll(constructorsMap.keySet());
         propertiesMap = scanForSetters();
     }
 
+    //make sure int goes before float
+    private final Comparator<Constructor> constructorComparator
+            = (Constructor o1, Constructor o2) -> {
+                int len1 = o1.getParameterCount();
+                int len2 = o2.getParameterCount();
+                int lim = Math.min(len1, len2);
+                for (int i = 0; i < lim; i++) {
+                    Class c1 = o1.getParameterTypes()[i];
+                    Class c2 = o2.getParameterTypes()[i];
+                    if (c1.equals(c2)) {
+                        continue;
+                    }
+                    if (c1.equals(Integer.TYPE) && c2.equals(Double.TYPE)) {
+                        return -1;
+                    }
+                    if (c1.equals(Double.TYPE) && c2.equals(Integer.TYPE)) {
+                        return 1;
+                    }
+                    return c1.getCanonicalName().compareTo(c2.getCanonicalName());
+                }
+                return len1 - len2;
+            };
     private final Map<String, Object> userValues = new HashMap<>();
 
     @Override
@@ -264,7 +289,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
 
         // there may be more constructor with the same argument names
         // (this often happens in case of List<T> and T... etc.
-        Set<Constructor> chosenConstructors = new HashSet<>();
+        Set<Constructor> chosenConstructors = new TreeSet<>(constructorComparator);
         Set<String> argsNotSet = null;
         for (Constructor c : constructors) {
             Set<String> argumentNames = getArgumentNames(c);

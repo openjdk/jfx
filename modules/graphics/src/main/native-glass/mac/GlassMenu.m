@@ -60,7 +60,7 @@ static jfieldID  jDelegateMenuField = 0;
     self = [super init];
     if (self != nil)
     {
-        self->menu = [[NSMenu allocWithZone:[NSMenu menuZone]] initWithTitle:@"Menubar"];
+        self->menu = [[NSMenu allocWithZone:NSDefaultMallocZone()] initWithTitle:@"Menubar"];
     }
     return self;
 }
@@ -82,17 +82,17 @@ static jfieldID  jDelegateMenuField = 0;
     {
         GET_MAIN_JENV;
         self->jDelegate = (*env)->NewGlobalRef(env, jdelegate);
-        NSString* title = [GlassHelper nsStringWithJavaString:jtitle withEnv:env];
+        NSString *title = [GlassHelper nsStringWithJavaString:jtitle withEnv:env];
         LOG("initWithJavajdelegate: jdelegate %p jtitle %s",
             jdelegate, [title UTF8String]);
 
-        self->item = [[NSMenuItem allocWithZone:[NSMenu menuZone]] initWithTitle:title
-                                                                          action:NULL
-                                                                   keyEquivalent:@""];
+        self->item = [[NSMenuItem alloc] initWithTitle:title
+                                                action:NULL
+                                         keyEquivalent:@""];
         [self->item setEnabled:(BOOL)jenabled];
         [self->item setTarget:self];
 
-        self->menu = [[NSMenu allocWithZone:[NSMenu menuZone]] initWithTitle:[self->item title]];
+        self->menu = [[NSMenu alloc] initWithTitle:[self->item title]];
         [self->menu setDelegate: self];
     }
     return self;
@@ -117,9 +117,9 @@ static jfieldID  jDelegateMenuField = 0;
         LOG("initWithJavajdelegate: jdelegate %p jcallback %p jtitle %s",
             jdelegate, jcallback, [title UTF8String]);
 
-        self->item = [[NSMenuItem allocWithZone:[NSMenu menuZone]] initWithTitle:title
-                                                                          action:@selector(action:)
-                                                                   keyEquivalent:shortcut];
+        self->item = [[NSMenuItem alloc] initWithTitle:title
+                                                action:@selector(action:)
+                                         keyEquivalent:shortcut];
         if (jshortcut != '\0')
         {
             [self _setShortcut:jshortcut modifiers:jmodifiers];
@@ -292,7 +292,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMen
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        GlassMenubar *menubar = [[GlassMenubar allocWithZone:[NSMenu menuZone]] init];
+        GlassMenubar *menubar = [[GlassMenubar alloc] init];
         value = ptr_to_jlong(menubar);
     }
     GLASS_POOL_EXIT;
@@ -522,7 +522,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setTitle
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        [menu->item setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
+        NSInteger index = [[NSApp mainMenu] indexOfItem: menu->item];
+        NSString *title = [GlassHelper nsStringWithJavaString:jTitle withEnv:env];
+        if (index != -1) {
+            [[[[NSApp mainMenu] itemAtIndex:index] submenu] setTitle: title];
+        } else {
+            [menu->item setTitle:title];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

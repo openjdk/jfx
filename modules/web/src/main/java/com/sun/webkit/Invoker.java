@@ -79,7 +79,7 @@ public abstract class Invoker {
      * @throws IllegalStateException if the current thread is not the event
      *         thread
      */
-    protected void checkEventThread() {
+    public void checkEventThread() {
         if (!isEventThread()) {
             throw new IllegalStateException("Current thread is not event thread"
                     + ", current thread: " + Thread.currentThread().getName());

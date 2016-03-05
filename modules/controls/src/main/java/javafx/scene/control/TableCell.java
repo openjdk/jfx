@@ -468,6 +468,9 @@ public class TableCell<S,T> extends IndexedCell<T> {
         updateItem(oldIndex);
         updateSelection();
         updateFocus();
+
+        // Fix for JDK-8150525
+        updateEditing();
     }
 
     private boolean isLastVisibleColumn = false;

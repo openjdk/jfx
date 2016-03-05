@@ -453,7 +453,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
                 boolean found = false;
                 for (int j = 0; j < oldHeaders.size(); j++) {
                     TableColumnHeader oldColumn = oldHeaders.get(j);
-                    if (column == oldColumn.getTableColumn()) {
+                    if (oldColumn.represents(column)) {
                         newHeaders.add(oldColumn);
                         found = true;
                         break;
@@ -482,6 +482,36 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         for (TableColumnHeader header : getColumnHeaders()) {
             header.applyCss();
         }
+    }
+
+    // Used to test whether this column header properly represents the given column.
+    // In particular, whether it has child column headers for all child columns
+    boolean represents(TableColumnBase<?, ?> column) {
+        if (column.getColumns().isEmpty()) {
+            // this column has no children, but we are in a NestedTableColumnHeader instance,
+            // so the match is bad.
+            return false;
+        }
+
+        if (column != getTableColumn()) {
+            return false;
+        }
+
+        final int columnCount = column.getColumns().size();
+        final int headerCount = getColumnHeaders().size();
+        if (columnCount != headerCount) {
+            return false;
+        }
+
+        for (int i = 0; i < columnCount; i++) {
+            // we expect the order of all children to match the order of the headers
+            TableColumnBase<?,?> childColumn = column.getColumns().get(i);
+            TableColumnHeader childHeader = getColumnHeaders().get(i);
+            if (!childHeader.represents(childColumn)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** {@inheritDoc} */

@@ -136,6 +136,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
             }
         };
         contentContainer.setClip(clipRect);
+        updateClip();
 
         if (control.isExpanded()) {
             setTransition(1.0f);
@@ -164,8 +165,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
             hpos = pos.getHpos();
             vpos = pos.getVpos();
         });
-        registerChangeListener(control.widthProperty(), e -> clipRect.setWidth(getSkinnable().getWidth()));
-        registerChangeListener(control.heightProperty(), e -> clipRect.setHeight(contentContainer.getHeight()));
+        registerChangeListener(control.widthProperty(), e -> updateClip());
+        registerChangeListener(control.heightProperty(), e -> updateClip());
         registerChangeListener(titleRegion.alignmentProperty(), e -> {
             pos = titleRegion.getAlignment();
             hpos = pos.getHpos();
@@ -236,6 +237,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
         titleRegion.resize(w, headerHeight);
         positionInArea(titleRegion, x, y,
                 w, headerHeight, 0, HPos.LEFT, VPos.CENTER);
+        titleRegion.requestLayout();
 
         // content
         double contentHeight = (h - headerHeight) * getTransition();
@@ -293,6 +295,11 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
      * Private implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    private void updateClip() {
+        clipRect.setWidth(getSkinnable().getWidth());
+        clipRect.setHeight(contentContainer.getHeight());
+    }
 
     private void setExpanded(boolean expanded) {
         if (! getSkinnable().isCollapsible()) {
