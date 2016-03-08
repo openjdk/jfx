@@ -28,24 +28,19 @@ package javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import java.util.Map;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.Control;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTableCell;
-import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTableRow;
-import javafx.scene.control.TreeTableView;
+import javafx.scene.control.*;
 
 /**
  * Default skin implementation for the {@link TreeTableCell} control.
  *
+ * @param <S> The type of the UI control (e.g. the type of the 'row'), this is wrapped in a TreeItem.
+ * @param <T> The type of the content in the cell, based on its {@link TreeTableColumn}.
  * @see TreeTableCell
  * @since 9
  */
-public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>> {
+public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, TreeTableCell<S,T>> {
 
     /***************************************************************************
      *                                                                         *
@@ -104,13 +99,8 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override BooleanProperty columnVisibleProperty() {
-        return getSkinnable().getTableColumn().visibleProperty();
-    }
-
-    /** {@inheritDoc} */
-    @Override ReadOnlyDoubleProperty columnWidthProperty() {
-        return getSkinnable().getTableColumn().widthProperty();
+    @Override public ReadOnlyObjectProperty<TreeTableColumn<S,T>> tableColumnProperty() {
+        return getSkinnable().tableColumnProperty();
     }
 
     /** {@inheritDoc} */
@@ -154,23 +144,13 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
         leftPadding += nodeLevel * indentPerLevel;
 
         // add in the width of the disclosure node, if one exists
-        Map<Control, Double> mdwp = TableRowSkinBase.maxDisclosureWidthMap;
-        leftPadding += mdwp.containsKey(treeTable) ? mdwp.get(treeTable) : 0;
+        Map<TableColumnBase<?,?>, Double> mdwp = TableRowSkinBase.maxDisclosureWidthMap;
+        leftPadding += mdwp.containsKey(treeColumn) ? mdwp.get(treeColumn) : 0;
 
         // adding in the width of the graphic on the tree item
         Node graphic = treeItem.getGraphic();
         leftPadding += graphic == null ? 0 : graphic.prefWidth(height);
 
         return leftPadding;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (isDeferToParentForPrefWidth) {
-            // RT-27167: we must take into account the disclosure node and the
-            // indentation (which is not taken into account by the LabeledSkinBase.
-            return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
-        }
-        return columnWidthProperty().get();
     }
 }

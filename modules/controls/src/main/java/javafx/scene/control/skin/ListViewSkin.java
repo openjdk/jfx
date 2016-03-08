@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.collections.FXCollections;
@@ -43,7 +42,6 @@ import javafx.geometry.Orientation;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
@@ -159,7 +157,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
             // fix for RT-37853
             getSkinnable().edit(-1);
 
-            rowCountDirty = true;
+            markItemCountDirty();
             getSkinnable().requestLayout();
         }
     };
@@ -230,7 +228,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 
-        updateRowCount();
+        updateItemCount();
 
         control.itemsProperty().addListener(new WeakInvalidationListener(itemsChangeListener));
 
@@ -319,12 +317,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     }
 
     /** {@inheritDoc} */
-    @Override int getItemCount() {
+    @Override protected int getItemCount() {
         return itemCount;
     }
 
     /** {@inheritDoc} */
-    @Override void updateRowCount() {
+    @Override protected void updateItemCount() {
         if (flow == null) return;
 
         int oldCount = itemCount;
@@ -452,7 +450,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
             listViewItems.addListener(weakListViewItemsListener);
         }
 
-        rowCountDirty = true;
+        markItemCountDirty();
         getSkinnable().requestLayout();
     }
 

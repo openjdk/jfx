@@ -25,7 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 
@@ -46,8 +45,6 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.ListCell;
@@ -507,7 +504,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 if (getSkin() instanceof ListViewSkin) {
                     ListViewSkin<?> skin = (ListViewSkin<?>)getSkin();
                     if (itemCountDirty) {
-                        skin.updateRowCount();
+                        skin.updateItemCount();
                         itemCountDirty = false;
                     }
 

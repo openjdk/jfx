@@ -224,7 +224,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
     }
 
     /** {@inheritDoc} */
-    @Override int getItemCount() {
+    @Override protected int getItemCount() {
         TableView<T> tableView = getSkinnable();
         return tableView.getItems() == null ? 0 : tableView.getItems().size();
     }

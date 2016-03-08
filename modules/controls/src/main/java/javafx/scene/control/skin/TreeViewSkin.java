@@ -26,7 +26,6 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -115,7 +114,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
             // no event being fired to the skin to be informed that the items
             // had changed. So, here we just watch for the case where the number
             // of items being added is equal to the number of items being removed.
-            rowCountDirty = true;
+            markItemCountDirty();
             getSkinnable().requestLayout();
         } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
             // Fix for RT-14971 and RT-15338.
@@ -127,7 +126,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
             EventType<?> eventType = e.getEventType();
             while (eventType != null) {
                 if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
-                    rowCountDirty = true;
+                    markItemCountDirty();
                     getSkinnable().requestLayout();
                     break;
                 }
@@ -215,12 +214,12 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
                 getRoot().setExpanded(true);
             }
             // update the item count in the flow and behavior instances
-            updateRowCount();
+            updateItemCount();
         });
         registerChangeListener(control.cellFactoryProperty(), e -> flow.recreateCells());
         registerChangeListener(control.fixedCellSizeProperty(), e -> flow.setFixedCellSize(getSkinnable().getFixedCellSize()));
 
-        updateRowCount();
+        updateItemCount();
     }
 
 
@@ -397,16 +396,16 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
             getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
 
-        updateRowCount();
+        updateItemCount();
     }
 
     /** {@inheritDoc} */
-    @Override int getItemCount() {
+    @Override protected int getItemCount() {
         return getSkinnable().getExpandedItemCount();
     }
 
     /** {@inheritDoc} */
-    @Override void updateRowCount() {
+    @Override protected void updateItemCount() {
 //        int oldCount = flow.getCellCount();
         int newCount = getItemCount();
 

@@ -26,24 +26,23 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.scene.Node;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
-import javafx.scene.control.Control;
-import javafx.scene.control.TableCell;
+import javafx.scene.control.*;
 
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.scene.control.TableColumn;
 
 /**
  * Default skin implementation for the {@link TableCell} control.
  *
+ * @param <S> The type of the UI control (e.g. the type of the 'row').
+ * @param <T> The type of the content in the cell, based on its {@link TableColumn}.
  * @see TableCell
  * @since 9
  */
-public class TableCellSkin<S,T> extends TableCellSkinBase<TableCell<S,T>> {
+public class TableCellSkin<S,T> extends TableCellSkinBase<S, T, TableCell<S,T>> {
 
     /***************************************************************************
      *                                                                         *
@@ -94,12 +93,7 @@ public class TableCellSkin<S,T> extends TableCellSkinBase<TableCell<S,T>> {
     }
 
     /** {@inheritDoc} */
-    @Override BooleanProperty columnVisibleProperty() {
-        return getSkinnable().getTableColumn().visibleProperty();
-    }
-
-    /** {@inheritDoc} */
-    @Override ReadOnlyDoubleProperty columnWidthProperty() {
-        return getSkinnable().getTableColumn().widthProperty();
+    @Override public ReadOnlyObjectProperty<TableColumn<S,T>> tableColumnProperty() {
+        return getSkinnable().tableColumnProperty();
     }
 }

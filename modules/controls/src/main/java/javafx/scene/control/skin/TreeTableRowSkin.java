@@ -121,6 +121,22 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             isDirty = true;
             getSkinnable().requestLayout();
         });
+
+        DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
+        if (fixedCellSizeProperty != null) {
+            registerChangeListener(fixedCellSizeProperty, e -> {
+                fixedCellSize = fixedCellSizeProperty.get();
+                fixedCellSizeEnabled = fixedCellSize > 0;
+            });
+            fixedCellSize = fixedCellSizeProperty.get();
+            fixedCellSizeEnabled = fixedCellSize > 0;
+
+            // JDK-8144500:
+            // When in fixed cell size mode, we must listen to the width of the virtual flow, so
+            // that when it changes, we can appropriately add / remove cells that may or may not
+            // be required (because we remove all cells that are not visible).
+            registerChangeListener(getVirtualFlow().widthProperty(), e -> control.requestLayout());
+        }
     }
 
 
@@ -228,7 +244,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override TreeTableCell<T, ?> getCell(TableColumnBase tcb) {
+    @Override protected TreeTableCell<T, ?> createCell(TableColumnBase tcb) {
         TreeTableColumn tableColumn = (TreeTableColumn<T,?>) tcb;
         TreeTableCell cell = (TreeTableCell) tableColumn.getCellFactory().call(tableColumn);
 
@@ -255,12 +271,12 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     /** {@inheritDoc} */
     @Override TableColumnBase getTreeColumn() {
-        return getSkinnable().getTreeTableView().getTreeColumn();
+        return getTreeTableView().getTreeColumn();
     }
 
     /** {@inheritDoc} */
     @Override int getIndentationLevel(TreeTableRow<T> control) {
-        return control.getTreeTableView().getTreeItemLevel(control.getTreeItem());
+        return getTreeTableView().getTreeItemLevel(control.getTreeItem());
     }
 
     /** {@inheritDoc} */
@@ -278,46 +294,31 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     @Override boolean isShowRoot() {
-        return getSkinnable().getTreeTableView().isShowRoot();
+        return getTreeTableView().isShowRoot();
     }
 
     /** {@inheritDoc} */
-    @Override ObservableList<TreeTableColumn<T, ?>> getVisibleLeafColumns() {
-        return getSkinnable().getTreeTableView().getVisibleLeafColumns();
+    @Override protected ObservableList<TreeTableColumn<T, ?>> getVisibleLeafColumns() {
+        return getTreeTableView().getVisibleLeafColumns();
     }
 
     /** {@inheritDoc} */
-    @Override void updateCell(TreeTableCell<T, ?> cell, TreeTableRow<T> row) {
+    @Override protected void updateCell(TreeTableCell<T, ?> cell, TreeTableRow<T> row) {
         cell.updateTreeTableRow(row);
     }
 
     /** {@inheritDoc} */
-    @Override boolean isColumnPartiallyOrFullyVisible(TableColumnBase tc) {
-        return treeTableViewSkin == null ? false : treeTableViewSkin.isColumnPartiallyOrFullyVisible(tc);
-    }
-
-    /** {@inheritDoc} */
-    @Override TreeTableColumn<T, ?> getTableColumnBase(TreeTableCell cell) {
+    @Override protected TreeTableColumn<T, ?> getTableColumn(TreeTableCell cell) {
         return cell.getTableColumn();
     }
 
     /** {@inheritDoc} */
-    @Override ObjectProperty<Node> graphicProperty() {
+    @Override protected ObjectProperty<Node> graphicProperty() {
         TreeTableRow<T> treeTableRow = getSkinnable();
         if (treeTableRow == null) return null;
         if (treeItem == null) return null;
 
         return treeItem.graphicProperty();
-    }
-
-    /** {@inheritDoc} */
-    @Override Control getVirtualFlowOwner() {
-        return getSkinnable().getTreeTableView();
-    }
-
-    /** {@inheritDoc} */
-    @Override DoubleProperty fixedCellSizeProperty() {
-        return getSkinnable().getTreeTableView().fixedCellSizeProperty();
     }
 
     private void updateTreeItem() {
@@ -328,6 +329,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         if (treeItem != null) {
             treeItem.graphicProperty().addListener(graphicListener);
         }
+    }
+
+    private TreeTableView<T> getTreeTableView() {
+        return getSkinnable().getTreeTableView();
     }
 
     private void updateDisclosureNodeAndGraphic() {
