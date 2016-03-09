@@ -29,6 +29,7 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -172,15 +173,21 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the items property on the ListView. Whenever the entire list is changed,
      * we have to unhook the weakItemsListener and update the item.
      */
-    private final ChangeListener<ObservableList<T>> itemsPropertyListener = new ChangeListener<ObservableList<T>>() {
-        @Override public void changed(ObservableValue<? extends ObservableList<T>> observable,
-                                      ObservableList<T> oldValue,
-                                      ObservableList<T> newValue) {
-            if (oldValue != null) {
-                oldValue.removeListener(weakItemsListener);
+    private final InvalidationListener itemsPropertyListener = new InvalidationListener() {
+        private WeakReference<ObservableList<T>> weakItemsRef = new WeakReference<>(null);
+
+        @Override public void invalidated(Observable observable) {
+            ObservableList<T> oldItems = weakItemsRef.get();
+            if (oldItems != null) {
+                oldItems.removeListener(weakItemsListener);
             }
-            if (newValue != null) {
-                newValue.addListener(weakItemsListener);
+
+            ListView<T> listView = getListView();
+            ObservableList<T> items = listView == null ? null : listView.getItems();
+            weakItemsRef = new WeakReference<>(items);
+
+            if (items != null) {
+                items.addListener(weakItemsListener);
             }
             updateItem(-1);
         }
@@ -217,7 +224,7 @@ public class ListCell<T> extends IndexedCell<T> {
     private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
     private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelPropertyListener);
     private final WeakListChangeListener<T> weakItemsListener = new WeakListChangeListener<T>(itemsListener);
-    private final WeakChangeListener<ObservableList<T>> weakItemsPropertyListener = new WeakChangeListener<ObservableList<T>>(itemsPropertyListener);
+    private final WeakInvalidationListener weakItemsPropertyListener = new WeakInvalidationListener(itemsPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<T>>(focusModelPropertyListener);
 
