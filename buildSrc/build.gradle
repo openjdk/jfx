@@ -95,7 +95,6 @@ dependencies {
 // Java 7 but when we switch to 8 this will be needed, and probably again when
 // we start building with Java 9.
 test {
-    jvmArgs("-Djava.ext.dirs=");
     enableAssertions = true;
     testLogging.exceptionFormat = "full";
     scanForTestClasses = false;

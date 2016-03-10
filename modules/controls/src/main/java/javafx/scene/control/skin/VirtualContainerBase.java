@@ -25,19 +25,17 @@
 
 package javafx.scene.control.skin;
 
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.scene.control.Cell;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollToEvent;
 import javafx.scene.control.SkinBase;
-import javafx.util.Callback;
 
 /**
  * Parent class to control skins whose contents are virtualized and scrollable.
  * This class handles the interaction with the VirtualFlow class, which is the
  * main class handling the virtualization of the contents of this container.
+ *
+ * @since 9
  */
 public abstract class VirtualContainerBase<C extends Control, I extends IndexedCell> extends SkinBase<C> {
 
@@ -47,7 +45,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      *                                                                         *
      **************************************************************************/
 
-    boolean rowCountDirty;
+    private boolean itemCountDirty;
 
     /**
      * The virtualized container which handles the layout and scrolling of
@@ -74,10 +72,10 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
         control.addEventHandler(ScrollToEvent.scrollToTopIndex(), event -> {
             // Fix for RT-24630: The row count in VirtualFlow was incorrect
             // (normally zero), so the scrollTo call was misbehaving.
-            if (rowCountDirty) {
+            if (itemCountDirty) {
                 // update row count before we do a scroll
-                updateRowCount();
-                rowCountDirty = false;
+                updateItemCount();
+                itemCountDirty = false;
             }
             flow.scrollToTop(event.getScrollTarget());
         });
@@ -95,9 +93,14 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      * Returns the total number of items in this container, including those
      * that are currently hidden because they are out of view.
      */
-    abstract int getItemCount();
+    protected abstract int getItemCount();
 
-    abstract void updateRowCount();
+    /**
+     * This method is called when it is possible that the item count has changed (i.e. scrolling has occurred,
+     * the control has resized, etc). This method should recalculate the item count and store that for future
+     * use by the {@link #getItemCount} method.
+     */
+    protected abstract void updateItemCount();
 
 
 
@@ -106,6 +109,13 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * Call this method to indicate that the item count should be updated on the next pulse.
+     */
+    protected final void markItemCountDirty() {
+        itemCountDirty = true;
+    }
 
     /** {@inheritDoc} */
     @Override protected void layoutChildren(double x, double y, double w, double h) {
@@ -147,9 +157,9 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
     }
 
     void checkState() {
-        if (rowCountDirty) {
-            updateRowCount();
-            rowCountDirty = false;
+        if (itemCountDirty) {
+            updateItemCount();
+            itemCountDirty = false;
         }
     }
 }

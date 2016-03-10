@@ -101,6 +101,22 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 }
             }
         });
+
+        DoubleProperty fixedCellSizeProperty = getTableView().fixedCellSizeProperty();
+        if (fixedCellSizeProperty != null) {
+            registerChangeListener(fixedCellSizeProperty, e -> {
+                fixedCellSize = fixedCellSizeProperty.get();
+                fixedCellSizeEnabled = fixedCellSize > 0;
+            });
+            fixedCellSize = fixedCellSizeProperty.get();
+            fixedCellSizeEnabled = fixedCellSize > 0;
+
+            // JDK-8144500:
+            // When in fixed cell size mode, we must listen to the width of the virtual flow, so
+            // that when it changes, we can appropriately add / remove cells that may or may not
+            // be required (because we remove all cells that are not visible).
+            registerChangeListener(getVirtualFlow().widthProperty(), e -> control.requestLayout());
+        }
     }
 
 
@@ -128,12 +144,12 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 // (selectedCells could be big, cellsMap is much smaller)
                 List<Node> selection = new ArrayList<>();
                 int index = getSkinnable().getIndex();
-                for (TablePosition<T,?> pos : getVirtualFlowOwner().getSelectionModel().getSelectedCells()) {
+                for (TablePosition<T,?> pos : getTableView().getSelectionModel().getSelectedCells()) {
                     if (pos.getRow() == index) {
                         TableColumn<T,?> column = pos.getTableColumn();
                         if (column == null) {
                             /* This is the row-based case */
-                            column = getVirtualFlowOwner().getVisibleLeafColumn(0);
+                            column = getTableView().getVisibleLeafColumn(0);
                         }
                         TableCell<T,?> cell = cellsMap.get(column).get();
                         if (cell != null) selection.add(cell);
@@ -143,19 +159,19 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
             }
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
-                TableColumn<T,?> column = getVirtualFlowOwner().getVisibleLeafColumn(colIndex);
+                TableColumn<T,?> column = getTableView().getVisibleLeafColumn(colIndex);
                 if (cellsMap.containsKey(column)) {
                     return cellsMap.get(column).get();
                 }
                 return null;
             }
             case FOCUS_ITEM: {
-                TableViewFocusModel<T> fm = getVirtualFlowOwner().getFocusModel();
+                TableViewFocusModel<T> fm = getTableView().getFocusModel();
                 TablePosition<T,?> focusedCell = fm.getFocusedCell();
                 TableColumn<T,?> column = focusedCell.getTableColumn();
                 if (column == null) {
                     /* This is the row-based case */
-                    column = getVirtualFlowOwner().getVisibleLeafColumn(0);
+                    column = getTableView().getVisibleLeafColumn(0);
                 }
                 if (cellsMap.containsKey(column)) {
                     return cellsMap.get(column).get();
@@ -175,7 +191,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override TableCell<T, ?> getCell(TableColumnBase tcb) {
+    @Override protected TableCell<T, ?> createCell(TableColumnBase tcb) {
         TableColumn tableColumn = (TableColumn<T,?>) tcb;
         TableCell cell = (TableCell) tableColumn.getCellFactory().call(tableColumn);
 
@@ -188,37 +204,21 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
     }
 
     /** {@inheritDoc} */
-    @Override ObservableList<TableColumn<T, ?>> getVisibleLeafColumns() {
-        return getVirtualFlowOwner().getVisibleLeafColumns();
+    @Override protected ObservableList<TableColumn<T, ?>> getVisibleLeafColumns() {
+        return getTableView().getVisibleLeafColumns();
     }
 
     /** {@inheritDoc} */
-    @Override void updateCell(TableCell<T, ?> cell, TableRow<T> row) {
+    @Override protected void updateCell(TableCell<T, ?> cell, TableRow<T> row) {
         cell.updateTableRow(row);
     }
 
     /** {@inheritDoc} */
-    @Override DoubleProperty fixedCellSizeProperty() {
-        return getVirtualFlowOwner().fixedCellSizeProperty();
-    }
-
-    /** {@inheritDoc} */
-    @Override boolean isColumnPartiallyOrFullyVisible(TableColumnBase tc) {
-        return tableViewSkin == null ? false : tableViewSkin.isColumnPartiallyOrFullyVisible((TableColumn)tc);
-    }
-
-    /** {@inheritDoc} */
-    @Override TableColumn<T, ?> getTableColumnBase(TableCell<T, ?> cell) {
+    @Override protected TableColumn<T, ?> getTableColumn(TableCell<T, ?> cell) {
         return cell.getTableColumn();
     }
 
-    /** {@inheritDoc} */
-    @Override ObjectProperty<Node> graphicProperty() {
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override TableView<T> getVirtualFlowOwner() {
+    private TableView<T> getTableView() {
         return getSkinnable().getTableView();
     }
 

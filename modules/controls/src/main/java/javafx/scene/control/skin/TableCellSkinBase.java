@@ -30,21 +30,25 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.shape.Rectangle;
 
 /**
  * Base skin for table cell controls, for example:
  * {@link javafx.scene.control.TableCell} and {@link javafx.scene.control.TreeTableCell}.
  *
+ * @param <S> The type of the UI control (e.g. the type of the 'row').
+ * @param <T> The type of the content in the cell, based on its {@link TableColumnBase}.
  * @see javafx.scene.control.TableCell
  * @see javafx.scene.control.TreeTableCell
  * @since 9
  */
-public abstract class TableCellSkinBase<C extends IndexedCell> extends CellSkinBase<C> {
+public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends CellSkinBase<C> {
 
     /***************************************************************************
      *                                                                         *
@@ -79,12 +83,10 @@ public abstract class TableCellSkinBase<C extends IndexedCell> extends CellSkinB
         getSkinnable().setClip(clip);
         // --- end of RT-22038
 
-        ReadOnlyDoubleProperty columnWidthProperty = columnWidthProperty();
-        if (columnWidthProperty != null) {
-            columnWidthProperty.addListener(weakColumnWidthListener);
+        TableColumnBase<?,?> tableColumn = getTableColumn();
+        if (tableColumn != null) {
+            tableColumn.widthProperty().addListener(weakColumnWidthListener);
         }
-
-        registerChangeListener(control.visibleProperty(), e -> getSkinnable().setVisible(columnVisibleProperty().get()));
 
         if (control.getProperties().containsKey(Properties.DEFER_TO_PARENT_PREF_WIDTH)) {
             isDeferToParentForPrefWidth = true;
@@ -112,11 +114,13 @@ public abstract class TableCellSkinBase<C extends IndexedCell> extends CellSkinB
      *                                                                         *
      **************************************************************************/
 
-    // Equivalent to tableColumn.widthProperty()
-    abstract ReadOnlyDoubleProperty columnWidthProperty();
-
-    // Equivalent to tableColumn.visibleProperty()
-    abstract BooleanProperty columnVisibleProperty();
+    /**
+     * The TableColumnBase instance that is responsible for this Cell.
+     */
+    public abstract ReadOnlyObjectProperty<? extends TableColumnBase<S,T>> tableColumnProperty();
+    public final TableColumnBase<S,T> getTableColumn() {
+        return tableColumnProperty().get();
+    }
 
 
 
@@ -128,9 +132,9 @@ public abstract class TableCellSkinBase<C extends IndexedCell> extends CellSkinB
 
     /** {@inheritDoc} */
     @Override public void dispose() {
-        ReadOnlyDoubleProperty columnWidthProperty = columnWidthProperty();
-        if (columnWidthProperty != null) {
-            columnWidthProperty.removeListener(weakColumnWidthListener);
+        TableColumnBase<?,T> tableColumn = getTableColumn();
+        if (tableColumn != null) {
+            tableColumn.widthProperty().removeListener(weakColumnWidthListener);
         }
 
         super.dispose();
@@ -150,6 +154,8 @@ public abstract class TableCellSkinBase<C extends IndexedCell> extends CellSkinB
         if (isDeferToParentForPrefWidth) {
             return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
         }
-        return columnWidthProperty().get();
+
+        TableColumnBase<?,?> tableColumn = getTableColumn();
+        return tableColumn == null ? 0 : tableColumn.getWidth();
     }
 }

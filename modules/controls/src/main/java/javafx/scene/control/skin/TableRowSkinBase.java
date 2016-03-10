@@ -31,6 +31,7 @@ import java.lang.ref.WeakReference;
 import java.util.*;
 
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -39,6 +40,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableObjectProperty;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -88,14 +90,14 @@ public abstract class TableRowSkinBase<T,
     /*
      * This is rather hacky - but it is a quick workaround to resolve the
      * issue that we don't know maximum width of a disclosure node for a given
-     * TreeView. If we don't know the maximum width, we have no way to ensure
-     * consistent indentation for a given TreeView.
+     * control. If we don't know the maximum width, we have no way to ensure
+     * consistent indentation.
      *
      * To work around this, we create a single WeakHashMap to store a max
-     * disclosureNode width per TreeView. We use WeakHashMap to help prevent
+     * disclosureNode width per TableColumnBase. We use WeakHashMap to help prevent
      * any memory leaks.
      */
-    static final Map<Control, Double> maxDisclosureWidthMap = new WeakHashMap<Control, Double>();
+    static final Map<TableColumnBase<?,?>, Double> maxDisclosureWidthMap = new WeakHashMap<>();
 
     // Specifies the number of times we will call 'recreateCells()' before we blow
     // out the cellsMap structure and rebuild all cells. This helps to prevent
@@ -132,8 +134,8 @@ public abstract class TableRowSkinBase<T,
     boolean isDirty = false;
     boolean updateCells = false;
 
-    private double fixedCellSize;
-    private boolean fixedCellSizeEnabled;
+    double fixedCellSize;
+    boolean fixedCellSizeEnabled;
 
 
 
@@ -177,21 +179,6 @@ public abstract class TableRowSkinBase<T,
                 requestCellUpdate();
             }
         });
-
-        if (fixedCellSizeProperty() != null) {
-            registerChangeListener(fixedCellSizeProperty(), e -> {
-                fixedCellSize = fixedCellSizeProperty().get();
-                fixedCellSizeEnabled = fixedCellSize > 0;
-            });
-            fixedCellSize = fixedCellSizeProperty().get();
-            fixedCellSizeEnabled = fixedCellSize > 0;
-
-            // JDK-8144500:
-            // When in fixed cell size mode, we must listen to the width of the virtual flow, so
-            // that when it changes, we can appropriately add / remove cells that may or may not
-            // be required (because we remove all cells that are not visible).
-            registerChangeListener(getVirtualFlow().widthProperty(), e -> control.requestLayout());
-        }
     }
 
 
@@ -208,7 +195,7 @@ public abstract class TableRowSkinBase<T,
     };
 
     private WeakListChangeListener<TableColumnBase> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<TableColumnBase>(visibleLeafColumnsListener);
+            new WeakListChangeListener<>(visibleLeafColumnsListener);
 
 
 
@@ -219,28 +206,29 @@ public abstract class TableRowSkinBase<T,
      **************************************************************************/
 
     /**
-     * Returns the graphic to draw on the inside of the disclosure node. Null
-     * is acceptable when no graphic should be shown. Commonly this is the
-     * graphic associated with a TreeItem (i.e. treeItem.getGraphic()), rather
-     * than a graphic associated with a cell.
+     * Creates a new cell instance that is suitable for representing the given table column instance.
      */
-    abstract ObjectProperty<Node> graphicProperty();
+    protected abstract R createCell(TableColumnBase<T,?> tc);
 
-    // return TableView / TreeTableView / etc
-    abstract Control getVirtualFlowOwner();
+    /**
+     * A method to allow the given cell to be told that it is a member of the given row.
+     * How this is implemented is dependent on the actual cell implementation.
+     * @param cell The cell for which we want to inform it of its owner row.
+     * @param row The row which will be set on the given cell.
+     */
+    protected abstract void updateCell(R cell, C row);
 
-    abstract ObservableList<? extends TableColumnBase/*<T,?>*/> getVisibleLeafColumns();
+    /**
+     * Returns the {@link TableColumnBase} instance for the given cell instance.
+     * @param cell The cell for which a TableColumn is desired.
+     */
+    protected abstract TableColumnBase<T,?> getTableColumn(R cell);
 
-    // cell.updateTableRow(skinnable); (i.e cell.updateTableRow(row))
-    abstract void updateCell(R cell, C row);
-
-    abstract DoubleProperty fixedCellSizeProperty();
-
-    abstract boolean isColumnPartiallyOrFullyVisible(TableColumnBase tc);
-
-    abstract R getCell(TableColumnBase tc);
-
-    abstract TableColumnBase<T,?> getTableColumnBase(R cell);
+    /**
+     * Returns an unmodifiable list containing the currently visible leaf columns.
+     */
+    @ReturnsUnmodifiableCollection
+    protected abstract ObservableList<? extends TableColumnBase/*<T,?>*/> getVisibleLeafColumns();
 
 
 
@@ -249,6 +237,16 @@ public abstract class TableRowSkinBase<T,
      * Public Methods                                                          *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * Returns the graphic to draw on the inside of the disclosure node. Null
+     * is acceptable when no graphic should be shown. Commonly this is the
+     * graphic associated with a TreeItem (i.e. treeItem.getGraphic()), rather
+     * than a graphic associated with a cell.
+     */
+    protected ObjectProperty<Node> graphicProperty() {
+        return null;
+    }
 
     /** {@inheritDoc} */
     @Override protected void layoutChildren(double x, final double y, final double w, final double h) {
@@ -287,9 +285,8 @@ public abstract class TableRowSkinBase<T,
             leftMargin = indentationLevel * indentationPerLevel;
 
             // position the disclosure node so that it is at the proper indent
-            Control c = getVirtualFlowOwner();
-            final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(c) ?
-                maxDisclosureWidthMap.get(c) : 0;
+            final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(treeColumn) ?
+                maxDisclosureWidthMap.get(treeColumn) : 0;
             disclosureWidth = defaultDisclosureWidth;
 
             disclosureNode = getDisclosureNode();
@@ -299,7 +296,7 @@ public abstract class TableRowSkinBase<T,
                 if (disclosureVisible) {
                     disclosureWidth = disclosureNode.prefWidth(h);
                     if (disclosureWidth > defaultDisclosureWidth) {
-                        maxDisclosureWidthMap.put(c, disclosureWidth);
+                        maxDisclosureWidthMap.put(treeColumn, disclosureWidth);
 
                         // RT-36359: The recorded max width of the disclosure node
                         // has increased. We need to go back and request all
@@ -341,7 +338,7 @@ public abstract class TableRowSkinBase<T,
 
         for (int column = 0, max = cells.size(); column < max; column++) {
             R tableCell = cells.get(column);
-            TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
+            TableColumnBase<T, ?> tableColumn = getTableColumn(tableCell);
 
             boolean isVisible = true;
             if (fixedCellSizeEnabled) {
@@ -495,12 +492,6 @@ public abstract class TableRowSkinBase<T,
         return true;
     }
 
-    TableColumnBase<T,?> getVisibleLeafColumn(int column) {
-        final List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
-        if (column < 0 || column >= visibleLeafColumns.size()) return null;
-        return visibleLeafColumns.get(column);
-    }
-
     void updateCells(boolean resetChildren) {
         // To avoid a potential memory leak (when the TableColumns in the
         // TableView are created/inserted/removed/deleted, we have a 'refresh
@@ -538,7 +529,7 @@ public abstract class TableRowSkinBase<T,
             if (cell == null) {
                 // if the cell is null it means we don't have it in cache and
                 // need to create it
-                cell = createCell(col);
+                cell = createCellAndCache(col);
             }
 
             updateCell(cell, skinnable);
@@ -554,7 +545,7 @@ public abstract class TableRowSkinBase<T,
             List<Node> toRemove = new ArrayList<>();
             for (Node cell : getChildren()) {
                 if (! (cell instanceof IndexedCell)) continue;
-                if (!getTableColumnBase((R)cell).isVisible()) {
+                if (!getTableColumn((R)cell).isVisible()) {
                     toRemove.add(cell);
                 }
             }
@@ -564,7 +555,7 @@ public abstract class TableRowSkinBase<T,
         }
     }
 
-    private VirtualFlow<C> getVirtualFlow() {
+    VirtualFlow<C> getVirtualFlow() {
         Parent p = getSkinnable();
         while (p != null) {
             if (p instanceof VirtualFlow) {
@@ -575,6 +566,7 @@ public abstract class TableRowSkinBase<T,
         return null;
     }
 
+    /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefWidth = 0.0;
 
@@ -586,6 +578,7 @@ public abstract class TableRowSkinBase<T,
         return prefWidth;
     }
 
+    /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (fixedCellSizeEnabled) {
             return fixedCellSize;
@@ -615,6 +608,7 @@ public abstract class TableRowSkinBase<T,
         return ph;
     }
 
+    /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (fixedCellSizeEnabled) {
             return fixedCellSize;
@@ -642,6 +636,7 @@ public abstract class TableRowSkinBase<T,
         return minHeight;
     }
 
+    /** {@inheritDoc} */
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (fixedCellSizeEnabled) {
             return fixedCellSize;
@@ -667,6 +662,29 @@ public abstract class TableRowSkinBase<T,
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    private boolean isColumnPartiallyOrFullyVisible(TableColumnBase col) {
+        if (col == null || !col.isVisible()) return false;
+
+        final VirtualFlow<?> virtualFlow = getVirtualFlow();
+        double scrollX = virtualFlow == null ? 0.0 : virtualFlow.getHbar().getValue();
+
+        // work out where this column header is, and it's width (start -> end)
+        double start = 0;
+        final ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
+        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
+            TableColumnBase<?,?> c = visibleLeafColumns.get(i);
+            if (c.equals(col)) break;
+            start += c.getWidth();
+        }
+        double end = start + col.getWidth();
+
+        // determine the width of the table
+        final Insets padding = getSkinnable().getPadding();
+        double headerWidth = getSkinnable().getWidth() - padding.getLeft() + padding.getRight();
+
+        return (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
+    }
 
     private void requestCellUpdate() {
         updateCells = true;
@@ -702,7 +720,7 @@ public abstract class TableRowSkinBase<T,
 
         ObservableList<? extends TableColumnBase/*<T,?>*/> columns = getVisibleLeafColumns();
 
-        cellsMap = new WeakHashMap<TableColumnBase, Reference<R>>(columns.size());
+        cellsMap = new WeakHashMap<>(columns.size());
         fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
         getChildren().clear();
 
@@ -713,16 +731,16 @@ public abstract class TableRowSkinBase<T,
 
             // create a TableCell for this column and store it in the cellsMap
             // for future use
-            createCell(col);
+            createCellAndCache(col);
         }
     }
 
-    private R createCell(TableColumnBase col) {
+    private R createCellAndCache(TableColumnBase<T,?> col) {
         // we must create a TableCell for this table column
-        R cell = getCell(col);
+        R cell = createCell(col);
 
         // and store this in our HashMap until needed
-        cellsMap.put(col, new WeakReference<R>(cell));
+        cellsMap.put(col, new WeakReference<>(cell));
 
         return cell;
     }

@@ -210,7 +210,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             ((TableView)getSkinnable()).edit(-1, null);
         }
 
-        rowCountDirty = true;
+        markItemCountDirty();
         getSkinnable().requestLayout();
     };
 
@@ -562,7 +562,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         return tableHeaderRow;
     }
 
-    @Override void updateRowCount() {
+    /** {@inheritDoc} */
+    @Override protected void updateItemCount() {
         updatePlaceholderRegionVisibility();
 
         int oldCount = itemCount;
@@ -579,7 +580,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             needCellsRecreated = true;
             forceCellRecreate = false;
         } else if (newCount != oldCount) {
-            // FIXME updateRowCount is called _a lot_. Perhaps we can make rebuildCells
+            // FIXME updateItemCount is called _a lot_. Perhaps we can make rebuildCells
             // smarter. Imagine if items has one million items added - do we really
             // need to rebuildCells a million times? Maybe this is better now that
             // we do rebuildCells instead of recreateCells.
@@ -659,7 +660,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             newList.addListener(weakRowCountListener);
         }
 
-        rowCountDirty = true;
+        markItemCountDirty();
         getSkinnable().requestLayout();
     }
 
@@ -758,28 +759,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
                 || (! isFocusDriven && sm.getSelectedIndex() == index);
     }
 
-    boolean isColumnPartiallyOrFullyVisible(TC col) {
-        if (col == null || !col.isVisible()) return false;
-
-        double scrollX = flow.getHbar().getValue();
-
-        // work out where this column header is, and it's width (start -> end)
-        double start = 0;
-        final ObservableList<? extends TC> visibleLeafColumns = getVisibleLeafColumns();
-        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
-            TableColumnBase<S,?> c = visibleLeafColumns.get(i);
-            if (c.equals(col)) break;
-            start += c.getWidth();
-        }
-        double end = start + col.getWidth();
-
-        // determine the width of the table
-        final Insets padding = getSkinnable().getPadding();
-        double headerWidth = getSkinnable().getWidth() - padding.getLeft() + padding.getRight();
-
-        return (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
-    }
-
     /**
      * Keeps track of how many leaf columns are currently visible in this table.
      */
@@ -863,7 +842,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     }
 
     private void refreshView() {
-        rowCountDirty = true;
+        markItemCountDirty();
         Control c = getSkinnable();
         if (c != null) {
             c.requestLayout();

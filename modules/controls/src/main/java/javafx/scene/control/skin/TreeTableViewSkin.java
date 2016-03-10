@@ -29,7 +29,6 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.event.WeakEventHandler;
 import javafx.scene.control.*;
@@ -90,7 +89,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             // no event being fired to the skin to be informed that the items
             // had changed. So, here we just watch for the case where the number
             // of items being added is equal to the number of items being removed.
-            rowCountDirty = true;
+            markItemCountDirty();
             getSkinnable().requestLayout();
         } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
             // Fix for RT-14971 and RT-15338.
@@ -102,7 +101,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             EventType<?> eventType = e.getEventType();
             while (eventType != null) {
                 if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
-                    rowCountDirty = true;
+                    markItemCountDirty();
                     getSkinnable().requestLayout();
                     break;
                 }
@@ -189,10 +188,10 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
                 getRoot().setExpanded(true);
             }
             // update the item count in the flow and behavior instances
-            updateRowCount();
+            updateItemCount();
         });
         registerChangeListener(control.rowFactoryProperty(), e -> flow.recreateCells());
-        registerChangeListener(control.expandedItemCountProperty(), e -> rowCountDirty = true);
+        registerChangeListener(control.expandedItemCountProperty(), e -> markItemCountDirty());
         registerChangeListener(control.fixedCellSizeProperty(), e -> flow.setFixedCellSize(getSkinnable().getFixedCellSize()));
     }
 
@@ -322,7 +321,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
 
-        updateRowCount();
+        updateItemCount();
     }
 
     /** {@inheritDoc} */
@@ -474,7 +473,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
     }
 
     /** {@inheritDoc} */
-    @Override int getItemCount() {
+    @Override protected int getItemCount() {
         return getSkinnable().getExpandedItemCount();
     }
 
@@ -487,7 +486,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
     }
 
     /** {@inheritDoc} */
-    @Override void updateRowCount() {
+    @Override protected void updateItemCount() {
         updatePlaceholderRegionVisibility();
 
         tableBackingList.resetSize();

@@ -31,6 +31,7 @@
 #include "FrameView.h"
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
+#include "NodeRenderStyle.h"
 #include "StyleResolver.h"
 
 namespace WebCore {
@@ -60,7 +61,7 @@ bool StyleMedia::matchMedium(const String& query) const
     if (!documentElement)
         return false;
 
-    RefPtr<RenderStyle> rootStyle = document->ensureStyleResolver().styleForElement(documentElement, 0 /*defaultParent*/, DisallowStyleSharing, MatchOnlyUserAgentRules);
+    RefPtr<RenderStyle> rootStyle = document->ensureStyleResolver().styleForElement(documentElement, document->renderStyle(), DisallowStyleSharing, MatchOnlyUserAgentRules);
 
     RefPtr<MediaQuerySet> media = MediaQuerySet::create();
     if (!media->parse(query))

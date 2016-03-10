@@ -1256,7 +1256,6 @@ allprojects {
     // Java 7 but when we switch to 8 this will be needed, and probably again when
     // we start building with Java 9.
     test {
-        jvmArgs("-Djava.ext.dirs=");
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
@@ -1533,7 +1532,6 @@ project(":graphics") {
                 classpath += files("$buildDir/classes/main")
                 classpath += files("$buildDir/classes/jsl-compilers/decora")
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"]
-                jvmArgs "-Djava.ext.dirs="
             }
         }
     }
@@ -1624,7 +1622,6 @@ project(":graphics") {
                 classpath = configurations.compile + configurations.antlr3
                 classpath += files("$buildDir/classes/jsl-compilers/prism", "modules/graphics/src/main/jsl-prism") // for the .stg
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-name", "$file"]
-                jvmArgs "-Djava.ext.dirs="
             }
         }
     }
@@ -1639,7 +1636,7 @@ project(":graphics") {
 
     test {
         def cssDir = file("$buildDir/classes/main/javafx")
-        jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
         testLogging.exceptionFormat = "full"
@@ -1722,7 +1719,6 @@ project(":controls") {
                         project(":base").sourceSets.main.output)
                 main = "com.sun.javafx.css.parser.Css2Bin"
                 args css
-                jvmArgs "-Djava.ext.dirs="
             }
         }
     }
@@ -2255,7 +2251,7 @@ project(":media") {
                                      "com.sun.media.jfxmediaimpl.platform.osx.OSXMediaPlayer"] );
             }
             exec {
-                commandLine ("${JAVAH}", "-J-Djava.ext.dirs=", "-d", "${generatedHeadersDir}", "-classpath", "${classpath.asPath}");
+                commandLine ("${JAVAH}", "-d", "${generatedHeadersDir}", "-classpath", "${classpath.asPath}");
                 args classesList;
             }
         }
@@ -2272,7 +2268,7 @@ project(":media") {
             mkdir generatedHeadersDir;
 
             exec {
-                commandLine("$JAVA", "-Djava.ext.dirs=", "-classpath", "${classpath.asPath}");
+                commandLine("$JAVA", "-classpath", "${classpath.asPath}");
                 args("headergen.HeaderGen", "$headerpath", "$srcRoot");
             }
         }
@@ -2532,7 +2528,7 @@ project(":web") {
             def dest = file("$buildDir/generated-src/headers");
             mkdir dest;
             exec {
-                commandLine("$JAVAH", "-J-Djava.ext.dirs=", "-d", "$dest",
+                commandLine("$JAVAH", "-d", "$dest",
                             "-classpath", "${classpath.asPath}");
                 args("java.lang.Character",
                      "java.net.IDN",
@@ -2787,7 +2783,7 @@ allprojects {
         compile.options.fork = true
         compile.options.forkOptions.executable = JAVAC
         compile.options.warnings = IS_LINT
-        compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding", "UTF-8"]
+        compile.options.compilerArgs = ["-XDignore.symbol.file", "-encoding", "UTF-8"]
         if (!DO_BUILD_SDK_FOR_TEST) {
             compile.classpath = files(jfxrtJarFromSdk) + compile.classpath
         }
@@ -2844,11 +2840,18 @@ task javadoc(type: Javadoc) {
     executable = JAVADOC
     def projectsToDocument = [
             project(":base"), project(":graphics"), project(":controls"), project(":media"),
-            project(":swing"), project(":swt"), project(":fxml"), project(":web")]
+            project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
     }));
     setDestinationDir(new File(buildDir, 'javadoc'));
+    // FIXME: The following is a workaround for JDK-8151191; it should be
+    // reverted once that bug is fixed
+    classpath = rootProject.BUILD_SRC
+    classpath += files(projectsToDocument.collect { project ->
+        project.sourceSets.main.java.srcDirs
+    });
+    /*
     // Might need a classpath
     classpath = files(projectsToDocument.collect { project ->
         project.sourceSets.main.compileClasspath
@@ -2856,6 +2859,7 @@ task javadoc(type: Javadoc) {
     classpath += files(projectsToDocument.collect { project ->
         project.sourceSets.main.output
     });
+    */
     exclude("com/**/*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")

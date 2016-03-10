@@ -214,7 +214,23 @@ public class JobSettingsTest {
      System.out.println("# of papers="+s.size());
      if (s != null) {
         for (Paper newPaper : s) {
-            PageLayout newPL = printer.createPageLayout(newPaper,  pagelayout.getPageOrientation(),   pagelayout.getTopMargin(), pagelayout.getBottomMargin(), pagelayout.getLeftMargin(), pagelayout.getRightMargin());
+            System.out.println("newPaper= "+newPaper);
+
+            double lm = pagelayout.getLeftMargin();
+            double rm = pagelayout.getRightMargin();
+            double tm = pagelayout.getTopMargin();
+            double bm = pagelayout.getBottomMargin();
+
+            if ((lm + rm > newPaper.getWidth()) ||
+                (tm + bm > newPaper.getHeight())) {
+                // margins exceed this paper, so make them smaller, say 10% of dimension
+                lm = rm = newPaper.getWidth() * 0.10;
+                tm = bm = newPaper.getHeight() * 0.10;
+            }
+
+            PageLayout newPL = printer.createPageLayout(newPaper,
+                pagelayout.getPageOrientation(),
+                tm, bm, lm, rm);
             System.out.println("newPaper= "+newPaper);
             js.setPageLayout(newPL);
             pagelayout = js.getPageLayout();
