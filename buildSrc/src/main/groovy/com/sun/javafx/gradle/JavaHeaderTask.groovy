@@ -89,7 +89,7 @@ class JavaHeaderTask extends DefaultTask {
         }
         // Execute javah
         project.exec({
-            commandLine("$project.JAVAH", "-J-Djava.ext.dirs=", "-d", "$output", "-classpath", "${classpath.asPath}");
+            commandLine("$project.JAVAH", "-d", "$output", "-classpath", "${classpath.asPath}");
             args(classNames);
         });
     }

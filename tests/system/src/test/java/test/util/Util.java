@@ -192,7 +192,7 @@ public class Util {
 
         String jfxdir = getJfxrtDir(classpath);
         Assert.assertNotNull("failed to find jfxdir",jfxdir);
-        cmd.add("-Djava.ext.dirs=" + jfxdir);
+        cmd.add("-Xbootclasspath/a:" + jfxdir + "/" + "jfxrt.jar");
 
         cmd.add("-cp");
         cmd.add(classpath);
