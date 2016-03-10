@@ -2844,11 +2844,18 @@ task javadoc(type: Javadoc) {
     executable = JAVADOC
     def projectsToDocument = [
             project(":base"), project(":graphics"), project(":controls"), project(":media"),
-            project(":swing"), project(":swt"), project(":fxml"), project(":web")]
+            project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
     }));
     setDestinationDir(new File(buildDir, 'javadoc'));
+    // FIXME: The following is a workaround for JDK-8151191; it should be
+    // reverted once that bug is fixed
+    classpath = rootProject.BUILD_SRC
+    classpath += files(projectsToDocument.collect { project ->
+        project.sourceSets.main.java.srcDirs
+    });
+    /*
     // Might need a classpath
     classpath = files(projectsToDocument.collect { project ->
         project.sourceSets.main.compileClasspath
@@ -2856,6 +2863,7 @@ task javadoc(type: Javadoc) {
     classpath += files(projectsToDocument.collect { project ->
         project.sourceSets.main.output
     });
+    */
     exclude("com/**/*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
