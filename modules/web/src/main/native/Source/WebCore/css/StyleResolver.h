@@ -143,8 +143,8 @@ public:
     void pushParentElement(Element*);
     void popParentElement(Element*);
 
-    PassRef<RenderStyle> styleForElement(Element*, RenderStyle* parentStyle = 0, StyleSharingBehavior = AllowStyleSharing,
-        RuleMatchingBehavior = MatchAllRules, RenderRegion* regionForStyling = 0);
+    PassRef<RenderStyle> styleForElement(Element*, RenderStyle* parentStyle, StyleSharingBehavior = AllowStyleSharing,
+        RuleMatchingBehavior = MatchAllRules, RenderRegion* regionForStyling = nullptr);
 
     void keyframeStylesForAnimation(Element*, const RenderStyle*, KeyframeList&);
 
@@ -158,7 +158,6 @@ public:
     RenderStyle* rootElementStyle() const { return m_state.rootElementStyle(); }
     Element* element() { return m_state.element(); }
     Document& document() { return m_document; }
-    bool hasParentNode() const { return m_state.parentNode(); }
 
     // FIXME: It could be better to call m_ruleSets.appendAuthorStyleSheets() directly after we factor StyleRsolver further.
     // https://bugs.webkit.org/show_bug.cgi?id=108890
@@ -229,7 +228,7 @@ public:
     bool usesSiblingRules() const { return !m_ruleSets.features().siblingRules.isEmpty(); }
     bool usesFirstLineRules() const { return m_ruleSets.features().usesFirstLineRules; }
     bool usesBeforeAfterRules() const { return m_ruleSets.features().usesBeforeAfterRules; }
-
+    
     void invalidateMatchedPropertiesCache();
 
 #if ENABLE(CSS_FILTERS)
@@ -263,7 +262,7 @@ public:
     struct MatchedProperties {
         MatchedProperties();
         ~MatchedProperties();
-
+        
         RefPtr<StyleProperties> properties;
         union {
             struct {
@@ -333,7 +332,6 @@ public:
         State()
         : m_element(0)
         , m_styledElement(0)
-        , m_parentNode(0)
         , m_parentStyle(0)
         , m_rootElementStyle(0)
         , m_regionForStyling(0)
@@ -348,7 +346,7 @@ public:
 
     public:
         void initElement(Element*);
-        void initForStyleResolve(Document&, Element*, RenderStyle* parentStyle = 0, RenderRegion* regionForStyling = 0);
+        void initForStyleResolve(Document&, Element*, RenderStyle* parentStyle, RenderRegion* regionForStyling = nullptr);
         void clear();
 
         Document& document() const { return m_element->document(); }
@@ -358,7 +356,6 @@ public:
         RenderStyle* style() const { return m_style.get(); }
         PassRef<RenderStyle> takeStyle() { return m_style.releaseNonNull(); }
 
-        const ContainerNode* parentNode() const { return m_parentNode; }
         void setParentStyle(PassRef<RenderStyle> parentStyle) { m_parentStyle = std::move(parentStyle); }
         RenderStyle* parentStyle() const { return m_parentStyle.get(); }
         RenderStyle* rootElementStyle() const { return m_rootElementStyle; }
@@ -405,13 +402,12 @@ public:
         Element* m_element;
         RefPtr<RenderStyle> m_style;
         StyledElement* m_styledElement;
-        ContainerNode* m_parentNode;
         RefPtr<RenderStyle> m_parentStyle;
         RenderStyle* m_rootElementStyle;
 
         // Required to ASSERT in applyProperties.
         RenderRegion* m_regionForStyling;
-
+        
         EInsideLink m_elementLinkState;
 
         bool m_elementAffectedByClassRules;
@@ -590,7 +586,7 @@ public:
             return;
         m_pushedStyleResolver->popParentElement(m_parent);
     }
-
+    
 private:
     Element* m_parent;
     StyleResolver* m_pushedStyleResolver;

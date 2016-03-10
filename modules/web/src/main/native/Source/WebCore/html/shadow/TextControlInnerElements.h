@@ -21,9 +21,9 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
-
+ 
 #ifndef TextControlInnerElements_h
 #define TextControlInnerElements_h
 
@@ -50,7 +50,7 @@ public:
 
 protected:
     TextControlInnerElement(Document&);
-    virtual PassRefPtr<RenderStyle> customStyleForRenderer() override;
+    virtual PassRefPtr<RenderStyle> customStyleForRenderer(RenderStyle& parentStyle) override;
 
 private:
     virtual bool isMouseFocusable() const override { return false; }
@@ -67,7 +67,7 @@ public:
 private:
     TextControlInnerTextElement(Document&);
     virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
-    virtual PassRefPtr<RenderStyle> customStyleForRenderer() override;
+    virtual PassRefPtr<RenderStyle> customStyleForRenderer(RenderStyle& parentStyle) override;
     virtual bool isMouseFocusable() const override { return false; }
     virtual bool isTextControlInnerTextElement() const override { return true; }
 };

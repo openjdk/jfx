@@ -575,7 +575,7 @@ void Element::setHovered(bool flag)
         renderer()->theme().stateChanged(renderer(), HoverState);
 }
 
-void Element::scrollIntoView(bool alignToTop)
+void Element::scrollIntoView(bool alignToTop) 
 {
     document().updateLayoutIgnorePendingStylesheets();
 
@@ -762,7 +762,7 @@ int Element::clientWidth()
     bool inQuirksMode = document().inQuirksMode();
     if ((!inQuirksMode && document().documentElement() == this) || (inQuirksMode && isHTMLElement() && document().body() == this))
         return adjustForAbsoluteZoom(renderView.frameView().layoutWidth(), renderView);
-
+    
     if (RenderBox* renderer = renderBox())
 #if ENABLE(SUBPIXEL_LAYOUT)
         return adjustLayoutUnitForAbsoluteZoom(renderer->pixelSnappedClientWidth(), *renderer).round();
@@ -975,7 +975,7 @@ IntRect Element::clientRect() const
         return document().view()->contentsToRootView(renderer->absoluteBoundingBoxRect());
     return IntRect();
 }
-
+    
 IntRect Element::screenRect() const
 {
     if (RenderObject* renderer = this->renderer())
@@ -1434,16 +1434,6 @@ void Element::unregisterNamedFlowContentElement()
         document().renderView()->flowThreadController().unregisterNamedFlowContentElement(*this);
 }
 
-PassRef<RenderStyle> Element::styleForRenderer()
-{
-    if (hasCustomStyleResolveCallbacks()) {
-        if (RefPtr<RenderStyle> style = customStyleForRenderer())
-            return style.releaseNonNull();
-    }
-
-    return document().ensureStyleResolver().styleForElement(this);
-}
-
 ShadowRoot* Element::shadowRoot() const
 {
     return hasRareData() ? elementRareData()->shadowRoot() : 0;
@@ -1457,8 +1447,6 @@ void Element::didAffectSelector(AffectedSelectorMask)
 static bool shouldUseNodeRenderingTraversalSlowPath(const Element& element)
 {
     if (element.isShadowRoot())
-        return true;
-    if (element.isPseudoElement() || element.beforePseudoElement() || element.afterPseudoElement())
         return true;
     return element.isInsertionPoint() || element.shadowRoot();
 }
@@ -1574,7 +1562,7 @@ static void checkForSiblingStyleChanges(Element* parent, SiblingCheckType checkT
     RenderStyle* style = parent->renderStyle();
     // :empty selector.
     checkForEmptyStyleChange(parent, style);
-
+    
     if (!style || (parent->needsStyleRecalc() && parent->childrenAffectedByPositionalRules()))
         return;
 
@@ -1589,7 +1577,7 @@ static void checkForSiblingStyleChanges(Element* parent, SiblingCheckType checkT
         // This is the insert/append case.
         if (newFirstElement != elementAfterChange && elementAfterChange->renderStyle() && elementAfterChange->renderStyle()->firstChildState())
             elementAfterChange->setNeedsStyleRecalc();
-
+            
         // We also have to handle node removal.
         if (checkType == SiblingElementRemoved && newFirstElement == elementAfterChange && newFirstElement && (!newFirstElement->renderStyle() || !newFirstElement->renderStyle()->firstChildState()))
             newFirstElement->setNeedsStyleRecalc();
@@ -1603,7 +1591,7 @@ static void checkForSiblingStyleChanges(Element* parent, SiblingCheckType checkT
 
         if (newLastElement != elementBeforeChange && elementBeforeChange->renderStyle() && elementBeforeChange->renderStyle()->lastChildState())
             elementBeforeChange->setNeedsStyleRecalc();
-
+            
         // We also have to handle node removal.  The parser callback case is similar to node removal as well in that we need to change the last child
         // to match now.
         if ((checkType == SiblingElementRemoved || checkType == FinishedParsingChildren) && newLastElement == elementBeforeChange && newLastElement
@@ -1906,7 +1894,7 @@ void Element::focus(bool restorePreviousSelection, FocusDirection direction)
 
     // If the stylesheets have already been loaded we can reliably check isFocusable.
     // If not, we continue and set the focused node on the focus controller below so
-    // that it can be updated soon after attach.
+    // that it can be updated soon after attach. 
     if (document().haveStylesheetsLoaded()) {
         document().updateLayoutIgnorePendingStylesheets();
         if (!isFocusable())
@@ -1933,7 +1921,7 @@ void Element::focus(bool restorePreviousSelection, FocusDirection direction)
         ensureElementRareData().setNeedsFocusAppearanceUpdateSoonAfterAttach(true);
         return;
     }
-
+        
     cancelFocusAppearanceUpdate();
 #if PLATFORM(IOS)
     // Focusing a form element triggers animation in UIKit to scroll to the right position.
@@ -1969,14 +1957,14 @@ void Element::updateFocusAppearance(bool /*restorePreviousSelection*/)
         Frame* frame = document().frame();
         if (!frame)
             return;
-
+        
         // When focusing an editable element in an iframe, don't reset the selection if it already contains a selection.
         if (this == frame->selection().selection().rootEditableElement())
             return;
 
         // FIXME: We should restore the previous selection if there is one.
         VisibleSelection newSelection = VisibleSelection(firstPositionInOrBeforeNode(this), DOWNSTREAM);
-
+        
         if (frame->selection().shouldChangeSelection(newSelection)) {
             frame->selection().setSelection(newSelection);
             frame->selection().revealSelection();
@@ -2298,13 +2286,11 @@ PseudoElement* Element::afterPseudoElement() const
 void Element::setBeforePseudoElement(PassRefPtr<PseudoElement> element)
 {
     ensureElementRareData().setBeforePseudoElement(element);
-    resetNeedsNodeRenderingTraversalSlowPath();
 }
 
 void Element::setAfterPseudoElement(PassRefPtr<PseudoElement> element)
 {
     ensureElementRareData().setAfterPseudoElement(element);
-    resetNeedsNodeRenderingTraversalSlowPath();
 }
 
 static void disconnectPseudoElement(PseudoElement* pseudoElement)
@@ -2323,7 +2309,6 @@ void Element::clearBeforePseudoElement()
         return;
     disconnectPseudoElement(elementRareData()->beforePseudoElement());
     elementRareData()->setBeforePseudoElement(nullptr);
-    resetNeedsNodeRenderingTraversalSlowPath();
 }
 
 void Element::clearAfterPseudoElement()
@@ -2332,7 +2317,6 @@ void Element::clearAfterPseudoElement()
         return;
     disconnectPseudoElement(elementRareData()->afterPseudoElement());
     elementRareData()->setAfterPseudoElement(nullptr);
-    resetNeedsNodeRenderingTraversalSlowPath();
 }
 
 // ElementTraversal API
@@ -2953,7 +2937,7 @@ void Element::didDetachRenderers()
     ASSERT(hasCustomStyleResolveCallbacks());
 }
 
-PassRefPtr<RenderStyle> Element::customStyleForRenderer()
+PassRefPtr<RenderStyle> Element::customStyleForRenderer(RenderStyle&)
 {
     ASSERT(hasCustomStyleResolveCallbacks());
     return 0;

@@ -34,6 +34,7 @@
 #include "PaintInfo.h"
 #include "RenderBoxRegionInfo.h"
 #include "RenderFlowThread.h"
+#include "RenderIterator.h"
 #include "RenderNamedFlowThread.h"
 #include "RenderView.h"
 #include "StyleResolver.h"
@@ -195,7 +196,7 @@ LayoutRect RenderNamedFlowFragment::flowThreadPortionRectForClipping(bool isFirs
     // If they do not continue into another region in that direction, they should be
     // painted all the way to the region's border box.
     // Regions with overflow:hidden will apply clip at the border box, not the content box.
-
+    
     LayoutRect clippingRect = flowThreadPortionRect();
     RenderBlockFlow& container = fragmentContainer();
     if (container.style().hasPadding()) {
@@ -208,14 +209,14 @@ LayoutRect RenderNamedFlowFragment::flowThreadPortionRectForClipping(bool isFirs
                 clippingRect.expand(container.paddingBefore(), 0);
             }
         }
-
+        
         if (isLastRegionInRange) {
             if (flowThread()->isHorizontalWritingMode())
                 clippingRect.expand(0, container.paddingAfter());
             else
                 clippingRect.expand(container.paddingAfter(), 0);
         }
-
+        
         if (flowThread()->isHorizontalWritingMode()) {
             clippingRect.move(-container.paddingStart(), 0);
             clippingRect.expand(container.paddingStart() + container.paddingEnd(), 0);
@@ -224,7 +225,7 @@ LayoutRect RenderNamedFlowFragment::flowThreadPortionRectForClipping(bool isFirs
             clippingRect.expand(0, container.paddingStart() + container.paddingEnd());
         }
     }
-
+    
     return clippingRect;
 }
 
@@ -278,24 +279,21 @@ void RenderNamedFlowFragment::checkRegionStyle()
     toRenderNamedFlowThread(m_flowThread)->checkRegionsWithStyling();
 }
 
-PassRefPtr<RenderStyle> RenderNamedFlowFragment::computeStyleInRegion(const RenderObject* object)
+PassRefPtr<RenderStyle> RenderNamedFlowFragment::computeStyleInRegion(RenderElement& renderer, RenderStyle& parentStyle)
 {
-    ASSERT(object);
-    ASSERT(!object->isAnonymous());
-    ASSERT(object->node() && object->node()->isElementNode());
+    ASSERT(!renderer.isAnonymous());
 
     // FIXME: Region styling fails for pseudo-elements because the renderers don't have a node.
-    Element* element = toElement(object->node());
-    RefPtr<RenderStyle> renderObjectRegionStyle = object->view().document().ensureStyleResolver().styleForElement(element, 0, DisallowStyleSharing, MatchAllRules, this);
+    RefPtr<RenderStyle> renderObjectRegionStyle = renderer.view().document().ensureStyleResolver().styleForElement(renderer.element(), &parentStyle, DisallowStyleSharing, MatchAllRules, this);
 
     return renderObjectRegionStyle.release();
 }
 
-void RenderNamedFlowFragment::computeChildrenStyleInRegion(const RenderElement* object)
+void RenderNamedFlowFragment::computeChildrenStyleInRegion(RenderElement& renderer)
 {
-    for (RenderObject* child = object->firstChild(); child; child = child->nextSibling()) {
+    for (auto& child : childrenOfType<RenderObject>(renderer)) {
 
-        auto it = m_renderObjectRegionStyle.find(child);
+        auto it = m_renderObjectRegionStyle.find(&child);
 
         RefPtr<RenderStyle> childStyleInRegion;
         bool objectRegionStyleCached = false;
@@ -303,17 +301,17 @@ void RenderNamedFlowFragment::computeChildrenStyleInRegion(const RenderElement* 
             childStyleInRegion = it->value.style;
             objectRegionStyleCached = true;
         } else {
-            if (child->isAnonymous() || child->isInFlowRenderFlowThread())
-                childStyleInRegion = RenderStyle::createAnonymousStyleWithDisplay(&object->style(), child->style().display());
-            else if (child->isText())
-                childStyleInRegion = RenderStyle::clone(&object->style());
+            if (child.isAnonymous() || child.isInFlowRenderFlowThread())
+                childStyleInRegion = RenderStyle::createAnonymousStyleWithDisplay(&renderer.style(), child.style().display());
+            else if (child.isText())
+                childStyleInRegion = RenderStyle::clone(&renderer.style());
             else
-                childStyleInRegion = computeStyleInRegion(child);
+                childStyleInRegion = computeStyleInRegion(toRenderElement(child), renderer.style());
         }
 
-        setObjectStyleInRegion(child, childStyleInRegion, objectRegionStyleCached);
+        setObjectStyleInRegion(&child, childStyleInRegion, objectRegionStyleCached);
 
-        if (child->isRenderElement())
+        if (child.isRenderElement())
             computeChildrenStyleInRegion(toRenderElement(child));
     }
 }
@@ -381,11 +379,11 @@ void RenderNamedFlowFragment::setRegionObjectsRegionStyle()
             ASSERT(it->value.cached);
             objectRegionStyleCached = true;
         } else
-            objectStyleInRegion = computeStyleInRegion(object);
+            objectStyleInRegion = computeStyleInRegion(*object, style());
 
         setObjectStyleInRegion(object, objectStyleInRegion, objectRegionStyleCached);
 
-        computeChildrenStyleInRegion(object);
+        computeChildrenStyleInRegion(*object);
     }
 }
 
@@ -433,7 +431,7 @@ LayoutRect RenderNamedFlowFragment::visualOverflowRect() const
         if (boxInfo && boxInfo->overflow())
             return boxInfo->overflow()->visualOverflowRect();
     }
-
+    
     return RenderRegion::visualOverflowRect();
 }
 
@@ -460,7 +458,7 @@ void RenderNamedFlowFragment::detachRegion()
 {
     if (m_flowThread && hasAutoLogicalHeight())
         decrementAutoLogicalHeightCount();
-
+    
     RenderRegion::detachRegion();
 }
 

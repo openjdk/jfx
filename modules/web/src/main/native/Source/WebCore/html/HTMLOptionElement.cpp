@@ -94,7 +94,7 @@ void HTMLOptionElement::didAttachRenderers()
     // manually cache the value. This happens if our parent doesn't have a
     // renderer like <optgroup> or if it doesn't allow children like <select>.
     if (!m_style && parentNode()->renderStyle())
-        updateNonRenderStyle();
+        updateNonRenderStyle(*parentNode()->renderStyle());
 }
 
 void HTMLOptionElement::willDetachRenderers()
@@ -146,7 +146,7 @@ void HTMLOptionElement::setText(const String &text, ExceptionCode& ec)
         removeChildren();
         appendChild(Text::create(document(), text), ec);
     }
-
+    
     if (selectIsMenuList && select->selectedIndex() != oldSelectedIndex)
         select->setSelectedIndex(oldSelectedIndex);
 }
@@ -291,7 +291,7 @@ String HTMLOptionElement::label() const
 {
     const AtomicString& label = fastGetAttribute(labelAttr);
     if (!label.isNull())
-        return label;
+        return label; 
     return collectOptionInnerText().stripWhiteSpace(isHTMLSpace).simplifyWhiteSpace(isHTMLSpace);
 }
 
@@ -300,9 +300,9 @@ void HTMLOptionElement::setLabel(const String& label)
     setAttribute(labelAttr, label);
 }
 
-void HTMLOptionElement::updateNonRenderStyle()
+void HTMLOptionElement::updateNonRenderStyle(RenderStyle& parentStyle)
 {
-    m_style = document().ensureStyleResolver().styleForElement(this);
+    m_style = document().ensureStyleResolver().styleForElement(this, &parentStyle);
 }
 
 RenderStyle* HTMLOptionElement::nonRendererStyle() const
@@ -310,11 +310,11 @@ RenderStyle* HTMLOptionElement::nonRendererStyle() const
     return m_style.get();
 }
 
-PassRefPtr<RenderStyle> HTMLOptionElement::customStyleForRenderer()
+PassRefPtr<RenderStyle> HTMLOptionElement::customStyleForRenderer(RenderStyle& parentStyle)
 {
     // styleForRenderer is called whenever a new style should be associated
     // with an Element so now is a good time to update our cached style.
-    updateNonRenderStyle();
+    updateNonRenderStyle(parentStyle);
     return m_style;
 }
 

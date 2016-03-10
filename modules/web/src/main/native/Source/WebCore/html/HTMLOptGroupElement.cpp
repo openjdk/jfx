@@ -96,7 +96,7 @@ void HTMLOptGroupElement::didAttachRenderers()
     // manually cache the value. This happens if our parent doesn't have a
     // renderer like <optgroup> or if it doesn't allow children like <select>.
     if (!m_style && parentNode()->renderStyle())
-        updateNonRenderStyle();
+        updateNonRenderStyle(*parentNode()->renderStyle());
 }
 
 void HTMLOptGroupElement::willDetachRenderers()
@@ -104,9 +104,9 @@ void HTMLOptGroupElement::willDetachRenderers()
     m_style.clear();
 }
 
-void HTMLOptGroupElement::updateNonRenderStyle()
+void HTMLOptGroupElement::updateNonRenderStyle(RenderStyle& parentStyle)
 {
-    m_style = document().ensureStyleResolver().styleForElement(this);
+    m_style = document().ensureStyleResolver().styleForElement(this, &parentStyle);
 }
 
 RenderStyle* HTMLOptGroupElement::nonRendererStyle() const
@@ -114,35 +114,35 @@ RenderStyle* HTMLOptGroupElement::nonRendererStyle() const
     return m_style.get();
 }
 
-PassRefPtr<RenderStyle> HTMLOptGroupElement::customStyleForRenderer()
+PassRefPtr<RenderStyle> HTMLOptGroupElement::customStyleForRenderer(RenderStyle& parentStyle)
 {
     // styleForRenderer is called whenever a new style should be associated
     // with an Element so now is a good time to update our cached style.
-    updateNonRenderStyle();
+    updateNonRenderStyle(parentStyle);
     return m_style;
 }
 
 String HTMLOptGroupElement::groupLabelText() const
 {
     String itemText = document().displayStringModifiedByEncoding(getAttribute(labelAttr));
-
+    
     // In WinIE, leading and trailing whitespace is ignored in options and optgroups. We match this behavior.
     itemText = itemText.stripWhiteSpace();
     // We want to collapse our whitespace too.  This will match other browsers.
     itemText = itemText.simplifyWhiteSpace();
-
+        
     return itemText;
 }
-
+    
 HTMLSelectElement* HTMLOptGroupElement::ownerSelectElement() const
 {
     ContainerNode* select = parentNode();
     while (select && !select->hasTagName(selectTag))
         select = select->parentNode();
-
+    
     if (!select)
        return 0;
-
+    
     return toHTMLSelectElement(select);
 }
 

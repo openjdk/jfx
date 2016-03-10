@@ -27,7 +27,7 @@
 #include "HTMLElement.h"
 
 namespace WebCore {
-
+    
 class HTMLSelectElement;
 
 class HTMLOptGroupElement final : public HTMLElement {
@@ -36,7 +36,7 @@ public:
 
     virtual bool isDisabledFormControl() const override;
     HTMLSelectElement* ownerSelectElement() const;
-
+    
     String groupLabelText() const;
 
 private:
@@ -54,9 +54,9 @@ private:
     virtual void accessKeyAction(bool sendMouseEvents) override;
 
     // <optgroup> never has a renderer so we manually manage a cached style.
-    void updateNonRenderStyle();
+    void updateNonRenderStyle(RenderStyle& parentStyle);
     virtual RenderStyle* nonRendererStyle() const override;
-    virtual PassRefPtr<RenderStyle> customStyleForRenderer() override;
+    virtual PassRefPtr<RenderStyle> customStyleForRenderer(RenderStyle& parentStyle) override;
 
     void recalcSelectOptions();
 
