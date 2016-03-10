@@ -230,7 +230,7 @@ public:
 
     PassRefPtr<ClientRectList> getClientRects();
     PassRefPtr<ClientRect> getBoundingClientRect();
-    
+
     // Returns the absolute bounding box translated into client coordinates.
     IntRect clientRect() const;
     // Returns the absolute bounding box translated into screen coordinates.
@@ -260,7 +260,7 @@ public:
 #endif // ENABLE(CSS_SELECTOR_JIT)
     String tagName() const { return nodeName(); }
     bool hasTagName(const QualifiedName& tagName) const { return m_tagName.matches(tagName); }
-    
+
     // A fast function for checking the local name against another atomic string.
     bool hasLocalName(const AtomicString& other) const { return m_tagName.localName() == other; }
     bool hasLocalName(const QualifiedName& other) const { return m_tagName.localName() == other.localName(); }
@@ -408,7 +408,7 @@ public:
 
     String innerText();
     String outerText();
- 
+
     virtual String title() const;
 
     const AtomicString& pseudo() const;
@@ -503,7 +503,7 @@ public:
         ALLOW_KEYBOARD_INPUT = 1 << 0,
         LEGACY_MOZILLA_REQUEST = 1 << 1,
     };
-    
+
     void webkitRequestFullScreen(unsigned short flags);
     bool containsFullScreenElement() const;
     void setContainsFullScreenElement(bool);
@@ -521,14 +521,14 @@ public:
     void setUIActions(const AtomicString&);
     const AtomicString& UIActions() const;
 #endif
-    
+
     virtual bool isSpellCheckingEnabled() const;
 
     RenderRegion* renderRegion() const;
 
 #if ENABLE(CSS_REGIONS)
     virtual bool shouldMoveToFlowThread(const RenderStyle&) const;
-    
+
     const AtomicString& webkitRegionOverset() const;
     Vector<RefPtr<Range>> webkitGetRegionFlowRanges() const;
 #endif
@@ -578,7 +578,7 @@ protected:
     virtual void childrenChanged(const ChildChange&) override;
     virtual void removeAllEventListeners() override final;
 
-    void clearTabIndexExplicitlyIfNeeded();    
+    void clearTabIndexExplicitlyIfNeeded();
     void setTabIndexExplicitly(short);
 
     PassRefPtr<HTMLCollection> ensureCachedHTMLCollection(CollectionType);
@@ -690,7 +690,7 @@ inline bool Node::hasTagName(const QualifiedName& name) const
 {
     return isElementNode() && toElement(this)->hasTagName(name);
 }
-    
+
 inline bool Node::hasLocalName(const AtomicString& name) const
 {
     return isElementNode() && toElement(this)->hasLocalName(name);

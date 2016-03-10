@@ -125,24 +125,24 @@ PassRefPtr<RenderStyle> HTMLOptGroupElement::customStyleForRenderer(RenderStyle&
 String HTMLOptGroupElement::groupLabelText() const
 {
     String itemText = document().displayStringModifiedByEncoding(getAttribute(labelAttr));
-    
+
     // In WinIE, leading and trailing whitespace is ignored in options and optgroups. We match this behavior.
     itemText = itemText.stripWhiteSpace();
     // We want to collapse our whitespace too.  This will match other browsers.
     itemText = itemText.simplifyWhiteSpace();
-        
+
     return itemText;
 }
-    
+
 HTMLSelectElement* HTMLOptGroupElement::ownerSelectElement() const
 {
     ContainerNode* select = parentNode();
     while (select && !select->hasTagName(selectTag))
         select = select->parentNode();
-    
+
     if (!select)
        return 0;
-    
+
     return toHTMLSelectElement(select);
 }
 

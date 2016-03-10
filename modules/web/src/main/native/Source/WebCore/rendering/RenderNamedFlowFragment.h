@@ -59,7 +59,7 @@ public:
 
     virtual LayoutUnit pageLogicalHeight() const;
     LayoutUnit maxPageLogicalHeight() const;
-    
+
     LayoutRect flowThreadPortionRectForClipping(bool isFirstRegionInRange, bool isLastRegionInRange) const;
 
     RenderBlockFlow& fragmentContainer() const;
@@ -79,7 +79,7 @@ public:
 
     void setRegionObjectsRegionStyle();
     void restoreRegionObjectsOriginalStyle();
-    
+
     virtual LayoutRect visualOverflowRect() const override;
 
     RenderNamedFlowThread* namedFlowThread() const;

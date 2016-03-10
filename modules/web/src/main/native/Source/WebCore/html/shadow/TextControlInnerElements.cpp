@@ -57,7 +57,7 @@ PassRefPtr<TextControlInnerContainer> TextControlInnerContainer::create(Document
 {
     return adoptRef(new TextControlInnerContainer(document));
 }
-    
+
 RenderPtr<RenderElement> TextControlInnerContainer::createElementRenderer(PassRef<RenderStyle> style)
 {
     return createRenderer<RenderTextControlInnerContainer>(*this, std::move(style));

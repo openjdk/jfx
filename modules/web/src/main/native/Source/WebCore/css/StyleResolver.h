@@ -228,7 +228,7 @@ public:
     bool usesSiblingRules() const { return !m_ruleSets.features().siblingRules.isEmpty(); }
     bool usesFirstLineRules() const { return m_ruleSets.features().usesFirstLineRules; }
     bool usesBeforeAfterRules() const { return m_ruleSets.features().usesBeforeAfterRules; }
-    
+
     void invalidateMatchedPropertiesCache();
 
 #if ENABLE(CSS_FILTERS)
@@ -262,7 +262,7 @@ public:
     struct MatchedProperties {
         MatchedProperties();
         ~MatchedProperties();
-        
+
         RefPtr<StyleProperties> properties;
         union {
             struct {
@@ -407,7 +407,7 @@ public:
 
         // Required to ASSERT in applyProperties.
         RenderRegion* m_regionForStyling;
-        
+
         EInsideLink m_elementLinkState;
 
         bool m_elementAffectedByClassRules;
@@ -586,7 +586,7 @@ public:
             return;
         m_pushedStyleResolver->popParentElement(m_parent);
     }
-    
+
 private:
     Element* m_parent;
     StyleResolver* m_pushedStyleResolver;

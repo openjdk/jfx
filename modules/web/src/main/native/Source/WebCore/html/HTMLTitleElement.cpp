@@ -98,7 +98,7 @@ void HTMLTitleElement::setText(const String &value)
     Ref<HTMLTitleElement> protectFromMutationEvents(*this);
 
     int numChildren = childNodeCount();
-    
+
     if (numChildren == 1 && firstChild()->isTextNode())
         toText(firstChild())->setData(value, IGNORE_EXCEPTION);
     else {

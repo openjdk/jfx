@@ -111,7 +111,7 @@ public:
 
     void synchronizeAnimatedSVGAttribute(const QualifiedName&) const;
     static void synchronizeAllAnimatedSVGAttribute(SVGElement*);
- 
+
     virtual PassRefPtr<RenderStyle> customStyleForRenderer(RenderStyle& parentStyle) override;
 
     static void synchronizeRequiredFeatures(SVGElement* contextElement);
