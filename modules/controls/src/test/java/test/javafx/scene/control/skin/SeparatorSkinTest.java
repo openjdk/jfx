@@ -61,6 +61,9 @@ public class SeparatorSkinTest {
         line = (Region) SkinBaseShim.getChildren(skin).get(0);
         line.setPadding((new Insets(4, 3, 2, 1)));
         separator.layout();
+        // Need a second layout() call is because this parent can be made
+        // "layout" dirty again by its children
+        separator.layout();
     }
 
     /****************************************************************************

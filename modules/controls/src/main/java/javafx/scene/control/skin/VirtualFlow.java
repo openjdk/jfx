@@ -954,10 +954,18 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * parent.
      */
     @Override public void requestLayout() {
-        // isNeedsLayout() is commented out due to RT-21417. This does not
-        // appear to impact performance (indeed, it may help), and resolves the
-        // issue identified in RT-21417.
-        setNeedsLayout(true);
+// Note: This block is commented as it was relaying on a bad assumption on how
+//       layout request was handled in parent class that is now fixed.
+//
+//        // isNeedsLayout() is commented out due to RT-21417. This does not
+//        // appear to impact performance (indeed, it may help), and resolves the
+//        // issue identified in RT-21417.
+//        setNeedsLayout(true);
+
+        // The fix is to prograte this layout request to its parent class.
+        // A better fix will be required if performance is negatively affected
+        // by this fix.
+        super.requestLayout();
     }
 
     /** {@inheritDoc} */
