@@ -103,17 +103,18 @@ public abstract class Control extends Region implements Skinnable {
      * @return The class. Cannot return null
      * @throws ClassNotFoundException If the class cannot be found using any technique.
      */
-    static Class<?> loadClass(final String className, final Object instance)
+    private static Class<?> loadClass(final String className, final Object instance)
             throws ClassNotFoundException
     {
         try {
             // Try just loading the class
-            return Class.forName(className);
+            return Class.forName(className, false, Control.class.getClassLoader());
         } catch (ClassNotFoundException ex) {
             // RT-17525 : Use context class loader only if Class.forName fails.
             if (Thread.currentThread().getContextClassLoader() != null) {
                 try {
-                    return Thread.currentThread().getContextClassLoader().loadClass(className);
+                    final ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+                    return Class.forName(className, false, ccl);
                 } catch (ClassNotFoundException ex2) {
                     // Do nothing, just fall through
                 }
@@ -127,7 +128,8 @@ public abstract class Control extends Region implements Skinnable {
                 Class<?> currentType = instance.getClass();
                 while (currentType != null) {
                     try {
-                        return currentType.getClassLoader().loadClass(className);
+                        final ClassLoader loader = currentType.getClassLoader();
+                        return Class.forName(className, false, loader);
                     } catch (ClassNotFoundException ex2) {
                         currentType = currentType.getSuperclass();
                     }
@@ -701,6 +703,17 @@ public abstract class Control extends Region implements Skinnable {
 
         try {
             final Class<?> skinClass = Control.loadClass(skinClassName, control);
+            if (!Skin.class.isAssignableFrom(skinClass)) {
+                final String msg =
+                    "'" + skinClassName + "' is not a valid Skin class for control " + control;
+                final List<CssParser.ParseError> errors = StyleManager.getErrors();
+                if (errors != null) {
+                    CssParser.ParseError error = new CssParser.ParseError(msg);
+                    errors.add(error); // RT-19884
+                }
+                Logging.getControlsLogger().severe(msg);
+                return;
+            }
             Constructor<?>[] constructors = skinClass.getConstructors();
             Constructor<?> skinConstructor = null;
             for (Constructor<?> c : constructors) {
