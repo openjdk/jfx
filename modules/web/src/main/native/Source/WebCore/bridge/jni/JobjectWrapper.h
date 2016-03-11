@@ -39,14 +39,14 @@ namespace Bindings {
 
 class JobjectWrapper : public RefCounted<JobjectWrapper> {
 public:
-    static PassRefPtr<JobjectWrapper> create(jobject object) { return adoptRef(new JobjectWrapper(object)); }
+    static PassRefPtr<JobjectWrapper> create(jobject object, bool useGlobalRef = false) { return adoptRef(new JobjectWrapper(object, useGlobalRef)); }
     ~JobjectWrapper();
 
     jobject instance() const { return m_instance; }
     void setInstance(jobject instance) { m_instance = instance; }
 
 private:
-    JobjectWrapper(jobject);
+    JobjectWrapper(jobject, bool useGlobalRef);
 
     jobject m_instance;
     JNIEnv* m_env;
