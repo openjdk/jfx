@@ -29,6 +29,7 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 
+import com.sun.javafx.scene.control.TreeTableViewBackingList;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.event.WeakEventHandler;
 import javafx.scene.control.*;
@@ -69,8 +70,9 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
      *                                                                         *
      **************************************************************************/
 
-    private TreeTableViewBackingList<T> tableBackingList;
-    private ObjectProperty<ObservableList<TreeItem<T>>> tableBackingListProperty;
+    TreeTableViewBackingList<T> tableBackingList;
+    ObjectProperty<ObservableList<TreeItem<T>>> tableBackingListProperty;
+
     private WeakReference<TreeItem<T>> weakRootRef;
     private final TreeTableViewBehavior<T>  behavior;
 
@@ -325,154 +327,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
     }
 
     /** {@inheritDoc} */
-    @Override ObservableList<TreeTableColumn<T, ?>> getVisibleLeafColumns() {
-        return getSkinnable().getVisibleLeafColumns();
-    }
-
-    @Override int getVisibleLeafIndex(TreeTableColumn<T,?> tc) {
-        return getSkinnable().getVisibleLeafIndex(tc);
-    }
-
-    @Override TreeTableColumn<T,?> getVisibleLeafColumn(int col) {
-        return getSkinnable().getVisibleLeafColumn(col);
-    }
-
-    /** {@inheritDoc} */
-    @Override TreeTableView.TreeTableViewFocusModel<T> getFocusModel() {
-        return getSkinnable().getFocusModel();
-    }
-
-    /** {@inheritDoc} */
-    @Override TreeTablePosition<T, ?> getFocusedCell() {
-        return getSkinnable().getFocusModel().getFocusedCell();
-    }
-
-    /** {@inheritDoc} */
-    @Override TableSelectionModel<TreeItem<T>> getSelectionModel() {
-        return getSkinnable().getSelectionModel();
-    }
-
-    /** {@inheritDoc} */
-    @Override ObjectProperty<Callback<TreeTableView<T>, TreeTableRow<T>>> rowFactoryProperty() {
-        return getSkinnable().rowFactoryProperty();
-    }
-
-    /** {@inheritDoc} */
-    @Override ObjectProperty<Node> placeholderProperty() {
-        return getSkinnable().placeholderProperty();
-    }
-
-    /** {@inheritDoc} */
-    @Override ObjectProperty<ObservableList<TreeItem<T>>> itemsProperty() {
-        if (tableBackingListProperty == null) {
-            this.tableBackingList = new TreeTableViewBackingList<>(getSkinnable());
-            this.tableBackingListProperty = new SimpleObjectProperty<>(tableBackingList);
-        }
-        return tableBackingListProperty;
-    }
-
-    /** {@inheritDoc} */
-    @Override ObservableList<TreeTableColumn<T,?>> getColumns() {
-        return getSkinnable().getColumns();
-    }
-
-    /** {@inheritDoc} */
-    @Override BooleanProperty tableMenuButtonVisibleProperty() {
-        return getSkinnable().tableMenuButtonVisibleProperty();
-    }
-
-    /** {@inheritDoc} */
-    @Override ObjectProperty<Callback<ResizeFeaturesBase, Boolean>> columnResizePolicyProperty() {
-        return (ObjectProperty<Callback<ResizeFeaturesBase, Boolean>>) (Object) getSkinnable().columnResizePolicyProperty();
-    }
-
-    /** {@inheritDoc} */
-    @Override ObservableList<TreeTableColumn<T,?>> getSortOrder() {
-        return getSkinnable().getSortOrder();
-    }
-
-    @Override boolean resizeColumn(TreeTableColumn<T,?> tc, double delta) {
-        return getSkinnable().resizeColumn(tc, delta);
-    }
-
-    /*
-     * FIXME: Naive implementation ahead
-     * Attempts to resize column based on the pref width of all items contained
-     * in this column. This can be potentially very expensive if the number of
-     * rows is large.
-     */
-    @Override void resizeColumnToFitContent(TreeTableColumn<T,?> tc, int maxRows) {
-        final TreeTableColumn col = tc;
-        List<?> items = itemsProperty().get();
-        if (items == null || items.isEmpty()) return;
-
-        Callback cellFactory = col.getCellFactory();
-        if (cellFactory == null) return;
-
-        TreeTableCell<T,?> cell = (TreeTableCell) cellFactory.call(col);
-        if (cell == null) return;
-
-        // set this property to tell the TableCell we want to know its actual
-        // preferred width, not the width of the associated TableColumnBase
-        cell.getProperties().put(Properties.DEFER_TO_PARENT_PREF_WIDTH, Boolean.TRUE);
-
-        // determine cell padding
-        double padding = 10;
-        Node n = cell.getSkin() == null ? null : cell.getSkin().getNode();
-        if (n instanceof Region) {
-            Region r = (Region) n;
-            padding = r.snappedLeftInset() + r.snappedRightInset();
-        }
-
-        final TreeTableView<T> treeTableView = getSkinnable();
-
-        TreeTableRow<T> treeTableRow = new TreeTableRow<>();
-        treeTableRow.updateTreeTableView(treeTableView);
-
-        int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
-        double maxWidth = 0;
-        for (int row = 0; row < rows; row++) {
-            treeTableRow.updateIndex(row);
-            treeTableRow.updateTreeItem(treeTableView.getTreeItem(row));
-
-            cell.updateTreeTableColumn(col);
-            cell.updateTreeTableView(treeTableView);
-            cell.updateTreeTableRow(treeTableRow);
-            cell.updateIndex(row);
-
-            if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
-                getChildren().add(cell);
-                cell.applyCss();
-
-                double w = cell.prefWidth(-1);
-
-                maxWidth = Math.max(maxWidth, w);
-                getChildren().remove(cell);
-            }
-        }
-
-        // dispose of the cell to prevent it retaining listeners (see RT-31015)
-        cell.updateIndex(-1);
-
-        // RT-36855 - take into account the column header text / graphic widths.
-        // Magic 10 is to allow for sort arrow to appear without text truncation.
-        TableColumnHeader header = getTableHeaderRow().getColumnHeaderFor(tc);
-        double headerTextWidth = Utils.computeTextWidth(header.label.getFont(), tc.getText(), -1);
-        Node graphic = header.label.getGraphic();
-        double headerGraphicWidth = graphic == null ? 0 : graphic.prefWidth(-1) + header.label.getGraphicTextGap();
-        double headerWidth = headerTextWidth + headerGraphicWidth + 10 + header.snappedLeftInset() + header.snappedRightInset();
-        maxWidth = Math.max(maxWidth, headerWidth);
-
-        // RT-23486
-        maxWidth += padding;
-        if(treeTableView.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY) {
-            maxWidth = Math.max(maxWidth, col.getWidth());
-        }
-
-        col.impl_setWidth(maxWidth);
-    }
-
-    /** {@inheritDoc} */
     @Override protected int getItemCount() {
         return getSkinnable().getExpandedItemCount();
     }
@@ -506,48 +360,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             needCellsRebuilt = true;
         } else {
             needCellsReconfigured = true;
-        }
-    }
-
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Support classes                                                         *
-     *                                                                         *
-     **************************************************************************/
-
-    /**
-     * A simple read only list structure that maps into the TreeTableView tree
-     * structure.
-     */
-    private static class TreeTableViewBackingList<T> extends ReadOnlyUnbackedObservableList<TreeItem<T>> {
-        private final TreeTableView<T> treeTable;
-
-        private int size = -1;
-
-        TreeTableViewBackingList(TreeTableView<T> treeTable) {
-            this.treeTable = treeTable;
-        }
-
-        void resetSize() {
-            int oldSize = size;
-            size = -1;
-
-            // TODO we can certainly make this better....but it may not really matter
-            callObservers(new NonIterableChange.GenericAddRemoveChange<TreeItem<T>>(
-                    0, oldSize, FXCollections.<TreeItem<T>>emptyObservableList(), this));
-        }
-
-        @Override public TreeItem<T> get(int i) {
-            return treeTable.getTreeItem(i);
-        }
-
-        @Override public int size() {
-            if (size == -1) {
-                size = treeTable.getExpandedItemCount();
-            }
-            return size;
         }
     }
 }
