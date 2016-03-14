@@ -546,6 +546,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         itemCount = newCount;
 
+        if (itemCount == 0) {
+            flow.getHbar().setValue(0.0);
+        }
+
         // if this is not called even when the count is the same, we get a
         // memory leak in VirtualFlow.sheet.children. This can probably be
         // optimised in the future when time permits.

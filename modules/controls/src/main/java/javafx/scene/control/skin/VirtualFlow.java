@@ -2164,10 +2164,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     void updateHbar() {
+        if (! isVisible() || getScene() == null) return;
         // Bring the clipView.clipX back to 0 if control is vertical or
         // the hbar isn't visible (fix for RT-11666)
-        if (! isVisible() || getScene() == null) return;
-
         if (isVertical()) {
             if (hbar.isVisible()) {
                 clipView.setClipX(hbar.getValue());
