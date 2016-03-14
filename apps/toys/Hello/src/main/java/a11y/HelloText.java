@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,7 @@ public class HelloText extends Application {
     @Override public void start(Stage stage) {
 
         final Text text = new Text("01234");
-        text.impl_selectionFillProperty().set(Color.BLUE);
+        text.selectionFillProperty().set(Color.BLUE);
         text.setFont(Font.font(50));
 
         Label l1 = new Label("name");
@@ -67,8 +67,8 @@ public class HelloText extends Application {
 //        scene.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 //            @Override
 //            public void handle(KeyEvent event) {
-//                int start = text.getImpl_selectionStart();
-//                int end = text.getImpl_selectionEnd();
+//                int start = text.getSelectionStart();
+//                int end = text.getSelectionEnd();
 //                if (start == -1) start = 0;
 //                if (end == -1) end = text.getText().length();
 //                switch (event.getCode()) {
@@ -78,8 +78,8 @@ public class HelloText extends Application {
 //                case DOWN: end++; break;
 //                default:
 //                }
-//                text.setImpl_selectionStart(start);
-//                text.setImpl_selectionEnd(end);
+//                text.setSelectionStart(start);
+//                text.setSelectionEnd(end);
 ////                System.out.println(start + " " + end);
 //            }
 //        });

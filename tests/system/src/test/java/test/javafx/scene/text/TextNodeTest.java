@@ -130,66 +130,66 @@ public class TextNodeTest {
         float avgChar = (float)bounds.getWidth();
         PathElement[] empty = {};
 
-        assertEquals(empty, text.getImpl_caretShape()); //initially empty
+        assertEquals(empty, text.getCaretShape()); //initially empty
 
-        text.setImpl_caretPosition(0);
-        assertCaretEquals(text.getImpl_caretShape(), 0, 0, 0, lineHeight);
+        text.setCaretPosition(0);
+        assertCaretEquals(text.getCaretShape(), 0, 0, 0, lineHeight);
 
-        text.setImpl_caretPosition(-1);
-        assertEquals(empty, text.getImpl_caretShape()); //empty after -1
+        text.setCaretPosition(-1);
+        assertEquals(empty, text.getCaretShape()); //empty after -1
 
         //set back
-        text.setImpl_caretPosition(0);
-        assertCaretEquals(text.getImpl_caretShape(), 0, 0, 0, lineHeight);
+        text.setCaretPosition(0);
+        assertCaretEquals(text.getCaretShape(), 0, 0, 0, lineHeight);
 
-        text.setImpl_caretBias(false);
+        text.setCaretBias(false);
         text.setText("abc");
-        assertEquals(empty, text.getImpl_caretShape()); //empty after setText
-        assertEquals(-1, text.getImpl_caretPosition());
-        assertEquals(true, text.impl_caretBiasProperty().get());
+        assertEquals(empty, text.getCaretShape()); //empty after setText
+        assertEquals(-1, text.getCaretPosition());
+        assertEquals(true, text.caretBiasProperty().get());
 
 
         // trailing edges
-        text.setImpl_caretPosition(0);
-        text.setImpl_caretBias(true);
-        assertCaretEquals(text.getImpl_caretShape(), 0, 0, 0, lineHeight);
-        text.setImpl_caretPosition(0);
-        text.setImpl_caretBias(false);
-        assertCaretEquals(text.getImpl_caretShape(), avgChar, 0, avgChar, lineHeight);
-        text.setImpl_caretPosition(1);
-        text.setImpl_caretBias(true);
-        assertCaretEquals(text.getImpl_caretShape(), avgChar, 0, avgChar, lineHeight);
-        text.setImpl_caretPosition(1);
-        text.setImpl_caretBias(false);
-        assertCaretEquals(text.getImpl_caretShape(), avgChar*2, 0, avgChar*2, lineHeight);
-        text.setImpl_caretPosition(2);
-        text.setImpl_caretBias(true);
-        assertCaretEquals(text.getImpl_caretShape(), avgChar*2, 0, avgChar*2, lineHeight);
-        text.setImpl_caretPosition(2);
-        text.setImpl_caretBias(false);
-        assertCaretEquals(text.getImpl_caretShape(), avgChar*3, 0, avgChar*3, lineHeight);
+        text.setCaretPosition(0);
+        text.setCaretBias(true);
+        assertCaretEquals(text.getCaretShape(), 0, 0, 0, lineHeight);
+        text.setCaretPosition(0);
+        text.setCaretBias(false);
+        assertCaretEquals(text.getCaretShape(), avgChar, 0, avgChar, lineHeight);
+        text.setCaretPosition(1);
+        text.setCaretBias(true);
+        assertCaretEquals(text.getCaretShape(), avgChar, 0, avgChar, lineHeight);
+        text.setCaretPosition(1);
+        text.setCaretBias(false);
+        assertCaretEquals(text.getCaretShape(), avgChar*2, 0, avgChar*2, lineHeight);
+        text.setCaretPosition(2);
+        text.setCaretBias(true);
+        assertCaretEquals(text.getCaretShape(), avgChar*2, 0, avgChar*2, lineHeight);
+        text.setCaretPosition(2);
+        text.setCaretBias(false);
+        assertCaretEquals(text.getCaretShape(), avgChar*3, 0, avgChar*3, lineHeight);
 
         //test length
-        text.setImpl_caretPosition(3);
-        text.setImpl_caretBias(true);
-        assertCaretEquals(text.getImpl_caretShape(), avgChar*3, 0, avgChar*3, lineHeight);
-        text.setImpl_caretPosition(3);
-        text.setImpl_caretBias(false);
-        assertCaretEquals(text.getImpl_caretShape(), avgChar*3, 0, avgChar*3, lineHeight);
+        text.setCaretPosition(3);
+        text.setCaretBias(true);
+        assertCaretEquals(text.getCaretShape(), avgChar*3, 0, avgChar*3, lineHeight);
+        text.setCaretPosition(3);
+        text.setCaretBias(false);
+        assertCaretEquals(text.getCaretShape(), avgChar*3, 0, avgChar*3, lineHeight);
 
         //test out of bounds
-        text.setImpl_caretPosition(4);
-        text.setImpl_caretBias(true);
-        assertEquals(empty, text.getImpl_caretShape());
-        text.setImpl_caretPosition(4);
-        text.setImpl_caretBias(false);
-        assertEquals(empty, text.getImpl_caretShape());
+        text.setCaretPosition(4);
+        text.setCaretBias(true);
+        assertEquals(empty, text.getCaretShape());
+        text.setCaretPosition(4);
+        text.setCaretBias(false);
+        assertEquals(empty, text.getCaretShape());
 
         //test empty text
         text.setText("");
-        text.setImpl_caretPosition(0);
-        text.setImpl_caretBias(true);
-        assertCaretEquals(text.getImpl_caretShape(), 0, 0, 0, lineHeight);
+        text.setCaretPosition(0);
+        text.setCaretBias(true);
+        assertCaretEquals(text.getCaretShape(), 0, 0, 0, lineHeight);
     }
 
 
@@ -205,89 +205,89 @@ public class TextNodeTest {
         float avgChar = (float)bounds.getWidth();
         PathElement[] empty = {};
 
-        assertEquals(empty, text.getImpl_selectionShape()); //initially null
+        assertEquals(empty, text.getSelectionShape()); //initially null
 
-        text.setImpl_selectionStart(0);
-        assertEquals(empty, text.getImpl_selectionShape()); //set start, but not end
+        text.setSelectionStart(0);
+        assertEquals(empty, text.getSelectionShape()); //set start, but not end
 
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(1);
-        assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
+        text.setSelectionStart(0);
+        text.setSelectionEnd(1);
+        assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
 
-        text.setImpl_selectionStart(-1);
-        assertEquals(empty, text.getImpl_selectionShape());; //no start
+        text.setSelectionStart(-1);
+        assertEquals(empty, text.getSelectionShape());; //no start
 
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(1);
-        assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
+        text.setSelectionStart(0);
+        text.setSelectionEnd(1);
+        assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
 
-        text.setImpl_selectionEnd(-1);
-        assertEquals(empty, text.getImpl_selectionShape()); //no end
+        text.setSelectionEnd(-1);
+        assertEquals(empty, text.getSelectionShape()); //no end
 
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(1);
-        assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
+        text.setSelectionStart(0);
+        text.setSelectionEnd(1);
+        assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
 
-        text.setImpl_selectionStart(1);
-        text.setImpl_selectionEnd(0);
-        assertEquals(empty, text.getImpl_selectionShape()); //end > start
+        text.setSelectionStart(1);
+        text.setSelectionEnd(0);
+        assertEquals(empty, text.getSelectionShape()); //end > start
 
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(1);
-        assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
+        text.setSelectionStart(0);
+        text.setSelectionEnd(1);
+        assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
 
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(0);
-        assertEquals(empty, text.getImpl_selectionShape()); //end == start
+        text.setSelectionStart(0);
+        text.setSelectionEnd(0);
+        assertEquals(empty, text.getSelectionShape()); //end == start
 
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(1);
-        assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
+        text.setSelectionStart(0);
+        text.setSelectionEnd(1);
+        assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
 
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(3);
-        assertEquals(empty, text.getImpl_selectionShape()); //end > length
+        text.setSelectionStart(0);
+        text.setSelectionEnd(3);
+        assertEquals(empty, text.getSelectionShape()); //end > length
 
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(1);
-        assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
+        text.setSelectionStart(0);
+        text.setSelectionEnd(1);
+        assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
 
-        text.setImpl_selectionStart(3);
-        text.setImpl_selectionEnd(5);
-        assertEquals(empty, text.getImpl_selectionShape()); //start > length
+        text.setSelectionStart(3);
+        text.setSelectionEnd(5);
+        assertEquals(empty, text.getSelectionShape()); //start > length
 
         text.setText("abc");
-        assertEquals(empty, text.getImpl_selectionShape()); //setText resets
-        assertEquals(-1, text.getImpl_selectionStart());
-        assertEquals(-1, text.getImpl_selectionEnd());
+        assertEquals(empty, text.getSelectionShape()); //setText resets
+        assertEquals(-1, text.getSelectionStart());
+        assertEquals(-1, text.getSelectionEnd());
 
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(0);
-        assertEquals(empty, text.getImpl_selectionShape());
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(1);
-        assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, avgChar, lineHeight);
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(2);
-        assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, 2*avgChar, lineHeight);
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(3);
-        assertBoundsEquals(text.getImpl_selectionShape(), 0, 0, 3*avgChar, lineHeight);
-        text.setImpl_selectionStart(0);
-        text.setImpl_selectionEnd(4);
-        assertEquals(empty, text.getImpl_selectionShape());
-        text.setImpl_selectionStart(1);
-        text.setImpl_selectionEnd(2);
-        assertBoundsEquals(text.getImpl_selectionShape(), avgChar, 0, avgChar, lineHeight);
-        text.setImpl_selectionStart(1);
-        text.setImpl_selectionEnd(3);
-        assertBoundsEquals(text.getImpl_selectionShape(), avgChar, 0, 2*avgChar, lineHeight);
-        text.setImpl_selectionStart(2);
-        text.setImpl_selectionEnd(3);
-        assertBoundsEquals(text.getImpl_selectionShape(), 2*avgChar, 0, avgChar, lineHeight);
-        text.setImpl_selectionStart(3);
-        text.setImpl_selectionEnd(3);
-        assertEquals(empty, text.getImpl_selectionShape());
+        text.setSelectionStart(0);
+        text.setSelectionEnd(0);
+        assertEquals(empty, text.getSelectionShape());
+        text.setSelectionStart(0);
+        text.setSelectionEnd(1);
+        assertBoundsEquals(text.getSelectionShape(), 0, 0, avgChar, lineHeight);
+        text.setSelectionStart(0);
+        text.setSelectionEnd(2);
+        assertBoundsEquals(text.getSelectionShape(), 0, 0, 2*avgChar, lineHeight);
+        text.setSelectionStart(0);
+        text.setSelectionEnd(3);
+        assertBoundsEquals(text.getSelectionShape(), 0, 0, 3*avgChar, lineHeight);
+        text.setSelectionStart(0);
+        text.setSelectionEnd(4);
+        assertEquals(empty, text.getSelectionShape());
+        text.setSelectionStart(1);
+        text.setSelectionEnd(2);
+        assertBoundsEquals(text.getSelectionShape(), avgChar, 0, avgChar, lineHeight);
+        text.setSelectionStart(1);
+        text.setSelectionEnd(3);
+        assertBoundsEquals(text.getSelectionShape(), avgChar, 0, 2*avgChar, lineHeight);
+        text.setSelectionStart(2);
+        text.setSelectionEnd(3);
+        assertBoundsEquals(text.getSelectionShape(), 2*avgChar, 0, avgChar, lineHeight);
+        text.setSelectionStart(3);
+        text.setSelectionEnd(3);
+        assertEquals(empty, text.getSelectionShape());
     }
 
 }
