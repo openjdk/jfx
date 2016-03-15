@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
+import javafx.scene.shape.PathElement;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
@@ -180,6 +181,50 @@ public class TextFlow extends Pane {
         }
     }
 
+    /**
+     * Maps local point to index in the content.
+     *
+     * @param point the specified point to be tested
+     * @return a {@code HitInfo} representing the character index found
+     * @since 9
+     */
+    public final HitInfo hitTest(javafx.geometry.Point2D point) {
+        if (point != null) {
+            TextLayout layout = getTextLayout();
+            double x = point.getX()/* - getX()*/;
+            double y = point.getY()/* - getY()/* + getYRendering()*/;
+            TextLayout.Hit layoutHit = layout.getHitInfo((float)x, (float)y);
+            return new HitInfo(layoutHit.getCharIndex(), layoutHit.getInsertionIndex(),
+                               layoutHit.isLeading(), null/*getText()*/);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Returns shape of caret in local coordinates.
+     *
+     * @param charIndex the character index for the caret
+     * @param caretBias whether the caret is biased on the leading edge of the character
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 9
+     */
+    public PathElement[] caretShape(int charIndex, boolean leading) {
+        return getTextLayout().getCaretShape(charIndex, leading, 0, 0);
+    }
+
+    /**
+     * Returns shape for the range of the text in local coordinates.
+     *
+     * @param start the beginning character index for the range
+     * @param start the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 9
+     */
+    public final PathElement[] rangeShape(int start, int end) {
+        return getRange(start, end, TextLayout.TYPE_TEXT);
+    }
+
     @Override
     public boolean usesMirroring() {
         return false;
@@ -298,6 +343,11 @@ public class TextFlow extends Pane {
             }
         }
         inLayout = false;
+    }
+
+    private PathElement[] getRange(int start, int end, int type) {
+        TextLayout layout = getTextLayout();
+        return layout.getRange(start, end, type, 0, 0);
     }
 
     private static class EmbeddedSpan implements TextSpan {

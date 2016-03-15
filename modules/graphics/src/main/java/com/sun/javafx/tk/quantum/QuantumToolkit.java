@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,7 +92,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AbstractRemoteResource;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
-import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.AppletWindow;
@@ -1045,14 +1044,6 @@ public final class QuantumToolkit extends Toolkit {
         }
 
         return elements.toArray(new PathElement[elements.size()]);
-    }
-
-    @Override public HitInfo convertHitInfoToFX(Object hit) {
-        Integer textHitPos = (Integer) hit;
-        HitInfo hitInfo = new HitInfo();
-        hitInfo.setCharIndex(textHitPos);
-        hitInfo.setLeading(true);
-        return hitInfo;
     }
 
     @Override public Filterable toFilterable(Image img) {

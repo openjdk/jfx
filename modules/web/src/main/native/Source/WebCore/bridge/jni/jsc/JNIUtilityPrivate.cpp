@@ -212,12 +212,26 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                     // Unwrap a Java instance.
                     JavaRuntimeObject* runtimeObject = static_cast<JavaRuntimeObject*>(object);
                     JavaInstance* instance = runtimeObject->getInternalJavaInstance();
-                    if (instance)
+                    if (instance) {
+                        // Since instance->javaInstance() is WeakGlobalRef, creating a localref to safeguard javaInstance() from GC
+                        JLObject jlinstance(instance->javaInstance(), true);
+                        if (!jlinstance) {
+                            LOG_ERROR("Could not get javaInstance for %p in JNIUtilityPrivate::convertValueToJValue", jlinstance);
+                            return result;
+                        }
                         result.l = instance->javaInstance();
+                    }
                 } else if (object->classInfo() == RuntimeArray::info()) {
                     // Input is a JavaScript Array that was originally created from a Java Array
                     RuntimeArray* imp = static_cast<RuntimeArray*>(object);
                     JavaArray* array = static_cast<JavaArray*>(imp->getConcreteArray());
+
+                    // Since array->javaArray() is WeakGlobalRef, creating a localref to safeguard javaInstance() from GC
+                    JLObject jlinstancearray(array->javaArray(), true);
+                    if (!jlinstancearray) {
+                        LOG_ERROR("Could not get javaArrayInstance for %p in JNIUtilityPrivate::convertValueToJValue", jlinstancearray);
+                        return result;
+                    }
                     result.l = array->javaArray();
                 } else if ((!result.l && (!strcmp(javaClassName, "java.lang.Object")))
                            || (!strcmp(javaClassName, "netscape.javascript.JSObject"))) {
@@ -402,6 +416,15 @@ jobject jvalueToJObject(jvalue value, JavaType jtype) {
 }
 
 jthrowable dispatchJNICall(int count, RootObject* rootObject, jobject obj, bool isStatic, JavaType returnType, jmethodID methodId, jobject* args, jvalue& result, jobject accessControlContext) {
+
+    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtilityPrivate::dispatchJNICall", jlinstance);
+        return NULL;
+    }
+
     JNIEnv* env = getJNIEnv();
     jclass objClass = env->GetObjectClass(obj);
     jobject rmethod = env->ToReflectedMethod(objClass, methodId, isStatic);

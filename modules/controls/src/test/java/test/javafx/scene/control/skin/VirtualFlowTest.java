@@ -111,6 +111,9 @@ public class VirtualFlowTest {
         flow.setCellCount(100);
         flow.resize(300, 300);
         pulse();
+        // Need a second pulse() call is because this parent can be made
+        // "layout" dirty again by its children
+        pulse();
     }
 
     private void pulse() {

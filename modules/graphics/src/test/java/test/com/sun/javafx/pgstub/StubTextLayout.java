@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -130,13 +130,10 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
-    public HitInfo getHitInfo(float x, float y) {
+    public Hit getHitInfo(float x, float y) {
         // TODO this probably needs to be entirely rewritten...
         if (text == null) {
-            final HitInfo hit = new HitInfo();
-            hit.setCharIndex(0);
-            hit.setLeading(true);
-            return hit;
+            return new Hit(0, -1, true);
         }
 
         final double fontSize = (font == null ? 0 : ((Font)font).getSize());
@@ -157,9 +154,7 @@ public class StubTextLayout implements TextLayout {
             throw new IllegalStateException("Asked for hit info out of x range");
         }
 
-        final HitInfo hit = new HitInfo();
-        hit.setCharIndex(offset + charPos);
-        return hit;
+        return new Hit(offset + charPos, -1, true);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,6 +69,7 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
+import javafx.scene.text.HitInfo;
 import javafx.stage.Window;
 import javafx.util.Duration;
 import java.lang.ref.WeakReference;
@@ -79,7 +80,6 @@ import com.sun.javafx.PlatformUtil;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.PaintConverter;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
-import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.tk.FontMetrics;
 import com.sun.javafx.tk.Toolkit;
 import static com.sun.javafx.PlatformUtil.isWindows;
@@ -984,53 +984,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                 break;
             }
             default: super.executeAccessibleAction(action, parameters);
-        }
-    }
-
-    /**
-     * This class represents the hit information for a Text node.
-     */
-    public static class TextPosInfo {
-
-        TextPosInfo(HitInfo hit) {
-            this(hit.getCharIndex(), hit.isLeading());
-        }
-
-        /**
-         * Create a TextPosInfo object representing a text index and forward bias.
-         *
-         * @param charIndex the character index.
-         * @param leading whether the hit is on the leading edge of the character. If it is false, it represents the trailing edge.
-         */
-        public TextPosInfo(int charIndex, boolean leading) {
-            setCharIndex(charIndex);
-            setLeading(leading);
-        }
-
-        /**
-         * The index of the character which this hit information refers to.
-         */
-        private int charIndex;
-        public int getCharIndex() { return charIndex; }
-        void setCharIndex(int charIndex) { this.charIndex = charIndex; }
-
-        /**
-         * Indicates whether the hit is on the leading edge of the character.
-         * If it is false, it represents the trailing edge.
-         */
-        private boolean leading;
-        public boolean isLeading() { return leading; }
-        void setLeading(boolean leading) { this.leading = leading; }
-
-        /**
-         * Returns the index of the insertion position.
-         */
-        public int getInsertionIndex() {
-            return leading ? charIndex : charIndex + 1;
-        }
-
-        @Override public String toString() {
-            return "charIndex: " + charIndex + ", isLeading: " + leading;
         }
     }
 }

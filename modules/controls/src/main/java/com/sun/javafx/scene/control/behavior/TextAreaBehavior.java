@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,12 +44,11 @@ import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.text.HitInfo;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 
 import java.util.function.Predicate;
-
-import static javafx.scene.control.skin.TextAreaSkin.TextPosInfo;
 
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
@@ -270,9 +269,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
             // if the primary button was pressed
             if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                TextPosInfo hit = skin.getIndex(e.getX(), e.getY());
-                int i = Utils.getHitInsertionIndex(hit, textArea.textProperty().getValueSafe());
-//                 int i = skin.getInsertionPoint(e.getX(), e.getY());
+                HitInfo hit = skin.getIndex(e.getX(), e.getY());
+                int i = hit.getInsertionIndex();
                 final int anchor = textArea.getAnchor();
                 final int caretPosition = textArea.getCaretPosition();
                 if (e.getClickCount() < 2 &&
@@ -415,7 +413,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         skin.setCaretAnimating(play);
     }
 
-    protected void mouseDoubleClick(TextPosInfo hit) {
+    protected void mouseDoubleClick(HitInfo hit) {
         final TextArea textArea = getNode();
         textArea.previousWord();
         if (isWindows()) {
@@ -425,7 +423,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         }
     }
 
-    protected void mouseTripleClick(TextPosInfo hit) {
+    protected void mouseTripleClick(HitInfo hit) {
         // select the line
         skin.moveCaret(TextUnit.PARAGRAPH, Direction.BEGINNING, false);
         skin.moveCaret(TextUnit.PARAGRAPH, Direction.END, true);

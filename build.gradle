@@ -835,8 +835,8 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
     NUM_COMPILE_THREADS = 1
 }
 
-// Check that Gradle 2.9 is in use, error if < 1.8.
-if (gradle.gradleVersion != "2.9") {
+// Check that Gradle 2.11 is in use, error if < 2.9.
+if (gradle.gradleVersion != "2.11") {
     def ver = gradle.gradleVersion.split("[\\.]");
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1]);
@@ -851,7 +851,7 @@ if (gradle.gradleVersion != "2.9") {
 
     logger.warn("*****************************************************************");
     logger.warn("Unsupported gradle version $gradle.gradleVersion in use.");
-    logger.warn("Only version 2.9 is supported. Use this version at your own risk");
+    logger.warn("Only version 2.11 is supported. Use this version at your own risk");
     if ( err != "") logger.warn(err);
     logger.warn("*****************************************************************");
 }

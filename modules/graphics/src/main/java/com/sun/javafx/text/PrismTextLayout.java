@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,6 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextSpan;
 import java.text.Bidi;
@@ -407,12 +406,14 @@ public class PrismTextLayout implements TextLayout {
         return result;
     }
 
-    public HitInfo getHitInfo(float x, float y) {
+    public Hit getHitInfo(float x, float y) {
+        int charIndex = -1;
+        boolean leading = false;
+
         ensureLayout();
-        HitInfo info = new HitInfo();
         int lineIndex = getLineIndex(y);
         if (lineIndex >= getLineCount()) {
-            info.setCharIndex(getCharCount());
+            charIndex = getCharCount();
         } else {
             if (isMirrored()) {
                 x = getMirroringWidth() - x;
@@ -433,15 +434,15 @@ public class PrismTextLayout implements TextLayout {
             }
             if (run != null) {
                 int[] trailing = new int[1];
-                info.setCharIndex(run.getStart() + run.getOffsetAtX(x, trailing));
-                info.setLeading(trailing[0] == 0);
+                charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
+                leading = (trailing[0] == 0);
             } else {
                 //empty line, set to line break leading
-                info.setCharIndex(line.getStart());
-                info.setLeading(true);
+                charIndex = line.getStart();
+                leading = true;
             }
         }
-        return info;
+        return new Hit(charIndex, -1, leading);
     }
 
     public PathElement[] getRange(int start, int end, int type,
