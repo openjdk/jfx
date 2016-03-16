@@ -832,13 +832,15 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    private void invalidatedScenes(Scene oldScene, SubScene oldSubScene) {
+    // reapplyCSS should be true for root elements when they are added, and is false for children
+    // of the root element. This prevents CSS being reapplied recursively, as noted in JDK-8151756.
+    private void invalidatedScenes(Scene oldScene, SubScene oldSubScene, boolean reapplyCSS) {
         Scene newScene = sceneProperty().get();
         boolean sceneChanged = oldScene != newScene;
         SubScene newSubScene = subScene;
 
         if (getClip() != null) {
-            getClip().setScenes(newScene, newSubScene);
+            getClip().setScenes(newScene, newSubScene, reapplyCSS);
         }
         if (sceneChanged) {
             updateCanReceiveFocus();
@@ -851,7 +853,7 @@ public abstract class Node implements EventTarget, Styleable {
             focusSetDirty(newScene);
         }
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
-        if (sceneChanged) impl_reapplyCSS();
+        if (sceneChanged && reapplyCSS) impl_reapplyCSS();
 
         if (sceneChanged && !impl_isDirtyEmpty()) {
             //Note: no need to remove from scene's dirty list
@@ -910,16 +912,16 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    final void setScenes(Scene newScene, SubScene newSubScene) {
+    final void setScenes(Scene newScene, SubScene newSubScene, boolean reapplyCSS) {
         Scene oldScene = sceneProperty().get();
         if (newScene != oldScene || newSubScene != subScene) {
             scene.set(newScene);
             SubScene oldSubScene = subScene;
             subScene = newSubScene;
-            invalidatedScenes(oldScene, oldSubScene);
+            invalidatedScenes(oldScene, oldSubScene, reapplyCSS);
             if (this instanceof SubScene) { // TODO: find better solution
                 SubScene thisSubScene = (SubScene)this;
-                thisSubScene.getRoot().setScenes(newScene, thisSubScene);
+                thisSubScene.getRoot().setScenes(newScene, thisSubScene, reapplyCSS);
             }
         }
     }
@@ -6635,13 +6637,13 @@ public abstract class Node implements EventTarget, Styleable {
                         } else {
                             if (oldClip != null) {
                                 oldClip.clipParent = null;
-                                oldClip.setScenes(null, null);
+                                oldClip.setScenes(null, null, /* reapplyCSS */ false);
                                 oldClip.updateTreeVisible(false);
                             }
 
                             if (newClip != null) {
                                 newClip.clipParent = Node.this;
-                                newClip.setScenes(getScene(), getSubScene());
+                                newClip.setScenes(getScene(), getSubScene(), /* reapplyCSS */ false);
                                 newClip.updateTreeVisible(true);
                             }
 

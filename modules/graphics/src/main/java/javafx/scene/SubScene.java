@@ -262,11 +262,11 @@ public class SubScene extends Node {
 
                     if (oldRoot != null) {
                         StyleManager.getInstance().forget(SubScene.this);
-                        oldRoot.setScenes(null, null);
+                        oldRoot.setScenes(null, null, /* reapplyCSS*/ false);
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
-                    _value.setScenes(getScene(), SubScene.this);
+                    _value.setScenes(getScene(), SubScene.this, /* reapplyCSS*/ true);
                     markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
                     _value.requestLayout();
