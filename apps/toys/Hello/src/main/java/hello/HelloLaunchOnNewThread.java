@@ -25,6 +25,7 @@
 
 package hello;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -35,6 +36,7 @@ import javafx.stage.Stage;
 public class HelloLaunchOnNewThread extends Application {
 
     static long startTime;
+    static AtomicBoolean mainCalled = new AtomicBoolean(false);
 
     public HelloLaunchOnNewThread() {
         long endTime = System.nanoTime();
@@ -42,6 +44,11 @@ public class HelloLaunchOnNewThread extends Application {
         System.err.println("DONE: elapsed time = " + elapsedMsec + " msec");
         System.err.println("Constructor: currentThread="
                 + Thread.currentThread().getName());
+        if (!mainCalled.get()) {
+            System.err.println("***************************************");
+            System.err.println("*** ERROR: main() method not called ***");
+            System.err.println("***************************************");
+        }
     }
 
     @Override public void init() {
@@ -81,6 +88,7 @@ public class HelloLaunchOnNewThread extends Application {
      * @param args the command line arguments
      */
     public static void main(final String[] args) {
+        mainCalled.set(true);
         System.err.println("main: currentThread="
                 + Thread.currentThread().getName());
         new Thread(() -> {

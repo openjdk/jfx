@@ -43,6 +43,7 @@ public class NativeLibLoader {
 
     private static boolean verbose = false;
 
+    private static boolean usingModules = false;
     private static File libDir = null;
     private static String libPrefix = "";
     private static String libSuffix = "";
@@ -89,10 +90,16 @@ public class NativeLibLoader {
     private static void loadLibraryInternal(String libraryName) {
         // Look for the library in the same directory as the jar file
         // containing this class.
-        // If that fails, then try System.loadLibrary as a last resort.
+        // If that fails, then try System.loadLibrary.
         try {
+            // FIXME: JIGSAW -- We should eventually remove this legacy path,
+            // since it isn't applicable to Jigsaw.
             loadLibraryFullPath(libraryName);
         } catch (UnsatisfiedLinkError ex) {
+            if (verbose && !usingModules) {
+                System.err.println("WARNING: " + ex);
+            }
+
             // NOTE: First attempt to load the libraries from the java.library.path.
             // This allows FX to find more recent versions of the shared libraries
             // from java.library.path instead of ones that might be part of the JRE
@@ -115,15 +122,12 @@ public class NativeLibLoader {
                 }
             }
 
-            // Try System.loadLibrary as a last resort. If it succeeds, then
-            // print a warning. If it fails, rethrow the exception from
-            // the earlier System.load()
+            // Finally we will use System.loadLibrary.
             try {
                 System.loadLibrary(libraryName);
                 if (verbose) {
-                    System.err.println("WARNING: " + ex.toString());
-                    System.err.println("    using System.loadLibrary("
-                            + libraryName + ") as a fallback");
+                    System.err.println("System.loadLibrary("
+                            + libraryName + ") succeeded");
                 }
             } catch (UnsatisfiedLinkError ex2) {
                 //On iOS we link all libraries staticaly. Presence of library
@@ -140,8 +144,8 @@ public class NativeLibLoader {
                         throw ex3;
                     }
                 }
-                // Rethrow original exception
-                throw ex;
+                // Rethrow exception
+                throw ex2;
             }
         }
     }
@@ -152,13 +156,21 @@ public class NativeLibLoader {
      */
     private static void loadLibraryFullPath(String libraryName) {
         try {
+            if (usingModules) {
+                throw new UnsatisfiedLinkError("ignored");
+            }
             if (libDir == null) {
                 // Get the URL for this class, if it is a jar URL, then get the
                 // filename associated with it.
                 String theClassFile = "NativeLibLoader.class";
                 Class theClass = NativeLibLoader.class;
                 String classUrlString = theClass.getResource(theClassFile).toString();
-                if (!classUrlString.startsWith("jar:file:") || classUrlString.indexOf('!') == -1){
+                if (classUrlString.startsWith("jrt:")) {
+                    // Suppress warning messages
+                    usingModules = true;
+                    throw new UnsatisfiedLinkError("ignored");
+                }
+                if (!classUrlString.startsWith("jar:file:") || classUrlString.indexOf('!') == -1) {
                     throw new UnsatisfiedLinkError("Invalid URL for class: " + classUrlString);
                 }
                 // Strip out the "jar:" and everything after and including the "!"

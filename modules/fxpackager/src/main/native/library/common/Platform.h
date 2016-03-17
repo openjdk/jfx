@@ -137,6 +137,7 @@ typedef pid_t TProcessID;
 #define CONFIG_MAINJAR_KEY        _T("CONFIG_MAINJAR_KEY")
 #define CONFIG_MAINCLASSNAME_KEY  _T("CONFIG_MAINCLASSNAME_KEY")
 #define CONFIG_CLASSPATH_KEY      _T("CONFIG_CLASSPATH_KEY")
+#define CONFIG_MODULEPATH_KEY     _T("CONFIG_MODULEPATH_KEY")
 #define APP_NAME_KEY              _T("APP_NAME_KEY")
 #define CONFIG_SPLASH_KEY         _T("CONFIG_SPLASH_KEY")
 #define CONFIG_APP_ID_KEY         _T("CONFIG_APP_ID_KEY")
@@ -151,9 +152,131 @@ typedef void* Module;
 typedef void* Procedure;
 
 
-class Process {
+template <typename ObjectType, typename ValueType, ValueType (ObjectType::*getter)(void), void (ObjectType::*setter)(ValueType)>
+class Property {
+private:
+    ObjectType* FObject;
+
 public:
-    Process() {}
+    Property() {
+        FObject = NULL;
+    }
+
+    void SetInstance(ObjectType* Value) {
+        FObject = Value;
+    }
+
+    // To set the value using the set method.
+    ValueType operator =(const ValueType& Value) {
+        assert(FObject != NULL);
+        (FObject->*setter)(Value);
+        return Value;
+    }
+
+    // The Property class is treated as the internal type.
+    operator ValueType() {
+        assert(FObject != NULL);
+        return (FObject->*getter)();
+    }
+};
+
+template <typename ObjectType, typename ValueType, ValueType (ObjectType::*getter)(void)>
+class ReadProperty {
+private:
+    ObjectType* FObject;
+
+public:
+    ReadProperty() {
+        FObject = NULL;
+    }
+
+    void SetInstance(ObjectType* Value) {
+        FObject = Value;
+    }
+
+    // The Property class is treated as the internal type.
+    operator ValueType() {
+        assert(FObject != NULL);
+        return (FObject->*getter)();
+    }
+};
+
+template <typename ObjectType, typename ValueType, void (ObjectType::*setter)(ValueType)>
+class WriteProperty {
+private:
+    ObjectType* FObject;
+
+public:
+    WriteProperty() {
+        FObject = NULL;
+    }
+
+    void SetInstance(ObjectType* Value) {
+        FObject = Value;
+    }
+
+    // To set the value using the set method.
+    ValueType operator =(const ValueType& Value) {
+        assert(FObject != NULL);
+        (FObject->*setter)(Value);
+        return Value;
+    }
+};
+
+template <typename ValueType, ValueType (*getter)(void), void (*setter)(ValueType)>
+class StaticProperty {
+public:
+    StaticProperty() {
+    }
+
+    // To set the value using the set method.
+    ValueType operator =(const ValueType& Value) {
+        (*getter)(Value);
+        return Value;
+    }
+
+    // The Property class is treated as the internal type which is the getter.
+    operator ValueType() {
+        return (*setter)();
+    }
+};
+
+template <typename ValueType, ValueType (*getter)(void)>
+class StaticReadProperty {
+public:
+    StaticReadProperty() {
+    }
+
+    // The Property class is treated as the internal type which is the getter.
+    operator ValueType() {
+        return (*getter)();
+    }
+};
+
+template <typename ValueType, void (*setter)(ValueType)>
+class StaticWriteProperty {
+public:
+    StaticWriteProperty() {
+    }
+
+    // To set the value using the set method.
+    ValueType operator =(const ValueType& Value) {
+        (*setter)(Value);
+        return Value;
+    }
+};
+
+
+class Process {
+protected:
+    std::list<TString> FOutput;
+
+public:
+    Process() {
+        Output.SetInstance(this);
+        Input.SetInstance(this);
+    }
+
     virtual ~Process() {}
 
     virtual bool IsRunning() = 0;
@@ -162,6 +285,12 @@ public:
         bool AWait = false) = 0;
     virtual bool Wait() = 0;
     virtual TProcessID GetProcessID() = 0;
+
+    virtual std::list<TString> GetOutput() { return FOutput; }
+    virtual void SetInput(TString Value) = 0;
+
+    ReadProperty<Process, std::list<TString>, &Process::GetOutput> Output;
+    WriteProperty<Process, TString, &Process::SetInput> Input;
 };
 
 
@@ -225,6 +354,24 @@ public:
     virtual bool GetValue(const TString SectionName, const TString Key, TString& Value) = 0;
     virtual bool ContainsSection(const TString SectionName) = 0;
     virtual bool GetSection(const TString SectionName, OrderedMap<TString, TString> &Data) = 0;
+};
+
+class Environment {
+private:
+    Environment() {
+    }
+
+public:
+    static TString GetNewLine() {
+#ifdef WINDOWS
+        return _T("\r\n");
+#endif //WINDOWS
+#ifdef POSIX
+        return _T("\n");
+#endif //POSIX
+    }
+
+    static StaticReadProperty<TString, &Environment::GetNewLine> NewLine;
 };
 
 

@@ -27,25 +27,28 @@ package com.oracle.tools.packager.linux;
 
 import com.oracle.tools.packager.AbstractImageBundler;
 import com.oracle.tools.packager.BundlerParamInfo;
-import com.oracle.tools.packager.JreUtils;
-import com.oracle.tools.packager.JreUtils.Rule;
-import com.oracle.tools.packager.StandardBundlerParam;
-import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
+import com.oracle.tools.packager.JLinkBundlerHelper;
+import com.oracle.tools.packager.JreUtils;
+import com.oracle.tools.packager.JreUtils.Rule;
+import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
+import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
+import jdk.tools.jlink.builder.ImageBuilder;
+import jdk.packager.builders.linux.LinuxAppImageBuilder;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
+import java.util.ResourceBundle;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
@@ -57,7 +60,6 @@ public class LinuxAppBundler extends AbstractImageBundler {
     protected static final String LINUX_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "linux" + File.separator;
     private static final String EXECUTABLE_NAME = "JavaAppLauncher";
-    private static final String LIBRARY_NAME    = "libpackager.so";
 
     public static final BundlerParamInfo<File> ICON_PNG = new StandardBundlerParam<>(
             I18N.getString("param.icon-png.name"),
@@ -151,15 +153,6 @@ public class LinuxAppBundler extends AbstractImageBundler {
                     I18N.getString("error.no-linux-resources.advice"));
         }
 
-        //validate required inputs
-        testRuntime(LINUX_RUNTIME.fetchFrom(p), new String[] {
-                "lib/[^/]+/[^/]+/libjvm.so", // most reliable
-                "lib/rt.jar", // fallback canary for JDK 8
-        });
-        if (USE_FX_PACKAGING.fetchFrom(p)) {
-            testRuntime(LINUX_RUNTIME.fetchFrom(p), new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
-        }
-
         return true;
     }
 
@@ -169,16 +162,11 @@ public class LinuxAppBundler extends AbstractImageBundler {
         return new File(outDir, APP_FS_NAME.fetchFrom(p));
     }
 
-    public static String getLauncherName(Map<String, ? super Object> p) {
-        return APP_FS_NAME.fetchFrom(p);
-    }
-
     public static String getLauncherCfgName(Map<String, ? super Object> p) {
         return "app/" + APP_FS_NAME.fetchFrom(p) +".cfg";
     }
 
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
-        Map<String, ? super Object> originalParams = new HashMap<>(p);
         try {
             if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
                 throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
@@ -196,166 +184,18 @@ public class LinuxAppBundler extends AbstractImageBundler {
                 Log.info(MessageFormat.format(I18N.getString("message.creating-bundle-location"), rootDirectory.getAbsolutePath()));
             }
 
-            File runtimeDirectory = new File(rootDirectory, "runtime");
-
-            File appDirectory = new File(rootDirectory, "app");
-            appDirectory.mkdirs();
-
-            // create the primary launcher
-            createLauncherForEntryPoint(p, rootDirectory);
-
-            // Copy library to the launcher folder
-            IOUtils.copyFromURL(
-                    LinuxResources.class.getResource(LIBRARY_NAME),
-                    new File(rootDirectory, LIBRARY_NAME));
-
-            // create the secondary launchers, if any
-            List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
-            for (Map<String, ? super Object> entryPoint : entryPoints) {
-                Map<String, ? super Object> tmp = new HashMap<>(originalParams);
-                tmp.putAll(entryPoint);
-                createLauncherForEntryPoint(tmp, rootDirectory);
+            if (!p.containsKey(JLinkBundlerHelper.JLINK_BUILDER.getID())) {
+                p.put(JLinkBundlerHelper.JLINK_BUILDER.getID(), "linuxapp-image-builder");
             }
 
-            // Copy runtime to PlugIns folder
-            copyRuntime(p, runtimeDirectory);
-
-            // Copy class path entries to Java folder
-            copyApplication(p, appDirectory);
-
-            // Copy icon to Resources folder
-//FIXME            copyIcon(resourcesDirectory);
+            ImageBuilder imageBuilder = new LinuxAppImageBuilder(p, outputDirectory.toPath());
+            JLinkBundlerHelper.execute(p, outputDirectory, imageBuilder);
 
             return rootDirectory;
         } catch (IOException ex) {
             Log.info("Exception: "+ex);
             Log.debug(ex);
             return null;
-        }
-    }
-
-    private void createLauncherForEntryPoint(Map<String, ? super Object> p, File rootDir) throws IOException {
-        // Copy executable to Linux folder
-        File executableFile = new File(rootDir, getLauncherName(p));
-        IOUtils.copyFromURL(
-                RAW_EXECUTABLE_URL.fetchFrom(p),
-                executableFile);
-
-        executableFile.setExecutable(true, false);
-        executableFile.setWritable(true, true); //for str
-
-        // Generate launcher .cfg file
-        if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
-            writeCfgFile(p, rootDir);
-        } else {
-            writeCfgFile(p, new File(rootDir, getLauncherCfgName(p)), getRuntimeLocation(p));
-        }
-    }
-
-    private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
-        List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(params);
-        if (appResourcesList == null) {
-            throw new RuntimeException("Null app resources?");
-        }
-        for (RelativeFileSet appResources : appResourcesList) {
-            if (appResources == null) {
-                throw new RuntimeException("Null app resources?");
-            }
-            File srcdir = appResources.getBaseDirectory();
-            for (String fname : appResources.getIncludedFiles()) {
-                IOUtils.copyFile(
-                        new File(srcdir, fname), new File(appDirectory, fname));
-            }
-        }
-    }
-
-    private String getRuntimeLocation(Map<String, ? super Object> params) {
-        if (LINUX_RUNTIME.fetchFrom(params) == null) {
-            return "";
-        } else {
-            return "$APPDIR/runtime";
-        }
-    }
-
-    private void writeCfgFile(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
-        File cfgFile = new File(rootDir, getLauncherCfgName(params));
-
-        cfgFile.delete();
-        PrintStream out = new PrintStream(cfgFile);
-        out.println("app.runtime=" + getRuntimeLocation(params));
-        out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
-        out.println("app.version=" + VERSION.fetchFrom(params));
-
-        //use '/' in the class name (instead of '.' to simplify native code
-        out.println("app.mainclass=" +
-                MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
-
-        StringBuilder macroedPath = new StringBuilder();
-        for (String s : CLASSPATH.fetchFrom(params).split("[ ;:]+")) {
-            macroedPath.append(s);
-            macroedPath.append(":");
-        }
-        macroedPath.deleteCharAt(macroedPath.length() - 1);
-        out.println("app.classpath=" + macroedPath.toString());
-
-        List<String> jvmargs = JVM_OPTIONS.fetchFrom(params);
-        int idx = 1;
-        for (String a : jvmargs) {
-            out.println("jvmarg."+idx+"="+a);
-            idx++;
-        }
-        Map<String, String> jvmProps = JVM_PROPERTIES.fetchFrom(params);
-        for (Map.Entry<String, String> entry : jvmProps.entrySet()) {
-            out.println("jvmarg."+idx+"=-D"+entry.getKey()+"="+entry.getValue());
-            idx++;
-        }
-
-        String preloader = PRELOADER_CLASS.fetchFrom(params);
-        if (preloader != null) {
-            out.println("jvmarg."+idx+"=-Djavafx.preloader="+preloader);
-        }
-
-        //app.id required for setting user preferences (Java Preferences API)
-        out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
-        out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));
-
-        Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
-        idx = 1;
-        for (Map.Entry<String, String> arg: overridableJVMOptions.entrySet()) {
-            if (arg.getKey() == null || arg.getValue() == null) {
-                Log.info(I18N.getString("message.jvm-user-arg-is-null"));
-            }
-            else {
-                out.println("jvmuserarg."+idx+".name="+arg.getKey());
-                out.println("jvmuserarg."+idx+".value="+arg.getValue());
-            }
-            idx++;
-        }
-
-        // add command line args
-        List<String> args = ARGUMENTS.fetchFrom(params);
-        idx = 1;
-        for (String a : args) {
-            out.println("arg."+idx+"="+a);
-            idx++;
-        }
-
-        out.close();
-    }
-
-    private void copyRuntime(Map<String, ? super Object> params, File runtimeDirectory) throws IOException {
-        RelativeFileSet runtime = LINUX_RUNTIME.fetchFrom(params);
-        if (runtime == null) {
-            //request to use system runtime
-            return;
-        }
-        runtimeDirectory.mkdirs();
-
-        File srcdir = runtime.getBaseDirectory();
-        Set<String> filesToCopy = runtime.getIncludedFiles();
-        for (String fname : filesToCopy) {
-            IOUtils.copyFile(
-                    new File(srcdir, fname), new File(runtimeDirectory, fname));
         }
     }
 
@@ -406,41 +246,5 @@ public class LinuxAppBundler extends AbstractImageBundler {
     @Override
     public File execute(Map<String, ? super Object> params, File outputParentDir) {
         return doBundle(params, outputParentDir, false);
-    }
-
-    @Override
-    protected String getCacheLocation(Map<String, ? super Object> params) {
-        return "$CACHEDIR/";
-    }
-
-    @Override
-    public void extractRuntimeFlags(Map<String, ? super Object> params) {
-        if (params.containsKey(".runtime.autodetect")) return;
-
-        params.put(".runtime.autodetect", "attempted");
-        RelativeFileSet runtime = LINUX_RUNTIME.fetchFrom(params);
-        String commandline;
-        if (runtime == null) {
-            //System JRE, report nothing useful
-            params.put(".runtime.autodetect", "systemjre");
-        } else {
-            File runtimePath = runtime.getBaseDirectory();
-            File launcherPath = new File(runtimePath, "bin/java");
-
-            ProcessBuilder pb = new ProcessBuilder(launcherPath.getAbsolutePath(), "-version");
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                try (PrintStream pout = new PrintStream(baos)) {
-                    IOUtils.exec(pb, Log.isDebug(), true, pout);
-                }
-
-                commandline = baos.toString();
-            } catch (IOException e) {
-                e.printStackTrace();
-                params.put(".runtime.autodetect", "failed");
-                return;
-            }
-            AbstractImageBundler.extractFlagsFromVersion(params, commandline);
-            params.put(".runtime.autodetect", "succeeded");
-        }
     }
 }

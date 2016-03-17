@@ -826,4 +826,19 @@ TProcessID WindowsProcess::GetProcessID() {
     return FProcessInfo.dwProcessId;
 }
 
+bool WindowsProcess::ReadOutput() {
+    bool result = false;
+    //TODO implement
+    return result;
+}
+
+void WindowsProcess::SetInput(TString Value) {
+    //TODO implement
+}
+
+std::list<TString> WindowsProcess::GetOutput() {
+    ReadOutput();
+    return Process::GetOutput();
+}
+
 #endif //WINDOWS

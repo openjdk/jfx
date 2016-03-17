@@ -179,7 +179,16 @@ public class Util {
         final String classpath = System.getProperty("java.class.path");
         final String libraryPath = System.getProperty("java.library.path");
 
+        /*
+         * note: the "worker" properties are tied into build.gradle and
+         * the related GradleJUnitWorker as a workaround until the build
+         * is fully converted to a modular build
+         */
+        final Boolean isJigsaw = Boolean.getBoolean("worker.isJigsaw");
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
+        final String workerPatch = System.getProperty("worker.xpatch.dir");
+        final String workerPatchPolicy = System.getProperty("worker.patch.policy");
+        final String workerClassPath = System.getProperty("worker.classpath.file");
         final Boolean workerDebug = Boolean.getBoolean("worker.debug");
 
         final ArrayList<String> cmd = new ArrayList<>(30);
@@ -190,20 +199,77 @@ public class Util {
             cmd.add("java");
         }
 
-        String jfxdir = getJfxrtDir(classpath);
-        Assert.assertNotNull("failed to find jfxdir",jfxdir);
-        cmd.add("-Xbootclasspath/a:" + jfxdir + "/" + "jfxrt.jar");
+        if (isJigsaw && workerPatch != null) {
+            cmd.add("-Xpatch:" + workerPatch);
+        } else {
+            String jfxdir = getJfxrtDir(classpath);
+            Assert.assertNotNull("failed to find jfxdir",jfxdir);
+            cmd.add("-Djava.ext.dirs=" + jfxdir);
+        }
 
-        cmd.add("-cp");
-        cmd.add(classpath);
+        // This is a "minimum" set, rather than the full @addExports
+        if (isJigsaw) {
+            cmd.add("-XaddExports:javafx.graphics/com.sun.javafx.application=ALL-UNNAMED");
+        }
+
+        if (isJigsaw && libraryPath != null) {
+            // needed for use with Xpatch but not otherwise
+            cmd.add("-Djava.library.path=" + libraryPath);
+        }
+
+        if (isJigsaw && workerClassPath != null) {
+            cmd.add("@" + workerClassPath);
+        } else {
+            cmd.add("-cp");
+            cmd.add(classpath);
+        }
 
         if (testPldrName != null) {
             cmd.add("-Djavafx.preloader=" + testPldrName);
         }
 
         if (testPolicy != null) {
-            cmd.add("-Djava.security.manager");
-            cmd.add("-Djava.security.policy=" + testPolicy);
+
+             cmd.add("-Djava.security.manager");
+
+            try {
+                if (workerPatchPolicy != null) {
+                    // with Jake, we need to create a merged java.policy
+                    // file that contains the permissions for the Xpatch classes
+                    // as well as the permissions needed for this test
+
+                    File tempFile = File.createTempFile("java", "policy");
+                    tempFile.deleteOnExit();
+
+                    File wpp = new File(workerPatchPolicy);
+                    if (!wpp.exists()) {
+                        throw new RuntimeException("Missing workerPatchPolicy");
+                    }
+                    BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
+
+                    BufferedReader reader1 = new BufferedReader(new FileReader(wpp));
+                    URL url = new URL(testPolicy);
+                    BufferedReader reader2 = new BufferedReader(new FileReader(url.getFile()));
+
+                    String line = null;
+                    while ((line = reader1.readLine()) != null) {
+                        writer.write(line);
+                        writer.newLine();
+                    }
+                    while ((line = reader2.readLine()) != null) {
+                        writer.write(line);
+                        writer.newLine();
+                    }
+                    writer.close();
+                    cmd.add("-Djava.security.policy=" +
+                        tempFile.getAbsolutePath().replaceAll("\\\\","/"));
+                } else {
+                    cmd.add("-Djava.security.policy=" + testPolicy);
+                }
+            } catch (IOException e) {
+                throw e;
+            }
+
         }
 
         cmd.add(testAppName);

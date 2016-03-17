@@ -1,0 +1,4 @@
+grant codeBase "jrt:/javafx.controls" {
+    permission java.security.AllPermission;
+};
+

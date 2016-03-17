@@ -58,6 +58,7 @@ public:
     TString FAppID;
     TString FPackageAppDataDirectory;
     TString FClassPath;
+    TString FModulePath;
     TString FMainJar;
     TString FMainClassName;
     bool FIsRuntimeBundled;
@@ -131,6 +132,7 @@ public:
     TString GetAppID();
     TString GetPackageAppDataDirectory();
     TString GetClassPath();
+    TString GetModulePath();
     TString GetMainClassName();
     bool IsRuntimeBundled();
     TString GetJVMLibraryFileName();

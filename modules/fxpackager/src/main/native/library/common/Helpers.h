@@ -69,6 +69,8 @@ public:
     static std::list<TString> MapToNameValueList(OrderedMap<TString, TString> Map);
 
     static TString NameValueToString(TString name, TString value);
+
+    static std::list<TString> StringToArray(TString Value);
 };
 
 #endif //HELPERS_H

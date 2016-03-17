@@ -203,7 +203,7 @@ public class MacAppBundlerTest {
                 params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
                 if (runtimeJdk != null) {
-                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
                 }
 
                 params.put(VERSION.getID(), v);
@@ -220,7 +220,7 @@ public class MacAppBundlerTest {
                 params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
                 if (runtimeJdk != null) {
-                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
                 }
 
                 params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
@@ -241,7 +241,7 @@ public class MacAppBundlerTest {
                 params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
                 if (runtimeJdk != null) {
-                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
                 }
 
                 params.put(VERSION.getID(), v);
@@ -259,7 +259,7 @@ public class MacAppBundlerTest {
                 params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
                 if (runtimeJdk != null) {
-                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
                 }
 
                 params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
@@ -302,7 +302,7 @@ public class MacAppBundlerTest {
         bundleParams.put(SIGN_BUNDLE.getID(), false);
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         boolean valid = bundler.validate(bundleParams);
@@ -402,7 +402,7 @@ public class MacAppBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         bundleParams.put(APP_NAME.getID(), appName);
@@ -463,7 +463,7 @@ public class MacAppBundlerTest {
         bundleParams.put(VERBOSE.getID(), true);
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         if (!signingKeysPresent) {
@@ -510,7 +510,7 @@ public class MacAppBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         String keychain = null;
@@ -549,7 +549,7 @@ public class MacAppBundlerTest {
         bundleParams.put(DESCRIPTION.getID(), "крайне большое описание со странными символами");
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         String keychain = null;
@@ -584,7 +584,7 @@ public class MacAppBundlerTest {
         bundleParams.put(VERBOSE.getID(), true);
 
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-        bundleParams.put(MAC_RUNTIME.getID(), APP_RESOURCES.fetchFrom(bundleParams));
+//FIXME        bundleParams.put(MAC_RUNTIME.getID(), APP_RESOURCES.fetchFrom(bundleParams));
 
         bundler.validate(bundleParams);
     }
@@ -629,7 +629,7 @@ public class MacAppBundlerTest {
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
         bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
-        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
+//FIXME        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
@@ -707,7 +707,7 @@ public class MacAppBundlerTest {
             bundleParams.put(SIGN_BUNDLE.getID(), false); // force no signing
 
             if (runtimeJdk != null) {
-                bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME                bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
             }
 
             boolean valid = bundler.validate(bundleParams);
@@ -737,7 +737,7 @@ public class MacAppBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-        bundleParams.put(MAC_RUNTIME.getID(), jre);
+//FIXME        bundleParams.put(MAC_RUNTIME.getID(), jre);
 
         String keychain = null;
         if (!signingKeysPresent) {
@@ -779,7 +779,7 @@ public class MacAppBundlerTest {
         bundleParams.put(ENABLE_APP_CDS.getID(), true);
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         boolean valid = bundler.validate(bundleParams);

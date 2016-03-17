@@ -40,6 +40,10 @@
 #include "MacPlatform.h"
 
 
+// Environment
+StaticReadProperty<TString, &Environment::GetNewLine> Environment::NewLine;
+
+
 //--------------------------------------------------------------------------------------------------
 
 Platform& Platform::GetInstance() {

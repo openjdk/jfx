@@ -209,7 +209,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
         Object value;
         if (getterMethod != null) {
             try {
-                value = MethodUtil.invoke(getterMethod, bean, (Object[]) null);
+                value = ModuleHelper.invoke(getterMethod, bean, (Object[]) null);
             } catch (IllegalAccessException exception) {
                 throw new RuntimeException(exception);
             } catch (InvocationTargetException exception) {
@@ -255,7 +255,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
         }
 
         try {
-            MethodUtil.invoke(setterMethod, bean, new Object[] { coerce(value, getType(key)) });
+            ModuleHelper.invoke(setterMethod, bean, new Object[] { coerce(value, getType(key)) });
         } catch (IllegalAccessException exception) {
             throw new RuntimeException(exception);
         } catch (InvocationTargetException exception) {
@@ -503,7 +503,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             }
 
             try {
-                coercedValue = MethodUtil.invoke(valueOfMethod, null, new Object[] { value });
+                coercedValue = ModuleHelper.invoke(valueOfMethod, null, new Object[] { value });
             } catch (IllegalAccessException exception) {
                 throw new RuntimeException(exception);
             } catch (InvocationTargetException exception) {
@@ -541,7 +541,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
 
         if (getterMethod != null) {
             try {
-                value = (T) MethodUtil.invoke(getterMethod, null, new Object[] { target } );
+                value = (T) ModuleHelper.invoke(getterMethod, null, new Object[] { target } );
             } catch (InvocationTargetException exception) {
                 throw new RuntimeException(exception);
             } catch (IllegalAccessException exception) {
@@ -599,7 +599,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
 
         // Invoke the setter
         try {
-            MethodUtil.invoke(setterMethod, null, new Object[] { target, value });
+            ModuleHelper.invoke(setterMethod, null, new Object[] { target, value });
         } catch (InvocationTargetException exception) {
             throw new RuntimeException(exception);
         } catch (IllegalAccessException exception) {

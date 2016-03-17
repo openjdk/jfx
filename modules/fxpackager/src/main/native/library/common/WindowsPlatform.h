@@ -177,6 +177,7 @@ private:
     static WindowsJob FJob;
 
     void Cleanup();
+    bool ReadOutput();
 
 public:
     WindowsProcess();
@@ -188,6 +189,8 @@ public:
         bool AWait = false);
     virtual bool Wait();
     virtual TProcessID GetProcessID();
+    virtual void SetInput(TString Value);
+    virtual std::list<TString> GetOutput();
 };
 
 

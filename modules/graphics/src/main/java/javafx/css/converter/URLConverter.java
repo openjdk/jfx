@@ -115,6 +115,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
             final String path = resourceUri.getPath();
             if (path.startsWith("/")) {
                 final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                // FIXME: JIGSAW -- use Class.getResource if resource is in a module
                 return contextClassLoader.getResource(path.substring(1));
             }
 
@@ -140,6 +141,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
 
             // URL doesn't have scheme or stylesheetUrl is null
             final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+            // FIXME: JIGSAW -- use Class.getResource if resource is in a module
             return contextClassLoader.getResource(path);
 
 
@@ -163,6 +165,9 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
     //
     private URL resolveRuntimeImport(final URI resourceUri) {
 
+        // FIXME: JIGSAW -- this method needs to be rewritten for Jigsaw.
+        // There is no jfxrt.jar any more, and resource encapsulation will
+        // prevent it from being resolved anyway.
 
         final String path = resourceUri.getPath();
         final String resourcePath = path.startsWith("/") ? path.substring(1) : path;
@@ -171,12 +176,15 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
              resourcePath.startsWith("com/sun/javafx/scene/control/skin/caspian/")) &&
             (resourcePath.endsWith(".css") || resourcePath.endsWith(".bss"))) {
 
+            System.err.println("WARNING: resolveRuntimeImport cannot resolve: " + resourcePath);
+
             final SecurityManager sm = System.getSecurityManager();
             if (sm == null) {
                 // If the SecurityManager is not null, then just look up the resource on the class-path.
                 // If there is a SecurityManager, the URLClassPath getResource call will return null,
                 // so fall through and create a URL from the code-source URI
                 final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                // FIXME: JIGSAW -- use Class.getResource if resource is in a module
                 final URL resolved = contextClassLoader.getResource(resourcePath);
                 return resolved;
             }

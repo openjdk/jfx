@@ -64,12 +64,16 @@ class PosixProcess : public Process {
 private:
     pid_t FChildPID;
     sigset_t saveblock;
+    int FOutputHandle;
+    int FInputHandle;
 #ifdef MAC
     struct sigaction savintr, savequit;
 #endif //MAC
     bool FRunning;
 
     void Cleanup();
+    bool ReadOutput();
+    //static void ProcessOutput(Process *Instance, std::vector<TString> Output);
 
 public:
     PosixProcess();
@@ -81,6 +85,8 @@ public:
         bool AWait = false);
     virtual bool Wait();
     virtual TProcessID GetProcessID();
+    virtual void SetInput(TString Value);
+    virtual std::list<TString> GetOutput();
 };
 
 #endif //POSIXPLATFORM_H

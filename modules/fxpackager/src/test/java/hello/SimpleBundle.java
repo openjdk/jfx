@@ -28,6 +28,7 @@ package hello;
 import com.oracle.tools.packager.Bundler;
 import com.oracle.tools.packager.Bundlers;
 import com.oracle.tools.packager.ConfigException;
+import com.oracle.tools.packager.JLinkBundlerHelper;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
@@ -75,6 +76,10 @@ public class SimpleBundle {
 
                 case "-b":
                     params.put(argsQ.remove(), argsQ.remove());
+                    break;
+
+                case "-modulepath":
+                    params.put(JLinkBundlerHelper.MODULE_PATH.getID(), argsQ.remove());
                     break;
 
                 case "-all":
@@ -132,8 +137,7 @@ public class SimpleBundle {
 
             File appResourcesDir = new File(".");
             File fakeMainJar = new File(appResourcesDir, "mainApp.jar");
-            File packagerJar = new File(appResourcesDir, "packager.jar");
-            Set<File> appResources = new HashSet<>(Arrays.asList(fakeMainJar, packagerJar));
+            Set<File> appResources = new HashSet<>(Arrays.asList(fakeMainJar));
 
             bundleParams.put(APP_NAME.getID(), "DevTest");
             bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
@@ -141,7 +145,7 @@ public class SimpleBundle {
                     new RelativeFileSet(fakeMainJar.getParentFile(),
                             new HashSet<>(Arrays.asList(fakeMainJar)))
             );
-            bundleParams.put(CLASSPATH.getID(), fakeMainJar.getName() + " " + packagerJar.getName());
+            bundleParams.put(CLASSPATH.getID(), fakeMainJar.getName());
             bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
             bundleParams.put(VERBOSE.getID(), true);
             bundleParams.put(ICON.getID(), "java-logo2.gif");

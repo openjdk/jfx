@@ -194,14 +194,25 @@ public abstract class Toolkit {
                 || (userSpecifiedToolkit && !forcedToolkit.endsWith("StubToolkit"));
 
         try {
-            Class<?> clz = Class.forName(forcedToolkit, false, Toolkit.class.getClassLoader());
+            Class clz = null;
+
+            try {
+                // try our priveledged loader first
+                final ClassLoader loader = Toolkit.class.getClassLoader();
+                clz = Class.forName(forcedToolkit, false, loader);
+            } catch (ClassNotFoundException e) {
+                // fall back and try the application class loader
+                final ClassLoader loader = Thread.currentThread().getContextClassLoader();
+                clz = Class.forName(forcedToolkit, false, loader);
+            }
+
             // Check that clz is a subclass of Toolkit
             if (!Toolkit.class.isAssignableFrom(clz)) {
                 throw new IllegalArgumentException("Unrecognized FX Toolkit class: "
                         + forcedToolkit);
             }
 
-            TOOLKIT = (Toolkit) clz.newInstance();
+            TOOLKIT = (Toolkit)clz.newInstance();
             if (TOOLKIT.init()) {
                 if (printToolkit) {
                     System.err.println("JavaFX: using " + forcedToolkit);
@@ -503,16 +514,6 @@ public abstract class Toolkit {
     public abstract void requestNextPulse();
 
     public abstract Future addRenderJob(RenderJob rj);
-
-    public InputStream getInputStream(String url, Class base)
-            throws IOException {
-        return (url.startsWith("http:")
-                    || url.startsWith("https:")
-                    || url.startsWith("file:")
-                    || url.startsWith("jar:"))
-                        ? new java.net.URL(url).openStream()
-                        : base.getResource(url).openStream();
-    }
 
     public abstract ImageLoader loadImage(String url,
                                           int width, int height,

@@ -111,6 +111,7 @@ public interface Bundlers {
      *     <LI>Windows MSI</LI>
      *     <LI>Windows EXE</LI>
      *     <LI>Mac DMG</LI>
+     *     <LI>Mac PKG</LI>
      *     <LI>Linux DEB</LI>
      *     <LI>Linux RPM</LI>
      *

@@ -74,6 +74,7 @@ public class URLBuilder extends AbstractMap<String, Object> implements Builder<U
             String spec = value.toString();
 
             if (spec.startsWith("/")) {
+                // FIXME: JIGSAW -- use Class.getResourceAsStream if resource is in a module
                 url = classLoader.getResource(spec);
             } else {
                 try {

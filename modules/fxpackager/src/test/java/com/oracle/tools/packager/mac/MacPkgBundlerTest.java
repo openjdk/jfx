@@ -253,7 +253,7 @@ public class MacPkgBundlerTest {
         bundleParams.put(SIGN_BUNDLE.getID(), false); // force no signing
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         boolean valid = bundler.validate(bundleParams);
@@ -290,7 +290,7 @@ public class MacPkgBundlerTest {
         bundleParams.put(VERBOSE.getID(), true);
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         if (!signingKeysPresent) {
@@ -337,7 +337,7 @@ public class MacPkgBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         String keychain = null;
@@ -380,7 +380,7 @@ public class MacPkgBundlerTest {
         bundleParams.put(DESCRIPTION.getID(), "крайне большое описание со странными символами");
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         String keychain = null;
@@ -423,7 +423,7 @@ public class MacPkgBundlerTest {
         appBundleParams.put(VERBOSE.getID(), true);
 
         if (runtimeJdk != null) {
-            appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         String keychain = null;
@@ -456,7 +456,7 @@ public class MacPkgBundlerTest {
         pkgBundleParams.put(VERBOSE.getID(), true);
 
         if (runtimeJdk != null) {
-            pkgBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            pkgBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
         if (keychain != null) {
             pkgBundleParams.put(SIGNING_KEYCHAIN.getID(), keychain);
@@ -543,7 +543,7 @@ public class MacPkgBundlerTest {
             appBundleParams.put(VERBOSE.getID(), true);
 
             if (runtimeJdk != null) {
-                appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME                appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
             }
 
             boolean valid = appBundler.validate(appBundleParams);
@@ -596,7 +596,7 @@ public class MacPkgBundlerTest {
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
-        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
+//FIXME        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");

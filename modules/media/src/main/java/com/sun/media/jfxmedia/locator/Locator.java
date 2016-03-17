@@ -162,7 +162,7 @@ public class Locator {
     private static long getContentLengthLong(URLConnection connection) {
         Method method = AccessController.doPrivileged((PrivilegedAction<Method>) () -> {
             try {
-                return connection.getClass().getMethod("getContentLengthLong");
+                return URLConnection.class.getMethod("getContentLengthLong");
             } catch (NoSuchMethodException ex) {
                 return null;
             }

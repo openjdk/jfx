@@ -48,6 +48,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
 import com.sun.javafx.scene.control.ContextMenuContent;
+import java.net.URL;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.paint.Color;
@@ -808,4 +809,9 @@ public class Utils {
             return null;
         }
     }
+
+    public static URL getResource(String str) {
+        return Utils.class.getResource(str);
+    }
+
 }

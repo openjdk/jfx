@@ -156,7 +156,24 @@ public class TestPackager {
         label.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
         panel.add(label, BorderLayout.NORTH);
 
-        panel.add(box, BorderLayout.CENTER);
+        DefaultTableModel propsModel = new DefaultTableModel();
+        propsModel.addColumn("Key");
+        propsModel.addColumn("Value");
+
+        for (Map.Entry <Object, Object> entry : System.getProperties().entrySet()) {
+            propsModel.addRow(new Object[] {entry.getKey(), entry.getValue()});
+        }
+        JTable props = new JTable(propsModel);
+        props.setAutoCreateRowSorter(true);
+        JScrollPane propsScroller = new JScrollPane(props);
+        propsScroller.setPreferredSize(new Dimension(400, 100));
+
+
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("Launch", box);
+        tabbedPane.addTab("System", propsScroller);
+
+        panel.add(tabbedPane, BorderLayout.CENTER);
         panel.setSize(panel.getPreferredSize());
 
         frame.getContentPane().add(panel);

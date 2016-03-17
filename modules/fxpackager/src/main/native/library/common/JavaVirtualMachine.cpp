@@ -229,6 +229,10 @@ public:
         AppendValue(Key, Value, NULL);
     }
 
+    void AppendValue(const TString Key) {
+        AppendValue(Key, _T(""), NULL);
+    }
+
     void AppendValues(OrderedMap<TString, TString> Values) {
         std::vector<TString> orderedKeys = Values.GetKeys();
 
@@ -360,9 +364,13 @@ bool JavaVirtualMachine::StartJVM() {
     Package& package = Package::GetInstance();
 
     TString classpath = package.GetClassPath();
-
+    TString modulepath = package.GetModulePath();
     JavaOptions options;
-    options.AppendValue(_T("-Djava.class.path"), classpath);
+
+    if (modulepath.empty() == false) {
+        options.AppendValue(_T("-Djava.module.path"), modulepath);
+    }
+
     options.AppendValue(_T("-Djava.library.path"), package.GetPackageAppDirectory() + FilePath::PathSeparator() + package.GetPackageLauncherDirectory());
     options.AppendValue(_T("-Djava.launcher.path"), package.GetPackageLauncherDirectory());
     options.AppendValue(_T("-Dapp.preferences.id"), package.GetAppID());
@@ -418,6 +426,8 @@ bool JavaVirtualMachine::StartJVM() {
     javaLibrary.Load(package.GetJVMLibraryFileName());
 
 #ifndef USE_JLI_LAUNCH
+    options.AppendValue(_T("-Djava.class.path"), classpath);
+
     if (package.HasSplashScreen() == true) {
         options.AppendValue(TString(_T("-splash:")) + package.GetSplashScreenFileName(), _T(""));
     }
@@ -458,6 +468,9 @@ bool JavaVirtualMachine::StartJVM() {
     // to add new args if we are still in the original main thread so we
     // will treat them as command line args provided by the user ...
     // Only propagate original set of args first time.
+
+    options.AppendValue(_T("-classpath"));
+    options.AppendValue(classpath);
 
     std::list<TString> vmargs;
     vmargs.push_back(package.GetCommandName());

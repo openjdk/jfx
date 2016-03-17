@@ -1104,8 +1104,10 @@ public class Image {
                 final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
                 URL resource;
                 if (url.charAt(0) == '/') {
+                    // FIXME: JIGSAW -- use Class.getResourceAsStream if resource is in a module
                     resource = contextClassLoader.getResource(url.substring(1));
                 } else {
+                    // FIXME: JIGSAW -- use Class.getResourceAsStream if resource is in a module
                     resource = contextClassLoader.getResource(url);
                 }
                 if (resource == null) {

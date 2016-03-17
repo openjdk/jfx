@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,11 @@ public class Application extends DataType implements Cloneable {
     boolean embeddedIntoSwing = false;
     String version = null;
     Boolean daemon = null;
+
+    public List<Argument> addModule = new LinkedList<Argument>();
+    public List<Argument> limitModule = new LinkedList<Argument>();
+    String jdkModulePath;
+    boolean detectModules;
 
     public void setVersion(String v) {
         version = v;
@@ -178,6 +183,94 @@ public class Application extends DataType implements Cloneable {
      */
     public void setDaemon(boolean b) {
         daemon = b;
+    }
+
+
+    /**
+     * "addModule" declaration for the application's runtime.
+     *
+     * Modules can be specified per-element, or comma/colon/semi-colon/space separated
+     *
+     * @ant.not-required Default is to bundle the whole platform
+     */
+    public Argument createAddModule() {
+        Argument a = new Argument();
+        addModule.add(a);
+        return a;
+    }
+
+    /**
+     * "addModule" declaration for the application's runtime
+     *
+     * @ant.not-required Default is to bundle the whole platform
+     */
+    List<String> getAddModule() {
+        List<String> lst = new LinkedList();
+        for(Argument a: arguments) {
+            for (String s : a.value.split("[:;,\\s]+")) {
+                lst.add(s);
+            }
+        }
+        return lst;
+    }
+
+    /**
+     * "limitModule" declaration for the application's runtime.
+     *
+     * Modules can be specified per-element, or comma/colon/semi-colon/space separated
+     *
+     * @ant.not-required Default is to bundle the whole platform
+     */
+    public Argument createLimitModule() {
+        Argument a = new Argument();
+        addModule.add(a);
+        return a;
+    }
+
+    /**
+     * "limitModule" declaration for the application's runtime
+     *
+     * @ant.not-required Default is to bundle the whole platform
+     */
+    List<String> getLimitModule() {
+        List<String> lst = new LinkedList();
+        for(Argument a: arguments) {
+            for (String s : a.value.split("[:;,\\s]+")) {
+                lst.add(s);
+            }
+        }
+        return lst;
+    }
+
+    /**
+     * Whether or not the bundler should attempt to detect and add used modules
+     */
+    public boolean getDetectModules() {
+        return detectModules;
+    }
+
+    /**
+     * Whether or not the bundler should attempt to detect and add used modules
+     * @ant.not-required default is false
+     */
+    public void setDetectModules(boolean Value) {
+        this.detectModules = Value;
+    }
+
+    /**
+     * Module path within the running applicaiton
+     */
+    public String getJdkModulePath() {
+        return jdkModulePath;
+    }
+
+    /**
+     * Module path within the running applicaiton
+     *
+     * @ant.not-required default is $PACKAGEPATH/modules
+     */
+    public void setJdkModulePath(String Value) {
+        this.jdkModulePath = Value;
     }
 
     //return instance that actually has data. Could be referenced object ...

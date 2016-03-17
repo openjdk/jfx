@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -229,6 +229,9 @@ public class Main {
                     boolean srcfilesSet = false;
                     File templateInFile = null;
                     File templateOutFile = null;
+                    deployParams.setBundleType(BundleType.JNLP);
+                    deployParams.setTargetFormat("jnlp");
+
 
                     //can only set it to true with command line, reset default
                     deployParams.setEmbedJNLP(false);
@@ -274,7 +277,6 @@ public class Main {
                                 } else {
                                     //assume it is request to build only specific format
                                     // (like exe or msi)
-                                    type = BundleType.INSTALLER;
                                     format = (v != null) ? v.toLowerCase() : null;
                                 }
                             }
@@ -338,6 +340,32 @@ public class Main {
                             addArgument(deployParams, nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-nosign")) {
                             deployParams.setSignBundle(false);
+                        } else if (arg.equals("-addmods")) {
+                            deployParams.addModules.add(nextArg(args, i++));
+                        } else if (arg.equals("-limitmods")) {
+                            deployParams.limitModules.add(nextArg(args, i++));
+                        } else if (arg.equals("-detectmods")) {
+                            deployParams.detectModules = true;
+                        } else if (arg.equals("-stripexecutables")) {
+                            deployParams.stripExecutables = true;
+                        } else if (arg.equals("-modulepath")) {
+                            if (deployParams.modulePath == null) {
+                                deployParams.modulePath = nextArg(args, i++);
+                            } else {
+                                deployParams.modulePath =
+                                        deployParams.modulePath
+                                        + File.pathSeparator
+                                        + nextArg(args, i++);
+                            }
+                        } else if (arg.equals("-jdkmodulepath")) {
+                            if (deployParams.jdkModulePath == null) {
+                                deployParams.jdkModulePath = nextArg(args, i++);
+                            } else {
+                                deployParams.jdkModulePath =
+                                        deployParams.jdkModulePath
+                                        + File.pathSeparator
+                                        + nextArg(args, i++);
+                            }
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }

@@ -210,7 +210,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
 
             private ObjectBuilder() {
                 try {
-                    builder = MethodUtil.invoke(createMethod, null, NO_ARGS);
+                    builder = createMethod.invoke(null, NO_ARGS);
                 } catch (Exception e) {
                     //TODO
                     throw new RuntimeException("Creation of the builder " + builderClass.getName() + " failed.", e);
@@ -227,7 +227,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
 
                 Object res;
                 try {
-                    res = MethodUtil.invoke(buildMethod, builder, NO_ARGS);
+                    res = buildMethod.invoke(builder, NO_ARGS);
                     // TODO:
                     // temporary special case for Node properties until
                     // platform builders are fixed
@@ -308,7 +308,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
                             value = array;
                         }
 
-                        MethodUtil.invoke(m, builder, new Object[] { BeanAdapter.coerce(value, type) });
+                        m.invoke(builder, new Object[] { BeanAdapter.coerce(value, type) });
                     } catch (Exception e) {
                         Logger.getLogger(ObjectBuilderWrapper.class.getName()).log(Level.WARNING,
                                 "Method " + m.getName() + " failed", e);

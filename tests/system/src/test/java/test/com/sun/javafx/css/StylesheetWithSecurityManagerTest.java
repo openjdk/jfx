@@ -97,6 +97,7 @@ public class StylesheetWithSecurityManagerTest {
     }
 
     @Test
+    @Ignore("8149999")
     public void testRT_38395_the_sequel() throws Exception {
 
         System.setSecurityManager(new TestSecurityManager());

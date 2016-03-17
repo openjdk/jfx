@@ -1,0 +1,4 @@
+grant codeBase "jrt:/javafx.web" {
+    permission java.security.AllPermission;
+};
+

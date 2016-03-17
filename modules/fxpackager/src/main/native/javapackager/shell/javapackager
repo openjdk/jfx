@@ -76,8 +76,8 @@ classpath=".:$javafx_home/lib/ant-javafx.jar"
 
 if [ -e "$javafx_home/jre/lib/ext/jfxrt.jar" ] ; then
   classpath="$classpath:$javafx_home/jre/lib/ext/jfxrt.jar"
-elif [ -e "$javafx_home/rt/lib/ext/jfxrt.jar" ] ; then
-  classpath="$classpath:$javafx_home/rt/lib/ext/jfxrt.jar"
+elif [ -e "$javafx_home/lib/jfxrt.jar" ] ; then
+  classpath="$classpath:$javafx_home/lib/jfxrt.jar"
 fi
 
 if $cygwin ; then

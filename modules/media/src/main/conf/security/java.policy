@@ -1,0 +1,4 @@
+grant codeBase "jrt:/javafx.media" {
+    permission java.security.AllPermission;
+};
+

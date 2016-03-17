@@ -25,6 +25,7 @@
 package com.sun.javafx.fxml.builder;
 
 import com.sun.javafx.fxml.BeanAdapter;
+import com.sun.javafx.fxml.ModuleHelper;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -45,7 +46,6 @@ import java.util.TreeSet;
 import javafx.beans.NamedArg;
 import javafx.util.Builder;
 import sun.reflect.misc.ConstructorUtil;
-import sun.reflect.misc.MethodUtil;
 import sun.reflect.misc.ReflectUtil;
 
 /**
@@ -556,7 +556,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
 
         public void invoke(Object obj, Object argStr) throws Exception {
             Object arg[] = new Object[]{BeanAdapter.coerce(argStr, type)};
-            MethodUtil.invoke(method, obj, arg);
+            ModuleHelper.invoke(method, obj, arg);
         }
     }
 
@@ -569,7 +569,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
         @Override
         public void invoke(Object obj, Object argStr) throws Exception {
             // we know that this.method returns collection otherwise it wouldn't be here
-            Collection to = (Collection) MethodUtil.invoke(method, obj, new Object[]{});
+            Collection to = (Collection) ModuleHelper.invoke(method, obj, new Object[]{});
             if (argStr instanceof Collection) {
                 Collection from = (Collection) argStr;
                 to.addAll(from);

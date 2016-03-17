@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,6 @@
 package com.sun.javafx.tools.packager.bundlers;
 
 import com.oracle.tools.packager.*;
-import com.oracle.tools.packager.linux.LinuxAppBundler;
-import com.oracle.tools.packager.mac.MacAppBundler;
-import com.oracle.tools.packager.windows.WindowsBundlerParam;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 
 import java.io.File;
@@ -39,6 +36,7 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.JLinkBundlerHelper.*;
 
 public class BundleParams {
 
@@ -170,6 +168,31 @@ public class BundleParams {
         putUnlessNullOrEmpty(ARGUMENTS.getID(), arguments);
     }
 
+    public void setAddModules(Set<String> addModules) {
+        putUnlessNullOrEmpty(ADD_MODULES.getID(), addModules);
+    }
+
+    public void setLimitModules(Set<String> limitModules)  {
+        putUnlessNullOrEmpty(LIMIT_MODULES.getID(), limitModules);
+    }
+
+    public void setDetectModules(Boolean detectModules) {
+        putUnlessNull(DETECT_MODULES.getID(), detectModules);
+    }
+
+    public void setStripExecutables(Boolean value) {
+        putUnlessNull(STRIP_NATIVE_COMMANDS.getID(), value);
+    }
+
+    public void setAppModulePath(String appModulePath) {
+        putUnlessNull(JDK_MODULE_PATH.getID(), appModulePath);
+    }
+
+    public void setLinkModulePath(String linkModulePath) {
+        putUnlessNull(MODULE_PATH.getID(), linkModulePath);
+    }
+
+
     public String getApplicationID() {
         return fetchParam(IDENTIFIER);
     }
@@ -249,23 +272,6 @@ public class BundleParams {
     }
 
     public void setSignBundle(Boolean b) { putUnlessNull(SIGN_BUNDLE.getID(), b); }
-
-    public com.oracle.tools.packager.RelativeFileSet getRuntime() {
-        return getRuntime(params);
-    }
-
-    public static com.oracle.tools.packager.RelativeFileSet getRuntime(Map<String, ? super Object> params) {
-        String os = System.getProperty("os.name").toLowerCase();
-        if (os.startsWith("linux")) {
-            return LinuxAppBundler.LINUX_RUNTIME.fetchFrom(params);
-        } else if (os.contains("os x")) {
-            return MacAppBundler.MAC_RUNTIME.fetchFrom(params);
-        } else if (os.startsWith("win")) {
-            return WindowsBundlerParam.WIN_RUNTIME.fetchFrom(params);
-        } else {
-            return null;
-        }
-    }
 
     public boolean isShortcutHint() {
         return fetchParam(SHORTCUT_HINT);

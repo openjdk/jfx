@@ -99,24 +99,24 @@ public class SandboxAppTest {
 
     // TEST CASES
 
-    @Test (timeout=10000)
+    @Test (timeout=15000)
     public void testFXApp() throws Exception {
         runSandboxedApp("FXApp");
     }
 
-    @Test (timeout=10000)
+    @Test (timeout=15000)
     public void testFXNonApp() throws Exception {
         runSandboxedApp("FXNonApp");
     }
 
-    @Test (timeout=10000)
+    @Test (timeout=15000)
     public void testJFXPanelApp() throws Exception {
         // TODO: re-enable this when 8139317 is fixed
         assumeTrue(!PlatformUtil.isMac());
         runSandboxedApp("JFXPanelApp");
     }
 
-    @Test (timeout=10000)
+    @Test (timeout=15000)
     public void testJFXPanelImplicitExitApp() throws Exception {
         // Test skipped on Mac OS X due to JDK bug 8037776
         assumeTrue(!PlatformUtil.isMac());

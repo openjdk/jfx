@@ -93,40 +93,8 @@ public class BasicBundlers implements Bundlers {
         return null;
     }
 
-    /**
-     * Loads the bundlers common to OpenJFX.
-     * <UL>
-     *     <LI>Windows file image</LI>
-     *     <LI>Mac .app</LI>
-     *     <LI>Linux file image</LI>
-     *     <LI>Windows MSI</LI>
-     *     <LI>Windows EXE</LI>
-     *     <LI>Mac DMG</LI>
-     *     <LI>Mac PKG</LI>
-     *     <LI>Linux DEB</LI>
-     *     <LI>Linux RPM</LI>
-     *
-     * </UL>
-     */
     public void loadDefaultBundlers() {
-        if (defaultsLoaded) return;
-
-        bundlers.add(new WinAppBundler());
-        bundlers.add(new WinExeBundler());
-        bundlers.add(new WinMsiBundler());
-
-        bundlers.add(new LinuxAppBundler());
-        bundlers.add(new LinuxDebBundler());
-        bundlers.add(new LinuxRpmBundler());
-
-        bundlers.add(new MacAppBundler());
-        bundlers.add(new MacDmgBundler());
-        bundlers.add(new MacPkgBundler());
-        bundlers.add(new MacAppStoreBundler());
-
-        bundlers.add(new JNLPBundler());
-
-        defaultsLoaded = true;
+        // no-op.  We now load all bundlers from module system.
     }
 
     /**

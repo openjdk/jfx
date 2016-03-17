@@ -32,7 +32,19 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.ResourceBundle;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.jar.Attributes;
@@ -77,9 +89,33 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.app-resource-list.description"),
                     BundleParams.PARAM_APP_RESOURCES + "List",
                     (Class<List<RelativeFileSet>>) (Object) List.class,
-                    p -> new ArrayList<>(Arrays.asList(APP_RESOURCES.fetchFrom(p))), // Default is appResources, as a single item list
-                    null // no string translation, tool must provide complex type
+                    p -> new ArrayList<>(Collections.singletonList(APP_RESOURCES.fetchFrom(p))), // Default is appResources, as a single item list
+                    StandardBundlerParam::createAppResourcesListFromString
             );
+
+    private static List<RelativeFileSet> createAppResourcesListFromString(String s, Map<String, ? super Object> objectObjectMap) {
+        List<RelativeFileSet> result = new ArrayList<>();
+        for (String path : s.split("[:;]")) {
+            File f = new File(path);
+            if (f.getName().equals("*") || path.endsWith("/") || path.endsWith("\\")) {
+                if (f.getName().equals("*")) {
+                    f = f.getParentFile();
+                }
+                Set<File> theFiles = new HashSet<>();
+                try {
+                    Files.walk(f.toPath())
+                            .filter(Files::isRegularFile)
+                            .forEach(p -> theFiles.add(p.toFile()));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                result.add(new RelativeFileSet(f, theFiles));
+            } else {
+                result.add(new RelativeFileSet(f.getParentFile(), Collections.singleton(f)));
+            }
+        }
+        return result;
+    }
 
     public static final StandardBundlerParam<File> ICON =
             new StandardBundlerParam<>(
@@ -99,6 +135,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     BundleParams.PARAM_APPLICATION_CLASS,
                     String.class,
                     params -> {
+                        //FIXME sniff modules
                         extractMainClassInfoFromAppResources(params);
                         return (String) params.get(BundleParams.PARAM_APPLICATION_CLASS);
                     },
@@ -195,7 +232,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                             File appResourcesRoot = rfs.getBaseDirectory();
                             File f = new File(appResourcesRoot, s);
                             if (f.exists()) {
-                                return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Arrays.asList(f)));
+                                return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Collections.singletonList(f)));
                             }
                         }
                         throw new IllegalArgumentException(
@@ -419,7 +456,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             );
 
     public static final BundlerParamInfo<String> LICENSE_TYPE =
-            new StandardBundlerParam<> (
+            new StandardBundlerParam<>(
                     I18N.getString("param.license-type.name"),
                     I18N.getString("param.license-type.description"),
                     BundleParams.PARAM_LICENSE_TYPE,
@@ -607,7 +644,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.com-app-cds-root.description"),
                     "commercial.AppCDS.classRoots",
                     (Class<List<String>>)((Object)List.class),
-                    p -> Arrays.asList(MAIN_CLASS.fetchFrom(p)),
+                    p -> Collections.singletonList(MAIN_CLASS.fetchFrom(p)),
                     (s, p) -> Arrays.asList(s.split("[ ,:]"))
             );
 
@@ -698,7 +735,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                             if (fnames[0] == null) {
                                 fnames[0] = file.getParentFile().toString();
                             }
-                            params.put(MAIN_JAR.getID(), new RelativeFileSet(new File(fnames[0]), new LinkedHashSet<>(Arrays.asList(file))));
+                            params.put(MAIN_JAR.getID(), new RelativeFileSet(new File(fnames[0]), new LinkedHashSet<>(Collections.singletonList(file))));
                         }
                         if (!hasMainJarClassPath) {
                             String cp = attrs.getValue(Attributes.Name.CLASS_PATH);
@@ -763,5 +800,4 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         l.add(current.toString());
         return l;
     }
-
 }

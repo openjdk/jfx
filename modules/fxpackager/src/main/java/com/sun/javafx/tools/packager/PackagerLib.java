@@ -28,7 +28,6 @@ package com.sun.javafx.tools.packager;
 import com.oracle.tools.packager.Bundlers;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.Log;
-import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.JarSignature.InputStreamSource;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
@@ -187,16 +186,16 @@ public class PackagerLib {
 
         //NOTE: This should be a save-to-temp file, then rename operation
         File applicationJar = new File(createJarParams.outdir,
-                        createJarParams.outfile.endsWith(".jar")
-                              ? createJarParams.outfile
-                              : createJarParams.outfile + ".jar");
+                createJarParams.outfile.endsWith(".jar")
+                        ? createJarParams.outfile
+                        : createJarParams.outfile + ".jar");
 
         if (jarToUpdate != null &&
                 applicationJar.getAbsoluteFile().equals(jarToUpdate.getAbsoluteFile())) {
             try {
                 File newInputJar = File.createTempFile("tempcopy", ".jar");
                 Files.move(jarToUpdate.toPath(), newInputJar.toPath(),
-                           StandardCopyOption.REPLACE_EXISTING);
+                        StandardCopyOption.REPLACE_EXISTING);
                 jarToUpdate = newInputJar;
             } catch (IOException ioe) {
                 throw new PackagerException(
@@ -315,8 +314,26 @@ public class PackagerLib {
         try {
             BundleParams bp = deployParams.getBundleParams();
             if (bp != null) {
-                generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), "JNLP", "jnlp");
-                generateNativeBundles(new File(deployParams.outdir, "bundles"), bp.getBundleParamsAsMap(), deployParams.getBundleType().toString(), deployParams.getTargetFormat());
+                if (deployParams.getBundleType().equals(BundleType.ALL) && deployParams.getTargetFormat() == null) {
+                    // generate everything.
+
+                    // generate JNLP in the main directory
+                    generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), BundleType.JNLP.toString(), "jnlp");
+                    // generate the rest in .../bundles
+
+                    // generate disk images
+                    generateNativeBundles(new File(deployParams.outdir, "bundles"), bp.getBundleParamsAsMap(), BundleType.IMAGE.toString(), deployParams.getTargetFormat());
+
+                    //TODO generate installers referencing disk image
+                    // for now just generate all images
+                    generateNativeBundles(new File(deployParams.outdir, "bundles"), bp.getBundleParamsAsMap(), BundleType.INSTALLER.toString(), deployParams.getTargetFormat());
+                } else if (deployParams.getBundleType().equals(BundleType.NONE) && deployParams.getTargetFormat() == null) {
+                    // old school default.  Just generate JNLP.
+                    generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), BundleType.JNLP.toString(), "jnlp");
+                } else {
+                    // a specefic output format, just generate that.
+                    generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType().toString(), deployParams.getTargetFormat());
+                }
             }
         } catch (PackagerException ex) {
             throw ex;
@@ -327,19 +344,7 @@ public class PackagerLib {
     }
 
     private void generateNativeBundles(File outdir, Map<String, ? super Object> params, String bundleType, String bundleFormat) throws PackagerException {
-        if (params.containsKey(BundleParams.PARAM_RUNTIME)) {
-            RelativeFileSet runtime = BundleParams.getRuntime(params);
-            if (runtime == null) {
-                com.oracle.tools.packager.Log.info(bundle.getString("MSG_NoJREPackaged"));
-            } else {
-                com.oracle.tools.packager.Log.info(MessageFormat.format(bundle.getString("MSG_UserProvidedJRE"), runtime.getBaseDirectory().getAbsolutePath()));
-                if (com.oracle.tools.packager.Log.isDebug()) {
-                    runtime.dump();
-                }
-            }
-        } else {
-            com.oracle.tools.packager.Log.info(bundle.getString("MSG_UseSystemJRE"));
-        }
+        //FIXME //TODO check for system JRE
 
         for (com.oracle.tools.packager.Bundler bundler : Bundlers.createBundlersInstance().getBundlers(bundleType)) {
 
@@ -432,7 +437,7 @@ public class PackagerLib {
 
     private void signFile(
             PackagerResource pr, JarSignature signature, File outdir, boolean verbose)
-               throws NoSuchAlgorithmException, IOException, SignatureException {
+            throws NoSuchAlgorithmException, IOException, SignatureException {
         if (pr.getFile().isDirectory()) {
             File[] children = pr.getFile().listFiles();
             if (children != null) {
@@ -463,7 +468,7 @@ public class PackagerLib {
             destJar.getParentFile().mkdirs();
             signedJar.renameTo(destJar);
             if (verbose) {
-               System.out.println("Signed as " + destJar.getPath());
+                System.out.println("Signed as " + destJar.getPath());
             }
         }
     }
@@ -523,7 +528,7 @@ public class PackagerLib {
             try (FileWriter sources = new FileWriter(tmpFile)) {
                 scanAndCopy(new PackagerResource(new File(srcDirName), "."), sources, compiledDir);
             }
-            String classpath = jfxHome + "/../rt/lib/ext/jfxrt.jar";
+            String classpath = jfxHome + "/../lib/jfxrt.jar";
             if (makeAllParams.classpath != null) {
                 classpath += File.pathSeparator + makeAllParams.classpath;
             }
@@ -635,8 +640,8 @@ public class PackagerLib {
                 } else {
                     copyFileToOutDir(new FileInputStream(f),
                             new File(outdir.getPath() + File.separator
-                            + dir.getRelativePath() + File.separator
-                            + f.getName()));
+                                    + dir.getRelativePath() + File.separator
+                                    + f.getName()));
                 }
             }
         } catch (IOException ex) {
@@ -669,7 +674,7 @@ public class PackagerLib {
     private void jar(
             Manifest manifest, List<PackagerResource> files,
             File importJarFile, JarOutputStream jar, Filter filter)
-                throws IOException, PackagerException {
+            throws IOException, PackagerException {
         try {
             jar.putNextEntry(new ZipEntry("META-INF/"));
             jar.closeEntry();
@@ -755,7 +760,7 @@ public class PackagerLib {
                 || (filter == Filter.RESOURCES && isResource(f.getAbsolutePath()))) {
             final String absPath = f.getAbsolutePath();
             if (absPath.endsWith("META-INF\\MANIFEST.MF")
-             || absPath.endsWith("META-INF/MANIFEST.MF")) {
+                    || absPath.endsWith("META-INF/MANIFEST.MF")) {
                 return;
             }
             createParentEntries(absPath.substring(cut).replace('\\', '/'), jar);
@@ -763,8 +768,8 @@ public class PackagerLib {
                 // generate bss file into temporary directory
                 int startOfExt = absPath.lastIndexOf(".") + 1;
                 String bssFileName = absPath
-                                      .substring(cut, startOfExt)
-                                      .concat("bss");
+                        .substring(cut, startOfExt)
+                        .concat("bss");
 
                 File bssFile = new File(bssTmpDir, bssFileName);
                 bssFile.getParentFile().mkdirs();
@@ -809,8 +814,8 @@ public class PackagerLib {
         } else if (f.getName().endsWith(".css")) {
             String cssFileName = f.getAbsolutePath();
             String bssFileName = new File(outdir.getAbsolutePath(),
-                                          replaceExtensionByBSS(relPath))
-                                          .getAbsolutePath();
+                    replaceExtensionByBSS(relPath))
+                    .getAbsolutePath();
             createBinaryCss(cssFileName, bssFileName);
         }
     }
@@ -831,7 +836,7 @@ public class PackagerLib {
         int lastIndexOfSlash = Math.max(classUrl.lastIndexOf("/"), classUrl.lastIndexOf("\\"));
 
         return classUrl.substring(0, lastIndexOfSlash)
-                    + "/../rt/lib/ext/jfxrt.jar!/";
+                + "/../lib/jfxrt.jar!/";
     }
 
     private Class loadClassFromRuntime(String className) throws PackagerException {
@@ -845,8 +850,8 @@ public class PackagerLib {
 
     private void createBinaryCss(String cssFile, String binCssFile) throws PackagerException {
         String ofname = (binCssFile != null)
-                            ? binCssFile
-                            : replaceExtensionByBSS(cssFile);
+                ? binCssFile
+                : replaceExtensionByBSS(cssFile);
 
         // create parent directories
         File of = new File(ofname);
@@ -872,7 +877,7 @@ public class PackagerLib {
         } catch (Exception ex) {
             Throwable causeEx = ex.getCause();
             String cause = (causeEx != null) ? causeEx.getMessage()
-                                             : bundle.getString("ERR_UnknownReason");
+                    : bundle.getString("ERR_UnknownReason");
 
             throw new PackagerException(ex, "ERR_BSSConversionFailed", cssFile, cause);
         }

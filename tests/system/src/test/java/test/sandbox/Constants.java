@@ -31,7 +31,7 @@ package test.sandbox;
 public class Constants {
 
     // Test timeout in milliseconds
-    public static final int TIMEOUT = 8000;
+    public static final int TIMEOUT = 10000;
 
     // Time in milliseconds to show the stage
     public static final int SHOWTIME = 2500;

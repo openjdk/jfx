@@ -295,3 +295,43 @@ TString Helpers::NameValueToString(TString name, TString value) {
 
     return result;
 }
+
+std::list<TString> Helpers::StringToArray(TString Value) {
+    std::list<TString> result;
+    TString line;
+
+    for (int index = 0; index < Value.length(); index++) {
+        TCHAR c = Value[index];
+
+//        Environment::NewLine;
+
+        switch (c) {
+            case '\n': {
+                result.push_back(line);
+                line = _T("");
+                break;
+            }
+
+            case '\r': {
+                result.push_back(line);
+                line = _T("");
+
+                if (Value[index + 1] == '\n')
+                    index++;
+
+                break;
+            }
+
+            default: {
+                line += c;
+            }
+        }
+    }
+
+    // The buffer may not have ended with a Carriage Return/Line Feed.
+    if (line.length() > 0) {
+        result.push_back(line);
+    }
+
+    return result;
+}

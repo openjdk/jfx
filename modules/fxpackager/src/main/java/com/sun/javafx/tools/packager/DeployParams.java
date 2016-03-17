@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,6 +73,14 @@ public class DeployParams extends CommonParams {
     List<Param> params;
     List<HtmlParam> htmlParams;
     List<String> arguments; //unnamed arguments
+
+    // Java 9 modules support
+    Set<String> addModules = new LinkedHashSet<>();
+    Set<String> limitModules = new LinkedHashSet<>();
+    boolean detectModules = false;
+    boolean stripExecutables = false;
+    String modulePath;
+    String jdkModulePath;
 
     int width;
     int height;
@@ -239,6 +247,30 @@ public class DeployParams extends CommonParams {
 
     public void setArguments(List<String> args) {
         this.arguments = args;
+    }
+
+    public void addAddModule(String module) {
+        addModules.add(module);
+    }
+
+    public void addLimitModule(String module) {
+        limitModules.add(module);
+    }
+
+    public void setModulePath(String value) {
+        this.modulePath = value;
+    }
+
+    public void setJdkModulePath(String value) {
+        this.jdkModulePath = value;
+    }
+
+    public void setDetectModules(boolean value) {
+        this.detectModules = value;
+    }
+
+    public void setStripExecutables(boolean value) {
+        this.stripExecutables = value;
     }
 
     public void setDescription(String description) {
@@ -523,7 +555,13 @@ public class DeployParams extends CommonParams {
             StandardBundlerParam.JVM_PROPERTIES.getID(),
             StandardBundlerParam.JVM_OPTIONS.getID(),
             StandardBundlerParam.USER_JVM_OPTIONS.getID(),
-            StandardBundlerParam.ARGUMENTS.getID()
+            StandardBundlerParam.ARGUMENTS.getID(),
+            //StandardBundlerParam.MODULE_NAME.getID(),
+            JLinkBundlerHelper.MODULE_PATH.getID(),
+            JLinkBundlerHelper.JDK_MODULE_PATH.getID(),
+            JLinkBundlerHelper.ADD_MODULES.getID(),
+            JLinkBundlerHelper.LIMIT_MODULES.getID(),
+            JLinkBundlerHelper.STRIP_NATIVE_COMMANDS.getID()
     ));
 
     @SuppressWarnings("unchecked")
@@ -603,6 +641,13 @@ public class DeployParams extends CommonParams {
         bundleParams.setJvmargs(jvmargs);
         bundleParams.setJvmUserArgs(jvmUserArgs);
         bundleParams.setArguments(arguments);
+
+        bundleParams.setAddModules(addModules);
+        bundleParams.setLimitModules(limitModules);
+        bundleParams.setDetectModules(detectModules);
+        bundleParams.setStripExecutables(stripExecutables);
+        bundleParams.setAppModulePath(jdkModulePath);
+        bundleParams.setLinkModulePath(modulePath);
 
         File appIcon = null;
         List<Map<String, ? super Object>> bundlerIcons = new ArrayList<>();

@@ -191,7 +191,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(VERBOSE.getID(), true);
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         boolean valid = bundler.validate(bundleParams);
@@ -243,7 +243,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
         bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
-        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
+//FIXME        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
@@ -324,7 +324,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
-        bundleParams.put(MAC_RUNTIME.getID(), jre);
+//FIXME        bundleParams.put(MAC_RUNTIME.getID(), jre);
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -361,7 +361,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(VERBOSE.getID(), true);
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         bundleParams.put(SIGN_BUNDLE.getID(), false);

@@ -29,9 +29,10 @@ import com.oracle.tools.packager.windows.WindowsBundlerParam;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
 
@@ -58,9 +59,9 @@ public abstract class AbstractBundler implements Bundler {
             String publicName, String category,
             String defaultName, File result, boolean verbose, File publicRoot)
             throws IOException {
-        URL u = locateResource(publicName, category, defaultName, verbose, publicRoot);
-        if (u != null) {
-            IOUtils.copyFromURL(u, result);
+        InputStream is = streamResource(publicName, category, defaultName, verbose, publicRoot);
+        if (is != null) {
+            Files.copy(is, result.toPath());
         } else {
             if (verbose) {
                 Log.info(MessageFormat.format(I18N.getString("message.using-default-resource"), category == null ? "" : "[" + category + "] ", publicName));
@@ -72,9 +73,9 @@ public abstract class AbstractBundler implements Bundler {
             String publicName, String category,
             File defaultFile, File result, boolean verbose, File publicRoot)
             throws IOException {
-        URL u = locateResource(publicName, category, null, verbose, publicRoot);
-        if (u != null) {
-            IOUtils.copyFromURL(u, result);
+        InputStream is = streamResource(publicName, category, null, verbose, publicRoot);
+        if (is != null) {
+            Files.copy(is, result.toPath());
         } else {
             IOUtils.copyFile(defaultFile, result);
             if (verbose) {
@@ -83,41 +84,40 @@ public abstract class AbstractBundler implements Bundler {
         }
     }
 
-    private URL locateResource(String publicName, String category,
+    private InputStream streamResource(String publicName, String category,
                                String defaultName, boolean verbose, File publicRoot) throws IOException {
-        URL u = null;
         boolean custom = false;
+        InputStream is = null;
         if (publicName != null) {
             if (publicRoot != null) {
                 File publicResource = new File(publicRoot, publicName);
                 if (publicResource.exists() && publicResource.isFile()) {
-                    u = publicResource.toURI().toURL();
+                    is = new FileInputStream(publicResource);
                 }
             } else {
-                u = baseResourceLoader.getClassLoader().getResource(publicName);
+                is = baseResourceLoader.getClassLoader().getResourceAsStream(publicName);
             }
-            custom = (u != null);
+            custom = (is != null);
         }
-        if (u == null && defaultName != null) {
-            u = baseResourceLoader.getResource(defaultName);
+        if (is == null && defaultName != null) {
+            is = baseResourceLoader.getResourceAsStream(defaultName);
         }
         String msg = null;
         if (custom) {
             msg = MessageFormat.format(I18N.getString("message.using-custom-resource-from-classpath"), category == null ? "" : "[" + category + "] ", publicName);
-        } else if (u != null) {
+        } else if (is != null) {
             msg = MessageFormat.format(I18N.getString("message.using-default-resource-from-classpath"), category == null ? "" : "[" + category + "] ", publicName);
         }
-        if (verbose && u != null) {
+        if (verbose && is != null) {
             Log.info(msg);
         }
-        return u;
+        return is;
     }
 
     protected String preprocessTextResource(String publicName, String category,
                                             String defaultName, Map<String, String> pairs,
                                             boolean verbose, File publicRoot) throws IOException {
-        URL u = locateResource(publicName, category, defaultName, verbose, publicRoot);
-        InputStream inp = u.openStream();
+        InputStream inp = streamResource(publicName, category, defaultName, verbose, publicRoot);
         if (inp == null) {
             throw new RuntimeException("Jar corrupt? No "+defaultName+" resource!");
         }

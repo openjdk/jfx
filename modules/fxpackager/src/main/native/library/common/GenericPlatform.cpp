@@ -166,6 +166,7 @@ std::map<TString, TString> GenericPlatform::GetKeys() {
     keys.insert(std::map<TString, TString>::value_type(CONFIG_MAINJAR_KEY,       _T("app.mainjar")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_MAINCLASSNAME_KEY, _T("app.mainclass")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_CLASSPATH_KEY,     _T("app.classpath")));
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_MODULEPATH_KEY,    _T("app.modulepath")));
     keys.insert(std::map<TString, TString>::value_type(APP_NAME_KEY,             _T("app.name")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_ID_KEY,        _T("app.preferences.id")));
     keys.insert(std::map<TString, TString>::value_type(JVM_RUNTIME_KEY,          _T("app.runtime")));

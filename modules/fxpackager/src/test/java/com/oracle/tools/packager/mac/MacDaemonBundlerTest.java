@@ -48,7 +48,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static com.oracle.tools.packager.mac.MacAppBundler.MAC_RUNTIME;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -138,7 +137,7 @@ public class MacDaemonBundlerTest {
         bundleParams.put(SYSTEM_WIDE.getID(), true);
 
         if (runtimeJdk != null) {
-            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+//FIXME            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
         boolean valid = bundler.validate(bundleParams);

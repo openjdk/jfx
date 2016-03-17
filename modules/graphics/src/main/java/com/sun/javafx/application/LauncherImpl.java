@@ -394,6 +394,9 @@ public class LauncherImpl {
         } catch (NoSuchMethodException | IllegalAccessException ex) {
             theEx = ex;
             savedPreloaderClass = null;
+            if (verbose) {
+                System.err.println("WARNING: Cannot access application main method: " + ex);
+            }
         } catch (InvocationTargetException ex) {
             ex.printStackTrace();
             abort(null, "Exception running application %1$s", tempAppClass.getName());
@@ -526,31 +529,8 @@ public class LauncherImpl {
             return;
         }
 
-        // grab deploy.jar
-        // Note that we don't need to keep deploy.jar in the JavaFX classloader
-        // it is only needed long enough to configure the proxy
-        String javaHome = System.getProperty("java.home");
-        File jreLibDir = new File(javaHome, "lib");
-        File deployJar = new File(jreLibDir, "deploy.jar");
-
-        URL[] deployURLs;
         try {
-            deployURLs = new URL[] {
-                deployJar.toURI().toURL()
-            };
-        } catch (MalformedURLException ex) {
-            if (trace) {
-                System.err.println("Unable to build URL to deploy.jar: "+ex);
-                ex.printStackTrace();
-            }
-            return; // give up setting proxy, usually silently
-        }
-
-        try {
-            URLClassLoader dcl = new URLClassLoader(deployURLs);
-            Class sm = Class.forName("com.sun.deploy.services.ServiceManager",
-                    true,
-                    dcl);
+            Class sm = Class.forName("com.sun.deploy.services.ServiceManager");
             Class params[] = {Integer.TYPE};
             Method setservice = sm.getDeclaredMethod("setService", params);
             String osname = System.getProperty("os.name");
@@ -564,16 +544,12 @@ public class LauncherImpl {
                 servicename = "STANDALONE_TIGER_UNIX";
             }
             Object values[] = new Object[1];
-            Class pt = Class.forName("com.sun.deploy.services.PlatformType",
-                    true,
-                    dcl);
+            Class pt = Class.forName("com.sun.deploy.services.PlatformType");
             values[0] = pt.getField(servicename).get(null);
             setservice.invoke(null, values);
 
             Class dps = Class.forName(
-                    "com.sun.deploy.net.proxy.DeployProxySelector",
-                    true,
-                    dcl);
+                    "com.sun.deploy.net.proxy.DeployProxySelector");
             Method m = dps.getDeclaredMethod("reset", new Class[0]);
             m.invoke(null, new Object[0]);
 

@@ -391,6 +391,7 @@ public class FXMLLoader {
                     return aValue;
                 } else {
                         if (aValue.charAt(0) == '/') {
+                            // FIXME: JIGSAW -- use Class.getResourceAsStream if resource is in a module
                             final URL res = getClassLoader().getResource(aValue.substring(1));
                             if (res == null) {
                                 throw constructLoadException("Invalid resource: " + aValue + " not found on the classpath");
@@ -1113,6 +1114,7 @@ public class FXMLLoader {
             URL location;
             final ClassLoader cl = getClassLoader();
             if (source.charAt(0) == '/') {
+            // FIXME: JIGSAW -- use Class.getResourceAsStream if resource is in a module
                 location = cl.getResource(source.substring(1));
                 if (location == null) {
                     throw constructLoadException("Cannot resolve path: " + source);
@@ -1537,6 +1539,7 @@ public class FXMLLoader {
                 try {
                     URL location;
                     if (source.charAt(0) == '/') {
+                        // FIXME: JIGSAW -- use Class.getResourceAsStream if resource is in a module
                         location = cl.getResource(source.substring(1));
                     } else {
                         if (FXMLLoader.this.location == null) {

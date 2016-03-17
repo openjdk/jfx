@@ -26,13 +26,12 @@
 package com.oracle.tools.packager.mac;
 
 import com.oracle.tools.packager.BundlerParamInfo;
-import com.oracle.tools.packager.JreUtils;
-import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.UnsupportedPlatformException;
+import jdk.packager.builders.mac.MacAppImageBuilder;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -111,7 +110,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
         p.put(DEFAULT_ICNS_ICON.getID(), TEMPLATE_BUNDLE_ICON_HIDPI);
 
         // next we need to change the jdk/jre stripping to strip gstreamer
-        p.put(MAC_RULES.getID(), createMacAppStoreRuntimeRules(p));
+//        p.put(MAC_RULES.getID(), createMacAppStoreRuntimeRules(p));
 
         // now we create the app
         File appImageDir = APP_IMAGE_BUILD_ROOT.fetchFrom(p);
@@ -129,7 +128,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             String entitlementsFile = getConfig_Entitlements(p).toString();
             String inheritEntitlements = getConfig_Inherit_Entitlements(p).toString();
 
-            signAppBundle(p, appLocation, signingIdentity, identifierPrefix, entitlementsFile, inheritEntitlements);
+            MacAppImageBuilder.signAppBundle(p, appLocation.toPath(), signingIdentity, identifierPrefix, entitlementsFile, inheritEntitlements);
             ProcessBuilder pb;
 
             // create the final pkg file
@@ -237,69 +236,6 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
     }
 
 
-    public static JreUtils.Rule[] createMacAppStoreRuntimeRules(Map<String, ? super Object> params) {
-        //Subsetting of JRE is restricted.
-        //JRE README defines what is allowed to strip:
-        //   ﻿http://www.oracle.com/technetwork/java/javase/jre-8-readme-2095710.html
-        //
-
-        List<JreUtils.Rule> rules = new ArrayList<>();
-
-        rules.addAll(Arrays.asList(createMacRuntimeRules(params)));
-
-        File baseDir;
-
-        if (params.containsKey(MAC_RUNTIME.getID())) {
-            Object o = params.get(MAC_RUNTIME.getID());
-            if (o instanceof RelativeFileSet) {
-
-                baseDir = ((RelativeFileSet) o).getBaseDirectory();
-            } else {
-                baseDir = new File(o.toString());
-            }
-        } else {
-            baseDir = new File(System.getProperty("java.home"));
-        }
-
-        // we accept either pointing at the directories typically installed at:
-        // /Libraries/Java/JavaVirtualMachine/jdk1.8.0_40/
-        //   * .
-        //   * Contents/Home
-        //   * Contents/Home/jre
-        // /Library/Internet\ Plug-Ins/JavaAppletPlugin.plugin/
-        //   * .
-        //   * /Contents/Home
-        // version may change, and if we don't detect any Contents/Home or Contents/Home/jre we will
-        // presume we are at a root.
-
-
-        try {
-            String path = baseDir.getCanonicalPath();
-            if (path.endsWith("/Contents/Home/jre")) {
-                baseDir = baseDir.getParentFile().getParentFile().getParentFile();
-            } else if (path.endsWith("/Contents/Home")) {
-                baseDir = baseDir.getParentFile().getParentFile();
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        if (!baseDir.exists()) {
-            throw new RuntimeException(I18N.getString("error.non-existent-runtime"),
-                    new ConfigException(I18N.getString("error.non-existent-runtime"),
-                            I18N.getString("error.non-existent-runtime.advice")));
-        }
-
-        if (new File(baseDir, "Contents/Home/lib/libjfxmedia_qtkit.dylib").exists()
-            || new File(baseDir, "Contents/Home/jre/lib/libjfxmedia_qtkit.dylib").exists())
-        {
-            rules.add(JreUtils.Rule.suffixNeg("/lib/libjfxmedia_qtkit.dylib"));
-        } else {
-            rules.add(JreUtils.Rule.suffixNeg("/lib/libjfxmedia.dylib"));
-        }
-        return rules.toArray(new JreUtils.Rule[rules.size()]);
-    }
-
     //////////////////////////////////////////////////////////////////////////////////
     // Implement Bundler
     //////////////////////////////////////////////////////////////////////////////////
@@ -360,14 +296,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             //run basic validation to ensure requirements are met
 
             // Mac App Store apps cannot use the system runtime
-            if (params.containsKey(MAC_RUNTIME.getID()) && params.get(MAC_RUNTIME.getID()) == null) {
-                throw new ConfigException(
-                        I18N.getString("error.no-system-runtime"),
-                        I18N.getString("error.no-system-runtime.advice"));
-            }
-
-            //we need to change the jdk/jre stripping to strip qtkit code
-            params.put(MAC_RULES.getID(), createMacAppStoreRuntimeRules(params));
+            //TODO
 
             //we are not interested in return code, only possible exception
             validateAppImageAndBundeler(params);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,6 +108,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
     private Resources resources = null;
     private Preferences prefs = null;
     private String codebase = null;
+    private String modulePath = null;
 
     //container to embed application into
     //could be either string id or js code. If it is string id then it needs to
@@ -135,6 +136,10 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         codebase = str;
     }
 
+    public void setLinkModulePath(String str) {
+        modulePath = str;
+    }
+
     public DeployFXTask() {
         packager = new PackagerLib();
         deployParams = new DeployParams();
@@ -147,6 +152,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         deployParams.setOfflineAllowed(offlineAllowed);
         deployParams.setVerbose(verbose);
         deployParams.setCodebase(codebase);
+        deployParams.setModulePath(modulePath);
         deployParams.setSignBundle(signBundle);
 
         if (width != null) {
@@ -180,6 +186,15 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             deployParams.setVersion(app.get().version);
             deployParams.setId(app.get().id);
             deployParams.setServiceHint(app.get().daemon);
+
+            for (String s : app.getAddModule()) {
+                deployParams.addAddModule(s);
+            }
+            for (String s : app.getLimitModule()) {
+                deployParams.addLimitModule(s);
+            }
+            deployParams.setDetectModules(app.getDetectModules());
+            deployParams.setJdkModulePath(app.getJdkModulePath());
         }
 
         if (appInfo != null) {

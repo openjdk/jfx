@@ -100,6 +100,10 @@ void Package::Initialize() {
         FBootFields->FClassPath = GetMainJar() + FilePath::PathSeparator() + FBootFields->FClassPath;
     }
 
+    // Modulepath.
+    config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[CONFIG_MODULEPATH_KEY], FBootFields->FModulePath);
+    FBootFields->FModulePath = FilePath::FixPathSeparatorForPlatform(FBootFields->FModulePath);
+
     // Main Class.
     config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[CONFIG_MAINCLASSNAME_KEY], FBootFields->FMainClassName);
 
@@ -560,6 +564,11 @@ TString Package::GetPackageAppDataDirectory() {
 TString Package::GetClassPath() {
     assert(FBootFields != NULL);
     return FBootFields->FClassPath;
+}
+
+TString Package::GetModulePath() {
+    assert(FBootFields != NULL);
+    return FBootFields->FModulePath;
 }
 
 TString Package::GetMainJar() {

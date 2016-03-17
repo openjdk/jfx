@@ -37,6 +37,7 @@
 
 #include "PlatformString.h"
 #include "FilePath.h"
+#include "Helpers.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -112,6 +113,8 @@ Process* PosixPlatform::CreateProcess() {
 PosixProcess::PosixProcess() : Process() {
     FChildPID = 0;
     FRunning = false;
+    FOutputHandle = 0;
+    FInputHandle = 0;
 }
 
 PosixProcess::~PosixProcess() {
@@ -119,11 +122,53 @@ PosixProcess::~PosixProcess() {
 }
 
 void PosixProcess::Cleanup() {
+    if (FOutputHandle != 0) {
+        close(FOutputHandle);
+        FOutputHandle = 0;
+    }
+
+    if (FInputHandle != 0) {
+        close(FInputHandle);
+        FInputHandle = 0;
+    }
+
 #ifdef MAC
     sigaction(SIGINT, &savintr, (struct sigaction *)0);
     sigaction(SIGQUIT, &savequit, (struct sigaction *)0);
     sigprocmask(SIG_SETMASK, &saveblock, (sigset_t *)0);
 #endif //MAC
+}
+
+bool PosixProcess::ReadOutput() {
+    bool result = false;
+
+    if (FOutputHandle != 0 && IsRunning() == true) {
+        char buffer[4096];
+        //select(p[0] + 1, &rfds, NULL, NULL, NULL);
+
+        ssize_t count = read(FOutputHandle, buffer, sizeof(buffer));
+
+        if (count == -1) {
+            if (errno == EINTR) {
+                //continue;
+            } else {
+                perror("read");
+                exit(1);
+            }
+        } else if (count == 0) {
+            //break;
+        } else {
+            if (buffer[count] == EOF) {
+                buffer[count] = '\0';
+            }
+
+            std::list<TString> output = Helpers::StringToArray(buffer);
+            FOutput.splice(FOutput.end(), output, output.begin(), output.end());
+            result = true;
+        }
+    }
+
+    return false;
 }
 
 bool PosixProcess::IsRunning() {
@@ -169,11 +214,22 @@ bool PosixProcess::Terminate() {
     return result;
 }
 
+#define PIPE_READ 0
+#define PIPE_WRITE 1
+
 bool PosixProcess::Execute(const TString Application, const std::vector<TString> Arguments, bool AWait) {
     bool result = false;
 
     if (FRunning == false) {
         FRunning = true;
+
+        int handles[2];
+
+        if (pipe(handles) == -1) {
+            //perror("pipe");
+            //exit(1);
+            return false;
+        }
 
         struct sigaction sa;
         sa.sa_handler = SIG_IGN;
@@ -206,10 +262,35 @@ bool PosixProcess::Execute(const TString Application, const std::vector<TString>
 #ifdef DEBUG
             printf("%s\n", command.data());
 #endif //DEBUG
+//            dup2(FOutputHandle, STDOUT_FILENO);
+//            dup2(FInputHandle, STDIN_FILENO);
+//            close(FOutputHandle);
+//            close(FInputHandle);
+
+            dup2(handles[PIPE_READ], STDIN_FILENO);
+            dup2(handles[PIPE_WRITE], STDOUT_FILENO);
+//            setvbuf(stdout,NULL,_IONBF,0);
+//            setvbuf(stdin,NULL,_IONBF,0);
+
+            close(handles[PIPE_READ]);
+            close(handles[PIPE_WRITE]);
+
             execl("/bin/sh", "sh", "-c", command.data(), (char *)0);
+
             _exit(127);
         } else {
+//            close(handles[PIPE_READ]);
+//            close(handles[PIPE_WRITE]);
+
+//            close(output[1]);
+//            int nbytes = read(output[0], foo, sizeof(foo));
+//            printf("Output: (%.*s)\n", nbytes, foo);
+//            wait(NULL);
+            FOutputHandle = handles[PIPE_READ];
+            FInputHandle = handles[PIPE_WRITE];
+
             if (AWait == true) {
+                ReadOutput();
                 Wait();
                 Cleanup();
                 FRunning = false;
@@ -269,6 +350,17 @@ bool PosixProcess::Wait() {
 
 TProcessID PosixProcess::GetProcessID() {
     return FChildPID;
+}
+
+void PosixProcess::SetInput(TString Value) {
+    if (FInputHandle != 0) {
+        write(FInputHandle, Value.data(), Value.size());
+    }
+}
+
+std::list<TString> PosixProcess::GetOutput() {
+    ReadOutput();
+    return Process::GetOutput();
 }
 
 #endif //POSIX

@@ -1,0 +1,14 @@
+"-XaddExports:\
+    javafx.base/com.sun.javafx.collections=ALL-UNNAMED,\
+    \
+    javafx.graphics/com.sun.javafx.application=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.font=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.geom=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.perf=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED,\
+    javafx.graphics/com.sun.prism=ALL-UNNAMED,\
+    javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED,\
+    \
+    javafx.fxml/com.sun.javafx.fxml.builder=ALL-UNNAMED,\
+    javafx.fxml/com.sun.javafx.fxml.expression=ALL-UNNAMED"

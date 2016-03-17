@@ -1,0 +1,22 @@
+"-XaddExports:\
+    javafx.base/com.sun.javafx=ALL-UNNAMED,\
+    \
+    javafx.graphics/com.sun.glass.ui=ALL-UNNAMED,\
+    javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.animation=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.application=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.css=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.css.parser=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.embed=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.font=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.geom=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.geom.transform=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.iio.bmp=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.iio.common=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.iio.gif=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.iio=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.iio.png=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.image.impl=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.image=ALL-UNNAMED,\
+    \
+    java.base/sun.util.logging=ALL-UNNAMED"
