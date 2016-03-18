@@ -876,7 +876,7 @@ logger.quiet("java build number: ${javaBuildNumber}")
 logger.quiet("jdk.runtime.version: ${jdkRuntimeVersion}")
 logger.quiet("jdk version: ${jdkVersion}")
 logger.quiet("jdk build number: ${jdkBuildNumber}")
-logger.quiet("minimum jdk version: ${jfxBuildJdkVersion}")
+logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("STUB_RUNTIME: $STUB_RUNTIME")
 logger.quiet("CONF: $CONF")
@@ -1123,9 +1123,9 @@ int compareJdkVersion(String a, String b) {
 // Task to verify the minimum level of Java needed to build JavaFX
 task verifyJava() {
     doLast {
-        def status = compareJdkVersion(jdkVersion, jfxBuildJdkVersion);
+        def status = compareJdkVersion(jdkVersion, jfxBuildJdkVersionMin);
         if (status < 0) {
-            fail("java version mismatch: JDK version (${jdkVersion}) < minimum version (${jfxBuildJdkVersion})")
+            fail("java version mismatch: JDK version (${jdkVersion}) < minimum version (${jfxBuildJdkVersionMin})")
         } else if (status == 0) {
             def buildNum = Integer.parseInt(jdkBuildNumber)
             def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
