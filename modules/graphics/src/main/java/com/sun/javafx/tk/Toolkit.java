@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,7 +83,6 @@ import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.SceneHelper;
-import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
@@ -661,7 +660,6 @@ public abstract class Toolkit {
     public abstract Dimension2D getBestCursorSize(int preferredWidth, int preferredHeight);
     public abstract int getMaximumCursorColors();
     public abstract PathElement[] convertShapeToFXPath(Object shape);
-    public abstract HitInfo convertHitInfoToFX(Object hit);
 
     public abstract Filterable toFilterable(Image img);
     public abstract FilterContext getFilterContext(Object config);

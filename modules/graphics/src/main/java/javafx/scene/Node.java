@@ -832,13 +832,15 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    private void invalidatedScenes(Scene oldScene, SubScene oldSubScene) {
+    // reapplyCSS should be true for root elements when they are added, and is false for children
+    // of the root element. This prevents CSS being reapplied recursively, as noted in JDK-8151756.
+    private void invalidatedScenes(Scene oldScene, SubScene oldSubScene, boolean reapplyCSS) {
         Scene newScene = sceneProperty().get();
         boolean sceneChanged = oldScene != newScene;
         SubScene newSubScene = subScene;
 
         if (getClip() != null) {
-            getClip().setScenes(newScene, newSubScene);
+            getClip().setScenes(newScene, newSubScene, reapplyCSS);
         }
         if (sceneChanged) {
             updateCanReceiveFocus();
@@ -851,7 +853,7 @@ public abstract class Node implements EventTarget, Styleable {
             focusSetDirty(newScene);
         }
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
-        if (sceneChanged) impl_reapplyCSS();
+        if (sceneChanged && reapplyCSS) impl_reapplyCSS();
 
         if (sceneChanged && !impl_isDirtyEmpty()) {
             //Note: no need to remove from scene's dirty list
@@ -910,16 +912,16 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    final void setScenes(Scene newScene, SubScene newSubScene) {
+    final void setScenes(Scene newScene, SubScene newSubScene, boolean reapplyCSS) {
         Scene oldScene = sceneProperty().get();
         if (newScene != oldScene || newSubScene != subScene) {
             scene.set(newScene);
             SubScene oldSubScene = subScene;
             subScene = newSubScene;
-            invalidatedScenes(oldScene, oldSubScene);
+            invalidatedScenes(oldScene, oldSubScene, reapplyCSS);
             if (this instanceof SubScene) { // TODO: find better solution
                 SubScene thisSubScene = (SubScene)this;
-                thisSubScene.getRoot().setScenes(newScene, thisSubScene);
+                thisSubScene.getRoot().setScenes(newScene, thisSubScene, reapplyCSS);
             }
         }
     }
@@ -2498,10 +2500,12 @@ public abstract class Node implements EventTarget, Styleable {
                 protected void invalidated() {
                     impl_transformsChanged();
                     final Parent p = getParent();
-                    if (p != null && !p.performingLayout) {
+
+                    // Propagate layout if this change isn't triggered by its parent
+                    if (p != null && !p.isCurrentLayoutChild(Node.this)) {
                         if (isManaged()) {
-                            // Let parent fix the layout
-                            p.requestLayout();
+                            // Force its parent to fix the layout since it is a managed child.
+                            p.requestLayout(true);
                         } else {
                             // Parent size changed, parent's parent might need to re-layout
                             p.clearSizeCache();
@@ -2570,10 +2574,12 @@ public abstract class Node implements EventTarget, Styleable {
                 protected void invalidated() {
                     impl_transformsChanged();
                     final Parent p = getParent();
-                    if (p != null && !p.performingLayout) {
+
+                    // Propagate layout if this change isn't triggered by its parent
+                    if (p != null && !p.isCurrentLayoutChild(Node.this)) {
                         if (isManaged()) {
-                            // Let parent fix the layout
-                            p.requestLayout();
+                            // Force its parent to fix the layout since it is a managed child.
+                            p.requestLayout(true);
                         } else {
                             // Parent size changed, parent's parent might need to re-layout
                             p.clearSizeCache();
@@ -3839,9 +3845,12 @@ public abstract class Node implements EventTarget, Styleable {
         // Group instanceof check a little hoaky, but it allows us to disable
         // unnecessary layout for the case of a non-resizable within a group
         Parent p = getParent();
+
+        // Need to propagate layout if this change isn't triggered by its parent
         if (isManaged() && (p != null) && !(p instanceof Group && !isResizable())
-                && !p.performingLayout) {
-            p.requestLayout();
+                && !p.isCurrentLayoutChild(this)) {
+            // Force its parent to fix the layout since it is a managed child.
+            p.requestLayout(true);
         }
     }
 
@@ -6628,13 +6637,13 @@ public abstract class Node implements EventTarget, Styleable {
                         } else {
                             if (oldClip != null) {
                                 oldClip.clipParent = null;
-                                oldClip.setScenes(null, null);
+                                oldClip.setScenes(null, null, /* reapplyCSS */ false);
                                 oldClip.updateTreeVisible(false);
                             }
 
                             if (newClip != null) {
                                 newClip.clipParent = Node.this;
-                                newClip.setScenes(getScene(), getSubScene());
+                                newClip.setScenes(getScene(), getSubScene(), /* reapplyCSS */ false);
                                 newClip.updateTreeVisible(true);
                             }
 
@@ -8983,7 +8992,7 @@ public abstract class Node implements EventTarget, Styleable {
         // apply the CSS immediately and not add it to the scene's queue
         // for deferred action.
         //
-        if (getParent() != null && getParent().performingLayout) {
+        if (getParent() != null && getParent().isPerformingLayout()) {
             impl_processCSS(null);
         } else {
             notifyParentsOfInvalidatedCSS();

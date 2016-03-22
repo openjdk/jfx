@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.PasswordField;
-import static javafx.scene.control.skin.TextFieldSkin.TextPosInfo;
+import javafx.scene.text.HitInfo;
 
 /**
  * Password field behavior.
@@ -48,7 +48,7 @@ public class PasswordFieldBehavior extends TextFieldBehavior {
     protected void selectWord() {
         selectAll();
     }
-    protected void mouseDoubleClick(TextPosInfo hit) {
+    protected void mouseDoubleClick(HitInfo hit) {
         getNode().selectAll();
     }
 

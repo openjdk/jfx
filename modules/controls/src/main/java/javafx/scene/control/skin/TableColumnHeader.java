@@ -159,8 +159,8 @@ public class TableColumnHeader extends Region {
 
         if (getTableColumn() != null) {
             updateSortPosition();
-            skin.getSortOrder().addListener(weakSortOrderListener);
-            skin.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+            TableSkinUtils.getSortOrder(skin).addListener(weakSortOrderListener);
+            TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakVisibleLeafColumnsListener);
         }
 
         if (getTableColumn() != null) {
@@ -177,7 +177,7 @@ public class TableColumnHeader extends Region {
             changeListenerHandler.registerChangeListener(tc.sortableProperty(), e -> {
                 // we need to notify all headers that a sortable state has changed,
                 // in case the sort grid in other columns needs to be updated.
-                if (skin.getSortOrder().contains(getTableColumn())) {
+                if (TableSkinUtils.getSortOrder(skin).contains(getTableColumn())) {
                     NestedTableColumnHeader root = getTableHeaderRow().getRootHeader();
                     updateAllHeaders(root);
                 }
@@ -492,8 +492,8 @@ public class TableColumnHeader extends Region {
     void dispose() {
         TableViewSkinBase skin = getTableViewSkin();
         if (skin != null) {
-            skin.getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
-            skin.getSortOrder().removeListener(weakSortOrderListener);
+            TableSkinUtils.getVisibleLeafColumns(skin).removeListener(weakVisibleLeafColumnsListener);
+            TableSkinUtils.getSortOrder(skin).removeListener(weakSortOrderListener);
         }
 
         changeListenerHandler.dispose();
@@ -508,7 +508,7 @@ public class TableColumnHeader extends Region {
 
     private boolean isColumnReorderingEnabled() {
         // we only allow for column reordering if there are more than one column,
-        return !Properties.IS_TOUCH_SUPPORTED && getTableViewSkin().getVisibleLeafColumns().size() > 1;
+        return !Properties.IS_TOUCH_SUPPORTED && TableSkinUtils.getVisibleLeafColumns(getTableViewSkin()).size() > 1;
     }
 
     private void initUI() {
@@ -541,7 +541,8 @@ public class TableColumnHeader extends Region {
 
         // if the prefWidth has been set, we do _not_ autosize columns
         if (prefWidth == DEFAULT_COLUMN_WIDTH) {
-            getTableViewSkin().resizeColumnToFitContent(column, cellsToMeasure);
+            TableSkinUtils.resizeColumnToFitContent(getTableViewSkin(), column, cellsToMeasure);
+//            getTableViewSkin().resizeColumnToFitContent(column, cellsToMeasure);
         }
     }
 
@@ -569,7 +570,7 @@ public class TableColumnHeader extends Region {
         }
 
         // RT-28016: if the tablecolumn is not a visible leaf column, we should ignore this
-        int visibleLeafIndex = skin.getVisibleLeafIndex(getTableColumn());
+        int visibleLeafIndex = TableSkinUtils.getVisibleLeafIndex(skin,getTableColumn());
         if (visibleLeafIndex == -1) return;
 
         final int sortColumnCount = getVisibleSortOrderColumnCount();
@@ -725,7 +726,7 @@ public class TableColumnHeader extends Region {
 
     private ObservableList<TableColumnBase<?,?>> getColumns(TableColumnBase column) {
         return column.getParentColumn() == null ?
-                getTableViewSkin().getColumns() :
+                TableSkinUtils.getColumns(getTableViewSkin()) :
                 column.getParentColumn().getColumns();
     }
 
@@ -750,13 +751,13 @@ public class TableColumnHeader extends Region {
 //        TableView tv = getTableView();
         TableViewSkinBase skin = getTableViewSkin();
         TableColumnBase tc = getTableColumn();
-        columnIndex = skin == null || tc == null ? -1 : skin.getVisibleLeafIndex(tc);
+        columnIndex = skin == null || tc == null ? -1 :TableSkinUtils.getVisibleLeafIndex(skin,tc);
 
         // update the pseudo class state regarding whether this is the last
         // visible cell (i.e. the right-most).
         isLastVisibleColumn = getTableColumn() != null &&
                 columnIndex != -1 &&
-                columnIndex == getTableViewSkin().getVisibleLeafColumns().size() - 1;
+                columnIndex == TableSkinUtils.getVisibleLeafColumns(skin).size() - 1;
         pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE, isLastVisibleColumn);
     }
 
@@ -769,7 +770,7 @@ public class TableColumnHeader extends Region {
 //        final int sortPos = getTable().getSortOrder().indexOf(column);
 //        final boolean isSortColumn = sortPos != -1;
 
-        final ObservableList<TableColumnBase<?,?>> sortOrder = getTableViewSkin().getSortOrder();
+        final ObservableList<TableColumnBase<?,?>> sortOrder = TableSkinUtils.getSortOrder(skin);
 
         // addColumn is true e.g. when the user is holding down Shift
         if (addColumn) {
@@ -849,7 +850,7 @@ public class TableColumnHeader extends Region {
     }
 
     private List<TableColumnBase> getVisibleSortOrderColumns() {
-        final ObservableList<TableColumnBase<?,?>> sortOrder = getTableViewSkin().getSortOrder();
+        final ObservableList<TableColumnBase<?,?>> sortOrder = TableSkinUtils.getSortOrder(skin);
 
         List<TableColumnBase> visibleSortOrderColumns = new ArrayList<>();
         for (int i = 0; i < sortOrder.size(); i++) {

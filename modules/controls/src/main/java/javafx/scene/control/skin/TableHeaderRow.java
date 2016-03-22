@@ -59,9 +59,9 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  * Region responsible for painting the entire row of column headers.
  *
  * @since 9
- * @see TableView
+ * @see javafx.scene.control.TableView
  * @see TableViewSkin
- * @see TreeTableView
+ * @see javafx.scene.control.TreeTableView
  * @see TreeTableViewSkin
  */
 public class TableHeaderRow extends StackPane {
@@ -200,13 +200,13 @@ public class TableHeaderRow extends StackPane {
         updateTableWidth();
         tableSkin.getSkinnable().widthProperty().addListener(weakTableWidthListener);
         tableSkin.getSkinnable().paddingProperty().addListener(weakTablePaddingListener);
-        skin.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
+        TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakVisibleLeafColumnsListener);
 
         // popup menu for hiding/showing columns
         columnPopupMenu = new ContextMenu();
-        updateTableColumnListeners(tableSkin.getColumns(), Collections.<TableColumnBase<?,?>>emptyList());
-        tableSkin.getVisibleLeafColumns().addListener(weakTableColumnsListener);
-        tableSkin.getColumns().addListener(weakTableColumnsListener);
+        updateTableColumnListeners(TableSkinUtils.getColumns(tableSkin), Collections.<TableColumnBase<?,?>>emptyList());
+        TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakTableColumnsListener);
+        TableSkinUtils.getColumns(tableSkin).addListener(weakTableColumnsListener);
 
         // drag header region. Used to indicate the current column being reordered
         dragHeader = new StackPane();
@@ -249,11 +249,12 @@ public class TableHeaderRow extends StackPane {
         };
         cornerRegion.getStyleClass().setAll("show-hide-columns-button");
         cornerRegion.getChildren().addAll(image);
-        cornerRegion.setVisible(tableSkin.tableMenuButtonVisibleProperty().get());
-        tableSkin.tableMenuButtonVisibleProperty().addListener(valueModel -> {
-            cornerRegion.setVisible(tableSkin.tableMenuButtonVisibleProperty().get());
-            requestLayout();
-        });
+
+        BooleanProperty tableMenuButtonVisibleProperty = TableSkinUtils.tableMenuButtonVisibleProperty(skin);
+        if (tableMenuButtonVisibleProperty != null) {
+            cornerRegion.visibleProperty().bind(tableMenuButtonVisibleProperty);
+        };
+
         cornerRegion.setOnMousePressed(me -> {
             // show a popupMenu which lists all columns
             columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
@@ -344,9 +345,11 @@ public class TableHeaderRow extends StackPane {
             return;
         }
 
+        final BooleanProperty tableMenuButtonVisibleProperty = TableSkinUtils.tableMenuButtonVisibleProperty(tableSkin);
+
         final double controlInsets = control.snappedLeftInset() + control.snappedRightInset();
         double fillerWidth = tableWidth - headerWidth + filler.getInsets().getLeft() - controlInsets;
-        fillerWidth -= tableSkin.tableMenuButtonVisibleProperty().get() ? cornerWidth : 0;
+        fillerWidth -= tableMenuButtonVisibleProperty != null && tableMenuButtonVisibleProperty.get() ? cornerWidth : 0;
         filler.setVisible(fillerWidth > 0);
         if (fillerWidth > 0) {
             filler.resizeRelocate(x + headerWidth, snappedTopInset(), fillerWidth, prefHeight);
@@ -511,7 +514,7 @@ public class TableHeaderRow extends StackPane {
     private void rebuildColumnMenu() {
         columnPopupMenu.getItems().clear();
 
-        for (TableColumnBase<?,?> col : tableSkin.getColumns()) {
+        for (TableColumnBase<?,?> col : TableSkinUtils.getColumns(tableSkin)) {
             // we only create menu items for leaf columns, visible or not
             if (col.getColumns().isEmpty()) {
                 createMenuItem(col);
@@ -572,7 +575,7 @@ public class TableHeaderRow extends StackPane {
         String s = text;
         TableColumnBase parentCol = col.getParentColumn();
         while (parentCol != null) {
-            if (isColumnVisibleInHeader(parentCol, tableSkin.getColumns())) {
+            if (isColumnVisibleInHeader(parentCol, TableSkinUtils.getColumns(tableSkin))) {
                 s = parentCol.getText() + MENU_SEPARATOR + s;
             }
             parentCol = parentCol.getParentColumn();

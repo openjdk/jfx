@@ -26,11 +26,14 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import com.sun.javafx.scene.control.skin.Utils;
+import javafx.beans.property.ObjectProperty;
 import javafx.collections.WeakListChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -130,7 +133,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
                     label.setVisible(getTableColumn().getText() != null && ! getTableColumn().getText().isEmpty()));
         }
 
-        changeListenerHandler.registerChangeListener(skin.columnResizePolicyProperty(), e -> updateContent());
+        changeListenerHandler.registerChangeListener(TableSkinUtils.columnResizePolicyProperty(skin), e -> updateContent());
     }
 
 
@@ -165,7 +168,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
             // the user wants to resize the column such that its
             // width is equal to the widest element in the column
-            header.getTableViewSkin().resizeColumnToFitContent(column, -1);
+            TableSkinUtils.resizeColumnToFitContent(header.getTableViewSkin(), column, -1);
         } else {
             // rather than refer to the rect variable, we just grab
             // it from the source to prevent a small memory leak.
@@ -412,7 +415,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     void updateTableColumnHeaders() {
         // watching for changes to the view columns in either table or tableColumn.
         if (getTableColumn() == null && getTableViewSkin() != null) {
-            setColumns(getTableViewSkin().getColumns());
+            setColumns(TableSkinUtils.getColumns(getTableViewSkin()));
         } else if (getTableColumn() != null) {
             setColumns(getTableColumn().getColumns());
         }
@@ -570,15 +573,19 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         }
 
         final TableViewSkinBase<?,?,?,?,?> skin = getTableViewSkin();
-        Callback<ResizeFeaturesBase, Boolean> columnResizePolicy = skin.columnResizePolicyProperty().get();
-        boolean isConstrainedResize =
-                skin instanceof TableViewSkin ? TableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
-                skin instanceof TreeTableViewSkin ? TreeTableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
-                false;
+
+        boolean isConstrainedResize = false;
+        Callback<ResizeFeaturesBase,Boolean> columnResizePolicy = TableSkinUtils.columnResizePolicyProperty(skin).get();
+        if (columnResizePolicy != null) {
+            isConstrainedResize =
+                    skin instanceof TableViewSkin ? TableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
+                    skin instanceof TreeTableViewSkin ? TreeTableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
+                    false;
+        }
 
         // RT-32547 - don't show resize cursor when in constrained resize mode
         // and there is only one column
-        if (isConstrainedResize && skin.getVisibleLeafColumns().size() == 1) {
+        if (isConstrainedResize && TableSkinUtils.getVisibleLeafColumns(skin).size() == 1) {
             return;
         }
 
@@ -645,7 +652,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             draggedX = -draggedX;
         }
         double delta = draggedX - lastX;
-        boolean allowed = getTableViewSkin().resizeColumn(col, delta);
+        boolean allowed = TableSkinUtils.resizeColumn(getTableViewSkin(), col, delta);
         if (allowed) {
             lastX = draggedX;
         }

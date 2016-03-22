@@ -127,6 +127,14 @@ jmethodID getMethodID(jobject obj, const char* name, const char* sig)
     JNIEnv* env = getJNIEnv();
     jmethodID mid = 0;
 
+    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::getMethodID", jlinstance);
+        return mid;
+    }
+
     if (env) {
         jclass cls = env->GetObjectClass(obj);
         if (cls) {
@@ -309,6 +317,15 @@ jvalue getJNIField(jobject obj, JavaType type, const char* name, const char* sig
     jvalue result;
 
     memset(&result, 0, sizeof(jvalue));
+
+    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::getJNIField", jlinstance);
+        return result;
+    }
+
     if (obj && jvm && env) {
         jclass cls = env->GetObjectClass(obj);
         if (cls) {
@@ -363,8 +380,19 @@ jvalue getJNIField(jobject obj, JavaType type, const char* name, const char* sig
 
 jvalue callJNIMethod(jobject object, JavaType returnType, const char* name, const char* signature, jvalue* args)
 {
-    jmethodID methodId = getMethodID(object, name, signature);
     jvalue result;
+    memset(&result, 0, sizeof(jvalue));
+
+    // Since object is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(object, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethod", jlinstance);
+        return result;
+    }
+
+    jmethodID methodId = getMethodID(object, name, signature);
+
     switch (returnType) {
     case JavaTypeVoid:
         callJNIMethodIDA<void>(object, methodId, args);

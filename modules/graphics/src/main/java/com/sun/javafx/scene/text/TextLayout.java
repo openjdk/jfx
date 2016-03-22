@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,6 +74,22 @@ public interface TextLayout {
     public static final int TYPE_BASELINE       = 1 << 3;
     public static final int TYPE_TOP            = 1 << 4;
     public static final int TYPE_BEARINGS       = 1 << 5;
+
+    public static class Hit {
+        int charIndex;
+        int insertionIndex;
+        boolean leading;
+
+        public Hit(int charIndex, int insertionIndex, boolean leading) {
+            this.charIndex = charIndex;
+            this.insertionIndex = insertionIndex;
+            this.leading = leading;
+        }
+
+        public int getCharIndex() { return charIndex; }
+        public int getInsertionIndex() { return insertionIndex; }
+        public boolean isLeading() { return leading; }
+    }
 
     /**
      * Sets the content for the TextLayout. Supports multiple spans (rich text).
@@ -172,7 +188,8 @@ public interface TextLayout {
      */
     public Shape getShape(int type, TextSpan filter);
 
-    public HitInfo getHitInfo(float x, float y);
+    public Hit getHitInfo(float x, float y);
+
     public PathElement[] getCaretShape(int offset, boolean isLeading,
                                        float x, float y);
     public PathElement[] getRange(int start, int end, int type,

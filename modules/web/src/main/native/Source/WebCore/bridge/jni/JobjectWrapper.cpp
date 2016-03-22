@@ -31,7 +31,7 @@
 
 using namespace JSC::Bindings;
 
-JobjectWrapper::JobjectWrapper(jobject instance)
+JobjectWrapper::JobjectWrapper(jobject instance, bool useGlobalRef)
 {
     ASSERT(instance);
 
@@ -39,7 +39,11 @@ JobjectWrapper::JobjectWrapper(jobject instance)
     // It'll be used to delete the reference.
     m_env = getJNIEnv();
 
-    m_instance = m_env->NewGlobalRef(instance);
+    if (useGlobalRef) {
+        m_instance = m_env->NewGlobalRef(instance);
+    } else {
+        m_instance = m_env->NewWeakGlobalRef(instance);
+    }
 
     if (!m_instance)
         LOG_ERROR("Could not get GlobalRef for %p", instance);
@@ -47,7 +51,13 @@ JobjectWrapper::JobjectWrapper(jobject instance)
 
 JobjectWrapper::~JobjectWrapper()
 {
-    m_env->DeleteGlobalRef(m_instance);
+    jobjectRefType objreftype = m_env->GetObjectRefType(m_instance);
+
+    if(objreftype == JNIWeakGlobalRefType) {
+        m_env->DeleteWeakGlobalRef(m_instance);
+    } else {
+        m_env->DeleteGlobalRef(m_instance);
+    }
 }
 
 #endif // ENABLE(JAVA_BRIDGE)

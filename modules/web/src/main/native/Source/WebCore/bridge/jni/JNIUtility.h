@@ -28,6 +28,7 @@
 
 #if ENABLE(JAVA_BRIDGE)
 
+#include "JavaRef.h"
 #include "JavaType.h"
 
 #if OS(MAC_OS_X)
@@ -188,6 +189,14 @@ static T callJNIMethodV(jobject obj, const char* name, const char* sig, va_list 
     JavaVM* jvm = getJavaVM();
     JNIEnv* env = getJNIEnv();
 
+    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethodV", jlinstance);
+        return 0;
+    }
+
     if (obj && jvm && env) {
         jclass cls = env->GetObjectClass(obj);
         if (cls) {
@@ -230,6 +239,14 @@ inline void callJNIMethodV<void>(jobject obj, const char* name, const char* sig,
     JavaVM* jvm = getJavaVM();
     JNIEnv* env = getJNIEnv();
 
+    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethodV<void>", jlinstance);
+        return;
+    }
+
     if (obj && jvm && env) {
         jclass cls = env->GetObjectClass(obj);
         if (cls) {
@@ -254,6 +271,14 @@ inline void callJNIMethodV<void>(jobject obj, const char* name, const char* sig,
 template<>
 inline void callJNIMethod<void>(jobject obj, const char* methodName, const char* methodSignature, ...)
 {
+    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethod<void>", jlinstance);
+        return;
+    }
+
     va_list args;
     va_start(args, methodSignature);
 

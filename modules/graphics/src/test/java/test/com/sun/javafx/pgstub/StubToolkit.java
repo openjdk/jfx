@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,6 @@ import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
-import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.tk.*;
 import com.sun.prism.BasicStroke;
@@ -633,11 +632,6 @@ public class StubToolkit extends Toolkit {
         // Since the "shape" could be anything, I'm just returning
         // something here, doesn't matter what.
         return new PathElement[0];
-    }
-
-    @Override
-    public HitInfo convertHitInfoToFX(Object hit) {
-        return (HitInfo) hit;
     }
 
     @Override

@@ -42,12 +42,12 @@ import com.sun.javafx.scene.control.skin.Utils;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.text.HitInfo;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.transform.Affine3D;
 
-import static javafx.scene.control.skin.TextFieldSkin.TextPosInfo;
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
 
@@ -257,9 +257,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
             // if the primary button was pressed
             if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                TextPosInfo hit = skin.getIndex(e.getX(), e.getY());
-                String text = textField.textProperty().getValueSafe();
-                int i = Utils.getHitInsertionIndex(hit, text);
+                HitInfo hit = skin.getIndex(e.getX(), e.getY());
+                int i = hit.getInsertionIndex();
                 final int anchor = textField.getAnchor();
                 final int caretPosition = textField.getCaretPosition();
                 if (e.getClickCount() < 2 &&
@@ -397,11 +396,11 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         e.consume();
     }
 
-    protected void mouseSingleClick(TextPosInfo hit) {
+    protected void mouseSingleClick(HitInfo hit) {
         skin.positionCaret(hit, false);
     }
 
-    protected void mouseDoubleClick(TextPosInfo hit) {
+    protected void mouseDoubleClick(HitInfo hit) {
         final TextField textField = getNode();
         textField.previousWord();
         if (isWindows()) {
@@ -411,7 +410,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         }
     }
 
-    protected void mouseTripleClick(TextPosInfo hit) {
+    protected void mouseTripleClick(HitInfo hit) {
         getNode().selectAll();
     }
 

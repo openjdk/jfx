@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,26 +29,24 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 public final class LambdaMultiplePropertyChangeListenerHandler {
 
-    private final Map<ObservableValue<?>, List<Consumer<ObservableValue<?>>>> propertyReferenceMap;
+    private final Map<ObservableValue<?>, Consumer<ObservableValue<?>>> propertyReferenceMap;
     private final ChangeListener<Object> propertyChangedListener;
     private final WeakChangeListener<Object> weakPropertyChangedListener;
+
+    private static final Consumer<ObservableValue<?>> EMPTY_CONSUMER = e -> {};
 
     public LambdaMultiplePropertyChangeListenerHandler() {
         this.propertyReferenceMap = new HashMap<>();
         this.propertyChangedListener = (observable, oldValue, newValue) -> {
-            List<Consumer<ObservableValue<?>>> callbacks = propertyReferenceMap.getOrDefault(observable, Collections.emptyList());
-            for (Consumer<ObservableValue<?>> callback : callbacks) {
-                callback.accept(observable);
-            }
+            // because all consumers are chained, this calls each consumer for the given property
+            // in turn.
+            propertyReferenceMap.getOrDefault(observable, EMPTY_CONSUMER).accept(observable);
         };
         this.weakPropertyChangedListener = new WeakChangeListener<>(propertyChangedListener);
     }
@@ -61,23 +59,25 @@ public final class LambdaMultiplePropertyChangeListenerHandler {
      */
     public final void registerChangeListener(ObservableValue<?> property, Consumer<ObservableValue<?>> consumer) {
         if (consumer == null) return;
-        List<Consumer<ObservableValue<?>>> callbacks = propertyReferenceMap.computeIfAbsent(property, p -> new ArrayList<>());
-        callbacks.add(consumer);
 
-        // we only add a listener if the callbacks list contains only one element
+        // we only add a listener if the propertyReferenceMap does not contain the property
         // (that is, we've added a consumer to this specific property for the first
         // time).
-        if (callbacks.size() == 1) {
+        if (!propertyReferenceMap.containsKey(property)) {
             property.addListener(weakPropertyChangedListener);
         }
+
+        propertyReferenceMap.merge(property, consumer, Consumer::andThen);
     }
 
     // need to be careful here - removing all listeners on the specific property!
-    public final void unregisterChangeListener(ObservableValue<?> property) {
+    public final Consumer<ObservableValue<?>> unregisterChangeListener(ObservableValue<?> property) {
         if (propertyReferenceMap.containsKey(property)) {
-            propertyReferenceMap.remove(property);
+            Consumer<ObservableValue<?>> consumer = propertyReferenceMap.remove(property);
             property.removeListener(weakPropertyChangedListener);
+            return consumer;
         }
+        return null;
     }
 
     public void dispose() {
