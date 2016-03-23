@@ -47,8 +47,10 @@ combinations of sampling frequencies and bit rates. Note: File must contain at l
 <tr><td>PCM</td><td>Audio</td><td>Uncompressed, raw audio samples</td></tr>
 <tr><td>H.264/AVC</td><td>Video</td><td>H.264/MPEG-4 Part 10 / AVC (Advanced Video Coding)
 video compression</td></tr>
-<tr><td>VP6</td><td>Video</td><td>On2 VP6 video compression</td></tr>
+<tr><td>VP6 (*)</td><td>Video</td><td>On2 VP6 video compression</td></tr>
 </table>
+
+<br/>(*) VP6 video encoding is deprecated since JDK 9.
 </p>
 
 <h4>Supported Container Types</h4>
@@ -65,11 +67,11 @@ supported by Java FX Media.
 <th>Audio Encoding</th><th>MIME Type</th><th>File Extension</th></tr>
 <tr><td>AIFF</td><td>Audio Interchange File Format</td><td>N/A</td>
     <td>PCM</td><td>audio/x-aiff</td><td>.aif, .aiff</td></tr>
-<tr><td>FXM, FLV</td><td>FX Media, Flash Video</td><td>VP6</td>
+<tr><td>FXM, FLV (*)</td><td>FX Media, Flash Video</td><td>VP6</td>
     <td>MP3</td><td>video/x-javafx, video/x-flv</td><td>.fxm, .flv</td></tr>
-<tr><td>HLS (*)</td><td>MP2T HTTP Live Streaming (audiovisual)</td><td>H.264/AVC</td>
+<tr><td>HLS (**)</td><td>MP2T HTTP Live Streaming (audiovisual)</td><td>H.264/AVC</td>
     <td>AAC</td><td>application/vnd.apple.mpegurl, audio/mpegurl</td><td>.m3u8</td></tr>
-<tr><td>HLS (*)</td><td>MP3 HTTP Live Streaming (audio-only)</td><td>N/A</td>
+<tr><td>HLS (**)</td><td>MP3 HTTP Live Streaming (audio-only)</td><td>N/A</td>
     <td>MP3</td><td>application/vnd.apple.mpegurl, audio/mpegurl</td><td>.m3u8</td></tr>
 <tr><td>MP3</td><td>MPEG-1, 2, 2.5 raw audio stream possibly with ID3 metadata v2.3 or v2.4</td>
     <td>N/A</td><td>MP3</td><td>audio/mpeg</td><td>.mp3</td></tr>
@@ -79,7 +81,8 @@ supported by Java FX Media.
     <td>PCM</td><td>audio/x-wav</td><td>.wav</td></tr>
 </table>
 
-<br/>(*) HLS is a protocol rather than a container type but is included here to
+<br/>(*) FXM and FLV containers are deprecated since JDK 9.
+<br/>(**) HLS is a protocol rather than a container type but is included here to
 aggregate similar attributes.
 </p>
 
