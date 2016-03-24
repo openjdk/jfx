@@ -125,7 +125,7 @@ void loadProperties(String sourceFileName) {
     def propFile = new File(sourceFileName)
     if (propFile.canRead()) {
         config.load(new FileInputStream(propFile))
-        for (Map.Entry property in config) {
+        for (java.util.Map.Entry property in config) {
             def keySplit = property.key.split("\\.");
             def key = keySplit[0];
             for (int i = 1; i < keySplit.length; i++) {
