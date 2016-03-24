@@ -54,11 +54,19 @@ JavaArray::JavaArray(jobject array, const char* type, PassRefPtr<RootObject> roo
     : Array(rootObject)
 {
     m_array = JobjectWrapper::create(array);
+    // Since m_array->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlarrayinstance(m_array->instance(), true);
+
+    if (!jlarrayinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaArray Constructor", jlarrayinstance);
+        return;
+    }
+
     // Java array are fixed length, so we can cache length.
     JNIEnv* env = getJNIEnv();
     m_length = env->GetArrayLength(static_cast<jarray>(m_array->instance()));
     m_type = strdup(type);
-    m_accessControlContext = JobjectWrapper::create(accessControlContext);
+    m_accessControlContext = JobjectWrapper::create(accessControlContext, true);
 }
 
 JavaArray::~JavaArray()
@@ -73,6 +81,14 @@ RootObject* JavaArray::rootObject() const
 
 void JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) const
 {
+    // Since javaArray() is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(javaArray(), true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaArray::setValueAt", jlinstance);
+        return;
+    }
+
     JNIEnv* env = getJNIEnv();
     char* javaClassName = 0;
 
@@ -149,6 +165,14 @@ void JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) cons
 
 JSValue JavaArray::valueAt(ExecState* exec, unsigned index) const
 {
+    // Since javaArray() is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(javaArray(), true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaArray::valueAt", jlinstance);
+        return jsUndefined();
+    }
+
     JNIEnv* env = getJNIEnv();
     JavaType arrayType = javaTypeFromPrimitiveType(m_type[1]);
     switch (arrayType) {

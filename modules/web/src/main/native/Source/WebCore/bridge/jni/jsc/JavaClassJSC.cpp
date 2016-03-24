@@ -40,6 +40,15 @@ using namespace JSC::Bindings;
 
 JavaClass::JavaClass(jobject anInstance, RootObject* rootObject, jobject accessControlContext)
 {
+    // Since anInstance is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(anInstance, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaClass::JavaClass", jlinstance);
+        m_name = fastStrDup("<Unknown>");
+        return;
+    }
+
     jobject aClass = callJNIMethod<jobject>(anInstance, "getClass", "()Ljava/lang/Class;");
 
     if (!aClass) {

@@ -2282,14 +2282,14 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(17, rt_31200_count);
+        assertEquals(21, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(17, rt_31200_count);
+        assertEquals(21, rt_31200_count);
 
         sl.dispose();
     }
@@ -3911,7 +3911,7 @@ public class TreeTableViewTest {
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
 
-                            assertEquals(useFixedCellSize ? 9 : 59, rt_35395_counter);
+                            assertEquals(useFixedCellSize ? 10 : 59, rt_35395_counter);
                             sl.dispose();
                         });
                     });

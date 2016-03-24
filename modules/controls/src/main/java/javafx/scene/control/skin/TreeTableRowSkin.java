@@ -336,7 +336,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     private void updateDisclosureNodeAndGraphic() {
-        if (getSkinnable().isEmpty()) return;
+        if (getSkinnable().isEmpty()) {
+            getChildren().remove(graphic);
+            return;
+        }
 
         // check for graphic missing
         ObjectProperty<Node> graphicProperty = graphicProperty();

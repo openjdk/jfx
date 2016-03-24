@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,11 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.TransformedShape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.text.*;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TextLayout;
+import com.sun.javafx.scene.text.TextLayoutFactory;
+import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
@@ -387,10 +391,10 @@ public class Text extends Shape {
                 @Override public String getName() { return "text"; }
                 @Override  public void invalidated() {
                     needsFullTextLayout();
-                    setImpl_selectionStart(-1);
-                    setImpl_selectionEnd(-1);
-                    setImpl_caretPosition(-1);
-                    setImpl_caretBias(true);
+                    setSelectionStart(-1);
+                    setSelectionEnd(-1);
+                    setCaretPosition(-1);
+                    setCaretBias(true);
 
                     // MH: Functionality copied from store() method,
                     // which was removed.
@@ -776,232 +780,161 @@ public class Text extends Shape {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final PathElement[] getImpl_selectionShape() {
-        return impl_selectionShapeProperty().get();
-    }
-
-    /**
      * Shape of selection in local coordinates.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * @since 9
      */
-    @Deprecated
-    public final ReadOnlyObjectProperty<PathElement[]> impl_selectionShapeProperty() {
+    public final PathElement[] getSelectionShape() {
+        return selectionShapeProperty().get();
+    }
+
+    public final ReadOnlyObjectProperty<PathElement[]> selectionShapeProperty() {
         return getTextAttribute().impl_selectionShapeProperty();
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * Selection start index in the content.
+     * Set to {@code -1} to unset selection.
+     *
+     * @since 9
      */
-    @Deprecated
-    public final void setImpl_selectionStart(int value) {
+    public final void setSelectionStart(int value) {
         if (value == -1 &&
                 (attributes == null || attributes.impl_selectionStart == null)) {
             return;
         }
-        impl_selectionStartProperty().set(value);
+        selectionStartProperty().set(value);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final int getImpl_selectionStart() {
+    public final int getSelectionStart() {
         if (attributes == null || attributes.impl_selectionStart == null) {
             return DEFAULT_SELECTION_START;
         }
         return attributes.getImpl_selectionStart();
     }
 
-    /**
-     * Selection start index in the content.
-     * set to {@code -1} to unset selection.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final IntegerProperty impl_selectionStartProperty() {
+    public final IntegerProperty selectionStartProperty() {
         return getTextAttribute().impl_selectionStartProperty();
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * Selection end index in the content.
+     * Set to {@code -1} to unset selection.
+     *
+     * @since 9
      */
-    @Deprecated
-    public final void setImpl_selectionEnd(int value) {
+    public final void setSelectionEnd(int value) {
         if (value == -1 &&
                 (attributes == null || attributes.impl_selectionEnd == null)) {
             return;
         }
-        impl_selectionEndProperty().set(value);
+        selectionEndProperty().set(value);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final int getImpl_selectionEnd() {
+    public final int getSelectionEnd() {
         if (attributes == null || attributes.impl_selectionEnd == null) {
             return DEFAULT_SELECTION_END;
         }
         return attributes.getImpl_selectionEnd();
     }
 
-    /**
-     * Selection end index in the content.
-     * set to {@code -1} to unset selection.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final IntegerProperty impl_selectionEndProperty() {
+    public final IntegerProperty selectionEndProperty() {
         return getTextAttribute().impl_selectionEndProperty();
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * The fill color of selected text.
+     *
+     * @since 9
      */
-    @Deprecated
-    public final ObjectProperty<Paint> impl_selectionFillProperty() {
+    public final ObjectProperty<Paint> selectionFillProperty() {
         return getTextAttribute().impl_selectionFillProperty();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final PathElement[] getImpl_caretShape() {
-        return impl_caretShapeProperty().get();
+    public final void setSelectionFill(Paint paint) {
+        selectionFillProperty().set(paint);
+    }
+    public final Paint getSelectionFill() {
+        return selectionFillProperty().get();
     }
 
     /**
      * Shape of caret in local coordinates.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-    */
-    @Deprecated
-    public final ReadOnlyObjectProperty<PathElement[]> impl_caretShapeProperty() {
+     * @since 9
+     */
+    public final PathElement[] getCaretShape() {
+        return caretShapeProperty().get();
+    }
+
+    public final ReadOnlyObjectProperty<PathElement[]> caretShapeProperty() {
         return getTextAttribute().impl_caretShapeProperty();
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * Caret index in the content.
+     * Set to {@code -1} to unset caret.
+     *
+     * @since 9
      */
-    @Deprecated
-    public final void setImpl_caretPosition(int value) {
+    public final void setCaretPosition(int value) {
         if (value == -1 &&
                 (attributes == null || attributes.impl_caretPosition == null)) {
             return;
         }
-        impl_caretPositionProperty().set(value);
+        caretPositionProperty().set(value);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final int getImpl_caretPosition() {
+    public final int getCaretPosition() {
         if (attributes == null || attributes.impl_caretPosition == null) {
             return DEFAULT_CARET_POSITION;
         }
         return attributes.getImpl_caretPosition();
     }
 
-    /**
-     * caret index in the content.
-     * set to {@code -1} to unset caret.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final IntegerProperty impl_caretPositionProperty() {
+    public final IntegerProperty caretPositionProperty() {
         return getTextAttribute().impl_caretPositionProperty();
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * caret bias in the content. {@code true} means a bias towards the leading character edge.
+     * (true=leading/false=trailing)
+     *
+     * @since 9
      */
-    @Deprecated
-    public final void setImpl_caretBias(boolean value) {
+    public final void setCaretBias(boolean value) {
         if (value && (attributes == null || attributes.impl_caretBias == null)) {
             return;
         }
-        impl_caretBiasProperty().set(value);
+        caretBiasProperty().set(value);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final boolean isImpl_caretBias() {
+    public final boolean isCaretBias() {
         if (attributes == null || attributes.impl_caretBias == null) {
             return DEFAULT_CARET_BIAS;
         }
         return getTextAttribute().isImpl_caretBias();
     }
 
-    /**
-     * caret bias in the content. true means a bias towards forward character
-     * (true=leading/false=trailing)
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final BooleanProperty impl_caretBiasProperty() {
+    public final BooleanProperty caretBiasProperty() {
         return getTextAttribute().impl_caretBiasProperty();
     }
 
     /**
      * Maps local point to index in the content.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * @param point the specified point to be tested
+     * @return a {@code HitInfo} representing the character index found
+     * @since 9
      */
-    @Deprecated
-    public final HitInfo impl_hitTestChar(Point2D point) {
+    public final HitInfo hitTest(Point2D point) {
         if (point == null) return null;
         TextLayout layout = getTextLayout();
         double x = point.getX() - getX();
         double y = point.getY() - getY() + getYRendering();
-        return layout.getHitInfo((float)x, (float)y);
+        TextLayout.Hit layoutHit = layout.getHitInfo((float)x, (float)y);
+        return new HitInfo(layoutHit.getCharIndex(), layoutHit.getInsertionIndex(),
+                           layoutHit.isLeading(), getText());
     }
 
     private PathElement[] getRange(int start, int end, int type) {
@@ -1016,26 +949,44 @@ public class Text extends Shape {
     }
 
     /**
+     * Returns shape for the caret at given index and bias.
+     *
+     * @param charIndex the character index for the caret
+     * @param caretBias whether the caret is biased on the leading edge of the character
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 9
+     */
+    public final PathElement[] caretShape(int charIndex, boolean caretBias) {
+        if (0 <= charIndex && charIndex <= getTextInternal().length()) {
+            float x = (float)getX();
+            float y = (float)getY() - getYRendering();
+            return getTextLayout().getCaretShape(charIndex, caretBias, x, y);
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Returns shape for the range of the text in local coordinates.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * @param start the beginning character index for the range
+     * @param start the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 9
      */
-    @Deprecated
-    public final PathElement[] impl_getRangeShape(int start, int end) {
+    public final PathElement[] rangeShape(int start, int end) {
         return getRange(start, end, TextLayout.TYPE_TEXT);
     }
 
     /**
      * Returns shape for the underline in local coordinates.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+     * @param start the beginning character index for the range
+     * @param start the end character index (non-inclusive) for the range
+     * @return an array of {@code PathElement} which can be used to create a {@code Shape}
+     * @since 9
      */
-    @Deprecated
-    public final PathElement[] impl_getUnderlineShape(int start, int end) {
+    public final PathElement[] underlineShape(int start, int end) {
         return getRange(start, end, TextLayout.TYPE_UNDERLINE);
     }
 
@@ -1477,11 +1428,11 @@ public class Text extends Shape {
         }
         if (impl_isDirty(DirtyBits.TEXT_SELECTION)) {
             Object fillObj = null;
-            int start = getImpl_selectionStart();
-            int end = getImpl_selectionEnd();
+            int start = getSelectionStart();
+            int end = getSelectionEnd();
             int length = getTextInternal().length();
             if (0 <= start && start < end  && end <= length) {
-                Paint fill = impl_selectionFillProperty().get();
+                Paint fill = selectionFillProperty().get();
                 fillObj = fill != null ? Toolkit.getPaintAccessor().getPlatformPaint(fill) : null;
             }
             peer.setSelection(start, end, fillObj);
@@ -1691,8 +1642,8 @@ public class Text extends Shape {
                 impl_selectionBinding = new ObjectBinding<PathElement[]>() {
                     {bind(impl_selectionStartProperty(), impl_selectionEndProperty());}
                     @Override protected PathElement[] computeValue() {
-                        int start = getImpl_selectionStart();
-                        int end = getImpl_selectionEnd();
+                        int start = getSelectionStart();
+                        int end = getSelectionEnd();
                         return getRange(start, end, TextLayout.TYPE_TEXT);
                     }
               };
@@ -1767,7 +1718,6 @@ public class Text extends Shape {
             return impl_selectionEnd;
         }
 
-        @Deprecated
         private ObjectProperty<PathElement[]> impl_caretShape;
         private ObjectBinding<PathElement[]> impl_caretBinding;
 
@@ -1897,21 +1847,21 @@ public class Text extends Shape {
             }
             case FONT: return getFont();
             case CARET_OFFSET: {
-                int sel = getImpl_caretPosition();
+                int sel = getCaretPosition();
                 if (sel >=  0) return sel;
                 return getText().length();
             }
             case SELECTION_START: {
-                int sel = getImpl_selectionStart();
+                int sel = getSelectionStart();
                 if (sel >=  0) return sel;
-                sel = getImpl_caretPosition();
+                sel = getCaretPosition();
                 if (sel >=  0) return sel;
                 return getText().length();
             }
             case SELECTION_END:  {
-                int sel = getImpl_selectionEnd();
+                int sel = getSelectionEnd();
                 if (sel >=  0) return sel;
-                sel = getImpl_caretPosition();
+                sel = getCaretPosition();
                 if (sel >=  0) return sel;
                 return getText().length();
             }
@@ -1948,12 +1898,12 @@ public class Text extends Shape {
             case OFFSET_AT_POINT: {
                 Point2D point = (Point2D)parameters[0];
                 point = screenToLocal(point);
-                return impl_hitTestChar(point).getCharIndex();
+                return hitTest(point).getCharIndex();
             }
             case BOUNDS_FOR_RANGE: {
                 int start = (Integer)parameters[0];
                 int end = (Integer)parameters[1];
-                PathElement[] elements = impl_getRangeShape(start, end + 1);
+                PathElement[] elements = rangeShape(start, end + 1);
                 /* Each bounds is defined by a MoveTo (top-left) followed by
                  * 4 LineTo (to top-right, bottom-right, bottom-left, back to top-left).
                  */

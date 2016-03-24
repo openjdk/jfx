@@ -299,18 +299,19 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
 
-        updateTableItems(null, itemsProperty().get());
+        final ObjectProperty<ObservableList<S>> itemsProperty = TableSkinUtils.itemsProperty(this);
+        updateTableItems(null, itemsProperty.get());
         itemsChangeListener = new InvalidationListener() {
-            private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(itemsProperty().get());
+            private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(itemsProperty.get());
 
             @Override public void invalidated(Observable observable) {
                 ObservableList<S> oldItems = weakItemsRef.get();
-                weakItemsRef = new WeakReference<>(itemsProperty().get());
-                updateTableItems(oldItems, itemsProperty().get());
+                weakItemsRef = new WeakReference<>(itemsProperty.get());
+                updateTableItems(oldItems, itemsProperty.get());
             }
         };
         weakItemsChangeListener = new WeakInvalidationListener(itemsChangeListener);
-        itemsProperty().addListener(weakItemsChangeListener);
+        itemsProperty.addListener(weakItemsChangeListener);
 
         final ObservableMap<Object, Object> properties = control.getProperties();
         properties.remove(Properties.REFRESH);
@@ -329,15 +330,16 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         flow.widthProperty().addListener(widthObserver);
         flow.getVbar().widthProperty().addListener(widthObserver);
 
-        registerChangeListener(rowFactoryProperty(), e -> {
+        final ObjectProperty<Callback<C, I>> rowFactoryProperty = TableSkinUtils.rowFactoryProperty(this);
+        registerChangeListener(rowFactoryProperty, e -> {
             Callback<C, I> oldFactory = rowFactory;
-            rowFactory = rowFactoryProperty().get();
+            rowFactory = rowFactoryProperty.get();
             if (oldFactory != rowFactory) {
                 needCellsRebuilt = true;
                 getSkinnable().requestLayout();
             }
         });
-        registerChangeListener(placeholderProperty(), e -> updatePlaceholderRegionVisibility());
+        registerChangeListener(TableSkinUtils.placeholderProperty(this), e -> updatePlaceholderRegionVisibility());
         registerChangeListener(flow.getVbar().visibleProperty(), e -> updateContentWidth());
     }
 
@@ -349,53 +351,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
      *                                                                         *
      **************************************************************************/
 
-    // returns the selection model of the control
-    abstract TableSelectionModel<S> getSelectionModel();
-
-    // returns the focus model of the control
-    abstract TableFocusModel<S,TC> getFocusModel();
-
-    // returns the currently focused cell in the focus model
-    abstract TablePositionBase<? extends TC> getFocusedCell();
-
-    // returns an ObservableList of the visible leaf columns of the control
-    abstract ObservableList<? extends TC> getVisibleLeafColumns();
-
-    // returns the index of a column in the visible leaf columns
-    abstract int getVisibleLeafIndex(TC tc);
-
-    // returns the leaf column at the given index
-    abstract TC getVisibleLeafColumn(int col);
-
-    // returns a list of the root columns
-    abstract ObservableList<TC> getColumns();
-
-    // returns the sort order of the control
-    abstract ObservableList<TC> getSortOrder();
-
-    // returns a property representing the list of items in the control
-    abstract ObjectProperty<ObservableList<S>> itemsProperty();
-
-    // returns a property representing the row factory in the control
-    abstract ObjectProperty<Callback<C, I>> rowFactoryProperty();
-
-    // returns the placeholder property for the control
-    abstract ObjectProperty<Node> placeholderProperty();
-
-    // returns the property used to represent whether the tableMenuButton should
-    // be visible
-    abstract BooleanProperty tableMenuButtonVisibleProperty();
-
-    // returns a property representing the column resize properyt in the control
-    abstract ObjectProperty<Callback<ResizeFeaturesBase, Boolean>> columnResizePolicyProperty();
-
-    // Method to resize the given column by the given delta, returning a boolean
-    // to indicate success or failure
-    abstract boolean resizeColumn(TC tc, double delta);
-
-    // Method to resize the column based on the content in that column, based on
-    // the maxRows number of rows
-    abstract void resizeColumnToFitContent(TC tc, int maxRows);
 
 
 
@@ -408,10 +363,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        final ObjectProperty<ObservableList<S>> itemsProperty = TableSkinUtils.itemsProperty(this);
+
         getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
-        itemsProperty().removeListener(weakItemsChangeListener);
+        itemsProperty.removeListener(weakItemsChangeListener);
         getSkinnable().getProperties().removeListener(propertiesMapListener);
-        updateTableItems(itemsProperty().get(), null);
+        updateTableItems(itemsProperty.get(), null);
 
         super.dispose();
     }
@@ -562,6 +519,24 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         return tableHeaderRow;
     }
 
+    private TableSelectionModel<S> getSelectionModel() {
+        return TableSkinUtils.getSelectionModel(this);
+    }
+
+    private TableFocusModel<M,?> getFocusModel() {
+        return TableSkinUtils.getFocusModel(this);
+    }
+
+    // returns the currently focused cell in the focus model
+    private TablePositionBase<? extends TC> getFocusedCell() {
+        return TableSkinUtils.getFocusedCell(this);
+    }
+
+    // returns an ObservableList of the visible leaf columns of the control
+    private ObservableList<? extends TC> getVisibleLeafColumns() {
+        return TableSkinUtils.getVisibleLeafColumns(this);
+    }
+
     /** {@inheritDoc} */
     @Override protected void updateItemCount() {
         updatePlaceholderRegionVisibility();
@@ -570,6 +545,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         int newCount = getItemCount();
 
         itemCount = newCount;
+
+        if (itemCount == 0) {
+            flow.getHbar().setValue(0.0);
+        }
 
         // if this is not called even when the count is the same, we get a
         // memory leak in VirtualFlow.sheet.children. This can probably be
@@ -605,14 +584,14 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     }
 
     void onFocusPreviousCell() {
-        TableFocusModel<S,TC> fm = getFocusModel();
+        TableFocusModel<M,?> fm = getFocusModel();
         if (fm == null) return;
 
         flow.scrollTo(fm.getFocusedIndex());
     }
 
     void onFocusNextCell() {
-        TableFocusModel<S,TC> fm = getFocusModel();
+        TableFocusModel<M,?> fm = getFocusModel();
         if (fm == null) return;
 
         flow.scrollTo(fm.getFocusedIndex());
@@ -753,7 +732,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     private boolean isLeadIndex(boolean isFocusDriven, int index) {
         final TableSelectionModel<S> sm = getSelectionModel();
-        final FocusModel<S> fm = getFocusModel();
+        final FocusModel<M> fm = getFocusModel();
 
         return (isFocusDriven && fm.getFocusedIndex() == index)
                 || (! isFocusDriven && sm.getSelectedIndex() == index);
@@ -795,7 +774,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
                 getChildren().add(placeholderRegion);
             }
 
-            Node placeholderNode = placeholderProperty().get();
+            Node placeholderNode = TableSkinUtils.placeholderProperty(this).get();
 
             if (placeholderNode == null) {
                 if (placeholderLabel == null) {
@@ -853,7 +832,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     // and the newly selected cell belongs to a column which is not totally
     // visible.
     void scrollHorizontally() {
-        TableFocusModel<S,TC> fm = getFocusModel();
+        TableFocusModel<M,?> fm = getFocusModel();
         if (fm == null) return;
 
         TC col = getFocusedCell().getTableColumn();
@@ -916,7 +895,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         int columnCount = getVisibleLeafColumns().size();
         for (int col = 0; col < columnCount; col++) {
-            if (sm.isSelected(row, getVisibleLeafColumn(col))) {
+            if (sm.isSelected(row, TableSkinUtils.getVisibleLeafColumn(this,col))) {
                 return true;
             }
         }
@@ -925,12 +904,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     }
 
     private boolean isCellFocused(int row) {
-        TableFocusModel<S,TC> fm = getFocusModel();
+        TableFocusModel<S,TC> fm = (TableFocusModel<S,TC>)(Object)getFocusModel();
         if (fm == null) return false;
 
         int columnCount = getVisibleLeafColumns().size();
         for (int col = 0; col < columnCount; col++) {
-            if (fm.isFocused(row, getVisibleLeafColumn(col))) {
+            if (fm.isFocused(row, TableSkinUtils.getVisibleLeafColumn(this,col))) {
                 return true;
             }
         }
@@ -950,7 +929,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     @Override protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case FOCUS_ITEM: {
-                TableFocusModel<S,?> fm = getFocusModel();
+                TableFocusModel<M,?> fm = getFocusModel();
                 int focusedIndex = fm.getFocusedIndex();
                 if (focusedIndex == -1) {
                     if (placeholderRegion != null && placeholderRegion.isVisible()) {
@@ -970,7 +949,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             }
             case COLUMN_AT_INDEX: {
                 int index = (Integer)parameters[0];
-                TableColumnBase<S,?> column = getVisibleLeafColumn(index);
+                TableColumnBase<S,?> column = TableSkinUtils.getVisibleLeafColumn(this,index);
                 return getTableHeaderRow().getColumnHeaderFor(column);
             }
             case HEADER: {

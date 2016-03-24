@@ -74,7 +74,23 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
 
     JSValue jsresult = jsUndefined();
     jobject jfield = m_field->instance();
+    // Since jfield is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlfield(jfield, true);
+
+    if (!jlfield) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaField::valueFromInstance", jlfield);
+        return jsresult;
+    }
+
     jobject jinstance = instance->javaInstance();
+    // Since jinstance is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(jinstance, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaField::valueFromInstance", jlinstance);
+        return jsresult;
+    }
+
     switch (m_type) {
     case JavaTypeArray:
     case JavaTypeObject:
@@ -139,7 +155,22 @@ void JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue a
     LOG(LiveConnect, "JavaField::setValueToInstance setting value %s to %s", String(name().impl()).utf8().data(), aValue.toString(exec)->value(exec).ascii().data());
 
     jobject jfield = m_field->instance();
+    // Since jfield is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlfield(jfield, true);
+
+    if (!jlfield) {
+        LOG_ERROR("Could not get Instance for %p in JavaField::setValueToInstance", jlfield);
+        return;
+    }
+
     jobject jinstance = instance->javaInstance();
+    // Since jinstance is WeakGlobalRef, creating a localref to safeguard javaInstance() from GC
+    JLObject jlinstance(jinstance, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaField::setValueToInstance", jlinstance);
+        return;
+    }
 
     switch (m_type) {
     case JavaTypeArray:

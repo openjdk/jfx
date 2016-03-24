@@ -56,7 +56,7 @@ JavaInstance::JavaInstance(jobject instance, PassRefPtr<RootObject> rootObject, 
 {
     m_instance = JobjectWrapper::create(instance);
     m_class = 0;
-    m_accessControlContext = JobjectWrapper::create(accessControlContext);
+    m_accessControlContext = JobjectWrapper::create(accessControlContext, true);
 }
 
 JavaInstance::~JavaInstance()
@@ -83,6 +83,15 @@ void JavaInstance::virtualEnd()
 
 Class* JavaInstance::getClass() const
 {
+    jobject obj = m_instance->instance();
+    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::getClass", jlinstance);
+        return NULL;
+    }
+
     if (!m_class) {
         jobject acc  = accessControlContext();
         m_class = new JavaClass (m_instance->instance(), rootObject(), acc);
@@ -95,7 +104,16 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
     JSLockHolder lock(exec);
 
     jobject obj = m_instance->instance();
+    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::stringValue", jlinstance);
+        return jsUndefined();
+    }
+
     jobject acc  = accessControlContext();
+
     jmethodID methodId = getMethodID(obj, "toString", "()Ljava/lang/String;");
     jvalue result;
     jthrowable ex = dispatchJNICall(0, rootObject(), obj, false,
@@ -121,20 +139,50 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
 }
 
 static JSValue numberValueForCharacter(jobject obj) {
+
+    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValueForCharacter", jlinstance);
+        return jsUndefined();
+    }
+
     return jsNumber((int) callJNIMethod<jchar>(obj, "charValue", "()C"));
 }
 
 static JSValue numberValueForNumber(jobject obj) {
-return jsNumber(callJNIMethod<jdouble>(obj, "doubleValue", "()D"));
+
+    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValueForNumber", jlinstance);
+        return jsUndefined();
+    }
+
+    return jsNumber(callJNIMethod<jdouble>(obj, "doubleValue", "()D"));
 }
 
 
 JSValue JavaInstance::numberValue(ExecState*) const
 {
     jobject obj = m_instance->instance();
+    // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValue", jlinstance);
+        return jsUndefined();
+    }
+
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
+
+    if (!aClass)
+        return jsUndefined();
+
     if (aClass->isCharacterClass())
-      return numberValueForCharacter(obj);
+        return numberValueForCharacter(obj);
     if (aClass->isBooleanClass())
         return jsNumber((int)
                         // Replaced the following line to work around possible GCC bug, see RT-22725
@@ -145,6 +193,14 @@ JSValue JavaInstance::numberValue(ExecState*) const
 
 JSValue JavaInstance::booleanValue() const
 {
+    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(m_instance->instance(), true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::booleanValue", jlinstance);
+        return jsUndefined();
+    }
+
     // Changed the call to work around possible GCC bug, see RT-22725
     jboolean booleanValue = callJNIMethod(m_instance->instance(), JavaTypeBoolean, "booleanValue", "()Z", 0).z;
     return jsBoolean(booleanValue);
@@ -188,7 +244,12 @@ const ClassInfo JavaRuntimeMethod::s_info = { "JavaRuntimeMethod", &RuntimeMetho
 
 JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
 {
-    Method *method = getClass()->methodNamed(propertyName, this);
+    JavaClass* aClass = static_cast<JavaClass*>(getClass());
+
+    if (!aClass)
+        return jsUndefined();
+
+    Method *method = aClass->methodNamed(propertyName, this);
     return JavaRuntimeMethod::create(exec, exec->lexicalGlobalObject(), propertyName.publicName(), method);
 }
 
@@ -227,6 +288,16 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     }
 
     const JavaMethod* jMethod = static_cast<const JavaMethod*>(method);
+
+    jobject obj = m_instance->instance();
+    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::invokeMethod", jlinstance);
+        return jsUndefined();
+    }
+
     LOG(LiveConnect, "JavaInstance::invokeMethod call %s %s on %p", String(jMethod->name().impl()).utf8().data(), jMethod->signature(), m_instance->instance());
 
     if (jMethod->numParameters() != count) {
@@ -259,6 +330,14 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     bool handled = false;
     if (rootObject->nativeHandle()) {
         jobject obj = m_instance->instance();
+        // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
+        JLObject jlinstance(obj, true);
+
+        if (!jlinstance) {
+            LOG_ERROR("Could not get javaInstance for %p in JavaInstance::invokeMethod", jlinstance);
+            return jsUndefined();
+        }
+
         const char *callingURL = 0; // FIXME, need to propagate calling URL to Java
         jmethodID methodId = getMethodID(obj, jMethod->name().utf8().data(), jMethod->signature());
 
@@ -357,9 +436,22 @@ JSValue JavaInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint)
         return stringValue(exec);
     if (hint == PreferNumber)
         return numberValue(exec);
+
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
+    if (!aClass)
+        return jsUndefined();
+
     if (aClass->isStringClass())
         return stringValue(exec);
+
+    jobject obj = m_instance->instance();
+    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
+    JLObject jlinstance(obj, true);
+
+    if (!jlinstance) {
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::defaultValue", jlinstance);
+        return jsUndefined();
+    }
 
     if (aClass->isNumberClass())
         return numberValueForNumber(m_instance->instance());

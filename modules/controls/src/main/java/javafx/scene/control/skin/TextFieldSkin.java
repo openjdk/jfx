@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
@@ -59,10 +58,10 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
+import javafx.scene.text.HitInfo;
 import java.util.List;
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
-import com.sun.javafx.scene.text.HitInfo;
 
 /**
  * Default skin implementation for the {@link TextField} control.
@@ -212,7 +211,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             }
         });
         textNode.fillProperty().bind(textFillProperty());
-        textNode.impl_selectionFillProperty().bind(new ObjectBinding<Paint>() {
+        textNode.selectionFillProperty().bind(new ObjectBinding<Paint>() {
             { bind(highlightTextFillProperty(), textFillProperty(), control.focusedProperty()); }
             @Override protected Paint computeValue() {
                 return control.isFocused() ? highlightTextFillProperty().get() : textFillProperty().get();
@@ -230,7 +229,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         selectionHighlightPath.layoutXProperty().bind(textTranslateX);
         selectionHighlightPath.visibleProperty().bind(control.anchorProperty().isNotEqualTo(control.caretPositionProperty()).and(control.focusedProperty()));
         selectionHighlightPath.fillProperty().bind(highlightFillProperty());
-        textNode.impl_selectionShapeProperty().addListener(observable -> {
+        textNode.selectionShapeProperty().addListener(observable -> {
             updateSelection();
         });
 
@@ -249,8 +248,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             }
         });
         caretPath.layoutXProperty().bind(textTranslateX);
-        textNode.impl_caretShapeProperty().addListener(observable -> {
-            caretPath.getElements().setAll(textNode.impl_caretShapeProperty().get());
+        textNode.caretShapeProperty().addListener(observable -> {
+            caretPath.getElements().setAll(textNode.caretShapeProperty().get());
             if (caretPath.getElements().size() == 0) {
                 // The caret pos is invalid.
                 updateTextNodeCaretPos(control.getCaretPosition());
@@ -331,7 +330,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             caretHandle.setOnMouseDragged(e -> {
                 Point2D p = new Point2D(caretHandle.getLayoutX() + e.getX() + pressX - textNode.getLayoutX(),
                                         caretHandle.getLayoutY() + e.getY() - pressY - 6);
-                HitInfo hit = textNode.impl_hitTestChar(p);
+                HitInfo hit = textNode.hitTest(p);
                 positionCaret(hit, false);
                 e.consume();
             });
@@ -342,17 +341,17 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                     Point2D tp = textNode.localToScene(0, 0);
                     Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle1.getWidth() / 2,
                                             e.getSceneY() - tp.getY() - pressY - 6);
-                    HitInfo hit = textNode.impl_hitTestChar(p);
-                    int pos = hit.getCharIndex();
+                    HitInfo hit = textNode.hitTest(p);
                     if (control.getAnchor() < control.getCaretPosition()) {
                         // Swap caret and anchor
                         control.selectRange(control.getCaretPosition(), control.getAnchor());
                     }
+                    int pos = hit.getInsertionIndex();
                     if (pos >= 0) {
                         if (pos >= control.getAnchor() - 1) {
-                            hit.setCharIndex(Math.max(0, control.getAnchor() - 1));
+                            pos = Math.max(0, control.getAnchor() - 1);
                         }
-                        positionCaret(hit, true);
+                        positionCaret(pos, hit.isLeading(), true);
                     }
                     e.consume();
                 }
@@ -364,17 +363,17 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                     Point2D tp = textNode.localToScene(0, 0);
                     Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + selectionHandle2.getWidth() / 2,
                                             e.getSceneY() - tp.getY() - pressY - 6);
-                    HitInfo hit = textNode.impl_hitTestChar(p);
-                    int pos = hit.getCharIndex();
+                    HitInfo hit = textNode.hitTest(p);
                     if (control.getAnchor() > control.getCaretPosition()) {
                         // Swap caret and anchor
                         control.selectRange(control.getCaretPosition(), control.getAnchor());
                     }
+                    int pos = hit.getInsertionIndex();
                     if (pos > 0) {
                         if (pos <= control.getAnchor()) {
-                            hit.setCharIndex(Math.min(control.getAnchor() + 1, control.getLength()));
+                            pos = Math.min(control.getAnchor() + 1, control.getLength());
                         }
-                        positionCaret(hit, true);
+                        positionCaret(pos, hit.isLeading(), true);
                     }
                     e.consume();
                 }
@@ -478,14 +477,14 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      *
      * @param x the x coordinate of the point.
      * @param y the y coordinate of the point.
-     * @return a {@code TextPosInfo} object describing the index and forward bias.
+     * @return a {@code HitInfo} object describing the index and forward bias.
      */
-    public TextPosInfo getIndex(double x, double y) {
+    public HitInfo getIndex(double x, double y) {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
         Point2D p = new Point2D(x - textTranslateX.get() - snappedLeftInset(),
                                 y - snappedTopInset());
-        return new TextPosInfo(textNode.impl_hitTestChar(p));
+        return textNode.hitTest(p);
     }
 
     // Public for behavior
@@ -495,21 +494,18 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      * @param hit the new position and forward bias of the caret.
      * @param select whether to extend selection to the new position.
      */
-    public void positionCaret(TextPosInfo hit, boolean select) {
-        TextField textField = getSkinnable();
-        int pos = Utils.getHitInsertionIndex(hit, textField.textProperty().getValueSafe());
+    public void positionCaret(HitInfo hit, boolean select) {
+        positionCaret(hit.getInsertionIndex(), hit.isLeading(), select);
+    }
 
+    private void positionCaret(int pos, boolean leading, boolean select) {
+        TextField textField = getSkinnable();
         if (select) {
             textField.selectPositionCaret(pos);
         } else {
             textField.positionCaret(pos);
         }
-
-        setForwardBias(hit.isLeading());
-    }
-
-    private void positionCaret(HitInfo hit, boolean select) {
-        positionCaret(new TextPosInfo(hit), select);
+        setForwardBias(leading);
     }
 
     /** {@inheritDoc} */
@@ -524,7 +520,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             height = textNodeBounds.getMaxY();
         } else {
             characterBoundingPath.getElements().clear();
-            characterBoundingPath.getElements().addAll(textNode.impl_getRangeShape(index, index + 1));
+            characterBoundingPath.getElements().addAll(textNode.rangeShape(index, index + 1));
             characterBoundingPath.setLayoutX(textNode.getLayoutX());
             characterBoundingPath.setLayoutY(textNode.getLayoutY());
 
@@ -545,12 +541,12 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
     /** {@inheritDoc} */
     @Override protected PathElement[] getUnderlineShape(int start, int end) {
-        return textNode.impl_getUnderlineShape(start, end);
+        return textNode.underlineShape(start, end);
     }
 
     /** {@inheritDoc} */
     @Override protected PathElement[] getRangeShape(int start, int end) {
-        return textNode.impl_getRangeShape(start, end);
+        return textNode.rangeShape(start, end);
     }
 
     /** {@inheritDoc} */
@@ -597,13 +593,14 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         }
         double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
         double hitY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
-        HitInfo hit = textNode.impl_hitTestChar(new Point2D(hitX, hitY));
-        Path charShape = new Path(textNode.impl_getRangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
+        HitInfo hit = textNode.hitTest(new Point2D(hitX, hitY));
+        boolean leading = hit.isLeading();
+        Path charShape = new Path(textNode.rangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
         if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
                 (!moveRight && charShape.getLayoutBounds().getMinX() < caretBounds.getMinX())) {
-            hit.setLeading(!hit.isLeading());
+            leading = !leading;
         }
-        positionCaret(hit, false);
+        positionCaret(hit.getInsertionIndex(), leading, false);
     }
 
     /** {@inheritDoc} */
@@ -716,11 +713,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
     private void updateTextNodeCaretPos(int pos) {
         if (pos == 0 || isForwardBias()) {
-            textNode.setImpl_caretPosition(pos);
+            textNode.setCaretPosition(pos);
         } else {
-            textNode.setImpl_caretPosition(pos - 1);
+            textNode.setCaretPosition(pos - 1);
         }
-        textNode.impl_caretBiasProperty().set(isForwardBias());
+        textNode.caretBiasProperty().set(isForwardBias());
     }
 
     private void createPromptNode() {
@@ -743,16 +740,16 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         IndexRange newValue = textField.getSelection();
 
         if (newValue == null || newValue.getLength() == 0) {
-            textNode.impl_selectionStartProperty().set(-1);
-            textNode.impl_selectionEndProperty().set(-1);
+            textNode.selectionStartProperty().set(-1);
+            textNode.selectionEndProperty().set(-1);
         } else {
-            textNode.impl_selectionStartProperty().set(newValue.getStart());
+            textNode.selectionStartProperty().set(newValue.getStart());
             // This intermediate value is needed to force selection shape layout.
-            textNode.impl_selectionEndProperty().set(newValue.getStart());
-            textNode.impl_selectionEndProperty().set(newValue.getEnd());
+            textNode.selectionEndProperty().set(newValue.getStart());
+            textNode.selectionEndProperty().set(newValue.getEnd());
         }
 
-        PathElement[] elements = textNode.impl_selectionShapeProperty().get();
+        PathElement[] elements = textNode.selectionShapeProperty().get();
         if (elements == null) {
             selectionHighlightPath.getElements().clear();
         } else {

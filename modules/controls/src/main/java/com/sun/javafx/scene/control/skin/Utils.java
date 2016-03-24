@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,9 +55,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
+import javafx.scene.text.HitInfo;
 
 import java.text.Bidi;
-import java.text.BreakIterator;
 import java.util.Locale;
 import java.util.function.Consumer;
 
@@ -68,7 +68,6 @@ import static javafx.scene.control.OverrunStyle.ELLIPSIS;
 import static javafx.scene.control.OverrunStyle.LEADING_ELLIPSIS;
 import static javafx.scene.control.OverrunStyle.LEADING_WORD_ELLIPSIS;
 import static javafx.scene.control.OverrunStyle.WORD_ELLIPSIS;
-import static javafx.scene.control.skin.TextFieldSkin.TextPosInfo;
 
 /**
  * BE REALLY CAREFUL WITH RESTORING OR RESETTING STATE OF helper NODE AS LEFTOVER
@@ -155,7 +154,7 @@ public class Utils {
         // clear what causes the small discrepancies.
         Bounds bounds = helper.getLayoutBounds();
         Point2D endPoint = new Point2D(width - 2, bounds.getMinY() + bounds.getHeight() / 2);
-        final int index = helper.impl_hitTestChar(endPoint).getCharIndex();
+        final int index = helper.hitTest(endPoint).getCharIndex();
         // RESTORE STATE
         helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
         helper.setLineSpacing(DEFAULT_LINE_SPACING);
@@ -411,13 +410,13 @@ public class Utils {
         // This should be the first character of a line that would be clipped.
         Point2D endPoint = new Point2D(0, height - helper.getBaselineOffset());
 
-        int hit = helper.impl_hitTestChar(endPoint).getCharIndex();
+        int hit = helper.hitTest(endPoint).getCharIndex();
         if (hit >= len) {
             helper.setBoundsType(TextBoundsType.LOGICAL); // restore
             return text;
         }
         if (center) {
-            hit = helper.impl_hitTestChar(centerPoint).getCharIndex();
+            hit = helper.hitTest(centerPoint).getCharIndex();
         }
 
         if (hit > 0 && hit < len) {
@@ -478,7 +477,7 @@ public class Utils {
             // If so, remove one char or word at a time.
             while (true) {
                 helper.setText(result);
-                int hit2 = helper.impl_hitTestChar(endPoint).getCharIndex();
+                int hit2 = helper.hitTest(endPoint).getCharIndex();
                 if (center && hit2 < centerLen) {
                     // No room for text after ellipsis. Maybe there is a newline
                     // here, and the next line falls outside the view.
@@ -755,26 +754,6 @@ public class Utils {
         return Platform.isSupported(ConditionalFeature.TWO_LEVEL_FOCUS);
     }
 
-
-    // Workaround for RT-26961. HitInfo.getInsertionIndex() doesn't skip
-    // complex character clusters / ligatures.
-    private static BreakIterator charIterator = null;
-    public static int getHitInsertionIndex(TextPosInfo hit, String text) {
-        int charIndex = hit.getCharIndex();
-        if (text != null && !hit.isLeading()) {
-            if (charIterator == null) {
-                charIterator = BreakIterator.getCharacterInstance();
-            }
-            charIterator.setText(text);
-            int next = charIterator.following(charIndex);
-            if (next == BreakIterator.DONE) {
-                charIndex = hit.getInsertionIndex();
-            } else {
-                charIndex = next;
-            }
-        }
-        return charIndex;
-    }
 
     // useful method for linking things together when before a property is
     // necessarily set

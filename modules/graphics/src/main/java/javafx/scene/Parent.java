@@ -266,7 +266,7 @@ public abstract class Parent extends Node {
                             relayout = true;
                         }
                         node.setParent(Parent.this);
-                        node.setScenes(getScene(), getSubScene());
+                        node.setScenes(getScene(), getSubScene(), /* reapplyCSS*/ true);
                         // assert !node.boundsChanged;
                         if (node.isVisible()) {
                             geomChanged = true;
@@ -495,7 +495,7 @@ public abstract class Parent extends Node {
                     }
                     if (old.getParent() == Parent.this) {
                         old.setParent(null);
-                        old.setScenes(null, null);
+                        old.setScenes(null, null, /* reapplyCSS*/ false);
                     }
                     // Do not add node with null scene to the removed list.
                     // It will not be processed in the list and its memory
@@ -664,7 +664,7 @@ public abstract class Parent extends Node {
         }
 
         for (int i=0; i<children.size(); i++) {
-            children.get(i).setScenes(newScene, newSubScene);
+            children.get(i).setScenes(newScene, newSubScene, /* reapplyCSS*/ false);
         }
 
         final boolean awaitingLayout = layoutFlag != LayoutFlags.CLEAN;
@@ -799,7 +799,7 @@ public abstract class Parent extends Node {
 
     protected final void setNeedsLayout(boolean value) {
         if (value) {
-            markDirtyLayout(true);
+            markDirtyLayout(true, false);
         } else if (layoutFlag == LayoutFlags.NEEDS_LAYOUT) {
             boolean hasBranch = false;
             for (int i = 0, max = children.size(); i < max; i++) {
@@ -828,12 +828,16 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * This package levelis used only by Node. It is set to true while
+     * This is used only by CCS in Node. It is set to true while
      * the layout() function is processing and set to false on the conclusion.
      * It is used by the Node to decide whether to perform CSS updates
      * synchronously or asynchronously.
      */
-    boolean performingLayout = false;
+    private boolean performingLayout = false;
+
+    boolean isPerformingLayout() {
+        return performingLayout;
+    }
 
     private boolean sizeCacheClear = true;
     private double prefWidthCache = -1;
@@ -848,7 +852,7 @@ public abstract class Parent extends Node {
         layoutFlag = flag;
     }
 
-    private void markDirtyLayout(boolean local) {
+    private void markDirtyLayout(boolean local, boolean forceParentLayout) {
         setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
         if (local || layoutRoot) {
             if (sceneRoot) {
@@ -860,7 +864,7 @@ public abstract class Parent extends Node {
                 markDirtyLayoutBranch();
             }
         } else {
-            requestParentLayout();
+            requestParentLayout(forceParentLayout);
         }
     }
 
@@ -875,8 +879,17 @@ public abstract class Parent extends Node {
      * @since JavaFX 8.0
      */
     public void requestLayout() {
+        requestLayout(false);
+    }
+
+    /**
+     * A package scope method used by Node and serves as a helper method for
+     * requestLayout() (see above). If forceParentLayout is true it will
+     * propagate this force layout flag to its parent.
+     */
+    void requestLayout(boolean forceParentLayout) {
         clearSizeCache();
-        markDirtyLayout(false);
+        markDirtyLayout(false, forceParentLayout);
     }
 
     /**
@@ -889,13 +902,21 @@ public abstract class Parent extends Node {
      * when it's parent recomputes the layout with the new hints.
      */
     protected final void requestParentLayout() {
+       requestParentLayout(false);
+    }
+
+    /**
+     * A package scope method used by Node and serves as a helper method for
+     * requestParentLayout() (see above). If forceParentLayout is true it will
+     * force a request layout call on its parent if its parent is not null.
+     */
+    void requestParentLayout(boolean forceParentLayout) {
         if (!layoutRoot) {
-            final Parent parent = getParent();
-            if (parent != null && !parent.performingLayout) {
-                parent.requestLayout();
+            final Parent p = getParent();
+            if (p != null && (!p.performingLayout || forceParentLayout)) {
+                p.requestLayout();
             }
         }
-
     }
 
     void clearSizeCache() {
@@ -1062,13 +1083,28 @@ public abstract class Parent extends Node {
         return super.getBaselineOffset();
     }
 
+    /***
+     * It stores the reference to the current child being laid out by its parent.
+     * This reference is important to differentiate whether a layout is triggered
+     * by its parent or other events.
+     */
+    private Node currentLayoutChild = null;
+
+    boolean isCurrentLayoutChild(Node node) {
+        return node == currentLayoutChild;
+    }
+
     /**
      * Executes a top-down layout pass on the scene graph under this parent.
      *
      * Calling this method while the Parent is doing layout is a no-op.
      */
     public final void layout() {
-        switch(layoutFlag) {
+        // layoutFlag can be accessed or changed during layout processing.
+        // Hence we need to cache and reset it before performing layout.
+        LayoutFlags flag = layoutFlag;
+        setLayoutFlag(LayoutFlags.CLEAN);
+        switch(flag) {
             case CLEAN:
                 break;
             case NEEDS_LAYOUT:
@@ -1089,13 +1125,14 @@ public abstract class Parent extends Node {
             case DIRTY_BRANCH:
                 for (int i = 0, max = children.size(); i < max; i++) {
                     final Node child = children.get(i);
+                    currentLayoutChild = child;
                     if (child instanceof Parent) {
                         ((Parent)child).layout();
                     } else if (child instanceof SubScene) {
                         ((SubScene)child).layoutPass();
                     }
                 }
-                setLayoutFlag(LayoutFlags.CLEAN);
+                currentLayoutChild = null;
                 performingLayout = false;
                 break;
         }
@@ -1112,10 +1149,12 @@ public abstract class Parent extends Node {
     protected void layoutChildren() {
         for (int i=0, max=children.size(); i<max; i++) {
             final Node node = children.get(i);
+            currentLayoutChild = node;
             if (node.isResizable() && node.isManaged()) {
                 node.autosize();
             }
         }
+        currentLayoutChild = null;
     }
 
     /**
