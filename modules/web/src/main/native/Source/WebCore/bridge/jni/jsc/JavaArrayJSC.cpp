@@ -54,17 +54,20 @@ JavaArray::JavaArray(jobject array, const char* type, PassRefPtr<RootObject> roo
     : Array(rootObject)
 {
     m_array = JobjectWrapper::create(array);
+
+    // Java array are fixed length, so we can cache length.
+    JNIEnv* env = getJNIEnv();
+
     // Since m_array->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
     JLObject jlarrayinstance(m_array->instance(), true);
 
     if (!jlarrayinstance) {
         LOG_ERROR("Could not get javaInstance for %p in JavaArray Constructor", jlarrayinstance);
-        return;
+        m_length = 0;
+    } else {
+        m_length = env->GetArrayLength(static_cast<jarray>(m_array->instance()));
     }
 
-    // Java array are fixed length, so we can cache length.
-    JNIEnv* env = getJNIEnv();
-    m_length = env->GetArrayLength(static_cast<jarray>(m_array->instance()));
     m_type = strdup(type);
     m_accessControlContext = JobjectWrapper::create(accessControlContext, true);
 }

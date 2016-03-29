@@ -44,9 +44,13 @@ JavaClass::JavaClass(jobject anInstance, RootObject* rootObject, jobject accessC
     JLObject jlinstance(anInstance, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaClass::JavaClass", jlinstance);
-        m_name = fastStrDup("<Unknown>");
-        return;
+        LOG_ERROR("Could not get javaInstance for %p in JavaClass Constructor", jlinstance);
+        anInstance = createDummyObject();
+        if (anInstance == NULL) {
+            LOG_ERROR("Could not createDummyObject for %p in JavaClass Constructor", anInstance);
+            m_name = fastStrDup("<Unknown>");
+            return;
+        }
     }
 
     jobject aClass = callJNIMethod<jobject>(anInstance, "getClass", "()Ljava/lang/Class;");
@@ -131,6 +135,29 @@ JavaClass::~JavaClass()
         delete methodList;
     }
     m_methods.clear();
+}
+
+jobject JavaClass::createDummyObject()
+{
+    JNIEnv* env = getJNIEnv();
+    jclass objectCls = env->FindClass("java/lang/Object");
+    if (!objectCls) {
+        LOG_ERROR("Unable to FindClass for java/lang/Object in JavaClass::createDummyObject");
+        return NULL;
+    }
+
+    jmethodID methodId = env->GetMethodID(objectCls, "<init>", "()V");
+    if (!methodId) {
+        LOG_ERROR("Unable to Get MethodID in JavaClass::createDummyObject");
+        return NULL;
+    }
+
+    jobject instance = env->NewObject(objectCls, methodId);
+    if (!instance) {
+        LOG_ERROR("Unable to create NewObject in JavaClass::createDummyObject");
+        return NULL;
+    }
+    return instance;
 }
 
 Method *JavaClass::methodNamed(PropertyName propertyName, Instance*) const

@@ -50,6 +50,7 @@ public:
     bool isStringClass() const;
 
 private:
+    jobject createDummyObject();
     const char* m_name;
     mutable FieldMap m_fields;
     mutable MethodListMap m_methods;
