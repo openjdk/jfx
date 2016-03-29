@@ -204,7 +204,7 @@ public class Util {
         } else {
             String jfxdir = getJfxrtDir(classpath);
             Assert.assertNotNull("failed to find jfxdir",jfxdir);
-            cmd.add("-Djava.ext.dirs=" + jfxdir);
+            cmd.add("-Xbootclasspath/a:" + jfxdir + "/" + "jfxrt.jar");
         }
 
         // This is a "minimum" set, rather than the full @addExports
