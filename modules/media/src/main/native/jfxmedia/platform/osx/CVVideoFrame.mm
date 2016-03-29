@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -160,7 +160,7 @@ CVideoFrame *CVVideoFrame::ConvertToFormat(FrameType type)
     if(YCbCr_422 == m_typeFrame && BGRA_PRE == type) {
         CVPixelBufferRef destPixelBuffer = NULL;
         if(kCVReturnSuccess == CVPixelBufferCreate(NULL, m_iEncodedWidth, m_iEncodedHeight,
-                                                   k32ARGBPixelFormat, NULL, &destPixelBuffer)) {
+                                                   k32BGRAPixelFormat, NULL, &destPixelBuffer)) {
             if(kCVReturnSuccess == CVPixelBufferLockBaseAddress(destPixelBuffer, 0)) {
                 uint8_t* bgra = (uint8_t*)CVPixelBufferGetBaseAddress(destPixelBuffer);
                 int32_t bgraStride = (int32_t)CVPixelBufferGetBytesPerRow(destPixelBuffer);
