@@ -858,14 +858,14 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
     NUM_COMPILE_THREADS = 1
 }
 
-// Check that Gradle 2.11 is in use, error if < 2.9.
+// Check that Gradle 2.11 is in use, error if < 2.11.
 if (gradle.gradleVersion != "2.11") {
     def ver = gradle.gradleVersion.split("[\\.]");
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1]);
     def err = "";
-    if (gradleMajor == 1 || gradleMajor == 2 && gradleMinor < 9) {
-        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 2.9"
+    if (gradleMajor == 1 || gradleMajor == 2 && gradleMinor < 11) {
+        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 2.11"
     }
 
     if (IS_GRADLE_VERSION_CHECK && err != "") {
