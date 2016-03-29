@@ -30,6 +30,7 @@ import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import java.util.List;
 import java.util.function.Function;
@@ -4723,5 +4724,38 @@ public class TreeTableViewKeyInputTest {
         assertEquals(4, sm.getSelectedCells().size());
 
         sl.dispose();
+    }
+
+    @Test public void test_jdk_8152106() {
+        //Creating tree items
+        final TreeItem<String> childNode1 = new TreeItem<>("Child Node 1");
+        final TreeItem<String> childNode2 = new TreeItem<>("Child Node 2");
+        childNode2.setExpanded(true);
+        final TreeItem<String> childNode3 = new TreeItem<>("Child Node 3");
+
+        //Creating the root element
+        TreeItem root = new TreeItem<>("Root node");
+        root.setExpanded(true);
+        root.getChildren().setAll(childNode1, childNode2, childNode3);
+
+        //Creating a column
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setPrefWidth(150);
+
+        //Defining cell content
+        column.setCellValueFactory((TreeTableColumn.CellDataFeatures<String, String> p) ->
+                new ReadOnlyStringWrapper(p.getValue().getValue()));
+
+        //Creating a tree table view
+        tableView.setRoot(root);
+        tableView.getColumns().add(column);
+        tableView.setShowRoot(false);
+
+        tableView.getSelectionModel().select(1);
+        keyboard.doLeftArrowPress();
+
+        // this causes the NPE, the firePulse() forces it to actually be triggered
+        keyboard.doLeftArrowPress();
+        Toolkit.getToolkit().firePulse();
     }
 }
