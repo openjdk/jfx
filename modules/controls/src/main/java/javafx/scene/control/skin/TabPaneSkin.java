@@ -322,6 +322,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         double tabsStartX = tabPosition.equals(Side.RIGHT)? x + w - headerHeight : x;
         double tabsStartY = tabPosition.equals(Side.BOTTOM)? y + h - headerHeight : y;
 
+        final double leftInset = snappedLeftInset();
+        final double topInset = snappedTopInset();
+        final double rightInset = snappedRightInset();
+
         if (tabPosition == Side.TOP) {
             tabHeaderArea.resize(w, headerHeight);
             tabHeaderArea.relocate(tabsStartX, tabsStartY);
@@ -329,12 +333,12 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             tabHeaderArea.getTransforms().add(new Rotate(getRotation(Side.TOP)));
         } else if (tabPosition == Side.BOTTOM) {
             tabHeaderArea.resize(w, headerHeight);
-            tabHeaderArea.relocate(w, tabsStartY - headerHeight);
+            tabHeaderArea.relocate(w + leftInset, tabsStartY - headerHeight);
             tabHeaderArea.getTransforms().clear();
             tabHeaderArea.getTransforms().add(new Rotate(getRotation(Side.BOTTOM), 0, headerHeight));
         } else if (tabPosition == Side.LEFT) {
             tabHeaderArea.resize(h, headerHeight);
-            tabHeaderArea.relocate(tabsStartX + headerHeight, h - headerHeight);
+            tabHeaderArea.relocate(tabsStartX + headerHeight, h - headerHeight + topInset);
             tabHeaderArea.getTransforms().clear();
             tabHeaderArea.getTransforms().add(new Rotate(getRotation(Side.LEFT), 0, headerHeight));
         } else if (tabPosition == Side.RIGHT) {
@@ -369,10 +373,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             }
         } else if (tabPosition == Side.BOTTOM) {
             contentStartX = x;
-            contentStartY = y;
+            contentStartY = y + topInset;
             if (isFloatingStyleClass()) {
                 // This is to hide the bottom border content
-                contentStartY = 1;
+                contentStartY = 1 + topInset;
             }
         } else if (tabPosition == Side.LEFT) {
             contentStartX = x + headerHeight;
@@ -382,11 +386,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 contentStartX -= 1;
             }
         } else if (tabPosition == Side.RIGHT) {
-            contentStartX = x;
+            contentStartX = x + leftInset;
             contentStartY = y;
             if (isFloatingStyleClass()) {
                 // This is to hide the right border content
-                contentStartX = 1;
+                contentStartX = 1 + leftInset;
             }
         }
 
