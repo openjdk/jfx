@@ -18,5 +18,6 @@
     javafx.graphics/com.sun.javafx.iio.png=ALL-UNNAMED,\
     javafx.graphics/com.sun.javafx.image.impl=ALL-UNNAMED,\
     javafx.graphics/com.sun.javafx.image=ALL-UNNAMED,\
+    javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED,\
     \
     java.base/sun.util.logging=ALL-UNNAMED"
