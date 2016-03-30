@@ -230,7 +230,7 @@ public class Util {
 
         if (testPolicy != null) {
 
-             cmd.add("-Djava.security.manager");
+            cmd.add("-Djava.security.manager");
 
             try {
                 if (workerPatchPolicy != null) {
@@ -248,7 +248,7 @@ public class Util {
                         tempFile = new File(workerPatchPolicy +
                                 "_" + testAppName);
                     } else {
-                        tempFile= File.createTempFile("java", "policy");
+                        tempFile = File.createTempFile("java", "policy");
                         tempFile.deleteOnExit();
                     }
 
