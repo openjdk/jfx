@@ -435,6 +435,10 @@ ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 defineProperty("UNSTABLE_TEST", "false")
 ext.IS_UNSTABLE_TEST = Boolean.parseBoolean(UNSTABLE_TEST);
 
+// Toggle diagnostic output from the Gradle workaround and the Sandbox test apps.
+defineProperty("WORKER_DEBUG", "false")
+ext.IS_WORKER_DEBUG = Boolean.parseBoolean(WORKER_DEBUG);
+
 // Specify the build configuration (Release, Debug, or DebugNative)
 defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
@@ -3930,7 +3934,7 @@ void configureJigsawTests(
 
                 String bcp = "-Xbootclasspath/a:" + rootProject.projectDir.path + "/buildSrc/build/libs/buildSrc.jar"
 
-                systemProperties 'worker.debug': false
+                systemProperties 'worker.debug': IS_WORKER_DEBUG
                 systemProperties 'worker.library.path': cygpath(javaLibraryPath)
                 systemProperties 'worker.xpatch.dir': cygpath(patchesDir.path)
                 if (addExportsFile != null) {
