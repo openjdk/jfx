@@ -99,10 +99,6 @@ void defineProperty(String name, Properties props, String defaultValue) {
  * Converts cygwin style paths to windows style paths, but with a forward slash.
  * This method is safe to call from any platform, and will only do work if
  * called on Windows (in all other cases it simply returns the supplied path.
- * In the future I would like to modify this so that it only does work if
- * cygwin is installed, as I hope one day to remove the requirement to build
- * with cygwin, but at present (due to GStreamer / Webkit) cygwin is needed
- * anyway.
  *
  * @param path the path to convert
  * @return the path converted to windows style, if on windows, otherwise it
@@ -111,13 +107,9 @@ void defineProperty(String name, Properties props, String defaultValue) {
 String cygpath(String path) {
     if (!IS_WINDOWS) return path;
     if (path == null || "".equals(path)) return path;
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    logger.info("Converting path '$path' via cygpath")
-    exec {
-        standardOutput = out
-        commandLine "cmd", "/c", "cygpath", "-m", path
-    }
-    return out.toString().trim();
+    String ret = path.replaceAll('\\\\', '/')
+    logger.info("Converting path '$path' via cygpath to "+ret)
+    return ret
 }
 
 void loadProperties(String sourceFileName) {
