@@ -1,37 +1,28 @@
-"-XaddExports:\
-    javafx.base/com.sun.javafx.collections=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx.event=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx.property=ALL-UNNAMED,\
-    \
-    javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED,\
-    javafx.graphics/com.sun.javafx.perf=ALL-UNNAMED,\
-    javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED,\
-    javafx.graphics/com.sun.javafx.geom=ALL-UNNAMED,\
-    javafx.graphics/com.sun.javafx.application=ALL-UNNAMED,\
-    javafx.graphics/com.sun.prism=ALL-UNNAMED,\
-    javafx.graphics/com.sun.javafx.font=ALL-UNNAMED,\
-    \
-    javafx.controls/javafx.scene.chart=ALL-UNNAMED,\
-    javafx.controls/com.sun.javafx.scene.control.behavior=ALL-UNNAMED,\
-    javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED,\
-    javafx.controls/com.sun.javafx.scene.control.inputmap=ALL-UNNAMED,\
-    javafx.controls/com.sun.javafx.scene.control.skin=ALL-UNNAMED,\
-    javafx.controls/com.sun.javafx.charts=ALL-UNNAMED,\
-    \
-    javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED,\
-    javafx.graphics/com.sun.javafx.application=ALL-UNNAMED,\
-    javafx.graphics/com.sun.javafx.util=ALL-UNNAMED,\
-    javafx.graphics/com.sun.javafx.scene.input=ALL-UNNAMED,\
-    \
-    javafx.base/javafx.beans.property=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx.event=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx.binding=ALL-UNNAMED,\
-    \
-    javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED,\
-    javafx.graphics/com.sun.prism.paint=ALL-UNNAMED,\
-    javafx.graphics/com.sun.scenario=ALL-UNNAMED,\
-    \
-    java.base/sun.util.logging=ALL-UNNAMED"
-
+-XaddExports:java.base/sun.util.logging=ALL-UNNAMED
+#
+-XaddExports:javafx.base/com.sun.javafx=ALL-UNNAMED
+-XaddExports:javafx.base/com.sun.javafx.binding=ALL-UNNAMED
+-XaddExports:javafx.base/com.sun.javafx.collections=ALL-UNNAMED
+-XaddExports:javafx.base/com.sun.javafx.event=ALL-UNNAMED
+-XaddExports:javafx.base/com.sun.javafx.property=ALL-UNNAMED
+-XaddExports:javafx.base/javafx.beans.property=ALL-UNNAMED
+#
+-XaddExports:javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.font=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.geom=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.perf=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.scene.input=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.util=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.prism=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.prism.paint=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.scenario=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED
+#
+-XaddExports:javafx.controls/com.sun.javafx.charts=ALL-UNNAMED
+-XaddExports:javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED
+-XaddExports:javafx.controls/com.sun.javafx.scene.control.behavior=ALL-UNNAMED
+-XaddExports:javafx.controls/com.sun.javafx.scene.control.inputmap=ALL-UNNAMED
+-XaddExports:javafx.controls/com.sun.javafx.scene.control.skin=ALL-UNNAMED
+-XaddExports:javafx.controls/javafx.scene.chart=ALL-UNNAMED

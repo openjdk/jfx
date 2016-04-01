@@ -50,7 +50,6 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
-import javafx.scene.control.skin.MenuBarSkin;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -1273,7 +1272,7 @@ public class ContextMenuContent extends Region {
                 label.setMouseTransparent(true);
                 getChildren().add(label);
 
-                listener.unregisterChangeListener(focusedProperty());
+                listener.unregisterChangeListeners(focusedProperty());
                 // RT-19546 update currentFocusedIndex when MenuItemContainer gets focused.
                 // e.g this happens when you press the Right key to open a submenu; the first
                 // menuitem is focused.
@@ -1331,7 +1330,7 @@ public class ContextMenuContent extends Region {
                     addEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
                 } else { // normal MenuItem
                     // remove old listeners
-                    listener.unregisterChangeListener(item.acceleratorProperty());
+                    listener.unregisterChangeListeners(item.acceleratorProperty());
 
                     // accelerator support
                     updateAccelerator();

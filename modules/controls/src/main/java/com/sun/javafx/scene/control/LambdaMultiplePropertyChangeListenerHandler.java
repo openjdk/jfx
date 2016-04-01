@@ -71,13 +71,9 @@ public final class LambdaMultiplePropertyChangeListenerHandler {
     }
 
     // need to be careful here - removing all listeners on the specific property!
-    public final Consumer<ObservableValue<?>> unregisterChangeListener(ObservableValue<?> property) {
-        if (propertyReferenceMap.containsKey(property)) {
-            Consumer<ObservableValue<?>> consumer = propertyReferenceMap.remove(property);
-            property.removeListener(weakPropertyChangedListener);
-            return consumer;
-        }
-        return null;
+    public final Consumer<ObservableValue<?>> unregisterChangeListeners(ObservableValue<?> property) {
+        property.removeListener(weakPropertyChangedListener);
+        return propertyReferenceMap.remove(property);
     }
 
     public void dispose() {

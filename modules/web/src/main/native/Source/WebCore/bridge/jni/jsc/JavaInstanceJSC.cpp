@@ -83,15 +83,6 @@ void JavaInstance::virtualEnd()
 
 Class* JavaInstance::getClass() const
 {
-    jobject obj = m_instance->instance();
-    // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
-    JLObject jlinstance(obj, true);
-
-    if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::getClass", jlinstance);
-        return NULL;
-    }
-
     if (!m_class) {
         jobject acc  = accessControlContext();
         m_class = new JavaClass (m_instance->instance(), rootObject(), acc);

@@ -146,6 +146,7 @@ public class TimelineApp extends Application {
         timeline.currentTimeProperty().addListener((Observable ov) -> {
             rate.setText(String.format("%4.0f",
                                        timeline.getCurrentTime().toMillis()));
+            flow.requestLayout();
         });
         flow.getChildren().addAll(current, rate, ms);
         // Autoreverse checkbox

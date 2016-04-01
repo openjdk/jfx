@@ -1,9 +1,9 @@
-"-XaddExports:\
-    javafx.base/com.sun.javafx.binding=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx.collections=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx.event=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx.property.adapter=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx.property=ALL-UNNAMED,\
-    javafx.base/com.sun.javafx.runtime=ALL-UNNAMED,\
-    \
-    java.base/sun.util.logging=ALL-UNNAMED"
+#
+-XaddExports:javafx.base/com.sun.javafx.binding=ALL-UNNAMED
+-XaddExports:javafx.base/com.sun.javafx.collections=ALL-UNNAMED
+-XaddExports:javafx.base/com.sun.javafx.event=ALL-UNNAMED
+-XaddExports:javafx.base/com.sun.javafx.property.adapter=ALL-UNNAMED
+-XaddExports:javafx.base/com.sun.javafx.property=ALL-UNNAMED
+-XaddExports:javafx.base/com.sun.javafx.runtime=ALL-UNNAMED
+#
+-XaddExports:java.base/sun.util.logging=ALL-UNNAMED

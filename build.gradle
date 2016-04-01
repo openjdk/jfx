@@ -99,10 +99,6 @@ void defineProperty(String name, Properties props, String defaultValue) {
  * Converts cygwin style paths to windows style paths, but with a forward slash.
  * This method is safe to call from any platform, and will only do work if
  * called on Windows (in all other cases it simply returns the supplied path.
- * In the future I would like to modify this so that it only does work if
- * cygwin is installed, as I hope one day to remove the requirement to build
- * with cygwin, but at present (due to GStreamer / Webkit) cygwin is needed
- * anyway.
  *
  * @param path the path to convert
  * @return the path converted to windows style, if on windows, otherwise it
@@ -111,13 +107,9 @@ void defineProperty(String name, Properties props, String defaultValue) {
 String cygpath(String path) {
     if (!IS_WINDOWS) return path;
     if (path == null || "".equals(path)) return path;
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    logger.info("Converting path '$path' via cygpath")
-    exec {
-        standardOutput = out
-        commandLine "cmd", "/c", "cygpath", "-m", path
-    }
-    return out.toString().trim();
+    String ret = path.replaceAll('\\\\', '/')
+    logger.info("Converting path '$path' via cygpath to "+ret)
+    return ret
 }
 
 void loadProperties(String sourceFileName) {
@@ -434,6 +426,10 @@ ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 //    assumeTrue(Boolean.getBoolean("unstable.test"));
 defineProperty("UNSTABLE_TEST", "false")
 ext.IS_UNSTABLE_TEST = Boolean.parseBoolean(UNSTABLE_TEST);
+
+// Toggle diagnostic output from the Gradle workaround and the Sandbox test apps.
+defineProperty("WORKER_DEBUG", "false")
+ext.IS_WORKER_DEBUG = Boolean.parseBoolean(WORKER_DEBUG);
 
 // Specify the build configuration (Release, Debug, or DebugNative)
 defineProperty("CONF", "Debug")
@@ -858,14 +854,14 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
     NUM_COMPILE_THREADS = 1
 }
 
-// Check that Gradle 2.11 is in use, error if < 2.9.
+// Check that Gradle 2.11 is in use, error if < 2.11.
 if (gradle.gradleVersion != "2.11") {
     def ver = gradle.gradleVersion.split("[\\.]");
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1]);
     def err = "";
-    if (gradleMajor == 1 || gradleMajor == 2 && gradleMinor < 9) {
-        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 2.9"
+    if (gradleMajor == 1 || gradleMajor == 2 && gradleMinor < 11) {
+        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 2.11"
     }
 
     if (IS_GRADLE_VERSION_CHECK && err != "") {
@@ -3930,7 +3926,7 @@ void configureJigsawTests(
 
                 String bcp = "-Xbootclasspath/a:" + rootProject.projectDir.path + "/buildSrc/build/libs/buildSrc.jar"
 
-                systemProperties 'worker.debug': false
+                systemProperties 'worker.debug': IS_WORKER_DEBUG
                 systemProperties 'worker.library.path': cygpath(javaLibraryPath)
                 systemProperties 'worker.xpatch.dir': cygpath(patchesDir.path)
                 if (addExportsFile != null) {

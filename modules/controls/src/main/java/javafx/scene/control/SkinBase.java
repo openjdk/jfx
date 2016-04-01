@@ -26,9 +26,6 @@
 package javafx.scene.control;
 
 import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -211,6 +208,25 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
             lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
         }
         lambdaChangeListenerHandler.registerChangeListener(property, consumer);
+    }
+
+    /**
+     * Unregisters all change listeners that have been registered using {@link #registerChangeListener(ObservableValue, Consumer)}
+     * for the given property. The end result is that the given property is no longer observed by any of the change
+     * listeners, but it may still have additional listeners registered on it through means outside of
+     * {@link #registerChangeListener(ObservableValue, Consumer)}.
+     *
+     * @param property The property for which all listeners should be removed.
+     * @return A single chained {@link Consumer} consisting of all {@link Consumer consumers} registered through
+     *      {@link #registerChangeListener(ObservableValue, Consumer)}. If no consumers have been registered on this
+     *      property, null will be returned.
+     * @since 9
+     */
+    protected final Consumer<ObservableValue<?>> unregisterChangeListeners(ObservableValue<?> property) {
+        if (lambdaChangeListenerHandler == null) {
+            return null;
+        }
+        return lambdaChangeListenerHandler.unregisterChangeListeners(property);
     }
 
 

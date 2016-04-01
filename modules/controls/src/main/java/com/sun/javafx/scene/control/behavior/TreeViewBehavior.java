@@ -688,8 +688,11 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (root == null) return;
 
         // Fix for RT-17233 where we could hide all items in a tree with no visible
-        // root by pressing the left-arrow key too many times
-        if (! isShowRoot && ! selectedItem.isExpanded() && root.equals(selectedItem.getParent())) {
+        // root by pressing the left-arrow key too many times.
+        // Check for isLeaf() added to resolve JDK-8152106.
+        if (!isShowRoot
+                && (!selectedItem.isExpanded() || selectedItem.isLeaf())
+                && root.equals(selectedItem.getParent())) {
             return;
         }
 

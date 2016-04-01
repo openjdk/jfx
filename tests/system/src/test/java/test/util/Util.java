@@ -204,7 +204,7 @@ public class Util {
         } else {
             String jfxdir = getJfxrtDir(classpath);
             Assert.assertNotNull("failed to find jfxdir",jfxdir);
-            cmd.add("-Djava.ext.dirs=" + jfxdir);
+            cmd.add("-Xbootclasspath/a:" + jfxdir + "/" + "jfxrt.jar");
         }
 
         // This is a "minimum" set, rather than the full @addExports
@@ -230,21 +230,28 @@ public class Util {
 
         if (testPolicy != null) {
 
-             cmd.add("-Djava.security.manager");
+            cmd.add("-Djava.security.manager");
 
             try {
                 if (workerPatchPolicy != null) {
-                    // with Jake, we need to create a merged java.policy
+                    // with Jigsaw, we need to create a merged java.policy
                     // file that contains the permissions for the Xpatch classes
                     // as well as the permissions needed for this test
-
-                    File tempFile = File.createTempFile("java", "policy");
-                    tempFile.deleteOnExit();
 
                     File wpp = new File(workerPatchPolicy);
                     if (!wpp.exists()) {
                         throw new RuntimeException("Missing workerPatchPolicy");
                     }
+
+                    File tempFile = null;
+                    if (workerDebug) {
+                        tempFile = new File(workerPatchPolicy +
+                                "_" + testAppName);
+                    } else {
+                        tempFile = File.createTempFile("java", "policy");
+                        tempFile.deleteOnExit();
+                    }
+
                     BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
 
                     BufferedReader reader1 = new BufferedReader(new FileReader(wpp));
