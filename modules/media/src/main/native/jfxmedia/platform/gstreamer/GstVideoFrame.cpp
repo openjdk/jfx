@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -512,11 +512,9 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr422(FrameType destType)
     GST_BUFFER_OFFSET(destBuffer) = GST_BUFFER_OFFSET(m_pBuffer);
     GST_BUFFER_DURATION(destBuffer) = GST_BUFFER_DURATION(m_pBuffer);
 
-    if (!gst_buffer_map(m_pBuffer, &info, GST_MAP_WRITE)) {
+    if (!gst_buffer_map(destBuffer, &info, GST_MAP_WRITE)) {
         // INLINE - gst_buffer_unref()
         gst_buffer_unref(destBuffer);
-        // INLINE - gst_sample_unref()
-        gst_sample_unref(destSample);
         return NULL;
     }
 
