@@ -43,6 +43,8 @@ import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
 /**
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the
  * label, the arrowButton with its arrow shape, and the popup.
+ *
+ * @since 9
  */
 public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 

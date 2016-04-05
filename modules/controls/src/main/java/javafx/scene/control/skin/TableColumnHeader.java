@@ -74,6 +74,8 @@ import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.setSortTyp
 
 /**
  * Region responsible for painting a single column header.
+ *
+ * @since 9
  */
 public class TableColumnHeader extends Region {
 
