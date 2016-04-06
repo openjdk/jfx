@@ -14,6 +14,7 @@
         <ant dir="PickTest3D" target="jar" inheritAll="true"/>
         <ant dir="Shape3DToy" target="jar" inheritAll="true"/>
         <ant dir="TouchSuite" target="jar" inheritAll="true"/>
+        <ant dir="DragDrop" target="jar" inheritAll="true"/>
     </target>
 
     <target description="Clean the toys" name="clean">
@@ -23,6 +24,7 @@
         <ant dir="PickTest3D" target="clean" inheritAll="true"/>
         <ant dir="Shape3DToy" target="clean" inheritAll="true"/>
         <ant dir="TouchSuite" target="clean" inheritAll="true"/>
+        <ant dir="DragDrop" target="clean" inheritAll="true"/>
     </target>
 
 </project>
