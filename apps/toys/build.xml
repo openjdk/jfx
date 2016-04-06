@@ -6,6 +6,7 @@
           JFX_CORE, so we should not try to build them
           -->
         <ant dir="ColorCube" target="jar" inheritAll="true"/>
+        <ant dir="DragDrop" target="jar" inheritAll="true"/>
     </target>
 
     <target description="Build the toys" name="jar" depends="swingJar">
@@ -14,7 +15,6 @@
         <ant dir="PickTest3D" target="jar" inheritAll="true"/>
         <ant dir="Shape3DToy" target="jar" inheritAll="true"/>
         <ant dir="TouchSuite" target="jar" inheritAll="true"/>
-        <ant dir="DragDrop" target="jar" inheritAll="true"/>
     </target>
 
     <target description="Clean the toys" name="clean">
