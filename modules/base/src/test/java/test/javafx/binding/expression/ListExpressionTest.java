@@ -112,11 +112,11 @@ public class ListExpressionTest {
         assertNull(opNull.valueAt(index).get());
         log.checkFine(IndexOutOfBoundsException.class);
         assertNull(opEmpty.valueAt(index).get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         assertNull(op1.valueAt(index).get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         assertNull(op2.valueAt(index).get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
 
         index.set(0);
         assertNull(opNull.valueAt(index).get());

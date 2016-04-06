@@ -222,7 +222,7 @@ public class BindingsArrayTest {
         property.set(list1);
         index.set(-1);
         assertNull(binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(data1, binding.get());
         index.set(1);
@@ -234,7 +234,7 @@ public class BindingsArrayTest {
         property.remove(data2);
         index.set(-1);
         assertNull(binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(data1, binding.get());
         index.set(1);
@@ -244,7 +244,7 @@ public class BindingsArrayTest {
         property.set(list2);
         index.set(-1);
         assertNull(binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertNull(binding.get());
         log.checkFine(IndexOutOfBoundsException.class);
@@ -252,7 +252,7 @@ public class BindingsArrayTest {
         property.addAll(data2, data2);
         index.set(-1);
         assertNull(binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(data2, binding.get());
         index.set(1);
@@ -371,7 +371,7 @@ public class BindingsArrayTest {
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
@@ -383,7 +383,7 @@ public class BindingsArrayTest {
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
@@ -393,7 +393,7 @@ public class BindingsArrayTest {
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
         log.checkFine(NullPointerException.class);
@@ -404,7 +404,7 @@ public class BindingsArrayTest {
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
         log.checkFine(IndexOutOfBoundsException.class);
@@ -412,7 +412,7 @@ public class BindingsArrayTest {
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get());
         index.set(1);
@@ -532,7 +532,7 @@ public class BindingsArrayTest {
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get(), EPSILON_DOUBLE);
         index.set(1);
@@ -544,7 +544,7 @@ public class BindingsArrayTest {
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get(), EPSILON_DOUBLE);
         index.set(1);
@@ -554,7 +554,7 @@ public class BindingsArrayTest {
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
         log.checkFine(NullPointerException.class);
@@ -565,7 +565,7 @@ public class BindingsArrayTest {
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
         log.checkFine(IndexOutOfBoundsException.class);
@@ -573,7 +573,7 @@ public class BindingsArrayTest {
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(1);
@@ -693,7 +693,7 @@ public class BindingsArrayTest {
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get(), EPSILON_FLOAT);
         index.set(1);
@@ -705,7 +705,7 @@ public class BindingsArrayTest {
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get(), EPSILON_FLOAT);
         index.set(1);
@@ -715,7 +715,7 @@ public class BindingsArrayTest {
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
         log.checkFine(NullPointerException.class);
@@ -726,7 +726,7 @@ public class BindingsArrayTest {
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
         log.checkFine(IndexOutOfBoundsException.class);
@@ -734,7 +734,7 @@ public class BindingsArrayTest {
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(1);
@@ -854,7 +854,7 @@ public class BindingsArrayTest {
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
@@ -866,7 +866,7 @@ public class BindingsArrayTest {
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
@@ -876,7 +876,7 @@ public class BindingsArrayTest {
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
         log.checkFine(NullPointerException.class);
@@ -887,7 +887,7 @@ public class BindingsArrayTest {
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
         log.checkFine(IndexOutOfBoundsException.class);
@@ -895,7 +895,7 @@ public class BindingsArrayTest {
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get());
         index.set(1);
@@ -1015,7 +1015,7 @@ public class BindingsArrayTest {
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
@@ -1027,7 +1027,7 @@ public class BindingsArrayTest {
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
@@ -1037,7 +1037,7 @@ public class BindingsArrayTest {
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
         log.checkFine(NullPointerException.class);
@@ -1048,7 +1048,7 @@ public class BindingsArrayTest {
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
         log.checkFine(IndexOutOfBoundsException.class);
@@ -1056,7 +1056,7 @@ public class BindingsArrayTest {
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get());
         index.set(1);
@@ -1176,7 +1176,7 @@ public class BindingsArrayTest {
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
@@ -1188,7 +1188,7 @@ public class BindingsArrayTest {
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
@@ -1198,7 +1198,7 @@ public class BindingsArrayTest {
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
         log.checkFine(IndexOutOfBoundsException.class);
@@ -1206,7 +1206,7 @@ public class BindingsArrayTest {
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        log.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get());
         index.set(1);
