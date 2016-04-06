@@ -38,6 +38,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
 import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Mnemonic;
@@ -54,24 +55,25 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     private ObservableMap<KeyCombination, ObservableList<Mnemonic>> mnemonics;
 
     public void addMnemonic(Mnemonic m) {
-        ObservableList<Mnemonic> mnemonicsList = (ObservableList)getMnemonics().get(m.getKeyCombination());
+        ObservableList<Mnemonic> mnemonicsList = getMnemonics().get(m.getKeyCombination());
         if (mnemonicsList == null) {
-            mnemonicsList = new ObservableListWrapper<Mnemonic>(new ArrayList<Mnemonic>());
+            mnemonicsList = new ObservableListWrapper<>(new ArrayList<>());
             getMnemonics().put(m.getKeyCombination(), mnemonicsList);
         }
         boolean foundMnemonic = false;
-        for (int i = 0 ; i < mnemonicsList.size() ; i++) {
-            if (mnemonicsList.get(i) == m) {
+        for (Mnemonic mnemonic : mnemonicsList) {
+            if (mnemonic == m) {
                 foundMnemonic = true;
+                break;
             }
         }
-        if (foundMnemonic == false) {
+        if (!foundMnemonic) {
             mnemonicsList.add(m);
         }
     }
 
     public void removeMnemonic(Mnemonic m) {
-        ObservableList<Mnemonic> mnemonicsList = (ObservableList)getMnemonics().get(m.getKeyCombination());
+        ObservableList<Mnemonic> mnemonicsList = getMnemonics().get(m.getKeyCombination());
         if (mnemonicsList != null) {
             for (int i = 0 ; i < mnemonicsList.size() ; i++) {
                 if (mnemonicsList.get(i).getNode() == m.getNode()) {
@@ -83,7 +85,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
 
     public ObservableMap<KeyCombination, ObservableList<Mnemonic>> getMnemonics() {
         if (mnemonics == null) {
-            mnemonics = new ObservableMapWrapper<KeyCombination, ObservableList<Mnemonic>>(new HashMap<KeyCombination, ObservableList<Mnemonic>>());
+            mnemonics = new ObservableMapWrapper<>(new HashMap<>());
         }
         return mnemonics;
     }
@@ -103,36 +105,38 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     }
 
     public void processTraversal(Event event) {
-        if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
-            if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown() && !((KeyEvent)event).isAltDown()) {
-                Object obj = event.getTarget();
-                if (obj instanceof Node) {
+        if (event.getEventType() != KeyEvent.KEY_PRESSED) return;
+        if (!(event instanceof KeyEvent)) return;
 
-                    switch (((KeyEvent)event).getCode()) {
-                      case TAB :
-                          if (((KeyEvent)event).isShiftDown()) {
-                              traverse(event, ((Node)obj), com.sun.javafx.scene.traversal.Direction.PREVIOUS);
-                          }
-                          else {
-                              traverse(event, ((Node)obj), com.sun.javafx.scene.traversal.Direction.NEXT);
-                          }
-                          break;
-                      case UP :
-                          traverse(event, ((Node) obj), com.sun.javafx.scene.traversal.Direction.UP);
-                          break;
-                      case DOWN :
-                          traverse(event, ((Node) obj), com.sun.javafx.scene.traversal.Direction.DOWN);
-                          break;
-                      case LEFT :
-                          traverse(event, ((Node) obj), com.sun.javafx.scene.traversal.Direction.LEFT);
-                          break;
-                      case RIGHT :
-                          traverse(event, ((Node) obj), com.sun.javafx.scene.traversal.Direction.RIGHT);
-                          break;
-                      default :
-                          break;
-                    }
-                }
+        KeyEvent keyEvent = (KeyEvent)event;
+        if (!keyEvent.isMetaDown() && !keyEvent.isControlDown() && !keyEvent.isAltDown()) {
+            Object obj = event.getTarget();
+            if (!(obj instanceof Node)) return;
+
+            Node node = (Node)obj;
+            switch (keyEvent.getCode()) {
+              case TAB :
+                  if (keyEvent.isShiftDown()) {
+                      traverse(event, node, Direction.PREVIOUS);
+                  }
+                  else {
+                      traverse(event, node, Direction.NEXT);
+                  }
+                  break;
+              case UP :
+                  traverse(event, node, Direction.UP);
+                  break;
+              case DOWN :
+                  traverse(event, node, Direction.DOWN);
+                  break;
+              case LEFT :
+                  traverse(event, node, Direction.LEFT);
+                  break;
+              case RIGHT :
+                  traverse(event, node, Direction.RIGHT);
+                  break;
+              default :
+                  break;
             }
         }
     }
@@ -140,31 +144,51 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     @Override
     public Event dispatchBubblingEvent(Event event) {
         /*
-        ** If the key event hasn't been consumed then
-        ** we will process global events in the order :
-        **    . Mnemonics,
-        **    . Accelerators,
-        **    . Navigation.
-        ** This processing is extra to that of listeners and
-        ** the focus Node.
-        */
-        if (event.getEventType() == KeyEvent.KEY_PRESSED) {
+         * Historically, we processed all unconsumed events in the following order:
+         *    . Mnemonics,
+         *    . Accelerators,
+         *    . Navigation.
+         * But we have now split the handling between capturing and bubbling phases.
+         * In the capturing phase we handle mnemonics and accelerators, and in the bubbling
+         * phase we handle navigation. See dispatchCapturingEvent for the other half of this
+         * impl.
+         */
+        if (!(event instanceof KeyEvent)) return event;
+        if (event.getEventType() == KeyEvent.KEY_PRESSED && !event.isConsumed()) {
+            processTraversal(event);
+        }
+        return event;
+    }
+
+    @Override
+    public Event dispatchCapturingEvent(Event event) {
+        /*
+         * Historically, we processed all unconsumed events in the following order:
+         *    . Mnemonics,
+         *    . Accelerators,
+         *    . Navigation.
+         * But we have now split the handling between capturing and bubbling phases.
+         * In the capturing phase we handle mnemonics and accelerators, and in the bubbling
+         * phase we handle navigation. See dispatchBubblingEvent for the other half of this
+         * impl.
+         */
+        if (!(event instanceof KeyEvent)) return event;
+        final boolean keyPressedEvent = event.getEventType() == KeyEvent.KEY_PRESSED;
+        final boolean keyTypedEvent = event.getEventType() == KeyEvent.KEY_TYPED;
+        final boolean keyReleasedEvent = event.getEventType() == KeyEvent.KEY_RELEASED;
+        final KeyEvent keyEvent = (KeyEvent)event;
+
+        if (keyPressedEvent || keyTypedEvent) {
             if (PlatformUtil.isMac()) {
-                if (((KeyEvent)event).isMetaDown()) {
-                    processMnemonics((KeyEvent)event);
+                if (keyEvent.isMetaDown()) {
+                    processMnemonics(keyEvent);
                 }
-            } else {
-                if (((KeyEvent)event).isAltDown() || isMnemonicsDisplayEnabled()) {
-                    processMnemonics((KeyEvent)event);
-                }
+            } else if (keyEvent.isAltDown() || isMnemonicsDisplayEnabled()) {
+                processMnemonics(keyEvent);
             }
 
-            if (!event.isConsumed()) {
-                processAccelerators((KeyEvent)event);
-            }
-
-            if (!event.isConsumed()) {
-                processTraversal(event);
+            if (keyPressedEvent && !event.isConsumed()) {
+                processAccelerators(keyEvent);
             }
         }
 
@@ -173,158 +197,160 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         ** check to see if we should highlight the mnemonics on the scene
         */
         if (!PlatformUtil.isMac()) {
-            if (event.getEventType() == KeyEvent.KEY_PRESSED) {
-                if (((KeyEvent)event).isAltDown()  && !event.isConsumed()) {
-                    /*
-                    ** show mnemonics while alt is held
-                    */
-                    if (!isMnemonicsDisplayEnabled()) {
-                        setMnemonicsDisplayEnabled(true);
-                    }
-                    else {
-                        if (PlatformUtil.isWindows()) {
-                            setMnemonicsDisplayEnabled(!isMnemonicsDisplayEnabled());
-                        }
+            if (keyPressedEvent && keyEvent.isAltDown() && !event.isConsumed()) {
+                /*
+                 * show mnemonics while alt is held
+                 */
+                if (!isMnemonicsDisplayEnabled()) {
+                    setMnemonicsDisplayEnabled(true);
+                } else {
+                    if (PlatformUtil.isWindows()) {
+                        setMnemonicsDisplayEnabled(!isMnemonicsDisplayEnabled());
                     }
                 }
             }
-            if (event.getEventType() == KeyEvent.KEY_RELEASED) {
-                if (!((KeyEvent)event).isAltDown()) {
-                    if (!PlatformUtil.isWindows()) {
-                        setMnemonicsDisplayEnabled(false);
-                    }
-                }
+            if (keyReleasedEvent && !keyEvent.isAltDown() && !PlatformUtil.isWindows()) {
+                setMnemonicsDisplayEnabled(false);
             }
         }
         return event;
     }
 
-    private void processMnemonics(KeyEvent event) {
-        if (mnemonics != null) {
+    private void processMnemonics(final KeyEvent event) {
+        if (mnemonics == null) return;
 
-            ObservableList<Mnemonic> mnemonicsList = null;
+         // we are going to create a lookup event that is a copy of this event
+        // except replacing KEY_TYPED with KEY_PRESSED. If we find a mnemonic
+        // with this lookup event, we will consume the event so that
+        // KEY_TYPED events are not fired after a mnemonic consumed the
+        // KEY_PRESSED event.
+        // We pass in isMnemonicDisplayEnabled() for the altDown test, as if
+        // mnemonic display has been enabled, we can act as if the alt key is
+        // being held down.
+        KeyEvent lookupEvent = event;
+        if (event.getEventType() == KeyEvent.KEY_TYPED) {
+            lookupEvent = new KeyEvent(null, event.getTarget(), KeyEvent.KEY_PRESSED,
+                    " ",
+                    event.getCharacter(),
+                    KeyCode.getKeyCode(event.getCharacter()),
+                    event.isShiftDown(),
+                    event.isControlDown(),
+                    isMnemonicsDisplayEnabled(),
+                    event.isMetaDown());
+        } else if (isMnemonicsDisplayEnabled()) {
+            lookupEvent = new KeyEvent(null, event.getTarget(), KeyEvent.KEY_PRESSED,
+                    event.getCharacter(),
+                    event.getText(),
+                    event.getCode(),
+                    event.isShiftDown(),
+                    event.isControlDown(),
+                    isMnemonicsDisplayEnabled(),
+                    event.isMetaDown());
+        }
 
-            for (Map.Entry<KeyCombination, ObservableList<Mnemonic>>
-                    mnemonic: mnemonics.entrySet()) {
 
-                if (!isMnemonicsDisplayEnabled()) {
-                    if (mnemonic.getKey().match(event)) {
-                        mnemonicsList = (ObservableList) mnemonic.getValue();
-                        break;
-                    }
-                }
-                else {
+        ObservableList<Mnemonic> mnemonicsList = null;
+
+        for (Map.Entry<KeyCombination, ObservableList<Mnemonic>> mnemonic: mnemonics.entrySet()) {
+            if (mnemonic.getKey().match(lookupEvent)) {
+                mnemonicsList = mnemonic.getValue();
+                break;
+            }
+        }
+
+        if (mnemonicsList == null) return;
+
+        /*
+        ** for mnemonics we need to check if visible and reachable....
+        ** if a single Mnemonic on the keyCombo we
+        ** fire the runnable in Mnemoninic, and transfer focus
+        ** if there is more than one then we just
+        ** transfer the focus
+        **
+        */
+        boolean multipleNodes = false;
+        Node firstNode = null;
+        Mnemonic firstMnemonics = null;
+        int focusedIndex = -1;
+        int nextFocusable = -1;
+
+        /*
+        ** find first focusable node
+        */
+        for (int i = 0 ; i < mnemonicsList.size() ; i++) {
+            Mnemonic mnemonic = mnemonicsList.get(i);
+            Node currentNode = mnemonic.getNode();
+
+            if (firstMnemonics == null && (currentNode.impl_isTreeVisible() && !currentNode.isDisabled())) {
+                firstMnemonics = mnemonic;
+            }
+
+            if (currentNode.impl_isTreeVisible() && (currentNode.isFocusTraversable() && !currentNode.isDisabled())) {
+                if (firstNode == null) {
+                    firstNode = currentNode;
+                } else {
                     /*
-                    ** Mnemonics display has been enabled, which means
-                    ** we act as is the alt key is being held down.
+                    ** there is more than one node on this keyCombo
                     */
-
-                    KeyEvent fakeEvent = new KeyEvent(null, event.getTarget(), KeyEvent.KEY_PRESSED,
-                                                                event.getCharacter(),
-                                                                event.getText(),
-                                                                event.getCode(),
-                                                                event.isShiftDown(),
-                                                                event.isControlDown(),
-                                                                true,
-                                                                event.isMetaDown());
-
-
-                    if (mnemonic.getKey().match(fakeEvent)) {
-                        mnemonicsList = (ObservableList) mnemonic.getValue();
-                        break;
+                    multipleNodes = true;
+                    if (focusedIndex != -1) {
+                        if (nextFocusable == -1) {
+                            nextFocusable = i;
+                        }
                     }
                 }
             }
 
-            if (mnemonicsList != null) {
+            /*
+            ** one of our targets has the focus already
+            */
+            if (currentNode.isFocused()) {
+                focusedIndex = i;
+            }
+        }
+
+        if (firstNode != null) {
+            if (!multipleNodes == true) {
                 /*
-                ** for mnemonics we need to check if visible and reachable....
-                ** if a single Mnemonic on the keyCombo we
-                ** fire the runnable in Mnemoninic, and transfer focus
-                ** if there is more than one then we just
-                ** transfer the focus
-                **
+                ** just one target
                 */
-                boolean multipleNodes = false;
-                Node firstNode = null;
-                Mnemonic firstMnemonics = null;
-                int focusedIndex = -1;
-                int nextFocusable = -1;
-
+                firstNode.requestFocus();
+                event.consume();
+            }
+            else {
                 /*
-                ** find first focusable node
+                ** we have multiple nodes using the same mnemonic.
+                ** this is allowed for nmemonics, and we simple
+                ** focus traverse between them
                 */
-                for (int i = 0 ; i < mnemonicsList.size() ; i++) {
-                    if (mnemonicsList.get(i) instanceof Mnemonic) {
-                        Node currentNode = (Node)mnemonicsList.get(i).getNode();
-
-                        if (firstMnemonics == null && (currentNode.impl_isTreeVisible() && !currentNode.isDisabled())) {
-                            firstMnemonics = mnemonicsList.get(i);
-                        }
-
-                        if (currentNode.impl_isTreeVisible() && (currentNode.isFocusTraversable() && !currentNode.isDisabled())) {
-                            if (firstNode == null) {
-                                firstNode = currentNode;
-                            }
-                            else {
-                                /*
-                                ** there is more than one node on this keyCombo
-                                */
-                                multipleNodes = true;
-                                if (focusedIndex != -1) {
-                                    if (nextFocusable == -1) {
-                                        nextFocusable = i;
-                                    }
-                                }
-                            }
-                        }
-                        /*
-                        ** one of our targets has the focus already
-                        */
-                        if (currentNode.isFocused()) {
-                            focusedIndex = i;
-                        }
-                    }
+                if (focusedIndex == -1) {
+                    firstNode.requestFocus();
+                    event.consume();
                 }
-
-                if (firstNode != null) {
-                    if (!multipleNodes == true) {
-                        /*
-                        ** just one target
-                        */
+                else {
+                    if (focusedIndex >= mnemonicsList.size()) {
                         firstNode.requestFocus();
                         event.consume();
                     }
                     else {
-                        /*
-                        ** we have multiple nodes using the same mnemonic.
-                        ** this is allowed for nmemonics, and we simple
-                        ** focus traverse between them
-                        */
-                        if (focusedIndex == -1) {
-                            firstNode.requestFocus();
-                            event.consume();
+                        if (nextFocusable != -1) {
+                            mnemonicsList.get(nextFocusable).getNode().requestFocus();
                         }
                         else {
-                            if (focusedIndex >= mnemonicsList.size()) {
-                                firstNode.requestFocus();
-                                event.consume();
-                            }
-                            else {
-                                if (nextFocusable != -1) {
-                                    ((Node)mnemonicsList.get(nextFocusable).getNode()).requestFocus();
-                                }
-                                else {
-                                    firstNode.requestFocus();
-                                }
-                                event.consume();
-                            }
+                            firstNode.requestFocus();
                         }
+                        event.consume();
                     }
                 }
-                if (!multipleNodes && firstMnemonics != null) {
-                    firstMnemonics.fire();
-                }
+            }
+        }
+
+        if (!multipleNodes && firstMnemonics != null) {
+            if (event.getEventType() == KeyEvent.KEY_TYPED) {
+                event.consume();
+            } else {
+                firstMnemonics.fire();
+                event.consume();
             }
         }
     }

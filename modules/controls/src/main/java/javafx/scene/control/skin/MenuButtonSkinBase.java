@@ -29,6 +29,7 @@ import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import com.sun.javafx.scene.control.LabeledImpl;
 import com.sun.javafx.scene.control.skin.Utils;
+import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.scene.control.ContextMenu;
@@ -186,9 +187,15 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
             if (popup.isShowing()) {
                 Utils.addMnemonics(popup, getSkinnable().getScene(), getSkinnable().impl_isShowMnemonics());
-            }
-            else {
-                Utils.removeMnemonics(popup, getSkinnable().getScene());
+            } else {
+                // we wrap this in a runLater so that mnemonics are not removed
+                // before all key events are fired (because KEY_PRESSED might have
+                // been used to hide the menu, but KEY_TYPED and KEY_RELEASED
+                // events are still to be fired, and shouldn't miss out on going
+                // through the mnemonics code (especially in case they should be
+                // consumed to prevent them being used elsewhere).
+                // See JBS-8090026 for more detail.
+                Platform.runLater(() -> Utils.removeMnemonics(popup, getSkinnable().getScene()));
             }
         });
     }
