@@ -59,7 +59,10 @@ module javafx.graphics {
         java.base,
         javafx.controls,
         javafx.swing,
-        javafx.web;
+        javafx.web,
+        jdk.dynalink,
+        jdk.scripting.nashorn,
+        jdk.scripting.nashorn.shell;
     exports com.sun.javafx.css to
         javafx.controls;
     exports com.sun.javafx.cursor to
