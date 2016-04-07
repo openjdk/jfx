@@ -1918,6 +1918,7 @@
                _Java_com_sun_webkit_WebPage_twkStopAll
                _Java_com_sun_webkit_WebPage_twkUpdateContent
                _Java_com_sun_webkit_WebPage_twkWorkerThreadCount
+               _Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection
                _Java_com_sun_webkit_dom_EventListenerImpl_twkCreatePeer
                _Java_com_sun_webkit_dom_EventListenerImpl_twkDispatchEvent
                _Java_com_sun_webkit_dom_EventListenerImpl_twkDisposeJSPeer
