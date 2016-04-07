@@ -1264,6 +1264,9 @@ allprojects {
         }
     }
 
+    compileJava.dependsOn verifyJava
+    compileJava.dependsOn checkJfxrtJar
+
     // Compile and run tests against the jfxrt.jar in the built sdk of the host machine
     def sdkDir = "${rootProject.buildDir}/sdk"
     def jfxrtJar = "$sdkDir/lib/jfxrt.jar"
@@ -1368,9 +1371,6 @@ project(":base") {
             line
         }
     }
-
-    compileJava.dependsOn updateCacheIfNeeded
-    compileJava.dependsOn verifyJava
 
     // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
@@ -2313,6 +2313,8 @@ project(":media") {
         compile BUILD_SRC, project(":base"), project(":graphics")
     }
 
+    compileJava.dependsOn updateCacheIfNeeded
+
     sourceSets {
         tools {
             java.srcDir "src/tools/java"
@@ -2622,6 +2624,8 @@ project(":web") {
     dependencies {
         compile project(":base"), project(":graphics"), project(":controls"), project(":media")
     }
+
+    compileJava.dependsOn updateCacheIfNeeded
 
     test {
         if (!IS_JIGSAW_TEST) {
@@ -3031,8 +3035,6 @@ task jfxrt() {
 }
 
 task sdk() {
-    dependsOn(checkJfxrtJar)
-
     if (DO_BUILD_SDK_FOR_TEST) {
         rootProject.getTasksByName("test", true).each { t ->
             if (t.enabled) t.dependsOn(sdk)
