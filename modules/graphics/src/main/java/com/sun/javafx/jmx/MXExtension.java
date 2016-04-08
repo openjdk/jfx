@@ -36,10 +36,14 @@ public abstract class MXExtension {
 
     public static void initializeIfAvailable() {
         try {
-            final Class<MXExtension> mxExtensionClass =
-                    (Class<MXExtension>) Class.forName(EXTENSION_CLASS_NAME);
-
-            final MXExtension mxExtension = mxExtensionClass.newInstance();
+            final ClassLoader loader = MXExtension.class.getClassLoader();
+            final Class<?> mxExtensionClass =
+                    Class.forName(EXTENSION_CLASS_NAME, false, loader);
+            if (!MXExtension.class.isAssignableFrom(mxExtensionClass)) {
+                throw new IllegalArgumentException("Unrecognized MXExtension class: "
+                        + EXTENSION_CLASS_NAME);
+            }
+            final MXExtension mxExtension = (MXExtension)mxExtensionClass.newInstance();
             mxExtension.intialize();
         } catch (final Exception e) {
             Logging.getJavaFXLogger().info(
