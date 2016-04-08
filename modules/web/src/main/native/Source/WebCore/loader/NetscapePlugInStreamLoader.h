@@ -50,7 +50,7 @@ protected:
 
 class NetscapePlugInStreamLoader : public ResourceLoader {
 public:
-    static PassRefPtr<NetscapePlugInStreamLoader> create(Frame*, NetscapePlugInStreamLoaderClient*, const ResourceRequest&);
+    static PassRefPtr<NetscapePlugInStreamLoader> create(DocumentLoader*, NetscapePlugInStreamLoaderClient*, const ResourceRequest&);
     virtual ~NetscapePlugInStreamLoader();
 
     bool isDone() const;
@@ -64,7 +64,7 @@ private:
 
     virtual void releaseResources() override;
 
-    NetscapePlugInStreamLoader(Frame*, NetscapePlugInStreamLoaderClient*);
+    NetscapePlugInStreamLoader(DocumentLoader*, NetscapePlugInStreamLoaderClient*);
 
     virtual void willCancel(const ResourceError&) override;
     virtual void didCancel(const ResourceError&) override;

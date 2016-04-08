@@ -53,14 +53,14 @@
 
 namespace WebCore {
 
-ResourceLoader::ResourceLoader(Frame* frame, ResourceLoaderOptions options)
-    : m_frame(frame)
-    , m_documentLoader(frame->loader().activeDocumentLoader())
+ResourceLoader::ResourceLoader(DocumentLoader* documentLoader, ResourceLoaderOptions options)
+    : m_frame(documentLoader->frame())
+    , m_documentLoader(documentLoader)
     , m_identifier(0)
     , m_reachedTerminalState(false)
     , m_notifiedLoadComplete(false)
     , m_cancellationStatus(NotCancelled)
-    , m_defersLoading(frame->page()->defersLoading())
+    , m_defersLoading(m_frame->page()->defersLoading())
     , m_options(options)
 {
 }

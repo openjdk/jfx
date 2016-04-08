@@ -39,12 +39,13 @@ namespace WebCore {
 class CachedResource;
 class CachedResourceLoader;
 class Document;
+class DocumentLoader;
 class PageActivityAssertionToken;
 class ResourceRequest;
 
 class SubresourceLoader : public ResourceLoader {
 public:
-    static PassRefPtr<SubresourceLoader> create(Frame*, CachedResource*, const ResourceRequest&, const ResourceLoaderOptions&);
+    static PassRefPtr<SubresourceLoader> create(DocumentLoader*, CachedResource*, const ResourceRequest&, const ResourceLoaderOptions&);
 
     virtual ~SubresourceLoader();
 
@@ -60,7 +61,7 @@ public:
 #endif
 
 private:
-    SubresourceLoader(Frame*, CachedResource*, const ResourceLoaderOptions&);
+    SubresourceLoader(DocumentLoader*, CachedResource*, const ResourceLoaderOptions&);
 
     virtual bool init(const ResourceRequest&) override;
 
