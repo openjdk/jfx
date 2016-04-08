@@ -36,6 +36,7 @@
 #include "FrameLoadRequest.h"
 #include "FrameLoaderClientJava.h"
 #include "FrameView.h"
+#include "GCController.h"
 #include "GraphicsContext.h"
 #include "HTMLFormElement.h"
 #include "IconController.h"
@@ -2217,6 +2218,12 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkWorkerThreadCount
   (JNIEnv* env, jclass)
 {
     return WorkerThread::workerThreadCount();
+}
+
+JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection
+  (JNIEnv*, jclass)
+{
+    gcController().garbageCollectNow();
 }
 
 #ifdef __cplusplus

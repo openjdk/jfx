@@ -3905,13 +3905,13 @@ public class TreeTableViewTest {
                     treeTableView.scrollTo(5);
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
-                        assertEquals(useFixedCellSize ? 2 : 5, rt_35395_counter);
+                        assertEquals(useFixedCellSize ? 5 : 5, rt_35395_counter);
                         rt_35395_counter = 0;
                         treeTableView.scrollTo(55);
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
 
-                            assertEquals(useFixedCellSize ? 10 : 59, rt_35395_counter);
+                            assertEquals(useFixedCellSize ? 7 : 59, rt_35395_counter);
                             sl.dispose();
                         });
                     });

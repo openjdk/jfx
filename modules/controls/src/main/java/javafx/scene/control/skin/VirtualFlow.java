@@ -987,7 +987,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
-            for (int i=0; i<cells.size(); i++) {
+            for (int i = 0, max = cells.size(); i < max; i++) {
                 cells.get(i).updateIndex(-1);
             }
             addAllToPile();
@@ -1302,38 +1302,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 pile.remove(i);
                 break;
             }
-            cell = null;
+        }
+
+        if (cell == null && !pile.isEmpty()) {
+            cell = pile.removeLast();
         }
 
         if (cell == null) {
-            if (pile.size() > 0) {
-                // we try to get a cell with an index that is the same even/odd
-                // as the prefIndex. This saves us from having to run so much
-                // css on the cell as it will not change from even to odd, or
-                // vice versa
-                final boolean prefIndexIsEven = (prefIndex & 1) == 0;
-                for (int i = 0, max = pile.size(); i < max; i++) {
-                    final T c = pile.get(i);
-                    final int cellIndex = getCellIndex(c);
-
-                    if ((cellIndex & 1) == 0 && prefIndexIsEven) {
-                        cell = c;
-                        pile.remove(i);
-                        break;
-                    } else if ((cellIndex & 1) == 1 && ! prefIndexIsEven) {
-                        cell = c;
-                        pile.remove(i);
-                        break;
-                    }
-                }
-
-                if (cell == null) {
-                    cell = pile.removeFirst();
-                }
-            } else {
-                cell = getCellFactory().call(this);
-                cell.getProperties().put(NEW_CELL, null);
-            }
+            cell = getCellFactory().call(this);
+            cell.getProperties().put(NEW_CELL, null);
         }
 
         if (cell.getParent() == null) {

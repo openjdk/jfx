@@ -64,12 +64,12 @@ SubresourceLoader::RequestCountTracker::~RequestCountTracker()
     m_cachedResourceLoader->decrementRequestCount(m_resource);
 }
 
-SubresourceLoader::SubresourceLoader(Frame* frame, CachedResource* resource, const ResourceLoaderOptions& options)
-    : ResourceLoader(frame, options)
+SubresourceLoader::SubresourceLoader(DocumentLoader* documentLoader, CachedResource* resource, const ResourceLoaderOptions& options)
+    : ResourceLoader(documentLoader, options)
     , m_resource(resource)
     , m_loadingMultipartContent(false)
     , m_state(Uninitialized)
-    , m_requestCountTracker(adoptPtr(new RequestCountTracker(frame->document()->cachedResourceLoader(), resource)))
+    , m_requestCountTracker(adoptPtr(new RequestCountTracker(&documentLoader->cachedResourceLoader(), resource)))
 {
 #ifndef NDEBUG
     subresourceLoaderCounter.increment();
@@ -85,9 +85,9 @@ SubresourceLoader::~SubresourceLoader()
 #endif
 }
 
-PassRefPtr<SubresourceLoader> SubresourceLoader::create(Frame* frame, CachedResource* resource, const ResourceRequest& request, const ResourceLoaderOptions& options)
+PassRefPtr<SubresourceLoader> SubresourceLoader::create(DocumentLoader* documentLoader, CachedResource* resource, const ResourceRequest& request, const ResourceLoaderOptions& options)
 {
-    RefPtr<SubresourceLoader> subloader(adoptRef(new SubresourceLoader(frame, resource, options)));
+    RefPtr<SubresourceLoader> subloader(adoptRef(new SubresourceLoader(documentLoader, resource, options)));
 #if PLATFORM(IOS)
     if (!applicationIsWebProcess()) {
         // On iOS, do not invoke synchronous resource load delegates while resource load scheduling

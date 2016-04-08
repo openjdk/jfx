@@ -95,7 +95,7 @@ PluginStream::~PluginStream()
 void PluginStream::start()
 {
     ASSERT(!m_loadManually);
-    m_loader = resourceLoadScheduler()->schedulePluginStreamLoad(m_frame, this, m_resourceRequest);
+    m_loader = resourceLoadScheduler()->schedulePluginStreamLoad(m_frame->loader().activeDocumentLoader(), this, m_resourceRequest);
 }
 
 void PluginStream::stop()

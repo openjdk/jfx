@@ -155,7 +155,7 @@ public:
     void setDataBufferingPolicy(DataBufferingPolicy);
 
 protected:
-    ResourceLoader(Frame*, ResourceLoaderOptions);
+    ResourceLoader(DocumentLoader*, ResourceLoaderOptions);
 
     friend class ResourceLoadScheduler; // for access to start()
     // start() actually sends the load to the network (unless the load is being

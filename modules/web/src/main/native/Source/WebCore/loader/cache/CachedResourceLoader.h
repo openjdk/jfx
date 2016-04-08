@@ -110,6 +110,8 @@ public:
     Frame* frame() const; // Can be null
     Document* document() const { return m_document; } // Can be null
     void setDocument(Document* document) { m_document = document; }
+
+    DocumentLoader* documentLoader() const { return m_documentLoader; }
     void clearDocumentLoader() { m_documentLoader = 0; }
 
     void removeCachedResource(CachedResource*) const;

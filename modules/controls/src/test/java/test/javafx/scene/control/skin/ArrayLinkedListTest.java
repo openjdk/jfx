@@ -87,8 +87,8 @@ public class ArrayLinkedListTest {
     @Test public void testArrayLinkedList_Empty_GetResultsInArrayIndexOutOfBounds() {
         try {
             list.get(0);
-            assertTrue("get didn't return an ArrayIndexOutOfBoundsException", false);
-        } catch (ArrayIndexOutOfBoundsException e) {
+            assertTrue("get didn't return an IndexOutOfBoundsException", false);
+        } catch (IndexOutOfBoundsException e) {
             assertTrue(true);
         }
     }
@@ -104,8 +104,8 @@ public class ArrayLinkedListTest {
     @Test public void testArrayLinkedList_Empty_RemoveResultsInArrayIndexOutOfBounds() {
         try {
             list.remove(0);
-            assertTrue("remove didn't return an ArrayIndexOutOfBoundsException", false);
-        } catch (ArrayIndexOutOfBoundsException e) {
+            assertTrue("remove didn't return an IndexOutOfBoundsException", false);
+        } catch (IndexOutOfBoundsException e) {
             assertTrue(true);
         }
     }

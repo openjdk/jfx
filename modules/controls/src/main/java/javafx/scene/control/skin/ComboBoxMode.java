@@ -27,6 +27,8 @@ package javafx.scene.control.skin;
 
 /**
  * Indicates what the look of the ColorPicker control should be.
+ *
+ * @since 9
  */
 enum ComboBoxMode {
 

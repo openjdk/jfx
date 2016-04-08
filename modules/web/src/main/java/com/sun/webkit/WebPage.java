@@ -142,6 +142,17 @@ public final class WebPage {
         });
     }
 
+    private static boolean firstWebPageCreated = false;
+
+    private static void collectJSCGarbages() {
+        Invoker.getInvoker().checkEventThread();
+        // Add dummy object to get notification as soon as it is collected
+        // by the JVM GC.
+        Disposer.addRecord(new Object(), WebPage::collectJSCGarbages);
+        // Invoke JavaScriptCore GC.
+        twkDoJSCGarbageCollection();
+    }
+
     public WebPage(WebPageClient pageClient,
                    UIClient uiClient,
                    PolicyClient policyClient,
@@ -173,6 +184,13 @@ public final class WebPage {
         if (pageClient != null && pageClient.isBackBufferSupported()) {
             backbuffer = pageClient.createBackBuffer();
             backbuffer.ref();
+        }
+
+        if (!firstWebPageCreated) {
+            // Add dummy object to get notification as soon as it is collected
+            // by the JVM GC.
+            Disposer.addRecord(new Object(), WebPage::collectJSCGarbages);
+            firstWebPageCreated = true;
         }
     }
 
@@ -2559,4 +2577,5 @@ public final class WebPage {
     private native void twkDisconnectInspectorFrontend(long pPage);
     private native void twkDispatchInspectorMessageFromFrontend(long pPage,
                                                                 String message);
+    private static native void twkDoJSCGarbageCollection();
 }

@@ -108,9 +108,9 @@ ResourceLoadScheduler::~ResourceLoadScheduler()
 {
 }
 
-PassRefPtr<SubresourceLoader> ResourceLoadScheduler::scheduleSubresourceLoad(Frame* frame, CachedResource* resource, const ResourceRequest& request, ResourceLoadPriority priority, const ResourceLoaderOptions& options)
+PassRefPtr<SubresourceLoader> ResourceLoadScheduler::scheduleSubresourceLoad(DocumentLoader* documentLoader, CachedResource* resource, const ResourceRequest& request, ResourceLoadPriority priority, const ResourceLoaderOptions& options)
 {
-    RefPtr<SubresourceLoader> loader = SubresourceLoader::create(frame, resource, request, options);
+    RefPtr<SubresourceLoader> loader = SubresourceLoader::create(documentLoader, resource, request, options);
     if (loader)
         scheduleLoad(loader.get(), priority);
 #if PLATFORM(IOS)
@@ -125,9 +125,9 @@ PassRefPtr<SubresourceLoader> ResourceLoadScheduler::scheduleSubresourceLoad(Fra
     return loader.release();
 }
 
-PassRefPtr<NetscapePlugInStreamLoader> ResourceLoadScheduler::schedulePluginStreamLoad(Frame* frame, NetscapePlugInStreamLoaderClient* client, const ResourceRequest& request)
+PassRefPtr<NetscapePlugInStreamLoader> ResourceLoadScheduler::schedulePluginStreamLoad(DocumentLoader* documentLoader, NetscapePlugInStreamLoaderClient* client, const ResourceRequest& request)
 {
-    PassRefPtr<NetscapePlugInStreamLoader> loader = NetscapePlugInStreamLoader::create(frame, client, request);
+    PassRefPtr<NetscapePlugInStreamLoader> loader = NetscapePlugInStreamLoader::create(documentLoader, client, request);
     if (loader)
         scheduleLoad(loader.get(), ResourceLoadPriorityLow);
     return loader;

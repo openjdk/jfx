@@ -44,14 +44,15 @@ class NetscapePlugInStreamLoaderClient;
 class ResourceLoader;
 class ResourceRequest;
 class SubresourceLoader;
+class DocumentLoader;
 
 class ResourceLoadScheduler {
     WTF_MAKE_NONCOPYABLE(ResourceLoadScheduler); WTF_MAKE_FAST_ALLOCATED;
 public:
     friend ResourceLoadScheduler* resourceLoadScheduler();
 
-    virtual PassRefPtr<SubresourceLoader> scheduleSubresourceLoad(Frame*, CachedResource*, const ResourceRequest&, ResourceLoadPriority, const ResourceLoaderOptions&);
-    virtual PassRefPtr<NetscapePlugInStreamLoader> schedulePluginStreamLoad(Frame*, NetscapePlugInStreamLoaderClient*, const ResourceRequest&);
+    virtual PassRefPtr<SubresourceLoader> scheduleSubresourceLoad(DocumentLoader*, CachedResource*, const ResourceRequest&, ResourceLoadPriority, const ResourceLoaderOptions&);
+    virtual PassRefPtr<NetscapePlugInStreamLoader> schedulePluginStreamLoad(DocumentLoader*, NetscapePlugInStreamLoaderClient*, const ResourceRequest&);
     virtual void remove(ResourceLoader*);
     virtual void crossOriginRedirectReceived(ResourceLoader*, const URL& redirectURL);
 

@@ -86,7 +86,7 @@ public class ErrorLoggingUtiltity {
     public void check(Level expectedLevel, Class expectedException) {
         assertNotNull(lastRecord);
         assertEquals(expectedLevel, lastRecord.getLevel());
-        assertEquals(expectedException, lastRecord.getThrown().getClass());
+        assertTrue(expectedException.isAssignableFrom(lastRecord.getThrown().getClass()));
         reset();
     }
 
