@@ -143,12 +143,12 @@ public class DatePickerContent extends VBox {
                 // number of columns. GridPane doesn't do this with percentage
                 // width constraints. See GridPane.adjustColumnWidths().
                 final int nCols = daysPerWeek + (datePicker.isShowWeekNumbers() ? 1 : 0);
-                final double snaphgap = snapSpace(getHgap());
-                final double left = snapSpace(getInsets().getLeft());
-                final double right = snapSpace(getInsets().getRight());
+                final double snaphgap = snapSpaceX(getHgap());
+                final double left = snapSpaceX(getInsets().getLeft());
+                final double right = snapSpaceX(getInsets().getRight());
                 final double hgaps = snaphgap * (nCols - 1);
                 final double contentWidth = width - left - right - hgaps;
-                return ((snapSize(contentWidth / nCols)) * nCols) + left + right + hgaps;
+                return ((snapSizeX(contentWidth / nCols)) * nCols) + left + right + hgaps;
             }
 
             @Override protected void layoutChildren() {

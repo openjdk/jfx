@@ -113,10 +113,11 @@ public class QueuedPixelSource implements PixelSource {
      *
      * @param w the width of the desired Pixels object
      * @param h the height of the desired Pixels object
-     * @param scale the scale of the desired Pixels object
+     * @param scalex the horizontal scale of the desired Pixels object
+     * @param scaley the vertical scale of the desired Pixels object
      * @return an unused {@code Pixels} object
      */
-    public synchronized Pixels getUnusedPixels(int w, int h, float scale) {
+    public synchronized Pixels getUnusedPixels(int w, int h, float scalex, float scaley) {
         int i = 0;
         IntBuffer reuseBuffer = null;
         while (i < saved.size()) {
@@ -132,7 +133,8 @@ public class QueuedPixelSource implements PixelSource {
             }
             if (p.getWidthUnsafe() == w &&
                 p.getHeightUnsafe() == h &&
-                p.getScaleUnsafe() == scale)
+                p.getScaleXUnsafe() == scalex &&
+                p.getScaleYUnsafe() == scaley)
             {
                 return p;
             }
@@ -155,7 +157,7 @@ public class QueuedPixelSource implements PixelSource {
                 reuseBuffer = IntBuffer.allocate(bufsize);
             }
         }
-        Pixels p = Application.GetApplication().createPixels(w, h, reuseBuffer, scale);
+        Pixels p = Application.GetApplication().createPixels(w, h, reuseBuffer, scalex, scaley);
         saved.add(new WeakReference<>(p));
         return p;
     }

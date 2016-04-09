@@ -621,12 +621,12 @@ public abstract class Application {
 
     public abstract Pixels createPixels(int width, int height, ByteBuffer data);
     public abstract Pixels createPixels(int width, int height, IntBuffer data);
-    public abstract Pixels createPixels(int width, int height, IntBuffer data, float scale);
+    public abstract Pixels createPixels(int width, int height, IntBuffer data, float scalex, float scaley);
     protected abstract int staticPixels_getNativeFormat();
 
     /* utility method called from native code */
-    static Pixels createPixels(int width, int height, int[] data, float scale) {
-        return Application.GetApplication().createPixels(width, height, IntBuffer.wrap(data), scale);
+    static Pixels createPixels(int width, int height, int[] data, float scalex, float scaley) {
+        return Application.GetApplication().createPixels(width, height, IntBuffer.wrap(data), scalex, scaley);
     }
 
     /* utility method called from native code */
@@ -636,8 +636,11 @@ public abstract class Application {
         for (Screen s : Screen.getScreens()) {
             final int sx = s.getX(), sy = s.getY(), sw = s.getWidth(), sh = s.getHeight();
             if (x < (sx + sw) && (x + w) > sx && y < (sy + sh) && (y + h) > sy) {
-                if (scale < s.getRenderScale()) {
-                    scale = s.getRenderScale();
+                if (scale < s.getRecommendedOutputScaleX()) {
+                    scale = s.getRecommendedOutputScaleX();
+                }
+                if (scale < s.getRecommendedOutputScaleY()) {
+                    scale = s.getRecommendedOutputScaleY();
                 }
             }
         }

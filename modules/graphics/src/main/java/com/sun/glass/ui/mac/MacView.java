@@ -26,6 +26,7 @@ package com.sun.glass.ui.mac;
 
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
+import com.sun.glass.ui.Window;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -81,26 +82,51 @@ final class MacView extends View {
     @Override protected void _uploadPixels(long ptr, Pixels pixels) {
         Buffer data = pixels.getPixels();
         if (data.isDirect() == true) {
-            _uploadPixelsDirect(ptr, data, pixels.getWidth(), pixels.getHeight(), pixels.getScale());
+            _uploadPixelsDirect(ptr, data, pixels.getWidth(), pixels.getHeight(), pixels.getScaleX(), pixels.getScaleY());
         } else if (data.hasArray() == true) {
             if (pixels.getBytesPerComponent() == 1) {
                 ByteBuffer bytes = (ByteBuffer)data;
                 _uploadPixelsByteArray(ptr, bytes.array(), bytes.arrayOffset(),
-                                       pixels.getWidth(), pixels.getHeight(), pixels.getScale());
+                                       pixels.getWidth(), pixels.getHeight(), pixels.getScaleX(), pixels.getScaleY());
             } else {
                 IntBuffer ints = (IntBuffer)data;
                 _uploadPixelsIntArray(ptr, ints.array(), ints.arrayOffset(),
-                                      pixels.getWidth(), pixels.getHeight(), pixels.getScale());
+                                      pixels.getWidth(), pixels.getHeight(), pixels.getScaleX(), pixels.getScaleY());
             }
         } else {
             // gznote: what are the circumstances under which this can happen?
             _uploadPixelsDirect(ptr, pixels.asByteBuffer(),
-                                pixels.getWidth(), pixels.getHeight(), pixels.getScale());
+                                pixels.getWidth(), pixels.getHeight(), pixels.getScaleX(), pixels.getScaleY());
         }
     }
-    native void _uploadPixelsDirect(long viewPtr, Buffer pixels, int width, int height, float scale);
-    native void _uploadPixelsByteArray(long viewPtr, byte[] pixels, int offset, int width, int height, float scale);
-    native void _uploadPixelsIntArray(long viewPtr, int[] pixels, int offset, int width, int height, float scale);
+    native void _uploadPixelsDirect(long viewPtr, Buffer pixels, int width, int height, float scaleX, float scaleY);
+    native void _uploadPixelsByteArray(long viewPtr, byte[] pixels, int offset, int width, int height, float scaleX, float scaleY);
+    native void _uploadPixelsIntArray(long viewPtr, int[] pixels, int offset, int width, int height, float scaleX, float scaleY);
+
+    @Override
+    protected void notifyResize(int width, int height) {
+        Window w = getWindow();
+        float sx = (w == null) ? 1.0f : w.getPlatformScaleX();
+        float sy = (w == null) ? 1.0f : w.getPlatformScaleY();
+        width = Math.round(width * sx);
+        height = Math.round(height * sy);
+        super.notifyResize(width, height);
+    }
+
+    @Override
+    protected void notifyMouse(int type, int button, int x, int y, int xAbs,
+                               int yAbs, int modifiers, boolean isPopupTrigger,
+                               boolean isSynthesized) {
+        Window w = getWindow();
+        float sx = (w == null) ? 1.0f : w.getPlatformScaleX();
+        float sy = (w == null) ? 1.0f : w.getPlatformScaleY();
+        x = Math.round(x * sx);
+        y = Math.round(y * sy);
+        xAbs = Math.round(xAbs * sx);
+        yAbs = Math.round(yAbs * sy);
+        super.notifyMouse(type, button, x, y, xAbs, yAbs, modifiers,
+                          isPopupTrigger, isSynthesized);
+    }
 
     @Override protected long _getNativeView(long ptr) {
         return ptr;

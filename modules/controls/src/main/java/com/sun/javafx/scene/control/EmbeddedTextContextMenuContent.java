@@ -109,13 +109,13 @@ public class EmbeddedTextContextMenuContent extends StackPane {
     }
 
     @Override protected double computePrefHeight(double width) {
-        final double pointerHeight = snapSize(pointer.prefHeight(width));
-        final double menuBoxHeight = snapSize(menuBox.prefHeight(width));
+        final double pointerHeight = snapSizeY(pointer.prefHeight(width));
+        final double menuBoxHeight = snapSizeY(menuBox.prefHeight(width));
         return snappedTopInset() + pointerHeight + menuBoxHeight + snappedBottomInset();
     }
 
     @Override protected double computePrefWidth(double height) {
-        final double menuBoxWidth = snapSize(menuBox.prefWidth(height));
+        final double menuBoxWidth = snapSizeX(menuBox.prefWidth(height));
         return snappedLeftInset() + menuBoxWidth + snappedRightInset();
     }
 
@@ -124,10 +124,10 @@ public class EmbeddedTextContextMenuContent extends StackPane {
         final double right = snappedRightInset();
         final double top = snappedTopInset();
         final double width = getWidth() - (left + right);
-        final double pointerWidth = snapSize(Utils.boundedSize(pointer.prefWidth(-1), pointer.minWidth(-1), pointer.maxWidth(-1)));
-        final double pointerHeight = snapSize(Utils.boundedSize(pointer.prefWidth(-1), pointer.minWidth(-1), pointer.maxWidth(-1)));
-        final double menuBoxWidth = snapSize(Utils.boundedSize(menuBox.prefWidth(-1), menuBox.minWidth(-1), menuBox.maxWidth(-1)));
-        final double menuBoxHeight = snapSize(Utils.boundedSize(menuBox.prefWidth(-1), menuBox.minWidth(-1), menuBox.maxWidth(-1)));
+        final double pointerWidth = snapSizeX(Utils.boundedSize(pointer.prefWidth(-1), pointer.minWidth(-1), pointer.maxWidth(-1)));
+        final double pointerHeight = snapSizeY(Utils.boundedSize(pointer.prefWidth(-1), pointer.minWidth(-1), pointer.maxWidth(-1)));
+        final double menuBoxWidth = snapSizeX(Utils.boundedSize(menuBox.prefWidth(-1), menuBox.minWidth(-1), menuBox.maxWidth(-1)));
+        final double menuBoxHeight = snapSizeY(Utils.boundedSize(menuBox.prefWidth(-1), menuBox.minWidth(-1), menuBox.maxWidth(-1)));
         double sceneX = 0;
         double screenX = 0;
         double pointerX = 0;

@@ -575,8 +575,8 @@ public abstract class Control extends Region implements Skinnable {
         if (skinBase != null) {
             final double x = snappedLeftInset();
             final double y = snappedTopInset();
-            final double w = snapSize(getWidth()) - x - snappedRightInset();
-            final double h = snapSize(getHeight()) - y - snappedBottomInset();
+            final double w = snapSizeX(getWidth()) - x - snappedRightInset();
+            final double h = snapSizeY(getHeight()) - y - snappedBottomInset();
             skinBase.layoutChildren(x, y, w, h);
         } else {
             Node n = getSkinNode();

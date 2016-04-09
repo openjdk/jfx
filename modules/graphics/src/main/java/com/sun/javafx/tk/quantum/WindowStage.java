@@ -277,69 +277,130 @@ class WindowStage extends GlassStage {
 
     @Override public void setBounds(float x, float y, boolean xSet, boolean ySet,
                                     float w, float h, float cw, float ch,
-                                    float xGravity, float yGravity)
+                                    float xGravity, float yGravity,
+                                    float renderScaleX, float renderScaleY)
     {
+        if (renderScaleX > 0.0 || renderScaleY > 0.0) {
+            // We set the render scale first since the call to setBounds()
+            // below can induce a recursive update on the scales if it moves
+            // the window to a new screen and we will then end up being called
+            // back with a new scale.  We do not want to set these old scale
+            // values after that recursion happens.
+            if (renderScaleX > 0.0) {
+                platformWindow.setRenderScaleX(renderScaleX);
+            }
+            if (renderScaleY > 0.0) {
+                platformWindow.setRenderScaleY(renderScaleY);
+            }
+            ViewScene vscene = getViewScene();
+            if (vscene != null) {
+                vscene.updateSceneState();
+                vscene.entireSceneNeedsRepaint();
+            }
+        }
         if (isAppletStage) {
             xSet = ySet = false;
         }
-        float pScale = platformWindow.getPlatformScale();
+        float pScaleX = platformWindow.getPlatformScaleX();
+        float pScaleY = platformWindow.getPlatformScaleY();
         int px, py;
         if (xSet || ySet) {
             Screen screen = platformWindow.getScreen();
             List<Screen> screens = Screen.getScreens();
             if (screens.size() > 1) {
-                float wx = xSet ? x : platformWindow.getX();
-                float wy = ySet ? y : platformWindow.getY();
-                float relx = screen.getX() + screen.getWidth() / 2.0f - wx;
-                float rely = screen.getY() + screen.getHeight()/ 2.0f - wy;
-                float distsq = relx * relx + rely * rely;
-                for (Screen s : Screen.getScreens()) {
-                    relx = s.getX() + s.getWidth() / 2.0f - wx;
-                    rely = s.getY() + s.getHeight()/ 2.0f - wy;
-                    float distsq2 = relx * relx + rely * rely;
-                    if (distsq2 < distsq) {
-                        screen = s;
-                        distsq = distsq2;
+                float winfxW = (w > 0) ? w : (platformWindow.getWidth() / pScaleX);
+                float winfxH = (h > 0) ? h : (platformWindow.getHeight()/ pScaleY);
+                float winfxX = xSet ? x :
+                        screen.getX() + (platformWindow.getX() - screen.getPlatformX()) / pScaleX;
+                float winfxY = ySet ? y :
+                        screen.getY() + (platformWindow.getY() - screen.getPlatformY()) / pScaleY;
+                float winfxCX = winfxX + winfxW/2f;
+                float winfxCY = winfxY + winfxH/2f;
+                // If the center point of the window (winfxCX,Y) is on any
+                // screen, then use that screen.  Otherwise, use the screen
+                // whose center is closest to the window center.
+                int scrX = screen.getX();
+                int scrY = screen.getY();
+                int scrW = screen.getWidth();
+                int scrH = screen.getHeight();
+                if (winfxCX < scrX ||
+                    winfxCY < scrY ||
+                    winfxCX >= scrX + scrW ||
+                    winfxCY >= scrY + scrH)
+                {
+                    float relx = scrX + scrW / 2.0f - winfxCX;
+                    float rely = scrY + scrH / 2.0f - winfxCY;
+                    float distsq = relx * relx + rely * rely;
+                    for (Screen s : Screen.getScreens()) {
+                        scrX = s.getX();
+                        scrY = s.getY();
+                        scrW = s.getWidth();
+                        scrH = s.getHeight();
+                        if (winfxCX >= scrX &&
+                            winfxCY >= scrY &&
+                            winfxCX < scrX + scrW &&
+                            winfxCY < scrY + scrH)
+                        {
+                            screen = s;
+                            break;
+                        }
+                        relx = scrX + scrW / 2.0f - winfxCX;
+                        rely = scrY + scrH / 2.0f - winfxCY;
+                        float distsq2 = relx * relx + rely * rely;
+                        if (distsq2 < distsq) {
+                            screen = s;
+                            distsq = distsq2;
+                        }
                     }
                 }
             }
             float sx = screen == null ? 0 : screen.getX();
             float sy = screen == null ? 0 : screen.getY();
-            px = xSet ? Math.round(sx + (x - sx) * pScale) : 0;
-            py = ySet ? Math.round(sy + (y - sy) * pScale) : 0;
+            float sScaleX = screen.getPlatformScaleX();
+            float sScaleY = screen.getPlatformScaleY();
+            px = xSet ? Math.round(screen.getPlatformX() + (x - sx) * sScaleX) : 0;
+            py = ySet ? Math.round(screen.getPlatformY() + (y - sy) * sScaleY) : 0;
         } else {
             px = py = 0;
         }
-        int pw = (int) (w > 0 ? Math.ceil(w * pScale) : w);
-        int ph = (int) (h > 0 ? Math.ceil(h * pScale) : h);
-        int pcw = (int) (cw > 0 ? Math.ceil(cw * pScale) : cw);
-        int pch = (int) (ch > 0 ? Math.ceil(ch * pScale) : ch);
+        int pw = (int) (w > 0 ? Math.ceil(w * pScaleX) : w);
+        int ph = (int) (h > 0 ? Math.ceil(h * pScaleY) : h);
+        int pcw = (int) (cw > 0 ? Math.ceil(cw * pScaleX) : cw);
+        int pch = (int) (ch > 0 ? Math.ceil(ch * pScaleY) : ch);
         platformWindow.setBounds(px, py, xSet, ySet,
                                  pw, ph, pcw, pch,
                                  xGravity, yGravity);
     }
 
     @Override
-    public float getUIScale() {
-        return platformWindow.getPlatformScale();
+    public float getPlatformScaleX() {
+        return platformWindow.getPlatformScaleX();
     }
 
     @Override
-    public float getRenderScale() {
-        return platformWindow.getRenderScale();
+    public float getPlatformScaleY() {
+        return platformWindow.getPlatformScaleY();
+    }
+
+    @Override
+    public float getOutputScaleX() {
+        return platformWindow.getOutputScaleX();
+    }
+
+    @Override
+    public float getOutputScaleY() {
+        return platformWindow.getOutputScaleY();
     }
 
     @Override public void setMinimumSize(int minWidth, int minHeight) {
-        float pScale = platformWindow.getPlatformScale();
-        minWidth  = (int) Math.ceil(minWidth  * pScale);
-        minHeight = (int) Math.ceil(minHeight * pScale);
+        minWidth  = (int) Math.ceil(minWidth  * getPlatformScaleX());
+        minHeight = (int) Math.ceil(minHeight * getPlatformScaleY());
         platformWindow.setMinimumSize(minWidth, minHeight);
     }
 
     @Override public void setMaximumSize(int maxWidth, int maxHeight) {
-        float pScale = platformWindow.getPlatformScale();
-        maxWidth  = (int) Math.ceil(maxWidth  * pScale);
-        maxHeight = (int) Math.ceil(maxHeight * pScale);
+        maxWidth  = (int) Math.ceil(maxWidth  * getPlatformScaleX());
+        maxHeight = (int) Math.ceil(maxHeight * getPlatformScaleY());
         platformWindow.setMaximumSize(maxWidth, maxHeight);
     }
 

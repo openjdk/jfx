@@ -193,7 +193,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     clazz = env->FindClass("com/sun/glass/ui/Screen");
     if (env->ExceptionCheck()) return JNI_ERR;
     jScreenCls = (jclass) env->NewGlobalRef(clazz);
-    jScreenInit = env->GetMethodID(jScreenCls, "<init>", "(JIIIIIIIIIIIF)V");
+    jScreenInit = env->GetMethodID(jScreenCls, "<init>", "(JIIIIIIIIIIIIIIIFFFF)V");
     if (env->ExceptionCheck()) return JNI_ERR;
     jScreenNotifySettingsChanged = env->GetStaticMethodID(jScreenCls, "notifySettingsChanged", "()V");
     if (env->ExceptionCheck()) return JNI_ERR;

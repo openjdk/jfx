@@ -802,7 +802,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
     jApplicationClass = (*env)->NewGlobalRef(env, jClass);
 
     javaIDs.Application.createPixels = (*env)->GetStaticMethodID(
-            env, jClass, "createPixels", "(II[IF)Lcom/sun/glass/ui/Pixels;");
+            env, jClass, "createPixels", "(II[IFF)Lcom/sun/glass/ui/Pixels;");
     if ((*env)->ExceptionCheck(env)) return;
 
     javaIDs.Application.getScaleFactor = (*env)->GetStaticMethodID(

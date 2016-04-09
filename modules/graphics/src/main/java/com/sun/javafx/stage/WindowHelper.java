@@ -56,6 +56,12 @@ public final class WindowHelper {
         windowAccessor.notifySizeChanged(window, width, height);
     }
 
+    public static void notifyScaleChanged(final Window window,
+                                          final double newOutputScaleX,
+                                          final double newOutputScaleY) {
+        windowAccessor.notifyScaleChanged(window, newOutputScaleX, newOutputScaleY);
+    }
+
     static AccessControlContext getAccessControlContext(Window window) {
         return windowAccessor.getAccessControlContext(window);
     }
@@ -79,8 +85,10 @@ public final class WindowHelper {
 
         void notifyScreenChanged(Window window, Object from, Object to);
 
-        float getUIScale(Window window);
-        float getRenderScale(Window window);
+        float getPlatformScaleX(Window window);
+        float getPlatformScaleY(Window window);
+
+        void notifyScaleChanged(Window window, double newOutputScaleX, double newOutputScaleY);
 
         ReadOnlyObjectProperty<Screen> screenProperty(Window window);
 

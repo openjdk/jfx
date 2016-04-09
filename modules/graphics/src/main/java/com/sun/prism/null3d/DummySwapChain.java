@@ -90,7 +90,13 @@ class DummySwapChain extends DummyResource implements Presentable {
         return 0;
     }
 
-    public float getPixelScaleFactor() {
+    @Override
+    public float getPixelScaleFactorX() {
+        return 1.0f;
+    }
+
+    @Override
+    public float getPixelScaleFactorY() {
         return 1.0f;
     }
 

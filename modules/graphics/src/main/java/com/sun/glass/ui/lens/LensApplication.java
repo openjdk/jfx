@@ -1682,8 +1682,8 @@ final class LensApplication extends Application {
     }
 
     @Override
-    public Pixels createPixels(int width, int height, IntBuffer data, float scale) {
-        return new LensPixels(width, height, data, scale);
+    public Pixels createPixels(int width, int height, IntBuffer data, float scalex, float scaley) {
+        return new LensPixels(width, height, data, scalex, scaley);
     }
 
     @Override

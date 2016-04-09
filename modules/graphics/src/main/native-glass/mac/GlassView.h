@@ -45,7 +45,7 @@
 // the graphics specifics APIs
 - (void)begin;
 - (void)end;
-- (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScale:(GLfloat)scale withEnv:(JNIEnv *)env;
+- (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScaleX:(GLfloat)scaleX withScaleY:(GLfloat)scaleY withEnv:(JNIEnv *)env;
 
 - (GlassViewDelegate*)delegate;
 - (void)setInputMethodEnabled:(BOOL)enabled;

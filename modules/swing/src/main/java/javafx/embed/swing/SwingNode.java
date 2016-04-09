@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -279,6 +279,22 @@ public class SwingNode extends Node {
 
     private List<Runnable> peerRequests = new ArrayList<>();
 
+    private static float getPlatformScaleX(Window win) {
+        return WindowHelper.getWindowAccessor().getPlatformScaleX(win);
+    }
+
+    private static float getPlatformScaleY(Window win) {
+        return WindowHelper.getWindowAccessor().getPlatformScaleY(win);
+    }
+
+    private float getPlatformScaleX() {
+        return getPlatformScaleX(getScene().getWindow());
+    }
+
+    private float getPlatformScaleY() {
+        return getPlatformScaleY(getScene().getWindow());
+    }
+
     /*
      * Called on EDT
      */
@@ -290,9 +306,10 @@ public class SwingNode extends Node {
     {
         Runnable r = () -> {
             Window win = getScene().getWindow();
-            float uiScale = WindowHelper.getWindowAccessor().getUIScale(win);
+            float uiScaleX = getPlatformScaleX(win);
+            float uiScaleY = getPlatformScaleY(win);
             peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h,
-                                w / uiScale, h / uiScale, linestride, scale);
+                                w / uiScaleX, h / uiScaleY, linestride, scale);
         };
         SwingFXUtils.runOnFxThread(() -> {
             if (peer != null) {
@@ -310,8 +327,9 @@ public class SwingNode extends Node {
     void setImageBounds(final int x, final int y, final int w, final int h) {
         Runnable r = () -> {
             Window win = getScene().getWindow();
-            float uiScale = WindowHelper.getWindowAccessor().getUIScale(win);
-            peer.setImageBounds(x, y, w, h, w / uiScale, h / uiScale);
+            float uiScaleX = getPlatformScaleX(win);
+            float uiScaleY = getPlatformScaleY(win);
+            peer.setImageBounds(x, y, w, h, w / uiScaleX, h / uiScaleY);
         };
         SwingFXUtils.runOnFxThread(() -> {
             if (peer != null) {
@@ -377,8 +395,7 @@ public class SwingNode extends Node {
      */
     @Override
     public double prefWidth(double height) {
-        float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
-        return swingPrefWidth / uiScale;
+        return swingPrefWidth / getPlatformScaleX();
     }
 
     /**
@@ -389,8 +406,7 @@ public class SwingNode extends Node {
      */
     @Override
     public double prefHeight(double width) {
-        float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
-        return swingPrefHeight / uiScale;
+        return swingPrefHeight / getPlatformScaleY();
     }
 
     /**
@@ -400,8 +416,7 @@ public class SwingNode extends Node {
      * @return the maximum width that the node should be resized to during layout
      */
     @Override public double maxWidth(double height) {
-        float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
-        return swingMaxWidth / uiScale;
+        return swingMaxWidth / getPlatformScaleX();
     }
 
     /**
@@ -411,8 +426,7 @@ public class SwingNode extends Node {
      * @return the maximum height that the node should be resized to during layout
      */
     @Override public double maxHeight(double width) {
-        float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
-        return swingMaxHeight / uiScale;
+        return swingMaxHeight / getPlatformScaleY();
     }
 
     /**
@@ -422,8 +436,7 @@ public class SwingNode extends Node {
      * @return the minimum width that the node should be resized to during layout
      */
     @Override public double minWidth(double height) {
-        float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
-        return swingMinWidth / uiScale;
+        return swingMinWidth / getPlatformScaleX();
     }
 
     /**
@@ -433,8 +446,7 @@ public class SwingNode extends Node {
      * @return the minimum height that the node should be resized to during layout
      */
     @Override public double minHeight(double width) {
-        float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
-        return swingMinHeight / uiScale;
+        return swingMinHeight / getPlatformScaleY();
     }
 
     /**
@@ -495,16 +507,23 @@ public class SwingNode extends Node {
     private void addWindowListeners(final Window window) {
         window.xProperty().addListener(locationListener);
         window.yProperty().addListener(locationListener);
+        window.widthProperty().addListener(locationListener);
+        window.heightProperty().addListener(locationListener);
+        window.renderScaleXProperty().addListener(locationListener);
         window.addEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
         window.showingProperty().addListener(windowVisibleListener);
 
-        this.scale = Math.round(WindowHelper.getWindowAccessor().getRenderScale(window));
+        // LW framework should be upgraded to separate X,Y scales...
+        this.scale = (int) Math.round(window.getRenderScaleX());
         setLwFrameScale(this.scale);
     }
 
     private void removeWindowListeners(final Window window) {
         window.xProperty().removeListener(locationListener);
         window.yProperty().removeListener(locationListener);
+        window.widthProperty().removeListener(locationListener);
+        window.heightProperty().removeListener(locationListener);
+        window.renderScaleXProperty().removeListener(locationListener);
         window.removeEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
         window.showingProperty().removeListener(windowVisibleListener);
     }
@@ -584,20 +603,21 @@ public class SwingNode extends Node {
             return;
         }
         Window w = getScene().getWindow();
-        float renderScale = WindowHelper.getWindowAccessor().getRenderScale(w);
-        float uiScale = WindowHelper.getWindowAccessor().getUIScale(w);
-        int lwScale = Math.round(renderScale);
+        float renderScaleX = (float) w.getRenderScaleX();
+        float uiScaleX = getPlatformScaleX(w);
+        float uiScaleY = getPlatformScaleY(w);
+        int lwScale = Math.round(renderScaleX);
         boolean sendScale = (this.scale != lwScale);
         this.scale = lwScale;
         final Point2D loc = localToScene(0, 0);
-        final int windowX = (int) (w.getX() * uiScale);
-        final int windowY = (int) (w.getY() * uiScale);
-        final int windowW = (int) (w.getWidth() * uiScale);
-        final int windowH = (int) (w.getHeight() * uiScale);
-        final int frameX = (int) Math.round((w.getX() + getScene().getX() + loc.getX()) * uiScale);
-        final int frameY = (int) Math.round((w.getY() + getScene().getY() + loc.getY()) * uiScale);
-        final int frameW = (int) (fxWidth * uiScale);
-        final int frameH = (int) (fxHeight * uiScale);
+        final int windowX = (int) (w.getX() * uiScaleX);
+        final int windowY = (int) (w.getY() * uiScaleY);
+        final int windowW = (int) (w.getWidth() * uiScaleX);
+        final int windowH = (int) (w.getHeight() * uiScaleY);
+        final int frameX = (int) Math.round((w.getX() + getScene().getX() + loc.getX()) * uiScaleX);
+        final int frameY = (int) Math.round((w.getY() + getScene().getY() + loc.getY()) * uiScaleY);
+        final int frameW = (int) (fxWidth * uiScaleX);
+        final int frameH = (int) (fxHeight * uiScaleY);
 
         SwingFXUtils.runOnEDT(() -> {
             if (lwFrame != null) {
@@ -881,11 +901,12 @@ public class SwingNode extends Node {
             int swingButton = SwingEvents.fxMouseButtonToMouseButton(event);
             long swingWhen = System.currentTimeMillis();
             Window win = getScene().getWindow();
-            float uiScale = WindowHelper.getWindowAccessor().getUIScale(win);
-            int relX = (int) Math.round(event.getX() * uiScale);
-            int relY = (int) Math.round(event.getY() * uiScale);
-            int absX = (int) Math.round(event.getScreenX() * uiScale);
-            int absY = (int) Math.round(event.getScreenY() * uiScale);
+            float uiScaleX = getPlatformScaleX(win);
+            float uiScaleY = getPlatformScaleY(win);
+            int relX = (int) Math.round(event.getX() * uiScaleX);
+            int relY = (int) Math.round(event.getY() * uiScaleY);
+            int absX = (int) Math.round(event.getScreenX() * uiScaleX);
+            int absY = (int) Math.round(event.getScreenY() * uiScaleY);
             java.awt.event.MouseEvent mouseEvent =
                     new java.awt.event.MouseEvent(
                         frame, swingID, swingWhen, swingModifiers,
@@ -929,9 +950,10 @@ public class SwingNode extends Node {
                 wheelRotation = signum;
             }
             Window w = getScene().getWindow();
-            float uiScale = WindowHelper.getWindowAccessor().getUIScale(w);
-            int x = (int) Math.round(fxX * uiScale);
-            int y = (int) Math.round(fxY * uiScale);
+            float uiScaleX = getPlatformScaleX(w);
+            float uiScaleY = getPlatformScaleY(w);
+            int x = (int) Math.round(fxX * uiScaleX);
+            int y = (int) Math.round(fxY * uiScaleY);
             MouseWheelEvent mouseWheelEvent =
                     new MouseWheelEvent(source, java.awt.event.MouseEvent.MOUSE_WHEEL,
                             System.currentTimeMillis(), swingModifiers, x, y, 0, 0,

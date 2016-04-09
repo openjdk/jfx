@@ -51,9 +51,6 @@ unsigned int GlassApplication::sm_mouseLLHookCounter = 0;
 HHOOK GlassApplication::sm_hMouseLLHook = NULL;
 
 jfloat GlassApplication::overrideUIScale = -1.0f;
-jfloat GlassApplication::overrideRenderScale = -1.0f;
-jfloat GlassApplication::minDPIScale = 1.0f;
-jboolean GlassApplication::forceIntegerRenderScale = JNI_TRUE;
 
 /* static */
 void GlassApplication::SetGlassClassLoader(JNIEnv *env, jobject classLoader)
@@ -370,13 +367,9 @@ BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
-  (JNIEnv *env, jclass cls,
-   jfloat overrideUIScale, jfloat overrideRenderScale, jfloat minDPIScale, jboolean forceIntegerRenderScale)
+  (JNIEnv *env, jclass cls, jfloat overrideUIScale)
 {
     GlassApplication::overrideUIScale = overrideUIScale;
-    GlassApplication::overrideRenderScale = overrideRenderScale;
-    GlassApplication::minDPIScale = minDPIScale;
-    GlassApplication::forceIntegerRenderScale = forceIntegerRenderScale;
 
     javaIDs.Application.reportExceptionMID =
         env->GetStaticMethodID(cls, "reportException", "(Ljava/lang/Throwable;)V");

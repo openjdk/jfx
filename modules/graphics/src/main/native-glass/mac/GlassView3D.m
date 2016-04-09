@@ -633,7 +633,7 @@
     [self->_delegate drawRect:dirtyRect];
 }
 
-- (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScale:(GLfloat)scale withEnv:(JNIEnv *)env
+- (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScaleX:(GLfloat)scalex withScaleY:(GLfloat)scaley withEnv:(JNIEnv *)env
 {
     assert(self->_drawCounter > 0);
 
@@ -671,8 +671,8 @@
         GLfloat h = self->_textureHeight;
 
         NSSize size = [self bounds].size;
-        size.width *= scale;
-        size.height *= scale;
+        size.width *= scalex;
+        size.height *= scaley;
         if ((size.width != w) || (size.height != h))
         {
             // This could happen on live resize, clear the FBO to avoid rendering garbage

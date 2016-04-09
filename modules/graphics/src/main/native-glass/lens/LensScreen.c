@@ -31,7 +31,7 @@ static jobject createJavaScreen(JNIEnv *env, NativeScreen screen) {
 
     jmethodID screenInit = (*env)->GetMethodID(env, jScreenClass,
         "<init>",
-        "(JIIIIIIIIIIIF)V");
+        "(JIIIIIIIIIIIIIIIFFFF)V");
     GLASS_CHECK_EXCEPTION(env);
 
     if (!screenInit) {
@@ -49,6 +49,11 @@ static jobject createJavaScreen(JNIEnv *env, NativeScreen screen) {
         screen->width,
         screen->height,
 
+        screen->x,
+        screen->y,
+        screen->width,
+        screen->height,
+
         screen->visibleX,
         screen->visibleY,
         screen->visibleWidth,
@@ -57,7 +62,7 @@ static jobject createJavaScreen(JNIEnv *env, NativeScreen screen) {
         screen->resolutionX,
         screen->resolutionY,
 
-        1.0f);
+        1.0f, 1.0f, 1.0f, 1.0f);
     GLASS_CHECK_EXCEPTION(env);
 
     return newScreen;

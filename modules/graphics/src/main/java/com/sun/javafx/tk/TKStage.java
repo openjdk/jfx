@@ -81,13 +81,18 @@ public interface TKStage {
      * @param ch the new window content height, ignored if set to -1
      * @param xGravity the xGravity coefficient
      * @param yGravity the yGravity coefficient
+     * @param renderScaleX new rendering scale, ignored if < 1
+     * @param renderScaleY new rendering scale, ignored if < 1
      */
     public void setBounds(float x, float y, boolean xSet, boolean ySet,
                           float w, float h, float cw, float ch,
-                          float xGravity, float yGravity);
+                          float xGravity, float yGravity,
+                          float renderScaleX, float renderScaleY);
 
-    public float getUIScale();
-    public float getRenderScale();
+    public float getPlatformScaleX();
+    public float getPlatformScaleY();
+    public float getOutputScaleX();
+    public float getOutputScaleY();
 
     public void setIcons(java.util.List icons);
 

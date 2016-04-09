@@ -50,9 +50,9 @@ public abstract class PresentableState {
     protected long nativeWindowHandle;
     protected long nativeView;
     protected int viewWidth, viewHeight;
-    protected float renderScale;
+    protected float renderScaleX, renderScaleY;
     protected int renderWidth, renderHeight;
-    protected float outputScale;
+    protected float outputScaleX, outputScaleY;
     protected int outputWidth, outputHeight;
     protected int screenHeight;
     protected int screenWidth;
@@ -132,12 +132,25 @@ public abstract class PresentableState {
      *
      * May be called on any thread
      */
-    public float getRenderScale() {
-        return renderScale;
+    public float getRenderScaleX() {
+        return renderScaleX;
     }
 
-    public float getOutputScale() {
-        return outputScale;
+    /**
+     * @return Screen.getScale
+     *
+     * May be called on any thread
+     */
+    public float getRenderScaleY() {
+        return renderScaleY;
+    }
+
+    public float getOutputScaleX() {
+        return outputScaleX;
+    }
+
+    public float getOutputScaleY() {
+        return outputScaleY;
     }
 
     /**
@@ -305,25 +318,30 @@ public abstract class PresentableState {
                : (int) Math.ceil(dim * toScale / fromScale);
     }
 
-    protected void update(float viewScale, float renderScale, float outputScale) {
-        this.renderScale = renderScale;
-        this.outputScale = outputScale;
-        if (renderScale == viewScale) {
+    protected void update(float viewScaleX,   float viewScaleY,
+                          float renderScaleX, float renderScaleY,
+                          float outputScaleX, float outputScaleY)
+    {
+        this.renderScaleX = renderScaleX;
+        this.renderScaleY = renderScaleY;
+        this.outputScaleX = outputScaleX;
+        this.outputScaleY = outputScaleY;
+        if (renderScaleX == viewScaleX && renderScaleY == viewScaleY) {
             renderWidth = viewWidth;
             renderHeight = viewHeight;
         } else {
-            renderWidth = scale(viewWidth, viewScale, renderScale);
-            renderHeight = scale(viewHeight, viewScale, renderScale);
+            renderWidth = scale(viewWidth, viewScaleX, renderScaleX);
+            renderHeight = scale(viewHeight, viewScaleY, renderScaleY);
         }
-        if (outputScale == viewScale) {
+        if (outputScaleX == viewScaleX && outputScaleY == viewScaleY) {
             outputWidth = viewWidth;
             outputHeight = viewHeight;
-        } else if (outputScale == renderScale) {
+        } else if (outputScaleX == renderScaleX && outputScaleY == renderScaleY) {
             outputWidth = renderWidth;
             outputHeight = renderHeight;
         } else {
-            outputWidth = scale(viewWidth, viewScale, outputScale);
-            outputHeight = scale(viewHeight, viewScale, outputScale);
+            outputWidth = scale(viewWidth, viewScaleX, outputScaleX);
+            outputHeight = scale(viewHeight, viewScaleY, outputScaleY);
         }
     }
 
@@ -351,9 +369,9 @@ public abstract class PresentableState {
             isClosed = view.isClosed();
             isWindowVisible = window.isVisible();
             isWindowMinimized = window.isMinimized();
-            update(window.getPlatformScale(),
-                   window.getRenderScale(),
-                   window.getOutputScale());
+            update(window.getPlatformScaleX(), window.getPlatformScaleY(),
+                   window.getRenderScaleX(),   window.getRenderScaleY(),
+                   window.getOutputScaleX(),   window.getOutputScaleY());
             Screen screen = window.getScreen();
             if (screen != null) {
                 // note only used by Embedded Z order painting

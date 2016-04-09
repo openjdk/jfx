@@ -45,9 +45,10 @@ public final class PrismGraphicsManager extends WCGraphicsManager {
     static {
         float ps = 1f;
         for (Screen s : Screen.getScreens()) {
-            ps = Math.max(s.getRenderScale(), ps);
+            ps = Math.max(s.getRecommendedOutputScaleX(), ps);
+            ps = Math.max(s.getRecommendedOutputScaleY(), ps);
         }
-        highestPixelScale = ps;
+        highestPixelScale = (float) Math.ceil(ps);
         pixelScaleTransform = BaseTransform.getScaleInstance(ps, ps);
     }
 

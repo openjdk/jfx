@@ -57,5 +57,6 @@ public interface Presentable extends RenderTarget {
      */
     public boolean present();
 
-    public float getPixelScaleFactor();
+    public float getPixelScaleFactorX();
+    public float getPixelScaleFactorY();
 }

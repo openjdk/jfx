@@ -46,7 +46,8 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     private boolean needsResize;
     private boolean opaque = false;
     private int w, h;
-    private float pixelScaleFactor;
+    private float pixelScaleFactorX;
+    private float pixelScaleFactorY;
     // a value of zero corresponds to the windowing system-provided
     // framebuffer object
     int nativeDestHandle = 0;
@@ -87,7 +88,8 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     ES2SwapChain(ES2Context context, PresentableState pState) {
         this.context = context;
         this.pState = pState;
-        this.pixelScaleFactor = pState.getRenderScale();
+        this.pixelScaleFactorX = pState.getRenderScaleX();
+        this.pixelScaleFactorY = pState.getRenderScaleY();
         this.msaa = pState.isMSAA();
         long nativeWindow = pState.getNativeWindow();
         drawable = ES2Pipeline.glFactory.createGLDrawable(
@@ -95,7 +97,10 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     }
 
     public boolean lockResources(PresentableState pState) {
-        if (this.pState != pState || pixelScaleFactor != pState.getRenderScale()) {
+        if (this.pState != pState ||
+            pixelScaleFactorX != pState.getRenderScaleX() ||
+            pixelScaleFactorY != pState.getRenderScaleY())
+        {
             return true;
         }
         needsResize = (w != pState.getRenderWidth() || h != pState.getRenderHeight());
@@ -220,7 +225,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             copyFullBuffer = true;
         }
         ES2Graphics g = ES2Graphics.create(context, stableBackbuffer);
-        g.scale(pixelScaleFactor, pixelScaleFactor);
+        g.scale(pixelScaleFactorX, pixelScaleFactorY);
         return g;
     }
 
@@ -269,8 +274,14 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         return pState.getOutputHeight();
     }
 
-    public float getPixelScaleFactor() {
-        return pixelScaleFactor;
+    @Override
+    public float getPixelScaleFactorX() {
+        return pixelScaleFactorX;
+    }
+
+    @Override
+    public float getPixelScaleFactorY() {
+        return pixelScaleFactorY;
     }
 
     @Override

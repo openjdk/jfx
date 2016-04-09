@@ -396,9 +396,9 @@ public class HBox extends Pane {
 
     @Override protected double computeMinWidth(double height) {
         Insets insets = getInsets();
-        return snapSpace(insets.getLeft()) +
+        return snapSpaceX(insets.getLeft()) +
                computeContentWidth(getManagedChildren(), height, true) +
-               snapSpace(insets.getRight());
+               snapSpaceX(insets.getRight());
     }
 
     @Override protected double computeMinHeight(double width) {
@@ -412,16 +412,16 @@ public class HBox extends Pane {
         } else {
             contentHeight = computeMaxMinAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos());
         }
-        return snapSpace(insets.getTop()) +
+        return snapSpaceY(insets.getTop()) +
                contentHeight +
-               snapSpace(insets.getBottom());
+               snapSpaceY(insets.getBottom());
     }
 
     @Override protected double computePrefWidth(double height) {
         Insets insets = getInsets();
-        return snapSpace(insets.getLeft()) +
+        return snapSpaceX(insets.getLeft()) +
                computeContentWidth(getManagedChildren(), height, false) +
-               snapSpace(insets.getRight());
+               snapSpaceX(insets.getRight());
     }
 
     @Override protected double computePrefHeight(double width) {
@@ -435,16 +435,16 @@ public class HBox extends Pane {
         } else {
             contentHeight = computeMaxPrefAreaHeight(managed, marginAccessor, getAlignmentInternal().getVpos());
         }
-        return snapSpace(insets.getTop()) +
+        return snapSpaceY(insets.getTop()) +
                contentHeight +
-               snapSpace(insets.getBottom());
+               snapSpaceY(insets.getBottom());
     }
 
     private double[][] getAreaWidths(List<Node>managed, double height, boolean minimum) {
         // height could be -1
         double[][] temp = getTempArray(managed.size());
         final double insideHeight = height == -1? -1 : height -
-                                     snapSpace(getInsets().getTop()) - snapSpace(getInsets().getBottom());
+                                     snapSpaceY(getInsets().getTop()) - snapSpaceY(getInsets().getBottom());
         final boolean shouldFillHeight = shouldFillHeight();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
@@ -460,12 +460,12 @@ public class HBox extends Pane {
 
     private double adjustAreaWidths(List<Node>managed, double areaWidths[][], double width, double height) {
         Insets insets = getInsets();
-        double top = snapSpace(insets.getTop());
-        double bottom = snapSpace(insets.getBottom());
+        double top = snapSpaceY(insets.getTop());
+        double bottom = snapSpaceY(insets.getBottom());
 
-        double contentWidth = sum(areaWidths[0], managed.size()) + (managed.size()-1)*snapSpace(getSpacing());
+        double contentWidth = sum(areaWidths[0], managed.size()) + (managed.size()-1)*snapSpaceX(getSpacing());
         double extraWidth = width -
-                snapSpace(insets.getLeft()) - snapSpace(insets.getRight()) - contentWidth;
+                snapSpaceX(insets.getLeft()) - snapSpaceX(insets.getRight()) - contentWidth;
 
         if (extraWidth != 0) {
             final double refHeight = shouldFillHeight() && height != -1? height - top - bottom : -1;
@@ -504,7 +504,7 @@ public class HBox extends Pane {
 
         double available = extraWidth; // will be negative in shrinking case
         outer:while (Math.abs(available) > 1 && adjustingNumber > 0) {
-            final double portion = snapPortion(available / adjustingNumber); // negative in shrinking case
+            final double portion = snapPortionX(available / adjustingNumber); // negative in shrinking case
             for (int i = 0, size = managed.size(); i < size; i++) {
                 if (temp[i] == -1) {
                     continue;
@@ -528,7 +528,7 @@ public class HBox extends Pane {
 
     private double computeContentWidth(List<Node> managedChildren, double height, boolean minimum) {
         return sum(getAreaWidths(managedChildren, height, minimum)[0], managedChildren.size())
-                + (managedChildren.size()-1)*snapSpace(getSpacing());
+                + (managedChildren.size()-1)*snapSpaceX(getSpacing());
     }
 
     private static double sum(double[] array, int size) {
@@ -615,11 +615,11 @@ public class HBox extends Pane {
         VPos alignVpos = align.getVpos();
         double width = getWidth();
         double height = getHeight();
-        double top = snapSpace(insets.getTop());
-        double left = snapSpace(insets.getLeft());
-        double bottom = snapSpace(insets.getBottom());
-        double right = snapSpace(insets.getRight());
-        double space = snapSpace(getSpacing());
+        double top = snapSpaceY(insets.getTop());
+        double left = snapSpaceX(insets.getLeft());
+        double bottom = snapSpaceY(insets.getBottom());
+        double right = snapSpaceX(insets.getRight());
+        double space = snapSpaceX(getSpacing());
         boolean shouldFillHeight = shouldFillHeight();
 
         final double[][] actualAreaWidths = getAreaWidths(managed, height, false);

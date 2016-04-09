@@ -40,8 +40,8 @@ final class LensPixels extends Pixels {
         super(width, height, data);
     }
 
-    protected LensPixels(int width, int height, IntBuffer data, float scale) {
-        super(width, height, data, scale);
+    protected LensPixels(int width, int height, IntBuffer data, float scalex, float scaley) {
+        super(width, height, data, scalex, scaley);
     }
 
     static int getNativeFormat_impl() {

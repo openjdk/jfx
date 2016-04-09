@@ -660,10 +660,10 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
             final double left = snappedLeftInset();
             final double bottom = snappedBottomInset();
             final double right = snappedRightInset();
-            final double aw = snapSize(arrow.prefWidth(-1));
-            final double ah = snapSize(arrow.prefHeight(-1));
-            final double yPos = snapPosition((getHeight() - (top + bottom + ah)) / 2.0);
-            final double xPos = snapPosition((getWidth() - (left + right + aw)) / 2.0);
+            final double aw = snapSizeX(arrow.prefWidth(-1));
+            final double ah = snapSizeY(arrow.prefHeight(-1));
+            final double yPos = snapPositionY((getHeight() - (top + bottom + ah)) / 2.0);
+            final double xPos = snapPositionX((getWidth() - (left + right + aw)) / 2.0);
             arrow.resizeRelocate(xPos + left, yPos + top, aw, ah);
         }
 
@@ -678,14 +678,14 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
         @Override protected double computePrefWidth(double height) {
             final double left = snappedLeftInset();
             final double right = snappedRightInset();
-            final double aw = snapSize(arrow.prefWidth(-1));
+            final double aw = snapSizeX(arrow.prefWidth(-1));
             return left + aw + right;
         }
 
         @Override protected double computePrefHeight(double width) {
             final double top = snappedTopInset();
             final double bottom = snappedBottomInset();
-            final double ah = snapSize(arrow.prefHeight(-1));
+            final double ah = snapSizeY(arrow.prefHeight(-1));
             return top + ah + bottom;
         }
     }

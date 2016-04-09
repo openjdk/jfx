@@ -105,22 +105,17 @@ public:
     static ULONG GetAccessibilityCount();
 
     static jfloat overrideUIScale;
-    static jfloat overrideRenderScale;
-    static jfloat minDPIScale;
-    static jboolean forceIntegerRenderScale;
+
+    inline static jboolean IsUIScaleOverridden()
+    {
+        return (overrideUIScale > 0.0f);
+    }
 
     inline static jfloat GetUIScale(UINT dpi)
     {
-        if (overrideUIScale > 0.0f) return overrideUIScale;
-        jfloat uiScale = dpi / 96.0f;
-        if (uiScale < minDPIScale) return 1.0f;
-        return uiScale;
-    }
-
-    inline static jfloat getRenderScale(jfloat uiScale) {
-        if (overrideRenderScale > 0.0f) return overrideRenderScale;
-        if (forceIntegerRenderScale) return ceil(uiScale);
-        return uiScale;
+        return IsUIScaleOverridden()
+            ? overrideUIScale
+            : dpi / ((float) USER_DEFAULT_SCREEN_DPI);
     }
 
 protected:

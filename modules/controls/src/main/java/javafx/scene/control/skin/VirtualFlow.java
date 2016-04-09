@@ -1825,9 +1825,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void positionCell(T cell, double position) {
         if (isVertical()) {
             cell.setLayoutX(0);
-            cell.setLayoutY(snapSize(position));
+            cell.setLayoutY(snapSizeY(position));
         } else {
-            cell.setLayoutX(snapSize(position));
+            cell.setLayoutX(snapSizeX(position));
             cell.setLayoutY(0);
         }
     }
@@ -2216,8 +2216,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     private void updateViewportDimensions() {
         final boolean isVertical = isVertical();
-        final double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
-        final double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
+        final double breadthBarLength = isVertical ? snapSizeY(hbar.prefHeight(-1)) : snapSizeX(vbar.prefWidth(-1));
+        final double lengthBarBreadth = isVertical ? snapSizeX(vbar.prefWidth(-1)) : snapSizeY(hbar.prefHeight(-1));
 
         setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
         setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
@@ -2408,8 +2408,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
-        clipView.resize(snapSize(isVertical ? viewportBreadth : viewportLength),
-                snapSize(isVertical ? viewportLength : viewportBreadth));
+        clipView.resize(snapSizeX(isVertical ? viewportBreadth : viewportLength),
+                        snapSizeY(isVertical ? viewportLength : viewportBreadth));
 
         // If the viewportLength becomes large enough that all cells fit
         // within the viewport, then we want to update the value to match.

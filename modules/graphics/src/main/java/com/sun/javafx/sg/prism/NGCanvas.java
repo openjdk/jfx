@@ -25,7 +25,6 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.glass.ui.Screen;
 import javafx.geometry.VPos;
 import javafx.scene.text.Font;
 import java.nio.IntBuffer;
@@ -355,9 +354,10 @@ public class NGCanvas extends NGNode {
         ScreenConfigurationAccessor screenAccessor = tk.getScreenConfigurationAccessor();
         float hPS = 1.0f;
         for (Object screen : tk.getScreens()) {
-            hPS = Math.max(screenAccessor.getRenderScale(screen), hPS);
+            hPS = Math.max(screenAccessor.getRecommendedOutputScaleX(screen), hPS);
+            hPS = Math.max(screenAccessor.getRecommendedOutputScaleY(screen), hPS);
         }
-        highestPixelScale = hPS;
+        highestPixelScale = (float) Math.ceil(hPS);
 
         cv = new RenderBuf(InitType.PRESERVE_UPPER_LEFT);
         temp = new RenderBuf(InitType.CLEAR);

@@ -159,7 +159,8 @@ public class JFXPanel extends JComponent {
 
     // The scale factor, used to translate b/w the logical (the FX content dimension)
     // and physical (the back buffer's dimension) coordinate spaces
-    private int scaleFactor = 1;
+    private double scaleFactorX = 1.0;
+    private double scaleFactorY = 1.0;
 
     // Preferred size set from FX
     private volatile int pPreferredWidth = -1;
@@ -208,11 +209,6 @@ public class JFXPanel extends JComponent {
     // Initialize FX runtime when the JFXPanel instance is constructed
     private synchronized static void initFx() {
         // Note that calling PlatformImpl.startup more than once is OK
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            System.setProperty("glass.win.uiScale", "100%");
-            System.setProperty("glass.win.renderScale", "100%");
-            return null;
-        });
         PlatformImpl.startup(() -> {
             // No need to do anything here
         });
@@ -515,8 +511,24 @@ public class JFXPanel extends JComponent {
             pWidth -= (i.left + i.right);
             pHeight -= (i.top + i.bottom);
         }
-        if (oldWidth != pWidth || oldHeight != pHeight) {
-            createResizePixelBuffer(scaleFactor);
+        double newScaleFactorX = scaleFactorX;
+        double newScaleFactorY = scaleFactorY;
+        Graphics g = getGraphics();
+        if (g instanceof SunGraphics2D) {
+            SurfaceData sd = ((SunGraphics2D) g).surfaceData;
+            newScaleFactorX = sd.getDefaultScaleX();
+            newScaleFactorY = sd.getDefaultScaleY();
+        }
+        if (oldWidth != pWidth || oldHeight != pHeight ||
+            newScaleFactorX != scaleFactorX || newScaleFactorY != scaleFactorY)
+        {
+            createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
+            if (scenePeer != null) {
+                scenePeer.setPixelScaleFactors((float) newScaleFactorX,
+                                               (float) newScaleFactorY);
+            }
+            scaleFactorX = newScaleFactorX;
+            scaleFactorY = newScaleFactorY;
             sendResizeEventToFX();
         }
     }
@@ -606,20 +618,22 @@ public class JFXPanel extends JComponent {
     }
 
     // called on EDT only
-    private void createResizePixelBuffer(int newScaleFactor) {
+    private void createResizePixelBuffer(double newScaleFactorX, double newScaleFactorY) {
         if (scenePeer == null || pWidth <= 0 || pHeight <= 0) {
             pixelsIm = null;
         } else {
             BufferedImage oldIm = pixelsIm;
-            pixelsIm = new BufferedImage(pWidth * newScaleFactor,
-                                         pHeight * newScaleFactor,
+            int newPixelW = (int) Math.ceil(pWidth * newScaleFactorX);
+            int newPixelH = (int) Math.ceil(pHeight * newScaleFactorY);
+            pixelsIm = new BufferedImage(newPixelW, newPixelH,
                                          SwingFXUtils.getBestBufferedImageType(
                                              scenePeer.getPixelFormat(), null));
             if (oldIm != null) {
-                double ratio = newScaleFactor / scaleFactor;
+                double ratioX = newScaleFactorX / scaleFactorX;
+                double ratioY = newScaleFactorY / scaleFactorY;
                 // Transform old size to the new coordinate space.
-                int oldW = (int)Math.round(oldIm.getWidth() * ratio);
-                int oldH = (int)Math.round(oldIm.getHeight() * ratio);
+                int oldW = (int)Math.round(oldIm.getWidth() * ratioX);
+                int oldH = (int)Math.round(oldIm.getHeight() * ratioY);
 
                 Graphics g = pixelsIm.getGraphics();
                 try {
@@ -649,24 +663,6 @@ public class JFXPanel extends JComponent {
                 e.getCaret().getInsertionIndex());
     }
 
-    // FIXME: once we move to JDK 9 as the boot JDK we should remove the
-    // reflection code from this method, consider changing it to
-    // use double rather than int, and account for the possibility of
-    // a different scale factor in X and Y.
-    private int getDefaultScale(SurfaceData surfaceData) {
-        /*
-        double scale = surfaceData.getDefaultScaleX();
-        */
-        double scale = 1;
-        try {
-            Method meth = SurfaceData.class.getMethod("getDefaultScaleX");
-            scale = (Double)meth.invoke(surfaceData);
-        } catch (Exception ex) {
-        }
-
-        return (int)Math.round(scale);
-    }
-
     /**
      * Overrides the {@link javax.swing.JComponent#paintComponent(Graphics)}
      * method to paint the content of the JavaFX scene attached to this
@@ -682,7 +678,10 @@ public class JFXPanel extends JComponent {
             return;
         }
         if (pixelsIm == null) {
-            createResizePixelBuffer(scaleFactor);
+            createResizePixelBuffer(scaleFactorX, scaleFactorY);
+            if (pixelsIm == null) {
+                return;
+            }
         }
         DataBufferInt dataBuf = (DataBufferInt)pixelsIm.getRaster().getDataBuffer();
         int[] pixelsData = dataBuf.getData();
@@ -705,15 +704,20 @@ public class JFXPanel extends JComponent {
             }
             gg.drawImage(pixelsIm, 0, 0, pWidth, pHeight, null);
 
-            int newScaleFactor = scaleFactor;
+            double newScaleFactorX = scaleFactorX;
+            double newScaleFactorY = scaleFactorY;
             if (g instanceof SunGraphics2D) {
-                newScaleFactor = getDefaultScale(((SunGraphics2D)g).surfaceData);
+                SurfaceData sd = ((SunGraphics2D)g).surfaceData;
+                newScaleFactorX = sd.getDefaultScaleX();
+                newScaleFactorY = sd.getDefaultScaleY();
             }
-            if (scaleFactor != newScaleFactor) {
-                createResizePixelBuffer(newScaleFactor);
+            if (scaleFactorX != newScaleFactorX || scaleFactorY != newScaleFactorY) {
+                createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
                 // The scene will request repaint.
-                scenePeer.setPixelScaleFactor(newScaleFactor);
-                scaleFactor = newScaleFactor;
+                scenePeer.setPixelScaleFactors((float) newScaleFactorX,
+                                               (float) newScaleFactorY);
+                scaleFactorX = newScaleFactorX;
+                scaleFactorY = newScaleFactorY;
             }
         } catch (Throwable th) {
             th.printStackTrace();
@@ -906,7 +910,7 @@ public class JFXPanel extends JComponent {
             if (pWidth > 0 && pHeight > 0) {
                 scenePeer.setSize(pWidth, pHeight);
             }
-            scenePeer.setPixelScaleFactor(scaleFactor);
+            scenePeer.setPixelScaleFactors((float) scaleFactorX, (float) scaleFactorY);
 
             invokeOnClientEDT(() -> {
                 dnd = new SwingDnD(JFXPanel.this, scenePeer);

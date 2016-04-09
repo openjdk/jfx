@@ -37,6 +37,6 @@ public interface ScreenConfigurationAccessor {
     public int getVisualHeight(Object obj);
     public int getVisualWidth(Object obj);
     public float getDPI(Object obj);
-    public float getUIScale(Object obj);
-    public float getRenderScale(Object obj);
+    public float getRecommendedOutputScaleX(Object obj);
+    public float getRecommendedOutputScaleY(Object obj);
 }

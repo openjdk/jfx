@@ -653,11 +653,11 @@ public final class QuantumToolkit extends Toolkit {
             @Override public float getDPI(Object obj) {
                 return ((Screen)obj).getResolutionX();
             }
-            @Override public float getUIScale(Object obj) {
-                return ((Screen)obj).getUIScale();
+            @Override public float getRecommendedOutputScaleX(Object obj) {
+                return ((Screen)obj).getRecommendedOutputScaleX();
             }
-            @Override public float getRenderScale(Object obj) {
-                return ((Screen)obj).getRenderScale();
+            @Override public float getRecommendedOutputScaleY(Object obj) {
+                return ((Screen)obj).getRecommendedOutputScaleY();
             }
         };
 
@@ -706,10 +706,18 @@ public final class QuantumToolkit extends Toolkit {
         return new PerformanceTrackerImpl();
     }
 
-    public float getMaxRenderScale() {
+    // Only currently called from the loadImage method below.  We do not
+    // necessarily know what the worst render scale we will ever see is
+    // because the user has control over that, but we should be loading
+    // all dpi variants of an image at all times anyway and then using
+    // whichever one is needed to respond to a given rendering request
+    // rather than predetermining which one to use up front.  If we switch
+    // to making that decision at render time then this method can go away.
+    private float getMaxRenderScale() {
         if (_maxPixelScale == 0) {
             for (Object o : getScreens()) {
-                _maxPixelScale = Math.max(_maxPixelScale, ((Screen) o).getRenderScale());
+                _maxPixelScale = Math.max(_maxPixelScale, ((Screen) o).getRecommendedOutputScaleX());
+                _maxPixelScale = Math.max(_maxPixelScale, ((Screen) o).getRecommendedOutputScaleY());
             }
         }
         return _maxPixelScale;

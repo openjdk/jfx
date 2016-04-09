@@ -1189,11 +1189,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         }
 
         @Override protected double computeMaxWidth(double height) {
-            return snapSize(content.maxWidth(height));
+            return snapSizeX(content.maxWidth(height));
         }
 
         @Override protected double computeMaxHeight(double width) {
-            return snapSize(content.maxHeight(width));
+            return snapSizeY(content.maxHeight(width));
         }
     }
 }

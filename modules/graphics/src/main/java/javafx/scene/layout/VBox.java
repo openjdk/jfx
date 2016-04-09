@@ -387,14 +387,14 @@ public class VBox extends Pane {
         } else {
             contentWidth = computeMaxMinAreaWidth(managed, marginAccessor);
         }
-        return snapSpace(insets.getLeft()) + contentWidth + snapSpace(insets.getRight());
+        return snapSpaceX(insets.getLeft()) + contentWidth + snapSpaceX(insets.getRight());
     }
 
     @Override protected double computeMinHeight(double width) {
         Insets insets = getInsets();
-        return snapSpace(insets.getTop()) +
+        return snapSpaceY(insets.getTop()) +
                computeContentHeight(getManagedChildren(), width, true) +
-               snapSpace(insets.getBottom());
+               snapSpaceY(insets.getBottom());
     }
 
     @Override protected double computePrefWidth(double height) {
@@ -408,14 +408,14 @@ public class VBox extends Pane {
         } else {
             contentWidth = computeMaxPrefAreaWidth(managed, marginAccessor);
         }
-        return snapSpace(insets.getLeft()) + contentWidth + snapSpace(insets.getRight());
+        return snapSpaceX(insets.getLeft()) + contentWidth + snapSpaceX(insets.getRight());
     }
 
     @Override protected double computePrefHeight(double width) {
         Insets insets = getInsets();
-        double d = snapSpace(insets.getTop()) +
+        double d = snapSpaceY(insets.getTop()) +
                computeContentHeight(getManagedChildren(), width, false) +
-               snapSpace(insets.getBottom());
+               snapSpaceY(insets.getBottom());
         return d;
     }
 
@@ -424,7 +424,7 @@ public class VBox extends Pane {
         // width could be -1
         double[][] temp = getTempArray(managed.size());
         final double insideWidth = width == -1? -1 : width -
-                                     snapSpace(getInsets().getLeft()) - snapSpace(getInsets().getRight());
+                                     snapSpaceX(getInsets().getLeft()) - snapSpaceX(getInsets().getRight());
         final boolean isFillWidth = isFillWidth();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
@@ -448,12 +448,12 @@ public class VBox extends Pane {
 
     private double adjustAreaHeights(List<Node>managed, double areaHeights[][], double height, double width) {
         Insets insets = getInsets();
-        double left = snapSpace(insets.getLeft());
-        double right = snapSpace(insets.getRight());
+        double left = snapSpaceX(insets.getLeft());
+        double right = snapSpaceX(insets.getRight());
 
-        double contentHeight = sum(areaHeights[0], managed.size()) + (managed.size()-1)*snapSpace(getSpacing());
+        double contentHeight = sum(areaHeights[0], managed.size()) + (managed.size()-1)*snapSpaceY(getSpacing());
         double extraHeight = height -
-                snapSpace(insets.getTop()) - snapSpace(insets.getBottom()) - contentHeight;
+                snapSpaceY(insets.getTop()) - snapSpaceY(insets.getBottom()) - contentHeight;
 
         if (extraHeight != 0) {
             final double refWidth = isFillWidth()&& width != -1? width - left - right : -1;
@@ -492,7 +492,7 @@ public class VBox extends Pane {
 
         double available = extraHeight; // will be negative in shrinking case
         outer: while (Math.abs(available) > 1 && adjustingNumber > 0) {
-            final double portion = snapPortion(available / adjustingNumber); // negative in shrinking case
+            final double portion = snapPortionY(available / adjustingNumber); // negative in shrinking case
             for (int i = 0, size = managed.size(); i < size; i++) {
                 if (temp[i] == -1) {
                     continue;
@@ -516,7 +516,7 @@ public class VBox extends Pane {
 
     private double computeContentHeight(List<Node> managedChildren, double width, boolean minimum) {
         return sum(getAreaHeights(managedChildren, width, minimum)[0], managedChildren.size())
-                + (managedChildren.size()-1)*snapSpace(getSpacing());
+                + (managedChildren.size()-1)*snapSpaceY(getSpacing());
     }
 
     private static double sum(double[] array, int size) {
@@ -543,11 +543,11 @@ public class VBox extends Pane {
         Insets insets = getInsets();
         double width = getWidth();
         double height = getHeight();
-        double top = snapSpace(insets.getTop());
-        double left = snapSpace(insets.getLeft());
-        double bottom = snapSpace(insets.getBottom());
-        double right = snapSpace(insets.getRight());
-        double space = snapSpace(getSpacing());
+        double top = snapSpaceY(insets.getTop());
+        double left = snapSpaceX(insets.getLeft());
+        double bottom = snapSpaceY(insets.getBottom());
+        double right = snapSpaceX(insets.getRight());
+        double space = snapSpaceY(getSpacing());
         HPos hpos = getAlignmentInternal().getHpos();
         VPos vpos = getAlignmentInternal().getVpos();
         boolean isFillWidth = isFillWidth();

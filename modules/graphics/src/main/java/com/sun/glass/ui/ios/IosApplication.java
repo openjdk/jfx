@@ -136,8 +136,8 @@ public final class IosApplication extends Application {
     }
 
     @Override
-    public Pixels createPixels(int width, int height, IntBuffer data, float scale) {
-        return new IosPixels(width, height, data, scale);
+    public Pixels createPixels(int width, int height, IntBuffer data, float scalex, float scaley) {
+        return new IosPixels(width, height, data, scalex, scaley);
     }
 
     @Override

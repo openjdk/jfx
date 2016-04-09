@@ -58,7 +58,7 @@ final class SWPresentable extends SWRTTexture implements Presentable {
              */
             int w = getPhysicalWidth();
             int h = getPhysicalHeight();
-            pixels = pixelSource.getUnusedPixels(w, h, 1.0f);
+            pixels = pixelSource.getUnusedPixels(w, h, 1.0f, 1.0f);
             IntBuffer pixBuf = (IntBuffer) pixels.getPixels();
             IntBuffer buf = getSurface().getDataIntBuffer();
             assert buf.hasArray();
@@ -75,8 +75,14 @@ final class SWPresentable extends SWRTTexture implements Presentable {
         return true;
     }
 
-    public float getPixelScaleFactor() {
-        return pState.getRenderScale();
+    @Override
+    public float getPixelScaleFactorX() {
+        return pState.getRenderScaleX();
+    }
+
+    @Override
+    public float getPixelScaleFactorY() {
+        return pState.getRenderScaleY();
     }
 
     public int getContentWidth() {

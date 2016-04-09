@@ -46,7 +46,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
     private RTTexture   resolveRTT = null;
 
     private QueuedPixelSource pixelSource = new QueuedPixelSource(true);
-    private float penScale;
+    private float penScaleX, penScaleY;
 
     UploadingPainter(GlassScene view) {
         super(view);
@@ -64,8 +64,13 @@ final class UploadingPainter extends ViewPainter implements Runnable {
     }
 
     @Override
-    public float getPixelScaleFactor() {
-        return sceneState.getRenderScale();
+    public float getPixelScaleFactorX() {
+        return sceneState.getRenderScaleX();
+    }
+
+    @Override
+    public float getPixelScaleFactorY() {
+        return sceneState.getRenderScaleY();
     }
 
     @Override public void run() {
@@ -88,7 +93,8 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 return;
             }
 
-            float scale = getPixelScaleFactor();
+            float scalex = getPixelScaleFactorX();
+            float scaley = getPixelScaleFactorY();
             int bufWidth = sceneState.getRenderWidth();
             int bufHeight = sceneState.getRenderHeight();
 
@@ -96,7 +102,8 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             // texture contents are no longer correct.
             // Repaint everything on new texture dimensions because otherwise
             // our upload logic below may fail with index out of bounds.
-            boolean needsReset = (penScale != scale ||
+            boolean needsReset = (penScaleX != scalex ||
+                                  penScaleY != scaley ||
                                   penWidth != viewWidth ||
                                   penHeight != viewHeight ||
                                   rttexture == null ||
@@ -119,7 +126,8 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 if (rttexture == null) {
                     return;
                 }
-                penScale    = scale;
+                penScaleX   = scalex;
+                penScaleY   = scaley;
                 penWidth    = viewWidth;
                 penHeight   = viewHeight;
                 freshBackBuffer = true;
@@ -130,13 +138,14 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 sceneState.getScene().entireSceneNeedsRepaint();
                 return;
             }
-            g.scale(scale, scale);
+            g.scale(scalex, scaley);
             paintImpl(g);
             freshBackBuffer = false;
 
             int outWidth = sceneState.getOutputWidth();
             int outHeight = sceneState.getOutputHeight();
-            float outScale = sceneState.getOutputScale();
+            float outScaleX = sceneState.getOutputScaleX();
+            float outScaleY = sceneState.getOutputScaleY();
             RTTexture rtt;
             if (rttexture.isMSAA() || outWidth != bufWidth || outHeight != bufHeight) {
                 rtt = resolveRenderTarget(g, outWidth, outHeight);
@@ -144,7 +153,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 rtt = rttexture;
             }
 
-            Pixels pix = pixelSource.getUnusedPixels(outWidth, outHeight, outScale);
+            Pixels pix = pixelSource.getUnusedPixels(outWidth, outHeight, outScaleX, outScaleY);
             IntBuffer bits = (IntBuffer) pix.getPixels();
 
             int rawbits[] = rtt.getPixels();

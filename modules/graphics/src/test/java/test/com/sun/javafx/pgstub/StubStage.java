@@ -72,6 +72,8 @@ public class StubStage implements TKStage {
     public float y = 12;
     public float width = 256;
     public float height = 192;
+    public float renderScaleX = 1.0f;
+    public float renderScaleY = 1.0f;
 
     public boolean visible;
     public float opacity;
@@ -80,7 +82,8 @@ public class StubStage implements TKStage {
     public void setBounds(float x, float y, boolean xSet, boolean ySet,
                           float width, float height,
                           float contentWidth, float contentHeight,
-                          float xGravity, float yGravity)
+                          float xGravity, float yGravity,
+                          float renderScaleX, float renderScaleY)
     {
         numTimesSetSizeAndLocation++;
 
@@ -129,26 +132,38 @@ public class StubStage implements TKStage {
         if (sizeChanged) {
             notificationSender.changedSize(width, height);
         }
+        if (renderScaleX > 0.0) this.renderScaleX = renderScaleX;
+        if (renderScaleY > 0.0) this.renderScaleY = renderScaleY;
     }
 
     @Override
-    public float getUIScale() {
+    public float getPlatformScaleX() {
         return 1.0f;
     }
 
     @Override
-    public float getRenderScale() {
+    public float getPlatformScaleY() {
+        return 1.0f;
+    }
+
+    @Override
+    public float getOutputScaleX() {
+        return 1.0f;
+    }
+
+    @Override
+    public float getOutputScaleY() {
         return 1.0f;
     }
 
     // Just a helper method
     public void setSize(float w, float h) {
-        setBounds(0, 0, false, false, w, h, 0, 0, 0, 0);
+        setBounds(0, 0, false, false, w, h, 0, 0, 0, 0, 0, 0);
     }
 
     // Just a helper method
     public void setLocation(float x, float y) {
-        setBounds(x, y, true, true, 0, 0, 0, 0, 0, 0);
+        setBounds(x, y, true, true, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     @Override
@@ -330,6 +345,11 @@ public class StubStage implements TKStage {
         }
 
         @Override
+        public void changedScale(float xScale, float yScale) {
+            process(listener1 -> listener1.changedScale(xScale, yScale));
+        }
+
+        @Override
         public void changedFocused(final boolean focused,
                                    final FocusCause cause) {
             process(listener1 -> listener1.changedFocused(focused, cause));
@@ -345,6 +365,7 @@ public class StubStage implements TKStage {
             process(listener1 -> listener1.changedMaximized(maximized));
         }
 
+        @Override
         public void changedAlwaysOnTop(boolean alwaysOnTop) {
             process(listener1 -> listener1.changedAlwaysOnTop(alwaysOnTop));
         }
@@ -413,6 +434,7 @@ public class StubStage implements TKStage {
 
     }
 
+    @Override
     public void setRTL(boolean b) {
     }
 }

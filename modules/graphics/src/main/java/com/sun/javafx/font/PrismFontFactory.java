@@ -1899,7 +1899,7 @@ public abstract class PrismFontFactory implements FontFactory {
     }
 
     static native int getLCDContrastWin32();
-    private static native int getSystemFontSizeNative();
+    private static native float getSystemFontSizeNative();
     private static native String getSystemFontNative();
     private static float systemFontSize;
     private static String systemFontFamily = null;
@@ -1908,8 +1908,7 @@ public abstract class PrismFontFactory implements FontFactory {
     public static float getSystemFontSize() {
         if (systemFontSize == -1) {
             if (isWindows) {
-                float uiScale = Screen.getMainScreen().getUIScale();
-                systemFontSize = getSystemFontSizeNative() / uiScale;
+                systemFontSize = getSystemFontSizeNative();
             } else if (isMacOSX || isIOS) {
                 systemFontSize = MacFontFinder.getSystemFontSize();
             } else if (isAndroid) {

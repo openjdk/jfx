@@ -85,6 +85,11 @@ public final class Screen {
     private final int width;
     private final int height;
 
+    private final int platformX;
+    private final int platformY;
+    private final int platformWidth;
+    private final int platformHeight;
+
     private final int visibleX;
     private final int visibleY;
     private final int visibleWidth;
@@ -93,10 +98,12 @@ public final class Screen {
     private final int resolutionX;
     private final int resolutionY;
 
-    private final float uiScale;
-    private final float renderScale;
+    private final float platformScaleX;
+    private final float platformScaleY;
+    private final float outputScaleX;
+    private final float outputScaleY;
 
-    protected Screen(
+    public Screen(
             long nativePtr,
 
             int depth,
@@ -104,6 +111,11 @@ public final class Screen {
             int y,
             int width,
             int height,
+
+            int platformX,
+            int platformY,
+            int platformWidth,
+            int platformHeight,
 
             int visibleX,
             int visibleY,
@@ -113,34 +125,10 @@ public final class Screen {
             int resolutionX,
             int resolutionY,
 
-            float renderScale
-            ) {
-        this(nativePtr,
-             depth, x, y, width, height,
-             visibleX, visibleY, visibleWidth, visibleHeight,
-             resolutionX, resolutionY,
-             1.0f, renderScale);
-    }
-
-    protected Screen(
-            long nativePtr,
-
-            int depth,
-            int x,
-            int y,
-            int width,
-            int height,
-
-            int visibleX,
-            int visibleY,
-            int visibleWidth,
-            int visibleHeight,
-
-            int resolutionX,
-            int resolutionY,
-
-            float uiScale,
-            float renderScale
+            float platformScaleX,
+            float platformScaleY,
+            float outputScaleX,
+            float outputScaleY
             ) {
         this.ptr = nativePtr;
 
@@ -150,6 +138,11 @@ public final class Screen {
         this.y = y;
         this.width = width;
         this.height = height;
+
+        this.platformX = platformX;
+        this.platformY = platformY;
+        this.platformWidth = platformWidth;
+        this.platformHeight = platformHeight;
 
         this.visibleX = visibleX;
         this.visibleY = visibleY;
@@ -163,8 +156,10 @@ public final class Screen {
             this.resolutionY = resolutionY;
         }
 
-        this.uiScale = uiScale;
-        this.renderScale = renderScale;
+        this.platformScaleX = platformScaleX;
+        this.platformScaleY = platformScaleY;
+        this.outputScaleX = outputScaleX;
+        this.outputScaleY = outputScaleY;
     }
 
     /**
@@ -200,6 +195,72 @@ public final class Screen {
      */
     public int getHeight() {
         return this.height;
+    }
+
+    /**
+     * Could be called from any thread
+     */
+    public int getPlatformX() {
+        return this.platformX;
+    }
+
+    /**
+     * Could be called from any thread
+     */
+    public int getPlatformY() {
+        return this.platformY;
+    }
+
+    /**
+     * Could be called from any thread
+     */
+    public int getPlatformWidth() {
+        return this.platformWidth;
+    }
+
+    /**
+     * Could be called from any thread
+     */
+    public int getPlatformHeight() {
+        return this.platformHeight;
+    }
+
+    /**
+     * Returns the horizontal scaling of the UI (window sizes and event
+     * coordinates) from FX logical units to the platform units.
+     * Could be called from any thread
+     * @return platform X scaling
+     */
+    public float getPlatformScaleX() {
+        return this.platformScaleX;
+    }
+
+    /**
+     * Returns the vertical scaling of the UI (window sizes and event
+     * coordinates) from FX logical units to the platform units.
+     * Could be called from any thread
+     * @return platform Y scaling
+     */
+    public float getPlatformScaleY() {
+        return this.platformScaleY;
+    }
+
+    /**
+     * Returns the recommended horizontal scaling for the rendered frames.
+     * Could be called from any thread
+     * @return recommended render X scaling
+     */
+    public float getRecommendedOutputScaleX() {
+        return this.outputScaleX;
+    }
+
+    /**
+     * Returns the recommended vertical scaling for the rendered frames.
+     * Could be called from any thread
+     * @return recommended render Y scaling
+     */
+    public float getRecommendedOutputScaleY() {
+        return this.outputScaleY;
     }
 
     /**
@@ -242,24 +303,6 @@ public final class Screen {
      */
     public int getResolutionY() {
         return this.resolutionY;
-    }
-
-    /**
-     * Returns the scaling of the UI (window sizes and event coordinates)
-     * on the screen.
-     * Could be called from any thread
-     */
-    public float getUIScale() {
-        return this.uiScale;
-    }
-
-    /**
-     * Returns the recommended scaling for rendering an image for this
-     * screen, potentially larger than {@link #getUIScale()}.
-     * Could be called from any thread
-     */
-    public float getRenderScale() {
-        return this.renderScale;
     }
 
     /**
@@ -341,12 +384,18 @@ public final class Screen {
                 "    y:"+getY()+"\n"+
                 "    width:"+getWidth()+"\n"+
                 "    height:"+getHeight()+"\n"+
+                "    platformX:"+getPlatformX()+"\n"+
+                "    platformY:"+getPlatformY()+"\n"+
+                "    platformWidth:"+getPlatformWidth()+"\n"+
+                "    platformHeight:"+getPlatformHeight()+"\n"+
                 "    visibleX:"+getVisibleX()+"\n"+
                 "    visibleY:"+getVisibleY()+"\n"+
                 "    visibleWidth:"+getVisibleWidth()+"\n"+
                 "    visibleHeight:"+getVisibleHeight()+"\n"+
-                "    uiScale:"+getUIScale()+"\n"+
-                "    RenderScale:"+getRenderScale()+"\n"+
+                "    platformScaleX:"+getPlatformScaleX()+"\n"+
+                "    platformScaleY:"+getPlatformScaleY()+"\n"+
+                "    outputScaleX:"+getRecommendedOutputScaleX()+"\n"+
+                "    outputScaleY:"+getRecommendedOutputScaleY()+"\n"+
                 "    resolutionX:"+getResolutionX()+"\n"+
                 "    resolutionY:"+getResolutionY()+"\n";
     }
@@ -369,8 +418,10 @@ public final class Screen {
                 && visibleHeight == screen.visibleHeight
                 && resolutionX == screen.resolutionX
                 && resolutionY == screen.resolutionY
-                && Float.compare(screen.uiScale, uiScale) == 0
-                && Float.compare(screen.renderScale, renderScale) == 0;
+                && Float.compare(screen.platformScaleX, platformScaleX) == 0
+                && Float.compare(screen.platformScaleY, platformScaleY) == 0
+                && Float.compare(screen.outputScaleX, outputScaleX) == 0
+                && Float.compare(screen.outputScaleY, outputScaleY) == 0;
     }
 
     @Override public int hashCode() {
@@ -388,8 +439,10 @@ public final class Screen {
         result = 31 * result + visibleHeight;
         result = 31 * result + resolutionX;
         result = 31 * result + resolutionY;
-        result = 31 * result + (uiScale != +0.0f ? Float.floatToIntBits(uiScale) : 0);
-        result = 31 * result + (renderScale != +0.0f ? Float.floatToIntBits(renderScale) : 0);
+        result = 31 * result + (platformScaleX != +0.0f ? Float.floatToIntBits(platformScaleX) : 0);
+        result = 31 * result + (platformScaleY != +0.0f ? Float.floatToIntBits(platformScaleY) : 0);
+        result = 31 * result + (outputScaleX != +0.0f ? Float.floatToIntBits(outputScaleX) : 0);
+        result = 31 * result + (outputScaleY != +0.0f ? Float.floatToIntBits(outputScaleY) : 0);
         return result;
     }
 }

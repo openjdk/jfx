@@ -46,8 +46,6 @@ final class MacWindow extends Window {
 
     protected MacWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
-        setPlatformScale(screen.getUIScale());
-        setRenderScale(screen.getRenderScale());
     }
     protected MacWindow(long parent) {
         super(parent);
@@ -57,14 +55,10 @@ final class MacWindow extends Window {
     protected void setScreen(Screen screen) {
         // SceneState will be called to update with new scale values
         // before we return from super.setScreen()...
-        setRenderScale(screen.getUIScale());
-        setRenderScale(screen.getRenderScale());
         super.setScreen(screen);
-    }
-
-    @Override
-    public float getOutputScale() {
-        return getRenderScale();
+        notifyScaleChanged(1.0f, 1.0f,
+                           screen.getRecommendedOutputScaleX(),
+                           screen.getRecommendedOutputScaleY());
     }
 
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
@@ -74,7 +68,22 @@ final class MacWindow extends Window {
     @Override native protected boolean _setMenubar(long ptr, long menubarPtr);
     @Override native protected boolean _minimize(long ptr, boolean minimize);
     @Override native protected boolean _maximize(long ptr, boolean maximize, boolean wasMaximized);
-    @Override native protected void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch, float xGravity, float yGravity);
+    @Override protected void _setBounds(long ptr,
+                                        int x, int y, boolean xSet, boolean ySet,
+                                        int w, int h, int cw, int ch,
+                                        float xGravity, float yGravity)
+    {
+        float sx = getPlatformScaleX();
+        float sy = getPlatformScaleY();
+        if (xSet)    x = Math.round( x / sx);
+        if (ySet)    y = Math.round( y / sy);
+        if ( w > 0)  w = Math.round( w / sx);
+        if ( h > 0)  h = Math.round( h / sy);
+        if (cw > 0) cw = Math.round(cw / sx);
+        if (ch > 0) ch = Math.round(ch / sy);
+        _setBounds2(ptr, x, y, xSet, ySet, w, h, cw, ch, xGravity, yGravity);
+    }
+    native protected void _setBounds2(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch, float xGravity, float yGravity);
     @Override native protected boolean _setVisible(long ptr, boolean visible);
     @Override native protected boolean _setResizable(long ptr, boolean resizable);
 
@@ -107,6 +116,13 @@ final class MacWindow extends Window {
 
     @Override native protected int _getEmbeddedX(long ptr);
     @Override native protected int _getEmbeddedY(long ptr);
+
+    @Override
+    protected void notifyResize(int type, int width, int height) {
+        width  = Math.round( width * getPlatformScaleX());
+        height = Math.round(height * getPlatformScaleY());
+        super.notifyResize(type, width, height);
+    }
 
     @Override
     protected void _setCursor(long ptr, Cursor cursor) {

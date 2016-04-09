@@ -52,7 +52,7 @@ public interface EmbeddedSceneInterface {
     /*
      * A notification about the scale factor is changed.
      */
-    public void setPixelScaleFactor(float scale);
+    public void setPixelScaleFactors(float scalex, float scaley);
 
     /*
      * A request to fetch all the FX scene pixels into a offscreen buffer.

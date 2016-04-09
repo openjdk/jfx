@@ -42,19 +42,10 @@ class WinWindow extends Window {
 
     protected WinWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
-        setPlatformScale(screen.getUIScale());
-        setRenderScale(screen.getRenderScale());
     }
 
     protected WinWindow(long parent) {
         super(parent);
-        setPlatformScale(getScreen().getUIScale());
-        setRenderScale(getScreen().getRenderScale());
-    }
-
-    protected void notifyScaleChanged(float newUIScale, float newRenderScale) {
-        setPlatformScale(newUIScale);
-        setRenderScale(newRenderScale);
     }
 
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);

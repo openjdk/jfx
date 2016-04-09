@@ -206,8 +206,12 @@ public abstract class Window {
     private int width = 0;
     private int height = 0;
     private float alpha = 1.0f;
-    private float platformScale = 1.0f;
-    private float renderScale = 1.0f;
+    private float platformScaleX = 1.0f;
+    private float platformScaleY = 1.0f;
+    private float outputScaleX = 1.0f;
+    private float outputScaleY = 1.0f;
+    private float renderScaleX = 1.0f;
+    private float renderScaleY = 1.0f;
 
     // This is a workaround for RT-15970: as for embedded windows we don't
     // receive any MOVE notifications from the native platform, we poll
@@ -269,6 +273,12 @@ public abstract class Window {
         this.isDecorated = (this.styleMask & Window.TITLED) != 0;
 
         this.screen = screen != null ? screen : Screen.getMainScreen();
+        if (PrismSettings.allowHiDPIScaling) {
+            this.platformScaleX = this.screen.getPlatformScaleX();
+            this.platformScaleY = this.screen.getPlatformScaleY();
+            this.outputScaleX = this.screen.getRecommendedOutputScaleX();
+            this.outputScaleY = this.screen.getRecommendedOutputScaleY();
+        }
 
         this.ptr = _createWindow(owner != null ? owner.getNativeHandle() : 0L,
                 this.screen.getNativeScreen(), this.styleMask);
@@ -466,38 +476,67 @@ public abstract class Window {
         return isMaximized();
     }
 
-    public void setPlatformScale(float platformScale) {
+    protected void notifyScaleChanged(float platformScaleX, float platformScaleY,
+                                      float outputScaleX, float outputScaleY)
+    {
         if (!PrismSettings.allowHiDPIScaling) return;
-        this.platformScale = platformScale;
+        this.platformScaleX = platformScaleX;
+        this.platformScaleY = platformScaleY;
+        this.outputScaleX = outputScaleX;
+        this.outputScaleY = outputScaleY;
+        notifyRescale();
     }
 
     /**
-     * Return the scale used to communicate window locations, sizes, and event
-     * coordinates to/from the platform.
-     * @return the platform scaling for screen locations
+     * Return the horizontal scale used to communicate window locations,
+     * sizes, and event coordinates to/from the platform.
+     * @return the horizontal platform scaling for screen locations
      */
-    public final float getPlatformScale() {
-        return platformScale;
-    }
-
-    public void setRenderScale(float renderScale) {
-        if (!PrismSettings.allowHiDPIScaling) return;
-        this.renderScale = renderScale;
+    public final float getPlatformScaleX() {
+        return platformScaleX;
     }
 
     /**
-     * Return the scale that should be used to render content on this window.
-     * This is usually similar to the platform scale, but may be different
-     * depending on how the platform manages events vs. rendering buffers
-     * and/or whether the system can handle non-integer rendering scales.
-     * @return the pixel scaling to be used during rendering
+     * Return the vertical scale used to communicate window locations,
+     * sizes, and event coordinates to/from the platform.
+     * @return the vertical platform scaling for screen locations
      */
-    public final float getRenderScale() {
-        return renderScale;
+    public final float getPlatformScaleY() {
+        return platformScaleY;
     }
 
-    public float getOutputScale() {
-        return platformScale;
+    public void setRenderScaleX(float renderScaleX) {
+        if (!PrismSettings.allowHiDPIScaling) return;
+        this.renderScaleX = renderScaleX;
+    }
+
+    public void setRenderScaleY(float renderScaleY) {
+        if (!PrismSettings.allowHiDPIScaling) return;
+        this.renderScaleY = renderScaleY;
+    }
+
+    /**
+     * Return the horizontal scale used for rendering the back buffer.
+     * @return the horizontal scaling for rendering
+     */
+    public final float getRenderScaleX() {
+        return renderScaleX;
+    }
+
+    /**
+     * Return the vertical scale used for rendering to the back buffer.
+     * @return the vertical scaling for rendering
+     */
+    public final float getRenderScaleY() {
+        return renderScaleY;
+    }
+
+    public float getOutputScaleX() {
+        return outputScaleX;
+    }
+
+    public float getOutputScaleY() {
+        return outputScaleY;
     }
 
     protected abstract int _getEmbeddedX(long ptr);
@@ -1192,6 +1231,10 @@ public abstract class Window {
         this.x = x;
         this.y = y;
         handleWindowEvent(System.nanoTime(), WindowEvent.MOVE);
+    }
+
+    protected void notifyRescale() {
+        handleWindowEvent(System.nanoTime(), WindowEvent.RESCALE);
     }
 
     protected void notifyMoveToAnotherScreen(Screen newScreen) {

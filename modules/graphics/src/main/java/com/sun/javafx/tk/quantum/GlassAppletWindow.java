@@ -122,10 +122,17 @@ class GlassAppletWindow implements AppletWindow {
     }
 
     @Override
-    public float getUIScale() {
-        final AtomicReference<Float> uiScale = new AtomicReference<Float>(0.0f);
-        Application.invokeAndWait(() -> uiScale.set(glassWindow.getPlatformScale()));
-        return uiScale.get();
+    public float getPlatformScaleX() {
+        final AtomicReference<Float> pScale = new AtomicReference<Float>(0.0f);
+        Application.invokeAndWait(() -> pScale.set(glassWindow.getPlatformScaleX()));
+        return pScale.get();
+    }
+
+    @Override
+    public float getPlatformScaleY() {
+        final AtomicReference<Float> pScale = new AtomicReference<Float>(0.0f);
+        Application.invokeAndWait(() -> pScale.set(glassWindow.getPlatformScaleY()));
+        return pScale.get();
     }
 
     void dispose() {

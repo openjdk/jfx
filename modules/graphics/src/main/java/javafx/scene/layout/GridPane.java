@@ -1204,9 +1204,9 @@ public class GridPane extends Pane {
         try {
             final double[] heights = height == -1 ? null : computeHeightsToFit(height).asArray();
 
-            return snapSpace(getInsets().getLeft()) +
+            return snapSpaceX(getInsets().getLeft()) +
                     computeMinWidths(heights).computeTotalWithMultiSize() +
-                    snapSpace(getInsets().getRight());
+                    snapSpaceX(getInsets().getRight());
         } finally {
             performingLayout = false;
         }
@@ -1219,9 +1219,9 @@ public class GridPane extends Pane {
         try {
             final double[] widths = width == -1 ? null : computeWidthsToFit(width).asArray();
 
-            return snapSpace(getInsets().getTop()) +
+            return snapSpaceY(getInsets().getTop()) +
                     computeMinHeights(widths).computeTotalWithMultiSize() +
-                    snapSpace(getInsets().getBottom());
+                    snapSpaceY(getInsets().getBottom());
         } finally {
             performingLayout = false;
         }
@@ -1233,9 +1233,9 @@ public class GridPane extends Pane {
         try {
             final double[] heights = height == -1 ? null : computeHeightsToFit(height).asArray();
 
-            return snapSpace(getInsets().getLeft()) +
+            return snapSpaceX(getInsets().getLeft()) +
                     computePrefWidths(heights).computeTotalWithMultiSize() +
-                    snapSpace(getInsets().getRight());
+                    snapSpaceX(getInsets().getRight());
         } finally {
             performingLayout = false;
         }
@@ -1247,9 +1247,9 @@ public class GridPane extends Pane {
         try {
             final double[] widths = width == -1 ? null : computeWidthsToFit(width).asArray();
 
-            return snapSpace(getInsets().getTop()) +
+            return snapSpaceY(getInsets().getTop()) +
                     computePrefHeights(widths).computeTotalWithMultiSize() +
-                    snapSpace(getInsets().getBottom());
+                    snapSpaceY(getInsets().getBottom());
         } finally {
             performingLayout = false;
         }
@@ -1362,15 +1362,17 @@ public class GridPane extends Pane {
             CompositeSize prefHeights = null;
             for (int i = 0; i < rowConstr.size(); ++i) {
                 final RowConstraints curConstraint = rowConstr.get(i);
-                double maxRowHeight = snapSize(curConstraint.getMaxHeight());
-                if (maxRowHeight == USE_PREF_SIZE) {
+                final double constrMaxH = curConstraint.getMaxHeight();
+                if (constrMaxH == USE_PREF_SIZE) {
                     if (prefHeights == null) {
                         prefHeights = computePrefHeights(null);
                     }
                     rowMaxHeight.setPresetSize(i, prefHeights.getSize(i));
-                } else if (maxRowHeight != USE_COMPUTED_SIZE) {
-                    final double min = snapSize(curConstraint.getMinHeight());
-                    if (min >= 0 ) {
+                } else if (constrMaxH != USE_COMPUTED_SIZE) {
+                    final double maxRowHeight = snapSizeY(constrMaxH);
+                    final double constrMinH = curConstraint.getMinHeight();
+                    if (constrMinH >= 0 ) {
+                        final double min = snapSizeY(curConstraint.getMinHeight());
                         rowMaxHeight.setPresetSize(i, boundedSize(min, maxRowHeight, maxRowHeight));
                     } else {
                         rowMaxHeight.setPresetSize(i, maxRowHeight);
@@ -1396,19 +1398,20 @@ public class GridPane extends Pane {
         final ObservableList<RowConstraints> rowConstr = getRowConstraints();
         for (int i = 0; i < rowConstr.size(); ++i) {
             final RowConstraints curConstraint = rowConstr.get(i);
-            double prefRowHeight = snapSize(curConstraint.getPrefHeight());
-            final double min = snapSize(curConstraint.getMinHeight());
-            if (prefRowHeight != USE_COMPUTED_SIZE) {
-                final double max = snapSize(curConstraint.getMaxHeight());
-                if (min >= 0 || max >= 0) {
-                    result.setPresetSize(i, boundedSize(min < 0 ? 0 : min,
-                            prefRowHeight,
-                            max < 0 ? Double.POSITIVE_INFINITY : max));
+            final double constrMinH = curConstraint.getMinHeight();
+            final double constrPrefH = curConstraint.getPrefHeight();
+            if (constrPrefH != USE_COMPUTED_SIZE) {
+                final double prefRowHeight = snapSizeY(constrPrefH);
+                final double constrMaxH = curConstraint.getMaxHeight();
+                if (constrMinH >= 0 || constrMaxH >= 0) {
+                    final double min = (constrMinH < 0 ? 0 : snapSizeY(constrMinH));
+                    final double max = (constrMaxH < 0 ? Double.POSITIVE_INFINITY : snapSizeY(constrMaxH));
+                    result.setPresetSize(i, boundedSize(min, prefRowHeight, max));
                 } else {
                     result.setPresetSize(i, prefRowHeight);
                 }
-            } else if (min > 0){
-                result.setSize(i, min);
+            } else if (constrMinH > 0){
+                result.setSize(i, snapSizeY(constrMinH));
             }
         }
         List<Node> managed = getManagedChildren();
@@ -1444,14 +1447,14 @@ public class GridPane extends Pane {
         final ObservableList<RowConstraints> rowConstr = getRowConstraints();
         CompositeSize prefHeights = null;
         for (int i = 0; i < rowConstr.size(); ++i) {
-            double minRowHeight = snapSize(rowConstr.get(i).getMinHeight());
-            if (minRowHeight == USE_PREF_SIZE) {
+            final double constrMinH = rowConstr.get(i).getMinHeight();
+            if (constrMinH == USE_PREF_SIZE) {
                 if (prefHeights == null) {
                     prefHeights = computePrefHeights(widths);
                 }
                 result.setPresetSize(i, prefHeights.getSize(i));
-            } else if (minRowHeight != USE_COMPUTED_SIZE) {
-                result.setPresetSize(i, minRowHeight);
+            } else if (constrMinH != USE_COMPUTED_SIZE) {
+                result.setPresetSize(i, snapSizeY(constrMinH));
             }
         }
         List<Node> managed = getManagedChildren();
@@ -1491,15 +1494,17 @@ public class GridPane extends Pane {
             CompositeSize prefWidths = null;
             for (int i = 0; i < columnConstr.size(); ++i) {
                 final ColumnConstraints curConstraint = columnConstr.get(i);
-                double maxColumnWidth = snapSize(curConstraint.getMaxWidth());
-                if (maxColumnWidth == USE_PREF_SIZE) {
+                final double constrMaxW = curConstraint.getMaxWidth();
+                if (constrMaxW == USE_PREF_SIZE) {
                     if (prefWidths == null) {
                         prefWidths = computePrefWidths(null);
                     }
                     columnMaxWidth.setPresetSize(i, prefWidths.getSize(i));
-                } else if (maxColumnWidth != USE_COMPUTED_SIZE) {
-                    final double min = snapSize(curConstraint.getMinWidth());
-                    if (min >= 0) {
+                } else if (constrMaxW != USE_COMPUTED_SIZE) {
+                    double maxColumnWidth = snapSizeX(constrMaxW);
+                    final double constrMinW = curConstraint.getMinWidth();
+                    if (constrMinW >= 0) {
+                        final double min = snapSizeX(constrMinW);
                         columnMaxWidth.setPresetSize(i, boundedSize(min, maxColumnWidth, maxColumnWidth));
                     } else {
                         columnMaxWidth.setPresetSize(i, maxColumnWidth);
@@ -1525,19 +1530,22 @@ public class GridPane extends Pane {
         final ObservableList<ColumnConstraints> columnConstr = getColumnConstraints();
         for (int i = 0; i < columnConstr.size(); ++i) {
             final ColumnConstraints curConstraint = columnConstr.get(i);
-            double prefColumnWidth = snapSize(curConstraint.getPrefWidth());
-            final double min = snapSize(curConstraint.getMinWidth());
-            if (prefColumnWidth != USE_COMPUTED_SIZE) {
-                final double max = snapSize(curConstraint.getMaxWidth());
-                if (min >= 0 || max >= 0) {
+            final double constrPrefW = curConstraint.getPrefWidth();
+            final double constrMinW = curConstraint.getMinWidth();
+            if (constrPrefW != USE_COMPUTED_SIZE) {
+                final double prefColumnWidth = snapSizeX(constrPrefW);
+                final double constrMaxW = curConstraint.getMaxWidth();
+                if (constrMinW >= 0 || constrMaxW >= 0) {
+                    double min = (constrMinW < 0 ? 0 : snapSizeX(constrMinW));
+                    final double max = (constrMaxW < 0 ? Double.POSITIVE_INFINITY : snapSizeX(constrMaxW));
                     result.setPresetSize(i, boundedSize(min < 0 ? 0 : min,
                             prefColumnWidth,
                             max < 0 ? Double.POSITIVE_INFINITY : max));
                 } else {
                     result.setPresetSize(i, prefColumnWidth);
                 }
-            } else if (min > 0){
-                result.setSize(i, min);
+            } else if (constrMinW > 0){
+                result.setSize(i, snapSizeX(constrMinW));
             }
         }
         List<Node> managed = getManagedChildren();
@@ -1576,14 +1584,14 @@ public class GridPane extends Pane {
         final ObservableList<ColumnConstraints> columnConstr = getColumnConstraints();
         CompositeSize prefWidths = null;
         for (int i = 0; i < columnConstr.size(); ++i) {
-            double minColumnWidth = snapSize(columnConstr.get(i).getMinWidth());
-            if (minColumnWidth == USE_PREF_SIZE) {
+            final double constrMinW = columnConstr.get(i).getMinWidth();
+            if (constrMinW == USE_PREF_SIZE) {
                 if (prefWidths == null) {
                     prefWidths = computePrefWidths(heights);
                 }
                 result.setPresetSize(i, prefWidths.getSize(i));
-            } else if (minColumnWidth != USE_COMPUTED_SIZE) {
-                result.setPresetSize(i, minColumnWidth);
+            } else if (constrMinW != USE_COMPUTED_SIZE) {
+                result.setPresetSize(i, snapSizeX(constrMinW));
             }
         }
         List<Node> managed = getManagedChildren();
@@ -1663,12 +1671,12 @@ public class GridPane extends Pane {
     @Override protected void layoutChildren() {
         performingLayout = true;
         try {
-            final double snaphgap = snapSpace(getHgap());
-            final double snapvgap = snapSpace(getVgap());
-            final double top = snapSpace(getInsets().getTop());
-            final double bottom = snapSpace(getInsets().getBottom());
-            final double left = snapSpace(getInsets().getLeft());
-            final double right = snapSpace(getInsets().getRight());
+            final double snaphgap = snapSpaceX(getHgap());
+            final double snapvgap = snapSpaceY(getVgap());
+            final double top = snapSpaceY(getInsets().getTop());
+            final double bottom = snapSpaceY(getInsets().getBottom());
+            final double left = snapSpaceX(getInsets().getLeft());
+            final double right = snapSpaceX(getInsets().getRight());
 
             final double width = getWidth();
             final double height = getHeight();
@@ -1799,9 +1807,9 @@ public class GridPane extends Pane {
 
     private double adjustRowHeights(final CompositeSize heights, double height) {
         assert(height != -1);
-        final double snapvgap = snapSpace(getVgap());
-        final double top = snapSpace(getInsets().getTop());
-        final double bottom = snapSpace(getInsets().getBottom());
+        final double snapvgap = snapSpaceY(getVgap());
+        final double top = snapSpaceY(getInsets().getTop());
+        final double bottom = snapSpaceY(getInsets().getBottom());
         final double vgaps = snapvgap * (getNumberOfRows() - 1);
         final double contentHeight = height - top - bottom;
 
@@ -2004,7 +2012,7 @@ public class GridPane extends Pane {
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
                     final int index = i.next();
-                    double limit = snapSpace(limitSize.getProportionalMinOrMaxSize(index, shrinking))
+                    double limit = snapSpaceY(limitSize.getProportionalMinOrMaxSize(index, shrinking))
                             - heights.getSize(index); // negative in shrinking case
                     if (shrinking && limit > 0
                             || !shrinking && limit < 0) { // Limit completely if current size
@@ -2040,9 +2048,9 @@ public class GridPane extends Pane {
 
     private double adjustColumnWidths(final CompositeSize widths, double width) {
         assert(width != -1);
-        final double snaphgap = snapSpace(getHgap());
-        final double left = snapSpace(getInsets().getLeft());
-        final double right = snapSpace(getInsets().getRight());
+        final double snaphgap = snapSpaceX(getHgap());
+        final double left = snapSpaceX(getInsets().getLeft());
+        final double right = snapSpaceX(getInsets().getRight());
         final double hgaps = snaphgap * (getNumberOfColumns() - 1);
         final double contentWidth = width - left - right;
 
@@ -2248,7 +2256,7 @@ public class GridPane extends Pane {
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
                     final int index = i.next();
-                    double limit = snapSpace(limitSize.getProportionalMinOrMaxSize(index, shrinking))
+                    double limit = snapSpaceX(limitSize.getProportionalMinOrMaxSize(index, shrinking))
                             - widths.getSize(index); // negative in shrinking case
                     if (shrinking && limit > 0
                             || !shrinking && limit < 0) { // Limit completely if current size
@@ -2289,16 +2297,16 @@ public class GridPane extends Pane {
         if (!gridLines.getChildren().isEmpty()) {
             gridLines.getChildren().clear();
         }
-        double hgap = snapSpace(getHgap());
-        double vgap = snapSpace(getVgap());
+        double hGap = snapSpaceX(getHgap());
+        double vGap = snapSpaceY(getVgap());
 
         // create vertical lines
         double linex = x;
         double liney = y;
         for (int i = 0; i <= columnWidths.getLength(); i++) {
              gridLines.getChildren().add(createGridLine(linex, liney, linex, liney + columnHeight));
-             if (i > 0 && i < columnWidths.getLength() && getHgap() != 0) {
-                 linex += getHgap();
+             if (i > 0 && i < columnWidths.getLength() && hGap != 0) {
+                 linex += hGap;
                  gridLines.getChildren().add(createGridLine(linex, liney, linex, liney + columnHeight));
              }
              if (i < columnWidths.getLength()) {
@@ -2309,8 +2317,8 @@ public class GridPane extends Pane {
         linex = x;
         for (int i = 0; i <= rowHeights.getLength(); i++) {
             gridLines.getChildren().add(createGridLine(linex, liney, linex + rowWidth, liney));
-            if (i > 0 && i < rowHeights.getLength() && getVgap() != 0) {
-                liney += getVgap();
+            if (i > 0 && i < rowHeights.getLength() && vGap != 0) {
+                liney += vGap;
                 gridLines.getChildren().add(createGridLine(linex, liney, linex + rowWidth, liney));
             }
             if (i < rowHeights.getLength()) {
@@ -2341,12 +2349,12 @@ public class GridPane extends Pane {
 
     private CompositeSize createCompositeRows(double initSize) {
         return new CompositeSize(getNumberOfRows(), rowPercentHeight, rowPercentTotal,
-                snapSpace(getVgap()), initSize);
+                snapSpaceY(getVgap()), initSize);
     }
 
     private CompositeSize createCompositeColumns(double initSize) {
         return new CompositeSize(getNumberOfColumns(), columnPercentWidth, columnPercentTotal,
-                snapSpace(getHgap()), initSize);
+                snapSpaceX(getHgap()), initSize);
     }
 
     private int getNodeRowEndConvertRemaining(Node child) {
@@ -2740,14 +2748,14 @@ public class GridPane extends Pane {
      */
     @Deprecated // SB-dependency: RT-33381 has been filed to track this
     public final Bounds impl_getCellBounds(int columnIndex, int rowIndex) {
-        final double snaphgap = this.snapSpace(this.getHgap());
-        final double snapvgap = this.snapSpace(this.getVgap());
-        final double top = this.snapSpace(this.getInsets().getTop());
-        final double right = this.snapSpace(this.getInsets().getRight());
-        final double bottom = this.snapSpace(this.getInsets().getBottom());
-        final double left = this.snapSpace(this.getInsets().getLeft());
-        final double gridPaneHeight = this.snapSize(this.getHeight()) - (top + bottom);
-        final double gridPaneWidth = this.snapSize(this.getWidth()) - (left + right);
+        final double snaphgap = this.snapSpaceX(this.getHgap());
+        final double snapvgap = this.snapSpaceY(this.getVgap());
+        final double top = this.snapSpaceY(this.getInsets().getTop());
+        final double right = this.snapSpaceX(this.getInsets().getRight());
+        final double bottom = this.snapSpaceY(this.getInsets().getBottom());
+        final double left = this.snapSpaceX(this.getInsets().getLeft());
+        final double gridPaneHeight = this.snapSizeY(this.getHeight()) - (top + bottom);
+        final double gridPaneWidth = this.snapSizeX(this.getWidth()) - (left + right);
 
         // Compute grid. Result contains two double arrays, first for columns, second for rows
         double[] columnWidths;

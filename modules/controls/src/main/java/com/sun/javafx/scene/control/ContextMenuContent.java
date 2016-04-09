@@ -177,36 +177,36 @@ public class ContextMenuContent extends Region {
                 Node n = menuItemContainer.left;
                 if (n != null) {
                     if (n.getContentBias() == Orientation.VERTICAL) { // width depends on height
-                        alt = snapSize(n.prefHeight(-1));
+                        alt = snapSizeY(n.prefHeight(-1));
                     } else alt = -1;
-                    maxLeftWidth = Math.max(maxLeftWidth, snapSize(n.prefWidth(alt)));
+                    maxLeftWidth = Math.max(maxLeftWidth, snapSizeX(n.prefWidth(alt)));
                     maxRowHeight = Math.max(maxRowHeight, n.prefHeight(-1));
                 }
 
                 n = menuItemContainer.graphic;
                 if (n != null) {
                     if (n.getContentBias() == Orientation.VERTICAL) { // width depends on height
-                        alt = snapSize(n.prefHeight(-1));
+                        alt = snapSizeY(n.prefHeight(-1));
                     } else alt = -1;
-                    maxGraphicWidth = Math.max(maxGraphicWidth, snapSize(n.prefWidth(alt)));
+                    maxGraphicWidth = Math.max(maxGraphicWidth, snapSizeX(n.prefWidth(alt)));
                     maxRowHeight = Math.max(maxRowHeight, n.prefHeight(-1));
                 }
 
                 n = menuItemContainer.label;
                 if (n != null) {
                     if (n.getContentBias() == Orientation.VERTICAL) {
-                        alt = snapSize(n.prefHeight(-1));
+                        alt = snapSizeY(n.prefHeight(-1));
                     } else alt = -1;
-                    maxLabelWidth = Math.max(maxLabelWidth, snapSize(n.prefWidth(alt)));
+                    maxLabelWidth = Math.max(maxLabelWidth, snapSizeX(n.prefWidth(alt)));
                     maxRowHeight = Math.max(maxRowHeight, n.prefHeight(-1));
                 }
 
                 n = menuItemContainer.right;
                 if (n != null) {
                     if (n.getContentBias() == Orientation.VERTICAL) { // width depends on height
-                        alt = snapSize(n.prefHeight(-1));
+                        alt = snapSizeY(n.prefHeight(-1));
                     } else alt = -1;
-                    maxRightWidth = Math.max(maxRightWidth, snapSize(n.prefWidth(alt)));
+                    maxRightWidth = Math.max(maxRightWidth, snapSizeX(n.prefWidth(alt)));
                     maxRowHeight = Math.max(maxRowHeight, n.prefHeight(-1));
                 }
             }
@@ -333,7 +333,7 @@ public class ContextMenuContent extends Region {
         final double y = snappedTopInset();
         final double w = getWidth() - x - snappedRightInset();
         final double h = getHeight() - y - snappedBottomInset();
-        final double contentHeight =  snapSize(getContentHeight()); // itemsContainer.prefHeight(-1);
+        final double contentHeight =  snapSizeY(getContentHeight()); // itemsContainer.prefHeight(-1);
 
         itemsContainer.resize(w,contentHeight);
         itemsContainer.relocate(x, y);
@@ -352,18 +352,18 @@ public class ContextMenuContent extends Region {
         clipRect.setHeight(h);
 
         if (upArrow.isVisible()) {
-            final double prefHeight = snapSize(upArrow.prefHeight(-1));
-            clipRect.setHeight(snapSize(clipRect.getHeight() - prefHeight));
-            clipRect.setY(snapSize(clipRect.getY()) + prefHeight);
-            upArrow.resize(snapSize(upArrow.prefWidth(-1)), prefHeight);
+            final double prefHeight = snapSizeY(upArrow.prefHeight(-1));
+            clipRect.setHeight(snapSizeY(clipRect.getHeight() - prefHeight));
+            clipRect.setY(snapSizeY(clipRect.getY()) + prefHeight);
+            upArrow.resize(snapSizeX(upArrow.prefWidth(-1)), prefHeight);
             positionInArea(upArrow, x, y, w, prefHeight, /*baseline ignored*/0,
                     HPos.CENTER, VPos.CENTER);
         }
 
         if (downArrow.isVisible()) {
-            final double prefHeight = snapSize(downArrow.prefHeight(-1));
-            clipRect.setHeight(snapSize(clipRect.getHeight()) - prefHeight);
-            downArrow.resize(snapSize(downArrow.prefWidth(-1)), prefHeight);
+            final double prefHeight = snapSizeY(downArrow.prefHeight(-1));
+            clipRect.setHeight(snapSizeY(clipRect.getHeight()) - prefHeight);
+            downArrow.resize(snapSizeX(downArrow.prefWidth(-1)), prefHeight);
             positionInArea(downArrow, x, (y + h - prefHeight), w, prefHeight, /*baseline ignored*/0,
                     HPos.CENTER, VPos.CENTER);
         }
@@ -375,16 +375,16 @@ public class ContextMenuContent extends Region {
          if (itemsContainer.getChildren().size() == 0) return 0;
          for (Node n : itemsContainer.getChildren()) {
              if (! n.isVisible()) continue;
-             prefWidth = Math.max(prefWidth, snapSize(n.prefWidth(-1)));
+             prefWidth = Math.max(prefWidth, snapSizeX(n.prefWidth(-1)));
          }
-         return snappedLeftInset() + snapSize(prefWidth) + snappedRightInset();
+         return snappedLeftInset() + snapSizeX(prefWidth) + snappedRightInset();
     }
 
     @Override protected double computePrefHeight(double width) {
         if (itemsContainer.getChildren().size() == 0) return 0;
         final double screenHeight = getScreenHeight();
         final double contentHeight = getContentHeight(); // itemsContainer.prefHeight(width);
-        double totalHeight = snappedTopInset() + snapSize(contentHeight) + snappedBottomInset();
+        double totalHeight = snappedTopInset() + snapSizeY(contentHeight) + snappedBottomInset();
         // the pref height of this menu is the smaller value of the
         // actual pref height and the height of the screens _visual_ bounds.
         double prefHeight = (screenHeight <= 0) ? (totalHeight) : (Math.min(totalHeight, screenHeight));
@@ -404,7 +404,7 @@ public class ContextMenuContent extends Region {
                 contextMenu.getOwnerWindow().getScene() == null) {
             return -1;
         }
-        return snapSize(com.sun.javafx.util.Utils.getScreen(
+        return snapSizeY(com.sun.javafx.util.Utils.getScreen(
             contextMenu.getOwnerWindow().getScene().getRoot()).getVisualBounds().getHeight());
 
     }
@@ -413,7 +413,7 @@ public class ContextMenuContent extends Region {
         double h = 0.0d;
         for (Node i : itemsContainer.getChildren()) {
             if (i.isVisible()) {
-               h += snapSize(i.prefHeight(-1));
+               h += snapSizeY(i.prefHeight(-1));
             }
         }
         return h;
@@ -1006,8 +1006,8 @@ public class ContextMenuContent extends Region {
             double yOffset = ty;
             for (Node n : getChildren()) {
                 if (n.isVisible()) {
-                    final double prefHeight = snapSize(n.prefHeight(-1));
-                    n.resize(snapSize(getWidth()), prefHeight);
+                    final double prefHeight = snapSizeY(n.prefHeight(-1));
+                    n.resize(snapSizeX(getWidth()), prefHeight);
                     n.relocate(snappedLeftInset(), yOffset);
                     yOffset += prefHeight;
                 }
@@ -1069,8 +1069,8 @@ public class ContextMenuContent extends Region {
         }
 
         @Override protected void layoutChildren() {
-            double w = snapSize(upDownArrow.prefWidth(-1));
-            double h = snapSize(upDownArrow.prefHeight(-1));
+            double w = snapSizeX(upDownArrow.prefWidth(-1));
+            double h = snapSizeY(upDownArrow.prefHeight(-1));
 
             upDownArrow.resize(w, h);
             positionInArea(upDownArrow, 0, 0, getWidth(), getHeight(),

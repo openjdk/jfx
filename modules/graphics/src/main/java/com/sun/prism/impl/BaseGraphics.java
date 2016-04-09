@@ -81,7 +81,8 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     private final BaseContext context;
     private final RenderTarget renderTarget;
     private boolean state3D = false;
-    private float pixelScale = 1.0f;
+    private float pixelScaleX = 1.0f;
+    private float pixelScaleY = 1.0f;
 
     protected BaseGraphics(BaseContext context, RenderTarget target) {
         this.context = context;
@@ -274,13 +275,19 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     }
 
     @Override
-    public void setPixelScaleFactor(float pixelScale) {
-        this.pixelScale = pixelScale;
+    public void setPixelScaleFactors(float pixelScaleX, float pixelScaleY) {
+        this.pixelScaleX = pixelScaleX;
+        this.pixelScaleY = pixelScaleY;
     }
 
     @Override
-    public float getPixelScaleFactor() {
-        return pixelScale;
+    public float getPixelScaleFactorX() {
+        return pixelScaleX;
+    }
+
+    @Override
+    public float getPixelScaleFactorY() {
+        return pixelScaleY;
     }
 
     public void setCamera(NGCamera camera) {

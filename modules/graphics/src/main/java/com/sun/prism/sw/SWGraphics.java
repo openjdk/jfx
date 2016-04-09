@@ -92,7 +92,8 @@ final class SWGraphics implements ReadbackGraphics {
 
     private boolean antialiasedShape = true;
     private boolean hasPreCullingBits = false;
-    private float pixelScale = 1.0f;
+    private float pixelScaleX = 1.0f;
+    private float pixelScaleY = 1.0f;
 
     private NodePath renderRoot;
     @Override
@@ -926,13 +927,18 @@ final class SWGraphics implements ReadbackGraphics {
     }
 
     @Override
-    public void setPixelScaleFactor(float pixelScale) {
-        this.pixelScale = pixelScale;
+    public void setPixelScaleFactors(float pixelScaleX, float pixelScaleY) {
+        this.pixelScaleX = pixelScaleX;
     }
 
     @Override
-    public float getPixelScaleFactor() {
-        return pixelScale;
+    public float getPixelScaleFactorX() {
+        return pixelScaleX;
+    }
+
+    @Override
+    public float getPixelScaleFactorY() {
+        return pixelScaleY;
     }
 
     @Override

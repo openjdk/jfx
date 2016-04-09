@@ -1121,7 +1121,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
  * Method:    _setBounds
  * Signature: (JIIZZIIIIFF)V
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBounds
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBounds2
 (JNIEnv *env, jobject jWindow, jlong jPtr,
  jint x, jint y, jboolean xSet, jboolean ySet,
  jint w, jint h, jint cw, jint ch, jfloat xGravity, jfloat yGravity)

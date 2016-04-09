@@ -552,9 +552,10 @@ class D3DContext extends BaseShaderContext {
 
         // Support retina display by scaling the projViewTx and pass it to the shader.
         scratchTx = scratchTx.set(projViewTx);
-        float pixelScaleFactor = g.getPixelScaleFactor();
-        if (pixelScaleFactor != 1.0) {
-            scratchTx.scale(pixelScaleFactor, pixelScaleFactor, 1.0);
+        float pixelScaleFactorX = g.getPixelScaleFactorX();
+        float pixelScaleFactorY = g.getPixelScaleFactorY();
+        if (pixelScaleFactorX != 1.0 || pixelScaleFactorY != 1.0) {
+            scratchTx.scale(pixelScaleFactorX, pixelScaleFactorY, 1.0);
         }
 
         // Set projection view matrix
@@ -571,10 +572,9 @@ class D3DContext extends BaseShaderContext {
         // Undo the SwapChain scaling done in createGraphics() because 3D needs
         // this information in the shader (via projViewTx)
         BaseTransform xform = g.getTransformNoClone();
-        if (pixelScaleFactor != 1.0) {
-            float invPSF = 1 / pixelScaleFactor;
+        if (pixelScaleFactorX != 1.0 || pixelScaleFactorY != 1.0) {
             scratchAffine3DTx.setToIdentity();
-            scratchAffine3DTx.scale(invPSF, invPSF);
+            scratchAffine3DTx.scale(1.0 / pixelScaleFactorX, 1.0 / pixelScaleFactorY);
             scratchAffine3DTx.concatenate(xform);
             updateWorldTransform(scratchAffine3DTx);
         } else {

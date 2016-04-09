@@ -38,9 +38,6 @@ import java.security.PrivilegedAction;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
     static float   overrideUIScale;
-    static float   overrideRenderScale;
-    static float   minDPIScale;
-    static boolean forceIntegerRenderScale;
 
     private static boolean getBoolean(String propname, boolean defval, String description) {
         String str = System.getProperty(propname);
@@ -80,10 +77,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return val;
     }
 
-    private static native void initIDs(float overrideUIScale,
-                                       float overrideRenderScale,
-                                       float minDPIScale,
-                                       boolean forceIntegerRenderScale);
+    private static native void initIDs(float overrideUIScale);
     static {
         // This loading of msvcr120.dll and msvcp120.dll (VS2013) is required when run with Java 8
         // since it was build with VS2010 and doesn't include msvcr120.dll in its JRE.
@@ -93,13 +87,17 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
                 verbose = Boolean.getBoolean("javafx.verbose");
                 if (PrismSettings.allowHiDPIScaling) {
                     overrideUIScale = getFloat("glass.win.uiScale", -1.0f, "Forcing UI scaling factor: ");
-                    overrideRenderScale = getFloat("glass.win.renderScale", -1.0f, "Forcing Rendering scaling factor: ");
-                    minDPIScale = getFloat("glass.win.minHiDPI", 1.5f, "Threshold to enable UI scaling factor: ");
-                    forceIntegerRenderScale = getBoolean("glass.win.forceIntegerRenderScale", true, "forcing integer rendering scale");
+                    // We only parse these if verbose, to inform the user...
+                    if (PrismSettings.verbose) {
+                        getFloat("glass.win.renderScale", -1.0f,
+                                 "(No longer supported) Rendering scaling factor: ");
+                        getFloat("glass.win.minHiDPI", 1.5f,
+                                 "(No longer supported) UI scaling threshold: ");
+                        getBoolean("glass.win.forceIntegerRenderScale", true,
+                                   "(No longer supported) force integer rendering scale");
+                    }
                 } else {
-                    overrideUIScale = overrideRenderScale = 1.0f;
-                    minDPIScale = Float.MAX_VALUE;
-                    forceIntegerRenderScale = false;
+                    overrideUIScale = 1.0f;
                 }
                 try {
                     NativeLibLoader.loadLibrary("msvcr120");
@@ -119,7 +117,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
                 return null;
             }
         });
-        initIDs(overrideUIScale, overrideRenderScale, minDPIScale, forceIntegerRenderScale);
+        initIDs(overrideUIScale);
     }
 
     private final InvokeLaterDispatcher invokeLaterDispatcher;
@@ -269,8 +267,8 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    public Pixels createPixels(int width, int height, IntBuffer data, float scale) {
-        return new WinPixels(width, height, data, scale);
+    public Pixels createPixels(int width, int height, IntBuffer data, float scalex, float scaley) {
+        return new WinPixels(width, height, data, scalex, scaley);
     }
 
     @Override protected int staticPixels_getNativeFormat() {

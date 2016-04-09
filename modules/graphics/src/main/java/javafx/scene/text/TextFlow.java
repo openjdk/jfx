@@ -234,8 +234,8 @@ public class TextFlow extends Pane {
         if (value != getWidth()) {
             TextLayout layout = getTextLayout();
             Insets insets = getInsets();
-            double left = snapSpace(insets.getLeft());
-            double right = snapSpace(insets.getRight());
+            double left = snapSpaceX(insets.getLeft());
+            double right = snapSpaceX(insets.getRight());
             double width = Math.max(1, value - left - right);
             layout.setWrapWidth((float)width);
             super.setWidth(value);
@@ -247,8 +247,8 @@ public class TextFlow extends Pane {
         layout.setWrapWidth(0);
         double width = layout.getBounds().getWidth();
         Insets insets = getInsets();
-        double left = snapSpace(insets.getLeft());
-        double right = snapSpace(insets.getRight());
+        double left = snapSpaceX(insets.getLeft());
+        double right = snapSpaceX(insets.getRight());
         double wrappingWidth = Math.max(1, getWidth() - left - right);
         layout.setWrapWidth((float)wrappingWidth);
         return left + width + right;
@@ -257,8 +257,8 @@ public class TextFlow extends Pane {
     @Override protected double computePrefHeight(double width) {
         TextLayout layout = getTextLayout();
         Insets insets = getInsets();
-        double left = snapSpace(insets.getLeft());
-        double right = snapSpace(insets.getRight());
+        double left = snapSpaceX(insets.getLeft());
+        double right = snapSpaceX(insets.getRight());
         if (width == USE_COMPUTED_SIZE) {
             layout.setWrapWidth(0);
         } else {
@@ -268,8 +268,8 @@ public class TextFlow extends Pane {
         double height = layout.getBounds().getHeight();
         double wrappingWidth = Math.max(1, getWidth() - left - right);
         layout.setWrapWidth((float)wrappingWidth);
-        double top = snapSpace(insets.getTop());
-        double bottom = snapSpace(insets.getBottom());
+        double top = snapSpaceY(insets.getTop());
+        double bottom = snapSpaceY(insets.getBottom());
         return top + height + bottom;
     }
 
@@ -313,8 +313,8 @@ public class TextFlow extends Pane {
     @Override protected void layoutChildren() {
         inLayout = true;
         Insets insets = getInsets();
-        double top = snapSpace(insets.getTop());
-        double left = snapSpace(insets.getLeft());
+        double top = snapSpaceY(insets.getTop());
+        double left = snapSpaceX(insets.getLeft());
 
         GlyphList[] runs = getTextLayout().getRuns();
         for (int j = 0; j < runs.length; j++) {
@@ -483,7 +483,7 @@ public class TextFlow extends Pane {
 
     @Override public final double getBaselineOffset() {
         Insets insets = getInsets();
-        double top = snapSpace(insets.getTop());
+        double top = snapSpaceY(insets.getTop());
         return top - getTextLayout().getBounds().getMinY();
     }
 
@@ -574,11 +574,11 @@ public class TextFlow extends Pane {
         double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            alt = snapSize(boundedSize(
+            alt = snapSizeY(boundedSize(
                     child.minHeight(-1), height != -1? height - top - bottom :
                            child.prefHeight(-1), child.maxHeight(-1)));
         }
-        return left + snapSize(boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt))) + right;
+        return left + snapSizeX(boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt))) + right;
     }
 
     double computeChildPrefAreaHeight(Node child, Insets margin) {
@@ -593,11 +593,11 @@ public class TextFlow extends Pane {
         double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            alt = snapSize(boundedSize(
+            alt = snapSizeX(boundedSize(
                     child.minWidth(-1), width != -1? width - left - right :
                            child.prefWidth(-1), child.maxWidth(-1)));
         }
-        return top + snapSize(boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt))) + bottom;
+        return top + snapSizeY(boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt))) + bottom;
     }
     /* end of copied code */
 

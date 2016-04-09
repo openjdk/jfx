@@ -48,6 +48,14 @@ public interface TKStageListener {
     public void changedSize(float width, float height);
 
     /**
+     * The stage's peer should now be displayed with a new UI scale
+     *
+     * @param xScale the new recommended horizontal scale
+     * @param yScale the new recommended vertical scale
+     */
+    public void changedScale(float xScale, float yScale);
+
+    /**
      * The stages peer focused state has changed.
      *
      * @param focused True if the stage's peer now contains the focus

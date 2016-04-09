@@ -519,12 +519,12 @@ public class StubToolkit extends Toolkit {
         }
 
         @Override
-        public float getUIScale(Object obj) {
+        public float getRecommendedOutputScaleX(Object obj) {
             return ((ScreenConfiguration) obj).getScale();
         }
 
         @Override
-        public float getRenderScale(Object obj) {
+        public float getRecommendedOutputScaleY(Object obj) {
             return ((ScreenConfiguration) obj).getScale();
         }
     };

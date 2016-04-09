@@ -56,7 +56,8 @@ public interface AppletWindow {
     public int getPositionX();
     public int getPositionY();
 
-    public float getUIScale();
+    public float getPlatformScaleX();
+    public float getPlatformScaleY();
 
     // returns CARemoteLayer id (only used on Mac)
     public int getRemoteLayerId();

@@ -28,10 +28,7 @@ package javafx.stage;
 import java.security.AllPermission;
 import java.security.AccessControlContext;
 import java.security.AccessController;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.property.DoubleProperty;
@@ -45,6 +42,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -58,7 +56,6 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 
 import com.sun.javafx.util.Utils;
-import com.sun.javafx.util.WeakReferenceQueue;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.stage.WindowHelper;
@@ -67,6 +64,8 @@ import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 
 
 /**
@@ -108,6 +107,13 @@ public class Window implements EventTarget {
                     }
 
                     @Override
+                    public void notifyScaleChanged(Window window,
+                                                   double newOutputScaleX,
+                                                   double newOutputScaleY) {
+                        window.updateOutputScales(newOutputScaleX, newOutputScaleY);
+                    }
+
+                    @Override
                     public void notifyScreenChanged(Window window,
                                                   Object from,
                                                   Object to) {
@@ -115,15 +121,15 @@ public class Window implements EventTarget {
                     }
 
                     @Override
-                    public float getUIScale(Window window) {
+                    public float getPlatformScaleX(Window window) {
                         TKStage peer = window.impl_peer;
-                        return peer == null ? 1.0f : peer.getUIScale();
+                        return peer == null ? 1.0f : peer.getPlatformScaleX();
                     }
 
                     @Override
-                    public float getRenderScale(Window window) {
+                    public float getPlatformScaleY(Window window) {
                         TKStage peer = window.impl_peer;
-                        return peer == null ? 1.0f : peer.getRenderScale();
+                        return peer == null ? 1.0f : peer.getPlatformScaleY();
                     }
 
                     @Override
@@ -287,6 +293,172 @@ public class Window implements EventTarget {
                                                CENTER_ON_SCREEN_Y_FRACTION);
             applyBounds();
         }
+    }
+
+    private void updateOutputScales(double sx, double sy) {
+        // We call updateRenderScales() before updating the property
+        // values so that an application can listen to the properties
+        // and set their own values overriding the default values we set.
+        updateRenderScales(sx, sy);
+        // Now set the properties and trigger any potential listeners.
+        outputScaleX.set(sx);
+        outputScaleY.set(sy);
+    }
+
+    void updateRenderScales(double sx, double sy) {
+        boolean forceInt = forceIntegerRenderScale.get();
+        if (!renderScaleX.isBound()) {
+            renderScaleX.set(forceInt ? Math.ceil(sx) : sx);
+        }
+        if (!renderScaleY.isBound()) {
+            renderScaleY.set(forceInt ? Math.ceil(sy) : sy);
+        }
+    }
+
+    /**
+     * The scale that the {@code Window} will apply to horizontal scene
+     * coordinates in all stages of rendering and compositing the output
+     * to the screen or other destination device.
+     * This property is updated asynchronously by the system at various
+     * times including:
+     * <ul>
+     * <li>Window creation
+     * <li>At some point during moving a window to a new {@code Screen}
+     * which may be before or after the {@link Screen} property is updated.
+     * <li>In response to a change in user preferences for output scaling.
+     * </ul>
+     *
+     * @see #renderScaleXProperty()
+     * @since 9
+     */
+    private ReadOnlyDoubleWrapper outputScaleX =
+        new ReadOnlyDoubleWrapper(this, "outputScaleX", 1.0);
+    public final double getOutputScaleX() {
+        return outputScaleX.get();
+    }
+    public final ReadOnlyDoubleProperty outputScaleXProperty() {
+        return outputScaleX.getReadOnlyProperty();
+    }
+
+    /**
+     * The scale that the {@code Window} will apply to vertical scene
+     * coordinates in all stages of rendering and compositing the output
+     * to the screen or other destination device.
+     * This property is updated asynchronously by the system at various
+     * times including:
+     * <ul>
+     * <li>Window creation
+     * <li>At some point during moving a window to a new {@code Screen}
+     * which may be before or after the {@link Screen} property is updated.
+     * <li>In response to a change in user preferences for output scaling.
+     * </ul>
+     *
+     * @see #renderScaleYProperty()
+     * @since 9
+     */
+    private ReadOnlyDoubleWrapper outputScaleY =
+        new ReadOnlyDoubleWrapper(this, "outputScaleY", 1.0);
+    public final double getOutputScaleY() {
+        return outputScaleY.get();
+    }
+    public final ReadOnlyDoubleProperty outputScaleYProperty() {
+        return outputScaleY.getReadOnlyProperty();
+    }
+
+    /**
+     * Boolean property that controls whether only integer render scales
+     * are set by default by the system when there is a change in the
+     * associated output scale.
+     * The {@code renderScale} properties will be updated directly and
+     * simultaneously with any changes in the associated {@code outputScale}
+     * properties, but the values can be overridden by subsequent calls to
+     * the {@code setRenderScale} setters or through appropriate use of
+     * binding.
+     * This property will not prevent setting non-integer scales
+     * directly using the {@code renderScale} property object or the
+     * convenience setter method.
+     *
+     * @defaultValue false
+     * @see #renderScaleXProperty()
+     * @see #renderScaleYProperty()
+     * @since 9
+     */
+    private BooleanProperty forceIntegerRenderScale =
+        new SimpleBooleanProperty(this, "forceIntegerRenderScale", false) {
+            @Override
+            protected void invalidated() {
+                updateRenderScales(getOutputScaleX(),
+                                   getOutputScaleY());
+            }
+        };
+    public final void setForceIntegerRenderScale(boolean forced) {
+        forceIntegerRenderScale.set(forced);
+    }
+    public final boolean isForceIntegerRenderScale() {
+        return forceIntegerRenderScale.get();
+    }
+    public final BooleanProperty forceIntegerRenderScaleProperty() {
+        return forceIntegerRenderScale;
+    }
+
+    /**
+     * The horizontal scale that the {@code Window} will use when rendering
+     * its {@code Scene} to the rendering buffer.
+     * This property is automatically updated whenever there is a change in
+     * the {@link outputScaleX} property and can be overridden either by
+     * calling {@code setRenderScaleX()} in response to a listener on the
+     * {@code outputScaleX} property or by binding it appropriately.
+     *
+     * @defaultValue outputScaleX
+     * @see #outputScaleXProperty()
+     * @see #forceIntegerRenderScaleProperty()
+     * @since 9
+     */
+    private DoubleProperty renderScaleX =
+        new SimpleDoubleProperty(this, "renderScaleX", 1.0) {
+            @Override
+            protected void invalidated() {
+                peerBoundsConfigurator.setRenderScaleX(get());
+            }
+        };
+    public final void setRenderScaleX(double scale) {
+        renderScaleX.set(scale);
+    }
+    public final double getRenderScaleX() {
+        return renderScaleX.get();
+    }
+    public final DoubleProperty renderScaleXProperty() {
+        return renderScaleX;
+    }
+
+    /**
+     * The vertical scale that the {@code Window} will use when rendering
+     * its {@code Scene} to the rendering buffer.
+     * This property is automatically updated whenever there is a change in
+     * the {@link outputScaleY} property and can be overridden either by
+     * calling {@code setRenderScaleY()} in response to a listener on the
+     * {@code outputScaleY} property or by binding it appropriately.
+     *
+     * @defaultValue outputScaleY
+     * @see #outputScaleYProperty()
+     * @see #forceIntegerRenderScaleProperty()
+     * @since 9
+     */
+    private DoubleProperty renderScaleY =
+        new SimpleDoubleProperty(this, "renderScaleY", 1.0) {
+            @Override
+            protected void invalidated() {
+                peerBoundsConfigurator.setRenderScaleY(get());
+            }
+        };
+    public final void setRenderScaleY(double scale) {
+        renderScaleY.set(scale);
+    }
+    public final double getRenderScaleY() {
+        return renderScaleY.get();
+    }
+    public final DoubleProperty renderScaleYProperty() {
+        return renderScaleY;
     }
 
     private boolean xExplicit = false;
@@ -851,6 +1023,18 @@ public class Window implements EventTarget {
                         getScene().impl_preferredSize();
                     }
 
+                    updateOutputScales(impl_peer.getOutputScaleX(), impl_peer.getOutputScaleY());
+                    // updateOutputScales may cause an update to the render
+                    // scales in many cases, but if the scale has not changed
+                    // then the lazy render scale properties might think
+                    // they do not need to send down the new values.  In some
+                    // cases we have been show()n with a brand new peer, so
+                    // it is better to force the render scales into the PBC.
+                    // This may usually be a NOP, but it is similar to the
+                    // forced setSize and setLocation down below.
+                    peerBoundsConfigurator.setRenderScaleX(getRenderScaleX());
+                    peerBoundsConfigurator.setRenderScaleY(getRenderScaleY());
+
                     // Set peer bounds
                     if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {
                         adjustSize(true);
@@ -1205,6 +1389,8 @@ public class Window implements EventTarget {
      * the next pulse.
      */
     private final class TKBoundsConfigurator implements TKPulseListener {
+        private double renderScaleX;
+        private double renderScaleY;
         private double x;
         private double y;
         private float xGravity;
@@ -1218,6 +1404,16 @@ public class Window implements EventTarget {
 
         public TKBoundsConfigurator() {
             reset();
+        }
+
+        public void setRenderScaleX(final double renderScaleX) {
+            this.renderScaleX = renderScaleX;
+            setDirty();
+        }
+
+        public void setRenderScaleY(final double renderScaleY) {
+            this.renderScaleY = renderScaleY;
+            setDirty();
         }
 
         public void setX(final double x, final float xGravity) {
@@ -1276,17 +1472,26 @@ public class Window implements EventTarget {
 
         public void apply() {
             if (dirty) {
-                impl_peer.setBounds((float) (Double.isNaN(x) ? 0 : x),
-                                    (float) (Double.isNaN(y) ? 0 : y),
-                                    !Double.isNaN(x),
-                                    !Double.isNaN(y),
-                                    (float) windowWidth,
-                                    (float) windowHeight,
-                                    (float) clientWidth,
-                                    (float) clientHeight,
-                                    xGravity, yGravity);
-
+                // Snapshot values and then reset() before we call down
+                // as we may end up with recursive calls back up with
+                // new values that must be recorded as dirty.
+                boolean xSet = !Double.isNaN(x);
+                float newX = xSet ? (float) x : 0f;
+                boolean ySet = !Double.isNaN(y);
+                float newY = ySet ? (float) y : 0f;
+                float newWW = (float) windowWidth;
+                float newWH = (float) windowHeight;
+                float newCW = (float) clientWidth;
+                float newCH = (float) clientHeight;
+                float newXG = xGravity;
+                float newYG = yGravity;
+                float newRX = (float) renderScaleX;
+                float newRY = (float) renderScaleY;
                 reset();
+                impl_peer.setBounds(newX, newY, xSet, ySet,
+                                    newWW, newWH, newCW, newCH,
+                                    newXG, newYG,
+                                    newRX, newRY);
             }
         }
 
@@ -1296,6 +1501,8 @@ public class Window implements EventTarget {
         }
 
         private void reset() {
+            renderScaleX = 0.0;
+            renderScaleY = 0.0;
             x = Double.NaN;
             y = Double.NaN;
             xGravity = 0;

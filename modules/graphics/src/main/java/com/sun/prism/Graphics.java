@@ -210,6 +210,7 @@ public interface Graphics {
     // TODO this is dangerous, must be called *after* setState3D is called, or it won't work
     public void setup3DRendering();
 
-    public void setPixelScaleFactor(float pixelScale);
-    public float getPixelScaleFactor();
+    public void setPixelScaleFactors(float pixelScaleX, float pixelScaleY);
+    public float getPixelScaleFactorX();
+    public float getPixelScaleFactorY();
 }

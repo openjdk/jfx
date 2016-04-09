@@ -65,7 +65,8 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     @Override
     public void setBounds(float x, float y, boolean xSet, boolean ySet,
                           float w, float h, float cw, float ch,
-                          float xGravity, float yGravity)
+                          float xGravity, float yGravity,
+                          float renderScaleX, float renderScaleY)
     {
         if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedStage.setBounds: x=" + x + " y=" + y + " xSet=" + xSet + " ySet=" + ySet +
@@ -76,18 +77,41 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
         if ((newW > 0) && (newH > 0)) {
             host.setPreferredSize((int)newW, (int)newH);
         }
+        TKScene scene = getScene();
+        if ((renderScaleX > 0 || renderScaleY > 0)
+            && scene instanceof EmbeddedScene)
+        {
+            EmbeddedScene escene = (EmbeddedScene) scene;
+            if (renderScaleX <= 0.0) renderScaleX = escene.getRenderScaleX();
+            if (renderScaleY <= 0.0) renderScaleY = escene.getRenderScaleY();
+            escene.setPixelScaleFactors(renderScaleX, renderScaleY);
+        }
     }
 
     @Override
-    public float getUIScale() {
+    public float getPlatformScaleX() {
         return 1.0f;
     }
 
     @Override
-    public float getRenderScale() {
+    public float getPlatformScaleY() {
+        return 1.0f;
+    }
+
+    @Override
+    public float getOutputScaleX() {
         TKScene scene = getScene();
         if (scene instanceof EmbeddedScene) {
-            return ((EmbeddedScene) scene).getRenderScale();
+            return ((EmbeddedScene) scene).getRenderScaleX();
+        }
+        return 1.0f;
+    }
+
+    @Override
+    public float getOutputScaleY() {
+        TKScene scene = getScene();
+        if (scene instanceof EmbeddedScene) {
+            return ((EmbeddedScene) scene).getRenderScaleY();
         }
         return 1.0f;
     }

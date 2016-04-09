@@ -363,7 +363,7 @@ public class TableColumnHeader extends Region {
         }
 
         double sortWidth = 0;
-        double w = snapSize(getWidth()) - (snappedLeftInset() + snappedRightInset());
+        double w = snapSizeX(getWidth()) - (snappedLeftInset() + snappedRightInset());
         double h = getHeight() - (snappedTopInset() + snappedBottomInset());
         double x = w;
 

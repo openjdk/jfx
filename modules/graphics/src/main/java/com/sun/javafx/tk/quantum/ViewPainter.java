@@ -174,9 +174,10 @@ abstract class ViewPainter implements Runnable {
         // might be reassigned to the sceneBuffer graphics.
         Graphics g = backBufferGraphics;
         // Take into account the pixel scale factor for retina displays
-        final float pixelScale = getPixelScaleFactor();
+        final float pixelScaleX = getPixelScaleFactorX();
+        final float pixelScaleY = getPixelScaleFactorY();
         // Cache pixelScale in Graphics for use in 3D shaders such as camera and light positions.
-        g.setPixelScaleFactor(pixelScale);
+        g.setPixelScaleFactors(pixelScaleX, pixelScaleY);
 
         // Initialize renderEverything based on various conditions that will cause us to render
         // the entire scene every time.
@@ -192,8 +193,8 @@ abstract class ViewPainter implements Runnable {
         // then we will render the scene to an intermediate texture, and then at the end we'll
         // draw that intermediate texture to the back buffer.
         if (showDirtyOpts && !sceneState.getScene().getDepthBuffer()) {
-            final int bufferWidth = (int) Math.ceil(width * pixelScale);
-            final int bufferHeight = (int) Math.ceil(height * pixelScale);
+            final int bufferWidth = (int) Math.ceil(width * pixelScaleX);
+            final int bufferHeight = (int) Math.ceil(height * pixelScaleY);
             // Check whether the sceneBuffer texture needs to be reconstructed
             if (sceneBuffer != null) {
                 sceneBuffer.lock();
@@ -219,7 +220,8 @@ abstract class ViewPainter implements Runnable {
             sceneBuffer.contentsUseful();
             // Hijack the "g" graphics variable
             g = sceneBuffer.createGraphics();
-            g.scale(pixelScale, pixelScale);
+            g.setPixelScaleFactors(pixelScaleX, pixelScaleY);
+            g.scale(pixelScaleX, pixelScaleY);
         } else if (sceneBuffer != null) {
             // We're in a situation where we have previously rendered to the sceneBuffer, but in
             // this render pass for whatever reason we're going to draw directly to the back buffer.
@@ -309,15 +311,11 @@ abstract class ViewPainter implements Runnable {
                 if (dirtyRegion.getWidth() > 0 && dirtyRegion.getHeight() > 0) {
                     // Set the clip rectangle using integer bounds since a fractional bounding box will
                     // still require a complete repaint on pixel boundaries
-                    dirtyRect.setBounds(dirtyRegion);
-                    // TODO I don't understand why this is needed. And if it is, are fractional pixelScale
-                    // values OK? And if not, shouldn't pixelScale be an int instead?
-                    if (pixelScale != 1.0f) {
-                        dirtyRect.x *= pixelScale;
-                        dirtyRect.y *= pixelScale;
-                        dirtyRect.width *= pixelScale;
-                        dirtyRect.height *= pixelScale;
-                    }
+                    int x0, y0;
+                    dirtyRect.x = x0 = (int) Math.floor(dirtyRegion.getMinX() * pixelScaleX);
+                    dirtyRect.y = y0 = (int) Math.floor(dirtyRegion.getMinY() * pixelScaleY);
+                    dirtyRect.width  = (int) Math.ceil (dirtyRegion.getMaxX() * pixelScaleX) - x0;
+                    dirtyRect.height = (int) Math.ceil (dirtyRegion.getMaxY() * pixelScaleY) - y0;
                     g.setClipRect(dirtyRect);
                     g.setClipRectIndex(i);
                     doPaint(g, getRootPath(i));
@@ -437,8 +435,12 @@ abstract class ViewPainter implements Runnable {
         return sceneState.isWindowVisible() && !sceneState.isWindowMinimized();
     }
 
-    protected float getPixelScaleFactor() {
-        return presentable == null ? 1.0f : presentable.getPixelScaleFactor();
+    protected float getPixelScaleFactorX() {
+        return presentable == null ? 1.0f : presentable.getPixelScaleFactorX();
+    }
+
+    protected float getPixelScaleFactorY() {
+        return presentable == null ? 1.0f : presentable.getPixelScaleFactorY();
     }
 
     private void doPaint(Graphics g, NodePath renderRootPath) {

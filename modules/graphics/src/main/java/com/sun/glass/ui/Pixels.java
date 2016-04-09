@@ -80,7 +80,8 @@ public abstract class Pixels {
     protected final ByteBuffer bytes;
     protected final IntBuffer ints;
 
-    private final float scale;
+    private final float scalex;
+    private final float scaley;
 
     protected Pixels(final int width, final int height, final ByteBuffer pixels) {
         this.width = width;
@@ -92,7 +93,8 @@ public abstract class Pixels {
         }
 
         this.ints = null;
-        this.scale = 1.0f;
+        this.scalex = 1.0f;
+        this.scaley = 1.0f;
     }
 
     protected Pixels(final int width, final int height, IntBuffer pixels) {
@@ -105,10 +107,11 @@ public abstract class Pixels {
         }
 
         this.bytes = null;
-        this.scale = 1.0f;
+        this.scalex = 1.0f;
+        this.scaley = 1.0f;
     }
 
-    protected Pixels(final int width, final int height, IntBuffer pixels, float scale) {
+    protected Pixels(final int width, final int height, IntBuffer pixels, float scalex, float scaley) {
         this.width = width;
         this.height = height;
         this.bytesPerComponent = 4;
@@ -118,16 +121,26 @@ public abstract class Pixels {
         }
 
         this.bytes = null;
-        this.scale = scale;
+        this.scalex = scalex;
+        this.scaley = scaley;
     }
 
-    public final float getScale() {
+    public final float getScaleX() {
         Application.checkEventThread();
-        return this.scale;
+        return this.scalex;
     }
 
-    public final float getScaleUnsafe() {
-        return this.scale;
+    public final float getScaleY() {
+        Application.checkEventThread();
+        return this.scaley;
+    }
+
+    public final float getScaleXUnsafe() {
+        return this.scalex;
+    }
+
+    public final float getScaleYUnsafe() {
+        return this.scaley;
     }
 
     public final int getWidth() {

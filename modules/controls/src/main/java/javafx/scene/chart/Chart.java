@@ -89,9 +89,9 @@ public abstract class Chart extends Region {
             final double right = snappedRightInset();
             final double width = getWidth();
             final double height = getHeight();
-            final double contentWidth = snapSize(width - (left + right));
-            final double contentHeight = snapSize(height - (top + bottom));
-            layoutChartChildren(snapPosition(top), snapPosition(left),contentWidth,contentHeight);
+            final double contentWidth = snapSizeX(width - (left + right));
+            final double contentHeight = snapSizeY(height - (top + bottom));
+            layoutChartChildren(snapPositionY(top), snapPositionX(left), contentWidth, contentHeight);
         }
         @Override public boolean usesMirroring() {
             return useChartContentMirroring;
@@ -337,19 +337,19 @@ public abstract class Chart extends Region {
         if (getTitle() != null) {
             titleLabel.setVisible(true);
             if (getTitleSide().equals(Side.TOP)) {
-                final double titleHeight = snapSize(titleLabel.prefHeight(width-left-right));
+                final double titleHeight = snapSizeY(titleLabel.prefHeight(width-left-right));
                 titleLabel.resizeRelocate(left,top,width-left-right,titleHeight);
                 top += titleHeight;
             } else if (getTitleSide().equals(Side.BOTTOM)) {
-                final double titleHeight = snapSize(titleLabel.prefHeight(width-left-right));
+                final double titleHeight = snapSizeY(titleLabel.prefHeight(width-left-right));
                 titleLabel.resizeRelocate(left,height-bottom-titleHeight,width-left-right,titleHeight);
                 bottom += titleHeight;
             } else if (getTitleSide().equals(Side.LEFT)) {
-                final double titleWidth = snapSize(titleLabel.prefWidth(height-top-bottom));
+                final double titleWidth = snapSizeX(titleLabel.prefWidth(height-top-bottom));
                 titleLabel.resizeRelocate(left,top,titleWidth,height-top-bottom);
                 left += titleWidth;
             } else if (getTitleSide().equals(Side.RIGHT)) {
-                final double titleWidth = snapSize(titleLabel.prefWidth(height-top-bottom));
+                final double titleWidth = snapSizeX(titleLabel.prefWidth(height-top-bottom));
                 titleLabel.resizeRelocate(width-right-titleWidth,top,titleWidth,height-top-bottom);
                 right += titleWidth;
             }
@@ -362,8 +362,8 @@ public abstract class Chart extends Region {
             boolean shouldShowLegend = isLegendVisible();
             if (shouldShowLegend) {
                 if (getLegendSide() == Side.TOP) {
-                    final double legendHeight = snapSize(legend.prefHeight(width-left-right));
-                    final double legendWidth = Utils.boundedSize(snapSize(legend.prefWidth(legendHeight)), 0, width - left - right);
+                    final double legendHeight = snapSizeY(legend.prefHeight(width-left-right));
+                    final double legendWidth = Utils.boundedSize(snapSizeX(legend.prefWidth(legendHeight)), 0, width - left - right);
                     legend.resizeRelocate(left + (((width - left - right)-legendWidth)/2), top, legendWidth, legendHeight);
                     if ((height - bottom - top - legendHeight) < MIN_HEIGHT_TO_LEAVE_FOR_CHART_CONTENT) {
                         shouldShowLegend = false;
@@ -371,8 +371,8 @@ public abstract class Chart extends Region {
                         top += legendHeight;
                     }
                 } else if (getLegendSide() == Side.BOTTOM) {
-                    final double legendHeight = snapSize(legend.prefHeight(width-left-right));
-                    final double legendWidth = Utils.boundedSize(snapSize(legend.prefWidth(legendHeight)), 0, width - left - right);
+                    final double legendHeight = snapSizeY(legend.prefHeight(width-left-right));
+                    final double legendWidth = Utils.boundedSize(snapSizeX(legend.prefWidth(legendHeight)), 0, width - left - right);
                     legend.resizeRelocate(left + (((width - left - right)-legendWidth)/2), height-bottom-legendHeight, legendWidth, legendHeight);
                     if ((height - bottom - top - legendHeight) < MIN_HEIGHT_TO_LEAVE_FOR_CHART_CONTENT) {
                         shouldShowLegend = false;
@@ -380,8 +380,8 @@ public abstract class Chart extends Region {
                         bottom += legendHeight;
                     }
                 } else if (getLegendSide() == Side.LEFT) {
-                    final double legendWidth = snapSize(legend.prefWidth(height-top-bottom));
-                    final double legendHeight = Utils.boundedSize(snapSize(legend.prefHeight(legendWidth)), 0, height - top - bottom);
+                    final double legendWidth = snapSizeX(legend.prefWidth(height-top-bottom));
+                    final double legendHeight = Utils.boundedSize(snapSizeY(legend.prefHeight(legendWidth)), 0, height - top - bottom);
                     legend.resizeRelocate(left,top +(((height-top-bottom)-legendHeight)/2),legendWidth,legendHeight);
                     if ((width - left - right - legendWidth) < MIN_WIDTH_TO_LEAVE_FOR_CHART_CONTENT) {
                         shouldShowLegend = false;
@@ -389,8 +389,8 @@ public abstract class Chart extends Region {
                         left += legendWidth;
                     }
                 } else if (getLegendSide() == Side.RIGHT) {
-                    final double legendWidth = snapSize(legend.prefWidth(height-top-bottom));
-                    final double legendHeight = Utils.boundedSize(snapSize(legend.prefHeight(legendWidth)), 0, height - top - bottom);
+                    final double legendWidth = snapSizeX(legend.prefWidth(height-top-bottom));
+                    final double legendHeight = Utils.boundedSize(snapSizeY(legend.prefHeight(legendWidth)), 0, height - top - bottom);
                     legend.resizeRelocate(width-right-legendWidth,top +(((height-top-bottom)-legendHeight)/2),legendWidth,legendHeight);
                     if ((width - left - right - legendWidth) < MIN_WIDTH_TO_LEAVE_FOR_CHART_CONTENT) {
                         shouldShowLegend = false;

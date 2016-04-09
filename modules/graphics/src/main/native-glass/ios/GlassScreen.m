@@ -36,12 +36,18 @@ static inline jobject createJavaScreen(JNIEnv *env, UIScreen* screen)
 {
     jmethodID screenInit = (*env)->GetMethodID(env, mat_jScreenClass,
                                                    "<init>",
-                                                   "(JIIIIIIIIIIIF)V");
+                                                   "(JIIIIIIIIIIIIIIIFFFF)V");
 
+    jfloat outputScale = (jfloat) [screen scale];
     return (jobject)(*env)->NewObject(env, mat_jScreenClass, screenInit,
                                       ptr_to_jlong(screen),
 
                                       32,
+
+                                      (jint)[screen bounds].origin.x,
+                                      (jint)[screen bounds].origin.y,
+                                      (jint)[screen bounds].size.width,
+                                      (jint)[screen bounds].size.height,
 
                                       (jint)[screen bounds].origin.x,
                                       (jint)[screen bounds].origin.y,
@@ -56,7 +62,8 @@ static inline jobject createJavaScreen(JNIEnv *env, UIScreen* screen)
 
                                       (jint)[screen currentMode].size.width,
                                       (jint)[screen currentMode].size.height,
-                                      (jfloat)[screen scale]);
+                                      1.0f, 1.0f,
+                                      outputScale, outputScale);
 
 }
 

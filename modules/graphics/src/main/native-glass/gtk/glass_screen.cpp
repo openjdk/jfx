@@ -126,6 +126,11 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
                                      monitor_geometry.width,
                                      monitor_geometry.height,
 
+                                     monitor_geometry.x,
+                                     monitor_geometry.y,
+                                     monitor_geometry.width,
+                                     monitor_geometry.height,
+
                                      working_monitor_geometry.x,
                                      working_monitor_geometry.y,
                                      working_monitor_geometry.width,
@@ -133,7 +138,7 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
 
                                      (jint)gdk_screen_get_resolution(screen),
                                      (jint)gdk_screen_get_resolution(screen),
-                                     1.0f);
+                                     1.0f, 1.0f, 1.0f, 1.0f);
     JNI_EXCEPTION_TO_CPP(env);
     return jScreen;
 }

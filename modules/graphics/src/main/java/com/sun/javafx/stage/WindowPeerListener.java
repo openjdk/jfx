@@ -54,6 +54,11 @@ public class WindowPeerListener implements TKStageListener {
         WindowHelper.notifySizeChanged(window, width, height);
     }
 
+    @Override
+    public void changedScale(float xScale, float yScale) {
+        WindowHelper.notifyScaleChanged(window, xScale, yScale);
+    }
+
     public void changedFocused(boolean focused, FocusCause cause) {
         // Also overridden in subclasses
         window.setFocused(focused);

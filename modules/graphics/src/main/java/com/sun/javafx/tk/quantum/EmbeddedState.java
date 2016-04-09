@@ -82,8 +82,9 @@ final class EmbeddedState extends SceneState {
     @Override
     public void update() {
         super.update();
-        float scale = ((EmbeddedScene) scene).getRenderScale();
-        update(1.0f, scale, scale);
+        float scalex = ((EmbeddedScene) scene).getRenderScaleX();
+        float scaley = ((EmbeddedScene) scene).getRenderScaleY();
+        update(1.0f, 1.0f, scalex, scaley, scalex, scaley);
         if (scene != null) {
             // These variables and others from the super class need be kept up to date to
             // minimize rendering.  For now, claim that the embedded scene is always visible

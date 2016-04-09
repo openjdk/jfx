@@ -187,8 +187,8 @@ class ColorPalette extends Region {
             xAdjust = focusedSquare.getWidth() / 2.0 + scaleAdjust;
         }
 
-        hoverSquare.setLayoutX(snapPosition(x) - xAdjust);
-        hoverSquare.setLayoutY(snapPosition(y) - focusedSquare.getHeight() / 2.0 + (hoverSquare.getScaleY() == 1.0 ? 0 : focusedSquare.getHeight() / 4.0));
+        hoverSquare.setLayoutX(snapPositionX(x) - xAdjust);
+        hoverSquare.setLayoutY(snapPositionY(y) - focusedSquare.getHeight() / 2.0 + (hoverSquare.getScaleY() == 1.0 ? 0 : focusedSquare.getHeight() / 4.0));
     }
 
     private void buildCustomColors() {

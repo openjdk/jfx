@@ -512,14 +512,14 @@ public class BorderPane extends Pane {
             Insets topMargin = getNodeMargin(t);
             double adjustedWidth = adjustWidthByMargin(insideWidth, topMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight, topMargin);
-            topHeight = snapSize(t.prefHeight(adjustedWidth));
+            topHeight = snapSizeY(t.prefHeight(adjustedWidth));
             topHeight = Math.min(topHeight, adjustedHeight);
             Vec2d result = boundedNodeSizeWithBias(t, adjustedWidth,
                    topHeight, true, true, TEMP_VEC2D);
-            topHeight = snapSize(result.y);
-            t.resize(snapSize(result.x), topHeight);
+            topHeight = snapSizeY(result.y);
+            t.resize(snapSizeX(result.x), topHeight);
 
-            topHeight = snapSpace(topMargin.getBottom()) + topHeight + snapSpace(topMargin.getTop());
+            topHeight = snapSpaceY(topMargin.getBottom()) + topHeight + snapSpaceY(topMargin.getTop());
             Pos alignment = getAlignment(t);
             positionInArea(t, insideX, insideY, insideWidth, topHeight, 0/*ignore baseline*/,
                     topMargin,
@@ -532,14 +532,14 @@ public class BorderPane extends Pane {
             Insets bottomMargin = getNodeMargin(b);
             double adjustedWidth = adjustWidthByMargin(insideWidth, bottomMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight, bottomMargin);
-            bottomHeight = snapSize(b.prefHeight(adjustedWidth));
+            bottomHeight = snapSizeY(b.prefHeight(adjustedWidth));
             bottomHeight = Math.min(bottomHeight, adjustedHeight);
             Vec2d result = boundedNodeSizeWithBias(b, adjustedWidth,
                     bottomHeight, true, true, TEMP_VEC2D);
-            bottomHeight = snapSize(result.y);
-            b.resize(snapSize(result.x), bottomHeight);
+            bottomHeight = snapSizeY(result.y);
+            b.resize(snapSizeX(result.x), bottomHeight);
 
-            bottomHeight = snapSpace(bottomMargin.getBottom()) + bottomHeight + snapSpace(bottomMargin.getTop());
+            bottomHeight = snapSpaceY(bottomMargin.getBottom()) + bottomHeight + snapSpaceY(bottomMargin.getTop());
             Pos alignment = getAlignment(b);
             positionInArea(b, insideX, insideY + insideHeight - bottomHeight,
                     insideWidth, bottomHeight, 0/*ignore baseline*/,
@@ -553,14 +553,14 @@ public class BorderPane extends Pane {
             Insets leftMargin = getNodeMargin(l);
             double adjustedWidth = adjustWidthByMargin(insideWidth, leftMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight - bottomHeight, leftMargin); // ????
-            leftWidth = snapSize(l.prefWidth(adjustedHeight));
+            leftWidth = snapSizeX(l.prefWidth(adjustedHeight));
             leftWidth = Math.min(leftWidth, adjustedWidth);
             Vec2d result = boundedNodeSizeWithBias(l, leftWidth, adjustedHeight,
                     true, true, TEMP_VEC2D);
-            leftWidth = snapSize(result.x);
-            l.resize(leftWidth, snapSize(result.y));
+            leftWidth = snapSizeX(result.x);
+            l.resize(leftWidth, snapSizeY(result.y));
 
-            leftWidth = snapSpace(leftMargin.getLeft()) + leftWidth + snapSpace(leftMargin.getRight());
+            leftWidth = snapSpaceX(leftMargin.getLeft()) + leftWidth + snapSpaceX(leftMargin.getRight());
             Pos alignment = getAlignment(l);
             positionInArea(l, insideX, insideY + topHeight,
                     leftWidth, insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
@@ -575,14 +575,14 @@ public class BorderPane extends Pane {
             double adjustedWidth = adjustWidthByMargin(insideWidth - leftWidth, rightMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight - bottomHeight, rightMargin);
 
-            rightWidth = snapSize(r.prefWidth(adjustedHeight));
+            rightWidth = snapSizeX(r.prefWidth(adjustedHeight));
             rightWidth = Math.min(rightWidth, adjustedWidth);
             Vec2d result = boundedNodeSizeWithBias(r, rightWidth, adjustedHeight,
                     true, true, TEMP_VEC2D);
-            rightWidth = snapSize(result.x);
-            r.resize(rightWidth, snapSize(result.y));
+            rightWidth = snapSizeX(result.x);
+            r.resize(rightWidth, snapSizeY(result.y));
 
-            rightWidth = snapSpace(rightMargin.getLeft()) + rightWidth + snapSpace(rightMargin.getRight());
+            rightWidth = snapSpaceX(rightMargin.getLeft()) + rightWidth + snapSpaceX(rightMargin.getRight());
             Pos alignment = getAlignment(r);
             positionInArea(r, insideX + insideWidth - rightWidth, insideY + topHeight,
                     rightWidth, insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,

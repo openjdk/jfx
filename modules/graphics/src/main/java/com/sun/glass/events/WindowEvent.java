@@ -27,6 +27,7 @@ package com.sun.glass.events;
 public class WindowEvent {
     final static public int RESIZE                = 511;
     final static public int MOVE                  = 512;
+    final static public int RESCALE               = 513;
 
     final static public int CLOSE                 = 521;
     final static public int DESTROY               = 522;
@@ -51,6 +52,8 @@ public class WindowEvent {
                 return "RESIZE";
             case WindowEvent.MOVE:
                 return "MOVE";
+            case WindowEvent.RESCALE:
+                return "RESCALE";
             case WindowEvent.CLOSE:
                 return "CLOSE";
             case WindowEvent.DESTROY:

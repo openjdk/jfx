@@ -488,7 +488,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
                     // create Pixels
                     pixels = (*env)->CallStaticObjectMethod(env,
                             [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:env],
-                            javaIDs.Application.createPixels, pixWidth, pixHeight, pixelArray, scale);
+                            javaIDs.Application.createPixels, pixWidth, pixHeight, pixelArray, scale, scale);
                 }
             }
 

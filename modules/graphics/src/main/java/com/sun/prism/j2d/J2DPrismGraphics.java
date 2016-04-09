@@ -116,7 +116,8 @@ public class J2DPrismGraphics
         new java.awt.geom.AffineTransform();
     private int clipRectIndex;
     private boolean hasPreCullingBits = false;
-    private float pixelScale = 1.0f;
+    private float pixelScaleX = 1.0f;
+    private float pixelScaleY = 1.0f;
 
     static java.awt.Color toJ2DColor(Color c) {
         return new java.awt.Color(c.getRed(),
@@ -1383,13 +1384,19 @@ public class J2DPrismGraphics
     }
 
     @Override
-    public void setPixelScaleFactor(float pixelScale) {
-        this.pixelScale = pixelScale;
+    public void setPixelScaleFactors(float pixelScaleX, float pixelScaleY) {
+        this.pixelScaleX = pixelScaleX;
+        this.pixelScaleY = pixelScaleY;
     }
 
     @Override
-    public float getPixelScaleFactor() {
-        return pixelScale;
+    public float getPixelScaleFactorX() {
+        return pixelScaleX;
+    }
+
+    @Override
+    public float getPixelScaleFactorY() {
+        return pixelScaleY;
     }
 
     @Override

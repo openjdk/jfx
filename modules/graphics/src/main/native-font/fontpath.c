@@ -735,15 +735,20 @@ JNIEXPORT jint JNICALL Java_com_sun_javafx_font_PrismFontFactory_getLCDContrastW
         &fontSmoothingContrast, 0) ? fontSmoothingContrast : fontSmoothingContrastDefault;
 }
 
-JNIEXPORT jint JNICALL
+JNIEXPORT jfloat JNICALL
 Java_com_sun_javafx_font_PrismFontFactory_getSystemFontSizeNative(JNIEnv *env, jclass cl)
 {
     NONCLIENTMETRICSW ncmetrics;
 
     if (getSysParams(&ncmetrics)) {
-        return -ncmetrics.lfMessageFont.lfHeight;
+        HWND hWnd = GetDesktopWindow();
+        HDC hDC = GetDC(hWnd);
+        int dpiY = GetDeviceCaps(hDC, LOGPIXELSY);
+        ReleaseDC(hWnd, hDC);
+        return (-ncmetrics.lfMessageFont.lfHeight)
+             * ((float) USER_DEFAULT_SCREEN_DPI) / dpiY;
     } else {
-        return 12;
+        return 12.0f;
     }
 }
 

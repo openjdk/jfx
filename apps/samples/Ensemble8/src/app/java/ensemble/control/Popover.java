@@ -33,7 +33,6 @@ package ensemble.control;
 
 import java.util.LinkedList;
 
-import ensemble.EnsembleApp;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
@@ -53,11 +52,9 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
@@ -94,7 +91,7 @@ public class Popover extends Region implements EventHandler<Event>{
 //    private final EventHandler<ScrollEvent> popoverScrollHandler;
     private final EventHandler<MouseEvent> popoverHideHandler;
     private Runnable onHideCallback = null;
-    private int maxPopupHeight = -1;
+    private double maxPopupHeight = -1;
 
     private DoubleProperty popoverHeight = new SimpleDoubleProperty(400) {
         @Override protected void invalidated() {
@@ -229,15 +226,15 @@ public class Popover extends Region implements EventHandler<Event>{
             maxPopupHeight = (int)getScene().getHeight()-100;
         }
         final Insets insets = getInsets();
-        final int width = (int)getWidth();
-        final int height = (int)getHeight();
-        final int top = (int)insets.getTop();
-        final int right = (int)insets.getRight();
-        final int bottom = (int)insets.getBottom();
-        final int left = (int)insets.getLeft();
+        final double width = getWidth();
+        final double height = getHeight();
+        final double top = insets.getTop();
+        final double right = insets.getRight();
+        final double bottom = insets.getBottom();
+        final double left = insets.getLeft();
 
-        int pageWidth = width - left - right;
-        int pageHeight = height - top - bottom;
+        double pageWidth = width - left - right;
+        double pageHeight = height - top - bottom;
 
         frameBorder.resize(width, height);
 
@@ -245,18 +242,18 @@ public class Popover extends Region implements EventHandler<Event>{
         pagesClipRect.setWidth(pageWidth);
         pagesClipRect.setHeight(pageHeight);
 
-        int pageX = 0;
+        double pageX = 0;
         for (Node page : pagesPane.getChildren()) {
             page.resizeRelocate(pageX, 0, pageWidth, pageHeight);
             pageX += pageWidth + PAGE_GAP;
         }
 
-        int buttonHeight = (int)(leftButton.prefHeight(-1));
+        double buttonHeight = leftButton.prefHeight(-1);
         if (buttonHeight < 30) buttonHeight = 30;
-        final int buttonTop = (int)((top-buttonHeight)/2d);
-        final int leftButtonWidth = (int)snapSize(leftButton.prefWidth(-1));
+        final double buttonTop = (top-buttonHeight) / 2.0;
+        final double leftButtonWidth = snapSizeX(leftButton.prefWidth(-1));
         leftButton.resizeRelocate(left, buttonTop,leftButtonWidth,buttonHeight);
-        final int rightButtonWidth = (int)snapSize(rightButton.prefWidth(-1));
+        final double rightButtonWidth = snapSizeX(rightButton.prefWidth(-1));
         rightButton.resizeRelocate(width-right-rightButtonWidth, buttonTop,rightButtonWidth,buttonHeight);
 
         final double leftButtonRight = leftButton.isVisible() ? (left + leftButtonWidth) : left;

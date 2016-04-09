@@ -38,12 +38,14 @@ class D3DSwapChain
     implements D3DRenderTarget, Presentable, D3DContextSource {
 
     private final D3DRTTexture texBackBuffer;
-    private final float pixelScaleFactor;
+    private final float pixelScaleFactorX;
+    private final float pixelScaleFactorY;
 
-    D3DSwapChain(D3DContext context, long pResource, D3DRTTexture rtt, float pixelScale) {
+    D3DSwapChain(D3DContext context, long pResource, D3DRTTexture rtt, float pixelScaleX, float pixelScaleY) {
         super(new D3DRecord(context, pResource));
         texBackBuffer = rtt;
-        pixelScaleFactor = pixelScale;
+        pixelScaleFactorX = pixelScaleX;
+        pixelScaleFactorY = pixelScaleY;
     }
 
     @Override
@@ -119,7 +121,8 @@ class D3DSwapChain
     public boolean lockResources(PresentableState pState) {
         if (pState.getRenderWidth() != texBackBuffer.getContentWidth() ||
             pState.getRenderHeight() != texBackBuffer.getContentHeight() ||
-            pState.getRenderScale() != pixelScaleFactor)
+            pState.getRenderScaleX() != pixelScaleFactorX ||
+            pState.getRenderScaleY() != pixelScaleFactorY)
         {
             return true;
         }
@@ -129,7 +132,7 @@ class D3DSwapChain
 
     public Graphics createGraphics() {
         Graphics g = D3DGraphics.create(texBackBuffer, getContext());
-        g.scale(pixelScaleFactor, pixelScaleFactor);
+        g.scale(pixelScaleFactorX, pixelScaleFactorY);
         return g;
     }
 
@@ -141,8 +144,14 @@ class D3DSwapChain
         return getContext().getAssociatedScreen();
     }
 
-    public float getPixelScaleFactor() {
-        return pixelScaleFactor;
+    @Override
+    public float getPixelScaleFactorX() {
+        return pixelScaleFactorX;
+    }
+
+    @Override
+    public float getPixelScaleFactorY() {
+        return pixelScaleFactorY;
     }
 
     public boolean isOpaque() {

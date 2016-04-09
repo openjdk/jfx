@@ -632,8 +632,8 @@ public abstract class XYChart<X,Y> extends Chart {
             if(getData() != null) updateAxisRange();
         }
         // snap top and left to pixels
-        top = snapPosition(top);
-        left = snapPosition(left);
+        top = snapPositionY(top);
+        left = snapPositionX(left);
         // get starting stuff
         final Axis<X> xa = getXAxis();
         final ObservableList<Axis.TickMark<X>> xaTickMarks = xa.getTickMarks();
@@ -647,12 +647,12 @@ public abstract class XYChart<X,Y> extends Chart {
         double yAxisWidth = 0;
         double yAxisHeight = 0;
         for (int count=0; count<5; count ++) {
-            yAxisHeight = snapSize(height - xAxisHeight);
+            yAxisHeight = snapSizeY(height - xAxisHeight);
             if (yAxisHeight < 0) {
                 yAxisHeight = 0;
             }
             yAxisWidth = ya.prefWidth(yAxisHeight);
-            xAxisWidth = snapSize(width - yAxisWidth);
+            xAxisWidth = snapSizeX(width - yAxisWidth);
             if (xAxisWidth < 0) {
                 xAxisWidth = 0;
             }

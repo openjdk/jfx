@@ -799,14 +799,14 @@ public class TilePane extends Pane {
         if (forHeight != -1) {
             // first compute number of rows that will fit in given height and
             // compute pref columns from that
-            int prefRows = computeRows(forHeight - snapSpace(insets.getTop()) - snapSpace(insets.getBottom()), getTileHeight());
+            int prefRows = computeRows(forHeight - snapSpaceY(insets.getTop()) - snapSpaceY(insets.getBottom()), getTileHeight());
             prefCols = computeOther(managed.size(), prefRows);
         } else {
             prefCols = getOrientation() == HORIZONTAL? getPrefColumns() : computeOther(managed.size(), getPrefRows());
         }
-        return snapSpace(insets.getLeft()) +
+        return snapSpaceX(insets.getLeft()) +
                computeContentWidth(prefCols, getTileWidth()) +
-               snapSpace(insets.getRight());
+               snapSpaceX(insets.getRight());
     }
 
     @Override protected double computePrefHeight(double forWidth) {
@@ -816,14 +816,14 @@ public class TilePane extends Pane {
         if (forWidth != -1) {
             // first compute number of columns that will fit in given width and
             // compute pref rows from that
-            int prefCols = computeColumns(forWidth - snapSpace(insets.getLeft()) - snapSpace(insets.getRight()), getTileWidth());
+            int prefCols = computeColumns(forWidth - snapSpaceX(insets.getLeft()) - snapSpaceX(insets.getRight()), getTileWidth());
             prefRows = computeOther(managed.size(), prefCols);
         } else {
             prefRows = getOrientation() == HORIZONTAL? computeOther(managed.size(), getPrefColumns()) : getPrefRows();
         }
-        return snapSpace(insets.getTop()) +
+        return snapSpaceY(insets.getTop()) +
                computeContentHeight(prefRows, getTileHeight()) +
-               snapSpace(insets.getBottom());
+               snapSpaceY(insets.getBottom());
     }
 
     private double computeTileWidth() {
@@ -843,9 +843,9 @@ public class TilePane extends Pane {
                 // widest may depend on height of tile
                 h = computeMaxPrefAreaHeight(managed, marginAccessor, -1, getTileAlignmentInternal().getVpos());
             }
-            return snapSize(computeMaxPrefAreaWidth(managed, marginAccessor, h, true));
+            return snapSizeX(computeMaxPrefAreaWidth(managed, marginAccessor, h, true));
         }
-        return snapSize(preftilewidth);
+        return snapSizeX(preftilewidth);
     }
 
     private double computeTileHeight() {
@@ -865,9 +865,9 @@ public class TilePane extends Pane {
                 // tallest may depend on width of tile
                 w = computeMaxPrefAreaWidth(managed, marginAccessor);
             }
-            return snapSize(computeMaxPrefAreaHeight(managed, marginAccessor, w, getTileAlignmentInternal().getVpos()));
+            return snapSizeY(computeMaxPrefAreaHeight(managed, marginAccessor, w, getTileAlignmentInternal().getVpos()));
         }
-        return snapSize(preftileheight);
+        return snapSizeY(preftileheight);
     }
 
     private int computeOther(int numNodes, int numCells) {
@@ -876,21 +876,23 @@ public class TilePane extends Pane {
     }
 
     private int computeColumns(double width, double tilewidth) {
-        return Math.max(1,(int)((width + snapSpace(getHgap())) / (tilewidth + snapSpace(getHgap()))));
+        double snappedHgap = snapSpaceX(getHgap());
+        return Math.max(1,(int)((width + snappedHgap) / (tilewidth + snappedHgap)));
     }
 
     private int computeRows(double height, double tileheight) {
-        return Math.max(1, (int)((height + snapSpace(getVgap())) / (tileheight + snapSpace(getVgap()))));
+        double snappedVgap = snapSpaceY(getVgap());
+        return Math.max(1, (int)((height + snappedVgap) / (tileheight + snappedVgap)));
     }
 
     private double computeContentWidth(int columns, double tilewidth) {
         if (columns == 0) return 0;
-        return columns * tilewidth + (columns - 1) * snapSpace(getHgap());
+        return columns * tilewidth + (columns - 1) * snapSpaceX(getHgap());
     }
 
     private double computeContentHeight(int rows, double tileheight) {
         if (rows == 0) return 0;
-        return rows * tileheight + (rows - 1) * snapSpace(getVgap());
+        return rows * tileheight + (rows - 1) * snapSpaceY(getVgap());
     }
 
     @Override protected void layoutChildren() {
@@ -899,12 +901,12 @@ public class TilePane extends Pane {
         VPos vpos = getAlignmentInternal().getVpos();
         double width = getWidth();
         double height = getHeight();
-        double top = snapSpace(getInsets().getTop());
-        double left = snapSpace(getInsets().getLeft());
-        double bottom = snapSpace(getInsets().getBottom());
-        double right = snapSpace(getInsets().getRight());
-        double vgap = snapSpace(getVgap());
-        double hgap = snapSpace(getHgap());
+        double top = snapSpaceY(getInsets().getTop());
+        double left = snapSpaceX(getInsets().getLeft());
+        double bottom = snapSpaceY(getInsets().getBottom());
+        double right = snapSpaceX(getInsets().getRight());
+        double vgap = snapSpaceY(getVgap());
+        double hgap = snapSpaceX(getHgap());
         double insideWidth = width - left - right;
         double insideHeight = height - top - bottom;
 

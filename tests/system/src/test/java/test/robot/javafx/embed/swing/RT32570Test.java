@@ -35,6 +35,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
+import org.junit.Ignore;
 import org.junit.Test;
 import test.robot.testharness.VisualTestBase;
 
@@ -57,6 +58,7 @@ public class RT32570Test extends VisualTestBase {
 
     private volatile boolean popped;
 
+    @Ignore("JDK-8153542")
     @Test(timeout=5000)
     public void test() throws Exception {
         runAndWait(() -> {

@@ -57,8 +57,8 @@ final class MacPixels extends Pixels {
         super(width, height, data);
     }
 
-    protected MacPixels(int width, int height, IntBuffer data, float scale) {
-        super(width, height, data, scale);
+    protected MacPixels(int width, int height, IntBuffer data, float scalex, float scaley) {
+        super(width, height, data, scalex, scaley);
     }
 
     @Override

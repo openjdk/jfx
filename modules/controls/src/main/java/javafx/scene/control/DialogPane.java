@@ -930,7 +930,7 @@ public class DialogPane extends Pane {
                 Math.max(Math.max(headerMinWidth, expandableContentMinWidth), Math.max(contentMinWidth, buttonBarMinWidth)) +
                 snappedRightInset();
 
-        return snapSize(minWidth);
+        return snapSizeX(minWidth);
     }
 
     /** {@inheritDoc} */
@@ -963,7 +963,7 @@ public class DialogPane extends Pane {
                 buttonBarMinHeight +
                 snappedBottomInset();
 
-        return snapSize(minHeight);
+        return snapSizeY(minHeight);
     }
 
     /** {@inheritDoc} */
@@ -984,7 +984,7 @@ public class DialogPane extends Pane {
                Math.max(Math.max(headerPrefWidth, expandableContentPrefWidth), Math.max(contentPrefWidth, buttonBarPrefWidth)) +
                snappedRightInset();
 
-        return snapSize(prefWidth);
+        return snapSizeX(prefWidth);
     }
 
     /** {@inheritDoc} */
@@ -1016,7 +1016,7 @@ public class DialogPane extends Pane {
                buttonBarPrefHeight +
                snappedBottomInset();
 
-        return snapSize(prefHeight);
+        return snapSizeY(prefHeight);
     }
 
 

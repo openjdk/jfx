@@ -332,9 +332,9 @@ public class TableHeaderRow extends StackPane {
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
         double x = scrollX;
-        double headerWidth = snapSize(getRootHeader().prefWidth(-1));
+        double headerWidth = snapSizeX(getRootHeader().prefWidth(-1));
         double prefHeight = getHeight() - snappedTopInset() - snappedBottomInset();
-        double cornerWidth = snapSize(flow.getVbar().prefWidth(-1));
+        double cornerWidth = snapSizeX(flow.getVbar().prefWidth(-1));
 
         // position the main nested header
         getRootHeader().resizeRelocate(x, snappedTopInset(), headerWidth, prefHeight);
@@ -399,8 +399,8 @@ public class TableHeaderRow extends StackPane {
             this.tableWidth = 0;
         } else {
             Insets insets = c.getInsets() == null ? Insets.EMPTY : c.getInsets();
-            double padding = snapSize(insets.getLeft()) + snapSize(insets.getRight());
-            this.tableWidth = snapSize(c.getWidth()) - padding;
+            double padding = snapSizeX(insets.getLeft()) + snapSizeX(insets.getRight());
+            this.tableWidth = snapSizeX(c.getWidth()) - padding;
         }
 
         clip.setWidth(tableWidth);

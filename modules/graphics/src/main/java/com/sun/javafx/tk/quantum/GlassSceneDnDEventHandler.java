@@ -46,12 +46,23 @@ class GlassSceneDnDEventHandler {
 
     // Drop target handlers
 
-    private double getPlatformScale() {
+    private double getPlatformScaleX() {
         View view = scene.getPlatformView();
         if (view != null) {
             Window w = view.getWindow();
             if (w != null) {
-                return w.getPlatformScale();
+                return w.getPlatformScaleX();
+            }
+        }
+        return 1.0;
+    }
+
+    private double getPlatformScaleY() {
+        View view = scene.getPlatformView();
+        if (view != null) {
+            Window w = view.getWindow();
+            if (w != null) {
+                return w.getPlatformScaleY();
             }
         }
         return 1.0;
@@ -64,10 +75,11 @@ class GlassSceneDnDEventHandler {
         assert Platform.isFxApplicationThread();
         return AccessController.doPrivileged((PrivilegedAction<TransferMode>) () -> {
             if (scene.dropTargetListener != null) {
-                double pScale = getPlatformScale();
+                double pScaleX = getPlatformScaleX();
+                double pScaleY = getPlatformScaleY();
                 QuantumClipboard dragboard =
                         QuantumClipboard.getDragboardInstance(dropTargetAssistant, false);
-                return scene.dropTargetListener.dragEnter(x / pScale, y / pScale, xAbs / pScale, yAbs / pScale,
+                return scene.dropTargetListener.dragEnter(x / pScaleX, y / pScaleY, xAbs / pScaleX, yAbs / pScaleY,
                         recommendedTransferMode, dragboard);
             }
             return null;
@@ -91,8 +103,9 @@ class GlassSceneDnDEventHandler {
         assert Platform.isFxApplicationThread();
         return AccessController.doPrivileged((PrivilegedAction<TransferMode>) () -> {
             if (scene.dropTargetListener != null) {
-                double pScale = getPlatformScale();
-                return scene.dropTargetListener.drop(x / pScale, y / pScale, xAbs / pScale, yAbs / pScale,
+                double pScaleX = getPlatformScaleX();
+                double pScaleY = getPlatformScaleY();
+                return scene.dropTargetListener.drop(x / pScaleX, y / pScaleY, xAbs / pScaleX, yAbs / pScaleY,
                         recommendedTransferMode);
             }
             return null;
@@ -106,8 +119,9 @@ class GlassSceneDnDEventHandler {
         assert Platform.isFxApplicationThread();
         return AccessController.doPrivileged((PrivilegedAction<TransferMode>) () -> {
             if (scene.dropTargetListener != null) {
-                double pScale = getPlatformScale();
-                return scene.dropTargetListener.dragOver(x / pScale, y / pScale, xAbs / pScale, yAbs / pScale,
+                double pScaleX = getPlatformScaleX();
+                double pScaleY = getPlatformScaleY();
+                return scene.dropTargetListener.dragOver(x / pScaleX, y / pScaleY, xAbs / pScaleX, yAbs / pScaleY,
                         recommendedTransferMode);
             }
             return null;
@@ -126,11 +140,12 @@ class GlassSceneDnDEventHandler {
         assert Platform.isFxApplicationThread();
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.dragGestureListener != null) {
-                double pScale = getPlatformScale();
+                double pScaleX = getPlatformScaleX();
+                double pScaleY = getPlatformScaleY();
                 QuantumClipboard dragboard =
                         QuantumClipboard.getDragboardInstance(dragSourceAssistant, true);
                 scene.dragGestureListener.dragGestureRecognized(
-                        x / pScale, y / pScale, xAbs / pScale, yAbs / pScale, button, dragboard);
+                        x / pScaleX, y / pScaleY, xAbs / pScaleX, yAbs / pScaleY, button, dragboard);
             }
             return null;
         }, scene.getAccessControlContext());

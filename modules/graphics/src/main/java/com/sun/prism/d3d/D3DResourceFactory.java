@@ -335,7 +335,7 @@ class D3DResourceFactory extends BaseShaderFactory {
             }
 
             if (rtt != null) {
-                return new D3DSwapChain(context, pResource, rtt, pState.getRenderScale());
+                return new D3DSwapChain(context, pResource, rtt, pState.getRenderScaleX(), pState.getRenderScaleY());
             }
 
             D3DResourceFactory.nReleaseResource(context.getContextHandle(), pResource);

@@ -41,8 +41,8 @@ final class MonoclePixels extends Pixels {
         super(width, height, data);
     }
 
-    MonoclePixels(int width, int height, IntBuffer data, float scale) {
-        super(width, height, data, scale);
+    MonoclePixels(int width, int height, IntBuffer data, float scalex, float scaley) {
+        super(width, height, data, scalex, scaley);
     }
 
 

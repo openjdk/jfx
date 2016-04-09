@@ -65,14 +65,23 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 stage.stageListener.changedMaximized(false);
                 break;
             case WindowEvent.MOVE: {
-                float pScale = window.getPlatformScale();
-                Screen screen = window.getScreen();
-                float sx = screen == null ? 0 : screen.getX();
-                float sy = screen == null ? 0 : screen.getY();
                 float wx = window.getX();
                 float wy = window.getY();
-                float newx = sx + (wx - sx) / pScale;
-                float newy = sy + (wy - sy) / pScale;
+                Screen screen = window.getScreen();
+                float newx, newy;
+                if (screen != null) {
+                    float pScaleX = screen.getPlatformScaleX();
+                    float pScaleY = screen.getPlatformScaleY();
+                    float sx = screen.getX();
+                    float sy = screen.getY();
+                    float px = screen.getPlatformX();
+                    float py = screen.getPlatformY();
+                    newx = sx + (wx - px) / pScaleX;
+                    newy = sy + (wy - py) / pScaleY;
+                } else {
+                    newx = wx;
+                    newy = wy;
+                }
                 stage.stageListener.changedLocation(newx, newy);
                 //We need to sync the new x,y for painting
                 if (!Application.GetApplication().hasWindowManager()) {
@@ -87,10 +96,26 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 break;
             }
             case WindowEvent.RESIZE: {
-                float pScale = window.getPlatformScale();
-                stage.stageListener.changedSize(window.getWidth()  / pScale,
-                                                window.getHeight() / pScale);
+                float pScaleX = window.getPlatformScaleX();
+                float pScaleY = window.getPlatformScaleY();
+                stage.stageListener.changedSize(window.getWidth()  / pScaleX,
+                                                window.getHeight() / pScaleY);
                  break;
+            }
+            case WindowEvent.RESCALE: {
+                float outScaleX = window.getOutputScaleX();
+                float outScaleY = window.getOutputScaleY();
+                stage.stageListener.changedScale(outScaleX, outScaleY);
+                // We need to sync the new scales for painting
+                QuantumToolkit.runWithRenderLock(() -> {
+                    GlassScene scene = stage.getScene();
+                    if (scene != null) {
+                        scene.entireSceneNeedsRepaint();
+                        scene.updateSceneState();
+                    }
+                    return null;
+                });
+                break;
             }
             case WindowEvent.FOCUS_GAINED:
                 WindowStage.addActiveWindow(stage);

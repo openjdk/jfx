@@ -228,8 +228,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    public Pixels createPixels(int width, int height, IntBuffer data, float scale) {
-        return new MacPixels(width, height, data, scale);
+    public Pixels createPixels(int width, int height, IntBuffer data, float scalex, float scaley) {
+        return new MacPixels(width, height, data, scalex, scaley);
     }
 
     @Override protected int staticPixels_getNativeFormat() {

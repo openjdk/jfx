@@ -48,8 +48,8 @@ struct MonitorInfoStruct {
     RECT fxWork;
     jboolean primaryScreen;
     jint colorDepth;
-    jfloat uiScale;
-    jfloat renderScale;
+    jfloat uiScaleX;
+    jfloat uiScaleY;
     jint dpiX;
     jint dpiY;
     jint anchoredInPass;
@@ -190,7 +190,7 @@ void GetMonitorSettings(HMONITOR hMonitor, MonitorInfoStruct *mis)
     mis->primaryScreen = ((mix.dwFlags & MONITORINFOF_PRIMARY) != 0) ? JNI_TRUE : JNI_FALSE;
     mis->colorDepth = ::GetDeviceCaps(hDC, BITSPIXEL) * ::GetDeviceCaps(hDC, PLANES);
     UINT resx, resy;
-    UINT uires;
+    UINT uiresx, uiresy;
     if (pGetDPIForMonitor) {
         // If we can use the GetDPIForMonitor function, then its Effective
         // value will tell us how much we should scale ourselves based on
@@ -212,7 +212,8 @@ void GetMonitorSettings(HMONITOR hMonitor, MonitorInfoStruct *mis)
             resx = ::GetDeviceCaps(hDC, LOGPIXELSX);
             resy = ::GetDeviceCaps(hDC, LOGPIXELSY);
         }
-        uires = resx;
+        uiresx = resx;
+        uiresy = resy;
         res = (*pGetDPIForMonitor)(hMonitor, MDT_Raw_DPI, &resx, &resy);
 #ifdef DEBUG_DPI
         fprintf(stderr, "raw DPI X,Y = [0x%08x] %d, %d\n", res, resx, resy);
@@ -223,12 +224,13 @@ void GetMonitorSettings(HMONITOR hMonitor, MonitorInfoStruct *mis)
 #ifdef DEBUG_DPI
         fprintf(stderr, "logpixelsX,Y = %d, %d\n", resx, resy);
 #endif /* DEBUG_DPI */
-        uires = resx;
+        uiresx = resx;
+        uiresy = resy;
     }
     mis->dpiX = resx;
     mis->dpiY = resy;
-    mis->uiScale = GlassApplication::GetUIScale(uires);
-    mis->renderScale = GlassApplication::getRenderScale(mis->uiScale);
+    mis->uiScaleX = GlassApplication::GetUIScale(uiresx);
+    mis->uiScaleY = GlassApplication::GetUIScale(uiresy);
 
     ::DeleteDC(hDC);
 }
@@ -279,7 +281,7 @@ jobject CreateJavaMonitorFromMIS(JNIEnv *env, MonitorInfoStruct *pMIS)
     jclass screenCls = GetScreenCls(env);
 
     if (javaIDs.Screen.init == NULL) {
-        javaIDs.Screen.init = env->GetMethodID(screenCls, "<init>", "(JIIIIIIIIIIIFF)V");
+        javaIDs.Screen.init = env->GetMethodID(screenCls, "<init>", "(JIIIIIIIIIIIIIIIFFFF)V");
         ASSERT(javaIDs.Screen.init);
         if (CheckAndClearException(env)) return NULL;
     }
@@ -293,6 +295,11 @@ jobject CreateJavaMonitorFromMIS(JNIEnv *env, MonitorInfoStruct *pMIS)
                           pMIS->fxMonitor.right  - pMIS->fxMonitor.left,
                           pMIS->fxMonitor.bottom - pMIS->fxMonitor.top,
 
+                          pMIS->rcMonitor.left,
+                          pMIS->rcMonitor.top,
+                          pMIS->rcMonitor.right  - pMIS->rcMonitor.left,
+                          pMIS->rcMonitor.bottom - pMIS->rcMonitor.top,
+
                           pMIS->fxWork.left,
                           pMIS->fxWork.top,
                           pMIS->fxWork.right  - pMIS->fxWork.left,
@@ -301,8 +308,10 @@ jobject CreateJavaMonitorFromMIS(JNIEnv *env, MonitorInfoStruct *pMIS)
                           pMIS->dpiX,
                           pMIS->dpiY,
 
-                          pMIS->uiScale,
-                          pMIS->renderScale);
+                          pMIS->uiScaleX,
+                          pMIS->uiScaleY,
+                          pMIS->uiScaleX,
+                          pMIS->uiScaleY);
     if (CheckAndClearException(env)) return NULL;
     pMIS->gScreen = env->NewGlobalRef(gScn);
     return gScn;
@@ -390,16 +399,19 @@ void anchorTo(MonitorInfoStruct *pMIS,
     jint wrkT = pMIS->rcWork   .top    - monY;
     jint wrkR = pMIS->rcWork   .right  - monX;
     jint wrkB = pMIS->rcWork   .bottom - monY;
-    jfloat scale = pMIS->uiScale;
-    if (scale > 1.0f) {
-        pMIS->dpiX = (jint) floorf((pMIS->dpiX / scale) + 0.5f);
-        pMIS->dpiY = (jint) floorf((pMIS->dpiY / scale) + 0.5f);
-        monW = (jint) floorf((monW / scale) + 0.5f);
-        monH = (jint) floorf((monH / scale) + 0.5f);
-        wrkL = (jint) floorf((wrkL / scale) + 0.5f);
-        wrkT = (jint) floorf((wrkT / scale) + 0.5f);
-        wrkR = (jint) floorf((wrkR / scale) + 0.5f);
-        wrkB = (jint) floorf((wrkB / scale) + 0.5f);
+    jfloat scalex = pMIS->uiScaleX;
+    jfloat scaley = pMIS->uiScaleY;
+    if (scalex != 1.0f) {
+        pMIS->dpiX = (jint) floorf((pMIS->dpiX / scalex) + 0.5f);
+        monW = (jint) floorf((monW / scalex) + 0.5f);
+        wrkL = (jint) floorf((wrkL / scalex) + 0.5f);
+        wrkR = (jint) floorf((wrkR / scalex) + 0.5f);
+    }
+    if (scaley != 1.0f) {
+        pMIS->dpiY = (jint) floorf((pMIS->dpiY / scaley) + 0.5f);
+        monH = (jint) floorf((monH / scaley) + 0.5f);
+        wrkT = (jint) floorf((wrkT / scaley) + 0.5f);
+        wrkB = (jint) floorf((wrkB / scaley) + 0.5f);
     }
 
     if (xBefore) fxX -= monW;
@@ -439,7 +451,7 @@ void anchorH(MonitorInfoStruct *pAnchor, MonitorInfoStruct *pMon,
     int x = before ? pAnchor->fxMonitor.left : pAnchor->fxMonitor.right;
     int yoff = originOffsetFromRanges(pAnchor->rcMonitor.top, pAnchor->rcMonitor.bottom,
                                       pMon->rcMonitor.top, pMon->rcMonitor.bottom,
-                                      pAnchor->uiScale, pMon->uiScale);
+                                      pAnchor->uiScaleY, pMon->uiScaleY);
     int y = pAnchor->fxMonitor.top + yoff;
     anchorTo(pMon, x, before, y, false, pass);
 }
@@ -449,7 +461,7 @@ void anchorV(MonitorInfoStruct *pAnchor, MonitorInfoStruct *pMon,
 {
     int xoff = originOffsetFromRanges(pAnchor->rcMonitor.left, pAnchor->rcMonitor.right,
                                       pMon->rcMonitor.left, pMon->rcMonitor.right,
-                                      pAnchor->uiScale, pMon->uiScale);
+                                      pAnchor->uiScaleX, pMon->uiScaleX);
     int x = pAnchor->fxMonitor.left + xoff;
     int y = before ? pAnchor->fxMonitor.top : pAnchor->fxMonitor.bottom;
     anchorTo(pMon, x, false, y, before, pass);

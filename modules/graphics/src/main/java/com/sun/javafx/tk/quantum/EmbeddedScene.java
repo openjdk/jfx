@@ -60,13 +60,15 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     private UploadingPainter        painter;
     private PaintRenderJob          paintRenderJob;
-    private float                   renderScale;
+    private float                   renderScaleX;
+    private float                   renderScaleY;
 
     private final EmbeddedSceneDnD embeddedDnD;
 
     private volatile IntBuffer  texBits;
     private volatile int        texLineStride; // pre-scaled
-    private volatile float      texScaleFactor = 1.0f;
+    private volatile float      texScaleFactorX = 1.0f;
+    private volatile float      texScaleFactorY = 1.0f;
 
     private volatile PixelFormat<?> pixelFormat;
 
@@ -149,15 +151,21 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     @Override
-    public void setPixelScaleFactor(float scale) {
-        renderScale = scale;
+    public void setPixelScaleFactors(float scalex, float scaley) {
+        renderScaleX = scalex;
+        renderScaleY = scaley;
         entireSceneNeedsRepaint();
     }
 
-    public float getRenderScale() {
-        return renderScale;
+    public float getRenderScaleX() {
+        return renderScaleX;
     }
 
+    public float getRenderScaleY() {
+        return renderScaleY;
+    }
+
+    @Override
     public PixelFormat<?> getPixelFormat() {
         return pixelFormat;
     }
@@ -166,7 +174,8 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     void uploadPixels(Pixels pixels) {
         texBits = (IntBuffer)pixels.getPixels();
         texLineStride = pixels.getWidthUnsafe();
-        texScaleFactor = pixels.getScaleUnsafe();
+        texScaleFactorX = pixels.getScaleXUnsafe();
+        texScaleFactorY = pixels.getScaleYUnsafe();
         if (host != null) {
             host.repaint();
         }
@@ -216,11 +225,14 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
             int scaledHeight = height;
 
             // The dest buffer scale factor is expected to match painter.getPixelScaleFactor().
-            if (getRenderScale() != texScaleFactor || texBits == null) {
+            if (getRenderScaleX() != texScaleFactorX ||
+                getRenderScaleY() != texScaleFactorY ||
+                texBits == null)
+            {
                 return false;
             }
-            scaledWidth = (int)Math.round(scaledWidth * texScaleFactor);
-            scaledHeight = (int)Math.round(scaledHeight * texScaleFactor);
+            scaledWidth = Math.round(scaledWidth * texScaleFactorX);
+            scaledHeight = Math.round(scaledHeight * texScaleFactorY);
 
             dest.rewind();
             texBits.rewind();

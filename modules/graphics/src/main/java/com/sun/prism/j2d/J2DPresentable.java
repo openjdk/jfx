@@ -114,7 +114,7 @@ public abstract class J2DPresentable implements Presentable {
                  */
                 int w = getPhysicalWidth();
                 int h = getPhysicalHeight();
-                pixels = pixelSource.getUnusedPixels(w, h, 1.0f);
+                pixels = pixelSource.getUnusedPixels(w, h, 1.0f, 1.0f);
                 IntBuffer pixBuf = (IntBuffer) pixels.getPixels();
                 assert ib.hasArray();
                 System.arraycopy(ib.array(), 0, pixBuf.array(), 0, w*h);
@@ -255,7 +255,13 @@ public abstract class J2DPresentable implements Presentable {
         return 0;
     }
 
-    public float getPixelScaleFactor() {
+    @Override
+    public float getPixelScaleFactorX() {
+        return 1.0f;
+    }
+
+    @Override
+    public float getPixelScaleFactorY() {
         return 1.0f;
     }
 

@@ -372,7 +372,7 @@
     CGContextRestoreGState(cgContext);
 }
 
-- (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScale:(GLfloat)scale withEnv:(JNIEnv *)env
+- (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScaleX:(GLfloat)scalex withScaleY:(GLfloat)scaley withEnv:(JNIEnv *)env
 {
     assert([NSGraphicsContext currentContext] != nil);
 
@@ -397,7 +397,7 @@
                         CGContextTranslateCTM(cgContext, 0, size.height);
                         CGContextScaleCTM(cgContext, 1, -1);
                         CGContextSetBlendMode(cgContext, kCGBlendModeCopy);
-                        CGContextDrawImage(cgContext, CGRectMake(0, 0, width/scale, height/scale), cgImage);
+                        CGContextDrawImage(cgContext, CGRectMake(0, 0, width/scalex, height/scaley), cgImage);
                     }
                     CGContextRestoreGState(cgContext);
                 }

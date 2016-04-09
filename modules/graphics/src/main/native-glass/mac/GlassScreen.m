@@ -56,7 +56,7 @@ jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
     {
         jmethodID screenInit = (*env)->GetMethodID(env, jScreenClass,
                                                    "<init>",
-                                                   "(JIIIIIIIIIIIF)V");
+                                                   "(JIIIIIIIIIIIIIIIFFFF)V");
         GLASS_CHECK_EXCEPTION(env);
 
         // Note that NSDeviceResolution always reports 72 DPI, so we use Core Graphics API instead
@@ -83,10 +83,16 @@ jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
             [screen retain];
         }
 
+        jfloat scale = (jfloat)GetScreenScaleFactor(screen);
         jscreen = (jobject)(*env)->NewObject(env, jScreenClass, screenInit,
                                              ptr_to_jlong(screen),
 
                                              (jint)NSBitsPerPixelFromDepth([screen depth]),
+
+                                             (jint)[screen frame].origin.x,
+                                             (jint)(primaryFrame.size.height - [screen frame].size.height - [screen frame].origin.y),
+                                             (jint)[screen frame].size.width,
+                                             (jint)[screen frame].size.height,
 
                                              (jint)[screen frame].origin.x,
                                              (jint)(primaryFrame.size.height - [screen frame].size.height - [screen frame].origin.y),
@@ -101,7 +107,8 @@ jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
 
                                              (jint)resolution.width,
                                              (jint)resolution.height,
-                                             (jfloat)GetScreenScaleFactor(screen));
+                                             1.0f, 1.0f,
+                                             scale, scale);
 
         GLASS_CHECK_EXCEPTION(env);
     }

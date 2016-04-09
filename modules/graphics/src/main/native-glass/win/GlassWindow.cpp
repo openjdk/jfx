@@ -647,37 +647,83 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
 }
 
 void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam) {
+    if (GlassApplication::IsUIScaleOverridden()) {
+        return;
+    }
+
     UINT xDPI = LOWORD(wParam);
     UINT yDPI = HIWORD(wParam);
 
-//    fprintf(stderr, "DPI Changed (=> %d, %d)!\n", yDPI, xDPI);
     JNIEnv* env = GetEnv();
-    jfloat newUIScale = GlassApplication::GetUIScale(xDPI);
-    jfloat newRenderScale = GlassApplication::getRenderScale(newUIScale);
-    env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, newUIScale, newRenderScale);
+    jfloat xScale = xDPI / ((float) USER_DEFAULT_SCREEN_DPI);
+    jfloat yScale = yDPI / ((float) USER_DEFAULT_SCREEN_DPI);
+    env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, xScale, yScale, xScale, yScale);
     CheckAndClearException(env);
 
-    LPRECT lprcNewScale = (LPRECT) lParam;
-#if 0
-    RECT oldBounds, oldClient;
+    // Windows provides new bounds for the window, but they assume that
+    // all parts (client and non-client) will be rescaled equally.
+    // Unfortunately, the basic window decoration support does not scale
+    // so we need to adjust the new bounds to represent the new intended
+    // client dimensions padded for the unchanging frame border.
+    LPRECT lprcNewBounds = (LPRECT) lParam;
+    RECT oldBounds, oldClient, padding, newClient, newBounds;
     ::GetWindowRect(GetHWND(), &oldBounds);
     ::GetClientRect(GetHWND(), &oldClient);
+    float rescaleX = ((float) (lprcNewBounds->right - lprcNewBounds->left)) /
+                              (oldBounds.right - oldBounds.left);
+    float rescaleY = ((float) (lprcNewBounds->bottom - lprcNewBounds->top)) /
+                              (oldBounds.bottom - oldBounds.top);
+
+    // First compute the padding between non-client and client for the old
+    // values for the window.  This is the size of the frame border
+    // decorations.  These will remain unchanged after the change in DPI.
+    padding.left   = oldClient.left   - oldBounds.left;
+    padding.top    = oldClient.top    - oldBounds.top;
+    padding.right  = oldBounds.right  - oldClient.right;
+    padding.bottom = oldBounds.bottom - oldClient.bottom;
+
+    // Next compute the correctly scaled new dimensions for the client
+    // area, based on the ratio of the old window bounds to the suggested
+    // new window bounds.
+    jint newClientW = (jint) ceil((oldClient.right - oldClient.left) * rescaleX);
+    jint newClientH = (jint) ceil((oldClient.bottom - oldClient.top) * rescaleY);
+
+    // Next compute the new client bounds implied by the values provided by
+    // the WM event data
+    newClient.left   = lprcNewBounds->left   + padding.left;
+    newClient.top    = lprcNewBounds->top    + padding.top;
+    newClient.right  = newClient.left + newClientW;
+    newClient.bottom = newClient.top  + newClientH;
+
+    // Finally, compute the new bounds of the window by padding out the
+    // correctly scaled new client region.
+    newBounds.left   = newClient.left   - padding.left;
+    newBounds.top    = newClient.top    - padding.top;
+    newBounds.right  = newClient.right  + padding.right;
+    newBounds.bottom = newClient.bottom + padding.bottom;
+#if 0
     POINT cursor;
     ::GetCursorPos(&cursor);
     fprintf(stderr, "    @ %d, %d\n", cursor.x, cursor.y);
-    fprintf(stderr, "    (%d, %d, %d, %d) [%d x %d] in (%d, %d, %d, %d) [%d x %d] => (%d, %d, %d, %d) [%d x %d]\n",
-            oldClient.left, oldClient.top, oldClient.right, oldClient.bottom,
+    fprintf(stderr, "    (%d, %d, %d, %d) [%d x %d] in (%d, %d, %d, %d) [%d x %d]\n",
+            oldClient.left,   oldClient.top,  oldClient.right,   oldClient.bottom,
             oldClient.right - oldClient.left, oldClient.bottom - oldClient.top,
-            oldBounds.left, oldBounds.top, oldBounds.right, oldBounds.bottom,
-            oldBounds.right - oldBounds.left, oldBounds.bottom - oldBounds.top,
-            lprcNewScale->left, lprcNewScale->top, lprcNewScale->right, lprcNewScale->bottom,
-            lprcNewScale->right - lprcNewScale->left, lprcNewScale->bottom - lprcNewScale->top);
+            oldBounds.left,   oldBounds.top,  oldBounds.right,   oldBounds.bottom,
+            oldBounds.right - oldBounds.left, oldBounds.bottom - oldBounds.top);
+    fprintf(stderr, "    => (suggested) (%d, %d, %d, %d) [%d x %d]\n",
+            lprcNewBounds->left,   lprcNewBounds->top,  lprcNewBounds->right,   lprcNewBounds->bottom,
+            lprcNewBounds->right - lprcNewBounds->left, lprcNewBounds->bottom - lprcNewBounds->top);
+    fprintf(stderr, "    => (recomputed) (%d, %d, %d, %d) [%d x %d] in (%d, %d, %d, %d) [%d x %d]\n",
+            newClient.left,   newClient.top,  newClient.right,   newClient.bottom,
+            newClient.right - newClient.left, newClient.bottom - newClient.top,
+            newBounds.left,   newBounds.top,  newBounds.right,   newBounds.bottom,
+            newBounds.right - newBounds.left, newBounds.bottom - newBounds.top);
 #endif
     ::SetWindowPos(GetHWND(), HWND_TOP,
-                   lprcNewScale->left,
-                   lprcNewScale->top,
-                   lprcNewScale->right - lprcNewScale->left,
-                   lprcNewScale->bottom - lprcNewScale->top,
+                   newBounds.left,
+                   newBounds.top,
+                   newBounds.right  - newBounds.left,
+                   newBounds.bottom - newBounds.top,
                    SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
@@ -1096,7 +1142,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
      ASSERT(midNotifyResize);
      if (env->ExceptionCheck()) return;
 
-     midNotifyScaleChanged = env->GetMethodID(cls, "notifyScaleChanged", "(FF)V");
+     midNotifyScaleChanged = env->GetMethodID(cls, "notifyScaleChanged", "(FFFF)V");
      ASSERT(midNotifyScaleChanged);
      if (env->ExceptionCheck()) return;
 

@@ -517,7 +517,7 @@ public class FXCanvas extends Canvas {
         if (lastScaleFactor != scaleFactor) {
             resizePixelBuffer(scaleFactor);
             lastScaleFactor = scaleFactor;
-            scenePeer.setPixelScaleFactor((float)scaleFactor);
+            scenePeer.setPixelScaleFactors((float)scaleFactor, (float)scaleFactor);
         }
 
         // if we can't get the pixels, draw the bits that were there before
@@ -1034,7 +1034,7 @@ public class FXCanvas extends Canvas {
             double scaleFactor = getScaleFactor();
             resizePixelBuffer(scaleFactor);
             lastScaleFactor = scaleFactor;
-            scenePeer.setPixelScaleFactor((float)scaleFactor);
+            scenePeer.setPixelScaleFactors((float)scaleFactor, (float)scaleFactor);
             scenePeer.setDragStartListener((fxDragSource, dragAction) -> {
                 Platform.runLater(() -> {
                     DragSource dragSource = createDragSource(fxDragSource, dragAction);
