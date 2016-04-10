@@ -524,6 +524,11 @@ is being used to size a border should also be in pixels.
     -fx-opacity: 0.4;
 }
 
+/* Prevent opacity being applied twice for JDK-8152392 */
+.text-input:disabled > .scroll-pane {
+    -fx-opacity: 1.0;
+}
+
 /* ====   MNEMONIC THINGS   ================================================= */
 
 .mnemonic-underline {
