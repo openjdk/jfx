@@ -414,7 +414,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         if (wasSelected) {
             change = ControlUtils.buildClearAndSelectChange(selectedIndicesSeq, previousSelectedIndices, row);
         } else {
-            int changeIndex = selectedIndicesSeq.indexOf(row);
+            int changeIndex = Math.max(0, selectedIndicesSeq.indexOf(row));
             change = new NonIterableChange.GenericAddRemoveChange<>(
                     changeIndex, changeIndex+1, previousSelectedIndices, selectedIndicesSeq);
         }
