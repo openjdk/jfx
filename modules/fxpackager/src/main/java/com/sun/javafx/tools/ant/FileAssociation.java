@@ -38,10 +38,7 @@ import java.util.Map;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
-/**
- *
- * Created by dferrin on 7/31/14.
- */
+
 public class FileAssociation extends DataType implements DynamicAttribute {
 
     String extension;

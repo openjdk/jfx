@@ -31,6 +31,7 @@ import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 
 import java.io.ByteArrayOutputStream;
@@ -242,7 +243,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
     }
 
     public static String findKey(String key, String keychainName, boolean verbose) {
-        if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
+        if (Platform.getPlatform() != Platform.MAC) {
             return null;
         }
 

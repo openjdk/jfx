@@ -31,6 +31,7 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.JLinkBundlerHelper;
 import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
@@ -100,7 +101,7 @@ public class WinAppBundler extends AbstractImageBundler {
     //to be used by chained bundlers, e.g. by EXE bundler to avoid
     // skipping validation if p.type does not include "image"
     boolean doValidate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
-        if (!System.getProperty("os.name").toLowerCase().startsWith("win")) {
+        if (Platform.getPlatform() != Platform.WINDOWS) {
             throw new UnsupportedPlatformException();
         }
 

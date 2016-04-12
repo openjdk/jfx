@@ -28,6 +28,7 @@ package com.sun.javafx.tools.packager;
 import com.oracle.tools.packager.Bundlers;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.JarSignature.InputStreamSource;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
@@ -491,8 +492,7 @@ public class PackagerLib {
 
 
     public void makeAll(MakeAllParams makeAllParams) throws PackagerException {
-        final String exe =
-                System.getProperty("os.name").startsWith("Windows") ? ".exe" : "";
+        final String exe = (Platform.getPlatform() == Platform.WINDOWS) ? ".exe" : "";
         String jHome = System.getenv("JAVA_HOME");
         if (jHome == null) {
             jHome = System.getProperty("java.home");

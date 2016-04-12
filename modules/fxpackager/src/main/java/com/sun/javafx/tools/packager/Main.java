@@ -346,6 +346,8 @@ public class Main {
                             deployParams.limitModules.add(nextArg(args, i++));
                         } else if (arg.equals("-detectmods")) {
                             deployParams.detectModules = true;
+                        } else if (arg.equals("-detectjremods")) {
+                            deployParams.detectJreModules = true;
                         } else if (arg.equals("-stripexecutables")) {
                             deployParams.stripExecutables = true;
                         } else if (arg.equals("-modulepath")) {

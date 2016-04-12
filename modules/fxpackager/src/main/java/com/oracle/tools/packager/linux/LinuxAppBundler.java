@@ -33,6 +33,7 @@ import com.oracle.tools.packager.JLinkBundlerHelper;
 import com.oracle.tools.packager.JreUtils;
 import com.oracle.tools.packager.JreUtils.Rule;
 import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
@@ -141,7 +142,7 @@ public class LinuxAppBundler extends AbstractImageBundler {
 
     //used by chained bundlers to reuse validation logic
     boolean doValidate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
-        if (!System.getProperty("os.name").toLowerCase().startsWith("linux")) {
+        if (Platform.getPlatform() != Platform.LINUX) {
             throw new UnsupportedPlatformException();
         }
 

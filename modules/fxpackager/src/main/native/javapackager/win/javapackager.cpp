@@ -40,16 +40,16 @@ using namespace std;
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
 
-bool from_string (int &result, string &str) {
+bool from_string(int &result, string &str) {
     const char *p = str.c_str();
     int res = 0;
-    for (int index = 0; ; index ++) {
+    for (int index = 0;; index++) {
         char c = str[index];
-        if (c == 0  &&  index > 0) {
+        if (c == 0 && index > 0) {
             result = res;
             return true;
         }
-        if (c < '0'  ||  c > '9')
+        if (c < '0' || c > '9')
             return false;
         res = res * 10 + (c - '0');
     }
@@ -84,7 +84,6 @@ void PrintCSBackupAPIErrorMessage(DWORD dwErr) {
             cerr << "cannot load ntdsbmsg.dll\n";
 #endif
             return;
-
         }
 
         // Try getting message text from ntdsbmsg.
@@ -99,14 +98,12 @@ void PrintCSBackupAPIErrorMessage(DWORD dwErr) {
 
         // Free the library.
         FreeLibrary(hInst);
-
     }
 
     // Display the error message, or generic text if not found.
 #ifdef _DEBUG
     cerr << "Error value: " << dwErr << " Message: " << ((dwChars > 0) ? wszMsgBuff : "Error message not found.") << endl;
 #endif
-
 }
 
 class JavaVersion {
@@ -160,6 +157,37 @@ public:
     }
 };
 
+class EnvironmentVariable {
+private:
+    std::wstring FValue;
+
+public:
+    EnvironmentVariable(std::wstring Name) {
+        wchar_t* value;
+        size_t requiredSize;
+
+        _wgetenv_s(&requiredSize, NULL, 0, Name.data());
+
+        if (requiredSize != 0) {
+            value = (wchar_t*)malloc(requiredSize * sizeof(wchar_t));
+            if (value)
+            {
+                // Get the value of the LIB environment variable.
+                _wgetenv_s(&requiredSize, value, requiredSize, Name.data());
+                FValue = value;
+            }
+        }
+    }
+
+    std::wstring get() {
+        return FValue;
+    }
+
+    bool exists() {
+        return !FValue.empty();
+    }
+};
+
 bool checkJavaHome(HKEY key, const char * sKey, const char * jv, JavaVersion *version) {
     char p[MAX_KEY_LENGTH];
     HKEY hKey;
@@ -178,18 +206,20 @@ bool checkJavaHome(HKEY key, const char * sKey, const char * jv, JavaVersion *ve
             ) {
         DWORD ot = REG_SZ;
         DWORD size = 255;
-        wchar_t data[MAX_PATH] = {0};
+        wchar_t data[MAX_PATH] = { 0 };
         if ((res = RegQueryValueEx(hKey, L"JavaHome", NULL, &ot, (BYTE *)data, &size)) == ERROR_SUCCESS) {
             version->home = data;
             std::wstring ldata = std::wstring(data) + L"\\bin\\java.exe";
             version->path = data;
             result = GetFileAttributes(data) != 0xFFFFFFFF;
-        } else {
+        }
+        else {
             PrintCSBackupAPIErrorMessage(res);
             result = false;
         }
         RegCloseKey(hKey);
-    } else {
+    }
+    else {
 #ifdef _DEBUG
         cerr << "Can not open registry key" << endl;
 #endif
@@ -213,7 +243,8 @@ JavaVersion * parseName(const char * jName) {
     if (pos != string::npos) {
         n = s.substr(0, pos);
         s = s.substr(pos + 1);
-    } else {
+    }
+    else {
         n = s;
         s = "";
     }
@@ -230,7 +261,8 @@ JavaVersion * parseName(const char * jName) {
     if (pos != string::npos) {
         n = s.substr(0, pos);
         s = s.substr(pos + 1);
-    } else {
+    }
+    else {
         n = s;
         s = "";
     }
@@ -256,7 +288,8 @@ JavaVersion * parseName(const char * jName) {
     n = s.substr(0, nn);
     if (nn < s.length()) {
         s = s.substr(nn + 1);
-    } else s = "";
+    }
+    else s = "";
 
     int v3 = 0;
 
@@ -353,27 +386,29 @@ JavaVersion * GetMaxVersion(HKEY key, const char * sKey) {
 #endif
 
                     if (isHome)
-                        if (result == NULL) {
-                            result = nv;
+                    if (result == NULL) {
+                        result = nv;
 #ifdef _DEBUG
-                            cout << "NEW" << endl;
+                        cout << "NEW" << endl;
 #endif
-                        } else {
-                            if (nv != NULL) {
-                                if (*nv > *result) {
+                    }
+                    else {
+                        if (nv != NULL) {
+                            if (*nv > *result) {
 #ifdef _DEBUG
-                                    cout << "REPLACE" << endl;
+                                cout << "REPLACE" << endl;
 #endif
-                                    delete result;
-                                    result = nv;
-                                } else {
+                                delete result;
+                                result = nv;
+                            }
+                            else {
 #ifdef _DEBUG
-                                    cout << "NO" << endl;
+                                cout << "NO" << endl;
 #endif
-                                    delete nv;
-                                }
+                                delete nv;
                             }
                         }
+                    }
 
                 }
 
@@ -381,7 +416,6 @@ JavaVersion * GetMaxVersion(HKEY key, const char * sKey) {
         }
 
         RegCloseKey(hKey);
-
     }
 
     return result;
@@ -411,23 +445,19 @@ bool hasEnding(std::wstring const &fullString, std::wstring const &ending) {
 
 int wmain(int argc, wchar_t* argv[]) {
     wchar_t buf[MAX_PATH];
-    GetModuleFileName (NULL, buf, MAX_PATH);
+    GetModuleFileName(NULL, buf, MAX_PATH);
     std::wstring javafxhome = buf;
-    std::wstring ending = L"javafxpackager.exe";
 
-    if (hasEnding(javafxhome, ending)) {
-        fprintf(stderr, "javafxpackager.exe has been renamed javapackager.exe.\nThe original file may be removed in a future release in lieu of javapackager.\nPlease update your scripts.\n\n");
-    }
-
-    javafxhome.erase(javafxhome.rfind (L"\\"));
+    javafxhome.erase(javafxhome.rfind(L"\\"));
 
     std::wstring fxlib = javafxhome + L"\\..\\lib\\";
 
-    const wchar_t *s = _wgetenv(L"JAVA_HOME");
+    EnvironmentVariable java_home(L"JAVA_HOME");
     std::wstring javacmd;
     std::wstring javahome;
-    if (s != NULL) {
-        javahome = s;
+
+    if (java_home.exists()) {
+        javahome = java_home.get();
         javacmd = javahome + L"\\bin\\java.exe";
         std::wstring javaccmd = javahome + L"\\bin\\javac.exe";
         if (!fileExists(javacmd) || !fileExists(javaccmd)) {
@@ -444,21 +474,43 @@ int wmain(int argc, wchar_t* argv[]) {
         if (jv2 != NULL) {
             javacmd = jv2->path;
             javahome = jv2->home;
-        } else
+        }
+        else
             javacmd = L"java.exe";
     }
 
     std::wstring cmd = L"\"" + javacmd + L"\"";
     if (javahome.length() > 0) {
-        SetEnvironmentVariable(L"JAVA_HOME", javahome.c_str ());
+        SetEnvironmentVariable(L"JAVA_HOME", javahome.c_str());
     }
-    cmd += L" -Xmx256M \"-Djavafx.home=" + javafxhome
-            + L"\" -classpath \"" + fxlib + L"ant-javafx.jar;"
-            + L"\" com.sun.javafx.tools.packager.Main";
 
-    for (int i = 1; i < argc; i ++) {
-        cmd = cmd + L" \"" + argv[i] + L"\"";
+    std::wstring memory = L"-Xmx512M";
+    std::wstring debug = L"";
+    std::wstring args = L"";
+
+    for (int i = 1; i < argc; i++) {
+        std::wstring argument = argv[i];
+        std::wstring debug_arg = L"-J-Xdebug:";
+
+        if (argument.find(L"-J-Xmx", 0) == 0) {
+            memory = argument.substr(2, argument.length() - 2);
+        }
+        else if (argument.find(debug_arg, 0) == 0) {
+            std::wstring address = argument.substr(debug_arg.length(), argument.length() - debug_arg.length());
+            debug = L"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=" + address;
+        }
+        else {
+            args = args + L" \"" + argv[i] + L"\"";
+        }
     }
+
+
+    cmd += debug +
+        L" " + memory +
+        L" -Djavafx.home=" + javafxhome +
+        L" -classpath " + fxlib + L"ant-javafx.jar" +
+        L" com.sun.javafx.tools.packager.Main" +
+        L" " + args;
 
 #ifdef _DEBUG
     printf ("%s", cmd.c_str());
@@ -466,7 +518,7 @@ int wmain(int argc, wchar_t* argv[]) {
 
     STARTUPINFO start;
     PROCESS_INFORMATION pi;
-    memset (&start, 0, sizeof (start));
+    memset(&start, 0, sizeof (start));
     start.cb = sizeof(start);
 
     if (!CreateProcess(NULL, (wchar_t *) cmd.data(),

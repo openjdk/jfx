@@ -142,5 +142,4 @@ public class CreateJarParams extends CommonParams {
             throw new PackagerException("ERR_MissingArgument", "-appclass");
         }
     }
-
 }

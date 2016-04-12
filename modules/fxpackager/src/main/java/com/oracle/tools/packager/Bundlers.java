@@ -119,6 +119,7 @@ public interface Bundlers {
      *
      * This method is called from the {@link #createBundlersInstance(ClassLoader)}
      * and {@link #createBundlersInstance()} methods.
+     * NOTE: Because of the module system this method is now not used.
      */
     void loadDefaultBundlers();
 

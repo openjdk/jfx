@@ -78,6 +78,7 @@ public class DeployParams extends CommonParams {
     Set<String> addModules = new LinkedHashSet<>();
     Set<String> limitModules = new LinkedHashSet<>();
     boolean detectModules = false;
+    boolean detectJreModules = false;
     boolean stripExecutables = false;
     String modulePath;
     String jdkModulePath;
@@ -267,6 +268,10 @@ public class DeployParams extends CommonParams {
 
     public void setDetectModules(boolean value) {
         this.detectModules = value;
+    }
+
+    public void setDetectJreModules(boolean value) {
+        this.detectJreModules = value;
     }
 
     public void setStripExecutables(boolean value) {
@@ -645,9 +650,10 @@ public class DeployParams extends CommonParams {
         bundleParams.setAddModules(addModules);
         bundleParams.setLimitModules(limitModules);
         bundleParams.setDetectModules(detectModules);
+        bundleParams.setDetectJreModules(detectJreModules);
         bundleParams.setStripExecutables(stripExecutables);
-        bundleParams.setAppModulePath(jdkModulePath);
-        bundleParams.setLinkModulePath(modulePath);
+        bundleParams.setJdkModulePath(jdkModulePath);
+        bundleParams.setModulePath(modulePath);
 
         File appIcon = null;
         List<Map<String, ? super Object>> bundlerIcons = new ArrayList<>();

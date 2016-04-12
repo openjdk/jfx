@@ -106,24 +106,24 @@ bool IniFile::LoadFromFile(const TString FileName) {
 bool IniFile::SaveToFile(const TString FileName, bool ownerOnly) {
     bool result = false;
 
-        std::list<TString> contents;
-        std::vector<TString> keys = FMap.GetKeys();
+    std::list<TString> contents;
+    std::vector<TString> keys = FMap.GetKeys();
 
-        for (unsigned int index = 0; index < keys.size(); index++) {
-            TString name = keys[index];
+    for (unsigned int index = 0; index < keys.size(); index++) {
+        TString name = keys[index];
         IniSectionData *section;
 
-                if (FMap.GetValue(name, section) == true) {
-                    contents.push_back(_T("[") + name + _T("]"));
-                    std::list<TString> lines = section->GetLines();
-                    contents.insert(contents.end(), lines.begin(), lines.end());
-                    contents.push_back(_T(""));
-                }
+        if (FMap.GetValue(name, section) == true) {
+            contents.push_back(_T("[") + name + _T("]"));
+            std::list<TString> lines = section->GetLines();
+            contents.insert(contents.end(), lines.begin(), lines.end());
+            contents.push_back(_T(""));
         }
+    }
 
-        Platform& platform = Platform::GetInstance();
-        platform.SaveToFile(FileName, contents, ownerOnly);
-        result = true;
+    Platform& platform = Platform::GetInstance();
+    platform.SaveToFile(FileName, contents, ownerOnly);
+    result = true;
     return result;
 }
 

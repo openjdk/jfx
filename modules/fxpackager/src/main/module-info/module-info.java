@@ -29,6 +29,7 @@ module jdk.packager {
     requires jdk.jdeps;
 
     requires java.xml;
+    requires java.desktop;
 
     exports com.oracle.tools.packager;
     exports com.sun.javafx.tools.packager;

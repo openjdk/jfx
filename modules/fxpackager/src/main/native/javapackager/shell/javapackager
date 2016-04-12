@@ -1,7 +1,31 @@
-#!/bin/sh
+#!/bin/bash
 #
-# JavaFX Packager tool execution script for Linux/Solaris/OS X.
+# Java Packager tool execution script for Linux and OS X.
 #
+
+# Default values.
+DEBUG=""
+MEMORY="-Xmx512M"
+JAVA_ARGS=""
+DEBUG_ARG="-J-Xdebug:";
+
+# Argument parsing.
+ARGS=()
+for i in "$@"; do
+    if [[ "$i" == "-J-Xmx"* ]]; then
+        ARGUMENT=${i:2}
+        MEMORY=${ARGUMENT}
+    elif [[ "$i" == ${DEBUG_ARG}* ]]; then
+        ADDRESS=${i:${#DEBUG_ARG}}
+        DEBUG="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=${ADDRESS}"
+    elif [[ "$i" == "-J-"* ]]; then
+        ARGUMENT=${i:2}
+        JAVA_ARGS="${JAVA_ARGS} ${ARGUMENT}"
+    else
+        ARGS+=("$i")
+    fi
+done
+
 
 # resolve symlinks
 PRG=$0
@@ -28,30 +52,36 @@ case "`uname`" in
   CYGWIN*) cygwin=true;;
 esac
 
-if [ -n "$JAVA_HOME" -a -x "$JAVA_HOME/bin/javac" ] ; then
-    JAVA_CMD="$JAVA_HOME/bin/java"
-    export JAVA_HOME
-else
-  JAVAC_CMD=`which javac 2> /dev/null `
-  while [ -h "$JAVAC_CMD" ]; do
-    ls=`ls -ld "$JAVAC_CMD"`
-    link=`expr "$ls" : '^.*-> \(.*\)$' 2>/dev/null`
-    if expr "$link" : '^/' 2> /dev/null >/dev/null; then
-	JAVAC_CMD="$link"
-    else
-	JAVAC_CMD="`dirname "$JAVAC_CMD"`/$link"
-    fi
-  done
-  BIN_DIR=`dirname "$JAVAC_CMD"`
-  JAVA_HOME=`dirname "$BIN_DIR"`
-  if [ "m$JAVA_HOME" != "m." ]; then
+JAVA_PACKAGER_PATH=$(cd $(dirname $0) ; pwd -P)
+JAVA_CMD="${JAVA_PACKAGER_PATH}/java"
+
+if [[ ! -f ${JAVA_CMD} ]]; then
+  if [ -n "$JAVA_HOME" -a -x "$JAVA_HOME/bin/javac" ] ; then
       JAVA_CMD="$JAVA_HOME/bin/java"
       export JAVA_HOME
   else
-    unset JAVA_HOME
-    JAVA_CMD=`which java 2> /dev/null `
-    if [ -z "$JAVA_CMD" ]; then
-      JAVA_CMD="java"
+    JAVAC_CMD=`which javac 2> /dev/null `
+    while [ -h "$JAVAC_CMD" ]; do
+      ls=`ls -ld "$JAVAC_CMD"`
+      link=`expr "$ls" : '^.*-> \(.*\)$' 2>/dev/null`
+      if expr "$link" : '^/' 2> /dev/null >/dev/null; then
+        JAVAC_CMD="$link"
+      else
+        JAVAC_CMD="`dirname "$JAVAC_CMD"`/$link"
+      fi
+    done
+
+    BIN_DIR=`dirname "$JAVAC_CMD"`
+    JAVA_HOME=`dirname "$BIN_DIR"`
+    if [ "m$JAVA_HOME" != "m." ]; then
+      JAVA_CMD="$JAVA_HOME/bin/java"
+      export JAVA_HOME
+    else
+      unset JAVA_HOME
+      JAVA_CMD=`which java 2> /dev/null `
+      if [ -z "$JAVA_CMD" ]; then
+        JAVA_CMD="java"
+      fi
     fi
   fi
 fi
@@ -61,14 +91,6 @@ if [ ! -x "$JAVA_CMD" ] ; then
   echo 'Error: JAVA_HOME is not defined, cannot find "java" command.'
   exit 1
 fi
-
-case "$PRG" in
-  *javafxpackager)
-  echo 'javafxpackager has been renamed javapackager';
-  echo 'The original file may be removed in a future release in lieu of javapackager.';
-  echo 'Please update your scripts.';
-  echo ;;
-esac
 
 javafx_home=`dirname "$PRG"`/..
 
@@ -86,4 +108,8 @@ if $cygwin ; then
     JAVA_CMD=`cygpath --unix "$JAVA_CMD"`
 fi
 
-exec "$JAVA_CMD" -Xmx256M "-Djavafx.home=$javafx_home" -classpath "$classpath" com.sun.javafx.tools.packager.Main "$@"
+# The cray looking use of echo and ARGS expands the ARGS array into a space
+# separated list to be passed as an argument to JAVA. This is similar to "$@"
+# except we had to strip out some arguments that we don't want to be passed
+# to the Java Packager.
+exec "$JAVA_CMD" ${DEBUG} ${MEMORY} ${JAVA_ARGS} "-Djavafx.home=$javafx_home" -classpath "$classpath" -m jdk.packager/com.sun.javafx.tools.packager.Main $(IFS=$' '; echo "${ARGS[*]}")

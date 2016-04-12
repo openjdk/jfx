@@ -24,6 +24,7 @@
  */
 package jdk.packager.builders.linux;
 
+
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
@@ -182,7 +183,6 @@ public class LinuxAppImageBuilder extends AbstractAppImageBuilder {
     protected void prepareApplicationFiles(Pool files, Set<String> modules) throws IOException {
         Map<String, ? super Object> originalParams = new HashMap<>(params);
         try {
-
             // create the primary launcher
             createLauncherForEntryPoint(params, root);
 
