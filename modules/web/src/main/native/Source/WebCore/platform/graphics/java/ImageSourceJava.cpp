@@ -77,24 +77,17 @@ void ImageSource::setData(SharedBuffer *data, bool allDataReceived)
         "([B)V");
     ASSERT(midAddImageData);
 
-    size_t dataSize = data->size();
-    if (dataSize) {
-        jbyte* pData = (jbyte*) data->data();
-        ASSERT(pData);
-
-        JLByteArray jArray( m_dataSize < dataSize
-            ? env->NewByteArray(dataSize - m_dataSize)
-            : NULL);
+    const char* segment;
+    while (unsigned length = data->getSomeData(segment, m_dataSize)) {
+        JLByteArray jArray(env->NewByteArray(length));
         if (jArray && !CheckAndClearException(env)) {
             // not OOME in Java
-            env->SetByteArrayRegion(jArray, 0, dataSize - m_dataSize, pData + m_dataSize);
+            env->SetByteArrayRegion(jArray, 0, length, (const jbyte*)segment);
             env->CallVoidMethod(m_decoder, midAddImageData, (jbyteArray)jArray);
-            if (!CheckAndClearException(env)) {
-                m_dataSize = dataSize;
-            }
+            CheckAndClearException(env);
         }
+        m_dataSize += length;
     }
-
     if (allDataReceived) {
         env->CallVoidMethod(m_decoder, midAddImageData, 0);
         CheckAndClearException(env);
@@ -239,25 +232,25 @@ void ImageSource::clear(
     SharedBuffer* data,
     bool allDataReceived)
 {
-        if (destroyAll) {
-                JNIEnv* env = WebCore_GetJavaEnv();
-                // [env] could be NULL in case of deallocation static BitmapImage objects
-                if (!env)
-                        return;
+    if (destroyAll) {
+        JNIEnv* env = WebCore_GetJavaEnv();
+        // [env] could be NULL in case of deallocation static BitmapImage objects
+        if (!env)
+            return;
 
-                static jmethodID midDestroy = env->GetMethodID(
-                        PG_GetGraphicsImageDecoderClass(env),
-                        "destroy",
-                        "()V");
-                ASSERT(midDestroy);
+        static jmethodID midDestroy = env->GetMethodID(
+                PG_GetGraphicsImageDecoderClass(env),
+                "destroy",
+                "()V");
+        ASSERT(midDestroy);
 
-                env->CallVoidMethod(m_decoder, midDestroy);
-                CheckAndClearException(env);
-        }
+        env->CallVoidMethod(m_decoder, midDestroy);
+        CheckAndClearException(env);
+    }
 
-        if (data) {
-                setData(data, allDataReceived);
-        }
+    if (data) {
+        setData(data, allDataReceived);
+    }
 }
 
 bool ImageSource::initialized() const
