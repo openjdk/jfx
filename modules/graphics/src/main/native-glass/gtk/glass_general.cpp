@@ -432,6 +432,8 @@ gboolean check_and_clear_exception(JNIEnv *env) {
     if (t) {
         env->ExceptionClear();
         env->CallStaticVoidMethod(jApplicationCls, jApplicationReportException, t);
+        //Clear in case our reporting upcall failed too!
+        env->ExceptionClear();
         return TRUE;
     }
     return FALSE;

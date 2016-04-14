@@ -157,6 +157,7 @@ do {                                                                            
         (*ENV)->ExceptionClear(ENV);                                               \
         (*ENV)->CallStaticVoidMethod(                                              \
             ENV, jApplicationClass, javaIDs.Application.reportException, t);       \
+        (*ENV)->ExceptionClear(ENV);                                               \
     };                                                                             \
 } while (0)
 
