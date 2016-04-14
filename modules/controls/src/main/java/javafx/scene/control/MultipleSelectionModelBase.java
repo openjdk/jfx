@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import static javafx.scene.control.SelectionMode.SINGLE;
 
@@ -33,12 +32,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import com.sun.javafx.scene.control.MultipleAdditionAndRemovedChange;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableListBase;
 import javafx.util.Callback;
 
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import javafx.util.Pair;
 
 
@@ -67,54 +68,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         });
 
         selectedIndices = new BitSet();
-
         selectedIndicesSeq = new BitSetReadOnlyUnbackedObservableList(selectedIndices);
 
-        final MappingChange.Map<Integer,T> map = f -> getModelItem(f);
-
-        selectedIndicesSeq.addListener(new ListChangeListener<Integer>() {
-            @Override public void onChanged(final Change<? extends Integer> c) {
-                // when the selectedIndices ObservableList changes, we manually call
-                // the observers of the selectedItems ObservableList.
-
-                // Fix for a bug identified whilst fixing RT-37395:
-                // We shouldn't fire events on the selectedItems list unless
-                // the indices list has actually changed. This means that index
-                // permutation events should not be forwarded blindly through the
-                // items list, as a index permutation implies the items list is
-                // unchanged, not changed!
-                boolean hasRealChangeOccurred = false;
-
-                if (c instanceof MultipleAdditionAndRemovedChange) {
-                    hasRealChangeOccurred = false;
-                } else {
-                    while (!hasRealChangeOccurred && c.next()) {
-                        hasRealChangeOccurred = c.wasAdded() || c.wasRemoved();
-                    }
-                }
-
-                selectedIndicesSeq.reset();
-                if (hasRealChangeOccurred) {
-                    if (selectedItemChange != null) {
-                        selectedItemsSeq.callObservers(selectedItemChange);
-                    } else {
-                        c.reset();
-                        selectedItemsSeq.callObservers(new MappingChange<>(c, map, selectedItemsSeq));
-                    }
-                }
-                c.reset();
-            }
-        });
-
-
-        selectedItemsSeq = new ReadOnlyUnbackedObservableList<T>() {
-            @Override public T get(int i) {
-                int pos = selectedIndicesSeq.get(i);
-                return getModelItem(pos);
-            }
-
-            @Override public int size() {
-                return selectedIndices.cardinality();
+        selectedItemsSeq = new SelectedItemsReadOnlyObservableList<T>(selectedIndicesSeq, () -> getItemCount()) {
+            @Override protected T getModelItem(int index) {
+                return MultipleSelectionModelBase.this.getModelItem(index);
             }
         };
     }
@@ -156,7 +114,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         return selectedIndicesSeq;
     }
 
-    private final ReadOnlyUnbackedObservableList<T> selectedItemsSeq;
+    private final ObservableListBase<T> selectedItemsSeq;
     @Override public ObservableList<T> getSelectedItems() {
         return selectedItemsSeq;
     }
@@ -795,6 +753,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         private int lastGetIndex = -1;
         private int lastGetValue = -1;
+
+        public BitSetReadOnlyUnbackedObservableList() {
+            this(new BitSet());
+        }
 
         public BitSetReadOnlyUnbackedObservableList(BitSet bitset) {
             this.bitset = bitset;

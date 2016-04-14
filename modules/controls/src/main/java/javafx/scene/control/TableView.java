@@ -39,6 +39,7 @@ import java.util.WeakHashMap;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import javafx.beans.*;
@@ -56,6 +57,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableListBase;
 import javafx.collections.WeakListChangeListener;
 import javafx.collections.transformation.SortedList;
 import javafx.css.CssMetaData;
@@ -2035,8 +2037,6 @@ public class TableView<S> extends Control {
 
         private int itemCount = 0;
 
-        private final MappingChange.Map<TablePosition<S,?>,S> cellToItemsMap = f -> getModelItem(f.getRow());
-
         private final MappingChange.Map<TablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
 
         /***********************************************************************
@@ -2056,22 +2056,14 @@ public class TableView<S> extends Control {
                     ObservableList<S> oldItems = weakItemsRef.get();
                     weakItemsRef = new WeakReference<>(tableView.getItems());
                     updateItemsObserver(oldItems, tableView.getItems());
+
+                    ((SelectedItemsReadOnlyObservableList)getSelectedItems()).setItemsList(tableView.getItems());
                 }
             });
 
             selectedCellsMap = new SelectedCellsMap<TablePosition<S,?>>(c -> handleSelectedCellsListChangeEvent(c)) {
                 @Override public boolean isCellSelectionEnabled() {
                     return TableViewArrayListSelectionModel.this.isCellSelectionEnabled();
-                }
-            };
-
-            selectedItems = new ReadOnlyUnbackedObservableList<S>() {
-                @Override public S get(int i) {
-                    return getModelItem(getSelectedIndices().get(i));
-                }
-
-                @Override public int size() {
-                    return getSelectedIndices().size();
                 }
             };
 
@@ -2098,6 +2090,7 @@ public class TableView<S> extends Control {
             // watching for changes to the items list content
             ObservableList<S> items = getTableView().getItems();
             if (items != null) {
+                ((SelectedItemsReadOnlyObservableList)getSelectedItems()).setItemsList(items);
                 items.addListener(weakItemsContentListener);
             }
 
@@ -2170,12 +2163,6 @@ public class TableView<S> extends Control {
         // the only 'proper' internal data structure, selectedItems and selectedIndices
         // are both 'read-only and unbacked'.
         private final SelectedCellsMap<TablePosition<S,?>> selectedCellsMap;
-
-        // used to represent the _row_ backing data for the selectedCells
-        private final ReadOnlyUnbackedObservableList<S> selectedItems;
-        @Override public ObservableList<S> getSelectedItems() {
-            return selectedItems;
-        }
 
         // we create a ReadOnlyUnbackedObservableList of selectedCells here so
         // that we can fire custom list change events.
@@ -3043,68 +3030,13 @@ public class TableView<S> extends Control {
             // the observers of the selectedItems, selectedIndices and
             // selectedCells lists.
 
-            // here we are considering whether to notify the observers of the
-            // selectedItems list. However, we can't just blindly do that, as
-            // noted below. This is a part of the fix for RT-37429.
-            c.next();
-            boolean fireChangeEvent;
-            outer: if (c.wasReplaced()) {
-                // if a replace happened, we need to check to see if the
-                // change actually impacts on the selected items - it may
-                // be that the index changed to the new location of the same
-                // item (i.e. if a sort occurred). Only if the item has changed
-                // should we fire an event to the observers of the selectedItems
-                // list
-                final int removedSize = c.getRemovedSize();
-                final int addedSize = c.getAddedSize();
-                if (removedSize != addedSize) {
-                    fireChangeEvent = true;
-                } else {
-                    for (int i = 0; i < removedSize; i++) {
-                        TablePosition<S, ?> removed = c.getRemoved().get(i);
-                        S removedItem = removed.getItem();
-
-                        boolean matchFound = false;
-                        for (int j = 0; j < addedSize; j++) {
-                            TablePosition<S, ?> added = c.getAddedSubList().get(j);
-                            S addedItem = added.getItem();
-
-                            if ((removedItem != null && removedItem.equals(addedItem)) ||
-                                    (removedItem == null && addedItem == null)) {
-                                matchFound = true;
-                                break;
-                            }
-                        }
-
-                        if (!matchFound) {
-                            fireChangeEvent = true;
-                            break outer;
-                        }
-                    }
-                    fireChangeEvent = false;
-                }
-            } else {
-                fireChangeEvent = true;
-            }
-
-            if (fireChangeEvent) {
-                if (selectedItemChange != null) {
-                    selectedItems.callObservers(selectedItemChange);
-                } else {
-                    // create an on-demand list of the removed objects contained in the
-                    // given rows.
-                    selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
-                }
-            }
-            c.reset();
-
             // Fix for RT-31577 - the selectedItems list was going to
             // empty, but the selectedItem property was staying non-null.
             // There is a unit test for this, so if a more elegant solution
             // can be found in the future and this code removed, the unit
             // test will fail if it isn't fixed elsewhere.
             // makeAtomic toggle added to resolve RT-32618
-            if (selectedItems.isEmpty() && getSelectedItem() != null) {
+            if (getSelectedItems().isEmpty() && getSelectedItem() != null) {
                 setSelectedItem(null);
             }
 

@@ -31,9 +31,11 @@ import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 
+import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.DoubleProperty;
+import javafx.collections.ObservableListBase;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 
@@ -2297,8 +2299,6 @@ public class TreeTableView<S> extends Control {
     // package for testing
     static class TreeTableViewArrayListSelectionModel<S> extends TreeTableViewSelectionModel<S> {
 
-        private final MappingChange.Map<TreeTablePosition<S,?>,TreeItem<S>> cellToItemsMap = f -> getModelItem(f.getRow());
-
         private final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
 
         private TreeTableView<S> treeTableView = null;
@@ -2325,16 +2325,6 @@ public class TreeTableView<S> extends Control {
                 }
             };
 
-            selectedItems = new ReadOnlyUnbackedObservableList<TreeItem<S>>() {
-                @Override public TreeItem<S> get(int i) {
-                    return getModelItem(getSelectedIndices().get(i));
-                }
-
-                @Override public int size() {
-                    return getSelectedIndices().size();
-                }
-            };
-
             selectedCellsSeq = new ReadOnlyUnbackedObservableList<TreeTablePosition<S,?>>() {
                 @Override public TreeTablePosition<S,?> get(int i) {
                     return selectedCellsMap.get(i);
@@ -2344,7 +2334,6 @@ public class TreeTableView<S> extends Control {
                     return selectedCellsMap.size();
                 }
             };
-
 
             updateDefaultSelection();
 
@@ -2473,6 +2462,10 @@ public class TreeTableView<S> extends Control {
                         // removed, but the location of the selected index / item
                         // has likely changed. This was added to fix RT-30156 and
                         // unit tests exist to prevent it from regressing.
+
+                        // FIXME the following line is a temporary crutch as we transition away from ReadOnlyUnbackedObservableList
+                        ((SelectedItemsReadOnlyObservableList)getSelectedItems()).eventBlock = true;
+
                         quietClearSelection();
                         select(oldSelectedItem);
                     } else if (e.wasAdded()) {
@@ -2590,12 +2583,6 @@ public class TreeTableView<S> extends Control {
         // the only 'proper' internal data structure, selectedItems and selectedIndices
         // are both 'read-only and unbacked'.
         private final SelectedCellsMap<TreeTablePosition<S,?>> selectedCellsMap;
-
-        // used to represent the _row_ backing data for the selectedCells
-        private final ReadOnlyUnbackedObservableList<TreeItem<S>> selectedItems;
-        @Override public ObservableList<TreeItem<S>> getSelectedItems() {
-            return selectedItems;
-        }
 
         private final ReadOnlyUnbackedObservableList<TreeTablePosition<S,?>> selectedCellsSeq;
         @Override public ObservableList<TreeTablePosition<S,?>> getSelectedCells() {
@@ -3288,63 +3275,13 @@ public class TreeTableView<S> extends Control {
             // the observers of the selectedItems, selectedIndices and
             // selectedCells lists.
 
-            // here we are considering whether to notify the observers of the
-            // selectedItems list. However, we can't just blindly do that, as
-            // noted below. This is a part of the fix for RT-37429.
-            c.next();
-            boolean fireChangeEvent;
-            outer: if (c.wasReplaced()) {
-                // if a replace happened, we need to check to see if the
-                // change actually impacts on the selected items - it may
-                // be that the index changed to the new location of the same
-                // item (i.e. if a sort occurred). Only if the item has changed
-                // should we fire an event to the observers of the selectedItems
-                // list
-                final int removedSize = c.getRemovedSize();
-                final int addedSize = c.getAddedSize();
-                if (removedSize != addedSize) {
-                    fireChangeEvent = true;
-                } else {
-                    for (int i = 0; i < c.getRemovedSize(); i++) {
-                        TreeTablePosition<S, ?> removed = c.getRemoved().get(i);
-                        TreeItem<S> removedTreeItem = removed.getTreeItem();
-
-                        boolean matchFound = false;
-                        for (int j = 0; j < c.getAddedSize(); j++) {
-                            TreeTablePosition<S, ?> added = c.getAddedSubList().get(j);
-                            TreeItem<S> addedTreeItem = added.getTreeItem();
-
-                            if (removedTreeItem != null && removedTreeItem.equals(addedTreeItem)) {
-                                matchFound = true;
-                                break;
-                            }
-                        }
-
-                        if (!matchFound) {
-                            fireChangeEvent = true;
-                            break outer;
-                        }
-                    }
-                    fireChangeEvent = false;
-                }
-            } else {
-                fireChangeEvent = true;
-            }
-
-            if (fireChangeEvent) {
-                // create an on-demand list of the removed objects contained in the
-                // given rows.
-                selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
-            }
-            c.reset();
-
             // Fix for RT-31577 - the selectedItems list was going to
             // empty, but the selectedItem property was staying non-null.
             // There is a unit test for this, so if a more elegant solution
             // can be found in the future and this code removed, the unit
             // test will fail if it isn't fixed elsewhere.
             // makeAtomic toggle added to resolve RT-32618
-            if (selectedItems.isEmpty() && getSelectedItem() != null) {
+            if (getSelectedItems().isEmpty() && getSelectedItem() != null) {
                 setSelectedItem(null);
             }
 
