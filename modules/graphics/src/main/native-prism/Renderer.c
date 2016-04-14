@@ -622,6 +622,8 @@ static void setAndClearRelativeAlphas(AlphaConsumer *pAC,
 {
 //    System.out.println("setting row "+(pix_y - y)+
 //                       " out of "+width+" x "+height);
+    (void) pix_from;
+    (void) pix_to;
     jint w = pAC->width;
     jint off = (pix_y - pAC->originY) * w;
     jbyte *out = pAC->alphas;
