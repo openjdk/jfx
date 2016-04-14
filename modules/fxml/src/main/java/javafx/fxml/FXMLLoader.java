@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,8 +88,6 @@ import java.security.PrivilegedAction;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.StringTokenizer;
-import sun.reflect.CallerSensitive;
-import sun.reflect.Reflection;
 import sun.reflect.misc.ConstructorUtil;
 import sun.reflect.misc.MethodUtil;
 import sun.reflect.misc.ReflectUtil;
@@ -103,6 +101,11 @@ public class FXMLLoader {
     // Indicates permission to get the ClassLoader
     private static final RuntimePermission GET_CLASSLOADER_PERMISSION =
         new RuntimePermission("getClassLoader");
+
+    // Instance of StackWalker used to get caller class (must be private)
+    private static final StackWalker walker =
+        AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
+            StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
 
     // Abstract base class for elements
     private abstract class Element {
@@ -2322,12 +2325,11 @@ public class FXMLLoader {
      * Returns the classloader used by this serializer.
      * @since JavaFX 2.1
      */
-    @CallerSensitive
     public ClassLoader getClassLoader() {
         if (classLoader == null) {
             final SecurityManager sm = System.getSecurityManager();
             final Class caller = (sm != null) ?
-                    Reflection.getCallerClass() :
+                    walker.getCallerClass() :
                     null;
             return getDefaultClassLoader(caller);
         }
@@ -2404,10 +2406,9 @@ public class FXMLLoader {
      * The loaded object hierarchy.
      * @since JavaFX 2.1
      */
-    @CallerSensitive
     public <T> T load() throws IOException {
         return loadImpl((System.getSecurityManager() != null)
-                            ? Reflection.getCallerClass()
+                            ? walker.getCallerClass()
                             : null);
     }
 
@@ -2420,10 +2421,9 @@ public class FXMLLoader {
      * @return
      * The loaded object hierarchy.
      */
-    @CallerSensitive
     public <T> T load(InputStream inputStream) throws IOException {
         return loadImpl(inputStream, (System.getSecurityManager() != null)
-                                         ? Reflection.getCallerClass()
+                                         ? walker.getCallerClass()
                                          : null);
     }
 
@@ -3059,11 +3059,10 @@ public class FXMLLoader {
      * Returns the default class loader.
      * @since JavaFX 2.1
      */
-    @CallerSensitive
     public static ClassLoader getDefaultClassLoader() {
         final SecurityManager sm = System.getSecurityManager();
         final Class caller = (sm != null) ?
-                Reflection.getCallerClass() :
+                walker.getCallerClass() :
                 null;
         return getDefaultClassLoader(caller);
     }
@@ -3092,10 +3091,9 @@ public class FXMLLoader {
      *
      * @param location
      */
-    @CallerSensitive
     public static <T> T load(URL location) throws IOException {
         return loadImpl(location, (System.getSecurityManager() != null)
-                                      ? Reflection.getCallerClass()
+                                      ? walker.getCallerClass()
                                       : null);
     }
 
@@ -3110,12 +3108,11 @@ public class FXMLLoader {
      * @param location
      * @param resources
      */
-    @CallerSensitive
     public static <T> T load(URL location, ResourceBundle resources)
                                      throws IOException {
         return loadImpl(location, resources,
                         (System.getSecurityManager() != null)
-                            ? Reflection.getCallerClass()
+                            ? walker.getCallerClass()
                             : null);
     }
 
@@ -3132,13 +3129,12 @@ public class FXMLLoader {
      * @param resources
      * @param builderFactory
      */
-    @CallerSensitive
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory)
                                      throws IOException {
         return loadImpl(location, resources, builderFactory,
                         (System.getSecurityManager() != null)
-                            ? Reflection.getCallerClass()
+                            ? walker.getCallerClass()
                             : null);
     }
 
@@ -3157,14 +3153,13 @@ public class FXMLLoader {
      * @param controllerFactory
      * @since JavaFX 2.1
      */
-    @CallerSensitive
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory,
                              Callback<Class<?>, Object> controllerFactory)
                                      throws IOException {
         return loadImpl(location, resources, builderFactory, controllerFactory,
                         (System.getSecurityManager() != null)
-                            ? Reflection.getCallerClass()
+                            ? walker.getCallerClass()
                             : null);
     }
 
@@ -3186,7 +3181,6 @@ public class FXMLLoader {
      * @param charset
      * @since JavaFX 2.1
      */
-    @CallerSensitive
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory,
                              Callback<Class<?>, Object> controllerFactory,
@@ -3194,7 +3188,7 @@ public class FXMLLoader {
         return loadImpl(location, resources, builderFactory, controllerFactory,
                         charset,
                         (System.getSecurityManager() != null)
-                            ? Reflection.getCallerClass()
+                            ? walker.getCallerClass()
                             : null);
     }
 
