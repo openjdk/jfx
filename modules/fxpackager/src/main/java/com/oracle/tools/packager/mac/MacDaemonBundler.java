@@ -44,6 +44,7 @@ import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 
 public class MacDaemonBundler extends AbstractBundler {
@@ -249,7 +250,7 @@ public class MacDaemonBundler extends AbstractBundler {
     public boolean doValidate(Map<String, ? super Object> p)
             throws UnsupportedPlatformException, ConfigException
     {
-        if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
+        if (Platform.getPlatform() != Platform.MAC) {
             throw new UnsupportedPlatformException();
         }
 

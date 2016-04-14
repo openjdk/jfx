@@ -77,7 +77,7 @@ public class JLinkBundlerHelper {
                                                 "javafx.fxml",
                                                 "javafx.media",
                                                 "javafx.web",
-                                                "jdk.packager.services", //TODO rename to jdk.packager.runtime JDK-8148482
+                                                "jdk.packager.services",
                                                 "jdk.accessibility",
                                                 "jdk.charsets",
                                                 "jdk.crypto.ec",
@@ -154,9 +154,19 @@ public class JLinkBundlerHelper {
     @SuppressWarnings("unchecked")
     public static final BundlerParamInfo<Boolean> DETECT_MODULES =
             new StandardBundlerParam<>(
-                    I18N.getString("param.auto-modules.name"),
-                    I18N.getString("param.auto-modules.description"),
+                    I18N.getString("param.detect-modules.name"),
+                    I18N.getString("param.detect-modules.description"),
                     "detectmods",
+                    Boolean.class,
+                    p -> Boolean.FALSE,
+                    (s, p) -> Boolean.valueOf(s));
+
+    @SuppressWarnings("unchecked")
+    public static final BundlerParamInfo<Boolean> DETECT_JRE_MODULES =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.detect-jre-modules.name"),
+                    I18N.getString("param.detect-jre-modules.description"),
+                    "detectjremods",
                     Boolean.class,
                     p -> Boolean.FALSE,
                     (s, p) -> Boolean.valueOf(s));
@@ -205,6 +215,9 @@ public class JLinkBundlerHelper {
         List<Path> modulePath = MODULE_PATH.fetchFrom(params);
         Set<String> addModules = ADD_MODULES.fetchFrom(params);
         Set<String> limitModules = LIMIT_MODULES.fetchFrom(params);
+
+        boolean detectModules = DETECT_MODULES.fetchFrom(params);
+        boolean detectJreModules = DETECT_JRE_MODULES.fetchFrom(params);
         File jdkModulePathFile = new File(jdkmodulePath);
 
         if (!jdkModulePathFile.exists() || !jdkModulePathFile.isDirectory()) {
@@ -213,35 +226,20 @@ public class JLinkBundlerHelper {
             jdkModulePathFile = null;
         }
 
-        if (DETECT_MODULES.fetchFrom(params)) {
-            // Add JDK modules to the module path.
-            if (jdkModulePathFile != null) {
-                modulePath.add(jdkModulePathFile.toPath());
-            }
+        Collection<String> moduleNames = getModuleNamesForApp(getResourceFileJarList(params),
+                                                              jdkModulePathFile,
+                                                              modulePath,
+                                                              detectJreModules,
+                                                              detectModules,
+                                                              addModules.isEmpty());
 
-            // Get App Jars.
-            List<String> appJars = JDepHelper.getResourceFileJarList(params);
+        if (moduleNames != null) {
+            addModules.addAll(moduleNames);
+        }
 
-            // Ask Jdeps for the list of dependent modules.
-            Collection<String> detectedModules = JDepHelper.calculateModules(appJars, modulePath);
-            addModules.addAll(detectedModules);
-            Log.info("Automatically adding detected modules " + detectedModules);
-        } else if (addModules.isEmpty()) {
-            // Add all modules on user specified path (-modulepath).
-            addModules.addAll(getModuleNamesFromPath(modulePath));
-
-            // Only retain Java SE Modules.
-            if (jdkModulePathFile != null) {
-                Set<String> jdkModuleNames = getModuleNamesFromPath(jdkModulePathFile.toPath());
-                Set<String> javaseModules = new HashSet<>(Arrays.asList(JRE_MODULES));
-
-                //TODO JDK-8149975 programmatically determine JRE vs JDK modules
-                jdkModuleNames.retainAll(javaseModules); // strip out JDK modules
-                addModules.addAll(jdkModuleNames);
-
-                // Add JDK modules to the module path.
-                modulePath.add(jdkModulePathFile.toPath());
-            }
+        // Add JDK path to the module path for JLINK.
+        if (jdkModulePathFile != null) {
+            modulePath.add(jdkModulePathFile.toPath());
         }
 
         Path output = outputParentDir.toPath();
@@ -296,24 +294,24 @@ public class JLinkBundlerHelper {
     }
 
     private static Set<String> getModuleNamesFromPath(List<Path> Value) {
-            Set<String> result = new LinkedHashSet();
-            ModuleManager mm = new ModuleManager(Value);
-            List<Module> modules = mm.getModules(EnumSet.of(ModuleManager.SearchType.ModularJar,
-                                                 ModuleManager.SearchType.Jmod,
-                                                 ModuleManager.SearchType.ExplodedModule));
+        Set<String> result = new LinkedHashSet();
+        ModuleManager mm = new ModuleManager(Value);
+        List<Module> modules = mm.getModules(EnumSet.of(ModuleManager.SearchType.ModularJar,
+                                             ModuleManager.SearchType.Jmod,
+                                             ModuleManager.SearchType.ExplodedModule));
 
-            for (Module module : modules) {
-                result.add(module.getModuleName());
-            }
+        for (Module module : modules) {
+            result.add(module.getModuleName());
+        }
 
-            return result;
+        return result;
     }
 
     private static Set<String> getModuleNamesFromPath(Path Value) {
         return getModuleNamesFromPath(new ArrayList<Path>(Arrays.asList(Value)));
     }
 
-    //TODO
+    //TODO make this per bundler.
     private static String getExcludeFileList() {
         // strip debug symbols
         String result = "*diz";
@@ -321,6 +319,109 @@ public class JLinkBundlerHelper {
         if (System.getProperty("os.name").toLowerCase().indexOf("mac") >= 0) {
             // strip mac osx quicktime
             result += ",*libjfxmedia_qtkit.dylib";
+        }
+
+        return result;
+    }
+
+    private static Set<String> getAllJDKModuleNames(File jdkModulePathFile) {
+        Set<String> result;
+
+        if (jdkModulePathFile != null) {
+            result = getModuleNamesFromPath(jdkModulePathFile.toPath());
+            Set<String> javaseModules = new HashSet<>(Arrays.asList(JRE_MODULES));
+
+            //TODO JDK-8149975 programmatically determine JRE vs JDK modules
+            result.retainAll(javaseModules); // strip out JDK modules
+        }
+        else {
+            result = new LinkedHashSet();
+        }
+
+        return result;
+    }
+
+    private static Collection<String> getAllDetectedModuleNames(List<String> appJars, File jdkModulePathFile, List<Path> modulePath) {
+            List<Path> lmodulePath = new ArrayList();
+            lmodulePath.addAll(modulePath);
+
+            // Add JDK modules to the module path.
+            if (jdkModulePathFile != null) {
+                lmodulePath.add(jdkModulePathFile.toPath());
+            }
+
+            // Ask Jdeps for the list of dependent modules.
+            Collection<String> detectedModules = JDepHelper.calculateModules(appJars, lmodulePath);
+            Log.info("Automatically adding detected modules " + detectedModules);
+
+            return detectedModules;
+    }
+
+    public static List<String> getResourceFileJarList(Map<String, ? super Object> params) {
+        List<String> files = new ArrayList();
+
+        for (RelativeFileSet rfs : StandardBundlerParam.APP_RESOURCES_LIST.fetchFrom(params)) {
+            for (String s : rfs.files) {
+                if (s.endsWith(".jar")) {
+                    files.add(rfs.getBaseDirectory() + File.separator + s);
+                }
+            }
+        }
+
+        return files;
+    }
+
+    private static Collection<String> getModuleNamesForApp(List<String> jars,
+                                                           File jdkModulePathFile,
+                                                           List<Path> modulePath,
+                                                           boolean detectJreModules,
+                                                           boolean detectModules,
+                                                           boolean manualModules) {
+        Collection<String> result = new LinkedHashSet();
+
+        Set<String> moduleNames = null;
+        Set<String> jdkModuleNames = null;
+        Collection<String> detectedModules = null;
+
+        // There are five options. 1. Manual, If none the options below apply,
+        // user specified modules with -addmods with no detection so they want
+        // complete manual control.
+
+        // 2. Detect JRE modules or detect other modules.
+        if (detectJreModules || detectModules) {
+            detectedModules = getAllDetectedModuleNames(jars, jdkModulePathFile, modulePath);
+
+            // 3. All JRE modules and detect other modules.
+            if (!detectJreModules) {
+                // Only retain Java SE Modules.
+                jdkModuleNames = getAllJDKModuleNames(jdkModulePathFile);
+            }
+
+            // 4. Detect JRE modules and all other modules.
+            if (!detectModules) {
+                // Add all modules on user specified path (-modulepath).
+                moduleNames = getModuleNamesFromPath(modulePath);
+            }
+        }
+        else if (manualModules) {
+            // 5. All Modules.
+            // Only retain Java SE Modules.
+            jdkModuleNames = getAllJDKModuleNames(jdkModulePathFile);
+
+            // Add all modules on user specified path (-modulepath).
+            moduleNames = getModuleNamesFromPath(modulePath);
+        }
+
+        if (moduleNames != null) {
+            result.addAll(moduleNames);
+        }
+
+        if (jdkModuleNames != null) {
+            result.addAll(jdkModuleNames);
+        }
+
+        if (detectedModules != null) {
+            result.addAll(detectedModules);
         }
 
         return result;

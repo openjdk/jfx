@@ -30,6 +30,7 @@ import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import jdk.packager.builders.mac.MacAppImageBuilder;
 
@@ -282,7 +283,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
     @Override
     public boolean validate(Map<String, ? super Object> params) throws UnsupportedPlatformException, ConfigException {
         try {
-            if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
+            if (Platform.getPlatform() != Platform.MAC) {
                 throw new UnsupportedPlatformException();
             }
 

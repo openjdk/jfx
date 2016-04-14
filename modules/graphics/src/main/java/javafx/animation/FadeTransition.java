@@ -54,7 +54,7 @@ import javafx.util.Duration;
  * <pre>
  * <code>
  * import javafx.scene.shape.*;
- * import javafx.animation.transition.*;
+ * import javafx.animation.*;
  *
  * ...
  *

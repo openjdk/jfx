@@ -54,6 +54,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     private int imageHeight = 0;
     private ImageFrame[] frames;
     private int frameCount = 0; // keeps frame count when decoded frames are temporarily destroyed
+    private boolean fullDataReceived = false;
     private boolean framesDecoded = false; // guards frames from repeated decoding
     private PrismImage[] images;
     private volatile byte[] data;
@@ -77,6 +78,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
         destroyLoader();
         frames = null;
         images = null;
+        framesDecoded = false;
     }
 
     @Override protected String getFilenameExtension() {
@@ -84,10 +86,13 @@ final class WCImageDecoderImpl extends WCImageDecoder {
         return ".img";
     }
 
+    private boolean imageSizeAvilable() {
+        return imageWidth > 0 && imageHeight > 0;
+    }
 
     @Override protected void addImageData(byte[] dataPortion) {
         if (dataPortion != null) {
-            framesDecoded = false;
+            fullDataReceived = false;
             if (data == null) {
                 data = Arrays.copyOf(dataPortion, dataPortion.length * 2);
                 dataSize = dataPortion.length;
@@ -99,15 +104,16 @@ final class WCImageDecoderImpl extends WCImageDecoder {
                 System.arraycopy(dataPortion, 0, data, dataSize, dataPortion.length);
                 dataSize = newDataSize;
             }
-            startLoader(); // partial data received - decode frames in background
-        } else if (data != null && !framesDecoded) {
+            // Try to decode the partial data until we get image size.
+            if (!imageSizeAvilable()) {
+                loadFrames();
+            }
+        } else if (data != null && !fullDataReceived) {
             // null dataPortion means data completion
-            destroyLoader();
             if (data.length > dataSize) {
                 resizeDataArray(dataSize);
             }
-            setFrames(loadFrames()); // full data received - decode frames immediately
-            framesDecoded = true;
+            fullDataReceived = true;
         }
     }
 
@@ -279,8 +285,12 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     }
 
     private ImageFrame getImageFrame(int idx) {
-        if (frames == null && idx >=0 && getFrameCount() > idx) {
+        if (!fullDataReceived) {
+            startLoader();
+        } else if (fullDataReceived && !framesDecoded) {
+            destroyLoader();
             setFrames(loadFrames()); // re-decode frames if they have been destroyed
+            framesDecoded = true;
         }
         return (idx >= 0) && (this.frames != null) && (this.frames.length > idx)
                 ? this.frames[idx]

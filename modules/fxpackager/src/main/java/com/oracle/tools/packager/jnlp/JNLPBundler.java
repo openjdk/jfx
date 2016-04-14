@@ -73,10 +73,7 @@ import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
-/**
- *
- * Created by dferrin on 1/7/15.
- */
+
 public class JNLPBundler extends AbstractBundler {
 
     private static final ResourceBundle I18N =

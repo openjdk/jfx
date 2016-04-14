@@ -31,6 +31,7 @@ import com.oracle.tools.packager.EnumeratedBundlerParam;
 import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.JLinkBundlerHelper;
 import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import jdk.tools.jlink.builder.ImageBuilder;
@@ -276,7 +277,7 @@ public class MacAppBundler extends AbstractImageBundler {
     //to be used by chained bundlers, e.g. by EXE bundler to avoid
     // skipping validation if p.type does not include "image"
     public boolean doValidate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
-        if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
+        if (Platform.getPlatform() != Platform.MAC) {
             throw new UnsupportedPlatformException();
         }
 

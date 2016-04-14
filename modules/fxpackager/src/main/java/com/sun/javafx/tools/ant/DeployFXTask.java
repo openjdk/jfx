@@ -136,8 +136,8 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         codebase = str;
     }
 
-    public void setLinkModulePath(String str) {
-        modulePath = str;
+    public void setModulePath(String value) {
+        modulePath = value;
     }
 
     public DeployFXTask() {
@@ -194,7 +194,9 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                 deployParams.addLimitModule(s);
             }
             deployParams.setDetectModules(app.getDetectModules());
+            deployParams.setDetectJreModules(app.getDetectJreModules());
             deployParams.setJdkModulePath(app.getJdkModulePath());
+            deployParams.setStripExecutables(app.getStripExecutables());
         }
 
         if (appInfo != null) {

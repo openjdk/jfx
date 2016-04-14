@@ -65,6 +65,8 @@ public class Application extends DataType implements Cloneable {
     public List<Argument> limitModule = new LinkedList<Argument>();
     String jdkModulePath;
     boolean detectModules;
+    boolean detectJreModules;
+    boolean stripExecutables;
 
     public void setVersion(String v) {
         version = v;
@@ -258,6 +260,21 @@ public class Application extends DataType implements Cloneable {
     }
 
     /**
+     * Whether or not the bundler should attempt to detect and add used JRE modules
+     */
+    public boolean getDetectJreModules() {
+        return detectJreModules;
+    }
+
+    /**
+     * Whether or not the bundler should attempt to detect and add used JRE modules
+     * @ant.not-required default is false
+     */
+    public void setDetectJreModules(boolean Value) {
+        this.detectJreModules = Value;
+    }
+
+    /**
      * Module path within the running applicaiton
      */
     public String getJdkModulePath() {
@@ -271,6 +288,21 @@ public class Application extends DataType implements Cloneable {
      */
     public void setJdkModulePath(String Value) {
         this.jdkModulePath = Value;
+    }
+
+    /**
+     * Whether or not the bundler should attempt to detect and add used modules
+     */
+    public boolean getStripExecutables() {
+        return stripExecutables;
+    }
+
+    /**
+     * Whether or not the bundler should attempt to detect and add used modules
+     * @ant.not-required default is false
+     */
+    public void setStripExecutables(boolean Value) {
+        this.stripExecutables = Value;
     }
 
     //return instance that actually has data. Could be referenced object ...

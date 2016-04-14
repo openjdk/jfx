@@ -180,15 +180,19 @@ public class BundleParams {
         putUnlessNull(DETECT_MODULES.getID(), detectModules);
     }
 
+    public void setDetectJreModules(Boolean value) {
+        putUnlessNull(DETECT_JRE_MODULES.getID(), value);
+    }
+
     public void setStripExecutables(Boolean value) {
         putUnlessNull(STRIP_NATIVE_COMMANDS.getID(), value);
     }
 
-    public void setAppModulePath(String appModulePath) {
+    public void setJdkModulePath(String appModulePath) {
         putUnlessNull(JDK_MODULE_PATH.getID(), appModulePath);
     }
 
-    public void setLinkModulePath(String linkModulePath) {
+    public void setModulePath(String linkModulePath) {
         putUnlessNull(MODULE_PATH.getID(), linkModulePath);
     }
 
@@ -378,18 +382,17 @@ public class BundleParams {
         if (javaHome == null) {
             return null;
         }
+
         File jdkRoot;
-
-        boolean isMac = System.getProperty("os.name").toLowerCase().contains("os x");
-
         File rtJar = new File(javaHome, "lib/rt.jar");
+
         if (rtJar.exists()) { //must be "java.home" case
                               //i.e. we are in JRE folder
             jdkRoot = javaHome.getParentFile();
         } else { //expect it to be root of JDK installation folder
             //On Mac it could be jdk/ or jdk/Contents/Home
             //Norm to jdk/Contents/Home for validation
-            if (isMac) {
+            if (Platform.getPlatform() == Platform.MAC) {
                 File f = new File(javaHome, "Contents/Home");
                 if (f.exists() && f.isDirectory()) {
                     javaHome = f;

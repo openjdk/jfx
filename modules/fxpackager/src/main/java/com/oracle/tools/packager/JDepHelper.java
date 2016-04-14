@@ -42,24 +42,11 @@ import java.util.stream.Collectors;
 
 
 public final class JDepHelper {
+
     private JDepHelper() {}
 
-    private static int invokeJdep(String[] args, PrintWriter out) {
+    private static int execute(String[] args, PrintWriter out) {
         return com.sun.tools.jdeps.Main.run(args, out);
-    }
-
-    public static List<String> getResourceFileJarList(Map<String, ? super Object> params) {
-        List<String> files = new ArrayList();
-
-        for (RelativeFileSet rfs : StandardBundlerParam.APP_RESOURCES_LIST.fetchFrom(params)) {
-            for (String s : rfs.files) {
-                if (s.endsWith(".jar")) {
-                    files.add(rfs.getBaseDirectory() + File.separator + s);
-                }
-            }
-        }
-
-        return files;
     }
 
     public static Set<String> calculateModules(List<String> Files, List<Path> modulePath) {
@@ -76,7 +63,7 @@ public final class JDepHelper {
 
             arguments.addAll(Files);
 
-            invokeJdep(arguments.toArray(new String[arguments.size()]), writer);
+            execute(arguments.toArray(new String[arguments.size()]), writer);
 
             // output format is multiple lines of "this.jar -> that.module.name"
             // we only care about what is to the right of the arrow

@@ -25,6 +25,7 @@
 
 package com.javafx.main;
 
+import com.oracle.tools.packager.Platform;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -346,7 +347,7 @@ public class Main {
      * @return the path to the JavaFX Runtime or null
      */
     private static String lookupRegistry() {
-        if (!System.getProperty("os.name").startsWith("Win")) {
+        if (Platform.getPlatform() != Platform.WINDOWS) {
             return null;
         }
 
@@ -636,7 +637,6 @@ public class Main {
             String servicename = null;
             if (osname.startsWith("Win")) {
                 servicename = "STANDALONE_TIGER_WIN32";
-
             } else if (osname.contains("Mac")) {
                 servicename = "STANDALONE_TIGER_MACOSX";
             } else {

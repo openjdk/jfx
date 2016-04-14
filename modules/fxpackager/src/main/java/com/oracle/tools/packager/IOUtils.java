@@ -177,7 +177,7 @@ public class IOUtils {
     // "false positive" is better than wrong answer
     public static boolean isNotSymbolicLink(File file) {
         //no symlinks on windows
-        if (System.getProperty("os.name").toLowerCase().startsWith("win")) {
+        if (Platform.getPlatform() == Platform.WINDOWS) {
             return true;
         }
         try {

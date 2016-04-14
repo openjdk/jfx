@@ -40,6 +40,7 @@ import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 
 public class WinServiceBundler extends AbstractBundler {
@@ -106,7 +107,7 @@ public class WinServiceBundler extends AbstractBundler {
     }
 
     boolean doValidate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
-        if (!System.getProperty("os.name").toLowerCase().startsWith("win")) {
+        if (Platform.getPlatform() != Platform.WINDOWS) {
             throw new UnsupportedPlatformException();
         }
 
