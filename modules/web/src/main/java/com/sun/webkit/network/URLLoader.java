@@ -35,6 +35,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.HttpRetryException;
 import java.net.HttpURLConnection;
@@ -44,6 +45,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.AccessControlException;
@@ -58,7 +60,6 @@ import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLHandshakeException;
-import sun.net.www.ParseUtil;
 
 /**
  * A runnable that loads a resource specified by a URL.
@@ -255,7 +256,12 @@ final class URLLoader implements Runnable {
         }
 
         if (System.getProperty("os.name").startsWith("Windows")) {
-            String path = ParseUtil.decode(url.getPath());
+            String path = null;
+            try {
+                path = URLDecoder.decode(url.getPath(), "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                // The system should always have the platform default
+            }
             path = path.replace('/', '\\');
             path = path.replace('|', ':');
             File file = new File("\\\\" + host + path);
