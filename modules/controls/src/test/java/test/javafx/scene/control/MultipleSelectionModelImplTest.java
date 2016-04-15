@@ -1163,7 +1163,6 @@ public class MultipleSelectionModelImplTest {
         model.clearAndSelect(-1);
     }
 
-    @Ignore
     @Test public void test_rt38884_invalidChange() {
         model.select(3);
         int removedSize = model.getSelectedItems().size();
