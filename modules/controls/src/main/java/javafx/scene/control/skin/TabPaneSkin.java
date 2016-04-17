@@ -447,12 +447,13 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         if (n instanceof ImageView) {
             ImageView iv = (ImageView) n;
             ImageView imageview = new ImageView();
-            imageview.setImage(iv.getImage());
+            imageview.imageProperty().bind(iv.imageProperty());
             return imageview;
         }
         if (n instanceof Label) {
             Label l = (Label)n;
             Label label = new Label(l.getText(), clone(l.getGraphic()));
+            label.textProperty().bind(l.textProperty());
             return label;
         }
         return null;
