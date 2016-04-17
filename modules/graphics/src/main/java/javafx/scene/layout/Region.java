@@ -3290,6 +3290,15 @@ public class
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
      * </p>
+     * <p>
+     * Subclasses overriding this method should not assume any particular implementation approach as to
+     * the number and frequency with which it is called. For this reason, attempting any kind of
+     * dynamic implementation (i.e. returning different user agent stylesheet values) based on some
+     * state change is highly discouraged, as there is no guarantee when, or even if, this method will
+     * be called. Some JavaFX CSS implementations may choose to cache this response for an indefinite
+     * period of time, and therefore there should be no expectation around when this method is called.
+     * </p>
+     *
      * <code><pre>
      *
      * package com.example.javafx.app;
