@@ -443,8 +443,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             return newNode == null;
         } else {
             // run item through StringConverter if it isn't null
-            StringConverter<T> c = comboBox.getConverter();
-            String s = item == null ? comboBox.getPromptText() : (c == null ? item.toString() : c.toString(item));
+            final StringConverter<T> c = comboBox.getConverter();
+            final String promptText = comboBox.getPromptText();
+            String s = item == null && promptText != null ? promptText :
+                       c == null ? (item == null ? null : item.toString()) : c.toString(item);
             cell.setText(s);
             cell.setGraphic(null);
             return s == null || s.isEmpty();
