@@ -2113,6 +2113,7 @@ public class TreeTableView<S> extends Control {
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
+        private final TreeTableView<S> source;
         private final S oldValue;
         private final S newValue;
         private transient final TreeItem<S> treeItem;
@@ -2126,6 +2127,7 @@ public class TreeTableView<S> extends Control {
                          EventType<? extends TreeTableView.EditEvent> eventType,
                          TreeItem<S> treeItem, S oldValue, S newValue) {
             super(source, Event.NULL_SOURCE_TARGET, eventType);
+            this.source = source;
             this.oldValue = oldValue;
             this.newValue = newValue;
             this.treeItem = treeItem;
@@ -2135,7 +2137,7 @@ public class TreeTableView<S> extends Control {
          * Returns the TreeTableView upon which the edit took place.
          */
         @Override public TreeTableView<S> getSource() {
-            return (TreeTableView<S>) super.getSource();
+            return source;
         }
 
         /**

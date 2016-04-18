@@ -1108,6 +1108,7 @@ public class ListView<T> extends Control {
     public static class EditEvent<T> extends Event {
         private final T newValue;
         private final int editIndex;
+        private final ListView<T> source;
 
         private static final long serialVersionUID = 20130724L;
 
@@ -1127,6 +1128,7 @@ public class ListView<T> extends Control {
                          T newValue,
                          int editIndex) {
             super(source, Event.NULL_SOURCE_TARGET, eventType);
+            this.source = source;
             this.editIndex = editIndex;
             this.newValue = newValue;
         }
@@ -1135,7 +1137,7 @@ public class ListView<T> extends Control {
          * Returns the ListView upon which the edit took place.
          */
         @Override public ListView<T> getSource() {
-            return (ListView<T>) super.getSource();
+            return source;
         }
 
         /**
