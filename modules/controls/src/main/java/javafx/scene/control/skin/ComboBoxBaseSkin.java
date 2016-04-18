@@ -85,6 +85,8 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
         // Call the super method with the ComboBox we were just given in the constructor
         super(control);
 
+        getChildren().clear();
+
         // open button / arrow
         arrow = new Region();
         arrow.setFocusTraversable(false);
