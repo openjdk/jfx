@@ -157,8 +157,6 @@ Java_com_sun_prism_impl_shape_NativePiscesRasterizer_init
     (JNIEnv *env, jclass klass,
      jint subpixelLgPositionsX, jint subpixelLgPositionsY)
 {
-    (void) env;
-    (void) klass;
     Renderer_setup(subpixelLgPositionsX, subpixelLgPositionsY);
 }
 
@@ -174,7 +172,6 @@ Java_com_sun_prism_impl_shape_NativePiscesRasterizer_produceFillAlphas
      jdouble mxx, jdouble mxy, jdouble mxt, jdouble myx, jdouble myy, jdouble myt,
      jintArray boundsArray, jbyteArray maskArray)
 {
-    (void) klass;
     jint bounds[4];
     Transformer transformer;
     Renderer renderer;
@@ -208,7 +205,6 @@ Java_com_sun_prism_impl_shape_NativePiscesRasterizer_produceFillAlphas
                 bounds[1],
                 bounds[2] - bounds[0],
                 bounds[3] - bounds[1],
-                NULL
             };
             if ((*env)->GetArrayLength(env, maskArray) / ac.width < ac.height) {
                 Throw(env, AIOOBException, "maskArray");
@@ -244,7 +240,6 @@ Java_com_sun_prism_impl_shape_NativePiscesRasterizer_produceStrokeAlphas
      jdouble mxx, jdouble mxy, jdouble mxt, jdouble myx, jdouble myy, jdouble myt,
      jintArray boundsArray, jbyteArray maskArray)
 {
-    (void) klass;
     jint bounds[4];
     Stroker stroker;
     Dasher dasher;
@@ -299,7 +294,6 @@ Java_com_sun_prism_impl_shape_NativePiscesRasterizer_produceStrokeAlphas
                 bounds[1],
                 bounds[2] - bounds[0],
                 bounds[3] - bounds[1],
-                NULL
             };
             if ((*env)->GetArrayLength(env, maskArray) / ac.width < ac.height) {
                 Throw(env, AIOOBException, "Mask");
