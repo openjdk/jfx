@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
 import java.util.List;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
@@ -362,5 +363,67 @@ public class Parent_structure_sync_Test {
         assertTrue(ParentShim.test_getRemoved(borderPane).isEmpty());
         sync();
         assertTrue(ParentShim.test_getRemoved(borderPane).isEmpty());
+    }
+
+    @Test
+    public void validateParentsViewOrderChildrenList1() {
+        Group root = new Group();
+        r1.setViewOrder(1);
+        ParentShim.getChildren(root).add(r1);
+        ParentShim.getChildren(parent).add(root);
+        sync();
+        assertNotNull(ParentShim.test_getViewOrderChildren(root));
+        assertFalse(ParentShim.test_getViewOrderChildren(root).isEmpty());
+
+        r1.setViewOrder(0);
+        sync();
+        assertTrue(ParentShim.test_getViewOrderChildren(root).isEmpty());
+
+        ParentShim.getChildren(root).add(r2);
+        sync();
+        assertTrue(ParentShim.test_getViewOrderChildren(root).isEmpty());
+
+        r2.setViewOrder(-1);
+        sync();
+        assertFalse(ParentShim.test_getViewOrderChildren(root).isEmpty());
+
+        ParentShim.getChildren(root).remove(r1);
+        sync();
+        assertFalse(ParentShim.test_getViewOrderChildren(root).isEmpty());
+
+        ParentShim.getChildren(root).remove(r2);
+        sync();
+        assertTrue(ParentShim.test_getViewOrderChildren(root).isEmpty());
+    }
+
+    @Test
+    public void validateParentsViewOrderChildrenList2() {
+        Group root = new Group();
+        r1.setViewOrder(0);
+        r2.setViewOrder(0);
+        r3.setViewOrder(0);
+        ParentShim.getChildren(root).addAll(r1, r2, r3);
+        ParentShim.getChildren(parent).add(root);
+        sync();
+        assertNotNull(ParentShim.test_getViewOrderChildren(root));
+        assertTrue(ParentShim.test_getViewOrderChildren(root).isEmpty());
+
+        // 0 1 2  C B A
+        r2.setViewOrder(1);
+        r3.setViewOrder(2);
+        sync();
+        List<Node> viewOrderChildren = ParentShim.test_getViewOrderChildren(root);
+        assertFalse(ParentShim.test_getViewOrderChildren(root).isEmpty());
+        assertEquals(viewOrderChildren.get(0), r3);
+        assertEquals(viewOrderChildren.get(1), r2);
+        assertEquals(viewOrderChildren.get(2), r1);
+
+        // 0 2 2  B C A
+        r2.setViewOrder(2);
+        sync();
+        assertFalse(ParentShim.test_getViewOrderChildren(root).isEmpty());
+        assertEquals(viewOrderChildren.get(0), r2);
+        assertEquals(viewOrderChildren.get(1), r3);
+        assertEquals(viewOrderChildren.get(2), r1);
     }
 }

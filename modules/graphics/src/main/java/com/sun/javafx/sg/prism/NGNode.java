@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -187,6 +187,11 @@ public abstract class NGNode {
      * The opacity of this node.
      */
     private float opacity = 1f;
+
+    /**
+     * The view order of this node.
+     */
+    private double viewOrder = 0;
 
     /**
      * The blend mode that controls how the pixels of this node blend into
@@ -433,6 +438,22 @@ public abstract class NGNode {
             if (old < 1 && (opacity == 1 || opacity == 0) || opacity < 1 && (old == 1 || old == 0)) {
                 invalidateOpaqueRegion();
             }
+        }
+    }
+
+    /**
+     * Called by the FX scene graph whenever the view order for the node
+     * changes.
+     *
+     * @param viewOrder A value between the range of negative Double.MAX_VALUE
+     * and positive Double.MAX_VALUE.
+     */
+    public void setViewOrder(double viewOrder) {
+        // If the viewOrder value has changed, react.
+        if (viewOrder != this.viewOrder) {
+            this.viewOrder = viewOrder;
+            // Mark this node dirty and invalidate its cache.
+            visualsChanged();
         }
     }
 

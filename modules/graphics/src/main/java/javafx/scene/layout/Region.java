@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,6 +73,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRegion;
@@ -3107,18 +3108,9 @@ public class
      */
     @Deprecated
     @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
+         double boundsDistance = impl_intersectsBounds(pickRay);
 
-        double boundsDistance = impl_intersectsBounds(pickRay);
-
-        if (!Double.isNaN(boundsDistance)) {
-            ObservableList<Node> children = getChildren();
-            for (int i = children.size()-1; i >= 0; i--) {
-                children.get(i).impl_pickNode(pickRay, result);
-                if (result.isClosed()) {
-                    return;
-                }
-            }
-
+        if (!Double.isNaN(boundsDistance) && ParentHelper.pickChildrenNode(this, pickRay, result)) {
             impl_intersects(pickRay, result);
         }
     }

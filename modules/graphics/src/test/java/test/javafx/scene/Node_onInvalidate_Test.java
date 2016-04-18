@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,8 @@ public class Node_onInvalidate_Test extends OnInvalidateMethodsTestBase {
             {new Configuration(Rectangle.class, "cursor", Cursor.WAIT, new CssMetaData[] {findCssCSSProperty("-fx-cursor")})},
             {new Configuration(Rectangle.class, "opacity", 0.5, new CssMetaData[] {findCssCSSProperty("-fx-opacity")})},
             {new Configuration(Rectangle.class, "opacity", 0.5, new DirtyBits[] {DirtyBits.NODE_OPACITY})},
+            {new Configuration(Rectangle.class, "viewOrder", 0.5, new CssMetaData[] {findCssCSSProperty("-fx-view-order")})},
+            {new Configuration(Rectangle.class, "viewOrder", 0.5, new DirtyBits[] {DirtyBits.NODE_VIEW_ORDER})},
             {new Configuration(Rectangle.class, "blendMode", BlendMode.DARKEN, new CssMetaData[] {findCssCSSProperty("-fx-blend-mode")})},
             {new Configuration(Rectangle.class, "blendMode", BlendMode.DARKEN, new DirtyBits[] {DirtyBits.NODE_BLENDMODE})},
             {new Configuration(Rectangle.class, "cache", true, new DirtyBits[] {DirtyBits.NODE_CACHE})},
