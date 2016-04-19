@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.RotateEvent;
 import javafx.scene.input.ScrollEvent;
@@ -152,6 +153,8 @@ class GlassViewEventHandler extends View.EventHandler {
         char[] chars;
         int modifiers;
 
+        private KeyCode lastKeyCode;
+
         @Override
         public Void run() {
             if (PULSE_LOGGING_ENABLED) {
@@ -159,10 +162,6 @@ class GlassViewEventHandler extends View.EventHandler {
             }
             WindowStage stage = scene.getWindowStage();
             try {
-                if (stage != null) {
-                    stage.setInEventHandler(true);
-                }
-
                 boolean shiftDown = (modifiers & KeyEvent.MODIFIER_SHIFT) != 0;
                 boolean controlDown = (modifiers & KeyEvent.MODIFIER_CONTROL) != 0;
                 boolean altDown = (modifiers & KeyEvent.MODIFIER_ALT) != 0;
@@ -176,6 +175,26 @@ class GlassViewEventHandler extends View.EventHandler {
                         str, text,
                         KeyCodeMap.valueOf(key) ,
                         shiftDown, controlDown, altDown, metaDown);
+
+                KeyCode keyCode = KeyCodeMap.valueOf(key);
+                switch (type) {
+                    case com.sun.glass.events.KeyEvent.PRESS:
+                    case com.sun.glass.events.KeyEvent.RELEASE:
+                        lastKeyCode = keyCode;
+                        break;
+
+                    case com.sun.glass.events.KeyEvent.TYPED:
+                        keyCode = lastKeyCode;
+                        break;
+                }
+
+                if (stage != null) {
+                    if (keyCode == KeyCode.ESCAPE) {
+                        stage.setInAllowedEventHandler(false);
+                    } else {
+                        stage.setInAllowedEventHandler(true);
+                    }
+                }
 
                 switch (type) {
                     case com.sun.glass.events.KeyEvent.PRESS:
@@ -204,7 +223,7 @@ class GlassViewEventHandler extends View.EventHandler {
                 }
             } finally {
                 if (stage != null) {
-                    stage.setInEventHandler(false);
+                    stage.setInAllowedEventHandler(false);
                 }
                 if (PULSE_LOGGING_ENABLED) {
                     PulseLogger.newInput(null);
@@ -336,8 +355,17 @@ class GlassViewEventHandler extends View.EventHandler {
             WindowStage stage = scene.getWindowStage();
             try {
                 if (stage != null) {
-                    stage.setInEventHandler(true);
+                    switch (type) {
+                        case MouseEvent.UP:
+                        case MouseEvent.DOWN:
+                            stage.setInAllowedEventHandler(true);
+                            break;
+                        default:
+                            stage.setInAllowedEventHandler(false);
+                            break;
+                    }
                 }
+
                 if (scene.sceneListener != null) {
                     boolean shiftDown = (modifiers & KeyEvent.MODIFIER_SHIFT) != 0;
                     boolean controlDown = (modifiers & KeyEvent.MODIFIER_CONTROL) != 0;
@@ -358,7 +386,7 @@ class GlassViewEventHandler extends View.EventHandler {
                 }
             } finally {
                 if (stage != null) {
-                    stage.setInEventHandler(false);
+                    stage.setInAllowedEventHandler(false);
                 }
                 if (PULSE_LOGGING_ENABLED) {
                     PulseLogger.newInput(null);
@@ -400,7 +428,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(true);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -417,7 +445,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
@@ -438,7 +466,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(false);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -464,7 +492,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
@@ -543,7 +571,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(true);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -561,7 +589,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
@@ -852,7 +880,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(false);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -894,7 +922,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
@@ -916,7 +944,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(false);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -955,7 +983,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
@@ -976,7 +1004,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(false);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -1014,7 +1042,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
@@ -1034,7 +1062,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(false);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -1075,7 +1103,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
@@ -1093,7 +1121,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(true);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -1110,7 +1138,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
@@ -1130,7 +1158,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(true);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                     return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -1163,7 +1191,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
@@ -1180,7 +1208,7 @@ class GlassViewEventHandler extends View.EventHandler {
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
-                stage.setInEventHandler(true);
+                stage.setInAllowedEventHandler(true);
             }
             QuantumToolkit.runWithoutRenderLock(() -> {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -1192,7 +1220,7 @@ class GlassViewEventHandler extends View.EventHandler {
             });
         } finally {
             if (stage != null) {
-                stage.setInEventHandler(false);
+                stage.setInAllowedEventHandler(false);
             }
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newInput(null);
