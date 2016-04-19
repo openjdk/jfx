@@ -36,8 +36,11 @@ import com.sun.javafx.collections.ListListenerHelper;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableListBase;
 
 import java.util.Collections;
+
+import static com.sun.javafx.collections.ListListenerHelper.fireValueChangedEvent;
 
 /**
  * A read-only and unbacked ObservableList - the data is retrieved on demand by
@@ -45,34 +48,53 @@ import java.util.Collections;
  * and GenericObservableList.
  *
  */
-public abstract class ReadOnlyUnbackedObservableList<E> implements ObservableList<E> {
-
-    private ListListenerHelper<E> listenerHelper;
-
+public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBase<E> {
 
     @Override public abstract E get(int i);
 
     @Override public abstract int size();
 
-
-    @Override public void addListener(InvalidationListener listener) {
-        listenerHelper = ListListenerHelper.addListener(listenerHelper, listener);
+    public void _beginChange() {
+        beginChange();
     }
 
-    @Override public void removeListener(InvalidationListener listener) {
-        listenerHelper = ListListenerHelper.removeListener(listenerHelper, listener);
+    public void _endChange() {
+        endChange();
     }
 
-    @Override public void addListener(ListChangeListener<? super E> obs) {
-        listenerHelper = ListListenerHelper.addListener(listenerHelper, obs);
+    public final void _nextUpdate(int pos) {
+        nextUpdate(pos);
     }
 
-    @Override public void removeListener(ListChangeListener<? super E> obs) {
-        listenerHelper = ListListenerHelper.removeListener(listenerHelper, obs);
+    public final void _nextSet(int idx, E old) {
+        nextSet(idx, old);
     }
+
+    public final void _nextReplace(int from, int to, List<? extends E> removed) {
+        nextReplace(from, to, removed);
+    }
+
+    public final void _nextRemove(int idx, List<? extends E> removed) {
+        nextRemove(idx, removed);
+    }
+
+    public final void _nextRemove(int idx, E removed) {
+        nextRemove(idx, removed);
+    }
+
+    public final void _nextPermutation(int from, int to, int[] perm) {
+        nextPermutation(from, to, perm);
+    }
+
+    public final void _nextAdd(int from, int to) {
+        nextAdd(from, to);
+    }
+
+
+
 
     public void callObservers(Change<E> c) {
-        ListListenerHelper.fireValueChangedEvent(listenerHelper, c);
+        fireChange(c);
     }
 
     @Override public int indexOf(Object o) {
