@@ -569,15 +569,40 @@ public class ChoiceBox<T> extends Control {
          */
         @Override public void select(int index) {
             // this does not sound right, we should let the superclass handle it.
-            final T value = getModelItem(index);
-            if (value instanceof Separator) {
-                select(++index);
-            } else {
-                super.select(index);
-            }
+            super.select(index);
 
             if (choiceBox.isShowing()) {
                 choiceBox.hide();
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void selectPrevious() {
+            // overridden to properly handle Separators
+            int index = getSelectedIndex() - 1;
+            while (index >= 0) {
+                final T value = getModelItem(index);
+                if (value instanceof Separator) {
+                    index--;
+                } else {
+                    select(index);
+                    break;
+                }
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void selectNext() {
+            // overridden to properly handle Separators
+            int index = getSelectedIndex() + 1;
+            while (index < getItemCount()) {
+                final T value = getModelItem(index);
+                if (value instanceof Separator) {
+                    index++;
+                } else {
+                    select(index);
+                    break;
+                }
             }
         }
     }
