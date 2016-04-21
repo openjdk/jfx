@@ -1355,7 +1355,7 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_processCSS(WritableValue<Boolean> unused) {
+    @Override protected void impl_processCSS() {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
@@ -1368,7 +1368,7 @@ public abstract class Parent extends Node {
         }
 
         // Let the super implementation handle CSS for this node
-        super.impl_processCSS(unused);
+        super.impl_processCSS();
 
         // avoid the following call to children.toArray if there are no children
         if (children.isEmpty()) return;
@@ -1399,7 +1399,7 @@ public abstract class Parent extends Node {
             if(CssFlags.UPDATE.compareTo(child.cssFlag) > 0) {
                 child.cssFlag = CssFlags.UPDATE;
             }
-            child.impl_processCSS(unused);
+            child.impl_processCSS();
         }
     }
 

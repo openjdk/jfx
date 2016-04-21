@@ -9100,7 +9100,7 @@ public abstract class Node implements EventTarget, Styleable {
         // for deferred action.
         //
         if (getParent() != null && getParent().isPerformingLayout()) {
-            impl_processCSS(null);
+            impl_processCSS();
         } else {
             notifyParentsOfInvalidatedCSS();
         }
@@ -9198,19 +9198,9 @@ public abstract class Node implements EventTarget, Styleable {
             case REAPPLY:
             case UPDATE:
             default:
-                impl_processCSS(null);
+                impl_processCSS();
         }
     }
-
-    /**
-     * This method simply calls {@link #applyCss()}
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-     @Deprecated
-    public final void impl_processCSS(boolean reapply) {
-         applyCss();
-     }
 
     /**
      * If required, apply styles to this Node and its children, if any. This method does not normally need to
@@ -9304,18 +9294,15 @@ public abstract class Node implements EventTarget, Styleable {
      * overridden, the overriding method must at some point call {@code super.impl_processCSS()} to ensure that
      * this Node's CSS state is properly updated.
      *
-     * Note that the difference between this method and {@link #impl_processCSS(boolean)} is that this method
-     * updates styles for this node on down; whereas, {@code impl_processCSS(boolean)} invokes
-     * {@link #applyCss()} which will look for the top-most ancestor that needs CSS update and apply styles
-     * from that node on down.
-     *
-     * The WritableValue&lt;Boolean&gt; parameter is no longer used.
+     * Note that the difference between this method and {@link #applyCss()} is that this method
+     * updates styles for this node on down; whereas, {@code applyCss()} looks for the top-most ancestor that needs
+     * CSS update and apply styles from that node on down.
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
-    protected void impl_processCSS(WritableValue<Boolean> unused) {
+    protected void impl_processCSS() {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;

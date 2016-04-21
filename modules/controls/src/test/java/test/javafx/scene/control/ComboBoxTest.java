@@ -838,7 +838,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
 
         comboBox.setVisibleRowCount(5);
@@ -886,7 +886,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
 
         comboBox.setConverter(new StringConverter() {
@@ -906,7 +906,7 @@ public class ComboBoxTest {
         assertEquals("2", comboBox.getValue());
 
         ListView listView = getListView();
-//        listView.impl_processCSS(true);
+//        listView.applyCss();
 
         assertEquals("2", listView.getSelectionModel().getSelectedItem());
 
@@ -927,7 +927,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
 
         SelectionModel sm = getListView().getSelectionModel();
@@ -956,7 +956,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
         ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
 
@@ -985,7 +985,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
         ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
 

@@ -577,14 +577,14 @@ public class SubScene extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override
-    protected void impl_processCSS(WritableValue<Boolean> unused) {
+    protected void impl_processCSS() {
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) { return; }
 
         if (getRoot().cssFlag == CssFlags.CLEAN) {
             getRoot().cssFlag = cssFlag;
         }
-        super.impl_processCSS(unused);
+        super.impl_processCSS();
         getRoot().processCSS();
     }
 

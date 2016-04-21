@@ -147,21 +147,21 @@ public class TextAreaTest {
     @Test public void wrapTextSetFromCSS() {
         txtArea.setStyle("-fx-wrap-text: true");
         Scene s = new Scene(txtArea);
-        txtArea.impl_processCSS(true);
+        txtArea.applyCss();
         assertTrue(txtArea.isWrapText());
     }
 
     @Test public void prefColumnCountSetFromCSS() {
         txtArea.setStyle("-fx-pref-column-count: 100");
         Scene s = new Scene(txtArea);
-        txtArea.impl_processCSS(true);
+        txtArea.applyCss();
         assertEquals(100, txtArea.getPrefColumnCount());
     }
 
     @Test public void prefRowCountSetFromCSS() {
         txtArea.setStyle("-fx-pref-row-count: 100");
         Scene s = new Scene(txtArea);
-        txtArea.impl_processCSS(true);
+        txtArea.applyCss();
         assertEquals(100, txtArea.getPrefRowCount());
     }
 

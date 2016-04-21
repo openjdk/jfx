@@ -138,13 +138,13 @@ public class TextFieldTest {
     @Test public void prefColumnCountSetFromCSS() {
         txtField.setStyle("-fx-pref-column-count: 100");
         Scene s = new Scene(txtField);
-        txtField.impl_processCSS(true);
+        txtField.applyCss();
         assertEquals(100.0, txtField.getPrefColumnCount(), 0);
     }
 
     @Test public void pseudoClassState_isReadOnly() {
         StageLoader sl = new StageLoader(txtField);
-        txtField.impl_processCSS(true);
+        txtField.applyCss();
 
         txtField.setEditable(false);
         ObservableSet<PseudoClass> pcSet = txtField.getPseudoClassStates();
@@ -160,7 +160,7 @@ public class TextFieldTest {
 
     @Test public void pseudoClassState_isNotReadOnly() {
         StageLoader sl = new StageLoader(txtField);
-        txtField.impl_processCSS(true);
+        txtField.applyCss();
 
         txtField.setEditable(true);
         ObservableSet<PseudoClass> pcSet = txtField.getPseudoClassStates();
