@@ -31,7 +31,7 @@
  */
 package ensemble.samples.controls.listview.listviewcellfactory;
 
-import java.text.NumberFormat;
+import java.text.DecimalFormat;
 import javafx.scene.control.ListCell;
 import javafx.scene.paint.Color;
 
@@ -49,7 +49,8 @@ public class MoneyFormatCell extends ListCell<Number> {
         // formatting relevant to the current locale. This would format
         // 43.68 as "$43.68", and -23.67 as "($23.67)"
         double value = item.doubleValue();
-        setText(NumberFormat.getCurrencyInstance().format(value));
+        DecimalFormat df = new DecimalFormat("\u00A4#,##0.00;(\u00A4#,##0.00)");
+        setText(df.format(value));
         setTextFill(value == 0 ?
                     Color.BLACK : value < 0 ? Color.RED : Color.GREEN);
     }
