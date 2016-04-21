@@ -40,8 +40,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 /**
- * A sample that demonstrates some properties of nodes. Use the radio buttons
- * to send any of the rectangles to the front or back. Use the controls to
+ * A sample that demonstrates some properties of nodes. Use the controls to
  * change opacity or horizontal position.
  *
  * @sampleName Node Properties
