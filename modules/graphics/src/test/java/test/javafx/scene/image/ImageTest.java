@@ -96,7 +96,7 @@ public final class ImageTest {
 
         final Image image = new Image(is);
 
-        assertEquals(is, ImageShim.getImpl_source(image));
+        assertEquals(is, ImageShim.getInputSource(image));
         verifyLoadedImage(image, 0, 0, false, false, 100, 200);
     }
 
@@ -107,7 +107,7 @@ public final class ImageTest {
 
         final Image image = new Image(is, 200, 400, true, true);
 
-        assertEquals(is, ImageShim.getImpl_source(image));
+        assertEquals(is, ImageShim.getInputSource(image));
         verifyLoadedImage(image, 200, 400, true, true, 300, 100);
     }
 

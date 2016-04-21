@@ -1780,7 +1780,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public void toBack() {
         if (getParent() != null) {
-            getParent().impl_toBack(this);
+            getParent().toBack(this);
         }
     }
 
@@ -1792,7 +1792,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public void toFront() {
         if (getParent() != null) {
-            getParent().impl_toFront(this);
+            getParent().toFront(this);
         }
     }
 
@@ -3004,7 +3004,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @since JavaFX 8.0
      */
     public double computeAreaInScreen() {
-        return impl_computeAreaInScreen();
+        return doComputeAreaInScreen();
     }
 
     /*
@@ -3021,7 +3021,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * Returns 0 for those fall outside viewing frustrum.
      */
-    private double impl_computeAreaInScreen() {
+    private double doComputeAreaInScreen() {
         Scene tmpScene = getScene();
         if (tmpScene != null) {
             Bounds bounds = getBoundsInLocal();

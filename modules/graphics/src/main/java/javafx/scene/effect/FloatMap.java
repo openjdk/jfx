@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ public class FloatMap {
         }
     }
 
-    private void impl_update() {
+    private void update() {
         if (mapBufferDirty) {
             map = new com.sun.scenario.effect.FloatMap(
                     Utils.clamp(1, getWidth(), 4096),
@@ -69,8 +69,8 @@ public class FloatMap {
 
     void impl_sync() {
         if (impl_isEffectDirty()) {
-            impl_update();
-            impl_clearDirty();
+            update();
+            clearDirty();
         }
     }
     private BooleanProperty effectDirty;
@@ -96,11 +96,11 @@ public class FloatMap {
         return effectDirty == null ? false : effectDirty.get();
     }
 
-    private void impl_markDirty() {
+    private void markDirty() {
         setEffectDirty(true);
     }
 
-    private void impl_clearDirty() {
+    private void clearDirty() {
         setEffectDirty(false);
     }
 
@@ -109,7 +109,7 @@ public class FloatMap {
      */
     public FloatMap() {
         updateBuffer();
-        impl_markDirty();
+        markDirty();
     }
 
     /**
@@ -122,7 +122,7 @@ public class FloatMap {
         setWidth(width);
         setHeight(height);
         updateBuffer();
-        impl_markDirty();
+        markDirty();
     }
 
     /**
@@ -153,7 +153,7 @@ public class FloatMap {
                 @Override
                 public void invalidated() {
                     updateBuffer();
-                    impl_markDirty();
+                    markDirty();
                 }
 
                 @Override
@@ -198,7 +198,7 @@ public class FloatMap {
                 @Override
                 public void invalidated() {
                     updateBuffer();
-                    impl_markDirty();
+                    markDirty();
                 }
 
                 @Override
@@ -225,7 +225,7 @@ public class FloatMap {
      */
     public void setSample(int x, int y, int band, float s) {
         buf[((x+(y*getWidth()))*4) + band] = s;
-        impl_markDirty();
+        markDirty();
     }
 
     /**
@@ -239,7 +239,7 @@ public class FloatMap {
     {
         int index = (x+(y*getWidth()))*4;
         buf[index + 0] = s0;
-        impl_markDirty();
+        markDirty();
     }
 
     /**
@@ -255,7 +255,7 @@ public class FloatMap {
         int index = (x+(y*getWidth()))*4;
         buf[index + 0] = s0;
         buf[index + 1] = s1;
-        impl_markDirty();
+        markDirty();
     }
 
     /**
@@ -273,7 +273,7 @@ public class FloatMap {
         buf[index + 0] = s0;
         buf[index + 1] = s1;
         buf[index + 2] = s2;
-        impl_markDirty();
+        markDirty();
     }
 
     /**
@@ -294,7 +294,7 @@ public class FloatMap {
         buf[index + 1] = s1;
         buf[index + 2] = s2;
         buf[index + 3] = s3;
-        impl_markDirty();
+        markDirty();
     }
 
     /**

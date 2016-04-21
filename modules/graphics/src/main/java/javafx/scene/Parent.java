@@ -690,7 +690,7 @@ public abstract class Parent extends Node {
     }
 
     // implementation of Node.toFront function
-    final void impl_toFront(Node node) {
+    final void toFront(Node node) {
         if (Utils.assertionEnabled()) {
             if (!childSet.contains(node)) {
                 throw new java.lang.AssertionError(
@@ -710,7 +710,7 @@ public abstract class Parent extends Node {
     }
 
     // implementation of Node.toBack function
-    final void impl_toBack(Node node) {
+    final void toBack(Node node) {
         if (Utils.assertionEnabled()) {
             if (!childSet.contains(node)) {
                 throw new java.lang.AssertionError(

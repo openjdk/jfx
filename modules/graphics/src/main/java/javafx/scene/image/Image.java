@@ -169,13 +169,10 @@ public class Image {
         return url;
     }
 
-    /**
-     * @treatAsPrivate
-     */
-    private final InputStream impl_source;
+    private final InputStream inputSource;
 
-    final InputStream getImpl_source() {
-        return impl_source;
+    final InputStream getInputSource() {
+        return inputSource;
     }
 
     /**
@@ -756,7 +753,7 @@ public class Image {
                   boolean preserveRatio, boolean smooth,
                   boolean backgroundLoading) {
         this.url = url;
-        this.impl_source = is;
+        this.inputSource = is;
         this.requestedWidth = requestedWidth;
         this.requestedHeight = requestedHeight;
         this.preserveRatio = preserveRatio;
@@ -796,14 +793,14 @@ public class Image {
             // object (e.g. a BufferedImage in the case of the Swing profile)
             ImageLoader loader = loadPlatformImage(externalImage);
             finishImage(loader);
-        } else if (isBackgroundLoading() && (impl_source == null)) {
+        } else if (isBackgroundLoading() && (inputSource == null)) {
             // Load image in the background.
             loadInBackground();
         } else {
             // Load image immediately.
             ImageLoader loader;
-            if (impl_source != null) {
-                loader = loadImage(impl_source, getRequestedWidth(), getRequestedHeight(),
+            if (inputSource != null) {
+                loader = loadImage(inputSource, getRequestedWidth(), getRequestedHeight(),
                                    isPreserveRatio(), isSmooth());
             } else {
                 loader = loadImage(getUrl(), getRequestedWidth(), getRequestedHeight(),
