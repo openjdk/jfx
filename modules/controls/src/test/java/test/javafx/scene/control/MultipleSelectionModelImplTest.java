@@ -1193,4 +1193,37 @@ public class MultipleSelectionModelImplTest {
 
         sl.dispose();
     }
+
+    @Test public void test_jdk_8088752() {
+        // FIXME for now this test does not cover TreeView / TreeTableView
+        if (isTree()) {
+            return;
+        }
+
+        Object uncontained = isTree() ? new TreeItem<>("uncontained") : "uncontained";
+
+        model.selectRange(3, 5);
+        model.select(uncontained);
+
+        assertEquals("sanity: having uncontained selectedItem", uncontained, model.getSelectedItem());
+        assertEquals("sanity: selected index removed ", -1, model.getSelectedIndex());
+
+        // insert uncontained to items
+        int insertIndex = 3;
+        addItem(insertIndex, uncontained);
+        assertEquals("selectedItem unchanged", uncontained, model.getSelectedItem());
+        assertEquals("selectedIndex updated", insertIndex, model.getSelectedIndex());
+    }
+
+    private void addItem(int index, Object item) {
+        if (currentControl instanceof ListView) {
+            ((ListView) currentControl).getItems().add(index, item);
+        } else if (currentControl instanceof TableView) {
+            ((TableView) currentControl).getItems().add(index, item);
+        } else if (currentControl instanceof TreeView || currentControl instanceof TreeTableView) {
+            root.getChildren().add(index, (TreeItem)item);
+        } else {
+            throw new RuntimeException("Unsupported control type");
+        }
+    }
 }

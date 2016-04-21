@@ -2111,6 +2111,7 @@ public class TableView<S> extends Control {
             updateItemCount();
 
             List<S> items1 = getTableModel();
+            boolean doSelectionUpdate = true;
 
             while (c.next()) {
                 if (c.wasReplaced() || c.getAddedSize() == getItemCount()) {
@@ -2129,6 +2130,7 @@ public class TableView<S> extends Control {
                     int newIndex = items1.indexOf(getSelectedItem());
                     if (newIndex != -1) {
                         setSelectedIndex(newIndex);
+                        doSelectionUpdate = false;
                     }
                 } else if (c.wasRemoved() &&
                         c.getRemovedSize() == 1 &&
@@ -2146,7 +2148,9 @@ public class TableView<S> extends Control {
                 }
             }
 
-            updateSelection(c);
+            if (doSelectionUpdate) {
+                updateSelection(c);
+            }
         };
 
         final WeakListChangeListener<S> weakItemsContentListener

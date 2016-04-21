@@ -1218,6 +1218,8 @@ public class ListView<T> extends Control {
             @Override public void onChanged(Change<? extends T> c) {
                 updateItemCount();
 
+                boolean doSelectionUpdate = true;
+
                 while (c.next()) {
                     final T selectedItem = getSelectedItem();
                     final int selectedIndex = getSelectedIndex();
@@ -1230,6 +1232,7 @@ public class ListView<T> extends Control {
                         int newIndex = listView.getItems().indexOf(selectedItem);
                         if (newIndex != -1) {
                             setSelectedIndex(newIndex);
+                            doSelectionUpdate = false;
                         }
                     } else if (c.wasRemoved() &&
                             c.getRemovedSize() == 1 &&
@@ -1250,7 +1253,9 @@ public class ListView<T> extends Control {
                     }
                 }
 
-                updateSelection(c);
+                if (doSelectionUpdate) {
+                    updateSelection(c);
+                }
             }
         };
 
