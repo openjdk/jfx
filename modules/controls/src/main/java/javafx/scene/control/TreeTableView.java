@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
@@ -2113,6 +2114,7 @@ public class TreeTableView<S> extends Control {
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
+        private final TreeTableView<S> source;
         private final S oldValue;
         private final S newValue;
         private transient final TreeItem<S> treeItem;
@@ -2126,6 +2128,7 @@ public class TreeTableView<S> extends Control {
                          EventType<? extends TreeTableView.EditEvent> eventType,
                          TreeItem<S> treeItem, S oldValue, S newValue) {
             super(source, Event.NULL_SOURCE_TARGET, eventType);
+            this.source = source;
             this.oldValue = oldValue;
             this.newValue = newValue;
             this.treeItem = treeItem;
@@ -2135,7 +2138,7 @@ public class TreeTableView<S> extends Control {
          * Returns the TreeTableView upon which the edit took place.
          */
         @Override public TreeTableView<S> getSource() {
-            return (TreeTableView<S>) super.getSource();
+            return source;
         }
 
         /**
@@ -3228,52 +3231,55 @@ public class TreeTableView<S> extends Control {
             //
             // selectedIndicesBitSet.clear();
             // for (int i = 0; i < selectedCells.size(); i++) {
-            //     final TreeTablePosition<S,?> tp = selectedCells.get(i);
+            //     final TablePosition<S,?> tp = selectedCells.get(i);
             //     final int row = tp.getRow();
             //     selectedIndicesBitSet.set(row);
             // }
             //
             // A more efficient solution:
-            final List<Integer> newlySelectedRows = new ArrayList<>();
-            final List<Integer> newlyUnselectedRows = new ArrayList<>();
+
+            final boolean isAtomic = isAtomic();
+
+            if (!isAtomic) {
+                selectedIndicesSeq._beginChange();
+            }
 
             while (c.next()) {
-                if (c.wasRemoved()) {
-                    List<? extends TreeTablePosition<S,?>> removed = c.getRemoved();
-                    for (int i = 0; i < removed.size(); i++) {
-                        final TreeTablePosition<S,?> tp = removed.get(i);
-                        final int row = tp.getRow();
+                // it may look like all we are doing here is collecting the removed elements (and
+                // counting the added elements), but the call to 'peek' is also crucial - it is
+                // ensuring that the selectedIndices bitset is correctly updated.
+                final List<Integer> removed = c.getRemoved().stream()
+                        .map(TreeTablePosition::getRow)
+                        .distinct()
+                        .peek(selectedIndices::clear)
+                        .collect(Collectors.toList());
 
-                        if (selectedIndices.get(row)) {
-                            selectedIndices.clear(row);
-                            newlyUnselectedRows.add(row);
-                        }
-                    }
+                final int addedSize = (int)c.getAddedSubList().stream()
+                        .map(TreeTablePosition::getRow)
+                        .distinct()
+                        .peek(selectedIndices::set)
+                        .count();
+
+                final int to = c.getFrom() + addedSize;
+
+                if (isAtomic) {
+                    continue;
                 }
-                if (c.wasAdded()) {
-                    List<? extends TreeTablePosition<S,?>> added = c.getAddedSubList();
-                    for (int i = 0; i < added.size(); i++) {
-                        final TreeTablePosition<S,?> tp = added.get(i);
-                        final int row = tp.getRow();
 
-                        if (! selectedIndices.get(row)) {
-                            selectedIndices.set(row);
-                            newlySelectedRows.add(row);
-                        }
-                    }
+                if (c.wasReplaced()) {
+                    selectedIndicesSeq._nextReplace(c.getFrom(), to, removed);
+                } else if (c.wasRemoved()) {
+                    selectedIndicesSeq._nextRemove(c.getFrom(), removed);
+                } else if (c.wasAdded()) {
+                    selectedIndicesSeq._nextAdd(c.getFrom(), to);
                 }
             }
             c.reset();
-
             selectedIndicesSeq.reset();
 
-            if (isAtomic()) {
+            if (isAtomic) {
                 return;
             }
-
-            // when the selectedCells observableArrayList changes, we manually call
-            // the observers of the selectedItems, selectedIndices and
-            // selectedCells lists.
 
             // Fix for RT-31577 - the selectedItems list was going to
             // empty, but the selectedItem property was staying non-null.
@@ -3285,23 +3291,7 @@ public class TreeTableView<S> extends Control {
                 setSelectedItem(null);
             }
 
-            final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq =
-                    (ReadOnlyUnbackedObservableList<Integer>)getSelectedIndices();
-
-            if (! newlySelectedRows.isEmpty() && newlyUnselectedRows.isEmpty()) {
-                // need to come up with ranges based on the actualSelectedRows, and
-                // then fire the appropriate number of changes. We also need to
-                // translate from a desired row to select to where that row is
-                // represented in the selectedIndices list. For example,
-                // we may have requested to select row 5, and the selectedIndices
-                // list may therefore have the following: [1,4,5], meaning row 5
-                // is in position 2 of the selectedIndices list
-                ListChangeListener.Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows, false);
-                selectedIndicesSeq.callObservers(change);
-            } else {
-                selectedIndicesSeq.callObservers(new MappingChange<>(c, cellToIndicesMap, selectedIndicesSeq));
-                c.reset();
-            }
+            selectedIndicesSeq._endChange();
 
             selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
             c.reset();

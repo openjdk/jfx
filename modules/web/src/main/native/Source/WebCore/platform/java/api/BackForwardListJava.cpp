@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -34,7 +34,7 @@ static HistoryItem* getItem(jlong jitem)
     return static_cast<HistoryItem*>(jlong_to_ptr(jitem));
 }
 
-static jmethodID initMethod(JNIEnv* env, jclass cls, char* name, const char* signature)
+static jmethodID initMethod(JNIEnv* env, jclass cls, const char* name, const char* signature)
 {
     jmethodID mid = env->GetMethodID(cls, name, signature);
     ASSERT(mid);

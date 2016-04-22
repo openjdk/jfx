@@ -1171,6 +1171,7 @@ public class TreeView<T> extends Control {
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
+        private final TreeView<T> source;
         private final T oldValue;
         private final T newValue;
         private transient final TreeItem<T> treeItem;
@@ -1184,6 +1185,7 @@ public class TreeView<T> extends Control {
                          EventType<? extends EditEvent> eventType,
                          TreeItem<T> treeItem, T oldValue, T newValue) {
             super(source, Event.NULL_SOURCE_TARGET, eventType);
+            this.source = source;
             this.oldValue = oldValue;
             this.newValue = newValue;
             this.treeItem = treeItem;
@@ -1193,7 +1195,7 @@ public class TreeView<T> extends Control {
          * Returns the TreeView upon which the edit took place.
          */
         @Override public TreeView<T> getSource() {
-            return (TreeView<T>) super.getSource();
+            return source;
         }
 
         /**

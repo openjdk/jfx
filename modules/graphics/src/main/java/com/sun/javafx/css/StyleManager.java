@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1613,6 +1613,9 @@ final public class StyleManager {
     // reuse key to avoid creation of numerous small objects
     private Key key = null;
 
+    // Stores weak references to regions which return non-null user agent stylesheets
+    private final WeakHashMap<Region, String> weakRegionUserAgentStylesheetMap = new WeakHashMap<>();
+
     /**
      * Finds matching styles for this Node.
      */
@@ -1659,11 +1662,15 @@ final public class StyleManager {
             // is this node in a region that has its own stylesheet?
             Node region = node;
             while (region != null) {
-                regionUserAgentStylesheet = (region instanceof Region) ? ((Region) region).getUserAgentStylesheet() : null;
-                if (regionUserAgentStylesheet != null) {
-                    // We want 'region' to be the node that has the user agent stylesheet.
-                    // 'region' is used below - look for if (hasRegionUserAgentStylesheet) block
-                    break;
+                if (region instanceof Region) {
+                    regionUserAgentStylesheet = weakRegionUserAgentStylesheetMap.computeIfAbsent(
+                            (Region)region, Region::getUserAgentStylesheet);
+
+                    if (regionUserAgentStylesheet != null) {
+                        // We want 'region' to be the node that has the user agent stylesheet.
+                        // 'region' is used below - look for if (hasRegionUserAgentStylesheet) block
+                        break;
+                    }
                 }
                 region = region.getParent();
             }

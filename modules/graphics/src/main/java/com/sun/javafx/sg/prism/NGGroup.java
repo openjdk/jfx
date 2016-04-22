@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
+import javafx.scene.Node;
 
 /**
  */
@@ -56,6 +57,15 @@ public class NGGroup extends NGNode {
     private List<NGNode> children = new ArrayList<>(1);
     private List<NGNode> unmod = Collections.unmodifiableList(children);
     private List<NGNode> removed;
+
+    /**
+     * The viewOrderChildren is a list children sorted in decreasing viewOrder
+     * order if it is not empty. Its size should always be equal to
+     * children.size(). If viewOrderChildren is empty it implies that the
+     * rendering order of the children is the same as the order in the children
+     * list.
+     */
+    private final List<NGNode> viewOrderChildren = new ArrayList<>(1);
 
     /**
      * This mask has all bits that mark that a region intersects this group.
@@ -172,6 +182,28 @@ public class NGGroup extends NGNode {
         markTreeDirtyNoIncrement();
     }
 
+    // Call this method if children view order is needed for rendering.
+    // The returned list should be treated as read only.
+    private List<NGNode> getOrderedChildren() {
+        if (!viewOrderChildren.isEmpty()) {
+            return viewOrderChildren;
+        }
+        return children;
+    }
+
+    // NOTE: This method is called on the FX application thread with the
+    // RenderLock held.
+    public void setViewOrderChildren(List<Node> sortedChildren) {
+        viewOrderChildren.clear();
+        for (Node child : sortedChildren) {
+            NGNode childPeer = child.impl_getPeer();
+            viewOrderChildren.add(childPeer);
+        }
+
+        // Mark visual dirty
+        visualsChanged();
+    }
+
     /**
      * Set by the FX scene graph.
      * @param blendMode cannot be null
@@ -191,17 +223,19 @@ public class NGGroup extends NGNode {
 
     @Override
     public void renderForcedContent(Graphics gOptional) {
-        if (children == null) {
+        List<NGNode> orderedChildren = getOrderedChildren();
+        if (orderedChildren == null) {
             return;
         }
-        for (int i = 0; i < children.size(); i++) {
-            children.get(i).renderForcedContent(gOptional);
+        for (int i = 0; i < orderedChildren.size(); i++) {
+            orderedChildren.get(i).renderForcedContent(gOptional);
         }
     }
 
     @Override
     protected void renderContent(Graphics g) {
-        if (children == null) {
+        List<NGNode> orderedChildren = getOrderedChildren();
+        if (orderedChildren == null) {
             return;
         }
 
@@ -210,10 +244,10 @@ public class NGGroup extends NGNode {
         if (renderRoot != null) {
             if (renderRoot.hasNext()) {
                 renderRoot.next();
-                startPos = children.indexOf(renderRoot.getCurrentNode());
+                startPos = orderedChildren.indexOf(renderRoot.getCurrentNode());
 
                 for (int i = 0; i < startPos; ++i) {
-                    children.get(i).clearDirtyTree();
+                    orderedChildren.get(i).clearDirtyTree();
                 }
             } else {
                 g.setRenderRoot(null);
@@ -221,12 +255,12 @@ public class NGGroup extends NGNode {
         }
 
         if (blendMode == Blend.Mode.SRC_OVER ||
-                children.size() < 2) {  // Blend modes only work "between" siblings
+                orderedChildren.size() < 2) {  // Blend modes only work "between" siblings
 
-            for (int i = startPos; i < children.size(); i++) {
+            for (int i = startPos; i < orderedChildren.size(); i++) {
                 NGNode child;
                 try {
-                    child = children.get(i);
+                    child = orderedChildren.get(i);
                 } catch (Exception e) {
                     child = null;
                 }
@@ -251,8 +285,8 @@ public class NGGroup extends NGNode {
                 bot = null;
             }
             Rectangle rclip = PrEffectHelper.getGraphicsClipNoClone(g);
-            for (int i = startPos; i < children.size(); i++) {
-                NGNode child = children.get(i);
+            for (int i = startPos; i < orderedChildren.size(); i++) {
+                NGNode child = orderedChildren.get(i);
                 ImageData top = NodeEffectInput.
                     getImageDataForNode(fctx, child, false, transform, rclip);
                 if (bot == null) {
@@ -285,9 +319,10 @@ public class NGGroup extends NGNode {
             // All other modes are flattened so there are no overlapping issues
             return false;
         }
-        int n = (children == null ? 0 : children.size());
+        List<NGNode> orderedChildren = getOrderedChildren();
+        int n = (orderedChildren == null ? 0 : orderedChildren.size());
         if (n == 1) {
-            return children.get(0).hasOverlappingContents();
+            return orderedChildren.get(0).hasOverlappingContents();
         }
         return (n != 0);
     }
@@ -375,9 +410,10 @@ public class NGGroup extends NGNode {
         // True if every child _after_ the the found render root is clean
         boolean followingChildrenClean = true;
         // Iterate over all children, looking for a render root.
-        for (int resultIdx=children.size()-1; resultIdx>=0; resultIdx--) {
+        List<NGNode> orderedChildren = getOrderedChildren();
+        for (int resultIdx = orderedChildren.size() - 1; resultIdx >= 0; resultIdx--) {
             // Get the render root result from the child
-            final NGNode child = children.get(resultIdx);
+            final NGNode child = orderedChildren.get(resultIdx);
             result = child.computeRenderRoot(path, dirtyRegion, cullingIndex, chTx, pvTx);
             // Update this flag, which if true means that this child and all subsequent children
             // of this group are all clean.
@@ -437,8 +473,9 @@ public class NGGroup extends NGNode {
             BaseTransform chTx = tx.deriveWithConcatenation(getTransform());
 
             NGNode child;
-            for (int chldIdx = 0; chldIdx < children.size(); chldIdx++) {
-                child = children.get(chldIdx);
+            List<NGNode> orderedChildren = getOrderedChildren();
+            for (int chldIdx = 0; chldIdx < orderedChildren.size(); chldIdx++) {
+                child = orderedChildren.get(chldIdx);
                 child.markCullRegions(
                         drc,
                         cullingBits,
@@ -458,8 +495,9 @@ public class NGGroup extends NGNode {
         // that the source transform (tx) is not modified.
         BaseTransform clone = tx.copy();
         clone = clone.deriveWithConcatenation(getTransform());
-        for (int childIndex = 0; childIndex < children.size(); childIndex++) {
-            final NGNode child = children.get(childIndex);
+        List<NGNode> orderedChildren = getOrderedChildren();
+        for (int childIndex = 0; childIndex < orderedChildren.size(); childIndex++) {
+            final NGNode child = orderedChildren.get(childIndex);
             child.drawDirtyOpts(clone, pvTx, clipBounds, countBuffer, dirtyRegionIndex);
         }
     }

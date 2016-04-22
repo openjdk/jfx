@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,6 +73,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRegion;
@@ -3107,18 +3108,9 @@ public class
      */
     @Deprecated
     @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
+         double boundsDistance = impl_intersectsBounds(pickRay);
 
-        double boundsDistance = impl_intersectsBounds(pickRay);
-
-        if (!Double.isNaN(boundsDistance)) {
-            ObservableList<Node> children = getChildren();
-            for (int i = children.size()-1; i >= 0; i--) {
-                children.get(i).impl_pickNode(pickRay, result);
-                if (result.isClosed()) {
-                    return;
-                }
-            }
-
+        if (!Double.isNaN(boundsDistance) && ParentHelper.pickChildrenNode(this, pickRay, result)) {
             impl_intersects(pickRay, result);
         }
     }
@@ -3298,6 +3290,15 @@ public class
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
      * </p>
+     * <p>
+     * Subclasses overriding this method should not assume any particular implementation approach as to
+     * the number and frequency with which it is called. For this reason, attempting any kind of
+     * dynamic implementation (i.e. returning different user agent stylesheet values) based on some
+     * state change is highly discouraged, as there is no guarantee when, or even if, this method will
+     * be called. Some JavaFX CSS implementations may choose to cache this response for an indefinite
+     * period of time, and therefore there should be no expectation around when this method is called.
+     * </p>
+     *
      * <code><pre>
      *
      * package com.example.javafx.app;

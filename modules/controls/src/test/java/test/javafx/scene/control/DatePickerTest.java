@@ -111,8 +111,8 @@ public class DatePickerTest {
         assertFalse(datePicker.isShowing());
     }
 
-    @Test public void noArgConstructor_promptTextIsEmptyString() {
-        assertEquals("", datePicker.getPromptText());
+    @Test public void noArgConstructor_promptTextIsNull() {
+        assertNull(datePicker.getPromptText());
     }
 
     @Test public void noArgConstructor_armedIsFalse() {
@@ -151,9 +151,9 @@ public class DatePickerTest {
         assertFalse(b2.isShowing());
     }
 
-    @Test public void singleArgConstructor_promptTextIsEmptyString() {
+    @Test public void singleArgConstructor_promptTextIsNull() {
         final DatePicker b2 = new DatePicker(today);
-        assertEquals("", b2.getPromptText());
+        assertNull(b2.getPromptText());
     }
 
     @Test public void singleArgConstructor_armedIsFalse() {
@@ -323,6 +323,7 @@ public class DatePickerTest {
     }
 
     @Test public void ensureCanSetPromptTextToNull() {
+        datePicker.setPromptText("");
         assertEquals("", datePicker.getPromptText());
         datePicker.setPromptText(null);
         assertEquals(null, datePicker.getPromptText());

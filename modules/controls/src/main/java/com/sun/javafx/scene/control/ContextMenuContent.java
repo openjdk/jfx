@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1557,7 +1557,7 @@ public class ContextMenuContent extends Region {
                     // Accessibility might need to see the menu node before the window
                     // is visible (i.e. before the skin is applied).
                     if (submenu.getSkin() == null) {
-                        submenu.getStyleableNode().impl_processCSS(true);
+                        submenu.getStyleableNode().applyCss();
                     }
                     ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
                     return cmContent.itemsContainer;

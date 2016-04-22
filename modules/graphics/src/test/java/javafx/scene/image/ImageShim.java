@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,8 +37,8 @@ public class ImageShim extends Image {
         super.dispose();
     }
 
-    public InputStream shim_getImpl_source() {
-        return super.getImpl_source();
+    public InputStream shim_getInputSource() {
+        return super.getInputSource();
     }
 
     @Override
@@ -56,8 +56,8 @@ public class ImageShim extends Image {
         image.dispose();
     }
 
-    public static InputStream getImpl_source(Image image) {
-        return image.getImpl_source();
+    public static InputStream getInputSource(Image image) {
+        return image.getInputSource();
     }
 
     public static void pixelsDirty(Image image) {

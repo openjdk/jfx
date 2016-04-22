@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -447,12 +447,13 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         if (n instanceof ImageView) {
             ImageView iv = (ImageView) n;
             ImageView imageview = new ImageView();
-            imageview.setImage(iv.getImage());
+            imageview.imageProperty().bind(iv.imageProperty());
             return imageview;
         }
         if (n instanceof Label) {
             Label l = (Label)n;
             Label label = new Label(l.getText(), clone(l.getGraphic()));
+            label.textProperty().bind(l.textProperty());
             return label;
         }
         return null;

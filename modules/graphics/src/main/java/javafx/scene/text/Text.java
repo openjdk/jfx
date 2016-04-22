@@ -769,11 +769,11 @@ public class Text extends Shape {
     protected final void impl_geomChanged() {
         super.impl_geomChanged();
         if (attributes != null) {
-            if (attributes.impl_caretBinding != null) {
-                attributes.impl_caretBinding.invalidate();
+            if (attributes.caretBinding != null) {
+                attributes.caretBinding.invalidate();
             }
-            if (attributes.impl_selectionBinding != null) {
-                attributes.impl_selectionBinding.invalidate();
+            if (attributes.selectionBinding != null) {
+                attributes.selectionBinding.invalidate();
             }
         }
         impl_markDirty(DirtyBits.NODE_GEOMETRY);
@@ -1634,12 +1634,12 @@ public class Text extends Shape {
 
         @Deprecated
         private ObjectProperty<PathElement[]> impl_selectionShape;
-        private ObjectBinding<PathElement[]> impl_selectionBinding;
+        private ObjectBinding<PathElement[]> selectionBinding;
 
         @Deprecated
         public final ReadOnlyObjectProperty<PathElement[]> impl_selectionShapeProperty() {
             if (impl_selectionShape == null) {
-                impl_selectionBinding = new ObjectBinding<PathElement[]>() {
+                selectionBinding = new ObjectBinding<PathElement[]>() {
                     {bind(impl_selectionStartProperty(), impl_selectionEndProperty());}
                     @Override protected PathElement[] computeValue() {
                         int start = getSelectionStart();
@@ -1648,7 +1648,7 @@ public class Text extends Shape {
                     }
               };
               impl_selectionShape = new SimpleObjectProperty<PathElement[]>(Text.this, "impl_selectionShape");
-              impl_selectionShape.bind(impl_selectionBinding);
+              impl_selectionShape.bind(selectionBinding);
             }
             return impl_selectionShape;
         }
@@ -1719,12 +1719,12 @@ public class Text extends Shape {
         }
 
         private ObjectProperty<PathElement[]> impl_caretShape;
-        private ObjectBinding<PathElement[]> impl_caretBinding;
+        private ObjectBinding<PathElement[]> caretBinding;
 
         @Deprecated
         public final ReadOnlyObjectProperty<PathElement[]> impl_caretShapeProperty() {
             if (impl_caretShape == null) {
-                impl_caretBinding = new ObjectBinding<PathElement[]>() {
+                caretBinding = new ObjectBinding<PathElement[]>() {
                     {bind(impl_caretPositionProperty(), impl_caretBiasProperty());}
                     @Override protected PathElement[] computeValue() {
                         int pos = getImpl_caretPosition();
@@ -1740,7 +1740,7 @@ public class Text extends Shape {
                     }
                 };
                 impl_caretShape = new SimpleObjectProperty<PathElement[]>(Text.this, "impl_caretShape");
-                impl_caretShape.bind(impl_caretBinding);
+                impl_caretShape.bind(caretBinding);
             }
             return impl_caretShape;
         }

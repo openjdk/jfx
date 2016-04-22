@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,6 +70,7 @@ public final class Node_properties_Test extends PropertiesTestBase {
             config(testNode, "visible", true, false),
             config(testNode, "cursor", Cursor.DEFAULT, Cursor.CROSSHAIR),
             config(testNode, "opacity", 1.0, 0.5),
+            config(testNode, "viewOrder", 0.0, 0.5),
             config(testNode, "blendMode",
                    BlendMode.SRC_OVER, BlendMode.SRC_ATOP),
             config(testNode, "clip", null, new Rectangle(0, 0, 100, 100)),

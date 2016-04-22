@@ -178,8 +178,19 @@ static jobject convertArrayInstanceToJavaArray(ExecState* exec, JSArray* jsArray
     return jarray;
 }
 
+static jchar toJCharValue(const JSValue& value, ExecState* exec)
+{
+    // If JS type is string and target Java type is char, then
+    // return the first unicode character.
+    if (value.isString()) {
+        String stringValue = value.toString(exec)->value(exec);
+        return (jchar)stringValue[0];
+    }
+    return (jchar)value.toNumber(exec);
+}
 
-jobject convertUndefinedToJObject() {
+jobject convertUndefinedToJObject()
+{
     static JGObject jgoUndefined;
     if (!jgoUndefined) {
         JNIEnv* env = getJNIEnv();
@@ -190,7 +201,6 @@ jobject convertUndefinedToJObject() {
     }
     return jgoUndefined;
 }
-
 
 jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue value, JavaType javaType, const char* javaClassName)
 {
@@ -269,6 +279,13 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                     JNIEnv* env = getJNIEnv();
                     jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.deprecatedCharacters(), stringValue.length());
                     result.l = javaString;
+                } else if (value.isString() && !strcmp(javaClassName, "java.lang.Character")) {
+                    JNIEnv* env = getJNIEnv();
+                    static JGClass clazz(env->FindClass("java/lang/Character"));
+                    jmethodID meth = env->GetStaticMethodID(clazz, "valueOf", "(C)Ljava/lang/Character;");
+                    jchar charValue = toJCharValue(value, exec);
+                    jobject javaChar = env->CallStaticObjectMethod(clazz, meth, charValue);
+                    result.l = javaChar;
                 } else if (value.isNumber()) {
                     JNIEnv* env = getJNIEnv();
                     if (value.isInt32() && (!strcmp(javaClassName, "java.lang.Number") || !strcmp(javaClassName, "java.lang.Integer") || !strcmp(javaClassName, "java.lang.Object"))) {
@@ -321,7 +338,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
 
     case JavaTypeChar:
         {
-            result.c = (jchar)value.toNumber(exec);
+            result.c = toJCharValue(value, exec);
         }
         break;
 

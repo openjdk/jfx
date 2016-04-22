@@ -218,7 +218,7 @@ public abstract class ComboBoxBase<T> extends Control {
      * shown when a combo box is non-editable (that is, prompt text is only shown
      * when user input is allowed via text input).
      */
-    private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
+    private StringProperty promptText = new SimpleStringProperty(this, "promptText", null) {
         @Override protected void invalidated() {
             // Strip out newlines
             String txt = get();

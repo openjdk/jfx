@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ public enum DirtyBits {
     NODE_BLENDMODE,
     NODE_CSS,
     NODE_FORCE_SYNC,
+    NODE_VIEW_ORDER,
 
     // Dirty bits for various subclasses of Node
     NODE_GEOMETRY,  // Used by ImageView, MediaView, and subclasses of Shape and Shape3D
@@ -52,6 +53,7 @@ public enum DirtyBits {
 
     // Dirty bits for the Parent class
     PARENT_CHILDREN,  // children removed, added or permuted
+    PARENT_CHILDREN_VIEW_ORDER,
 
     // Dirty bits for the Shape class
     SHAPE_FILL,

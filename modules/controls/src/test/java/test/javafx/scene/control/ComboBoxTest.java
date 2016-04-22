@@ -149,7 +149,7 @@ public class ComboBoxTest {
     }
 
     @Test public void noArgConstructor_promptTextIsEmptyString() {
-        assertEquals("", comboBox.getPromptText());
+        assertNull(comboBox.getPromptText());
     }
 
     @Test public void noArgConstructor_placeholderIsNull() {
@@ -220,7 +220,7 @@ public class ComboBoxTest {
 
     @Test public void singleArgConstructor_promptTextIsEmptyString() {
         final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
-        assertEquals("", b2.getPromptText());
+        assertNull(b2.getPromptText());
     }
 
     @Test public void singleArgConstructor_placeholderIsNull() {
@@ -724,6 +724,7 @@ public class ComboBoxTest {
     }
 
     @Test public void ensureCanSetPromptTextToNull() {
+        comboBox.setPromptText("");
         assertEquals("", comboBox.getPromptText());
         comboBox.setPromptText(null);
         assertEquals(null, comboBox.getPromptText());
@@ -837,7 +838,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
 
         comboBox.setVisibleRowCount(5);
@@ -885,7 +886,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
 
         comboBox.setConverter(new StringConverter() {
@@ -905,7 +906,7 @@ public class ComboBoxTest {
         assertEquals("2", comboBox.getValue());
 
         ListView listView = getListView();
-//        listView.impl_processCSS(true);
+//        listView.applyCss();
 
         assertEquals("2", listView.getSelectionModel().getSelectedItem());
 
@@ -926,7 +927,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
 
         SelectionModel sm = getListView().getSelectionModel();
@@ -955,7 +956,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
         ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
 
@@ -968,7 +969,7 @@ public class ComboBoxTest {
         sm.clearSelection();
         assertNull(sm.getSelectedItem());
         assertNull(comboBox.getValue());
-        assertEquals("", buttonCell.getText());
+        assertNull(buttonCell.getText());
         assertEquals(-1, sm.getSelectedIndex());
 
         sm.select(2);
@@ -984,7 +985,7 @@ public class ComboBoxTest {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);
-        comboBox.impl_processCSS(true);
+        comboBox.applyCss();
         comboBox.show();
         ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
 
@@ -999,7 +1000,7 @@ public class ComboBoxTest {
         sm.clearSelection();
         assertNull(sm.getSelectedItem());
         assertNull(comboBox.getValue());
-        assertEquals("", buttonCell.getText());
+        assertNull(buttonCell.getText());
         assertEquals(-1, sm.getSelectedIndex());
 
         sm.select("2");
@@ -1128,7 +1129,7 @@ public class ComboBoxTest {
         assertEquals(1, comboBox.getButtonCell().getIndex());
 
         comboBox.setItems(FXCollections.observableArrayList("1","2","3","4"));
-        assertTrue(comboBox.getButtonCell().getText().isEmpty());
+        assertNull(comboBox.getButtonCell().getText());
         assertEquals(-1, comboBox.getButtonCell().getIndex());
 
         sl.dispose();
@@ -1158,7 +1159,7 @@ public class ComboBoxTest {
 
         comboBox.setValue(null);
         Toolkit.getToolkit().firePulse();
-        assertTrue(comboBox.getButtonCell().getText().isEmpty());
+        assertNull(comboBox.getButtonCell().getText());
         assertEquals(-1, comboBox.getButtonCell().getIndex());
         assertTrue(customCell.getPseudoClassStates().contains(empty));
 

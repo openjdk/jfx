@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -597,6 +597,10 @@ public abstract class Node implements EventTarget, Styleable {
 
         if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
             peer.setTransformMatrix(localToParentTx);
+        }
+
+        if (impl_isDirty(DirtyBits.NODE_VIEW_ORDER)) {
+            peer.setViewOrder(getViewOrder());
         }
 
         if (impl_isDirty(DirtyBits.NODE_BOUNDS)) {
@@ -1776,7 +1780,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public void toBack() {
         if (getParent() != null) {
-            getParent().impl_toBack(this);
+            getParent().toBack(this);
         }
     }
 
@@ -1788,7 +1792,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public void toFront() {
         if (getParent() != null) {
-            getParent().impl_toFront(this);
+            getParent().toFront(this);
         }
     }
 
@@ -3000,7 +3004,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @since JavaFX 8.0
      */
     public double computeAreaInScreen() {
-        return impl_computeAreaInScreen();
+        return doComputeAreaInScreen();
     }
 
     /*
@@ -3017,7 +3021,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * Returns 0 for those fall outside viewing frustrum.
      */
-    private double impl_computeAreaInScreen() {
+    private double doComputeAreaInScreen() {
         Scene tmpScene = getScene();
         if (tmpScene != null) {
             Bounds bounds = getBoundsInLocal();
@@ -3907,7 +3911,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     @Deprecated
     protected boolean containsBounds(double localX, double localY) {
-          final TempState tempState = TempState.getInstance();
+        final TempState tempState = TempState.getInstance();
         BaseBounds tempBounds = tempState.bounds;
 
         // first, we do a quick test to see if the point is contained in
@@ -5219,6 +5223,54 @@ public abstract class Node implements EventTarget, Styleable {
     static boolean almostZero(double a) {
         return ((a < EPSILON_ABSOLUTE) && (a > -EPSILON_ABSOLUTE));
     }
+
+    /***************************************************************************
+     *                                                                         *
+     *                      viewOrder property handling                        *
+     *                                                                         *
+     **************************************************************************/
+    public final void setViewOrder(double value) {
+        viewOrderProperty().set(value);
+    }
+
+    public final double getViewOrder() {
+        return (miscProperties == null) ? DEFAULT_VIEW_ORDER
+                : miscProperties.getViewOrder();
+    }
+
+    /**
+     * Defines the rendering and picking order of this {@code Node} within its
+     * parent.
+     * <p>
+     * This property is used to alter the rendering and picking order of a node
+     * within its parent without reordering the parent's {@code children} list.
+     * For example, this can be used as a more efficient way to implement
+     * transparency sorting. To do this, an application can assign the viewOrder
+     * value of each node to the computed distance between that node and the
+     * viewer.
+     * </p>
+     * <p>
+     * The parent will traverse its {@code children} in decreasing
+     * {@code viewOrder} order. This means that a child with a lower
+     * {@code viewOrder} will be in front of a child with a higher
+     * {@code viewOrder}. If two children have the same {@code viewOrder}, the
+     * parent will traverse them in the order they appear in the parent's
+     * {@code children} list.
+     * </p>
+     * <p>
+     * However, {@code viewOrder} does not alter the layout and focus traversal
+     * order of this Node within its parent. A parent always traverses its
+     * {@code children} list in order when doing layout or focus traversal.
+     * </p>
+     *
+     * @defaultValue 0.0
+     *
+     * @since 9
+     */
+    public final DoubleProperty viewOrderProperty() {
+        return getMiscProperties().viewOrderProperty();
+    }
+
     /***************************************************************************
      *                                                                         *
      *                             Transformations                             *
@@ -6418,6 +6470,7 @@ public abstract class Node implements EventTarget, Styleable {
         return miscProperties;
     }
 
+    private static final double DEFAULT_VIEW_ORDER = 0;
     private static final boolean DEFAULT_CACHE = false;
     private static final CacheHint DEFAULT_CACHE_HINT = CacheHint.DEFAULT;
     private static final Node DEFAULT_CLIP = null;
@@ -6441,6 +6494,43 @@ public abstract class Node implements EventTarget, Styleable {
         private ObjectProperty<Effect> effect;
         private ObjectProperty<InputMethodRequests> inputMethodRequests;
         private BooleanProperty mouseTransparent;
+        private DoubleProperty viewOrder;
+
+        public double getViewOrder() {
+            return (viewOrder == null) ? DEFAULT_VIEW_ORDER : viewOrder.get();
+        }
+
+        public final DoubleProperty viewOrderProperty() {
+            if (viewOrder == null) {
+                viewOrder = new StyleableDoubleProperty(DEFAULT_VIEW_ORDER) {
+                    @Override
+                    public void invalidated() {
+                        Parent p = getParent();
+                        if (p != null) {
+                            // Parent will be responsible to update sorted children list
+                            p.markViewOrderChildrenDirty();
+                        }
+                        impl_markDirty(DirtyBits.NODE_VIEW_ORDER);
+                    }
+
+                    @Override
+                    public CssMetaData getCssMetaData() {
+                        return StyleableProperties.VIEW_ORDER;
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return Node.this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "viewOrder";
+                    }
+                };
+            }
+            return viewOrder;
+        }
 
         public final Bounds getBoundsInParent() {
             return boundsInParentProperty().get();
@@ -8711,6 +8801,22 @@ public abstract class Node implements EventTarget, Styleable {
                     return (StyleableProperty<Number>)node.translateZProperty();
                 }
             };
+         private static final CssMetaData<Node, Number> VIEW_ORDER
+                 = new CssMetaData<Node, Number>("-fx-view-order",
+                         SizeConverter.getInstance(), 0.0) {
+
+                     @Override
+                     public boolean isSettable(Node node) {
+                         return node.miscProperties == null
+                         || node.miscProperties.viewOrder == null
+                         || !node.miscProperties.viewOrder.isBound();
+                     }
+
+                     @Override
+                     public StyleableProperty<Number> getStyleableProperty(Node node) {
+                         return (StyleableProperty<Number>) node.viewOrderProperty();
+                     }
+                 };
         private static final CssMetaData<Node,Boolean> VISIBILITY =
             new CssMetaData<Node,Boolean>("visibility",
                 new StyleConverter<String,Boolean>() {
@@ -8751,6 +8857,7 @@ public abstract class Node implements EventTarget, Styleable {
              styleables.add(SCALE_X);
              styleables.add(SCALE_Y);
              styleables.add(SCALE_Z);
+             styleables.add(VIEW_ORDER);
              styleables.add(TRANSLATE_X);
              styleables.add(TRANSLATE_Y);
              styleables.add(TRANSLATE_Z);
@@ -8993,7 +9100,7 @@ public abstract class Node implements EventTarget, Styleable {
         // for deferred action.
         //
         if (getParent() != null && getParent().isPerformingLayout()) {
-            impl_processCSS(null);
+            impl_processCSS();
         } else {
             notifyParentsOfInvalidatedCSS();
         }
@@ -9091,19 +9198,9 @@ public abstract class Node implements EventTarget, Styleable {
             case REAPPLY:
             case UPDATE:
             default:
-                impl_processCSS(null);
+                impl_processCSS();
         }
     }
-
-    /**
-     * This method simply calls {@link #applyCss()}
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-     @Deprecated
-    public final void impl_processCSS(boolean reapply) {
-         applyCss();
-     }
 
     /**
      * If required, apply styles to this Node and its children, if any. This method does not normally need to
@@ -9197,18 +9294,15 @@ public abstract class Node implements EventTarget, Styleable {
      * overridden, the overriding method must at some point call {@code super.impl_processCSS()} to ensure that
      * this Node's CSS state is properly updated.
      *
-     * Note that the difference between this method and {@link #impl_processCSS(boolean)} is that this method
-     * updates styles for this node on down; whereas, {@code impl_processCSS(boolean)} invokes
-     * {@link #applyCss()} which will look for the top-most ancestor that needs CSS update and apply styles
-     * from that node on down.
-     *
-     * The WritableValue&lt;Boolean&gt; parameter is no longer used.
+     * Note that the difference between this method and {@link #applyCss()} is that this method
+     * updates styles for this node on down; whereas, {@code applyCss()} looks for the top-most ancestor that needs
+     * CSS update and apply styles from that node on down.
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
-    protected void impl_processCSS(WritableValue<Boolean> unused) {
+    protected void impl_processCSS() {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;

@@ -64,7 +64,7 @@ public class LabeledTextTest {
         stage = new Stage();
         stage.setScene(scene = new Scene(label));
         scene.getStylesheets().add(LabeledTextTest.class.getResource("LabeledTextTest.css").toExternalForm());
-        label.impl_processCSS(true);
+        label.applyCss();
         labeledText = LabelSkinBaseShim.getText(label);
     }
 
@@ -72,7 +72,7 @@ public class LabeledTextTest {
     public void testLabeledTextAlignmentStyleAffectsLabeledText() {
 
         label.setStyle("-fx-text-alignment: right;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(TextAlignment.RIGHT, label.getTextAlignment());
         assertEquals(TextAlignment.RIGHT, labeledText.getTextAlignment());
 
@@ -92,7 +92,7 @@ public class LabeledTextTest {
     public void testLabeledFontStyleAffectsLabeledText() {
 
         label.setStyle("-fx-font: 10px Amble;");
-        label.impl_processCSS(true);
+        label.applyCss();
         Font expected = Font.font("Amble", 10);
         assertEquals(expected, label.getFont());
         assertEquals(expected, labeledText.getFont());
@@ -113,7 +113,7 @@ public class LabeledTextTest {
     public void testLabeledTextFillStyleAffectsLabeledText() {
 
         label.setStyle("-fx-text-fill: rgb(255,0,0);");
-        label.impl_processCSS(true);
+        label.applyCss();
         Color expected = Color.rgb(255, 0, 0);
         assertEquals(expected, label.getTextFill());
         assertEquals(expected, labeledText.getFill());
@@ -134,7 +134,7 @@ public class LabeledTextTest {
     public void testLabeledUnderlineStyleAffectsLabeledText() {
 
         label.setStyle("-fx-underline: true;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assert(label.isUnderline() == true);
         assert(labeledText.isUnderline() == true);
 
@@ -143,7 +143,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledBlendModeStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-blend-mode: color-burn;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(BlendMode.COLOR_BURN,label.getBlendMode());
         assertFalse(BlendMode.COLOR_BURN.equals(labeledText.getBlendMode()));
     }
@@ -151,7 +151,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledCursorStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-cursor: crosshair;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(Cursor.CROSSHAIR,label.getCursor());
         assertFalse(Cursor.CROSSHAIR.equals(labeledText.getCursor()));
     }
@@ -159,7 +159,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledEffectStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-effect: dropshadow(one-pass-box, red, 64, .5, 2, 3);");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertNotNull(label.getEffect());
         assertNull(labeledText.getEffect());
     }
@@ -167,7 +167,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledFocusTraversableStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-focus-traversable: true;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assert(label.focusTraversableProperty().get() == true);
         assert(labeledText.focusTraversableProperty().get() == false);
     }
@@ -175,7 +175,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledOpacityStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-opacity: .5;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(label.getOpacity(), .5, .0000001);
         assertEquals(labeledText.getOpacity(), 1, .0000001);
     }
@@ -183,7 +183,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledRotateStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-rotate: 180;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(label.getRotate(), 180, .0000001);
         assertEquals(labeledText.getRotate(), 0, .0000001);
     }
@@ -191,7 +191,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledScaleXStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-scale-x: .5;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(label.getScaleX(), .5, .0000001);
         assertEquals(labeledText.getScaleX(), 1, .0000001);
     }
@@ -199,7 +199,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledScaleYStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-scale-y: .5;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(label.getScaleY(), .5, .0000001);
         assertEquals(labeledText.getScaleY(), 1, .0000001);
     }
@@ -207,7 +207,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledScaleZStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-scale-z: .5;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(label.getScaleZ(), .5, .0000001);
         assertEquals(labeledText.getScaleZ(), 1, .0000001);
     }
@@ -215,7 +215,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTranslateXStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-translate-x: .5;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(label.getTranslateX(), .5, .0000001);
         assertEquals(labeledText.getTranslateX(), 0, .0000001);
     }
@@ -223,7 +223,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTranslateYStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-translate-y: .5;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(label.getTranslateY(), .5, .0000001);
         assertEquals(labeledText.getTranslateY(), 0, .0000001);
     }
@@ -231,7 +231,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledTranslateZStyleDoesNotAffectLabeledText() {
         label.setStyle("-fx-translate-z: .5;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assertEquals(label.getTranslateZ(), .5, .0000001);
         assertEquals(labeledText.getTranslateZ(), 0, .0000001);
     }
@@ -239,7 +239,7 @@ public class LabeledTextTest {
     @Test
     public void testLabeledVisibilityStyleDoesNotAffectLabeledText() {
         label.setStyle("visibility: false;");
-        label.impl_processCSS(true);
+        label.applyCss();
         assert(label.visibleProperty().get() == false);
         assert(labeledText.visibleProperty().get() == true);
     }
@@ -314,7 +314,7 @@ public class LabeledTextTest {
         label.setTextFill(Color.YELLOW);
         stage.setScene(scene = new Scene(label));
         stage.show();
-//        label.impl_processCSS(true);
+//        label.applyCss();
         labeledText = LabelSkinBaseShim.getText(label);
         assertEquals(Color.YELLOW, labeledText.getFill());
     }
@@ -332,7 +332,7 @@ public class LabeledTextTest {
         label.setFont(font);
         stage.setScene(scene = new Scene(label));
         stage.show();
-//        label.impl_processCSS(true);
+//        label.applyCss();
         labeledText = LabelSkinBaseShim.getText(label);
         assertEquals(font, labeledText.getFont());
     }
@@ -349,7 +349,7 @@ public class LabeledTextTest {
         label.setTextAlignment(TextAlignment.JUSTIFY);
         stage.setScene(scene = new Scene(label));
         stage.show();
-//        label.impl_processCSS(true);
+//        label.applyCss();
         labeledText = LabelSkinBaseShim.getText(label);
         assertEquals(TextAlignment.JUSTIFY, labeledText.getTextAlignment());
     }
@@ -366,7 +366,7 @@ public class LabeledTextTest {
         label.setUnderline(true);
         stage.setScene(scene = new Scene(label));
         stage.show();
-//        label.impl_processCSS(true);
+//        label.applyCss();
         labeledText = LabelSkinBaseShim.getText(label);
         assertTrue(labeledText.isUnderline());
     }

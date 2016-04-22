@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -251,7 +251,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     private SoftReference<Transform> inverseCache = null;
 
-    private WeakReferenceQueue impl_nodes = new WeakReferenceQueue();
+    private WeakReferenceQueue nodes = new WeakReferenceQueue();
 
     /* *************************************************************************
      *                                                                         *
@@ -2011,7 +2011,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     @Deprecated
     public void impl_add(final Node node) {
-        impl_nodes.add(node);
+        nodes.add(node);
     }
 
     /**
@@ -2020,7 +2020,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     @Deprecated
     public void impl_remove(final Node node) {
-        impl_nodes.remove(node);
+        nodes.remove(node);
     }
 
     /**
@@ -2032,7 +2032,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     protected void transformChanged() {
         inverseCache = null;
-        final Iterator iterator = impl_nodes.iterator();
+        final Iterator iterator = nodes.iterator();
         while (iterator.hasNext()) {
             ((Node) iterator.next()).impl_transformsChanged();
         }

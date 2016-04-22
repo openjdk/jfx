@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -40,8 +40,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 /**
- * A sample that demonstrates some properties of nodes. Use the radio buttons
- * to send any of the rectangles to the front or back. Use the controls to
+ * A sample that demonstrates some properties of nodes. Use the controls to
  * change opacity or horizontal position.
  *
  * @sampleName Node Properties

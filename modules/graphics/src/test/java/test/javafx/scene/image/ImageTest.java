@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,7 @@ public final class ImageTest {
 
         final Image image = new Image(is);
 
-        assertEquals(is, ImageShim.getImpl_source(image));
+        assertEquals(is, ImageShim.getInputSource(image));
         verifyLoadedImage(image, 0, 0, false, false, 100, 200);
     }
 
@@ -107,7 +107,7 @@ public final class ImageTest {
 
         final Image image = new Image(is, 200, 400, true, true);
 
-        assertEquals(is, ImageShim.getImpl_source(image));
+        assertEquals(is, ImageShim.getInputSource(image));
         verifyLoadedImage(image, 200, 400, true, true, 300, 100);
     }
 

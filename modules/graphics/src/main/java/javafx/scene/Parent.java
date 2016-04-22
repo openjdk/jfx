@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,6 +61,8 @@ import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
+import com.sun.javafx.scene.ParentHelper;
+import java.util.Collections;
 import javafx.stage.Window;
 
 /**
@@ -96,6 +98,18 @@ public abstract class Parent extends Node {
      * but mark whole parent dirty.
      */
     private boolean removedChildrenOptimizationDisabled = false;
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        ParentHelper.setParentAccessor(new ParentHelper.ParentAccessor() {
+
+            @Override
+            public boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result) {
+                return parent.pickChildrenNode(pickRay, result);
+            }
+        });
+    }
 
     /**
      * @treatAsPrivate implementation detail
@@ -138,6 +152,10 @@ public abstract class Parent extends Node {
             }
             pgChildrenSize = children.size();
             startIdx = pgChildrenSize;
+        }
+
+        if (impl_isDirty(DirtyBits.PARENT_CHILDREN_VIEW_ORDER)) {
+            computeViewOrderChidrenAndUpdatePeer();
         }
 
         if (Utils.assertionEnabled()) validatePG();
@@ -195,6 +213,52 @@ public abstract class Parent extends Node {
         System.out.println(str);
     }
 
+    /**
+     * The viewOrderChildren is a list children sorted in decreasing viewOrder
+     * order if it is not empty. Its size should always be equal to
+     * children.size(). If viewOrderChildren is empty it implies that the
+     * rendering order of the children is the same as the order in the children
+     * list.
+     */
+    private final List<Node> viewOrderChildren = new ArrayList(1);
+
+    void markViewOrderChildrenDirty() {
+        impl_markDirty(DirtyBits.PARENT_CHILDREN_VIEW_ORDER);
+    }
+
+    private void computeViewOrderChidrenAndUpdatePeer() {
+        boolean viewOrderSet = false;
+        for (Node child : children) {
+            double vo = child.getViewOrder();
+
+            if (!viewOrderSet && vo != 0) {
+                viewOrderSet = true;
+            }
+        }
+
+        viewOrderChildren.clear();
+        if (viewOrderSet) {
+            viewOrderChildren.addAll(children);
+
+            // Sort in descending order (or big-to-small order)
+            Collections.sort(viewOrderChildren, (Node a, Node b)
+                    -> a.getViewOrder() < b.getViewOrder() ? 1
+                            : a.getViewOrder() == b.getViewOrder() ? 0 : -1);
+        }
+
+        final NGGroup peer = impl_getPeer();
+        peer.setViewOrderChildren(viewOrderChildren);
+    }
+
+    // Call this method if children view order is needed for picking.
+    // The returned list should be treated as read only.
+    private List<Node> getOrderedChildren() {
+        if (!viewOrderChildren.isEmpty()) {
+            return viewOrderChildren;
+        }
+        return children;
+    }
+
     // Variable used to indicate that the change to the children ObservableList is
     // a simple permutation as the result of a toFront or toBack operation.
     // We can avoid almost all of the processing of the on replace trigger in
@@ -231,6 +295,8 @@ public abstract class Parent extends Node {
             // proceed with updating the scene graph
             unmodifiableManagedChildren = null;
             boolean relayout = false;
+            boolean viewOrderChildrenDirty = false;
+
             if (childSetModified) {
                 while (c.next()) {
                     int from = c.getFrom();
@@ -259,9 +325,19 @@ public abstract class Parent extends Node {
                         }
                     }
 
+                    // Mark viewOrderChildrenDirty if there is modification to children list
+                    // and view order was set on one or more of the children prior to this change
+                    if (((removedSize > 0) || (to - from) > 0) && !viewOrderChildren.isEmpty()) {
+                        viewOrderChildrenDirty = true;
+                    }
                     // update the parent and scene for each new node
                     for (int i = from; i < to; ++i) {
                         Node node = children.get(i);
+
+                        // Newly added node has view order set.
+                        if (node.getViewOrder() != 0) {
+                            viewOrderChildrenDirty = true;
+                        }
                         if (node.isManaged() || (node instanceof Parent && ((Parent) node).layoutFlag != LayoutFlags.CLEAN)) {
                             relayout = true;
                         }
@@ -355,6 +431,10 @@ public abstract class Parent extends Node {
             // Force synchronization to include the handling of invisible node
             // so that removed list will get cleanup to prevent memory leak.
             impl_markDirty(DirtyBits.NODE_FORCE_SYNC);
+
+            if (viewOrderChildrenDirty) {
+                impl_markDirty(DirtyBits.PARENT_CHILDREN_VIEW_ORDER);
+            }
         }
 
     }) {
@@ -610,7 +690,7 @@ public abstract class Parent extends Node {
     }
 
     // implementation of Node.toFront function
-    final void impl_toFront(Node node) {
+    final void toFront(Node node) {
         if (Utils.assertionEnabled()) {
             if (!childSet.contains(node)) {
                 throw new java.lang.AssertionError(
@@ -630,7 +710,7 @@ public abstract class Parent extends Node {
     }
 
     // implementation of Node.toBack function
-    final void impl_toBack(Node node) {
+    final void toBack(Node node) {
         if (Utils.assertionEnabled()) {
             if (!childSet.contains(node)) {
                 throw new java.lang.AssertionError(
@@ -695,23 +775,26 @@ public abstract class Parent extends Node {
         }
     }
 
+    boolean pickChildrenNode(PickRay pickRay, PickResultChooser result) {
+        List<Node> orderedChildren = getOrderedChildren();
+        for (int i = orderedChildren.size() - 1; i >= 0; i--) {
+            orderedChildren.get(i).impl_pickNode(pickRay, result);
+            if (result.isClosed()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
+         double boundsDistance = impl_intersectsBounds(pickRay);
 
-        double boundsDistance = impl_intersectsBounds(pickRay);
-
-        if (!Double.isNaN(boundsDistance)) {
-            for (int i = children.size()-1; i >= 0; i--) {
-                children.get(i).impl_pickNode(pickRay, result);
-                if (result.isClosed()) {
-                    return;
-                }
-            }
-
+        if (!Double.isNaN(boundsDistance) && pickChildrenNode(pickRay, result)) {
             if (isPickOnBounds()) {
                 result.offer(this, boundsDistance, PickResultChooser.computePoint(pickRay, boundsDistance));
             }
@@ -1272,7 +1355,7 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_processCSS(WritableValue<Boolean> unused) {
+    @Override protected void impl_processCSS() {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
@@ -1285,7 +1368,7 @@ public abstract class Parent extends Node {
         }
 
         // Let the super implementation handle CSS for this node
-        super.impl_processCSS(unused);
+        super.impl_processCSS();
 
         // avoid the following call to children.toArray if there are no children
         if (children.isEmpty()) return;
@@ -1316,7 +1399,7 @@ public abstract class Parent extends Node {
             if(CssFlags.UPDATE.compareTo(child.cssFlag) > 0) {
                 child.cssFlag = CssFlags.UPDATE;
             }
-            child.impl_processCSS(unused);
+            child.impl_processCSS();
         }
     }
 
@@ -1863,5 +1946,13 @@ public abstract class Parent extends Node {
      */
     List<Node> test_getRemoved() {
         return removed;
+    }
+
+    /**
+     * Note: The only user of this method is in unit test:
+     * Parent_viewOrderChildren_sync_Test.
+     */
+    List<Node> test_getViewOrderChildren() {
+        return viewOrderChildren;
     }
 }

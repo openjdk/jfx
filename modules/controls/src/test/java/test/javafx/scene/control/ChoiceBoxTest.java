@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import javafx.scene.control.Separator;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 
@@ -503,5 +504,31 @@ public class ChoiceBoxTest {
                 model.getSelectedItem());
         box.setSelectionModel(model);
         assertEquals("box value must be same as selected item", items.get(index), box.getValue());
+    }
+
+    @Test public void test_jdk_8988261_selectNext() {
+        ChoiceBox box = new ChoiceBox();
+        box.getItems().setAll("apples", "oranges", new Separator(), "trucks", "diggers");
+
+        SingleSelectionModel sm = box.getSelectionModel();
+        sm.select(1);
+        assertEquals("oranges", sm.getSelectedItem());
+
+        sm.selectNext();
+        assertEquals("selecting next must move over separator", 3, sm.getSelectedIndex());
+        assertEquals("trucks", sm.getSelectedItem());
+    }
+
+    @Test public void test_jdk_8988261_selectPrevious() {
+        ChoiceBox box = new ChoiceBox();
+        box.getItems().setAll("apples", "oranges", new Separator(), "trucks", "diggers");
+
+        SingleSelectionModel sm = box.getSelectionModel();
+        sm.select(3);
+        assertEquals("trucks", sm.getSelectedItem());
+
+        sm.selectPrevious();
+        assertEquals("selecting previous must move over separator", 1, sm.getSelectedIndex());
+        assertEquals("oranges", sm.getSelectedItem());
     }
 }

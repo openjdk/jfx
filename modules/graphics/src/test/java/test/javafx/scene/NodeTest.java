@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -945,6 +945,34 @@ public class NodeTest {
             }
         }
         return true;
+    }
+
+    @Test
+    public void testDefaultValueForViewOrderIsZeroWhenReadFromGetter() {
+        final Node node = new Rectangle();
+        assertEquals(0, node.getViewOrder(), .005);
+    }
+
+    @Test
+    public void testDefaultValueForViewOrderIsZeroWhenReadFromProperty() {
+        final Node node = new Rectangle();
+        assertEquals(0, node.viewOrderProperty().get(), .005);
+    }
+
+    @Test
+    public void settingViewOrderThroughSetterShouldAffectBothGetterAndProperty() {
+        final Node node = new Rectangle();
+        node.setViewOrder(.5);
+        assertEquals(.5, node.getViewOrder(), .005);
+        assertEquals(.5, node.viewOrderProperty().get(), .005);
+    }
+
+    @Test
+    public void settingViewOrderThroughPropertyShouldAffectBothGetterAndProperty() {
+        final Node node = new Rectangle();
+        node.viewOrderProperty().set(.5);
+        assertEquals(.5, node.getViewOrder(), .005);
+        assertEquals(.5, node.viewOrderProperty().get(), .005);
     }
 
     @Test

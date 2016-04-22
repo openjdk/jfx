@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -200,8 +200,9 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
     /**
-     * Subclasses can invoke this method to register that we want to listen to
-     * property change events for the given property.
+     * Subclasses can invoke this method to register that they want to listen to
+     * property change events for the given property. Registered {@link Consumer} instances
+     * will be executed in the order in which they are registered.
      */
     protected final void registerChangeListener(ObservableValue<?> property, Consumer<ObservableValue<?>> consumer) {
         if (lambdaChangeListenerHandler == null) {

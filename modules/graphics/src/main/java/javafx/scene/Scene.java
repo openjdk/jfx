@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -506,7 +506,7 @@ public class Scene implements EventTarget {
      */
     void addToDirtyList(Node n) {
         if (dirtyNodes == null || dirtyNodesSize == 0) {
-            if (impl_peer != null) {
+            if (peer != null) {
                 Toolkit.getToolkit().requestNextPulse();
             }
         }
@@ -556,12 +556,8 @@ public class Scene implements EventTarget {
 
     /**
      * The peer of this scene
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    private TKScene impl_peer;
+    private TKScene peer;
 
     /**
      * Get Scene's peer
@@ -571,7 +567,7 @@ public class Scene implements EventTarget {
      */
     @Deprecated
     public TKScene impl_getPeer() {
-        return impl_peer;
+        return peer;
     }
 
     /**
@@ -796,7 +792,7 @@ public class Scene implements EventTarget {
      */
     @Deprecated
     public void impl_initPeer() {
-        assert impl_peer == null;
+        assert peer == null;
 
         Window window = getWindow();
         // impl_initPeer() is only called from Window, either when the window
@@ -821,16 +817,16 @@ public class Scene implements EventTarget {
         impl_setAllowPGAccess(true);
 
         Toolkit tk = Toolkit.getToolkit();
-        impl_peer = windowPeer.createTKScene(isDepthBufferInternal(), getAntiAliasingInternal(), acc);
+        peer = windowPeer.createTKScene(isDepthBufferInternal(), getAntiAliasingInternal(), acc);
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
-        impl_peer.setTKSceneListener(new ScenePeerListener());
-        impl_peer.setTKScenePaintListener(new ScenePeerPaintListener());
+        peer.setTKSceneListener(new ScenePeerListener());
+        peer.setTKScenePaintListener(new ScenePeerPaintListener());
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
-        impl_peer.setRoot(getRoot().impl_getPeer());
-        impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
+        peer.setRoot(getRoot().impl_getPeer());
+        peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
         getEffectiveCamera().impl_updatePeer();
-        impl_peer.setCamera((NGCamera) getEffectiveCamera().impl_getPeer());
-        impl_peer.markDirty();
+        peer.setCamera((NGCamera) getEffectiveCamera().impl_getPeer());
+        peer.markDirty();
         PerformanceTracker.logEvent("Scene.initPeer TKScene initialized");
 
         impl_setAllowPGAccess(false);
@@ -841,10 +837,10 @@ public class Scene implements EventTarget {
             if (dragGestureListener == null) {
                 dragGestureListener = new DragGestureListener();
             }
-            tk.registerDragGestureListener(impl_peer, EnumSet.allOf(TransferMode.class), dragGestureListener);
+            tk.registerDragGestureListener(peer, EnumSet.allOf(TransferMode.class), dragGestureListener);
         }
-        tk.enableDrop(impl_peer, new DropTargetListener());
-        tk.installInputMethodRequests(impl_peer, new InputMethodRequestsDelegate());
+        tk.enableDrop(peer, new DropTargetListener());
+        tk.installInputMethodRequests(peer, new InputMethodRequestsDelegate());
 
         PerformanceTracker.logEvent("Scene.initPeer finished");
     }
@@ -855,7 +851,7 @@ public class Scene implements EventTarget {
      */
     @Deprecated
     public void impl_disposePeer() {
-        if (impl_peer == null) {
+        if (peer == null) {
             // This is fine, the window is either not shown yet and there is no
             // need in disposing scene peer, or is hidden and impl_disposePeer()
             // has already been called.
@@ -873,8 +869,8 @@ public class Scene implements EventTarget {
             accessible.dispose();
             accessible = null;
         }
-        impl_peer.dispose();
-        impl_peer = null;
+        peer.dispose();
+        peer = null;
 
         PerformanceTracker.logEvent("Scene.disposePeer finished");
     }
@@ -1258,8 +1254,8 @@ public class Scene implements EventTarget {
     }
 
     void setNeedsRepaint() {
-        if (this.impl_peer != null) {
-            impl_peer.entireSceneNeedsRepaint();
+        if (this.peer != null) {
+            peer.entireSceneNeedsRepaint();
         }
     }
 
@@ -1279,14 +1275,14 @@ public class Scene implements EventTarget {
 
         if (!paused) {
             getRoot().updateBounds();
-            if (impl_peer != null) {
-                impl_peer.waitForRenderingToComplete();
-                impl_peer.waitForSynchronization();
+            if (peer != null) {
+                peer.waitForRenderingToComplete();
+                peer.waitForSynchronization();
                 try {
                     // Run the synchronizer while holding the render lock
                     scenePulseListener.synchronizeSceneNodes();
                 } finally {
-                    impl_peer.releaseSynchronization(false);
+                    peer.releaseSynchronization(false);
                 }
             } else {
                 scenePulseListener.synchronizeSceneNodes();
@@ -1367,7 +1363,7 @@ public class Scene implements EventTarget {
         // if this scene belongs to some stage
         // we need to mark the entire scene as dirty
         // because dirty logic is buggy
-        if (scene != null && scene.impl_peer != null) {
+        if (scene != null && scene.peer != null) {
             scene.setNeedsRepaint();
         }
 
@@ -2243,8 +2239,8 @@ public class Scene implements EventTarget {
      */
     @Deprecated
     public void impl_enableInputMethodEvents(boolean enable) {
-       if (impl_peer != null) {
-           impl_peer.enableInputMethodEvents(enable);
+       if (peer != null) {
+           peer.enableInputMethodEvents(enable);
        }
     }
 
@@ -2276,7 +2272,7 @@ public class Scene implements EventTarget {
      */
     private void markDirty(DirtyBits dirtyBit) {
         setDirty(dirtyBit);
-        if (impl_peer != null) {
+        if (peer != null) {
             Toolkit.getToolkit().requestNextPulse();
         }
     }
@@ -2349,10 +2345,10 @@ public class Scene implements EventTarget {
             return;
         }
         inSynchronizer = true;
-        NGLightBase peerLights[] = impl_peer.getLights();
+        NGLightBase peerLights[] = peer.getLights();
         if (!lights.isEmpty() || (peerLights != null)) {
             if (lights.isEmpty()) {
-                impl_peer.setLights(null);
+                peer.setLights(null);
             } else {
                 if (peerLights == null || peerLights.length < lights.size()) {
                     peerLights = new NGLightBase[lights.size()];
@@ -2365,7 +2361,7 @@ public class Scene implements EventTarget {
                 while (i < peerLights.length && peerLights[i] != null) {
                     peerLights[i++] = null;
                 }
-                impl_peer.setLights(peerLights);
+                peer.setLights(peerLights);
             }
         }
         inSynchronizer = false;
@@ -2448,19 +2444,19 @@ public class Scene implements EventTarget {
         private void synchronizeSceneProperties() {
             inSynchronizer = true;
             if (isDirty(DirtyBits.ROOT_DIRTY)) {
-                impl_peer.setRoot(getRoot().impl_getPeer());
+                peer.setRoot(getRoot().impl_getPeer());
             }
 
             if (isDirty(DirtyBits.FILL_DIRTY)) {
                 Toolkit tk = Toolkit.getToolkit();
-                impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
+                peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
             }
 
             // new camera was set on the scene or old camera changed
             final Camera cam = getEffectiveCamera();
             if (isDirty(DirtyBits.CAMERA_DIRTY)) {
                 cam.impl_updatePeer();
-                impl_peer.setCamera((NGCamera) cam.impl_getPeer());
+                peer.setCamera((NGCamera) cam.impl_getPeer());
             }
 
             if (isDirty(DirtyBits.CURSOR_DIRTY)) {
@@ -2539,13 +2535,13 @@ public class Scene implements EventTarget {
                     PulseLogger.newPhase("Update bounds");
                 }
                 getRoot().updateBounds();
-                if (impl_peer != null) {
+                if (peer != null) {
                     try {
                         if (PULSE_LOGGING_ENABLED) {
                             PulseLogger.newPhase("Waiting for previous rendering");
                         }
-                        impl_peer.waitForRenderingToComplete();
-                        impl_peer.waitForSynchronization();
+                        peer.waitForRenderingToComplete();
+                        peer.waitForSynchronization();
                         // synchronize scene properties
                         if (PULSE_LOGGING_ENABLED) {
                             PulseLogger.newPhase("Copy state to render graph");
@@ -2556,9 +2552,9 @@ public class Scene implements EventTarget {
                         synchronizeSceneNodes();
                         Scene.this.mouseHandler.pulse();
                         // Tell the scene peer that it needs to repaint
-                        impl_peer.markDirty();
+                        peer.markDirty();
                     } finally {
-                        impl_peer.releaseSynchronization(true);
+                        peer.releaseSynchronization(true);
                     }
                 } else {
                     if (PULSE_LOGGING_ENABLED) {
@@ -3087,7 +3083,7 @@ public class Scene implements EventTarget {
             final boolean hasContent = (dragboard != null) && (dragboard.impl_contentPut());
             if (hasContent) {
                 /* start DnD */
-                Toolkit.getToolkit().startDrag(Scene.this.impl_peer,
+                Toolkit.getToolkit().startDrag(Scene.this.peer,
                                                 sourceTransferModes,
                                                 new DragSourceListener(),
                                                 dragboard);
@@ -3422,7 +3418,7 @@ public class Scene implements EventTarget {
                     return dragboard;
                 }
             }
-            TKClipboard dragboardPeer = impl_peer.createDragboard(isDragSource);
+            TKClipboard dragboardPeer = peer.createDragboard(isDragSource);
             return Dragboard.impl_createDragboard(dragboardPeer);
         }
     }
@@ -3654,7 +3650,7 @@ public class Scene implements EventTarget {
             public void run() {
                 // Make sure this is run only if the peer is still alive
                 // and there is an event to deliver
-                if (Scene.this.impl_peer != null && lastEvent != null) {
+                if (Scene.this.peer != null && lastEvent != null) {
                     process(lastEvent, true);
                 }
             }
@@ -4023,8 +4019,8 @@ public class Scene implements EventTarget {
                            ? currCursor.getCurrentFrame()
                            : Cursor.DEFAULT.getCurrentFrame();
             if (currCursorFrame != newCursorFrame) {
-                if (Scene.this.impl_peer != null) {
-                    Scene.this.impl_peer.setCursor(newCursorFrame);
+                if (Scene.this.peer != null) {
+                    Scene.this.peer.setCursor(newCursorFrame);
                 }
 
                 currCursorFrame = newCursorFrame;
@@ -6457,7 +6453,7 @@ public class Scene implements EventTarget {
          * it still being used by the AT client and trying
          * to reach to the top level window.
          */
-        if (impl_peer == null) return null;
+        if (peer == null) return null;
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {

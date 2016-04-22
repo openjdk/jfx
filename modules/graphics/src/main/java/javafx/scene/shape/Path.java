@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -215,7 +215,7 @@ public class Path extends Shape {
                 }
             }
             if (firstElementChanged) {
-                isPathValid = impl_isFirstPathElementValid();
+                isPathValid = isFirstPathElementValid();
             }
 
             impl_markDirty(DirtyBits.NODE_CONTENTS);
@@ -272,7 +272,7 @@ public class Path extends Shape {
        return new BoundingBox(0, 0, -1, -1); //create empty bounds
     }
 
-    private boolean impl_isFirstPathElementValid() {
+    private boolean isFirstPathElementValid() {
         ObservableList<PathElement> _elements = getElements();
         if (_elements != null && _elements.size() > 0) {
             PathElement firstElement = _elements.get(0);

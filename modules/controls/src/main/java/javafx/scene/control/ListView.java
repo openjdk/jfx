@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1108,6 +1108,7 @@ public class ListView<T> extends Control {
     public static class EditEvent<T> extends Event {
         private final T newValue;
         private final int editIndex;
+        private final ListView<T> source;
 
         private static final long serialVersionUID = 20130724L;
 
@@ -1127,6 +1128,7 @@ public class ListView<T> extends Control {
                          T newValue,
                          int editIndex) {
             super(source, Event.NULL_SOURCE_TARGET, eventType);
+            this.source = source;
             this.editIndex = editIndex;
             this.newValue = newValue;
         }
@@ -1135,7 +1137,7 @@ public class ListView<T> extends Control {
          * Returns the ListView upon which the edit took place.
          */
         @Override public ListView<T> getSource() {
-            return (ListView<T>) super.getSource();
+            return source;
         }
 
         /**
@@ -1216,6 +1218,8 @@ public class ListView<T> extends Control {
             @Override public void onChanged(Change<? extends T> c) {
                 updateItemCount();
 
+                boolean doSelectionUpdate = true;
+
                 while (c.next()) {
                     final T selectedItem = getSelectedItem();
                     final int selectedIndex = getSelectedIndex();
@@ -1228,6 +1232,7 @@ public class ListView<T> extends Control {
                         int newIndex = listView.getItems().indexOf(selectedItem);
                         if (newIndex != -1) {
                             setSelectedIndex(newIndex);
+                            doSelectionUpdate = false;
                         }
                     } else if (c.wasRemoved() &&
                             c.getRemovedSize() == 1 &&
@@ -1248,7 +1253,9 @@ public class ListView<T> extends Control {
                     }
                 }
 
-                updateSelection(c);
+                if (doSelectionUpdate) {
+                    updateSelection(c);
+                }
             }
         };
 

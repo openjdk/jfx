@@ -127,7 +127,7 @@ public class TextInputControlTest {
     @Test public void fontSetFromCSS() {
         textInput.setStyle("-fx-font: 24 Helvetica");
         Scene s = new Scene(textInput);
-        textInput.impl_processCSS(true);
+        textInput.applyCss();
         assertEquals(Font.font("Helvetica", 24), textInput.getFont());
     }
 

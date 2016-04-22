@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -622,8 +622,6 @@ static void setAndClearRelativeAlphas(AlphaConsumer *pAC,
 {
 //    System.out.println("setting row "+(pix_y - y)+
 //                       " out of "+width+" x "+height);
-    (void) pix_from;
-    (void) pix_to;
     jint w = pAC->width;
     jint off = (pix_y - pAC->originY) * w;
     jbyte *out = pAC->alphas;
