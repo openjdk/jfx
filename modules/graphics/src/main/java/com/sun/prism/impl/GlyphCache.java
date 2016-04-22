@@ -143,6 +143,7 @@ public class GlyphCache {
                 continue;
             }
             pt.setLocation(x + gl.getPosX(gi), y + gl.getPosY(gi));
+            xform.transform(pt, pt);
             int subPixel = strike.getQuantizedPosition(pt);
             GlyphData data = getCachedGlyph(gc, subPixel);
             if (data != null) {
@@ -168,7 +169,6 @@ public class GlyphCache {
                         }
                     }
                 }
-                xform.transform(pt, pt);
                 addDataToQuad(data, vb, tex, pt.x, pt.y, dstw, dsth);
             }
         }
