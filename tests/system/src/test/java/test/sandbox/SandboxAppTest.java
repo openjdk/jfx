@@ -111,8 +111,6 @@ public class SandboxAppTest {
 
     @Test (timeout=15000)
     public void testJFXPanelApp() throws Exception {
-        // TODO: re-enable this when 8139317 is fixed
-        assumeTrue(!PlatformUtil.isMac());
         runSandboxedApp("JFXPanelApp");
     }
 
