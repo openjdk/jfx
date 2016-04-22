@@ -24,6 +24,7 @@
  */
 
 exports jdk.internal.misc to javafx.graphics;
+exports jdk.internal.ref to javafx.media;
 exports sun.net.www to javafx.web;
 exports sun.nio.ch to javafx.media;
 exports sun.reflect.misc to javafx.base;
