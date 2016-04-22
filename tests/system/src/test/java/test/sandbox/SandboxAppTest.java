@@ -116,8 +116,6 @@ public class SandboxAppTest {
 
     @Test (timeout=15000)
     public void testJFXPanelImplicitExitApp() throws Exception {
-        // Test skipped on Mac OS X due to JDK bug 8037776
-        assumeTrue(!PlatformUtil.isMac());
         runSandboxedApp("JFXPanelImplicitExitApp", 0);
     }
 
