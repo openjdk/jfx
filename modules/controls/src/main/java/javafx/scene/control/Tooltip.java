@@ -40,6 +40,7 @@ import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
 import javafx.css.converter.StringConverter;
+import javafx.css.converter.DurationConverter;
 import javafx.scene.control.skin.TooltipSkin;
 
 import java.util.ArrayList;
@@ -121,8 +122,7 @@ public class Tooltip extends PopupControl {
     private static int TOOLTIP_XOFFSET = 10;
     private static int TOOLTIP_YOFFSET = 7;
 
-    private static TooltipBehavior BEHAVIOR = new TooltipBehavior(
-        new Duration(1000), new Duration(5000), new Duration(200), false);
+    private static TooltipBehavior BEHAVIOR = new TooltipBehavior(false);
 
     /**
      * Associates the given {@link Tooltip} with the given {@link Node}. The tooltip
@@ -309,6 +309,69 @@ public class Tooltip extends PopupControl {
             return "font";
         }
     };
+
+
+    /**
+     * The delay between the mouse entering the hovered node and when the associated tooltip will be shown to the user.
+     * The default delay is 1000ms.
+     *
+     * @since 9
+     * @defaultvalue 1000ms
+     */
+    public final ObjectProperty<Duration> showDelayProperty() {
+        return showDelayProperty;
+    }
+    public final void setShowDelay(Duration showDelay) {
+        showDelayProperty.set(showDelay);
+    }
+    public final Duration getShowDelay() {
+        return showDelayProperty.get();
+    }
+    private final ObjectProperty<Duration> showDelayProperty
+            = new SimpleStyleableObjectProperty<>(SHOW_DELAY, this, "showDelay", new Duration(1000));
+
+
+    /**
+     * The duration that the tooltip should remain showing for until it is no longer visible to the user.
+     * If the mouse leaves the control before the showDuration finishes, then the tooltip will remain showing
+     * for the duration specified in the {@link #hideDelayProperty()}, even if the remaining time of the showDuration
+     * is less than the hideDelay duration. The default value is 5000ms.
+     *
+     * @since 9
+     * @defaultvalue 5000ms
+     */
+    public final ObjectProperty<Duration> showDurationProperty() {
+        return showDurationProperty;
+    }
+    public final void setShowDuration(Duration showDuration) {
+        showDurationProperty.set(showDuration);
+    }
+    public final Duration getShowDuration() {
+        return showDurationProperty.get();
+    }
+    private final ObjectProperty<Duration> showDurationProperty
+            = new SimpleStyleableObjectProperty<>(SHOW_DURATION, this, "showDuration", new Duration(5000));
+
+
+    /**
+     * The duration in which to continue showing the tooltip after the mouse has left the node. Once this time has
+     * elapsed the tooltip will hide. The default value is 200ms.
+     *
+     * @since 9
+     * @defaultvalue 200ms
+     */
+    public final ObjectProperty<Duration> hideDelayProperty() {
+        return hideDelayProperty;
+    }
+    public final void setHideDelay(Duration hideDelay) {
+        hideDelayProperty.set(hideDelay);
+    }
+    public final Duration getHideDelay() {
+        return hideDelayProperty.get();
+    }
+    private final ObjectProperty<Duration> hideDelayProperty
+            = new SimpleStyleableObjectProperty<>(HIDE_DELAY, this, "hideDelay", new Duration(200));
+
 
     /**
      * An optional icon for the Tooltip. This can be positioned relative to the
@@ -613,6 +676,52 @@ public class Tooltip extends PopupControl {
                 }
             };
 
+    private static final CssMetaData<Tooltip.CSSBridge,Duration> SHOW_DELAY =
+            new CssMetaData<Tooltip.CSSBridge,Duration>("-fx-show-delay",
+                    DurationConverter.getInstance(), new Duration(1000)) {
+
+                @Override
+                public boolean isSettable(Tooltip.CSSBridge cssBridge) {
+                    return !cssBridge.tooltip.showDelayProperty().isBound();
+                }
+
+                @Override
+                public StyleableProperty<Duration> getStyleableProperty(Tooltip.CSSBridge cssBridge) {
+                    return (StyleableProperty<Duration>)(WritableValue<Duration>)cssBridge.tooltip.showDelayProperty();
+                }
+            };
+
+    private static final CssMetaData<Tooltip.CSSBridge,Duration> SHOW_DURATION =
+            new CssMetaData<Tooltip.CSSBridge,Duration>("-fx-show-duration",
+                    DurationConverter.getInstance(), new Duration(5000)) {
+
+                @Override
+                public boolean isSettable(Tooltip.CSSBridge cssBridge) {
+                    return !cssBridge.tooltip.showDurationProperty().isBound();
+                }
+
+                @Override
+                public StyleableProperty<Duration> getStyleableProperty(Tooltip.CSSBridge cssBridge) {
+                    return (StyleableProperty<Duration>)(WritableValue<Duration>)cssBridge.tooltip.showDurationProperty();
+                }
+            };
+
+    private static final CssMetaData<Tooltip.CSSBridge,Duration> HIDE_DELAY =
+            new CssMetaData<Tooltip.CSSBridge,Duration>("-fx-hide-delay",
+                    DurationConverter.getInstance(), new Duration(200)) {
+
+                @Override
+                public boolean isSettable(Tooltip.CSSBridge cssBridge) {
+                    return !cssBridge.tooltip.hideDelayProperty().isBound();
+                }
+
+                @Override
+                public StyleableProperty<Duration> getStyleableProperty(Tooltip.CSSBridge cssBridge) {
+                    return (StyleableProperty<Duration>)(WritableValue<Duration>)cssBridge.tooltip.hideDelayProperty();
+                }
+            };
+
+
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
     static {
         final List<CssMetaData<? extends Styleable, ?>> styleables =
@@ -624,6 +733,9 @@ public class Tooltip extends PopupControl {
         styleables.add(GRAPHIC);
         styleables.add(CONTENT_DISPLAY);
         styleables.add(GRAPHIC_TEXT_GAP);
+        styleables.add(SHOW_DELAY);
+        styleables.add(SHOW_DURATION);
+        styleables.add(HIDE_DELAY);
         STYLEABLES = Collections.unmodifiableList(styleables);
     }
 
@@ -735,11 +847,11 @@ public class Tooltip extends PopupControl {
         private double lastMouseY;
 
         private boolean hideOnExit;
+        private boolean cssForced = false;
 
-        TooltipBehavior(Duration openDelay, Duration visibleDuration, Duration closeDelay, final boolean hideOnExit) {
+        TooltipBehavior(final boolean hideOnExit) {
             this.hideOnExit = hideOnExit;
 
-            activationTimer.getKeyFrames().add(new KeyFrame(openDelay));
             activationTimer.setOnFinished(event -> {
                 // Show the currently activated tooltip and start the
                 // HIDE_TIMER.
@@ -791,6 +903,9 @@ public class Tooltip extends PopupControl {
 
                     visibleTooltip = activatedTooltip;
                     hoveredNode = null;
+                    if (activatedTooltip.getShowDuration() != null) {
+                        hideTimer.getKeyFrames().setAll(new KeyFrame(activatedTooltip.getShowDuration()));
+                    }
                     hideTimer.playFromStart();
                 }
 
@@ -801,7 +916,6 @@ public class Tooltip extends PopupControl {
                 activatedTooltip = null;
             });
 
-            hideTimer.getKeyFrames().add(new KeyFrame(visibleDuration));
             hideTimer.setOnFinished(event -> {
                 // Hide the currently visible tooltip.
                 assert visibleTooltip != null;
@@ -810,7 +924,6 @@ public class Tooltip extends PopupControl {
                 hoveredNode = null;
             });
 
-            leftTimer.getKeyFrames().add(new KeyFrame(closeDelay));
             leftTimer.setOnFinished(event -> {
                 if (!hideOnExit) {
                     // Hide the currently visible tooltip.
@@ -866,13 +979,30 @@ public class Tooltip extends PopupControl {
                         t.show(owner, event.getScreenX()+TOOLTIP_XOFFSET,
                                 event.getScreenY()+TOOLTIP_YOFFSET);
                         leftTimer.stop();
+                        if (t.getShowDuration() != null) {
+                            hideTimer.getKeyFrames().setAll(new KeyFrame(t.getShowDuration()));
+                        }
                         hideTimer.playFromStart();
                     } else {
+                        // Force the CSS to be processed for the tooltip so that it uses the
+                        // appropriate timings for showDelay, showDuration, and hideDelay.
+                        if (!cssForced) {
+                            double opacity = t.getOpacity();
+                            t.setOpacity(0);
+                            t.show(owner);
+                            t.hide();
+                            t.setOpacity(opacity);
+                            cssForced = true;
+                        }
+
                         // Start / restart the timer and make sure the tooltip
                         // is marked as activated.
                         t.setActivated(true);
                         activatedTooltip = t;
                         activationTimer.stop();
+                        if (t.getShowDelay() != null) {
+                            activationTimer.getKeyFrames().setAll(new KeyFrame(t.getShowDelay()));
+                        }
                         activationTimer.playFromStart();
                     }
                 }
@@ -894,7 +1024,14 @@ public class Tooltip extends PopupControl {
                 assert visibleTooltip != null;
                 hideTimer.stop();
                 if (hideOnExit) visibleTooltip.hide();
-                leftTimer.playFromStart();
+                Node source = (Node) event.getSource();
+                Tooltip t = (Tooltip) source.getProperties().get(TOOLTIP_PROP_KEY);
+                if (t != null) {
+                    if (t.getHideDelay() != null) {
+                        leftTimer.getKeyFrames().setAll(new KeyFrame(t.getHideDelay()));
+                    }
+                    leftTimer.playFromStart();
+                }
             }
 
             hoveredNode = null;
