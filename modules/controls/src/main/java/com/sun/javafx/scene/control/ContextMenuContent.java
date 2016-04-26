@@ -70,6 +70,8 @@ import java.util.List;
  */
 public class ContextMenuContent extends Region {
 
+    private static final String ITEM_STYLE_CLASS_LISTENER = "itemStyleClassListener";
+
     private ContextMenu contextMenu;
 
     /***************************************************************************
@@ -100,6 +102,7 @@ public class ContextMenuContent extends Region {
     };
     private WeakInvalidationListener weakPopupShowingListener =
             new WeakInvalidationListener(popupShowingListener);
+
 
     /***************************************************************************
      * Constructors
@@ -1212,7 +1215,11 @@ public class ContextMenuContent extends Region {
                 ((Label)label).textProperty().unbind();
                 label.styleProperty().unbind();
                 label.idProperty().unbind();
-                Bindings.unbindContent(label.getStyleClass(), item.getStyleClass());
+
+                ListChangeListener<String> itemStyleClassListener = (ListChangeListener<String>)item.getProperties().remove(ITEM_STYLE_CLASS_LISTENER);
+                if (itemStyleClassListener != null) {
+                    item.getStyleClass().removeListener(itemStyleClassListener);
+                }
             }
 
             left = null;
@@ -1266,7 +1273,21 @@ public class ContextMenuContent extends Region {
                 ((Label)label).textProperty().bind(item.textProperty());
                 label.styleProperty().bind(item.styleProperty());
                 label.idProperty().bind(item.styleProperty());
-                Bindings.bindContent(label.getStyleClass(), item.getStyleClass());
+
+                // we want to ensure that any styleclasses set on the menuitem are applied to the
+                // label (so we can style appropriately), but we can't just do a binding such as this:
+                // Bindings.bindContent(label.getStyleClass(), item.getStyleClass());
+                // Because that means we overwrite the 'label' style class on the Label.
+                // What we really want is to ensure all style classes in the MenuItem are _copied_
+                // into the label, which is what we do below
+                ListChangeListener<String> itemStyleClassListener = c -> {
+                    while (c.next()) {
+                        label.getStyleClass().removeAll(c.getRemoved());
+                        label.getStyleClass().addAll(c.getAddedSubList());
+                    }
+                };
+                item.getStyleClass().addListener(itemStyleClassListener);
+                item.getProperties().put(ITEM_STYLE_CLASS_LISTENER, itemStyleClassListener);
 
 
                 label.setMouseTransparent(true);
