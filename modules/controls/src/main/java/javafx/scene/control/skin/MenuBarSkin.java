@@ -145,10 +145,10 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     private ListChangeListener<MenuItem> menuItemListener = (c) -> {
         while (c.next()) {
             for (MenuItem mi : c.getAddedSubList()) {
-                mi.addEventHandler(ActionEvent.ACTION, menuActionEventHandler);
+                updateActionListeners(mi, true);
             }
             for (MenuItem mi: c.getRemoved()) {
-                mi.removeEventHandler(ActionEvent.ACTION, menuActionEventHandler);
+                updateActionListeners(mi, false);
             }
         }
     };
@@ -189,8 +189,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     /**
      * Creates a new MenuBarSkin instance, installing the necessary child
      * nodes into the Control {@link Control#getChildren() children} list, as
-     * well as the necessary {@link Node#getInputMap() input mappings} for
-     * handling key, mouse, etc events.
+     * well as the necessary input mappings for handling key, mouse, etc events.
      *
      * @param control The control that this skin should be installed onto.
      */
@@ -724,21 +723,24 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         return -1;
     }
 
-    private void updateActionListeners(Menu m, boolean add) {
-        if (add) {
-            m.getItems().addListener(menuItemListener);
-        } else {
-            m.getItems().removeListener(menuItemListener);
-        }
-        for (MenuItem mi : m.getItems()) {
-            if (mi instanceof Menu) {
-                updateActionListeners((Menu)mi, add);
+    private void updateActionListeners(MenuItem item, boolean add) {
+        if (item instanceof Menu) {
+            Menu menu = (Menu) item;
+
+            if (add) {
+                menu.getItems().addListener(menuItemListener);
             } else {
-                if (add) {
-                    mi.addEventHandler(ActionEvent.ACTION, menuActionEventHandler);
-                } else {
-                    mi.removeEventHandler(ActionEvent.ACTION, menuActionEventHandler);
-                }
+                menu.getItems().removeListener(menuItemListener);
+            }
+
+            for (MenuItem mi : menu.getItems()) {
+                updateActionListeners(mi, add);
+            }
+        } else {
+            if (add) {
+                item.addEventHandler(ActionEvent.ACTION, menuActionEventHandler);
+            } else {
+                item.removeEventHandler(ActionEvent.ACTION, menuActionEventHandler);
             }
         }
     }
