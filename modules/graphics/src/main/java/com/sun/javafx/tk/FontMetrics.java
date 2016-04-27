@@ -147,11 +147,11 @@ public class FontMetrics {
     }
 
     /**
-     * Computes the width of the String when rendered with the font represented
+     * Computes the width of the char when rendered with the font represented
      * by this FontMetrics instance.
      */
-    public float computeStringWidth(String string) {
-        return Toolkit.getToolkit().getFontLoader().computeStringWidth(string, getFont());
+    public float getCharWidth(char ch) {
+        return Toolkit.getToolkit().getFontLoader().getCharWidth(ch, getFont());
     }
 
     @Override public String toString() {

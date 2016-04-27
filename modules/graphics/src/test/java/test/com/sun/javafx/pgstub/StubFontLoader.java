@@ -182,10 +182,10 @@ public class StubFontLoader extends FontLoader {
     }
 
     @Override
-    public float computeStringWidth(String s, Font f) {
+    public float getCharWidth(char ch, Font f) {
         // Assume that the font glyph size == font point size, mono-spaced
         // TODO needs to make sense given getFontMetrics implementation
-        return (float) (f.getSize() * s.length());
+        return (float) (f.getSize());
     }
 
     @Override
