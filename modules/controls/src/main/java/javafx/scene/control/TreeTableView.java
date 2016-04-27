@@ -3397,7 +3397,7 @@ public class TreeTableView<S> extends Control {
                                 TreeItem<S> item = e.getAddedChildren().get(i);
                                 row = treeTableView.getRow(item);
 
-                                if (item != null && row <= getFocusedIndex()) {
+                                if (item != null && row <= (shift+getFocusedIndex())) {
                                     shift += item.getExpandedDescendentCount(false);
                                 }
                             }
