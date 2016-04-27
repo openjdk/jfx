@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.CustomColorDialog;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.traversal.Algorithm;
@@ -262,7 +263,7 @@ class ColorPalette extends Region {
             }
         });
 
-        setImpl_traversalEngine(new ParentTraversalEngine(this, new Algorithm() {
+        ParentHelper.setTraversalEngine(this, new ParentTraversalEngine(this, new Algorithm() {
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
                 final Node subsequentNode = context.selectInSubtree(context.getRoot(), owner, dir);

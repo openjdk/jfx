@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.effect;
 
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.DisplacementMap;
 import javafx.scene.effect.FloatMap;
@@ -53,7 +54,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         effect.setOffsetX(1.0f);
         assertEquals(1.0f, effect.getOffsetX(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getOffsetX(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getOffsetX(), 1e-100);
     }
 
     @Test
@@ -62,7 +63,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(0f, effect.getOffsetX(), 1e-100);
         assertEquals(0f, effect.offsetXProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getOffsetX(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getOffsetX(), 1e-100);
     }
 
     @Test
@@ -71,7 +72,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         effect.setOffsetY(1.0f);
         assertEquals(1.0f, effect.getOffsetY(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getOffsetY(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getOffsetY(), 1e-100);
     }
 
     @Test
@@ -80,7 +81,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(0f, effect.getOffsetY(), 1e-100);
         assertEquals(0f, effect.offsetYProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getOffsetY(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getOffsetY(), 1e-100);
     }
 
     @Test
@@ -89,7 +90,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         effect.setScaleX(1.1f);
         assertEquals(1.1f, effect.getScaleX(), 1e-100);
         pulse();
-        assertEquals(1.1f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getScaleX(), 1e-100);
+        assertEquals(1.1f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getScaleX(), 1e-100);
     }
 
     @Test
@@ -98,7 +99,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(1f, effect.getScaleX(), 1e-100);
         assertEquals(1f, effect.scaleXProperty().get(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getScaleX(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getScaleX(), 1e-100);
     }
 
     @Test
@@ -107,7 +108,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         effect.setScaleY(1.1f);
         assertEquals(1.1f, effect.getScaleY(), 1e-100);
         pulse();
-        assertEquals(1.1f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getScaleY(), 1e-100);
+        assertEquals(1.1f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getScaleY(), 1e-100);
     }
 
     @Test
@@ -116,7 +117,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(1f, effect.getScaleY(), 1e-100);
         assertEquals(1f, effect.scaleYProperty().get(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getScaleY(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getScaleY(), 1e-100);
     }
 
     @Test
@@ -125,7 +126,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         effect.setWrap(true);
         assertTrue(effect.isWrap());
         pulse();
-        assertTrue(((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getWrap());
+        assertTrue(((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getWrap());
     }
 
     @Test
@@ -134,7 +135,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertFalse(effect.isWrap());
         assertFalse(effect.wrapProperty().get());
         pulse();
-        assertFalse(((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getWrap());
+        assertFalse(((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getWrap());
     }
 
     private FloatMap createFloatMap(int width, int height) {
@@ -167,7 +168,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(h, map.getHeight());
         pulse();
         com.sun.scenario.effect.FloatMap mapImpl =
-                ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getMapData();
+                ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getMapData();
         assertNotNull(mapImpl);
         assertEquals(w, mapImpl.getWidth());
         assertEquals(h, mapImpl.getHeight());
@@ -182,7 +183,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(1, map.getHeight());
         pulse();
         com.sun.scenario.effect.FloatMap mapImpl =
-                ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getMapData();
+                ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getMapData();
         assertNotNull(mapImpl);
         assertEquals(1, mapImpl.getWidth());
         assertEquals(1, mapImpl.getHeight());
@@ -203,7 +204,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertNull(effect.getMapData());
         pulse();
         com.sun.scenario.effect.FloatMap mapImpl =
-                ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getMapData();
+                ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getMapData();
         assertNotNull(mapImpl);
         assertEquals(1, mapImpl.getWidth());
         assertEquals(1, mapImpl.getHeight());
@@ -250,7 +251,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.DisplacementMap", "input",
                 "com.sun.scenario.effect.DisplacementMap", "contentInput",
-                blur, (com.sun.scenario.effect.BoxBlur)blur.impl_getImpl());
+                blur, (com.sun.scenario.effect.BoxBlur) EffectHelper.getPeer(blur));
     }
 
     @Test
@@ -277,7 +278,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(map, effect.getMapData());
         pulse();
         com.sun.scenario.effect.FloatMap mapImpl =
-                ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getMapData();
+                ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getMapData();
         assertNotNull(mapImpl);
         assertEquals(w, mapImpl.getWidth());
         assertEquals(h, mapImpl.getHeight());
@@ -297,12 +298,12 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(4, effect.getScaleY(), 1e-100);
         assertEquals(map, effect.getMapData());
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getOffsetX(), 1e-100);
-        assertEquals(2f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getOffsetY(), 1e-100);
-        assertEquals(3f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getScaleX(), 1e-100);
-        assertEquals(4f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getScaleY(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getOffsetX(), 1e-100);
+        assertEquals(2f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getOffsetY(), 1e-100);
+        assertEquals(3f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getScaleX(), 1e-100);
+        assertEquals(4f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getScaleY(), 1e-100);
         com.sun.scenario.effect.FloatMap mapImpl =
-                ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getMapData();
+                ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getMapData();
         assertNotNull(mapImpl);
         assertEquals(w, mapImpl.getWidth());
         assertEquals(h, mapImpl.getHeight());
@@ -319,7 +320,7 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(map, effect.getMapData());
         pulse();
         com.sun.scenario.effect.FloatMap mapImpl =
-                ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getMapData();
+                ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getMapData();
         assertNotNull(mapImpl);
         assertEquals(w, mapImpl.getWidth());
         assertEquals(h, mapImpl.getHeight());
@@ -339,12 +340,12 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(1, effect.getScaleY(), 1e-100);
         assertEquals(map, effect.getMapData());
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getOffsetX(), 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getOffsetY(), 1e-100);
-        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getScaleX(), 1e-100);
-        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getScaleY(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getOffsetX(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getOffsetY(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getScaleX(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getScaleY(), 1e-100);
         com.sun.scenario.effect.FloatMap mapImpl =
-                ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getMapData();
+                ((com.sun.scenario.effect.DisplacementMap) EffectHelper.getPeer(effect)).getMapData();
         assertNotNull(mapImpl);
         assertEquals(w, mapImpl.getWidth());
         assertEquals(h, mapImpl.getHeight());

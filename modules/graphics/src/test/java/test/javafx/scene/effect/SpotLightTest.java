@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(1.0f, effect.getPointsAtX(), 1e-100);
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getPointsAtX(), 1e-100);
+                LightShim.getPeer(effect)).getPointsAtX(), 1e-100);
     }
 
     @Test
@@ -67,7 +67,7 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(0f, effect.pointsAtXProperty().get(), 1e-100);
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getPointsAtX(), 1e-100);
+                LightShim.getPeer(effect)).getPointsAtX(), 1e-100);
     }
 
     @Test
@@ -77,7 +77,7 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(1.0f, effect.getPointsAtY(), 1e-100);
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getPointsAtY(), 1e-100);
+                LightShim.getPeer(effect)).getPointsAtY(), 1e-100);
     }
 
     @Test
@@ -87,7 +87,7 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(0f, effect.pointsAtYProperty().get(), 1e-100);
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getPointsAtY(), 1e-100);
+                LightShim.getPeer(effect)).getPointsAtY(), 1e-100);
     }
 
     @Test
@@ -97,7 +97,7 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(1.0f, effect.getPointsAtZ(), 1e-100);
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getPointsAtZ(), 1e-100);
+                LightShim.getPeer(effect)).getPointsAtZ(), 1e-100);
     }
 
     @Test
@@ -107,7 +107,7 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(0f, effect.pointsAtZProperty().get(), 1e-100);
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getPointsAtZ(), 1e-100);
+                LightShim.getPeer(effect)).getPointsAtZ(), 1e-100);
     }
 
     @Test
@@ -117,7 +117,7 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(1.1f, effect.getSpecularExponent(), 1e-100);
         pulse();
         assertEquals(1.1f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                LightShim.getPeer(effect)).getSpecularExponent(), 1e-100);
     }
 
     @Test
@@ -127,7 +127,7 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(1f, effect.specularExponentProperty().get(), 1e-100);
         pulse();
         assertEquals(1f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                LightShim.getPeer(effect)).getSpecularExponent(), 1e-100);
     }
 
     @Test
@@ -139,7 +139,7 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(-0.1f, effect.getSpecularExponent(), 1e-100);
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                LightShim.getPeer(effect)).getSpecularExponent(), 1e-100);
     }
 
     @Test
@@ -151,13 +151,13 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(4.1f, effect.getSpecularExponent(), 1e-100);
         pulse();
         assertEquals(4f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                LightShim.getPeer(effect)).getSpecularExponent(), 1e-100);
     }
 
     @Test
     public void testPointsAtXSynced() throws Exception {
         checkDoublePropertySynced(
-                effect, LightShim.impl_getImpl(effect),
+                effect, LightShim.getPeer(effect),
                 "javafx.scene.effect.Light$Spot", "pointsAtX",
                 "com.sun.scenario.effect.light.SpotLight", "pointsAtX", 0.3);
     }
@@ -165,7 +165,7 @@ public class SpotLightTest extends LightTestBase {
     @Test
     public void testPointsAtYSynced() throws Exception {
         checkDoublePropertySynced(
-                effect, LightShim.impl_getImpl(effect),
+                effect, LightShim.getPeer(effect),
                 "javafx.scene.effect.Light$Spot", "pointsAtY",
                 "com.sun.scenario.effect.light.SpotLight", "pointsAtY", 0.3);
     }
@@ -173,7 +173,7 @@ public class SpotLightTest extends LightTestBase {
     @Test
     public void testSpecularExponentSynced() throws Exception {
         checkDoublePropertySynced(
-                effect, LightShim.impl_getImpl(effect),
+                effect, LightShim.getPeer(effect),
                 "javafx.scene.effect.Light$Spot", "specularExponent",
                 "com.sun.scenario.effect.light.SpotLight", "specularExponent", 0.3);
     }
@@ -181,7 +181,7 @@ public class SpotLightTest extends LightTestBase {
     @Test
     public void testPointsAtZSynced() throws Exception {
         checkDoublePropertySynced(
-                effect, LightShim.impl_getImpl(effect),
+                effect, LightShim.getPeer(effect),
                 "javafx.scene.effect.Light$Spot", "pointsAtZ",
                 "com.sun.scenario.effect.light.SpotLight", "pointsAtZ", 0.3);
     }
@@ -192,7 +192,7 @@ public class SpotLightTest extends LightTestBase {
         Color4f red = new Color4f((float) color.getRed(), (float) color.getGreen(),
                 (float) color.getBlue(), (float) color.getOpacity());
         Color4f result = (Color4f) getObjectPropertySynced(
-                effect, LightShim.impl_getImpl(effect),
+                effect, LightShim.getPeer(effect),
                 "javafx.scene.effect.Light$Spot", "color",
                 "com.sun.scenario.effect.light.SpotLight", "color",
                 Color.RED);
@@ -210,15 +210,15 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(Color.RED, effect.getColor());
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getX(), 1e-100);
+                LightShim.getPeer(effect)).getX(), 1e-100);
         assertEquals(2.0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getY(), 1e-100);
+                LightShim.getPeer(effect)).getY(), 1e-100);
         assertEquals(3.0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getZ(), 1e-100);
+                LightShim.getPeer(effect)).getZ(), 1e-100);
         assertEquals(4.0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                LightShim.getPeer(effect)).getSpecularExponent(), 1e-100);
         Color4f c = ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getColor();
+                LightShim.getPeer(effect)).getColor();
         assertEquals(1f, c.getRed(), 1e-5);
         assertEquals(0f, c.getGreen(), 1e-5);
         assertEquals(0f, c.getBlue(), 1e-5);
@@ -236,15 +236,15 @@ public class SpotLightTest extends LightTestBase {
         assertEquals(Color.WHITE, effect.getColor());
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getX(), 1e-100);
+                LightShim.getPeer(effect)).getX(), 1e-100);
         assertEquals(0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getY(), 1e-100);
+                LightShim.getPeer(effect)).getY(), 1e-100);
         assertEquals(0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getZ(), 1e-100);
+                LightShim.getPeer(effect)).getZ(), 1e-100);
         assertEquals(1.0f, ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                LightShim.getPeer(effect)).getSpecularExponent(), 1e-100);
         Color4f c = ((com.sun.scenario.effect.light.SpotLight)
-                LightShim.impl_getImpl(effect)).getColor();
+                LightShim.getPeer(effect)).getColor();
         assertEquals(1f, c.getRed(), 1e-5);
         assertEquals(1f, c.getGreen(), 1e-5);
         assertEquals(1f, c.getBlue(), 1e-5);

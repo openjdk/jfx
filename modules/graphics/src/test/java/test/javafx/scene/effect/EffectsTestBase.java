@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ import javafx.stage.Stage;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.scenario.effect.Color4f;
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.Effect;
 
@@ -85,7 +86,7 @@ public class EffectsTestBase {
             String pgPropertyName,
             double expected)
             throws Exception {
-       checkDoublePropertySynced(e, e.impl_getImpl(), effectName, propertyName, pgEffectName, pgPropertyName, expected);
+       checkDoublePropertySynced(e, EffectHelper.getPeer(e), effectName, propertyName, pgEffectName, pgPropertyName, expected);
     }
 
     protected void checkDoublePropertySynced(
@@ -122,7 +123,7 @@ public class EffectsTestBase {
             String pgPropertyName,
             int expected)
             throws Exception {
-        checkIntPropertySynced(e, e.impl_getImpl(), effectName, propertyName, pgEffectName, pgPropertyName, expected);
+        checkIntPropertySynced(e, EffectHelper.getPeer(e), effectName, propertyName, pgEffectName, pgPropertyName, expected);
     }
 
     protected void checkIntPropertySynced(
@@ -159,7 +160,7 @@ public class EffectsTestBase {
             String pgPropertyName,
             boolean expected)
             throws Exception {
-        checkBooleanPropertySynced(e, e.impl_getImpl(), effectName, propertyName, pgEffectName, pgPropertyName, expected);
+        checkBooleanPropertySynced(e, EffectHelper.getPeer(e), effectName, propertyName, pgEffectName, pgPropertyName, expected);
     }
 
     protected void checkBooleanPropertySynced(
@@ -198,7 +199,7 @@ public class EffectsTestBase {
             Object pgExpected,
             Object defaultVal)
             throws Exception {
-       checkObjectPropertySynced(e, e.impl_getImpl(), effectName, propertyName, pgEffectName, pgPropertyName, expected, pgExpected, defaultVal);
+       checkObjectPropertySynced(e, EffectHelper.getPeer(e), effectName, propertyName, pgEffectName, pgPropertyName, expected, pgExpected, defaultVal);
     }
 
     protected void checkObjectPropertySynced(
@@ -261,7 +262,7 @@ public class EffectsTestBase {
         pulse(); // make sure that the dirty flag is cleaned before testing of binding
         v.set(expected);
         pulse();
-        assertEquals(pgExpected, pgGetter.invoke(e.impl_getImpl()));
+        assertEquals(pgExpected, pgGetter.invoke(EffectHelper.getPeer(e)));
 
         // test wheter input listeners were correctly registered
         expected.setWidth(150);
@@ -277,7 +278,7 @@ public class EffectsTestBase {
             String pgPropertyName,
             Object expected)
             throws Exception {
-        return getObjectPropertySynced(e, e.impl_getImpl(), effectName, propertyName, pgEffectName, pgPropertyName, expected);
+        return getObjectPropertySynced(e, EffectHelper.getPeer(e), effectName, propertyName, pgEffectName, pgPropertyName, expected);
     }
 
     protected Object getObjectPropertySynced(
@@ -329,6 +330,6 @@ public class EffectsTestBase {
         pulse(); // make sure that the dirty flag is cleaned before testing of binding
         v.set(expected);
         pulse();
-        return pgGetter.invoke(e.impl_getImpl());
+        return pgGetter.invoke(EffectHelper.getPeer(e));
     }
 }

@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.VirtualScrollBar;
@@ -578,7 +579,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             startSBReleasedAnimation();
         });
 
-        setImpl_traversalEngine(new ParentTraversalEngine(this, new Algorithm() {
+        ParentHelper.setTraversalEngine(this, new ParentTraversalEngine(this, new Algorithm() {
 
             Node selectNextAfterIndex(int index, TraversalContext context) {
                 T nextCell;

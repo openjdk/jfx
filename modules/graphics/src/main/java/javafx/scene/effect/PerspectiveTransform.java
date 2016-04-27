@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -122,7 +122,7 @@ public class PerspectiveTransform extends Effect {
     }
 
     private void updateXform() {
-        ((com.sun.scenario.effect.PerspectiveTransform)impl_getImpl()).setQuadMapping(
+        ((com.sun.scenario.effect.PerspectiveTransform) getPeer()).setQuadMapping(
                              (float)getUlx(), (float)getUly(),
                              (float)getUrx(), (float)getUry(),
                              (float)getLrx(), (float)getLry(),
@@ -130,7 +130,7 @@ public class PerspectiveTransform extends Effect {
     }
 
     @Override
-    com.sun.scenario.effect.PerspectiveTransform impl_createImpl() {
+    com.sun.scenario.effect.PerspectiveTransform createPeer() {
         return new com.sun.scenario.effect.PerspectiveTransform();
     };
     /**
@@ -159,13 +159,13 @@ public class PerspectiveTransform extends Effect {
     }
 
     @Override
-    boolean impl_checkChainContains(Effect e) {
+    boolean checkChainContains(Effect e) {
         Effect localInput = getInput();
         if (localInput == null)
             return false;
         if (localInput == e)
             return true;
-        return localInput.impl_checkChainContains(e);
+        return localInput.checkChainContains(e);
     }
 
     /**
@@ -489,29 +489,24 @@ public class PerspectiveTransform extends Effect {
     }
 
     @Override
-    void impl_update() {
+    void update() {
         Effect localInput = getInput();
         if (localInput != null) {
-            localInput.impl_sync();
+            localInput.sync();
         }
 
-        ((com.sun.scenario.effect.PerspectiveTransform)impl_getImpl())
-            .setInput(localInput == null ? null : localInput.impl_getImpl());
+        ((com.sun.scenario.effect.PerspectiveTransform)getPeer())
+            .setInput(localInput == null ? null : localInput.getPeer());
         updateXform();
     }
 
     private float devcoords[] = new float[8];
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public BaseBounds impl_getBounds(BaseBounds bounds,
-                                     BaseTransform tx,
-                                     Node node,
-                                     BoundsAccessor boundsAccessor) {
+    BaseBounds getBounds(BaseBounds bounds,
+                         BaseTransform tx,
+                         Node node,
+                         BoundsAccessor boundsAccessor) {
         setupDevCoords(tx);
 
         float minx, miny, maxx, maxy;
@@ -539,14 +534,8 @@ public class PerspectiveTransform extends Effect {
         transform.transform(devcoords, 0, devcoords, 0, 4);
     }
 
-    /**
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public Effect impl_copy() {
+    Effect copy() {
         return new PerspectiveTransform(this.getUlx(), this.getUly(),
                 this.getUrx(), this.getUry(), this.getLrx(), this.getLry(),
                 this.getLlx(), this.getLly());

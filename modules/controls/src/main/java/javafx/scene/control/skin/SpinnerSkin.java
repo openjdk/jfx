@@ -24,6 +24,7 @@
  */
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.control.FakeFocusTextField;
@@ -226,7 +227,9 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // Following code borrowed from ComboBoxPopupControl, to resolve the
         // issue initially identified in RT-36902, but specifically (for Spinner)
         // identified in RT-40625
-        control.setImpl_traversalEngine(new ParentTraversalEngine(control, new Algorithm() {
+        ParentHelper.setTraversalEngine(control,
+                new ParentTraversalEngine(control, new Algorithm() {
+
             @Override public Node select(Node owner, Direction dir, TraversalContext context) {
                 return null;
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,6 +79,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import com.sun.javafx.menu.MenuBase;
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import com.sun.javafx.stage.StageHelper;
@@ -388,7 +389,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             if (openMenu != null) openMenu.hide();
             focusedMenuIndex = 0;
         });
-        getSkinnable().setImpl_traversalEngine(engine);
+        ParentHelper.setTraversalEngine(getSkinnable(), engine);
 
         control.sceneProperty().addListener((ov, t, t1) -> {
             if (weakSceneKeyEventHandler != null) {

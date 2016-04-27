@@ -26,11 +26,8 @@
 package javafx.scene;
 
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -107,6 +104,16 @@ public abstract class Parent extends Node {
             @Override
             public boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result) {
                 return parent.pickChildrenNode(pickRay, result);
+            }
+
+            @Override
+            public void setTraversalEngine(Parent parent, ParentTraversalEngine value) {
+                parent.setTraversalEngine(value);
+            }
+
+            @Override
+            public ParentTraversalEngine getTraversalEngine(Parent parent) {
+                return parent.getTraversalEngine();
             }
         });
     }
@@ -830,40 +837,14 @@ public abstract class Parent extends Node {
         return results;
     }
 
-    /** @treatAsPrivate implementation detail */
-    private javafx.beans.property.ObjectProperty<ParentTraversalEngine> impl_traversalEngine;
+    private ParentTraversalEngine traversalEngine;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: RT-21209 has been filed to track this
-    @Deprecated
-    public final void setImpl_traversalEngine(ParentTraversalEngine value) {
-        impl_traversalEngineProperty().set(value);
+    private final void setTraversalEngine(ParentTraversalEngine value) {
+        this.traversalEngine = value;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final ParentTraversalEngine getImpl_traversalEngine() {
-        return impl_traversalEngine == null ? null : impl_traversalEngine.get();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final ObjectProperty<ParentTraversalEngine> impl_traversalEngineProperty() {
-        if (impl_traversalEngine == null) {
-            impl_traversalEngine =
-                    new SimpleObjectProperty<>(
-                            this, "impl_traversalEngine");
-        }
-        return impl_traversalEngine;
+    private final ParentTraversalEngine getTraversalEngine() {
+        return traversalEngine;
     }
 
     /***********************************************************************

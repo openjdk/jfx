@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,8 +72,8 @@ import com.sun.scenario.effect.PhongLighting;
  */
 public class Lighting extends Effect {
     @Override
-    com.sun.scenario.effect.PhongLighting impl_createImpl() {
-        return new PhongLighting(getLightInternal().impl_getImpl());
+    com.sun.scenario.effect.PhongLighting createPeer() {
+        return new PhongLighting(getLightInternal().getPeer());
     };
 
     /**
@@ -135,13 +135,8 @@ public class Lighting extends Effect {
 
     private final LightChangeListener lightChangeListener = new LightChangeListener();
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public Effect impl_copy() {
+    Effect copy() {
         Lighting lighting = new Lighting(this.getLight());
         lighting.setBumpInput(this.getBumpInput());
         lighting.setContentInput(this.getContentInput());
@@ -161,7 +156,7 @@ public class Lighting extends Effect {
 
         @Override
         public void invalidated(Observable valueModel) {
-            if (light.impl_isEffectDirty()) {
+            if (light.isEffectDirty()) {
                 markDirty(EffectDirtyBits.EFFECT_DIRTY);
                 effectBoundsChanged();
             }
@@ -220,14 +215,14 @@ public class Lighting extends Effect {
     }
 
     @Override
-    boolean impl_checkChainContains(Effect e) {
+    boolean checkChainContains(Effect e) {
         Effect localBumpInput = getBumpInput();
         Effect localContentInput = getContentInput();
         if (localContentInput == e || localBumpInput == e)
             return true;
-        if (localContentInput != null && localContentInput.impl_checkChainContains(e))
+        if (localContentInput != null && localContentInput.checkChainContains(e))
             return true;
-        if (localBumpInput != null && localBumpInput.impl_checkChainContains(e))
+        if (localBumpInput != null && localBumpInput.checkChainContains(e))
             return true;
 
         return false;
@@ -415,21 +410,21 @@ public class Lighting extends Effect {
     }
 
     @Override
-    void impl_update() {
+    void update() {
         Effect localBumpInput = getBumpInput();
 
         if (localBumpInput != null) {
-            localBumpInput.impl_sync();
+            localBumpInput.sync();
         }
 
         Effect localContentInput = getContentInput();
         if (localContentInput != null) {
-            localContentInput.impl_sync();
+            localContentInput.sync();
         }
 
-        PhongLighting peer = (PhongLighting) impl_getImpl();
-        peer.setBumpInput(localBumpInput == null ? null : localBumpInput.impl_getImpl());
-        peer.setContentInput(localContentInput == null ? null : localContentInput.impl_getImpl());
+        PhongLighting peer = (PhongLighting) getPeer();
+        peer.setBumpInput(localBumpInput == null ? null : localBumpInput.getPeer());
+        peer.setContentInput(localContentInput == null ? null : localContentInput.getPeer());
         peer.setDiffuseConstant((float)Utils.clamp(0, getDiffuseConstant(), 2));
         peer.setSpecularConstant((float)Utils.clamp(0, getSpecularConstant(), 2));
         peer.setSpecularExponent((float)Utils.clamp(0, getSpecularExponent(), 40));
@@ -438,20 +433,15 @@ public class Lighting extends Effect {
         // because default light never changes
         lightChangeListener.register(getLight());
 
-        getLightInternal().impl_sync();
-        peer.setLight(getLightInternal().impl_getImpl());
+        getLightInternal().sync();
+        peer.setLight(getLightInternal().getPeer());
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public BaseBounds impl_getBounds(BaseBounds bounds,
-                                     BaseTransform tx,
-                                     Node node,
-                                     BoundsAccessor boundsAccessor) {
+    BaseBounds getBounds(BaseBounds bounds,
+                         BaseTransform tx,
+                         Node node,
+                         BoundsAccessor boundsAccessor) {
         return getInputBounds(bounds, tx, node, boundsAccessor, getContentInput());
     }
 }

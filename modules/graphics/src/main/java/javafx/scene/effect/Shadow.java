@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,7 +87,7 @@ public class Shadow extends Effect {
     }
 
     @Override
-    com.sun.scenario.effect.GeneralShadow impl_createImpl() {
+    com.sun.scenario.effect.GeneralShadow createPeer() {
         return new com.sun.scenario.effect.GeneralShadow();
     };
     /**
@@ -116,13 +116,13 @@ public class Shadow extends Effect {
     }
 
     @Override
-    boolean impl_checkChainContains(Effect e) {
+    boolean checkChainContains(Effect e) {
         Effect localInput = getInput();
         if (localInput == null)
             return false;
         if (localInput == e)
             return true;
-        return localInput.impl_checkChainContains(e);
+        return localInput.checkChainContains(e);
     }
 
     /**
@@ -448,31 +448,26 @@ public class Shadow extends Effect {
     }
 
     @Override
-    void impl_update() {
+    void update() {
         Effect localInput = getInput();
         if (localInput != null) {
-            localInput.impl_sync();
+            localInput.sync();
         }
 
         com.sun.scenario.effect.GeneralShadow peer =
-                (com.sun.scenario.effect.GeneralShadow) impl_getImpl();
-        peer.setInput(localInput == null ? null : localInput.impl_getImpl());
+                (com.sun.scenario.effect.GeneralShadow) getPeer();
+        peer.setInput(localInput == null ? null : localInput.getPeer());
         peer.setGaussianWidth(getClampedWidth());
         peer.setGaussianHeight(getClampedHeight());
         peer.setShadowMode(Toolkit.getToolkit().toShadowMode(getBlurTypeInternal()));
         peer.setColor(Toolkit.getToolkit().toColor4f(getColorInternal()));
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public BaseBounds impl_getBounds(BaseBounds bounds,
-                                     BaseTransform tx,
-                                     Node node,
-                                     BoundsAccessor boundsAccessor) {
+    BaseBounds getBounds(BaseBounds bounds,
+                         BaseTransform tx,
+                         Node node,
+                         BoundsAccessor boundsAccessor) {
         bounds = getInputBounds(bounds,
                                 BaseTransform.IDENTITY_TRANSFORM,
                                 node, boundsAccessor,
@@ -483,13 +478,8 @@ public class Shadow extends Effect {
                                getBlurTypeInternal());
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public Effect impl_copy() {
+    Effect copy() {
         Shadow shadow = new Shadow(this.getBlurType(), this.getColor(), this.getRadius());
         shadow.setInput(this.getInput());
         shadow.setHeight(this.getHeight());

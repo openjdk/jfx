@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -142,7 +142,7 @@ public class DropShadow extends Effect {
     }
 
     @Override
-    com.sun.scenario.effect.DropShadow impl_createImpl() {
+    com.sun.scenario.effect.DropShadow createPeer() {
         return new com.sun.scenario.effect.DropShadow();
     };
     /**
@@ -171,13 +171,13 @@ public class DropShadow extends Effect {
     }
 
     @Override
-    boolean impl_checkChainContains(Effect e) {
+    boolean checkChainContains(Effect e) {
         Effect localInput = getInput();
         if (localInput == null)
             return false;
         if (localInput == e)
             return true;
-        return localInput.impl_checkChainContains(e);
+        return localInput.checkChainContains(e);
     }
 
     /**
@@ -662,16 +662,16 @@ public class DropShadow extends Effect {
     }
 
     @Override
-    void impl_update() {
+    void update() {
         Effect localInput = getInput();
         if (localInput != null) {
-            localInput.impl_sync();
+            localInput.sync();
         }
 
         com.sun.scenario.effect.DropShadow peer =
-                (com.sun.scenario.effect.DropShadow) impl_getImpl();
-        peer.setShadowSourceInput(localInput == null ? null : localInput.impl_getImpl());
-        peer.setContentInput(localInput == null ? null : localInput.impl_getImpl());
+                (com.sun.scenario.effect.DropShadow) getPeer();
+        peer.setShadowSourceInput(localInput == null ? null : localInput.getPeer());
+        peer.setContentInput(localInput == null ? null : localInput.getPeer());
         peer.setGaussianWidth(getClampedWidth());
         peer.setGaussianHeight(getClampedHeight());
         peer.setSpread(getClampedSpread());
@@ -681,16 +681,11 @@ public class DropShadow extends Effect {
         peer.setOffsetY((int) getOffsetY());
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public BaseBounds impl_getBounds(BaseBounds bounds,
-                                     BaseTransform tx,
-                                     Node node,
-                                     BoundsAccessor boundsAccessor) {
+    BaseBounds getBounds(BaseBounds bounds,
+                         BaseTransform tx,
+                         Node node,
+                         BoundsAccessor boundsAccessor) {
         bounds = getInputBounds(bounds,
                                 BaseTransform.IDENTITY_TRANSFORM,
                                 node, boundsAccessor,
@@ -716,13 +711,8 @@ public class DropShadow extends Effect {
         return ret;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public Effect impl_copy() {
+    Effect copy() {
         DropShadow d = new DropShadow(this.getBlurType(), this.getColor(),
                 this.getRadius(), this.getSpread(), this.getOffsetX(),
                 this.getOffsetY());

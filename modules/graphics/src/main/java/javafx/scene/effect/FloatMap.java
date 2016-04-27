@@ -67,8 +67,8 @@ public class FloatMap {
         map.put(buf);
     }
 
-    void impl_sync() {
-        if (impl_isEffectDirty()) {
+    void sync() {
+        if (isEffectDirty()) {
             update();
             clearDirty();
         }
@@ -87,12 +87,7 @@ public class FloatMap {
         return effectDirty;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    boolean impl_isEffectDirty() {
+    boolean isEffectDirty() {
         return effectDirty == null ? false : effectDirty.get();
     }
 
@@ -297,12 +292,7 @@ public class FloatMap {
         markDirty();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public FloatMap impl_copy() {
+    FloatMap copy() {
         FloatMap dest = new FloatMap(this.getWidth(), this.getHeight());
         System.arraycopy(buf, 0, dest.buf, 0, buf.length);
         return dest;

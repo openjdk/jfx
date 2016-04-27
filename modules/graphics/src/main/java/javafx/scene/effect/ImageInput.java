@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,7 +76,7 @@ public class ImageInput extends Effect {
     }
 
     @Override
-    com.sun.scenario.effect.Identity impl_createImpl() {
+    com.sun.scenario.effect.Identity createPeer() {
         return new com.sun.scenario.effect.Identity(null);
     };
     /**
@@ -238,9 +238,9 @@ public class ImageInput extends Effect {
     }
 
     @Override
-    void impl_update() {
+    void update() {
         com.sun.scenario.effect.Identity peer =
-                (com.sun.scenario.effect.Identity) impl_getImpl();
+                (com.sun.scenario.effect.Identity) getPeer();
         Image localSource = getSource();
         if (localSource != null && localSource.impl_getPlatformImage() != null) {
             peer.setSource(Toolkit.getToolkit().toFilterable(localSource));
@@ -251,20 +251,15 @@ public class ImageInput extends Effect {
     }
 
     @Override
-    boolean impl_checkChainContains(Effect e) {
+    boolean checkChainContains(Effect e) {
         return false;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public BaseBounds impl_getBounds(BaseBounds bounds,
-                                     BaseTransform tx,
-                                     Node node,
-                                     BoundsAccessor boundsAccessor) {
+    BaseBounds getBounds(BaseBounds bounds,
+                         BaseTransform tx,
+                         Node node,
+                         BoundsAccessor boundsAccessor) {
         Image localSource = getSource();
         if (localSource != null && localSource.impl_getPlatformImage() != null) {
             float localX = (float) getX();
@@ -280,13 +275,8 @@ public class ImageInput extends Effect {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public Effect impl_copy() {
+    Effect copy() {
         return new ImageInput(this.getSource(), this.getX(), this.getY());
     }
 }

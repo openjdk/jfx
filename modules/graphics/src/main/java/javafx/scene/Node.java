@@ -158,6 +158,7 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.impl.PrismSettings;
+import com.sun.scenario.effect.EffectHelper;
 
 import javafx.scene.shape.Shape3D;
 import sun.util.logging.PlatformLogger;
@@ -625,13 +626,13 @@ public abstract class Node implements EventTarget, Styleable {
 
         if (impl_isDirty(DirtyBits.EFFECT_EFFECT)) {
             if (getEffect() != null) {
-                getEffect().impl_sync();
+                EffectHelper.sync(getEffect());
                 peer.effectChanged();
             }
         }
 
         if (impl_isDirty(DirtyBits.NODE_EFFECT)) {
-            peer.setEffect(getEffect() != null ? getEffect().impl_getImpl() : null);
+            peer.setEffect(getEffect() != null ? EffectHelper.getPeer(getEffect()) : null);
         }
 
         if (impl_isDirty(DirtyBits.NODE_VISIBLE)) {
@@ -3620,7 +3621,7 @@ public abstract class Node implements EventTarget, Styleable {
         // or we get the geom bounds (if effect is null). We will then
         // intersect this with the clip.
         if (getEffect() != null) {
-            BaseBounds b = getEffect().impl_getBounds(bounds, tx, this, boundsAccessor);
+            BaseBounds b = EffectHelper.getBounds(getEffect(), bounds, tx, this, boundsAccessor);
             bounds = bounds.deriveWithNewBounds(b);
         } else {
             bounds = getGeomBounds(bounds, tx);
@@ -6886,18 +6887,18 @@ public abstract class Node implements EventTarget, Styleable {
                     protected void invalidated() {
                         Effect _effect = get();
                         if (oldEffect != null) {
-                            oldEffect.impl_effectDirtyProperty().removeListener(
+                            EffectHelper.effectDirtyProperty(oldEffect).removeListener(
                                     effectChangeListener.getWeakListener());
                         }
                         oldEffect = _effect;
                         if (_effect != null) {
-                            _effect.impl_effectDirtyProperty()
+                            EffectHelper.effectDirtyProperty(_effect)
                                    .addListener(
                                        effectChangeListener.getWeakListener());
-                            if (_effect.impl_isEffectDirty()) {
+                            if (EffectHelper.isEffectDirty(_effect)) {
                                 impl_markDirty(DirtyBits.EFFECT_EFFECT);
                             }
-                            oldBits = _effect.impl_effectDirtyProperty().get();
+                            oldBits = EffectHelper.effectDirtyProperty(_effect).get();
                         }
 
                         impl_markDirty(DirtyBits.NODE_EFFECT);

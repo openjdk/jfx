@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
+import com.sun.scenario.effect.EffectHelper;
 
 /**
  * The abstract base class for all effect implementations.
@@ -59,6 +60,44 @@ import com.sun.javafx.scene.BoundsAccessor;
  * @since JavaFX 2.0
  */
 public abstract class Effect {
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        EffectHelper.setEffectAccessor(new EffectHelper.EffectAccessor() {
+
+            @Override
+            public com.sun.scenario.effect.Effect getPeer(Effect effect) {
+                return effect.getPeer();
+            }
+
+            @Override
+            public void sync(Effect effect) {
+                effect.sync();
+            }
+
+            @Override
+            public IntegerProperty effectDirtyProperty(Effect effect) {
+                return effect.effectDirtyProperty();
+            }
+
+            @Override
+            public boolean isEffectDirty(Effect effect) {
+                return effect.isEffectDirty();
+            }
+
+            @Override
+            public BaseBounds getBounds(Effect effect, BaseBounds bounds,
+                    BaseTransform tx, Node node, BoundsAccessor boundsAccessor) {
+                return effect.getBounds(bounds, tx, node, boundsAccessor);
+            }
+
+            @Override
+            public Effect copy(Effect effect) {
+                return effect.copy();
+            }
+        });
+    }
+
     /**
      * Creates a new Effect.
      */
@@ -70,17 +109,12 @@ public abstract class Effect {
         toggleDirty(EffectDirtyBits.BOUNDS_CHANGED);
     }
 
-     private com.sun.scenario.effect.Effect peer;
-     abstract com.sun.scenario.effect.Effect impl_createImpl();
+    private com.sun.scenario.effect.Effect peer;
+    abstract com.sun.scenario.effect.Effect createPeer();
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public com.sun.scenario.effect.Effect impl_getImpl() {
+    com.sun.scenario.effect.Effect getPeer() {
         if (peer == null) {
-            peer = impl_createImpl();
+            peer = createPeer();
         }
         return peer;
     }
@@ -90,24 +124,14 @@ public abstract class Effect {
             new SimpleIntegerProperty(this, "effectDirty");
 
     private void setEffectDirty(int value) {
-        impl_effectDirtyProperty().set(value);
+        effectDirtyProperty().set(value);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final IntegerProperty impl_effectDirtyProperty() {
+    private final IntegerProperty effectDirtyProperty() {
         return effectDirty;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final boolean impl_isEffectDirty() {
+    private final boolean isEffectDirty() {
         return isEffectDirty(EffectDirtyBits.EFFECT_DIRTY);
     }
 
@@ -139,25 +163,20 @@ public abstract class Effect {
         setEffectDirty(effectDirty.get() & ~dirtyBit.getMask());
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void impl_sync() {
+    final void sync() {
         if (isEffectDirty(EffectDirtyBits.EFFECT_DIRTY)) {
-            impl_update();
+            update();
             clearEffectDirty(EffectDirtyBits.EFFECT_DIRTY);
         }
     }
 
-    abstract void impl_update();
+    abstract void update();
 
-    abstract boolean impl_checkChainContains(Effect e);
+    abstract boolean checkChainContains(Effect e);
 
-    boolean impl_containsCycles(Effect value) {
+    boolean containsCycles(Effect value) {
         if (value != null
-                && (value == this || value.impl_checkChainContains(this))) {
+                && (value == this || value.checkChainContains(this))) {
             return true;
         }
         return false;
@@ -167,9 +186,9 @@ public abstract class Effect {
         private int oldBits;
 
         public void register(Effect value) {
-            super.register(value == null? null: value.impl_effectDirtyProperty());
+            super.register(value == null? null: value.effectDirtyProperty());
             if (value != null) {
-                oldBits = value.impl_effectDirtyProperty().get();
+                oldBits = value.effectDirtyProperty().get();
             }
         }
 
@@ -203,7 +222,7 @@ public abstract class Effect {
         @Override
         public void invalidated() {
             final Effect newInput = super.get();
-            if (impl_containsCycles(newInput)) {
+            if (containsCycles(newInput)) {
                 if (isBound()) {
                     unbind();
                     set(validInput);
@@ -244,22 +263,13 @@ public abstract class Effect {
     * We *never* pass null in as a bounds. This method will
     * NOT take a null bounds object. The returned value may be
     * the same bounds object passed in, or it may be a new object.
-    *
-    * @treatAsPrivate implementation detail
-    * @deprecated This is an internal API that is not intended for use and will be removed in the next version
     */
-    @Deprecated
-    public abstract BaseBounds impl_getBounds(BaseBounds bounds,
-                                              BaseTransform tx,
-                                              Node node,
-                                              BoundsAccessor boundsAccessor);
-    /**
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public abstract Effect impl_copy();
+    abstract BaseBounds getBounds(BaseBounds bounds,
+                                  BaseTransform tx,
+                                  Node node,
+                                  BoundsAccessor boundsAccessor);
+
+    abstract Effect copy();
 
     static BaseBounds transformBounds(BaseTransform tx, BaseBounds r) {
         if (tx == null || tx.isIdentity()) {
@@ -322,7 +332,7 @@ public abstract class Effect {
                                      BoundsAccessor boundsAccessor,
                                      Effect input) {
         if (input != null) {
-            bounds = input.impl_getBounds(bounds, tx, node, boundsAccessor);
+            bounds = input.getBounds(bounds, tx, node, boundsAccessor);
         } else {
             bounds = boundsAccessor.getGeomBounds(bounds, tx, node);
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,15 +46,15 @@ public abstract class Light {
      * Creates a new Light.
      */
     protected Light() {
-        impl_markDirty();
+        markDirty();
     }
 
-    abstract com.sun.scenario.effect.light.Light impl_createImpl();
+    abstract com.sun.scenario.effect.light.Light createPeer();
     private com.sun.scenario.effect.light.Light peer;
 
-    com.sun.scenario.effect.light.Light impl_getImpl() {
+    com.sun.scenario.effect.light.Light getPeer() {
         if (peer == null) {
-            peer = impl_createImpl();
+            peer = createPeer();
         }
         return peer;
     }
@@ -84,7 +84,7 @@ public abstract class Light {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty();
+                    markDirty();
                 }
 
                 @Override
@@ -101,10 +101,10 @@ public abstract class Light {
         return color;
     }
 
-    void impl_sync() {
-        if (impl_isEffectDirty()) {
-            impl_update();
-            impl_clearDirty();
+    void sync() {
+        if (isEffectDirty()) {
+            update();
+            clearDirty();
         }
     }
 
@@ -113,8 +113,8 @@ public abstract class Light {
         return c == null ? Color.WHITE : c;
     }
 
-    void impl_update() {
-        impl_getImpl().setColor(Toolkit.getToolkit().toColor4f(getColorInternal()));
+    void update() {
+        getPeer().setColor(Toolkit.getToolkit().toColor4f(getColorInternal()));
     }
 
     private BooleanProperty effectDirty;
@@ -130,15 +130,15 @@ public abstract class Light {
         return effectDirty;
     }
 
-    boolean impl_isEffectDirty() {
+    boolean isEffectDirty() {
         return effectDirty == null ? false : effectDirty.get();
     }
 
-    final void impl_markDirty() {
+    final void markDirty() {
         setEffectDirty(true);
     }
 
-    final void impl_clearDirty() {
+    final void clearDirty() {
         setEffectDirty(false);
     }
 
@@ -195,7 +195,7 @@ public abstract class Light {
         }
 
         @Override
-        com.sun.scenario.effect.light.DistantLight impl_createImpl() {
+        com.sun.scenario.effect.light.DistantLight createPeer() {
             return new com.sun.scenario.effect.light.DistantLight();
         }
         /**
@@ -225,7 +225,7 @@ public abstract class Light {
 
                     @Override
                     public void invalidated() {
-                        impl_markDirty();
+                        markDirty();
                     }
 
                     @Override
@@ -268,7 +268,7 @@ public abstract class Light {
 
                     @Override
                     public void invalidated() {
-                        impl_markDirty();
+                        markDirty();
                     }
 
                     @Override
@@ -286,10 +286,10 @@ public abstract class Light {
         }
 
         @Override
-        void impl_update() {
-            super.impl_update();
+        void update() {
+            super.update();
             com.sun.scenario.effect.light.DistantLight peer =
-                    (com.sun.scenario.effect.light.DistantLight) impl_getImpl();
+                    (com.sun.scenario.effect.light.DistantLight) getPeer();
             peer.setAzimuth((float) getAzimuth());
             peer.setElevation((float) getElevation());
         }
@@ -350,13 +350,8 @@ public abstract class Light {
            setColor(color);
         }
 
-        /**
-         * @treatAsPrivate implementation detail
-         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-         */
-        @Deprecated
         @Override
-        com.sun.scenario.effect.light.PointLight impl_createImpl() {
+        com.sun.scenario.effect.light.PointLight createPeer() {
             return new com.sun.scenario.effect.light.PointLight();
         }
         /**
@@ -385,7 +380,7 @@ public abstract class Light {
 
                     @Override
                     public void invalidated() {
-                        impl_markDirty();
+                        markDirty();
                     }
 
                     @Override
@@ -427,7 +422,7 @@ public abstract class Light {
 
                     @Override
                     public void invalidated() {
-                        impl_markDirty();
+                        markDirty();
                     }
 
                     @Override
@@ -469,7 +464,7 @@ public abstract class Light {
 
                     @Override
                     public void invalidated() {
-                        impl_markDirty();
+                        markDirty();
                     }
 
                     @Override
@@ -487,10 +482,10 @@ public abstract class Light {
         }
 
         @Override
-        void impl_update() {
-            super.impl_update();
+        void update() {
+            super.update();
             com.sun.scenario.effect.light.PointLight peer =
-                    (com.sun.scenario.effect.light.PointLight) impl_getImpl();
+                    (com.sun.scenario.effect.light.PointLight) getPeer();
             peer.setX((float) getX());
             peer.setY((float) getY());
             peer.setZ((float) getZ());
@@ -561,13 +556,8 @@ public abstract class Light {
            setColor(color);
         }
 
-        /**
-         * @treatAsPrivate implementation detail
-         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-         */
-        @Deprecated
         @Override
-        com.sun.scenario.effect.light.SpotLight impl_createImpl() {
+        com.sun.scenario.effect.light.SpotLight createPeer() {
             return new com.sun.scenario.effect.light.SpotLight();
         }
         /**
@@ -596,7 +586,7 @@ public abstract class Light {
 
                     @Override
                     public void invalidated() {
-                        impl_markDirty();
+                        markDirty();
                     }
 
                     @Override
@@ -638,7 +628,7 @@ public abstract class Light {
 
                     @Override
                     public void invalidated() {
-                        impl_markDirty();
+                        markDirty();
                     }
 
                     @Override
@@ -680,7 +670,7 @@ public abstract class Light {
 
                     @Override
                     public void invalidated() {
-                        impl_markDirty();
+                        markDirty();
                     }
 
                     @Override
@@ -723,7 +713,7 @@ public abstract class Light {
 
                     @Override
                     public void invalidated() {
-                        impl_markDirty();
+                        markDirty();
                     }
 
                     @Override
@@ -741,10 +731,10 @@ public abstract class Light {
         }
 
         @Override
-        void impl_update() {
-            super.impl_update();
+        void update() {
+            super.update();
             com.sun.scenario.effect.light.SpotLight peer =
-                    (com.sun.scenario.effect.light.SpotLight) impl_getImpl();
+                    (com.sun.scenario.effect.light.SpotLight) getPeer();
             peer.setPointsAtX((float) getPointsAtX());
             peer.setPointsAtY((float) getPointsAtY());
             peer.setPointsAtZ((float) getPointsAtZ());

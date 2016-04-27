@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.ParentHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -221,7 +222,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 return selectPrev(box.getChildren().size() - 1, context);
             }
         });
-        getSkinnable().setImpl_traversalEngine(engine);
+        ParentHelper.setTraversalEngine(getSkinnable(), engine);
 
         control.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {

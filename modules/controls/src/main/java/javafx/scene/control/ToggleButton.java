@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 
 import javafx.beans.property.BooleanProperty;
@@ -205,7 +206,7 @@ import javafx.css.StyleableProperty;
             toggleGroup = new ObjectPropertyBase<ToggleGroup>() {
                 private ToggleGroup old;
                 private ChangeListener<Toggle> listener = (o, oV, nV) ->
-                    getImpl_traversalEngine().setOverriddenFocusTraversability(nV != null ? isSelected() : null);
+                    ParentHelper.getTraversalEngine(ToggleButton.this).setOverriddenFocusTraversability(nV != null ? isSelected() : null);
 
                 @Override protected void invalidated() {
                     final ToggleGroup tg = get();
@@ -215,14 +216,14 @@ import javafx.css.StyleableProperty;
                         }
                         tg.getToggles().add(ToggleButton.this);
                         final ParentTraversalEngine parentTraversalEngine = new ParentTraversalEngine(ToggleButton.this);
-                        setImpl_traversalEngine(parentTraversalEngine);
+                        ParentHelper.setTraversalEngine(ToggleButton.this, parentTraversalEngine);
                         // If there's no toggle selected, do not override
                         parentTraversalEngine.setOverriddenFocusTraversability(tg.getSelectedToggle() != null ? isSelected() : null);
                         tg.selectedToggleProperty().addListener(listener);
                     } else if (tg == null) {
                         old.selectedToggleProperty().removeListener(listener);
                         old.getToggles().remove(ToggleButton.this);
-                        setImpl_traversalEngine(null);
+                        ParentHelper.setTraversalEngine(ToggleButton.this, null);
                     }
 
                     old = tg;

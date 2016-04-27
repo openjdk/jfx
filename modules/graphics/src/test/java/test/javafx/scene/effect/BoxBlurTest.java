@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.effect;
 
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.EffectShim;
 import static org.junit.Assert.assertEquals;
@@ -54,7 +55,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(1.0f, effect.getWidth(), 1e-100);
         pulse();
         assertEquals(1, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getHorizontalSize());
+                EffectShim.getPeer(effect)).getHorizontalSize());
     }
 
     @Test
@@ -64,7 +65,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(5.0f, effect.widthProperty().get(), 1e-100);
         pulse();
         assertEquals(5, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getHorizontalSize());
+                EffectShim.getPeer(effect)).getHorizontalSize());
     }
 
     @Test
@@ -76,7 +77,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(-0.1f, effect.getWidth(), 1e-100);
         pulse();
         assertEquals(0, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getHorizontalSize());
+                EffectShim.getPeer(effect)).getHorizontalSize());
     }
 
     @Test
@@ -88,7 +89,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(255.1f, effect.getWidth(), 1e-100);
         pulse();
         assertEquals(255, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getHorizontalSize());
+                EffectShim.getPeer(effect)).getHorizontalSize());
     }
 
     @Test
@@ -98,7 +99,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(1.0f, effect.getHeight(), 1e-100);
         pulse();
         assertEquals(1, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getVerticalSize());
+                EffectShim.getPeer(effect)).getVerticalSize());
     }
 
     @Test
@@ -108,7 +109,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(5.0f, effect.heightProperty().get(), 1e-100);
         pulse();
         assertEquals(5, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getVerticalSize());
+                EffectShim.getPeer(effect)).getVerticalSize());
     }
 
     @Test
@@ -120,7 +121,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(-0.1f, effect.getHeight(), 1e-100);
         pulse();
         assertEquals(0, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getVerticalSize());
+                EffectShim.getPeer(effect)).getVerticalSize());
     }
 
     @Test
@@ -132,7 +133,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(255.1f, effect.getHeight(), 1e-100);
         pulse();
         assertEquals(255, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getVerticalSize());
+                EffectShim.getPeer(effect)).getVerticalSize());
     }
 
     @Test
@@ -142,7 +143,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(2, effect.getIterations());
         pulse();
         assertEquals(2, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getPasses());
+                EffectShim.getPeer(effect)).getPasses());
     }
 
     @Test
@@ -152,7 +153,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(1, effect.iterationsProperty().get());
         pulse();
         assertEquals(1, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getPasses());
+                EffectShim.getPeer(effect)).getPasses());
     }
 
     @Test
@@ -164,7 +165,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(-1, effect.getIterations());
         pulse();
         assertEquals(0, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getPasses());
+                EffectShim.getPeer(effect)).getPasses());
     }
 
     @Test
@@ -176,7 +177,7 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(4, effect.getIterations());
         pulse();
         assertEquals(3, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getPasses());
+                EffectShim.getPeer(effect)).getPasses());
     }
 
     @Test
@@ -188,11 +189,11 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(3, effect.getIterations());
         pulse();
         assertEquals(1, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getHorizontalSize());
+                EffectShim.getPeer(effect)).getHorizontalSize());
         assertEquals(1, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getVerticalSize());
+                EffectShim.getPeer(effect)).getVerticalSize());
         assertEquals(3, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getPasses());
+                EffectShim.getPeer(effect)).getPasses());
     }
 
     @Test
@@ -204,11 +205,11 @@ public class BoxBlurTest extends EffectsTestBase {
         assertEquals(1, effect.getIterations());
         pulse();
         assertEquals(5, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getHorizontalSize());
+                EffectShim.getPeer(effect)).getHorizontalSize());
         assertEquals(5, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getVerticalSize());
+                EffectShim.getPeer(effect)).getVerticalSize());
         assertEquals(1, ((com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(effect)).getPasses());
+                EffectShim.getPeer(effect)).getPasses());
     }
 
     @Test
@@ -238,6 +239,6 @@ public class BoxBlurTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.BoxBlur", "input",
                 "com.sun.scenario.effect.BoxBlur", "input",
-                blur, (com.sun.scenario.effect.BoxBlur)blur.impl_getImpl());
+                blur, (com.sun.scenario.effect.BoxBlur) EffectHelper.getPeer(blur));
     }
 }

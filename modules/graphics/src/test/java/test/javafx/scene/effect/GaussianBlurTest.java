@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.effect;
 
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.GaussianBlur;
 import static org.junit.Assert.assertEquals;
@@ -47,7 +48,7 @@ public class GaussianBlurTest extends EffectsTestBase {
         effect.setRadius(1.0f);
         assertEquals(1.0f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.GaussianBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -56,7 +57,7 @@ public class GaussianBlurTest extends EffectsTestBase {
         assertEquals(10, effect.getRadius(), 1e-10);
         assertEquals(10, effect.radiusProperty().get(), 1e-10);
         pulse();
-        assertEquals(10, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(10, ((com.sun.scenario.effect.GaussianBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -67,7 +68,7 @@ public class GaussianBlurTest extends EffectsTestBase {
         effect.setRadius(-0.1f);
         assertEquals(-0.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.GaussianBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -78,7 +79,7 @@ public class GaussianBlurTest extends EffectsTestBase {
         effect.setRadius(63.1f);
         assertEquals(63.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(63f, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(63f, ((com.sun.scenario.effect.GaussianBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -94,7 +95,7 @@ public class GaussianBlurTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.GaussianBlur", "input",
                 "com.sun.scenario.effect.GaussianBlur", "input",
-                blur, (com.sun.scenario.effect.BoxBlur)blur.impl_getImpl());
+                blur, (com.sun.scenario.effect.BoxBlur) EffectHelper.getPeer(blur));
     }
 
     @Test
@@ -103,7 +104,7 @@ public class GaussianBlurTest extends EffectsTestBase {
         setupTest(effect);
         assertEquals(4, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(4f, ((com.sun.scenario.effect.GaussianBlur) effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(4f, ((com.sun.scenario.effect.GaussianBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -112,6 +113,6 @@ public class GaussianBlurTest extends EffectsTestBase {
         setupTest(effect);
         assertEquals(10, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(10f, ((com.sun.scenario.effect.GaussianBlur) effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(10f, ((com.sun.scenario.effect.GaussianBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 }

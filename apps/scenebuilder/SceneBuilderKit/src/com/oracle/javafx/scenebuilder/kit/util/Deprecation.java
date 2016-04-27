@@ -135,10 +135,6 @@ public class Deprecation {
     }
 
     // Deprecated stuff in Parent
-//    // RT-21209 : Promote setImpl_traversalEngine to public API
-//    public static void setTraversalEngine(Parent parent, TraversalEngine engine) {
-//        parent.setImpl_traversalEngine(engine);
-//    }
 
 //    // RT-21217 : Promote impl_fromPlatformImage to public API
 //    public static Image fromPlatformImage(Object platformImage) {
