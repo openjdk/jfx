@@ -1134,27 +1134,24 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
         windowChangesMask |= CWHeight;
     }
 
-    if (xSet) {
-        geometry.refx = x + geometry.current_width * geometry.gravity_x;
+    if (xSet || ySet) {
+        if (xSet) {
+            geometry.refx = x + geometry.current_width * geometry.gravity_x;
+        }
+
         windowChanges.x = geometry_get_window_x(&geometry);
         windowChangesMask |= CWX;
 
-    } else if ((geometry.gravity_x != 0) && (windowChangesMask & CWWidth)) {
-        windowChanges.x = geometry_get_window_x(&geometry);
-        windowChangesMask |= CWX;
-    }
+        if (ySet) {
+            geometry.refy = y + geometry.current_height * geometry.gravity_y;
+        }
 
-    if (ySet) {
-        geometry.refy = y + geometry.current_height * geometry.gravity_y;
         windowChanges.y = geometry_get_window_y(&geometry);
         windowChangesMask |= CWY;
 
-    } else if ((geometry.gravity_y != 0) && (windowChangesMask & CWHeight)) {
-        windowChanges.y = geometry_get_window_y(&geometry);
-        windowChangesMask |= CWY;
+        location_assigned = true;
     }
 
-    if (xSet || ySet) location_assigned = true;
     if (w > 0 || h > 0 || cw > 0 || ch > 0) size_assigned = true;
 
     window_configure(&windowChanges, windowChangesMask);
