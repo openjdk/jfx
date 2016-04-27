@@ -142,6 +142,8 @@ public final class ImageTest {
         lastAsyncImageLoader.setProgress(200, 100);
         final float p4 = (float) image.getProgress();
 
+        lastAsyncImageLoader.finish();
+
         assertTrue(p1 < p2);
         assertTrue(p2 < p3);
         assertTrue(p3 == p4);
@@ -173,6 +175,8 @@ public final class ImageTest {
         lastAsyncImageLoader.finish();
         final Object platformImage3 = getPlatformImage(image);
         final Object platformImage4 = getPlatformImage(image);
+
+        lastAsyncImageLoader.finish();
 
         assertNotSame(platformImage1, platformImage2);
         assertNotSame(platformImage2, platformImage3);
