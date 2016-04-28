@@ -424,15 +424,14 @@ void URL::init(const URL& base, const String& relative, const TextEncoding& enco
     } else {
         // If the base is empty or opaque (e.g. data: or javascript:), then the URL is invalid
         // unless the relative URL is a single fragment.
+#if PLATFORM(JAVA)
+        if (!base.isHierarchical() && !base.isJarFile()) {
+#else
         if (!base.isHierarchical()) {
+#endif
             if (str[0] == '#') {
                 appendASCII(base.m_string.left(base.m_queryEnd), str, len, parseBuffer);
                 parse(parseBuffer.data(), &relative);
-#if PLATFORM(JAVA)
-            } else if(base.isJarFile()) {
-                appendASCII(base.m_string.left(base.m_pathAfterLastSlash), str, len, parseBuffer);
-                parse(parseBuffer.data(), &relative);
-#endif
             } else {
                 m_string = relative;
                 invalidate();
