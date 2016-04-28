@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.com.sun.javafx.scene.traversal;
 
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.ContainerTabOrder;
 import com.sun.javafx.scene.traversal.ContainerTabOrderShim;
@@ -80,7 +81,7 @@ public class TopMostTraversalEngineTest {
     @Test
     public void selectFirstUseParentEngine() {
         Group g = new Group(createFocusableNode());
-        g.setImpl_traversalEngine(new ParentTraversalEngine(g, new Algorithm() {
+        ParentHelper.setTraversalEngine(g, new ParentTraversalEngine(g, new Algorithm() {
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
                 return null;
@@ -101,7 +102,7 @@ public class TopMostTraversalEngineTest {
 
         final Node focusableNode = createFocusableNode();
         g = new Group(createFocusableNode(), focusableNode, createFocusableNode());
-        g.setImpl_traversalEngine(new ParentTraversalEngine(g, new Algorithm() {
+        ParentHelper.setTraversalEngine(g, new ParentTraversalEngine(g, new Algorithm() {
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
                 fail();
@@ -140,7 +141,7 @@ public class TopMostTraversalEngineTest {
         g.setFocusTraversable(true);
         final ParentTraversalEngine pEngine = new ParentTraversalEngine(g);
         pEngine.setOverriddenFocusTraversability(false);
-        g.setImpl_traversalEngine(pEngine);
+        ParentHelper.setTraversalEngine(g, pEngine);
 
         ParentShim.getChildren(root).add(g);
 
@@ -170,7 +171,7 @@ public class TopMostTraversalEngineTest {
     public void selectLastUseParentEngine() {
         final Node focusableNode = createFocusableNode();
         Group g = new Group(createFocusableNode(), focusableNode, createFocusableNode());
-        g.setImpl_traversalEngine(new ParentTraversalEngine(g, new Algorithm() {
+        ParentHelper.setTraversalEngine(g, new ParentTraversalEngine(g, new Algorithm() {
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
                 fail();
@@ -193,7 +194,7 @@ public class TopMostTraversalEngineTest {
 
 
         g = new Group(createFocusableNode());
-        g.setImpl_traversalEngine(new ParentTraversalEngine(g, new Algorithm() {
+        ParentHelper.setTraversalEngine(g, new ParentTraversalEngine(g, new Algorithm() {
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
                 return null;
@@ -241,7 +242,7 @@ public class TopMostTraversalEngineTest {
         g.setFocusTraversable(true);
         final ParentTraversalEngine pEngine = new ParentTraversalEngine(g);
         pEngine.setOverriddenFocusTraversability(false);
-        g.setImpl_traversalEngine(pEngine);
+        ParentHelper.setTraversalEngine(g, pEngine);
 
         Node focusableNode = createFocusableNode();
 
@@ -311,7 +312,7 @@ public class TopMostTraversalEngineTest {
         Node n1 = createFocusableNode();
         Node n2 = createFocusableNode();
         Group g = new Group(n1, createFocusableNode(), n2);
-        g.setImpl_traversalEngine(new ParentTraversalEngine(g, new Algorithm() {
+        ParentHelper.setTraversalEngine(g, new ParentTraversalEngine(g, new Algorithm() {
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
                 assertEquals(Direction.NEXT, dir);
@@ -343,7 +344,7 @@ public class TopMostTraversalEngineTest {
         Node n2 = createFocusableNode();
         Group g = new Group(n1, createFocusableNode(), n2);
         g.setFocusTraversable(true);
-        g.setImpl_traversalEngine(new ParentTraversalEngine(g, new Algorithm() {
+        ParentHelper.setTraversalEngine(g, new ParentTraversalEngine(g, new Algorithm() {
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
                 assertEquals(Direction.NEXT, dir);
@@ -479,7 +480,7 @@ public class TopMostTraversalEngineTest {
         Node n1 = createFocusableNode();
         Node n2 = createFocusableNode();
         Group g = new Group(n2, createFocusableNode(), n1);
-        g.setImpl_traversalEngine(new ParentTraversalEngine(g, new Algorithm() {
+        ParentHelper.setTraversalEngine(g, new ParentTraversalEngine(g, new Algorithm() {
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
                 assertEquals(Direction.PREVIOUS, dir);

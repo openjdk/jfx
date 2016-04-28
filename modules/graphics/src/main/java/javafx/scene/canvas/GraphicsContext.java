@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.sg.prism.GrowableDataBuffer;
 import com.sun.javafx.sg.prism.NGCanvas;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.scenario.effect.EffectHelper;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.effect.Blend;
@@ -2931,9 +2932,9 @@ public final class GraphicsContext {
             curState.effect = null;
             buf.putObject(null);
         } else {
-            curState.effect = e.impl_copy();
-            curState.effect.impl_sync();
-            buf.putObject(curState.effect.impl_getImpl());
+            curState.effect = EffectHelper.copy(e);
+            EffectHelper.sync(curState.effect);
+            buf.putObject(EffectHelper.getPeer(curState.effect));
         }
     }
 
@@ -2951,7 +2952,7 @@ public final class GraphicsContext {
      *         or null if there is no current effect
      */
     public Effect getEffect(Effect e) {
-        return curState.effect == null ? null : curState.effect.impl_copy();
+        return curState.effect == null ? null : EffectHelper.copy(curState.effect);
     }
 
     /**
@@ -2973,8 +2974,8 @@ public final class GraphicsContext {
         if (e == null) return;
         GrowableDataBuffer buf = getBuffer();
         buf.putByte(NGCanvas.FX_APPLY_EFFECT);
-        Effect effect = e.impl_copy();
-        effect.impl_sync();
-        buf.putObject(effect.impl_getImpl());
+        Effect effect = EffectHelper.copy(e);
+        EffectHelper.sync(effect);
+        buf.putObject(EffectHelper.getPeer(effect));
     }
 }

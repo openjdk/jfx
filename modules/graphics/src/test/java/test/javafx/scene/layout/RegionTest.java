@@ -42,6 +42,7 @@ import javafx.scene.shape.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGRegion;
+import com.sun.javafx.tk.Toolkit;
 import javafx.scene.NodeShim;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -59,6 +60,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  *
@@ -1019,6 +1021,8 @@ public class RegionTest {
         r.setBackground(background);
 
         assertTrue(r.listenerAdded.get());
+
+        ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory().getLastAsyncImageLoader().finish();
     }
 
     @Test public void testBackgroundLoadedBackgroundImageStillLoadingButRemovedFromRegionHasListenerRemoved() {
@@ -1031,6 +1035,8 @@ public class RegionTest {
         r.setBackground(null);
 
         assertFalse(r.listenerAdded.get());
+
+        ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory().getLastAsyncImageLoader().finish();
     }
 
     @Test public void testBackgroundLoadedBackgroundImageWhichFinishesLoadingHasListenerRemoved() {
@@ -1044,6 +1050,8 @@ public class RegionTest {
         image.updateVisuals();
 
         assertFalse(r.listenerAdded.get());
+
+        ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory().getLastAsyncImageLoader().finish();
     }
 
     @Test public void testBackgroundLoadedBackgroundImageWhichFinishesLoadingCausesRepaint() {
@@ -1059,6 +1067,8 @@ public class RegionTest {
         image.updateVisuals();
 
         assertTrue(r.willBeRepainted());
+
+        ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory().getLastAsyncImageLoader().finish();
     }
 
     @Test public void testBackgroundLoadedBorderImageHasListenerInstalled() {
@@ -1070,6 +1080,8 @@ public class RegionTest {
         r.setBorder(border);
 
         assertTrue(r.listenerAdded.get());
+
+        ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory().getLastAsyncImageLoader().finish();
     }
 
     @Test public void testBackgroundLoadedBorderImageStillLoadingButRemovedFromRegionHasListenerRemoved() {
@@ -1082,6 +1094,8 @@ public class RegionTest {
         r.setBorder(null);
 
         assertFalse(r.listenerAdded.get());
+
+        ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory().getLastAsyncImageLoader().finish();
     }
 
     @Test public void testBackgroundLoadedBorderImageWhichFinishesLoadingHasListenerRemoved() {
@@ -1095,6 +1109,8 @@ public class RegionTest {
         image.updateVisuals();
 
         assertFalse(r.listenerAdded.get());
+
+        ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory().getLastAsyncImageLoader().cancel();
     }
 
     @Test public void testBackgroundLoadedBorderImageWhichFinishesLoadingCausesRepaint() {
@@ -1110,6 +1126,8 @@ public class RegionTest {
         image.updateVisuals();
 
         assertTrue(r.willBeRepainted());
+
+        ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory().getLastAsyncImageLoader().cancel();
     }
 
     @Test public void testAnimatedBackgroundImageHasListenerInstalled() {

@@ -261,4 +261,39 @@ public class LoadTest extends TestBase {
             throw new AssertionError(ex);
         }
     }
+
+   /**
+     * @test
+     * @bug 8152420
+     * summary loading relative sub-resource from jar
+     */
+    @Test public void loadJarFile() throws Exception {
+
+        // archive-root0.html -- src archive-r0.js, c/archive-c0.js
+        load("jar:" + new File(System.getProperties().get("WEB_ARCHIVE_JAR_TEST_DIR").toString()
+                + "/webArchiveJar.jar").toURI().toASCIIString() + "!/archive-root0.html");
+        assertEquals("archive-root0.html failed to load src='archive-r0.js'",
+                executeScript("jsr0()").toString(), "loaded");
+
+        assertEquals("archive-root0.html failed to load src='c/archive-c0.js'",
+                executeScript("jsc0()").toString(), "loaded");
+
+        // archive-root1.html -- src ./archive-r0.js, ./c/archive-c0.js
+        load("jar:" + new File(System.getProperties().get("WEB_ARCHIVE_JAR_TEST_DIR").toString()
+                + "/webArchiveJar.jar").toURI().toASCIIString() + "!/archive-root1.html");
+        assertEquals("archive-root1.html failed to load src='./archive-r0.js'",
+                executeScript("jsr0()").toString(), "loaded");
+
+        assertEquals("archive-root1.html failed to load src='./c/archive-c0.js'",
+                executeScript("jsc0()").toString(), "loaded");
+
+        // archive-root2.html -- src ./c/../archive-r0.js, ./c/./././archive-c0.js
+        load("jar:" + new File(System.getProperties().get("WEB_ARCHIVE_JAR_TEST_DIR").toString()
+                + "/webArchiveJar.jar").toURI().toASCIIString() + "!/archive-root2.html");
+        assertEquals("archive-root2.html failed to load src='./c/../archive-r0.js'",
+                executeScript("jsr0()").toString(), "loaded");
+
+        assertEquals("archive-root2.html failed to load src='./c/./././archive-c0.js'",
+                executeScript("jsc0()").toString(), "loaded");
+    }
 }

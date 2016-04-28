@@ -229,9 +229,9 @@ public class PrismFontLoader extends FontLoader {
         }
     }
 
-    @Override public float computeStringWidth(String string, Font font) {
+    @Override public float getCharWidth(char ch, Font font) {
         PGFont prismFont = (PGFont)font.impl_getNativeFont();
-        return (float)PrismFontUtils.computeStringWidth(prismFont, string);
+        return (float)PrismFontUtils.getCharWidth(prismFont, ch);
     }
 
     @Override public float getSystemFontSize() {

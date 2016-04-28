@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
@@ -628,7 +629,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             // auto-scroll so node is within (0,0),(contentWidth,contentHeight)
             scrollBoundsIntoView(bounds);
         });
-        getSkinnable().setImpl_traversalEngine(traversalEngine);
+        ParentHelper.setTraversalEngine(getSkinnable(), traversalEngine);
 
         if (scrollNode != null) {
             scrollNode.layoutBoundsProperty().addListener(nodeListener);

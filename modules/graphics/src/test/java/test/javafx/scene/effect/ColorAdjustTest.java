@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.effect;
 
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.ColorAdjust;
 import static test.com.sun.javafx.test.TestHelper.box;
@@ -48,7 +49,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setBrightness(1.0f);
         assertEquals(1.0f, effect.getBrightness(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getBrightness(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getBrightness(), 1e-100);
     }
 
     @Test
@@ -57,7 +58,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         assertEquals(0f, effect.getBrightness(), 1e-100);
         assertEquals(0f, effect.brightnessProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getBrightness(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getBrightness(), 1e-100);
     }
 
     @Test
@@ -68,7 +69,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setBrightness(-1.1f);
         assertEquals(-1.1f, effect.getBrightness(), 1e-100);
         pulse();
-        assertEquals(-1f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getBrightness(), 1e-100);
+        assertEquals(-1f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getBrightness(), 1e-100);
     }
 
     @Test
@@ -79,7 +80,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setBrightness(1.1f);
         assertEquals(1.1f, effect.getBrightness(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getBrightness(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getBrightness(), 1e-100);
     }
 
     @Test
@@ -88,7 +89,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setContrast(0.5);
         assertEquals(0.5, effect.getContrast(), 1e-100);
         pulse();
-        assertEquals(0.5, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getContrast(), 1e-100);
+        assertEquals(0.5, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getContrast(), 1e-100);
     }
 
     @Test
@@ -97,7 +98,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         assertEquals(0.0, effect.getContrast(), 1e-100);
         assertEquals(0.0, effect.contrastProperty().get(), 1e-100);
         pulse();
-        assertEquals(0.0, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getContrast(), 1e-100);
+        assertEquals(0.0, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getContrast(), 1e-100);
     }
 
     @Test
@@ -108,7 +109,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setContrast(-1.1);
         assertEquals(-1.1, effect.getContrast(), 1e-100);
         pulse();
-        assertEquals(-1.0, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getContrast(), 1e-100);
+        assertEquals(-1.0, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getContrast(), 1e-100);
     }
 
     @Test
@@ -119,7 +120,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setContrast(1.1);
         assertEquals(1.1, effect.getContrast(), 1e-100);
         pulse();
-        assertEquals(1.0, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getContrast(), 1e-100);
+        assertEquals(1.0, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getContrast(), 1e-100);
     }
 
     @Test
@@ -128,7 +129,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setHue(1.0f);
         assertEquals(1.0f, effect.getHue(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getHue(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getHue(), 1e-100);
     }
 
     @Test
@@ -137,7 +138,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         assertEquals(0f, effect.getHue(), 1e-100);
         assertEquals(0f, effect.hueProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getHue(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getHue(), 1e-100);
     }
 
     @Test
@@ -148,7 +149,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setHue(-1.1f);
         assertEquals(-1.1f, effect.getHue(), 1e-100);
         pulse();
-        assertEquals(-1f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getHue(), 1e-100);
+        assertEquals(-1f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getHue(), 1e-100);
     }
 
     @Test
@@ -159,7 +160,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setHue(1.1f);
         assertEquals(1.1f, effect.getHue(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getHue(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getHue(), 1e-100);
     }
 
     @Test
@@ -168,7 +169,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setSaturation(1.0f);
         assertEquals(1.0f, effect.getSaturation(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getSaturation(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getSaturation(), 1e-100);
     }
 
     @Test
@@ -177,7 +178,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         assertEquals(0f, effect.getSaturation(), 1e-100);
         assertEquals(0f, effect.saturationProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getSaturation(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getSaturation(), 1e-100);
     }
 
     @Test
@@ -188,7 +189,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setSaturation(-1.1f);
         assertEquals(-1.1f, effect.getSaturation(), 1e-100);
         pulse();
-        assertEquals(-1f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getSaturation(), 1e-100);
+        assertEquals(-1f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getSaturation(), 1e-100);
     }
 
     @Test
@@ -199,7 +200,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         effect.setSaturation(1.1f);
         assertEquals(1.1f, effect.getSaturation(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getSaturation(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getSaturation(), 1e-100);
     }
 
     @Test
@@ -236,7 +237,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.ColorAdjust", "input",
                 "com.sun.scenario.effect.ColorAdjust", "input",
-                blur, (com.sun.scenario.effect.BoxBlur)blur.impl_getImpl());
+                blur, (com.sun.scenario.effect.BoxBlur) EffectHelper.getPeer(blur));
     }
 
     @Test
@@ -261,10 +262,10 @@ public class ColorAdjustTest extends EffectsTestBase {
         assertEquals(-0.1, effect.getBrightness(), 1e-100);
         assertEquals(0.1, effect.getContrast(), 1e-100);
         pulse();
-        assertEquals(-0.5f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getHue(), 1e-100);
-        assertEquals(0.5f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getSaturation(), 1e-100);
-        assertEquals(-0.1f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getBrightness(), 1e-100);
-        assertEquals(0.1f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getContrast(), 1e-100);
+        assertEquals(-0.5f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getHue(), 1e-100);
+        assertEquals(0.5f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getSaturation(), 1e-100);
+        assertEquals(-0.1f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getBrightness(), 1e-100);
+        assertEquals(0.1f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getContrast(), 1e-100);
     }
 
     @Test
@@ -276,9 +277,9 @@ public class ColorAdjustTest extends EffectsTestBase {
         assertEquals(0, effect.getBrightness(), 1e-100);
         assertEquals(0, effect.getContrast(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getHue(), 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getSaturation(), 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getBrightness(), 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getContrast(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getHue(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getSaturation(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getBrightness(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust) EffectHelper.getPeer(effect)).getContrast(), 1e-100);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
@@ -185,7 +186,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         }
 
         // Fix for RT-36902, where focus traversal was getting stuck inside the ComboBox
-        comboBoxBase.setImpl_traversalEngine(new ParentTraversalEngine(comboBoxBase, new Algorithm() {
+        ParentHelper.setTraversalEngine(comboBoxBase,
+                new ParentTraversalEngine(comboBoxBase, new Algorithm() {
+
             @Override public Node select(Node owner, Direction dir, TraversalContext context) {
                 return null;
             }

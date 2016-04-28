@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package javafx.scene.web;
 import java.util.ResourceBundle;
 
 import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
@@ -468,7 +469,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                 return cutButton;
             }
         });
-        getSkinnable().setImpl_traversalEngine(engine);
+        ParentHelper.setTraversalEngine(getSkinnable(), engine);
         webView.setFocusTraversable(true);
         gridPane.getChildren().addListener(itemsListener);
     }

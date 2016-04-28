@@ -27,6 +27,7 @@ package com.sun.javafx.scene;
 
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.scene.Parent;
 
 /**
@@ -48,6 +49,14 @@ public class ParentHelper {
         return parentAccessor.pickChildrenNode(parent, pickRay, result);
     }
 
+    public static void setTraversalEngine(Parent parent, ParentTraversalEngine value) {
+        parentAccessor.setTraversalEngine(parent, value);
+    }
+
+    public static ParentTraversalEngine getTraversalEngine(Parent parent) {
+        return parentAccessor.getTraversalEngine(parent);
+    }
+
     public static void setParentAccessor(final ParentAccessor newAccessor) {
         if (parentAccessor != null) {
             throw new IllegalStateException();
@@ -58,6 +67,8 @@ public class ParentHelper {
 
     public interface ParentAccessor {
         boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result);
+        void setTraversalEngine(Parent parent, ParentTraversalEngine value);
+        ParentTraversalEngine getTraversalEngine(Parent parent);
     }
 
     private static void forceInit(final Class<?> classToInit) {

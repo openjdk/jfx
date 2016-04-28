@@ -1148,7 +1148,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     private void updateFontMetrics() {
         Text firstParagraph = (Text)paragraphNodes.getChildren().get(0);
         lineHeight = Utils.getLineHeight(getSkinnable().getFont(), firstParagraph.getBoundsType());
-        characterWidth = fontMetrics.get().computeStringWidth("W");
+        characterWidth = fontMetrics.get().getCharWidth('W');
     }
 
     private double getTextTranslateX() {

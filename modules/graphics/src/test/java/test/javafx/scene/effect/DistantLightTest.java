@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ public class DistantLightTest extends LightTestBase {
         assertEquals(1.0f, effect.getAzimuth(), 1e-100);
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getAzimuth(), 1e-100);
+                LightShim.getPeer(effect)).getAzimuth(), 1e-100);
     }
 
     @Test
@@ -63,7 +63,7 @@ public class DistantLightTest extends LightTestBase {
         assertEquals(45f, effect.azimuthProperty().get(), 1e-100);
         pulse();
         assertEquals(45f, ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getAzimuth(), 1e-100);
+                LightShim.getPeer(effect)).getAzimuth(), 1e-100);
     }
 
     @Test
@@ -73,7 +73,7 @@ public class DistantLightTest extends LightTestBase {
         assertEquals(1.0f, effect.getElevation(), 1e-100);
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getElevation(), 1e-100);
+                LightShim.getPeer(effect)).getElevation(), 1e-100);
     }
 
     @Test
@@ -83,7 +83,7 @@ public class DistantLightTest extends LightTestBase {
         assertEquals(45f, effect.elevationProperty().get(), 1e-100);
         pulse();
         assertEquals(45f, ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getElevation(), 1e-100);
+                LightShim.getPeer(effect)).getElevation(), 1e-100);
     }
 
     @Test
@@ -93,7 +93,7 @@ public class DistantLightTest extends LightTestBase {
         assertEquals(Color.BLUE, effect.getColor());
         pulse();
         Color4f c = ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getColor();
+                LightShim.getPeer(effect)).getColor();
         assertEquals(0f, c.getRed(), 1e-5);
         assertEquals(0f, c.getGreen(), 1e-5);
         assertEquals(1f, c.getBlue(), 1e-5);
@@ -107,7 +107,7 @@ public class DistantLightTest extends LightTestBase {
         assertEquals(Color.WHITE, effect.colorProperty().get());
         pulse();
         Color4f c = ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getColor();
+                LightShim.getPeer(effect)).getColor();
         assertEquals(1f, c.getRed(), 1e-5);
         assertEquals(1f, c.getGreen(), 1e-5);
         assertEquals(1f, c.getBlue(), 1e-5);
@@ -122,7 +122,7 @@ public class DistantLightTest extends LightTestBase {
         assertNull(effect.colorProperty().get());
         pulse();
         Color4f c = ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getColor();
+                LightShim.getPeer(effect)).getColor();
         assertEquals(1f, c.getRed(), 1e-5);
         assertEquals(1f, c.getGreen(), 1e-5);
         assertEquals(1f, c.getBlue(), 1e-5);
@@ -132,7 +132,7 @@ public class DistantLightTest extends LightTestBase {
     @Test
     public void testAzimuthSynced() throws Exception {
         checkDoublePropertySynced(
-                effect, LightShim.impl_getImpl(effect),
+                effect, LightShim.getPeer(effect),
                 "javafx.scene.effect.Light$Distant", "azimuth",
                 "com.sun.scenario.effect.light.DistantLight", "azimuth", 0.3);
     }
@@ -143,7 +143,7 @@ public class DistantLightTest extends LightTestBase {
         Color4f red = new Color4f((float) color.getRed(), (float) color.getGreen(),
                 (float) color.getBlue(), (float) color.getOpacity());
         Color4f result = (Color4f) getObjectPropertySynced(
-                effect, LightShim.impl_getImpl(effect),
+                effect, LightShim.getPeer(effect),
                 "javafx.scene.effect.Light$Distant", "color",
                 "com.sun.scenario.effect.light.DistantLight", "color",
                 Color.RED);
@@ -159,11 +159,11 @@ public class DistantLightTest extends LightTestBase {
         assertEquals(Color.BLUE, effect.getColor());
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getAzimuth(), 1e-100);
+                LightShim.getPeer(effect)).getAzimuth(), 1e-100);
         assertEquals(2.0f, ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getElevation(), 1e-100);
+                LightShim.getPeer(effect)).getElevation(), 1e-100);
         Color4f c = ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getColor();
+                LightShim.getPeer(effect)).getColor();
         assertEquals(0f, c.getRed(), 1e-5);
         assertEquals(0f, c.getGreen(), 1e-5);
         assertEquals(1f, c.getBlue(), 1e-5);
@@ -179,11 +179,11 @@ public class DistantLightTest extends LightTestBase {
         assertEquals(Color.RED, effect.getColor());
         pulse();
         assertEquals(45f, ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getAzimuth(), 1e-100);
+                LightShim.getPeer(effect)).getAzimuth(), 1e-100);
         assertEquals(45f, ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getElevation(), 1e-100);
+                LightShim.getPeer(effect)).getElevation(), 1e-100);
         Color4f c = ((com.sun.scenario.effect.light.DistantLight)
-                LightShim.impl_getImpl(effect)).getColor();
+                LightShim.getPeer(effect)).getColor();
         assertEquals(1f, c.getRed(), 1e-5);
         assertEquals(0f, c.getGreen(), 1e-5);
         assertEquals(0f, c.getBlue(), 1e-5);

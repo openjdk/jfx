@@ -2627,6 +2627,14 @@ project(":web") {
 
     compileJava.dependsOn updateCacheIfNeeded
 
+    task webArchiveJar(type: Jar) {
+        from (project.file("$projectDir/src/test/resources/test/html")) {
+            include "**/archive-*.*"
+        }
+        archiveName = "webArchiveJar.jar"
+        destinationDir = file("$buildDir/testing/resources")
+    }
+
     test {
         if (!IS_JIGSAW_TEST) {
         //TODO: support this in Jake
@@ -2635,6 +2643,9 @@ project(":web") {
         systemProperty 'monocle.platform', 'Headless'
         systemProperty 'prism.order', 'sw'
         }
+        dependsOn webArchiveJar
+        def testResourceDir = file("$buildDir/testing/resources")
+        jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
     }
 
     if (!IS_COMPILE_WEBKIT) {

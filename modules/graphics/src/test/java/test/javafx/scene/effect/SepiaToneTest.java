@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.effect;
 
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.SepiaTone;
 import static test.com.sun.javafx.test.TestHelper.box;
@@ -48,7 +49,7 @@ public class SepiaToneTest extends EffectsTestBase {
         effect.setLevel(0.5f);
         assertEquals(0.5f, effect.getLevel(), 1e-100);
         pulse();
-        assertEquals(0.5f, ((com.sun.scenario.effect.SepiaTone)effect.impl_getImpl()).getLevel(), 1e-100);
+        assertEquals(0.5f, ((com.sun.scenario.effect.SepiaTone) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
     }
 
     @Test
@@ -57,7 +58,7 @@ public class SepiaToneTest extends EffectsTestBase {
         assertEquals(1f, effect.getLevel(), 1e-100);
         assertEquals(1f, effect.levelProperty().get(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.SepiaTone)effect.impl_getImpl()).getLevel(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.SepiaTone) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
     }
 
     @Test
@@ -68,7 +69,7 @@ public class SepiaToneTest extends EffectsTestBase {
         effect.setLevel(-0.1f);
         assertEquals(-0.1f, effect.getLevel(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.SepiaTone)effect.impl_getImpl()).getLevel(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.SepiaTone) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
     }
 
     @Test
@@ -79,7 +80,7 @@ public class SepiaToneTest extends EffectsTestBase {
         effect.setLevel(1.1f);
         assertEquals(1.1f, effect.getLevel(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.SepiaTone)effect.impl_getImpl()).getLevel(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.SepiaTone) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
     }
 
     @Test
@@ -95,7 +96,7 @@ public class SepiaToneTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.SepiaTone", "input",
                 "com.sun.scenario.effect.SepiaTone", "input",
-                blur, (com.sun.scenario.effect.BoxBlur)blur.impl_getImpl());
+                blur, (com.sun.scenario.effect.BoxBlur) EffectHelper.getPeer(blur));
     }
 
     @Test
@@ -117,7 +118,7 @@ public class SepiaToneTest extends EffectsTestBase {
         setupTest(effect);
         assertEquals(0.1, effect.getLevel(), 1e-100);
         pulse();
-        assertEquals(0.1f, ((com.sun.scenario.effect.SepiaTone) effect.impl_getImpl()).getLevel(), 1e-100);
+        assertEquals(0.1f, ((com.sun.scenario.effect.SepiaTone) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
     }
 
     @Test
@@ -126,6 +127,6 @@ public class SepiaToneTest extends EffectsTestBase {
         setupTest(effect);
         assertEquals(1, effect.getLevel(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.SepiaTone) effect.impl_getImpl()).getLevel(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.SepiaTone) EffectHelper.getPeer(effect)).getLevel(), 1e-100);
     }
 }

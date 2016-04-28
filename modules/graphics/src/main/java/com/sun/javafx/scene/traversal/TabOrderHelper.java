@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,9 +23,9 @@
  * questions.
  */
 
-
 package com.sun.javafx.scene.traversal;
 
+import com.sun.javafx.scene.ParentHelper;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -38,10 +38,11 @@ final class TabOrderHelper {
             Node prevNode = nodeList.get(i);
             // ParentTraverEngine can override traversability, so we need to check it first
             if (isDisabledOrInvisible(prevNode)) continue;
-            final ParentTraversalEngine impl_traversalEngine = prevNode instanceof Parent ? ((Parent)prevNode).getImpl_traversalEngine() : null;
+            final ParentTraversalEngine traversalEngine = prevNode instanceof Parent
+                    ? ParentHelper.getTraversalEngine((Parent) prevNode) : null;
             if (prevNode instanceof Parent) {
-                if (impl_traversalEngine != null && impl_traversalEngine.canTraverse()) {
-                    Node selected = impl_traversalEngine.selectLast();
+                if (traversalEngine != null && traversalEngine.canTraverse()) {
+                    Node selected = traversalEngine.selectLast();
                     if (selected != null) {
                         return selected;
                     }
@@ -55,7 +56,9 @@ final class TabOrderHelper {
                     }
                 }
             }
-            if (impl_traversalEngine != null ? impl_traversalEngine.isParentTraversable() : prevNode.isFocusTraversable()) {
+            if (traversalEngine != null
+                    ? traversalEngine.isParentTraversable()
+                    : prevNode.isFocusTraversable()) {
                 return prevNode;
             }
         }
@@ -93,7 +96,8 @@ final class TabOrderHelper {
             Parent parent = startNode.getParent();
             if (parent != null) {
                 // If the parent itself is traversable, select it
-                final ParentTraversalEngine parentEngine = parent.getImpl_traversalEngine();
+                final ParentTraversalEngine parentEngine
+                        = ParentHelper.getTraversalEngine(parent);
                 if (parentEngine != null ? parentEngine.isParentTraversable() : parent.isFocusTraversable()) {
                     newNode = parent;
                 } else {
@@ -126,14 +130,17 @@ final class TabOrderHelper {
         for (int i = startIndex ; i < nodeList.size() ; i++) {
             Node nextNode = nodeList.get(i);
             if (isDisabledOrInvisible(nextNode)) continue;
-            final ParentTraversalEngine impl_traversalEngine = nextNode instanceof Parent ? ((Parent)nextNode).getImpl_traversalEngine() : null;
+            final ParentTraversalEngine traversalEngine = nextNode instanceof Parent
+                    ? ParentHelper.getTraversalEngine((Parent) nextNode) : null;
             // ParentTraverEngine can override traversability, so we need to check it first
-            if (impl_traversalEngine != null ? impl_traversalEngine.isParentTraversable() : nextNode.isFocusTraversable()) {
+            if (traversalEngine != null
+                    ? traversalEngine.isParentTraversable()
+                    : nextNode.isFocusTraversable()) {
                 return nextNode;
             }
             else if (nextNode instanceof Parent) {
-                if (impl_traversalEngine!= null && impl_traversalEngine.canTraverse()) {
-                    Node selected = impl_traversalEngine.selectFirst();
+                if (traversalEngine!= null && traversalEngine.canTraverse()) {
+                    Node selected = traversalEngine.selectFirst();
                     if (selected != null) {
                         return selected;
                     } else {
@@ -198,9 +205,10 @@ final class TabOrderHelper {
 
     public static Node getFirstTargetNode(Parent p) {
         if (p == null || isDisabledOrInvisible(p)) return null;
-        final ParentTraversalEngine impl_traversalEngine = p.getImpl_traversalEngine();
-        if (impl_traversalEngine!= null && impl_traversalEngine.canTraverse()) {
-            Node selected = impl_traversalEngine.selectFirst();
+        final ParentTraversalEngine traversalEngine
+                = ParentHelper.getTraversalEngine(p);
+        if (traversalEngine!= null && traversalEngine.canTraverse()) {
+            Node selected = traversalEngine.selectFirst();
             if (selected != null) {
                 return selected;
             }
@@ -208,7 +216,8 @@ final class TabOrderHelper {
         List<Node> parentsNodes = p.getChildrenUnmodifiable();
         for (Node n : parentsNodes) {
             if (isDisabledOrInvisible(n)) continue;
-            final ParentTraversalEngine parentEngine = n instanceof Parent ? ((Parent)n).getImpl_traversalEngine() : null;
+            final ParentTraversalEngine parentEngine = n instanceof Parent
+                    ? ParentHelper.getTraversalEngine((Parent)n) : null;
             if (parentEngine != null ? parentEngine.isParentTraversable() : n.isFocusTraversable()) {
                 return n;
             }
@@ -222,9 +231,10 @@ final class TabOrderHelper {
 
     public static Node getLastTargetNode(Parent p) {
         if (p == null || isDisabledOrInvisible(p)) return null;
-        final ParentTraversalEngine impl_traversalEngine = p.getImpl_traversalEngine();
-        if (impl_traversalEngine!= null && impl_traversalEngine.canTraverse()) {
-            Node selected = impl_traversalEngine.selectLast();
+        final ParentTraversalEngine traversalEngine
+                = ParentHelper.getTraversalEngine(p);
+        if (traversalEngine!= null && traversalEngine.canTraverse()) {
+            Node selected = traversalEngine.selectLast();
             if (selected != null) {
                 return selected;
             }
@@ -238,7 +248,8 @@ final class TabOrderHelper {
                 Node result = getLastTargetNode((Parent) n);
                 if (result != null) return result;
             }
-            final ParentTraversalEngine parentEngine = n instanceof Parent ? ((Parent)n).getImpl_traversalEngine() : null;
+            final ParentTraversalEngine parentEngine = n instanceof Parent
+                    ? ParentHelper.getTraversalEngine((Parent) n) : null;
             if (parentEngine != null ? parentEngine.isParentTraversable() : n.isFocusTraversable()) {
                 return n;
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import org.junit.Test;
 
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.ImageInput;
 
 public class ImageInputTest extends EffectsTestBase {
@@ -54,7 +55,7 @@ public class ImageInputTest extends EffectsTestBase {
         effect.setX(1.0f);
         assertEquals(1.0f, effect.getX(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().x, 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getLocation().x, 1e-100);
     }
 
     @Test
@@ -63,7 +64,7 @@ public class ImageInputTest extends EffectsTestBase {
         assertEquals(0, effect.getX(), 1e-100);
         assertEquals(0, effect.xProperty().get(), 1e-100);
         pulse();
-        assertEquals(0, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().x, 1e-100);
+        assertEquals(0, ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getLocation().x, 1e-100);
     }
 
     @Test
@@ -72,7 +73,7 @@ public class ImageInputTest extends EffectsTestBase {
         effect.setY(1.0f);
         assertEquals(1.0f, effect.getY(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().y, 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getLocation().y, 1e-100);
     }
 
     @Test
@@ -81,7 +82,7 @@ public class ImageInputTest extends EffectsTestBase {
         assertEquals(0, effect.getY(), 1e-100);
         assertEquals(0, effect.yProperty().get(), 1e-100);
         pulse();
-        assertEquals(0, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().y, 1e-100);
+        assertEquals(0, ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getLocation().y, 1e-100);
     }
 
     @Test
@@ -91,15 +92,15 @@ public class ImageInputTest extends EffectsTestBase {
         effect.setSource(i);
         assertEquals(i, effect.getSource());
         pulse();
-        assertEquals(null, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource());
+        assertEquals(null, ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource());
         // try setting correct one
         effect.setSource(TestImages.TEST_IMAGE_32x32);
         pulse();
         assertEquals(TestImages.TEST_IMAGE_32x32, effect.getSource());
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalHeight(),
-                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalHeight());
+                ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource().getPhysicalHeight());
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalWidth(),
-                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalWidth());
+                ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource().getPhysicalWidth());
     }
 
     @Test
@@ -108,7 +109,7 @@ public class ImageInputTest extends EffectsTestBase {
         assertNull(effect.getSource());
         assertNull(effect.sourceProperty().get());
         pulse();
-        assertNull(((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource());
+        assertNull(((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource());
     }
 
     @Test
@@ -135,9 +136,9 @@ public class ImageInputTest extends EffectsTestBase {
         pulse();
         assertEquals(TestImages.TEST_IMAGE_32x32, effect.getSource());
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalHeight(),
-                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalHeight());
+                ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource().getPhysicalHeight());
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalWidth(),
-                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalWidth());
+                ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource().getPhysicalWidth());
     }
 
     @Test
@@ -147,9 +148,9 @@ public class ImageInputTest extends EffectsTestBase {
         assertEquals(TestImages.TEST_IMAGE_32x32, effect.getSource());
         pulse();
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalHeight(),
-                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalHeight());
+                ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource().getPhysicalHeight());
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalWidth(),
-                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalWidth());
+                ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource().getPhysicalWidth());
     }
 
     @Test
@@ -161,11 +162,11 @@ public class ImageInputTest extends EffectsTestBase {
         assertEquals(2, effect.getY(), 1e-100);
         pulse();
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalHeight(),
-                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalHeight());
+                ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource().getPhysicalHeight());
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalWidth(),
-                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalWidth());
-        assertEquals(1.0f, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().x, 1e-100);
-        assertEquals(2.0f, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().y, 1e-100);
+                ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource().getPhysicalWidth());
+        assertEquals(1.0f, ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getLocation().x, 1e-100);
+        assertEquals(2.0f, ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getLocation().y, 1e-100);
     }
 
     @Test
@@ -174,7 +175,7 @@ public class ImageInputTest extends EffectsTestBase {
         setupTest(effect);
         assertNull(effect.getSource());
         pulse();
-        assertNull(((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource());
+        assertNull(((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource());
     }
 
     @Test
@@ -185,8 +186,8 @@ public class ImageInputTest extends EffectsTestBase {
         assertEquals(0, effect.getX(), 1e-100);
         assertEquals(0, effect.getY(), 1e-100);
         pulse();
-        assertNull(((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource());
-        assertEquals(0f, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().x, 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().y, 1e-100);
+        assertNull(((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getSource());
+        assertEquals(0f, ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getLocation().x, 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.Identity) EffectHelper.getPeer(effect)).getLocation().y, 1e-100);
     }
 }

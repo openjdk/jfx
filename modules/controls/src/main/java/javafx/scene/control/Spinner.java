@@ -25,7 +25,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.scene.control.FakeFocusTextField;
-import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.beans.property.StringProperty;
 import javafx.scene.control.skin.SpinnerSkin;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
@@ -554,6 +554,17 @@ public class Spinner<T> extends Control {
     public final TextField getEditor() {
         return editorProperty().get();
     }
+
+
+    // --- prompt text
+    /**
+     * The prompt text to display in the {@code Spinner}, or
+     * {@code null} if no prompt text is displayed.
+     * @since 9
+     */
+    public final StringProperty promptTextProperty() { return getEditor().promptTextProperty(); }
+    public final String getPromptText() { return getEditor().getPromptText(); }
+    public final void setPromptText(String value) { getEditor().setPromptText(value); }
 
 
 

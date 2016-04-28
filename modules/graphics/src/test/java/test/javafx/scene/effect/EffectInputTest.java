@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.Effect;
 
 @RunWith(Parameterized.class)
@@ -127,13 +128,13 @@ public class EffectInputTest {
         setInput1.invoke(effect1, effect2);
         assertEquals(effect2, getInput1.invoke(effect1));
         pulse();
-        assertEquals(effect2.impl_getImpl(), pgGetInput1.invoke(effect1.impl_getImpl()));
+        assertEquals(EffectHelper.getPeer(effect2), pgGetInput1.invoke(EffectHelper.getPeer(effect1)));
 
         // try resetting input of first effect to null
         setInput1.invoke(effect1, (java.lang.Object) null);
         assertEquals((java.lang.Object) null, getInput2.invoke(effect2));
         pulse();
-        assertEquals((java.lang.Object) null, pgGetInput2.invoke(effect2.impl_getImpl()));
+        assertEquals((java.lang.Object) null, pgGetInput2.invoke(EffectHelper.getPeer(effect2)));
 
         // try setting first effect as input for second
         // but first try
@@ -149,7 +150,7 @@ public class EffectInputTest {
         setInput2.invoke(effect2, effect1);
         assertEquals(effect1, getInput2.invoke(effect2));
         pulse();
-        assertEquals(effect1.impl_getImpl(), pgGetInput2.invoke(effect2.impl_getImpl()));
+        assertEquals(EffectHelper.getPeer(effect1), pgGetInput2.invoke(EffectHelper.getPeer(effect2)));
     }
 
     @Test

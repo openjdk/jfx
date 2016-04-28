@@ -402,7 +402,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         TextField textField = getSkinnable();
 
-        double characterWidth = fontMetrics.get().computeStringWidth("W");
+        double characterWidth = fontMetrics.get().getCharWidth('W');
 
         int columnCount = textField.getPrefColumnCount();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ import java.util.List;
 
 /**
  * This is abstract class for a traversal engine. There are 2 types : {@link com.sun.javafx.scene.traversal.ParentTraversalEngine}
- * to be used in {@link Parent#setImpl_traversalEngine(ParentTraversalEngine)} to override default behavior
+ * to be used in {@link Parent#setTraversalEngine(ParentTraversalEngine)} to override default behavior
  * and {@link com.sun.javafx.scene.traversal.TopMostTraversalEngine} that is the default traversal engine for scene and subscene.
  *
  * Every engine is basically a wrapper of an algorithm + some specific parent (or scene/subscene), which define engine's root.

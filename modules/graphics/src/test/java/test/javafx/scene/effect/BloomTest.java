@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ public class BloomTest extends EffectsTestBase {
         assertEquals(1.0f, (float) effect.getThreshold(), 1e-100);
         pulse();
         assertEquals(1.0f, (float) ((com.sun.scenario.effect.Bloom)
-                EffectShim.impl_getImpl(effect)).getThreshold(), 1e-100);
+                EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 
     @Test
@@ -61,7 +61,7 @@ public class BloomTest extends EffectsTestBase {
         assertEquals(0.3f, (float) effect.thresholdProperty().get(), 1e-100);
         pulse();
         assertEquals(0.3f, (float) ((com.sun.scenario.effect.Bloom)
-                EffectShim.impl_getImpl(effect)).getThreshold(), 1e-100);
+                EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 
     @Test
@@ -73,7 +73,7 @@ public class BloomTest extends EffectsTestBase {
         assertEquals(-0.1f, (float) effect.getThreshold(), 1e-100);
         pulse();
         assertEquals(0.0f, (float) ((com.sun.scenario.effect.Bloom)
-                EffectShim.impl_getImpl(effect)).getThreshold(), 1e-100);
+                EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 
     @Test
@@ -85,7 +85,7 @@ public class BloomTest extends EffectsTestBase {
         assertEquals(1.1f, (float) effect.getThreshold(), 1e-100);
         pulse();
         assertEquals(1.0f, (float) ((com.sun.scenario.effect.Bloom)
-                EffectShim.impl_getImpl(effect)).getThreshold(), 1e-100);
+                EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 
     @Test
@@ -102,7 +102,7 @@ public class BloomTest extends EffectsTestBase {
                 "javafx.scene.effect.Bloom", "input",
                 "com.sun.scenario.effect.Bloom", "input",
                 blur,
-                (com.sun.scenario.effect.BoxBlur) EffectShim.impl_getImpl(blur));
+                (com.sun.scenario.effect.BoxBlur) EffectShim.getPeer(blur));
     }
 
     @Test
@@ -125,7 +125,7 @@ public class BloomTest extends EffectsTestBase {
         assertEquals(1, effect.getThreshold(), 1e-100);
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.Bloom)
-                EffectShim.impl_getImpl(effect)).getThreshold(), 1e-100);
+                EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 
     @Test
@@ -135,6 +135,6 @@ public class BloomTest extends EffectsTestBase {
         assertEquals(0.3, effect.getThreshold(), 1e-100);
         pulse();
         assertEquals(0.3f, ((com.sun.scenario.effect.Bloom)
-                EffectShim.impl_getImpl(effect)).getThreshold(), 1e-100);
+                EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 }

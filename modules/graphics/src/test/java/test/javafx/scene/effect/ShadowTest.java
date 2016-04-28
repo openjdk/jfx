@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import org.junit.Test;
 
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.Shadow;
@@ -55,22 +56,22 @@ public class ShadowTest extends EffectsTestBase {
         effect.setBlurType(BlurType.ONE_PASS_BOX);
         assertEquals(BlurType.ONE_PASS_BOX, effect.getBlurType());
         pulse();
-        assertEquals(ShadowMode.ONE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getShadowMode());
+        assertEquals(ShadowMode.ONE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getShadowMode());
 
         effect.setBlurType(BlurType.TWO_PASS_BOX);
         assertEquals(BlurType.TWO_PASS_BOX, effect.getBlurType());
         pulse();
-        assertEquals(ShadowMode.TWO_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getShadowMode());
+        assertEquals(ShadowMode.TWO_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getShadowMode());
 
         effect.setBlurType(BlurType.THREE_PASS_BOX);
         assertEquals(BlurType.THREE_PASS_BOX, effect.getBlurType());
         pulse();
-        assertEquals(ShadowMode.THREE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getShadowMode());
+        assertEquals(ShadowMode.THREE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getShadowMode());
 
         effect.setBlurType(BlurType.GAUSSIAN);
         assertEquals(BlurType.GAUSSIAN, effect.getBlurType());
         pulse();
-        assertEquals(ShadowMode.GAUSSIAN, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getShadowMode());
+        assertEquals(ShadowMode.GAUSSIAN, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getShadowMode());
     }
 
     @Test
@@ -79,7 +80,7 @@ public class ShadowTest extends EffectsTestBase {
         assertEquals(BlurType.THREE_PASS_BOX, effect.getBlurType());
         assertEquals(BlurType.THREE_PASS_BOX, effect.blurTypeProperty().get());
         pulse();
-        assertEquals(ShadowMode.THREE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getShadowMode());
+        assertEquals(ShadowMode.THREE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getShadowMode());
     }
 
     @Test
@@ -89,7 +90,7 @@ public class ShadowTest extends EffectsTestBase {
         assertEquals(null, effect.getBlurType());
         assertEquals(null, effect.blurTypeProperty().get());
         pulse();
-        assertEquals(ShadowMode.THREE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getShadowMode());
+        assertEquals(ShadowMode.THREE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getShadowMode());
     }
 
     @Test
@@ -101,7 +102,7 @@ public class ShadowTest extends EffectsTestBase {
         Color color = Color.RED;
         Color4f red = new Color4f((float) color.getRed(), (float) color.getGreen(),
                 (float) color.getBlue(), (float) color.getOpacity());
-        Color4f actual = ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getColor();
+        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getColor();
         assertColor4fEquals(red, actual);
     }
 
@@ -114,7 +115,7 @@ public class ShadowTest extends EffectsTestBase {
         Color color = Color.BLACK;
         Color4f black = new Color4f((float) color.getRed(), (float) color.getGreen(),
                 (float) color.getBlue(), (float) color.getOpacity());
-        Color4f actual = ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getColor();
+        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getColor();
         assertColor4fEquals(black, actual);
     }
 
@@ -128,7 +129,7 @@ public class ShadowTest extends EffectsTestBase {
         Color color = Color.BLACK;
         Color4f black = new Color4f((float) color.getRed(), (float) color.getGreen(),
                 (float) color.getBlue(), (float) color.getOpacity());
-        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getColor();
+        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getColor();
         assertColor4fEquals(black, actual);
     }
 
@@ -138,7 +139,7 @@ public class ShadowTest extends EffectsTestBase {
         effect.setWidth(9.0f);
         assertEquals(9.0f, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(9.0f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getGaussianWidth(), 1e-100);
+        assertEquals(9.0f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
         // test that radius changed appropriately
         // radius = (((width + height)/2) -1) /2
         assertEquals(7.0f, effect.getRadius(), 1e-100);
@@ -150,7 +151,7 @@ public class ShadowTest extends EffectsTestBase {
         assertEquals(21f, effect.getWidth(), 1e-100);
         assertEquals(21f, effect.widthProperty().get(), 1e-100);
         pulse();
-        assertEquals(21f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getGaussianWidth(), 1e-100);
+        assertEquals(21f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
     }
 
     @Test
@@ -161,7 +162,7 @@ public class ShadowTest extends EffectsTestBase {
         effect.setWidth(-0.1f);
         assertEquals(-0.1f, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getGaussianWidth(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
     }
 
     @Test
@@ -172,7 +173,7 @@ public class ShadowTest extends EffectsTestBase {
         effect.setWidth(255.1f);
         assertEquals(255.1f, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(255f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getGaussianWidth(), 1e-100);
+        assertEquals(255f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
     }
 
     @Test
@@ -181,7 +182,7 @@ public class ShadowTest extends EffectsTestBase {
         effect.setHeight(9.0f);
         assertEquals(9.0f, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(9.0f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getGaussianHeight(), 1e-100);
+        assertEquals(9.0f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
         // test that radius changed appropriately
         // radius = (((width + height)/2) -1) /2
         assertEquals(7.0f, effect.getRadius(), 1e-100);
@@ -193,7 +194,7 @@ public class ShadowTest extends EffectsTestBase {
         assertEquals(21f, effect.getHeight(), 1e-100);
         assertEquals(21f, effect.heightProperty().get(), 1e-100);
         pulse();
-        assertEquals(21f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getGaussianHeight(), 1e-100);
+        assertEquals(21f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
     }
 
     @Test
@@ -204,7 +205,7 @@ public class ShadowTest extends EffectsTestBase {
         effect.setHeight(-0.1f);
         assertEquals(-0.1f, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getGaussianHeight(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
     }
 
     @Test
@@ -215,7 +216,7 @@ public class ShadowTest extends EffectsTestBase {
         effect.setHeight(255.1f);
         assertEquals(255.1f, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(255f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getGaussianHeight(), 1e-100);
+        assertEquals(255f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
     }
 
     @Test
@@ -224,7 +225,7 @@ public class ShadowTest extends EffectsTestBase {
         effect.setRadius(4.0f);
         assertEquals(4.0f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(4.0f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(4.0f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
         // test that width and height changed appropriately
         assertEquals(9.0f, effect.getHeight(), 1e-100);
         assertEquals(9.0f, effect.getWidth(), 1e-100);
@@ -236,7 +237,7 @@ public class ShadowTest extends EffectsTestBase {
         assertEquals(10f, effect.getRadius(), 1e-100);
         assertEquals(10f, effect.radiusProperty().get(), 1e-100);
         pulse();
-        assertEquals(10f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(10f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -247,7 +248,7 @@ public class ShadowTest extends EffectsTestBase {
         effect.setRadius(-0.1f);
         assertEquals(-0.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -258,7 +259,7 @@ public class ShadowTest extends EffectsTestBase {
         effect.setRadius(127.1f);
         assertEquals(127.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(127f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(127f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -268,14 +269,14 @@ public class ShadowTest extends EffectsTestBase {
         // radius should be 0, not negative
         assertEquals(0f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
 
         effect.setWidth(0.2f);
         effect.setHeight(0.2f);
         // radius should be 0, not negative
         assertEquals(0f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -318,7 +319,7 @@ public class ShadowTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.Shadow", "input",
                 "com.sun.scenario.effect.GeneralShadow", "input",
-                blur, (com.sun.scenario.effect.BoxBlur)blur.impl_getImpl());
+                blur, (com.sun.scenario.effect.BoxBlur)EffectHelper.getPeer(blur));
     }
 
     @Test
@@ -346,14 +347,14 @@ public class ShadowTest extends EffectsTestBase {
 
         assertEquals(9, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
-        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
+        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
 
         effect.setHeight(3);
         assertEquals(15, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(15, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
+        assertEquals(15, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
     }
 
     // test whether width/radius are changing correctly if height is bound
@@ -369,9 +370,9 @@ public class ShadowTest extends EffectsTestBase {
 
         assertEquals(9, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
-        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
+        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
 
         effect.setWidth(3);
         assertEquals(2.5, effect.getRadius(), 1e-100);
@@ -390,9 +391,9 @@ public class ShadowTest extends EffectsTestBase {
 
         assertEquals(9, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
-        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
+        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
 
         effect.setHeight(3);
         assertEquals(2.5, effect.getRadius(), 1e-100);
@@ -412,16 +413,16 @@ public class ShadowTest extends EffectsTestBase {
 
         assertEquals(9, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
-        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
+        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
 
         // set radius once again to be sure that the order of calls is not
         // important
         boundRadius.set(7);
         assertEquals(21, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(21, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
+        assertEquals(21, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
     }
 
     @Test
@@ -437,14 +438,14 @@ public class ShadowTest extends EffectsTestBase {
 
         assertEquals(9, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
-        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
+        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
 
         boundRadius.set(7);
         assertEquals(21, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(21, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
+        assertEquals(21, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
     }
 
     @Test
@@ -460,14 +461,14 @@ public class ShadowTest extends EffectsTestBase {
 
         assertEquals(4, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
-        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
+        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
 
         boundHeight.set(21);
         assertEquals(7, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(7, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(7, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
     }
 
     // all radius, width and height are bound, radius is ignored in this case
@@ -487,9 +488,9 @@ public class ShadowTest extends EffectsTestBase {
         boundRadius.set(5);
 
         pulse();
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
-        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
-        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianHeight(), 1e-100);
+        assertEquals(9, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianWidth(), 1e-100);
+        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
     }
 
     @Test
@@ -502,11 +503,11 @@ public class ShadowTest extends EffectsTestBase {
         assertEquals(9, effect.getHeight(), 1e-100);
         assertEquals(9, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(4, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
         Color color = Color.RED;
         Color4f red = new Color4f((float) color.getRed(), (float) color.getGreen(),
                 (float) color.getBlue(), (float) color.getOpacity());
-        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getColor();
+        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getColor();
         assertColor4fEquals(red, actual);
     }
 
@@ -521,12 +522,12 @@ public class ShadowTest extends EffectsTestBase {
         assertEquals(9, effect.getHeight(), 1e-100);
         assertEquals(9, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(4f, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
-        assertEquals(ShadowMode.GAUSSIAN, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getShadowMode());
+        assertEquals(4f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
+        assertEquals(ShadowMode.GAUSSIAN, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getShadowMode());
         Color color = Color.RED;
         Color4f red = new Color4f((float) color.getRed(), (float) color.getGreen(),
                 (float) color.getBlue(), (float) color.getOpacity());
-        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getColor();
+        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getColor();
         assertColor4fEquals(red, actual);
     }
 
@@ -540,11 +541,11 @@ public class ShadowTest extends EffectsTestBase {
         assertEquals(21, effect.getHeight(), 1e-100);
         assertEquals(21, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(10, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
+        assertEquals(10, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
         Color color = Color.BLACK;
         Color4f black = new Color4f((float) color.getRed(), (float) color.getGreen(),
                 (float) color.getBlue(), (float) color.getOpacity());
-        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getColor();
+        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getColor();
         assertColor4fEquals(black, actual);
     }
 
@@ -559,12 +560,12 @@ public class ShadowTest extends EffectsTestBase {
         assertEquals(21, effect.getHeight(), 1e-100);
         assertEquals(21, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(10f, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
-        assertEquals(ShadowMode.THREE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getShadowMode());
+        assertEquals(10f, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getGaussianRadius(), 1e-100);
+        assertEquals(ShadowMode.THREE_PASS_BOX, ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getShadowMode());
         Color color = Color.BLACK;
         Color4f black = new Color4f((float) color.getRed(), (float) color.getGreen(),
                 (float) color.getBlue(), (float) color.getOpacity());
-        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) effect.impl_getImpl()).getColor();
+        Color4f actual = ((com.sun.scenario.effect.GeneralShadow) EffectHelper.getPeer(effect)).getColor();
         assertColor4fEquals(black, actual);
     }
 }

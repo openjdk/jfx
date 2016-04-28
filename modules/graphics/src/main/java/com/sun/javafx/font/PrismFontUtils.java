@@ -38,13 +38,12 @@ public class PrismFontUtils {
         return strike.getMetrics();
     }
 
-    static double computeStringWidth(PGFont font, String string) {
-        if (string == null || string.equals("")) return 0;
+    static double getCharWidth(PGFont font, char ch) {
         FontStrike strike = font.getStrike(BaseTransform.IDENTITY_TRANSFORM,
                                            FontResource.AA_GREYSCALE);
-        double width = 0f;
-        for (int i = 0; i < string.length(); i++) {
-            width += strike.getCharAdvance(string.charAt(i));
+        double width = strike.getCharAdvance(ch);
+        if (width == 0) {
+            width = font.getSize() / 2.0; // better than zero.
         }
         return width;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(1.1f, (float) effect.getDiffuseConstant(), 1e-100);
         pulse();
         assertEquals(1.1f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getDiffuseConstant(), 1e-100);
+                EffectShim.getPeer(effect)).getDiffuseConstant(), 1e-100);
     }
 
     @Test
@@ -73,7 +73,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(1f, (float) effect.diffuseConstantProperty().get(), 1e-100);
         pulse();
         assertEquals(1f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getDiffuseConstant(), 1e-100);
+                EffectShim.getPeer(effect)).getDiffuseConstant(), 1e-100);
     }
 
     @Test
@@ -85,7 +85,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(-0.1f, (float) effect.getDiffuseConstant(), 1e-100);
         pulse();
         assertEquals(0f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getDiffuseConstant(), 1e-100);
+                EffectShim.getPeer(effect)).getDiffuseConstant(), 1e-100);
     }
 
     @Test
@@ -97,7 +97,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(2.1f, (float) effect.getDiffuseConstant(), 1e-100);
         pulse();
         assertEquals(2f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getDiffuseConstant(), 1e-100);
+                EffectShim.getPeer(effect)).getDiffuseConstant(), 1e-100);
     }
 
     @Test
@@ -107,7 +107,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(1.0f, (float) effect.getSpecularConstant(), 1e-100);
         pulse();
         assertEquals(1.0f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSpecularConstant(), 1e-100);
+                EffectShim.getPeer(effect)).getSpecularConstant(), 1e-100);
     }
 
     @Test
@@ -117,7 +117,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(0.3f, (float) effect.specularConstantProperty().get(), 1e-100);
         pulse();
         assertEquals(0.3f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSpecularConstant(), 1e-100);
+                EffectShim.getPeer(effect)).getSpecularConstant(), 1e-100);
     }
 
     @Test
@@ -129,7 +129,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(-0.1f, (float) effect.getSpecularConstant(), 1e-100);
         pulse();
         assertEquals(0f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSpecularConstant(), 1e-100);
+                EffectShim.getPeer(effect)).getSpecularConstant(), 1e-100);
     }
 
     @Test
@@ -141,7 +141,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(2.1f, (float) effect.getSpecularConstant(), 1e-100);
         pulse();
         assertEquals(2f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSpecularConstant(), 1e-100);
+                EffectShim.getPeer(effect)).getSpecularConstant(), 1e-100);
     }
 
     @Test
@@ -151,7 +151,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(1.0f, (float) effect.getSpecularExponent(), 1e-100);
         pulse();
         assertEquals(1.0f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                EffectShim.getPeer(effect)).getSpecularExponent(), 1e-100);
     }
 
     @Test
@@ -161,7 +161,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(20f, (float) effect.specularExponentProperty().get(), 1e-100);
         pulse();
         assertEquals(20f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                EffectShim.getPeer(effect)).getSpecularExponent(), 1e-100);
     }
 
     @Test
@@ -173,7 +173,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(-0.1f, (float) effect.getSpecularExponent(), 1e-100);
         pulse();
         assertEquals(0f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                EffectShim.getPeer(effect)).getSpecularExponent(), 1e-100);
     }
 
     @Test
@@ -185,7 +185,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(40.1f, (float) effect.getSpecularExponent(), 1e-100);
         pulse();
         assertEquals(40f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSpecularExponent(), 1e-100);
+                EffectShim.getPeer(effect)).getSpecularExponent(), 1e-100);
     }
 
     @Test
@@ -195,7 +195,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(1.0f, (float) effect.getSurfaceScale(), 1e-100);
         pulse();
         assertEquals(1.0f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSurfaceScale(), 1e-100);
+                EffectShim.getPeer(effect)).getSurfaceScale(), 1e-100);
     }
 
     @Test
@@ -205,7 +205,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(1.5f, (float) effect.surfaceScaleProperty().get(), 1e-100);
         pulse();
         assertEquals(1.5f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSurfaceScale(), 1e-100);
+                EffectShim.getPeer(effect)).getSurfaceScale(), 1e-100);
     }
 
     @Test
@@ -217,7 +217,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(-0.1f, (float) effect.getSurfaceScale(), 1e-100);
         pulse();
         assertEquals(0f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSurfaceScale(), 1e-100);
+                EffectShim.getPeer(effect)).getSurfaceScale(), 1e-100);
     }
 
     @Test
@@ -229,7 +229,7 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(10.1f, (float) effect.getSurfaceScale(), 1e-100);
         pulse();
         assertEquals(10f, (float) ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getSurfaceScale(), 1e-100);
+                EffectShim.getPeer(effect)).getSurfaceScale(), 1e-100);
     }
 
     @Test
@@ -272,8 +272,8 @@ public class LightingTest extends EffectsTestBase {
         effect.setLight(l);
         assertEquals(l, effect.getLight());
         pulse();
-        assertEquals(LightShim.impl_getImpl(l), ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getLight());
+        assertEquals(LightShim.getPeer(l), ((com.sun.scenario.effect.PhongLighting)
+                EffectShim.getPeer(effect)).getLight());
     }
 
     @Test
@@ -284,8 +284,8 @@ public class LightingTest extends EffectsTestBase {
         assertTrue(l instanceof Light.Distant);
         assertEquals(l, effect.lightProperty().get());
         pulse();
-        assertEquals(LightShim.impl_getImpl(l), ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getLight());
+        assertEquals(LightShim.getPeer(l), ((com.sun.scenario.effect.PhongLighting)
+                EffectShim.getPeer(effect)).getLight());
     }
 
     @Test
@@ -297,7 +297,7 @@ public class LightingTest extends EffectsTestBase {
         assertNull(effect.lightProperty().get());
         pulse();
         assertNotNull(((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getLight());
+                EffectShim.getPeer(effect)).getLight());
     }
 
     @Test
@@ -331,7 +331,7 @@ public class LightingTest extends EffectsTestBase {
         assertNull(effect.getLight());
         pulse();
         Color4f c = ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getLight().getColor();
+                EffectShim.getPeer(effect)).getLight().getColor();
         assertEquals(1f, c.getRed(), 1e-5);
         assertEquals(1f, c.getGreen(), 1e-5);
         assertEquals(1f, c.getBlue(), 1e-5);
@@ -345,12 +345,12 @@ public class LightingTest extends EffectsTestBase {
         effect.setLight(l);
         assertEquals(l, effect.getLight());
         pulse();
-        assertEquals(LightShim.impl_getImpl(l), ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getLight());
+        assertEquals(LightShim.getPeer(l), ((com.sun.scenario.effect.PhongLighting)
+                EffectShim.getPeer(effect)).getLight());
         l.setX(100);
         pulse();
         assertEquals(100f, (float) ((com.sun.scenario.effect.light.PointLight)
-                LightShim.impl_getImpl(l)).getX(), 1e-100);
+                LightShim.getPeer(l)).getX(), 1e-100);
     }
 
     @Test
@@ -489,7 +489,7 @@ public class LightingTest extends EffectsTestBase {
         checkObjectPropertySynced(
                 "javafx.scene.effect.Lighting", "light",
                 "com.sun.scenario.effect.PhongLighting", "light",
-                l, LightShim.impl_getImpl(l),
+                l, LightShim.getPeer(l),
                 null);
     }
 
@@ -500,7 +500,7 @@ public class LightingTest extends EffectsTestBase {
                 "javafx.scene.effect.Lighting", "bumpInput",
                 "com.sun.scenario.effect.PhongLighting", "bumpInput",
                 blur, (com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(blur));
+                EffectShim.getPeer(blur));
     }
 
     @Test
@@ -510,7 +510,7 @@ public class LightingTest extends EffectsTestBase {
                 "javafx.scene.effect.Lighting", "contentInput",
                 "com.sun.scenario.effect.PhongLighting", "contentInput",
                 blur, (com.sun.scenario.effect.BoxBlur)
-                EffectShim.impl_getImpl(blur));
+                EffectShim.getPeer(blur));
     }
 
     @Test
@@ -551,7 +551,7 @@ public class LightingTest extends EffectsTestBase {
         effect.setLight(l);
         assertEquals(l, effect.getLight());
         pulse();
-        assertEquals(LightShim.impl_getImpl(l), ((com.sun.scenario.effect.PhongLighting)
-                EffectShim.impl_getImpl(effect)).getLight());
+        assertEquals(LightShim.getPeer(l), ((com.sun.scenario.effect.PhongLighting)
+                EffectShim.getPeer(effect)).getLight());
     }
 }

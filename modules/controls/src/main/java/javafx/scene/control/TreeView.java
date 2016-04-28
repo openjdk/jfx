@@ -1613,7 +1613,7 @@ public class TreeView<T> extends Control {
                                 TreeItem<T> item = e.getAddedChildren().get(i);
                                 row = treeView.getRow(item);
 
-                                if (item != null && row <= getFocusedIndex()) {
+                                if (item != null && row <= (shift+getFocusedIndex())) {
                                     shift += item.getExpandedDescendentCount(false);
                                 }
                             }

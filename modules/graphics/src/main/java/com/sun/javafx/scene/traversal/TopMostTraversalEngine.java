@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.traversal;
 
-import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.scene.ParentHelper;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 
@@ -72,7 +72,7 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
         Node traverseNode = node;
         while (p != null) {
             // First find the nearest traversal engine override (i.e. a ParentTraversalEngine that is traversable)
-            ParentTraversalEngine engine = p.getImpl_traversalEngine();
+            ParentTraversalEngine engine = ParentHelper.getTraversalEngine(p);
             if (engine != null && engine.canTraverse()) {
                 newNode = engine.select(node, dir);
                 if (newNode != null) {
@@ -114,9 +114,9 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
     private void notifyTreeTraversedTo(Node newNode) {
         Parent p = newNode.getParent();
         while (p != null) {
-            final ParentTraversalEngine impl_traversalEngine = p.getImpl_traversalEngine();
-            if (impl_traversalEngine != null) {
-                impl_traversalEngine.notifyTraversedTo(newNode);
+            final ParentTraversalEngine traversalEngine = ParentHelper.getTraversalEngine(p);
+            if (traversalEngine != null) {
+                traversalEngine.notifyTraversedTo(newNode);
             }
             p = p.getParent();
         }

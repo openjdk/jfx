@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -165,7 +165,7 @@ public class Blend extends Effect {
     }
 
     @Override
-    com.sun.scenario.effect.Blend impl_createImpl() {
+    com.sun.scenario.effect.Blend createPeer() {
         return new com.sun.scenario.effect.Blend(
                         toPGMode(BlendMode.SRC_OVER),
                         com.sun.scenario.effect.Effect.DefaultInput,
@@ -312,49 +312,44 @@ public class Blend extends Effect {
     }
 
     @Override
-    boolean impl_checkChainContains(Effect e) {
+    boolean checkChainContains(Effect e) {
         Effect localTopInput = getTopInput();
         Effect localBottomInput = getBottomInput();
         if (localTopInput == e || localBottomInput == e)
             return true;
-        if (localTopInput != null && localTopInput.impl_checkChainContains(e))
+        if (localTopInput != null && localTopInput.checkChainContains(e))
             return true;
-        if (localBottomInput != null && localBottomInput.impl_checkChainContains(e))
+        if (localBottomInput != null && localBottomInput.checkChainContains(e))
             return true;
 
         return false;
     }
 
     @Override
-    void impl_update() {
+    void update() {
         Effect localBottomInput = getBottomInput();
         Effect localTopInput = getTopInput();
 
         if (localTopInput != null) {
-            localTopInput.impl_sync();
+            localTopInput.sync();
         }
         if (localBottomInput != null) {
-            localBottomInput.impl_sync();
+            localBottomInput.sync();
         }
 
         com.sun.scenario.effect.Blend peer =
-                (com.sun.scenario.effect.Blend) impl_getImpl();
-        peer.setTopInput(localTopInput == null ? null : localTopInput.impl_getImpl());
-        peer.setBottomInput(localBottomInput == null ? null : localBottomInput.impl_getImpl());
+                (com.sun.scenario.effect.Blend) getPeer();
+        peer.setTopInput(localTopInput == null ? null : localTopInput.getPeer());
+        peer.setBottomInput(localBottomInput == null ? null : localBottomInput.getPeer());
         peer.setOpacity((float)Utils.clamp(0, getOpacity(), 1));
         peer.setMode(toPGMode(getMode()));
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public BaseBounds impl_getBounds(BaseBounds bounds,
-                                     BaseTransform tx,
-                                     Node node,
-                                     BoundsAccessor boundsAccessor) {
+    BaseBounds getBounds(BaseBounds bounds,
+                         BaseTransform tx,
+                         Node node,
+                         BoundsAccessor boundsAccessor) {
         BaseBounds topBounds = new RectBounds();
         BaseBounds bottomBounds = new RectBounds();
         bottomBounds = getInputBounds(bottomBounds, tx,
@@ -367,13 +362,8 @@ public class Blend extends Effect {
         return ret;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public Effect impl_copy() {
+    Effect copy() {
         return new Blend(this.getMode(), this.getBottomInput(), this.getTopInput());
     }
 }

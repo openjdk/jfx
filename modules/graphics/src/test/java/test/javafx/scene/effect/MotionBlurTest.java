@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.effect;
 
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.MotionBlur;
 import static org.junit.Assert.assertEquals;
@@ -47,7 +48,7 @@ public class MotionBlurTest extends EffectsTestBase {
         effect.setAngle(1.5f);
         assertEquals(1.5f, effect.getAngle(), 1e-100);
         pulse();
-        assertEquals(1.5f, Math.toDegrees(((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getAngle()), 1e-5);
+        assertEquals(1.5f, Math.toDegrees(((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getAngle()), 1e-5);
     }
 
     @Test
@@ -56,7 +57,7 @@ public class MotionBlurTest extends EffectsTestBase {
         assertEquals(0f, effect.getAngle(), 1e-100);
         assertEquals(0f, effect.angleProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getAngle(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getAngle(), 1e-100);
     }
 
     @Test
@@ -65,7 +66,7 @@ public class MotionBlurTest extends EffectsTestBase {
         effect.setRadius(0.5f);
         assertEquals(0.5f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0.5f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(0.5f, ((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -74,7 +75,7 @@ public class MotionBlurTest extends EffectsTestBase {
         assertEquals(10f, effect.getRadius(), 1e-100);
         assertEquals(10f, effect.radiusProperty().get(), 1e-100);
         pulse();
-        assertEquals(10f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(10f, ((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -85,7 +86,7 @@ public class MotionBlurTest extends EffectsTestBase {
         effect.setRadius(-0.1f);
         assertEquals(-0.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -96,7 +97,7 @@ public class MotionBlurTest extends EffectsTestBase {
         effect.setRadius(63.1f);
         assertEquals(63.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(63f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(63f, ((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -120,7 +121,7 @@ public class MotionBlurTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.MotionBlur", "input",
                 "com.sun.scenario.effect.MotionBlur", "input",
-                blur, (com.sun.scenario.effect.BoxBlur)blur.impl_getImpl());
+                blur, (com.sun.scenario.effect.BoxBlur) EffectHelper.getPeer(blur));
     }
 
     @Test
@@ -130,8 +131,8 @@ public class MotionBlurTest extends EffectsTestBase {
         assertEquals(1, effect.getAngle(), 1e-100);
         assertEquals(2, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(1.0f, Math.toDegrees(((com.sun.scenario.effect.MotionBlur) effect.impl_getImpl()).getAngle()), 1e-5);
-        assertEquals(2.0f, ((com.sun.scenario.effect.MotionBlur) effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(1.0f, Math.toDegrees(((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getAngle()), 1e-5);
+        assertEquals(2.0f, ((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 
     @Test
@@ -141,7 +142,7 @@ public class MotionBlurTest extends EffectsTestBase {
         assertEquals(0, effect.getAngle(), 1e-100);
         assertEquals(10, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0f, Math.toDegrees(((com.sun.scenario.effect.MotionBlur) effect.impl_getImpl()).getAngle()), 1e-5);
-        assertEquals(10f, ((com.sun.scenario.effect.MotionBlur) effect.impl_getImpl()).getRadius(), 1e-100);
+        assertEquals(0f, Math.toDegrees(((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getAngle()), 1e-5);
+        assertEquals(10f, ((com.sun.scenario.effect.MotionBlur) EffectHelper.getPeer(effect)).getRadius(), 1e-100);
     }
 }

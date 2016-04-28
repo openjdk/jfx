@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,7 +61,7 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(0.5f, effect.getOpacity(), 1e-100);
         pulse();
         assertEquals(0.5f, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getOpacity(), 1e-100);
+                EffectShim.getPeer(effect)).getOpacity(), 1e-100);
     }
 
     @Test
@@ -71,7 +71,7 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(1f, effect.opacityProperty().get(), 1e-100);
         pulse();
         assertEquals(1f, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getOpacity(), 1e-100);
+                EffectShim.getPeer(effect)).getOpacity(), 1e-100);
     }
 
     @Test
@@ -83,7 +83,7 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(-0.1f, effect.getOpacity(), 1e-100);
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getOpacity(), 1e-100);
+                EffectShim.getPeer(effect)).getOpacity(), 1e-100);
     }
 
     @Test
@@ -95,7 +95,7 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(1.1f, effect.getOpacity(), 1e-100);
         pulse();
         assertEquals(1f, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getOpacity(), 1e-100);
+                EffectShim.getPeer(effect)).getOpacity(), 1e-100);
     }
 
     @Test
@@ -105,115 +105,115 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(BlendMode.ADD, effect.getMode());
         pulse();
         assertEquals(Mode.ADD, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.BLUE);
         assertEquals(BlendMode.BLUE, effect.getMode());
         pulse();
         assertEquals(Mode.BLUE, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.COLOR_BURN);
         assertEquals(BlendMode.COLOR_BURN, effect.getMode());
         pulse();
         assertEquals(Mode.COLOR_BURN, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.COLOR_DODGE);
         assertEquals(BlendMode.COLOR_DODGE, effect.getMode());
         pulse();
         assertEquals(Mode.COLOR_DODGE, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.DARKEN);
         assertEquals(BlendMode.DARKEN, effect.getMode());
         pulse();
         assertEquals(Mode.DARKEN, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.DIFFERENCE);
         assertEquals(BlendMode.DIFFERENCE, effect.getMode());
         pulse();
         assertEquals(Mode.DIFFERENCE, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.EXCLUSION);
         assertEquals(BlendMode.EXCLUSION, effect.getMode());
         pulse();
         assertEquals(Mode.EXCLUSION, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.GREEN);
         assertEquals(BlendMode.GREEN, effect.getMode());
         pulse();
         assertEquals(Mode.GREEN, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.HARD_LIGHT);
         assertEquals(BlendMode.HARD_LIGHT, effect.getMode());
         pulse();
         assertEquals(Mode.HARD_LIGHT, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.LIGHTEN);
         assertEquals(BlendMode.LIGHTEN, effect.getMode());
         pulse();
         assertEquals(Mode.LIGHTEN, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.MULTIPLY);
         assertEquals(BlendMode.MULTIPLY, effect.getMode());
         pulse();
         assertEquals(Mode.MULTIPLY, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.OVERLAY);
         assertEquals(BlendMode.OVERLAY, effect.getMode());
         pulse();
         assertEquals(Mode.OVERLAY, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.RED);
         assertEquals(BlendMode.RED, effect.getMode());
         pulse();
         assertEquals(Mode.RED, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.ADD);
         assertEquals(BlendMode.ADD, effect.getMode());
         pulse();
         assertEquals(Mode.ADD, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.SCREEN);
         assertEquals(BlendMode.SCREEN, effect.getMode());
         pulse();
         assertEquals(Mode.SCREEN, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.SOFT_LIGHT);
         assertEquals(BlendMode.SOFT_LIGHT, effect.getMode());
         pulse();
         assertEquals(Mode.SOFT_LIGHT, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.SRC_ATOP);
         assertEquals(BlendMode.SRC_ATOP, effect.getMode());
         pulse();
         assertEquals(Mode.SRC_ATOP, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(BlendMode.SRC_OVER);
         assertEquals(BlendMode.SRC_OVER, effect.getMode());
         pulse();
         assertEquals(Mode.SRC_OVER, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
 
         effect.setMode(null);
         assertNull(effect.getMode());
         pulse();
         assertEquals(Mode.SRC_OVER, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
     }
 
     @Test
@@ -223,7 +223,7 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(BlendMode.SRC_OVER, effect.modeProperty().get());
         pulse();
         assertEquals(Mode.SRC_OVER, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
     }
 
     @Test
@@ -277,7 +277,7 @@ public class BlendTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.Blend", "topInput",
                 "com.sun.scenario.effect.Blend", "topInput",
-                blur, (com.sun.scenario.effect.BoxBlur) EffectShim.impl_getImpl(blur));
+                blur, (com.sun.scenario.effect.BoxBlur) EffectShim.getPeer(blur));
     }
 
     @Test
@@ -286,7 +286,7 @@ public class BlendTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.Blend","bottomInput",
                 "com.sun.scenario.effect.Blend", "bottomInput",
-                blur, (com.sun.scenario.effect.BoxBlur) EffectShim.impl_getImpl(blur));
+                blur, (com.sun.scenario.effect.BoxBlur) EffectShim.getPeer(blur));
     }
 
     @Test
@@ -447,7 +447,7 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(BlendMode.GREEN, effect.getMode());
         pulse();
         assertEquals(Mode.GREEN, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
     }
 
     @Test
@@ -462,9 +462,9 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(blur, effect.getTopInput());
         pulse();
         assertEquals(Mode.GREEN, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
         assertEquals(1.0f, ((com.sun.scenario.effect.Bloom)
-                EffectShim.impl_getImpl(bloom)).getThreshold(), 1e-100);
+                EffectShim.getPeer(bloom)).getThreshold(), 1e-100);
     }
 
     @Test
@@ -474,7 +474,7 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(BlendMode.SRC_OVER, effect.getMode());
         pulse();
         assertEquals(Mode.SRC_OVER, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
     }
 
     @Test
@@ -486,10 +486,10 @@ public class BlendTest extends EffectsTestBase {
         assertNull(effect.getTopInput());
         pulse();
         assertEquals(Mode.SRC_OVER, ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getMode());
+                EffectShim.getPeer(effect)).getMode());
         assertNull( ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getBottomInput());
+                EffectShim.getPeer(effect)).getBottomInput());
         assertNull( ((com.sun.scenario.effect.Blend)
-                EffectShim.impl_getImpl(effect)).getTopInput());
+                EffectShim.getPeer(effect)).getTopInput());
     }
 }

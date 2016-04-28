@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.effect;
 
+import com.sun.scenario.effect.EffectHelper;
 import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.Reflection;
 import static org.junit.Assert.assertEquals;
@@ -47,7 +48,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setTopOpacity(1.0f);
         assertEquals(1.0f, effect.getTopOpacity(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOpacity(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOpacity(), 1e-100);
     }
 
     @Test
@@ -56,7 +57,7 @@ public class ReflectionTest extends EffectsTestBase {
         assertEquals(0.5f, effect.getTopOpacity(), 1e-100);
         assertEquals(0.5f, effect.topOpacityProperty().get(), 1e-100);
         pulse();
-        assertEquals(0.5f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOpacity(), 1e-100);
+        assertEquals(0.5f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOpacity(), 1e-100);
     }
 
     @Test
@@ -67,7 +68,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setTopOpacity(-0.1f);
         assertEquals(-0.1f, effect.getTopOpacity(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOpacity(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOpacity(), 1e-100);
     }
 
     @Test
@@ -78,7 +79,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setTopOpacity(1.1f);
         assertEquals(1.1f, effect.getTopOpacity(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOpacity(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOpacity(), 1e-100);
     }
 
     @Test
@@ -87,7 +88,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setBottomOpacity(1.0f);
         assertEquals(1.0f, effect.getBottomOpacity(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getBottomOpacity(), 1e-100);
     }
 
     @Test
@@ -96,7 +97,7 @@ public class ReflectionTest extends EffectsTestBase {
         assertEquals(0f, effect.getBottomOpacity(), 1e-100);
         assertEquals(0f, effect.bottomOpacityProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getBottomOpacity(), 1e-100);
     }
 
     @Test
@@ -107,7 +108,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setBottomOpacity(-0.1f);
         assertEquals(-0.1f, effect.getBottomOpacity(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getBottomOpacity(), 1e-100);
     }
 
     @Test
@@ -118,7 +119,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setBottomOpacity(1.1f);
         assertEquals(1.1f, effect.getBottomOpacity(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getBottomOpacity(), 1e-100);
     }
 
     @Test
@@ -127,7 +128,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setFraction(1.0f);
         assertEquals(1.0f, effect.getFraction(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getFraction(), 1e-100);
     }
 
     @Test
@@ -136,7 +137,7 @@ public class ReflectionTest extends EffectsTestBase {
         assertEquals(0.75f, effect.getFraction(), 1e-100);
         assertEquals(0.75f, effect.fractionProperty().get(), 1e-100);
         pulse();
-        assertEquals(0.75f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
+        assertEquals(0.75f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getFraction(), 1e-100);
     }
 
     @Test
@@ -147,7 +148,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setFraction(-0.1f);
         assertEquals(-0.1f, effect.getFraction(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getFraction(), 1e-100);
     }
 
     @Test
@@ -158,7 +159,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setFraction(1.1f);
         assertEquals(1.1f, effect.getFraction(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getFraction(), 1e-100);
     }
 
     @Test
@@ -167,7 +168,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setTopOffset(1.0f);
         assertEquals(1.0f, effect.getTopOffset(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOffset(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOffset(), 1e-100);
     }
 
     @Test
@@ -176,7 +177,7 @@ public class ReflectionTest extends EffectsTestBase {
         assertEquals(0f, effect.getTopOffset(), 1e-100);
         assertEquals(0f, effect.topOffsetProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOffset(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOffset(), 1e-100);
     }
 
     @Test
@@ -213,7 +214,7 @@ public class ReflectionTest extends EffectsTestBase {
         checkEffectPropertySynced(
                 "javafx.scene.effect.Reflection", "input",
                 "com.sun.scenario.effect.Reflection", "input",
-                blur, (com.sun.scenario.effect.BoxBlur)blur.impl_getImpl());
+                blur, (com.sun.scenario.effect.BoxBlur) EffectHelper.getPeer(blur));
     }
 
     @Test
@@ -225,10 +226,10 @@ public class ReflectionTest extends EffectsTestBase {
         assertEquals(0.4, effect.getTopOpacity(), 1e-100);
         assertEquals(0.5, effect.getBottomOpacity(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOffset(), 1e-100);
-        assertEquals(0.2f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
-        assertEquals(0.4f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOpacity(), 1e-100);
-        assertEquals(0.5f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
+        assertEquals(1.0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOffset(), 1e-100);
+        assertEquals(0.2f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getFraction(), 1e-100);
+        assertEquals(0.4f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOpacity(), 1e-100);
+        assertEquals(0.5f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getBottomOpacity(), 1e-100);
     }
 
     @Test
@@ -240,9 +241,9 @@ public class ReflectionTest extends EffectsTestBase {
         assertEquals(0.5, effect.getTopOpacity(), 1e-100);
         assertEquals(1, effect.getBottomOpacity(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOffset(), 1e-100);
-        assertEquals(0.75f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
-        assertEquals(0.5f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOpacity(), 1e-100);
-        assertEquals(1f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
+        assertEquals(0f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOffset(), 1e-100);
+        assertEquals(0.75f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getFraction(), 1e-100);
+        assertEquals(0.5f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getTopOpacity(), 1e-100);
+        assertEquals(1f, ((com.sun.scenario.effect.Reflection) EffectHelper.getPeer(effect)).getBottomOpacity(), 1e-100);
     }
 }
