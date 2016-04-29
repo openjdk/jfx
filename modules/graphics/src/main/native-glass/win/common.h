@@ -42,8 +42,6 @@
 #include <assert.h>
 #include <comdef.h>
 #include <comutil.h>
-#include <hash_map>
-#include <hash_set>
 #include <imm.h>
 #include <jni.h>
 #include <malloc.h>

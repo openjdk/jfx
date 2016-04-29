@@ -31,8 +31,15 @@ set LIB=
 set LIBPATH=
 
 REM Run the vsvars32.bat file, sending it's output to neverland.
+REM The current officially supported Visual Studio version is 12.0.
+REM Handling of 14.0 is included here, but not yet supported.
+REM The previous officially supported VS version was 10.0
+REM Handling of 11.0 has been included, but not really tested.
+REM So, the search order is 120, then 140, then 100, then 110
 set VSVER=120
 set VSVARSDIR=%VS120COMNTOOLS%
+if "%VSVARSDIR%"=="" set VSVER=140
+if "%VSVARSDIR%"=="" set VSVARSDIR=%VS140COMNTOOLS%
 if "%VSVARSDIR%"=="" set VSVER=100
 if "%VSVARSDIR%"=="" set VSVARSDIR=%VS100COMNTOOLS%
 if "%VSVARSDIR%"=="" set VSVER=110
