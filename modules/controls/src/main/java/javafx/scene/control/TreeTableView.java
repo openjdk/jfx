@@ -35,7 +35,6 @@ import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.DoubleProperty;
-import javafx.collections.ObservableListBase;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 
@@ -2451,11 +2450,9 @@ public class TreeTableView<S> extends Control {
                         if (wasPrimarySelectionInChild && wasAnyChildSelected) {
                             select(startRow, selectedColumn);
                         } else if (!isCellSelectionMode) {
-                            // we pass in (index, index) here to represent that nothing was added
-                            // in this change.
-                            ListChangeListener.Change newChange = new NonIterableChange.GenericAddRemoveChange<>(from, from,
-                                    removed, selectedIndicesSeq);
-                            selectedIndicesSeq.callObservers(newChange);
+                            selectedIndices._beginChange();
+                            selectedIndices._nextRemove(from, removed);
+                            selectedIndices._endChange();
                         }
 
                         shift += -count + 1;
@@ -3238,16 +3235,13 @@ public class TreeTableView<S> extends Control {
             //
             // A more efficient solution:
 
-            final boolean isAtomic = isAtomic();
-
-            if (!isAtomic) {
-                selectedIndicesSeq._beginChange();
-            }
+            selectedIndices._beginChange();
 
             while (c.next()) {
                 // it may look like all we are doing here is collecting the removed elements (and
                 // counting the added elements), but the call to 'peek' is also crucial - it is
                 // ensuring that the selectedIndices bitset is correctly updated.
+                startAtomic();
                 final List<Integer> removed = c.getRemoved().stream()
                         .map(TreeTablePosition::getRow)
                         .distinct()
@@ -3259,25 +3253,22 @@ public class TreeTableView<S> extends Control {
                         .distinct()
                         .peek(selectedIndices::set)
                         .count();
+                stopAtomic();
 
                 final int to = c.getFrom() + addedSize;
 
-                if (isAtomic) {
-                    continue;
-                }
-
                 if (c.wasReplaced()) {
-                    selectedIndicesSeq._nextReplace(c.getFrom(), to, removed);
+                    selectedIndices._nextReplace(c.getFrom(), to, removed);
                 } else if (c.wasRemoved()) {
-                    selectedIndicesSeq._nextRemove(c.getFrom(), removed);
+                    selectedIndices._nextRemove(c.getFrom(), removed);
                 } else if (c.wasAdded()) {
-                    selectedIndicesSeq._nextAdd(c.getFrom(), to);
+                    selectedIndices._nextAdd(c.getFrom(), to);
                 }
             }
             c.reset();
-            selectedIndicesSeq.reset();
+            selectedIndices.reset();
 
-            if (isAtomic) {
+            if (isAtomic()) {
                 return;
             }
 
@@ -3291,7 +3282,7 @@ public class TreeTableView<S> extends Control {
                 setSelectedItem(null);
             }
 
-            selectedIndicesSeq._endChange();
+            selectedIndices._endChange();
 
             selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
             c.reset();

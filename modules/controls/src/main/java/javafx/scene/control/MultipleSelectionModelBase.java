@@ -30,13 +30,13 @@ import static javafx.scene.control.SelectionMode.SINGLE;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.sun.javafx.scene.control.MultipleAdditionAndRemovedChange;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableListBase;
 import javafx.util.Callback;
 
@@ -67,10 +67,9 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             setSelectedItem(getModelItem(getSelectedIndex()));
         });
 
-        selectedIndices = new BitSet();
-        selectedIndicesSeq = new BitSetReadOnlyUnbackedObservableList(selectedIndices);
+        selectedIndices = new SelectedIndicesList();
 
-        selectedItemsSeq = new SelectedItemsReadOnlyObservableList<T>(selectedIndicesSeq, () -> getItemCount()) {
+        selectedItems = new SelectedItemsReadOnlyObservableList<T>(selectedIndices, () -> getItemCount()) {
             @Override protected T getModelItem(int index) {
                 return MultipleSelectionModelBase.this.getModelItem(index);
             }
@@ -108,15 +107,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      */
 
 
-    final BitSet selectedIndices;
-    final BitSetReadOnlyUnbackedObservableList selectedIndicesSeq;
+    final SelectedIndicesList selectedIndices;
     @Override public ObservableList<Integer> getSelectedIndices() {
-        return selectedIndicesSeq;
+        return selectedIndices;
     }
 
-    private final ObservableListBase<T> selectedItemsSeq;
+    private final ObservableListBase<T> selectedItems;
     @Override public ObservableList<T> getSelectedItems() {
-        return selectedItemsSeq;
+        return selectedItems;
     }
 
 
@@ -129,17 +127,6 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
     ListChangeListener.Change selectedItemChange;
 
-    // Fix for RT-20945 (and numerous other issues!)
-    private int atomicityCount = 0;
-    boolean isAtomic() {
-        return atomicityCount > 0;
-    }
-    void startAtomic() {
-        atomicityCount++;
-    }
-    void stopAtomic() {
-        atomicityCount = Math.max(0, atomicityCount - 1);
-    }
 
 
     /***********************************************************************
@@ -199,10 +186,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     void shiftSelection(List<Pair<Integer, Integer>> shifts, final Callback<ShiftParams, Void> callback) {
-        int selectedIndicesCardinality = selectedIndices.cardinality(); // number of true bits
+        int selectedIndicesCardinality = selectedIndices.size(); // number of true bits
         if (selectedIndicesCardinality == 0) return;
 
-        int selectedIndicesSize = selectedIndices.size();   // number of bits reserved
+        int selectedIndicesSize = selectedIndices.bitsetSize();   // number of bits reserved
 
         int[] perm = new int[selectedIndicesSize];
         Arrays.fill(perm, -1);
@@ -212,11 +199,13 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         final int lowestShiftPosition = shifts.get(shifts.size() - 1).getKey();
 
         // make a copy of the selectedIndices before so we can compare to it afterwards
-        BitSet selectedIndicesCopy = (BitSet) selectedIndices.clone();
+        BitSet selectedIndicesCopy = (BitSet) selectedIndices.bitset.clone();
 
+        startAtomic();
         for (Pair<Integer, Integer> shift : shifts) {
             doShift(shift, callback, perm);
         }
+        stopAtomic();
 
         // strip out all useless -1 default values from the perm array
         final int[] prunedPerm = Arrays.stream(perm).filter(value -> value > -1).toArray();
@@ -257,16 +246,16 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         if (hasSelectionChanged) {
             // work out what indices were removed and added
             BitSet removed = (BitSet) selectedIndicesCopy.clone();
-            removed.andNot(selectedIndices);
+            removed.andNot(selectedIndices.bitset);
 
-            BitSet added = (BitSet) selectedIndices.clone();
+            BitSet added = (BitSet) selectedIndices.bitset.clone();
             added.andNot(selectedIndicesCopy);
 
-            selectedIndicesSeq.reset();
-            selectedIndicesSeq.callObservers(new MultipleAdditionAndRemovedChange<>(
+            selectedIndices.reset();
+            selectedIndices.callObservers(new MultipleAdditionAndRemovedChange<>(
                     added.stream().boxed().collect(Collectors.toList()),
                     removed.stream().boxed().collect(Collectors.toList()),
-                    selectedIndicesSeq
+                    selectedIndices
             ));
         }
     }
@@ -281,11 +270,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         int idx = (int) Arrays.stream(perm).filter(value -> value > -1).count();
 
-        int selectedIndicesSize = selectedIndices.size() - idx;   // number of bits reserved
+        int selectedIndicesSize = selectedIndices.bitsetSize() - idx;   // number of bits reserved
 
         if (shift > 0) {
             for (int i = selectedIndicesSize - 1; i >= position && i >= 0; i--) {
-                boolean selected = selectedIndices.get(i);
+                boolean selected = selectedIndices.isSelected(i);
 
                 if (callback == null) {
                     selectedIndices.clear(i);
@@ -303,7 +292,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             for (int i = position; i < selectedIndicesSize; i++) {
                 if ((i + shift) < 0) continue;
                 if ((i + 1 + shift) < position) continue;
-                boolean selected = selectedIndices.get(i + 1);
+                boolean selected = selectedIndices.isSelected(i + 1);
 
                 if (callback == null) {
                     selectedIndices.clear(i + 1);
@@ -317,6 +306,18 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 }
             }
         }
+    }
+
+    void startAtomic() {
+        selectedIndices.startAtomic();
+    }
+
+    void stopAtomic() {
+        selectedIndices.stopAtomic();
+    }
+
+    boolean isAtomic() {
+        return selectedIndices.isAtomic();
     }
 
     @Override public void clearAndSelect(int row) {
@@ -341,9 +342,9 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // the correct details in the selection change event.
         // We remove the new selection from the list seeing as it is not removed.
         BitSet selectedIndicesCopy = new BitSet();
-        selectedIndicesCopy.or(selectedIndices);
+        selectedIndicesCopy.or(selectedIndices.bitset);
         selectedIndicesCopy.clear(row);
-        List<Integer> previousSelectedIndices = new BitSetReadOnlyUnbackedObservableList(selectedIndicesCopy);
+        List<Integer> previousSelectedIndices = new SelectedIndicesList(selectedIndicesCopy);
 
         // RT-32411 We used to call quietClearSelection() here, but this
         // resulted in the selectedItems and selectedIndices lists never
@@ -370,14 +371,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
          *   return the same number - the place where the removed elements were positioned in the list.
          */
         if (wasSelected) {
-            change = ControlUtils.buildClearAndSelectChange(selectedIndicesSeq, previousSelectedIndices, row);
+            change = ControlUtils.buildClearAndSelectChange(selectedIndices, previousSelectedIndices, row);
         } else {
-            int changeIndex = Math.max(0, selectedIndicesSeq.indexOf(row));
+            int changeIndex = Math.max(0, selectedIndices.indexOf(row));
             change = new NonIterableChange.GenericAddRemoveChange<>(
-                    changeIndex, changeIndex+1, previousSelectedIndices, selectedIndicesSeq);
+                    changeIndex, changeIndex+1, previousSelectedIndices, selectedIndices);
         }
 
-        selectedIndicesSeq.callObservers(change);
+        selectedIndices.callObservers(change);
     }
 
     @Override public void select(int row) {
@@ -395,23 +396,19 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         boolean isSameItem = newItem != null && newItem.equals(currentItem);
         boolean fireUpdatedItemEvent = isSameRow && ! isSameItem;
 
-        startAtomic();
-        if (! selectedIndices.get(row)) {
+        // focus must come first so that we have the anchors set appropriately
+        focus(row);
+
+        if (! selectedIndices.isSelected(row)) {
             if (getSelectionMode() == SINGLE) {
+                startAtomic();
                 quietClearSelection();
+                stopAtomic();
             }
             selectedIndices.set(row);
         }
 
         setSelectedIndex(row);
-        focus(row);
-
-        stopAtomic();
-
-        if (! isAtomic()) {
-            int changeIndex = Math.max(0, selectedIndicesSeq.indexOf(row));
-            selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(changeIndex, changeIndex+1, selectedIndicesSeq));
-        }
 
         if (fireUpdatedItemEvent) {
             setSelectedItem(newItem);
@@ -488,127 +485,18 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                     select(row);
                 }
             }
-
-            selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, 1, selectedIndicesSeq));
         } else {
-            final List<Integer> actualSelectedRows = new ArrayList<Integer>();
+            selectedIndices.set(row, rows);
 
-            int lastIndex = -1;
-            if (row >= 0 && row < rowCount) {
-                lastIndex = row;
-                if (! selectedIndices.get(row)) {
-                    selectedIndices.set(row);
-                    actualSelectedRows.add(row);
-                }
-            }
-
-            for (int i = 0; i < rows.length; i++) {
-                int index = rows[i];
-                if (index < 0 || index >= rowCount) continue;
-                lastIndex = index;
-
-                if (! selectedIndices.get(index)) {
-                    selectedIndices.set(index);
-                    actualSelectedRows.add(index);
-                }
-            }
-
-            if (lastIndex != -1) {
-                setSelectedIndex(lastIndex);
-                focus(lastIndex);
-                setSelectedItem(getModelItem(lastIndex));
-            }
-
-            // need to come up with ranges based on the actualSelectedRows, and
-            // then fire the appropriate number of changes. We also need to
-            // translate from a desired row to select to where that row is
-            // represented in the selectedIndices list. For example,
-            // we may have requested to select row 5, and the selectedIndices
-            // list may therefore have the following: [1,4,5], meaning row 5
-            // is in position 2 of the selectedIndices list
-            Collections.sort(actualSelectedRows);
-            Change<Integer> change = createRangeChange(selectedIndicesSeq, actualSelectedRows, false);
-            selectedIndicesSeq.callObservers(change);
+            IntStream.concat(IntStream.of(row), IntStream.of(rows))
+                     .filter(index -> index >= 0 && index < rowCount)
+                     .reduce((first, second) -> second)
+                     .ifPresent(lastIndex -> {
+                         setSelectedIndex(lastIndex);
+                         focus(lastIndex);
+                         setSelectedItem(getModelItem(lastIndex));
+                     });
         }
-    }
-
-    static Change<Integer> createRangeChange(final ObservableList<Integer> list, final List<Integer> addedItems, boolean splitChanges) {
-        Change<Integer> change = new Change<Integer>(list) {
-            private final int[] EMPTY_PERM = new int[0];
-            private final int addedSize = addedItems.size();
-
-            private boolean invalid = true;
-
-            private int pos = 0;
-            private int from = pos;
-            private int to = pos;
-
-            @Override public int getFrom() {
-                checkState();
-                return from;
-            }
-
-            @Override public int getTo() {
-                checkState();
-                return to;
-            }
-
-            @Override public List<Integer> getRemoved() {
-                checkState();
-                return Collections.<Integer>emptyList();
-            }
-
-            @Override protected int[] getPermutation() {
-                checkState();
-                return EMPTY_PERM;
-            }
-
-            @Override public int getAddedSize() {
-                return to - from;
-            }
-
-            @Override public boolean next() {
-                if (pos >= addedSize) return false;
-
-                // starting from pos, we keep going until the value is
-                // not the next value
-                int startValue = addedItems.get(pos++);
-                from = list.indexOf(startValue);
-                to = from + 1;
-                int endValue = startValue;
-                while (pos < addedSize) {
-                    int previousEndValue = endValue;
-                    endValue = addedItems.get(pos++);
-                    ++to;
-                    if (splitChanges && previousEndValue != (endValue - 1)) {
-                        break;
-                    }
-                }
-
-                if (invalid) {
-                    invalid = false;
-                    return true;
-                }
-
-                // we keep going until we've represented all changes!
-                return splitChanges && pos < addedSize;
-            }
-
-            @Override public void reset() {
-                invalid = true;
-                pos = 0;
-                to = 0;
-                from = 0;
-            }
-
-            private void checkState() {
-                if (invalid) {
-                    throw new IllegalStateException("Invalid Change state: next() must be called before inspecting the Change.");
-                }
-            }
-
-        };
-        return change;
     }
 
     @Override public void selectAll() {
@@ -622,7 +510,6 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // set all selected indices to true
         clearSelection();
         selectedIndices.set(0, rowCount, true);
-        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<>(0, rowCount, selectedIndicesSeq));
 
         if (focusedIndex == -1) {
             setSelectedIndex(rowCount - 1);
@@ -665,27 +552,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         if (! wasEmpty && selectedIndices.isEmpty()) {
             clearSelection();
         }
-
-        if (!isAtomic()) {
-            // we pass in (index, index) here to represent that nothing was added
-            // in this change.
-            selectedIndicesSeq.callObservers(
-                    new NonIterableChange.GenericAddRemoveChange<>(index, index,
-                            Collections.singletonList(index), selectedIndicesSeq));
-        }
     }
 
     @Override public void clearSelection() {
-        List<Integer> removed = new BitSetReadOnlyUnbackedObservableList((BitSet) selectedIndices.clone());
-
         quietClearSelection();
 
         if (! isAtomic()) {
             setSelectedIndex(-1);
             focus(-1);
-            selectedIndicesSeq.callObservers(
-                    new NonIterableChange.GenericAddRemoveChange<>(0, 0,
-                    removed, selectedIndicesSeq));
         }
     }
 
@@ -701,8 +575,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // called for indices that exceeded the item count, as a TreeItem (e.g.
         // the root) was being collapsed.
 //        if (index >= 0 && index < getItemCount()) {
-        if (index >= 0 && index < selectedIndices.length()) {
-            return selectedIndices.get(index);
+        if (index >= 0 && index < selectedIndices.bitsetSize()) {
+            return selectedIndices.isSelected(index);
         }
 
         return false;
@@ -748,20 +622,40 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      *                                                                     *
      **********************************************************************/
 
-    class BitSetReadOnlyUnbackedObservableList extends ReadOnlyUnbackedObservableList<Integer> {
+    class SelectedIndicesList extends ReadOnlyUnbackedObservableList<Integer> {
         private final BitSet bitset;
 
         private int lastGetIndex = -1;
         private int lastGetValue = -1;
 
-        public BitSetReadOnlyUnbackedObservableList() {
+        // Fix for RT-20945 (and numerous other issues!)
+        private int atomicityCount = 0;
+
+//        @Override
+//        public void callObservers(Change<Integer> c) {
+//            throw new RuntimeException("callObservers unavailable");
+//        }
+
+        public SelectedIndicesList() {
             this(new BitSet());
         }
 
-        public BitSetReadOnlyUnbackedObservableList(BitSet bitset) {
+        public SelectedIndicesList(BitSet bitset) {
             this.bitset = bitset;
         }
 
+        boolean isAtomic() {
+            return atomicityCount > 0;
+        }
+        void startAtomic() {
+            atomicityCount++;
+        }
+        void stopAtomic() {
+            atomicityCount = Math.max(0, atomicityCount - 1);
+        }
+
+        // Returns the selected index at the given index.
+        // e.g. if our selectedIndices are [1,3,5], then an index of 2 will return 5 here.
         @Override public Integer get(int index) {
             final int itemCount = getItemCount();
             if (index < 0 || index >= itemCount)  {
@@ -793,8 +687,183 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             return -1;
         }
 
+        public void set(int index) {
+            if (!isValidIndex(index) || isSelected(index)) {
+                return;
+            }
+
+            _beginChange();
+            bitset.set(index);
+            int indicesIndex = indexOf(index);
+            _nextAdd(indicesIndex, indicesIndex + 1);
+            _endChange();
+        }
+
+        private boolean isValidIndex(int index) {
+            return index >= 0 && index < getItemCount();
+        }
+
+        public void set(int index, boolean isSet) {
+            if (isSet) {
+                set(index);
+            } else {
+                clear(index);
+            }
+        }
+
+        public void set(int index, int end, boolean isSet) {
+            _beginChange();
+            if (isSet) {
+                bitset.set(index, end, isSet);
+                int indicesIndex = indexOf(index);
+                int span = end - index;
+                _nextAdd(indicesIndex, indicesIndex + span);
+            } else {
+                // TODO handle remove
+                bitset.set(index, end, isSet);
+            }
+            _endChange();
+        }
+
+        public void set(int index, int... indices) {
+            if (indices == null || indices.length == 0) {
+                set(index);
+            } else {
+                // we reduce down to the minimal number of changes possible
+                // by finding all contiguous indices, of all indices that are
+                // not already selected, and which are in the valid range
+                startAtomic();
+                List<Integer> sortedNewIndices =
+                        IntStream.concat(IntStream.of(index), IntStream.of(indices))
+                        .distinct()
+                        .filter(this::isValidIndex)
+                        .filter(this::isNotSelected)
+                        .sorted()
+                        .boxed()
+                        .peek(this::set) // we also set here, but it's atomic!
+                        .collect(Collectors.toList());
+                stopAtomic();
+
+                final int size = sortedNewIndices.size();
+                if (size == 0) {
+                    // no-op
+                } else if (size == 1) {
+                    _beginChange();
+                    int _index = sortedNewIndices.get(0);
+                    _nextAdd(_index, _index + 1);
+                    _endChange();
+                } else {
+                    _beginChange();
+                    int pos = 0;
+                    int start = 0;
+                    int end = 0;
+
+                    // starting from pos, we keep going until the value is
+                    // not the next value
+                    int startValue = sortedNewIndices.get(pos++);
+                    start = indexOf(startValue);
+                    end = start + 1;
+                    int endValue = startValue;
+                    while (pos < size) {
+                        int previousEndValue = endValue;
+                        endValue = sortedNewIndices.get(pos++);
+                        ++end;
+                        if (previousEndValue != (endValue - 1)) {
+                            _nextAdd(start, end);
+                            start = end;
+                            continue;
+                        }
+
+                        // special case for when we get to the point where the loop is about to end
+                        // and we have uncommitted changes to fire.
+                        if (pos == size) {
+                            _nextAdd(start, start + pos);
+                        }
+                    }
+
+                    _endChange();
+                }
+            }
+        }
+
+        public void clear() {
+            _beginChange();
+            List<Integer> removed = bitset.stream().boxed().collect(Collectors.toList());
+            bitset.clear();
+            _nextRemove(0, removed);
+            _endChange();
+        }
+
+        public void clear(int index) {
+            if (!bitset.get(index)) return;
+
+            _beginChange();
+            bitset.clear(index);
+            _nextRemove(index, index);
+            _endChange();
+        }
+
+//        public void clearAndSelect(int index) {
+//            if (index < 0 || index >= getItemCount()) {
+//                clearSelection();
+//                return;
+//            }
+//
+//            final boolean wasSelected = isSelected(index);
+//
+//            // RT-33558 if this method has been called with a given row, and that
+//            // row is the only selected row currently, then this method becomes a no-op.
+//            if (wasSelected && getSelectedIndices().size() == 1) {
+//                // before we return, we double-check that the selected item
+//                // is equal to the item in the given index
+//                if (getSelectedItem() == getModelItem(index)) {
+//                    return;
+//                }
+//            }
+//
+//            List<Integer> removed = bitset.stream().boxed().collect(Collectors.toList());
+//            boolean isSelected = removed.contains(index);
+//            if (isSelected) {
+//                removed.remove((Object)index);
+//            }
+//
+//            if (removed.isEmpty()) {
+//                set(index);
+//            }
+//
+//            bitset.clear();
+//            bitset.set(index);
+//            _beginChange();
+//            if (isSelected) {
+//                _nextRemove(0, removed);
+//            } else {
+//                _nextAdd(0, 1);
+//                _nextRemove(0, removed);
+//            }
+//            _endChange();
+//        }
+
+        public boolean isSelected(int index) {
+            return bitset.get(index);
+        }
+
+        public boolean isNotSelected(int index) {
+            return !isSelected(index);
+        }
+
+        /** Returns number of true bits in BitSet */
         @Override public int size() {
             return bitset.cardinality();
+        }
+
+        /** Returns the number of bits reserved in the BitSet */
+        public int bitsetSize() {
+            return bitset.size();
+        }
+
+        @Override public int indexOf(Object obj) {
+            reset();
+            return super.indexOf(obj);
         }
 
         @Override public boolean contains(Object o) {
@@ -812,6 +881,60 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         public void reset() {
             this.lastGetIndex = -1;
             this.lastGetValue = -1;
+        }
+
+        @Override public void _beginChange() {
+            if (!isAtomic()) {
+                super._beginChange();
+            }
+        }
+
+        @Override public void _endChange() {
+            if (!isAtomic()) {
+                super._endChange();
+            }
+        }
+
+        @Override public final void _nextUpdate(int pos) {
+            if (!isAtomic()) {
+                nextUpdate(pos);
+            }
+        }
+
+        @Override public final void _nextSet(int idx, Integer old) {
+            if (!isAtomic()) {
+                nextSet(idx, old);
+            }
+        }
+
+        @Override public final void _nextReplace(int from, int to, List<? extends Integer> removed) {
+            if (!isAtomic()) {
+                nextReplace(from, to, removed);
+            }
+        }
+
+        @Override public final void _nextRemove(int idx, List<? extends Integer> removed) {
+            if (!isAtomic()) {
+                nextRemove(idx, removed);
+            }
+        }
+
+        @Override public final void _nextRemove(int idx, Integer removed) {
+            if (!isAtomic()) {
+                nextRemove(idx, removed);
+            }
+        }
+
+        @Override public final void _nextPermutation(int from, int to, int[] perm) {
+            if (!isAtomic()) {
+                nextPermutation(from, to, perm);
+            }
+        }
+
+        @Override public final void _nextAdd(int from, int to) {
+            if (!isAtomic()) {
+                nextAdd(from, to);
+            }
         }
     }
 }

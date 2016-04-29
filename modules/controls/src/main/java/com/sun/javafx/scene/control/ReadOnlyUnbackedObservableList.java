@@ -62,31 +62,31 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
         endChange();
     }
 
-    public final void _nextUpdate(int pos) {
+    public void _nextUpdate(int pos) {
         nextUpdate(pos);
     }
 
-    public final void _nextSet(int idx, E old) {
+    public void _nextSet(int idx, E old) {
         nextSet(idx, old);
     }
 
-    public final void _nextReplace(int from, int to, List<? extends E> removed) {
+    public void _nextReplace(int from, int to, List<? extends E> removed) {
         nextReplace(from, to, removed);
     }
 
-    public final void _nextRemove(int idx, List<? extends E> removed) {
+    public void _nextRemove(int idx, List<? extends E> removed) {
         nextRemove(idx, removed);
     }
 
-    public final void _nextRemove(int idx, E removed) {
+    public void _nextRemove(int idx, E removed) {
         nextRemove(idx, removed);
     }
 
-    public final void _nextPermutation(int from, int to, int[] perm) {
+    public void _nextPermutation(int from, int to, int[] perm) {
         nextPermutation(from, to, perm);
     }
 
-    public final void _nextAdd(int from, int to) {
+    public void _nextAdd(int from, int to) {
         nextAdd(from, to);
     }
 

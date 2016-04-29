@@ -2994,16 +2994,14 @@ public class TableView<S> extends Control {
             //
             // A more efficient solution:
 
-            final boolean isAtomic = isAtomic();
-
-            if (!isAtomic) {
-                selectedIndicesSeq._beginChange();
-            }
+            selectedIndices._beginChange();
 
             while (c.next()) {
                 // it may look like all we are doing here is collecting the removed elements (and
                 // counting the added elements), but the call to 'peek' is also crucial - it is
                 // ensuring that the selectedIndices bitset is correctly updated.
+
+                startAtomic();
                 final List<Integer> removed = c.getRemoved().stream()
                         .map(TablePosition::getRow)
                         .distinct()
@@ -3015,25 +3013,22 @@ public class TableView<S> extends Control {
                         .distinct()
                         .peek(selectedIndices::set)
                         .count();
+                stopAtomic();
 
                 final int to = c.getFrom() + addedSize;
 
-                if (isAtomic) {
-                    continue;
-                }
-
                 if (c.wasReplaced()) {
-                    selectedIndicesSeq._nextReplace(c.getFrom(), to, removed);
+                    selectedIndices._nextReplace(c.getFrom(), to, removed);
                 } else if (c.wasRemoved()) {
-                    selectedIndicesSeq._nextRemove(c.getFrom(), removed);
+                    selectedIndices._nextRemove(c.getFrom(), removed);
                 } else if (c.wasAdded()) {
-                    selectedIndicesSeq._nextAdd(c.getFrom(), to);
+                    selectedIndices._nextAdd(c.getFrom(), to);
                 }
             }
             c.reset();
-            selectedIndicesSeq.reset();
+            selectedIndices.reset();
 
-            if (isAtomic) {
+            if (isAtomic()) {
                 return;
             }
 
@@ -3047,7 +3042,7 @@ public class TableView<S> extends Control {
                 setSelectedItem(null);
             }
 
-            selectedIndicesSeq._endChange();
+            selectedIndices._endChange();
 
             selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
             c.reset();

@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.collections.NonIterableChange;
 import javafx.css.converter.SizeConverter;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
@@ -1335,11 +1334,9 @@ public class TreeView<T> extends Control {
                     if (wasPrimarySelectionInChild && wasAnyChildSelected) {
                         select(startRow);
                     } else {
-                        // we pass in (index, index) here to represent that nothing was added
-                        // in this change.
-                        ListChangeListener.Change newChange = new NonIterableChange.GenericAddRemoveChange<>(from, from,
-                                removed, selectedIndicesSeq);
-                        selectedIndicesSeq.callObservers(newChange);
+                        selectedIndices._beginChange();
+                        selectedIndices._nextRemove(from, removed);
+                        selectedIndices._endChange();
                     }
 
                     shift += -count + 1;
