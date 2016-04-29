@@ -25,10 +25,9 @@
 
 package jdk.packager.builders;
 
+
 import com.oracle.tools.packager.JLinkBundlerHelper;
 import com.oracle.tools.packager.RelativeFileSet;
-import jdk.tools.jlink.builder.*;
-import jdk.tools.jlink.plugin.Pool;
 
 import com.oracle.tools.packager.Log;
 
@@ -52,11 +51,8 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.StandardBundlerParam.ARGUMENTS;
 import static com.oracle.tools.packager.StandardBundlerParam.USER_JVM_OPTIONS;
 
-/**
- *
- * Created by dferrin on 9/1/15.
- */
-public abstract class AbstractAppImageBuilder extends DefaultImageBuilder {
+
+public abstract class AbstractAppImageBuilder {
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(AbstractAppImageBuilder.class.getName());
@@ -65,13 +61,28 @@ public abstract class AbstractAppImageBuilder extends DefaultImageBuilder {
     // we use it for classpath lookup and there / are not platform specific
     public final static String BUNDLER_PREFIX = "package/";
 
+    private Map<String, Object> properties;
+    private Path root;
+
     public AbstractAppImageBuilder(Map<String, Object> properties, Path root) throws IOException {
-        super(true, root);
+        this.properties = properties;
+        this.root = root;
     }
 
-    abstract protected void prepareApplicationFiles(Pool files, Set<String> modules) throws IOException;
+    public abstract InputStream getResourceAsStream(String name);
+    public abstract void prepareApplicationFiles() throws IOException;
 
-    abstract protected InputStream getResourceAsStream(String name);
+    public Map<String, Object> getProperties() {
+        return this.properties;
+    }
+
+    public Path getRoot() {
+        return this.root;
+    }
+
+    public String getExcludeFileList() {
+        return "*diz";
+    }
 
     protected InputStream locateResource(String publicName, String category,
                                          String defaultName, File customFile,
@@ -262,6 +273,4 @@ public abstract class AbstractAppImageBuilder extends DefaultImageBuilder {
             out.println("-XX:+UnlockDiagnosticVMOptions");
         }
     }
-
-
 }

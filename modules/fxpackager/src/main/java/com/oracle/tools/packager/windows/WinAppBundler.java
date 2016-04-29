@@ -36,7 +36,6 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import jdk.packager.builders.windows.WindowsAppImageBuilder;
-import jdk.tools.jlink.builder.ImageBuilder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -50,6 +49,7 @@ import java.util.ResourceBundle;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.*;
+import jdk.packager.builders.AbstractAppImageBuilder;
 
 public class WinAppBundler extends AbstractImageBundler {
 
@@ -171,8 +171,8 @@ public class WinAppBundler extends AbstractImageBundler {
                 p.put(JLinkBundlerHelper.JLINK_BUILDER.getID(), "windowsapp-image-builder");
             }
 
-            ImageBuilder imageBuilder = new WindowsAppImageBuilder(p, outputDirectory.toPath());
-            JLinkBundlerHelper.execute(p, outputDirectory, imageBuilder);
+            AbstractAppImageBuilder appBuilder = new WindowsAppImageBuilder(p, outputDirectory.toPath());
+            JLinkBundlerHelper.execute(p, appBuilder);
 
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.result-dir"), outputDirectory.getAbsolutePath()));

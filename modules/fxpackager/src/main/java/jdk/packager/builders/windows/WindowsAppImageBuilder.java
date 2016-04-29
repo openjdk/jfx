@@ -34,8 +34,6 @@ import com.oracle.tools.packager.windows.WinResources;
 import com.oracle.tools.packager.windows.WindowsBundlerParam;
 import jdk.packager.builders.AbstractAppImageBuilder;
 
-import jdk.tools.jlink.plugin.Pool;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -87,7 +85,7 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
 
     private final Path root;
     private final Path appDir;
-    private final Path runtimeRoot;
+    private final Path runtimeDir;
     private final Path mdir;
 
     private final Map<String, ? super Object> params;
@@ -141,13 +139,14 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
 
         this.root = imageOutDir.resolve(APP_NAME.fetchFrom(params));
         this.appDir = root.resolve("app");
-        this.runtimeRoot = root.resolve("runtime");
-        this.mdir = runtimeRoot.resolve("lib");
+        this.runtimeDir = root.resolve("runtime");
+        this.mdir = runtimeDir.resolve("lib");
         Files.createDirectories(appDir);
+        Files.createDirectories(runtimeDir);
     }
 
     private Path destFile(String dir, String filename) {
-        return runtimeRoot.resolve(dir).resolve(filename);
+        return runtimeDir.resolve(dir).resolve(filename);
     }
 
     private void writeEntry(InputStream in, Path dstFile) throws IOException {
@@ -216,12 +215,12 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
     }
 
     @Override
-    protected InputStream getResourceAsStream(String name) {
+    public InputStream getResourceAsStream(String name) {
         return WinResources.class.getResourceAsStream(name);
     }
 
     @Override
-    protected void prepareApplicationFiles(Pool files, Set<String> modules) throws IOException {
+    public void prepareApplicationFiles() throws IOException {
         Map<String, ? super Object> originalParams = new HashMap<>(params);
         File rootFile = root.toFile();
         if (!rootFile.isDirectory() && !rootFile.mkdirs()) {
@@ -290,7 +289,7 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
 
         AtomicReference<IOException> ioe = new AtomicReference<>();
         final String finalVsVer = vsVer;
-        Files.list(runtimeRoot.resolve("bin"))
+        Files.list(runtimeDir.resolve("bin"))
                 .filter(p -> Pattern.matches("msvc(r|p)\\d\\d\\d.dll", p.toFile().getName().toLowerCase()))
                 .filter(p -> !p.toString().toLowerCase().endsWith(finalVsVer + ".dll"))
                 .forEach(p -> {

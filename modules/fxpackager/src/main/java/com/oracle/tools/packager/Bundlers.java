@@ -69,7 +69,6 @@ public interface Bundlers {
             bundlers = new BasicBundlers();
         }
 
-        bundlers.loadDefaultBundlers();
         bundlers.loadBundlersFromServices(servicesClassLoader);
         return bundlers;
     }

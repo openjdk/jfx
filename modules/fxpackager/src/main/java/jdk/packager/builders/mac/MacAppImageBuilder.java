@@ -32,7 +32,6 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.mac.MacResources;
 import jdk.packager.builders.AbstractAppImageBuilder;
-import jdk.tools.jlink.plugin.Pool;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -66,9 +65,8 @@ import java.util.function.Consumer;
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.*;
 import static com.oracle.tools.packager.mac.MacAppBundler.*;
-/**
- *
- */
+
+
 public class MacAppImageBuilder extends AbstractAppImageBuilder {
 
     private static final ResourceBundle I18N =
@@ -243,10 +241,6 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
             },
             (s, p) -> new File(s));
 
-    private static String extractAppName() {
-        return "";
-    }
-
     public MacAppImageBuilder(Map<String, Object> config, Path imageOutDir) throws IOException {
         super(config, imageOutDir.resolve(APP_NAME.fetchFrom(config) + ".app/Contents/PlugIns/Java.runtime/Contents/Home"));
 
@@ -269,6 +263,11 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
         Files.createDirectories(javaDir);
         Files.createDirectories(resourcesDir);
         Files.createDirectories(macOSDir);
+        Files.createDirectories(runtimeDir);
+    }
+
+    private static String extractAppName() {
+        return "";
     }
 
     private void writeEntry(InputStream in, Path dstFile) throws IOException {
@@ -353,13 +352,12 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
     }
 
     @Override
-    protected InputStream getResourceAsStream(String name) {
+    public InputStream getResourceAsStream(String name) {
         return MacResources.class.getResourceAsStream(name);
     }
 
-
     @Override
-    protected void prepareApplicationFiles(Pool files, Set<String> modules) throws IOException {
+    public void prepareApplicationFiles() throws IOException {
         File f;
 
         // Generate PkgInfo

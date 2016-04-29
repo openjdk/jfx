@@ -31,7 +31,6 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.linux.LinuxResources;
 import jdk.packager.builders.AbstractAppImageBuilder;
-import jdk.tools.jlink.plugin.Pool;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -55,9 +54,7 @@ import java.util.Set;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
-/**
- *
- */
+
 public class LinuxAppImageBuilder extends AbstractAppImageBuilder {
 
     private static final ResourceBundle I18N =
@@ -70,7 +67,7 @@ public class LinuxAppImageBuilder extends AbstractAppImageBuilder {
 
     private final Path root;
     private final Path appDir;
-    private final Path runtimeRoot;
+    private final Path runtimeDir;
     private final Path mdir;
 
     private final Map<String, ? super Object> params;
@@ -116,15 +113,16 @@ public class LinuxAppImageBuilder extends AbstractAppImageBuilder {
 
         this.root = imageOutDir.resolve(APP_NAME.fetchFrom(config));
         this.appDir = root.resolve("app");
-        this.runtimeRoot = root.resolve("runtime");
-        this.mdir = runtimeRoot.resolve("lib");
+        this.runtimeDir = root.resolve("runtime");
+        this.mdir = runtimeDir.resolve("lib");
         this.params = new HashMap<String, Object>();
         config.entrySet().stream().forEach(e -> params.put(e.getKey().toString(), e.getValue()));
         Files.createDirectories(appDir);
+        Files.createDirectories(runtimeDir);
     }
 
     private Path destFile(String dir, String filename) {
-        return runtimeRoot.resolve(dir).resolve(filename);
+        return runtimeDir.resolve(dir).resolve(filename);
     }
 
     private void writeEntry(InputStream in, Path dstFile) throws IOException {
@@ -175,13 +173,14 @@ public class LinuxAppImageBuilder extends AbstractAppImageBuilder {
     }
 
     @Override
-    protected InputStream getResourceAsStream(String name) {
+    public InputStream getResourceAsStream(String name) {
         return LinuxResources.class.getResourceAsStream(name);
     }
 
     @Override
-    protected void prepareApplicationFiles(Pool files, Set<String> modules) throws IOException {
+    public void prepareApplicationFiles() throws IOException {
         Map<String, ? super Object> originalParams = new HashMap<>(params);
+
         try {
             // create the primary launcher
             createLauncherForEntryPoint(params, root);

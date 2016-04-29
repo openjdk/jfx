@@ -38,7 +38,6 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
-import jdk.tools.jlink.builder.ImageBuilder;
 import jdk.packager.builders.linux.LinuxAppImageBuilder;
 
 import java.io.File;
@@ -52,6 +51,7 @@ import java.util.Map;
 import java.util.ResourceBundle;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import jdk.packager.builders.AbstractAppImageBuilder;
 
 public class LinuxAppBundler extends AbstractImageBundler {
 
@@ -189,8 +189,8 @@ public class LinuxAppBundler extends AbstractImageBundler {
                 p.put(JLinkBundlerHelper.JLINK_BUILDER.getID(), "linuxapp-image-builder");
             }
 
-            ImageBuilder imageBuilder = new LinuxAppImageBuilder(p, outputDirectory.toPath());
-            JLinkBundlerHelper.execute(p, outputDirectory, imageBuilder);
+            AbstractAppImageBuilder appBuilder = new LinuxAppImageBuilder(p, outputDirectory.toPath());
+            JLinkBundlerHelper.execute(p, appBuilder);
 
             return rootDirectory;
         } catch (IOException ex) {

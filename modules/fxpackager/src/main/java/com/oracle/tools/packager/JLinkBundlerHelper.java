@@ -25,9 +25,7 @@
 
 package com.oracle.tools.packager;
 
-import jdk.tools.jlink.Jlink;
-import jdk.tools.jlink.builder.ImageBuilder;
-import jdk.tools.jlink.plugin.Plugin;
+import jdk.tools.jlink.internal.packager.AppRuntimeImageBuilder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -42,6 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -51,6 +50,7 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import jdk.packager.builders.AbstractAppImageBuilder;
 
 
 public class JLinkBundlerHelper {
@@ -210,12 +210,10 @@ public class JLinkBundlerHelper {
                     (s, p) -> s);
 
 
-    public static void execute(Map<String, ? super Object> params, File outputParentDir, ImageBuilder imageBuilder) {
+    public static void execute(Map<String, ? super Object> params, AbstractAppImageBuilder imageBuilder) throws IOException {
         String jdkmodulePath = JDK_MODULE_PATH.fetchFrom(params);
         List<Path> modulePath = MODULE_PATH.fetchFrom(params);
         Set<String> addModules = ADD_MODULES.fetchFrom(params);
-        Set<String> limitModules = LIMIT_MODULES.fetchFrom(params);
-
         boolean detectModules = DETECT_MODULES.fetchFrom(params);
         boolean detectJreModules = DETECT_JRE_MODULES.fetchFrom(params);
         File jdkModulePathFile = new File(jdkmodulePath);
@@ -242,55 +240,35 @@ public class JLinkBundlerHelper {
             modulePath.add(jdkModulePathFile.toPath());
         }
 
-        Path output = outputParentDir.toPath();
+        Map<String, String> userArguments = convertMapOfObjectToMapOfStrings(JLINK_OPTIONS.fetchFrom(params));
 
-        // jlink main arguments
-        Jlink.JlinkConfiguration jlinkConfig = new Jlink.JlinkConfiguration(output,
-                                                                            modulePath,
-                                                                            addModules,
-                                                                            limitModules);
+        AppRuntimeImageBuilder appRuntimeBuilder = new AppRuntimeImageBuilder();
+        appRuntimeBuilder.setOutputDir(imageBuilder.getRoot());
+        appRuntimeBuilder.setModulePath(modulePath);
+        appRuntimeBuilder.setAddModules(addModules);
+        appRuntimeBuilder.setLimitModules(LIMIT_MODULES.fetchFrom(params));
+        appRuntimeBuilder.setExcludeFileList(imageBuilder.getExcludeFileList());
+        appRuntimeBuilder.setStripNativeCommands(STRIP_NATIVE_COMMANDS.fetchFrom(params));
+        appRuntimeBuilder.setUserArguments(userArguments);
 
-        // plugin configuration
-        List<Plugin> plugins = new ArrayList<>();
+        appRuntimeBuilder.build();
+        imageBuilder.prepareApplicationFiles();
+    }
 
-        if (STRIP_NATIVE_COMMANDS.fetchFrom(params)) {
-            plugins.add(Jlink.newPlugin(
-                    "strip-native-commands",
-                    Collections.singletonMap("strip-native-commands", "on"),
-                    null));
-        }
+    private static Map<String, String> convertMapOfObjectToMapOfStrings(Map<String, Object> options) {
+        Map<String, String> result = new LinkedHashMap<String, String>();
 
-        plugins.add(Jlink.newPlugin(
-                "exclude-files",
-                Collections.singletonMap("exclude-files", getExcludeFileList()),
-                null));
-
-        // add user supplied jlink arguments
-        for (Map.Entry<String, Object> entry : JLINK_OPTIONS.fetchFrom(params).entrySet()) {
+        for (Map.Entry<String, Object> entry : options.entrySet()) {
             Object o = entry.getValue();
+
             if (o instanceof String) {
                 String key = entry.getKey();
                 String value = (String)entry.getValue();
-                plugins.add(Jlink.newPlugin(key,
-                            Collections.singletonMap(key, value),
-                            null));
+                result.put(key, value);
             }
         }
 
-        plugins.add(Jlink.newPlugin("installed-modules", Collections.emptyMap(), null));
-
-        //TODO --compress-resources
-
-        Jlink.PluginsConfiguration pluginConfig = new Jlink.PluginsConfiguration(plugins, imageBuilder, null);
-
-        // Build the image
-        Jlink jlink = new Jlink();
-
-        try {
-            jlink.build(jlinkConfig, pluginConfig);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return result;
     }
 
     private static Set<String> getModuleNamesFromPath(List<Path> Value) {
