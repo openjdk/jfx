@@ -1298,6 +1298,10 @@ allprojects {
         }
 
         systemProperty 'unstable.test', IS_UNSTABLE_TEST
+
+        if (project.hasProperty("EXTRA_TEST_ARGS")) {
+            jvmArgs EXTRA_TEST_ARGS.split(' ')
+        }
     }
 
     compileTestJava {
