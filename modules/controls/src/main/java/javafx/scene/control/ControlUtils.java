@@ -34,6 +34,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 class ControlUtils {
     private ControlUtils() { }
@@ -146,5 +147,57 @@ class ControlUtils {
                 }
             }
         };
+    }
+
+    public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, ListChangeListener.Change<? extends TablePositionBase<?>> c) {
+        sm.selectedIndices._beginChange();
+
+        while (c.next()) {
+            // it may look like all we are doing here is collecting the removed elements (and
+            // counting the added elements), but the call to 'peek' is also crucial - it is
+            // ensuring that the selectedIndices bitset is correctly updated.
+
+            sm.startAtomic();
+            final List<Integer> removed = c.getRemoved().stream()
+                    .map(TablePositionBase::getRow)
+                    .distinct()
+                    .peek(sm.selectedIndices::clear)
+                    .collect(Collectors.toList());
+
+            final int addedSize = (int)c.getAddedSubList().stream()
+                    .map(TablePositionBase::getRow)
+                    .distinct()
+                    .peek(sm.selectedIndices::set)
+                    .count();
+            sm.stopAtomic();
+
+            final int to = c.getFrom() + addedSize;
+
+            if (c.wasReplaced()) {
+                sm.selectedIndices._nextReplace(c.getFrom(), to, removed);
+            } else if (c.wasRemoved()) {
+                sm.selectedIndices._nextRemove(c.getFrom(), removed);
+            } else if (c.wasAdded()) {
+                sm.selectedIndices._nextAdd(c.getFrom(), to);
+            }
+        }
+        c.reset();
+        sm.selectedIndices.reset();
+
+        if (sm.isAtomic()) {
+            return;
+        }
+
+        // Fix for RT-31577 - the selectedItems list was going to
+        // empty, but the selectedItem property was staying non-null.
+        // There is a unit test for this, so if a more elegant solution
+        // can be found in the future and this code removed, the unit
+        // test will fail if it isn't fixed elsewhere.
+        // makeAtomic toggle added to resolve RT-32618
+        if (sm.getSelectedItems().isEmpty() && sm.getSelectedItem() != null) {
+            sm.setSelectedItem(null);
+        }
+
+        sm.selectedIndices._endChange();
     }
 }
