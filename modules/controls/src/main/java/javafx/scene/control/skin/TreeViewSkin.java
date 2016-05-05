@@ -86,10 +86,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     private WeakReference<TreeItem<T>> weakRoot;
     private final TreeViewBehavior<T> behavior;
 
-    //    private boolean needItemCountUpdate = false;
-    private boolean needCellsRebuilt = true;
-    private boolean needCellsReconfigured = false;
-
 
 
     /***************************************************************************
@@ -101,8 +97,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     private MapChangeListener<Object, Object> propertiesMapListener = c -> {
         if (! c.wasAdded()) return;
         if (Properties.RECREATE.equals(c.getKey())) {
-            needCellsRebuilt = true;
-            getSkinnable().requestLayout();
+            requestRebuildCells();
             getSkinnable().getProperties().remove(Properties.RECREATE);
         }
     };
@@ -118,8 +113,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
             getSkinnable().requestLayout();
         } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
             // Fix for RT-14971 and RT-15338.
-            needCellsRebuilt = true;
-            getSkinnable().requestLayout();
+            requestRebuildCells();
         } else {
             // Fix for RT-20090. We are checking to see if the event coming
             // from the TreeItem root is an event where the count has changed.
@@ -165,7 +159,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         // init the VirtualFlow
         flow = getVirtualFlow();
         flow.setPannable(IS_PANNABLE);
-        flow.setCellFactory(flow1 -> createCell());
+        flow.setCellFactory(this::createCell);
         flow.setFixedCellSize(control.getFixedCellSize());
         getChildren().add(flow);
 
@@ -250,19 +244,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     }
 
     /** {@inheritDoc} */
-    @Override protected void layoutChildren(final double x, final double y,
-                                  final double w, final double h) {
+    @Override protected void layoutChildren(final double x, final double y, final double w, final double h) {
         super.layoutChildren(x, y, w, h);
-
-        if (needCellsRebuilt) {
-            flow.rebuildCells();
-        } else if (needCellsReconfigured) {
-            flow.reconfigureCells();
-        }
-
-        needCellsRebuilt = false;
-        needCellsReconfigured = false;
-
         flow.resizeRelocate(x, y, w, h);
     }
 
@@ -342,8 +325,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
      *                                                                         *
      **************************************************************************/
 
-    /** {@inheritDoc} */
-    private TreeCell<T> createCell() {
+    private TreeCell<T> createCell(VirtualFlow<TreeCell<T>> flow) {
         final TreeCell<T> cell;
         if (getSkinnable().getCellFactory() != null) {
             cell = getSkinnable().getCellFactory().call(getSkinnable());
@@ -412,14 +394,14 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         // if this is not called even when the count is the same, we get a
         // memory leak in VirtualFlow.sheet.children. This can probably be
         // optimised in the future when time permits.
+        requestRebuildCells();
         flow.setCellCount(newCount);
 
-        // Ideally we would be more nuanced here, toggling a cheaper needs*
+        // Ideally we would be more nuanced above, toggling a cheaper needs*
         // field, but if we do we hit issues such as those identified in
         // RT-27852, where the expended item count of the new root equals the
         // EIC of the old root, which would lead to the visuals not updating
         // properly.
-        needCellsRebuilt = true;
         getSkinnable().requestLayout();
     }
 

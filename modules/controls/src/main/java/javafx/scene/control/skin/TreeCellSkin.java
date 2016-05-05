@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
@@ -97,8 +96,6 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     private double fixedCellSize;
     private boolean fixedCellSizeEnabled;
 
-    private InvalidationListener expandedListener = o -> updateDisclosureNodeRotation(true);
-
 
 
     /***************************************************************************
@@ -125,7 +122,6 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         this.fixedCellSizeEnabled = fixedCellSize > 0;
 
         updateTreeItem();
-        updateDisclosureNodeRotation(false);
 
         registerChangeListener(control.treeItemProperty(), e -> {
             updateTreeItem();
@@ -335,37 +331,8 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
      *                                                                         *
      **************************************************************************/
 
-    private void updateDisclosureNodeRotation(boolean animate) {
-        // no-op, this is now handled in CSS (although we no longer animate)
-//        if (treeItem == null || treeItem.isLeaf()) return;
-//
-//        Node disclosureNode = getSkinnable().getDisclosureNode();
-//        if (disclosureNode == null) return;
-//
-//        final boolean isExpanded = treeItem.isExpanded();
-//        int fromAngle = isExpanded ? 0 : 90;
-//        int toAngle = isExpanded ? 90 : 0;
-//
-//        if (animate) {
-//            RotateTransition rt = new RotateTransition(Duration.millis(200), disclosureNode);
-//            rt.setFromAngle(fromAngle);
-//            rt.setToAngle(toAngle);
-//            rt.play();
-//        } else {
-//            disclosureNode.setRotate(toAngle);
-//        }
-    }
-
     private void updateTreeItem() {
-        if (treeItem != null) {
-            treeItem.expandedProperty().removeListener(expandedListener);
-        }
         treeItem = getSkinnable().getTreeItem();
-        if (treeItem != null) {
-            treeItem.expandedProperty().addListener(expandedListener);
-        }
-
-        updateDisclosureNodeRotation(false);
     }
 
     private void updateDisclosureNode() {

@@ -1064,6 +1064,7 @@ public class TreeViewTest {
         assertEquals("Root", cell.getText());
 
         treeView.setShowRoot(false);
+        cell = VirtualFlowTestUtils.getCell(treeView, 0);
         assertEquals("Child 1", cell.getText());
     }
 
