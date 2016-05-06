@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -129,17 +129,18 @@ public enum ConditionalFeature {
      * Transparent windows will have only limited or no functionality on a platform that
      * doesn't support it.
      * <p>
-     * NOTE: Currently, this support is available on all platforms
+     * Currently, this support is available on all desktop platforms
      * except Linux systems without the XComposite extension. The
      * XShape extension is used in that case, so the window edges are aliased.
      * </p>
      * <p>
-     * NOTE: In an environment with enabled security manager (for example in
-     * applet mode), usage of transparent windows is protected by security
-     * checks. If the application doesn't have the required permissions, it
-     * won't be able to use this feature and the system will appear as if the
-     * support for transparent windows wasn't implemented. This includes
-     * returning false from the Platform.isSupported(TRANSPARENT_WINDOW) test.
+     * If a security manager is present, the application must have
+     * the {@link javafx.util.FXPermission} "createTransparentWindow"
+     * in order to create a transparent window.
+     * If the application doesn't have the required permission, it
+     * won't be able to use this feature; it will appear as if the the platform
+     * doesn't support transparent windows, and
+     * {@code Platform.isSupported(TRANSPARENT_WINDOW)} will return {@code false}.
      * </p>
      *
      * @since JavaFX 2.2

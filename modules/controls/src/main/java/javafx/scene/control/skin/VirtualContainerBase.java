@@ -162,4 +162,9 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
             itemCountDirty = false;
         }
     }
+
+    void requestRebuildCells() {
+        flow.rebuildCells();
+    }
+
 }

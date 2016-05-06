@@ -177,7 +177,6 @@ public class Util {
             String testPolicy) throws IOException {
 
         final String classpath = System.getProperty("java.class.path");
-        final String libraryPath = System.getProperty("java.library.path");
 
         /*
          * note: the "worker" properties are tied into build.gradle and
@@ -186,7 +185,7 @@ public class Util {
          */
         final Boolean isJigsaw = Boolean.getBoolean("worker.isJigsaw");
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
-        final String workerPatch = System.getProperty("worker.xpatch.dir");
+        final String workerXpatchFile = System.getProperty("worker.xpatch.file");
         final String workerPatchPolicy = System.getProperty("worker.patch.policy");
         final String workerClassPath = System.getProperty("worker.classpath.file");
         final Boolean workerDebug = Boolean.getBoolean("worker.debug");
@@ -199,8 +198,8 @@ public class Util {
             cmd.add("java");
         }
 
-        if (isJigsaw && workerPatch != null) {
-            cmd.add("-Xpatch:" + workerPatch);
+        if (isJigsaw && workerXpatchFile != null) {
+            cmd.add("@" + workerXpatchFile);
         } else {
             String jfxdir = getJfxrtDir(classpath);
             Assert.assertNotNull("failed to find jfxdir",jfxdir);
@@ -210,11 +209,6 @@ public class Util {
         // This is a "minimum" set, rather than the full @addExports
         if (isJigsaw) {
             cmd.add("-XaddExports:javafx.graphics/com.sun.javafx.application=ALL-UNNAMED");
-        }
-
-        if (isJigsaw && libraryPath != null) {
-            // needed for use with Xpatch but not otherwise
-            cmd.add("-Djava.library.path=" + libraryPath);
         }
 
         if (isJigsaw && workerClassPath != null) {

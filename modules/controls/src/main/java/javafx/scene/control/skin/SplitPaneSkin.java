@@ -77,8 +77,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     /**
      * Creates a new SplitPaneSkin instance, installing the necessary child
      * nodes into the Control {@link Control#getChildren() children} list, as
-     * well as the necessary {@link Node#getInputMap() input mappings} for
-     * handling key, mouse, etc events.
+     * well as the necessary input mappings for handling key, mouse, etc events.
      *
      * @param control The control that this skin should be installed onto.
      */
@@ -502,6 +501,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     private void removeContent(Node n) {
         for (Content c: contentRegions) {
             if (c.getContent().equals(n)) {
+                c.dispose();
                 getChildren().remove(c);
                 contentRegions.remove(c);
                 break;
@@ -1186,6 +1186,10 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         protected void setClipSize(double w, double h) {
             clipRect.setWidth(w);
             clipRect.setHeight(h);
+        }
+
+        private void dispose() {
+            getChildren().remove(content);
         }
 
         @Override protected double computeMaxWidth(double height) {

@@ -39,6 +39,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableListBase;
 
 import java.util.Collections;
+import java.util.function.Consumer;
 
 import static com.sun.javafx.collections.ListListenerHelper.fireValueChangedEvent;
 
@@ -88,6 +89,12 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
 
     public void _nextAdd(int from, int to) {
         nextAdd(from, to);
+    }
+
+    public void fireChange(Runnable r) {
+        _beginChange();
+        r.run();
+        _endChange();
     }
 
 

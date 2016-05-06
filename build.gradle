@@ -1298,6 +1298,10 @@ allprojects {
         }
 
         systemProperty 'unstable.test', IS_UNSTABLE_TEST
+
+        if (project.hasProperty("EXTRA_TEST_ARGS")) {
+            jvmArgs EXTRA_TEST_ARGS.split(' ')
+        }
     }
 
     compileTestJava {
@@ -3403,6 +3407,9 @@ compileTargets { t ->
     def modulesSrcDir = "${modularSdkDir}/modules_src"
     def modulesConfDir = "${modularSdkDir}/modules_conf"
     def modulesMakeDir = "${modularSdkDir}/make"
+    final File xpatchFile = file("${rootProject.buildDir}/xpatch.args")
+
+    project.files(xpatchFile);
 
     def zipTask = project.task("buildModuleZip$t.capital", type: Zip, group: "Build") {
         // FIXME: JIGSAW -- this should be moved to a sub-directory so we can keep the same name
@@ -3496,6 +3503,25 @@ compileTargets { t ->
     }
     zipTask.dependsOn(buildModulesTask);
     buildModules.dependsOn(buildModulesTask)
+
+    def buildModulesXpatchTask = task("buildModulesXpatch$t.capital", group: "Build") {
+        doLast() {
+            xpatchFile.delete()
+
+            logger.info("Creating xpatch.args file ${xpatchFile}")
+            String thepath=cygpath("${rootProject.buildDir}/sdk/${targetProperties.libDest}")
+
+            xpatchFile <<  "-Djava.library.path=${thepath}\n"
+            moduleProjList.each { project ->
+                def moduleName = project.ext.moduleName
+                def dstModuleDir = cygpath("${modulesDir}/${moduleName}")
+                xpatchFile <<  "-Xpatch:${moduleName}=${dstModuleDir}\n"
+            }
+        }
+    }
+
+    buildModulesXpatchTask.dependsOn(buildModulesTask)
+    buildModules.dependsOn(buildModulesXpatchTask)
 
     def isWindows = IS_WINDOWS && t.name == "win";
     def isMac = IS_MAC && t.name == "mac";
@@ -3813,6 +3839,7 @@ void configureJigsawTests(
         def testingDir = "${rootProject.buildDir}/${targetProperties.platformPrefix}testing";
         def patchesDir = new File("${testingDir}/modules");
         File patchPolicyFile = new File("${testingDir}/java.patch.policy");
+        File xpatchFile = new File("${testingDir}/xpatch.args");
 
         String javaLibraryPath = "${rootProject.buildDir}/sdk/$targetProperties.libDest"
 
@@ -3820,6 +3847,7 @@ void configureJigsawTests(
         def jigsawPatchesTestDir = new File("${testingDir}/tests/$moduleName");
 
         p.files(patchPolicyFile);
+        p.files(xpatchFile);
 
         def srcClassesDir = "${p.buildDir}/${targetProperties.platformPrefix}module-classes"
         Task classes =  p.task("jigsawCopyClasses${t.capital}", type: Copy, dependsOn: [p.classes]) {
@@ -3876,17 +3904,25 @@ void configureJigsawTests(
         } else {
             patchPerms = rootProject.task(nameis) {
                 outputs.file(patchPolicyFile)
+                outputs.file(xpatchFile)
                 doLast() {
                     logger.info("Creating test patch.policy file ${patchPolicyFile}")
+                    logger.info("Creating test patch.policy file ${xpatchFile}")
 
                     delete(patchPolicyFile)
+                    delete(xpatchFile)
                     mkdir(testingDir)
+                    String thepath=cygpath("${rootProject.buildDir}/sdk/${targetProperties.libDest}")
 
-                    [ "base", "graphics", "controls", "fxml", "swing", "web", ].each { mn ->
-                        String themod = file("${patchesDir}/javafx.${mn}").toURI()
+                    xpatchFile <<  "-Djava.library.path=${thepath}\n"
+                    moduleProjList.each { project ->
+                        String themod = file("${patchesDir}/${project.ext.moduleName}").toURI()
                         patchPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
                         "    permission java.security.AllPermission;\n" +
                         "};\n"
+
+                        def dstModuleDir = cygpath("${patchesDir}/${project.ext.moduleName}")
+                        xpatchFile <<  "-Xpatch:${project.ext.moduleName}=${dstModuleDir}\n"
                     }
                 }
             }
@@ -3940,8 +3976,7 @@ void configureJigsawTests(
                 String bcp = "-Xbootclasspath/a:" + rootProject.projectDir.path + "/buildSrc/build/libs/buildSrc.jar"
 
                 systemProperties 'worker.debug': IS_WORKER_DEBUG
-                systemProperties 'worker.library.path': cygpath(javaLibraryPath)
-                systemProperties 'worker.xpatch.dir': cygpath(patchesDir.path)
+                systemProperties 'worker.xpatch.file': cygpath(xpatchFile.path)
                 if (addExportsFile != null) {
                     systemProperties 'worker.exports.file': cygpath(addExportsFile)
                 }

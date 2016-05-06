@@ -92,12 +92,12 @@ public class TableRow<T> extends IndexedCell<T> {
      **************************************************************************/
 
     /*
-     * This is the list observer we use to keep an eye on the SelectedCells
+     * This is the list observer we use to keep an eye on the SelectedIndices
      * list in the table view. Because it is possible that the table can
      * be mutated, we create this observer here, and add/remove it from the
      * storeTableView method.
      */
-    private ListChangeListener<TablePosition> selectedListener = c -> {
+    private ListChangeListener<Integer> selectedListener = c -> {
         updateSelection();
     };
 
@@ -111,7 +111,7 @@ public class TableRow<T> extends IndexedCell<T> {
         updateEditing();
     };
 
-    private final WeakListChangeListener<TablePosition> weakSelectedListener = new WeakListChangeListener<>(selectedListener);
+    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
 
@@ -153,7 +153,7 @@ public class TableRow<T> extends IndexedCell<T> {
                         if (oldTableView != null) {
                             sm = oldTableView.getSelectionModel();
                             if (sm != null) {
-                                sm.getSelectedCells().removeListener(weakSelectedListener);
+                                sm.getSelectedIndices().removeListener(weakSelectedListener);
                             }
 
                             fm = oldTableView.getFocusModel();
@@ -171,7 +171,7 @@ public class TableRow<T> extends IndexedCell<T> {
                     if (tableView != null) {
                         sm = tableView.getSelectionModel();
                         if (sm != null) {
-                            sm.getSelectedCells().addListener(weakSelectedListener);
+                            sm.getSelectedIndices().addListener(weakSelectedListener);
                         }
 
                         fm = tableView.getFocusModel();

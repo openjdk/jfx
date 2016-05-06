@@ -392,9 +392,7 @@ final class QuantumClipboard implements TKClipboard {
                                 SocketPermission sp = new SocketPermission(hoststr, "connect");
                                 sm.checkPermission(sp, context);
                             } else {
-                                final Permission clipboardPerm =
-                                        PermissionHelper.getAccessClipboardPermission();
-                                sm.checkPermission(clipboardPerm, context);
+                                PermissionHelper.checkClipboardPermission(context);
                             }
                         }
                         return (new Image(url));

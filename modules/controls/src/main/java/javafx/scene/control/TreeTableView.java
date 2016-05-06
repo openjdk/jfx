@@ -32,6 +32,7 @@ import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 
 import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.DoubleProperty;
@@ -61,7 +62,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
@@ -1825,7 +1825,7 @@ public class TreeTableView<S> extends Control {
                     // position before and after the sort). Therefore, we need to fire
                     // a single add/remove event to cover the added and removed positions.
                     ListChangeListener.Change<TreeTablePosition<S, ?>> c = new NonIterableChange.GenericAddRemoveChange<>(0, itemCount, removed, newState);
-                    sm.handleSelectedCellsListChangeEvent(c);
+                    sm.fireCustomSelectedCellsListChangeEvent(c);
                 }
             }
         }
@@ -2321,7 +2321,7 @@ public class TreeTableView<S> extends Control {
             });
             updateTreeEventListener(null, treeTableView.getRoot());
 
-            selectedCellsMap = new SelectedCellsMap<TreeTablePosition<S,?>>(c -> handleSelectedCellsListChangeEvent(c)) {
+            selectedCellsMap = new SelectedCellsMap<TreeTablePosition<S,?>>(this::fireCustomSelectedCellsListChangeEvent) {
                 @Override public boolean isCellSelectionEnabled() {
                     return TreeTableViewArrayListSelectionModel.this.isCellSelectionEnabled();
                 }
@@ -2336,6 +2336,9 @@ public class TreeTableView<S> extends Control {
                     return selectedCellsMap.size();
                 }
             };
+//            selectedCellsSeq.addListener((ListChangeListener<? super TreeTablePosition<S,?>>) c -> {
+//                ControlUtils.updateSelectedIndices(this, c);
+//            });
 
             updateDefaultSelection();
 
@@ -2679,9 +2682,13 @@ public class TreeTableView<S> extends Control {
                 final int changeSize = isCellSelectionEnabled ? getSelectedCells().size() : 1;
                 change = new NonIterableChange.GenericAddRemoveChange<>(
                         changeIndex, changeIndex + changeSize, previousSelection, selectedCellsSeq);
+//                selectedCellsSeq._beginChange();
+//                selectedCellsSeq._nextAdd(changeIndex, changeIndex + changeSize);
+//                selectedCellsSeq._nextRemove(changeIndex, previousSelection);
+//                selectedCellsSeq._endChange();
             }
 
-            handleSelectedCellsListChangeEvent(change);
+            fireCustomSelectedCellsListChangeEvent(change);
         }
 
         @Override public void select(int row) {
@@ -2702,19 +2709,14 @@ public class TreeTableView<S> extends Control {
                 return;
             }
 
-            TreeTablePosition<S,?> pos = new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column);
+            if (TableCellBehavior.hasDefaultAnchor(treeTableView)) {
+                TableCellBehavior.removeAnchor(treeTableView);
+            }
 
             if (getSelectionMode() == SelectionMode.SINGLE) {
-                startAtomic();
                 quietClearSelection();
-                stopAtomic();
             }
-
-            if (TreeTableCellBehavior.hasDefaultAnchor(treeTableView)) {
-                TreeTableCellBehavior.removeAnchor(treeTableView);
-            }
-
-            selectedCellsMap.add(pos);
+            selectedCellsMap.add(new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column));
 
             updateSelectedIndex(row);
             focus(row, (TreeTableColumn<S, ?>) column);
@@ -2936,8 +2938,10 @@ public class TreeTableView<S> extends Control {
             if (startChangeIndex > -1 && endChangeIndex > -1) {
                 final int startIndex = Math.min(startChangeIndex, endChangeIndex);
                 final int endIndex = Math.max(startChangeIndex, endChangeIndex);
+
                 ListChangeListener.Change c = new NonIterableChange.SimpleAddChange<>(startIndex, endIndex + 1, selectedCellsSeq);
-                handleSelectedCellsListChangeEvent(c);
+                fireCustomSelectedCellsListChangeEvent(c);
+//                selectedCellsSeq.fireChange(() -> selectedCellsSeq._nextAdd(startIndex, endIndex + 1));
             }
         }
 
@@ -2990,13 +2994,15 @@ public class TreeTableView<S> extends Control {
                 updateSelectedIndex(-1);
                 focus(-1);
 
-                ListChangeListener.Change<TreeTablePosition<S, ?>> c = new NonIterableChange<TreeTablePosition<S, ?>>(0, 0, selectedCellsSeq) {
-                    @Override
-                    public List<TreeTablePosition<S, ?>> getRemoved() {
-                        return removed;
-                    }
-                };
-                handleSelectedCellsListChangeEvent(c);
+                if (!removed.isEmpty()) {
+//                    selectedCellsSeq.fireChange(() -> selectedCellsSeq._nextRemove(0, removed));
+                    ListChangeListener.Change<TreeTablePosition<S, ?>> c = new NonIterableChange<TreeTablePosition<S, ?>>(0, 0, selectedCellsSeq) {
+                        @Override public List<TreeTablePosition<S, ?>> getRemoved() {
+                            return removed;
+                        }
+                    };
+                    fireCustomSelectedCellsListChangeEvent(c);
+                }
             }
         }
 
@@ -3210,82 +3216,14 @@ public class TreeTableView<S> extends Control {
             return treeTableView.getExpandedItemCount();
         }
 
-        private void handleSelectedCellsListChangeEvent(ListChangeListener.Change<? extends TreeTablePosition<S,?>> c) {
-            // RT-29313: because selectedIndices and selectedItems represent
-            // row-based selection, we need to update the
-            // selectedIndicesBitSet when the selectedCells changes to
-            // ensure that selectedIndices and selectedItems return only
-            // the correct values (and only once). The issue identified
-            // by RT-29313 is that the size and contents of selectedIndices
-            // and selectedItems can not simply defer to the
-            // selectedCells as selectedCells may be representing
-            // multiple cells from one row (e.g. selectedCells of
-            // [(0,1), (1,1), (1,2), (1,3)] should result in
-            // selectedIndices of [0,1], not [0,1,1,1]).
-            // An inefficient solution would rebuild the selectedIndicesBitSet
-            // every time the change happens, but we can do better than
-            // that. Inefficient solution:
-            //
-            // selectedIndicesBitSet.clear();
-            // for (int i = 0; i < selectedCells.size(); i++) {
-            //     final TablePosition<S,?> tp = selectedCells.get(i);
-            //     final int row = tp.getRow();
-            //     selectedIndicesBitSet.set(row);
-            // }
-            //
-            // A more efficient solution:
-
-            selectedIndices._beginChange();
-
-            while (c.next()) {
-                // it may look like all we are doing here is collecting the removed elements (and
-                // counting the added elements), but the call to 'peek' is also crucial - it is
-                // ensuring that the selectedIndices bitset is correctly updated.
-                startAtomic();
-                final List<Integer> removed = c.getRemoved().stream()
-                        .map(TreeTablePosition::getRow)
-                        .distinct()
-                        .peek(selectedIndices::clear)
-                        .collect(Collectors.toList());
-
-                final int addedSize = (int)c.getAddedSubList().stream()
-                        .map(TreeTablePosition::getRow)
-                        .distinct()
-                        .peek(selectedIndices::set)
-                        .count();
-                stopAtomic();
-
-                final int to = c.getFrom() + addedSize;
-
-                if (c.wasReplaced()) {
-                    selectedIndices._nextReplace(c.getFrom(), to, removed);
-                } else if (c.wasRemoved()) {
-                    selectedIndices._nextRemove(c.getFrom(), removed);
-                } else if (c.wasAdded()) {
-                    selectedIndices._nextAdd(c.getFrom(), to);
-                }
-            }
-            c.reset();
-            selectedIndices.reset();
+        private void fireCustomSelectedCellsListChangeEvent(ListChangeListener.Change<? extends TreeTablePosition<S,?>> c) {
+            ControlUtils.updateSelectedIndices(this, c);
 
             if (isAtomic()) {
                 return;
             }
 
-            // Fix for RT-31577 - the selectedItems list was going to
-            // empty, but the selectedItem property was staying non-null.
-            // There is a unit test for this, so if a more elegant solution
-            // can be found in the future and this code removed, the unit
-            // test will fail if it isn't fixed elsewhere.
-            // makeAtomic toggle added to resolve RT-32618
-            if (getSelectedItems().isEmpty() && getSelectedItem() != null) {
-                setSelectedItem(null);
-            }
-
-            selectedIndices._endChange();
-
             selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
-            c.reset();
         }
     }
 

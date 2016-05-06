@@ -143,25 +143,22 @@ public class GradleJUnitWorker {
         try {
             final ArrayList<String> cmd = new ArrayList<>(30);
             String gradleWorkerJar = null;
-            String patchesDir = null;
+            String xpatchesFile = null;
             String exportsFile = null;
             String classpathFile = null;
-            String libraryPath = null;
             String jigsawJavapath = null;
 
             final String exportsFileProperty = "worker.exports.file";
             final String workerDebugProperty = "worker.debug";
-            final String patchesDirProperty = "worker.xpatch.dir";
+            final String xpatchesFileProperty = "worker.xpatch.file";
             final String classpathFileProperty = "worker.classpath.file";
-            final String libraryPathProperty = "worker.library.path";
             final String javaCmdProperty = "worker.java.cmd";
 
             Collections.addAll(ignoreSysProps, defSysProps);
             ignoreSysProps.add(exportsFileProperty);
             ignoreSysProps.add(workerDebugProperty);
-            ignoreSysProps.add(patchesDirProperty);
+            ignoreSysProps.add(xpatchesFileProperty);
             ignoreSysProps.add(classpathFileProperty);
-            ignoreSysProps.add(libraryPathProperty);
             ignoreSysProps.add(javaCmdProperty);
 
             debug = Boolean.parseBoolean(System.getProperty(workerDebugProperty, "false"));
@@ -176,10 +173,10 @@ public class GradleJUnitWorker {
                     int equals = args[i].indexOf("=");
                     exportsFile = args[i].substring(equals+1);
                     if (debug) System.err.println("XWORKER "+exportsFileProperty+"="+exportsFile);
-                } else if (args[i].contains(patchesDirProperty)) {
+                } else if (args[i].contains(xpatchesFileProperty)) {
                     int equals = args[i].indexOf("=");
-                    patchesDir = args[i].substring(equals+1);
-                    if (debug) System.err.println("XWORKER "+patchesDirProperty+"="+patchesDir);
+                    xpatchesFile = args[i].substring(equals+1);
+                    if (debug) System.err.println("XWORKER "+xpatchesFileProperty+"="+xpatchesFile);
                 } else if (args[i].contains(javaCmdProperty)) {
                     int equals = args[i].indexOf("=");
                     jigsawJavapath = args[i].substring(equals+1);
@@ -188,10 +185,6 @@ public class GradleJUnitWorker {
                     int equals = args[i].indexOf("=");
                     classpathFile = args[i].substring(equals+1);
                     if (debug) System.err.println("XWORKER "+classpathFileProperty+"="+classpathFile);
-                } else if (args[i].contains(libraryPathProperty)) {
-                    int equals = args[i].indexOf("=");
-                    libraryPath = args[i].substring(equals+1);
-                    if (debug) System.err.println("XWORKER "+libraryPathProperty+"="+libraryPath);
                 } else {
                     if (debug) System.err.println("XWORKER forwarding cmd "+args[i]);
                     newArgs.add(args[i]);
@@ -370,13 +363,13 @@ public class GradleJUnitWorker {
 
             cmd.add("-D"+javaCmdProperty+"="+java_cmd);
 
-            if (patchesDir == null) {
-                patchesDir = System.getProperty(patchesDirProperty);
+            if (xpatchesFile == null) {
+                xpatchesFile = System.getProperty(xpatchesFileProperty);
             }
 
-            if (patchesDir != null) {
-                cmd.add("-Xpatch:" + patchesDir);
-                cmd.add("-D"+patchesDirProperty+"="+patchesDir);
+            if (xpatchesFile != null) {
+                cmd.add("@" + xpatchesFile);
+                cmd.add("-D" + xpatchesFileProperty + "=" + xpatchesFile);
             }
 
             if (exportsFile == null) {
@@ -392,15 +385,6 @@ public class GradleJUnitWorker {
                 classPathArgFile.getAbsolutePath().replaceAll("\\\\", "/");
             cmd.add("@" + cleanpath);
             cmd.add("-D"+classpathFileProperty+"="+cleanpath);
-
-            if (libraryPath == null) {
-                libraryPath = System.getProperty(libraryPathProperty);
-            }
-
-            if (libraryPath != null) {
-                cmd.add("-Djava.library.path=" + libraryPath);
-                cmd.add("-D"+libraryPathProperty+"="+libraryPath);
-            }
 
             if (debug) {
                 cmd.add("-D"+workerDebugProperty+"="+debug);
