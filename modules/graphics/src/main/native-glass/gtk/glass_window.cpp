@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 #include "glass_window.h"
 #include "glass_general.h"
-#include "glass_gtkcompat.h"
 #include "glass_key.h"
 #include "glass_screen.h"
 #include "glass_dnd.h"
@@ -49,8 +48,6 @@
 
 WindowContext * WindowContextBase::sm_grab_window = NULL;
 WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
-
-GdkAtom atom_net_wm_state = gdk_atom_intern_static_string("_NET_WM_STATE");
 
 GdkWindow* WindowContextBase::get_gdk_window(){
     return gdk_window;
@@ -466,7 +463,7 @@ void WindowContextBase::paint(void* data, jint width, jint height)
     }
 
     cairo_t* context;
-    context = gdk_cairo_create(GDK_DRAWABLE(gdk_window));
+    context = gdk_cairo_create(gdk_window);
 
     cairo_surface_t* cairo_surface;
     cairo_surface = cairo_image_surface_create_for_data(
@@ -600,7 +597,7 @@ void WindowContextBase::set_cursor(GdkCursor* cursor) {
                     WindowContextBase::sm_mouse_drag_window->get_gdk_window(), cursor, FALSE);
         } else if (WindowContextBase::sm_grab_window) {
             glass_gdk_mouse_devices_grab_with_cursor(
-                    WindowContextBase::sm_grab_window->get_gdk_window(), cursor);
+                    WindowContextBase::sm_grab_window->get_gdk_window(), cursor, TRUE);
         }
     }
     gdk_window_set_cursor(gdk_window, cursor);
@@ -720,7 +717,7 @@ get_net_frame_extents_atom() {
 
 void
 WindowContextTop::request_frame_extents() {
-    Display *display = GDK_WINDOW_XDISPLAY(gdk_window);
+    Display *display = GDK_DISPLAY_XDISPLAY(gdk_window_get_display(gdk_window));
     Atom rfeAtom = XInternAtom(display, "_NET_REQUEST_FRAME_EXTENTS", True);
     if (rfeAtom != None) {
         XClientMessageEvent clientMessage;
@@ -739,7 +736,7 @@ WindowContextTop::request_frame_extents() {
 }
 
 void WindowContextTop::activate_window() {
-    Display *display = GDK_WINDOW_XDISPLAY(gdk_window);
+    Display *display = GDK_DISPLAY_XDISPLAY (gdk_window_get_display (gdk_window));
     Atom navAtom = XInternAtom(display, "_NET_ACTIVE_WINDOW", True);
     if (navAtom != None) {
         XClientMessageEvent clientMessage;
@@ -870,6 +867,7 @@ void WindowContextTop::process_net_wm_property() {
     // Workaround for https://bugs.launchpad.net/unity/+bug/998073
 
     static GdkAtom atom_atom = gdk_atom_intern_static_string("ATOM");
+    static GdkAtom atom_net_wm_state = gdk_atom_intern_static_string("_NET_WM_STATE");
     static GdkAtom atom_net_wm_state_hidden = gdk_atom_intern_static_string("_NET_WM_STATE_HIDDEN");
     static GdkAtom atom_net_wm_state_above = gdk_atom_intern_static_string("_NET_WM_STATE_ABOVE");
 
@@ -905,6 +903,8 @@ void WindowContextTop::process_net_wm_property() {
 }
 
 void WindowContextTop::process_property_notify(GdkEventProperty* event) {
+    static GdkAtom atom_net_wm_state = gdk_atom_intern_static_string("_NET_WM_STATE");
+
     if (event->atom == atom_net_wm_state && event->window == gdk_window) {
         process_net_wm_property();
     } else if (event->atom == get_net_frame_extents_atom() &&
@@ -1028,7 +1028,7 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     }
 
     if (resizable.request != REQUEST_NONE) {
-        set_window_resizable(resizable.request == REQUEST_RESIZABLE, true);
+        set_window_resizable(resizable.request == REQUEST_RESIZABLE);
         resizable.request = REQUEST_NONE;
     }
 }
@@ -1051,7 +1051,7 @@ void WindowContextTop::update_window_constraints() {
     }
 }
 
-void WindowContextTop::set_window_resizable(bool res, bool grip) {
+void WindowContextTop::set_window_resizable(bool res) {
     if(!res) {
         int w = geometry_get_content_width(&geometry);
         int h = geometry_get_content_height(&geometry);
@@ -1061,16 +1061,12 @@ void WindowContextTop::set_window_resizable(bool res, bool grip) {
         GdkGeometry geom = {w, h, w, h, 0, 0, 0, 0, 0.0, 0.0, GDK_GRAVITY_NORTH_WEST};
         gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom,
                 static_cast<GdkWindowHints>(GDK_HINT_MIN_SIZE | GDK_HINT_MAX_SIZE));
-        GLASS_GTK_WINDOW_SET_HAS_RESIZE_GRIP(gdk_window, FALSE);
         resizable.prev = resizable.value;
         resizable.value = false;
     } else {
         resizable.prev = resizable.value;
         resizable.value = true;
         update_window_constraints();
-        if (grip) {
-            GLASS_GTK_WINDOW_SET_HAS_RESIZE_GRIP(gdk_window, TRUE);
-        }
     }
 }
 
@@ -1078,7 +1074,7 @@ void WindowContextTop::set_resizable(bool res) {
     gint w, h;
     gtk_window_get_size(GTK_WINDOW(gtk_widget), &w, &h);
     if (map_received || w > 1 || h > 1) {
-        set_window_resizable(res, true);
+        set_window_resizable(res);
     } else {
         //Since window is not ready yet set only request for change of resizable.
         resizable.request  = res ? REQUEST_RESIZABLE : REQUEST_NOT_RESIZABLE;
@@ -1168,6 +1164,8 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
         return;
     }
 
+    Display *display = GDK_DISPLAY_XDISPLAY (gdk_window_get_display (gdk_window));
+
     if (!gtk_widget_get_visible(gtk_widget)) {
         // not visible yet, synchronize with gtk only
         if (windowChangesMask & (CWX | CWY)) {
@@ -1220,11 +1218,11 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             sizeHints->min_height = 1;
             sizeHints->max_width = INT_MAX;
             sizeHints->max_height = INT_MAX;
-            XSetWMNormalHints(GDK_WINDOW_XDISPLAY(gdk_window),
+            XSetWMNormalHints(display,
                     GDK_WINDOW_XID(gdk_window),
                     sizeHints);
 
-            XConfigureWindow(GDK_WINDOW_XDISPLAY(gdk_window),
+            XConfigureWindow(display,
                     GDK_WINDOW_XID(gdk_window),
                     windowChangesMask,
                     windowChanges);
@@ -1233,7 +1231,7 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             sizeHints->min_height = fixedHeight;
             sizeHints->max_width = fixedWidth;
             sizeHints->max_height = fixedHeight;
-            XSetWMNormalHints(GDK_WINDOW_XDISPLAY(gdk_window),
+            XSetWMNormalHints(display,
                     GDK_WINDOW_XID(gdk_window),
                     sizeHints);
 
@@ -1242,7 +1240,7 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
         }
     }
 
-    XConfigureWindow(GDK_WINDOW_XDISPLAY(gdk_window),
+    XConfigureWindow(display,
             GDK_WINDOW_XID(gdk_window),
             windowChangesMask,
             windowChanges);
@@ -1254,20 +1252,7 @@ void WindowContextTop::applyShapeMask(void* data, uint width, uint height)
         return;
     }
 
-    GdkPixbuf* pixbuf = gdk_pixbuf_new_from_data((guchar *) data,
-            GDK_COLORSPACE_RGB, TRUE, 8, width, height, width * 4, NULL, NULL);
-
-    if (GDK_IS_PIXBUF(pixbuf)) {
-        GdkBitmap* mask = NULL;
-        gdk_pixbuf_render_pixmap_and_mask(pixbuf, NULL, &mask, 128);
-
-        gdk_window_input_shape_combine_mask(gdk_window, mask, 0, 0);
-
-        g_object_unref(pixbuf);
-        if (mask) {
-            g_object_unref(mask);
-        }
-    }
+    glass_window_apply_shape_mask(gtk_widget_get_window(gtk_widget), data, width, height);
 }
 
 void WindowContextTop::set_minimized(bool minimize) {
@@ -1275,7 +1260,7 @@ void WindowContextTop::set_minimized(bool minimize) {
     if (minimize) {
         if (frame_type == TRANSPARENT) {
             // https://bugs.launchpad.net/ubuntu/+source/unity/+bug/1245571
-            gdk_window_input_shape_combine_mask(gdk_window, NULL, 0, 0);
+            glass_window_reset_input_shape_mask(gtk_widget_get_window(gtk_widget));
         }
 
         if ((gdk_windowManagerFunctions & GDK_FUNC_MINIMIZE) == 0) {
@@ -1326,10 +1311,10 @@ void WindowContextTop::set_alpha(double alpha) {
 void WindowContextTop::set_enabled(bool enabled) {
     if (enabled) {
         //set back proper resizable value.
-        set_window_resizable(resizable.prev, true);
+        set_window_resizable(resizable.prev);
     } else {
         //disabled window can't be resizable.
-        set_window_resizable(false, false);
+        set_window_resizable(false);
     }
 }
 

@@ -72,7 +72,7 @@ setupTools("linux_tools",
 
         results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst"
+            commandLine "pkg-config", "--libs", "pangocairo", "gio-2.0", "gthread-2.0", "xtst"
             standardOutput = results
         }
         propFile << "libs=" << results.toString().trim();
@@ -144,7 +144,7 @@ LINUX.glass.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
 LINUX.glass.compiler = compiler
 LINUX.glass.ccFlags = [ccFlags, "-Werror"].flatten()
 LINUX.glass.linker = linker
-LINUX.glass.linkFlags = [linkFlags].flatten()
+LINUX.glass.linkFlags = [linkFlags ].flatten()
 LINUX.glass.lib = "glass"
 
 LINUX.decora = [:]

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,12 @@
 
 #include <jni.h>
 
-
 #include <stdint.h>
 #include <X11/Xlib.h>
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
+
+#include "glass_wrapper.h"
 
 #define JLONG_TO_PTR(value) ((void*)(intptr_t)(value))
 #define PTR_TO_JLONG(value) ((jlong)(intptr_t)(value))

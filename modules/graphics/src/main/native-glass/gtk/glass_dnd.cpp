@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,6 @@
  * questions.
  */
 #include "glass_dnd.h"
-#include "glass_gtkcompat.h"
 #include "glass_general.h"
 #include "glass_evloop.h"
 
@@ -35,6 +34,8 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
+#include "glass_wrapper.h"
+#include <gdk/gdkkeysyms.h>
 
 /************************* COMMON *********************************************/
 static jint translate_gdk_action_to_glass(GdkDragAction action)
@@ -165,7 +166,7 @@ static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *even
         return; // Do not process motion events if no enter event was received
     }
     jmethodID method = enter_ctx.just_entered ? jViewNotifyDragEnter : jViewNotifyDragOver;
-    GdkDragAction suggested = GLASS_GDK_DRAG_CONTEXT_GET_SUGGESTED_ACTION(event->context);
+    GdkDragAction suggested = gdk_drag_context_get_suggested_action(event->context);
     GdkDragAction result = translate_glass_action_to_gdk(mainEnv->CallIntMethod(ctx->get_jview(), method,
             (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
             (jint)event->x_root, (jint)event->y_root,
@@ -193,7 +194,7 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
         gdk_drop_reply(event->context, FALSE, GDK_CURRENT_TIME);
         return; // Do not process drop events if no enter event and subsequent motion event were received
     }
-    GdkDragAction selected = GLASS_GDK_DRAG_CONTEXT_GET_SELECTED_ACTION(event->context);
+    GdkDragAction selected = gdk_drag_context_get_selected_action(event->context);
 
     mainEnv->CallIntMethod(ctx->get_jview(), jViewNotifyDragDrop,
             (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
@@ -245,7 +246,7 @@ jobjectArray dnd_target_get_mimes(JNIEnv *env)
         return NULL;
     }
     if (!enter_ctx.mimes) {
-        GList* targets = GLASS_GDK_DRAG_CONTEXT_LIST_TARGETS(enter_ctx.ctx);
+        GList* targets = gdk_drag_context_list_targets(enter_ctx.ctx);
         jobject set = env->NewObject(jHashSetCls, jHashSetInit, NULL);
         EXCEPTION_OCCURED(env);
 
@@ -312,13 +313,13 @@ jint dnd_target_get_supported_actions(JNIEnv *env)
     if (check_state_in_drag(env)) {
         return 0;
     }
-    return translate_gdk_action_to_glass(GLASS_GDK_DRAG_CONTEXT_GET_ACTIONS(enter_ctx.ctx));
+    return translate_gdk_action_to_glass(gdk_drag_context_get_actions(enter_ctx.ctx));
 }
 
 static void wait_for_selection_data_hook(GdkEvent * event, void * data)
 {
     selection_data_ctx *ctx = (selection_data_ctx*)data;
-    GdkWindow *dest = GLASS_GDK_DRAG_CONTEXT_GET_DEST_WINDOW(enter_ctx.ctx);
+    GdkWindow *dest = glass_gdk_drag_context_get_dest_window(enter_ctx.ctx);
     if (event->type == GDK_SELECTION_NOTIFY &&
             event->selection.window == dest) {
         if (event->selection.property) { // if 0, that we received negative response
@@ -334,7 +335,7 @@ static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_d
 
     memset(selection_ctx, 0, sizeof(selection_data_ctx));
 
-    gdk_selection_convert(GLASS_GDK_DRAG_CONTEXT_GET_DEST_WINDOW(enter_ctx.ctx), gdk_drag_get_selection(enter_ctx.ctx), target,
+    gdk_selection_convert(glass_gdk_drag_context_get_dest_window(enter_ctx.ctx), gdk_drag_get_selection(enter_ctx.ctx), target,
                           GDK_CURRENT_TIME);
 
     hookReg =
@@ -560,7 +561,7 @@ static gboolean dnd_finish_callback() {
     if (dnd_window) {
         dnd_set_performed_action(
                 translate_gdk_action_to_glass(
-                    GLASS_GDK_DRAG_CONTEXT_GET_SELECTED_ACTION(
+                    gdk_drag_context_get_selected_action(
                         get_drag_context())));
 
         gdk_window_destroy(dnd_window);
@@ -688,7 +689,7 @@ static gboolean dnd_source_set_image(GdkWindow *requestor, GdkAtom property, Gdk
     mainEnv->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
 
     if (!EXCEPTION_OCCURED(mainEnv)
-            && gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &size, type, NULL, NULL)) {
+            && glass_gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &size, type, NULL)) {
         gdk_property_change(requestor, property, target,
                 8, GDK_PROP_MODE_REPLACE, (guchar *)buffer, size);
         result = TRUE;
@@ -785,7 +786,9 @@ static void process_dnd_source_selection_req(GdkWindow *window, GdkEventSelectio
 {
     (void)window;
 
-    GdkWindow *requestor = GLASS_GDK_SELECTION_EVENT_GET_REQUESTOR(event);
+    GdkWindow *requestor = gdk_x11_window_foreign_new_for_display(
+            gdk_display_get_default(),
+            event->requestor);
 
     gboolean is_data_set = FALSE;
     if (event->target == TARGET_UTF8_STRING_ATOM
@@ -812,7 +815,7 @@ static void process_dnd_source_mouse_release(GdkWindow *window, GdkEventButton *
 
     glass_gdk_master_pointer_ungrab();
 
-    if (GLASS_GDK_DRAG_CONTEXT_GET_SELECTED_ACTION(get_drag_context())) {
+    if (gdk_drag_context_get_selected_action(get_drag_context())) {
         gdk_drag_drop(get_drag_context(), GDK_CURRENT_TIME);
     } else {
         gdk_drag_abort(get_drag_context(), GDK_CURRENT_TIME);
@@ -881,7 +884,7 @@ static void process_dnd_source_drag_status(GdkWindow *window, GdkEventDND *event
 {
     (void)window;
 
-    GdkDragAction selected = GLASS_GDK_DRAG_CONTEXT_GET_SELECTED_ACTION(event->context);
+    GdkDragAction selected = gdk_drag_context_get_selected_action(event->context);
     GdkCursor* cursor;
 
     if (selected & GDK_ACTION_COPY) {
@@ -1212,10 +1215,6 @@ DragView::View::View(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
 
     gtk_widget_realize(widget);
 
-    GdkRegion* region = gdk_region_new();
-    gdk_window_input_shape_combine_region(gtk_widget_get_window(widget), region, 0,0);
-    gdk_region_destroy(region);
-
     gtk_widget_set_app_paintable(widget, TRUE);
 
     g_signal_connect(G_OBJECT(widget), "expose-event", G_CALLBACK(on_expose), this);
@@ -1231,19 +1230,15 @@ DragView::View::View(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
 
 void DragView::View::screen_changed() {
     GdkScreen *screen = gtk_widget_get_screen(widget);
-    GdkColormap *colormap = gdk_screen_get_rgba_colormap(screen);
 
-    if (!colormap || !gdk_screen_is_composited(screen)) {
+    glass_configure_window_transparency(widget, true);
+
+    if (!gdk_screen_is_composited(screen)) {
         if (!is_offset_set) {
             offset_x = 1;
             offset_y = 1;
         }
     }
-
-    if (!colormap) {
-        colormap = gdk_screen_get_rgb_colormap(screen);
-    }
-    gtk_widget_set_colormap(widget, colormap);
 }
 
 void DragView::View::expose() {

@@ -111,26 +111,6 @@ jmethodID jApplicationReportException;
 jmethodID jApplicationGetApplication;
 jmethodID jApplicationGetName;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-void init_threads() {
-    gboolean is_g_thread_get_initialized = FALSE;
-    if (glib_check_version(2, 32, 0)) { // < 2.32
-        if (!glib_check_version(2, 20, 0)) {
-            is_g_thread_get_initialized = g_thread_get_initialized();
-        }
-        if (!is_g_thread_get_initialized) {
-            // Calling g_thread_init() multiple times leads to crash on GLib < 2.24
-            // We can use g_thread_get_initialized () but it is available only for
-            // GLib >= 2.20. We rely on GThreadHelper for GLib < 2.20.
-            // g_thread_init is no longer necessary for GLib >=2.32
-            g_thread_init(NULL);
-        }
-    }
-    gdk_threads_init();
-}
-#pragma GCC diagnostic pop
-
 static jboolean displayValid = JNI_FALSE;
 
 jboolean
@@ -347,31 +327,6 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
         // Invalid DISPLAY, skip initialization
         return JNI_VERSION_1_6;
     }
-
-    clazz = env->FindClass("sun/misc/GThreadHelper");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    if (clazz) {
-        jmethodID mid_getAndSetInitializationNeededFlag = env->GetStaticMethodID(clazz, "getAndSetInitializationNeededFlag", "()Z");
-        if (env->ExceptionCheck()) return JNI_ERR;
-        jmethodID mid_lock = env->GetStaticMethodID(clazz, "lock", "()V");
-        if (env->ExceptionCheck()) return JNI_ERR;
-        jmethodID mid_unlock = env->GetStaticMethodID(clazz, "unlock", "()V");
-        if (env->ExceptionCheck()) return JNI_ERR;
-
-        env->CallStaticVoidMethod(clazz, mid_lock);
-
-        if (!env->CallStaticBooleanMethod(clazz, mid_getAndSetInitializationNeededFlag)) {
-            init_threads();
-        }
-
-        env->CallStaticVoidMethod(clazz, mid_unlock);
-    } else {
-        env->ExceptionClear();
-        init_threads();
-    }
-
-    gdk_threads_enter();
-    gtk_init(NULL, NULL);
 
     return JNI_VERSION_1_6;
 }

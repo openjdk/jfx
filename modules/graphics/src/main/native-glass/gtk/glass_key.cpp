@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,13 +23,14 @@
  * questions.
  */
 #include "glass_key.h"
-#include "glass_gtkcompat.h"
 #include <com_sun_glass_events_KeyEvent.h>
 #include <com_sun_glass_ui_gtk_GtkApplication.h>
 
 #include <glib.h>
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
+#include "glass_wrapper.h"
+#include <gdk/gdkkeysyms.h>
 
 static gboolean key_initialized = FALSE;
 static GHashTable *keymap;

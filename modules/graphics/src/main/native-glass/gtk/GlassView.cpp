@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@
 #include "glass_general.h"
 #include "glass_view.h"
 #include "glass_window.h"
-#include "glass_gtkcompat.h"
 
 #define JLONG_TO_GLASSVIEW(value) ((GlassView *) JLONG_TO_PTR(value))
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,6 +77,48 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isDisplayV
     (void)clazz;
 
     return is_display_valid();
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+static void init_threads() {
+    gboolean is_g_thread_get_initialized = FALSE;
+    if (glib_check_version(2, 32, 0)) { // < 2.32
+        if (!glib_check_version(2, 20, 0)) {
+            is_g_thread_get_initialized = g_thread_get_initialized();
+        }
+        if (!is_g_thread_get_initialized) {
+            g_thread_init(NULL);
+        }
+    }
+    gdk_threads_init();
+}
+#pragma GCC diagnostic pop
+
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkApplication
+ * Method:    _initGTK
+ * Signature: (IZ)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
+  (JNIEnv *env, jclass clazz, jint version, jboolean verbose)
+{
+    (void) clazz;
+
+    int ret = wrapper_load_symbols(version, verbose);
+
+    if (ret == -1) {
+        return -1;
+    }
+
+    env->ExceptionClear();
+    init_threads();
+
+    gdk_threads_enter();
+    gtk_init(NULL, NULL);
+
+    return ret;
 }
 
 /*

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,13 +112,12 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
         return create_empty_result();
     }
 
-    GtkWidget* chooser = gtk_file_chooser_dialog_new(chooser_title, gdk_window_handle_to_gtk(parent),
+    GtkWidget* chooser = glass_file_chooser_dialog(
+            chooser_title,
+            gdk_window_handle_to_gtk(parent),
             static_cast<GtkFileChooserAction>(chooser_type),
-            GTK_STOCK_CANCEL,
-            GTK_RESPONSE_CANCEL,
-            (chooser_type == GTK_FILE_CHOOSER_ACTION_OPEN ? GTK_STOCK_OPEN : GTK_STOCK_SAVE),
-            GTK_RESPONSE_ACCEPT,
-            NULL);
+            (chooser_type == GTK_FILE_CHOOSER_ACTION_OPEN ? GTK_STOCK_OPEN : GTK_STOCK_SAVE)
+            );
 
     if (chooser_type == GTK_FILE_CHOOSER_ACTION_SAVE) {
         gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(chooser), chooser_filename);
@@ -197,15 +196,12 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolde
         return NULL;
     }
 
-    GtkWidget* chooser = gtk_file_chooser_dialog_new(
+    GtkWidget* chooser = glass_file_chooser_dialog(
             chooser_title,
             gdk_window_handle_to_gtk(parent),
             GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-            GTK_STOCK_CANCEL,
-            GTK_RESPONSE_CANCEL,
-            GTK_STOCK_OPEN,
-            GTK_RESPONSE_ACCEPT,
-            NULL);
+            GTK_STOCK_OPEN
+            );
 
     if (chooser_folder != NULL) {
         gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser),

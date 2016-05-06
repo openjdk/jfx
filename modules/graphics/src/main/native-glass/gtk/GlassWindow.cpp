@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include "glass_gtkcompat.h"
 #include "glass_general.h"
 #include "glass_evloop.h"
 #include "glass_window.h"
@@ -109,7 +108,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createChildWindow
     WindowContextPlug *parent_ctx = NULL;
     WindowContext *ctx = NULL;
 
-    parent_window = GLASS_GDK_WINDOW_LOOKUP_FOR_DISPLAY(
+    parent_window = gdk_x11_window_lookup_for_display(
                         gdk_display_get_default(),
                         (GdkNativeWindow)PTR_TO_JLONG(owner));
 

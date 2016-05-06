@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@
 #include <com_sun_glass_ui_gtk_GtkRobot.h>
 #include <com_sun_glass_events_MouseEvent.h>
 #include "glass_general.h"
-#include "glass_gtkcompat.h"
 #include "glass_key.h"
 
 
@@ -247,8 +246,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getScreenCapture
     GdkPixbuf *screenshot, *tmp;
     GdkWindow *root_window = gdk_get_default_root_window();
 
-    tmp = gdk_pixbuf_get_from_drawable (NULL, root_window, NULL,
-                                           x, y, 0, 0, width, height);
+    tmp = glass_pixbuf_from_window(root_window, x, y, width, height);
     screenshot = gdk_pixbuf_add_alpha(tmp, FALSE, 0, 0, 0);
     g_object_unref(tmp);
 

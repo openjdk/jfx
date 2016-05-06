@@ -61,11 +61,33 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
     GtkApplication() {
+
         // Check whether the Display is valid and throw an exception if not.
         // We use UnsupportedOperationException rather than HeadlessException
         // so as not to introduce a dependency on AWT.
         if (!isDisplayValid()) {
             throw new UnsupportedOperationException("Unable to open DISPLAY");
+        }
+
+        int gtkVersion =
+                AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
+            String v = System.getProperty("jdk.gtk.version","2");
+            int ret = 0;
+            if ("3".equals(v) || v.startsWith("3.")) {
+                ret = 3;
+            } else if ("2".equals(v) || v.startsWith("2.")) {
+                ret = 2;
+            }
+            return ret;
+        });
+        boolean gtkVersionVerbose =
+                AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            return Boolean.getBoolean("jdk.gtk.verbose");
+        });
+        int version = _initGTK(gtkVersion, gtkVersionVerbose);
+
+        if (version == -1) {
+            throw new RuntimeException("Error loading GTK libraries");
         }
 
         // Embedded in SWT, with shared event thread
@@ -78,6 +100,8 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
             invokeLaterDispatcher = null;
         }
     }
+
+    private static native int _initGTK(int version, boolean verbose);
 
     private static boolean isDisplayValid() {
         return _isDisplayValid();

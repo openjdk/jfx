@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 #include "com_sun_glass_ui_View.h"
 #include "glass_window.h"
 #include "glass_general.h"
-#include "glass_gtkcompat.h"
 
 #include <cstring>
 #include <cstdlib>
@@ -41,7 +40,7 @@ static XKeyPressedEvent convert_event(GdkEventKey *event) {
 
     result.type = (event->type == GDK_KEY_PRESS) ? KeyPress : KeyRelease;
     result.send_event = event->send_event;
-    result.display = gdk_x11_display_get_xdisplay(glass_gdk_window_get_display(event->window));
+    result.display = gdk_x11_display_get_xdisplay(gdk_window_get_display(event->window));
     result.window = result.subwindow = GDK_WINDOW_XID(event->window);
     result.root = GDK_WINDOW_XID(gdk_screen_get_root_window(glass_gdk_window_get_screen(event->window)));
     result.time = event->time;
@@ -222,7 +221,7 @@ static XIMStyle get_best_supported_style(XIM im_xim)
 }
 
 void WindowContextBase::enableOrResetIME() {
-    Display *display = gdk_x11_display_get_xdisplay(glass_gdk_window_get_display(gdk_window));
+    Display *display = gdk_x11_display_get_xdisplay(gdk_window_get_display(gdk_window));
     if (xim.im == NULL || xim.ic == NULL) {
         xim.im = XOpenIM(display, NULL, NULL, NULL);
         if (xim.im == NULL) {
