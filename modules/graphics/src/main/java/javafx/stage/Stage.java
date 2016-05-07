@@ -33,7 +33,6 @@ import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
@@ -43,7 +42,6 @@ import javafx.scene.input.KeyCombination;
 
 import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
@@ -171,18 +169,8 @@ public class Stage extends Window {
 
     private boolean inNestedEventLoop = false;
 
-    private static ObservableList<Stage> stages = FXCollections.<Stage>observableArrayList();
-
     static {
-        FXRobotHelper.setStageAccessor(new FXRobotHelper.FXRobotStageAccessor() {
-            @Override public ObservableList<Stage> getStages() {
-                return stages;
-            }
-        });
         StageHelper.setStageAccessor(new StageHelper.StageAccessor() {
-            @Override public ObservableList<Stage> getStages() {
-                return stages;
-            }
             @Override public void initSecurityDialog(Stage stage, boolean securityDialog) {
                 stage.initSecurityDialog(securityDialog);
             }
@@ -1160,8 +1148,6 @@ public class Stage extends Window {
             impl_peer.setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
             peerListener = new StagePeerListener(this, STAGE_ACCESSOR);
-           // Insert this into stages so we have a references to all created stages
-            stages.add(this);
         }
     }
 
@@ -1191,11 +1177,6 @@ public class Stage extends Window {
             if (impl_peer != null) {
                 impl_peer.setIcons(platformImages);
             }
-        }
-
-        if (!value) {
-            // Remove form active stage list
-            stages.remove(this);
         }
 
         if (!value && inNestedEventLoop) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package com.sun.javafx.stage;
 
-import javafx.collections.ObservableList;
+import com.sun.javafx.util.Utils;
 import javafx.stage.Stage;
 
 /**
@@ -36,29 +36,12 @@ public class StageHelper {
 
     private static StageAccessor stageAccessor;
 
-    public static interface StageAccessor {
-        public ObservableList<Stage> getStages();
-        public void initSecurityDialog(Stage stage, boolean securityDialog);
+    static {
+        Utils.forceInit(Stage.class);
     }
 
-    /**
-     * Returns a ObservableList containing {@code Stage}s created at this point.
-     *
-     * Note that application must use/reference javafx.stage.Stage class prior to
-     * using this method (for example, by creating a Stage).
-     *
-     * @return ObservableList containing existing stages
-     */
-    public static ObservableList<Stage> getStages() {
-        if (stageAccessor == null) {
-            try {
-                // Force stage static initialization, see http://java.sun.com/j2se/1.5.0/compatibility.html
-                Class.forName(Stage.class.getName(), true, Stage.class.getClassLoader());
-            } catch (ClassNotFoundException ex) {
-                // Cannot happen
-            }
-        }
-        return stageAccessor.getStages();
+    public static interface StageAccessor {
+        public void initSecurityDialog(Stage stage, boolean securityDialog);
     }
 
     public static void initSecurityDialog(Stage stage, boolean securityDialog) {

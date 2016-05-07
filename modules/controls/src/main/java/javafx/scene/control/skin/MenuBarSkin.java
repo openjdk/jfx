@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
 import com.sun.javafx.scene.control.MenuBarButton;
@@ -82,9 +83,11 @@ import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
-import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.Toolkit;
+import java.util.function.Predicate;
 import javafx.stage.Window;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 /**
  * Default skin implementation for the {@link MenuBar} control. In essence it is
@@ -95,6 +98,17 @@ import javafx.stage.Window;
  * @since 9
  */
 public class MenuBarSkin extends SkinBase<MenuBar> {
+
+    private static final ObservableList<Window> stages;
+
+    static {
+        final Predicate<Window> findStage = (w) -> w instanceof Stage;
+        ObservableList<Window> windows = AccessController.doPrivileged(
+            (PrivilegedAction<ObservableList<Window>>) () -> Window.getWindows(),
+            null,
+            ACCESS_WINDOW_LIST_PERMISSION);
+        stages = windows.filtered(findStage);
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -489,18 +503,17 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             setSystemMenu((Stage)((ReadOnlyProperty<?>)ov).getBean());
         };
 
-        final ObservableList<Stage> stages = StageHelper.getStages();
-        for (Stage stage : stages) {
+        for (Window stage : stages) {
             stage.focusedProperty().addListener(focusedStageListener);
         }
-        stages.addListener((ListChangeListener<Stage>) c -> {
+        stages.addListener((ListChangeListener<Window>) c -> {
             while (c.next()) {
-                for (Stage stage : c.getRemoved()) {
+                for (Window stage : c.getRemoved()) {
                     stage.focusedProperty().removeListener(focusedStageListener);
                 }
-                for (Stage stage : c.getAddedSubList()) {
+                for (Window stage : c.getAddedSubList()) {
                     stage.focusedProperty().addListener(focusedStageListener);
-                    setSystemMenu(stage);
+                    setSystemMenu((Stage) stage);
                 }
             }
         });

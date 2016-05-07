@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
-import javafx.stage.Stage;
 
 import com.sun.javafx.robot.FXRobotImage;
 import javafx.scene.input.ScrollEvent;
@@ -49,7 +48,6 @@ public class FXRobotHelper {
 
     static FXRobotInputAccessor inputAccessor;
     static FXRobotSceneAccessor sceneAccessor;
-    static FXRobotStageAccessor stageAccessor;
     static FXRobotImageConvertor imageConvertor;
 
     /**
@@ -66,21 +64,6 @@ public class FXRobotHelper {
             // TODO: force scene initialization
         }
         return sceneAccessor.getChildren(p);
-    }
-
-    /**
-     * Returns a ObservableList containing {@code Stage}s created at this point.
-     *
-     * Note that application must use/reference javafx.stage.Stage class prior to
-     * using this method (for example, by creating a Stage).
-     *
-     * @return ObservableList containing existing stages
-     */
-    public static ObservableList<Stage> getStages() {
-        if (stageAccessor == null) {
-            // TODO: force stage initialization
-        }
-        return stageAccessor.getStages();
     }
 
     /**
@@ -135,24 +118,6 @@ public class FXRobotHelper {
             Thread.dumpStack();
         }
         imageConvertor = ic;
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     */
-    public static void setStageAccessor(FXRobotStageAccessor a) {
-        if (stageAccessor != null) {
-            System.out.println("Warning: Stage accessor already set: " + stageAccessor);
-            Thread.dumpStack();
-        }
-        stageAccessor = a;
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     */
-    public static abstract class FXRobotStageAccessor {
-          public abstract ObservableList<Stage> getStages();
     }
 
     /**

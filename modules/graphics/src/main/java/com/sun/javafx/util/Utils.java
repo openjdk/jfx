@@ -25,6 +25,7 @@
 
 package com.sun.javafx.util;
 
+import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
@@ -41,7 +42,8 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.stage.StageHelper;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 /**
  * Some basic utilities which need to be in java (for shifting operations or
@@ -655,14 +657,19 @@ public class Utils {
     }
 
     public static boolean hasFullScreenStage(final Screen screen) {
-        final List<Stage> allStages = StageHelper.getStages();
+        final List<Window> allWindows = AccessController.doPrivileged(
+                (PrivilegedAction<List<Window>>) () -> Window.getWindows(),
+                null,
+                ACCESS_WINDOW_LIST_PERMISSION);
 
-        for (final Stage stage: allStages) {
-            if (stage.isFullScreen() && (getScreen(stage) == screen)) {
-                return true;
+        for (final Window window : allWindows) {
+            if (window instanceof Stage) {
+                final Stage stage = (Stage) window;
+                if (stage.isFullScreen() && (getScreen(stage) == screen)) {
+                    return true;
+                }
             }
         }
-
         return false;
     }
 
@@ -836,6 +843,19 @@ public class Utils {
      * Miscellaneous utilities                                                 *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * To force initialization of a class
+     * @param classToInit
+     */
+    public static void forceInit(final Class<?> classToInit) {
+        try {
+            Class.forName(classToInit.getName(), true,
+                    classToInit.getClassLoader());
+        } catch (final ClassNotFoundException e) {
+            throw new AssertionError(e);  // Can't happen
+        }
+    }
 
     public static boolean assertionEnabled() {
         boolean assertsEnabled = false;
