@@ -363,13 +363,23 @@
 .menu-up-arrow, .menu-down-arrow {
     -fx-effect: null;
 }
+.menu > .right-container > .arrow {
+    -fx-background-color: -fx-hover-base;
+}
 /*******************************************************************************
  *                                                                             *
  * MenuItem                                                                    *
  *                                                                             *
  ******************************************************************************/
+.menu-item >.label {
+    -fx-text-fill: -fx-hover-base;
+}
 .menu-item:focused > .label {
     -fx-text-fill: -fx-contrast-color;
+}
+.radio-menu-item:checked > .left-container > .radio,
+.check-menu-item:checked > .left-container > .check {
+    -fx-background-color: -fx-hover-base;
 }
 .radio-menu-item:focused:checked > .left-container > .radio,
 .check-menu-item:focused:checked > .left-container > .check {
