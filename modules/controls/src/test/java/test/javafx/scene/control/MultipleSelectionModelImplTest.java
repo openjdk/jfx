@@ -25,6 +25,8 @@
 
 package test.javafx.scene.control;
 
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1225,5 +1227,49 @@ public class MultipleSelectionModelImplTest {
         } else {
             throw new RuntimeException("Unsupported control type");
         }
+    }
+
+    @Test
+    public void test_jdk_8088467_selectedIndicesReselect() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        IntegerProperty counter = new SimpleIntegerProperty();
+
+        model.selectAll();
+        Object selected = model.getSelectedItem();
+        int selectedIndex = model.getSelectedIndex();
+        List<String> selectedItems = new ArrayList(model.getSelectedItems());
+        List<Integer> selectedIndices = new ArrayList(model.getSelectedIndices());
+
+        model.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> counter.set(counter.get() +1));
+
+        // add selectedIndex - changes nothing as it is already selected
+        model.select(selectedIndex);
+        assertSame("sanity: state unchanged", selected, model.getSelectedItems().get(0));
+        assertEquals("sanity: state unchanged", 0, selectedIndex);
+        assertEquals("sanity: state unchanged", selectedItems, model.getSelectedItems());
+        assertEquals("sanity: state unchanged", selectedIndices, model.getSelectedIndices());
+        assertEquals("must not fire if nothing changed", 0, counter.get());
+    }
+
+    @Test
+    public void test_jdk_8088467_selectedItemsReselect() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        IntegerProperty counter = new SimpleIntegerProperty();
+
+        model.selectAll();
+        Object selected = model.getSelectedItem();
+        int selectedIndex = model.getSelectedIndex();
+        List<String> selectedItems = new ArrayList(model.getSelectedItems());
+        List<Integer> selectedIndices = new ArrayList(model.getSelectedIndices());
+
+        model.getSelectedItems().addListener((ListChangeListener<String>) c -> counter.set(counter.get() +1));
+
+        // add selectedIndex - changes nothing as it is already selected
+        model.select(selectedIndex);
+        assertSame("sanity: state unchanged", selected, model.getSelectedItems().get(0));
+        assertEquals("sanity: state unchanged", 0, selectedIndex);
+        assertEquals("sanity: state unchanged", selectedItems, model.getSelectedItems());
+        assertEquals("sanity: state unchanged", selectedIndices, model.getSelectedIndices());
+        assertEquals("must not fire if nothing changed", 0, counter.get());
     }
 }
