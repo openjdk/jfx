@@ -76,7 +76,6 @@ import java.awt.event.InvocationEvent;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 import sun.awt.AppContext;
-import sun.awt.CausedFocusEvent;
 import sun.awt.SunToolkit;
 import sun.java2d.SunGraphics2D;
 import sun.java2d.SurfaceData;
@@ -592,14 +591,19 @@ public class JFXPanel extends JComponent {
         int focusCause = (focused ? AbstractEvents.FOCUSEVENT_ACTIVATED :
                                       AbstractEvents.FOCUSEVENT_DEACTIVATED);
 
+        // FIXME: JDK-8156592 -- replace this with FocusEvent.getCause()
+        // which is now public API, once we update to using a newer JDK.
+        // NOTE: the focusCause is unused at present.
+        /*
         if (focused && (e instanceof CausedFocusEvent)) {
-            CausedFocusEvent ce = (CausedFocusEvent)e;
+            CausedFocusEvent ce = (CausedFocusEvent) e;
             if (ce.getCause() == CausedFocusEvent.Cause.TRAVERSAL_FORWARD) {
                 focusCause = AbstractEvents.FOCUSEVENT_TRAVERSED_FORWARD;
-                        } else if (ce.getCause() == sun.awt.CausedFocusEvent.Cause.TRAVERSAL_BACKWARD) {
+            } else if (ce.getCause() == sun.awt.CausedFocusEvent.Cause.TRAVERSAL_BACKWARD) {
                 focusCause = AbstractEvents.FOCUSEVENT_TRAVERSED_BACKWARD;
-                        }
-                    }
+            }
+        }
+        */
         stagePeer.setFocused(focused, focusCause);
     }
 
