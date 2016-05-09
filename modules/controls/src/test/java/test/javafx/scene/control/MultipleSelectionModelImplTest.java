@@ -36,6 +36,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.collections.FXCollections;
@@ -1271,5 +1272,37 @@ public class MultipleSelectionModelImplTest {
         assertEquals("sanity: state unchanged", selectedItems, model.getSelectedItems());
         assertEquals("sanity: state unchanged", selectedIndices, model.getSelectedIndices());
         assertEquals("must not fire if nothing changed", 0, counter.get());
+    }
+
+    @Test
+    public void test_jdk_8088896() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+
+        model.selectRange(2, 4);
+        assertEquals(2, model.getSelectedIndices().size());
+        assertEquals(2, model.getSelectedItems().size());
+
+        AtomicInteger counter = new AtomicInteger();
+        model.getSelectedIndices().addListener((ListChangeListener)c -> {
+            counter.incrementAndGet();
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    assertTrue(c.getAddedSubList().contains(4));
+                }
+                if (c.wasRemoved()) {
+                    assertTrue(c.getRemoved().contains(2));
+                }
+            }
+        });
+
+        assertEquals(0, counter.get());
+        if (isTree()) {
+            addItem(0, new TreeItem<>("new item"));
+        } else {
+            addItem(0, "new item");
+        }
+        assertEquals(2, model.getSelectedIndices().size());
+        assertEquals(2, model.getSelectedItems().size());
+        assertEquals(1, counter.get());
     }
 }

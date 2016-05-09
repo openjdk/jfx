@@ -1035,6 +1035,10 @@ public class TreeTableView<S> extends Control {
                     // in order to set pseudo-class state
                     if (oldValue != null) {
                         oldValue.cellSelectionEnabledProperty().removeListener(weakCellSelectionModelInvalidationListener);
+
+                        if (oldValue instanceof TreeTableViewArrayListSelectionModel) {
+                            ((TreeTableViewArrayListSelectionModel)oldValue).dispose();
+                        }
                     }
 
                     oldValue = get();
@@ -2316,9 +2320,7 @@ public class TreeTableView<S> extends Control {
             this.treeTableView = treeTableView;
 
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
-            this.treeTableView.showRootProperty().addListener(o -> {
-                shiftSelection(0, treeTableView.isShowRoot() ? 1 : -1, null);
-            });
+            this.treeTableView.showRootProperty().addListener(showRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
 
             selectedCellsMap = new SelectedCellsMap<TreeTablePosition<S,?>>(this::fireCustomSelectedCellsListChangeEvent) {
@@ -2348,6 +2350,16 @@ public class TreeTableView<S> extends Control {
             });
         }
 
+        private void dispose() {
+            this.treeTableView.rootProperty().removeListener(weakRootPropertyListener);
+            this.treeTableView.showRootProperty().removeListener(showRootPropertyListener);
+
+            TreeItem<S> root = this.treeTableView.getRoot();
+            if (root != null) {
+                root.removeEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakTreeItemListener);
+            }
+        }
+
         private void updateTreeEventListener(TreeItem<S> oldRoot, TreeItem<S> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {
                 oldRoot.removeEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakTreeItemListener);
@@ -2363,6 +2375,10 @@ public class TreeTableView<S> extends Control {
             updateDefaultSelection();
 
             updateTreeEventListener(oldValue, newValue);
+        };
+
+        private InvalidationListener showRootPropertyListener = o -> {
+            shiftSelection(0, treeTableView.isShowRoot() ? 1 : -1, null);
         };
 
         private EventHandler<TreeItem.TreeModificationEvent<S>> treeItemListener = new EventHandler<TreeItem.TreeModificationEvent<S>>() {

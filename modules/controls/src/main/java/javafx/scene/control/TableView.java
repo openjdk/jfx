@@ -35,7 +35,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.stream.Collectors;
 
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
@@ -980,6 +979,10 @@ public class TableView<S> extends Control {
 
             if (oldValue != null) {
                 oldValue.cellSelectionEnabledProperty().removeListener(weakCellSelectionModelInvalidationListener);
+
+                if (oldValue instanceof TableViewArrayListSelectionModel) {
+                    ((TableViewArrayListSelectionModel)oldValue).dispose();
+                }
             }
 
             oldValue = get();
@@ -2049,7 +2052,7 @@ public class TableView<S> extends Control {
             super(tableView);
             this.tableView = tableView;
 
-            this.tableView.itemsProperty().addListener(new InvalidationListener() {
+            this.itemsPropertyListener = new InvalidationListener() {
                 private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(tableView.getItems());
 
                 @Override public void invalidated(Observable observable) {
@@ -2059,7 +2062,8 @@ public class TableView<S> extends Control {
 
                     ((SelectedItemsReadOnlyObservableList)getSelectedItems()).setItemsList(tableView.getItems());
                 }
-            });
+            };
+            this.tableView.itemsProperty().addListener(itemsPropertyListener);
 
             selectedCellsMap = new SelectedCellsMap<TablePosition<S,?>>(this::fireCustomSelectedCellsListChangeEvent) {
                 @Override public boolean isCellSelectionEnabled() {
@@ -2108,7 +2112,18 @@ public class TableView<S> extends Control {
             });
         }
 
+        private void dispose() {
+            this.tableView.itemsProperty().removeListener(itemsPropertyListener);
+
+            ObservableList<S> items = getTableView().getItems();
+            if (items != null) {
+                items.removeListener(weakItemsContentListener);
+            }
+        }
+
         private final TableView<S> tableView;
+
+        final InvalidationListener itemsPropertyListener;
 
         final ListChangeListener<S> itemsContentListener = c -> {
             updateItemCount();
@@ -2283,52 +2298,50 @@ public class TableView<S> extends Control {
                 }
             }
 
-            if (shift != 0 && startRow >= 0) {
-                List<TablePosition<S,?>> newIndices = new ArrayList<>(selectedCellsMap.size());
-
-                for (int i = 0; i < selectedCellsMap.size(); i++) {
-                    final TablePosition<S,?> old = selectedCellsMap.get(i);
-                    final int oldRow = old.getRow();
-                    final int newRow = Math.max(0, oldRow < startRow ? oldRow : oldRow + shift);
-
-                    if (oldRow < startRow) {
-                        continue;
-                    }
-
-                    // Special case for RT-28637 (See unit test in TableViewTest).
-                    // Essentially the selectedItem was correct, but selectedItems
-                    // was empty.
-                    if (oldRow == 0 && shift == -1) {
-                        newIndices.add(new TablePosition<>(getTableView(), 0, old.getTableColumn()));
-                        continue;
-                    }
-
-                    newIndices.add(new TablePosition<>(getTableView(), newRow, old.getTableColumn()));
+            TablePosition<S,?> anchor = TableCellBehavior.getAnchor(tableView, null);
+            if (shift != 0 && startRow >= 0 && anchor != null && (c.wasRemoved() || c.wasAdded())) {
+                if (isSelected(anchor.getRow(), anchor.getTableColumn())) {
+                    TablePosition<S,?> newAnchor = new TablePosition<>(tableView, anchor.getRow() + shift, anchor.getTableColumn());
+                    TableCellBehavior.setAnchor(tableView, newAnchor, false);
                 }
+            }
 
-                final int newIndicesSize = newIndices.size();
+            shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
+                @Override public Void call(ShiftParams param) {
 
-                if ((c.wasRemoved() || c.wasAdded()) && newIndicesSize > 0) {
-                    TablePosition<S,?> anchor = TableCellBehavior.getAnchor(tableView, null);
-                    if (anchor != null) {
-                        boolean isAnchorSelected = isSelected(anchor.getRow(), anchor.getTableColumn());
-                        if (isAnchorSelected) {
-                            TablePosition<S,?> newAnchor = new TablePosition<>(tableView, anchor.getRow() + shift, anchor.getTableColumn());
-                            TableCellBehavior.setAnchor(tableView, newAnchor, false);
+                    // we make the shifts atomic, as otherwise listeners to
+                    // the items / indices lists get a lot of intermediate
+                    // noise. They eventually get the summary event fired
+                    // from within shiftSelection, so this is ok.
+                    startAtomic();
+
+                    final int clearIndex = param.getClearIndex();
+                    final int setIndex = param.getSetIndex();
+                    TablePosition<S,?> oldTP = null;
+                    if (clearIndex > -1) {
+                        for (int i = 0; i < selectedCellsMap.size(); i++) {
+                            TablePosition<S,?> tp = selectedCellsMap.get(i);
+                            if (tp.getRow() == clearIndex) {
+                                oldTP = tp;
+                                selectedCellsMap.remove(tp);
+                            } else if (tp.getRow() == setIndex && !param.isSelected()) {
+                                selectedCellsMap.remove(tp);
+                            }
                         }
                     }
 
-                    quietClearSelection();
+                    if (oldTP != null && param.isSelected()) {
+                        TablePosition<S,?> newTP = new TablePosition<>(
+                                tableView, param.getSetIndex(), oldTP.getTableColumn());
 
-                    // Fix for RT-22079
-                    blockFocusCall = true;
-                    for (int i = 0; i < newIndicesSize; i++) {
-                        TablePosition<S, ?> tp = newIndices.get(i);
-                        select(tp.getRow(), tp.getTableColumn());
+                        selectedCellsMap.add(newTP);
                     }
-                    blockFocusCall = false;
+
+                    stopAtomic();
+
+                    return null;
                 }
-            }
+            });
 
             previousModelSize = getItemCount();
         }
