@@ -1021,6 +1021,9 @@ final public class WebView extends Parent {
             x = Short.MIN_VALUE;
             y = Short.MIN_VALUE;
             Point2D screenPoint = localToScreen(x, y);
+            if (screenPoint == null) {
+                return;
+            }
             screenX = screenPoint.getX();
             screenY = screenPoint.getY();
         }
