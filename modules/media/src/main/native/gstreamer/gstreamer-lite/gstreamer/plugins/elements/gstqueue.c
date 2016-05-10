@@ -821,7 +821,14 @@ gst_queue_handle_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
 
       /* make sure it pauses, this should happen since we sent
        * flush_start downstream. */
+#ifdef GSTREAMER_LITE
+      // Pause task on pad only if it is linked
+      if (gst_pad_is_linked (queue->srcpad)) {
+          gst_pad_pause_task (queue->srcpad);
+      }
+#else // GSTREAMER_LITE
       gst_pad_pause_task (queue->srcpad);
+#endif // GSTREAMER_LITE
       GST_CAT_LOG_OBJECT (queue_dataflow, queue, "loop stopped");
       break;
     case GST_EVENT_FLUSH_STOP:
@@ -1318,7 +1325,15 @@ out_flushing:
     gboolean eos = queue->eos;
     GstFlowReturn ret = queue->srcresult;
 
-    gst_pad_pause_task (queue->srcpad);
+#ifdef GSTREAMER_LITE
+      // Pause task on pad only if it is linked
+      if (gst_pad_is_linked (queue->srcpad)) {
+          gst_pad_pause_task (queue->srcpad);
+      }
+#else // GSTREAMER_LITE
+      gst_pad_pause_task (queue->srcpad);
+#endif // GSTREAMER_LITE
+
     GST_CAT_LOG_OBJECT (queue_dataflow, queue,
         "pause task, reason:  %s", gst_flow_get_name (ret));
     if (ret == GST_FLOW_FLUSHING)
@@ -1665,6 +1680,19 @@ gst_queue_get_property (GObject * object,
 static GstStateChangeReturn gst_queue_change_state (GstElement *element, GstStateChange transition)
 {
     GstQueue *queue = GST_QUEUE(element);
+
+    switch (transition)
+    {
+        case GST_STATE_CHANGE_PAUSED_TO_READY:
+            GST_QUEUE_MUTEX_LOCK (queue);
+            queue->srcresult = GST_FLOW_FLUSHING; // make sure we stop _loop task
+            g_cond_signal (&queue->item_add);
+            GST_QUEUE_MUTEX_UNLOCK (queue);
+            break;
+        default:
+            break;
+    }
+
     GstStateChangeReturn ret = GST_ELEMENT_CLASS (parent_class)->change_state (element, transition);
 
     if (ret == GST_STATE_CHANGE_FAILURE)

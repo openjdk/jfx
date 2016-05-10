@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,12 @@ enum SINK_EVENTS
     SINK_VIDEO_RESOLUTION,
 };
 
+enum COMMAND
+{
+    CMD_SEND_EOS = 0,
+    CMD_EXIT
+};
+
 class CInputPin : public CRendererInputPin
 {
 public:
@@ -82,7 +88,7 @@ private:
     IMemAllocator *m_pIAlloc;
 };
 
-class CSink : public CBaseRenderer
+class CSink : public CBaseRenderer, public CAMThread
 {
 public:
     CSink(HRESULT *phr);
@@ -105,6 +111,14 @@ public:
     HRESULT SetGetGstBufferCallback(void (*function)(GstBuffer **ppBuffer, long lSize, sUserData *pUserData));
     HRESULT SetRenderSampleAppCallback(void (*function)(BYTE *pData, long lSize, sUserData *pUserData));
 
+    // Worker thread to deliver events to GStreamer. Currently used for EOS.
+    // DirectShow in some cases delivers event on main DirectShow thread and we cannot send events
+    // to GStreamer from DirectShow main thread, since it can result in deadlock. Also creating, destroying, starting
+    // or stopping graph happens on main thread.
+    HRESULT StartWorkerThread();
+    HRESULT StopWorkerThread();
+    DWORD ThreadProc(void);
+
 private:
     CMediaType m_mediaType;
 
@@ -116,4 +130,7 @@ private:
 
     bool m_bForceStereoOutput;
     bool m_bUseExternalAllocator;
+
+    bool m_bEOSInProgress;
+    bool m_bWorkerThreadExits;
 };

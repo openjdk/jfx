@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -200,6 +200,7 @@ static GstFlowReturn dshowwrapper_chain (GstPad* pad, GstObject *parent, GstBuff
 static gboolean dshowwrapper_sink_event (GstPad* pad, GstObject *parent, GstEvent* event);
 static gboolean dshowwrapper_sink_set_caps (GstPad * pad, GstObject *parent, GstCaps * caps);
 static gboolean dshowwrapper_activate(GstPad* pad, GstObject *parent);
+static gboolean dshowwrapper_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active);
 
 static gboolean dshowwrapper_src_query (GstPad* pad, GstObject *parent, GstQuery* query);
 static gboolean dshowwrapper_src_event (GstPad* pad, GstObject *parent, GstEvent* event);
@@ -291,6 +292,7 @@ static void gst_dshowwrapper_init (GstDShowWrapper *decoder)
     gst_pad_set_chain_function (decoder->sinkpad, dshowwrapper_chain);
     gst_pad_set_event_function(decoder->sinkpad, dshowwrapper_sink_event);
     gst_pad_set_activate_function(decoder->sinkpad, dshowwrapper_activate);
+    gst_pad_set_activatemode_function(decoder->sinkpad, dshowwrapper_activatemode);
 
     // Output
     dshowwrapper_create_src_pad(decoder, &decoder->srcpad[0], NULL, "src", TRUE);
@@ -687,6 +689,7 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
 {
     GstFlowReturn ret = GST_FLOW_OK;
     GstDShowWrapper *decoder = (GstDShowWrapper*)pUserData->pUserData;
+    GstBuffer *pBufferOut = NULL;
 
     if (decoder->is_eos[pUserData->output_index] || decoder->is_flushing)
     {
@@ -790,8 +793,12 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
                 g_print("AMDEBUG AAC  -1\n");
         }
 #endif
-        ret = gst_pad_push(decoder->srcpad[pUserData->output_index], decoder->out_buffer[pUserData->output_index]);
+
+        // Set output buffer to NULL before delivering it, otherwise flush stop can release it right after
+        // we finish delivery.
+        pBufferOut = decoder->out_buffer[pUserData->output_index];
         decoder->out_buffer[pUserData->output_index] = NULL;
+        ret = gst_pad_push(decoder->srcpad[pUserData->output_index], pBufferOut);
 
         // Unref pBuffer if we will return
         if (decoder->is_eos[pUserData->output_index] || decoder->is_flushing || ret != GST_FLOW_OK)
@@ -822,6 +829,7 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
 int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUserData)
 {
     GstDShowWrapper *decoder = (GstDShowWrapper*)pUserData->pUserData;
+    GstBuffer *pBufferOut = NULL;
 
     switch (sinkEvent)
     {
@@ -835,13 +843,34 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
             decoder->is_data_produced = TRUE; // Do not send more errors
         }
 
-        // Deliver last buffer
-        if (decoder->out_buffer[pUserData->output_index] != NULL)
+        // Do not deliver EOS while we flushing
         {
-            GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]) = GST_CLOCK_TIME_NONE;
-            gst_pad_push(decoder->srcpad[pUserData->output_index], decoder->out_buffer[pUserData->output_index]);
-            decoder->out_buffer[pUserData->output_index] = NULL;
+            CAutoLock lock(decoder->pDSLock);
+            if (decoder->is_flushing)
+            {
+                if (decoder->out_buffer[pUserData->output_index] != NULL)
+                {
+                    gst_buffer_unref(decoder->out_buffer[pUserData->output_index]);
+                    decoder->out_buffer[pUserData->output_index] = NULL;
+                }
+                break;
+            }
         }
+
+        // Deliver last buffer
+        {
+            CAutoLock lock(decoder->pDSLock);
+
+            if (decoder->out_buffer[pUserData->output_index] != NULL)
+            {
+                pBufferOut = decoder->out_buffer[pUserData->output_index];
+                GST_BUFFER_DURATION(pBufferOut) = GST_CLOCK_TIME_NONE;
+                decoder->out_buffer[pUserData->output_index] = NULL;
+            }
+        }
+
+        if (pBufferOut)
+            gst_pad_push(decoder->srcpad[pUserData->output_index], pBufferOut);
 
         decoder->is_eos[pUserData->output_index] = TRUE;
 #if EOS_DEBUG
@@ -1073,6 +1102,14 @@ static void dshowwrapper_destroy_graph (GstDShowWrapper *decoder)
         bCallCoUninitialize = false;
 
     CAutoLock lock(decoder->pDSLock);
+
+    for (int i = 0; i < MAX_OUTPUT_DS_STREAMS; i++)
+    {
+        if (decoder->pSink[i] != NULL)
+        {
+            decoder->pSink[i]->StopWorkerThread();
+        }
+    }
 
     if (decoder->pPTSLock)
     {
@@ -1364,6 +1401,12 @@ static gboolean dshowwrapper_create_ds_sink(GstDShowWrapper *decoder, sOutputFor
 
     decoder->pSink[index] = new CSink(&hr);
     if (decoder->pSink[index] == NULL || FAILED(hr))
+    {
+        return FALSE;
+    }
+
+    hr = decoder->pSink[index]->StartWorkerThread();
+    if (FAILED(hr))
     {
         return FALSE;
     }
@@ -2972,6 +3015,38 @@ static gboolean dshowwrapper_sink_set_caps(GstPad * pad, GstObject *parent, GstC
 static gboolean dshowwrapper_activate(GstPad *pad, GstObject *parent)
 {
     return gst_pad_activate_mode (pad, GST_PAD_MODE_PUSH, TRUE);
+}
+
+static gboolean dshowwrapper_activatemode(GstPad *pad, GstObject *parent, GstPadMode mode, gboolean active)
+{
+    gboolean res = FALSE;
+    GstDShowWrapper *decoder = GST_DSHOWWRAPPER (parent);
+
+    switch (mode) {
+        case GST_PAD_MODE_PUSH:
+            if (!active)
+            {
+                if (decoder->pSrc)
+                {
+                    decoder->pDSLock->Lock();
+                    decoder->is_flushing = TRUE; // Do not accept more data
+                    decoder->pDSLock->Unlock();
+
+                    decoder->pSrc->DecommitAllocator();
+                }
+            }
+            res = TRUE;
+            break;
+        case GST_PAD_MODE_PULL:
+            res = TRUE;
+            break;
+        default:
+            /* unknown scheduling mode */
+            res = FALSE;
+            break;
+    }
+
+    return res;
 }
 
 static gboolean dshowwrapper_src_query (GstPad * pad, GstObject *parent, GstQuery * query)
