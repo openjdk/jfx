@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import static com.sun.xml.internal.fastinfoset.alphabet.BuiltInRestrictedAlphabets.table;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;
@@ -34,10 +35,12 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
@@ -5745,5 +5748,58 @@ public class TreeTableViewTest {
         assertEquals(3, sm.getSelectedItems().size());
         assertEquals(3, sm.getSelectedIndices().size());
         assertEquals(3, sm.getSelectedCells().size());
+    }
+
+    @Test public void test_jdk_8147483() {
+        TreeItem<Number> root = new TreeItem<>(0);
+        root.setExpanded(true);
+
+        final TreeTableView<Number> view = new TreeTableView<>(root);
+        view.setShowRoot(false);
+
+        AtomicInteger cellUpdateCount = new AtomicInteger();
+        AtomicInteger rowCreateCount = new AtomicInteger();
+
+        TreeTableColumn<Number, Number> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyIntegerWrapper(0));
+        column.setCellFactory( ttc -> new TreeTableCell<Number,Number>() {
+            @Override protected void updateItem(Number item, boolean empty) {
+                cellUpdateCount.incrementAndGet();
+                super.updateItem(item, empty);
+            }
+        });
+        view.getColumns().add(column);
+
+        view.setRowFactory(t -> {
+            rowCreateCount.incrementAndGet();
+            return new TreeTableRow<>();
+        });
+
+        assertEquals(0, cellUpdateCount.get());
+        assertEquals(0, rowCreateCount.get());
+
+        StageLoader sl = new StageLoader(view);
+
+        // Before the fix, we got cellUpdateCount = 18 and rowCreateCount = 17 for the first add below.
+        // After the second add, these numbers went to 53 and 17 respectively.
+        // Because these numbers might differ on other systems, we simply record the values after
+        // the first add, and then we expect the cellUpdateCount to increase by one, and rowCreateCount to
+        // not increase at all.
+        root.getChildren().add(new TreeItem(1));
+        Toolkit.getToolkit().firePulse();
+        final int firstCellUpdateCount = cellUpdateCount.get();
+        final int firstRowCreateCount = rowCreateCount.get();
+
+        root.getChildren().add(new TreeItem(2));
+        Toolkit.getToolkit().firePulse();
+        assertEquals(firstCellUpdateCount+1, cellUpdateCount.get());
+        assertEquals(firstRowCreateCount, rowCreateCount.get());
+
+        root.getChildren().add(new TreeItem(3));
+        Toolkit.getToolkit().firePulse();
+        assertEquals(firstCellUpdateCount+2, cellUpdateCount.get());
+        assertEquals(firstRowCreateCount, rowCreateCount.get());
+
+        sl.dispose();
     }
 }

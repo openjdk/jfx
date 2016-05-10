@@ -149,10 +149,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     private int visibleColCount;
 
-    boolean needCellsRebuilt = true;
     boolean needCellsRecreated = true;
     boolean needCellsReconfigured = false;
-    boolean forceCellRecreate = false;
 
     private int itemCount = -1;
 
@@ -170,7 +168,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             refreshView();
             getSkinnable().getProperties().remove(Properties.REFRESH);
         } else if (Properties.RECREATE.equals(c.getKey())) {
-            forceCellRecreate = true;
+            needCellsRecreated = true;
             refreshView();
             getSkinnable().getProperties().remove(Properties.RECREATE);
         }
@@ -214,13 +212,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         getSkinnable().requestLayout();
     };
 
-    private ListChangeListener<TC> visibleLeafColumnsListener =
-            c -> {
-                updateVisibleColumnCount();
-                while (c.next()) {
-                    updateVisibleLeafColumnWidthListeners(c.getAddedSubList(), c.getRemoved());
-                }
-            };
+    private ListChangeListener<TC> visibleLeafColumnsListener = c -> {
+        updateVisibleColumnCount();
+        while (c.next()) {
+            updateVisibleLeafColumnWidthListeners(c.getAddedSubList(), c.getRemoved());
+        }
+    };
 
     private InvalidationListener widthListener = observable -> {
         // This forces the horizontal scrollbar to show when the column
@@ -335,8 +332,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             Callback<C, I> oldFactory = rowFactory;
             rowFactory = rowFactoryProperty.get();
             if (oldFactory != rowFactory) {
-                needCellsRebuilt = true;
-                getSkinnable().requestLayout();
+                requestRebuildCells();
             }
         });
         registerChangeListener(TableSkinUtils.placeholderProperty(this), e -> updatePlaceholderRegionVisibility());
@@ -412,13 +408,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         if (needCellsRecreated) {
             flow.recreateCells();
-        } else if (needCellsRebuilt) {
-            flow.rebuildCells();
         } else if (needCellsReconfigured) {
             flow.reconfigureCells();
         }
 
-        needCellsRebuilt = false;
         needCellsRecreated = false;
         needCellsReconfigured = false;
 
@@ -555,15 +548,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
 
-        if (forceCellRecreate) {
-            needCellsRecreated = true;
-            forceCellRecreate = false;
-        } else if (newCount != oldCount) {
+        if (newCount != oldCount) {
             // FIXME updateItemCount is called _a lot_. Perhaps we can make rebuildCells
             // smarter. Imagine if items has one million items added - do we really
             // need to rebuildCells a million times? Maybe this is better now that
             // we do rebuildCells instead of recreateCells.
-            needCellsRebuilt = true;
+            requestRebuildCells();
         } else {
             needCellsReconfigured = true;
         }
@@ -745,8 +735,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         visibleColCount = getVisibleLeafColumns().size();
 
         updatePlaceholderRegionVisibility();
-        needCellsRebuilt = true;
-        getSkinnable().requestLayout();
+        requestRebuildCells();
     }
 
     private void updateVisibleLeafColumnWidthListeners(
@@ -760,8 +749,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             TC tc = added.get(i);
             tc.widthProperty().addListener(weakWidthListener);
         }
-        needCellsRebuilt = true;
-        getSkinnable().requestLayout();
+        requestRebuildCells();
     }
 
     final void updatePlaceholderRegionVisibility() {
