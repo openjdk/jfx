@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -417,7 +417,7 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
 {
     pPipeline->m_pBusCallbackContent->m_DisposeLock->Enter();
 
-    if (pPipeline->m_pBusCallbackContent->m_bIsDisposed)
+    if (pPipeline->m_pBusCallbackContent->m_bIsDisposeInProgress)
     {
         pPipeline->m_pBusCallbackContent->m_DisposeLock->Exit();
         return;
@@ -534,7 +534,7 @@ void CGstAVPlaybackPipeline::no_more_pads(GstElement *element, CGstAVPlaybackPip
 {
     pPipeline->m_pBusCallbackContent->m_DisposeLock->Enter();
 
-    if (pPipeline->m_pBusCallbackContent->m_bIsDisposed)
+    if (pPipeline->m_pBusCallbackContent->m_bIsDisposeInProgress)
     {
         pPipeline->m_pBusCallbackContent->m_DisposeLock->Exit();
         return;
