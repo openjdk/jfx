@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.FontMetrics;
 import javafx.scene.text.Font;
@@ -48,34 +49,34 @@ public class StubFontLoader extends FontLoader {
         nativeFont.font = font;
         String name = font.getName().trim().toLowerCase(Locale.ROOT);
         if (name.equals("system") || name.equals("system regular")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "System", "Regular");
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Regular");
         } else if (name.equals("amble regular")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble", "Regular");
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Regular");
         } else if (name.equals("amble bold")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble", "Bold");
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Bold");
         } else if (name.equals("amble italic")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble", "Italic");
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Italic");
         } else if (name.equals("amble bold italic")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble",
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble",
                     "Bold Italic");
         } else if (name.equals("amble condensed")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Cn", "Regular");
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Regular");
         } else if (name.equals("amble bold condensed")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Cn", "Bold");
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Bold");
         } else if (name.equals("amble condensed italic")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Cn", "Italic");
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn", "Italic");
         } else if (name.equals("amble bold condensed italic")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Cn",
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Cn",
                     "Bold Italic");
         } else if (name.equals("amble light")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Lt", "Regular");
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Lt", "Regular");
         } else if (name.equals("amble light italic")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble Lt", "Italic");
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble Lt", "Italic");
         } else if (name.equals("amble light condensed")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble LtCn",
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble LtCn",
                     "Regular");
         } else if (name.equals("amble light condensed italic")) {
-            font.impl_setNativeFont(nativeFont, font.getName(), "Amble LtCn",
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble LtCn",
                     "Italic");
         }
     }

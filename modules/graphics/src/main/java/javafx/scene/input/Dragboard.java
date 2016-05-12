@@ -65,21 +65,11 @@ public final class Dragboard extends Clipboard {
         return peer.getTransferModes();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public TKClipboard impl_getPeer() {
+    TKClipboard getPeer() {
         return peer;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static Dragboard impl_createDragboard(TKClipboard peer) {
+    static Dragboard createDragboard(TKClipboard peer) {
         return new Dragboard(peer);
     }
 
@@ -176,8 +166,22 @@ public final class Dragboard extends Clipboard {
     static {
         // This is used by classes in different packages to get access to
         // private and package private methods.
-        DragboardHelper.setDragboardAccessor((dragboard, restricted) -> {
-            dragboard.dataAccessRestricted = restricted;
+        DragboardHelper.setDragboardAccessor(new DragboardHelper.DragboardAccessor() {
+
+            @Override
+            public void setDataAccessRestriction(Dragboard dragboard, boolean restricted) {
+                dragboard.dataAccessRestricted = restricted;
+            }
+
+            @Override
+            public TKClipboard getPeer(Dragboard dragboard) {
+                return dragboard.getPeer();
+            }
+
+            @Override
+            public Dragboard createDragboard(TKClipboard peer) {
+                return Dragboard.createDragboard(peer);
+            }
         });
     }
 }

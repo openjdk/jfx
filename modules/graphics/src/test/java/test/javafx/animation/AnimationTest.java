@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -236,7 +236,7 @@ public class AnimationTest {
         assertTrue(animation.getCycleDuration().greaterThan(Duration.ZERO));
 
         // should not be startable
-        assertFalse(animation.impl_startable(true));
+        assertFalse(animation.startable(true));
 
         // jump
         animation.jumpTo(Duration.ZERO);
@@ -411,34 +411,34 @@ public class AnimationTest {
     @Test
     public void testStart() {
         // cycleDuration = 1000ms
-        assertTrue(animation.impl_startable(true));
-        animation.impl_start(true);
+        assertTrue(animation.startable(true));
+        animation.doStart(true);
         assertEquals(Status.RUNNING, animation.getStatus());
         assertEquals(1.0, animation.getCurrentRate(), EPSILON);
         assertEquals(6000, clipEnvelope.getTimelineTicks());
         assertEquals(1.0, clipEnvelope.getRate(), EPSILON);
         assertEquals(false, clipEnvelope.getAutoReverse());
         assertEquals(1, clipEnvelope.getCycleCount());
-        animation.shim_impl_finished();
+        animation.shim_finished();
 
         // change all values and try again
         animation.shim_setCycleDuration(TWO_SECS);
         animation.setRate(-2.0);
         animation.setAutoReverse(true);
         animation.setCycleCount(Animation.INDEFINITE);
-        assertTrue(animation.impl_startable(true));
-        animation.impl_start(true);
+        assertTrue(animation.startable(true));
+        animation.doStart(true);
         assertEquals(Status.RUNNING, animation.getStatus());
         assertEquals(-2.0, animation.getCurrentRate(), EPSILON);
         assertEquals(12000, clipEnvelope.getTimelineTicks());
         assertEquals(-2.0, clipEnvelope.getRate(), EPSILON);
         assertEquals(true, clipEnvelope.getAutoReverse());
         assertEquals(Animation.INDEFINITE, clipEnvelope.getCycleCount());
-        animation.shim_impl_finished();
+        animation.shim_finished();
 
         // cycleDuration = 0
         animation.shim_setCycleDuration(Duration.ZERO);
-        assertFalse(animation.impl_startable(true));
+        assertFalse(animation.startable(true));
     }
 
     @Test
@@ -447,9 +447,9 @@ public class AnimationTest {
         animation.play();
         assertEquals(Status.RUNNING, animation.getStatus());
         assertEquals(Duration.ZERO, animation.getCurrentTime());
-        animation.impl_setCurrentTicks(12000);
+        animation.setCurrentTicks(12000);
         assertEquals(TWO_SECS, animation.getCurrentTime());
-        animation.shim_impl_finished();
+        animation.shim_finished();
 
         animation.shim_setCycleDuration(ONE_SEC);
         animation.play();
@@ -463,14 +463,14 @@ public class AnimationTest {
         animation.setOnFinished(listener);
 
         // stopped timeline
-        animation.shim_impl_finished();
+        animation.shim_finished();
         assertEquals(Status.STOPPED, animation.getStatus());
         assertEquals(0.0, animation.getCurrentRate(), EPSILON);
         assertTrue(listener.wasCalled);
 
         // playing timeline
         animation.play();
-        animation.shim_impl_finished();
+        animation.shim_finished();
         assertEquals(Status.STOPPED, animation.getStatus());
         assertEquals(0.0, animation.getCurrentRate(), EPSILON);
         assertTrue(listener.wasCalled);
@@ -478,7 +478,7 @@ public class AnimationTest {
         // paused timeline
         animation.play();
         animation.pause();
-        animation.shim_impl_finished();
+        animation.shim_finished();
         assertEquals(Status.STOPPED, animation.getStatus());
         assertEquals(0.0, animation.getCurrentRate(), EPSILON);
         assertTrue(listener.wasCalled);
@@ -501,7 +501,7 @@ public class AnimationTest {
         } catch (SecurityException ex) {
             // ignore
         }
-        animation.shim_impl_finished();
+        animation.shim_finished();
         try {
             System.setErr(defaultErrorStream);
         } catch (SecurityException ex) {
@@ -518,7 +518,7 @@ public class AnimationTest {
         } catch (SecurityException ex) {
             // ignore
         }
-        animation.shim_impl_finished();
+        animation.shim_finished();
         try {
             System.setErr(defaultErrorStream);
         } catch (SecurityException ex) {
@@ -536,7 +536,7 @@ public class AnimationTest {
         } catch (SecurityException ex) {
             // ignore
         }
-        animation.shim_impl_finished();
+        animation.shim_finished();
         try {
             System.setErr(defaultErrorStream);
         } catch (SecurityException ex) {
@@ -552,19 +552,19 @@ public class AnimationTest {
         final int resolution = Toolkit.getToolkit().getMasterTimer().getDefaultResolution();
 
         // send pulse
-        animation.impl_timePulse(4 * resolution);
+        animation.doTimePulse(4 * resolution);
         assertEquals(4 * resolution, clipEnvelope.getLastTimePulse());
 
         // send half pulse
-        animation.impl_timePulse(Math.round(4.5 * resolution));
+        animation.doTimePulse(Math.round(4.5 * resolution));
         assertEquals(Math.round(4.5 * resolution), clipEnvelope.getLastTimePulse());
 
         // send full pulse
-        animation.impl_timePulse(Math.round(5.5 * resolution));
+        animation.doTimePulse(Math.round(5.5 * resolution));
         assertEquals(Math.round(5.5 * resolution), clipEnvelope.getLastTimePulse());
 
         // send half pulse
-        animation.impl_timePulse(6 * resolution);
+        animation.doTimePulse(6 * resolution);
         assertEquals(6 * resolution, clipEnvelope.getLastTimePulse());
 
     }
@@ -575,19 +575,19 @@ public class AnimationTest {
         animation = new AnimationImpl(timer, clipEnvelope, resolution);
 
         // send pulse
-        animation.impl_timePulse(4 * resolution);
+        animation.doTimePulse(4 * resolution);
         assertEquals(4 * resolution, clipEnvelope.getLastTimePulse());
 
         // send half pulse
-        animation.impl_timePulse(Math.round(4.5 * resolution));
+        animation.doTimePulse(Math.round(4.5 * resolution));
         assertEquals(0, clipEnvelope.getLastTimePulse());
 
         // send full pulse
-        animation.impl_timePulse(Math.round(5.5 * resolution));
+        animation.doTimePulse(Math.round(5.5 * resolution));
         assertEquals(Math.round(5.5 * resolution), clipEnvelope.getLastTimePulse());
 
         // send half pulse, this time it should trigger a pulse
-        animation.impl_timePulse(6 * resolution);
+        animation.doTimePulse(6 * resolution);
         assertEquals(6 * resolution, clipEnvelope.getLastTimePulse());
 
     }

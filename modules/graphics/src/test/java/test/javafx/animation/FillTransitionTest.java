@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,15 +126,15 @@ public class FillTransitionTest {
         final Color toValue = Color.color(0.8, 0.4, 0.2, 0.9);
         final FillTransition t0 = new FillTransition(ONE_SEC, shape, fromValue, toValue);
 
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        AnimationShim.impl_start(t0,false);
+        assertTrue(AnimationShim.startable(t0,false));
+        AnimationShim.doStart(t0,false);
         TransitionShim.interpolate(t0,0.0);
         assertColorEquals(Color.color(0.2, 0.3, 0.7, 0.1), shape.getFill());
         TransitionShim.interpolate(t0,0.4);
         assertColorEquals(Color.color(0.44, 0.34, 0.5, 0.42), shape.getFill());
         TransitionShim.interpolate(t0,1.0);
         assertColorEquals(Color.color(0.8, 0.4, 0.2, 0.9), shape.getFill());
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
     @Test
@@ -148,20 +148,20 @@ public class FillTransitionTest {
         // no from value set
         shape.setFill(originalValue);
         t0.setFromValue(null);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        AnimationShim.impl_start(t0,false);
+        assertTrue(AnimationShim.startable(t0,false));
+        AnimationShim.doStart(t0,false);
         TransitionShim.interpolate(t0,0.0);
         assertColorEquals(originalValue, shape.getFill());
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // from-value set
         shape.setFill(originalValue);
         t0.setFromValue(fromValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertColorEquals(fromValue, shape.getFill());
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
     @Test
@@ -178,29 +178,29 @@ public class FillTransitionTest {
         shape2.setFill(Color.WHITE);
 
         // node set, parent set
-        assertTrue(AnimationShim.impl_startable(ft,false));
-        AnimationShim.impl_start(ft,false);
+        assertTrue(AnimationShim.startable(ft,false));
+        AnimationShim.doStart(ft,false);
         TransitionShim.interpolate(ft,0.5);
         assertColorEquals(Color.color(0.5, 0.6, 0.7, 0.7), shape.getFill());
         assertColorEquals(Color.WHITE, shape2.getFill());
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
 
         // node null, parent set
         ft.setShape(null);
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         TransitionShim.interpolate(ft,0.4);
         assertColorEquals(Color.color(0.5, 0.6, 0.7, 0.7), shape.getFill());
         assertColorEquals(Color.color(0.4, 0.56, 0.72, 0.76), shape2.getFill());
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
 
         // node null, parent not shape set
         pt.setNode(new Group());
-        assertFalse(AnimationShim.impl_startable(ft,true));
+        assertFalse(AnimationShim.startable(ft,true));
 
         // node null, parent null
         pt.setNode(null);
-        assertFalse(AnimationShim.impl_startable(ft,true));
+        assertFalse(AnimationShim.startable(ft,true));
     }
 
     @Test
@@ -211,39 +211,39 @@ public class FillTransitionTest {
         ft.setInterpolator(Interpolator.LINEAR);
 
         // start
-        assertTrue(AnimationShim.impl_startable(ft,false));
-        AnimationShim.impl_start(ft,false);
+        assertTrue(AnimationShim.startable(ft,false));
+        AnimationShim.doStart(ft,false);
         ft.setFromValue(Color.WHITE);
         TransitionShim.interpolate(ft,0.5);
         assertColorEquals(Color.color(0.5, 0.6, 0.7, 0.3), shape.getFill());
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
         ft.setFromValue(fromValue);
 
         // end
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         ft.setToValue(Color.BLACK);
         TransitionShim.interpolate(ft,0.2);
         assertColorEquals(Color.color(0.2, 0.48, 0.76, 0.24), shape.getFill());
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
         ft.setToValue(toValue);
 
         // shape
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         ft.setShape(null);
         TransitionShim.interpolate(ft,0.7);
         assertColorEquals(Color.color(0.7, 0.68, 0.66, 0.34), shape.getFill());
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
         ft.setShape(shape);
 
         // interpolator
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         ft.setInterpolator(null);
         TransitionShim.interpolate(ft,0.1);
         assertColorEquals(Color.color(0.1, 0.44, 0.78, 0.22), shape.getFill());
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
         ft.setInterpolator(Interpolator.LINEAR);
     }
 
@@ -252,48 +252,48 @@ public class FillTransitionTest {
         final FillTransition t0 = new FillTransition(Duration.ONE, shape, Color.WHITE, Color.BLACK);
         final Paint paint2 = new LinearGradient(0, 0, 1, 1, false, null,
                 new Stop[] { new Stop(0, Color.RED) });
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // duration is 0
         t0.setDuration(Duration.ZERO);
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setDuration(Duration.ONE);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // interpolator is null
         t0.setInterpolator(null);
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setInterpolator(Interpolator.LINEAR);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // shape is null
         t0.setShape(null);
-        assertFalse(AnimationShim.impl_startable(t0,false));
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,false));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setShape(shape);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // fromValue
         t0.setFromValue(null);
         shape.setFill(paint2);
-        assertFalse(AnimationShim.impl_startable(t0,false));
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,false));
+        assertFalse(AnimationShim.startable(t0,true));
         shape.setFill(Color.BLACK);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertTrue(AnimationShim.startable(t0,true));
         t0.setFromValue(Color.WHITE);
         shape.setFill(paint2);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // toValue
         t0.setToValue(null);
-        assertFalse(AnimationShim.impl_startable(t0,false));
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,false));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setToValue(Color.BLACK);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertTrue(AnimationShim.startable(t0,true));
     }
 
     @Test
@@ -301,38 +301,38 @@ public class FillTransitionTest {
         final FillTransition t0 = new FillTransition(Duration.ONE, shape, Color.WHITE, Color.BLACK);
         final Paint paint2 = new LinearGradient(0, 0, 1, 1, false, null,
                 new Stop[] { new Stop(0, Color.RED) });
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
-        AnimationShim.impl_finished(t0);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
+        AnimationShim.finished(t0);
 
         // shape is null
         t0.setShape(null);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setShape(shape);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // fromValue
         t0.setFromValue(null);
         shape.setFill(paint2);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertFalse(AnimationShim.startable(t0,true));
         shape.setFill(Color.BLACK);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertTrue(AnimationShim.startable(t0,true));
         t0.setFromValue(Color.WHITE);
         shape.setFill(paint2);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // toValue
         t0.setToValue(null);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setToValue(Color.BLACK);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,false));
+        assertTrue(AnimationShim.startable(t0,true));
     }
 
     @Test
@@ -341,21 +341,21 @@ public class FillTransitionTest {
 
         // first run
         shape.setFill(Color.GREY);
-        assertTrue(AnimationShim.impl_startable(t0,false));
-        AnimationShim.impl_start(t0,false);
+        assertTrue(AnimationShim.startable(t0,false));
+        AnimationShim.doStart(t0,false);
         shape.setFill(Color.TRANSPARENT);
         TransitionShim.interpolate(t0,0.0);
         assertColorEquals(Color.GREY, shape.getFill());
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // second run
         shape.setFill(Color.BLACK);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         shape.setFill(Color.WHITE);
         TransitionShim.interpolate(t0,0.0);
         assertColorEquals(Color.BLACK, shape.getFill());
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
 }

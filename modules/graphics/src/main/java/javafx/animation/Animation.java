@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -183,7 +183,7 @@ public abstract class Animation {
             }
 
             AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                impl_timePulse(elapsedTime);
+                doTimePulse(elapsedTime);
                 return null;
             }, accessCtrlCtx);
         }
@@ -311,17 +311,17 @@ public abstract class Animation {
                                 lastPlayedForward = (Math.abs(getCurrentRate()
                                         - oldRate) < EPSILON);
                             }
-                            setCurrentRate(0.0);
+                            doSetCurrentRate(0.0);
                             pauseReceiver();
                         } else {
                             if (getStatus() == Status.RUNNING) {
                                 final double currentRate = getCurrentRate();
                                 if (Math.abs(currentRate) < EPSILON) {
-                                    setCurrentRate(lastPlayedForward ? newRate : -newRate);
+                                    doSetCurrentRate(lastPlayedForward ? newRate : -newRate);
                                     resumeReceiver();
                                 } else {
                                     final boolean playingForward = Math.abs(currentRate - oldRate) < EPSILON;
-                                    setCurrentRate(playingForward ? newRate : -newRate);
+                                    doSetCurrentRate(playingForward ? newRate : -newRate);
                                 }
                             }
                             oldRate = newRate;
@@ -366,7 +366,7 @@ public abstract class Animation {
     private ReadOnlyDoubleProperty currentRate;
     private static final double DEFAULT_CURRENT_RATE = 0.0;
 
-    private void setCurrentRate(double value) {
+    private void doSetCurrentRate(double value) {
         if ((currentRate != null) || (Math.abs(value - DEFAULT_CURRENT_RATE) > EPSILON)) {
             ((CurrentRateProperty)currentRateProperty()).set(value);
         }
@@ -904,12 +904,12 @@ public abstract class Animation {
         }
         switch (getStatus()) {
             case STOPPED:
-                if (impl_startable(true)) {
+                if (startable(true)) {
                     final double rate = getRate();
                     if (lastPlayedFinished) {
                         jumpTo((rate < 0)? getTotalDuration() : Duration.ZERO);
                     }
-                    impl_start(true);
+                    doStart(true);
                     startReceiver(TickCalculation.fromDuration(getDelay()));
                     if (Math.abs(rate) < EPSILON) {
                         pauseReceiver();
@@ -924,7 +924,7 @@ public abstract class Animation {
                 }
                 break;
             case PAUSED:
-                impl_resume();
+                doResume();
                 if (Math.abs(getRate()) >= EPSILON) {
                     resumeReceiver();
                 }
@@ -978,7 +978,7 @@ public abstract class Animation {
         }
         if (getStatus() != Status.STOPPED) {
             clipEnvelope.abortCurrentPulse();
-            impl_stop();
+            doStop();
             jumpTo(Duration.ZERO);
         }
     }
@@ -1001,7 +1001,7 @@ public abstract class Animation {
         if (getStatus() == Status.RUNNING) {
             clipEnvelope.abortCurrentPulse();
             pauseReceiver();
-            impl_pause();
+            doPause();
         }
     }
 
@@ -1047,12 +1047,12 @@ public abstract class Animation {
         this.timer = timer;
     }
 
-    boolean impl_startable(boolean forceSync) {
+    boolean startable(boolean forceSync) {
         return (fromDuration(getCycleDuration()) > 0L)
                 || (!forceSync && clipEnvelope.wasSynched());
     }
 
-    void impl_sync(boolean forceSync) {
+    void sync(boolean forceSync) {
         if (forceSync || !clipEnvelope.wasSynched()) {
             syncClipEnvelope();
         }
@@ -1067,37 +1067,37 @@ public abstract class Animation {
         clipEnvelope.setAutoReverse(isAutoReverse());
     }
 
-    void impl_start(boolean forceSync) {
-        impl_sync(forceSync);
+    void doStart(boolean forceSync) {
+        sync(forceSync);
         setStatus(Status.RUNNING);
         clipEnvelope.start();
-        setCurrentRate(clipEnvelope.getCurrentRate());
+        doSetCurrentRate(clipEnvelope.getCurrentRate());
         lastPulse = 0;
     }
 
-    void impl_pause() {
+    void doPause() {
         final double currentRate = getCurrentRate();
         if (Math.abs(currentRate) >= EPSILON) {
             lastPlayedForward = Math.abs(getCurrentRate() - getRate()) < EPSILON;
         }
-        setCurrentRate(0.0);
+        doSetCurrentRate(0.0);
         setStatus(Status.PAUSED);
     }
 
-    void impl_resume() {
+    void doResume() {
         setStatus(Status.RUNNING);
-        setCurrentRate(lastPlayedForward ? getRate() : -getRate());
+        doSetCurrentRate(lastPlayedForward ? getRate() : -getRate());
     }
 
-    void impl_stop() {
+    void doStop() {
         if (!paused) {
             timer.removePulseReceiver(pulseReceiver);
         }
         setStatus(Status.STOPPED);
-        setCurrentRate(0.0);
+        doSetCurrentRate(0.0);
     }
 
-    void impl_timePulse(long elapsedTime) {
+    void doTimePulse(long elapsedTime) {
         if (resolution == 1) { // fullspeed
             clipEnvelope.timePulse(elapsedTime);
         } else if (elapsedTime - lastPulse >= resolution) {
@@ -1106,26 +1106,26 @@ public abstract class Animation {
         }
     }
 
-    abstract void impl_playTo(long currentTicks, long cycleTicks);
+    abstract void doPlayTo(long currentTicks, long cycleTicks);
 
-    abstract void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump);
+    abstract void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump);
 
-    void impl_setCurrentTicks(long ticks) {
+    void setCurrentTicks(long ticks) {
         currentTicks = ticks;
         if (currentTime != null) {
             currentTime.fireValueChangedEvent();
         }
     }
 
-    void impl_setCurrentRate(double currentRate) {
+    void setCurrentRate(double currentRate) {
 //        if (getStatus() == Status.RUNNING) {
-            setCurrentRate(currentRate);
+            doSetCurrentRate(currentRate);
 //        }
     }
 
-    final void impl_finished() {
+    final void finished() {
         lastPlayedFinished = true;
-        impl_stop();
+        doStop();
         final EventHandler<ActionEvent> handler = getOnFinished();
         if (handler != null) {
             try {

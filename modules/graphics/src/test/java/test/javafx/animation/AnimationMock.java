@@ -89,22 +89,22 @@ public class AnimationMock extends AnimationImpl {
 
 
     @Override
-    public void impl_playTo(long currentTicks, long cycleTicks) {
+    public void doPlayTo(long currentTicks, long cycleTicks) {
         lastCommand = Command.PLAY;
         lastCurrentTicks = currentTicks;
         lastCycleTicks = cycleTicks;
     }
 
     @Override
-    public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+    public void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
         lastCommand = Command.JUMP;
         lastCurrentTicks = currentTicks;
         lastCycleTicks = cycleTicks;
     }
 
     @Override
-    public void impl_timePulse(long elapsedTime) {
-        super.impl_timePulse(elapsedTime);
+    public void doTimePulse(long elapsedTime) {
+        super.doTimePulse(elapsedTime);
         lastTimePulse = elapsedTime;
     }
 

@@ -129,6 +129,7 @@ import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
 import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import com.sun.javafx.scene.input.DragboardHelper;
 import com.sun.prism.impl.ManagedResource;
 
 public final class QuantumToolkit extends Toolkit {
@@ -896,7 +897,8 @@ public final class QuantumToolkit extends Toolkit {
         if (paint.getImage() == null) {
             return com.sun.prism.paint.Color.TRANSPARENT;
         } else {
-            return new com.sun.prism.paint.ImagePattern((com.sun.prism.Image) paint.getImage().impl_getPlatformImage(),
+            return new com.sun.prism.paint.ImagePattern(
+                    (com.sun.prism.Image) Toolkit.getImageAccessor().getPlatformImage(paint.getImage()),
                     (float)paint.getX(),
                     (float)paint.getY(),
                     (float)paint.getWidth(),
@@ -1055,7 +1057,7 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public Filterable toFilterable(Image img) {
-        return PrImage.create((com.sun.prism.Image) img.impl_getPlatformImage());
+        return PrImage.create((com.sun.prism.Image) Toolkit.getImageAccessor().getPlatformImage(img));
     }
 
     @Override public FilterContext getFilterContext(Object config) {
@@ -1218,7 +1220,7 @@ public final class QuantumToolkit extends Toolkit {
         GlassScene view = (GlassScene)scene;
         view.setTKDragSourceListener(l);
 
-        QuantumClipboard gc = (QuantumClipboard)dragboard.impl_getPeer();
+        QuantumClipboard gc = (QuantumClipboard) DragboardHelper.getPeer(dragboard);
         gc.setSupportedTransferMode(tm);
         gc.flush();
 

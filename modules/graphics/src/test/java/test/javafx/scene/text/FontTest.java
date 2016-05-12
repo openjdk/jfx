@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.text;
 
+import com.sun.javafx.scene.text.FontHelper;
 import static test.com.sun.javafx.test.TestHelper.assertImmutableList;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
@@ -140,7 +141,7 @@ public class FontTest {
 
     @Test
     public void testSetNative() {
-        new Font(12).impl_setNativeFont(new Object(), "", "", "");
+        FontHelper.setNativeFont(new Font(12), new Object(), "", "", "");
         // no assumptions
     }
 

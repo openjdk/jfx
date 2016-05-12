@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,39 +93,39 @@ public class TransitionTest {
 
     @Test
     public void testStart() {
-        transition.impl_start(true);
+        transition.doStart(true);
         transition.setInterpolator(Interpolator.DISCRETE);
         assertEquals(DEFAULT_INTERPOLATOR, transition.getCachedInterpolator());
         transition.shim_impl_finished();
 
-        transition.impl_start(true);
+        transition.doStart(true);
         assertEquals(Interpolator.DISCRETE, transition.getCachedInterpolator());
         transition.shim_impl_finished();
     }
 
     @Test
     public void testPlayTo() {
-        assertTrue(transition.impl_startable(true));
+        assertTrue(transition.startable(true));
 
         // normal play with linear interpolator
         transition.setInterpolator(Interpolator.LINEAR);
-        transition.impl_start(true);
-        transition.impl_playTo(0, 2);
+        transition.doStart(true);
+        transition.doPlayTo(0, 2);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_playTo(1, 2);
+        transition.doPlayTo(1, 2);
         assertEquals(0.5, transition.frac, EPSILON);
-        transition.impl_playTo(2, 2);
+        transition.doPlayTo(2, 2);
         assertEquals(1.0, transition.frac, EPSILON);
         transition.shim_impl_finished();
 
         // normal play with discrete interpolator
         transition.setInterpolator(Interpolator.DISCRETE);
-        transition.impl_start(true);
-        transition.impl_playTo(0, 2);
+        transition.doStart(true);
+        transition.doPlayTo(0, 2);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_playTo(1, 2);
+        transition.doPlayTo(1, 2);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_playTo(2, 2);
+        transition.doPlayTo(2, 2);
         assertEquals(1.0, transition.frac, EPSILON);
 
         transition.shim_impl_finished();
@@ -134,52 +134,52 @@ public class TransitionTest {
     @Test
     public void testJumpTo() {
         // not running
-        transition.impl_jumpTo(0, 2, false);
+        transition.doJumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2, false);
+        transition.doJumpTo(1, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2, false);
+        transition.doJumpTo(2, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
 
         // running with linear interpolator
         transition.setInterpolator(Interpolator.LINEAR);
-        assertTrue(transition.impl_startable(true));
-        transition.impl_start(true);
-        transition.impl_jumpTo(0, 2, false);
+        assertTrue(transition.startable(true));
+        transition.doStart(true);
+        transition.doJumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2, false);
+        transition.doJumpTo(1, 2, false);
         assertEquals(0.5, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2, false);
+        transition.doJumpTo(2, 2, false);
         assertEquals(1.0, transition.frac, EPSILON);
 
         // paused with linear interpolator
-        transition.impl_pause();
-        transition.impl_jumpTo(0, 2, false);
+        transition.doPause();
+        transition.doJumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2, false);
+        transition.doJumpTo(1, 2, false);
         assertEquals(0.5, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2, false);
+        transition.doJumpTo(2, 2, false);
         assertEquals(1.0, transition.frac, EPSILON);
         transition.shim_impl_finished();
 
         // running with discrete interpolator
         transition.setInterpolator(Interpolator.DISCRETE);
-        assertTrue(transition.impl_startable(true));
-        transition.impl_start(true);
-        transition.impl_jumpTo(0, 2, false);
+        assertTrue(transition.startable(true));
+        transition.doStart(true);
+        transition.doJumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2, false);
+        transition.doJumpTo(1, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2, false);
+        transition.doJumpTo(2, 2, false);
         assertEquals(1.0, transition.frac, EPSILON);
 
         // paused with discrete interpolator
-        transition.impl_pause();
-        transition.impl_jumpTo(0, 2, false);
+        transition.doPause();
+        transition.doJumpTo(0, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2, false);
+        transition.doJumpTo(1, 2, false);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2, false);
+        transition.doJumpTo(2, 2, false);
         assertEquals(1.0, transition.frac, EPSILON);
         transition.shim_impl_finished();
     }
@@ -190,30 +190,30 @@ public class TransitionTest {
     public void testForcedJumpTo() {
         transition.setInterpolator(Interpolator.LINEAR);
         // not running
-        transition.impl_jumpTo(0, 2, true);
+        transition.doJumpTo(0, 2, true);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2, true);
+        transition.doJumpTo(1, 2, true);
         assertEquals(0.5, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2, true);
+        transition.doJumpTo(2, 2, true);
         assertEquals(1.0, transition.frac, EPSILON);
 
         // running with linear interpolator
-        assertTrue(transition.impl_startable(true));
-        transition.impl_start(true);
-        transition.impl_jumpTo(0, 2, true);
+        assertTrue(transition.startable(true));
+        transition.doStart(true);
+        transition.doJumpTo(0, 2, true);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2, true);
+        transition.doJumpTo(1, 2, true);
         assertEquals(0.5, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2, true);
+        transition.doJumpTo(2, 2, true);
         assertEquals(1.0, transition.frac, EPSILON);
 
         // paused with linear interpolator
-        transition.impl_pause();
-        transition.impl_jumpTo(0, 2, true);
+        transition.doPause();
+        transition.doJumpTo(0, 2, true);
         assertEquals(0.0, transition.frac, EPSILON);
-        transition.impl_jumpTo(1, 2, true);
+        transition.doJumpTo(1, 2, true);
         assertEquals(0.5, transition.frac, EPSILON);
-        transition.impl_jumpTo(2, 2, true);
+        transition.doJumpTo(2, 2, true);
         assertEquals(1.0, transition.frac, EPSILON);
         transition.shim_impl_finished();
 

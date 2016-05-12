@@ -94,7 +94,7 @@ public final class ImageViewTest {
                         assertNull(pgValue);
                     } else {
                         assertSame(
-                                ((Image) sgValue).impl_getPlatformImage(),
+                                Toolkit.getImageAccessor().getPlatformImage((Image) sgValue),
                                 pgValue);
                     }
 
@@ -174,14 +174,14 @@ public final class ImageViewTest {
         imageView.setImage(asyncImage);
 
         NodeTest.callSyncPGNode(imageView);
-        assertSame(placeholderImage.impl_getPlatformImage(),
+        assertSame(Toolkit.getImageAccessor().getPlatformImage(placeholderImage),
                    pgImageView.getImage());
         assertBoundsEqual(box(0, 0, 200, 100), imageView.getBoundsInLocal());
 
         lastAsyncImageLoader.finish();
 
         NodeTest.callSyncPGNode(imageView);
-        assertSame(asyncImage.impl_getPlatformImage(),
+        assertSame(Toolkit.getImageAccessor().getPlatformImage(asyncImage),
                    pgImageView.getImage());
         assertBoundsEqual(box(0, 0, 100, 200), imageView.getBoundsInLocal());
     }

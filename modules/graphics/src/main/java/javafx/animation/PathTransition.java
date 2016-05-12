@@ -354,15 +354,15 @@ public final class PathTransition extends Transition {
     }
 
     @Override
-    boolean impl_startable(boolean forceSync) {
-        return super.impl_startable(forceSync)
+    boolean startable(boolean forceSync) {
+        return super.startable(forceSync)
                 && (((getTargetNode() != null) && (getPath() != null) && !getPath().getLayoutBounds().isEmpty()) || (!forceSync
                         && (cachedNode != null)));
     }
 
     @Override
-    void impl_sync(boolean forceSync) {
-        super.impl_sync(forceSync);
+    void sync(boolean forceSync) {
+        super.sync(forceSync);
         if (forceSync || (cachedNode == null)) {
             cachedNode = getTargetNode();
             recomputeSegments();

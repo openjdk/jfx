@@ -681,7 +681,7 @@ public class Stage extends Window {
         @Override protected void onChanged(Change<Image> c) {
             List<Object> platformImages = new ArrayList<Object>();
             for (Image icon : icons) {
-                platformImages.add(icon.impl_getPlatformImage());
+                platformImages.add(Toolkit.getImageAccessor().getPlatformImage(icon));
             }
             if (impl_peer != null) {
                 impl_peer.setIcons(platformImages);
@@ -1172,7 +1172,7 @@ public class Stage extends Window {
 
             List<Object> platformImages = new ArrayList<Object>();
             for (Image icon : icons) {
-                platformImages.add(icon.impl_getPlatformImage());
+                platformImages.add(Toolkit.getImageAccessor().getPlatformImage(icon));
             }
             if (impl_peer != null) {
                 impl_peer.setIcons(platformImages);

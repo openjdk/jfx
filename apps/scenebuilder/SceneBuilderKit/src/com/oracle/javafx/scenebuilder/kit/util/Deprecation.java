@@ -136,14 +136,6 @@ public class Deprecation {
 
     // Deprecated stuff in Parent
 
-//    // RT-21217 : Promote impl_fromPlatformImage to public API
-//    public static Image fromPlatformImage(Object platformImage) {
-//        return Image.impl_fromPlatformImage(platformImage);
-//    }
-//    // RT-21219 : Promote impl_getPlatformImage to public API
-//    public static Object getPlatformImage(Image image) {
-//        return image.impl_getPlatformImage();
-//    }
     // Deprecated stuff in FXMLLoader
     // RT-21226 : Promote setStaticLoad to public API
     public static void setStaticLoad(FXMLLoader loader, boolean staticLoad) {

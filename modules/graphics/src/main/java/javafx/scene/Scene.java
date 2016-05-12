@@ -94,6 +94,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import com.sun.javafx.logging.PulseLogger;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import com.sun.javafx.scene.input.ClipboardHelper;
+import com.sun.javafx.scene.input.TouchPointHelper;
 
 /**
  * The JavaFX {@code Scene} class is the container for all content in a scene graph.
@@ -377,7 +379,7 @@ public class Scene implements EventTarget {
                     return parent.getChildren(); //was impl_getChildren
                 }
                 public Object renderToImage(Scene scene, Object platformImage) {
-                    return scene.snapshot(null).impl_getPlatformImage();
+                    return Toolkit.getImageAccessor().getPlatformImage(scene.snapshot(null));
                 }
             });
             SceneHelper.setSceneAccessor(
@@ -1990,7 +1992,7 @@ public class Scene implements EventTarget {
                 }
 
                 for (TouchPoint t : touchPoints) {
-                    t.impl_reset();
+                    TouchPointHelper.reset(t);
                 }
 
                 TouchEvent te = new TouchEvent(type, tp, touchList,
@@ -2938,7 +2940,7 @@ public class Scene implements EventTarget {
             if (dndGesture == null) {
                 dndGesture = new DnDGesture();
             }
-            Dragboard db = Dragboard.impl_createDragboard(dragboard);
+            Dragboard db = DragboardHelper.createDragboard(dragboard);
             dndGesture.dragboard = db;
             DragEvent dragEvent =
                     new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
@@ -3024,7 +3026,7 @@ public class Scene implements EventTarget {
        public void dragGestureRecognized(double x, double y, double screenX, double screenY,
                                          int button, TKClipboard dragboard)
        {
-           Dragboard db = Dragboard.impl_createDragboard(dragboard);
+           Dragboard db = DragboardHelper.createDragboard(dragboard);
            dndGesture = new DnDGesture();
            dndGesture.dragboard = db;
            // TODO: support mouse buttons in DragEvent
@@ -3080,7 +3082,7 @@ public class Scene implements EventTarget {
          */
         private void dragDetectedProcessed() {
             dragDetected = DragDetectedState.DONE;
-            final boolean hasContent = (dragboard != null) && (dragboard.impl_contentPut());
+            final boolean hasContent = (dragboard != null) && (ClipboardHelper.contentPut(dragboard));
             if (hasContent) {
                 /* start DnD */
                 Toolkit.getToolkit().startDrag(Scene.this.peer,
@@ -3419,7 +3421,7 @@ public class Scene implements EventTarget {
                 }
             }
             TKClipboard dragboardPeer = peer.createDragboard(isDragSource);
-            return Dragboard.impl_createDragboard(dragboardPeer);
+            return DragboardHelper.createDragboard(dragboardPeer);
         }
     }
 

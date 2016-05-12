@@ -116,7 +116,7 @@ public final class ImageTest {
         final Object fakePlatformImage = new Object();
         registerImage(fakePlatformImage, 200, 500);
 
-        final Image image = Image.impl_fromPlatformImage(fakePlatformImage);
+        final Image image = Toolkit.getImageAccessor().fromPlatformImage(fakePlatformImage);
         verifyLoadedImage(image, 0, 0, false, false, 200, 500);
     }
 
@@ -161,9 +161,9 @@ public final class ImageTest {
         registerImage(url, 200, 100);
 
         final Image placeholderImage1 =
-                Image.impl_fromPlatformImage(fakePlatformImage1);
+                Toolkit.getImageAccessor().fromPlatformImage(fakePlatformImage1);
         final Image placeholderImage2 =
-                Image.impl_fromPlatformImage(fakePlatformImage2);
+                Toolkit.getImageAccessor().fromPlatformImage(fakePlatformImage2);
         final Image image = new Image(url, 500, 200, true, false,
                                       true);
 
@@ -203,7 +203,7 @@ public final class ImageTest {
         final StubAsyncImageLoader finalLoader =
                 getLastAsyncImageLoader();
 
-        assertNull(finalImage.impl_getPlatformImage());
+        assertNull(Toolkit.getImageAccessor().getPlatformImage(finalImage));
         assertEquals(0, finalImage.getWidth(), 0);
         assertEquals(0, finalImage.getHeight(), 0);
 
@@ -406,7 +406,7 @@ public final class ImageTest {
 
         assertEquals(0, image.getWidth(), 0);
         assertEquals(0, image.getHeight(), 0);
-        assertEquals(null, image.impl_getPlatformImage());
+        assertEquals(null, Toolkit.getImageAccessor().getPlatformImage(image));
 
         lastAsyncImageLoader.finish();
 
@@ -428,7 +428,7 @@ public final class ImageTest {
                 observable -> {
                     assertEquals(200, image.getWidth(), 0);
                     assertEquals(100, image.getHeight(), 0);
-                    assertNotNull(image.impl_getPlatformImage());
+                    assertNotNull(Toolkit.getImageAccessor().getPlatformImage(image));
                 };
 
         image.widthProperty().addListener(imageChecker);
@@ -437,7 +437,7 @@ public final class ImageTest {
 
         assertEquals(0, image.getWidth(), 0);
         assertEquals(0, image.getHeight(), 0);
-        assertEquals(null, image.impl_getPlatformImage());
+        assertEquals(null, Toolkit.getImageAccessor().getPlatformImage(image));
 
         lastAsyncImageLoader.finish();
     }
@@ -468,7 +468,7 @@ public final class ImageTest {
     }
 
     private static StubPlatformImage getPlatformImage(final Image srcImage) {
-        final Object unknownPlatformImage = srcImage.impl_getPlatformImage();
+        final Object unknownPlatformImage = Toolkit.getImageAccessor().getPlatformImage(srcImage);
         assertTrue(unknownPlatformImage instanceof StubPlatformImage);
         return (StubPlatformImage) unknownPlatformImage;
     }

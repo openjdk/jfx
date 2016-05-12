@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -337,9 +337,9 @@ public final class ParallelTransition extends Transition {
 
     private boolean startChild(Animation child, int index) {
         final boolean forceSync = forceChildSync[index];
-        if (child.impl_startable(forceSync)) {
+        if (child.startable(forceSync)) {
             child.clipEnvelope.setRate(rates[index] * Math.signum(getCurrentRate()));
-            child.impl_start(forceSync);
+            child.doStart(forceSync);
             forceChildSync[index] = false;
             return true;
         }
@@ -347,8 +347,8 @@ public final class ParallelTransition extends Transition {
     }
 
     @Override
-    void impl_sync(boolean forceSync) {
-        super.impl_sync(forceSync);
+    void sync(boolean forceSync) {
+        super.sync(forceSync);
         if ((forceSync && childrenChanged) || (durations == null)) {
             cachedChildren = getChildren().toArray(EMPTY_ANIMATION_ARRAY);
             final int n = cachedChildren.length;
@@ -380,22 +380,22 @@ public final class ParallelTransition extends Transition {
     }
 
     @Override
-    void impl_pause() {
-        super.impl_pause();
+    void doPause() {
+        super.doPause();
         for (final Animation animation : cachedChildren) {
             if (animation.getStatus() == Status.RUNNING) {
-                animation.impl_pause();
+                animation.doPause();
             }
         }
     }
 
     @Override
-    void impl_resume() {
-        super.impl_resume();
+    void doResume() {
+        super.doResume();
         int i = 0;
         for (final Animation animation : cachedChildren) {
             if (animation.getStatus() == Status.PAUSED) {
-                animation.impl_resume();
+                animation.doResume();
                 animation.clipEnvelope.setRate(rates[i] * Math.signum(getCurrentRate()));
             }
             i++;
@@ -403,8 +403,8 @@ public final class ParallelTransition extends Transition {
     }
 
     @Override
-    void impl_start(boolean forceSync) {
-        super.impl_start(forceSync);
+    void doStart(boolean forceSync) {
+        super.doStart(forceSync);
         toggledRate = false;
         rateProperty().addListener(rateListener);
         double curRate = getCurrentRate();
@@ -412,22 +412,22 @@ public final class ParallelTransition extends Transition {
         if (curRate < 0) {
             jumpToEnd();
             if (currentTicks < cycleTime) {
-                impl_jumpTo(currentTicks, cycleTime, false);
+                doJumpTo(currentTicks, cycleTime, false);
             }
         } else {
             jumpToStart();
             if (currentTicks > 0) {
-                impl_jumpTo(currentTicks, cycleTime, false);
+                doJumpTo(currentTicks, cycleTime, false);
             }
         }
     }
 
     @Override
-    void impl_stop() {
-        super.impl_stop();
+    void doStop() {
+        super.doStop();
         for (final Animation animation : cachedChildren) {
             if (animation.getStatus() != Status.STOPPED) {
-                animation.impl_stop();
+                animation.doStop();
             }
         }
         if (childrenChanged) {
@@ -436,14 +436,9 @@ public final class ParallelTransition extends Transition {
         rateProperty().removeListener(rateListener);
     }
 
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public void impl_playTo(long currentTicks, long cycleTicks) {
-        impl_setCurrentTicks(currentTicks);
+    @Override
+    void doPlayTo(long currentTicks, long cycleTicks) {
+        setCurrentTicks(currentTicks);
         final double frac = calculateFraction(currentTicks, cycleTicks);
         final long newTicks = Math.max(0, Math.min(getCachedInterpolator().interpolate(0, cycleTicks, frac), cycleTicks));
         if (toggledRate) {
@@ -474,11 +469,11 @@ public final class ParallelTransition extends Transition {
                 }
                 if (newTicks >= add(durations[i], delays[i])) {
                     if (animation.getStatus() == Status.RUNNING) {
-                        animation.impl_timePulse(sub(durations[i], offsetTicks[i]));
+                        animation.doTimePulse(sub(durations[i], offsetTicks[i]));
                         offsetTicks[i] = 0;
                     }
                 } else if (newTicks > delays[i]) {
-                    animation.impl_timePulse(sub(newTicks - delays[i], offsetTicks[i]));
+                    animation.doTimePulse(sub(newTicks - delays[i], offsetTicks[i]));
                 }
                 i++;
             }
@@ -502,11 +497,11 @@ public final class ParallelTransition extends Transition {
                     }
                     if (newTicks <= delays[i]) {
                         if (animation.getStatus() == Status.RUNNING) {
-                            animation.impl_timePulse(sub(durations[i], offsetTicks[i]));
+                            animation.doTimePulse(sub(durations[i], offsetTicks[i]));
                             offsetTicks[i] = 0;
                         }
                     } else {
-                        animation.impl_timePulse(sub( add(durations[i], delays[i]) - newTicks, offsetTicks[i]));
+                        animation.doTimePulse(sub( add(durations[i], delays[i]) - newTicks, offsetTicks[i]));
                     }
                 }
                 i++;
@@ -515,17 +510,13 @@ public final class ParallelTransition extends Transition {
         oldTicks = newTicks;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
-        impl_setCurrentTicks(currentTicks);
+    @Override
+    void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        setCurrentTicks(currentTicks);
         if (getStatus() == Status.STOPPED && !forceJump) {
             return;
         }
-        impl_sync(false);
+        sync(false);
         final double frac = calculateFraction(currentTicks, cycleTicks);
         final long newTicks = Math.max(0, Math.min(getCachedInterpolator().interpolate(0, cycleTicks, frac), cycleTicks));
         int i = 0;
@@ -535,23 +526,23 @@ public final class ParallelTransition extends Transition {
                 offsetTicks[i] = 0;
                 if (status != Status.STOPPED) {
                     animation.clipEnvelope.jumpTo(0);
-                    animation.impl_stop();
+                    animation.doStop();
                 } else if(TickCalculation.fromDuration(animation.getCurrentTime()) != 0) {
-                    animation.impl_jumpTo(0, durations[i], true);
+                    animation.doJumpTo(0, durations[i], true);
                 }
             } else if (newTicks >= add(durations[i], delays[i])) {
                 offsetTicks[i] = 0;
                 if (status != Status.STOPPED) {
                     animation.clipEnvelope.jumpTo(Math.round(durations[i] * rates[i]));
-                    animation.impl_stop();
+                    animation.doStop();
                 } else if (TickCalculation.fromDuration(animation.getCurrentTime()) != durations[i]) {
-                    animation.impl_jumpTo(durations[i], durations[i], true);
+                    animation.doJumpTo(durations[i], durations[i], true);
                 }
             } else {
                 if (status == Status.STOPPED) {
                     startChild(animation, i);
                     if (getStatus() == Status.PAUSED) {
-                        animation.impl_pause();
+                        animation.doPause();
                     }
 
                     offsetTicks[i] = (getCurrentRate() > 0)? newTicks - delays[i] : add(durations[i], delays[i]) - newTicks;
@@ -579,18 +570,18 @@ public final class ParallelTransition extends Transition {
         for (int i = 0 ; i < cachedChildren.length; ++i) {
             if (forceChildSync[i]) {
                 // See explanation in SequentialTransition#jumpToEnd
-                cachedChildren[i].impl_sync(true);
+                cachedChildren[i].sync(true);
             }
-            cachedChildren[i].impl_jumpTo(durations[i], durations[i], true);
+            cachedChildren[i].doJumpTo(durations[i], durations[i], true);
         }
     }
 
     private void jumpToStart() {
         for (int i = cachedChildren.length - 1 ; i >= 0; --i) {
             if (forceChildSync[i]) {
-                cachedChildren[i].impl_sync(true);
+                cachedChildren[i].sync(true);
             }
-            cachedChildren[i].impl_jumpTo(0, durations[i], true);
+            cachedChildren[i].doJumpTo(0, durations[i], true);
         }
     }
 

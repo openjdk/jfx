@@ -647,7 +647,7 @@ public abstract class Node implements EventTarget, Styleable {
             BlendMode mode = getBlendMode();
             peer.setNodeBlendMode((mode == null)
                                   ? null
-                                  : Blend.impl_getToolkitMode(mode));
+                                  : EffectHelper.getToolkitBlendMode(mode));
         }
     }
 

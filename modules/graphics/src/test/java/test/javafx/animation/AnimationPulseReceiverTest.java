@@ -53,7 +53,7 @@ public class AnimationPulseReceiverTest {
 
     @After
     public void tearDown() {
-        animation.impl_stop();
+        animation.doStop();
     }
 
     @Test
@@ -72,11 +72,11 @@ public class AnimationPulseReceiverTest {
         assertEquals(13 * DEFAULT_RESOLUTION, animation.getLastTimePulse());
 
         // stop animation
-        animation.impl_stop();
+        animation.doStop();
         assertFalse(timer.containsPulseReceiver(animation.shim_pulseReceiver()));
 
         // stop again
-        animation.impl_stop();
+        animation.doStop();
         assertFalse(timer.containsPulseReceiver(animation.shim_pulseReceiver()));
 
         // start again

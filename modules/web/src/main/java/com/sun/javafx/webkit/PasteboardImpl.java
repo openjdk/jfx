@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit;
 
+import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.Pasteboard;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCImageFrame;
@@ -64,7 +65,7 @@ final class PasteboardImpl implements Pasteboard {
     @Override public void writeImage(WCImageFrame wcImage) {
         Object platformImage = WCGraphicsManager.getGraphicsManager().
                 toPlatformImage(wcImage.getFrame());
-        Image fxImage = Image.impl_fromPlatformImage(platformImage);
+        Image fxImage = Toolkit.getImageAccessor().fromPlatformImage(platformImage);
         ClipboardContent content = new ClipboardContent();
         content.putImage(fxImage);
         clipboard.setContent(content);

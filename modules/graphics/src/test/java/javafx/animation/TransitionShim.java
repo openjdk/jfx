@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,22 +43,22 @@ public abstract class TransitionShim extends Transition {
     }
 
     @Override
-    public void impl_pause() {
-        super.impl_pause();
+    public void doPause() {
+        super.doPause();
     }
 
     @Override
-    public void impl_sync(boolean forceSync) {
-        super.impl_sync(forceSync);
+    public void sync(boolean forceSync) {
+        super.sync(forceSync);
     }
 
     @Override
-    public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
-        super.impl_jumpTo(currentTicks, cycleTicks, forceJump);
+    public void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        super.doJumpTo(currentTicks, cycleTicks, forceJump);
     }
 
     public void shim_impl_finished() {
-        super.impl_finished();
+        super.finished();
     }
 
     @Override
@@ -67,18 +67,18 @@ public abstract class TransitionShim extends Transition {
     }
 
     @Override
-    public void impl_start(boolean forceSync) {
-        super.impl_start(forceSync);
+    public void doStart(boolean forceSync) {
+        super.doStart(forceSync);
     }
 
     @Override
-    public boolean impl_startable(boolean forceSync) {
-        return super.impl_startable(forceSync);
+    public boolean startable(boolean forceSync) {
+        return super.startable(forceSync);
     }
 
     @Override
-    public void impl_playTo(long currentTicks, long cycleTicks) {
-        super.impl_playTo(currentTicks, cycleTicks);
+    public void doPlayTo(long currentTicks, long cycleTicks) {
+        super.doPlayTo(currentTicks, cycleTicks);
     }
 
     @Override

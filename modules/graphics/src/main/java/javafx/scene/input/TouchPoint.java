@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.input;
 
 import com.sun.javafx.scene.input.InputEventUtils;
+import com.sun.javafx.scene.input.TouchPointHelper;
 import java.io.IOException;
 import java.io.Serializable;
 import javafx.beans.NamedArg;
@@ -54,6 +55,18 @@ import javafx.scene.Scene;
  * @since JavaFX 2.2
  */
 public final class TouchPoint implements Serializable{
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        TouchPointHelper.setTouchPointAccessor(new TouchPointHelper.TouchPointAccessor() {
+
+            @Override
+            public void reset(TouchPoint touchPoint) {
+                touchPoint.reset();
+            }
+        });
+    }
 
     private transient EventTarget target;
     private transient Object source;
@@ -135,12 +148,7 @@ public final class TouchPoint implements Serializable{
         return target == this.target;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_reset() {
+    void reset() {
         final Point3D p = InputEventUtils.recomputeCoordinates(pickResult, null);
         x = p.getX();
         y = p.getY();

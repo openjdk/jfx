@@ -25,6 +25,7 @@
 
 package javafx.scene.text;
 
+import com.sun.javafx.scene.text.FontHelper;
 import java.io.FilePermission;
 import java.io.InputStream;
 import java.net.URL;
@@ -56,6 +57,29 @@ import javafx.beans.NamedArg;
  * @since JavaFX 2.0
  */
 public final class Font {
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        FontHelper.setFontAccessor(new FontHelper.FontAccessor() {
+
+            @Override
+            public Object getNativeFont(Font font) {
+                return font.getNativeFont();
+            }
+
+            @Override
+            public void setNativeFont(Font font, Object f, String nam, String fam, String styl) {
+                font.setNativeFont(f, nam, fam, styl);
+            }
+
+            @Override
+            public Font nativeFont(Object f, String name, String family, String style, double size) {
+                return Font.nativeFont(f, name, family, style, size);
+            }
+
+        });
+    }
 
     private static final String DEFAULT_FAMILY = "System";
     private static final String DEFAULT_FULLNAME = "System Regular";
@@ -315,7 +339,7 @@ public final class Font {
         // Font was created based on an existing native font. If however a Font
         // was created directly in FX, then we need to find the native font
         // to use. This call will also set the family and style by invoking
-        // the impl_setNativeFont callback method.
+        // the setNativeFont callback method.
         Toolkit.getToolkit().getFontLoader().loadFont(this);
     }
 
@@ -508,31 +532,16 @@ public final class Font {
 
     private Object nativeFont;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public Object impl_getNativeFont() { return nativeFont; }
+    Object getNativeFont() { return nativeFont; }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_setNativeFont(Object f, String nam, String fam, String styl) {
+    void setNativeFont(Object f, String nam, String fam, String styl) {
         nativeFont = f;
         name = nam;
         family = fam;
         style = styl;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static Font impl_NativeFont(Object f, String name, String family,
+    static Font nativeFont(Object f, String name, String family,
                                        String style, double size) {
         Font retFont = new Font( f, family, name, style, size);
         return retFont;

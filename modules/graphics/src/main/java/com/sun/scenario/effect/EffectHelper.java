@@ -28,8 +28,11 @@ package com.sun.scenario.effect;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
+import com.sun.javafx.util.Utils;
 import javafx.beans.property.IntegerProperty;
 import javafx.scene.Node;
+import javafx.scene.effect.Blend;
+import javafx.scene.effect.BlendMode;
 
 /**
  * Used to access internal methods of javafx.scene.effect.Effect.
@@ -39,7 +42,7 @@ public class EffectHelper {
     private static EffectAccessor effectAccessor;
 
     static {
-        forceInit(javafx.scene.effect.Effect.class);
+        Utils.forceInit(javafx.scene.effect.Effect.class);
     }
 
     private EffectHelper() {
@@ -69,6 +72,11 @@ public class EffectHelper {
     public static javafx.scene.effect.Effect copy(javafx.scene.effect.Effect effect) {
         return effectAccessor.copy(effect);
     }
+
+    public static com.sun.scenario.effect.Blend.Mode getToolkitBlendMode(BlendMode mode) {
+        return effectAccessor.getToolkitBlendMode(mode);
+    }
+
     public static void setEffectAccessor(final EffectAccessor newAccessor) {
         if (effectAccessor != null) {
             throw new IllegalStateException();
@@ -85,15 +93,7 @@ public class EffectHelper {
         BaseBounds getBounds(javafx.scene.effect.Effect effect, BaseBounds bounds,
                 BaseTransform tx, Node node, BoundsAccessor boundsAccessor);
         javafx.scene.effect.Effect copy(javafx.scene.effect.Effect effect);
-    }
-
-    private static void forceInit(final Class<?> classToInit) {
-        try {
-            Class.forName(classToInit.getName(), true,
-                    classToInit.getClassLoader());
-        } catch (final ClassNotFoundException e) {
-            throw new AssertionError(e);  // Can't happen
-        }
+        com.sun.scenario.effect.Blend.Mode getToolkitBlendMode(javafx.scene.effect.BlendMode mode);
     }
 
 }

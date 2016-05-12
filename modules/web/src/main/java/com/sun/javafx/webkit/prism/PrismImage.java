@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit.prism;
 
+import com.sun.javafx.tk.Toolkit;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -64,7 +65,7 @@ abstract class PrismImage extends WCImage {
 
     @Override
     protected final String toDataURL(String mimeType) {
-        Object image = UIClientImpl.toBufferedImage(javafx.scene.image.Image.impl_fromPlatformImage(getImage()));
+        Object image = UIClientImpl.toBufferedImage(Toolkit.getImageAccessor().fromPlatformImage(getImage()));
         if (image instanceof BufferedImage) {
             Iterator<ImageWriter> it = ImageIO.getImageWritersByMIMEType(mimeType);
             while (it.hasNext()) {

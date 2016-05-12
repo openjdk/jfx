@@ -714,7 +714,7 @@ public class NGRegion extends NGGroup {
         final List<BackgroundImage> images = background.getImages();
         for (int i = 0, max = images.size(); i < max; i++) {
             final BackgroundImage image = images.get(i);
-            final Image prismImage = (Image) image.getImage().impl_getPlatformImage();
+            final Image prismImage = (Image) Toolkit.getImageAccessor().getPlatformImage(image.getImage());
             if (prismImage == null) {
                 // The prismImage might be null if the Image has not completed loading.
                 // In that case, we simply must skip rendering of that layer this
@@ -851,7 +851,7 @@ public class NGRegion extends NGGroup {
         final List<BackgroundImage> images = background.getImages();
         for (int i = 0, max = images.size(); i < max; i++) {
             final BackgroundImage image = images.get(i);
-            Image prismImage = (Image) image.getImage().impl_getPlatformImage();
+            Image prismImage = (Image) Toolkit.getImageAccessor().getPlatformImage(image.getImage());
             if (prismImage == null) {
                 // The prismImage might be null if the Image has not completed loading.
                 // In that case, we simply must skip rendering of that layer this
@@ -1314,7 +1314,7 @@ public class NGRegion extends NGGroup {
 
         for (int i = 0, max = images.size(); i < max; i++) {
             final BorderImage ib = images.get(i);
-            final Image prismImage = (Image) ib.getImage().impl_getPlatformImage();
+            final Image prismImage = (Image) Toolkit.getImageAccessor().getPlatformImage(ib.getImage());
             if (prismImage == null) {
                 // The prismImage might be null if the Image has not completed loading.
                 // In that case, we simply must skip rendering of that layer this

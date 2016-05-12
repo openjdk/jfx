@@ -33,7 +33,6 @@ import java.awt.image.BufferedImage;
 
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.cursor.ImageCursorFrame;
-import javafx.scene.image.Image;
 
 /**
  * An utility class to translate cursor types between embedded
@@ -54,7 +53,7 @@ class SwingCursors {
         Point hotspot = new Point((int)scaledHotspotX, (int)scaledHotspotY);
 
         BufferedImage awtImage = SwingFXUtils.fromFXImage(
-                Image.impl_fromPlatformImage(cursorFrame.getPlatformImage()), null);
+                com.sun.javafx.tk.Toolkit.getImageAccessor().fromPlatformImage(cursorFrame.getPlatformImage()), null);
         return awtToolkit.createCustomCursor(awtImage, hotspot, null);
     }
 

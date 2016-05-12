@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -172,26 +172,26 @@ public final class Timeline extends Animation {
     }
 
     @Override
-    void impl_playTo(long currentTicks, long cycleTicks) {
+    void doPlayTo(long currentTicks, long cycleTicks) {
         clipCore.playTo(currentTicks);
     }
 
     @Override
-    void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
-        impl_sync(false);
-        impl_setCurrentTicks(currentTicks);
+    void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        sync(false);
+        setCurrentTicks(currentTicks);
         clipCore.jumpTo(currentTicks, forceJump);
     }
 
     @Override
-    void impl_setCurrentRate(double currentRate) {
-        super.impl_setCurrentRate(currentRate);
+    void setCurrentRate(double currentRate) {
+        super.setCurrentRate(currentRate);
         clipCore.notifyCurrentRateChanged();
     }
 
     @Override
-    void impl_start(boolean forceSync) {
-        super.impl_start(forceSync);
+    void doStart(boolean forceSync) {
+        super.doStart(forceSync);
         clipCore.start(forceSync);
     }
 

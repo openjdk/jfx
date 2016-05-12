@@ -143,6 +143,16 @@ public class Image {
             public int[] getNonPreColors(PixelFormat<ByteBuffer> pf) {
                 return ((PixelFormat.IndexedPixelFormat) pf).getNonPreColors();
             }
+
+            @Override
+            public  Object getPlatformImage(Image image) {
+                return image.getPlatformImage();
+            }
+
+            @Override
+            public Image fromPlatformImage(Object image) {
+                return Image.fromPlatformImage(image);
+            }
         });
     }
 
@@ -527,14 +537,7 @@ public class Image {
      */
     private ObjectPropertyImpl<PlatformImage> platformImage;
 
-    /**
-     * @treatAsPrivate implementation detail
-     */
-    // SB-dependency: RT-21219 has been filed to track this
-    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
-    // to new 2.2 public API before we remove this.
-    @Deprecated
-    public final Object impl_getPlatformImage() {
+    final Object getPlatformImage() {
         return platformImage == null ? null : platformImage.get();
     }
 
@@ -949,28 +952,20 @@ public class Image {
     }
 
     // Used by SwingUtils.toFXImage
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: RT-21217 has been filed to track this
-    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
-    // to new 2.2 public API before we remove this.
-    @Deprecated
-    public static Image impl_fromPlatformImage(Object image) {
+    static Image fromPlatformImage(Object image) {
         return new Image(image);
     }
 
     private void setPlatformImageWH(final PlatformImage newPlatformImage,
                                     final double newWidth,
                                     final double newHeight) {
-        if ((impl_getPlatformImage() == newPlatformImage)
+        if ((Toolkit.getImageAccessor().getPlatformImage(this) == newPlatformImage)
                 && (getWidth() == newWidth)
                 && (getHeight() == newHeight)) {
             return;
         }
 
-        final Object oldPlatformImage = impl_getPlatformImage();
+        final Object oldPlatformImage = Toolkit.getImageAccessor().getPlatformImage(this);
         final double oldWidth = getWidth();
         final double oldHeight = getHeight();
 

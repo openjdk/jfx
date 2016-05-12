@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import com.sun.javafx.scene.input.ClipboardHelper;
 import java.io.File;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -133,6 +134,18 @@ import com.sun.javafx.tk.Toolkit;
  * @since JavaFX 2.0
  */
 public class Clipboard {
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        ClipboardHelper.setClipboardAccessor(new ClipboardHelper.ClipboardAccessor() {
+
+            @Override
+            public boolean contentPut(Clipboard clipboard) {
+                return clipboard.contentPut();
+            }
+        });
+    }
 
     /**
      * Whether user has put something on this clipboard. Needed for DnD.
@@ -405,12 +418,7 @@ public class Clipboard {
         return (List<File>) getContent(DataFormat.FILES);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public boolean impl_contentPut() {
+    boolean contentPut() {
         return contentPut;
     }
 

@@ -808,7 +808,7 @@ public abstract class Toolkit {
      * @param context a ImageRenderingContext instance specifying
      *               the various rendering parameters
      * @return a platform specific image object
-     * @see javafx.scene.image.Image#impl_fromPlatformImage
+     * @see Toolkit.getImageAccessor().fromPlatformImage
      */
 
     public abstract Object renderToImage(ImageRenderingContext context);
@@ -948,6 +948,8 @@ public abstract class Toolkit {
         public ReadOnlyObjectProperty<PlatformImage>getImageProperty(Image image);
         public int[] getPreColors(PixelFormat<ByteBuffer> pf);
         public int[] getNonPreColors(PixelFormat<ByteBuffer> pf);
+        public Object getPlatformImage(Image image);
+        public Image fromPlatformImage(Object image);
     }
 
     private static ImageAccessor imageAccessor = null;

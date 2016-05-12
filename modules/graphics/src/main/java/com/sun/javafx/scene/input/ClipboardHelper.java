@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,33 +23,39 @@
  * questions.
  */
 
-package test.javafx.animation;
+package com.sun.javafx.scene.input;
 
-import com.sun.scenario.animation.AbstractMasterTimer;
-import com.sun.scenario.animation.shared.ClipEnvelope;
-import javafx.animation.AnimationShim;
+import com.sun.javafx.util.Utils;
+import javafx.scene.input.Clipboard;
 
-public class AnimationImpl extends AnimationShim {
+/**
+ * Used to access internal methods of Clipboard.
+ */
+public class ClipboardHelper {
 
-    public AnimationImpl(AbstractMasterTimer timer, ClipEnvelope clipEnvelope, int resolution) {
-        super(timer, clipEnvelope, resolution);
+    private static ClipboardAccessor clipboardAccessor;
+
+    static {
+        Utils.forceInit(Clipboard.class);
     }
 
-    public AnimationImpl() {
-        super();
+    private ClipboardHelper() {
     }
 
-    public AnimationImpl(AbstractMasterTimer timer) {
-        super(timer);
+    public static boolean contentPut(Clipboard clipboard) {
+        return clipboardAccessor.contentPut(clipboard);
     }
 
-    @Override
-    public void doPlayTo(long currentTicks, long cycleTicks) {
+    public static void setClipboardAccessor(final ClipboardAccessor newAccessor) {
+        if (clipboardAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        clipboardAccessor = newAccessor;
     }
 
-    @Override
-    public void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
-        setCurrentTicks(currentTicks);
+    public interface ClipboardAccessor {
+        boolean contentPut(Clipboard clipboard);
     }
 
 }

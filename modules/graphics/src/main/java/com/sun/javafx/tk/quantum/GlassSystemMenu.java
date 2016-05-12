@@ -38,6 +38,7 @@ import com.sun.glass.ui.Menu;
 import com.sun.glass.ui.MenuBar;
 import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.Pixels;
+import com.sun.javafx.tk.Toolkit;
 
 import java.util.List;
 
@@ -297,7 +298,7 @@ class GlassSystemMenu implements TKSystemMenu {
             String    url          = im.getUrl();
 
             if (url == null || PixelUtils.supportedFormatType(url)) {
-                com.sun.prism.Image pi = (com.sun.prism.Image)im.impl_getPlatformImage();
+                com.sun.prism.Image pi = (com.sun.prism.Image) Toolkit.getImageAccessor().getPlatformImage(im);
 
                 return pi == null ? null : PixelUtils.imageToPixels(pi);
             }

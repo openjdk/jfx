@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,33 +23,40 @@
  * questions.
  */
 
-package test.javafx.animation;
+package com.sun.javafx.scene.input;
 
-import com.sun.scenario.animation.AbstractMasterTimer;
-import com.sun.scenario.animation.shared.ClipEnvelope;
-import javafx.animation.AnimationShim;
+import com.sun.javafx.util.Utils;
+import javafx.scene.input.TouchPoint;
 
-public class AnimationImpl extends AnimationShim {
+/**
+ * Used to access internal methods of TouchPoint.
+ */
+public class TouchPointHelper {
 
-    public AnimationImpl(AbstractMasterTimer timer, ClipEnvelope clipEnvelope, int resolution) {
-        super(timer, clipEnvelope, resolution);
+    private static TouchPointAccessor touchPointAccessor;
+
+    static {
+        Utils.forceInit(TouchPoint.class);
     }
 
-    public AnimationImpl() {
-        super();
+    private TouchPointHelper() {
     }
 
-    public AnimationImpl(AbstractMasterTimer timer) {
-        super(timer);
+    public static void reset(TouchPoint touchPoint) {
+        touchPointAccessor.reset(touchPoint);
     }
 
-    @Override
-    public void doPlayTo(long currentTicks, long cycleTicks) {
+    public static void setTouchPointAccessor(final TouchPointAccessor newAccessor) {
+        if (touchPointAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        touchPointAccessor = newAccessor;
     }
 
-    @Override
-    public void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
-        setCurrentTicks(currentTicks);
+    public interface TouchPointAccessor {
+        void reset(TouchPoint touchPoint);
     }
 
 }
+

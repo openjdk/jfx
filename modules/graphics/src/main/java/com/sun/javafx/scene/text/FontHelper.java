@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,50 +23,51 @@
  * questions.
  */
 
-package com.sun.javafx.scene.input;
+package com.sun.javafx.scene.text;
 
-import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.util.Utils;
-import javafx.scene.input.Dragboard;
+import javafx.scene.text.Font;
 
 /**
- * Used to access internal methods of Dragboard.
+ * Used to access internal methods of Font.
  */
-public class DragboardHelper {
-    private static DragboardAccessor dragboardAccessor;
+public class FontHelper {
+
+    private static FontAccessor fontAccessor;
 
     static {
-        Utils.forceInit(Dragboard.class);
+        Utils.forceInit(Font.class);
     }
 
-    private DragboardHelper() {
+    private FontHelper() {
     }
 
-    public static void setDataAccessRestriction(Dragboard dragboard,
-            boolean restricted) {
-        dragboardAccessor.setDataAccessRestriction(dragboard, restricted);
+    public static Object getNativeFont(Font font) {
+        return fontAccessor.getNativeFont(font);
     }
 
-    public static TKClipboard getPeer(Dragboard dragboard) {
-        return dragboardAccessor.getPeer(dragboard);
+    public static void setNativeFont(Font font, Object f, String nam,
+            String fam, String styl) {
+        fontAccessor.setNativeFont(font, f, nam, fam, styl);
     }
 
-    public static Dragboard createDragboard(TKClipboard peer) {
-        return dragboardAccessor.createDragboard(peer);
+    public static Font nativeFont(Object f, String name, String family,
+                                       String style, double size) {
+        return fontAccessor.nativeFont(f, name, family, style, size);
     }
 
-    public static void setDragboardAccessor(final DragboardAccessor newAccessor) {
-        if (dragboardAccessor != null) {
+    public static void setFontAccessor(final FontAccessor newAccessor) {
+        if (fontAccessor != null) {
             throw new IllegalStateException();
         }
 
-        dragboardAccessor = newAccessor;
+        fontAccessor = newAccessor;
     }
 
-    public interface DragboardAccessor {
-        void setDataAccessRestriction(Dragboard dragboard, boolean restricted);
-        TKClipboard getPeer(Dragboard dragboard);
-        Dragboard createDragboard(TKClipboard peer);
+    public interface FontAccessor {
+        Object getNativeFont(Font font);
+        void setNativeFont(Font font, Object f, String nam, String fam, String styl);
+        Font nativeFont(Object f, String name, String family, String style, double size);
     }
 
 }

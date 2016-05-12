@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.font;
 
+import com.sun.javafx.scene.text.FontHelper;
 import javafx.scene.text.*;
 import com.sun.javafx.tk.*;
 import java.lang.reflect.Method;
@@ -103,11 +104,11 @@ public class PrismFontLoader extends FontLoader {
 
     @SuppressWarnings("deprecation")
     private Font createFont(PGFont font) {
-        return Font.impl_NativeFont(font,
-                                    font.getName(),
-                                    font.getFamilyName(),
-                                    font.getStyleName(),
-                                    font.getSize());
+        return FontHelper.nativeFont(font,
+                                     font.getName(),
+                                     font.getFamilyName(),
+                                     font.getStyleName(),
+                                     font.getSize());
     }
 
     /**
@@ -181,9 +182,9 @@ public class PrismFontLoader extends FontLoader {
         PGFont prismFont = fontFactory.createFont(family, bold, italic, size);
 
         // Create Font and set implementation
-        Font fxFont = Font.impl_NativeFont(prismFont, prismFont.getName(),
-                                           prismFont.getFamilyName(),
-                                           prismFont.getStyleName(), size);
+        Font fxFont = FontHelper.nativeFont(prismFont, prismFont.getName(),
+                                            prismFont.getFamilyName(),
+                                            prismFont.getStyleName(), size);
         return fxFont;
     }
 
@@ -208,12 +209,12 @@ public class PrismFontLoader extends FontLoader {
         String name = prismFont.getName();
         String family = prismFont.getFamilyName();
         String style = prismFont.getStyleName();
-        font.impl_setNativeFont(prismFont, name, family, style);
+        FontHelper.setNativeFont(font, prismFont, name, family, style);
     }
 
     @Override public FontMetrics getFontMetrics(Font font) {
         if (font != null) {
-            PGFont prismFont = (PGFont)font.impl_getNativeFont();
+            PGFont prismFont = (PGFont) FontHelper.getNativeFont(font);
             Metrics metrics = PrismFontUtils.getFontMetrics(prismFont);
             // TODO: what's the difference between ascent and maxAscent?
             float maxAscent = -metrics.getAscent();//metrics.getMaxAscent();
@@ -230,7 +231,7 @@ public class PrismFontLoader extends FontLoader {
     }
 
     @Override public float getCharWidth(char ch, Font font) {
-        PGFont prismFont = (PGFont)font.impl_getNativeFont();
+        PGFont prismFont = (PGFont) FontHelper.getNativeFont(font);
         return (float)PrismFontUtils.getCharWidth(prismFont, ch);
     }
 

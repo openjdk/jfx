@@ -128,11 +128,8 @@ public class Blend extends Effect {
 
     /**
      * Used by Group to convert the FX BlendMode enum value into a Decora value.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public static Mode impl_getToolkitMode(BlendMode mode) {
+    static Mode getToolkitMode(BlendMode mode) {
         return toPGMode(mode);
     }
 

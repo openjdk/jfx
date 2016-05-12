@@ -78,7 +78,7 @@ public class AnimationSetRateTest {
         assertAnimation(1.5, 1.5, Status.RUNNING, true);
 
         // changing the rate of a animation playing in reverse
-        animation.impl_setCurrentRate(-1.5);
+        animation.setCurrentRate(-1.5);
         animation.setRate(2.2);
         assertAnimation(2.2, -2.2, Status.RUNNING, true);
 
@@ -202,7 +202,7 @@ public class AnimationSetRateTest {
         assertAnimation(1.5, 1.5, Status.RUNNING, true);
 
         // changing the rate of a animation playing in reverse
-        animation.impl_setCurrentRate(-1.5);
+        animation.setCurrentRate(-1.5);
         animation.setRate(0.0);
         assertAnimation(0.0, 0.0, Status.RUNNING, false);
         animation.setRate(2.2);
@@ -259,7 +259,7 @@ public class AnimationSetRateTest {
         assertAnimation(1.5, 1.5, Status.RUNNING, true);
 
         // changing the rate of a paused animation pointing in reverse
-        animation.impl_setCurrentRate(-1.5);
+        animation.setCurrentRate(-1.5);
         animation.pause();
         animation.setRate(2.2);
         assertAnimation(2.2, 0.0, Status.PAUSED, false);
@@ -335,7 +335,7 @@ public class AnimationSetRateTest {
         assertAnimation(1.5, 1.5, Status.RUNNING, true);
 
         // changing the rate of a paused animation pointing in reverse
-        animation.impl_setCurrentRate(-1.5);
+        animation.setCurrentRate(-1.5);
         animation.pause();
         animation.setRate(0.0);
         assertAnimation(0.0, 0.0, Status.PAUSED, false);
