@@ -38,7 +38,6 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
-import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.LayoutFlags;
@@ -363,23 +362,6 @@ public class Scene implements EventTarget {
                     synchronized (trackerMonitor) {
                         return scene.tracker;
                     }
-                }
-            });
-            FXRobotHelper.setSceneAccessor(new FXRobotHelper.FXRobotSceneAccessor() {
-                public void processKeyEvent(Scene scene, KeyEvent keyEvent) {
-                    scene.impl_processKeyEvent(keyEvent);
-                }
-                public void processMouseEvent(Scene scene, MouseEvent mouseEvent) {
-                    scene.impl_processMouseEvent(mouseEvent);
-                }
-                public void processScrollEvent(Scene scene, ScrollEvent scrollEvent) {
-                    scene.processGestureEvent(scrollEvent, scene.scrollGesture);
-                }
-                public ObservableList<Node> getChildren(Parent parent) {
-                    return parent.getChildren(); //was impl_getChildren
-                }
-                public Object renderToImage(Scene scene, Object platformImage) {
-                    return Toolkit.getImageAccessor().getPlatformImage(scene.snapshot(null));
                 }
             });
             SceneHelper.setSceneAccessor(
