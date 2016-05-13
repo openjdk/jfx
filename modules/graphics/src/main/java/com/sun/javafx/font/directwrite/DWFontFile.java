@@ -49,7 +49,7 @@ class DWFontFile extends PrismFontFile {
             }
         }
 
-        if (!isRegistered()) {
+        if (copy) {
             disposer = new DWDisposer(fontFace);
             Disposer.addRecord(this, disposer);
         }
@@ -140,5 +140,28 @@ class DWFontFile extends PrismFontFile {
     protected PrismFontStrike<DWFontFile> createStrike(float size, BaseTransform transform,
                                                        int aaMode, FontStrikeDesc desc) {
         return new DWFontStrike(this, size, transform, aaMode, desc);
+    }
+
+    /* This is called only for fonts where a temp file was created
+     */
+    @Override
+    protected synchronized void disposeOnShutdown() {
+        if (fontFace != null) {
+            //If this isn't done, Windows won't delete the file, since
+            // DW will have it open.
+            if (disposer != null) {
+                disposer.dispose();
+            } else {
+                fontFace.Release();
+                if (PrismFontFactory.debugFonts) {
+                    System.err.println("null disposer for " + fontFace);
+                }
+            }
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("fontFace freed: " + fontFace);
+            }
+            fontFace = null;
+        }
+        super.disposeOnShutdown(); // deletes the file.
     }
 }

@@ -121,7 +121,11 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             AccessController.doPrivileged(
                     (PrivilegedAction<Void>) () -> {
                         try {
-                            (new File(filename)).delete();
+                            boolean delOK = (new File(filename)).delete();
+                            if (!delOK && PrismFontFactory.debugFonts) {
+                                 System.err.println("Temp file not deleted : "
+                                                    + filename);
+                            }
                             /* Embedded fonts (copy) can also be decoded.
                              * Set both flags to false to avoid double deletes.
                              */
