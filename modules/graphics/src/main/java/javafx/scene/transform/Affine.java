@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -5702,25 +5702,15 @@ public class Affine extends Transform {
         throw new InternalError("missing case in a switch");
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public void impl_apply(final Affine3D trans) {
+    void apply(final Affine3D trans) {
         trans.concatenate(getMxx(), getMxy(), getMxz(), getTx(),
                           getMyx(), getMyy(), getMyz(), getTy(),
                           getMzx(), getMzy(), getMzz(), getTz());
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public BaseTransform impl_derive(final BaseTransform trans) {
+    BaseTransform derive(final BaseTransform trans) {
         switch(state3d) {
             default:
                 stateError();
