@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -163,6 +163,9 @@ CSink::CSink(HRESULT *phr) : CBaseRenderer(CLSID_Sink, "CSink", NULL, phr)
 
     m_bForceStereoOutput = false;
     m_bUseExternalAllocator = false;
+
+    m_bEOSInProgress = false;
+    m_bWorkerThreadExits = false;
 }
 
 HRESULT CSink::GetMediaType(int iPosition, CMediaType *pMediaType)
@@ -489,7 +492,18 @@ HRESULT CSink::SendEndOfStream()
     HRESULT hr = CBaseRenderer::SendEndOfStream();
 
     if (m_bEOSDelivered && SinkEventCallback != NULL)
-        SinkEventCallback(SINK_EOS, NULL, 0, &m_UserData);
+    {
+        // Check if sending EOS in progress. If true ignore additional requests.
+        m_WorkerLock.Lock();
+        if (m_bEOSInProgress || m_bWorkerThreadExits)
+        {
+            m_WorkerLock.Unlock();
+            return S_OK;
+        }
+        m_WorkerLock.Unlock();
+
+        CallWorker(CMD_SEND_EOS);
+    }
 
     return hr;
 }
@@ -598,4 +612,62 @@ HRESULT CSink::SetRenderSampleAppCallback(void (*function)(BYTE *pData, long lSi
     RenderSampleApp = function;
 
     return S_OK;
+}
+
+HRESULT CSink::StartWorkerThread()
+{
+    if (Create())
+        return S_OK;
+    else
+        return E_FAIL;
+}
+
+HRESULT CSink::StopWorkerThread()
+{
+    CallWorker(CMD_EXIT);
+    Close(); // Wait for thread to exit
+
+    return S_OK;
+}
+
+DWORD CSink::ThreadProc(void)
+{
+    bool bRun = true;
+
+    while (bRun)
+    {
+        COMMAND cmd = (COMMAND)GetRequest();
+        switch (cmd)
+        {
+        case CMD_SEND_EOS:
+            m_WorkerLock.Lock();
+            m_bEOSInProgress = true;
+            m_WorkerLock.Unlock();
+
+            Reply(S_OK); // Unblock calling thread
+
+            if (SinkEventCallback)
+                SinkEventCallback(SINK_EOS, NULL, 0, &m_UserData);
+
+            m_WorkerLock.Lock();
+            m_bEOSInProgress = false;
+            m_WorkerLock.Unlock();
+            break;
+        case CMD_EXIT:
+            m_WorkerLock.Lock();
+            m_bWorkerThreadExits = true;
+            m_WorkerLock.Unlock();
+
+            bRun = false;
+
+            break;
+        default:
+            bRun = false;
+            break;
+        }
+    }
+
+    Reply(S_FALSE);
+
+    return 0;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,43 +49,43 @@ public abstract class AnimationShim extends Animation {
     }
 
     @Override
-    public void impl_pause() {
-        super.impl_pause();
+    public void doPause() {
+        super.doPause();
     }
 
     @Override
-    public void impl_start(boolean forceSync) {
-        super.impl_start(forceSync);
+    public void doStart(boolean forceSync) {
+        super.doStart(forceSync);
     }
 
     @Override
-    public void impl_setCurrentRate(double currentRate) {
-        super.impl_setCurrentRate(currentRate);
+    public void setCurrentRate(double currentRate) {
+        super.setCurrentRate(currentRate);
     }
 
     @Override
-    public void impl_setCurrentTicks(long ticks) {
-        super.impl_setCurrentTicks(ticks);
+    public void setCurrentTicks(long ticks) {
+        super.setCurrentTicks(ticks);
     }
 
     @Override
-    public boolean impl_startable(boolean forceSync) {
-        return super.impl_startable(forceSync);
+    public boolean startable(boolean forceSync) {
+        return super.startable(forceSync);
     }
 
     @Override
-    public void impl_stop() {
-        super.impl_stop();
+    public void doStop() {
+        super.doStop();
     }
 
     @Override
-    public void impl_sync(boolean forceSync) {
-        super.impl_sync(forceSync);
+    public void sync(boolean forceSync) {
+        super.sync(forceSync);
     }
 
     @Override
-    public void impl_timePulse(long elapsedTime) {
-        super.impl_timePulse(elapsedTime);
+    public void doTimePulse(long elapsedTime) {
+        super.doTimePulse(elapsedTime);
     }
 
     @Override
@@ -111,28 +111,28 @@ public abstract class AnimationShim extends Animation {
         return pulseReceiver;
     }
 
-    public void shim_impl_finished() {
-        impl_finished();
+    public void shim_finished() {
+        finished();
     }
 
     @Override
-    abstract public void impl_playTo(long currentTicks, long cycleTicks);
+    abstract public void doPlayTo(long currentTicks, long cycleTicks);
 
     @Override
-    abstract public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump);
+    abstract public void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump);
 
     //-------------------------------
 
-    public static void impl_finished(Animation a) {
-        a.impl_finished();
+    public static void finished(Animation a) {
+        a.finished();
     }
 
-    public static void impl_start(Animation a, boolean forceSync) {
-        a.impl_start(forceSync);
+    public static void doStart(Animation a, boolean forceSync) {
+        a.doStart(forceSync);
     }
 
-    public static boolean impl_startable(Animation a, boolean forceSync) {
-        return a.impl_startable(forceSync);
+    public static boolean startable(Animation a, boolean forceSync) {
+        return a.startable(forceSync);
     }
 
 }

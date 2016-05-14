@@ -48,6 +48,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
 import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.text.FontHelper;
 import java.net.URL;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
@@ -96,7 +97,7 @@ public class Utils {
     static final TextLayout layout = Toolkit.getToolkit().getTextLayoutFactory().createLayout();
 
     public static double getAscent(Font font, TextBoundsType boundsType) {
-        layout.setContent("", font.impl_getNativeFont());
+        layout.setContent("", FontHelper.getNativeFont(font));
         layout.setWrapWidth(0);
         layout.setLineSpacing(0);
         if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
@@ -108,7 +109,7 @@ public class Utils {
     }
 
     public static double getLineHeight(Font font, TextBoundsType boundsType) {
-        layout.setContent("", font.impl_getNativeFont());
+        layout.setContent("", FontHelper.getNativeFont(font));
         layout.setWrapWidth(0);
         layout.setLineSpacing(0);
         if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
@@ -122,7 +123,7 @@ public class Utils {
     }
 
     public static double computeTextWidth(Font font, String text, double wrappingWidth) {
-        layout.setContent(text != null ? text : "", font.impl_getNativeFont());
+        layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
         layout.setWrapWidth((float)wrappingWidth);
         return layout.getBounds().getWidth();
     }
@@ -133,7 +134,7 @@ public class Utils {
 
     @SuppressWarnings("deprecation")
     public static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing, TextBoundsType boundsType) {
-        layout.setContent(text != null ? text : "", font.impl_getNativeFont());
+        layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
         layout.setWrapWidth((float)wrappingWidth);
         layout.setLineSpacing((float)lineSpacing);
         if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {

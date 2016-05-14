@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import javafx.scene.transform.Affine;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Transform;
+import javafx.scene.transform.TransformShim;
 
 import static org.junit.Assert.*;
 
@@ -155,13 +156,10 @@ public class TransformTest {
 
     @Test
     public void defaultTransformShouldBeIdentity() {
-        final Transform t = new Transform() {
-            @Override
-            public void impl_apply(com.sun.javafx.geom.transform.Affine3D ad) {}
-
-            @Override
-            public BaseTransform impl_derive(BaseTransform ad) { return null; }
-        };
+        final Transform t = TransformShim.createRawTransform(
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0);
 
         TransformHelper.assertMatrix(t,
                 1, 0, 0, 0,

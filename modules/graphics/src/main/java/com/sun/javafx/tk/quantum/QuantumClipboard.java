@@ -356,7 +356,7 @@ final class QuantumClipboard implements TKClipboard {
                 pixels);
             ImageLoader il =  Toolkit.getToolkit().loadPlatformImage(
                 platformImage);
-            return Image.impl_fromPlatformImage(il);
+            return Toolkit.getImageAccessor().fromPlatformImage(il);
         }
     }
 
@@ -436,7 +436,7 @@ final class QuantumClipboard implements TKClipboard {
         String url = image.getUrl();
         if (url == null || PixelUtils.supportedFormatType(url)) {
             com.sun.prism.Image prismImage =
-                        (com.sun.prism.Image)image.impl_getPlatformImage();
+                    (com.sun.prism.Image) Toolkit.getImageAccessor().getPlatformImage(image);
             Pixels pixels = PixelUtils.imageToPixels(prismImage);
             if (pixels != null) {
                 systemAssistant.setData(Clipboard.RAW_IMAGE_TYPE, pixels);

@@ -308,8 +308,8 @@ public final class FillTransition extends Transition {
     }
 
     @Override
-    boolean impl_startable(boolean forceSync) {
-        if (!super.impl_startable(forceSync)) {
+    boolean startable(boolean forceSync) {
+        if (!super.startable(forceSync)) {
             return false;
         }
         // check if synchronization is not forced and cached values are valid
@@ -331,8 +331,8 @@ public final class FillTransition extends Transition {
     }
 
     @Override
-    void impl_sync(boolean forceSync) {
-        super.impl_sync(forceSync);
+    void sync(boolean forceSync) {
+        super.sync(forceSync);
         if (forceSync || (cachedShape == null)) {
             cachedShape = getTargetShape();
             final Color _fromValue = getFromValue();

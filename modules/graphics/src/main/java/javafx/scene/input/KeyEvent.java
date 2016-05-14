@@ -30,8 +30,6 @@ import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
-import com.sun.javafx.robot.impl.FXRobotHelper;
-import com.sun.javafx.robot.impl.FXRobotHelper.FXRobotInputAccessor;
 import com.sun.javafx.scene.input.KeyCodeMap;
 import javafx.event.Event;
 import javafx.scene.input.ScrollEvent.HorizontalTextScrollUnits;
@@ -113,68 +111,6 @@ public final class KeyEvent extends InputEvent {
      */
     public static final EventType<KeyEvent> KEY_TYPED =
             new EventType<KeyEvent>(KeyEvent.ANY, "KEY_TYPED");
-
-    static {
-        FXRobotInputAccessor a = new FXRobotInputAccessor() {
-            @Override public int getCodeForKeyCode(KeyCode keyCode) {
-                return keyCode.code;
-            }
-            @Override public KeyCode getKeyCodeForCode(int code) {
-                return KeyCodeMap.valueOf(code);
-            }
-            @Override public KeyEvent createKeyEvent(
-                EventType<? extends KeyEvent> eventType,
-                KeyCode code, String character, String text,
-                boolean shiftDown, boolean controlDown,
-                boolean altDown, boolean metaDown)
-            {
-                return new KeyEvent((EventType<KeyEvent>)eventType, character, text, code,
-                        shiftDown, controlDown, altDown, metaDown);
-            }
-            @Override public MouseEvent createMouseEvent(
-                EventType<? extends MouseEvent> eventType,
-                int x, int y, int screenX, int screenY,
-                MouseButton button, int clickCount, boolean shiftDown,
-                boolean controlDown, boolean altDown, boolean metaDown,
-                boolean popupTrigger, boolean primaryButtonDown,
-                boolean middleButtonDown, boolean secondaryButtonDown)
-            {
-                return new MouseEvent(eventType, x, y,
-                                           screenX, screenY,
-                                           button, clickCount,
-                                           shiftDown,
-                                           controlDown,
-                                           altDown,
-                                           metaDown,
-                                           primaryButtonDown,
-                                           middleButtonDown,
-                                           secondaryButtonDown,
-                                           false,
-                                           popupTrigger,
-                                           false,
-                                           null
-                                           );
-            }
-
-            @Override
-            public ScrollEvent createScrollEvent(
-                    EventType<? extends ScrollEvent> eventType,
-                    int scrollX, int scrollY,
-                    HorizontalTextScrollUnits xTextUnits, int xText,
-                    VerticalTextScrollUnits yTextUnits, int yText,
-                    int x, int y, int screenX, int screenY,
-                    boolean shiftDown, boolean controlDown,
-                    boolean altDown, boolean metaDown) {
-                return new ScrollEvent(ScrollEvent.SCROLL,
-                        x, y, screenX, screenY,
-                        shiftDown, controlDown, altDown, metaDown, false, false,
-                        scrollX, scrollY, 0, 0,
-                        xTextUnits, xText, yTextUnits, yText,
-                        0, null);
-            }
-        };
-        FXRobotHelper.setInputAccessor(a);
-    }
 
     /**
      * Constructs new KeyEvent event with null source and target and KeyCode object directly specified.

@@ -35,6 +35,7 @@ import com.sun.javafx.image.*;
 import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.sg.prism.GrowableDataBuffer;
 import com.sun.javafx.sg.prism.NGCanvas;
+import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.scenario.effect.EffectHelper;
 import javafx.geometry.NodeOrientation;
@@ -748,7 +749,7 @@ public final class GraphicsContext {
                             double dx, double dy, double dw, double dh)
     {
         if (img == null || img.getProgress() < 1.0) return;
-        Object platformImg = img.impl_getPlatformImage();
+        Object platformImg = Toolkit.getImageAccessor().getPlatformImage(img);
         if (platformImg == null) return;
         updateTransform();
         GrowableDataBuffer buf = getBuffer();
@@ -761,7 +762,7 @@ public final class GraphicsContext {
                             double sx, double sy, double sw, double sh)
     {
         if (img == null || img.getProgress() < 1.0) return;
-        Object platformImg = img.impl_getPlatformImage();
+        Object platformImg = Toolkit.getImageAccessor().getPlatformImage(img);
         if (platformImg == null) return;
         updateTransform();
         GrowableDataBuffer buf = getBuffer();
@@ -1131,7 +1132,7 @@ public final class GraphicsContext {
             GrowableDataBuffer buf = getBuffer();
             curState.blendop = op;
             buf.putByte(NGCanvas.COMP_MODE);
-            buf.putObject(Blend.impl_getToolkitMode(op));
+            buf.putObject(EffectHelper.getToolkitBlendMode(op));
         }
     }
 
@@ -1482,7 +1483,7 @@ public final class GraphicsContext {
             curState.font = f;
             GrowableDataBuffer buf = getBuffer();
             buf.putByte(NGCanvas.FONT);
-            buf.putObject(f.impl_getNativeFont());
+            buf.putObject(FontHelper.getNativeFont(f));
         }
     }
 

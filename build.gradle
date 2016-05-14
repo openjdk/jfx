@@ -399,6 +399,10 @@ ext.IS_BUILD_JAVADOC = Boolean.parseBoolean(BUILD_JAVADOC)
 defineProperty("BUILD_SRC_ZIP", "false")
 ext.IS_BUILD_SRC_ZIP = Boolean.parseBoolean(BUILD_SRC_ZIP)
 
+// Specifies whether to build the javafx-exports bundle
+defineProperty("BUILD_MODULE_ZIP", "true")
+ext.IS_BUILD_MODULE_ZIP = Boolean.parseBoolean(BUILD_MODULE_ZIP)
+
 // Specifies whether to run full tests (true) or smoke tests (false)
 defineProperty("FULL_TEST", "false")
 ext.IS_FULL_TEST = Boolean.parseBoolean(FULL_TEST);
@@ -3412,6 +3416,8 @@ compileTargets { t ->
     project.files(xpatchFile);
 
     def zipTask = project.task("buildModuleZip$t.capital", type: Zip, group: "Build") {
+        enabled = IS_BUILD_MODULE_ZIP
+
         // FIXME: JIGSAW -- this should be moved to a sub-directory so we can keep the same name
         def jfxBundle = "${platformPrefix}javafx-exports.zip"
 

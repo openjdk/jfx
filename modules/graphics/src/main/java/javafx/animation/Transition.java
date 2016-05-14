@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -191,30 +191,30 @@ public abstract class Transition extends Animation {
     }
 
     @Override
-    boolean impl_startable(boolean forceSync) {
-        return super.impl_startable(forceSync)
+    boolean startable(boolean forceSync) {
+        return super.startable(forceSync)
                 && ((getInterpolator() != null) || (!forceSync && (cachedInterpolator != null)));
     }
 
     @Override
-    void impl_sync(boolean forceSync) {
-        super.impl_sync(forceSync);
+    void sync(boolean forceSync) {
+        super.sync(forceSync);
         if (forceSync || (cachedInterpolator == null)) {
             cachedInterpolator = getInterpolator();
         }
     }
 
     @Override
-    void impl_playTo(long currentTicks, long cycleTicks) {
-        impl_setCurrentTicks(currentTicks);
+    void doPlayTo(long currentTicks, long cycleTicks) {
+        setCurrentTicks(currentTicks);
         interpolate(calculateFraction(currentTicks, cycleTicks));
     }
 
     @Override
-    void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
-        impl_setCurrentTicks(currentTicks);
+    void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        setCurrentTicks(currentTicks);
         if (getStatus() != Status.STOPPED || forceJump) {
-            impl_sync(false);
+            sync(false);
             interpolate(calculateFraction(currentTicks, cycleTicks));
         }
     }

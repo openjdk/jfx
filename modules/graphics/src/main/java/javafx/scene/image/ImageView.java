@@ -772,7 +772,8 @@ public class ImageView extends Node {
             return false;
         }
         // Do alpha test on the picked pixel.
-        return Toolkit.getToolkit().imageContains(localImage.impl_getPlatformImage(), (float)dx, (float)dy);
+        return Toolkit.getToolkit().imageContains(
+                Toolkit.getImageAccessor().getPlatformImage(localImage), (float)dx, (float)dy);
     }
 
     /***************************************************************************
@@ -836,7 +837,7 @@ public class ImageView extends Node {
 
     void updateViewport() {
         recomputeWidthHeight();
-        if (getImage() == null || getImage().impl_getPlatformImage() == null) {
+        if (getImage() == null || Toolkit.getImageAccessor().getPlatformImage(getImage()) == null) {
             return;
         }
 
@@ -868,7 +869,8 @@ public class ImageView extends Node {
             peer.setSmooth(isSmooth());
         }
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
-            peer.setImage(getImage()!= null? getImage().impl_getPlatformImage():null);
+            peer.setImage(getImage() != null
+                    ? Toolkit.getImageAccessor().getPlatformImage(getImage()) : null);
         }
         // The NG part expects this to be called when image changes
         if (impl_isDirty(DirtyBits.NODE_VIEWPORT) || impl_isDirty(DirtyBits.NODE_CONTENTS)) {

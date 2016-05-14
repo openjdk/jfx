@@ -26,6 +26,7 @@
 package javafx.scene.paint;
 
 import com.sun.javafx.beans.event.AbstractNotifyListener;
+import com.sun.javafx.scene.paint.MaterialHelper;
 import com.sun.javafx.sg.prism.NGPhongMaterial;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.Observable;
@@ -444,31 +445,21 @@ public class PhongMaterial extends Material {
     /** The peer node created by the graphics Toolkit/Pipeline implementation */
     private NGPhongMaterial peer;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public NGPhongMaterial impl_getNGMaterial() {
+    NGPhongMaterial getNGMaterial() {
         if (peer == null) {
             peer = new NGPhongMaterial();
         }
         return peer;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    public void impl_updatePG(){
+    void updatePG(){
         if (!isDirty()) {
             return;
         }
 
-        final NGPhongMaterial pMaterial = impl_getNGMaterial();
+        final NGPhongMaterial pMaterial = MaterialHelper.getNGMaterial(this);
         if (diffuseColorDirty) {
             pMaterial.setDiffuseColor(getDiffuseColor() == null ? null
                     : Toolkit.getPaintAccessor().getPlatformPaint(getDiffuseColor()));
@@ -482,19 +473,19 @@ public class PhongMaterial extends Material {
         }
         if (diffuseMapDirty) {
             pMaterial.setDiffuseMap(getDiffuseMap()
-                    == null ? null : getDiffuseMap().impl_getPlatformImage());
+                    == null ? null : Toolkit.getImageAccessor().getPlatformImage(getDiffuseMap()));
         }
         if (specularMapDirty) {
             pMaterial.setSpecularMap(getSpecularMap()
-                    == null ? null : getSpecularMap().impl_getPlatformImage());
+                    == null ? null : Toolkit.getImageAccessor().getPlatformImage(getSpecularMap()));
         }
         if (bumpMapDirty) {
             pMaterial.setBumpMap(getBumpMap()
-                    == null ? null : getBumpMap().impl_getPlatformImage());
+                    == null ? null : Toolkit.getImageAccessor().getPlatformImage(getBumpMap()));
         }
         if (selfIlluminationMapDirty) {
             pMaterial.setSelfIllumMap(getSelfIlluminationMap()
-                    == null ? null : getSelfIlluminationMap().impl_getPlatformImage());
+                    == null ? null : Toolkit.getImageAccessor().getPlatformImage(getSelfIlluminationMap()));
         }
 
         setDirty(false);

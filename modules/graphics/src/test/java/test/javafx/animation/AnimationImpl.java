@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,12 +44,12 @@ public class AnimationImpl extends AnimationShim {
     }
 
     @Override
-    public void impl_playTo(long currentTicks, long cycleTicks) {
+    public void doPlayTo(long currentTicks, long cycleTicks) {
     }
 
     @Override
-    public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
-        impl_setCurrentTicks(currentTicks);
+    public void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+        setCurrentTicks(currentTicks);
     }
 
 }

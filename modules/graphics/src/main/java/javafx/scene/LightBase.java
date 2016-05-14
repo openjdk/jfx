@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.ConditionalFeature;
@@ -277,7 +278,7 @@ public abstract class LightBase extends Node {
 
         if (impl_isDirty(DirtyBits.NODE_LIGHT_TRANSFORM)) {
             localToSceneTx.setToIdentity();
-            getLocalToSceneTransform().impl_apply(localToSceneTx);
+            TransformHelper.apply(getLocalToSceneTransform(), localToSceneTx);
             // TODO: 3D - For now, we are treating the scene as world. This may need to change
             // for the fixed eye position case.
             peer.setWorldTransform(localToSceneTx);

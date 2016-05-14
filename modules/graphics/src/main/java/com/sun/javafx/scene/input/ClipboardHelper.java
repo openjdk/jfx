@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,37 +23,39 @@
  * questions.
  */
 
-package com.sun.javafx.scene.transform;
+package com.sun.javafx.scene.input;
 
-import com.sun.javafx.scene.transform.TransformUtils.ImmutableTransform;
-import javafx.scene.transform.Transform;
+import com.sun.javafx.util.Utils;
+import javafx.scene.input.Clipboard;
 
-public class TransformUtilsShim {
+/**
+ * Used to access internal methods of Clipboard.
+ */
+public class ClipboardHelper {
 
-    public static Transform getImmutableTransform(Transform transform) {
-        return new TransformUtils.ImmutableTransform(transform);
+    private static ClipboardAccessor clipboardAccessor;
+
+    static {
+        Utils.forceInit(Clipboard.class);
     }
 
-    public static Transform getImmutableTransform(
-            double mxx, double mxy, double mxz, double tx,
-            double myx, double myy, double myz, double ty,
-            double mzx, double mzy, double mzz, double tz) {
-        return new TransformUtils.ImmutableTransform(
-                mxx, mxy, mxz, tx,
-                myx, myy, myz, ty,
-                mzx, mzy, mzz, tz);
+    private ClipboardHelper() {
     }
 
-    public static int getImmutableState2d(Transform t) {
-        return ((TransformUtils.ImmutableTransform) t).getState2d();
+    public static boolean contentPut(Clipboard clipboard) {
+        return clipboardAccessor.contentPut(clipboard);
     }
 
-    public static int getImmutableState3d(Transform t) {
-        return ((TransformUtils.ImmutableTransform) t).getState3d();
+    public static void setClipboardAccessor(final ClipboardAccessor newAccessor) {
+        if (clipboardAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        clipboardAccessor = newAccessor;
     }
 
-    public static class ImmutableTransformShim extends ImmutableTransform  {
-
+    public interface ClipboardAccessor {
+        boolean contentPut(Clipboard clipboard);
     }
 
 }

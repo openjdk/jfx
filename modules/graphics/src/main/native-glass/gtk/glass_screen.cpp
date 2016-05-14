@@ -23,12 +23,17 @@
  * questions.
  */
 
+#include <stdlib.h>
+
 #include "glass_screen.h"
 #include "glass_general.h"
 
 #include <X11/Xatom.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
+#include <gio/gio.h>
+
+jfloat OverrideUIScale = -1.0f;
 
 static guint get_current_desktop(GdkScreen *screen) {
     Display* display = gdk_x11_display_get_xdisplay(gdk_display_get_default());
@@ -116,29 +121,59 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
     GdkRectangle working_monitor_geometry;
     gdk_rectangle_intersect(&workArea, &monitor_geometry, &working_monitor_geometry);
 
+    jfloat uiScale;
+    if (OverrideUIScale > 0.0f) {
+        uiScale = OverrideUIScale;
+    } else {
+        char *scale_str = getenv("GDK_SCALE");
+        int gdk_scale = (scale_str == NULL) ? -1 : atoi(scale_str);
+        if (gdk_scale > 0) {
+            uiScale = (jfloat) gdk_scale;
+        } else {
+            GSettings *gset = g_settings_new("org.gnome.desktop.interface");
+            uiScale = (jfloat) g_settings_get_uint(gset, "scaling-factor");
+        }
+    }
+
+    gint dpi = gdk_screen_get_resolution(screen);
+    dpi /= uiScale;
+    jint mx = monitor_geometry.x / uiScale;
+    jint my = monitor_geometry.y / uiScale;
+    jint mw = monitor_geometry.width / uiScale;
+    jint mh = monitor_geometry.height / uiScale;
+    jint wx = working_monitor_geometry.x / uiScale;
+    jint wy = working_monitor_geometry.y / uiScale;
+    jint ww = working_monitor_geometry.width / uiScale;
+    jint wh = working_monitor_geometry.height / uiScale;
+
     jobject jScreen = env->NewObject(jScreenCls, jScreenInit,
                                      (jlong)monitor_idx,
 
                                      (visual ? glass_gdk_visual_get_depth(visual) : 0),
 
-                                     monitor_geometry.x,
-                                     monitor_geometry.y,
-                                     monitor_geometry.width,
-                                     monitor_geometry.height,
+//                                     monitor_geometry.x,
+//                                     monitor_geometry.y,
+//                                     monitor_geometry.width,
+//                                     monitor_geometry.height,
+                                     mx, my, mw, mh,
 
                                      monitor_geometry.x,
                                      monitor_geometry.y,
                                      monitor_geometry.width,
                                      monitor_geometry.height,
 
-                                     working_monitor_geometry.x,
-                                     working_monitor_geometry.y,
-                                     working_monitor_geometry.width,
-                                     working_monitor_geometry.height,
+//                                     working_monitor_geometry.x,
+//                                     working_monitor_geometry.y,
+//                                     working_monitor_geometry.width,
+//                                     working_monitor_geometry.height,
+                                     wx, wy, ww, wh,
 
-                                     (jint)gdk_screen_get_resolution(screen),
-                                     (jint)gdk_screen_get_resolution(screen),
-                                     1.0f, 1.0f, 1.0f, 1.0f);
+//                                     (jint)gdk_screen_get_resolution(screen),
+//                                     (jint)gdk_screen_get_resolution(screen),
+                                     dpi, dpi,
+//                                     1.0f, 1.0f, 1.0f, 1.0f);
+                                     uiScale, uiScale, uiScale, uiScale);
+
     JNI_EXCEPTION_TO_CPP(env);
     return jScreen;
 }

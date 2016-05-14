@@ -99,8 +99,8 @@ public class SequentialTransitionPlayTest {
             }
 
             @Override
-            public void impl_sync(boolean forceSync) {
-                super.impl_sync(forceSync);
+            public void sync(boolean forceSync) {
+                super.sync(forceSync);
                 if (forceSync) {
                     lastX = xProperty.get();
                 }

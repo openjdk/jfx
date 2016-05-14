@@ -55,6 +55,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     private Comparator<Element<E>> elementComparator;
     private Element<E>[] sorted;
+    private int[] perm;
     private int size;
 
     private final SortHelper helper = new SortHelper();
@@ -73,9 +74,11 @@ public final class SortedList<E> extends TransformationList<E, E>{
     public SortedList(@NamedArg("source") ObservableList<? extends E> source, @NamedArg("comparator") Comparator<? super E> comparator) {
         super(source);
         sorted = (Element<E>[]) new Element[source.size() *3/2 + 1];
+        perm = new int[sorted.length];
         size = source.size();
         for (int i = 0; i < size; ++i) {
             sorted[i] = new Element<E>(source.get(i), i);
+            perm[i] = i;
         }
         if (comparator != null) {
             setComparator(comparator);
@@ -180,6 +183,9 @@ public final class SortedList<E> extends TransformationList<E, E>{
     private void doSortWithPermutationChange() {
         if (elementComparator != null) {
             int[] perm = helper.sort(sorted, 0, size, elementComparator);
+            for (int i = 0; i < size; i++) {
+                this.perm[sorted[i].index] = i;
+            }
             fireChange(new SimplePermutationChange<>(0, size, perm, this));
         } else {
             int[] perm = new int[size];
@@ -198,6 +204,8 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 Element<E> other = sorted[otherIdx];
                 sorted[otherIdx] = sorted[idx];
                 sorted[idx] = other;
+                this.perm[idx] = idx;
+                this.perm[otherIdx] = otherIdx;
                 perm[rperm[idx]] = otherIdx;
                 perm[rperm[otherIdx]] = idx;
                 int tp = rperm[idx];
@@ -216,9 +224,16 @@ public final class SortedList<E> extends TransformationList<E, E>{
         return sorted[index].index;
     }
 
+    @Override
+    public int getViewIndex(int index) {
+        return perm[index];
+    }
+
     private void updatePermutationIndexes(Change<? extends E> change) {
         for (int i = 0; i < size; ++i) {
-            sorted[i].index = change.getPermutation(sorted[i].index);
+            int p = change.getPermutation(sorted[i].index);
+            sorted[i].index = p;
+            perm[p] = i;
         }
     }
 
@@ -228,7 +243,10 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 Element[] sortedTmp = new Element[sorted.length];
                 for (int i = 0; i < size; ++i) {
                     if (i >= c.getFrom() && i < c.getTo()) {
-                        sortedTmp[c.getPermutation(i)] = sorted[i];
+                        int p = c.getPermutation(i);
+                        sortedTmp[p] = sorted[i];
+                        sortedTmp[p].index = p;
+                        perm[i] = i;
                     } else {
                         sortedTmp[i] = sorted[i];
                     }
@@ -238,16 +256,19 @@ public final class SortedList<E> extends TransformationList<E, E>{
             if (c.wasRemoved()) {
                 final int removedTo = c.getFrom() + c.getRemovedSize();
                 System.arraycopy(sorted, removedTo, sorted, c.getFrom(), size - removedTo);
+                System.arraycopy(perm, removedTo, perm, c.getFrom(), size - removedTo);
                 size -= c.getRemovedSize();
-                updateIndices(removedTo, -c.getRemovedSize());
+                updateIndices(removedTo, removedTo, -c.getRemovedSize());
             }
             if (c.wasAdded()) {
                 ensureSize(size + c.getAddedSize());
-                updateIndices(c.getFrom(), c.getAddedSize());
+                updateIndices(c.getFrom(), c.getFrom(), c.getAddedSize());
                 System.arraycopy(sorted, c.getFrom(), sorted, c.getTo(), size - c.getFrom());
+                System.arraycopy(perm, c.getFrom(), perm, c.getTo(), size - c.getFrom());
                 size += c.getAddedSize();
                 for (int i = c.getFrom(); i < c.getTo(); ++i) {
                     sorted[i] = new Element<E>(c.getList().get(i), i);
+                    perm[i] = i;
                 }
             }
         }
@@ -280,19 +301,24 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     }
 
-    @SuppressWarnings("unchecked")
     private void ensureSize(int size) {
         if (sorted.length < size) {
             Element<E>[] replacement = new Element[size * 3/2 + 1];
             System.arraycopy(sorted, 0, replacement, 0, this.size);
-            sorted = (Element<E>[]) replacement;
+            sorted = replacement;
+            int[] replacementPerm = new int[size * 3/2 + 1];
+            System.arraycopy(perm, 0, replacementPerm, 0, this.size);
+            perm = replacementPerm;
         }
     }
 
-    private void updateIndices(int from, int difference) {
+    private void updateIndices(int from, int viewFrom, int difference) {
         for (int i = 0 ; i < size; ++i) {
             if (sorted[i].index >= from) {
                 sorted[i].index += difference;
+            }
+            if (perm[i] >= viewFrom) {
+                perm[i] += difference;
             }
         }
     }
@@ -306,40 +332,17 @@ public final class SortedList<E> extends TransformationList<E, E>{
         return pos;
     }
 
-    private int compare(E e1, E e2) {
-        Comparator<? super E> comp = getComparator();
-        return comp == null ? ((Comparable)e1).compareTo(e2) :
-                comp.compare(e1, e2);
-    }
-
-    @SuppressWarnings("empty-statement")
-    private int findPosition(int idx ,E e) {
-        int pos = findPosition(e);
-        if (sorted[pos].index == idx) {
-            return pos;
-        }
-        int tmp = pos;
-        while (tmp != 0 && sorted[--tmp].index != idx && compare(sorted[tmp].e, e) == 0);
-        if (sorted[tmp].index == idx) {
-            return tmp;
-        }
-        tmp = pos;
-        while (tmp != (size - 1) && sorted[++tmp].index != idx && compare(sorted[tmp].e, e) == 0);
-        if (sorted[tmp].index == idx) {
-            return tmp;
-        }
-        return -1;
-    }
-
     private void insertToMapping(E e, int idx) {
         int pos = findPosition(e);
         if (pos < 0) {
             pos = ~pos;
         }
         ensureSize(size + 1);
-        updateIndices(idx, 1);
+        updateIndices(idx, pos, 1);
         System.arraycopy(sorted, pos, sorted, pos + 1, size - pos);
         sorted[pos] = new Element<>(e, idx);
+        System.arraycopy(perm, idx, perm, idx + 1, size - idx);
+        perm[idx] = pos;
         ++size;
         nextAdd(pos, pos + 1);
 
@@ -351,16 +354,19 @@ public final class SortedList<E> extends TransformationList<E, E>{
         for (int i = 0; i < to; ++i) {
             sorted[i] = new Element<E>(list.get(i), i);
         }
-        Arrays.sort(sorted, 0, size, elementComparator);
+        int[] perm = helper.sort(sorted, 0, size, elementComparator);
+        System.arraycopy(perm, 0, this.perm, 0, size);
         nextAdd(0, size);
     }
 
     private void removeFromMapping(int idx, E e) {
-        int pos = findPosition(idx, e);
+        int pos = perm[idx];
         System.arraycopy(sorted, pos + 1, sorted, pos, size - pos - 1);
+        System.arraycopy(perm, idx + 1, perm, idx, size - idx - 1);
         --size;
         sorted[size] = null;
-        updateIndices(idx + 1, - 1);
+        updateIndices(idx + 1, pos, - 1);
+
         nextRemove(pos, e);
     }
 
@@ -375,9 +381,12 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     private void update(Change<? extends E> c) {
         int[] perm = helper.sort(sorted, 0, size, elementComparator);
+        for (int i = 0; i < size; i++) {
+            this.perm[sorted[i].index] = i;
+        }
         nextPermutation(0, size, perm);
         for (int i = c.getFrom(), to = c.getTo(); i < to; ++i) {
-            nextUpdate(findPosition(i, c.getList().get(i)));
+            nextUpdate(this.perm[i]);
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -265,25 +265,25 @@ public class TransformOperationsTest {
     private static final Transform immutable_nonInv_sc_tr_y =
             TransformHelper.immutableTransform(0, 0, 0, 0, 2, 7);
     private static final Transform raw_arbitrary_nonInvertible =
-            TransformHelper.rawTransform( 5,  6,  7,  8,
-                                         10, 11, 12, 13,
-                                         15, 16, 17, 18);
+            TransformShim.createRawTransform(5,  6,  7,  8,
+                                            10, 11, 12, 13,
+                                            15, 16, 17, 18);
     private static final Transform raw_arbitrary =
-            TransformHelper.rawTransform( 5,  6, 13,  8,
-                                         10,  4, 12, 13,
-                                         15, 16, 26, 18);
+            TransformShim.createRawTransform(5,  6, 13,  8,
+                                            10,  4, 12, 13,
+                                            15, 16, 26, 18);
     private static final Transform raw_empty =
-            TransformHelper.rawTransform(0, 0, 0, 0,
-                                         0, 0, 0, 0,
-                                         0, 0, 0, 0);
+            TransformShim.createRawTransform(0, 0, 0, 0,
+                                             0, 0, 0, 0,
+                                             0, 0, 0, 0);
     private static final Transform raw_emptyZ =
-            TransformHelper.rawTransform(1, 0, 0, 0,
-                                         0, 1, 0, 0,
-                                         0, 0, 0, 0);
+            TransformShim.createRawTransform(1, 0, 0, 0,
+                                             0, 1, 0, 0,
+                                             0, 0, 0, 0);
     private static final Transform raw_emptyXY =
-            TransformHelper.rawTransform(0, 0, 0, 0,
-                                         0, 0, 0, 0,
-                                         0, 0, 1, 0);
+            TransformShim.createRawTransform(0, 0, 0, 0,
+                                             0, 0, 0, 0,
+                                             0, 0, 1, 0);
 
     private boolean listenerCalled;
     private int eventCounter;

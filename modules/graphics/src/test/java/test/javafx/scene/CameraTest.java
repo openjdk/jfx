@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -144,7 +144,8 @@ public class CameraTest {
         camera.getParent().setTranslateY(100);
         Affine3D expected = new Affine3D();
         try {
-            camera.getLocalToSceneTransform().createInverse().impl_apply(expected);
+            com.sun.javafx.scene.transform.TransformHelper.apply(
+                    camera.getLocalToSceneTransform().createInverse(), expected);
         } catch (NonInvertibleTransformException ex) {
             fail("NonInvertibleTransformException when compute sceneToLocalTx.");
         }
@@ -154,7 +155,8 @@ public class CameraTest {
         camera.setScaleX(10);
         expected.setToIdentity();
         try {
-            camera.getLocalToSceneTransform().createInverse().impl_apply(expected);
+            com.sun.javafx.scene.transform.TransformHelper.apply(
+                    camera.getLocalToSceneTransform().createInverse(), expected);
         } catch (NonInvertibleTransformException ex) {
             fail("NonInvertibleTransformException when compute sceneToLocalTx.");
         }
@@ -171,7 +173,8 @@ public class CameraTest {
         assertEquals(expected, CameraShim.getSceneToLocalTransform(camera));
 
         try {
-            camera.getLocalToSceneTransform().createInverse().impl_apply(expected);
+            com.sun.javafx.scene.transform.TransformHelper.apply(
+                    camera.getLocalToSceneTransform().createInverse(), expected);
         } catch (NonInvertibleTransformException ex) {
             fail("NonInvertibleTransformException when compute sceneToLocalTx.");
         }
@@ -181,7 +184,8 @@ public class CameraTest {
         camera.setScaleX(10);
         expected.setToIdentity();
         try {
-            camera.getLocalToSceneTransform().createInverse().impl_apply(expected);
+            com.sun.javafx.scene.transform.TransformHelper.apply(
+                    camera.getLocalToSceneTransform().createInverse(), expected);
         } catch (NonInvertibleTransformException ex) {
             fail("NonInvertibleTransformException when compute sceneToLocalTx.");
         }

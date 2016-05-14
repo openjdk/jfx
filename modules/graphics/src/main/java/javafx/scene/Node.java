@@ -153,6 +153,7 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
@@ -647,7 +648,7 @@ public abstract class Node implements EventTarget, Styleable {
             BlendMode mode = getBlendMode();
             peer.setNodeBlendMode((mode == null)
                                   ? null
-                                  : Blend.impl_getToolkitMode(mode));
+                                  : EffectHelper.getToolkitBlendMode(mode));
         }
     }
 
@@ -1865,7 +1866,7 @@ public abstract class Node implements EventTarget, Styleable {
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
         if (params.getTransform() != null) {
             Affine3D tempTx = new Affine3D();
-            params.getTransform().impl_apply(tempTx);
+            TransformHelper.apply(params.getTransform(), tempTx);
             transform = tempTx;
         }
         double x;
@@ -3093,9 +3094,9 @@ public abstract class Node implements EventTarget, Styleable {
                     BaseBounds nodeInCameraBounds = new BoxBounds();
 
                     // We need to set tempTx to identity since it is a recycled transform.
-                    // This is because impl_apply is a matrix concatenation operation.
+                    // This is because TransformHelper.apply() is a matrix concatenation operation.
                     tempTx.setToIdentity();
-                    localToSceneTx.impl_apply(tempTx);
+                    TransformHelper.apply(localToSceneTx, tempTx);
 
                     // Convert node from local coordinate to camera coordinate
                     tempTx.preConcatenate(camera.getSceneToLocalTransform());
@@ -3113,9 +3114,9 @@ public abstract class Node implements EventTarget, Styleable {
             projViewTx.set(camera.getProjViewTransform());
 
             // We need to set tempTx to identity since it is a recycled transform.
-            // This is because impl_apply is a matrix concatenation operation.
+            // This is because TransformHelper.apply() is a matrix concatenation operation.
             tempTx.setToIdentity();
-            localToSceneTx.impl_apply(tempTx);
+            TransformHelper.apply(localToSceneTx, tempTx);
 
             // The product of projViewTx * localToSceneTransform
             GeneralTransform3D tx = projViewTx.mul(tempTx);
@@ -4822,7 +4823,7 @@ public abstract class Node implements EventTarget, Styleable {
 
             if (impl_hasTransforms()) {
                 for (Transform t : getTransforms()) {
-                    localToParentTx = t.impl_derive(localToParentTx);
+                    localToParentTx = TransformHelper.derive(t, localToParentTx);
                 }
             }
 
@@ -6091,10 +6092,10 @@ public abstract class Node implements EventTarget, Styleable {
                     protected void onChanged(Change<Transform> c) {
                         while (c.next()) {
                             for (Transform t : c.getRemoved()) {
-                                t.impl_remove(Node.this);
+                                TransformHelper.remove(t, Node.this);
                             }
                             for (Transform t : c.getAddedSubList()) {
-                                t.impl_add(Node.this);
+                                TransformHelper.add(t, Node.this);
                             }
                         }
 

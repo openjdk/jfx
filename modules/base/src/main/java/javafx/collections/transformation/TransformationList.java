@@ -148,4 +148,15 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
         return idx;
     }
 
+    /**
+     * Maps the index of the direct source list's element to an index in this list.
+     * @param index the index in the source list
+     * @return the index of the element in this list if it is contained 
+     * in this list or negative value otherwise
+     * @see #getSource()
+     * @see #getSourceIndex(int)
+     * 
+     * @since 9
+     */
+    public abstract int getViewIndex(int index);
 }

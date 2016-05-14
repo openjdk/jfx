@@ -34,13 +34,13 @@ public class AnimationDummy extends AnimationImpl {
     }
 
     @Override
-    public void impl_playTo(long currentTicks, long cycleTicks) {
+    public void doPlayTo(long currentTicks, long cycleTicks) {
         // TODO Auto-generated method stub
 
     }
 
     @Override
-    public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
+    public void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
         // TODO Auto-generated method stub
 
     }

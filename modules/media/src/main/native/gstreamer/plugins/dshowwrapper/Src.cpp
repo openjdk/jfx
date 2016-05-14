@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -238,6 +238,14 @@ HRESULT COutputPin::CreateAllocator()
     return S_OK;
 }
 
+HRESULT COutputPin::DecommitAllocator()
+{
+    if (m_pIAlloc)
+        return m_pIAlloc->Decommit();
+
+    return E_FAIL;
+}
+
 CSrc::CSrc(HRESULT *phr) : CBaseFilter("CSrc", NULL, &m_Lock, CLSID_Src, phr)
 {
     HRESULT hr = S_OK;
@@ -305,6 +313,14 @@ HRESULT CSrc::SetReleaseSampleCallback(void (*function)(GstBuffer *pBuffer, sUse
 {
     if (m_pPin != NULL)
         return m_pPin->SetReleaseSampleCallback(function);
+    else
+        return E_FAIL;
+}
+
+HRESULT CSrc::DecommitAllocator()
+{
+    if (m_pPin != NULL)
+        return m_pPin->DecommitAllocator();
     else
         return E_FAIL;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package javafx.scene.layout;
 
 import java.util.Iterator;
 
-import javafx.scene.Node;
 import javafx.scene.Parent;
 
 import com.sun.javafx.util.WeakReferenceQueue;
@@ -48,24 +47,24 @@ public abstract class ConstraintsBase {
      */
     public static final double CONSTRAIN_TO_PREF = Double.NEGATIVE_INFINITY;
 
-     WeakReferenceQueue impl_nodes = new WeakReferenceQueue();
+    private WeakReferenceQueue nodes = new WeakReferenceQueue();
 
-     ConstraintsBase() {
-     }
-
-     void add(Parent node) {
-         impl_nodes.add(node);
-     }
-
-    void remove(Parent node) {
-        impl_nodes.remove(node);
+    ConstraintsBase() {
     }
 
-     /**
-      * Calls requestLayout on layout parent associated with this constraint object.
-      */
-     protected void requestLayout() {
-        Iterator<Parent> nodeIter = impl_nodes.iterator();
+    void add(Parent node) {
+        nodes.add(node);
+    }
+
+    void remove(Parent node) {
+        nodes.remove(node);
+    }
+
+    /**
+     * Calls requestLayout on layout parent associated with this constraint object.
+     */
+    protected void requestLayout() {
+        Iterator<Parent> nodeIter = nodes.iterator();
 
         while (nodeIter.hasNext()) {
             nodeIter.next().requestLayout();

@@ -31,6 +31,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.paint.MaterialHelper;
 import com.sun.javafx.sg.prism.NGShape3D;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
@@ -115,11 +116,11 @@ public abstract class Shape3D extends Node {
 
                 @Override protected void invalidated() {
                     if (old != null) {
-                        old.impl_dirtyProperty().removeListener(weakMaterialChangeListener);
+                        MaterialHelper.dirtyProperty(old).removeListener(weakMaterialChangeListener);
                     }
                     Material newMaterial = get();
                     if (newMaterial != null) {
-                        newMaterial.impl_dirtyProperty().addListener(weakMaterialChangeListener);
+                        MaterialHelper.dirtyProperty(newMaterial).addListener(weakMaterialChangeListener);
                     }
                     impl_markDirty(DirtyBits.MATERIAL);
                     impl_geomChanged();
@@ -223,8 +224,8 @@ public abstract class Shape3D extends Node {
         final NGShape3D peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.MATERIAL)) {
             Material mat = getMaterial() == null ? DEFAULT_MATERIAL : getMaterial();
-            mat.impl_updatePG(); // new material should be updated
-            peer.setMaterial(mat.impl_getNGMaterial());
+            MaterialHelper.updatePG(mat); // new material should be updated
+            peer.setMaterial(MaterialHelper.getNGMaterial(mat));
         }
         if (impl_isDirty(DirtyBits.NODE_DRAWMODE)) {
             peer.setDrawMode(getDrawMode() == null ? DrawMode.FILL : getDrawMode());

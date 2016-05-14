@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,18 +23,40 @@
  * questions.
  */
 
-package com.sun.javafx.robot;
+package com.sun.javafx.scene.input;
 
-import javafx.scene.Scene;
+import com.sun.javafx.util.Utils;
+import javafx.scene.input.TouchPoint;
 
-import com.sun.javafx.robot.impl.BaseFXRobot;
+/**
+ * Used to access internal methods of TouchPoint.
+ */
+public class TouchPointHelper {
 
-public class FXRobotFactory {
-    /**
-     * Creates FXRobot instance which controls given scene.
-     *
-     */
-    public static FXRobot createRobot(Scene scene) {
-        return new BaseFXRobot(scene);
+    private static TouchPointAccessor touchPointAccessor;
+
+    static {
+        Utils.forceInit(TouchPoint.class);
     }
+
+    private TouchPointHelper() {
+    }
+
+    public static void reset(TouchPoint touchPoint) {
+        touchPointAccessor.reset(touchPoint);
+    }
+
+    public static void setTouchPointAccessor(final TouchPointAccessor newAccessor) {
+        if (touchPointAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        touchPointAccessor = newAccessor;
+    }
+
+    public interface TouchPointAccessor {
+        void reset(TouchPoint touchPoint);
+    }
+
 }
+

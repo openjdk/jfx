@@ -296,7 +296,7 @@ public class ImageCursor extends Cursor {
             return currentCursorFrame;
         }
 
-        final Object cursorPlatformImage = cursorImage.impl_getPlatformImage();
+        final Object cursorPlatformImage = Toolkit.getImageAccessor().getPlatformImage(cursorImage);
         if (cursorPlatformImage == null) {
             currentCursorFrame = Cursor.DEFAULT.getCurrentFrame();
             return currentCursorFrame;

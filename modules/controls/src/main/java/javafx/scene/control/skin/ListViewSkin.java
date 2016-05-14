@@ -334,7 +334,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
         updatePlaceholderRegionVisibility();
         if (newCount != oldCount) {
-            needCellsRebuilt = true;
+            requestRebuildCells();
         } else {
             needCellsReconfigured = true;
         }

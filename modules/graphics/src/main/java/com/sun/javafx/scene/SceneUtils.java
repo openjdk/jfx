@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -122,7 +122,7 @@ public class SceneUtils {
 //
 //        // convert it to node's local pickRay
 //        final Affine3D localToSceneTx = new Affine3D();
-//        n.getLocalToSceneTransform().impl_apply(localToSceneTx);
+//        TransformHelper.apply(n.getLocalToSceneTransform(), localToSceneTx);
 //        try {
 //            Vec3d origin = pickRay.getOriginNoClone();
 //            Vec3d direction = pickRay.getDirectionNoClone();

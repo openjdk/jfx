@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -170,8 +170,8 @@ public class TranslateTransitionTest {
         t0.setFromZ(1.5);
         t0.setToZ(0.5);
 
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(0.5, node.getTranslateX(), EPSILON);
         assertEquals(1.5, node.getTranslateY(), EPSILON);
@@ -184,7 +184,7 @@ public class TranslateTransitionTest {
         assertEquals(1.0, node.getTranslateX(), EPSILON);
         assertEquals(2.0, node.getTranslateY(), EPSILON);
         assertEquals(0.5, node.getTranslateZ(), EPSILON);
-                AnimationShim.impl_finished(t0);
+                AnimationShim.finished(t0);
     }
 
     @Test
@@ -200,104 +200,104 @@ public class TranslateTransitionTest {
         t0.setFromX(Double.NaN);
         t0.setToX(Double.NaN);
         t0.setByX(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateX(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(originalValue, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only from-value set
         node.setTranslateX(originalValue);
         t0.setFromX(fromValue);
         t0.setToX(Double.NaN);
         t0.setByX(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateX(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(fromValue, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only to-value set
         node.setTranslateX(originalValue);
         t0.setFromX(Double.NaN);
         t0.setToX(toValue);
         t0.setByX(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateX(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only by-value set
         node.setTranslateX(originalValue);
         t0.setFromX(Double.NaN);
         t0.setToX(Double.NaN);
         t0.setByX(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateX(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(originalValue + byValue, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // from- and to-values set
         node.setTranslateX(originalValue);
         t0.setFromX(fromValue);
         t0.setToX(toValue);
         t0.setByX(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateX(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // from- and by-values set
         node.setTranslateX(originalValue);
         t0.setFromX(fromValue);
         t0.setToX(Double.NaN);
         t0.setByX(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateX(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(fromValue + byValue, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // to- and by-values set
         node.setTranslateX(originalValue);
         t0.setFromX(Double.NaN);
         t0.setToX(toValue);
         t0.setByX(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateX(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // all values set
         node.setTranslateX(originalValue);
         t0.setFromX(fromValue);
         t0.setToX(toValue);
         t0.setByX(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateX(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
     @Test
@@ -313,104 +313,104 @@ public class TranslateTransitionTest {
         t0.setFromY(Double.NaN);
         t0.setToY(Double.NaN);
         t0.setByY(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateY(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(originalValue, node.getTranslateY(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only from-value set
         node.setTranslateY(originalValue);
         t0.setFromY(fromValue);
         t0.setToY(Double.NaN);
         t0.setByY(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateY(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(fromValue, node.getTranslateY(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only to-value set
         node.setTranslateY(originalValue);
         t0.setFromY(Double.NaN);
         t0.setToY(toValue);
         t0.setByY(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateY(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateY(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only by-value set
         node.setTranslateY(originalValue);
         t0.setFromY(Double.NaN);
         t0.setToY(Double.NaN);
         t0.setByY(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateY(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(originalValue + byValue, node.getTranslateY(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // from- and to-values set
         node.setTranslateY(originalValue);
         t0.setFromY(fromValue);
         t0.setToY(toValue);
         t0.setByY(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateY(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateY(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // from- and by-values set
         node.setTranslateY(originalValue);
         t0.setFromY(fromValue);
         t0.setToY(Double.NaN);
         t0.setByY(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateY(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(fromValue + byValue, node.getTranslateY(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // to- and by-values set
         node.setTranslateY(originalValue);
         t0.setFromY(Double.NaN);
         t0.setToY(toValue);
         t0.setByY(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateY(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateY(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // all values set
         node.setTranslateY(originalValue);
         t0.setFromY(fromValue);
         t0.setToY(toValue);
         t0.setByY(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateY(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateY(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
     @Test
@@ -426,104 +426,104 @@ public class TranslateTransitionTest {
         t0.setFromZ(Double.NaN);
         t0.setToZ(Double.NaN);
         t0.setByZ(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateZ(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(originalValue, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only from-value set
         node.setTranslateZ(originalValue);
         t0.setFromZ(fromValue);
         t0.setToZ(Double.NaN);
         t0.setByZ(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateZ(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(fromValue, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only to-value set
         node.setTranslateZ(originalValue);
         t0.setFromZ(Double.NaN);
         t0.setToZ(toValue);
         t0.setByZ(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateZ(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only by-value set
         node.setTranslateZ(originalValue);
         t0.setFromZ(Double.NaN);
         t0.setToZ(Double.NaN);
         t0.setByZ(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateZ(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(originalValue + byValue, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // from- and to-values set
         node.setTranslateZ(originalValue);
         t0.setFromZ(fromValue);
         t0.setToZ(toValue);
         t0.setByZ(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateZ(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // from- and by-values set
         node.setTranslateZ(originalValue);
         t0.setFromZ(fromValue);
         t0.setToZ(Double.NaN);
         t0.setByZ(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateZ(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(fromValue + byValue, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // to- and by-values set
         node.setTranslateZ(originalValue);
         t0.setFromZ(Double.NaN);
         t0.setToZ(toValue);
         t0.setByZ(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getTranslateZ(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // all values set
         node.setTranslateZ(originalValue);
         t0.setFromZ(fromValue);
         t0.setToZ(toValue);
         t0.setByZ(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getTranslateZ(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
     @Test
@@ -538,25 +538,25 @@ public class TranslateTransitionTest {
         pt.setNode(node2);
 
         // node set, parent set
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.5);
         assertEquals(0.75, node.getTranslateX(), EPSILON);
         assertEquals(0.0, node2.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // node null, parent set
         t0.setNode(null);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.4);
         assertEquals(0.75, node.getTranslateX(), EPSILON);
         assertEquals(0.7, node2.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // node null, parent null
         pt.setNode(null);
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,true));
     }
 
     @Test
@@ -571,8 +571,8 @@ public class TranslateTransitionTest {
         t0.setToZ(0.5);
 
         // start
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         t0.setFromX(0.0);
         t0.setFromY(-1.0);
         t0.setFromZ(0.5);
@@ -580,14 +580,14 @@ public class TranslateTransitionTest {
         assertEquals(0.75, node.getTranslateX(), EPSILON);
         assertEquals(1.75, node.getTranslateY(), EPSILON);
         assertEquals(1.0,  node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
         t0.setFromX(0.5);
         t0.setFromY(1.5);
         t0.setFromZ(1.5);
 
         // end
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         t0.setToX(0.0);
         t0.setFromY(-1.0);
         t0.setFromZ(1.5);
@@ -595,52 +595,52 @@ public class TranslateTransitionTest {
         assertEquals(0.6, node.getTranslateX(), EPSILON);
         assertEquals(1.6, node.getTranslateY(), EPSILON);
         assertEquals(1.3, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
         t0.setToX(1.0);
         t0.setToY(2.0);
         t0.setToZ(0.5);
 
         // node
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         t0.setNode(null);
         TransitionShim.interpolate(t0,0.7);
         assertEquals(0.85, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
         t0.setNode(node);
 
         // interpolator
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         t0.setInterpolator(null);
         TransitionShim.interpolate(t0,0.1);
         assertEquals(0.55, node.getTranslateX(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
         t0.setInterpolator(Interpolator.LINEAR);
     }
 
     @Test
     public void testStartable() {
         final TranslateTransition t0 = new TranslateTransition(Duration.ONE, node);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // duration is 0
         t0.setDuration(Duration.ZERO);
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setDuration(Duration.ONE);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // node is null
         t0.setNode(null);
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setNode(node);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // interpolator is null
         t0.setInterpolator(null);
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setInterpolator(Interpolator.LINEAR);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
     }
 
     @Test
@@ -654,8 +654,8 @@ public class TranslateTransitionTest {
         node.setTranslateX( 0.6);
         node.setTranslateY( 1.6);
         node.setTranslateZ(-0.6);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         node.setTranslateX(0.8);
         node.setTranslateY(0.8);
         node.setTranslateZ(0.8);
@@ -663,14 +663,14 @@ public class TranslateTransitionTest {
         assertEquals( 0.6, node.getTranslateX(), EPSILON);
         assertEquals( 1.6, node.getTranslateY(), EPSILON);
         assertEquals(-0.6, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // second run
         node.setTranslateX( 0.2);
         node.setTranslateY(-2.2);
         node.setTranslateZ(11.2);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         node.setTranslateX(0.8);
         node.setTranslateY(0.8);
         node.setTranslateZ(0.8);
@@ -678,7 +678,7 @@ public class TranslateTransitionTest {
         assertEquals( 0.2, node.getTranslateX(), EPSILON);
         assertEquals(-2.2, node.getTranslateY(), EPSILON);
         assertEquals(11.2, node.getTranslateZ(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
 }

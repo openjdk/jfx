@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.sg.prism.NGCamera;
 import sun.util.logging.PlatformLogger;
 
@@ -359,7 +360,7 @@ public abstract class Camera extends Node {
     Affine3D getCameraTransform() {
         if (!localToSceneValid) {
             localToSceneTx.setToIdentity();
-            getLocalToSceneTransform().impl_apply(localToSceneTx);
+            TransformHelper.apply(getLocalToSceneTransform(), localToSceneTx);
             localToSceneValid = true;
         }
         return localToSceneTx;
@@ -412,7 +413,7 @@ public abstract class Camera extends Node {
         final PickRay ray = computePickRay(x, y, null);
 
         final Affine3D localToScene = new Affine3D();
-        node.getLocalToSceneTransform().impl_apply(localToScene);
+        TransformHelper.apply(node.getLocalToSceneTransform(), localToScene);
 
         final Vec3d o = ray.getOriginNoClone();
         final Vec3d d = ray.getDirectionNoClone();

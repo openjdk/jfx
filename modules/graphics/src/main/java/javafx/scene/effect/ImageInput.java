@@ -242,7 +242,7 @@ public class ImageInput extends Effect {
         com.sun.scenario.effect.Identity peer =
                 (com.sun.scenario.effect.Identity) getPeer();
         Image localSource = getSource();
-        if (localSource != null && localSource.impl_getPlatformImage() != null) {
+        if (localSource != null && Toolkit.getImageAccessor().getPlatformImage(localSource) != null) {
             peer.setSource(Toolkit.getToolkit().toFilterable(localSource));
         } else {
             peer.setSource(null);
@@ -261,7 +261,7 @@ public class ImageInput extends Effect {
                          Node node,
                          BoundsAccessor boundsAccessor) {
         Image localSource = getSource();
-        if (localSource != null && localSource.impl_getPlatformImage() != null) {
+        if (localSource != null && Toolkit.getImageAccessor().getPlatformImage(localSource) != null) {
             float localX = (float) getX();
             float localY = (float) getY();
             float localWidth = (float) localSource.getWidth();

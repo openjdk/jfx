@@ -45,6 +45,7 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.text.PrismTextLayout;
 import com.sun.javafx.tk.RenderJob;
 import com.sun.javafx.tk.ScreenConfigurationAccessor;
@@ -386,7 +387,7 @@ public class NGCanvas extends NGNode {
         path.setWindingRule(Path2D.WIND_NON_ZERO);
         // ngtext stores no state between render operations
         // textLayout stores no state between render operations
-        pgfont = (PGFont) Font.getDefault().impl_getNativeFont();
+        pgfont = (PGFont) FontHelper.getNativeFont(Font.getDefault());
         smoothing = SMOOTH_GRAY;
         align = ALIGN_LEFT;
         baseline = VPos.BASELINE.ordinal();

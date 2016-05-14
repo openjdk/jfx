@@ -636,7 +636,8 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public Filterable toFilterable(Image img) {
-        return StubFilterable.create((StubPlatformImage)img.impl_getPlatformImage());
+        return StubFilterable.create((StubPlatformImage)
+                Toolkit.getImageAccessor().getPlatformImage(img));
     }
 
     @Override

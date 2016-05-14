@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,27 +31,27 @@ final class AnimationAccessorImpl extends AnimationAccessor{
 
     @Override
     public void setCurrentRate(Animation animation, double currentRate) {
-        animation.impl_setCurrentRate(currentRate);
+        animation.setCurrentRate(currentRate);
     }
 
     @Override
     public void playTo(Animation animation, long pos, long cycleTicks) {
-        animation.impl_playTo(pos, cycleTicks);
+        animation.doPlayTo(pos, cycleTicks);
     }
 
     @Override
     public void jumpTo(Animation animation, long pos, long cycleTicks, boolean forceJump) {
-        animation.impl_jumpTo(pos, cycleTicks, forceJump);
+        animation.doJumpTo(pos, cycleTicks, forceJump);
     }
 
     @Override
     public void finished(Animation animation) {
-        animation.impl_finished();
+        animation.finished();
     }
 
     @Override
     public void setCurrentTicks(Animation animation, long ticks) {
-        animation.impl_setCurrentTicks(ticks);
+        animation.setCurrentTicks(ticks);
     }
 
 

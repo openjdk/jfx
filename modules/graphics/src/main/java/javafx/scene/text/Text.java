@@ -42,6 +42,7 @@ import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
+import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -490,7 +491,7 @@ public class Text extends Shape {
     private Object getFontInternal() {
         Font font = getFont();
         if (font == null) font = Font.getDefault();
-        return font.impl_getNativeFont();
+        return FontHelper.getNativeFont(font);
     }
 
     public final ObjectProperty<Font> fontProperty() {

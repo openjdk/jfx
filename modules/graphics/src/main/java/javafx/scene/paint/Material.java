@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.paint;
 
+import com.sun.javafx.scene.paint.MaterialHelper;
 import com.sun.javafx.sg.prism.NGPhongMaterial;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
@@ -42,6 +43,29 @@ import sun.util.logging.PlatformLogger;
  * @since JavaFX 8.0
  */
 public abstract class Material {
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        MaterialHelper.setMaterialAccessor(new MaterialHelper.MaterialAccessor() {
+
+            @Override
+            public BooleanProperty dirtyProperty(Material material) {
+                return material.dirtyProperty();
+            }
+
+            @Override
+            public void updatePG(Material material) {
+                material.updatePG();
+            }
+            @Override
+            public NGPhongMaterial getNGMaterial(Material material) {
+                return material.getNGMaterial();
+            }
+
+        });
+    }
+
     /*
      *     Material (including Shaders and Textures)
      Material is not Paint
@@ -72,26 +96,11 @@ public abstract class Material {
         dirty.setValue(value);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final BooleanProperty impl_dirtyProperty() {
+    final BooleanProperty dirtyProperty() {
         return dirty;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    abstract public void impl_updatePG();
+    abstract void updatePG();
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    abstract public NGPhongMaterial impl_getNGMaterial();
+    abstract NGPhongMaterial getNGMaterial();
 }

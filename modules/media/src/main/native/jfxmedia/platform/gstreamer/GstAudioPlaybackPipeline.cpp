@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -137,6 +137,7 @@ uint32_t CGstAudioPlaybackPipeline::Init()
     m_pBusCallbackContent->m_pPipeline = this;
     m_pBusCallbackContent->m_DisposeLock = CJfxCriticalSection::Create();
     m_pBusCallbackContent->m_bIsDisposed = false;
+    m_pBusCallbackContent->m_bIsDisposeInProgress = false;
     m_pBusCallbackContent->m_bFreeMe = false;
 
     GstBus *pBus = gst_pipeline_get_bus (GST_PIPELINE (m_Elements[PIPELINE]));
@@ -235,7 +236,7 @@ void CGstAudioPlaybackPipeline::OnParserSrcPadAdded(GstElement *element, GstPad 
 {
     pPipeline->m_pBusCallbackContent->m_DisposeLock->Enter();
 
-    if (pPipeline->m_pBusCallbackContent->m_bIsDisposed)
+    if (pPipeline->m_pBusCallbackContent->m_bIsDisposeInProgress)
     {
         pPipeline->m_pBusCallbackContent->m_DisposeLock->Exit();
         return;
@@ -350,6 +351,13 @@ void CGstAudioPlaybackPipeline::Dispose()
 #if JFXMEDIA_DEBUG
     g_print ("CGstAudioPlaybackPipeline::Dispose()\n");
 #endif
+
+    if (m_pBusCallbackContent != NULL)
+    {
+        m_pBusCallbackContent->m_DisposeLock->Enter();
+        m_pBusCallbackContent->m_bIsDisposeInProgress = true;
+        m_pBusCallbackContent->m_DisposeLock->Exit();
+    }
 
     // Stop pipeline before lock, so all callbacks from pipeline are finished.
     if (m_Elements[PIPELINE])
@@ -1040,7 +1048,13 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
     if (pBusCallbackContent->m_bIsDisposed)
     {
         pBusCallbackContent->m_DisposeLock->Exit();
-        return FALSE;
+        return FALSE; // Tell to stop sending messaged
+    }
+    else if (pBusCallbackContent->m_bIsDisposeInProgress)
+    {
+        pBusCallbackContent->m_DisposeLock->Exit();
+        return TRUE; // Continue processing messages while we disposing, but
+                     // ignore them.
     }
 
     CGstAudioPlaybackPipeline* pPipeline = pBusCallbackContent->m_pPipeline;

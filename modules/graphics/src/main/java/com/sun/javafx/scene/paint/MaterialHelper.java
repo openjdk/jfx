@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,50 +23,52 @@
  * questions.
  */
 
-package com.sun.javafx.scene.input;
+package com.sun.javafx.scene.paint;
 
-import com.sun.javafx.tk.TKClipboard;
+import com.sun.javafx.sg.prism.NGPhongMaterial;
 import com.sun.javafx.util.Utils;
-import javafx.scene.input.Dragboard;
+import javafx.beans.property.BooleanProperty;
+import javafx.scene.paint.Material;
+
 
 /**
- * Used to access internal methods of Dragboard.
+ * Used to access internal methods of Material.
  */
-public class DragboardHelper {
-    private static DragboardAccessor dragboardAccessor;
+public class MaterialHelper {
+
+    private static MaterialAccessor materialAccessor;
 
     static {
-        Utils.forceInit(Dragboard.class);
+        Utils.forceInit(Material.class);
     }
 
-    private DragboardHelper() {
+    private MaterialHelper() {
     }
 
-    public static void setDataAccessRestriction(Dragboard dragboard,
-            boolean restricted) {
-        dragboardAccessor.setDataAccessRestriction(dragboard, restricted);
+    public static BooleanProperty dirtyProperty(Material material) {
+        return materialAccessor.dirtyProperty(material);
     }
 
-    public static TKClipboard getPeer(Dragboard dragboard) {
-        return dragboardAccessor.getPeer(dragboard);
+    public static void updatePG(Material material) {
+        materialAccessor.updatePG(material);
     }
 
-    public static Dragboard createDragboard(TKClipboard peer) {
-        return dragboardAccessor.createDragboard(peer);
+    public static NGPhongMaterial getNGMaterial(Material material) {
+        return materialAccessor.getNGMaterial(material);
     }
 
-    public static void setDragboardAccessor(final DragboardAccessor newAccessor) {
-        if (dragboardAccessor != null) {
+    public static void setMaterialAccessor(final MaterialAccessor newAccessor) {
+        if (materialAccessor != null) {
             throw new IllegalStateException();
         }
 
-        dragboardAccessor = newAccessor;
+        materialAccessor = newAccessor;
     }
 
-    public interface DragboardAccessor {
-        void setDataAccessRestriction(Dragboard dragboard, boolean restricted);
-        TKClipboard getPeer(Dragboard dragboard);
-        Dragboard createDragboard(TKClipboard peer);
+    public interface MaterialAccessor {
+        BooleanProperty dirtyProperty(Material material);
+        void updatePG(Material material);
+        NGPhongMaterial getNGMaterial(Material material);
     }
 
 }

@@ -25,8 +25,6 @@
 
 package test.javafx.collections;
 
-import test.javafx.collections.Person;
-import test.javafx.collections.MockListObserver;
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 import com.sun.javafx.collections.ObservableListWrapper;
 import java.util.ArrayList;
@@ -43,16 +41,13 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableListWrapperShim;
+import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
-import javafx.collections.transformation.TransformationList;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.* ;
 import static org.junit.Assert.assertEquals;
 
-/**
- *
- */
 public class SortedListTest {
 
     private ObservableList<String> list;
@@ -67,10 +62,13 @@ public class SortedListTest {
         mockListObserver = new MockListObserver<String>();
         sortedList.addListener(mockListObserver);
     }
+
     @Test
     public void testNoChange() {
         assertEquals(Arrays.asList("a", "c", "c", "d"), sortedList);
         mockListObserver.check0();
+
+        compareIndices();
     }
 
     @Test
@@ -83,6 +81,27 @@ public class SortedListTest {
         mockListObserver.check1AddRemove(sortedList, Collections.<String>emptyList(), 0, 4);
         assertEquals(0, sortedList.getSourceIndex(0));
         assertEquals(2, sortedList.getSourceIndex(3));
+
+        compareIndices();
+    }
+
+    private <E> void compareIndices(SortedList<E> sorted) {
+        ObservableList<? extends E> source = sorted.getSource();
+        for (int i = 0; i < sorted.size(); i++) {
+            // i as a view index
+            int sourceIndex = sorted.getSourceIndex(i);
+            assertEquals(i, sorted.getViewIndex(sourceIndex));
+            assertSame(sorted.get(i), source.get(sourceIndex));
+
+            // i as a source index
+            int viewIndex = sorted.getViewIndex(i);
+            assertEquals(i, sorted.getSourceIndex(viewIndex));
+            assertSame(source.get(i), sorted.get(viewIndex));
+        }
+    }
+
+    private void compareIndices() {
+        compareIndices(sortedList);
     }
 
     @Test
@@ -95,6 +114,8 @@ public class SortedListTest {
         assertEquals(1, sortedList.getSourceIndex(2));
         assertEquals(3, sortedList.getSourceIndex(3));
         assertEquals(2, sortedList.getSourceIndex(4));
+
+        compareIndices();
     }
 
     @Test
@@ -107,6 +128,8 @@ public class SortedListTest {
         mockListObserver.clear();
         list.removeAll(Arrays.asList("a", "d"));
         mockListObserver.check1AddRemove(sortedList, Arrays.asList("a", "d"), 0, 0);
+
+        compareIndices();
     }
 
     @Test
@@ -117,6 +140,8 @@ public class SortedListTest {
         assertEquals(0, sortedList.getSourceIndex(0));
         assertEquals(2, sortedList.getSourceIndex(1));
         assertEquals(1, sortedList.getSourceIndex(2));
+
+        compareIndices();
     }
 
     @Test
@@ -128,6 +153,8 @@ public class SortedListTest {
         list.add("b");
         assertEquals(Arrays.asList("a", "b", "c", "c"), sortedList);
         mockListObserver.check1AddRemove(sortedList, Collections.<String>emptyList(), 1, 2);
+
+        compareIndices();
     }
 
     @Test
@@ -135,6 +162,8 @@ public class SortedListTest {
         list.removeAll(Arrays.asList("c", "d"));
         mockListObserver.check1AddRemove(sortedList, Arrays.asList("c", "c", "d"), 1, 1);
         assertEquals(0, sortedList.getSourceIndex(0));
+
+        compareIndices();
     }
 
     @Test
@@ -144,13 +173,24 @@ public class SortedListTest {
 
         sortedList = new SortedList<>(list);
         assertEquals(Arrays.asList("a", "c", "d", "c"), sortedList);
+        compareIndices();
+
         sortedList.comparatorProperty().bind(op);
         assertEquals(Arrays.asList("a", "c", "c", "d"), sortedList);
+        compareIndices();
+
         sortedList.addListener(mockListObserver);
 
         op.set((Comparator<String>) (String o1, String o2) -> -o1.compareTo(o2));
         assertEquals(Arrays.asList("d", "c", "c", "a"), sortedList);
         mockListObserver.check1Permutation(sortedList, new int[] {3, 1, 2, 0}); // could be also 3, 2, 1, 0, but the algorithm goes this way
+        compareIndices();
+
+        mockListObserver.clear();
+        op.set(null);
+        assertEquals(Arrays.asList("a", "c", "d", "c"), sortedList);
+        mockListObserver.check1Permutation(sortedList, new int[] {2, 1, 3, 0});
+        compareIndices();
     }
 
 
@@ -164,32 +204,34 @@ public class SortedListTest {
               );
         // the list to be removed again, note that its highest value is greater
         // then the highest in the base list before adding
-      List<Double> other = Arrays.asList(
-              50., -300., 4000.
-      );
-      sourceList.addAll(other);
-      // wrap into a sorted list and add a listener to the sorted
-      final SortedList<Double> sorted = sourceList.sorted();
-      ListChangeListener<Double> listener = c -> {
-          assertEquals(Arrays.<Double>asList(400.0, 600.0, 1300.0), c.getList());
+        List<Double> other = Arrays.asList(
+                50., -300., 4000.
+        );
+        sourceList.addAll(other);
+        // wrap into a sorted list and add a listener to the sorted
+        final SortedList<Double> sorted = sourceList.sorted();
+        ListChangeListener<Double> listener = c -> {
+            assertEquals(Arrays.<Double>asList(400.0, 600.0, 1300.0), c.getList());
 
-          c.next();
-          assertEquals(Arrays.<Double>asList(-300.0, 50.0), c.getRemoved());
-          assertEquals(0, c.getFrom());
-          assertEquals(0, c.getTo());
-          assertTrue(c.next());
-          assertEquals(Arrays.<Double>asList(4000.), c.getRemoved());
-          assertEquals(3, c.getFrom());
-          assertEquals(3, c.getTo());
-          assertFalse(c.next());
+            c.next();
+            assertEquals(Arrays.<Double>asList(-300.0, 50.0), c.getRemoved());
+            assertEquals(0, c.getFrom());
+            assertEquals(0, c.getTo());
+            assertTrue(c.next());
+            assertEquals(Arrays.<Double>asList(4000.), c.getRemoved());
+            assertEquals(3, c.getFrom());
+            assertEquals(3, c.getTo());
+            assertFalse(c.next());
 
 
-          // grab sourceIndex of last (aka: highest) value in sorted list
-          int sourceIndex = sorted.getSourceIndex(sorted.size() - 1);
-          assertEquals(0, sourceIndex);
-      };
-      sorted.addListener(listener);
-      sourceList.removeAll(other);
+            // grab sourceIndex of last (aka: highest) value in sorted list
+            int sourceIndex = sorted.getSourceIndex(sorted.size() - 1);
+            assertEquals(0, sourceIndex);
+        };
+        sorted.addListener(listener);
+        sourceList.removeAll(other);
+
+        compareIndices(sorted);
     }
 
     @Test
@@ -210,6 +252,8 @@ public class SortedListTest {
         listener.checkPermutation(0, expected, 0, list.size(), new int[]{0, 4, 1, 2, 3});
         listener.checkUpdate(1, expected, 4, 5);
         assertEquals(expected, sorted);
+
+        compareIndices(sorted);
     }
 
     @Test
@@ -223,6 +267,8 @@ public class SortedListTest {
                 new Person("one"), new Person("two"), new Person("three"),
                 new Person("zero"), new Person("five"));
         listener.check1Update(expected, 3, 4);
+
+        compareIndices(unsorted);
     }
 
     @Test
@@ -244,6 +290,35 @@ public class SortedListTest {
         listener.checkUpdate(1, expected, 4, 5);
         assertEquals(expected, sorted);
         assertEquals(expected, unsorted);
+
+        compareIndices(sorted);
+        compareIndices(unsorted);
+    }
+
+    @Test
+    public void testMutableElementSortedFilteredChain() {
+        ObservableList<Person> items = FXCollections.observableArrayList(
+                (Person p) -> new Observable[]{p.name});
+        items.addAll(
+                new Person("b"), new Person("c"), new Person("a"),
+                new Person("f"), new Person("e"), new Person("d"));
+
+        FilteredList<Person> filtered = items.filtered(e -> !e.name.get().startsWith("z"));
+        MockListObserver<Person> filterListener = new MockListObserver<>();
+        filtered.addListener(filterListener);
+
+        SortedList<Person> sorted = filtered.sorted((x, y) -> x.name.get().compareTo(y.name.get()));
+        MockListObserver<Person> sortListener = new MockListObserver<>();
+        sorted.addListener(sortListener);
+        items.get(2).name.set("z"); // "a" -> "z"
+        filterListener.check1AddRemove(filtered, Arrays.asList(new Person("z")), 2, 2);
+        sortListener.check1AddRemove(sorted, Arrays.asList(new Person("z")), 0, 0);
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("b"), new Person("c"), new Person("d"),
+                new Person("e"), new Person("f"));
+        assertEquals(expected, sorted);
+
+        compareIndices(sorted);
     }
 
     private ObservableList<Person> createPersonsList() {
@@ -282,14 +357,18 @@ public class SortedListTest {
 
         SortedList<Object> sorted = list.sorted();
         assertEquals(Arrays.asList(o2, o1, o3), sorted);
+
+        compareIndices(sorted);
     }
 
     @Test
     public void testCompareNulls() {
         ObservableList<String> list = FXCollections.observableArrayList( "g", "a", null, "z");
 
-        TransformationList<String, String> sorted = list.sorted();
+        SortedList<String> sorted = list.sorted();
         assertEquals(Arrays.asList(null, "a", "g", "z"), sorted);
+
+        compareIndices(sorted);
     }
 
 
@@ -321,7 +400,8 @@ public class SortedListTest {
         Permutator<Integer> permutator = new Permutator<Integer>(list);
         SortedList<Integer> sorted = new SortedList<Integer>(permutator);
         permutator.swap();
-        assertEquals(0, sorted.getSourceIndex(sorted.size() - 1));
+
+        compareIndices(sorted);
     }
 
     @Test
@@ -342,6 +422,20 @@ public class SortedListTest {
 
         assertEquals(sorted, list);
 
+        compareIndices(sorted);
+    }
+
+    @Test
+    public void testUnsorted2() {
+        list.setAll("a", "b", "c", "d", "e", "f");
+        SortedList<String> sorted = new SortedList<>(list);
+        assertEquals(sorted, list);
+
+        list.removeAll("b", "c", "d");
+
+        assertEquals(sorted, list);
+
+        compareIndices(sorted);
     }
 
     @Test
@@ -361,6 +455,8 @@ public class SortedListTest {
 
         assertEquals(1, sorted.size());
         assertTrue(sorted.get(0) == other);
+
+        compareIndices(sorted);
     }
 
     @Test
@@ -370,6 +466,8 @@ public class SortedListTest {
         list.addAll("B", "A");
 
         assertEquals(Arrays.asList("A", "B"), sl);
+
+        compareIndices(sl);
     }
 
     @Test
@@ -398,6 +496,7 @@ public class SortedListTest {
         expected.put(1, 0);     // item "1" has moved from index 1 to index 0
         expected.put(2, 2);     // item "3" has remained in index 2
         assertEquals(expected, pMap);
+        compareIndices(sortedList);
 
         // comparator that will create list of [3,2,1]. Sort indices based on
         // previous order [1,2,3].
@@ -408,6 +507,7 @@ public class SortedListTest {
         expected.put(1, 1);     // item "2" has remained in index 1
         expected.put(2, 0);     // item "3" has moved from index 2 to index 0
         assertEquals(expected, pMap);
+        compareIndices(sortedList);
 
         // null comparator so sort order should return to [2,1,3]. Sort indices based on
         // previous order [3,2,1].
@@ -418,8 +518,8 @@ public class SortedListTest {
         expected.put(1, 0);     // item "2" has moved from index 1 to index 0
         expected.put(2, 1);     // item "1" has moved from index 2 to index 1
         assertEquals(expected, pMap);
+        compareIndices(sortedList);
     }
-
 
     @Test
     public void testAddWhenUnsorted() {
@@ -429,19 +529,21 @@ public class SortedListTest {
         assertEquals(5, sortedList.size());
         assertEquals(Arrays.asList("a", "c", "b", "d", "c"), sortedList);
         mockListObserver.check1AddRemove(sortedList, Collections.emptyList(), 2, 3);
+        compareIndices();
 
         mockListObserver.clear();
         sortedList.setComparator(Comparator.<String>naturalOrder());
         mockListObserver.check1Permutation(sortedList, new int[] {0, 2, 1, 4, 3});
         assertEquals(5, sortedList.size());
         assertEquals(Arrays.asList("a", "b", "c", "c", "d"), sortedList);
+        compareIndices();
 
         mockListObserver.clear();
         sortedList.setComparator(null);
         assertEquals(5, sortedList.size());
         assertEquals(Arrays.asList("a", "c", "b", "d", "c"), sortedList);
         mockListObserver.check1Permutation(sortedList, new int[] {0, 2, 1, 4, 3});
-
+        compareIndices();
     }
 
     @Test
@@ -452,18 +554,21 @@ public class SortedListTest {
         assertEquals(3, sortedList.size());
         assertEquals(Arrays.asList("a", "d", "c"), sortedList);
         mockListObserver.check1AddRemove(sortedList, Arrays.asList("c"), 1, 1);
+        compareIndices();
 
         mockListObserver.clear();
         sortedList.setComparator(Comparator.<String>naturalOrder());
         mockListObserver.check1Permutation(sortedList, new int[] {0, 2, 1});
         assertEquals(3, sortedList.size());
         assertEquals(Arrays.asList("a", "c", "d"), sortedList);
+        compareIndices();
 
         mockListObserver.clear();
         sortedList.setComparator(null);
         assertEquals(3, sortedList.size());
         assertEquals(Arrays.asList("a", "d", "c"), sortedList);
         mockListObserver.check1Permutation(sortedList, new int[] {0, 2, 1});
+        compareIndices();
     }
 
     @Test
@@ -474,17 +579,20 @@ public class SortedListTest {
         assertEquals(4, sortedList.size());
         assertEquals(Arrays.asList("a", "e", "d", "c"), sortedList);
         mockListObserver.check1AddRemove(sortedList, Arrays.asList("c"), 1, 2);
+        compareIndices();
 
         mockListObserver.clear();
         sortedList.setComparator(Comparator.<String>naturalOrder());
         mockListObserver.check1Permutation(sortedList, new int[] {0, 3, 2, 1});
         assertEquals(4, sortedList.size());
         assertEquals(Arrays.asList("a", "c", "d", "e"), sortedList);
+        compareIndices();
 
         mockListObserver.clear();
         sortedList.setComparator(null);
         assertEquals(4, sortedList.size());
         assertEquals(Arrays.asList("a", "e", "d", "c"), sortedList);
         mockListObserver.check1Permutation(sortedList, new int[] {0, 3, 2, 1});
+        compareIndices();
     }
 }

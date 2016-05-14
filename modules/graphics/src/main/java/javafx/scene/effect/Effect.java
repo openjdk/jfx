@@ -95,6 +95,11 @@ public abstract class Effect {
             public Effect copy(Effect effect) {
                 return effect.copy();
             }
+
+            @Override
+            public com.sun.scenario.effect.Blend.Mode getToolkitBlendMode(BlendMode mode) {
+                return Blend.getToolkitMode(mode);
+            }
         });
     }
 

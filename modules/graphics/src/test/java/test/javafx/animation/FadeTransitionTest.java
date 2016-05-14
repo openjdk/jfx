@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -130,15 +130,15 @@ public class FadeTransitionTest {
         t0.setFromValue(0.5);
         t0.setToValue(1.0);
 
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(0.5, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,0.4);
         assertEquals(0.7, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(1.0, node.getOpacity(), EPSILON);
-                AnimationShim.impl_finished(t0);
+                AnimationShim.finished(t0);
     }
 
     @Test
@@ -154,104 +154,104 @@ public class FadeTransitionTest {
         t0.setFromValue(Double.NaN);
         t0.setToValue(Double.NaN);
         t0.setByValue(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(originalValue, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only from-value set
         node.setOpacity(originalValue);
         t0.setFromValue(fromValue);
         t0.setToValue(Double.NaN);
         t0.setByValue(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(fromValue, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only to-value set
         node.setOpacity(originalValue);
         t0.setFromValue(Double.NaN);
         t0.setToValue(toValue);
         t0.setByValue(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // only by-value set
         node.setOpacity(originalValue);
         t0.setFromValue(Double.NaN);
         t0.setToValue(Double.NaN);
         t0.setByValue(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(originalValue + byValue, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // from- and to-values set
         node.setOpacity(originalValue);
         t0.setFromValue(fromValue);
         t0.setToValue(toValue);
         t0.setByValue(0.0);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // from- and by-values set
         node.setOpacity(originalValue);
         t0.setFromValue(fromValue);
         t0.setToValue(Double.NaN);
         t0.setByValue(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(fromValue + byValue, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // to- and by-values set
         node.setOpacity(originalValue);
         t0.setFromValue(Double.NaN);
         t0.setToValue(toValue);
         t0.setByValue(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(originalValue, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // all values set
         node.setOpacity(originalValue);
         t0.setFromValue(fromValue);
         t0.setToValue(toValue);
         t0.setByValue(byValue);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(fromValue, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(toValue, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
     @Test
@@ -262,54 +262,54 @@ public class FadeTransitionTest {
         // start < 0.0
         t0.setFromValue(-0.4);
         t0.setToValue(0.6);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(0.0, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,0.5);
         assertEquals(0.3, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(0.6, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // start > 1.0
         t0.setFromValue(1.3);
         t0.setToValue(0.3);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(1.0, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,0.5);
         assertEquals(0.65, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(0.3, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // end < 0.0
         t0.setFromValue(0.2);
         t0.setToValue(-1.2);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(0.2, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,0.5);
         assertEquals(0.1, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(0.0, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // end > 1.0
         t0.setFromValue(0.9);
         t0.setToValue(1.9);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(0.9, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,0.5);
         assertEquals(0.95, node.getOpacity(), EPSILON);
         TransitionShim.interpolate(t0,1.0);
         assertEquals(1.0, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
     @Test
@@ -324,25 +324,25 @@ public class FadeTransitionTest {
         pt.setNode(node2);
 
         // node set, parent set
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         TransitionShim.interpolate(ft,0.5);
         assertEquals(0.75, node.getOpacity(), EPSILON);
         assertEquals(1.0, node2.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
 
         // node null, parent set
         ft.setNode(null);
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         TransitionShim.interpolate(ft,0.4);
         assertEquals(0.75, node.getOpacity(), EPSILON);
         assertEquals(0.7, node2.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
 
         // node null, parent null
         pt.setNode(null);
-        assertFalse(AnimationShim.impl_startable(ft,true));
+        assertFalse(AnimationShim.startable(ft,true));
     }
 
     @Test
@@ -353,64 +353,64 @@ public class FadeTransitionTest {
         ft.setToValue(1.0);
 
         // start
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         ft.setFromValue(0.0);
         TransitionShim.interpolate(ft,0.5);
         assertEquals(0.75, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
         ft.setFromValue(0.5);
 
         // end
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         ft.setToValue(0.0);
         TransitionShim.interpolate(ft,0.2);
         assertEquals(0.6, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
         ft.setToValue(1.0);
 
         // node
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         ft.setNode(null);
         TransitionShim.interpolate(ft,0.7);
         assertEquals(0.85, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
         ft.setNode(node);
 
         // interpolator
-        assertTrue(AnimationShim.impl_startable(ft,true));
-        AnimationShim.impl_start(ft,true);
+        assertTrue(AnimationShim.startable(ft,true));
+        AnimationShim.doStart(ft,true);
         ft.setInterpolator(null);
         TransitionShim.interpolate(ft,0.1);
         assertEquals(0.55, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(ft);
+        AnimationShim.finished(ft);
         ft.setInterpolator(Interpolator.LINEAR);
     }
 
     @Test
     public void testStartable() {
         final FadeTransition t0 = new FadeTransition(Duration.ONE, node);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // duration is 0
         t0.setDuration(Duration.ZERO);
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setDuration(Duration.ONE);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // node is null
         t0.setNode(null);
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setNode(node);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
 
         // interpolator is null
         t0.setInterpolator(null);
-        assertFalse(AnimationShim.impl_startable(t0,true));
+        assertFalse(AnimationShim.startable(t0,true));
         t0.setInterpolator(Interpolator.LINEAR);
-        assertTrue(AnimationShim.impl_startable(t0,true));
+        assertTrue(AnimationShim.startable(t0,true));
     }
 
     @Test
@@ -419,21 +419,21 @@ public class FadeTransitionTest {
 
         // first run
         node.setOpacity(0.6);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         node.setOpacity(0.8);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(0.6, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
 
         // second run
         node.setOpacity(0.2);
-        assertTrue(AnimationShim.impl_startable(t0,true));
-        AnimationShim.impl_start(t0,true);
+        assertTrue(AnimationShim.startable(t0,true));
+        AnimationShim.doStart(t0,true);
         node.setOpacity(0.8);
         TransitionShim.interpolate(t0,0.0);
         assertEquals(0.2, node.getOpacity(), EPSILON);
-        AnimationShim.impl_finished(t0);
+        AnimationShim.finished(t0);
     }
 
 }

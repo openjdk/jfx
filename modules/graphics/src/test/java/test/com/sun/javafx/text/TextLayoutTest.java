@@ -32,6 +32,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.text.PrismTextLayout;
 import com.sun.javafx.text.PrismTextLayout;
 
@@ -100,8 +101,8 @@ public class TextLayoutTest {
     @Test public void buildRuns() {
 
         PrismTextLayout layout = new PrismTextLayout();
-        PGFont font = (PGFont)Font.font("Monaco", 12).impl_getNativeFont();
-        PGFont font2 = (PGFont)Font.font("Tahoma", 12).impl_getNativeFont();
+        PGFont font = (PGFont) FontHelper.getNativeFont(Font.font("Monaco", 12));
+        PGFont font2 = (PGFont) FontHelper.getNativeFont(Font.font("Tahoma", 12));
 
         /* simple case */
         layout.setContent("hello", font);

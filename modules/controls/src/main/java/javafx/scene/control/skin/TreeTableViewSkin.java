@@ -95,8 +95,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             getSkinnable().requestLayout();
         } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
             // Fix for RT-14971 and RT-15338.
-            needCellsRebuilt = true;
-            getSkinnable().requestLayout();
+            requestRebuildCells();
         } else {
             // Fix for RT-20090. We are checking to see if the event coming
             // from the TreeItem root is an event where the count has changed.
@@ -353,11 +352,12 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
 
-        if (forceCellRecreate) {
-            needCellsRecreated = true;
-            forceCellRecreate = false;
-        } else if (newCount != oldCount) {
-            needCellsRebuilt = true;
+        if (newCount != oldCount) {
+            // The following line is (perhaps temporarily) disabled to
+            // resolve two issues: JDK-8155798 and JDK-8147483.
+            // A unit test exists in TreeTableViewTest to ensure that
+            // the performance issue covered in JDK-8147483 doesn't regress.
+            // requestRebuildCells();
         } else {
             needCellsReconfigured = true;
         }

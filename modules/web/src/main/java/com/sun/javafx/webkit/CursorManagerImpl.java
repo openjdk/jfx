@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit;
 
+import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.CursorManager;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCImage;
@@ -44,7 +45,7 @@ public final class CursorManagerImpl extends CursorManager<Cursor> {
 
     @Override protected Cursor getCustomCursor(WCImage image, int hotspotX, int hotspotY) {
         return new ImageCursor(
-                Image.impl_fromPlatformImage(
+                Toolkit.getImageAccessor().fromPlatformImage(
                     WCGraphicsManager.getGraphicsManager().toPlatformImage(image)),
                 hotspotX, hotspotY);
     }
