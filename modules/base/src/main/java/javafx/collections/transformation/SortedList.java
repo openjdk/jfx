@@ -224,6 +224,11 @@ public final class SortedList<E> extends TransformationList<E, E>{
         return sorted[index].index;
     }
 
+    @Override
+    public int getViewIndex(int index) {
+        return perm[index];
+    }
+
     private void updatePermutationIndexes(Change<? extends E> change) {
         for (int i = 0; i < size; ++i) {
             int p = change.getPermutation(sorted[i].index);

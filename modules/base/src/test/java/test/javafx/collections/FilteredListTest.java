@@ -25,8 +25,6 @@
 
 package test.javafx.collections;
 
-import test.javafx.collections.Person;
-import test.javafx.collections.MockListObserver;
 import com.sun.javafx.collections.ObservableListWrapper;
 import java.util.Arrays;
 import java.util.Collections;
@@ -58,6 +56,27 @@ public class FilteredListTest {
         filteredList.addListener(mlo);
     }
 
+    private <E> void compareIndices(FilteredList<E> filtered) {
+        ObservableList<? extends E> source = filtered.getSource();
+        for (int i = 0; i < filtered.size(); i++) {
+            // i as a view index
+            int sourceIndex = filtered.getSourceIndex(i);
+            assertEquals(i, filtered.getViewIndex(sourceIndex));
+            assertSame(filtered.get(i), source.get(sourceIndex));
+        }
+        for (int i = 0; i < source.size(); i++) {
+            // i as a source index
+            int viewIndex = filtered.getViewIndex(i);
+            if (viewIndex >= 0) {
+                assertEquals(i, filtered.getSourceIndex(viewIndex));
+                assertSame(source.get(i), filtered.get(viewIndex));
+            }
+        }
+    }
+
+    private void compareIndices() {
+        compareIndices(filteredList);
+    }
 
     @Test
     public void testLiveMode() {
@@ -73,12 +92,15 @@ public class FilteredListTest {
         list.addAll("a", "c", "d", "c");
         assertEquals(Arrays.asList("a", "d"), filteredList);
         mlo.check1AddRemove(filteredList, Collections.<String>emptyList(), 0, 2);
+        compareIndices();
+
         mlo.clear();
         list.add("c");
         mlo.check0();
         list.add(1, "b");
         assertEquals(Arrays.asList("a", "b", "d"), filteredList);
         mlo.check1AddRemove(filteredList, Collections.<String>emptyList(), 1, 2);
+        compareIndices();
     }
 
     @Test
@@ -86,10 +108,13 @@ public class FilteredListTest {
         list.removeAll(Arrays.asList("c"));
         assertEquals(Arrays.asList("a", "d"), filteredList);
         mlo.check0();
+        compareIndices();
+
         mlo.clear();
         list.remove("a");
         assertEquals(Arrays.asList("d"), filteredList);
         mlo.check1AddRemove(filteredList, Arrays.asList("a"), 0, 0);
+        compareIndices();
     }
 
     @Test
@@ -97,6 +122,7 @@ public class FilteredListTest {
         FXCollections.sort(list, (o1, o2) -> -o1.compareTo(o2));
         mlo.check1Permutation(filteredList, new int[] {1, 0});
         assertEquals(Arrays.asList("d", "a"), filteredList);
+        compareIndices();
     }
 
     @Test
@@ -110,6 +136,7 @@ public class FilteredListTest {
         mlo.check0();
         pProperty.set((String s) -> !s.equals("d"));
         mlo.check1AddRemove(filteredList, Arrays.asList("a", "d"), 0, 3);
+        compareIndices();
     }
 
     @Test
@@ -122,20 +149,24 @@ public class FilteredListTest {
         filtered.addListener(lo);
 
         assertEquals(Arrays.asList(new Person("BB")), filtered);
+        compareIndices(filtered);
 
         list.get(0).name.set("AA");
         lo.check1AddRemove(filtered, Collections.EMPTY_LIST, 0, 1);
         assertEquals(Person.createPersonsList("AA", "BB"), filtered);
+        compareIndices(filtered);
 
         lo.clear();
         list.get(1).name.set("BBB");
         lo.check1Update(filtered, 1, 2);
         assertEquals(Person.createPersonsList("AA", "BBB"), filtered);
+        compareIndices(filtered);
 
         lo.clear();
         list.get(1).name.set("B");
         lo.check1AddRemove(filtered, Person.createPersonsList("B"), 1, 1);
         assertEquals(Person.createPersonsList("AA"), filtered);
+        compareIndices(filtered);
     }
 
     @Test
@@ -148,10 +179,12 @@ public class FilteredListTest {
         filtered.addListener(lo);
 
         assertEquals(Collections.EMPTY_LIST, filtered);
+        compareIndices(filtered);
 
         list.get(0).name.set("AA");
         lo.check1AddRemove(filtered, Collections.EMPTY_LIST, 0, 1);
         assertEquals(Person.createPersonsList("AA"), filtered);
+        compareIndices(filtered);
     }
 
     @Test
@@ -172,6 +205,7 @@ public class FilteredListTest {
         lo.checkAddRemove(1, filtered, Collections.EMPTY_LIST, 3, 5);
         lo.checkAddRemove(2, filtered, Collections.EMPTY_LIST, 6, 7);
         assertEquals(Person.createPersonsList("AA", "AA", "BB", "AA", "AA", "BC", "AA"), filtered);
+        compareIndices(filtered);
 
         lo.clear();
         p1.name.set("AAA");
@@ -179,6 +213,7 @@ public class FilteredListTest {
         lo.checkUpdate(1, filtered, 3, 5);
         lo.checkUpdate(2, filtered, 6, 7);
         assertEquals(Person.createPersonsList("AAA", "AAA", "BB", "AAA", "AAA", "BC", "AAA"), filtered);
+        compareIndices(filtered);
 
         lo.clear();
         p1.name.set("A");
@@ -186,6 +221,7 @@ public class FilteredListTest {
         lo.checkAddRemove(1, filtered, Person.createPersonsList("A", "A"), 1, 1);
         lo.checkAddRemove(2, filtered, Person.createPersonsList("A"), 2, 2);
         assertEquals(Person.createPersonsList( "BB", "BC"), filtered);
+        compareIndices(filtered);
     }
 
     private static class Updater<E> extends ObservableListWrapper<E> {
@@ -220,6 +256,7 @@ public class FilteredListTest {
 
         list.updateAll();
         lo.checkUpdate(0, filtered, 0, filtered.size());
+        compareIndices(filtered);
 
         lo.clear();
         list.get(0).name.set("AA0");
@@ -232,6 +269,7 @@ public class FilteredListTest {
         lo.checkAddRemove(0, filtered, Collections.EMPTY_LIST, 0, 1);
         lo.checkAddRemove(1, filtered, Person.createPersonsList("B6"), 2, 5);
         lo.checkUpdate(2, filtered, 1, 2);
+        compareIndices(filtered);
     }
 
     @Test
@@ -240,6 +278,7 @@ public class FilteredListTest {
         assertEquals(list.size(), filteredList.size());
         assertEquals(list, filteredList);
         mlo.check1AddRemove(filteredList, Arrays.asList("a", "d"), 0, 4);
+        compareIndices();
     }
 
     @Test
@@ -247,5 +286,6 @@ public class FilteredListTest {
         filteredList = new FilteredList<>(list);
         assertEquals(list.size(), filteredList.size());
         assertEquals(list, filteredList);
+        compareIndices();
     }
 }

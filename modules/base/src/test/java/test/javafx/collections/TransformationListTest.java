@@ -85,6 +85,11 @@ public class TransformationListTest {
         }
 
         @Override
+        public int getViewIndex(int index) {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
         public boolean removeAll(String... es) {
             throw new UnsupportedOperationException("Not supported yet.");
         }

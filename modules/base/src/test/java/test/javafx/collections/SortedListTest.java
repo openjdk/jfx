@@ -85,26 +85,16 @@ public class SortedListTest {
         compareIndices();
     }
 
-    //TODO: replace with sorted.getViewIndex when JDK-8139848 is fixed
-    private <E> int getViewIndex(SortedList<E> sorted, int sourceIndex) {
-        for (int i = 0; i < sorted.size(); i++) {
-            if (sourceIndex == sorted.getSourceIndex(i)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
     private <E> void compareIndices(SortedList<E> sorted) {
         ObservableList<? extends E> source = sorted.getSource();
         for (int i = 0; i < sorted.size(); i++) {
             // i as a view index
             int sourceIndex = sorted.getSourceIndex(i);
-            assertEquals(i, getViewIndex(sorted, sourceIndex));
+            assertEquals(i, sorted.getViewIndex(sourceIndex));
             assertSame(sorted.get(i), source.get(sourceIndex));
 
             // i as a source index
-            int viewIndex = getViewIndex(sorted, i);
+            int viewIndex = sorted.getViewIndex(i);
             assertEquals(i, sorted.getSourceIndex(viewIndex));
             assertSame(source.get(i), sorted.get(viewIndex));
         }
