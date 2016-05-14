@@ -36,6 +36,7 @@ import com.sun.glass.ui.Size;
 import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.prism.impl.PrismSettings;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -58,7 +59,32 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     public static  long display = 0;
     public static  long visualID = 0;
 
+    static float overrideUIScale;
+
     private final InvokeLaterDispatcher invokeLaterDispatcher;
+
+    private static float getFloat(String propname, float defval, String description) {
+        String str = System.getProperty(propname);
+        if (str == null) {
+            str = System.getenv(propname);
+        }
+        if (str == null) {
+            return defval;
+        }
+        str = str.trim();
+        float val;
+        if (str.endsWith("%")) {
+            val = Integer.parseInt(str.substring(0, str.length()-1)) / 100.0f;
+        } else if (str.endsWith("DPI") || str.endsWith("dpi")) {
+            val = Integer.parseInt(str.substring(0, str.length()-3)) / 96.0f;
+        } else {
+            val = Float.parseFloat(str);
+        }
+        if (PrismSettings.verbose) {
+            System.out.println(description+val);
+        }
+        return val;
+    }
 
     GtkApplication() {
 
@@ -84,7 +110,12 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
                 AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             return Boolean.getBoolean("jdk.gtk.verbose");
         });
-        int version = _initGTK(gtkVersion, gtkVersionVerbose);
+        if (PrismSettings.allowHiDPIScaling) {
+            overrideUIScale = getFloat("glass.gtk.uiScale", -1.0f, "Forcing UI scaling factor: ");
+        } else {
+            overrideUIScale = -1.0f;
+        }
+        int version = _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
 
         if (version == -1) {
             throw new RuntimeException("Error loading GTK libraries");
@@ -101,7 +132,7 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
         }
     }
 
-    private static native int _initGTK(int version, boolean verbose);
+    private static native int _initGTK(int version, boolean verbose, float overrideUIScale);
 
     private static boolean isDisplayValid() {
         return _isDisplayValid();

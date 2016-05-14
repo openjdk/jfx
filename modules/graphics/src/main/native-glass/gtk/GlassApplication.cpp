@@ -102,9 +102,11 @@ static void init_threads() {
  * Signature: (IZ)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
-  (JNIEnv *env, jclass clazz, jint version, jboolean verbose)
+  (JNIEnv *env, jclass clazz, jint version, jboolean verbose, jfloat uiScale)
 {
     (void) clazz;
+
+    OverrideUIScale = uiScale;
 
     int ret = wrapper_load_symbols(version, verbose);
 
