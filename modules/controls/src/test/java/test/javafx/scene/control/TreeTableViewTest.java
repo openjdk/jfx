@@ -41,6 +41,8 @@ import java.util.stream.Collectors;
 
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
@@ -4348,7 +4350,7 @@ public class TreeTableViewTest {
         assertEquals(0, fm.getFocusedIndex());
         assertEquals(0, fm.getFocusedCell().getRow());
         assertEquals(test_rt_38892_lastNameCol, fm.getFocusedCell().getTableColumn());
-        assertEquals(1, fm.getFocusedCell().getColumn());
+        assertEquals(0, fm.getFocusedCell().getColumn());
     }
 
     @Test public void test_rt_38892_removeSelectionFromCellsInRemovedColumn() {
@@ -5801,5 +5803,113 @@ public class TreeTableViewTest {
         assertEquals(firstRowCreateCount, rowCreateCount.get());
 
         sl.dispose();
+    }
+
+    @Test public void test_jdk_8144681_removeColumn() {
+        TreeTableView<Book> table = new TreeTableView<>();
+
+        TreeItem<Book> root = new TreeItem<>();
+        root.getChildren().addAll(
+                new TreeItem<>(new Book("Book 1", "Author 1", "Remark 1"))
+                , new TreeItem<>(new Book("Book 2", "Author 2", "Remark 2"))
+                , new TreeItem<>(new Book("Book 3", "Author 3", "Remark 3"))
+                , new TreeItem<>(new Book("Book 4", "Author 4", "Remark 4")));
+        table.setRoot(root);
+
+        String[] columns = { "title", "author", "remark" };
+        for (String prop : columns) {
+            TreeTableColumn<Book, String> col = new TreeTableColumn<>(prop);
+            col.setCellValueFactory(new TreeItemPropertyValueFactory<>(prop));
+            table.getColumns().add(col);
+        }
+        table.setColumnResizePolicy(TreeTableView.UNCONSTRAINED_RESIZE_POLICY);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        table.getSelectionModel().setCellSelectionEnabled(true);
+
+        table.getSelectionModel().selectAll();
+
+        ControlTestUtils.runWithExceptionHandler(() -> table.getColumns().remove(2));
+    }
+
+    @Test public void test_jdk_8144681_moveColumn() {
+        TreeTableView<Book> table = new TreeTableView<>();
+
+        TreeItem<Book> root = new TreeItem<>();
+        root.getChildren().addAll(
+                new TreeItem<>(new Book("Book 1", "Author 1", "Remark 1"))
+                , new TreeItem<>(new Book("Book 2", "Author 2", "Remark 2"))
+                , new TreeItem<>(new Book("Book 3", "Author 3", "Remark 3"))
+                , new TreeItem<>(new Book("Book 4", "Author 4", "Remark 4")));
+        table.setRoot(root);
+
+        String[] columns = { "title", "author", "remark" };
+        for (String prop : columns) {
+            TreeTableColumn<Book, String> col = new TreeTableColumn<>(prop);
+            col.setCellValueFactory(new TreeItemPropertyValueFactory<>(prop));
+            table.getColumns().add(col);
+        }
+        table.setColumnResizePolicy(TreeTableView.UNCONSTRAINED_RESIZE_POLICY);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        table.getSelectionModel().setCellSelectionEnabled(true);
+
+        table.getSelectionModel().selectAll();
+
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            table.getColumns().setAll(table.getColumns().get(0), table.getColumns().get(2), table.getColumns().get(1));
+        });
+    }
+
+    private static class Book {
+        private SimpleStringProperty title = new SimpleStringProperty();
+        private SimpleStringProperty author = new SimpleStringProperty();
+        private SimpleStringProperty remark = new SimpleStringProperty();
+
+        public Book(String title, String author, String remark) {
+            super();
+            setTitle(title);
+            setAuthor(author);
+            setRemark(remark);
+        }
+
+        public SimpleStringProperty titleProperty() {
+            return this.title;
+        }
+
+        public java.lang.String getTitle() {
+            return this.titleProperty().get();
+        }
+
+        public void setTitle(final java.lang.String title) {
+            this.titleProperty().set(title);
+        }
+
+        public SimpleStringProperty authorProperty() {
+            return this.author;
+        }
+
+        public java.lang.String getAuthor() {
+            return this.authorProperty().get();
+        }
+
+        public void setAuthor(final java.lang.String author) {
+            this.authorProperty().set(author);
+        }
+
+        public SimpleStringProperty remarkProperty() {
+            return this.remark;
+        }
+
+        public java.lang.String getRemark() {
+            return this.remarkProperty().get();
+        }
+
+        public void setRemark(final java.lang.String remark) {
+            this.remarkProperty().set(remark);
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s(%s) - %s", getTitle(), getAuthor(), getRemark());
+        }
     }
 }

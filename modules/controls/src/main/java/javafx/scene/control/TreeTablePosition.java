@@ -68,6 +68,8 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
         super(row, tableColumn);
         this.controlRef = new WeakReference<>(treeTableView);
         this.treeItemRef = new WeakReference<>(treeTableView.getTreeItem(row));
+
+        nonFixedColumnIndex = treeTableView == null || tableColumn == null ? -1 : treeTableView.getVisibleLeafIndex(tableColumn);
     }
 
 
@@ -81,6 +83,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
     private final WeakReference<TreeTableView<S>> controlRef;
     private final WeakReference<TreeItem<S>> treeItemRef;
     int fixedColumnIndex = -1;
+    private final int nonFixedColumnIndex;
 
     /***************************************************************************
      *                                                                         *
@@ -90,16 +93,15 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
 
     /**
      * The column index that this TreeTablePosition represents in the TreeTableView. It
-     * is -1 if the TreeTableView or TreeTableColumn instances are null.
+     * is -1 if the TreeTableView or TreeTableColumn instances are null at the time the class
+     * is instantiated (i.e. it is computed at construction).
      */
     @Override public int getColumn() {
         if (fixedColumnIndex > -1) {
             return fixedColumnIndex;
         }
-        TreeTableView<S> tableView = getTreeTableView();
-        TreeTableColumn<S,T> tableColumn = getTableColumn();
-        return tableView == null || tableColumn == null ? -1 :
-                tableView.getVisibleLeafIndex(tableColumn);
+
+        return nonFixedColumnIndex;
     }
 
     /**

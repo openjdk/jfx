@@ -683,67 +683,78 @@ public class TableView<S> extends Control {
             final TableViewFocusModel<S> fm = getFocusModel();
             final TableViewSelectionModel<S> sm = getSelectionModel();
             c.reset();
+
+            // we need to collect together all removed and all added columns, because
+            // the code below works on the actually removed columns. If we perform
+            // the code within this while loop, we'll be deselecting columns that
+            // should be deselected (because they have just moved place, for example).
+            List<TableColumn<S,?>> removed = new ArrayList<>();
+            List<TableColumn<S,?>> added = new ArrayList<>();
             while (c.next()) {
-                if (! c.wasRemoved()) continue;
+                if (c.wasRemoved()) {
+                    removed.addAll(c.getRemoved());
+                }
+                if (c.wasAdded()) {
+                    added.addAll(c.getAddedSubList());
+                }
+            }
+            removed.removeAll(added);
 
-                List<? extends TableColumn<S,?>> removed = c.getRemoved();
-
-                // Fix for focus - we simply move focus to a cell to the left
-                // of the focused cell if the focused cell was located within
-                // a column that has been removed.
-                if (fm != null) {
-                    TablePosition<S, ?> focusedCell = fm.getFocusedCell();
-                    boolean match = false;
-                    for (TableColumn<S, ?> tc : removed) {
-                        match = focusedCell != null && focusedCell.getTableColumn() == tc;
-                        if (match) {
-                            break;
-                        }
-                    }
-
+            // Fix for focus - we simply move focus to a cell to the left
+            // of the focused cell if the focused cell was located within
+            // a column that has been removed.
+            if (fm != null) {
+                TablePosition<S, ?> focusedCell = fm.getFocusedCell();
+                boolean match = false;
+                for (TableColumn<S, ?> tc : removed) {
+                    match = focusedCell != null && focusedCell.getTableColumn() == tc;
                     if (match) {
-                        int matchingColumnIndex = lastKnownColumnIndex.getOrDefault(focusedCell.getTableColumn(), 0);
-                        int newFocusColumnIndex =
-                                matchingColumnIndex == 0 ? 0 :
-                                Math.min(getVisibleLeafColumns().size() - 1, matchingColumnIndex - 1);
-                        fm.focus(focusedCell.getRow(), getVisibleLeafColumn(newFocusColumnIndex));
+                        break;
                     }
                 }
 
-                // Fix for selection - we remove selection from all cells that
-                // were within the removed column.
-                if (sm != null) {
-                    List<TablePosition> selectedCells = new ArrayList<>(sm.getSelectedCells());
-                    for (TablePosition selectedCell : selectedCells) {
-                        boolean match = false;
-                        for (TableColumn<S, ?> tc : removed) {
-                            match = selectedCell != null && selectedCell.getTableColumn() == tc;
-                            if (match) break;
-                        }
+                if (match) {
+                    int matchingColumnIndex = lastKnownColumnIndex.getOrDefault(focusedCell.getTableColumn(), 0);
+                    int newFocusColumnIndex =
+                            matchingColumnIndex == 0 ? 0 :
+                            Math.min(getVisibleLeafColumns().size() - 1, matchingColumnIndex - 1);
+                    fm.focus(focusedCell.getRow(), getVisibleLeafColumn(newFocusColumnIndex));
+                }
+            }
 
-                        if (match) {
-                            // we can't just use the selectedCell.getTableColumn(), as that
-                            // column no longer exists and therefore its index is not correct.
-                            int matchingColumnIndex = lastKnownColumnIndex.getOrDefault(selectedCell.getTableColumn(), -1);
-                            if (matchingColumnIndex == -1) continue;
+            // Fix for selection - we remove selection from all cells that
+            // were within the removed column.
+            if (sm != null) {
+                List<TablePosition> selectedCells = new ArrayList<>(sm.getSelectedCells());
+                for (TablePosition selectedCell : selectedCells) {
+                    boolean match = false;
+                    for (TableColumn<S, ?> tc : removed) {
+                        match = selectedCell != null && selectedCell.getTableColumn() == tc;
+                        if (match) break;
+                    }
 
-                            if (sm instanceof TableViewArrayListSelectionModel) {
-                                // Also, because the table column no longer exists in the columns
-                                // list at this point, we can't just call:
-                                // sm.clearSelection(selectedCell.getRow(), selectedCell.getTableColumn());
-                                // as the tableColumn would map to an index of -1, which means that
-                                // selection will not be cleared. Instead, we have to create
-                                // a new TablePosition with a fixed column index and use that.
-                                TablePosition<S,?> fixedTablePosition =
-                                        new TablePosition<S,Object>(TableView.this,
-                                                selectedCell.getRow(),
-                                                selectedCell.getTableColumn());
-                                fixedTablePosition.fixedColumnIndex = matchingColumnIndex;
+                    if (match) {
+                        // we can't just use the selectedCell.getTableColumn(), as that
+                        // column no longer exists and therefore its index is not correct.
+                        int matchingColumnIndex = lastKnownColumnIndex.getOrDefault(selectedCell.getTableColumn(), -1);
+                        if (matchingColumnIndex == -1) continue;
 
-                                ((TableViewArrayListSelectionModel)sm).clearSelection(fixedTablePosition);
-                            } else {
-                                sm.clearSelection(selectedCell.getRow(), selectedCell.getTableColumn());
-                            }
+                        if (sm instanceof TableViewArrayListSelectionModel) {
+                            // Also, because the table column no longer exists in the columns
+                            // list at this point, we can't just call:
+                            // sm.clearSelection(selectedCell.getRow(), selectedCell.getTableColumn());
+                            // as the tableColumn would map to an index of -1, which means that
+                            // selection will not be cleared. Instead, we have to create
+                            // a new TablePosition with a fixed column index and use that.
+                            TablePosition<S,?> fixedTablePosition =
+                                    new TablePosition<>(TableView.this,
+                                            selectedCell.getRow(),
+                                            selectedCell.getTableColumn());
+                            fixedTablePosition.fixedColumnIndex = matchingColumnIndex;
+
+                            ((TableViewArrayListSelectionModel)sm).clearSelection(fixedTablePosition);
+                        } else {
+                            sm.clearSelection(selectedCell.getRow(), selectedCell.getTableColumn());
                         }
                     }
                 }

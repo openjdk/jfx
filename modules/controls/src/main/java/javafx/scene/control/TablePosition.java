@@ -73,6 +73,8 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
         List<S> items = tableView.getItems();
         this.itemRef = new WeakReference<>(
                 items != null && row >= 0 && row < items.size() ? items.get(row) : null);
+
+        nonFixedColumnIndex = tableView == null || tableColumn == null ? -1 : tableView.getVisibleLeafIndex(tableColumn);
     }
 
 
@@ -86,6 +88,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
     private final WeakReference<TableView<S>> controlRef;
     private final WeakReference<S> itemRef;
     int fixedColumnIndex = -1;
+    private final int nonFixedColumnIndex;
 
     /***************************************************************************
      *                                                                         *
@@ -95,17 +98,15 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
 
     /**
      * The column index that this TablePosition represents in the TableView. It
-     * is -1 if the TableView or TableColumn instances are null.
+     * is -1 if the TableView or TableColumn instances are null at the time the class
+     * is instantiated (i.e. it is computed at construction).
      */
     @Override public int getColumn() {
         if (fixedColumnIndex > -1) {
             return fixedColumnIndex;
         }
 
-        TableView<S> tableView = getTableView();
-        TableColumn<S,T> tableColumn = getTableColumn();
-        return tableView == null || tableColumn == null ? -1 :
-                tableView.getVisibleLeafIndex(tableColumn);
+        return nonFixedColumnIndex;
     }
 
     /**
