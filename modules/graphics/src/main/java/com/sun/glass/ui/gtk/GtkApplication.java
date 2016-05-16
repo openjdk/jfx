@@ -111,7 +111,8 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
             return Boolean.getBoolean("jdk.gtk.verbose");
         });
         if (PrismSettings.allowHiDPIScaling) {
-            overrideUIScale = getFloat("glass.gtk.uiScale", -1.0f, "Forcing UI scaling factor: ");
+            overrideUIScale = AccessController.doPrivileged((PrivilegedAction<Float>) () ->
+                    getFloat("glass.gtk.uiScale", -1.0f, "Forcing UI scaling factor: "));
         } else {
             overrideUIScale = -1.0f;
         }
