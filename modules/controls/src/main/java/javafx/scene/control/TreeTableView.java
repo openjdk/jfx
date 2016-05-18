@@ -2440,10 +2440,7 @@ public class TreeTableView<S> extends Control {
                         final boolean isCellSelectionMode = isCellSelectionEnabled();
                         ObservableList<TreeTableColumn<S, ?>> columns = getTreeTableView().getVisibleLeafColumns();
 
-                        if (!isCellSelectionMode) {
-                            startAtomic();
-                        }
-
+                        selectedIndices._beginChange();
                         final int from = startRow + 1;
                         final int to = startRow + count;
                         final List<Integer> removed = new ArrayList<>();
@@ -2467,23 +2464,22 @@ public class TreeTableView<S> extends Control {
                             } else {
                                 if (isSelected(i)) {
                                     wasAnyChildSelected = true;
-                                    clearSelection(i);
+                                    selectedIndices._nextRemove(i);
                                     removed.add(i);
                                 }
                             }
                         }
 
-                        if (!isCellSelectionMode) {
+                        for (int index : removed) {
+                            startAtomic();
+                            clearSelection(index);
                             stopAtomic();
                         }
+                        selectedIndices._endChange();
 
                         // put selection onto the newly-collapsed tree item
                         if (wasPrimarySelectionInChild && wasAnyChildSelected) {
                             select(startRow, selectedColumn);
-                        } else if (!isCellSelectionMode) {
-                            selectedIndices._beginChange();
-                            selectedIndices._nextRemove(from, removed);
-                            selectedIndices._endChange();
                         }
 
                         shift += -count + 1;

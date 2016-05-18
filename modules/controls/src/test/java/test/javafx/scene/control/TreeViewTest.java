@@ -40,6 +40,7 @@ import test.com.sun.javafx.scene.control.test.RT_22463_Person;
 import com.sun.javafx.tk.Toolkit;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import javafx.application.Platform;
@@ -2435,7 +2436,8 @@ public class TreeViewTest {
         treeItem2.getChildren().addAll(new TreeItem<>("Item 21"), new TreeItem<>("Item 22"));
 
         final TreeItem<String> root1 = new TreeItem<>("Root Node 1");
-        root1.getChildren().addAll(new TreeItem<>("Item 1"), treeItem2, new TreeItem<>("Item 3"));
+        TreeItem<String> treeItem1 = new TreeItem<>("Item 1");
+        root1.getChildren().addAll(treeItem1, treeItem2, new TreeItem<>("Item 3"));
         root1.setExpanded(true);
 
         final TreeItem<String> root2 = new TreeItem<>("Root Node 2");
@@ -2447,28 +2449,73 @@ public class TreeViewTest {
         final TreeView<String> treeView = new TreeView<>(hiddenRoot);
         treeView.setShowRoot(false);
 
+        AtomicInteger step = new AtomicInteger();
         MultipleSelectionModel<TreeItem<String>> sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.getSelectedItems().addListener((ListChangeListener.Change<? extends TreeItem<String>> c) -> {
+            switch (step.get()) {
+                case 0: {
+                    // we expect treeItem1 to be the only item added
+                    while (c.next()) {
+                        assertFalse(c.wasRemoved());
+                        assertTrue(c.wasAdded());
+                        assertEquals(1, c.getAddedSize());
+                        assertTrue(c.getAddedSubList().contains(treeItem1));
+                    }
+                    break;
+                }
+                case 1: {
+                    // we expect treeItem2 to be the only item added
+                    while (c.next()) {
+                        assertFalse(c.wasRemoved());
+                        assertTrue(c.wasAdded());
+                        assertEquals(1, c.getAddedSize());
+                        assertTrue(c.getAddedSubList().contains(treeItem2));
+                    }
+                    break;
+                }
+                case 2: {
+                    // we expect treeItem1 and treeItem2 to be removed in two separate events,
+                    // and we then expect root1 to be added in another event
+                    List<TreeItem<String>> removed = new ArrayList<>();
+                    while (c.next()) {
+                        if (c.wasAdded()) {
+                            assertEquals(1, c.getAddedSize());
+                            assertTrue(c.getAddedSubList().contains(root1));
+                            removed.clear();
+                        }
+                        if (c.wasRemoved()) {
+                            removed.addAll(c.getRemoved());
+                        }
+                    }
+                    if (!removed.isEmpty()) {
+                        assertTrue(removed.containsAll(FXCollections.observableArrayList(treeItem1, treeItem2)));
+                    }
+                    break;
+                }
+            }
             rt_37366_count++;
         });
 
         assertEquals(0, rt_37366_count);
 
-        sm.select(1);
+        step.set(0);
+        sm.select(1); // select "Item 1"
         assertEquals(1, rt_37366_count);
         assertFalse(sm.isSelected(0));
         assertTrue(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
 
-        sm.select(2);
+        step.set(1);
+        sm.select(2); // select "Item 2"
         assertEquals(2, rt_37366_count);
         assertFalse(sm.isSelected(0));
         assertTrue(sm.isSelected(1));
         assertTrue(sm.isSelected(2));
 
-        root1.setExpanded(false);
-        assertEquals(3, rt_37366_count);
+        step.set(2);
+        root1.setExpanded(false); // collapse "Root Node 1" and deselect the two children, moving selection up to "Root Node 1"
+        assertEquals(4, rt_37366_count);
         assertTrue(sm.isSelected(0));
         assertFalse(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
@@ -3418,5 +3465,121 @@ public class TreeViewTest {
         assertEquals(startIndex, model.getSelectedIndex());
         assertEquals("NEW", model.getSelectedItem().getValue());
         assertEquals(1, model.getSelectedItems().size());
+    }
+
+    @Test public void test_jdk_8157205() {
+        final TreeItem<String> childNode1 = new TreeItem<>("Child Node 1");
+        childNode1.setExpanded(true);
+        TreeItem<String> item1 = new TreeItem<>("Node 1-1");
+        TreeItem<String> item2 = new TreeItem<>("Node 1-2");
+        childNode1.getChildren().addAll(item1, item2);
+
+        final TreeItem<String> root = new TreeItem<>("Root node");
+        root.setExpanded(true);
+        root.getChildren().add(childNode1);
+
+        final TreeView<String> view = new TreeView<>(root);
+        MultipleSelectionModel<TreeItem<String>> sm = view.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        AtomicInteger step = new AtomicInteger();
+
+        AtomicInteger indicesEventCount = new AtomicInteger();
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>)c -> {
+            switch (step.get()) {
+                case 0: {
+                    // expect to see [1,2,3] added at index 0
+                    c.next();
+                    assertEquals(3, c.getAddedSize());
+                    assertTrue("added: " + c.getAddedSubList(),
+                            c.getAddedSubList().containsAll(FXCollections.observableArrayList(1,2,3)));
+                    assertEquals(0, c.getFrom());
+                    break;
+                }
+                case 1: {
+                    // expect to see [2,3] removed
+                    List<Integer> removed = new ArrayList<>();
+                    while (c.next()) {
+                        if (c.wasRemoved()) {
+                            removed.addAll(c.getRemoved());
+                        } else {
+                            fail("Unexpected state");
+                        }
+                    }
+                    if (!removed.isEmpty()) {
+                        assertTrue(removed.containsAll(FXCollections.observableArrayList(2,3)));
+                    }
+                    break;
+                }
+            }
+
+            indicesEventCount.incrementAndGet();
+        });
+
+        AtomicInteger itemsEventCount = new AtomicInteger();
+        sm.getSelectedItems().addListener((ListChangeListener<TreeItem<String>>)c -> {
+            switch (step.get()) {
+                case 0: {
+                    // expect to see [1,2,3] added at index 0
+                    c.next();
+                    assertEquals(3, c.getAddedSize());
+                    assertTrue("added: " + c.getAddedSubList(),
+                            c.getAddedSubList().containsAll(FXCollections.observableArrayList(childNode1, item1, item2)));
+                    assertEquals(0, c.getFrom());
+                    break;
+                }
+                case 1: {
+                    // expect to see [2,3] removed
+                    List<TreeItem<String>> removed = new ArrayList<>();
+                    while (c.next()) {
+                        if (c.wasRemoved()) {
+                            removed.addAll(c.getRemoved());
+                        } else {
+                            fail("Unexpected state");
+                        }
+                    }
+                    if (!removed.isEmpty()) {
+                        assertTrue(removed.containsAll(FXCollections.observableArrayList(item1, item2)));
+                    }
+                    break;
+                }
+            }
+
+            itemsEventCount.incrementAndGet();
+        });
+
+        assertEquals(0, indicesEventCount.get());
+        assertEquals(0, itemsEventCount.get());
+
+        step.set(0);
+        sm.selectIndices(1,2,3); // select Child Node 1 and both children
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+        assertTrue(sm.isSelected(3));
+        assertEquals(3, sm.getSelectedIndices().size());
+        assertEquals(3, sm.getSelectedItems().size());
+        assertEquals(1, indicesEventCount.get());
+        assertEquals(1, itemsEventCount.get());
+
+        step.set(1);
+        System.out.println("about to collapse now");
+        childNode1.setExpanded(false); // collapse Child Node 1 and expect both children to be deselected
+        assertTrue(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+        assertFalse(sm.isSelected(3));
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(2, indicesEventCount.get());
+        assertEquals(2, itemsEventCount.get());
+
+        step.set(2);
+        childNode1.setExpanded(true); // expand Child Node 1 and expect both children to still be deselected
+        assertTrue(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+        assertFalse(sm.isSelected(3));
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(2, indicesEventCount.get());
+        assertEquals(2, itemsEventCount.get());
     }
 }
