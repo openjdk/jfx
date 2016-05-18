@@ -25,6 +25,7 @@
 
 package test.javafx.stage;
 
+import com.sun.javafx.stage.WindowHelper;
 import test.com.sun.javafx.pgstub.StubPopupStage;
 import test.com.sun.javafx.pgstub.StubStage;
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -125,7 +126,7 @@ public class PopupTest {
         assertEquals(10, p1.getX(), 1e-100);
         assertEquals(20, p1.getY(), 1e-100);
         pulse();
-        StubPopupStage peer = (StubPopupStage) p1.impl_getPeer();
+        StubPopupStage peer = (StubPopupStage) WindowHelper.getPeer(p1);
         assertEquals(10, peer.x, 1e-100);
         assertEquals(20, peer.y, 1e-100);
     }
@@ -186,7 +187,7 @@ public class PopupTest {
         popup.setAnchorLocation(PopupWindow.AnchorLocation.WINDOW_BOTTOM_RIGHT);
         popup.show(stage, 400, 400);
 
-        final StubPopupStage peer = (StubPopupStage) popup.impl_getPeer();
+        final StubPopupStage peer = (StubPopupStage) WindowHelper.getPeer(popup);
 
         pulse();
         assertEquals(280.0, peer.x, 1e-100);
@@ -222,7 +223,7 @@ public class PopupTest {
                 PopupWindow.AnchorLocation.CONTENT_BOTTOM_RIGHT);
         popup.show(stage, 400, 300);
 
-        final StubPopupStage peer = (StubPopupStage) popup.impl_getPeer();
+        final StubPopupStage peer = (StubPopupStage) WindowHelper.getPeer(popup);
 
         assertEquals(280.0, peer.x, 1e-100);
         assertEquals(180.0, peer.y, 1e-100);
@@ -248,7 +249,7 @@ public class PopupTest {
         double centerX = Math.ceil((bounds.getMinX() + (bounds.getWidth() - 100))/2);
         double centerY = Math.ceil((bounds.getMinY() + (bounds.getHeight() - 100))/3);
 
-        StubPopupStage peer = (StubPopupStage) popup.impl_getPeer();
+        StubPopupStage peer = (StubPopupStage) WindowHelper.getPeer(popup);
 
         assertEquals(centerX, Math.ceil(peer.x), 1e-100);
         assertEquals(centerY, Math.ceil(peer.y), 1e-100);
@@ -256,7 +257,7 @@ public class PopupTest {
         popup.hide();
         popup.show(stage);
 
-        peer = (StubPopupStage) popup.impl_getPeer();
+        peer = (StubPopupStage) WindowHelper.getPeer(popup);
 
         assertEquals(centerX, Math.ceil(peer.x), 1e-100);
         assertEquals(centerY, Math.ceil(peer.y), 1e-100);
@@ -398,7 +399,7 @@ public class PopupTest {
         p.setAutoHide(true);
         p.show(stage);
 
-        StubPopupStage peer = (StubPopupStage) p.impl_getPeer();
+        StubPopupStage peer = (StubPopupStage) WindowHelper.getPeer(p);
         p.sizeToScene();
 
         double width = p.getWidth();
@@ -691,7 +692,7 @@ public class PopupTest {
         popup.show(stage);
         stage.requestFocus();
 
-        final StubStage peer = (StubStage) stage.impl_getPeer();
+        final StubStage peer = (StubStage) WindowHelper.getPeer(stage);
         assertFalse(peer.isFocusGrabbed());
 
         popup.setAutoHide(true);

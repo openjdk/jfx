@@ -59,6 +59,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.ParentHelper;
+import com.sun.javafx.stage.WindowHelper;
 import java.util.Collections;
 import javafx.stage.Window;
 
@@ -450,7 +451,7 @@ public abstract class Parent extends Node {
             final Scene scene = getScene();
             if (scene != null) {
                 Window w = scene.getWindow();
-                if (w != null && w.impl_getPeer() != null) {
+                if (w != null && WindowHelper.getPeer(w) != null) {
                     Toolkit.getToolkit().checkFxUserThread();
                 }
             }

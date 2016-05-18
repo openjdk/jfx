@@ -25,6 +25,7 @@
 
 package test.javafx.stage;
 
+import com.sun.javafx.stage.StageHelper;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageShim;
@@ -73,7 +74,7 @@ public class StageMutabilityTest {
     @Test public void testStyleSetPrimary() {
         Stage stage = new Stage();
         assertFalse(StageShim.isPrimary(stage));
-        stage.impl_setPrimary(true);
+        StageHelper.setPrimary(stage, true);
         assertTrue(StageShim.isPrimary(stage));
         assertEquals(StageStyle.DECORATED, stage.getStyle());
         stage.initStyle(StageStyle.UNDECORATED);
@@ -162,7 +163,7 @@ public class StageMutabilityTest {
     @Test public void testModalitySetPrimary() {
         Stage stage = new Stage();
         assertFalse(StageShim.isPrimary(stage));
-        stage.impl_setPrimary(true);
+        StageHelper.setPrimary(stage, true);
         assertTrue(StageShim.isPrimary(stage));
         assertEquals(Modality.NONE, stage.getModality());
         try {

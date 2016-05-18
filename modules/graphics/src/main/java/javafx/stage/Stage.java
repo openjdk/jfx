@@ -171,8 +171,30 @@ public class Stage extends Window {
 
     static {
         StageHelper.setStageAccessor(new StageHelper.StageAccessor() {
+            @Override public String getMXWindowType(Window window) {
+                return ((Stage) window).getMXWindowType();
+            }
+
+            @Override public void doVisibleChanging(Window window, boolean visible) {
+                ((Stage) window).doVisibleChanging(visible);
+            }
+
+            @Override public void doVisibleChanged(Window window, boolean visible) {
+                ((Stage) window).doVisibleChanged(visible);
+            }
+
             @Override public void initSecurityDialog(Stage stage, boolean securityDialog) {
                 stage.initSecurityDialog(securityDialog);
+            }
+
+            @Override
+            public void setPrimary(Stage stage, boolean primary) {
+                stage.setPrimary(primary);
+            }
+
+            @Override
+            public void setImportant(Stage stage, boolean important) {
+                stage.setImportant(important);
             }
         });
     }
@@ -230,6 +252,7 @@ public class Stage extends Window {
 
         // Set the style
         initStyle(style);
+        StageHelper.initHelper(this);
     }
 
     /**
@@ -286,18 +309,15 @@ public class Stage extends Window {
         return securityDialog;
     }
 
-    /**
+    /*
      * sets this stage to be the primary stage.
      * When run as an applet, this stage will appear in the broswer
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public void impl_setPrimary(boolean primary) {
+    void setPrimary(boolean primary) {
         this.primary = primary;
     }
 
-    /**
+    /*
      * Returns whether this stage is the primary stage.
      * When run as an applet, the primary stage will appear in the broswer
      *
@@ -307,28 +327,19 @@ public class Stage extends Window {
         return primary;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    public String impl_getMXWindowType() {
+    String getMXWindowType() {
         return (primary) ? "PrimaryStage" : getClass().getSimpleName();
     }
 
     private boolean important = true;
 
-    /**
+    /*
      * Sets a flag indicating whether this stage is an "important" window for
      * the purpose of determining whether the application is idle and should
      * exit. The application is considered finished when the last important
      * window is closed.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public void impl_setImportant(boolean important) {
+    void setImportant(boolean important) {
         this.important = important;
     }
 
@@ -651,8 +662,8 @@ public class Stage extends Window {
     public final void setFullScreen(boolean value) {
         Toolkit.getToolkit().checkFxUserThread();
         fullScreenPropertyImpl().set(value);
-        if (impl_peer != null)
-            impl_peer.setFullScreen(value);
+        if (getPeer() != null)
+            getPeer().setFullScreen(value);
     }
 
     public final boolean isFullScreen() {
@@ -683,8 +694,8 @@ public class Stage extends Window {
             for (Image icon : icons) {
                 platformImages.add(Toolkit.getImageAccessor().getPlatformImage(icon));
             }
-            if (impl_peer != null) {
-                impl_peer.setIcons(platformImages);
+            if (getPeer() != null) {
+                getPeer().setIcons(platformImages);
             }
         }
     };
@@ -720,8 +731,8 @@ public class Stage extends Window {
 
                 @Override
                 protected void invalidated() {
-                    if (impl_peer != null) {
-                        impl_peer.setTitle(get());
+                    if (getPeer() != null) {
+                        getPeer().setTitle(get());
                     }
                 }
 
@@ -761,8 +772,8 @@ public class Stage extends Window {
 
     public final void setIconified(boolean value) {
         iconifiedPropertyImpl().set(value);
-        if (impl_peer != null)
-            impl_peer.setIconified(value);
+        if (getPeer() != null)
+            getPeer().setIconified(value);
     }
 
     public final boolean isIconified() {
@@ -799,8 +810,9 @@ public class Stage extends Window {
 
     public final void setMaximized(boolean value) {
         maximizedPropertyImpl().set(value);
-        if (impl_peer != null)
-            impl_peer.setMaximized(value);
+        if (getPeer() != null) {
+            getPeer().setMaximized(value);
+        }
     }
 
     public final boolean isMaximized() {
@@ -844,8 +856,8 @@ public class Stage extends Window {
 
     public final void setAlwaysOnTop(boolean value) {
         alwaysOnTopPropertyImpl().set(value);
-        if (impl_peer != null) {
-            impl_peer.setAlwaysOnTop(value);
+        if (getPeer() != null) {
+            getPeer().setAlwaysOnTop(value);
         }
     }
 
@@ -918,9 +930,9 @@ public class Stage extends Window {
             if (noInvalidate) {
                 return;
             }
-            if (impl_peer != null) {
+            if (getPeer() != null) {
                 applyBounds();
-                impl_peer.setResizable(get());
+                getPeer().setResizable(get());
             }
         }
 
@@ -953,8 +965,8 @@ public class Stage extends Window {
 
                 @Override
                 protected void invalidated() {
-                    if (impl_peer != null) {
-                        impl_peer.setMinimumSize((int) Math.ceil(get()),
+                    if (getPeer() != null) {
+                        getPeer().setMinimumSize((int) Math.ceil(get()),
                                 (int) Math.ceil(getMinHeight()));
                     }
                     if (getWidth() < getMinWidth()) {
@@ -998,8 +1010,8 @@ public class Stage extends Window {
 
                 @Override
                 protected void invalidated() {
-                    if (impl_peer != null) {
-                        impl_peer.setMinimumSize(
+                    if (getPeer() != null) {
+                        getPeer().setMinimumSize(
                                 (int) Math.ceil(getMinWidth()),
                                 (int) Math.ceil(get()));
                     }
@@ -1044,8 +1056,8 @@ public class Stage extends Window {
 
                 @Override
                 protected void invalidated() {
-                    if (impl_peer != null) {
-                        impl_peer.setMaximumSize((int) Math.floor(get()),
+                    if (getPeer() != null) {
+                        getPeer().setMaximumSize((int) Math.floor(get()),
                                 (int) Math.floor(getMaxHeight()));
                     }
                     if (getWidth() > getMaxWidth()) {
@@ -1089,8 +1101,8 @@ public class Stage extends Window {
 
                 @Override
                 protected void invalidated() {
-                    if (impl_peer != null) {
-                        impl_peer.setMaximumSize(
+                    if (getPeer() != null) {
+                        getPeer().setMaximumSize(
                                 (int) Math.floor(getMaxWidth()),
                                 (int) Math.floor(get()));
                     }
@@ -1113,19 +1125,16 @@ public class Stage extends Window {
         return maxHeight;
     }
 
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * This can be replaced by listening for the onShowing/onHiding events
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected void impl_visibleChanging(boolean value) {
-        super.impl_visibleChanging(value);
+    private void doVisibleChanging(boolean value) {
         Toolkit toolkit = Toolkit.getToolkit();
-        if (value && (impl_peer == null)) {
+        if (value && (getPeer() == null)) {
             // Setup the peer
             Window window = getOwner();
-            TKStage tkStage = (window == null ? null : window.impl_getPeer());
+            TKStage tkStage = (window == null ? null : window.getPeer());
             Scene scene = getScene();
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
@@ -1141,41 +1150,39 @@ public class Stage extends Window {
                     }
                 }
             }
-            impl_peer = toolkit.createTKStage(this, isSecurityDialog(), stageStyle, isPrimary(),
-                                              getModality(), tkStage, rtl, acc);
-            impl_peer.setMinimumSize((int) Math.ceil(getMinWidth()),
+            setPeer(toolkit.createTKStage(this, isSecurityDialog(),
+                    stageStyle, isPrimary(), getModality(), tkStage, rtl, acc));
+            getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
-            impl_peer.setMaximumSize((int) Math.floor(getMaxWidth()),
+            getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
-            peerListener = new StagePeerListener(this, STAGE_ACCESSOR);
+            setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }
     }
 
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * This can be replaced by listening for the onShown/onHidden events
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected void impl_visibleChanged(boolean value) {
-        super.impl_visibleChanged(value);
-
+    private void doVisibleChanged(boolean value) {
         if (value) {
             // Finish initialization
-            impl_peer.setImportant(isImportant());
-            impl_peer.setResizable(isResizable());
-            impl_peer.setFullScreen(isFullScreen());
-            impl_peer.setAlwaysOnTop(isAlwaysOnTop());
-            impl_peer.setIconified(isIconified());
-            impl_peer.setMaximized(isMaximized());
-            impl_peer.setTitle(getTitle());
+            TKStage peer = getPeer();
+            peer.setImportant(isImportant());
+            peer.setResizable(isResizable());
+            peer.setFullScreen(isFullScreen());
+            peer.setAlwaysOnTop(isAlwaysOnTop());
+            peer.setIconified(isIconified());
+            peer.setMaximized(isMaximized());
+            peer.setTitle(getTitle());
 
             List<Object> platformImages = new ArrayList<Object>();
             for (Image icon : icons) {
                 platformImages.add(Toolkit.getImageAccessor().getPlatformImage(icon));
             }
-            if (impl_peer != null) {
-                impl_peer.setIcons(platformImages);
+            if (peer != null) {
+                peer.setIcons(platformImages);
             }
         }
 
@@ -1190,8 +1197,8 @@ public class Stage extends Window {
      * already in the foreground there is no visible difference.
      */
     public void toFront() {
-        if (impl_peer != null) {
-            impl_peer.toFront();
+        if (getPeer() != null) {
+            getPeer().toFront();
         }
     }
 
@@ -1202,8 +1209,8 @@ public class Stage extends Window {
      * platforms that support stacking.
      */
     public void toBack() {
-        if (impl_peer != null) {
-            impl_peer.toBack();
+        if (getPeer() != null) {
+            getPeer().toBack();
         }
     }
 

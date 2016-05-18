@@ -51,6 +51,7 @@ import javafx.css.StyleableProperty;
 import com.sun.javafx.jmx.HighlightRegion;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.Toolkit;
@@ -370,7 +371,7 @@ public class SGMXBeanImpl implements SGMXBean, MXNodeAlgorithm {
 
             final JSONDocument jwindow = JSONDocument.createObject();
             jwindow.setNumber("id", windowCount);
-            jwindow.setString("type", window.impl_getMXWindowType());
+            jwindow.setString("type", WindowHelper.getMXWindowType(window));
             jwindows.array().add(jwindow);
             windowCount++;
         }

@@ -749,8 +749,8 @@ public class SwingNode extends Node {
 
                 if (getScene() != null &&
                         getScene().getWindow() != null &&
-                        getScene().getWindow().impl_getPeer() != null) {
-                    getScene().getWindow().impl_getPeer().grabFocus();
+                        WindowHelper.getPeer(getScene().getWindow()) != null) {
+                    WindowHelper.getPeer(getScene().getWindow()).grabFocus();
                     grabbed = true;
                 }
             });
@@ -840,10 +840,10 @@ public class SwingNode extends Node {
         if (grabbed &&
             getScene() != null &&
             getScene().getWindow() != null &&
-            getScene().getWindow().impl_getPeer() != null)
+            WindowHelper.getPeer(getScene().getWindow()) != null)
         {
             skipBackwardUnrgabNotification = !postUngrabEvent;
-            getScene().getWindow().impl_getPeer().ungrabFocus();
+            WindowHelper.getPeer(getScene().getWindow()).ungrabFocus();
             skipBackwardUnrgabNotification = false;
             grabbed = false;
         }

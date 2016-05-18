@@ -28,6 +28,7 @@ package com.sun.javafx.tk.quantum;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Window;
 import com.sun.glass.ui.View;
+import com.sun.javafx.stage.WindowHelper;
 
 import com.sun.javafx.tk.AppletWindow;
 import com.sun.javafx.tk.TKStage;
@@ -178,7 +179,7 @@ class GlassAppletWindow implements AppletWindow {
         if (null != topStage) {
             Stage ts = topStage.get();
             if (null != ts) {
-                TKStage tsp = ts.impl_getPeer();
+                TKStage tsp = WindowHelper.getPeer(ts);
                 if (tsp instanceof WindowStage && ((WindowStage)tsp).isVisible()) {
                     // call the underlying Glass window toFront to bypass
                     // the check in WindowStage.toFront or we'll create an

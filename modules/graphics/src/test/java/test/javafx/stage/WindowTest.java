@@ -25,6 +25,7 @@
 
 package test.javafx.stage;
 
+import com.sun.javafx.stage.WindowHelper;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.assertNotNull;
@@ -105,7 +106,7 @@ public final class WindowTest {
     }
 
     private static StubStage getPeer(final Window window) {
-        final TKStage unkPeer = window.impl_getPeer();
+        final TKStage unkPeer = WindowHelper.getPeer(window);
         assertTrue(unkPeer instanceof StubStage);
         return (StubStage) unkPeer;
     }

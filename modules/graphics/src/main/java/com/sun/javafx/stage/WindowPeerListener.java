@@ -61,7 +61,7 @@ public class WindowPeerListener implements TKStageListener {
 
     public void changedFocused(boolean focused, FocusCause cause) {
         // Also overridden in subclasses
-        window.setFocused(focused);
+        WindowHelper.setFocused(window, focused);
     }
 
     public void changedIconified(boolean iconified) {

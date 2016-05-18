@@ -93,6 +93,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import com.sun.javafx.logging.PulseLogger;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.scene.input.ClipboardHelper;
 import com.sun.javafx.scene.input.TouchPointHelper;
 
@@ -784,7 +785,7 @@ public class Scene implements EventTarget {
         // this scene's window cannot be null.
         assert window != null;
 
-        TKStage windowPeer = window.impl_getPeer();
+        TKStage windowPeer = WindowHelper.getPeer(window);
         if (windowPeer == null) {
             // This is fine, the window is not visible. impl_initPeer() will
             // be called again later, when the window is being shown.

@@ -28,6 +28,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.stage.PopupWindowHelper;
 
 import javafx.css.SimpleStyleableBooleanProperty;
 import javafx.css.SimpleStyleableDoubleProperty;
@@ -166,7 +167,7 @@ public class Tooltip extends PopupControl {
         super();
         if (text != null) setText(text);
         bridge = new CSSBridge();
-        getContent().setAll(bridge);
+        PopupWindowHelper.getContent(this).setAll(bridge);
         getStyleClass().setAll("tooltip");
     }
 

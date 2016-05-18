@@ -50,6 +50,7 @@ import com.sun.javafx.geom.transform.Affine3D;
 
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
+import com.sun.javafx.stage.WindowHelper;
 
 /**
  * Text field behavior.
@@ -139,7 +140,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
                 // we need to display native text input component on the place where JFX component is drawn
                 // all parameters needed to do that are passed to native impl. here
-                textField.getScene().getWindow().impl_getPeer().requestInput(text, type.ordinal(), w, h,
+                WindowHelper.getPeer(textField.getScene().getWindow()).requestInput(
+                        text, type.ordinal(), w, h,
                         trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),// + insets.getLeft(),
                         trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),// + insets.getTop(),
                         trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
@@ -150,7 +152,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         } else {
             if (PlatformUtil.isIOS() && textField.getScene() != null) {
                 // releasing the focus => we need to hide the native component and also native keyboard
-                textField.getScene().getWindow().impl_getPeer().releaseInput();
+                WindowHelper.getPeer(textField.getScene().getWindow()).releaseInput();
             }
             focusGainedByMouseClick = false;
             setCaretAnimating(false);
