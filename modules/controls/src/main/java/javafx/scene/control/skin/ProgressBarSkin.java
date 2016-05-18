@@ -390,10 +390,8 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
      *                                                                         *
      **************************************************************************/
 
-    /**
+    /*
      * Super-lazy instantiation pattern from Bill Pugh.
-     *
-     * @treatAsPrivate implementation detail
      */
     private static class StyleableProperties {
         private static final CssMetaData<ProgressBar, Number> INDETERMINATE_BAR_LENGTH =

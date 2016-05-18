@@ -552,7 +552,6 @@ public final class CategoryAxis extends Axis<String> {
 
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
-    /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
         private static final CssMetaData<CategoryAxis,Number> START_MARGIN =
             new CssMetaData<CategoryAxis,Number>("-fx-start-margin",

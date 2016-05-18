@@ -393,7 +393,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
     private static class StyleableProperties {
 
         private static final CssMetaData<TreeTableRow<?>,Number> INDENT =

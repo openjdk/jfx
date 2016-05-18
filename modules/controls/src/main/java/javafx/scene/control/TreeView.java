@@ -1067,7 +1067,6 @@ public class TreeView<T> extends Control {
 
     private static final String DEFAULT_STYLE_CLASS = "tree-view";
 
-    /** @treatAsPrivate */
     private static class StyleableProperties {
         private static final CssMetaData<TreeView<?>,Number> FIXED_CELL_SIZE =
                 new CssMetaData<TreeView<?>,Number>("-fx-fixed-cell-size",

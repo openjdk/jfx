@@ -152,9 +152,8 @@ public class CellSkinBase<C extends Cell> extends LabeledSkinBase<C> {
 
     static final double DEFAULT_CELL_SIZE = 24.0;
 
-     /**
+     /*
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          private final static CssMetaData<Cell<?>,Number> CELL_SIZE =

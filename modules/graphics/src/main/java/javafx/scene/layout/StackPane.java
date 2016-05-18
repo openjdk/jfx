@@ -353,9 +353,8 @@ public class StackPane extends Pane {
      *                                                                         *
      **************************************************************************/
 
-     /**
+     /*
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          private static final CssMetaData<StackPane,Pos> ALIGNMENT =

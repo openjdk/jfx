@@ -782,10 +782,9 @@ public class ImageView extends Node {
 
     private static final String DEFAULT_STYLE_CLASS = "image-view";
 
-     /**
-      * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
-      */
+    /*
+     * Super-lazy instantiation pattern from Bill Pugh.
+     */
      private static class StyleableProperties {
         // TODO
         // "preserve-ratio","smooth","viewport","fit-width","fit-height"

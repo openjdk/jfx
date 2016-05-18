@@ -3332,10 +3332,9 @@ public class
         return null;
     }
 
-     /**
-      * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
-      */
+    /*
+     * Super-lazy instantiation pattern from Bill Pugh.
+     */
      private static class StyleableProperties {
          private static final CssMetaData<Region,Insets> PADDING =
              new CssMetaData<Region,Insets>("-fx-padding",

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -518,7 +518,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
-     /** @treatAsPrivate implementation detail */
     private static class StyleableProperties  {
         private  static final CssMetaData<ValueAxis<? extends Number>,Number> MINOR_TICK_LENGTH =
             new CssMetaData<ValueAxis<? extends Number>,Number>("-fx-minor-tick-length",

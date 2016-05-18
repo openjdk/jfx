@@ -662,9 +662,8 @@ public class HBox extends Pane {
      *                                                                         *
      **************************************************************************/
 
-     /**
+     /*
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
 

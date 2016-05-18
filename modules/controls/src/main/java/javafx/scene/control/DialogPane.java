@@ -1176,9 +1176,6 @@ public class DialogPane extends Pane {
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * @treatAsPrivate implementation detail
-      */
     private static class StyleableProperties {
 
         private static final CssMetaData<DialogPane,String> GRAPHIC =

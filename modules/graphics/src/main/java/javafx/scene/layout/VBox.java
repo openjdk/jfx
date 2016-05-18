@@ -586,9 +586,8 @@ public class VBox extends Pane {
      *                                                                         *
      **************************************************************************/
 
-     /**
+     /*
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          private static final CssMetaData<VBox,Pos> ALIGNMENT =

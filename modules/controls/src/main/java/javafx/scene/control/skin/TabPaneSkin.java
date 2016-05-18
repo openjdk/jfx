@@ -701,9 +701,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      *                                                                         *
      **************************************************************************/
 
-   /**
+   /*
     * Super-lazy instantiation pattern from Bill Pugh.
-    * @treatAsPrivate implementation detail
     */
    private static class StyleableProperties {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;

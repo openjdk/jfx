@@ -950,7 +950,6 @@ public class ContextMenuContent extends Region {
         return contextMenu;
     }
 
-     /** @treatAsPrivate */
     private static class StyleableProperties {
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
