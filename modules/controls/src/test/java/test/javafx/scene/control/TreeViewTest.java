@@ -3582,4 +3582,43 @@ public class TreeViewTest {
         assertEquals(2, indicesEventCount.get());
         assertEquals(2, itemsEventCount.get());
     }
+
+    @Test public void test_jdk_8157285() {
+        final TreeItem<String> childNode1 = new TreeItem<>("Child Node 1");
+        childNode1.setExpanded(true);
+        TreeItem<String> item1 = new TreeItem<>("Node 1-1");
+        TreeItem<String> item2 = new TreeItem<>("Node 1-2");
+        childNode1.getChildren().addAll(item1, item2);
+
+        final TreeItem<String> root = new TreeItem<>("Root node");
+        root.setExpanded(true);
+        root.getChildren().add(childNode1);
+
+        final TreeView<String> view = new TreeView<>(root);
+        MultipleSelectionModel<TreeItem<String>> sm = view.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        view.expandedItemCountProperty().addListener((observable, oldCount, newCount) -> {
+            if (childNode1.isExpanded()) return;
+            System.out.println(sm.getSelectedIndices());
+            System.out.println(sm.getSelectedItems());
+            assertTrue(sm.isSelected(1));
+            assertFalse(sm.isSelected(2));
+            assertFalse(sm.isSelected(3));
+            assertEquals(1, sm.getSelectedIndices().size());
+            assertEquals(1, sm.getSelectedItems().size());
+        });
+
+        sm.selectIndices(1,2,3); // select Child Node 1 and both children
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+        assertTrue(sm.isSelected(3));
+        assertEquals(3, sm.getSelectedIndices().size());
+        assertEquals(3, sm.getSelectedItems().size());
+
+        // collapse Child Node 1 and expect both children to be deselected,
+        // and that in the expandedItemCount listener that we get the right values
+        // in the selectedIndices and selectedItems list
+        childNode1.setExpanded(false);
+    }
 }

@@ -65,9 +65,14 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
      * @param tableColumn The TreeTableColumn instance that this TreeTablePosition represents.
      */
     public TreeTablePosition(@NamedArg("treeTableView") TreeTableView<S> treeTableView, @NamedArg("row") int row, @NamedArg("tableColumn") TreeTableColumn<S,T> tableColumn) {
+        this(treeTableView, row, tableColumn, true);
+    }
+
+    // Not public API
+    TreeTablePosition(@NamedArg("treeTableView") TreeTableView<S> treeTableView, @NamedArg("row") int row, @NamedArg("tableColumn") TreeTableColumn<S,T> tableColumn, boolean doLookup) {
         super(row, tableColumn);
         this.controlRef = new WeakReference<>(treeTableView);
-        this.treeItemRef = new WeakReference<>(treeTableView.getTreeItem(row));
+        this.treeItemRef = new WeakReference<>(doLookup ? treeTableView.getTreeItem(row) : null);
 
         nonFixedColumnIndex = treeTableView == null || tableColumn == null ? -1 : treeTableView.getVisibleLeafIndex(tableColumn);
     }

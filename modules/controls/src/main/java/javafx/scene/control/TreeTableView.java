@@ -2471,7 +2471,9 @@ public class TreeTableView<S> extends Control {
 
                         for (int index : removed) {
                             startAtomic();
-                            clearSelection(index);
+                            // we pass in false here to prevent a lookup into the TreeItem, as it is unnecessary
+                            // and results in JDK-8152396
+                            clearSelection(new TreeTablePosition<>(treeTableView, index, null, false));
                             stopAtomic();
                         }
                         selectedIndices._endChange();
