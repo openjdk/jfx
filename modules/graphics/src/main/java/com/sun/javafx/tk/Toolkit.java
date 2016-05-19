@@ -87,6 +87,7 @@ import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.util.Utils;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
@@ -952,7 +953,13 @@ public abstract class Toolkit {
         public Image fromPlatformImage(Object image);
     }
 
-    private static ImageAccessor imageAccessor = null;
+    private static ImageAccessor imageAccessor;
+
+    static {
+        // Need to ensure that the Image class is loaded since Toolkit class
+        // is the provider of getImageAccessor method and sets the accessor.
+        Utils.forceInit(Image.class);
+    }
 
     public static void setImageAccessor(ImageAccessor accessor) {
         imageAccessor = accessor;
