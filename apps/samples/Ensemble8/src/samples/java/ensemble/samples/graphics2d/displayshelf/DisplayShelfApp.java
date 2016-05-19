@@ -70,7 +70,7 @@ public class DisplayShelfApp extends Application {
         "/ensemble/samples/shared-resources/Animal13.jpg",
         "/ensemble/samples/shared-resources/Animal14.jpg"
     };
-    
+
     private Timeline animation;
 
     public Parent createContent() {
