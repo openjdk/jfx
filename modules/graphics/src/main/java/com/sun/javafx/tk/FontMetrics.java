@@ -33,8 +33,8 @@ import javafx.scene.text.Font;
  * this font.
  */
 public class FontMetrics {
-    /** @treatAsPrivate */
-    public static FontMetrics impl_createFontMetrics(
+
+    public static FontMetrics createFontMetrics(
             float maxAscent, float ascent, float xheight, float descent,
             float maxDescent, float leading, Font font) {
         return new FontMetrics(maxAscent, ascent, xheight, descent, maxDescent, leading, font);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.input;
 
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.pgstub.StubScene;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import javafx.event.Event;
@@ -197,13 +198,13 @@ public class RotateEventTest {
             rotated = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 1, 1,
                 50, 50, 50, 50, false, false, false, false, false, false);
 
         assertFalse(rotated);
 
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 1, 1,
                 150, 150, 150, 150, false, false, false, false, false, false);
 
@@ -223,7 +224,7 @@ public class RotateEventTest {
             rotated = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 90, -180,
                 150, 150, 150, 150, false, false, false, false, false, false);
 
@@ -244,7 +245,7 @@ public class RotateEventTest {
             assertFalse(event.isMetaDown());
             rotated = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 150, 150, 150, 150, true, false, true, false, false, false);
         assertTrue(rotated);
@@ -257,7 +258,7 @@ public class RotateEventTest {
             assertTrue(event.isMetaDown());
             rotated = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 150, 150, 150, 150, false, true, false, true, false, false);
         assertTrue(rotated);
@@ -274,7 +275,7 @@ public class RotateEventTest {
             assertTrue(event.isDirect());
             rotated = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -284,7 +285,7 @@ public class RotateEventTest {
             assertFalse(event.isDirect());
             rotated = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 150, 150, 150, 150, false, true, false, true, false, false);
         assertTrue(rotated);
@@ -301,7 +302,7 @@ public class RotateEventTest {
             assertTrue(event.isInertia());
             rotated = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, true);
         assertTrue(rotated);
@@ -311,7 +312,7 @@ public class RotateEventTest {
             assertFalse(event.isInertia());
             rotated = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 150, 150, 150, 150, false, true, false, true, true, false);
         assertTrue(rotated);
@@ -327,7 +328,7 @@ public class RotateEventTest {
         rect.setOnRotationStarted(event -> {
             rotated = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_STARTED, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -336,7 +337,7 @@ public class RotateEventTest {
         rect.setOnRotationFinished(event -> {
             rotated = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_FINISHED, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -353,19 +354,19 @@ public class RotateEventTest {
         });
 
         rotated = false;
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_STARTED, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(rotated);
 
         rotated = false;
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(rotated);
 
         rotated = false;
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_FINISHED, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -388,7 +389,7 @@ public class RotateEventTest {
 
         rotated = false;
         rotated2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_STARTED, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -396,7 +397,7 @@ public class RotateEventTest {
 
         rotated = false;
         rotated2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -404,7 +405,7 @@ public class RotateEventTest {
 
         rotated = false;
         rotated2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_FINISHED, 2, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -434,7 +435,7 @@ public class RotateEventTest {
             rotated2 = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 1, 1,
                 150, 150, 150, 150, false, false, false, false, false, false);
 
@@ -462,7 +463,7 @@ public class RotateEventTest {
         rotated = false;
         rotated2 = false;
         pickRes = null;
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_STARTED, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -476,7 +477,7 @@ public class RotateEventTest {
         rotated = false;
         rotated2 = false;
         pickRes = null;
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -490,7 +491,7 @@ public class RotateEventTest {
         rotated = false;
         rotated2 = false;
         pickRes = null;
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_FINISHED, 2, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertTrue(rotated);
@@ -522,9 +523,9 @@ public class RotateEventTest {
             Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
             rotated2 = true;
         });
-        scene.impl_processMouseEvent(generator.generateMouseEvent(
+        SceneHelper.processMouseEvent(scene, generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_STARTED, 2, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
@@ -538,9 +539,9 @@ public class RotateEventTest {
             Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
             rotated2 = true;
         });
-        scene.impl_processMouseEvent(generator.generateMouseEvent(
+        SceneHelper.processMouseEvent(scene, generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 150, 150));
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
@@ -554,7 +555,7 @@ public class RotateEventTest {
             Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
             rotated2 = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_FINISHED, 2, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
@@ -575,17 +576,17 @@ public class RotateEventTest {
 
         rotated = false;
 
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_STARTED, 2, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
 
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
 
         assertFalse(rotated);
 
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATION_FINISHED, 2, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
@@ -607,20 +608,20 @@ public class RotateEventTest {
 
         rotated = false;
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
                 gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
 
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
 
         assertFalse(rotated);
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
                 gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 150, 150));
 
-        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);

@@ -23,8 +23,8 @@
 -XaddExports:javafx.graphics/com.sun.javafx.perf=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.print=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.runtime.async=ALL-UNNAMED
--XaddExports:javafx.graphics/com.sun.javafx.scene.input=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.scene.input=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.layout.region=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.transform=ALL-UNNAMED

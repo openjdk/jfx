@@ -51,6 +51,7 @@ import javafx.css.StyleableProperty;
 import com.sun.javafx.jmx.HighlightRegion;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKScene;
@@ -179,7 +180,7 @@ public class SGMXBeanImpl implements SGMXBean, MXNodeAlgorithm {
         }
         Toolkit.getToolkit().getHighlightedRegions().add(
                                 createHighlightRegion(nodeId));
-        getNode(nodeId).getScene().impl_getPeer().markDirty();
+        SceneHelper.getPeer(getNode(nodeId).getScene()).markDirty();
     }
 
     /**
@@ -192,7 +193,7 @@ public class SGMXBeanImpl implements SGMXBean, MXNodeAlgorithm {
         }
         Toolkit.getToolkit().getHighlightedRegions().remove(
                                 createHighlightRegion(nodeId));
-        getNode(nodeId).getScene().impl_getPeer().markDirty();
+        SceneHelper.getPeer(getNode(nodeId).getScene()).markDirty();
     }
 
     /**
@@ -205,7 +206,7 @@ public class SGMXBeanImpl implements SGMXBean, MXNodeAlgorithm {
         if (!paused) {
             throw new IllegalStateException(SGMX_NOT_PAUSED_TEXT);
         }
-        TKScene scenePeer = getScene(windowId).impl_getPeer();
+        TKScene scenePeer = SceneHelper.getPeer(getScene(windowId));
         Toolkit.getToolkit().getHighlightedRegions().add(
                           new HighlightRegion(scenePeer, x, y, w, h));
         scenePeer.markDirty();
@@ -221,7 +222,7 @@ public class SGMXBeanImpl implements SGMXBean, MXNodeAlgorithm {
         if (!paused) {
             throw new IllegalStateException(SGMX_NOT_PAUSED_TEXT);
         }
-        TKScene scenePeer = getScene(windowId).impl_getPeer();
+        TKScene scenePeer = SceneHelper.getPeer(getScene(windowId));
         Toolkit.getToolkit().getHighlightedRegions().remove(
                           new HighlightRegion(scenePeer, x, y, w, h));
         scenePeer.markDirty();
@@ -252,7 +253,7 @@ public class SGMXBeanImpl implements SGMXBean, MXNodeAlgorithm {
     private HighlightRegion createHighlightRegion(int nodeId) {
         Node node = getNode(nodeId);
         Bounds bounds = node.localToScene(node.getBoundsInLocal());
-        return new HighlightRegion(node.getScene().impl_getPeer(),
+        return new HighlightRegion(SceneHelper.getPeer(node.getScene()),
                                    bounds.getMinX(),
                                    bounds.getMinY(),
                                    bounds.getWidth(),

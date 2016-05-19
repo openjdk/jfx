@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene;
 
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -198,7 +199,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 10, 40);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -214,7 +215,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 10, 40);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -230,7 +231,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 10, 40);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -245,7 +246,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -260,7 +261,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 10, 40);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -275,7 +276,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -290,7 +291,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -305,7 +306,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -320,7 +321,7 @@ public class Mouse3DTest {
         Box b = box().handleMove(me);
         b.setCullFace(CullFace.BACK);
         Scene s = scene(group(b), parallel(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -334,7 +335,7 @@ public class Mouse3DTest {
         MouseEventGenerator g = new MouseEventGenerator();
         Node b = box().rotate('x', 180).handleMove(me);
         Scene s = scene(group(b), parallel(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -349,10 +350,10 @@ public class Mouse3DTest {
         Box b = box().handleMove(me);
         b.setCullFace(CullFace.BACK);
         Scene s = scene(group(b), parallel(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 40));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, -500, 40));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 400));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, -400));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 40));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, -500, 40));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 400));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, -400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -364,7 +365,7 @@ public class Mouse3DTest {
         Scene s = scene(group(group(b).rotate('x', 40)), perspective(), true);
 
         makeParallel(s, 0, 0);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -379,13 +380,13 @@ public class Mouse3DTest {
         b.setTranslateX(300);
         Scene s = scene(group(b), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 1000, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 10, -500);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 10, 500);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -397,13 +398,13 @@ public class Mouse3DTest {
         b.setTranslateX(300);
         Scene s = scene(group(b), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 1000, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 300, -500);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 300, 500);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -416,7 +417,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 10, 40);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -432,7 +433,7 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
         b.setTranslateZ(-1000);
         makeParallel(s, 10, 40);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -445,7 +446,7 @@ public class Mouse3DTest {
         b.setTranslateZ(-1000);
         Scene s = scene(group(b), perspective(), true);
         makeParallel(s, 10, 40);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -461,7 +462,7 @@ public class Mouse3DTest {
         b.setCullFace(CullFace.NONE);
         Scene s = scene(group(b), parallel(), true);
         b.setTranslateZ(PERSPECTIVE_CAMERA_Z);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -477,7 +478,7 @@ public class Mouse3DTest {
         b.setTranslateZ(-3000);
         Scene s = scene(group(b), perspective(), true);
         makeParallel(s, 10, 40);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -490,7 +491,7 @@ public class Mouse3DTest {
         b.setCullFace(CullFace.NONE);
         Scene s = scene(group(b), parallel(), true);
         b.setTranslateZ(-3000);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -503,7 +504,7 @@ public class Mouse3DTest {
         b.setCullFace(CullFace.NONE);
         Scene s = scene(group(b), perspective(true), true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -521,7 +522,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -538,7 +539,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -555,7 +556,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -571,7 +572,7 @@ public class Mouse3DTest {
         sph.setCullFace(CullFace.BACK);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -586,7 +587,7 @@ public class Mouse3DTest {
         sph.setCullFace(CullFace.FRONT);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -601,7 +602,7 @@ public class Mouse3DTest {
         sph.setCullFace(CullFace.NONE);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -616,7 +617,7 @@ public class Mouse3DTest {
         sph.setCullFace(CullFace.BACK);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -632,7 +633,7 @@ public class Mouse3DTest {
         sph.setTranslateY(110);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -644,7 +645,7 @@ public class Mouse3DTest {
         Scene s = scene(group(sph), perspective(), true);
         sph.impl_updatePeer();
         makeParallel(s, 50, 25);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -659,7 +660,7 @@ public class Mouse3DTest {
         Scene s = scene(group(sph), perspective(), true);
         sph.impl_updatePeer();
         makeParallel(s, 50, 60);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -673,7 +674,7 @@ public class Mouse3DTest {
         Scene s = scene(group(sph), perspective(), true);
         sph.impl_updatePeer();
         makeParallel(s, 50, 25);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -690,7 +691,7 @@ public class Mouse3DTest {
         Scene s = scene(group(sph), perspective(), true);
         sph.impl_updatePeer();
         makeParallel(s, 50, 25);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -702,7 +703,7 @@ public class Mouse3DTest {
         sph.setPickOnBounds(true);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -717,7 +718,7 @@ public class Mouse3DTest {
         sph.setPickOnBounds(true);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -731,12 +732,12 @@ public class Mouse3DTest {
         Sphere sph = sphere().handleMove(me);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 99, 1);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         MouseEvent e = me.event;
         assertNotNull(e);
 
         sph.setPickOnBounds(true);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         e = me.event;
         assertNotNull(e);
         assertCoordinates(e, 99, 1, -100);
@@ -751,7 +752,7 @@ public class Mouse3DTest {
         sph.setCullFace(CullFace.NONE);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -767,7 +768,7 @@ public class Mouse3DTest {
         sph.setTranslateZ(PERSPECTIVE_CAMERA_Z + 80);
         sph.setCullFace(CullFace.NONE);
         Scene s = scene(group(sph), parallel(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -783,7 +784,7 @@ public class Mouse3DTest {
         sph.setCullFace(CullFace.NONE);
         Scene s = scene(group(sph), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -796,7 +797,7 @@ public class Mouse3DTest {
         sph.setTranslateZ(PERSPECTIVE_CAMERA_Z - 98);
         sph.setCullFace(CullFace.NONE);
         Scene s = scene(group(sph), parallel(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -809,7 +810,7 @@ public class Mouse3DTest {
         sp.setCullFace(CullFace.NONE);
         Scene s = scene(group(sp), perspective(true), true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -827,7 +828,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(sp), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -844,7 +845,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(sp), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -861,7 +862,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(sp), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -877,7 +878,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.BACK);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -892,7 +893,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.FRONT);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -907,7 +908,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.BACK);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -922,7 +923,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -936,7 +937,7 @@ public class Mouse3DTest {
         Node c = cylinder().rotate('x', 90).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -951,7 +952,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.FRONT);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -966,7 +967,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -980,7 +981,7 @@ public class Mouse3DTest {
         Node c = cylinder().rotate('x', -90).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -995,9 +996,9 @@ public class Mouse3DTest {
         c.setTranslateY(130);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 10, 520);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1009,7 +1010,7 @@ public class Mouse3DTest {
         c.setTranslateX(-48);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1020,21 +1021,21 @@ public class Mouse3DTest {
         Node c = cylinder().rotate('x', 90).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 48, 48);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, -48, 48);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 48, -48);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, -48, -48);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 148, 148);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, -148, 148);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, 148, -148);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         makeParallel(s, -148, -148);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1046,7 +1047,7 @@ public class Mouse3DTest {
         Scene s = scene(group(c), perspective(), true);
         c.impl_updatePeer();
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1061,7 +1062,7 @@ public class Mouse3DTest {
         Scene s = scene(group(c), perspective(), true);
         c.impl_updatePeer();
         makeParallel(s, 48, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1075,7 +1076,7 @@ public class Mouse3DTest {
         Scene s = scene(group(c), perspective(), true);
         c.impl_updatePeer();
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1092,7 +1093,7 @@ public class Mouse3DTest {
         Scene s = scene(group(c), perspective(), true);
         c.impl_updatePeer();
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1104,7 +1105,7 @@ public class Mouse3DTest {
         c.setPickOnBounds(true);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1119,7 +1120,7 @@ public class Mouse3DTest {
         c.setPickOnBounds(true);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1133,12 +1134,12 @@ public class Mouse3DTest {
         Node c = cylinder().rotate('x', 90).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 49, 48);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         MouseEvent e = me.event;
         assertNull(e);
 
         c.setPickOnBounds(true);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         e = me.event;
         assertNotNull(e);
         assertCoordinates(e, 49, -100, -48);
@@ -1153,7 +1154,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1169,7 +1170,7 @@ public class Mouse3DTest {
         c.setTranslateZ(PERSPECTIVE_CAMERA_Z + 150);
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), parallel(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1185,7 +1186,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1198,7 +1199,7 @@ public class Mouse3DTest {
         c.setTranslateZ(PERSPECTIVE_CAMERA_Z - 49);
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), parallel(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1211,7 +1212,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(true), true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1225,7 +1226,7 @@ public class Mouse3DTest {
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(true), true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1243,7 +1244,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(c), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1260,7 +1261,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(c), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1277,7 +1278,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(c), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1294,7 +1295,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(c), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1311,7 +1312,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(c), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1329,7 +1330,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(c), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1345,7 +1346,7 @@ public class Mouse3DTest {
         Node m = meshXY().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1359,7 +1360,7 @@ public class Mouse3DTest {
         Node m = meshXY().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 70);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1371,7 +1372,7 @@ public class Mouse3DTest {
         m.setCullFace(CullFace.FRONT);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1383,7 +1384,7 @@ public class Mouse3DTest {
         m.setCullFace(CullFace.NONE);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1398,7 +1399,7 @@ public class Mouse3DTest {
         m.setCullFace(CullFace.BACK);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1412,7 +1413,7 @@ public class Mouse3DTest {
         Node m = meshXYFlippedTexture().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1426,7 +1427,7 @@ public class Mouse3DTest {
         Node m = meshXYBack().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1437,7 +1438,7 @@ public class Mouse3DTest {
         Node m = meshYZ().rotate('y', 90).handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1451,7 +1452,7 @@ public class Mouse3DTest {
         Node m = meshGeneral().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1465,7 +1466,7 @@ public class Mouse3DTest {
         Node m = meshGeneralStretchedTexture().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1480,7 +1481,7 @@ public class Mouse3DTest {
         m.setPickOnBounds(true);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1495,12 +1496,12 @@ public class Mouse3DTest {
         Scene s = scene(group(m), perspective(), true);
 
         makeParallel(s, 90, 90);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         MouseEvent e = me.event;
         assertNull(e);
 
         m.setPickOnBounds(true);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         e = me.event;
         assertNotNull(e);
         assertCoordinates(e, 90, 90, 0);
@@ -1514,7 +1515,7 @@ public class Mouse3DTest {
         m.setTranslateZ(-3000);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1526,7 +1527,7 @@ public class Mouse3DTest {
         Node m = meshXY().handleMove(me);
         m.setTranslateZ(-3000);
         Scene s = scene(group(m), parallel(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1538,7 +1539,7 @@ public class Mouse3DTest {
         m.setTranslateZ(-1011);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 10, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1550,7 +1551,7 @@ public class Mouse3DTest {
         Node m = meshGeneral().handleMove(me);
         m.setTranslateZ(PERSPECTIVE_CAMERA_Z - 11);
         Scene s = scene(group(m), parallel(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1562,7 +1563,7 @@ public class Mouse3DTest {
         m.setTranslateZ(50);
         Scene s = scene(group(m), perspective(true), true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1580,7 +1581,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(m), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1596,7 +1597,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(m), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1612,7 +1613,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(m), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 500, 400));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1628,7 +1629,7 @@ public class Mouse3DTest {
         Node m = meshesXY().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1642,7 +1643,7 @@ public class Mouse3DTest {
         Node m = meshesXY2().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1656,7 +1657,7 @@ public class Mouse3DTest {
         Node m = meshesXYFacingEachOther().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1671,7 +1672,7 @@ public class Mouse3DTest {
         m.setCullFace(CullFace.NONE);
         Scene s = scene(group(m), perspective(), true);
         makeParallel(s, 60, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1686,7 +1687,7 @@ public class Mouse3DTest {
         m.setTranslateZ(-500);
         Scene s = scene(group(meshXY(), cylinder(), sphere(), box(), m), perspective(), true);
         makeParallel(s, 40, 10);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1702,7 +1703,7 @@ public class Mouse3DTest {
         m.setTranslateX(-30);
         Scene s = scene(group(m, box(), sphere(), cylinder(), meshXY()), perspective(), true);
         makeParallel(s, 30, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1722,7 +1723,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(m, b), perspective(), true);
         makeParallel(s, 30, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1743,7 +1744,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(m, b), perspective(), true);
         makeParallel(s, 30, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1763,7 +1764,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(group(closer), group(b)), perspective(), true);
         makeParallel(s, 30, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1785,7 +1786,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(group(b1), group(b), group(b2)), perspective(), true);
         makeParallel(s, 30, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1807,7 +1808,7 @@ public class Mouse3DTest {
 
         Scene s = scene(parent, perspective(), true);
         makeParallel(s, 30, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1828,7 +1829,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(m, b), perspective(), false);
         makeParallel(s, 30, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1849,7 +1850,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b1, b2), perspective(), false);
         makeParallel(s, 30, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1873,7 +1874,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b1, b2, odd), perspective(), true);
         makeParallel(s, 30, 20);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1896,7 +1897,7 @@ public class Mouse3DTest {
 
         Scene s = scene(parent, perspective(), true).handleMove(sme);
         makeParallel(s, 150, 160);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         assertNull(me.event);
         assertNull(pme.event);
@@ -1918,7 +1919,7 @@ public class Mouse3DTest {
         Group root = group(sphere(), trg = cylinder());
         Scene s = scene(root, perspective(), false).handleMove(me);
         makeParallel(s, 0, 0);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1931,7 +1932,7 @@ public class Mouse3DTest {
         Group root = group(trg = sphere(), cylinder());
         Scene s = scene(root, perspective(), true).handleMove(me);
         makeParallel(s, 0, 0);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1948,7 +1949,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(r), perspective(), true);
         makeParallel(s, 50, 60);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1968,7 +1969,7 @@ public class Mouse3DTest {
 
         Scene s = scene(parent, perspective(), true).handleMove(sme);
         makeParallel(s, 150, 60);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1991,7 +1992,7 @@ public class Mouse3DTest {
         Scene s = scene(group(r), perspective(), true).handleMove(sme);
 
         makeParallel(s, 10, 50);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -2004,7 +2005,7 @@ public class Mouse3DTest {
         sme.clear();
 
         makeParallel(s, 30, 50);
-        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        SceneHelper.processMouseEvent(s, generateMouseEvent(MouseEvent.MOUSE_MOVED));
         e = me.event;
         assertNotNull(e);
         assertCoordinates(e, 21.71572, 50, 0);
@@ -2026,7 +2027,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(r), parallel(), true).handleMove(sme);
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 50));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 50));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -2048,7 +2049,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(r), parallel(), true).handleMove(sme);
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 50));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 50));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -2060,7 +2061,7 @@ public class Mouse3DTest {
                 1492.82032, NOFACE, null);
         sme.clear();
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 50));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 50));
         e = me.event;
         assertNotNull(e);
         assertCoordinates(e, 30, 50, 21.71572, 50, 0);
@@ -2092,7 +2093,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(r1, r2), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 540, 440));
 
         assertNull(me.event);
@@ -2114,13 +2115,13 @@ public class Mouse3DTest {
 
         Scene s = scene(group(r), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 540, 440));
         assertNotNull(me.event);
 
         me.clear();
         r.setTranslateZ(far + 0.1);
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 540, 440));
         assertNull(me.event);
     }
@@ -2140,7 +2141,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(r1, r2), cam, false);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 20, 20));
 
         assertNull(me.event);
@@ -2160,13 +2161,13 @@ public class Mouse3DTest {
 
         Scene s = scene(group(r), cam, true);
 
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 20, 20));
         assertNotNull(me.event);
 
         me.clear();
         r.setTranslateZ(far + 0.1);
-        s.impl_processMouseEvent(MouseEventGenerator.generateMouseEvent(
+        SceneHelper.processMouseEvent(s, MouseEventGenerator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 20, 20));
         assertNull(me.event);
     }
@@ -2181,9 +2182,9 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 20, 50);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
                 PERSPECTIVE_CAMERA_X - 10, PERSPECTIVE_CAMERA_Y));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
                 PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = me.event;
@@ -2205,9 +2206,9 @@ public class Mouse3DTest {
         Scene s = scene(group(b1, b2), perspective(), true);
 
         makeParallel(s, 70, 50);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
                 PERSPECTIVE_CAMERA_X - 60, PERSPECTIVE_CAMERA_Y));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
                 PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = me.event;
@@ -2231,11 +2232,11 @@ public class Mouse3DTest {
         Scene s = scene(group(b), perspective(), true);
 
         makeParallel(s, 20, 50);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
                 PERSPECTIVE_CAMERA_X - 10, PERSPECTIVE_CAMERA_Y));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
                 PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
                 PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = me.event;
@@ -2262,11 +2263,11 @@ public class Mouse3DTest {
         Scene s = scene(group(b1, b2), perspective(), true);
 
         makeParallel(s, 70, 50);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
                 PERSPECTIVE_CAMERA_X - 60, PERSPECTIVE_CAMERA_Y));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
                 PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
                 PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = me.event;
@@ -2295,15 +2296,15 @@ public class Mouse3DTest {
         Scene s = scene(group(b1, b2), perspective(), true);
 
         makeParallel(s, 70, 50);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
                 PERSPECTIVE_CAMERA_X - 60, PERSPECTIVE_CAMERA_Y));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
                 PERSPECTIVE_CAMERA_X - 60, PERSPECTIVE_CAMERA_Y + 10));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
                 PERSPECTIVE_CAMERA_X - 59, PERSPECTIVE_CAMERA_Y + 10));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
                 PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
                 PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = smde.event;
@@ -2343,7 +2344,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b), cam, true);
         ParentShim.getChildren(s.getRoot()).add(camGroup);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -2367,7 +2368,7 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b), cam, true);
         ParentShim.getChildren(s.getRoot()).add(camGroup);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+        SceneHelper.processMouseEvent(s, g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -2404,7 +2405,7 @@ public class Mouse3DTest {
 
         me.event = null;
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
                 MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED,
                 350, 350));
 

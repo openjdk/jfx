@@ -67,6 +67,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
+import com.sun.javafx.scene.SceneHelper;
 
 
 /**
@@ -279,7 +280,7 @@ public class Window implements EventTarget {
      */
     public void sizeToScene() {
         if (getScene() != null && peer != null) {
-            getScene().impl_preferredSize();
+            SceneHelper.preferredSize(getScene());
             adjustSize(false);
         } else {
             // Remember the request to reapply it later if needed
@@ -771,7 +772,7 @@ public class Window implements EventTarget {
             updatePeerScene(null);
             // Second, dispose scene peer
             if (oldScene != null) {
-                oldScene.impl_setWindow(null);
+                SceneHelper.setWindow(oldScene, null);
                 StyleManager.getInstance().forget(oldScene);
             }
             if (newScene != null) {
@@ -785,9 +786,9 @@ public class Window implements EventTarget {
 
                 // Set the "window" on the new scene. This will also trigger
                 // scene's peer creation.
-                newScene.impl_setWindow(Window.this);
+                SceneHelper.setWindow(newScene, Window.this);
                 // Set scene impl on stage impl
-                updatePeerScene(newScene.impl_getPeer());
+                updatePeerScene(SceneHelper.getPeer(newScene));
 
                 // Fix for RT-15432: we should update new Scene's stylesheets, if the
                 // window is already showing. For not yet shown windows, the update is
@@ -796,7 +797,7 @@ public class Window implements EventTarget {
                     newScene.getRoot().impl_reapplyCSS();
 
                     if (!widthExplicit || !heightExplicit) {
-                        getScene().impl_preferredSize();
+                        SceneHelper.preferredSize(getScene());
                         adjustSize(true);
                     }
                 }
@@ -1066,9 +1067,9 @@ public class Window implements EventTarget {
                     tk.addStageTkPulseListener(peerBoundsConfigurator);
 
                     if (getScene() != null) {
-                        getScene().impl_initPeer();
-                        peer.setScene(getScene().impl_getPeer());
-                        getScene().impl_preferredSize();
+                        SceneHelper.initPeer(getScene());
+                        peer.setScene(SceneHelper.getPeer(getScene()));
+                        SceneHelper.preferredSize(getScene());
                     }
 
                     updateOutputScales(peer.getOutputScaleX(), peer.getOutputScaleY());
@@ -1113,7 +1114,7 @@ public class Window implements EventTarget {
 
                     if (getScene() != null) {
                         peer.setScene(null);
-                        getScene().impl_disposePeer();
+                        SceneHelper.disposePeer(getScene());
                         StyleManager.getInstance().forget(getScene());
                     }
 

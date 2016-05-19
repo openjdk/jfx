@@ -858,7 +858,7 @@ public abstract class Toolkit {
         Window.getWindows().stream().forEach(window -> {
             final Scene scene = window.getScene();
             if (scene != null) {
-                this.removeSceneTkPulseListener(scene.impl_getScenePulseListener());
+                this.removeSceneTkPulseListener(SceneHelper.getScenePulseListener(scene));
             }
         });
         this.getMasterTimer().pause();
@@ -875,7 +875,7 @@ public abstract class Toolkit {
         Window.getWindows().stream().forEach(window -> {
             final Scene scene = window.getScene();
             if (scene != null) {
-                this.addSceneTkPulseListener(scene.impl_getScenePulseListener());
+                this.addSceneTkPulseListener(SceneHelper.getScenePulseListener(scene));
             }
         });
         pauseScenesLatch.countDown();

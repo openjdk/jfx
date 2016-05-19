@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.input;
 
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.pgstub.StubScene;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -207,23 +208,23 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, true, false, true);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, true, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(3, touched);
     }
@@ -261,33 +262,33 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, true, false, true);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, true, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, true, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(6, touched);
     }
@@ -321,33 +322,33 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, true, false, true);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, true, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, true, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(6, touched);
     }
@@ -382,15 +383,15 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 3, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 152, 130, 130, 130, 130);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(3, touched);
     }
@@ -425,29 +426,29 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 130, 130, 130, 130);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(3, touched);
     }
@@ -488,29 +489,29 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 130, 130, 130, 130);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(3, touched);
     }
@@ -566,21 +567,21 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 127, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 127, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 1368, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(4, touched);
     }
@@ -643,37 +644,37 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 127, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 127, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1368, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 11, 160, 160, 160, 160);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 127, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 11, 160, 160, 160, 160);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 127, 120, 120, 120, 120);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(5, touched);
     }
@@ -713,37 +714,37 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, true, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, true, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
 
         assertEquals(8, touched);
@@ -772,21 +773,21 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 2, 120, 120, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(4, touched);
     }
@@ -813,21 +814,21 @@ public class TouchEventTest {
             assertSame(rect1, event.getTouchPoints().get(0).getTarget());
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 2, 220, 220, 220, 220);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 2, 220, 220, 220, 220);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(4, touched);
     }
@@ -854,23 +855,23 @@ public class TouchEventTest {
             Assert.assertEquals(50, event.getTouchPoint().getZ(), 0.00001);
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, true, false, true);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, true, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(6, touched);
     }
@@ -961,21 +962,21 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 2, 220, 220, 220, 220);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 1, 220, 220, 220, 220);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 2, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(4, touched);
     }
@@ -1016,21 +1017,21 @@ public class TouchEventTest {
             assertTrue(event.getTouchPoints().get(0).belongsTo(rect1));
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 2, 220, 220, 220, 220);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 2, 220, 220, 220, 220);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(4, touched);
     }
@@ -1097,21 +1098,21 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 3, 150, 155, 1150, 1155);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 4, 260, 265, 1260, 1265);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 3, 250, 255, 1250, 1255);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 4, 160, 165, 1160, 1165);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(4, touched);
     }
@@ -1180,21 +1181,21 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 3, 150, 155, 1150, 1155);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 4, 260, 265, 1260, 1265);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 3, 250, 255, 1250, 1255);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 4, 160, 165, 1160, 1165);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(4, touched);
     }
@@ -1262,21 +1263,21 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 3, 150, 155, 1150, 1155);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 4, 260, 265, 1260, 1265);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 3, 250, 255, 1250, 1255);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 4, 160, 165, 1160, 1165);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(4, touched);
     }
@@ -1344,21 +1345,21 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 3, 150, 155, 1150, 1155);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 4, 260, 265, 1260, 1265);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 3, 250, 255, 1250, 1255);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 4, 160, 165, 1160, 1165);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
         assertEquals(4, touched);
     }
@@ -1399,27 +1400,27 @@ public class TouchEventTest {
             }
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 130, 130, 130, 130);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.STATIONARY, 1, 130, 130, 130, 130);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 2, 140, 140, 140, 140);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 130, 130, 130, 130);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 2, 140, 140, 140, 140);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
 
         assertEquals(5, touched);
@@ -1433,17 +1434,17 @@ public class TouchEventTest {
 
         rect.addEventHandler(TouchEvent.ANY, event -> fail("Delivered indirect touch event"));
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, false, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, false, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
     }
 
     @Test(expected=RuntimeException.class)
@@ -1452,17 +1453,17 @@ public class TouchEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 2, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
     }
 
     @Test(expected=RuntimeException.class)
@@ -1471,17 +1472,17 @@ public class TouchEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.MOVED, 127, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
     }
 
     @Test(expected=RuntimeException.class)
@@ -1490,13 +1491,13 @@ public class TouchEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
     }
 
     @Test(expected=RuntimeException.class)
@@ -1505,11 +1506,11 @@ public class TouchEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 2, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
     }
 
     @Test(expected=RuntimeException.class)
@@ -1518,17 +1519,17 @@ public class TouchEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
     }
 
     // Reenable once indirect events are used
@@ -1539,17 +1540,17 @@ public class TouchEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, false, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
 
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, false, false, false, false, false);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
     }
 
     private Scene createScene() {
@@ -1628,7 +1629,7 @@ public class TouchEventTest {
 
             int reporting = count + (removed >= 0 ? 1 : 0);
 
-            ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+            ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                     System.currentTimeMillis(), reporting, true, false, false, false, false);
 
             for (int j = 0; j < available; j++) {
@@ -1641,12 +1642,12 @@ public class TouchEventTest {
                     } else {
                     }
 
-                    ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                    ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                             state, ids[j], 150, 150, 150, 150);
                 }
             }
 
-            ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+            ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
             removed = -1;
             added = -1;
         }
@@ -1726,7 +1727,7 @@ public class TouchEventTest {
 
             int reporting = count + (removed >= 0 ? 1 : 0);
 
-            ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+            ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                     System.currentTimeMillis(), reporting, true, false, false, false, false);
 
             for (int j = 0; j < available; j++) {
@@ -1738,12 +1739,12 @@ public class TouchEventTest {
                         state = TouchPoint.State.RELEASED;
                     }
 
-                    ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                    ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                             state, ids[j], 150, 150, 150, 150);
                 }
             }
 
-            ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+            ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
             removed = -1;
             added = -1;
         }

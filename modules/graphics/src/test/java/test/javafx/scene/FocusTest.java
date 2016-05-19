@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene;
 
 
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.pgstub.StubScene;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
@@ -715,7 +716,7 @@ public class FocusTest {
         assertSame(n1, scene.getFocusOwner());
         actionTaken = false;
 
-        ((StubScene) scene.impl_getPeer()).setInputMethodCompositionFinishDelegate(
+        ((StubScene) SceneHelper.getPeer(scene)).setInputMethodCompositionFinishDelegate(
                 () -> {
                     assertSame(n1, scene.getFocusOwner());
                     actionTaken = true;
@@ -724,7 +725,7 @@ public class FocusTest {
 
         n2.requestFocus();
 
-        ((StubScene) scene.impl_getPeer()).setInputMethodCompositionFinishDelegate(
+        ((StubScene) SceneHelper.getPeer(scene)).setInputMethodCompositionFinishDelegate(
                 null);
 
         assertSame(n2, scene.getFocusOwner());

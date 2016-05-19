@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit;
 
+import com.sun.javafx.scene.SceneHelper;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,7 +63,7 @@ public final class InputMethodClientImpl
     public void activateInputMethods(final boolean doActivate) {
         WebView wv = wvRef.get();
         if (wv != null && wv.getScene() != null) {
-            wv.getScene().impl_enableInputMethodEvents(doActivate);
+            SceneHelper.enableInputMethodEvents(wv.getScene(), doActivate);
         }
         state = doActivate;
     }

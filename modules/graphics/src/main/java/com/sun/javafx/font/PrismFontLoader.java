@@ -224,7 +224,7 @@ public class PrismFontLoader extends FontLoader {
             // TODO: what's the difference between descent and maxDescent?
             float maxDescent = metrics.getDescent();//metrics.getMaxDescent();
             float leading = metrics.getLineGap();
-            return FontMetrics.impl_createFontMetrics(maxAscent, ascent, xheight, descent, maxDescent, leading, font);
+            return FontMetrics.createFontMetrics(maxAscent, ascent, xheight, descent, maxDescent, leading, font);
         } else {
             return null; // this should never happen
         }

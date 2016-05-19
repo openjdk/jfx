@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene;
 
 import com.sun.javafx.runtime.SystemProperties;
+import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Task;
@@ -710,7 +711,7 @@ public class SceneTest {
         // verify it has correct owner
         cam.setNearClip(20);
         Toolkit.getToolkit().firePulse();
-        NGCamera ngCamera = ((StubScene)scene.impl_getPeer()).getCamera();
+        NGCamera ngCamera = ((StubScene) SceneHelper.getPeer(scene)).getCamera();
         assertEquals(20, ngCamera.getNearClip(), 0.00001);
 
         scene.setCamera(null);
@@ -747,7 +748,7 @@ public class SceneTest {
 
         cam.setNearClip(20);
         Toolkit.getToolkit().firePulse();
-        NGCamera camera = ((StubScene)scene.impl_getPeer()).getCamera();
+        NGCamera camera = ((StubScene) SceneHelper.getPeer(scene)).getCamera();
         assertEquals(20, camera.getNearClip(), 0.00001);
     }
 
@@ -802,7 +803,7 @@ public class SceneTest {
 
         final Scene scene = new Scene(new Group(), 300, 200);
         stage.setScene(scene);
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
                 generator.generateMouseEvent(MouseEvent.MOUSE_ENTERED,
                                              100, 100));
         toolkit.firePulse();
@@ -812,7 +813,7 @@ public class SceneTest {
         toolkit.firePulse();
 
         assertSame(CursorShim.getCurrentFrame(Cursor.TEXT),
-                   ((StubScene) scene.impl_getPeer()).getCursor());
+                   ((StubScene) SceneHelper.getPeer(scene)).getCursor());
     }
 
     @Test
@@ -823,7 +824,7 @@ public class SceneTest {
         final Parent root = new Group(new Rectangle(300, 200));
         final Scene scene = new Scene(root, 300, 200);
         stage.setScene(scene);
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
                 generator.generateMouseEvent(MouseEvent.MOUSE_ENTERED,
                                              100, 100));
         toolkit.firePulse();
@@ -833,7 +834,7 @@ public class SceneTest {
         toolkit.firePulse();
 
         assertSame(CursorShim.getCurrentFrame(Cursor.TEXT),
-                   ((StubScene) scene.impl_getPeer()).getCursor());
+                   ((StubScene) SceneHelper.getPeer(scene)).getCursor());
     }
 
     @Test public void testProperties() {

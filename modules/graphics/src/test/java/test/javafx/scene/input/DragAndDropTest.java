@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.input;
 
+import com.sun.javafx.scene.SceneHelper;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
@@ -283,15 +284,15 @@ public class DragAndDropTest {
         n.addEventHandler(MouseEvent.MOUSE_DRAGGED, thirdEventFailsHysteresis);
         n.addEventHandler(MouseEvent.MOUSE_RELEASED, thirdEventFailsHysteresis);
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 52, 48));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 70, 70));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 50, 50));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 50, 50));
 
         assertEquals(5, counter);
@@ -308,15 +309,15 @@ public class DragAndDropTest {
         n.setOnMouseReleased(doDetect);
 
         /* dontDetect prevents detection */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertFalse(detected);
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 50, 50));
         assertFalse(detected);
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 60));
         assertFalse(detected);
     }
@@ -332,30 +333,30 @@ public class DragAndDropTest {
         n.setOnMouseReleased(doDetect);
 
         /* dontDetect prevents detection */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertFalse(detected);
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 52, 48));
         assertFalse(detected);
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 70, 70));
         assertFalse(detected);
 
         /* doDetect fires detection */
         n.setOnMouseDragged(doDetect);
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 50, 50));
         assertTrue(detected);
         detected = false;
 
         /* but fires it only once */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 70, 70));
         assertFalse(detected);
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 50, 50));
         assertFalse(detected);
     }
@@ -372,16 +373,16 @@ public class DragAndDropTest {
         n.getParent().setOnMouseDragged(doDetect);
 
         /* dontDetect prevents detection */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertFalse(detected);
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 50, 50));
         assertTrue(detected);
         detected = false;
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 50, 50));
         assertFalse(detected);
     }
@@ -396,11 +397,11 @@ public class DragAndDropTest {
             n.startDragAndDrop(TransferMode.COPY);
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 50, 50));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 50, 50));
 
         assertFalse(toolkit.dragging);
@@ -415,7 +416,7 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertTrue(toolkit.dragging);
     }
@@ -437,7 +438,7 @@ public class DragAndDropTest {
             counter++;
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         toolkit.dragTo(52, 52, TransferMode.COPY);
 
@@ -457,7 +458,7 @@ public class DragAndDropTest {
             counter++;
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         toolkit.dragTo(52, 52, TransferMode.COPY);
 
@@ -486,7 +487,7 @@ public class DragAndDropTest {
             counter++;
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         toolkit.dragTo(51, 51, TransferMode.COPY);
         toolkit.dragTo(52, 52, TransferMode.COPY);
@@ -518,7 +519,7 @@ public class DragAndDropTest {
             counter++;
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         toolkit.dragTo(51, 51, TransferMode.COPY);
         toolkit.dragTo(52, 52, TransferMode.COPY);
@@ -544,7 +545,7 @@ public class DragAndDropTest {
             counter++;
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         toolkit.dragTo(52, 52, TransferMode.COPY);
 
@@ -573,7 +574,7 @@ public class DragAndDropTest {
             counter++;
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         toolkit.dragTo(51, 51, TransferMode.COPY);
         toolkit.dragTo(52, 52, TransferMode.COPY);
@@ -597,7 +598,7 @@ public class DragAndDropTest {
         n.setOnDragOver(acceptAny);
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag */
@@ -615,7 +616,7 @@ public class DragAndDropTest {
         n.setOnDragOver(acceptAny);
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag */
@@ -633,7 +634,7 @@ public class DragAndDropTest {
         n.setOnDragOver(acceptAny);
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag */
@@ -652,7 +653,7 @@ public class DragAndDropTest {
         n.getParent().setOnDragOver(acceptCopy);
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag */
@@ -671,7 +672,7 @@ public class DragAndDropTest {
         n.getParent().setOnDragOver(acceptAny);
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag */
@@ -689,7 +690,7 @@ public class DragAndDropTest {
         n.setOnDragOver(acceptCopyOrMove);
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag */
@@ -706,7 +707,7 @@ public class DragAndDropTest {
         n.setOnDragDetected(stringSource(TransferMode.ANY));
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag */
@@ -729,7 +730,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag and drop*/
@@ -758,7 +759,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag and drop*/
@@ -786,7 +787,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag and drop*/
@@ -818,7 +819,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag and drop*/
@@ -851,7 +852,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag and drop*/
@@ -873,7 +874,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag and drop*/
@@ -892,7 +893,7 @@ public class DragAndDropTest {
         n.setOnDragOver(acceptCopy);
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag and drop*/
@@ -917,7 +918,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag and drop*/
@@ -947,7 +948,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        src.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(src.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         /* drag and drop*/
@@ -976,7 +977,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
 
@@ -999,7 +1000,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
 
@@ -1026,7 +1027,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 MouseEventGenerator.generateMouseEvent(
                     MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
@@ -1052,7 +1053,7 @@ public class DragAndDropTest {
         );
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
 
@@ -1075,7 +1076,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
 
@@ -1105,7 +1106,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 MouseEventGenerator.generateMouseEvent(
                     MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
@@ -1132,7 +1133,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
 
@@ -1163,7 +1164,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        src.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(src.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
 
@@ -1191,7 +1192,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        src.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(src.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
 
@@ -1222,7 +1223,7 @@ public class DragAndDropTest {
         });
 
         /* start drag */
-        src.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(src.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
 
@@ -1255,7 +1256,7 @@ public class DragAndDropTest {
         );
 
         /* start drag */
-        src.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(src.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         assertEquals(0, counter);
 
@@ -1287,11 +1288,11 @@ public class DragAndDropTest {
             db.setDragViewOffsetX(15);
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 50, 50));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 50, 50));
 
         assertFalse(toolkit.dragging);
@@ -1315,7 +1316,7 @@ public class DragAndDropTest {
             db.setDragViewOffsetX(15);
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
 
         assertTrue(toolkit.dragging);
@@ -1360,7 +1361,7 @@ public class DragAndDropTest {
             assertEquals(55, db.getDragViewOffsetY(), 1e-10);
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
     }
 
@@ -1401,7 +1402,7 @@ public class DragAndDropTest {
             assertEquals(55, db.getDragViewOffsetY(), 1e-10);
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
     }
 
@@ -1428,13 +1429,13 @@ public class DragAndDropTest {
             db.setDragViewOffsetX(15);
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 40, 40));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 55, 55));
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 81, 81));
     }
 
@@ -1467,7 +1468,7 @@ public class DragAndDropTest {
             Assert.assertEquals(50, event.getZ(), 0.00001);
         });
 
-        n.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         toolkit.dragTo(52, 52, TransferMode.COPY);
         toolkit.drop(252, 52, TransferMode.COPY);
@@ -1519,7 +1520,7 @@ public class DragAndDropTest {
             counter++;
         });
 
-        n1.getScene().impl_processMouseEvent(
+        SceneHelper.processMouseEvent(n1.getScene(),
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
         toolkit.dragTo(52, 52, TransferMode.COPY);
         toolkit.dragTo(252, 52, TransferMode.COPY);

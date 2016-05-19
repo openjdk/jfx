@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.SceneHelper;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
@@ -711,7 +712,7 @@ public class TabPaneTest {
         double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
         double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+75, yval+20));
         tk.firePulse();
 
@@ -745,13 +746,13 @@ public class TabPaneTest {
         double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
         double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+75, yval+20));
         tk.firePulse();
 
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+75, yval+20));
         tk.firePulse();
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());

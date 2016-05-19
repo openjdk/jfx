@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.scenario.animation.shared;
 
+import com.sun.javafx.animation.KeyValueHelper;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyValue;
 import javafx.beans.value.WritableBooleanValue;
@@ -53,7 +54,7 @@ public abstract class InterpolationInterval {
 
     public static InterpolationInterval create(KeyValue rightKeyValue,
             long ticks, KeyValue leftKeyValue, long duration) {
-        switch (rightKeyValue.getType()) {
+        switch (KeyValueHelper.getType(rightKeyValue)) {
             case BOOLEAN:
                 return new BooleanInterpolationInterval(rightKeyValue, ticks,
                         leftKeyValue.getEndValue());
@@ -90,7 +91,7 @@ public abstract class InterpolationInterval {
 
     public static InterpolationInterval create(KeyValue rightKeyValue,
             long ticks) {
-        switch (rightKeyValue.getType()) {
+        switch (KeyValueHelper.getType(rightKeyValue)) {
             case BOOLEAN:
                 return new BooleanInterpolationInterval(rightKeyValue, ticks);
             case DOUBLE:

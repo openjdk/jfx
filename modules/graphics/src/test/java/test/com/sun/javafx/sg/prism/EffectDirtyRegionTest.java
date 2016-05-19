@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.scenario.effect.Blend;
@@ -484,7 +485,7 @@ public class EffectDirtyRegionTest {
     }
 
     public static NGNode getBaseNode(Node n) {
-        Scene.impl_setAllowPGAccess(true);
+        SceneHelper.setAllowPGAccess(true);
         // Eeek, this is gross! I have to use reflection to invoke this
         // method so that bounds are updated...
         try {
@@ -496,7 +497,7 @@ public class EffectDirtyRegionTest {
         }
         n.impl_updatePeer();
         NGNode bn = n.impl_getPeer();
-        Scene.impl_setAllowPGAccess(false);
+        SceneHelper.setAllowPGAccess(false);
         return bn;
     }
 

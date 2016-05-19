@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,25 +23,8 @@
  * questions.
  */
 
-package com.sun.javafx.webkit.prism.theme;
+package com.sun.javafx.animation;
 
-import com.sun.javafx.scene.SceneHelper;
-import com.sun.javafx.sg.prism.NGNode;
-import com.sun.prism.Graphics;
-import com.sun.webkit.graphics.WCGraphicsContext;
-import com.sun.javafx.webkit.theme.Renderer;
-import javafx.scene.Scene;
-import javafx.scene.control.Control;
-
-public final class PrismRenderer extends Renderer {
-
-    @Override
-    protected void render(Control control, WCGraphicsContext g) {
-        SceneHelper.setAllowPGAccess(true);
-        // The peer is not modified.
-        NGNode peer = control.impl_getPeer();
-        SceneHelper.setAllowPGAccess(false);
-
-        peer.render((Graphics)g.getPlatformGraphics());
-    }
+public enum KeyValueType {
+    BOOLEAN, DOUBLE, FLOAT, INTEGER, LONG, OBJECT
 }

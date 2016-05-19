@@ -11,6 +11,7 @@
 -XaddExports:javafx.graphics/com.sun.javafx.font=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.geom=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.perf=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.scene=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.input=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.stage=ALL-UNNAMED

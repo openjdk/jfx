@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,25 +23,39 @@
  * questions.
  */
 
-package com.sun.javafx.webkit.prism.theme;
+package com.sun.javafx.animation;
 
-import com.sun.javafx.scene.SceneHelper;
-import com.sun.javafx.sg.prism.NGNode;
-import com.sun.prism.Graphics;
-import com.sun.webkit.graphics.WCGraphicsContext;
-import com.sun.javafx.webkit.theme.Renderer;
-import javafx.scene.Scene;
-import javafx.scene.control.Control;
+import com.sun.javafx.util.Utils;
+import javafx.animation.KeyValue;
 
-public final class PrismRenderer extends Renderer {
+/**
+ * Used to access internal methods of KeyValue.
+ */
+public class KeyValueHelper {
 
-    @Override
-    protected void render(Control control, WCGraphicsContext g) {
-        SceneHelper.setAllowPGAccess(true);
-        // The peer is not modified.
-        NGNode peer = control.impl_getPeer();
-        SceneHelper.setAllowPGAccess(false);
+    private static KeyValueAccessor keyValueAccessor;
 
-        peer.render((Graphics)g.getPlatformGraphics());
+    static {
+        Utils.forceInit(KeyValue.class);
     }
+
+    private KeyValueHelper() {
+    }
+
+    public static KeyValueType getType(KeyValue keyValue) {
+        return keyValueAccessor.getType(keyValue);
+    }
+
+    public static void setKeyValueAccessor(final KeyValueAccessor newAccessor) {
+        if (keyValueAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        keyValueAccessor = newAccessor;
+    }
+
+    public interface KeyValueAccessor {
+        KeyValueType getType(KeyValue keyValue);
+    }
+
 }

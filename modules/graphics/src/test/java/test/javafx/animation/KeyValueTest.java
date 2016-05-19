@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package test.javafx.animation;
 
 
+import com.sun.javafx.animation.KeyValueHelper;
+import com.sun.javafx.animation.KeyValueType;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyValue;
 import static org.junit.Assert.assertEquals;
@@ -53,15 +55,15 @@ public class KeyValueTest {
     private static final double EPSILON_DOUBLE = 1e-12;
     private static final float EPSILON_FLOAT = 1e-6f;
 
-    private void assertKeyValue(KeyValue.Type type, WritableValue<?> target, Object endValue, Interpolator interpolator, KeyValue kv) {
-        assertEquals(type, kv.getType());
+    private void assertKeyValue(KeyValueType type, WritableValue<?> target, Object endValue, Interpolator interpolator, KeyValue kv) {
+        assertEquals(type, KeyValueHelper.getType(kv));
         assertEquals(target, kv.getTarget());
         assertEquals(endValue, kv.getEndValue());
         assertEquals(interpolator, kv.getInterpolator());
     }
 
-    private void assertKeyValue(KeyValue.Type type, WritableValue<?> target, Interpolator interpolator, KeyValue kv) {
-        assertEquals(type, kv.getType());
+    private void assertKeyValue(KeyValueType type, WritableValue<?> target, Interpolator interpolator, KeyValue kv) {
+        assertEquals(type, KeyValueHelper.getType(kv));
         assertEquals(target, kv.getTarget());
         assertEquals(interpolator, kv.getInterpolator());
     }
@@ -72,7 +74,7 @@ public class KeyValueTest {
     public void testBooleanFactory_Interpolator() {
         final BooleanProperty v = new SimpleBooleanProperty();
         final KeyValue kv = new KeyValue(v, true, Interpolator.EASE_BOTH);
-        assertKeyValue(KeyValue.Type.BOOLEAN, v, Boolean.TRUE, Interpolator.EASE_BOTH, kv);
+        assertKeyValue(KeyValueType.BOOLEAN, v, Boolean.TRUE, Interpolator.EASE_BOTH, kv);
     }
 
     @Test(expected=NullPointerException.class)
@@ -92,7 +94,7 @@ public class KeyValueTest {
     public void testBooleanFactory() {
         final BooleanProperty v = new SimpleBooleanProperty();
         final KeyValue kv = new KeyValue(v, true);
-        assertKeyValue(KeyValue.Type.BOOLEAN, v, Boolean.TRUE, Interpolator.LINEAR, kv);
+        assertKeyValue(KeyValueType.BOOLEAN, v, Boolean.TRUE, Interpolator.LINEAR, kv);
     }
 
     @Test(expected=NullPointerException.class)
@@ -106,7 +108,7 @@ public class KeyValueTest {
     public void testDoubleFactory_Interpolator() {
         final DoubleProperty v = new SimpleDoubleProperty();
         final KeyValue kv = new KeyValue(v, Math.PI, Interpolator.EASE_BOTH);
-        assertKeyValue(KeyValue.Type.DOUBLE, v, Interpolator.EASE_BOTH, kv);
+        assertKeyValue(KeyValueType.DOUBLE, v, Interpolator.EASE_BOTH, kv);
         assertEquals(Math.PI, ((Number)kv.getEndValue()).doubleValue(), EPSILON_DOUBLE);
     }
 
@@ -127,7 +129,7 @@ public class KeyValueTest {
     public void testDoubleFactory() {
         final DoubleProperty v = new SimpleDoubleProperty();
         final KeyValue kv = new KeyValue(v, Math.E);
-        assertKeyValue(KeyValue.Type.DOUBLE, v, Interpolator.LINEAR, kv);
+        assertKeyValue(KeyValueType.DOUBLE, v, Interpolator.LINEAR, kv);
         assertEquals(Math.E, ((Number)kv.getEndValue()).doubleValue(), EPSILON_DOUBLE);
     }
 
@@ -142,7 +144,7 @@ public class KeyValueTest {
     public void testFloatFactory_Interpolator() {
         final FloatProperty v = new SimpleFloatProperty();
         final KeyValue kv = new KeyValue(v, (float)Math.E, Interpolator.EASE_BOTH);
-        assertKeyValue(KeyValue.Type.FLOAT, v, Interpolator.EASE_BOTH, kv);
+        assertKeyValue(KeyValueType.FLOAT, v, Interpolator.EASE_BOTH, kv);
         assertEquals((float)Math.E, ((Number)kv.getEndValue()).floatValue(), EPSILON_FLOAT);
     }
 
@@ -163,7 +165,7 @@ public class KeyValueTest {
     public void testFloatFactory() {
         final FloatProperty v = new SimpleFloatProperty();
         final KeyValue kv = new KeyValue(v, (float)Math.PI);
-        assertKeyValue(KeyValue.Type.FLOAT, v, Interpolator.LINEAR, kv);
+        assertKeyValue(KeyValueType.FLOAT, v, Interpolator.LINEAR, kv);
         assertEquals((float)Math.PI, ((Number)kv.getEndValue()).floatValue(), EPSILON_FLOAT);
     }
 
@@ -178,7 +180,7 @@ public class KeyValueTest {
     public void testIntegerFactory_Interpolator() {
         final IntegerProperty v = new SimpleIntegerProperty();
         final KeyValue kv = new KeyValue(v, Integer.MAX_VALUE, Interpolator.EASE_BOTH);
-        assertKeyValue(KeyValue.Type.INTEGER, v, Integer.MAX_VALUE, Interpolator.EASE_BOTH, kv);
+        assertKeyValue(KeyValueType.INTEGER, v, Integer.MAX_VALUE, Interpolator.EASE_BOTH, kv);
     }
 
     @Test(expected=NullPointerException.class)
@@ -198,7 +200,7 @@ public class KeyValueTest {
     public void testIntegerFactory() {
         final IntegerProperty v = new SimpleIntegerProperty();
         final KeyValue kv = new KeyValue(v, Integer.MIN_VALUE);
-        assertKeyValue(KeyValue.Type.INTEGER, v, Integer.MIN_VALUE, Interpolator.LINEAR, kv);
+        assertKeyValue(KeyValueType.INTEGER, v, Integer.MIN_VALUE, Interpolator.LINEAR, kv);
     }
 
     @Test(expected=NullPointerException.class)
@@ -212,7 +214,7 @@ public class KeyValueTest {
     public void testLongFactory_Interpolator() {
         final LongProperty v = new SimpleLongProperty();
         final KeyValue kv = new KeyValue(v, Long.MAX_VALUE, Interpolator.EASE_BOTH);
-        assertKeyValue(KeyValue.Type.LONG, v, Long.MAX_VALUE, Interpolator.EASE_BOTH, kv);
+        assertKeyValue(KeyValueType.LONG, v, Long.MAX_VALUE, Interpolator.EASE_BOTH, kv);
     }
 
     @Test(expected=NullPointerException.class)
@@ -232,7 +234,7 @@ public class KeyValueTest {
     public void testLongFactory() {
         final LongProperty v = new SimpleLongProperty();
         final KeyValue kv = new KeyValue(v, Long.MIN_VALUE);
-        assertKeyValue(KeyValue.Type.LONG, v, Long.MIN_VALUE, Interpolator.LINEAR, kv);
+        assertKeyValue(KeyValueType.LONG, v, Long.MIN_VALUE, Interpolator.LINEAR, kv);
     }
 
     @Test(expected=NullPointerException.class)
@@ -246,7 +248,7 @@ public class KeyValueTest {
     public void testObjectFactory_Interpolator() {
         final StringProperty v = new SimpleStringProperty();
         final KeyValue kv = new KeyValue(v, "Hello World", Interpolator.EASE_BOTH);
-        assertKeyValue(KeyValue.Type.OBJECT, v, "Hello World", Interpolator.EASE_BOTH, kv);
+        assertKeyValue(KeyValueType.OBJECT, v, "Hello World", Interpolator.EASE_BOTH, kv);
     }
 
     @Test(expected=NullPointerException.class)
@@ -266,7 +268,7 @@ public class KeyValueTest {
     public void testObjectFactory() {
         final StringProperty v = new SimpleStringProperty();
         final KeyValue kv = new KeyValue(v, "Goodbye World");
-        assertKeyValue(KeyValue.Type.OBJECT, v, "Goodbye World", Interpolator.LINEAR, kv);
+        assertKeyValue(KeyValueType.OBJECT, v, "Goodbye World", Interpolator.LINEAR, kv);
     }
 
     @Test(expected=NullPointerException.class)

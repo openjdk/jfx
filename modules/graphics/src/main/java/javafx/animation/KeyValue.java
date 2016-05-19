@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package javafx.animation;
 
+import com.sun.javafx.animation.KeyValueHelper;
+import com.sun.javafx.animation.KeyValueType;
 import javafx.beans.NamedArg;
 import javafx.beans.value.WritableBooleanValue;
 import javafx.beans.value.WritableDoubleValue;
@@ -64,26 +66,19 @@ public final class KeyValue {
 
     private static final Interpolator DEFAULT_INTERPOLATOR = Interpolator.LINEAR;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     * @since JavaFX 2.0
-     */
-    @Deprecated
-    public static enum Type {
-        BOOLEAN, DOUBLE, FLOAT, INTEGER, LONG, OBJECT
+    static {
+        KeyValueHelper.setKeyValueAccessor(new KeyValueHelper.KeyValueAccessor() {
+            @Override public KeyValueType getType(KeyValue keyValue) {
+                return keyValue.getType();
+            }
+        });
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public Type getType() {
+    KeyValueType getType() {
         return type;
     }
 
-    private final Type type;
+    private final KeyValueType type;
 
     /**
      * Returns the target of this {@code KeyValue}
@@ -141,13 +136,13 @@ public final class KeyValue {
         this.target = target;
         this.endValue = endValue;
         this.interpolator = interpolator;
-        this.type = (target instanceof WritableNumberValue) ? (target instanceof WritableDoubleValue) ? Type.DOUBLE
-                : (target instanceof WritableIntegerValue) ? Type.INTEGER
-                        : (target instanceof WritableFloatValue) ? Type.FLOAT
-                                : (target instanceof WritableLongValue) ? Type.LONG
-                                        : Type.OBJECT
-                : (target instanceof WritableBooleanValue) ? Type.BOOLEAN
-                        : Type.OBJECT;
+        this.type = (target instanceof WritableNumberValue) ? (target instanceof WritableDoubleValue) ? KeyValueType.DOUBLE
+                : (target instanceof WritableIntegerValue) ? KeyValueType.INTEGER
+                        : (target instanceof WritableFloatValue) ? KeyValueType.FLOAT
+                                : (target instanceof WritableLongValue) ? KeyValueType.LONG
+                                        : KeyValueType.OBJECT
+                : (target instanceof WritableBooleanValue) ? KeyValueType.BOOLEAN
+                        : KeyValueType.OBJECT;
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.input;
 
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.pgstub.StubScene;
 import javafx.event.Event;
 import javafx.scene.Group;
@@ -173,7 +174,7 @@ public class ContextMenuEventTest {
             assertFalse(event.isKeyboardTrigger());
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().menuEvent(
                 101, 102, 201, 202, false);
     }
 
@@ -198,7 +199,7 @@ public class ContextMenuEventTest {
             assertTrue(event.isKeyboardTrigger());
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().menuEvent(
                 101, 102, 201, 202, true);
     }
 
@@ -237,7 +238,7 @@ public class ContextMenuEventTest {
             assertFalse(event.isKeyboardTrigger());
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().menuEvent(
                 101, 102, 201, 202, false);
     }
 
@@ -261,7 +262,7 @@ public class ContextMenuEventTest {
             assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().menuEvent(
                 1330, 1350, 1340, 1360, true);
 
     }
