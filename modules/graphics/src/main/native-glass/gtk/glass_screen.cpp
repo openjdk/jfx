@@ -104,6 +104,39 @@ static GdkRectangle get_screen_workarea(GdkScreen *screen) {
 
 }
 
+#undef DEBUG_GSETTINGS
+
+static guint gsettings_get_guint(const gchar *schema_name,
+                                 const gchar *key_name,
+                                 int defval)
+{
+    GSettingsSchemaSource *default_schema_source =
+            g_settings_schema_source_get_default();
+    if (default_schema_source == NULL) {
+#ifdef DEBUG_GSETTINGS
+        fprintf(stderr, "No schema source dir found!\n");
+#endif
+        return defval;
+    }
+    GSettingsSchema *the_schema =
+            g_settings_schema_source_lookup(default_schema_source, schema_name, TRUE);
+    if (the_schema == NULL) {
+#ifdef DEBUG_GSETTINGS
+        fprintf(stderr, "schema '%s' not found!\n", schema_name);
+#endif
+        return defval;
+    }
+#ifdef DEBUG_GSETTINGS
+    fprintf(stderr, "found schema '%s'\n", schema_name);
+#endif
+    GSettings *gset = g_settings_new(schema_name);
+    guint val = g_settings_get_uint(gset, key_name);
+#ifdef DEBUG_GSETTINGS
+    fprintf(stderr, "...and key '%s'\n", key_name);
+#endif
+    return val;
+}
+
 static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx)
 {
     GdkRectangle workArea = get_screen_workarea(screen);
@@ -130,13 +163,14 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
         if (gdk_scale > 0) {
             uiScale = (jfloat) gdk_scale;
         } else {
-            GSettings *gset = g_settings_new("org.gnome.desktop.interface");
-            uiScale = (jfloat) g_settings_get_uint(gset, "scaling-factor");
+            uiScale = (jfloat) gsettings_get_guint("org.gnome.desktop.interface",
+                                                   "scaling-factor", 0);
+            if (uiScale < 1) {
+                uiScale = 1;
+            }
         }
     }
 
-    gint dpi = gdk_screen_get_resolution(screen);
-    dpi /= uiScale;
     jint mx = monitor_geometry.x / uiScale;
     jint my = monitor_geometry.y / uiScale;
     jint mw = monitor_geometry.width / uiScale;
@@ -146,15 +180,27 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
     jint ww = working_monitor_geometry.width / uiScale;
     jint wh = working_monitor_geometry.height / uiScale;
 
+    gint mmW = gdk_screen_get_monitor_width_mm(screen, monitor_idx);
+    gint mmH = gdk_screen_get_monitor_height_mm(screen, monitor_idx);
+    if (mmW <= 0 || mmH <= 0) {
+        if (gdk_screen_get_n_monitors(screen) == 1) {
+            mmW = gdk_screen_get_width_mm(screen);
+            mmH = gdk_screen_get_height_mm(screen);
+        }
+    }
+    jint dpiX, dpiY;
+    if (mmW <= 0 || mmH <= 0) {
+        dpiX = dpiY = 96;
+    } else {
+        dpiX = (mw * 254) / (mmW * 10);
+        dpiY = (mh * 254) / (mmH * 10);
+    }
+
     jobject jScreen = env->NewObject(jScreenCls, jScreenInit,
                                      (jlong)monitor_idx,
 
                                      (visual ? glass_gdk_visual_get_depth(visual) : 0),
 
-//                                     monitor_geometry.x,
-//                                     monitor_geometry.y,
-//                                     monitor_geometry.width,
-//                                     monitor_geometry.height,
                                      mx, my, mw, mh,
 
                                      monitor_geometry.x,
@@ -162,16 +208,9 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
                                      monitor_geometry.width,
                                      monitor_geometry.height,
 
-//                                     working_monitor_geometry.x,
-//                                     working_monitor_geometry.y,
-//                                     working_monitor_geometry.width,
-//                                     working_monitor_geometry.height,
                                      wx, wy, ww, wh,
 
-//                                     (jint)gdk_screen_get_resolution(screen),
-//                                     (jint)gdk_screen_get_resolution(screen),
-                                     dpi, dpi,
-//                                     1.0f, 1.0f, 1.0f, 1.0f);
+                                     dpiX, dpiY,
                                      uiScale, uiScale, uiScale, uiScale);
 
     JNI_EXCEPTION_TO_CPP(env);
