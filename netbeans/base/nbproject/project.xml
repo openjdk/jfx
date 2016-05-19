@@ -7,9 +7,8 @@
             <explicit-platform explicit-source-supported="true"/>
             <source-roots>
                 <root id="src.dir"/>
-                <root id="src.version-info.dir"/>
-                <root id="src.java8.dir"/>
-                <root id="src.java-jfr.dir"/>
+                <root id="src.version-info.dir" name="version-info"/>
+                <root id="src.java-jfr.dir" name="java-jfr"/>
             </source-roots>
             <test-roots>
                 <root id="test.src.dir"/>

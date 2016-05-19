@@ -1380,17 +1380,12 @@ project(":base") {
         }
     }
 
-    // Make sure to include $buildDir/generated-src/version-info that we previously created.
-    // We DO NOT want to include src/main/version-info
-    if (System.getProperty("jfx.build.jdk.defenders", "true").equals("true")) {
-        sourceSets.main.java.srcDirs += "src/main/java8"
-    } else {
-        sourceSets.main.java.srcDirs += "src/main/java7"
-    }
-
     if (IS_COMPILE_JFR) {
         sourceSets.main.java.srcDirs += "src/main/java-jfr"
     }
+
+    // Make sure to include $buildDir/generated-src/version-info that we previously created.
+    // We DO NOT want to include src/main/version-info
 
     sourceSets.main.java.srcDirs += "$buildDir/generated-src/version-info"
 
