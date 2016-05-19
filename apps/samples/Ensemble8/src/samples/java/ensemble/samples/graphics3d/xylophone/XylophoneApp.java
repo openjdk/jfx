@@ -78,6 +78,17 @@ public class XylophoneApp extends Application {
     private Timeline animation;
     private Timeline animation2;
 
+    private static final String[] urls = {
+        "/ensemble/samples/shared-resources/Note1.wav",
+        "/ensemble/samples/shared-resources/Note2.wav",
+        "/ensemble/samples/shared-resources/Note3.wav",
+        "/ensemble/samples/shared-resources/Note4.wav",
+        "/ensemble/samples/shared-resources/Note5.wav",
+        "/ensemble/samples/shared-resources/Note6.wav",
+        "/ensemble/samples/shared-resources/Note7.wav",
+        "/ensemble/samples/shared-resources/Note8.wav"
+    };
+
     public Parent createContent() {
         Xform sceneRoot = new Xform();
         sceneRoot.rx.setAngle(45.0);
@@ -112,10 +123,7 @@ public class XylophoneApp extends Application {
             Color.GREENYELLOW, Color.YELLOW, Color.ORANGE, Color.RED
         };
         for (int i = 0; i < barCubes.length; i++) {
-            String str =
-                String.format("/ensemble/samples/shared-resources/Note%d.wav",
-                              (i + 1));
-            String url = getClass().getResource(str).toString();
+            String url = getClass().getResource(urls[i]).toString();
             final AudioClip barNote = new AudioClip(url);
 
             barCubes[i] = new Box(barWidth, barDepth, 100.0 - (i * 5.0));

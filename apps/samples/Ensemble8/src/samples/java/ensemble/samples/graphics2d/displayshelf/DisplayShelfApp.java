@@ -54,16 +54,30 @@ import javafx.stage.Stage;
  */
 public class DisplayShelfApp extends Application {
     private static final double WIDTH = 450, HEIGHT = 480;
+    private static final String[] urls = {
+        "/ensemble/samples/shared-resources/Animal1.jpg",
+        "/ensemble/samples/shared-resources/Animal2.jpg",
+        "/ensemble/samples/shared-resources/Animal3.jpg",
+        "/ensemble/samples/shared-resources/Animal4.jpg",
+        "/ensemble/samples/shared-resources/Animal5.jpg",
+        "/ensemble/samples/shared-resources/Animal6.jpg",
+        "/ensemble/samples/shared-resources/Animal7.jpg",
+        "/ensemble/samples/shared-resources/Animal8.jpg",
+        "/ensemble/samples/shared-resources/Animal9.jpg",
+        "/ensemble/samples/shared-resources/Animal10.jpg",
+        "/ensemble/samples/shared-resources/Animal11.jpg",
+        "/ensemble/samples/shared-resources/Animal12.jpg",
+        "/ensemble/samples/shared-resources/Animal13.jpg",
+        "/ensemble/samples/shared-resources/Animal14.jpg"
+    };
+    
     private Timeline animation;
 
     public Parent createContent() {
         // load images
         Image[] images = new Image[14];
         for (int i = 0; i < 14; i++) {
-            String str =
-                String.format("/ensemble/samples/shared-resources/Animal%d.jpg",
-                              (i + 1));
-            String url = getClass().getResource(str).toExternalForm();
+            String url = getClass().getResource(urls[i]).toExternalForm();
             images[i] = new Image(url);
         }
         // create display shelf
