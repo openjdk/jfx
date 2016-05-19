@@ -1323,11 +1323,11 @@ public class TreeView<T> extends Control {
                     for (int i = from; i < to; i++) {
                         if (isSelected(i)) {
                             wasAnyChildSelected = true;
-
-                            selectedIndices._nextRemove(i);
                             removed.add(i);
                         }
                     }
+
+                    ControlUtils.reducingChange(selectedIndices, removed);
 
                     for (int index : removed) {
                         startAtomic();

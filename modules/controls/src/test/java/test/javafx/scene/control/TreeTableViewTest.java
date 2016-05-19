@@ -35,12 +35,14 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.collections.transformation.FilteredList;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
@@ -4666,21 +4668,40 @@ public class TreeTableViewTest {
                     break;
                 }
                 case 2: {
-                    // we expect treeItem1 and treeItem2 to be removed in two separate events,
-                    // and we then expect root1 to be added in another event
-                    List<TreeItem<String>> removed = new ArrayList<>();
+                    // we expect treeItem1 and treeItem2 to be removed in one separate event,
+                    // and then we expect a separate event for root1 to be added. Therefore,
+                    // once the remove event is received, we will increment the step to test for
+                    // the addition
+                    boolean wasRemoved = false;
+                    while (c.next()) {
+                        if (c.wasAdded()) {
+                            fail("no addition expected yet");
+                        }
+                        if (c.wasRemoved()) {
+                            assertTrue(c.getRemoved().containsAll(FXCollections.observableArrayList(treeItem1, treeItem2)));
+                            wasRemoved = true;
+                        }
+                    }
+                    if (!wasRemoved) {
+                        fail("Expected a remove operation");
+                    }
+                    step.incrementAndGet();
+                    break;
+                }
+                case 3: {
+                    boolean wasAdded = false;
                     while (c.next()) {
                         if (c.wasAdded()) {
                             assertEquals(1, c.getAddedSize());
                             assertTrue(c.getAddedSubList().contains(root1));
-                            removed.clear();
+                            wasAdded = true;
                         }
                         if (c.wasRemoved()) {
-                            removed.addAll(c.getRemoved());
+                            fail("no removal expected now");
                         }
                     }
-                    if (!removed.isEmpty()) {
-                        assertTrue(removed.containsAll(FXCollections.observableArrayList(treeItem1, treeItem2)));
+                    if (!wasAdded) {
+                        fail("Expected an add operation");
                     }
                     break;
                 }
@@ -6112,5 +6133,53 @@ public class TreeTableViewTest {
         // and that in the expandedItemCount listener that we get the right values
         // in the selectedIndices and selectedItems list
         childNode1.setExpanded(false);
+    }
+
+    @Test public void test_jdk_8152396() {
+        final TreeItem<String> childNode1 = new TreeItem<>("Child Node 1");
+        TreeItem<String> item1 = new TreeItem<>("Node 1-1");
+        TreeItem<String> item2 = new TreeItem<>("Node 1-2");
+        childNode1.getChildren().addAll(item1, item2);
+
+        final TreeItem<String> root = new TreeItem<>("Root node");
+        root.setExpanded(true);
+        root.getChildren().add(childNode1);
+
+        final TreeTableView<String> view = new TreeTableView<>(root);
+        MultipleSelectionModel<TreeItem<String>> sm = view.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        view.expandedItemCountProperty().addListener((observable, oldCount, newCount) -> {
+            if (newCount.intValue() > oldCount.intValue()) {
+                for (int index: sm.getSelectedIndices()) {
+                    TreeItem<String> item = view.getTreeItem(index);
+
+                    if (item != null && item.isExpanded() && !item.getChildren().isEmpty()) {
+                        int startIndex = index + 1;
+                        int maxCount = startIndex + item.getChildren().size();
+
+                        sm.selectRange(startIndex, maxCount);
+                    }
+                }
+            }
+        });
+
+        FilteredList filteredList = sm.getSelectedItems().filtered(Objects::nonNull);
+
+        StageLoader sl = new StageLoader(view);
+
+        sm.select(1);
+        childNode1.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        // collapse Child Node 1 and expect both children to be deselected,
+        // and that the filtered list does not throw an exception
+        assertEquals(3, filteredList.size());
+        ControlTestUtils.runWithExceptionHandler(() -> childNode1.setExpanded(false));
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, filteredList.size());
+
+        sl.dispose();
     }
 }

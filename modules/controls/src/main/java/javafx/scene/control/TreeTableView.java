@@ -2463,11 +2463,12 @@ public class TreeTableView<S> extends Control {
                             } else {
                                 if (isSelected(i)) {
                                     wasAnyChildSelected = true;
-                                    selectedIndices._nextRemove(i);
                                     removed.add(i);
                                 }
                             }
                         }
+
+                        ControlUtils.reducingChange(selectedIndices, removed);
 
                         for (int index : removed) {
                             startAtomic();

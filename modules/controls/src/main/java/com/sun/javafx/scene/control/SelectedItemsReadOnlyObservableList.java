@@ -101,7 +101,7 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
             // FIXME we could make this more efficient by only making the reported changes to the list
             itemsRefList.clear();
             for (int selectedIndex : selectedIndices) {
-                itemsRefList.add(new WeakReference<E>(getModelItem(selectedIndex)));
+                itemsRefList.add(new WeakReference<>(getModelItem(selectedIndex)));
             }
 
             itemsListChanged = false;
@@ -151,12 +151,9 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
 
     private List<E> getRemovedElements(ListChangeListener.Change<? extends Integer> c) {
         List<E> removed = new ArrayList<>(c.getRemovedSize());
-        for (int index : c.getRemoved()) {
-            if (itemsListChanged && itemsListChange.wasPermutated()) {
-                removed.add(_getModelItem(itemsListChange.getPermutation(index)));
-            } else {
-                removed.add(_getModelItem(index));
-            }
+        final int startPos = c.getFrom();
+        for (int i = startPos, max = startPos + c.getRemovedSize(); i < max; i++) {
+            removed.add(getRemovedModelItem(i));
         }
         return removed;
     }
