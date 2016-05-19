@@ -26,8 +26,6 @@
 #ifndef DFGValidate_h
 #define DFGValidate_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "DFGCommon.h"
@@ -37,7 +35,7 @@ namespace JSC { namespace DFG {
 
 enum GraphDumpMode { DontDumpGraph, DumpGraph };
 
-void validate(Graph&, GraphDumpMode = DumpGraph);
+void validate(Graph&, GraphDumpMode = DumpGraph, CString graphDumpBeforePhase = CString());
 
 } } // namespace JSC::DFG
 

@@ -26,7 +26,6 @@ __Z26InitWebCoreSystemInterfacev
 +[WebView _shouldAutomaticDashSubstitutionBeEnabled]
 +[WebView _shouldAutomaticTextReplacementBeEnabled]
 +[WebView _shouldAutomaticSpellingCorrectionBeEnabled]
-_WKCopyCFLocalizationPreferredName
 +[WebView(WebPrivate) _setDomainRelaxationForbidden:forURLScheme:]
 +[WebView(WebPrivate) _registerURLSchemeAsAllowingLocalStorageAccessInPrivateBrowsing:]
 +[WebView(WebPrivate) _registerURLSchemeAsAllowingDatabaseAccessInPrivateBrowsing:]
@@ -288,7 +287,6 @@ __Z4core40WebTextDirectionSubmenuInclusionBehavior
 -[WebPreferences(WebPrivate) showsURLsInToolTips]
 -[WebPreferences(WebPrivate) showsToolTipOverTruncatedText]
 -[WebPreferences(WebPrivate) developerExtrasEnabled]
--[WebPreferences(WebPrivate) javaScriptExperimentsEnabled]
 -[WebPreferences(WebPrivate) authorAndUserStylesEnabled]
 -[WebPreferences(WebPrivate) applicationChromeModeEnabled]
 -[WebPreferences userStyleSheetEnabled]
@@ -316,7 +314,6 @@ _WKAppVersionCheckLessThan
 -[WebPreferences(WebPrivate) cssCompositingEnabled]
 -[WebPreferences(WebPrivate) webAudioEnabled]
 -[WebPreferences(WebPrivate) seamlessIFramesEnabled]
--[WebPreferences(WebPrivate) cssGridLayoutEnabled]
 -[WebPreferences(WebPrivate) fullScreenEnabled]
 -[WebPreferences(WebPrivate) asynchronousSpellCheckingEnabled]
 -[WebPreferences(WebPrivate) hyperlinkAuditingEnabled]
@@ -504,7 +501,6 @@ __ZN20WebFrameLoaderClient32postProgressFinishedNotificationEv
 __ZN20WebDocumentLoaderMacD0Ev
 -[WebView _windowChangedKeyState]
 -[WebHTMLView windowDidBecomeKey:]
-_WKMouseMovedNotification
 -[WebHTMLView(WebNSTextInputSupport) _updateSecureInputState]
 -[WebView _windowWillOrderOnScreen:]
 -[WebHTMLView windowWillOrderOnScreen:]
@@ -605,10 +601,7 @@ __ZN20WebFrameLoaderClient24dispatchDidFinishLoadingEPN7WebCore14DocumentLoaderE
 -[WebHTMLRepresentation finishedLoadingWithDataSource:]
 __ZN20WebFrameLoaderClient29dispatchDidFinishDocumentLoadEv
 __ZN20WebFrameLoaderClient29dispatchDidHandleOnloadEventsEv
-_WKSetUpFontCache
-_WKGetGlyphsForCharacters
 _WKGetGlyphTransformedAdvances
-_WKCTFontTransformGlyphs
 __ZN20WebFrameLoaderClient17dispatchDidLayoutEj
 __ZN20WebFrameLoaderClient21dispatchDidFinishLoadEv
 -[WebView(WebPrivate) _didFinishLoadForFrame:]
@@ -738,8 +731,6 @@ _WKSetNSURLRequestShouldContentSniff
 _WKGetCFURLResponseMIMEType
 __ZN20WebFrameLoaderClient38dispatchDidLoadResourceFromMemoryCacheEPN7WebCore14DocumentLoaderERKNS0_15ResourceRequestERKNS0_16ResourceResponseEi
 -[WebFrame(WebInternal) _characterRangeAtPoint:]
-_WKCreateCTTypesetterWithUniCharProviderAndOptions
-_WKCTRunGetInitialAdvance
 -[WebView(WebViewEditing) selectedDOMRange]
 -[WebHTMLRepresentation attributedStringFrom:startOffset:to:endOffset:]
 -[WebHTMLView shouldDelayWindowOrderingForEvent:]
@@ -850,7 +841,6 @@ __ZN3WTF6VectorINS_6StringELm0ENS_15CrashOnOverflowEEC2ERKS3_
 __ZN7WebCore13MimeClassInfoD2Ev
 -[WebBasePluginPackage isNativeLibraryData:]
 -[WebBasePluginPackage pListForPath:createFile:]
-+[WebBasePluginPackage preferredLocalizationName]
 -[WebPluginDatabase(Internal) _addPlugin:]
 -[WebBasePluginPackage path]
 -[WebBasePluginPackage wasAddedToPluginDatabase:]
@@ -1255,7 +1245,6 @@ _WKCreatePrivateStorageSession
 -[WebPreferences(WebPrivate) setTextAreasAreResizable:]
 -[WebPreferences(WebPrivate) setJavaScriptCanAccessClipboard:]
 -[WebPreferences(WebPrivate) setOfflineWebApplicationCacheEnabled:]
--[WebPreferences(WebPrivate) setJavaScriptExperimentsEnabled:]
 -[WebPreferences(WebPrivate) setLoadsSiteIconsIgnoringImageLoadingPreference:]
 -[WebPreferences(WebPrivate) setFrameFlatteningEnabled:]
 -[WebPreferences(WebPrivate) setSpatialNavigationEnabled:]
@@ -1263,7 +1252,6 @@ _WKCreatePrivateStorageSession
 -[WebPreferences(WebPrivate) setCanvasUsesAcceleratedDrawing:]
 -[WebPreferences(WebPrivate) setAcceleratedDrawingEnabled:]
 -[WebPreferences(WebPrivate) setCSSRegionsEnabled:]
--[WebPreferences(WebPrivate) setCSSGridLayoutEnabled:]
 -[WebPreferences(WebPrivate) setUsePreHTML5ParserQuirks:]
 -[WebPreferences(WebPrivate) setAsynchronousSpellCheckingEnabled:]
 -[WebPreferences(WebPrivate) setMockScrollbarsEnabled:]
@@ -1481,7 +1469,6 @@ __ZN7WebCore17FrameLoaderClient29dispatchDidNavigateWithinPageEv
 __ZN20WebFrameLoaderClient29dispatchDidPopStateWithinPageEv
 __ZN20WebFrameLoaderClient35dispatchDidChangeLocationWithinPageEv
 __ZN20WebFrameLoaderClient13didFinishLoadEv
-_WKGetFontInLanguageForRange
 +[NSObject(WebScripting) isKeyExcludedFromWebScript:]
 -[WebHTMLRepresentation receivedError:withDataSource:]
 __ZN20WebFrameLoaderClient31interruptedForPolicyChangeErrorERKN7WebCore15ResourceRequestE
@@ -1538,7 +1525,6 @@ __ZN7WebCore17FrameLoaderClient13didChangeNameERKN3WTF6StringE
 -[WebBackForwardList addItem:]
 __Z4coreP14WebHistoryItem
 -[WebBackForwardList goToItem:]
-_WKCreateCTLineWithUniCharProvider
 -[WebInspector show:]
 -[WebInspector showWindow]
 __ZN18WebInspectorClient21openInspectorFrontendEPN7WebCore19InspectorControllerE
@@ -2191,7 +2177,6 @@ __ZN20WebFrameLoaderClient21didRunInsecureContentEPN7WebCore14SecurityOriginERKN
 __ZN7WebCore17FrameLoaderClient30allowDisplayingInsecureContentEbPNS_14SecurityOriginERKNS_4KURLE
 __ZN20WebFrameLoaderClient25didDisplayInsecureContentEv
 __Z21CallFrameLoadDelegatePFP11objc_objectS0_P13objc_selectorzEP7WebViewS1_
-_WKGetFontInLanguageForCharacter
 __ZNK25WebFrameNetworkingContext12blockedErrorERKN7WebCore15ResourceRequestE
 _WKGetCFURLResponseURL
 _WKSetCFURLResponseMIMEType
@@ -2321,8 +2306,6 @@ __ZN20WebContextMenuClient10isSpeakingEv
 -[WebHTMLView(WebNSTextInputSupport) selectedRange]
 -[WebFrame(WebPrivate) _selectedNSRange]
 -[WebFrameView _pageHorizontally:]
-_WKGetVerticalGlyphsForCharacters
-_CTFontGetVerticalGlyphsForCharacters
 __ZThn8_N15WebEditorClient17getGuessesForWordERKN3WTF6StringES3_RNS0_6VectorIS1_Lm0ENS0_15CrashOnOverflowEEE
 __ZN15WebEditorClient17getGuessesForWordERKN3WTF6StringES3_RNS0_6VectorIS1_Lm0ENS0_15CrashOnOverflowEEE
 __ZN3WTF6VectorINS_6StringELm0ENS_15CrashOnOverflowEE14shrinkCapacityEm

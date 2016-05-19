@@ -52,11 +52,6 @@ TimeInputType::TimeInputType(HTMLInputElement& element)
 {
 }
 
-void TimeInputType::attach()
-{
-    observeFeatureIfVisible(FeatureObserver::InputTypeTime);
-}
-
 const AtomicString& TimeInputType::formControlType() const
 {
     return InputTypeNames::time();
@@ -82,7 +77,7 @@ Decimal TimeInputType::defaultValueForStepUp() const
 
 StepRange TimeInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
-    DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (timeDefaultStep, timeDefaultStepBase, timeStepScaleFactor, StepRange::ScaledStepValueShouldBeInteger));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (timeDefaultStep, timeDefaultStepBase, timeStepScaleFactor, StepRange::ScaledStepValueShouldBeInteger));
 
     const Decimal stepBase = parseToNumber(element().fastGetAttribute(minAttr), 0);
     const Decimal minimum = parseToNumber(element().fastGetAttribute(minAttr), Decimal::fromDouble(DateComponents::minimumTime()));

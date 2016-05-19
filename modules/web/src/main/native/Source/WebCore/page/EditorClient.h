@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -55,6 +55,7 @@ class Element;
 class Frame;
 class HTMLElement;
 class KeyboardEvent;
+class LayoutRect;
 class Node;
 class Range;
 class SharedBuffer;
@@ -63,6 +64,7 @@ class TextCheckerClient;
 class VisibleSelection;
 class VisiblePosition;
 
+struct GapRects;
 struct GrammarDetail;
 
 class EditorClient {
@@ -86,15 +88,21 @@ public:
     virtual bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) = 0;
 
     virtual bool shouldApplyStyle(StyleProperties*, Range*) = 0;
+    virtual void didApplyStyle() = 0;
     virtual bool shouldMoveRangeAfterDelete(Range*, Range*) = 0;
 
     virtual void didBeginEditing() = 0;
     virtual void respondToChangedContents() = 0;
     virtual void respondToChangedSelection(Frame*) = 0;
+    virtual void didChangeSelectionAndUpdateLayout() = 0;
     virtual void didEndEditing() = 0;
     virtual void willWriteSelectionToPasteboard(Range*) = 0;
     virtual void didWriteSelectionToPasteboard() = 0;
     virtual void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer>>& pasteboardData) = 0;
+
+    // Notify an input method that a composition was voluntarily discarded by WebCore, so that it could clean up too.
+    // This function is not called when a composition is closed per a request from an input method.
+    virtual void discardedComposition(Frame*) = 0;
 
     virtual void registerUndoStep(PassRefPtr<UndoStep>) = 0;
     virtual void registerRedoStep(PassRefPtr<UndoStep>) = 0;
@@ -117,6 +125,7 @@ public:
     virtual bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) = 0;
     virtual void textWillBeDeletedInTextField(Element*) = 0;
     virtual void textDidChangeInTextArea(Element*) = 0;
+    virtual void overflowScrollPositionChanged() = 0;
 
 #if PLATFORM(IOS)
     virtual void startDelayingAndCoalescingContentChangeNotifications() = 0;
@@ -159,10 +168,6 @@ public:
     virtual void toggleAutomaticTextReplacement() = 0;
     virtual bool isAutomaticSpellingCorrectionEnabled() = 0;
     virtual void toggleAutomaticSpellingCorrection() = 0;
-#endif
-
-#if ENABLE(DELETION_UI)
-    virtual bool shouldShowDeleteInterface(HTMLElement*) = 0;
 #endif
 
 #if PLATFORM(GTK)

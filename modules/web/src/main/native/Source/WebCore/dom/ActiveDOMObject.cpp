@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,8 +28,6 @@
 #include "ActiveDOMObject.h"
 
 #include "ScriptExecutionContext.h"
-#include "WorkerGlobalScope.h"
-#include "WorkerThread.h"
 
 namespace WebCore {
 
@@ -37,14 +35,14 @@ ActiveDOMObject::ActiveDOMObject(ScriptExecutionContext* scriptExecutionContext)
     : ContextDestructionObserver(scriptExecutionContext)
     , m_pendingActivityCount(0)
 #if !ASSERT_DISABLED
-    , m_suspendIfNeededCalled(false)
+    , m_suspendIfNeededWasCalled(false)
 #endif
 {
     if (!m_scriptExecutionContext)
         return;
 
     ASSERT(m_scriptExecutionContext->isContextThread());
-    m_scriptExecutionContext->didCreateActiveDOMObject(this);
+    m_scriptExecutionContext->didCreateActiveDOMObject(*this);
 }
 
 ActiveDOMObject::~ActiveDOMObject()
@@ -52,7 +50,7 @@ ActiveDOMObject::~ActiveDOMObject()
     if (!m_scriptExecutionContext)
         return;
 
-    ASSERT(m_suspendIfNeededCalled);
+    ASSERT(m_suspendIfNeededWasCalled);
 
     // ActiveDOMObject may be inherited by a sub-class whose life-cycle
     // exceeds that of the associated ScriptExecutionContext. In those cases,
@@ -62,28 +60,37 @@ ActiveDOMObject::~ActiveDOMObject()
     // here.
     if (m_scriptExecutionContext) {
         ASSERT(m_scriptExecutionContext->isContextThread());
-        m_scriptExecutionContext->willDestroyActiveDOMObject(this);
+        m_scriptExecutionContext->willDestroyActiveDOMObject(*this);
     }
 }
 
 void ActiveDOMObject::suspendIfNeeded()
 {
 #if !ASSERT_DISABLED
-    ASSERT(!m_suspendIfNeededCalled);
-    m_suspendIfNeededCalled = true;
+    ASSERT(!m_suspendIfNeededWasCalled);
+    m_suspendIfNeededWasCalled = true;
 #endif
     if (!m_scriptExecutionContext)
         return;
 
-    m_scriptExecutionContext->suspendActiveDOMObjectIfNeeded(this);
+    m_scriptExecutionContext->suspendActiveDOMObjectIfNeeded(*this);
 }
+
+#if !ASSERT_DISABLED
+
+void ActiveDOMObject::assertSuspendIfNeededWasCalled() const
+{
+    ASSERT(m_suspendIfNeededWasCalled);
+}
+
+#endif
 
 bool ActiveDOMObject::hasPendingActivity() const
 {
     return m_pendingActivityCount;
 }
 
-bool ActiveDOMObject::canSuspend() const
+bool ActiveDOMObject::canSuspendForPageCache() const
 {
     return false;
 }

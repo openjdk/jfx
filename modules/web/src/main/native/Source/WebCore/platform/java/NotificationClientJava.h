@@ -25,6 +25,7 @@ public:
 #if ENABLE(NOTIFICATIONS)
     void requestPermission(ScriptExecutionContext*, PassRefPtr<NotificationPermissionCallback>) {}
 #endif
+    bool hasPendingPermissionRequests(ScriptExecutionContext*) const override { return false;};
     void cancelRequestsForPermission(ScriptExecutionContext*) {}
     Permission checkPermission(ScriptExecutionContext*) {return PermissionDenied;}
     ~NotificationClientJava() {}

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -65,7 +65,6 @@
 #import <WebCore/FrameView.h>
 #import <WebCore/HTMLPlugInElement.h>
 #import <WebCore/Page.h>
-#import <WebCore/PluginMainThreadScheduler.h>
 #import <WebCore/ProxyServer.h>
 #import <WebCore/ScriptController.h>
 #import <WebCore/SecurityOrigin.h>
@@ -74,8 +73,8 @@
 #import <WebCore/WebCoreObjCExtras.h>
 #import <WebCore/WebCoreURLResponse.h>
 #import <WebCore/npruntime_impl.h>
-#import <WebKit/DOMPrivate.h>
-#import <WebKit/WebUIDelegate.h>
+#import <WebKitLegacy/DOMPrivate.h>
+#import <WebKitLegacy/WebUIDelegate.h>
 #import <objc/runtime.h>
 #import <runtime/InitializeThreading.h>
 #import <runtime/JSLock.h>
@@ -1188,12 +1187,12 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     // Setting the window type to 0 ensures that NPP_SetWindow will be called if the plug-in is restarted.
     lastSetWindow.type = (NPWindowType)0;
 
-    _pluginLayer = 0;
+    _pluginLayer = nil;
 
     [self _destroyPlugin];
     [_pluginPackage.get() close];
 
-    _eventHandler.clear();
+    _eventHandler = nullptr;
 }
 
 - (NPEventModel)eventModel
@@ -1382,7 +1381,6 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
 
 - (void)finalize
 {
-    ASSERT_MAIN_THREAD();
     ASSERT(!_isStarted);
 
     [self fini];
@@ -1732,7 +1730,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     }
 
     if (cTarget || JSString) {
-        // Make when targetting a frame or evaluating a JS string, perform the request after a delay because we don't
+        // Make when targeting a frame or evaluating a JS string, perform the request after a delay because we don't
         // want to potentially kill the plug-in inside of its URL request.
 
         if (JSString && target && [frame findFrameNamed:target] != frame) {
@@ -1805,7 +1803,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
         } else {
             path = bufString;
         }
-        postData = [NSData dataWithContentsOfFile:[path _webkit_fixedCarbonPOSIXPath]];
+        postData = [NSData dataWithContentsOfFile:path];
         CFRelease(bufString);
         if (!postData) {
             return NPERR_FILE_NOT_FOUND;
@@ -2166,7 +2164,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     if (_shouldFireTimers)
         timer->start(_isCompletelyObscured);
 
-    *slot = std::move(timer);
+    *slot = WTF::move(timer);
 
     return timerID;
 }
@@ -2358,8 +2356,6 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     // NPN_New(), which creates the plug-in instance, should never be called while calling a plug-in function for that instance.
     ASSERT(pluginFunctionCallDepth == 0);
 
-    PluginMainThreadScheduler::scheduler().registerPlugin(plugin);
-
     _isFlash = [_pluginPackage.get() bundleIdentifier] == "com.macromedia.Flash Player.plugin";
     _isSilverlight = [_pluginPackage.get() bundleIdentifier] == "com.microsoft.SilverlightPlugin";
 
@@ -2374,8 +2370,6 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
 
 - (void)_destroyPlugin
 {
-    PluginMainThreadScheduler::scheduler().unregisterPlugin(plugin);
-
     if (_isSilverlight)
         [self _workaroundSilverlightFullscreenBug:NO];
 

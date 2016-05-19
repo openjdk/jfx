@@ -24,14 +24,17 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "JavaScriptTest.h"
 
 #include "PlatformUtilities.h"
 #include "Test.h"
 #include <JavaScriptCore/JSContextRef.h>
 #include <JavaScriptCore/JSRetainPtr.h>
-#include <WebKit2/WKRetainPtr.h>
-#include <WebKit2/WKSerializedScriptValue.h>
+#include <WebKit/WKRetainPtr.h>
+#include <WebKit/WKSerializedScriptValue.h>
 #include <wtf/StdLibExtras.h>
 
 namespace TestWebKitAPI {
@@ -90,3 +93,5 @@ static void javaScriptCallback(WKSerializedScriptValueRef resultSerializedScript
 }
 
 } // namespace TestWebKitAPI
+
+#endif

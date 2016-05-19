@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2015 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -84,9 +84,9 @@ VisibleSelection::VisibleSelection(const VisiblePosition& base, const VisiblePos
     validate();
 }
 
-VisibleSelection::VisibleSelection(const Range* range, EAffinity affinity, bool isDirectional)
-    : m_base(range->startPosition())
-    , m_extent(range->endPosition())
+VisibleSelection::VisibleSelection(const Range& range, EAffinity affinity, bool isDirectional)
+    : m_base(range.startPosition())
+    , m_extent(range.endPosition())
     , m_affinity(affinity)
     , m_isDirectional(isDirectional)
 {
@@ -234,9 +234,9 @@ void VisibleSelection::appendTrailingWhitespace()
     if (!searchRange)
         return;
 
-    CharacterIterator charIt(searchRange.get(), TextIteratorEmitsCharactersBetweenAllVisiblePositions);
+    CharacterIterator charIt(*searchRange, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
 
-    for (; charIt.length(); charIt.advance(1)) {
+    for (; !charIt.atEnd() && charIt.text().length(); charIt.advance(1)) {
         UChar c = charIt.text()[0];
         if ((!isSpaceOrNewline(c) && c != noBreakSpace) || c == '\n')
             break;
@@ -322,14 +322,12 @@ void VisibleSelection::setStartAndEndFromBaseAndExtentRespectingGranularity(Text
             }
 
             m_end = end.deepEquivalent();
-#if PLATFORM(IOS)
             // End must not be before start.
             if (m_start.deprecatedNode() == m_end.deprecatedNode() && m_start.deprecatedEditingOffset() > m_end.deprecatedEditingOffset()) {
                 Position swap(m_start);
                 m_start = m_end;
                 m_end = swap;
             }
-#endif
             break;
         }
         case SentenceGranularity: {
@@ -393,11 +391,9 @@ void VisibleSelection::setStartAndEndFromBaseAndExtentRespectingGranularity(Text
             m_start = startOfSentence(VisiblePosition(m_start, m_affinity)).deepEquivalent();
             m_end = endOfSentence(VisiblePosition(m_end, m_affinity)).deepEquivalent();
             break;
-#if PLATFORM(IOS)
         case DocumentGranularity:
             ASSERT_NOT_REACHED();
             break;
-#endif
     }
 
     // Make sure we do not have a dangling start or end.
@@ -533,12 +529,10 @@ void VisibleSelection::adjustSelectionToAvoidCrossingEditingBoundaries()
     if (m_base.isNull() || m_start.isNull() || m_end.isNull())
         return;
 
-#if PLATFORM(IOS)
     // Early return in the caret case (the state hasn't actually been set yet, so we can't use isCaret()) to avoid the
     // expense of computing highestEditableRoot.
     if (m_base == m_start && m_base == m_end)
         return;
-#endif
 
     Node* baseRoot = highestEditableRoot(m_base);
     Node* startRoot = highestEditableRoot(m_start);
@@ -649,7 +643,9 @@ bool VisibleSelection::isContentEditable() const
 
 bool VisibleSelection::hasEditableStyle() const
 {
-    return isEditablePosition(start(), ContentIsEditable, DoNotUpdateStyle);
+    if (Node* containerNode = start().containerNode())
+        return containerNode->hasEditableStyle();
+    return false;
 }
 
 bool VisibleSelection::isContentRichlyEditable() const
@@ -664,16 +660,16 @@ Element* VisibleSelection::rootEditableElement() const
 
 Node* VisibleSelection::nonBoundaryShadowTreeRootNode() const
 {
-    return start().deprecatedNode() ? start().deprecatedNode()->nonBoundaryShadowTreeRootNode() : 0;
+    return start().deprecatedNode() ? start().deprecatedNode()->nonBoundaryShadowTreeRootNode() : nullptr;
 }
 
 bool VisibleSelection::isInPasswordField() const
 {
     HTMLTextFormControlElement* textControl = enclosingTextFormControl(start());
-    return textControl && isHTMLInputElement(textControl) && toHTMLInputElement(textControl)->isPasswordField();
+    return is<HTMLInputElement>(textControl) && downcast<HTMLInputElement>(*textControl).isPasswordField();
 }
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 
 void VisibleSelection::debugPosition() const
 {
@@ -730,7 +726,7 @@ void VisibleSelection::showTreeForThis() const
 
 } // namespace WebCore
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 
 void showTree(const WebCore::VisibleSelection& sel)
 {

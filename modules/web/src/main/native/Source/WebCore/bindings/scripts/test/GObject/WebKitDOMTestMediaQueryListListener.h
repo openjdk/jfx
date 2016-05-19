@@ -18,25 +18,23 @@
  *  Boston, MA 02110-1301, USA.
  */
 
-#if !defined(__WEBKITDOM_H_INSIDE__) && !defined(BUILDING_WEBKIT)
-#error "Only <webkitdom/webkitdom.h> can be included directly."
-#endif
-
 #ifndef WebKitDOMTestMediaQueryListListener_h
 #define WebKitDOMTestMediaQueryListListener_h
 
+#ifdef WEBKIT_DOM_USE_UNSTABLE_API
+
 #include <glib-object.h>
 #include <webkitdom/WebKitDOMObject.h>
-#include <webkitdom/webkitdomdefines.h>
+#include <webkitdom/webkitdomdefines-unstable.h>
 
 G_BEGIN_DECLS
 
-#define WEBKIT_TYPE_DOM_TEST_MEDIA_QUERY_LIST_LISTENER            (webkit_dom_test_media_query_list_listener_get_type())
-#define WEBKIT_DOM_TEST_MEDIA_QUERY_LIST_LISTENER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), WEBKIT_TYPE_DOM_TEST_MEDIA_QUERY_LIST_LISTENER, WebKitDOMTestMediaQueryListListener))
-#define WEBKIT_DOM_TEST_MEDIA_QUERY_LIST_LISTENER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_TYPE_DOM_TEST_MEDIA_QUERY_LIST_LISTENER, WebKitDOMTestMediaQueryListListenerClass)
-#define WEBKIT_DOM_IS_TEST_MEDIA_QUERY_LIST_LISTENER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), WEBKIT_TYPE_DOM_TEST_MEDIA_QUERY_LIST_LISTENER))
-#define WEBKIT_DOM_IS_TEST_MEDIA_QUERY_LIST_LISTENER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  WEBKIT_TYPE_DOM_TEST_MEDIA_QUERY_LIST_LISTENER))
-#define WEBKIT_DOM_TEST_MEDIA_QUERY_LIST_LISTENER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  WEBKIT_TYPE_DOM_TEST_MEDIA_QUERY_LIST_LISTENER, WebKitDOMTestMediaQueryListListenerClass))
+#define WEBKIT_DOM_TYPE_TEST_MEDIA_QUERY_LIST_LISTENER            (webkit_dom_test_media_query_list_listener_get_type())
+#define WEBKIT_DOM_TEST_MEDIA_QUERY_LIST_LISTENER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), WEBKIT_DOM_TYPE_TEST_MEDIA_QUERY_LIST_LISTENER, WebKitDOMTestMediaQueryListListener))
+#define WEBKIT_DOM_TEST_MEDIA_QUERY_LIST_LISTENER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_DOM_TYPE_TEST_MEDIA_QUERY_LIST_LISTENER, WebKitDOMTestMediaQueryListListenerClass)
+#define WEBKIT_DOM_IS_TEST_MEDIA_QUERY_LIST_LISTENER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), WEBKIT_DOM_TYPE_TEST_MEDIA_QUERY_LIST_LISTENER))
+#define WEBKIT_DOM_IS_TEST_MEDIA_QUERY_LIST_LISTENER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  WEBKIT_DOM_TYPE_TEST_MEDIA_QUERY_LIST_LISTENER))
+#define WEBKIT_DOM_TEST_MEDIA_QUERY_LIST_LISTENER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  WEBKIT_DOM_TYPE_TEST_MEDIA_QUERY_LIST_LISTENER, WebKitDOMTestMediaQueryListListenerClass))
 
 struct _WebKitDOMTestMediaQueryListListener {
     WebKitDOMObject parent_instance;
@@ -47,8 +45,9 @@ struct _WebKitDOMTestMediaQueryListListenerClass {
 };
 
 WEBKIT_API GType
-webkit_dom_test_media_query_list_listener_get_type (void);
+webkit_dom_test_media_query_list_listener_get_type(void);
 
 G_END_DECLS
 
+#endif /* WEBKIT_DOM_USE_UNSTABLE_API */
 #endif /* WebKitDOMTestMediaQueryListListener_h */

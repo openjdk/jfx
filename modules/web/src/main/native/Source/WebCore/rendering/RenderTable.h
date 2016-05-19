@@ -4,7 +4,7 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2004, 2005, 2006, 2009, 2010, 2014 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,6 +28,8 @@
 #include "CSSPropertyNames.h"
 #include "CollapsedBorderValue.h"
 #include "RenderBlock.h"
+#include <memory>
+#include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -42,8 +44,8 @@ enum SkipEmptySectionsValue { DoNotSkipEmptySections, SkipEmptySections };
 
 class RenderTable : public RenderBlock {
 public:
-    RenderTable(Element&, PassRef<RenderStyle>);
-    RenderTable(Document&, PassRef<RenderStyle>);
+    RenderTable(Element&, Ref<RenderStyle>&&);
+    RenderTable(Document&, Ref<RenderStyle>&&);
     virtual ~RenderTable();
 
     // Per CSS 3 writing-mode: "The first and second values of the 'border-spacing' property represent spacing between columns
@@ -172,6 +174,9 @@ public:
 
     unsigned colToEffCol(unsigned column) const
     {
+        if (!m_hasCellColspanThatDeterminesTableWidth)
+            return column;
+
         unsigned effColumn = 0;
         unsigned numColumns = numEffCols();
         for (unsigned c = 0; effColumn < numColumns && c + m_columns[effColumn].span - 1 < column; ++effColumn)
@@ -181,6 +186,9 @@ public:
 
     unsigned effColToCol(unsigned effCol) const
     {
+        if (!m_hasCellColspanThatDeterminesTableWidth)
+            return effCol;
+
         unsigned c = 0;
         for (unsigned i = 0; i < effCol; i++)
             c += m_columns[i].span;
@@ -190,7 +198,7 @@ public:
     LayoutUnit borderSpacingInRowDirection() const
     {
         if (unsigned effectiveColumnCount = numEffCols())
-            return static_cast<LayoutUnit>(effectiveColumnCount + 1) * hBorderSpacing();
+            return (effectiveColumnCount + 1) * hBorderSpacing();
 
         return 0;
     }
@@ -234,11 +242,9 @@ public:
     RenderTableCell* cellAfter(const RenderTableCell*) const;
 
     typedef Vector<CollapsedBorderValue> CollapsedBorderValues;
-    void invalidateCollapsedBorders()
-    {
-        m_collapsedBordersValid = false;
-        m_collapsedBorders.clear();
-    }
+    bool collapsedBordersAreValid() const { return m_collapsedBordersValid; }
+    void invalidateCollapsedBorders();
+    void collapsedEmptyBorderIsPresent() { m_collapsedEmptyBorderIsPresent = true; }
     const CollapsedBorderValue* currentBorderValue() const { return m_currentBorder; }
 
     bool hasSections() const { return m_head || m_foot || m_firstBody; }
@@ -263,6 +269,13 @@ public:
     void addColumn(const RenderTableCol*);
     void removeColumn(const RenderTableCol*);
 
+    LayoutUnit offsetTopForColumn(const RenderTableCol&) const;
+    LayoutUnit offsetLeftForColumn(const RenderTableCol&) const;
+    LayoutUnit offsetWidthForColumn(const RenderTableCol&) const;
+    LayoutUnit offsetHeightForColumn(const RenderTableCol&) const;
+
+    virtual void markForPaginationRelayoutIfNeeded() override final;
+
 protected:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override final;
     virtual void simplifiedNormalFlowLayout() override final;
@@ -284,13 +297,15 @@ private:
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
     virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override final;
-    virtual int firstLineBaseline() const override;
-    virtual int inlineBlockBaseline(LineDirectionMode) const override final;
+    virtual Optional<int> firstLineBaseline() const override;
+    virtual Optional<int> inlineBlockBaseline(LineDirectionMode) const override final;
 
     RenderTableCol* slowColElement(unsigned col, bool* startEdge, bool* endEdge) const;
 
     void updateColumnCache() const;
     void invalidateCachedColumns();
+
+    void invalidateCachedColumnOffsets();
 
     virtual RenderBlock* firstLineBlock() const override final;
     virtual void updateFirstLetter() override final;
@@ -318,26 +333,43 @@ private:
     mutable Vector<RenderTableCaption*> m_captions;
     mutable Vector<RenderTableCol*> m_columnRenderers;
 
+    unsigned effectiveIndexOfColumn(const RenderTableCol&) const;
+    typedef HashMap<const RenderTableCol*, unsigned> EffectiveColumnIndexMap;
+    mutable EffectiveColumnIndexMap m_effectiveColumnIndexMap;
+
     mutable RenderTableSection* m_head;
     mutable RenderTableSection* m_foot;
     mutable RenderTableSection* m_firstBody;
 
-    OwnPtr<TableLayout> m_tableLayout;
+    std::unique_ptr<TableLayout> m_tableLayout;
 
     CollapsedBorderValues m_collapsedBorders;
     const CollapsedBorderValue* m_currentBorder;
     bool m_collapsedBordersValid : 1;
+    bool m_collapsedEmptyBorderIsPresent : 1;
 
     mutable bool m_hasColElements : 1;
     mutable bool m_needsSectionRecalc : 1;
 
     bool m_columnLogicalWidthChanged : 1;
     mutable bool m_columnRenderersValid: 1;
+    mutable bool m_hasCellColspanThatDeterminesTableWidth : 1;
+
+    bool hasCellColspanThatDeterminesTableWidth() const
+    {
+        for (unsigned c = 0; c < numEffCols(); c++) {
+            if (m_columns[c].span > 1)
+                return true;
+        }
+        return false;
+    }
 
     short m_hSpacing;
     short m_vSpacing;
     int m_borderStart;
     int m_borderEnd;
+    mutable LayoutUnit m_columnOffsetTop;
+    mutable LayoutUnit m_columnOffsetHeight;
 };
 
 inline RenderTableSection* RenderTable::topSection() const
@@ -350,8 +382,8 @@ inline RenderTableSection* RenderTable::topSection() const
     return m_foot;
 }
 
-RENDER_OBJECT_TYPE_CASTS(RenderTable, isTable())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTable, isTable())
 
 #endif // RenderTable_h

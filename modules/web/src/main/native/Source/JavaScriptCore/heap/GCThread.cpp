@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,15 +32,14 @@
 #include "JSCInlines.h"
 #include "SlotVisitor.h"
 #include <wtf/MainThread.h>
-#include <wtf/PassOwnPtr.h>
 
 namespace JSC {
 
-GCThread::GCThread(GCThreadSharedData& shared, SlotVisitor* slotVisitor, CopyVisitor* copyVisitor)
+GCThread::GCThread(GCThreadSharedData& shared, std::unique_ptr<SlotVisitor> slotVisitor, std::unique_ptr<CopyVisitor> copyVisitor)
     : m_threadID(0)
     , m_shared(shared)
-    , m_slotVisitor(WTF::adoptPtr(slotVisitor))
-    , m_copyVisitor(WTF::adoptPtr(copyVisitor))
+    , m_slotVisitor(WTF::move(slotVisitor))
+    , m_copyVisitor(WTF::move(copyVisitor))
 {
 }
 
@@ -116,6 +115,9 @@ void GCThread::gcThreadMain()
                 // all of the blocks that the GCThreads borrowed have been returned. doneCopying()
                 // returns our borrowed CopiedBlock, allowing the copying phase to finish.
                 m_copyVisitor->doneCopying();
+
+                WTF::releaseFastMallocFreeMemoryForThisThread();
+
                 break;
             case NoPhase:
                 RELEASE_ASSERT_NOT_REACHED();

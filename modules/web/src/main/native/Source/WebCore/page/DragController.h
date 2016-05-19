@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-    class Clipboard;
+    class DataTransfer;
     class Document;
     class DragClient;
     class DragData;
@@ -45,7 +45,6 @@ namespace WebCore {
     class Page;
     class PlatformMouseEvent;
 
-    struct DragSession;
     struct DragState;
 
     class DragController {
@@ -54,14 +53,17 @@ namespace WebCore {
         DragController(Page&, DragClient&);
         ~DragController();
 
-        static PassOwnPtr<DragController> create(Page*, DragClient*);
+        static std::unique_ptr<DragController> create(Page&, DragClient&);
 
         DragClient& client() const { return m_client; }
 
-        DragSession dragEntered(DragData&);
-        void dragExited(DragData&);
-        DragSession dragUpdated(DragData&);
-        bool performDrag(DragData&);
+        WEBCORE_EXPORT DragOperation dragEntered(DragData&);
+        WEBCORE_EXPORT void dragExited(DragData&);
+        WEBCORE_EXPORT DragOperation dragUpdated(DragData&);
+        WEBCORE_EXPORT bool performDragOperation(DragData&);
+
+        bool mouseIsOverFileInput() const { return m_fileInputElementUnderMouse; }
+        unsigned numberOfItemsToBeAccepted() const { return m_numberOfItemsToBeAccepted; }
 
         // FIXME: It should be possible to remove a number of these accessors once all
         // drag logic is in WebCore.
@@ -69,6 +71,9 @@ namespace WebCore {
         bool didInitiateDrag() const { return m_didInitiateDrag; }
         DragOperation sourceDragOperation() const { return m_sourceDragOperation; }
         const URL& draggingImageURL() const { return m_draggingImageURL; }
+#if ENABLE(ATTACHMENT_ELEMENT)
+        const URL& draggingAttachmentURL() const { return m_draggingAttachmentURL; }
+#endif
         void setDragOffset(const IntPoint& offset) { m_dragOffset = offset; }
         const IntPoint& dragOffset() const { return m_dragOffset; }
         DragSourceAction dragSourceAction() const { return m_dragSourceAction; }
@@ -78,9 +83,9 @@ namespace WebCore {
         DragSourceAction delegateDragSourceAction(const IntPoint& rootViewPoint);
 
         Element* draggableElement(const Frame*, Element* start, const IntPoint&, DragState&) const;
-        void dragEnded();
+        WEBCORE_EXPORT void dragEnded();
 
-        void placeDragCaret(const IntPoint&);
+        WEBCORE_EXPORT void placeDragCaret(const IntPoint&);
 
         bool startDrag(Frame& src, const DragState&, DragOperation srcOp, const PlatformMouseEvent& dragEvent, const IntPoint& dragOrigin);
         static const IntSize& maxDragImageSize();
@@ -95,28 +100,31 @@ namespace WebCore {
         bool dispatchTextInputEventFor(Frame*, DragData&);
         bool canProcessDrag(DragData&);
         bool concludeEditDrag(DragData&);
-        DragSession dragEnteredOrUpdated(DragData&);
+        DragOperation dragEnteredOrUpdated(DragData&);
         DragOperation operationForLoad(DragData&);
-        bool tryDocumentDrag(DragData&, DragDestinationAction, DragSession&);
+        bool tryDocumentDrag(DragData&, DragDestinationAction, DragOperation&);
         bool tryDHTMLDrag(DragData&, DragOperation&);
         DragOperation dragOperation(DragData&);
-        void cancelDrag();
+        void clearDragCaret();
         bool dragIsMove(FrameSelection&, DragData&);
         bool isCopyKeyDown(DragData&);
 
         void mouseMovedIntoDocument(Document*);
 
-        void doImageDrag(Element&, const IntPoint&, const IntRect&, Clipboard&, Frame&, IntPoint&);
-        void doSystemDrag(DragImageRef, const IntPoint&, const IntPoint&, Clipboard&, Frame&, bool forLink);
+        void doImageDrag(Element&, const IntPoint&, const IntRect&, DataTransfer&, Frame&, IntPoint&);
+        void doSystemDrag(DragImageRef, const IntPoint&, const IntPoint&, DataTransfer&, Frame&, bool forLink);
         void cleanupAfterSystemDrag();
-        void declareAndWriteDragImage(Clipboard&, Element&, const URL&, const String& label);
-
+        void declareAndWriteDragImage(DataTransfer&, Element&, const URL&, const String& label);
+#if ENABLE(ATTACHMENT_ELEMENT)
+        void declareAndWriteAttachment(DataTransfer&, Element&, const URL&);
+#endif
         Page& m_page;
         DragClient& m_client;
 
         RefPtr<Document> m_documentUnderMouse; // The document the mouse was last dragged over.
         RefPtr<Document> m_dragInitiator; // The Document (if any) that initiated the drag.
         RefPtr<HTMLInputElement> m_fileInputElementUnderMouse;
+        unsigned m_numberOfItemsToBeAccepted;
         bool m_documentIsHandlingDrag;
 
         DragDestinationAction m_dragDestinationAction;
@@ -125,7 +133,12 @@ namespace WebCore {
         DragOperation m_sourceDragOperation; // Set in startDrag when a drag starts from a mouse down within WebKit
         IntPoint m_dragOffset;
         URL m_draggingImageURL;
+#if ENABLE(ATTACHMENT_ELEMENT)
+        URL m_draggingAttachmentURL;
+#endif
     };
+
+    WEBCORE_EXPORT bool isDraggableLink(const Element&);
 
 }
 

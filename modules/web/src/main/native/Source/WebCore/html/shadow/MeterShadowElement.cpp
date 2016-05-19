@@ -51,7 +51,7 @@ MeterShadowElement::MeterShadowElement(Document& document)
 
 HTMLMeterElement* MeterShadowElement::meterElement() const
 {
-    return toHTMLMeterElement(shadowHost());
+    return downcast<HTMLMeterElement>(shadowHost());
 }
 
 bool MeterShadowElement::rendererIsNeeded(const RenderStyle& style)
@@ -63,7 +63,7 @@ bool MeterShadowElement::rendererIsNeeded(const RenderStyle& style)
 MeterInnerElement::MeterInnerElement(Document& document)
     : MeterShadowElement(document)
 {
-    DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-meter-inner-element", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-meter-inner-element", AtomicString::ConstructFromLiteral));
     setPseudo(pseudoId);
 }
 
@@ -73,16 +73,16 @@ bool MeterInnerElement::rendererIsNeeded(const RenderStyle& style)
     return render && !render->theme().supportsMeter(render->style().appearance()) && HTMLDivElement::rendererIsNeeded(style);
 }
 
-RenderPtr<RenderElement> MeterInnerElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> MeterInnerElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderMeter>(*this, std::move(style));
+    return createRenderer<RenderMeter>(*this, WTF::move(style));
 }
 
 const AtomicString& MeterValueElement::valuePseudoId() const
 {
-    DEFINE_STATIC_LOCAL(AtomicString, optimumPseudoId, ("-webkit-meter-optimum-value", AtomicString::ConstructFromLiteral));
-    DEFINE_STATIC_LOCAL(AtomicString, suboptimumPseudoId, ("-webkit-meter-suboptimum-value", AtomicString::ConstructFromLiteral));
-    DEFINE_STATIC_LOCAL(AtomicString, evenLessGoodPseudoId, ("-webkit-meter-even-less-good-value", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, optimumPseudoId, ("-webkit-meter-optimum-value", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, suboptimumPseudoId, ("-webkit-meter-suboptimum-value", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, evenLessGoodPseudoId, ("-webkit-meter-even-less-good-value", AtomicString::ConstructFromLiteral));
 
     HTMLMeterElement* meter = meterElement();
     if (!meter)

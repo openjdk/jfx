@@ -79,7 +79,7 @@ bool JSCryptoAlgorithmDictionary::getAlgorithmIdentifier(ExecState* exec, JSValu
         return false;
     }
 
-    if (!CryptoAlgorithmRegistry::shared().getIdentifierForName(algorithmName, algorithmIdentifier)) {
+    if (!CryptoAlgorithmRegistry::singleton().getIdentifierForName(algorithmName, algorithmIdentifier)) {
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return false;
     }
@@ -89,7 +89,7 @@ bool JSCryptoAlgorithmDictionary::getAlgorithmIdentifier(ExecState* exec, JSValu
 
 static JSValue getProperty(ExecState* exec, JSObject* object, const char* name)
 {
-    Identifier identifier(exec, name);
+    Identifier identifier = Identifier::fromString(exec, name);
     PropertySlot slot(object);
 
     if (object->getPropertySlot(exec, identifier, slot))
@@ -105,7 +105,7 @@ static bool getHashAlgorithm(JSDictionary& dictionary, CryptoAlgorithmIdentifier
     ExecState* exec = dictionary.execState();
     JSObject* object = dictionary.initializerObject();
 
-    Identifier identifier(exec, "hash");
+    Identifier identifier = Identifier::fromString(exec, "hash");
     PropertySlot slot(object);
 
     JSValue hash = getProperty(exec, object, "hash");
@@ -146,7 +146,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createAesCbcParams(ExecState* 
 
     memcpy(result->iv.data(), ivData.first, ivData.second);
 
-    return std::move(result);
+    return WTF::move(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createAesKeyGenParams(ExecState* exec, JSValue value)
@@ -164,7 +164,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createAesKeyGenParams(ExecStat
 
     result->length = toUInt16(exec, lengthValue, EnforceRange);
 
-    return std::move(result);
+    return WTF::move(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createHmacParams(ExecState* exec, JSValue value)
@@ -182,7 +182,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createHmacParams(ExecState* ex
         return nullptr;
     }
 
-    return std::move(result);
+    return WTF::move(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createHmacKeyParams(ExecState* exec, JSValue value)
@@ -204,7 +204,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createHmacKeyParams(ExecState*
     if (exec->hadException())
         return nullptr;
 
-    return std::move(result);
+    return WTF::move(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createRsaKeyGenParams(ExecState* exec, JSValue value)
@@ -236,7 +236,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaKeyGenParams(ExecStat
     }
     result->publicExponent.append(publicExponentArray->data(), publicExponentArray->byteLength());
 
-    return std::move(result);
+    return WTF::move(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createRsaKeyParamsWithHash(ExecState*, JSValue)
@@ -266,7 +266,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaOaepParams(ExecState*
 
     result->hasLabel = !labelValue.isUndefinedOrNull();
     if (!result->hasLabel)
-        return std::move(result);
+        return WTF::move(result);
 
     CryptoOperationData labelData;
     if (!cryptoOperationDataFromJSValue(exec, labelValue, labelData)) {
@@ -276,7 +276,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaOaepParams(ExecState*
 
     result->label.append(labelData.first, labelData.second);
 
-    return std::move(result);
+    return WTF::move(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createRsaSsaParams(ExecState* exec, JSValue value)
@@ -294,7 +294,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaSsaParams(ExecState* 
         return nullptr;
     }
 
-    return std::move(result);
+    return WTF::move(result);
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForEncrypt(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue value)
@@ -335,6 +335,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForDecrypt(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue value)
@@ -375,6 +377,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForSign(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue value)
@@ -411,6 +415,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForVerify(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue value)
@@ -447,6 +453,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForDigest(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue)
@@ -480,6 +488,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForGenerateKey(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue value)
@@ -515,6 +525,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForDeriveKey(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue)
@@ -545,6 +557,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForDeriveBits(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue)
@@ -575,6 +589,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForImportKey(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue value)
@@ -612,6 +628,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForExportKey(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue)
@@ -643,6 +661,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
         setDOMException(exec, NOT_SUPPORTED_ERR);
         return nullptr;
     }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 }

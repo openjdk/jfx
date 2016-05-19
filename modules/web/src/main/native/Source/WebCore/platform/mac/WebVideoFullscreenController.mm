@@ -35,7 +35,7 @@
 #import <Carbon/Carbon.h>
 #import <QTKit/QTKit.h>
 #import <WebCore/DisplaySleepDisabler.h>
-#import <WebCore/HTMLMediaElement.h>
+#import <WebCore/HTMLVideoElement.h>
 #import <WebCore/SoftLinking.h>
 #import <objc/runtime.h>
 
@@ -98,7 +98,7 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
 - (void)setupVideoOverlay:(CALayer *)layer
 {
     WebVideoFullscreenWindow *window = [self fullscreenWindow];
-    [[window contentView] setLayer:layer];
+    [(NSView*)[window contentView] setLayer:layer];
     [[window contentView] setWantsLayer:YES];
 }
 
@@ -107,29 +107,29 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
     WebVideoFullscreenWindow *window = [self fullscreenWindow];
     [window setHasShadow:YES]; // This is nicer with a shadow.
     [window setLevel:NSPopUpMenuWindowLevel-1];
-    [[window contentView] setLayer:[CALayer layer]];
+    [(NSView*)[window contentView] setLayer:[CALayer layer]];
     [[window contentView] setWantsLayer:YES];
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidResignActive:) name:NSApplicationDidResignActiveNotification object:NSApp];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeScreenParameters:) name:NSApplicationDidChangeScreenParametersNotification object:NSApp];
 }
 
-- (HTMLMediaElement*)mediaElement
+- (HTMLVideoElement*)videoElement
 {
-    return _mediaElement.get();
+    return _videoElement.get();
 }
 
-- (void)setMediaElement:(HTMLMediaElement*)mediaElement
+- (void)setVideoElement:(HTMLVideoElement*)videoElement
 {
-    _mediaElement = mediaElement;
+    _videoElement = videoElement;
 
-    if (!_mediaElement)
+    if (!_videoElement)
         return;
 
     if ([self isWindowLoaded]) {
-        if (_mediaElement->platformMedia().type == PlatformMedia::QTMovieType) {
-            QTMovie *movie = _mediaElement->platformMedia().media.qtMovie;
-            QTMovieLayer *layer = [[getQTMovieLayerClass() alloc] init];
+        if (_videoElement->platformMedia().type == PlatformMedia::QTMovieType) {
+            QTMovie *movie = _videoElement->platformMedia().media.qtMovie;
+            QTMovieLayer *layer = [allocQTMovieLayerInstance() init];
             [layer setMovie:movie];
             [self setupVideoOverlay:layer];
 
@@ -138,13 +138,13 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
                                                          name:QTMovieRateDidChangeNotification
                                                        object:movie];
 
-        } else if (_mediaElement->platformMedia().type == PlatformMedia::AVFoundationMediaPlayerType) {
-            AVPlayer *player = _mediaElement->platformMedia().media.avfMediaPlayer;
-            AVPlayerLayer *layer = [[getAVPlayerLayerClass() alloc] init];
+        } else if (_videoElement->platformMedia().type == PlatformMedia::AVFoundationMediaPlayerType) {
+            AVPlayer *player = _videoElement->platformMedia().media.avfMediaPlayer;
+            AVPlayerLayer *layer = [allocAVPlayerLayerInstance() init];
             [self setupVideoOverlay:layer];
             [layer setPlayer:player];
 
-            [player addObserver:self forKeyPath:@"rate" options:nil context:NULL];
+            [player addObserver:self forKeyPath:@"rate" options:0 context:nullptr];
         }
     }
 }
@@ -171,7 +171,7 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
 
 - (void)windowDidExitFullscreen
 {
-    CALayer *layer = [[[self window] contentView] layer];
+    CALayer *layer = [(NSView*)[[self window] contentView] layer];
     if ([layer isKindOfClass:getAVPlayerLayerClass()])
         [[(AVPlayerLayer*)layer player] removeObserver:self forKeyPath:@"rate"];
 
@@ -207,9 +207,9 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
     [_hudController fadeWindowIn];
 }
 
-- (NSRect)mediaElementRect
+- (NSRect)videoElementRect
 {
-    return _mediaElement->screenRect();
+    return _videoElement->screenRect();
 }
 
 - (void)applicationDidResignActive:(NSNotification*)notification
@@ -276,7 +276,7 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
     if (!screen)
         screen = [NSScreen mainScreen];
 
-    NSRect frame = [self mediaElementRect];
+    NSRect frame = [self videoElementRect];
     NSRect endFrame = [screen frame];
     constrainFrameToRatioOfFrame(&endFrame, &frame);
 
@@ -303,7 +303,7 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
     _isEndingFullscreen = YES;
     [_hudController closeWindow];
 
-    NSRect endFrame = [self mediaElementRect];
+    NSRect endFrame = [self videoElementRect];
 
     [self setupFadeAnimationIfNeededAndFadeIn:NO];
     if (_forceDisableAnimation) {
@@ -358,8 +358,8 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
 - (void)updatePowerAssertions
 {
     float rate = 0;
-    if (_mediaElement && _mediaElement->platformMedia().type == PlatformMedia::QTMovieType)
-        rate = [_mediaElement->platformMedia().media.qtMovie rate];
+    if (_videoElement && _videoElement->platformMedia().type == PlatformMedia::QTMovieType)
+        rate = [_videoElement->platformMedia().media.qtMovie rate];
 
     if (rate && !_isEndingFullscreen) {
         if (!_displaySleepDisabler)
@@ -373,8 +373,8 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
 
 - (void)_requestExit
 {
-    if (_mediaElement)
-        _mediaElement->exitFullscreen();
+    if (_videoElement)
+        _videoElement->exitFullscreen();
     _forceDisableAnimation = NO;
 }
 

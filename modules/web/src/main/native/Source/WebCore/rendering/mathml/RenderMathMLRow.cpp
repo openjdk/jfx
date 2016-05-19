@@ -38,13 +38,13 @@ namespace WebCore {
 
 using namespace MathMLNames;
 
-RenderMathMLRow::RenderMathMLRow(Element& element, PassRef<RenderStyle> style)
-    : RenderMathMLBlock(element, std::move(style))
+RenderMathMLRow::RenderMathMLRow(Element& element, Ref<RenderStyle>&& style)
+    : RenderMathMLBlock(element, WTF::move(style))
 {
 }
 
-RenderMathMLRow::RenderMathMLRow(Document& document, PassRef<RenderStyle> style)
-    : RenderMathMLBlock(document, std::move(style))
+RenderMathMLRow::RenderMathMLRow(Document& document, Ref<RenderStyle>&& style)
+    : RenderMathMLBlock(document, WTF::move(style))
 {
 }
 
@@ -55,27 +55,52 @@ RenderPtr<RenderMathMLRow> RenderMathMLRow::createAnonymousWithParentRenderer(Re
     return newMRow;
 }
 
+void RenderMathMLRow::updateOperatorProperties()
+{
+    for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
+        if (is<RenderMathMLBlock>(*child)) {
+            if (auto* renderOperator = downcast<RenderMathMLBlock>(*child).unembellishedOperator())
+                renderOperator->updateOperatorProperties();
+        }
+    }
+    setNeedsLayoutAndPrefWidthsRecalc();
+}
+
 void RenderMathMLRow::layout()
 {
-    int stretchLogicalHeight = 0;
+    int stretchHeightAboveBaseline = 0, stretchDepthBelowBaseline = 0;
     for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
         if (child->needsLayout())
-            toRenderElement(child)->layout();
-        // FIXME: Only skip renderMo if it is stretchy.
-        if (child->isRenderMathMLBlock() && toRenderMathMLBlock(child)->unembellishedOperator())
-            continue;
-        if (child->isBox())
-            stretchLogicalHeight = std::max<int>(stretchLogicalHeight, roundToInt(toRenderBox(child)->logicalHeight()));
+            downcast<RenderElement>(*child).layout();
+        if (is<RenderMathMLBlock>(*child)) {
+            // We skip the stretchy operators as they must not be included in the computation of the stretch size.
+            auto* renderOperator = downcast<RenderMathMLBlock>(*child).unembellishedOperator();
+            if (renderOperator && renderOperator->hasOperatorFlag(MathMLOperatorDictionary::Stretchy))
+                continue;
+        }
+        LayoutUnit childHeightAboveBaseline = 0, childDepthBelowBaseline = 0;
+        if (is<RenderMathMLBlock>(*child)) {
+            RenderMathMLBlock& mathmlChild = downcast<RenderMathMLBlock>(*child);
+            childHeightAboveBaseline = mathmlChild.firstLineBaseline().valueOr(mathmlChild.logicalHeight());
+            childDepthBelowBaseline = mathmlChild.logicalHeight() - childHeightAboveBaseline;
+        } else if (is<RenderMathMLTable>(*child)) {
+            RenderMathMLTable& tableChild = downcast<RenderMathMLTable>(*child);
+            childHeightAboveBaseline = tableChild.firstLineBaseline().valueOr(-1);
+            childDepthBelowBaseline = tableChild.logicalHeight() - childHeightAboveBaseline;
+        } else if (is<RenderBox>(*child)) {
+            childHeightAboveBaseline = downcast<RenderBox>(*child).logicalHeight();
+            childDepthBelowBaseline = 0;
+        }
+        stretchHeightAboveBaseline = std::max<LayoutUnit>(stretchHeightAboveBaseline, childHeightAboveBaseline);
+        stretchDepthBelowBaseline = std::max<LayoutUnit>(stretchDepthBelowBaseline, childDepthBelowBaseline);
     }
-    if (!stretchLogicalHeight)
-        stretchLogicalHeight = style().fontSize();
+    if (stretchHeightAboveBaseline + stretchDepthBelowBaseline <= 0)
+        stretchHeightAboveBaseline = style().fontSize();
 
     // Set the sizes of (possibly embellished) stretchy operator children.
     for (auto& child : childrenOfType<RenderMathMLBlock>(*this)) {
-        if (auto renderMo = child.unembellishedOperator()) {
-            if (renderMo->stretchHeight() != stretchLogicalHeight)
-                renderMo->stretchToHeight(stretchLogicalHeight);
-        }
+        if (auto renderOperator = child.unembellishedOperator())
+            renderOperator->stretchTo(stretchHeightAboveBaseline, stretchDepthBelowBaseline);
     }
 
     RenderMathMLBlock::layout();

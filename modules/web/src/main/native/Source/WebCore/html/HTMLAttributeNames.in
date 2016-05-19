@@ -42,6 +42,7 @@ aria-pressed
 aria-readonly
 aria-relevant
 aria-required
+aria-roledescription
 aria-selected
 aria-setsize
 aria-sort
@@ -169,6 +170,11 @@ novalidate
 nowrap
 object
 onabort
+onanimationstart
+onanimationiteration
+onanimationend
+onautocomplete
+onautocompleteerror
 onbeforecopy
 onbeforecut
 onbeforeload
@@ -210,6 +216,7 @@ onload
 onloadeddata
 onloadedmetadata
 onloadstart
+onmessage
 onmousedown
 onmouseenter
 onmouseleave
@@ -264,6 +271,10 @@ onwebkitfullscreenerror
 onwebkitkeyadded
 onwebkitkeyerror
 onwebkitkeymessage
+onwebkitmouseforcechanged
+onwebkitmouseforcedown
+onwebkitmouseforceup
+onwebkitmouseforcewillbegin
 onwebkitneedkey
 onwebkitsourceclose
 onwebkitsourceended
@@ -324,6 +335,7 @@ standby
 start
 step
 style
+subtitle
 summary
 tabindex
 tableborder
@@ -344,14 +356,17 @@ version
 vlink
 vspace
 webkitallowfullscreen
+webkitattachmentpath
 width
 wrap
 
 autocorrect
 autocapitalize
-data-youtube-id
 onwebkitcurrentplaybacktargetiswirelesschanged
 onwebkitplaybacktargetavailabilitychanged
+onwebkitpresentationmodechanged
+x-webkit-imagemenu
 webkit-playsinline
 x-webkit-airplay
 x-webkit-wirelessvideoplaybackdisabled
+x-itunes-inherit-uri-query-component

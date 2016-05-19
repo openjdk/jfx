@@ -64,8 +64,8 @@ bool ImageInputType::appendFormData(FormDataList& encoding, bool) const
         return true;
     }
 
-    DEFINE_STATIC_LOCAL(String, dotXString, (ASCIILiteral(".x")));
-    DEFINE_STATIC_LOCAL(String, dotYString, (ASCIILiteral(".y")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, dotXString, (ASCIILiteral(".x")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, dotYString, (ASCIILiteral(".y")));
     encoding.appendData(name + dotXString, m_clickLocation.x());
     encoding.appendData(name + dotYString, m_clickLocation.y());
 
@@ -89,8 +89,8 @@ void ImageInputType::handleDOMActivateEvent(Event* event)
     m_clickLocation = IntPoint();
     if (event->underlyingEvent()) {
         Event& underlyingEvent = *event->underlyingEvent();
-        if (underlyingEvent.isMouseEvent()) {
-            MouseEvent& mouseEvent = toMouseEvent(underlyingEvent);
+        if (is<MouseEvent>(underlyingEvent)) {
+            MouseEvent& mouseEvent = downcast<MouseEvent>(underlyingEvent);
             if (!mouseEvent.isSimulated())
                 m_clickLocation = IntPoint(mouseEvent.offsetX(), mouseEvent.offsetY());
         }
@@ -101,46 +101,46 @@ void ImageInputType::handleDOMActivateEvent(Event* event)
     event->setDefaultHandled();
 }
 
-RenderPtr<RenderElement> ImageInputType::createInputRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> ImageInputType::createInputRenderer(Ref<RenderStyle>&& style)
 {
-    return createRenderer<RenderImage>(element(), std::move(style));
+    return createRenderer<RenderImage>(element(), WTF::move(style));
 }
 
 void ImageInputType::altAttributeChanged()
 {
-    RenderImage* image = toRenderImage(element().renderer());
-    if (!image)
+    auto* renderer = downcast<RenderImage>(element().renderer());
+    if (!renderer)
         return;
-    image->updateAltText();
+    renderer->updateAltText();
 }
 
 void ImageInputType::srcAttributeChanged()
 {
     if (!element().renderer())
         return;
-    element().imageLoader()->updateFromElementIgnoringPreviousError();
+    element().ensureImageLoader().updateFromElementIgnoringPreviousError();
 }
 
 void ImageInputType::attach()
 {
     BaseButtonInputType::attach();
 
-    HTMLImageLoader* imageLoader = element().imageLoader();
-    imageLoader->updateFromElement();
+    HTMLImageLoader& imageLoader = element().ensureImageLoader();
+    imageLoader.updateFromElement();
 
-    RenderImage* renderer = toRenderImage(element().renderer());
+    auto* renderer = downcast<RenderImage>(element().renderer());
     if (!renderer)
         return;
 
-    if (imageLoader->hasPendingBeforeLoadEvent())
+    if (imageLoader.hasPendingBeforeLoadEvent())
         return;
 
     auto& imageResource = renderer->imageResource();
-    imageResource.setCachedImage(imageLoader->image());
+    imageResource.setCachedImage(imageLoader.image());
 
     // If we have no image at all because we have no src attribute, set
     // image height and width for the alt text instead.
-    if (!imageLoader->image() && !imageResource.cachedImage())
+    if (!imageLoader.image() && !imageResource.cachedImage())
         renderer->setImageSizeForAltText();
 }
 
@@ -180,11 +180,9 @@ unsigned ImageInputType::height() const
             return height;
 
         // If the image is available, use its height.
-        if (element->hasImageLoader()) {
-            HTMLImageLoader* imageLoader = element->imageLoader();
-            if (imageLoader->image())
-                return imageLoader->image()->imageSizeForRenderer(element->renderer(), 1).height();
-        }
+        HTMLImageLoader* imageLoader = element->imageLoader();
+        if (imageLoader && imageLoader->image())
+            return imageLoader->image()->imageSizeForRenderer(element->renderer(), 1).height();
     }
 
     element->document().updateLayout();
@@ -204,11 +202,9 @@ unsigned ImageInputType::width() const
             return width;
 
         // If the image is available, use its width.
-        if (element->hasImageLoader()) {
-            HTMLImageLoader* imageLoader = element->imageLoader();
-            if (imageLoader->image())
-                return imageLoader->image()->imageSizeForRenderer(element->renderer(), 1).width();
-        }
+        HTMLImageLoader* imageLoader = element->imageLoader();
+        if (imageLoader && imageLoader->image())
+            return imageLoader->image()->imageSizeForRenderer(element->renderer(), 1).width();
     }
 
     element->document().updateLayout();

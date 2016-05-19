@@ -30,12 +30,17 @@
 
 #import <Foundation/Foundation.h>
 #import <wtf/Assertions.h>
+#import <wtf/Ref.h>
+#import <wtf/RetainPtr.h>
+#import <wtf/spi/darwin/XPCSPI.h>
 
 #if __has_include(<CoreFoundation/CFXPCBridge.h>)
 #import <CoreFoundation/CFXPCBridge.h>
 #else
-extern "C" xpc_object_t _CFXPCCreateXPCMessageWithCFObject(CFTypeRef);
-extern "C" CFTypeRef _CFXPCCreateCFObjectFromXPCMessage(xpc_object_t);
+extern "C" {
+    xpc_object_t _CFXPCCreateXPCMessageWithCFObject(CFTypeRef);
+    CFTypeRef _CFXPCCreateCFObjectFromXPCMessage(xpc_object_t);
+}
 #endif
 
 namespace Inspector {
@@ -59,7 +64,7 @@ RemoteInspectorXPCConnection::RemoteInspectorXPCConnection(xpc_connection_t conn
         handleEvent(object);
     });
 
-    // Balanced by deref in close.
+    // Balanced by deref when the xpc_connection receives XPC_ERROR_CONNECTION_INVALID.
     ref();
 
     xpc_connection_resume(m_connection);
@@ -74,24 +79,34 @@ RemoteInspectorXPCConnection::~RemoteInspectorXPCConnection()
 
 void RemoteInspectorXPCConnection::close()
 {
-    if (m_closed)
-        return;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    closeFromMessage();
+}
 
+void RemoteInspectorXPCConnection::closeFromMessage()
+{
     m_closed = true;
+    m_client = nullptr;
 
     dispatch_async(m_queue, ^{
+        std::lock_guard<std::mutex> lock(m_mutex);
+        // This will trigger one last XPC_ERROR_CONNECTION_INVALID event on the queue and deref us.
+        closeOnQueue();
+    });
+}
+
+void RemoteInspectorXPCConnection::closeOnQueue()
+{
+    if (m_connection) {
         xpc_connection_cancel(m_connection);
         xpc_release(m_connection);
-        m_connection = NULL;
+        m_connection = nullptr;
+    }
 
+    if (m_queue) {
         dispatch_release(m_queue);
-        m_queue = NULL;
-
-        m_client = nullptr;
-
-        // Balance the ref in our constructor.
-        deref();
-    });
+        m_queue = nullptr;
+    }
 }
 
 NSDictionary *RemoteInspectorXPCConnection::deserializeMessage(xpc_object_t object)
@@ -101,21 +116,35 @@ NSDictionary *RemoteInspectorXPCConnection::deserializeMessage(xpc_object_t obje
 
     xpc_object_t xpcDictionary = xpc_dictionary_get_value(object, RemoteInspectorXPCConnectionSerializedMessageKey);
     if (!xpcDictionary || xpc_get_type(xpcDictionary) != XPC_TYPE_DICTIONARY) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         if (m_client)
             m_client->xpcConnectionUnhandledMessage(this, object);
         return nil;
     }
 
-    NSDictionary *dictionary = static_cast<NSDictionary *>(_CFXPCCreateCFObjectFromXPCMessage(xpcDictionary));
+    RetainPtr<CFDictionaryRef> dictionary = adoptCF((CFDictionaryRef)_CFXPCCreateCFObjectFromXPCMessage(xpcDictionary));
     ASSERT_WITH_MESSAGE(dictionary, "Unable to deserialize xpc message");
-    return [dictionary autorelease];
+    return (NSDictionary *)dictionary.autorelease();
 }
 
 void RemoteInspectorXPCConnection::handleEvent(xpc_object_t object)
 {
     if (xpc_get_type(object) == XPC_TYPE_ERROR) {
-        if (m_client)
-            m_client->xpcConnectionFailed(this);
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            if (m_client)
+                m_client->xpcConnectionFailed(this);
+
+            m_closed = true;
+            m_client = nullptr;
+            closeOnQueue();
+        }
+
+        if (object == XPC_ERROR_CONNECTION_INVALID) {
+            // This is the last event we will ever receive from the connection.
+            // This balances the ref() in the constructor.
+            deref();
+        }
         return;
     }
 
@@ -125,12 +154,14 @@ void RemoteInspectorXPCConnection::handleEvent(xpc_object_t object)
 
     NSString *message = [dataDictionary objectForKey:RemoteInspectorXPCConnectionMessageNameKey];
     NSDictionary *userInfo = [dataDictionary objectForKey:RemoteInspectorXPCConnectionUserInfoKey];
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (m_client)
         m_client->xpcConnectionReceivedMessage(this, message, userInfo);
 }
 
 void RemoteInspectorXPCConnection::sendMessage(NSString *messageName, NSDictionary *userInfo)
 {
+    ASSERT(!m_closed);
     if (m_closed)
         return;
 
@@ -143,7 +174,7 @@ void RemoteInspectorXPCConnection::sendMessage(NSString *messageName, NSDictiona
     if (!xpcDictionary)
         return;
 
-    xpc_object_t msg = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_object_t msg = xpc_dictionary_create(nullptr, nullptr, 0);
     xpc_dictionary_set_value(msg, RemoteInspectorXPCConnectionSerializedMessageKey, xpcDictionary);
     xpc_release(xpcDictionary);
 

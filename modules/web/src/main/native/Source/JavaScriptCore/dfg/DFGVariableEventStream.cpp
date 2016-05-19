@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,11 +48,14 @@ namespace {
 
 struct MinifiedGenerationInfo {
     bool filled; // true -> in gpr/fpr/pair, false -> spilled
+    bool alive;
     VariableRepresentation u;
     DataFormat format;
 
     MinifiedGenerationInfo()
-        : format(DataFormatNone)
+        : filled(false)
+        , alive(false)
+        , format(DataFormatNone)
     {
     }
 
@@ -62,13 +65,19 @@ struct MinifiedGenerationInfo {
         case BirthToFill:
         case Fill:
             filled = true;
+            alive = true;
             break;
         case BirthToSpill:
         case Spill:
             filled = false;
+            alive = true;
             break;
+        case Birth:
+            alive = true;
+            return;
         case Death:
             format = DataFormatNone;
+            alive = false;
             return;
         default:
             return;
@@ -81,25 +90,23 @@ struct MinifiedGenerationInfo {
 
 } // namespace
 
-bool VariableEventStream::tryToSetConstantRecovery(ValueRecovery& recovery, CodeBlock* codeBlock, MinifiedNode* node) const
+bool VariableEventStream::tryToSetConstantRecovery(ValueRecovery& recovery, MinifiedNode* node) const
 {
     if (!node)
         return false;
 
-    if (node->hasConstantNumber()) {
-        recovery = ValueRecovery::constant(
-            codeBlock->constantRegister(
-                FirstConstantRegisterIndex + node->constantNumber()).get());
+    if (node->hasConstant()) {
+        recovery = ValueRecovery::constant(node->constant());
         return true;
     }
 
-    if (node->hasWeakConstant()) {
-        recovery = ValueRecovery::constant(node->weakConstant());
+    if (node->op() == PhantomDirectArguments) {
+        recovery = ValueRecovery::directArgumentsThatWereNotCreated(node->id());
         return true;
     }
 
-    if (node->op() == PhantomArguments) {
-        recovery = ValueRecovery::argumentsThatWereNotCreated();
+    if (node->op() == PhantomClonedArguments) {
+        recovery = ValueRecovery::outOfBandArgumentsThatWereNotCreated(node->id());
         return true;
     }
 
@@ -148,7 +155,8 @@ void VariableEventStream::reconstruct(
             // nothing to do.
             break;
         case BirthToFill:
-        case BirthToSpill: {
+        case BirthToSpill:
+        case Birth: {
             MinifiedGenerationInfo info;
             info.update(event);
             generationInfos.add(event.id(), info);
@@ -187,14 +195,14 @@ void VariableEventStream::reconstruct(
 
         ASSERT(source.kind() == HaveNode);
         MinifiedNode* node = graph.at(source.id());
-        if (tryToSetConstantRecovery(valueRecoveries[i], codeBlock, node))
-            continue;
-
         MinifiedGenerationInfo info = generationInfos.get(source.id());
-        if (info.format == DataFormatNone) {
+        if (!info.alive) {
             valueRecoveries[i] = ValueRecovery::constant(jsUndefined());
             continue;
         }
+
+        if (tryToSetConstantRecovery(valueRecoveries[i], node))
+            continue;
 
         ASSERT(info.format != DataFormatNone);
 

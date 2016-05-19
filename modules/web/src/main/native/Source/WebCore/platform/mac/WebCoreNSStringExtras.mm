@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,6 +28,7 @@
 
 #import "config.h"
 #import "WebCoreNSStringExtras.h"
+#import "CFLocaleSPI.h"
 
 #import <wtf/RetainPtr.h>
 
@@ -73,57 +74,29 @@ NSString *filenameByFixingIllegalCharacters(NSString *string)
     return filename;
 }
 
-#if !PLATFORM(IOS)
-
-#if COMPILER(CLANG)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-CFStringEncoding stringEncodingForResource(Handle resource)
+NSString *preferredBundleLocalizationName()
 {
-    short resRef = HomeResFile(resource);
-    if (ResError() != noErr)
-        return NSMacOSRomanStringEncoding;
+    // FIXME: Any use of this function to pass localizations to another
+    // process is likely not completely right, since it only considers
+    // one localization.
+    NSArray *preferredLocalizations = [[NSBundle mainBundle] preferredLocalizations];
+    if (!preferredLocalizations || ![preferredLocalizations count])
+        return @"en_US";
 
-    // Get the FSRef for the current resource file
-    FSRef fref;
-    OSStatus error = FSGetForkCBInfo(resRef, 0, NULL, NULL, NULL, &fref, NULL);
-    if (error != noErr)
-        return NSMacOSRomanStringEncoding;
-
-    RetainPtr<CFURLRef> url = adoptCF(CFURLCreateFromFSRef(NULL, &fref));
-    if (!url)
-        return NSMacOSRomanStringEncoding;
-
-    NSString *path = [(NSURL *)url.get() path];
-
-    // Get the lproj directory name
-    path = [path stringByDeletingLastPathComponent];
-    if (!stringIsCaseInsensitiveEqualToString([path pathExtension], @"lproj"))
-        return NSMacOSRomanStringEncoding;
-
-    NSString *directoryName = [[path stringByDeletingPathExtension] lastPathComponent];
-    RetainPtr<CFStringRef> locale = adoptCF(CFLocaleCreateCanonicalLocaleIdentifierFromString(NULL, (CFStringRef)directoryName));
-    if (!locale)
-        return NSMacOSRomanStringEncoding;
-
-    LangCode lang;
-    RegionCode region;
-    error = LocaleStringToLangAndRegionCodes([(NSString *)locale.get() UTF8String], &lang, &region);
-    if (error != noErr)
-        return NSMacOSRomanStringEncoding;
-
-    TextEncoding encoding;
-    error = UpgradeScriptInfoToTextEncoding(kTextScriptDontCare, lang, region, NULL, &encoding);
-    if (error != noErr)
-        return NSMacOSRomanStringEncoding;
-
-    return encoding;
+    return canonicalLocaleName([preferredLocalizations objectAtIndex:0]);
 }
 
-#if COMPILER(CLANG)
-#pragma clang diagnostic pop
-#endif
+NSString *canonicalLocaleName(NSString *language)
+{
+    // FIXME: <rdar://problem/18083880> Replace use of Script Manager
+    // to canonicalize locales with a custom Web-specific table
+    LangCode languageCode;
+    RegionCode regionCode;
 
-#endif // !PLATFORM(IOS)
+    Boolean success = CFLocaleGetLanguageRegionEncodingForLocaleIdentifier((CFStringRef)language, &languageCode, &regionCode, nullptr, nullptr);
+    if (!success)
+        return @"en_US";
+
+    RetainPtr<CFStringRef> code = adoptCF(CFLocaleCreateCanonicalLocaleIdentifierFromScriptManagerCodes(0, languageCode, regionCode));
+    return (NSString *)code.autorelease();
+}

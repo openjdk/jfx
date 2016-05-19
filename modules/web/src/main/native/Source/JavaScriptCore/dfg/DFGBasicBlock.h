@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +30,15 @@
 
 #include "DFGAbstractValue.h"
 #include "DFGAvailability.h"
+#include "DFGAvailabilityMap.h"
 #include "DFGBranchDirection.h"
 #include "DFGFlushedAt.h"
 #include "DFGNode.h"
-#include "DFGVariadicFunction.h"
+#include "DFGNodeOrigin.h"
+#include "DFGStructureClobberState.h"
 #include "Operands.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace DFG {
@@ -46,9 +47,12 @@ class Graph;
 class InsertionSet;
 
 typedef Vector<BasicBlock*, 2> PredecessorList;
+typedef Vector<Node*, 8> BlockNodeList;
 
 struct BasicBlock : RefCounted<BasicBlock> {
-    BasicBlock(unsigned bytecodeBegin, unsigned numArguments, unsigned numLocals);
+    BasicBlock(
+        unsigned bytecodeBegin, unsigned numArguments, unsigned numLocals,
+        float executionCount);
     ~BasicBlock();
 
     void ensureLocals(unsigned newNumLocals);
@@ -57,18 +61,71 @@ struct BasicBlock : RefCounted<BasicBlock> {
     bool isEmpty() const { return !size(); }
     Node*& at(size_t i) { return m_nodes[i]; }
     Node* at(size_t i) const { return m_nodes[i]; }
+    Node* tryAt(size_t i) const
+    {
+        if (i >= size())
+            return nullptr;
+        return at(i);
+    }
     Node*& operator[](size_t i) { return at(i); }
     Node* operator[](size_t i) const { return at(i); }
-    Node* last() const { return at(size() - 1); }
+
+    // Use this to find both the index of the terminal and the terminal itself in one go. May
+    // return a clear NodeAndIndex if the basic block currently lacks a terminal. That may happen
+    // in the middle of IR transformations within a phase but should never be the case in between
+    // phases.
+    //
+    // The reason why this is more than just "at(size() - 1)" is that we may place non-terminal
+    // liveness marking instructions after the terminal. This is supposed to happen infrequently
+    // but some basic blocks - most notably return blocks - will have liveness markers for all of
+    // the flushed variables right after the return.
+    //
+    // It turns out that doing this linear search is basically perf-neutral, so long as we force
+    // the method to be inlined. Hence the ALWAYS_INLINE.
+    ALWAYS_INLINE NodeAndIndex findTerminal() const
+    {
+        size_t i = size();
+        while (i--) {
+            Node* node = at(i);
+            switch (node->op()) {
+            case Jump:
+            case Branch:
+            case Switch:
+            case Return:
+            case Unreachable:
+                return NodeAndIndex(node, i);
+            // The bitter end can contain Phantoms and the like. There will probably only be one or two nodes after the terminal. They are all no-ops and will not have any checked children.
+            case Check: // This is here because it's our universal no-op.
+            case Phantom:
+            case PhantomLocal:
+            case Flush:
+                break;
+            default:
+                return NodeAndIndex();
+            }
+        }
+        return NodeAndIndex();
+    }
+
+    ALWAYS_INLINE Node* terminal() const
+    {
+        return findTerminal().node;
+    }
+
     void resize(size_t size) { m_nodes.resize(size); }
     void grow(size_t size) { m_nodes.grow(size); }
 
     void append(Node* node) { m_nodes.append(node); }
-    void insertBeforeLast(Node* node)
+    void insertBeforeTerminal(Node* node)
     {
-        append(last());
-        at(size() - 2) = node;
+        NodeAndIndex result = findTerminal();
+        if (!result)
+            append(node);
+        else
+            m_nodes.insert(result.index, node);
     }
+
+    void replaceTerminal(Node*);
 
     size_t numNodes() const { return phis.size() + size(); }
     Node* node(size_t i) const
@@ -82,31 +139,48 @@ struct BasicBlock : RefCounted<BasicBlock> {
     bool isInPhis(Node* node) const;
     bool isInBlock(Node* myNode) const;
 
-    unsigned numSuccessors() { return last()->numSuccessors(); }
+    BlockNodeList::iterator begin() { return m_nodes.begin(); }
+    BlockNodeList::iterator end() { return m_nodes.end(); }
+
+    Node* firstOriginNode();
+    NodeOrigin firstOrigin();
+
+    unsigned numSuccessors() { return terminal()->numSuccessors(); }
 
     BasicBlock*& successor(unsigned index)
     {
-        return last()->successor(index);
+        return terminal()->successor(index);
     }
     BasicBlock*& successorForCondition(bool condition)
     {
-        return last()->successorForCondition(condition);
+        return terminal()->successorForCondition(condition);
+    }
+
+    Node::SuccessorsIterable successors()
+    {
+        return terminal()->successors();
     }
 
     void removePredecessor(BasicBlock* block);
     void replacePredecessor(BasicBlock* from, BasicBlock* to);
 
-#define DFG_DEFINE_APPEND_NODE(templatePre, templatePost, typeParams, valueParamsComma, valueParams, valueArgs) \
-    templatePre typeParams templatePost Node* appendNode(Graph&, SpeculatedType valueParamsComma valueParams);
-    DFG_VARIADIC_TEMPLATE_FUNCTION(DFG_DEFINE_APPEND_NODE)
-#undef DFG_DEFINE_APPEND_NODE
+    template<typename... Params>
+    Node* appendNode(Graph&, SpeculatedType, Params...);
 
-#define DFG_DEFINE_APPEND_NODE(templatePre, templatePost, typeParams, valueParamsComma, valueParams, valueArgs) \
-    templatePre typeParams templatePost Node* appendNonTerminal(Graph&, SpeculatedType valueParamsComma valueParams);
-    DFG_VARIADIC_TEMPLATE_FUNCTION(DFG_DEFINE_APPEND_NODE)
-#undef DFG_DEFINE_APPEND_NODE
+    template<typename... Params>
+    Node* appendNonTerminal(Graph&, SpeculatedType, Params...);
+
+    template<typename... Params>
+    Node* replaceTerminal(Graph&, SpeculatedType, Params...);
 
     void dump(PrintStream& out) const;
+
+    void didLink()
+    {
+#if !ASSERT_DISABLED
+        isLinked = true;
+#endif
+    }
 
     // This value is used internally for block linking and OSR entry. It is mostly meaningless
     // for other purposes due to inlining.
@@ -119,6 +193,8 @@ struct BasicBlock : RefCounted<BasicBlock> {
     bool cfaShouldRevisit;
     bool cfaFoundConstants;
     bool cfaDidFinish;
+    StructureClobberState cfaStructureClobberStateAtHead;
+    StructureClobberState cfaStructureClobberStateAtTail;
     BranchDirection cfaBranchDirection;
 #if !ASSERT_DISABLED
     bool isLinked;
@@ -134,15 +210,36 @@ struct BasicBlock : RefCounted<BasicBlock> {
     Operands<AbstractValue> valuesAtHead;
     Operands<AbstractValue> valuesAtTail;
 
+    // The intersection of assumptions we have made previously at the head of this block. Note
+    // that under normal circumstances, each time we run the CFA, we will get strictly more precise
+    // results. But we don't actually require this to be the case. It's fine for the CFA to loosen
+    // up for any odd reason. It's fine when this happens, because anything that the CFA proves
+    // must be true from that point forward, except if some registered watchpoint fires, in which
+    // case the code won't ever run. So, the CFA proving something less precise later on is just an
+    // outcome of the CFA being imperfect; the more precise thing that it had proved earlier is no
+    // less true.
+    //
+    // But for the purpose of OSR entry, we need to make sure that we remember what assumptions we
+    // had used for optimizing any given basic block. That's what this is for.
+    //
+    // It's interesting that we could use this to make the CFA more precise: all future CFAs could
+    // filter their results with this thing to sort of maintain maximal precision. Because we
+    // expect CFA to usually be monotonically more precise each time we run it to fixpoint, this
+    // would not be a productive optimization: it would make setting up a basic block more
+    // expensive and would only benefit bizarre pathological cases.
+    Operands<AbstractValue> intersectionOfPastValuesAtHead;
+    bool intersectionOfCFAHasVisited;
+
+    float executionCount;
+
     // These fields are reserved for NaturalLoops.
     static const unsigned numberOfInnerMostLoopIndices = 2;
     unsigned innerMostLoopIndices[numberOfInnerMostLoopIndices];
 
     struct SSAData {
-        Operands<FlushedAt> flushAtHead;
-        Operands<FlushedAt> flushAtTail;
-        Operands<Availability> availabilityAtHead;
-        Operands<Availability> availabilityAtTail;
+        AvailabilityMap availabilityAtHead;
+        AvailabilityMap availabilityAtTail;
+
         HashSet<Node*> liveAtHead;
         HashSet<Node*> liveAtTail;
         HashMap<Node*, AbstractValue> valuesAtHead;
@@ -151,12 +248,14 @@ struct BasicBlock : RefCounted<BasicBlock> {
         SSAData(BasicBlock*);
         ~SSAData();
     };
-    OwnPtr<SSAData> ssa;
+    std::unique_ptr<SSAData> ssa;
 
 private:
     friend class InsertionSet;
-    Vector<Node*, 8> m_nodes;
+    BlockNodeList m_nodes;
 };
+
+typedef Vector<BasicBlock*, 5> BlockList;
 
 struct UnlinkedBlock {
     BasicBlock* m_block;

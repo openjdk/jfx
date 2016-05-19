@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
@@ -34,14 +34,14 @@ class Widget;
 
 class PluginDocument final : public HTMLDocument {
 public:
-    static PassRefPtr<PluginDocument> create(Frame* frame, const URL& url)
+    static Ref<PluginDocument> create(Frame* frame, const URL& url)
     {
-        return adoptRef(new PluginDocument(frame, url));
+        return adoptRef(*new PluginDocument(frame, url));
     }
 
     void setPluginElement(PassRefPtr<HTMLPlugInElement>);
 
-    Widget* pluginWidget();
+    WEBCORE_EXPORT Widget* pluginWidget();
     HTMLPlugInElement* pluginElement() { return m_pluginElement.get(); }
 
     void detachFromPluginElement();
@@ -53,7 +53,7 @@ public:
 private:
     PluginDocument(Frame*, const URL&);
 
-    virtual PassRefPtr<DocumentParser> createParser() override;
+    virtual Ref<DocumentParser> createParser() override;
 
     void setShouldLoadPluginManually(bool loadManually) { m_shouldLoadPluginManually = loadManually; }
 
@@ -61,11 +61,11 @@ private:
     RefPtr<HTMLPlugInElement> m_pluginElement;
 };
 
-inline bool isPluginDocument(const Document& document) { return document.isPluginDocument(); }
-void isPluginDocument(const PluginDocument&); // Catch unnecessary runtime check of type known at compile time.
+} // namespace WebCore
 
-DOCUMENT_TYPE_CASTS(PluginDocument)
-
-}
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PluginDocument)
+    static bool isType(const WebCore::Document& document) { return document.isPluginDocument(); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // PluginDocument_h

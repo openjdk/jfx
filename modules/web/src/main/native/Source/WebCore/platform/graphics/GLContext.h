@@ -23,10 +23,13 @@
 #include "GraphicsContext3D.h"
 #include "Widget.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/PassOwnPtr.h>
 
 #if USE(EGL) && !PLATFORM(GTK)
 #include "eglplatform.h"
+typedef EGLNativeWindowType GLNativeWindowType;
+#elif PLATFORM(GTK) && PLATFORM(WAYLAND) && !defined(GTK_API_VERSION_2)
+#include <wayland-egl.h>
+#include <EGL/eglplatform.h>
 typedef EGLNativeWindowType GLNativeWindowType;
 #else
 typedef uint64_t GLNativeWindowType;
@@ -45,8 +48,8 @@ namespace WebCore {
 class GLContext {
     WTF_MAKE_NONCOPYABLE(GLContext);
 public:
-    static PassOwnPtr<GLContext> createContextForWindow(GLNativeWindowType windowHandle, GLContext* sharingContext);
-    static PassOwnPtr<GLContext> createOffscreenContext(GLContext* sharing = 0);
+    static std::unique_ptr<GLContext> createContextForWindow(GLNativeWindowType windowHandle, GLContext* sharingContext);
+    static std::unique_ptr<GLContext> createOffscreenContext(GLContext* sharing = 0);
     static GLContext* getCurrent();
     static GLContext* sharingContext();
 
@@ -57,6 +60,8 @@ public:
     virtual void waitNative() = 0;
     virtual bool canRenderToDefaultFramebuffer() = 0;
     virtual IntSize defaultFrameBufferSize() = 0;
+
+    virtual bool isEGLContext() const = 0;
 
 #if USE(CAIRO)
     virtual cairo_device_t* cairoDevice() = 0;
@@ -71,7 +76,7 @@ public:
     static void removeActiveContext(GLContext*);
     static void cleanupActiveContextsAtExit();
 
-#if USE(3D_GRAPHICS)
+#if ENABLE(GRAPHICS_CONTEXT_3D)
     virtual PlatformGraphicsContext3D platformContext() = 0;
 #endif
 };

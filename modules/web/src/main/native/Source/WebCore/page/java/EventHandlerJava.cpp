@@ -13,7 +13,7 @@
 #include "Page.h"
 #include "PlatformKeyboardEvent.h"
 #include "Widget.h"
-#include "Clipboard.h"
+#include "DataTransfer.h"
 
 namespace WebCore {
 
@@ -24,9 +24,9 @@ unsigned EventHandler::accessKeyModifiers()
     return PlatformKeyboardEvent::AltKey;
 }
 
-PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
+PassRefPtr<DataTransfer> EventHandler::createDraggingDataTransfer() const
 {
-    return Clipboard::createForDragAndDrop();
+    return DataTransfer::createForDragAndDrop();
 }
 
 void EventHandler::focusDocumentView()
@@ -74,13 +74,13 @@ bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestR
     return false;
 }
 
-bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& ev, Widget* widget)
+bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& ev, Widget& widget)
 {
-    if (!widget->isFrameView()) {
+    if (!widget.isFrameView()) {
         return false;
     }
 
-    FrameView* frameView = static_cast<FrameView*>(widget);
+    FrameView* frameView = static_cast<FrameView*>(&widget);
     return frameView->frame().eventHandler().handleWheelEvent(ev);
 }
 

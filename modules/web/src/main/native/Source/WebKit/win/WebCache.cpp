@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebCache.h"
 
@@ -40,16 +39,16 @@
 // WebCache ---------------------------------------------------------------------------
 
 WebCache::WebCache()
-: m_refCount(0)
+    : m_refCount(0)
 {
     gClassCount++;
-    gClassNameCount.add("WebCache");
+    gClassNameCount().add("WebCache");
 }
 
 WebCache::~WebCache()
 {
     gClassCount--;
-    gClassNameCount.remove("WebCache");
+    gClassNameCount().remove("WebCache");
 }
 
 WebCache* WebCache::createInstance()
@@ -91,18 +90,16 @@ ULONG STDMETHODCALLTYPE WebCache::Release(void)
 
 // IWebCache ------------------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebCache::statistics(
-    /* [in][out] */ int* count,
-    /* [retval][out] */ IPropertyBag ** s)
+HRESULT WebCache::statistics(int* count, IPropertyBag** s)
 {
-    if (!count || (s && *count < 4))
+    if (!count || (s && *count < 6))
         return E_FAIL;
 
-    *count = 4;
+    *count = 6;
     if (!s)
         return S_OK;
 
-    WebCore::MemoryCache::Statistics stat = WebCore::memoryCache()->getStatistics();
+    WebCore::MemoryCache::Statistics stat = WebCore::MemoryCache::singleton().getStatistics();
 
     static CFStringRef imagesKey = CFSTR("images");
     static CFStringRef stylesheetsKey = CFSTR("style sheets");
@@ -112,6 +109,7 @@ HRESULT STDMETHODCALLTYPE WebCache::statistics(
     const int zero = 0;
 #endif
 
+    // Object Counts.
     RetainPtr<CFMutableDictionaryRef> dictionary = adoptCF(CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
     RetainPtr<CFNumberRef> value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.images.count));
@@ -134,6 +132,7 @@ HRESULT STDMETHODCALLTYPE WebCache::statistics(
     propBag->setDictionary(dictionary.get());
     s[0] = propBag.leakRef();
 
+    // Object Sizes.
     dictionary = adoptCF(CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.images.size));
@@ -156,6 +155,7 @@ HRESULT STDMETHODCALLTYPE WebCache::statistics(
     propBag->setDictionary(dictionary.get());
     s[1] = propBag.leakRef();
 
+    // Live Sizes.
     dictionary = adoptCF(CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.images.liveSize));
@@ -178,6 +178,7 @@ HRESULT STDMETHODCALLTYPE WebCache::statistics(
     propBag->setDictionary(dictionary.get());
     s[2] = propBag.leakRef();
 
+    // Decoded Sizes.
     dictionary = adoptCF(CFDictionaryCreateMutable(0, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.images.decodedSize));
@@ -205,16 +206,17 @@ HRESULT STDMETHODCALLTYPE WebCache::statistics(
 
 HRESULT STDMETHODCALLTYPE WebCache::empty( void)
 {
-    if (WebCore::memoryCache()->disabled())
+    auto& memoryCache = WebCore::MemoryCache::singleton();
+    if (memoryCache.disabled())
         return S_OK;
-    WebCore::memoryCache()->setDisabled(true);
-    WebCore::memoryCache()->setDisabled(false);
+    memoryCache.setDisabled(true);
+    memoryCache.setDisabled(false);
 
     // Empty the application cache.
-    WebCore::cacheStorage().empty();
+    WebCore::ApplicationCacheStorage::singleton().empty();
 
     // Empty the Cross-Origin Preflight cache
-    WebCore::CrossOriginPreflightResultCache::shared().empty();
+    WebCore::CrossOriginPreflightResultCache::singleton().empty();
 
     return S_OK;
 }
@@ -222,7 +224,7 @@ HRESULT STDMETHODCALLTYPE WebCache::empty( void)
 HRESULT STDMETHODCALLTYPE WebCache::setDisabled(
     /* [in] */ BOOL disabled)
 {
-    WebCore::memoryCache()->setDisabled(!!disabled);
+    WebCore::MemoryCache::singleton().setDisabled(!!disabled);
     return S_OK;
 }
 
@@ -231,7 +233,7 @@ HRESULT STDMETHODCALLTYPE WebCache::disabled(
 {
     if (!disabled)
         return E_POINTER;
-    *disabled = WebCore::memoryCache()->disabled();
+    *disabled = WebCore::MemoryCache::singleton().disabled();
     return S_OK;
 }
 

@@ -81,10 +81,26 @@ public:
         return withNode(unavailableMarker());
     }
 
+    void setFlush(FlushedAt flushedAt)
+    {
+        m_flushedAt = flushedAt;
+    }
+
+    void setNode(Node* node)
+    {
+        m_node = node;
+    }
+
+    void setNodeUnavailable()
+    {
+        m_node = unavailableMarker();
+    }
+
     bool nodeIsUndecided() const { return !m_node; }
     bool nodeIsUnavailable() const { return m_node == unavailableMarker(); }
 
     bool hasNode() const { return !nodeIsUndecided() && !nodeIsUnavailable(); }
+    bool shouldUseNode() const { return !isFlushUseful() && hasNode(); }
 
     Node* node() const
     {
@@ -94,6 +110,12 @@ public:
     }
 
     FlushedAt flushedAt() const { return m_flushedAt; }
+    bool isFlushUseful() const
+    {
+        return flushedAt().format() != DeadFlush && flushedAt().format() != ConflictingFlush;
+    }
+
+    bool isDead() const { return !isFlushUseful() && !hasNode(); }
 
     bool operator!() const { return nodeIsUnavailable() && flushedAt().format() == ConflictingFlush; }
 
@@ -101,6 +123,11 @@ public:
     {
         return m_node == other.m_node
             && m_flushedAt == other.m_flushedAt;
+    }
+
+    bool operator!=(const Availability& other) const
+    {
+        return !(*this == other);
     }
 
     Availability merge(const Availability& other) const

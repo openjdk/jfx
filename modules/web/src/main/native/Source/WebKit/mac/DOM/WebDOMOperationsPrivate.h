@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,11 +26,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WebDOMOperations.h>
+#import <WebKitLegacy/WebDOMOperations.h>
 #import <JavaScriptCore/JSBase.h>
 
 #if TARGET_OS_IPHONE
-#import <Foundation/NSGeometry.h>
+#import <WebKitLegacy/WAKAppKitStubs.h>
+#else
+#import <AppKit/NSEvent.h>
+#import <WebKitLegacy/DOMWheelEvent.h>
 #endif
 
 @interface DOMElement (WebDOMElementOperationsPrivate)
@@ -56,3 +59,10 @@ typedef BOOL (^WebArchiveSubframeFilter)(WebFrame* subframe);
 - (void)showPlaceholderIfNecessary;
 #endif
 @end
+
+#if !TARGET_OS_IPHONE
+@interface DOMWheelEvent (WebDOMWheelEventOperationsPrivate)
+- (NSEventPhase)_phase;
+- (NSEventPhase)_momentumPhase;
+@end
+#endif

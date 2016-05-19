@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -62,7 +62,7 @@ OpaqueJSClass::OpaqueJSClass(const JSClassDefinition* definition, OpaqueJSClass*
     initializeThreading();
 
     if (const JSStaticValue* staticValue = definition->staticValues) {
-        m_staticValues = adoptPtr(new OpaqueJSClassStaticValuesTable);
+        m_staticValues = std::make_unique<OpaqueJSClassStaticValuesTable>();
         while (staticValue->name) {
             String valueName = String::fromUTF8(staticValue->name);
             if (!valueName.isNull())
@@ -72,7 +72,7 @@ OpaqueJSClass::OpaqueJSClass(const JSClassDefinition* definition, OpaqueJSClass*
     }
 
     if (const JSStaticFunction* staticFunction = definition->staticFunctions) {
-        m_staticFunctions = adoptPtr(new OpaqueJSClassStaticFunctionsTable);
+        m_staticFunctions = std::make_unique<OpaqueJSClassStaticFunctionsTable>();
         while (staticFunction->name) {
             String functionName = String::fromUTF8(staticFunction->name);
             if (!functionName.isNull())
@@ -88,19 +88,19 @@ OpaqueJSClass::OpaqueJSClass(const JSClassDefinition* definition, OpaqueJSClass*
 OpaqueJSClass::~OpaqueJSClass()
 {
     // The empty string is shared across threads & is an identifier, in all other cases we should have done a deep copy in className(), below.
-    ASSERT(!m_className.length() || !m_className.impl()->isIdentifier());
+    ASSERT(!m_className.length() || !m_className.impl()->isAtomic());
 
 #ifndef NDEBUG
     if (m_staticValues) {
         OpaqueJSClassStaticValuesTable::const_iterator end = m_staticValues->end();
         for (OpaqueJSClassStaticValuesTable::const_iterator it = m_staticValues->begin(); it != end; ++it)
-            ASSERT(!it->key->isIdentifier());
+            ASSERT(!it->key->isAtomic());
     }
 
     if (m_staticFunctions) {
         OpaqueJSClassStaticFunctionsTable::const_iterator end = m_staticFunctions->end();
         for (OpaqueJSClassStaticFunctionsTable::const_iterator it = m_staticFunctions->begin(); it != end; ++it)
-            ASSERT(!it->key->isIdentifier());
+            ASSERT(!it->key->isAtomic());
     }
 #endif
 
@@ -108,12 +108,12 @@ OpaqueJSClass::~OpaqueJSClass()
         JSClassRelease(prototypeClass);
 }
 
-PassRefPtr<OpaqueJSClass> OpaqueJSClass::createNoAutomaticPrototype(const JSClassDefinition* definition)
+Ref<OpaqueJSClass> OpaqueJSClass::createNoAutomaticPrototype(const JSClassDefinition* definition)
 {
-    return adoptRef(new OpaqueJSClass(definition, 0));
+    return adoptRef(*new OpaqueJSClass(definition, 0));
 }
 
-PassRefPtr<OpaqueJSClass> OpaqueJSClass::create(const JSClassDefinition* clientDefinition)
+Ref<OpaqueJSClass> OpaqueJSClass::create(const JSClassDefinition* clientDefinition)
 {
     JSClassDefinition definition = *clientDefinition; // Avoid modifying client copy.
 
@@ -124,7 +124,7 @@ PassRefPtr<OpaqueJSClass> OpaqueJSClass::create(const JSClassDefinition* clientD
     // We are supposed to use JSClassRetain/Release but since we know that we currently have
     // the only reference to this class object we cheat and use a RefPtr instead.
     RefPtr<OpaqueJSClass> protoClass = adoptRef(new OpaqueJSClass(&protoDefinition, 0));
-    return adoptRef(new OpaqueJSClass(&definition, protoClass.get()));
+    return adoptRef(*new OpaqueJSClass(&definition, protoClass.get()));
 }
 
 OpaqueJSClassContextData::OpaqueJSClassContextData(JSC::VM&, OpaqueJSClass* jsClass)
@@ -134,7 +134,7 @@ OpaqueJSClassContextData::OpaqueJSClassContextData(JSC::VM&, OpaqueJSClass* jsCl
         staticValues = std::make_unique<OpaqueJSClassStaticValuesTable>();
         OpaqueJSClassStaticValuesTable::const_iterator end = jsClass->m_staticValues->end();
         for (OpaqueJSClassStaticValuesTable::const_iterator it = jsClass->m_staticValues->begin(); it != end; ++it) {
-            ASSERT(!it->key->isIdentifier());
+            ASSERT(!it->key->isAtomic());
             String valueName = it->key->isolatedCopy();
             staticValues->add(valueName.impl(), std::make_unique<StaticValueEntry>(it->value->getProperty, it->value->setProperty, it->value->attributes, valueName));
         }
@@ -144,7 +144,7 @@ OpaqueJSClassContextData::OpaqueJSClassContextData(JSC::VM&, OpaqueJSClass* jsCl
         staticFunctions = std::make_unique<OpaqueJSClassStaticFunctionsTable>();
         OpaqueJSClassStaticFunctionsTable::const_iterator end = jsClass->m_staticFunctions->end();
         for (OpaqueJSClassStaticFunctionsTable::const_iterator it = jsClass->m_staticFunctions->begin(); it != end; ++it) {
-            ASSERT(!it->key->isIdentifier());
+            ASSERT(!it->key->isAtomic());
             staticFunctions->add(it->key->isolatedCopy(), std::make_unique<StaticFunctionEntry>(it->value->callAsFunction, it->value->attributes));
         }
     }
@@ -160,7 +160,7 @@ OpaqueJSClassContextData& OpaqueJSClass::contextData(ExecState* exec)
 
 String OpaqueJSClass::className()
 {
-    // Make a deep copy, so that the caller has no chance to put the original into IdentifierTable.
+    // Make a deep copy, so that the caller has no chance to put the original into AtomicStringTable.
     return m_className.isolatedCopy();
 }
 

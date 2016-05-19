@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003 Apple Computer, Inc.
+ * Copyright (C) 2003 Apple Inc.
  *
  * Portions are Copyright (C) 1998 Netscape Communications Corporation.
  *
@@ -53,11 +53,11 @@ namespace WebCore {
 class RenderLayer;
 
 // This class handles the auto-scrolling of layers with overflow: marquee.
-class RenderMarquee {
+class RenderMarquee final {
     WTF_MAKE_NONCOPYABLE(RenderMarquee); WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit RenderMarquee(RenderLayer*);
-    virtual ~RenderMarquee();
+    ~RenderMarquee();
 
     int speed() const { return m_speed; }
     int marqueeSpeed() const;
@@ -79,12 +79,12 @@ public:
     void updateMarqueePosition();
 
 private:
-    void timerFired(Timer<RenderMarquee>&);
+    void timerFired();
 
     RenderLayer* m_layer;
     int m_currentLoop;
     int m_totalLoops;
-    Timer<RenderMarquee> m_timer;
+    Timer m_timer;
     int m_start;
     int m_end;
     int m_speed;
@@ -92,7 +92,7 @@ private:
     bool m_reset: 1;
     bool m_suspended : 1;
     bool m_stopped : 1;
-    EMarqueeDirection m_direction : 4;
+    EMarqueeDirection m_direction : 4; // Not unsigned because EMarqueeDirection has negative values
 };
 
 } // namespace WebCore

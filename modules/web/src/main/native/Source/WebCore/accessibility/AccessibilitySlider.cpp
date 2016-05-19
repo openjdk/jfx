@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -45,9 +45,9 @@ AccessibilitySlider::AccessibilitySlider(RenderObject* renderer)
 {
 }
 
-PassRefPtr<AccessibilitySlider> AccessibilitySlider::create(RenderObject* renderer)
+Ref<AccessibilitySlider> AccessibilitySlider::create(RenderObject* renderer)
 {
-    return adoptRef(new AccessibilitySlider(renderer));
+    return adoptRef(*new AccessibilitySlider(renderer));
 }
 
 AccessibilityOrientation AccessibilitySlider::orientation() const
@@ -84,15 +84,15 @@ void AccessibilitySlider::addChildren()
 
     AXObjectCache* cache = m_renderer->document().axObjectCache();
 
-    AccessibilitySliderThumb* thumb = toAccessibilitySliderThumb(cache->getOrCreate(SliderThumbRole));
-    thumb->setParent(this);
+    auto& thumb = downcast<AccessibilitySliderThumb>(*cache->getOrCreate(SliderThumbRole));
+    thumb.setParent(this);
 
     // Before actually adding the value indicator to the hierarchy,
     // allow the platform to make a final decision about it.
-    if (thumb->accessibilityIsIgnored())
-        cache->remove(thumb->axObjectID());
+    if (thumb.accessibilityIsIgnored())
+        cache->remove(thumb.axObjectID());
     else
-        m_children.append(thumb);
+        m_children.append(&thumb);
 }
 
 const AtomicString& AccessibilitySlider::getAttribute(const QualifiedName& attribute) const
@@ -133,15 +133,12 @@ void AccessibilitySlider::setValue(const String& value)
     if (input->value() == value)
         return;
 
-    input->setValue(value);
-
-    // Fire change event manually, as RenderSlider::setValueForPosition does.
-    input->dispatchFormControlChangeEvent();
+    input->setValue(value, DispatchChangeEvent);
 }
 
 HTMLInputElement* AccessibilitySlider::inputElement() const
 {
-    return toHTMLInputElement(m_renderer->node());
+    return downcast<HTMLInputElement>(m_renderer->node());
 }
 
 
@@ -149,9 +146,9 @@ AccessibilitySliderThumb::AccessibilitySliderThumb()
 {
 }
 
-PassRefPtr<AccessibilitySliderThumb> AccessibilitySliderThumb::create()
+Ref<AccessibilitySliderThumb> AccessibilitySliderThumb::create()
 {
-    return adoptRef(new AccessibilitySliderThumb());
+    return adoptRef(*new AccessibilitySliderThumb());
 }
 
 LayoutRect AccessibilitySliderThumb::elementRect() const
@@ -162,7 +159,9 @@ LayoutRect AccessibilitySliderThumb::elementRect() const
     RenderObject* sliderRenderer = m_parent->renderer();
     if (!sliderRenderer || !sliderRenderer->isSlider())
         return LayoutRect();
-    return toHTMLInputElement(sliderRenderer->node())->sliderThumbElement()->boundingBox();
+    if (auto* thumbRenderer = downcast<RenderSlider>(*sliderRenderer).element().sliderThumbElement()->renderer())
+        return thumbRenderer->absoluteBoundingBoxRect();
+    return LayoutRect();
 }
 
 bool AccessibilitySliderThumb::computeAccessibilityIsIgnored() const

@@ -86,17 +86,17 @@ URLLoader::~URLLoader()
     cancel();
 }
 
-PassOwnPtr<URLLoader> URLLoader::loadAsynchronously(NetworkingContext* context,
+std::unique_ptr<URLLoader> URLLoader::loadAsynchronously(NetworkingContext* context,
                                                     ResourceHandle* handle)
 {
-    OwnPtr<URLLoader> result = adoptPtr(new URLLoader());
-    result->m_target = adoptPtr(new AsynchronousTarget(handle));
+    std::unique_ptr<URLLoader> result = std::unique_ptr<URLLoader>(new URLLoader());
+    result->m_target = std::unique_ptr<AsynchronousTarget>(new AsynchronousTarget(handle));
     result->m_ref = load(
             true,
             context,
             handle->firstRequest(),
             result->m_target.get());
-    return result->m_ref ? result.release() : PassOwnPtr<URLLoader>();
+    return result->m_ref ? std::move(result) : std::unique_ptr<URLLoader>(); //XXX: use WTF::move?
 }
 
 void URLLoader::cancel()
@@ -196,7 +196,7 @@ JLObjectArray URLLoader::toJava(const FormData* formData)
             NULL);
     for (size_t i = 0; i < size; i++) {
         JLObject resultElement;
-        if (elements[i].m_type == FormDataElement::encodedFile) {
+        if (elements[i].m_type == FormDataElement::Type::EncodedFile) {
             resultElement = env->CallStaticObjectMethod(
                     formDataElementClass,
                     createFromFileMethod,

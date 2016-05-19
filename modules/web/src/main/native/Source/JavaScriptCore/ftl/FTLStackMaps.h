@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,12 +26,12 @@
 #ifndef FTLStackMaps_h
 #define FTLStackMaps_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(FTL_JIT)
 
 #include "DataView.h"
+#include "FTLDWARFRegister.h"
 #include "GPRInfo.h"
+#include "RegisterSet.h"
 #include <wtf/HashMap.h>
 
 namespace JSC {
@@ -41,18 +41,24 @@ class MacroAssembler;
 namespace FTL {
 
 struct StackMaps {
+    struct ParseContext {
+        unsigned version;
+        DataView* view;
+        unsigned offset;
+    };
+
     struct Constant {
         int64_t integer;
 
-        void parse(DataView*, unsigned& offset);
+        void parse(ParseContext&);
         void dump(PrintStream& out) const;
     };
 
     struct StackSize {
-        uint32_t functionOffset;
-        uint32_t size;
+        uint64_t functionOffset;
+        uint64_t size;
 
-        void parse(DataView*, unsigned& offset);
+        void parse(ParseContext&);
         void dump(PrintStream&) const;
     };
 
@@ -66,16 +72,29 @@ struct StackMaps {
             ConstantIndex
         };
 
-        uint16_t dwarfRegNum; // Represented as a 12-bit int in the section.
-        int8_t size;
+        DWARFRegister dwarfReg;
+        uint8_t size;
         Kind kind;
         int32_t offset;
 
-        void parse(DataView*, unsigned& offset);
+        void parse(ParseContext&);
         void dump(PrintStream& out) const;
 
         GPRReg directGPR() const;
         void restoreInto(MacroAssembler&, StackMaps&, char* savedRegisters, GPRReg result) const;
+    };
+
+    // FIXME: Investigate how much memory this takes and possibly prune it from the
+    // format we keep around in FTL::JITCode. I suspect that it would be most awesome to
+    // have a CompactStackMaps struct that lossily stores only that subset of StackMaps
+    // and Record that we actually need for OSR exit.
+    // https://bugs.webkit.org/show_bug.cgi?id=130802
+    struct LiveOut {
+        DWARFRegister dwarfReg;
+        uint8_t size;
+
+        void parse(ParseContext&);
+        void dump(PrintStream& out) const;
     };
 
     struct Record {
@@ -84,11 +103,17 @@ struct StackMaps {
         uint16_t flags;
 
         Vector<Location> locations;
+        Vector<LiveOut> liveOuts;
 
-        bool parse(DataView*, unsigned& offset);
+        bool parse(ParseContext&);
         void dump(PrintStream&) const;
+
+        RegisterSet liveOutsSet() const;
+        RegisterSet locationSet() const;
+        RegisterSet usedRegisterSet() const;
     };
 
+    unsigned version;
     Vector<StackSize> stackSizes;
     Vector<Constant> constants;
     Vector<Record> records;

@@ -22,7 +22,6 @@
 #ifndef FETile_h
 #define FETile_h
 
-#if ENABLE(FILTERS)
 #include "FilterEffect.h"
 #include "Filter.h"
 
@@ -30,7 +29,7 @@ namespace WebCore {
 
 class FETile : public FilterEffect {
 public:
-    static PassRefPtr<FETile> create(Filter* filter);
+    static Ref<FETile> create(Filter&);
 
     virtual void platformApplySoftware();
     virtual void dump();
@@ -42,11 +41,9 @@ public:
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;
 
 private:
-    FETile(Filter*);
+    FETile(Filter&);
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // FETile_h

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2008 Apple Inc.  All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,7 +29,6 @@
 
 #include "Gradient.h"
 #include <wtf/Forward.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -38,16 +37,17 @@ namespace WebCore {
 
     class CanvasGradient : public RefCounted<CanvasGradient> {
     public:
-        static PassRefPtr<CanvasGradient> create(const FloatPoint& p0, const FloatPoint& p1)
+        static Ref<CanvasGradient> create(const FloatPoint& p0, const FloatPoint& p1)
         {
-            return adoptRef(new CanvasGradient(p0, p1));
+            return adoptRef(*new CanvasGradient(p0, p1));
         }
-        static PassRefPtr<CanvasGradient> create(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1)
+        static Ref<CanvasGradient> create(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1)
         {
-            return adoptRef(new CanvasGradient(p0, r0, p1, r1));
+            return adoptRef(*new CanvasGradient(p0, r0, p1, r1));
         }
 
-        Gradient* gradient() const { return m_gradient.get(); }
+        Gradient& gradient() { return m_gradient; }
+        const Gradient& gradient() const { return m_gradient; }
 
         void addColorStop(float value, const String& color, ExceptionCode&);
 
@@ -59,7 +59,7 @@ namespace WebCore {
         CanvasGradient(const FloatPoint& p0, const FloatPoint& p1);
         CanvasGradient(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1);
 
-        RefPtr<Gradient> m_gradient;
+        Ref<Gradient> m_gradient;
 #if ENABLE(DASHBOARD_SUPPORT)
         bool m_dashbardCompatibilityMode;
 #endif

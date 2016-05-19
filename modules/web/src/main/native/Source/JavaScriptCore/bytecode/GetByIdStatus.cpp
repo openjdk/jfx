@@ -26,34 +26,54 @@
 #include "config.h"
 #include "GetByIdStatus.h"
 
+#include "AccessorCallJITStubRoutine.h"
 #include "CodeBlock.h"
+#include "ComplexGetStatus.h"
+#include "JSCInlines.h"
 #include "JSScope.h"
 #include "LLIntData.h"
 #include "LowLevelInterpreter.h"
-#include "JSCInlines.h"
+#include "PolymorphicGetByIdList.h"
 #include <wtf/ListDump.h>
 
 namespace JSC {
 
-#if ENABLE(DFG_JIT)
-bool GetByIdStatus::hasExitSite(const ConcurrentJITLocker& locker, CodeBlock* profiledBlock, unsigned bytecodeIndex, ExitingJITType jitType)
+bool GetByIdStatus::appendVariant(const GetByIdVariant& variant)
 {
-    return profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadCache, jitType))
-        || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadCacheWatchpoint, jitType))
-        || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadWeakConstantCache, jitType))
-        || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadWeakConstantCacheWatchpoint, jitType));
+    // Attempt to merge this variant with an already existing variant.
+    for (unsigned i = 0; i < m_variants.size(); ++i) {
+        if (m_variants[i].attemptToMerge(variant))
+            return true;
+    }
+
+    // Make sure there is no overlap. We should have pruned out opportunities for
+    // overlap but it's possible that an inline cache got into a weird state. We are
+    // defensive and bail if we detect crazy.
+    for (unsigned i = 0; i < m_variants.size(); ++i) {
+        if (m_variants[i].structureSet().overlaps(variant.structureSet()))
+            return false;
+    }
+
+    m_variants.append(variant);
+    return true;
+}
+
+#if ENABLE(DFG_JIT)
+bool GetByIdStatus::hasExitSite(const ConcurrentJITLocker& locker, CodeBlock* profiledBlock, unsigned bytecodeIndex)
+{
+    return profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadCache))
+        || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadConstantCache));
 }
 #endif
 
-GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned bytecodeIndex, StringImpl* uid)
+GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned bytecodeIndex, UniquedStringImpl* uid)
 {
     UNUSED_PARAM(profiledBlock);
     UNUSED_PARAM(bytecodeIndex);
     UNUSED_PARAM(uid);
-#if ENABLE(LLINT)
     Instruction* instruction = profiledBlock->instructions().begin() + bytecodeIndex;
 
-    if (instruction[0].u.opcode == LLInt::getOpcode(llint_op_get_array_length))
+    if (instruction[0].u.opcode == LLInt::getOpcode(op_get_array_length))
         return GetByIdStatus(NoInformation, false);
 
     Structure* structure = instruction[4].u.structure.get();
@@ -64,74 +84,14 @@ GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned
         return GetByIdStatus(NoInformation, false);
 
     unsigned attributesIgnored;
-    JSCell* specificValue;
-    PropertyOffset offset = structure->getConcurrently(
-        *profiledBlock->vm(), uid, attributesIgnored, specificValue);
-    if (structure->isDictionary())
-        specificValue = 0;
+    PropertyOffset offset = structure->getConcurrently(uid, attributesIgnored);
     if (!isValidOffset(offset))
         return GetByIdStatus(NoInformation, false);
 
-    return GetByIdStatus(Simple, false, GetByIdVariant(StructureSet(structure), offset, specificValue));
-#else
-    return GetByIdStatus(NoInformation, false);
-#endif
+    return GetByIdStatus(Simple, false, GetByIdVariant(StructureSet(structure), offset));
 }
 
-bool GetByIdStatus::computeForChain(CodeBlock* profiledBlock, StringImpl* uid, PassRefPtr<IntendedStructureChain> passedChain)
-{
-#if ENABLE(JIT)
-    RefPtr<IntendedStructureChain> chain = passedChain;
-
-    // Validate the chain. If the chain is invalid, then currently the best thing
-    // we can do is to assume that TakesSlow is true. In the future, it might be
-    // worth exploring reifying the structure chain from the structure we've got
-    // instead of using the one from the cache, since that will do the right things
-    // if the structure chain has changed. But that may be harder, because we may
-    // then end up having a different type of access altogether. And it currently
-    // does not appear to be worth it to do so -- effectively, the heuristic we
-    // have now is that if the structure chain has changed between when it was
-    // cached on in the baseline JIT and when the DFG tried to inline the access,
-    // then we fall back on a polymorphic access.
-    if (!chain->isStillValid())
-        return false;
-
-    if (chain->head()->takesSlowPathInDFGForImpureProperty())
-        return false;
-    size_t chainSize = chain->size();
-    for (size_t i = 0; i < chainSize; i++) {
-        if (chain->at(i)->takesSlowPathInDFGForImpureProperty())
-            return false;
-    }
-
-    JSObject* currentObject = chain->terminalPrototype();
-    Structure* currentStructure = chain->last();
-
-    ASSERT_UNUSED(currentObject, currentObject);
-
-    unsigned attributesIgnored;
-    JSCell* specificValue;
-
-    PropertyOffset offset = currentStructure->getConcurrently(
-        *profiledBlock->vm(), uid, attributesIgnored, specificValue);
-    if (currentStructure->isDictionary())
-        specificValue = 0;
-    if (!isValidOffset(offset))
-        return false;
-
-    m_variants.append(
-        GetByIdVariant(StructureSet(chain->head()), offset, specificValue, chain));
-    return true;
-#else // ENABLE(JIT)
-    UNUSED_PARAM(profiledBlock);
-    UNUSED_PARAM(uid);
-    UNUSED_PARAM(passedChain);
-    UNREACHABLE_FOR_PLATFORM();
-    return false;
-#endif // ENABLE(JIT)
-}
-
-GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& map, unsigned bytecodeIndex, StringImpl* uid)
+GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& map, unsigned bytecodeIndex, UniquedStringImpl* uid)
 {
     ConcurrentJITLocker locker(profiledBlock->m_lock);
 
@@ -139,12 +99,12 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& m
 
 #if ENABLE(DFG_JIT)
     result = computeForStubInfo(
-        locker, profiledBlock, map.get(CodeOrigin(bytecodeIndex)), uid);
+        locker, profiledBlock, map.get(CodeOrigin(bytecodeIndex)), uid,
+        CallLinkStatus::computeExitSiteData(locker, profiledBlock, bytecodeIndex));
 
     if (!result.takesSlowPath()
-        && (hasExitSite(locker, profiledBlock, bytecodeIndex)
-            || profiledBlock->likelyToTakeSlowCase(bytecodeIndex)))
-        return GetByIdStatus(TakesSlowPath, true);
+        && hasExitSite(locker, profiledBlock, bytecodeIndex))
+        return GetByIdStatus(result.makesCalls() ? MakesCalls : TakesSlowPath, true);
 #else
     UNUSED_PARAM(map);
 #endif
@@ -157,25 +117,28 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& m
 
 #if ENABLE(JIT)
 GetByIdStatus GetByIdStatus::computeForStubInfo(
-    const ConcurrentJITLocker&, CodeBlock* profiledBlock, StructureStubInfo* stubInfo,
-    StringImpl* uid)
+    const ConcurrentJITLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, UniquedStringImpl* uid,
+    CallLinkStatus::ExitSiteData callExitSiteData)
 {
-    if (!stubInfo || !stubInfo->seen)
+    if (!stubInfo)
         return GetByIdStatus(NoInformation);
 
-    if (stubInfo->resetByGC)
-        return GetByIdStatus(TakesSlowPath, true);
+    if (!stubInfo->seen)
+        return GetByIdStatus(NoInformation);
 
-    PolymorphicAccessStructureList* list = 0;
-    int listSize = 0;
-    if (stubInfo->accessType == access_get_by_id_self_list) {
-        list = stubInfo->u.getByIdSelfList.structureList;
-        listSize = stubInfo->u.getByIdSelfList.listSize;
-        for (int i = 0; i < listSize; ++i) {
-            if (!list->list[i].isDirect)
-                return GetByIdStatus(MakesCalls, true);
+    PolymorphicGetByIdList* list = 0;
+    State slowPathState = TakesSlowPath;
+    if (stubInfo->accessType == access_get_by_id_list) {
+        list = stubInfo->u.getByIdList.list;
+        for (unsigned i = 0; i < list->size(); ++i) {
+            const GetByIdAccess& access = list->at(i);
+            if (access.doesCalls())
+                slowPathState = MakesCalls;
         }
     }
+
+    if (stubInfo->tookSlowPath)
+        return GetByIdStatus(slowPathState);
 
     // Finally figure out if we can derive an access strategy.
     GetByIdStatus result;
@@ -188,96 +151,75 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(
     case access_get_by_id_self: {
         Structure* structure = stubInfo->u.getByIdSelf.baseObjectStructure.get();
         if (structure->takesSlowPathInDFGForImpureProperty())
-            return GetByIdStatus(TakesSlowPath, true);
+            return GetByIdStatus(slowPathState, true);
         unsigned attributesIgnored;
-        JSCell* specificValue;
         GetByIdVariant variant;
-        variant.m_offset = structure->getConcurrently(
-            *profiledBlock->vm(), uid, attributesIgnored, specificValue);
+        variant.m_offset = structure->getConcurrently(uid, attributesIgnored);
         if (!isValidOffset(variant.m_offset))
-            return GetByIdStatus(TakesSlowPath, true);
-
-        if (structure->isDictionary())
-            specificValue = 0;
+            return GetByIdStatus(slowPathState, true);
 
         variant.m_structureSet.add(structure);
-        variant.m_specificValue = JSValue(specificValue);
-        result.m_variants.append(variant);
+        bool didAppend = result.appendVariant(variant);
+        ASSERT_UNUSED(didAppend, didAppend);
         return result;
     }
 
-    case access_get_by_id_self_list: {
-        for (int listIndex = 0; listIndex < listSize; ++listIndex) {
-            ASSERT(list->list[listIndex].isDirect);
+    case access_get_by_id_list: {
+        for (unsigned listIndex = 0; listIndex < list->size(); ++listIndex) {
+            Structure* structure = list->at(listIndex).structure();
 
-            Structure* structure = list->list[listIndex].base.get();
-            if (structure->takesSlowPathInDFGForImpureProperty())
-                return GetByIdStatus(TakesSlowPath, true);
+            ComplexGetStatus complexGetStatus = ComplexGetStatus::computeFor(
+                profiledBlock, structure, list->at(listIndex).chain(),
+                list->at(listIndex).chainCount(), uid);
 
-            if (list->list[listIndex].chain.get()) {
-                RefPtr<IntendedStructureChain> chain = adoptRef(new IntendedStructureChain(
-                    profiledBlock, structure, list->list[listIndex].chain.get(),
-                    list->list[listIndex].count));
-                if (!result.computeForChain(profiledBlock, uid, chain))
-                    return GetByIdStatus(TakesSlowPath, true);
+            switch (complexGetStatus.kind()) {
+            case ComplexGetStatus::ShouldSkip:
                 continue;
-            }
 
-            unsigned attributesIgnored;
-            JSCell* specificValue;
-            PropertyOffset myOffset = structure->getConcurrently(
-                *profiledBlock->vm(), uid, attributesIgnored, specificValue);
-            if (structure->isDictionary())
-                specificValue = 0;
+            case ComplexGetStatus::TakesSlowPath:
+                return GetByIdStatus(slowPathState, true);
 
-            if (!isValidOffset(myOffset))
-                return GetByIdStatus(TakesSlowPath, true);
-
-            bool found = false;
-            for (unsigned variantIndex = 0; variantIndex < result.m_variants.size(); ++variantIndex) {
-                GetByIdVariant& variant = result.m_variants[variantIndex];
-                if (variant.m_chain)
-                    continue;
-
-                if (variant.m_offset != myOffset)
-                    continue;
-
-                found = true;
-                if (variant.m_structureSet.contains(structure))
+            case ComplexGetStatus::Inlineable: {
+                std::unique_ptr<CallLinkStatus> callLinkStatus;
+                switch (list->at(listIndex).type()) {
+                case GetByIdAccess::SimpleInline:
+                case GetByIdAccess::SimpleStub: {
                     break;
+                }
+                case GetByIdAccess::Getter: {
+                    AccessorCallJITStubRoutine* stub = static_cast<AccessorCallJITStubRoutine*>(
+                        list->at(listIndex).stubRoutine());
+                    callLinkStatus = std::make_unique<CallLinkStatus>(
+                        CallLinkStatus::computeFor(
+                            locker, profiledBlock, *stub->m_callLinkInfo, callExitSiteData));
+                    break;
+                }
+                case GetByIdAccess::SimpleMiss:
+                case GetByIdAccess::CustomGetter:
+                case GetByIdAccess::WatchedStub:{
+                    // FIXME: It would be totally sweet to support this at some point in the future.
+                    // https://bugs.webkit.org/show_bug.cgi?id=133052
+                    return GetByIdStatus(slowPathState, true);
+                }
+                default:
+                    RELEASE_ASSERT_NOT_REACHED();
+                }
 
-                if (variant.m_specificValue != JSValue(specificValue))
-                    variant.m_specificValue = JSValue();
+                GetByIdVariant variant(
+                    StructureSet(structure), complexGetStatus.offset(), complexGetStatus.chain(),
+                    WTF::move(callLinkStatus));
 
-                variant.m_structureSet.add(structure);
+                if (!result.appendVariant(variant))
+                    return GetByIdStatus(slowPathState, true);
                 break;
-            }
-
-            if (found)
-                continue;
-
-            result.m_variants.append(
-                GetByIdVariant(StructureSet(structure), myOffset, specificValue));
+            } }
         }
 
         return result;
     }
 
-    case access_get_by_id_chain: {
-        if (!stubInfo->u.getByIdChain.isDirect)
-            return GetByIdStatus(MakesCalls, true);
-        RefPtr<IntendedStructureChain> chain = adoptRef(new IntendedStructureChain(
-            profiledBlock,
-            stubInfo->u.getByIdChain.baseObjectStructure.get(),
-            stubInfo->u.getByIdChain.chain.get(),
-            stubInfo->u.getByIdChain.count));
-        if (result.computeForChain(profiledBlock, uid, chain))
-            return result;
-        return GetByIdStatus(TakesSlowPath, true);
-    }
-
     default:
-        return GetByIdStatus(TakesSlowPath, true);
+        return GetByIdStatus(slowPathState, true);
     }
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -287,14 +229,22 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(
 
 GetByIdStatus GetByIdStatus::computeFor(
     CodeBlock* profiledBlock, CodeBlock* dfgBlock, StubInfoMap& baselineMap,
-    StubInfoMap& dfgMap, CodeOrigin codeOrigin, StringImpl* uid)
+    StubInfoMap& dfgMap, CodeOrigin codeOrigin, UniquedStringImpl* uid)
 {
 #if ENABLE(DFG_JIT)
     if (dfgBlock) {
+        CallLinkStatus::ExitSiteData exitSiteData;
+        {
+            ConcurrentJITLocker locker(profiledBlock->m_lock);
+            exitSiteData = CallLinkStatus::computeExitSiteData(
+                locker, profiledBlock, codeOrigin.bytecodeIndex);
+        }
+
         GetByIdStatus result;
         {
             ConcurrentJITLocker locker(dfgBlock->m_lock);
-            result = computeForStubInfo(locker, dfgBlock, dfgMap.get(codeOrigin), uid);
+            result = computeForStubInfo(
+                locker, dfgBlock, dfgMap.get(codeOrigin), uid, exitSiteData);
         }
 
         if (result.takesSlowPath())
@@ -302,7 +252,7 @@ GetByIdStatus GetByIdStatus::computeFor(
 
         {
             ConcurrentJITLocker locker(profiledBlock->m_lock);
-            if (hasExitSite(locker, profiledBlock, codeOrigin.bytecodeIndex, ExitFromFTL))
+            if (hasExitSite(locker, profiledBlock, codeOrigin.bytecodeIndex))
                 return GetByIdStatus(TakesSlowPath, true);
         }
 
@@ -317,34 +267,60 @@ GetByIdStatus GetByIdStatus::computeFor(
     return computeFor(profiledBlock, baselineMap, codeOrigin.bytecodeIndex, uid);
 }
 
-GetByIdStatus GetByIdStatus::computeFor(VM& vm, Structure* structure, StringImpl* uid)
+GetByIdStatus GetByIdStatus::computeFor(const StructureSet& set, UniquedStringImpl* uid)
 {
     // For now we only handle the super simple self access case. We could handle the
     // prototype case in the future.
 
-    if (!structure)
+    if (set.isEmpty())
+        return GetByIdStatus();
+
+    if (parseIndex(*uid))
         return GetByIdStatus(TakesSlowPath);
 
-    if (toUInt32FromStringImpl(uid) != PropertyName::NotAnIndex)
-        return GetByIdStatus(TakesSlowPath);
+    GetByIdStatus result;
+    result.m_state = Simple;
+    result.m_wasSeenInJIT = false;
+    for (unsigned i = 0; i < set.size(); ++i) {
+        Structure* structure = set[i];
+        if (structure->typeInfo().overridesGetOwnPropertySlot() && structure->typeInfo().type() != GlobalObjectType)
+            return GetByIdStatus(TakesSlowPath);
 
-    if (structure->typeInfo().overridesGetOwnPropertySlot() && structure->typeInfo().type() != GlobalObjectType)
-        return GetByIdStatus(TakesSlowPath);
+        if (!structure->propertyAccessesAreCacheable())
+            return GetByIdStatus(TakesSlowPath);
 
-    if (!structure->propertyAccessesAreCacheable())
-        return GetByIdStatus(TakesSlowPath);
+        unsigned attributes;
+        PropertyOffset offset = structure->getConcurrently(uid, attributes);
+        if (!isValidOffset(offset))
+            return GetByIdStatus(TakesSlowPath); // It's probably a prototype lookup. Give up on life for now, even though we could totally be way smarter about it.
+        if (attributes & Accessor)
+            return GetByIdStatus(MakesCalls); // We could be smarter here, like strenght-reducing this to a Call.
 
-    unsigned attributes;
-    JSCell* specificValue;
-    PropertyOffset offset = structure->getConcurrently(vm, uid, attributes, specificValue);
-    if (!isValidOffset(offset))
-        return GetByIdStatus(TakesSlowPath); // It's probably a prototype lookup. Give up on life for now, even though we could totally be way smarter about it.
-    if (attributes & Accessor)
-        return GetByIdStatus(MakesCalls);
-    if (structure->isDictionary())
-        specificValue = 0;
-    return GetByIdStatus(
-        Simple, false, GetByIdVariant(StructureSet(structure), offset, specificValue));
+        if (!result.appendVariant(GetByIdVariant(structure, offset)))
+            return GetByIdStatus(TakesSlowPath);
+    }
+
+    return result;
+}
+
+bool GetByIdStatus::makesCalls() const
+{
+    switch (m_state) {
+    case NoInformation:
+    case TakesSlowPath:
+        return false;
+    case Simple:
+        for (unsigned i = m_variants.size(); i--;) {
+            if (m_variants[i].callLinkStatus())
+                return true;
+        }
+        return false;
+    case MakesCalls:
+        return true;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+
+    return false;
 }
 
 void GetByIdStatus::dump(PrintStream& out) const

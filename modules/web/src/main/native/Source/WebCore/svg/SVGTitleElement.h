@@ -28,7 +28,7 @@ namespace WebCore {
 
 class SVGTitleElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGTitleElement> create(const QualifiedName&, Document&);
+    static Ref<SVGTitleElement> create(const QualifiedName&, Document&);
 
 private:
     SVGTitleElement(const QualifiedName&, Document&);
@@ -39,8 +39,6 @@ private:
 
     virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 };
-
-NODE_TYPE_CASTS(SVGTitleElement)
 
 } // namespace WebCore
 

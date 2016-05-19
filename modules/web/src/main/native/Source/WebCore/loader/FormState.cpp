@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -42,9 +42,9 @@ inline FormState::FormState(PassRefPtr<HTMLFormElement> form, StringPairVector& 
     m_textFieldValues.swap(textFieldValuesToAdopt);
 }
 
-PassRefPtr<FormState> FormState::create(PassRefPtr<HTMLFormElement> form, StringPairVector& textFieldValuesToAdopt, PassRefPtr<Document> sourceDocument, FormSubmissionTrigger formSubmissionTrigger)
+Ref<FormState> FormState::create(PassRefPtr<HTMLFormElement> form, StringPairVector& textFieldValuesToAdopt, PassRefPtr<Document> sourceDocument, FormSubmissionTrigger formSubmissionTrigger)
 {
-    return adoptRef(new FormState(form, textFieldValuesToAdopt, sourceDocument, formSubmissionTrigger));
+    return adoptRef(*new FormState(form, textFieldValuesToAdopt, sourceDocument, formSubmissionTrigger));
 }
 
 }

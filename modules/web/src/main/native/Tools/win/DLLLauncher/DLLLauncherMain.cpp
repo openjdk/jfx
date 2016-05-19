@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,9 +48,6 @@ using namespace std;
 #endif
 
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='" PROCESSORARCHITECTURE "' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#if defined(_MSC_VER) && (_MSC_VER >= 1600) && !defined(WIN_CAIRO)
-#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.VC80.CRT' version='8.0.50727.6195' processorArchitecture='" PROCESSORARCHITECTURE "' publicKeyToken='1fc8b3b9a1e18e3b' language='*'\"")
-#endif
 
 static void enableTerminationOnHeapCorruption()
 {
@@ -95,6 +92,11 @@ static wstring applePathFromRegistry(const wstring& key, const wstring& value)
     return path;
 }
 
+static wstring appleApplicationSupportDirectory()
+{
+    return applePathFromRegistry(L"SOFTWARE\\Apple Inc.\\Apple Application Support", L"InstallDir");
+}
+
 static wstring copyEnvironmentVariable(const wstring& variable)
 {
     DWORD length = ::GetEnvironmentVariableW(variable.c_str(), 0, 0);
@@ -133,21 +135,20 @@ static bool modifyPath(const wstring& programName)
 #ifdef WIN_CAIRO
 
 #if defined(_M_X64)
-    wstring path = copyEnvironmentVariable(L"GSTREAMER_1_0_ROOT_X86_64") + L"bin";
+    wstring pathGStreamer = copyEnvironmentVariable(L"GSTREAMER_1_0_ROOT_X86_64") + L"bin";
+    wstring pathWinCairo = copyEnvironmentVariable(L"WEBKIT_LIBRARIES") + L"\\bin64";
 #else
-    wstring path = copyEnvironmentVariable(L"GSTREAMER_1_0_ROOT_X86") + L"bin";
+    wstring pathGStreamer = copyEnvironmentVariable(L"GSTREAMER_1_0_ROOT_X86") + L"bin";
+    wstring pathWinCairo = copyEnvironmentVariable(L"WEBKIT_LIBRARIES") + L"\\bin32";
 #endif
-    if (directoryExists(path))
-        prependPath(path);
+    prependPath(pathWinCairo);
+    if (directoryExists(pathGStreamer))
+        prependPath(pathGStreamer);
     return true;
 
 #else
 
-#if defined(_M_X64)
-    static const wstring pathPrefix = L"C:\\Program Files\\Common Files\\Apple\\Apple Application Support";
-#else
-    static const wstring pathPrefix = L"C:\\Program Files (x86)\\Common Files\\Apple\\Apple Application Support";
-#endif
+    const wstring& pathPrefix = appleApplicationSupportDirectory();
 
     if (!directoryExists(pathPrefix)) {
         fatalError(programName, L"Failed to determine path to AAS directory.");
@@ -172,7 +173,7 @@ static wstring getLastErrorString(HRESULT hr)
     if (len >= bufSize)
         len = bufSize - 1;
 
-    errorMessage[len + 1] = 0;
+    errorMessage[len] = 0;
 
     return errorMessage;
 }
@@ -183,6 +184,25 @@ int main(int argc, const char* argv[])
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpstrCmdLine, int nCmdShow)
 #endif
 {
+#if defined(_M_X64) || defined(__x86_64__)
+    // The VS2013 runtime has a bug where it mis-detects AVX-capable processors
+    // if the feature has been disabled in firmware. This causes us to crash
+    // in some of the math functions. For now, we disable those optimizations
+    // because Microsoft is not going to fix the problem in VS2013.
+    // FIXME: http://webkit.org/b/141449: Remove this workaround when we switch to VS2015+.
+    _set_FMA3_enable(0);
+#endif
+
+    BOOL didIt = SetProcessDPIAware();
+    _ASSERT(didIt);
+
+#ifdef _CRTDBG_MAP_ALLOC
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+#endif
+
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_DELAY_FREE_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF);
+
     enableTerminationOnHeapCorruption();
 
     // Get the path of our executable.

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,17 +29,17 @@
 #ifndef AnimationController_h
 #define AnimationController_h
 
+#include "AnimationBase.h"
 #include "CSSPropertyNames.h"
 #include <wtf/Forward.h>
-#include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
-class AnimationBase;
 class AnimationControllerPrivate;
 class Document;
 class Element;
 class Frame;
+class LayoutRect;
 class RenderElement;
 class RenderStyle;
 
@@ -48,23 +48,28 @@ public:
     explicit AnimationController(Frame&);
     ~AnimationController();
 
-    void cancelAnimations(RenderElement*);
-    PassRef<RenderStyle> updateAnimations(RenderElement&, PassRef<RenderStyle> newStyle);
-    PassRefPtr<RenderStyle> getAnimatedStyleForRenderer(RenderElement*);
+    void cancelAnimations(RenderElement&);
+    bool updateAnimations(RenderElement&, RenderStyle& newStyle, Ref<RenderStyle>& animatedStyle);
+    PassRefPtr<RenderStyle> getAnimatedStyleForRenderer(RenderElement&);
+
+    // If possible, compute the visual extent of any transform animation on the given renderer
+    // using the given rect, returning the result in the rect. Return false if there is some
+    // transform animation but we were unable to cheaply compute its affect on the extent.
+    bool computeExtentOfAnimation(RenderElement&, LayoutRect&) const;
 
     // This is called when an accelerated animation or transition has actually started to animate.
-    void notifyAnimationStarted(RenderElement*, double startTime);
+    void notifyAnimationStarted(RenderElement&, double startTime);
 
-    bool pauseAnimationAtTime(RenderElement*, const AtomicString& name, double t); // To be used only for testing
-    bool pauseTransitionAtTime(RenderElement*, const String& property, double t); // To be used only for testing
-    unsigned numberOfActiveAnimations(Document*) const; // To be used only for testing
+    WEBCORE_EXPORT bool pauseAnimationAtTime(RenderElement*, const AtomicString& name, double t); // To be used only for testing
+    WEBCORE_EXPORT bool pauseTransitionAtTime(RenderElement*, const String& property, double t); // To be used only for testing
+    WEBCORE_EXPORT unsigned numberOfActiveAnimations(Document*) const; // To be used only for testing
 
-    bool isRunningAnimationOnRenderer(RenderElement*, CSSPropertyID, bool isRunningNow = true) const;
-    bool isRunningAcceleratedAnimationOnRenderer(RenderElement*, CSSPropertyID, bool isRunningNow = true) const;
+    bool isRunningAnimationOnRenderer(RenderElement&, CSSPropertyID, AnimationBase::RunningState) const;
+    bool isRunningAcceleratedAnimationOnRenderer(RenderElement&, CSSPropertyID, AnimationBase::RunningState) const;
 
-    bool isSuspended() const;
-    void suspendAnimations();
-    void resumeAnimations();
+    WEBCORE_EXPORT bool isSuspended() const;
+    WEBCORE_EXPORT void suspendAnimations();
+    WEBCORE_EXPORT void resumeAnimations();
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     void serviceAnimations();
 #endif
@@ -76,14 +81,18 @@ public:
     void beginAnimationUpdate();
     void endAnimationUpdate();
 
-    bool allowsNewAnimationsWhileSuspended() const;
-    void setAllowsNewAnimationsWhileSuspended(bool);
+    WEBCORE_EXPORT bool allowsNewAnimationsWhileSuspended() const;
+    WEBCORE_EXPORT void setAllowsNewAnimationsWhileSuspended(bool);
 
     static bool supportsAcceleratedAnimationOfProperty(CSSPropertyID);
 
+#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
+    bool wantsScrollUpdates() const;
+    void scrollWasUpdated();
+#endif
+
 private:
     const std::unique_ptr<AnimationControllerPrivate> m_data;
-    int m_beginAnimationUpdateCount;
 };
 
 class AnimationUpdateBlock {

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -106,24 +106,6 @@
 #define WTF_HIDDEN
 
 #endif // USE(EXPORT_MACROS)
-
-// WTF_TESTING (and WEBCORE_TESTING in PlatformExportMacros.h) is used for
-// exporting symbols which are referred from WebCoreTestSupport library.
-// Since the set of APIs is common between ports,
-// it is rather worth annotating inside the code than maintaining port specific export lists.
-#if USE(EXPORT_MACROS_FOR_TESTING)
-
-#if defined(WTF_IS_LINKED_IN_SAME_BINARY)
-#define WTF_TESTING WTF_EXPORT_DECLARATION
-#else
-#define WTF_TESTING WTF_IMPORT_DECLARATION
-#endif
-
-#else // USE(EXPORT_MACROS_FOR_TESTING)
-
-#define WTF_TESTING
-
-#endif // USE(EXPORT_MACROS_FOR_TESTING)
 
 #if defined(WTF_IS_LINKED_IN_SAME_BINARY)
 #define WTF_EXPORT_PRIVATE WTF_EXPORT

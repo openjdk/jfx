@@ -16,7 +16,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -83,6 +83,11 @@ bool screenIsMonochrome(Widget* widget)
     return screenDepth(widget) < 2;
 }
 
+bool screenHasInvertedColors()
+{
+    return false;
+}
+
 FloatRect screenRect(Widget* widget)
 {
 #ifdef HAVE_ECORE_X
@@ -91,7 +96,11 @@ FloatRect screenRect(Widget* widget)
     // and we cannot accurately detect the screen size.
     int width = 800;
     int height = 600;
-    ecore_x_screen_size_get(ecore_x_default_screen_get(), &width, &height);
+    Ecore_X_Window focusedWindow = ecore_x_window_focus_get();
+    if (ecore_x_randr_query() && focusedWindow)
+        ecore_x_randr_screen_primary_output_current_size_get(ecore_x_window_root_get(focusedWindow), &width, &height, 0, 0, 0);
+    else
+        ecore_x_screen_size_get(ecore_x_default_screen_get(), &width, &height);
     return FloatRect(0, 0, width, height);
 #else
     if (!widget || !widget->evas())
@@ -107,11 +116,6 @@ FloatRect screenAvailableRect(Widget* widget)
 {
     notImplemented();
     return screenRect(widget);
-}
-
-void screenColorProfile(ColorProfile&)
-{
-    notImplemented();
 }
 
 }

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Computer Inc.
+ * Copyright (C) 2006 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,9 +28,9 @@ namespace WebCore {
 
 class RenderSVGInline : public RenderInline {
 public:
-    RenderSVGInline(SVGGraphicsElement&, PassRef<RenderStyle>);
+    RenderSVGInline(SVGGraphicsElement&, Ref<RenderStyle>&&);
 
-    SVGGraphicsElement& graphicsElement() const { return toSVGGraphicsElement(nodeForNonAnonymous()); }
+    SVGGraphicsElement& graphicsElement() const { return downcast<SVGGraphicsElement>(nodeForNonAnonymous()); }
 
 private:
     void element() const = delete;
@@ -38,6 +38,8 @@ private:
     virtual const char* renderName() const override { return "RenderSVGInline"; }
     virtual bool requiresLayer() const override final { return false; }
     virtual bool isSVGInline() const override final { return true; }
+
+    virtual void updateFromStyle() override final;
 
     // Chapter 10.4 of the SVG Specification say that we should use the
     // object bounding box of the parent text element.
@@ -50,7 +52,7 @@ private:
 
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override final;
     virtual void computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed = false) const override final;
-    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const override final;
+    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override final;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override final;
     virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override final;
 
@@ -59,10 +61,12 @@ private:
     virtual void willBeDestroyed() override final;
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override final;
 
-    virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0) override final;
+    virtual void addChild(RenderObject* child, RenderObject* beforeChild = nullptr) override final;
     virtual void removeChild(RenderObject&) override final;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGInline, isSVGInline())
 
 #endif // !RenderSVGTSpan_H

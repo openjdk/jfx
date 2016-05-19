@@ -28,7 +28,7 @@ namespace WebCore {
 
 class SVGAltGlyphDefElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGAltGlyphDefElement> create(const QualifiedName&, Document&);
+    static Ref<SVGAltGlyphDefElement> create(const QualifiedName&, Document&);
 
     bool hasValidGlyphElements(Vector<String>& glyphNames) const;
 
@@ -37,8 +37,6 @@ private:
 
     virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 };
-
-NODE_TYPE_CASTS(SVGAltGlyphDefElement)
 
 }
 

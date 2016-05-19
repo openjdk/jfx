@@ -22,12 +22,11 @@
 #include "SVGGraphicsElement.h"
 
 #include "AffineTransform.h"
-#include "Attribute.h"
 #include "RenderSVGPath.h"
 #include "RenderSVGResource.h"
-#include "SVGElementInstance.h"
 #include "SVGNames.h"
 #include "SVGPathData.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -75,6 +74,14 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
 
         // Flatten any 3D transform.
         matrix = transform.toAffineTransform();
+        // CSS bakes the zoom factor into lengths, including translation components.
+        // In order to align CSS & SVG transforms, we need to invert this operation.
+        float zoom = style->effectiveZoom();
+        if (zoom != 1) {
+            matrix.setE(matrix.e() / zoom);
+            matrix.setF(matrix.f() / zoom);
+        }
+
     } else
         transform().concatenate(matrix);
 
@@ -92,21 +99,16 @@ AffineTransform* SVGGraphicsElement::supplementalTransform()
 
 bool SVGGraphicsElement::isSupportedAttribute(const QualifiedName& attrName)
 {
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty()) {
+    static NeverDestroyed<HashSet<QualifiedName>> supportedAttributes;
+    if (supportedAttributes.get().isEmpty()) {
         SVGTests::addSupportedAttributes(supportedAttributes);
-        supportedAttributes.add(SVGNames::transformAttr);
+        supportedAttributes.get().add(SVGNames::transformAttr);
     }
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.get().contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGGraphicsElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(name)) {
-        SVGElement::parseAttribute(name, value);
-        return;
-    }
-
     if (name == SVGNames::transformAttr) {
         SVGTransformList newList;
         newList.parse(value);
@@ -115,10 +117,8 @@ void SVGGraphicsElement::parseAttribute(const QualifiedName& name, const AtomicS
         return;
     }
 
-    if (SVGTests::parseAttribute(name, value))
-        return;
-
-    ASSERT_NOT_REACHED();
+    SVGElement::parseAttribute(name, value);
+    SVGTests::parseAttribute(name, value);
 }
 
 void SVGGraphicsElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -128,7 +128,7 @@ void SVGGraphicsElement::svgAttributeChanged(const QualifiedName& attrName)
         return;
     }
 
-    SVGElementInstance::InvalidationGuard invalidationGuard(this);
+    InstanceInvalidationGuard guard(*this);
 
     if (SVGTests::handleAttributeChange(this, attrName))
         return;
@@ -161,10 +161,10 @@ FloatRect SVGGraphicsElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)
     return SVGTransformable::getBBox(this, styleUpdateStrategy);
 }
 
-RenderPtr<RenderElement> SVGGraphicsElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGGraphicsElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
     // By default, any subclass is expected to do path-based drawing
-    return createRenderer<RenderSVGPath>(*this, std::move(style));
+    return createRenderer<RenderSVGPath>(*this, WTF::move(style));
 }
 
 void SVGGraphicsElement::toClipPath(Path& path)

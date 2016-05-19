@@ -32,21 +32,22 @@
 namespace WebCore {
 
 class BlobRegistry;
+class Frame;
 class NetworkingContext;
 class ResourceError;
 class ResourceLoadScheduler;
 class ResourceRequest;
 class ResourceResponse;
 
-class LoaderStrategy {
+class WEBCORE_EXPORT LoaderStrategy {
 public:
     virtual ResourceLoadScheduler* resourceLoadScheduler();
 
     virtual void loadResourceSynchronously(NetworkingContext*, unsigned long identifier, const ResourceRequest&, StoredCredentials, ClientCredentialPolicy, ResourceError&, ResourceResponse&, Vector<char>& data);
 
-#if ENABLE(BLOB)
     virtual BlobRegistry* createBlobRegistry();
-#endif
+
+    virtual void createPingHandle(NetworkingContext*, ResourceRequest&, bool shouldUseCredentialStorage);
 
 protected:
     virtual ~LoaderStrategy()

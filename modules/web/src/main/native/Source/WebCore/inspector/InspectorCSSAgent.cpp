@@ -23,9 +23,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INSPECTOR)
-
 #include "InspectorCSSAgent.h"
 
 #include "CSSComputedStyleDeclaration.h"
@@ -39,25 +36,25 @@
 #include "ContentSecurityPolicy.h"
 #include "DOMWindow.h"
 #include "ExceptionCodePlaceholder.h"
+#include "FontCache.h"
 #include "HTMLHeadElement.h"
 #include "HTMLStyleElement.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorHistory.h"
-#include "InspectorWebTypeBuilders.h"
 #include "InstrumentingAgents.h"
 #include "NamedFlowCollection.h"
 #include "Node.h"
 #include "NodeList.h"
-#include "RenderRegion.h"
+#include "RenderNamedFlowFragment.h"
 #include "SVGStyleElement.h"
+#include "SelectorChecker.h"
 #include "StyleProperties.h"
 #include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
 #include "StyleSheetList.h"
 #include "WebKitNamedFlow.h"
-#include <inspector/InspectorValues.h>
-#include <wtf/CurrentTime.h>
+#include <inspector/InspectorProtocolObjects.h>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
@@ -69,101 +66,40 @@ using namespace Inspector;
 namespace WebCore {
 
 enum ForcePseudoClassFlags {
-    PseudoNone = 0,
-    PseudoHover = 1 << 0,
-    PseudoFocus = 1 << 1,
-    PseudoActive = 1 << 2,
-    PseudoVisited = 1 << 3
+    PseudoClassNone = 0,
+    PseudoClassHover = 1 << 0,
+    PseudoClassFocus = 1 << 1,
+    PseudoClassActive = 1 << 2,
+    PseudoClassVisited = 1 << 3
 };
 
-static unsigned computePseudoClassMask(InspectorArray* pseudoClassArray)
+static unsigned computePseudoClassMask(const InspectorArray& pseudoClassArray)
 {
-    DEFINE_STATIC_LOCAL(String, active, (ASCIILiteral("active")));
-    DEFINE_STATIC_LOCAL(String, hover, (ASCIILiteral("hover")));
-    DEFINE_STATIC_LOCAL(String, focus, (ASCIILiteral("focus")));
-    DEFINE_STATIC_LOCAL(String, visited, (ASCIILiteral("visited")));
-    if (!pseudoClassArray || !pseudoClassArray->length())
-        return PseudoNone;
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, active, (ASCIILiteral("active")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, hover, (ASCIILiteral("hover")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, focus, (ASCIILiteral("focus")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, visited, (ASCIILiteral("visited")));
+    if (!pseudoClassArray.length())
+        return PseudoClassNone;
 
-    unsigned result = PseudoNone;
-    for (size_t i = 0; i < pseudoClassArray->length(); ++i) {
-        RefPtr<InspectorValue> pseudoClassValue = pseudoClassArray->get(i);
+    unsigned result = PseudoClassNone;
+    for (size_t i = 0; i < pseudoClassArray.length(); ++i) {
+        RefPtr<InspectorValue> pseudoClassValue = pseudoClassArray.get(i);
         String pseudoClass;
-        bool success = pseudoClassValue->asString(&pseudoClass);
+        bool success = pseudoClassValue->asString(pseudoClass);
         if (!success)
             continue;
         if (pseudoClass == active)
-            result |= PseudoActive;
+            result |= PseudoClassActive;
         else if (pseudoClass == hover)
-            result |= PseudoHover;
+            result |= PseudoClassHover;
         else if (pseudoClass == focus)
-            result |= PseudoFocus;
+            result |= PseudoClassFocus;
         else if (pseudoClass == visited)
-            result |= PseudoVisited;
+            result |= PseudoClassVisited;
     }
 
     return result;
-}
-
-class UpdateRegionLayoutTask {
-public:
-    UpdateRegionLayoutTask(InspectorCSSAgent*);
-    void scheduleFor(WebKitNamedFlow*, int documentNodeId);
-    void unschedule(WebKitNamedFlow*);
-    void reset();
-    void timerFired(Timer<UpdateRegionLayoutTask>&);
-
-private:
-    InspectorCSSAgent* m_cssAgent;
-    Timer<UpdateRegionLayoutTask> m_timer;
-    HashMap<WebKitNamedFlow*, int> m_namedFlows;
-};
-
-UpdateRegionLayoutTask::UpdateRegionLayoutTask(InspectorCSSAgent* cssAgent)
-    : m_cssAgent(cssAgent)
-    , m_timer(this, &UpdateRegionLayoutTask::timerFired)
-{
-}
-
-void UpdateRegionLayoutTask::scheduleFor(WebKitNamedFlow* namedFlow, int documentNodeId)
-{
-    m_namedFlows.add(namedFlow, documentNodeId);
-
-    if (!m_timer.isActive())
-        m_timer.startOneShot(0);
-}
-
-void UpdateRegionLayoutTask::unschedule(WebKitNamedFlow* namedFlow)
-{
-    m_namedFlows.remove(namedFlow);
-}
-
-void UpdateRegionLayoutTask::reset()
-{
-    m_timer.stop();
-    m_namedFlows.clear();
-}
-
-void UpdateRegionLayoutTask::timerFired(Timer<UpdateRegionLayoutTask>&)
-{
-    // The timer is stopped on m_cssAgent destruction, so this method will never be called after m_cssAgent has been destroyed.
-    Vector<std::pair<WebKitNamedFlow*, int>> namedFlows;
-
-    for (HashMap<WebKitNamedFlow*, int>::iterator it = m_namedFlows.begin(), end = m_namedFlows.end(); it != end; ++it)
-        namedFlows.append(std::make_pair(it->key, it->value));
-
-    for (unsigned i = 0, size = namedFlows.size(); i < size; ++i) {
-        WebKitNamedFlow* namedFlow = namedFlows.at(i).first;
-        int documentNodeId = namedFlows.at(i).second;
-
-        if (m_namedFlows.contains(namedFlow)) {
-            m_cssAgent->regionLayoutUpdated(namedFlow, documentNodeId);
-            m_namedFlows.remove(namedFlow);
-        }
-    }
-
-    if (!m_namedFlows.isEmpty() && !m_timer.isActive())
-        m_timer.startOneShot(0);
 }
 
 class ChangeRegionOversetTask {
@@ -172,17 +108,17 @@ public:
     void scheduleFor(WebKitNamedFlow*, int documentNodeId);
     void unschedule(WebKitNamedFlow*);
     void reset();
-    void timerFired(Timer<ChangeRegionOversetTask>&);
+    void timerFired();
 
 private:
     InspectorCSSAgent* m_cssAgent;
-    Timer<ChangeRegionOversetTask> m_timer;
+    Timer m_timer;
     HashMap<WebKitNamedFlow*, int> m_namedFlows;
 };
 
 ChangeRegionOversetTask::ChangeRegionOversetTask(InspectorCSSAgent* cssAgent)
     : m_cssAgent(cssAgent)
-    , m_timer(this, &ChangeRegionOversetTask::timerFired)
+    , m_timer(*this, &ChangeRegionOversetTask::timerFired)
 {
 }
 
@@ -205,7 +141,7 @@ void ChangeRegionOversetTask::reset()
     m_namedFlows.clear();
 }
 
-void ChangeRegionOversetTask::timerFired(Timer<ChangeRegionOversetTask>&)
+void ChangeRegionOversetTask::timerFired()
 {
     // The timer is stopped on m_cssAgent destruction, so this method will never be called after m_cssAgent has been destroyed.
     for (HashMap<WebKitNamedFlow*, int>::iterator it = m_namedFlows.begin(), end = m_namedFlows.end(); it != end; ++it)
@@ -324,99 +260,6 @@ private:
     String m_oldText;
 };
 
-class InspectorCSSAgent::SetPropertyTextAction final : public InspectorCSSAgent::StyleSheetAction {
-    WTF_MAKE_NONCOPYABLE(SetPropertyTextAction);
-public:
-    SetPropertyTextAction(InspectorStyleSheet* styleSheet, const InspectorCSSId& cssId, unsigned propertyIndex, const String& text, bool overwrite)
-        : InspectorCSSAgent::StyleSheetAction(ASCIILiteral("SetPropertyText"), styleSheet)
-        , m_cssId(cssId)
-        , m_propertyIndex(propertyIndex)
-        , m_text(text)
-        , m_overwrite(overwrite)
-    {
-    }
-
-    virtual String toString() override
-    {
-        return mergeId() + ": " + m_oldText + " -> " + m_text;
-    }
-
-    virtual bool perform(ExceptionCode& ec) override
-    {
-        return redo(ec);
-    }
-
-    virtual bool undo(ExceptionCode& ec) override
-    {
-        String placeholder;
-        return m_styleSheet->setPropertyText(m_cssId, m_propertyIndex, m_overwrite ? m_oldText : "", true, &placeholder, ec);
-    }
-
-    virtual bool redo(ExceptionCode& ec) override
-    {
-        String oldText;
-        bool result = m_styleSheet->setPropertyText(m_cssId, m_propertyIndex, m_text, m_overwrite, &oldText, ec);
-        m_oldText = oldText.stripWhiteSpace();
-        // FIXME: remove this once the model handles this case.
-        if (!m_oldText.endsWith(';'))
-            m_oldText.append(';');
-
-        return result;
-    }
-
-    virtual String mergeId() override
-    {
-        return String::format("SetPropertyText %s:%u:%s", m_styleSheet->id().utf8().data(), m_propertyIndex, m_overwrite ? "true" : "false");
-    }
-
-    virtual void merge(std::unique_ptr<Action> action) override
-    {
-        ASSERT(action->mergeId() == mergeId());
-
-        SetPropertyTextAction* other = static_cast<SetPropertyTextAction*>(action.get());
-        m_text = other->m_text;
-    }
-
-private:
-    InspectorCSSId m_cssId;
-    unsigned m_propertyIndex;
-    String m_text;
-    String m_oldText;
-    bool m_overwrite;
-};
-
-class InspectorCSSAgent::TogglePropertyAction final : public InspectorCSSAgent::StyleSheetAction {
-    WTF_MAKE_NONCOPYABLE(TogglePropertyAction);
-public:
-    TogglePropertyAction(InspectorStyleSheet* styleSheet, const InspectorCSSId& cssId, unsigned propertyIndex, bool disable)
-        : InspectorCSSAgent::StyleSheetAction(ASCIILiteral("ToggleProperty"), styleSheet)
-        , m_cssId(cssId)
-        , m_propertyIndex(propertyIndex)
-        , m_disable(disable)
-    {
-    }
-
-    virtual bool perform(ExceptionCode& ec) override
-    {
-        return redo(ec);
-    }
-
-    virtual bool undo(ExceptionCode& ec) override
-    {
-        return m_styleSheet->toggleProperty(m_cssId, m_propertyIndex, !m_disable, ec);
-    }
-
-    virtual bool redo(ExceptionCode& ec) override
-    {
-        return m_styleSheet->toggleProperty(m_cssId, m_propertyIndex, m_disable, ec);
-    }
-
-private:
-    InspectorCSSId m_cssId;
-    unsigned m_propertyIndex;
-    bool m_disable;
-};
-
 class InspectorCSSAgent::SetRuleSelectorAction final : public InspectorCSSAgent::StyleSheetAction {
     WTF_MAKE_NONCOPYABLE(SetRuleSelectorAction);
 public:
@@ -488,11 +331,11 @@ private:
 };
 
 // static
-CSSStyleRule* InspectorCSSAgent::asCSSStyleRule(CSSRule* rule)
+CSSStyleRule* InspectorCSSAgent::asCSSStyleRule(CSSRule& rule)
 {
-    if (rule->type() != CSSRule::STYLE_RULE)
+    if (!is<CSSStyleRule>(rule))
         return nullptr;
-    return static_cast<CSSStyleRule*>(rule);
+    return downcast<CSSStyleRule>(&rule);
 }
 
 InspectorCSSAgent::InspectorCSSAgent(InstrumentingAgents* instrumentingAgents, InspectorDOMAgent* domAgent)
@@ -509,16 +352,16 @@ InspectorCSSAgent::~InspectorCSSAgent()
     reset();
 }
 
-void InspectorCSSAgent::didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel* frontendChannel, InspectorBackendDispatcher* backendDispatcher)
+void InspectorCSSAgent::didCreateFrontendAndBackend(Inspector::FrontendChannel* frontendChannel, Inspector::BackendDispatcher* backendDispatcher)
 {
-    m_frontendDispatcher = std::make_unique<InspectorCSSFrontendDispatcher>(frontendChannel);
-    m_backendDispatcher = InspectorCSSBackendDispatcher::create(backendDispatcher, this);
+    m_frontendDispatcher = std::make_unique<CSSFrontendDispatcher>(frontendChannel);
+    m_backendDispatcher = CSSBackendDispatcher::create(backendDispatcher, this);
 }
 
-void InspectorCSSAgent::willDestroyFrontendAndBackend(InspectorDisconnectReason)
+void InspectorCSSAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason)
 {
     m_frontendDispatcher = nullptr;
-    m_backendDispatcher.clear();
+    m_backendDispatcher = nullptr;
 
     resetNonPersistentData();
 }
@@ -541,19 +384,17 @@ void InspectorCSSAgent::reset()
 void InspectorCSSAgent::resetNonPersistentData()
 {
     m_namedFlowCollectionsRequested.clear();
-    if (m_updateRegionLayoutTask)
-        m_updateRegionLayoutTask->reset();
     if (m_changeRegionOversetTask)
         m_changeRegionOversetTask->reset();
     resetPseudoStates();
 }
 
-void InspectorCSSAgent::enable(ErrorString*)
+void InspectorCSSAgent::enable(ErrorString&)
 {
     m_instrumentingAgents->setInspectorCSSAgent(this);
 }
 
-void InspectorCSSAgent::disable(ErrorString*)
+void InspectorCSSAgent::disable(ErrorString&)
 {
     m_instrumentingAgents->setInspectorCSSAgent(nullptr);
 }
@@ -564,62 +405,37 @@ void InspectorCSSAgent::mediaQueryResultChanged()
         m_frontendDispatcher->mediaQueryResultChanged();
 }
 
-void InspectorCSSAgent::didCreateNamedFlow(Document* document, WebKitNamedFlow* namedFlow)
+void InspectorCSSAgent::didCreateNamedFlow(Document& document, WebKitNamedFlow& namedFlow)
 {
-    int documentNodeId = documentNodeWithRequestedFlowsId(document);
+    int documentNodeId = documentNodeWithRequestedFlowsId(&document);
     if (!documentNodeId)
         return;
 
-    ErrorString errorString;
-    m_frontendDispatcher->namedFlowCreated(buildObjectForNamedFlow(&errorString, namedFlow, documentNodeId));
+    ErrorString unused;
+    m_frontendDispatcher->namedFlowCreated(buildObjectForNamedFlow(unused, &namedFlow, documentNodeId));
 }
 
-void InspectorCSSAgent::willRemoveNamedFlow(Document* document, WebKitNamedFlow* namedFlow)
+void InspectorCSSAgent::willRemoveNamedFlow(Document& document, WebKitNamedFlow& namedFlow)
 {
-    int documentNodeId = documentNodeWithRequestedFlowsId(document);
+    int documentNodeId = documentNodeWithRequestedFlowsId(&document);
     if (!documentNodeId)
         return;
-
-    if (m_updateRegionLayoutTask)
-        m_updateRegionLayoutTask->unschedule(namedFlow);
 
     if (m_changeRegionOversetTask)
-        m_changeRegionOversetTask->unschedule(namedFlow);
+        m_changeRegionOversetTask->unschedule(&namedFlow);
 
-    m_frontendDispatcher->namedFlowRemoved(documentNodeId, namedFlow->name().string());
+    m_frontendDispatcher->namedFlowRemoved(documentNodeId, namedFlow.name().string());
 }
 
-void InspectorCSSAgent::didUpdateRegionLayout(Document* document, WebKitNamedFlow* namedFlow)
+void InspectorCSSAgent::didChangeRegionOverset(Document& document, WebKitNamedFlow& namedFlow)
 {
-    int documentNodeId = documentNodeWithRequestedFlowsId(document);
-    if (!documentNodeId)
-        return;
-
-    if (!m_updateRegionLayoutTask)
-        m_updateRegionLayoutTask = std::make_unique<UpdateRegionLayoutTask>(this);
-    m_updateRegionLayoutTask->scheduleFor(namedFlow, documentNodeId);
-}
-
-void InspectorCSSAgent::regionLayoutUpdated(WebKitNamedFlow* namedFlow, int documentNodeId)
-{
-    if (namedFlow->flowState() == WebKitNamedFlow::FlowStateNull)
-        return;
-
-    ErrorString errorString;
-    Ref<WebKitNamedFlow> protect(*namedFlow);
-
-    m_frontendDispatcher->regionLayoutUpdated(buildObjectForNamedFlow(&errorString, namedFlow, documentNodeId));
-}
-
-void InspectorCSSAgent::didChangeRegionOverset(Document* document, WebKitNamedFlow* namedFlow)
-{
-    int documentNodeId = documentNodeWithRequestedFlowsId(document);
+    int documentNodeId = documentNodeWithRequestedFlowsId(&document);
     if (!documentNodeId)
         return;
 
     if (!m_changeRegionOversetTask)
         m_changeRegionOversetTask = std::make_unique<ChangeRegionOversetTask>(this);
-    m_changeRegionOversetTask->scheduleFor(namedFlow, documentNodeId);
+    m_changeRegionOversetTask->scheduleFor(&namedFlow, documentNodeId);
 }
 
 void InspectorCSSAgent::regionOversetChanged(WebKitNamedFlow* namedFlow, int documentNodeId)
@@ -627,45 +443,45 @@ void InspectorCSSAgent::regionOversetChanged(WebKitNamedFlow* namedFlow, int doc
     if (namedFlow->flowState() == WebKitNamedFlow::FlowStateNull)
         return;
 
-    ErrorString errorString;
+    ErrorString unused;
     Ref<WebKitNamedFlow> protect(*namedFlow);
 
-    m_frontendDispatcher->regionOversetChanged(buildObjectForNamedFlow(&errorString, namedFlow, documentNodeId));
+    m_frontendDispatcher->regionOversetChanged(buildObjectForNamedFlow(unused, namedFlow, documentNodeId));
 }
 
-void InspectorCSSAgent::didRegisterNamedFlowContentElement(Document* document, WebKitNamedFlow* namedFlow, Node* contentElement, Node* nextContentElement)
+void InspectorCSSAgent::didRegisterNamedFlowContentElement(Document& document, WebKitNamedFlow& namedFlow, Node& contentElement, Node* nextContentElement)
 {
-    int documentNodeId = documentNodeWithRequestedFlowsId(document);
+    int documentNodeId = documentNodeWithRequestedFlowsId(&document);
     if (!documentNodeId)
         return;
 
-    ErrorString errorString;
-    int contentElementNodeId = m_domAgent->pushNodeToFrontend(&errorString, documentNodeId, contentElement);
-    int nextContentElementNodeId = nextContentElement ? m_domAgent->pushNodeToFrontend(&errorString, documentNodeId, nextContentElement) : 0;
-    m_frontendDispatcher->registeredNamedFlowContentElement(documentNodeId, namedFlow->name().string(), contentElementNodeId, nextContentElementNodeId);
+    ErrorString unused;
+    int contentElementNodeId = m_domAgent->pushNodeToFrontend(unused, documentNodeId, &contentElement);
+    int nextContentElementNodeId = nextContentElement ? m_domAgent->pushNodeToFrontend(unused, documentNodeId, nextContentElement) : 0;
+    m_frontendDispatcher->registeredNamedFlowContentElement(documentNodeId, namedFlow.name().string(), contentElementNodeId, nextContentElementNodeId);
 }
 
-void InspectorCSSAgent::didUnregisterNamedFlowContentElement(Document* document, WebKitNamedFlow* namedFlow, Node* contentElement)
+void InspectorCSSAgent::didUnregisterNamedFlowContentElement(Document& document, WebKitNamedFlow& namedFlow, Node& contentElement)
 {
-    int documentNodeId = documentNodeWithRequestedFlowsId(document);
+    int documentNodeId = documentNodeWithRequestedFlowsId(&document);
     if (!documentNodeId)
         return;
 
-    ErrorString errorString;
-    int contentElementNodeId = m_domAgent->pushNodeToFrontend(&errorString, documentNodeId, contentElement);
+    ErrorString unused;
+    int contentElementNodeId = m_domAgent->pushNodeToFrontend(unused, documentNodeId, &contentElement);
     if (!contentElementNodeId) {
         // We've already notified that the DOM node was removed from the DOM, so there's no need to send another event.
         return;
     }
-    m_frontendDispatcher->unregisteredNamedFlowContentElement(documentNodeId, namedFlow->name().string(), contentElementNodeId);
+    m_frontendDispatcher->unregisteredNamedFlowContentElement(documentNodeId, namedFlow.name().string(), contentElementNodeId);
 }
 
-bool InspectorCSSAgent::forcePseudoState(Element* element, CSSSelector::PseudoType pseudoType)
+bool InspectorCSSAgent::forcePseudoState(Element& element, CSSSelector::PseudoClassType pseudoClassType)
 {
     if (m_nodeIdToForcedPseudoState.isEmpty())
         return false;
 
-    int nodeId = m_domAgent->boundNodeId(element);
+    int nodeId = m_domAgent->boundNodeId(&element);
     if (!nodeId)
         return false;
 
@@ -674,21 +490,21 @@ bool InspectorCSSAgent::forcePseudoState(Element* element, CSSSelector::PseudoTy
         return false;
 
     unsigned forcedPseudoState = it->value;
-    switch (pseudoType) {
-    case CSSSelector::PseudoActive:
-        return forcedPseudoState & PseudoActive;
-    case CSSSelector::PseudoFocus:
-        return forcedPseudoState & PseudoFocus;
-    case CSSSelector::PseudoHover:
-        return forcedPseudoState & PseudoHover;
-    case CSSSelector::PseudoVisited:
-        return forcedPseudoState & PseudoVisited;
+    switch (pseudoClassType) {
+    case CSSSelector::PseudoClassActive:
+        return forcedPseudoState & PseudoClassActive;
+    case CSSSelector::PseudoClassFocus:
+        return forcedPseudoState & PseudoClassFocus;
+    case CSSSelector::PseudoClassHover:
+        return forcedPseudoState & PseudoClassHover;
+    case CSSSelector::PseudoClassVisited:
+        return forcedPseudoState & PseudoClassVisited;
     default:
         return false;
     }
 }
 
-void InspectorCSSAgent::getMatchedStylesForNode(ErrorString* errorString, int nodeId, const bool* includePseudo, const bool* includeInherited, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::RuleMatch>>& matchedCSSRules, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::PseudoIdMatches>>& pseudoIdMatches, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::InheritedStyleEntry>>& inheritedEntries)
+void InspectorCSSAgent::getMatchedStylesForNode(ErrorString& errorString, int nodeId, const bool* includePseudo, const bool* includeInherited, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::RuleMatch>>& matchedCSSRules, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::PseudoIdMatches>>& pseudoIdMatches, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::InheritedStyleEntry>>& inheritedEntries)
 {
     Element* element = elementForId(errorString, nodeId);
     if (!element)
@@ -696,49 +512,51 @@ void InspectorCSSAgent::getMatchedStylesForNode(ErrorString* errorString, int no
 
     // Matched rules.
     StyleResolver& styleResolver = element->document().ensureStyleResolver();
-    Vector<RefPtr<StyleRuleBase>> matchedRules = styleResolver.styleRulesForElement(element, StyleResolver::AllCSSRules);
+    auto matchedRules = styleResolver.styleRulesForElement(element, StyleResolver::AllCSSRules);
     matchedCSSRules = buildArrayForMatchedRuleList(matchedRules, styleResolver, element);
 
     // Pseudo elements.
     if (!includePseudo || *includePseudo) {
-        RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::PseudoIdMatches>> pseudoElements = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::PseudoIdMatches>::create();
+        auto pseudoElements = Inspector::Protocol::Array<Inspector::Protocol::CSS::PseudoIdMatches>::create();
         for (PseudoId pseudoId = FIRST_PUBLIC_PSEUDOID; pseudoId < AFTER_LAST_INTERNAL_PSEUDOID; pseudoId = static_cast<PseudoId>(pseudoId + 1)) {
-            Vector<RefPtr<StyleRuleBase>> matchedRules = styleResolver.pseudoStyleRulesForElement(element, pseudoId, StyleResolver::AllCSSRules);
+            auto matchedRules = styleResolver.pseudoStyleRulesForElement(element, pseudoId, StyleResolver::AllCSSRules);
             if (!matchedRules.isEmpty()) {
-                RefPtr<Inspector::TypeBuilder::CSS::PseudoIdMatches> matches = Inspector::TypeBuilder::CSS::PseudoIdMatches::create()
+                auto matches = Inspector::Protocol::CSS::PseudoIdMatches::create()
                     .setPseudoId(static_cast<int>(pseudoId))
-                    .setMatches(buildArrayForMatchedRuleList(matchedRules, styleResolver, element));
-                pseudoElements->addItem(matches.release());
+                    .setMatches(buildArrayForMatchedRuleList(matchedRules, styleResolver, element))
+                    .release();
+                pseudoElements->addItem(WTF::move(matches));
             }
         }
 
-        pseudoIdMatches = pseudoElements.release();
+        pseudoIdMatches = WTF::move(pseudoElements);
     }
 
     // Inherited styles.
     if (!includeInherited || *includeInherited) {
-        RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::InheritedStyleEntry>> entries = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::InheritedStyleEntry>::create();
+        auto entries = Inspector::Protocol::Array<Inspector::Protocol::CSS::InheritedStyleEntry>::create();
         Element* parentElement = element->parentElement();
         while (parentElement) {
             StyleResolver& parentStyleResolver = parentElement->document().ensureStyleResolver();
-            Vector<RefPtr<StyleRuleBase>> parentMatchedRules = parentStyleResolver.styleRulesForElement(parentElement, StyleResolver::AllCSSRules);
-            RefPtr<Inspector::TypeBuilder::CSS::InheritedStyleEntry> entry = Inspector::TypeBuilder::CSS::InheritedStyleEntry::create()
-                .setMatchedCSSRules(buildArrayForMatchedRuleList(parentMatchedRules, styleResolver, parentElement));
+            auto parentMatchedRules = parentStyleResolver.styleRulesForElement(parentElement, StyleResolver::AllCSSRules);
+            auto entry = Inspector::Protocol::CSS::InheritedStyleEntry::create()
+                .setMatchedCSSRules(buildArrayForMatchedRuleList(parentMatchedRules, styleResolver, parentElement))
+                .release();
             if (parentElement->style() && parentElement->style()->length()) {
                 InspectorStyleSheetForInlineStyle* styleSheet = asInspectorStyleSheet(parentElement);
                 if (styleSheet)
                     entry->setInlineStyle(styleSheet->buildObjectForStyle(styleSheet->styleForId(InspectorCSSId(styleSheet->id(), 0))));
             }
 
-            entries->addItem(entry.release());
+            entries->addItem(WTF::move(entry));
             parentElement = parentElement->parentElement();
         }
 
-        inheritedEntries = entries.release();
+        inheritedEntries = WTF::move(entries);
     }
 }
 
-void InspectorCSSAgent::getInlineStylesForNode(ErrorString* errorString, int nodeId, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& inlineStyle, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& attributesStyle)
+void InspectorCSSAgent::getInlineStylesForNode(ErrorString& errorString, int nodeId, RefPtr<Inspector::Protocol::CSS::CSSStyle>& inlineStyle, RefPtr<Inspector::Protocol::CSS::CSSStyle>& attributesStyle)
 {
     Element* element = elementForId(errorString, nodeId);
     if (!element)
@@ -749,36 +567,36 @@ void InspectorCSSAgent::getInlineStylesForNode(ErrorString* errorString, int nod
         return;
 
     inlineStyle = styleSheet->buildObjectForStyle(element->style());
-    RefPtr<Inspector::TypeBuilder::CSS::CSSStyle> attributes = buildObjectForAttributesStyle(element);
+    RefPtr<Inspector::Protocol::CSS::CSSStyle> attributes = buildObjectForAttributesStyle(element);
     attributesStyle = attributes ? attributes.release() : nullptr;
 }
 
-void InspectorCSSAgent::getComputedStyleForNode(ErrorString* errorString, int nodeId, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSComputedStyleProperty>>& style)
+void InspectorCSSAgent::getComputedStyleForNode(ErrorString& errorString, int nodeId, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSComputedStyleProperty>>& style)
 {
     Element* element = elementForId(errorString, nodeId);
     if (!element)
         return;
 
     RefPtr<CSSComputedStyleDeclaration> computedStyleInfo = CSSComputedStyleDeclaration::create(element, true);
-    RefPtr<InspectorStyle> inspectorStyle = InspectorStyle::create(InspectorCSSId(), computedStyleInfo, nullptr);
+    Ref<InspectorStyle> inspectorStyle = InspectorStyle::create(InspectorCSSId(), computedStyleInfo, nullptr);
     style = inspectorStyle->buildArrayForComputedStyle();
 }
 
-void InspectorCSSAgent::getAllStyleSheets(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSStyleSheetHeader>>& styleInfos)
+void InspectorCSSAgent::getAllStyleSheets(ErrorString&, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSStyleSheetHeader>>& styleInfos)
 {
-    styleInfos = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSStyleSheetHeader>::create();
+    styleInfos = Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSStyleSheetHeader>::create();
     Vector<Document*> documents = m_domAgent->documents();
     for (Vector<Document*>::iterator it = documents.begin(); it != documents.end(); ++it) {
-        StyleSheetList* list = (*it)->styleSheets();
-        for (unsigned i = 0; i < list->length(); ++i) {
-            StyleSheet* styleSheet = list->item(i);
-            if (styleSheet->isCSSStyleSheet())
-                collectStyleSheets(static_cast<CSSStyleSheet*>(styleSheet), styleInfos.get());
+        StyleSheetList& list = (*it)->styleSheets();
+        for (unsigned i = 0; i < list.length(); ++i) {
+            StyleSheet& styleSheet = *list.item(i);
+            if (is<CSSStyleSheet>(styleSheet))
+                collectStyleSheets(&downcast<CSSStyleSheet>(styleSheet), styleInfos.get());
         }
     }
 }
 
-void InspectorCSSAgent::getStyleSheet(ErrorString* errorString, const String& styleSheetId, RefPtr<Inspector::TypeBuilder::CSS::CSSStyleSheetBody>& styleSheetObject)
+void InspectorCSSAgent::getStyleSheet(ErrorString& errorString, const String& styleSheetId, RefPtr<Inspector::Protocol::CSS::CSSStyleSheetBody>& styleSheetObject)
 {
     InspectorStyleSheet* inspectorStyleSheet = assertStyleSheetForId(errorString, styleSheetId);
     if (!inspectorStyleSheet)
@@ -787,7 +605,7 @@ void InspectorCSSAgent::getStyleSheet(ErrorString* errorString, const String& st
     styleSheetObject = inspectorStyleSheet->buildObjectForStyleSheet();
 }
 
-void InspectorCSSAgent::getStyleSheetText(ErrorString* errorString, const String& styleSheetId, String* result)
+void InspectorCSSAgent::getStyleSheetText(ErrorString& errorString, const String& styleSheetId, String* result)
 {
     InspectorStyleSheet* inspectorStyleSheet = assertStyleSheetForId(errorString, styleSheetId);
     if (!inspectorStyleSheet)
@@ -796,7 +614,7 @@ void InspectorCSSAgent::getStyleSheetText(ErrorString* errorString, const String
     inspectorStyleSheet->getText(result);
 }
 
-void InspectorCSSAgent::setStyleSheetText(ErrorString* errorString, const String& styleSheetId, const String& text)
+void InspectorCSSAgent::setStyleSheetText(ErrorString& errorString, const String& styleSheetId, const String& text)
 {
     InspectorStyleSheet* inspectorStyleSheet = assertStyleSheetForId(errorString, styleSheetId);
     if (!inspectorStyleSheet)
@@ -804,10 +622,10 @@ void InspectorCSSAgent::setStyleSheetText(ErrorString* errorString, const String
 
     ExceptionCode ec = 0;
     m_domAgent->history()->perform(std::make_unique<SetStyleSheetTextAction>(inspectorStyleSheet, text), ec);
-    *errorString = InspectorDOMAgent::toErrorString(ec);
+    errorString = InspectorDOMAgent::toErrorString(ec);
 }
 
-void InspectorCSSAgent::setStyleText(ErrorString* errorString, const RefPtr<InspectorObject>& fullStyleId, const String& text, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& result)
+void InspectorCSSAgent::setStyleText(ErrorString& errorString, const InspectorObject& fullStyleId, const String& text, RefPtr<Inspector::Protocol::CSS::CSSStyle>& result)
 {
     InspectorCSSId compoundId(fullStyleId);
     ASSERT(!compoundId.isEmpty());
@@ -820,42 +638,10 @@ void InspectorCSSAgent::setStyleText(ErrorString* errorString, const RefPtr<Insp
     bool success = m_domAgent->history()->perform(std::make_unique<SetStyleTextAction>(inspectorStyleSheet, compoundId, text), ec);
     if (success)
         result = inspectorStyleSheet->buildObjectForStyle(inspectorStyleSheet->styleForId(compoundId));
-    *errorString = InspectorDOMAgent::toErrorString(ec);
+    errorString = InspectorDOMAgent::toErrorString(ec);
 }
 
-void InspectorCSSAgent::setPropertyText(ErrorString* errorString, const RefPtr<InspectorObject>& fullStyleId, int propertyIndex, const String& text, bool overwrite, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& result)
-{
-    InspectorCSSId compoundId(fullStyleId);
-    ASSERT(!compoundId.isEmpty());
-
-    InspectorStyleSheet* inspectorStyleSheet = assertStyleSheetForId(errorString, compoundId.styleSheetId());
-    if (!inspectorStyleSheet)
-        return;
-
-    ExceptionCode ec = 0;
-    bool success = m_domAgent->history()->perform(std::make_unique<SetPropertyTextAction>(inspectorStyleSheet, compoundId, propertyIndex, text, overwrite), ec);
-    if (success)
-        result = inspectorStyleSheet->buildObjectForStyle(inspectorStyleSheet->styleForId(compoundId));
-    *errorString = InspectorDOMAgent::toErrorString(ec);
-}
-
-void InspectorCSSAgent::toggleProperty(ErrorString* errorString, const RefPtr<InspectorObject>& fullStyleId, int propertyIndex, bool disable, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& result)
-{
-    InspectorCSSId compoundId(fullStyleId);
-    ASSERT(!compoundId.isEmpty());
-
-    InspectorStyleSheet* inspectorStyleSheet = assertStyleSheetForId(errorString, compoundId.styleSheetId());
-    if (!inspectorStyleSheet)
-        return;
-
-    ExceptionCode ec = 0;
-    bool success = m_domAgent->history()->perform(std::make_unique<TogglePropertyAction>(inspectorStyleSheet, compoundId, propertyIndex, disable), ec);
-    if (success)
-        result = inspectorStyleSheet->buildObjectForStyle(inspectorStyleSheet->styleForId(compoundId));
-    *errorString = InspectorDOMAgent::toErrorString(ec);
-}
-
-void InspectorCSSAgent::setRuleSelector(ErrorString* errorString, const RefPtr<InspectorObject>& fullRuleId, const String& selector, RefPtr<Inspector::TypeBuilder::CSS::CSSRule>& result)
+void InspectorCSSAgent::setRuleSelector(ErrorString& errorString, const InspectorObject& fullRuleId, const String& selector, RefPtr<Inspector::Protocol::CSS::CSSRule>& result)
 {
     InspectorCSSId compoundId(fullRuleId);
     ASSERT(!compoundId.isEmpty());
@@ -868,11 +654,11 @@ void InspectorCSSAgent::setRuleSelector(ErrorString* errorString, const RefPtr<I
     bool success = m_domAgent->history()->perform(std::make_unique<SetRuleSelectorAction>(inspectorStyleSheet, compoundId, selector), ec);
 
     if (success)
-        result = inspectorStyleSheet->buildObjectForRule(inspectorStyleSheet->ruleForId(compoundId));
-    *errorString = InspectorDOMAgent::toErrorString(ec);
+        result = inspectorStyleSheet->buildObjectForRule(inspectorStyleSheet->ruleForId(compoundId), nullptr);
+    errorString = InspectorDOMAgent::toErrorString(ec);
 }
 
-void InspectorCSSAgent::addRule(ErrorString* errorString, const int contextNodeId, const String& selector, RefPtr<Inspector::TypeBuilder::CSS::CSSRule>& result)
+void InspectorCSSAgent::addRule(ErrorString& errorString, const int contextNodeId, const String& selector, RefPtr<Inspector::Protocol::CSS::CSSRule>& result)
 {
     Node* node = m_domAgent->assertNode(errorString, contextNodeId);
     if (!node)
@@ -880,55 +666,67 @@ void InspectorCSSAgent::addRule(ErrorString* errorString, const int contextNodeI
 
     InspectorStyleSheet* inspectorStyleSheet = viaInspectorStyleSheet(&node->document(), true);
     if (!inspectorStyleSheet) {
-        *errorString = "No target stylesheet found";
+        errorString = ASCIILiteral("No target stylesheet found");
         return;
     }
 
     ExceptionCode ec = 0;
     auto action = std::make_unique<AddRuleAction>(inspectorStyleSheet, selector);
     AddRuleAction* rawAction = action.get();
-    bool success = m_domAgent->history()->perform(std::move(action), ec);
+    bool success = m_domAgent->history()->perform(WTF::move(action), ec);
     if (!success) {
-        *errorString = InspectorDOMAgent::toErrorString(ec);
+        errorString = InspectorDOMAgent::toErrorString(ec);
         return;
     }
 
     InspectorCSSId ruleId = rawAction->newRuleId();
     CSSStyleRule* rule = inspectorStyleSheet->ruleForId(ruleId);
-    result = inspectorStyleSheet->buildObjectForRule(rule);
+    result = inspectorStyleSheet->buildObjectForRule(rule, nullptr);
 }
 
-void InspectorCSSAgent::getSupportedCSSProperties(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSPropertyInfo>>& cssProperties)
+void InspectorCSSAgent::getSupportedCSSProperties(ErrorString&, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSPropertyInfo>>& cssProperties)
 {
-    RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSPropertyInfo>> properties = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSPropertyInfo>::create();
+    auto properties = Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSPropertyInfo>::create();
     for (int i = firstCSSProperty; i <= lastCSSProperty; ++i) {
         CSSPropertyID id = convertToCSSPropertyID(i);
-        RefPtr<Inspector::TypeBuilder::CSS::CSSPropertyInfo> property = Inspector::TypeBuilder::CSS::CSSPropertyInfo::create()
-            .setName(getPropertyNameString(id));
+        auto property = Inspector::Protocol::CSS::CSSPropertyInfo::create()
+            .setName(getPropertyNameString(id))
+            .release();
 
         const StylePropertyShorthand& shorthand = shorthandForProperty(id);
         if (!shorthand.length()) {
-            properties->addItem(property.release());
+            properties->addItem(WTF::move(property));
             continue;
         }
-        RefPtr<Inspector::TypeBuilder::Array<String>> longhands = Inspector::TypeBuilder::Array<String>::create();
+        auto longhands = Inspector::Protocol::Array<String>::create();
         for (unsigned j = 0; j < shorthand.length(); ++j) {
             CSSPropertyID longhandID = shorthand.properties()[j];
             longhands->addItem(getPropertyNameString(longhandID));
         }
-        property->setLonghands(longhands);
-        properties->addItem(property.release());
+        property->setLonghands(WTF::move(longhands));
+        properties->addItem(WTF::move(property));
     }
-    cssProperties = properties.release();
+    cssProperties = WTF::move(properties);
 }
 
-void InspectorCSSAgent::forcePseudoState(ErrorString* errorString, int nodeId, const RefPtr<InspectorArray>& forcedPseudoClasses)
+void InspectorCSSAgent::getSupportedSystemFontFamilyNames(ErrorString&, RefPtr<Inspector::Protocol::Array<String>>& fontFamilyNames)
+{
+    auto families = Inspector::Protocol::Array<String>::create();
+
+    Vector<String> systemFontFamilies = FontCache::singleton().systemFontFamilies();
+    for (const auto& familyName : systemFontFamilies)
+        families->addItem(familyName);
+
+    fontFamilyNames = WTF::move(families);
+}
+
+void InspectorCSSAgent::forcePseudoState(ErrorString& errorString, int nodeId, const InspectorArray& forcedPseudoClasses)
 {
     Element* element = m_domAgent->assertElement(errorString, nodeId);
     if (!element)
         return;
 
-    unsigned forcedPseudoState = computePseudoClassMask(forcedPseudoClasses.get());
+    unsigned forcedPseudoState = computePseudoClassMask(forcedPseudoClasses);
     NodeIdToForcedPseudoState::iterator it = m_nodeIdToForcedPseudoState.find(nodeId);
     unsigned currentForcedPseudoState = it == m_nodeIdToForcedPseudoState.end() ? 0 : it->value;
     bool needStyleRecalc = forcedPseudoState != currentForcedPseudoState;
@@ -942,7 +740,7 @@ void InspectorCSSAgent::forcePseudoState(ErrorString* errorString, int nodeId, c
     element->document().styleResolverChanged(RecalcStyleImmediately);
 }
 
-void InspectorCSSAgent::getNamedFlowCollection(ErrorString* errorString, int documentNodeId, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::NamedFlow>>& result)
+void InspectorCSSAgent::getNamedFlowCollection(ErrorString& errorString, int documentNodeId, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::NamedFlow>>& result)
 {
     Document* document = m_domAgent->assertDocument(errorString, documentNodeId);
     if (!document)
@@ -950,13 +748,13 @@ void InspectorCSSAgent::getNamedFlowCollection(ErrorString* errorString, int doc
 
     m_namedFlowCollectionsRequested.add(documentNodeId);
 
-    Vector<RefPtr<WebKitNamedFlow>> namedFlowsVector = document->namedFlows()->namedFlows();
-    RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::NamedFlow>> namedFlows = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::NamedFlow>::create();
+    Vector<RefPtr<WebKitNamedFlow>> namedFlowsVector = document->namedFlows().namedFlows();
+    auto namedFlows = Inspector::Protocol::Array<Inspector::Protocol::CSS::NamedFlow>::create();
 
     for (Vector<RefPtr<WebKitNamedFlow>>::iterator it = namedFlowsVector.begin(); it != namedFlowsVector.end(); ++it)
         namedFlows->addItem(buildObjectForNamedFlow(errorString, it->get(), documentNodeId));
 
-    result = namedFlows.release();
+    result = WTF::move(namedFlows);
 }
 
 InspectorStyleSheetForInlineStyle* InspectorCSSAgent::asInspectorStyleSheet(Element* element)
@@ -968,7 +766,7 @@ InspectorStyleSheetForInlineStyle* InspectorCSSAgent::asInspectorStyleSheet(Elem
             return nullptr;
 
         String newStyleSheetId = String::number(m_lastStyleSheetId++);
-        RefPtr<InspectorStyleSheetForInlineStyle> inspectorStyleSheet = InspectorStyleSheetForInlineStyle::create(m_domAgent->pageAgent(), newStyleSheetId, element, Inspector::TypeBuilder::CSS::StyleSheetOrigin::Regular, this);
+        RefPtr<InspectorStyleSheetForInlineStyle> inspectorStyleSheet = InspectorStyleSheetForInlineStyle::create(m_domAgent->pageAgent(), newStyleSheetId, element, Inspector::Protocol::CSS::StyleSheetOrigin::Regular, this);
         m_idToInspectorStyleSheet.set(newStyleSheetId, inspectorStyleSheet);
         m_nodeToInspectorStyleSheet.set(element, inspectorStyleSheet);
         return inspectorStyleSheet.get();
@@ -977,18 +775,18 @@ InspectorStyleSheetForInlineStyle* InspectorCSSAgent::asInspectorStyleSheet(Elem
     return it->value.get();
 }
 
-Element* InspectorCSSAgent::elementForId(ErrorString* errorString, int nodeId)
+Element* InspectorCSSAgent::elementForId(ErrorString& errorString, int nodeId)
 {
     Node* node = m_domAgent->nodeForId(nodeId);
     if (!node) {
-        *errorString = "No node with given id found";
+        errorString = ASCIILiteral("No node with given id found");
         return nullptr;
     }
-    if (!node->isElementNode()) {
-        *errorString = "Not an element node";
+    if (!is<Element>(*node)) {
+        errorString = ASCIILiteral("Not an element node");
         return nullptr;
     }
-    return toElement(node);
+    return downcast<Element>(node);
 }
 
 int InspectorCSSAgent::documentNodeWithRequestedFlowsId(Document* document)
@@ -1000,15 +798,14 @@ int InspectorCSSAgent::documentNodeWithRequestedFlowsId(Document* document)
     return documentNodeId;
 }
 
-void InspectorCSSAgent::collectStyleSheets(CSSStyleSheet* styleSheet, Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSStyleSheetHeader>* result)
+void InspectorCSSAgent::collectStyleSheets(CSSStyleSheet* styleSheet, Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSStyleSheetHeader>* result)
 {
-    InspectorStyleSheet* inspectorStyleSheet = bindStyleSheet(static_cast<CSSStyleSheet*>(styleSheet));
+    InspectorStyleSheet* inspectorStyleSheet = bindStyleSheet(styleSheet);
     result->addItem(inspectorStyleSheet->buildObjectForStyleSheetInfo());
     for (unsigned i = 0, size = styleSheet->length(); i < size; ++i) {
         CSSRule* rule = styleSheet->item(i);
-        if (rule->type() == CSSRule::IMPORT_RULE) {
-            CSSStyleSheet* importedStyleSheet = static_cast<CSSImportRule*>(rule)->styleSheet();
-            if (importedStyleSheet)
+        if (is<CSSImportRule>(*rule)) {
+            if (CSSStyleSheet* importedStyleSheet = downcast<CSSImportRule>(*rule).styleSheet())
                 collectStyleSheets(importedStyleSheet, result);
         }
     }
@@ -1048,10 +845,10 @@ InspectorStyleSheet* InspectorCSSAgent::viaInspectorStyleSheet(Document* documen
     if (!ec) {
         ContainerNode* targetNode;
         // HEAD is absent in ImageDocuments, for example.
-        if (document->head())
-            targetNode = document->head();
-        else if (document->body())
-            targetNode = document->body();
+        if (auto* head = document->head())
+            targetNode = head;
+        else if (auto* body = document->bodyOrFrameset())
+            targetNode = body;
         else
             return nullptr;
 
@@ -1063,47 +860,47 @@ InspectorStyleSheet* InspectorCSSAgent::viaInspectorStyleSheet(Document* documen
 
     CSSStyleSheet* cssStyleSheet = nullptr;
     if (styleElement->isHTMLElement())
-        cssStyleSheet = toHTMLStyleElement(styleElement.get())->sheet();
+        cssStyleSheet = downcast<HTMLStyleElement>(*styleElement).sheet();
     else if (styleElement->isSVGElement())
-        cssStyleSheet = toSVGStyleElement(styleElement.get())->sheet();
+        cssStyleSheet = downcast<SVGStyleElement>(*styleElement).sheet();
 
     if (!cssStyleSheet)
         return nullptr;
 
     String id = String::number(m_lastStyleSheetId++);
-    inspectorStyleSheet = InspectorStyleSheet::create(m_domAgent->pageAgent(), id, cssStyleSheet, Inspector::TypeBuilder::CSS::StyleSheetOrigin::Inspector, InspectorDOMAgent::documentURLString(document), this);
+    inspectorStyleSheet = InspectorStyleSheet::create(m_domAgent->pageAgent(), id, cssStyleSheet, Inspector::Protocol::CSS::StyleSheetOrigin::Inspector, InspectorDOMAgent::documentURLString(document), this);
     m_idToInspectorStyleSheet.set(id, inspectorStyleSheet);
     m_cssStyleSheetToInspectorStyleSheet.set(cssStyleSheet, inspectorStyleSheet);
     m_documentToInspectorStyleSheet.set(document, inspectorStyleSheet);
     return inspectorStyleSheet.get();
 }
 
-InspectorStyleSheet* InspectorCSSAgent::assertStyleSheetForId(ErrorString* errorString, const String& styleSheetId)
+InspectorStyleSheet* InspectorCSSAgent::assertStyleSheetForId(ErrorString& errorString, const String& styleSheetId)
 {
     IdToInspectorStyleSheet::iterator it = m_idToInspectorStyleSheet.find(styleSheetId);
     if (it == m_idToInspectorStyleSheet.end()) {
-        *errorString = "No style sheet with given id found";
+        errorString = ASCIILiteral("No style sheet with given id found");
         return nullptr;
     }
     return it->value.get();
 }
 
-Inspector::TypeBuilder::CSS::StyleSheetOrigin::Enum InspectorCSSAgent::detectOrigin(CSSStyleSheet* pageStyleSheet, Document* ownerDocument)
+Inspector::Protocol::CSS::StyleSheetOrigin InspectorCSSAgent::detectOrigin(CSSStyleSheet* pageStyleSheet, Document* ownerDocument)
 {
-    Inspector::TypeBuilder::CSS::StyleSheetOrigin::Enum origin = Inspector::TypeBuilder::CSS::StyleSheetOrigin::Regular;
+    auto origin = Inspector::Protocol::CSS::StyleSheetOrigin::Regular;
     if (pageStyleSheet && !pageStyleSheet->ownerNode() && pageStyleSheet->href().isEmpty())
-        origin = Inspector::TypeBuilder::CSS::StyleSheetOrigin::UserAgent;
+        origin = Inspector::Protocol::CSS::StyleSheetOrigin::UserAgent;
     else if (pageStyleSheet && pageStyleSheet->ownerNode() && pageStyleSheet->ownerNode()->nodeName() == "#document")
-        origin = Inspector::TypeBuilder::CSS::StyleSheetOrigin::User;
+        origin = Inspector::Protocol::CSS::StyleSheetOrigin::User;
     else {
         InspectorStyleSheet* viaInspectorStyleSheetForOwner = viaInspectorStyleSheet(ownerDocument, false);
         if (viaInspectorStyleSheetForOwner && pageStyleSheet == viaInspectorStyleSheetForOwner->pageStyleSheet())
-            origin = Inspector::TypeBuilder::CSS::StyleSheetOrigin::Inspector;
+            origin = Inspector::Protocol::CSS::StyleSheetOrigin::Inspector;
     }
     return origin;
 }
 
-PassRefPtr<Inspector::TypeBuilder::CSS::CSSRule> InspectorCSSAgent::buildObjectForRule(StyleRule* styleRule, StyleResolver& styleResolver)
+RefPtr<Inspector::Protocol::CSS::CSSRule> InspectorCSSAgent::buildObjectForRule(StyleRule* styleRule, StyleResolver& styleResolver, Element* element)
 {
     if (!styleRule)
         return nullptr;
@@ -1114,97 +911,86 @@ PassRefPtr<Inspector::TypeBuilder::CSS::CSSRule> InspectorCSSAgent::buildObjectF
     if (!cssomWrapper)
         return nullptr;
     InspectorStyleSheet* inspectorStyleSheet = bindStyleSheet(cssomWrapper->parentStyleSheet());
-    return inspectorStyleSheet ? inspectorStyleSheet->buildObjectForRule(cssomWrapper) : nullptr;
+    return inspectorStyleSheet ? inspectorStyleSheet->buildObjectForRule(cssomWrapper, element) : nullptr;
 }
 
-PassRefPtr<Inspector::TypeBuilder::CSS::CSSRule> InspectorCSSAgent::buildObjectForRule(CSSStyleRule* rule)
+RefPtr<Inspector::Protocol::CSS::CSSRule> InspectorCSSAgent::buildObjectForRule(CSSStyleRule* rule)
 {
     if (!rule)
         return nullptr;
 
     ASSERT(rule->parentStyleSheet());
     InspectorStyleSheet* inspectorStyleSheet = bindStyleSheet(rule->parentStyleSheet());
-    return inspectorStyleSheet ? inspectorStyleSheet->buildObjectForRule(rule) : nullptr;
+    return inspectorStyleSheet ? inspectorStyleSheet->buildObjectForRule(rule, nullptr) : nullptr;
 }
 
-PassRefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSRule>> InspectorCSSAgent::buildArrayForRuleList(CSSRuleList* ruleList)
+RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::RuleMatch>> InspectorCSSAgent::buildArrayForMatchedRuleList(const Vector<RefPtr<StyleRule>>& matchedRules, StyleResolver& styleResolver, Element* element)
 {
-    RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSRule>> result = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSRule>::create();
-    if (!ruleList)
-        return result.release();
+    auto result = Inspector::Protocol::Array<Inspector::Protocol::CSS::RuleMatch>::create();
 
-    for (unsigned i = 0, size = ruleList->length(); i < size; ++i) {
-        CSSStyleRule* rule = asCSSStyleRule(ruleList->item(i));
-        RefPtr<Inspector::TypeBuilder::CSS::CSSRule> ruleObject = buildObjectForRule(rule);
+    SelectorChecker::CheckingContext context(SelectorChecker::Mode::CollectingRules);
+    SelectorChecker selectorChecker(element->document());
+
+    for (auto& matchedRule : matchedRules) {
+        RefPtr<Inspector::Protocol::CSS::CSSRule> ruleObject = buildObjectForRule(matchedRule.get(), styleResolver, element);
         if (!ruleObject)
             continue;
-        result->addItem(ruleObject);
-    }
-    return result.release();
-}
 
-PassRefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::RuleMatch>> InspectorCSSAgent::buildArrayForMatchedRuleList(const Vector<RefPtr<StyleRuleBase>>& matchedRules, StyleResolver& styleResolver, Element* element)
-{
-    RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::RuleMatch>> result = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::RuleMatch>::create();
-
-    for (unsigned i = 0; i < matchedRules.size(); ++i) {
-        if (!matchedRules[i]->isStyleRule())
-            continue;
-        StyleRule* matchedStyleRule = static_cast<StyleRule*>(matchedRules[i].get());
-        RefPtr<Inspector::TypeBuilder::CSS::CSSRule> ruleObject = buildObjectForRule(matchedStyleRule, styleResolver);
-        if (!ruleObject)
-            continue;
-        RefPtr<Inspector::TypeBuilder::Array<int>> matchingSelectors = Inspector::TypeBuilder::Array<int>::create();
-        const CSSSelectorList& selectorList = matchedStyleRule->selectorList();
+        auto matchingSelectors = Inspector::Protocol::Array<int>::create();
+        const CSSSelectorList& selectorList = matchedRule->selectorList();
         long index = 0;
         for (const CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector)) {
-            bool matched = element->webkitMatchesSelector(selector->selectorText(), IGNORE_EXCEPTION);
+            unsigned ignoredSpecificity;
+            bool matched = selectorChecker.match(selector, element, context, ignoredSpecificity);
             if (matched)
                 matchingSelectors->addItem(index);
             ++index;
         }
-        RefPtr<Inspector::TypeBuilder::CSS::RuleMatch> match = Inspector::TypeBuilder::CSS::RuleMatch::create()
-            .setRule(ruleObject)
-            .setMatchingSelectors(matchingSelectors);
-        result->addItem(match);
+
+        auto match = Inspector::Protocol::CSS::RuleMatch::create()
+            .setRule(WTF::move(ruleObject))
+            .setMatchingSelectors(WTF::move(matchingSelectors))
+            .release();
+        result->addItem(WTF::move(match));
     }
 
-    return result.release();
+    return WTF::move(result);
 }
 
-PassRefPtr<Inspector::TypeBuilder::CSS::CSSStyle> InspectorCSSAgent::buildObjectForAttributesStyle(Element* element)
+RefPtr<Inspector::Protocol::CSS::CSSStyle> InspectorCSSAgent::buildObjectForAttributesStyle(Element* element)
 {
-    if (!element->isStyledElement())
+    ASSERT(element);
+    if (!is<StyledElement>(*element))
         return nullptr;
 
     // FIXME: Ugliness below.
-    StyleProperties* attributeStyle = const_cast<StyleProperties*>(toStyledElement(element)->presentationAttributeStyle());
+    StyleProperties* attributeStyle = const_cast<StyleProperties*>(downcast<StyledElement>(element)->presentationAttributeStyle());
     if (!attributeStyle)
         return nullptr;
 
     ASSERT_WITH_SECURITY_IMPLICATION(attributeStyle->isMutable());
     MutableStyleProperties* mutableAttributeStyle = static_cast<MutableStyleProperties*>(attributeStyle);
 
-    RefPtr<InspectorStyle> inspectorStyle = InspectorStyle::create(InspectorCSSId(), mutableAttributeStyle->ensureCSSStyleDeclaration(), nullptr);
+    Ref<InspectorStyle> inspectorStyle = InspectorStyle::create(InspectorCSSId(), mutableAttributeStyle->ensureCSSStyleDeclaration(), nullptr);
     return inspectorStyle->buildObjectForStyle();
 }
 
-PassRefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::Region>> InspectorCSSAgent::buildArrayForRegions(ErrorString* errorString, PassRefPtr<NodeList> regionList, int documentNodeId)
+RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::Region>> InspectorCSSAgent::buildArrayForRegions(ErrorString& errorString, RefPtr<NodeList>&& regionList, int documentNodeId)
 {
-    RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::Region>> regions = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::Region>::create();
+    auto regions = Inspector::Protocol::Array<Inspector::Protocol::CSS::Region>::create();
 
     for (unsigned i = 0; i < regionList->length(); ++i) {
-        Inspector::TypeBuilder::CSS::Region::RegionOverset::Enum regionOverset;
+        Inspector::Protocol::CSS::Region::RegionOverset regionOverset;
 
-        switch (toElement(regionList->item(i))->renderRegion()->regionOversetState()) {
+        switch (downcast<Element>(regionList->item(i))->regionOversetState()) {
         case RegionFit:
-            regionOverset = Inspector::TypeBuilder::CSS::Region::RegionOverset::Fit;
+            regionOverset = Inspector::Protocol::CSS::Region::RegionOverset::Fit;
             break;
         case RegionEmpty:
-            regionOverset = Inspector::TypeBuilder::CSS::Region::RegionOverset::Empty;
+            regionOverset = Inspector::Protocol::CSS::Region::RegionOverset::Empty;
             break;
         case RegionOverset:
-            regionOverset = Inspector::TypeBuilder::CSS::Region::RegionOverset::Overset;
+            regionOverset = Inspector::Protocol::CSS::Region::RegionOverset::Overset;
             break;
         case RegionUndefined:
             continue;
@@ -1213,35 +999,35 @@ PassRefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::Region>> I
             continue;
         }
 
-        RefPtr<Inspector::TypeBuilder::CSS::Region> region = Inspector::TypeBuilder::CSS::Region::create()
+        auto region = Inspector::Protocol::CSS::Region::create()
             .setRegionOverset(regionOverset)
             // documentNodeId was previously asserted
-            .setNodeId(m_domAgent->pushNodeToFrontend(errorString, documentNodeId, regionList->item(i)));
+            .setNodeId(m_domAgent->pushNodeToFrontend(errorString, documentNodeId, regionList->item(i)))
+            .release();
 
-        regions->addItem(region);
+        regions->addItem(WTF::move(region));
     }
 
-    return regions.release();
+    return WTF::move(regions);
 }
 
-PassRefPtr<Inspector::TypeBuilder::CSS::NamedFlow> InspectorCSSAgent::buildObjectForNamedFlow(ErrorString* errorString, WebKitNamedFlow* webkitNamedFlow, int documentNodeId)
+RefPtr<Inspector::Protocol::CSS::NamedFlow> InspectorCSSAgent::buildObjectForNamedFlow(ErrorString& errorString, WebKitNamedFlow* webkitNamedFlow, int documentNodeId)
 {
     RefPtr<NodeList> contentList = webkitNamedFlow->getContent();
-    RefPtr<Inspector::TypeBuilder::Array<int>> content = Inspector::TypeBuilder::Array<int>::create();
+    auto content = Inspector::Protocol::Array<int>::create();
 
     for (unsigned i = 0; i < contentList->length(); ++i) {
         // documentNodeId was previously asserted
         content->addItem(m_domAgent->pushNodeToFrontend(errorString, documentNodeId, contentList->item(i)));
     }
 
-    RefPtr<Inspector::TypeBuilder::CSS::NamedFlow> namedFlow = Inspector::TypeBuilder::CSS::NamedFlow::create()
+    return Inspector::Protocol::CSS::NamedFlow::create()
         .setDocumentNodeId(documentNodeId)
         .setName(webkitNamedFlow->name().string())
         .setOverset(webkitNamedFlow->overset())
-        .setContent(content)
-        .setRegions(buildArrayForRegions(errorString, webkitNamedFlow->getRegions(), documentNodeId));
-
-    return namedFlow.release();
+        .setContent(WTF::move(content))
+        .setRegions(buildArrayForRegions(errorString, webkitNamedFlow->getRegions(), documentNodeId))
+        .release();
 }
 
 void InspectorCSSAgent::didRemoveDocument(Document* document)
@@ -1289,7 +1075,7 @@ void InspectorCSSAgent::resetPseudoStates()
 {
     HashSet<Document*> documentsToChange;
     for (NodeIdToForcedPseudoState::iterator it = m_nodeIdToForcedPseudoState.begin(), end = m_nodeIdToForcedPseudoState.end(); it != end; ++it) {
-        if (Element* element = toElement(m_domAgent->nodeForId(it->key)))
+        if (Element* element = downcast<Element>(m_domAgent->nodeForId(it->key)))
             documentsToChange.add(&element->document());
     }
 
@@ -1299,5 +1085,3 @@ void InspectorCSSAgent::resetPseudoStates()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

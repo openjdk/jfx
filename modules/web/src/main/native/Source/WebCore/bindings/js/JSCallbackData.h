@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -79,21 +79,12 @@ private:
 
 class DeleteCallbackDataTask : public ScriptExecutionContext::Task {
 public:
-    static PassOwnPtr<DeleteCallbackDataTask> create(JSCallbackData* data)
+    DeleteCallbackDataTask(JSCallbackData* data)
+        : ScriptExecutionContext::Task(ScriptExecutionContext::Task::CleanupTask, [data] (ScriptExecutionContext&) {
+            delete data;
+        })
     {
-        return adoptPtr(new DeleteCallbackDataTask(data));
     }
-
-    virtual void performTask(ScriptExecutionContext*)
-    {
-        delete m_data;
-    }
-    virtual bool isCleanupTask() const { return true; }
-private:
-
-    DeleteCallbackDataTask(JSCallbackData* data) : m_data(data) {}
-
-    JSCallbackData* m_data;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,23 +26,22 @@
 #ifndef DFGCommonData_h
 #define DFGCommonData_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "CodeBlockJettisoningWatchpoint.h"
 #include "DFGJumpReplacement.h"
 #include "InlineCallFrameSet.h"
 #include "JSCell.h"
-#include "ProfiledCodeBlockJettisoningWatchpoint.h"
 #include "ProfilerCompilation.h"
 #include "SymbolTable.h"
+#include <wtf/Bag.h>
 #include <wtf/Noncopyable.h>
 
 namespace JSC {
 
 class CodeBlock;
 class Identifier;
+class TrackedReferences;
 
 namespace DFG {
 
@@ -73,13 +72,12 @@ class CommonData {
 public:
     CommonData()
         : isStillValid(true)
-        , machineCaptureStart(std::numeric_limits<int>::max())
         , frameRegisterCount(std::numeric_limits<unsigned>::max())
         , requiredRegisterCountForExit(std::numeric_limits<unsigned>::max())
     { }
 
     void notifyCompilingStructureTransition(Plan&, CodeBlock*, Node*);
-    unsigned addCodeOrigin(CodeOrigin codeOrigin);
+    unsigned addCodeOrigin(CodeOrigin);
 
     void shrinkToFit();
 
@@ -90,14 +88,16 @@ public:
         return std::max(frameRegisterCount, requiredRegisterCountForExit);
     }
 
-    OwnPtr<InlineCallFrameSet> inlineCallFrames;
+    void validateReferences(const TrackedReferences&);
+
+    RefPtr<InlineCallFrameSet> inlineCallFrames;
     Vector<CodeOrigin, 0, UnsafeVectorOverflow> codeOrigins;
 
     Vector<Identifier> dfgIdentifiers;
     Vector<WeakReferenceTransition> transitions;
     Vector<WriteBarrier<JSCell>> weakReferences;
-    SegmentedVector<CodeBlockJettisoningWatchpoint, 1, 0> watchpoints;
-    SegmentedVector<ProfiledCodeBlockJettisoningWatchpoint, 1, 0> profiledWatchpoints;
+    Vector<WriteBarrier<Structure>> weakStructureReferences;
+    Bag<CodeBlockJettisoningWatchpoint> watchpoints;
     Vector<JumpReplacement> jumpReplacements;
 
     RefPtr<Profiler::Compilation> compilation;
@@ -105,8 +105,9 @@ public:
     bool allTransitionsHaveBeenMarked; // Initialized and used on every GC.
     bool isStillValid;
 
-    int machineCaptureStart;
-    std::unique_ptr<SlowArgument[]> slowArguments;
+#if USE(JSVALUE32_64)
+    std::unique_ptr<Bag<double>> doubleConstants;
+#endif
 
     unsigned frameRegisterCount;
     unsigned requiredRegisterCountForExit;

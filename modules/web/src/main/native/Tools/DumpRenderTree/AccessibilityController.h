@@ -64,6 +64,10 @@ public:
     bool addNotificationListener(JSObjectRef functionCallback);
     void removeNotificationListener();
 
+    // Enhanced accessibility.
+    void enableEnhancedAccessibility(bool);
+    bool enhancedAccessibilityEnabled();
+
     JSRetainPtr<JSStringRef> platformName() const;
 
 #if PLATFORM(WIN)
@@ -89,7 +93,7 @@ private:
     HashMap<PlatformUIElement, JSObjectRef> m_notificationListeners;
 #endif
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || PLATFORM(IOS)
     RetainPtr<NotificationHandler> m_globalNotificationHandler;
 #endif
 

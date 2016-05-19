@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,7 +37,6 @@
 #include <windows.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -75,7 +74,7 @@ public:
 
     void releaseFrontend();
 
-    WebInspectorFrontendClient* frontendClient() { return m_frontendClient; }
+    WebInspectorFrontendClient* frontendClient() { return m_frontendClient.get(); }
 
     void updateHighlight();
 
@@ -85,11 +84,11 @@ private:
 
     WebView* m_inspectedWebView;
     WebCore::Page* m_frontendPage;
-    WebInspectorFrontendClient* m_frontendClient;
-    OLE_HANDLE m_inspectedWebViewHandle;
-    OLE_HANDLE m_frontendHandle;
+    std::unique_ptr<WebInspectorFrontendClient> m_frontendClient;
+    HWND m_inspectedWebViewHandle;
+    HWND m_frontendHandle;
 
-    OwnPtr<WebNodeHighlight> m_highlight;
+    std::unique_ptr<WebNodeHighlight> m_highlight;
 };
 
 class WebInspectorFrontendClient : public WebCore::InspectorFrontendClientLocal, WebCore::WindowMessageListener {

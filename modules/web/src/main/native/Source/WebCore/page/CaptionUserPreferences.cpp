@@ -24,15 +24,19 @@
  */
 
 #include "config.h"
+#include "CaptionUserPreferences.h"
 
 #if ENABLE(VIDEO_TRACK)
 
-#include "CaptionUserPreferences.h"
+#include "AudioTrackList.h"
 #include "DOMWrapperWorld.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "Settings.h"
 #include "TextTrackList.h"
+#include "UserContentController.h"
+#include "UserContentTypes.h"
+#include "UserStyleSheet.h"
 #include "UserStyleSheetTypes.h"
 
 namespace WebCore {
@@ -40,7 +44,7 @@ namespace WebCore {
 CaptionUserPreferences::CaptionUserPreferences(PageGroup& group)
     : m_pageGroup(group)
     , m_displayMode(ForcedOnly)
-    , m_timer(this, &CaptionUserPreferences::timerFired)
+    , m_timer(*this, &CaptionUserPreferences::timerFired)
     , m_testingMode(false)
     , m_havePreferences(false)
 {
@@ -50,7 +54,7 @@ CaptionUserPreferences::~CaptionUserPreferences()
 {
 }
 
-void CaptionUserPreferences::timerFired(Timer<CaptionUserPreferences>&)
+void CaptionUserPreferences::timerFired()
 {
     captionPreferencesChanged();
 }
@@ -154,6 +158,20 @@ void CaptionUserPreferences::setPreferredLanguage(const String& language)
     notify();
 }
 
+void CaptionUserPreferences::setPreferredAudioCharacteristic(const String& characteristic)
+{
+    m_userPreferredAudioCharacteristic = characteristic;
+    notify();
+}
+
+Vector<String> CaptionUserPreferences::preferredAudioCharacteristics() const
+{
+    Vector<String> characteristics;
+    if (!m_userPreferredAudioCharacteristic.isEmpty())
+        characteristics.append(m_userPreferredAudioCharacteristic);
+    return characteristics;
+}
+
 static String trackDisplayName(TextTrack* track)
 {
     if (track == TextTrack::captionMenuOffItem())
@@ -196,22 +214,47 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTra
     return tracksForMenu;
 }
 
+static String trackDisplayName(AudioTrack* track)
+{
+    if (track->label().isEmpty() && track->language().isEmpty())
+        return audioTrackNoLabelText();
+    if (!track->label().isEmpty())
+        return track->label();
+    return track->language();
+}
+
+String CaptionUserPreferences::displayNameForTrack(AudioTrack* track) const
+{
+    return trackDisplayName(track);
+}
+
+Vector<RefPtr<AudioTrack>> CaptionUserPreferences::sortedTrackListForMenu(AudioTrackList* trackList)
+{
+    ASSERT(trackList);
+
+    Vector<RefPtr<AudioTrack>> tracksForMenu;
+
+    for (unsigned i = 0, length = trackList->length(); i < length; ++i) {
+        AudioTrack* track = trackList->item(i);
+        tracksForMenu.append(track);
+    }
+
+    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](const RefPtr<AudioTrack>& a, const RefPtr<AudioTrack>& b) {
+        return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
+    });
+
+    return tracksForMenu;
+}
+
 int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaElement*) const
 {
-    int trackScore = 0;
-
     if (track->kind() != TextTrack::captionsKeyword() && track->kind() != TextTrack::subtitlesKeyword())
-        return trackScore;
+        return 0;
 
     if (!userPrefersSubtitles() && !userPrefersCaptions())
-        return trackScore;
+        return 0;
 
-    if (track->kind() == TextTrack::subtitlesKeyword() && userPrefersSubtitles())
-        trackScore = 1;
-    else if (track->kind() == TextTrack::captionsKeyword() && userPrefersCaptions())
-        trackScore = 1;
-
-    return trackScore + textTrackLanguageSelectionScore(track, preferredLanguages());
+    return textTrackLanguageSelectionScore(track, preferredLanguages()) + 1;
 }
 
 int CaptionUserPreferences::textTrackLanguageSelectionScore(TextTrack* track, const Vector<String>& preferredLanguages) const
@@ -219,13 +262,15 @@ int CaptionUserPreferences::textTrackLanguageSelectionScore(TextTrack* track, co
     if (track->language().isEmpty())
         return 0;
 
-    size_t languageMatchIndex = indexOfBestMatchingLanguageInList(track->language(), preferredLanguages);
+    bool exactMatch;
+    size_t languageMatchIndex = indexOfBestMatchingLanguageInList(track->language(), preferredLanguages, exactMatch);
     if (languageMatchIndex >= preferredLanguages.size())
         return 0;
 
     // Matching a track language is more important than matching track type, so this multiplier must be
     // greater than the maximum value returned by textTrackSelectionScore.
-    return (preferredLanguages.size() - languageMatchIndex) * 10;
+    int bonus = exactMatch ? 1 : 0;
+    return (preferredLanguages.size() + bonus - languageMatchIndex) * 10;
 }
 
 void CaptionUserPreferences::setCaptionsStyleSheetOverride(const String& override)
@@ -237,16 +282,24 @@ void CaptionUserPreferences::setCaptionsStyleSheetOverride(const String& overrid
 void CaptionUserPreferences::updateCaptionStyleSheetOveride()
 {
     // Identify our override style sheet with a unique URL - a new scheme and a UUID.
-    DEFINE_STATIC_LOCAL(URL, captionsStyleSheetURL, (ParsedURLString, "user-captions-override:01F6AF12-C3B0-4F70-AF5E-A3E00234DC23"));
+    DEPRECATED_DEFINE_STATIC_LOCAL(URL, captionsStyleSheetURL, (ParsedURLString, "user-captions-override:01F6AF12-C3B0-4F70-AF5E-A3E00234DC23"));
 
-    m_pageGroup.removeUserStyleSheetFromWorld(mainThreadNormalWorld(), captionsStyleSheetURL);
+    auto& pages = m_pageGroup.pages();
+    for (auto& page : pages) {
+        if (auto* pageUserContentController = page->userContentController())
+            pageUserContentController->removeUserStyleSheet(mainThreadNormalWorld(), captionsStyleSheetURL);
+    }
 
     String captionsOverrideStyleSheet = captionsStyleSheetOverride();
     if (captionsOverrideStyleSheet.isEmpty())
         return;
 
-    m_pageGroup.addUserStyleSheetToWorld(mainThreadNormalWorld(), captionsOverrideStyleSheet, captionsStyleSheetURL, Vector<String>(),
-        Vector<String>(), InjectInAllFrames, UserStyleAuthorLevel, InjectInExistingDocuments);
+    for (auto& page : pages) {
+        if (auto* pageUserContentController = page->userContentController()) {
+            auto userStyleSheet = std::make_unique<UserStyleSheet>(captionsOverrideStyleSheet, captionsStyleSheetURL, Vector<String>(), Vector<String>(), InjectInAllFrames, UserStyleAuthorLevel);
+            pageUserContentController->addUserStyleSheet(mainThreadNormalWorld(), WTF::move(userStyleSheet), InjectInExistingDocuments);
+        }
+    }
 }
 
 String CaptionUserPreferences::primaryAudioTrackLanguageOverride() const

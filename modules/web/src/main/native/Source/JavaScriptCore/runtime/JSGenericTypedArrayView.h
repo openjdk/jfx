@@ -87,6 +87,8 @@ template<typename Adaptor>
 class JSGenericTypedArrayView : public JSArrayBufferView {
 public:
     typedef JSArrayBufferView Base;
+    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetPropertyNames | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero;
+
     static const unsigned elementSize = sizeof(typename Adaptor::Type);
 
 protected:
@@ -154,11 +156,15 @@ public:
         setIndexQuicklyToNativeValue(i, toNativeFromValue<Adaptor>(value));
     }
 
-    bool setIndexQuickly(ExecState* exec, unsigned i, JSValue jsValue)
+    bool setIndex(ExecState* exec, unsigned i, JSValue jsValue)
     {
         typename Adaptor::Type value = toNativeFromValue<Adaptor>(exec, jsValue);
         if (exec->hadException())
             return false;
+
+        if (i >= m_length)
+            return false;
+
         setIndexQuicklyToNativeValue(i, value);
         return true;
     }
@@ -186,7 +192,7 @@ public:
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info(), NonArray);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(typeForTypedArrayType(Adaptor::typeValue), StructureFlags), info(), NonArray);
     }
 
     static const ClassInfo s_info; // This is never accessed directly, since that would break linkage on some compilers.
@@ -224,8 +230,6 @@ public:
 
 protected:
     friend struct TypedArrayClassInfos;
-
-    static const unsigned StructureFlags = OverridesGetPropertyNames | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | Base::StructureFlags;
 
     static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);

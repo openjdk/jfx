@@ -29,8 +29,9 @@
 #define RemoteInspectorXPCConnection_h
 
 #import <dispatch/dispatch.h>
+#import <mutex>
 #import <wtf/ThreadSafeRefCounted.h>
-#import <xpc/xpc.h>
+#import <wtf/spi/darwin/XPCSPI.h>
 
 OBJC_CLASS NSDictionary;
 OBJC_CLASS NSString;
@@ -51,11 +52,17 @@ public:
     virtual ~RemoteInspectorXPCConnection();
 
     void close();
+    void closeFromMessage();
     void sendMessage(NSString *messageName, NSDictionary *userInfo);
 
 private:
     NSDictionary *deserializeMessage(xpc_object_t);
     void handleEvent(xpc_object_t);
+    void closeOnQueue();
+
+    // We handle XPC events on the queue, but a client may call close() on any queue.
+    // We make sure that m_client is thread safe and immediately cleared in close().
+    std::mutex m_mutex;
 
     xpc_connection_t m_connection;
     dispatch_queue_t m_queue;

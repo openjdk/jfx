@@ -47,11 +47,6 @@ static const int monthDefaultStep = 1;
 static const int monthDefaultStepBase = 0;
 static const int monthStepScaleFactor = 1;
 
-void MonthInputType::attach()
-{
-    observeFeatureIfVisible(FeatureObserver::InputTypeMonth);
-}
-
 const AtomicString& MonthInputType::formControlType() const
 {
     return InputTypeNames::month();
@@ -95,7 +90,7 @@ Decimal MonthInputType::defaultValueForStepUp() const
 
 StepRange MonthInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
-    DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (monthDefaultStep, monthDefaultStepBase, monthStepScaleFactor, StepRange::ParsedStepValueShouldBeInteger));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (monthDefaultStep, monthDefaultStepBase, monthStepScaleFactor, StepRange::ParsedStepValueShouldBeInteger));
 
     const Decimal stepBase = parseToNumber(element().fastGetAttribute(minAttr), Decimal::fromDouble(monthDefaultStepBase));
     const Decimal minimum = parseToNumber(element().fastGetAttribute(minAttr), Decimal::fromDouble(DateComponents::minimumMonth()));

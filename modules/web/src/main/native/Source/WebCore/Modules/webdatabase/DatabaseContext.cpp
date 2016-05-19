@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,12 +28,9 @@
 #include "config.h"
 #include "DatabaseContext.h"
 
-#if ENABLE(SQL_DATABASE)
-
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Database.h"
-#include "DatabaseBackendContext.h"
 #include "DatabaseManager.h"
 #include "DatabaseTask.h"
 #include "DatabaseThread.h"
@@ -104,7 +101,7 @@ DatabaseContext::DatabaseContext(ScriptExecutionContext* context)
     , m_hasRequestedTermination(false)
 #if PLATFORM(IOS)
     , m_paused(false)
-#endif //PLATFORM(IOS)
+#endif
 {
     // ActiveDOMObject expects this to be called to set internal flags.
     suspendIfNeeded();
@@ -113,9 +110,10 @@ DatabaseContext::DatabaseContext(ScriptExecutionContext* context)
 
     // For debug accounting only. We must do this before we register the
     // instance. The assertions assume this.
-    DatabaseManager::manager().didConstructDatabaseContext();
+    auto& databaseManager = DatabaseManager::singleton();
+    databaseManager.didConstructDatabaseContext();
 
-    DatabaseManager::manager().registerDatabaseContext(this);
+    databaseManager.registerDatabaseContext(this);
 }
 
 DatabaseContext::~DatabaseContext()
@@ -125,26 +123,18 @@ DatabaseContext::~DatabaseContext()
 
     // For debug accounting only. We must call this last. The assertions assume
     // this.
-    DatabaseManager::manager().didDestructDatabaseContext();
+    DatabaseManager::singleton().didDestructDatabaseContext();
 }
 
-// This is called if the associated ScriptExecutionContext is destructing while
+// This is called if the associated ScriptExecutionContext is destroyed while
 // we're still associated with it. That's our cue to disassociate and shutdown.
-// To do this, we stop the database and let everything shutdown naturally
-// because the database closing process may still make use of this context.
+// To do this, we stop the database and let everything shut down naturally
+// because the database closing process might still make use of this context.
 // It is not safe to just delete the context here.
 void DatabaseContext::contextDestroyed()
 {
     stopDatabases();
-
-    // Normally, willDestroyActiveDOMObject() is called in ~ActiveDOMObject().
-    // However, we're here because the destructor hasn't been called, and the
-    // ScriptExecutionContext we're associated with is about to be destructed.
-    // So, go ahead an unregister self from the ActiveDOMObject list, and
-    // set m_scriptExecutionContext to 0 so that ~ActiveDOMObject() doesn't
-    // try to do so again.
-    m_scriptExecutionContext->willDestroyActiveDOMObject(this);
-    m_scriptExecutionContext = 0;
+    ActiveDOMObject::contextDestroyed();
 }
 
 // stop() is from stopActiveDOMObjects() which indicates that the owner Frame
@@ -155,10 +145,12 @@ void DatabaseContext::stop()
     stopDatabases();
 }
 
-PassRefPtr<DatabaseBackendContext> DatabaseContext::backend()
+bool DatabaseContext::canSuspendForPageCache() const
 {
-    DatabaseBackendContext* backend = static_cast<DatabaseBackendContext*>(this);
-    return backend;
+    if (!hasOpenDatabases() || !m_databaseThread)
+        return true;
+
+    return !m_databaseThread->hasPendingDatabaseActivity();
 }
 
 DatabaseThread* DatabaseContext::databaseThread()
@@ -166,7 +158,7 @@ DatabaseThread* DatabaseContext::databaseThread()
     if (!m_databaseThread && !m_hasOpenDatabases) {
 #if PLATFORM(IOS)
         MutexLocker lock(m_databaseThreadMutex);
-#endif //PLATFORM(IOS)
+#endif
         // It's OK to ask for the m_databaseThread after we've requested
         // termination because we're still using it to execute the closing
         // of the database. However, it is NOT OK to create a new thread
@@ -177,11 +169,12 @@ DatabaseThread* DatabaseContext::databaseThread()
         // because in that case we already had a database thread and terminated it and should not create another.
         m_databaseThread = DatabaseThread::create();
         if (!m_databaseThread->start())
-            m_databaseThread = 0;
+            m_databaseThread = nullptr;
+
 #if PLATFORM(IOS)
         if (m_databaseThread)
             m_databaseThread->setPaused(m_paused);
-#endif //PLATFORM(IOS)
+#endif
     }
 
     return m_databaseThread.get();
@@ -198,10 +191,10 @@ void DatabaseContext::setPaused(bool paused)
 }
 #endif // PLATFORM(IOS)
 
-bool DatabaseContext::stopDatabases(DatabaseTaskSynchronizer* cleanupSync)
+bool DatabaseContext::stopDatabases(DatabaseTaskSynchronizer* synchronizer)
 {
     if (m_isRegistered) {
-        DatabaseManager::manager().unregisterDatabaseContext(this);
+        DatabaseManager::singleton().unregisterDatabaseContext(this);
         m_isRegistered = false;
     }
 
@@ -216,7 +209,7 @@ bool DatabaseContext::stopDatabases(DatabaseTaskSynchronizer* cleanupSync)
     // DatabaseThread.
 
     if (m_databaseThread && !m_hasRequestedTermination) {
-        m_databaseThread->requestTermination(cleanupSync);
+        m_databaseThread->requestTermination(synchronizer);
         m_hasRequestedTermination = true;
         return true;
     }
@@ -225,9 +218,9 @@ bool DatabaseContext::stopDatabases(DatabaseTaskSynchronizer* cleanupSync)
 
 bool DatabaseContext::allowDatabaseAccess() const
 {
-    if (m_scriptExecutionContext->isDocument()) {
-        Document* document = toDocument(m_scriptExecutionContext);
-        if (!document->page() || (document->page()->settings().privateBrowsingEnabled() && !SchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(document->securityOrigin()->protocol())))
+    if (is<Document>(*m_scriptExecutionContext)) {
+        Document& document = downcast<Document>(*m_scriptExecutionContext);
+        if (!document.page() || (document.page()->usesEphemeralSession() && !SchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(document.securityOrigin()->protocol())))
             return false;
         return true;
     }
@@ -238,18 +231,26 @@ bool DatabaseContext::allowDatabaseAccess() const
 
 void DatabaseContext::databaseExceededQuota(const String& name, DatabaseDetails details)
 {
-    if (m_scriptExecutionContext->isDocument()) {
-        Document* document = toDocument(m_scriptExecutionContext);
-        if (Page* page = document->page())
-            page->chrome().client().exceededDatabaseQuota(document->frame(), name, details);
+    if (is<Document>(*m_scriptExecutionContext)) {
+        Document& document = downcast<Document>(*m_scriptExecutionContext);
+        if (Page* page = document.page())
+            page->chrome().client().exceededDatabaseQuota(document.frame(), name, details);
         return;
     }
     ASSERT(m_scriptExecutionContext->isWorkerGlobalScope());
     // FIXME: This needs a real implementation; this is a temporary solution for testing.
     const unsigned long long defaultQuota = 5 * 1024 * 1024;
-    DatabaseManager::manager().setQuota(m_scriptExecutionContext->securityOrigin(), defaultQuota);
+    DatabaseManager::singleton().setQuota(m_scriptExecutionContext->securityOrigin(), defaultQuota);
+}
+
+SecurityOrigin* DatabaseContext::securityOrigin() const
+{
+    return m_scriptExecutionContext->securityOrigin();
+}
+
+bool DatabaseContext::isContextThread() const
+{
+    return m_scriptExecutionContext->isContextThread();
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)

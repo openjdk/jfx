@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,6 +28,7 @@
 #include "CrossOriginPreflightResultCache.h"
 
 #include "CrossOriginAccessControl.h"
+#include "HTTPHeaderNames.h"
 #include "ResourceResponse.h"
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
@@ -92,19 +93,19 @@ static bool parseAccessControlAllowList(const String& string, HashSet<String, Ha
 bool CrossOriginPreflightResultCacheItem::parse(const ResourceResponse& response, String& errorDescription)
 {
     m_methods.clear();
-    if (!parseAccessControlAllowList(response.httpHeaderField("Access-Control-Allow-Methods"), m_methods)) {
+    if (!parseAccessControlAllowList(response.httpHeaderField(HTTPHeaderName::AccessControlAllowMethods), m_methods)) {
         errorDescription = "Cannot parse Access-Control-Allow-Methods response header field.";
         return false;
     }
 
     m_headers.clear();
-    if (!parseAccessControlAllowList(response.httpHeaderField("Access-Control-Allow-Headers"), m_headers)) {
+    if (!parseAccessControlAllowList(response.httpHeaderField(HTTPHeaderName::AccessControlAllowHeaders), m_headers)) {
         errorDescription = "Cannot parse Access-Control-Allow-Headers response header field.";
         return false;
     }
 
     std::chrono::seconds expiryDelta;
-    if (parseAccessControlMaxAge(response.httpHeaderField("Access-Control-Max-Age"), expiryDelta)) {
+    if (parseAccessControlMaxAge(response.httpHeaderField(HTTPHeaderName::AccessControlMaxAge), expiryDelta)) {
         if (expiryDelta > maxPreflightCacheTimeout)
             expiryDelta = maxPreflightCacheTimeout;
     } else
@@ -126,8 +127,10 @@ bool CrossOriginPreflightResultCacheItem::allowsCrossOriginMethod(const String& 
 bool CrossOriginPreflightResultCacheItem::allowsCrossOriginHeaders(const HTTPHeaderMap& requestHeaders, String& errorDescription) const
 {
     for (const auto& header : requestHeaders) {
-        if (!m_headers.contains(header.key) && !isOnAccessControlSimpleRequestHeaderWhitelist(header.key, header.value)) {
-            errorDescription = "Request header field " + header.key.string() + " is not allowed by Access-Control-Allow-Headers.";
+        if (header.keyAsHTTPHeaderName && isOnAccessControlSimpleRequestHeaderWhitelist(header.keyAsHTTPHeaderName.value(), header.value))
+            continue;
+        if (!m_headers.contains(header.key)) {
+            errorDescription = "Request header field " + header.key + " is not allowed by Access-Control-Allow-Headers.";
             return false;
         }
     }
@@ -148,7 +151,7 @@ bool CrossOriginPreflightResultCacheItem::allowsRequest(StoredCredentials includ
     return true;
 }
 
-CrossOriginPreflightResultCache& CrossOriginPreflightResultCache::shared()
+CrossOriginPreflightResultCache& CrossOriginPreflightResultCache::singleton()
 {
     ASSERT(isMainThread());
 
@@ -159,7 +162,7 @@ CrossOriginPreflightResultCache& CrossOriginPreflightResultCache::shared()
 void CrossOriginPreflightResultCache::appendEntry(const String& origin, const URL& url, std::unique_ptr<CrossOriginPreflightResultCacheItem> preflightResult)
 {
     ASSERT(isMainThread());
-    m_preflightHashMap.set(std::make_pair(origin, url), std::move(preflightResult));
+    m_preflightHashMap.set(std::make_pair(origin, url), WTF::move(preflightResult));
 }
 
 bool CrossOriginPreflightResultCache::canSkipPreflight(const String& origin, const URL& url, StoredCredentials includeCredentials, const String& method, const HTTPHeaderMap& requestHeaders)

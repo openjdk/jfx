@@ -27,10 +27,13 @@
 #ifndef CurlCacheEntry_h
 #define CurlCacheEntry_h
 
+#include "FileSystem.h"
 #include "HTTPHeaderMap.h"
 #include "ResourceHandle.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include <wtf/HashMap.h>
+#include <wtf/ListHashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -40,40 +43,58 @@ namespace WebCore {
 class CurlCacheEntry {
 
 public:
-    CurlCacheEntry(const String& url, const String& cacheDir);
+    CurlCacheEntry(const String& url, ResourceHandle* job, const String& cacheDir);
     ~CurlCacheEntry();
 
     bool isCached();
+    bool isLoading() const;
     size_t entrySize();
     HTTPHeaderMap& requestHeaders() { return m_requestHeaders; }
 
     bool saveCachedData(const char* data, size_t);
     bool readCachedData(ResourceHandle*);
 
-    bool saveResponseHeaders(ResourceResponse&);
+    bool saveResponseHeaders(const ResourceResponse&);
     void setResponseFromCachedHeaders(ResourceResponse&);
 
     void invalidate();
     void didFail();
     void didFinishLoading();
 
-    bool parseResponseHeaders(ResourceResponse&);
+    bool parseResponseHeaders(const ResourceResponse&);
+
+    void setIsLoading(bool);
+
+    void addClient(ResourceHandle* job) { m_clients.add(job); }
+    void removeClient(ResourceHandle* job) { m_clients.remove(job); }
+    int hasClients() const { return m_clients.size() > 0; }
+
+    const ResourceHandle* getJob() const { return m_job; }
 
 private:
     String m_basename;
     String m_headerFilename;
     String m_contentFilename;
 
+    PlatformFileHandle m_contentFile;
+
     size_t m_entrySize;
     double m_expireDate;
     bool m_headerParsed;
+    bool m_isLoading;
+    ListHashSet<ResourceHandle*> m_clients;
 
     ResourceResponse m_cachedResponse;
     HTTPHeaderMap m_requestHeaders;
 
+    ResourceHandle* m_job;
+
     void generateBaseFilename(const CString& url);
     bool loadFileToBuffer(const String& filepath, Vector<char>& buffer);
     bool loadResponseHeaders();
+
+    bool openContentFile();
+    bool closeContentFile();
 };
 
 }

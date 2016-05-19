@@ -29,20 +29,19 @@
 #include "ActivateFonts.h"
 #include "InjectedBundlePage.h"
 #include "StringFunctions.h"
-#include <WebKit2/WKBundle.h>
-#include <WebKit2/WKBundlePage.h>
-#include <WebKit2/WKBundlePagePrivate.h>
-#include <WebKit2/WKBundlePrivate.h>
-#include <WebKit2/WKRetainPtr.h>
-#include <WebKit2/WebKit2_C.h>
-#include <wtf/PassOwnPtr.h>
+#include <WebKit/WKBundle.h>
+#include <WebKit/WKBundlePage.h>
+#include <WebKit/WKBundlePagePrivate.h>
+#include <WebKit/WKBundlePrivate.h>
+#include <WebKit/WKRetainPtr.h>
+#include <WebKit/WebKit2_C.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/Vector.h>
 
 namespace WTR {
 
-InjectedBundle& InjectedBundle::shared()
+InjectedBundle& InjectedBundle::singleton()
 {
     static InjectedBundle& shared = *new InjectedBundle;
     return shared;
@@ -101,23 +100,18 @@ void InjectedBundle::initialize(WKBundleRef bundle, WKTypeRef initializationUser
     platformInitialize(initializationUserData);
 
     activateFonts();
-    WKBundleActivateMacFontAscentHack(m_bundle);
 }
 
 void InjectedBundle::didCreatePage(WKBundlePageRef page)
 {
-    m_pages.append(adoptPtr(new InjectedBundlePage(page)));
+    m_pages.append(std::make_unique<InjectedBundlePage>(page));
 }
 
 void InjectedBundle::willDestroyPage(WKBundlePageRef page)
 {
-    size_t size = m_pages.size();
-    for (size_t i = 0; i < size; ++i) {
-        if (m_pages[i]->page() == page) {
-            m_pages.remove(i);
-            break;
-        }
-    }
+    m_pages.removeFirstMatching([page] (const std::unique_ptr<InjectedBundlePage>& current) {
+        return current->page() == page;
+    });
 }
 
 void InjectedBundle::didInitializePageGroup(WKBundlePageGroupRef pageGroup)
@@ -139,6 +133,13 @@ void InjectedBundle::resetLocalSettings()
 
 void InjectedBundle::didReceiveMessage(WKStringRef messageName, WKTypeRef messageBody)
 {
+    WKRetainPtr<WKStringRef> errorMessageName(AdoptWK, WKStringCreateWithUTF8CString("Error"));
+    WKRetainPtr<WKStringRef> errorMessageBody(AdoptWK, WKStringCreateWithUTF8CString("Unknown"));
+    WKBundlePostMessage(m_bundle, errorMessageName.get(), errorMessageBody.get());
+}
+
+void InjectedBundle::didReceiveMessageToPage(WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody)
+{
     if (WKStringIsEqualToUTF8CString(messageName, "BeginTest")) {
         ASSERT(messageBody);
         ASSERT(WKGetTypeID(messageBody) == WKDictionaryGetTypeID());
@@ -155,11 +156,13 @@ void InjectedBundle::didReceiveMessage(WKStringRef messageName, WKTypeRef messag
 
         WKRetainPtr<WKStringRef> ackMessageName(AdoptWK, WKStringCreateWithUTF8CString("Ack"));
         WKRetainPtr<WKStringRef> ackMessageBody(AdoptWK, WKStringCreateWithUTF8CString("BeginTest"));
-        WKBundlePostMessage(m_bundle, ackMessageName.get(), ackMessageBody.get());
+        WKBundlePagePostMessage(page, ackMessageName.get(), ackMessageBody.get());
 
         beginTesting(messageBodyDictionary);
         return;
-    } else if (WKStringIsEqualToUTF8CString(messageName, "Reset")) {
+    }
+
+    if (WKStringIsEqualToUTF8CString(messageName, "Reset")) {
         ASSERT(messageBody);
         ASSERT(WKGetTypeID(messageBody) == WKDictionaryGetTypeID());
         WKDictionaryRef messageBodyDictionary = static_cast<WKDictionaryRef>(messageBody);
@@ -170,48 +173,57 @@ void InjectedBundle::didReceiveMessage(WKStringRef messageName, WKTypeRef messag
         if (shouldGC)
             WKBundleGarbageCollectJavaScriptObjects(m_bundle);
 
+        WKRetainPtr<WKStringRef> allowedHostsKey(AdoptWK, WKStringCreateWithUTF8CString("AllowedHosts"));
+        WKTypeRef allowedHostsValue = WKDictionaryGetItemForKey(messageBodyDictionary, allowedHostsKey.get());
+        if (allowedHostsValue && WKGetTypeID(allowedHostsValue) == WKArrayGetTypeID()) {
+            WKArrayRef allowedHostsArray = static_cast<WKArrayRef>(allowedHostsValue);
+            for (size_t i = 0, size = WKArrayGetSize(allowedHostsArray); i < size; ++i) {
+                WKTypeRef item = WKArrayGetItemAtIndex(allowedHostsArray, i);
+                if (item && WKGetTypeID(item) == WKStringGetTypeID())
+                    m_allowedHosts.append(toWTFString(static_cast<WKStringRef>(item)));
+            }
+        }
+
         m_state = Idle;
         m_dumpPixels = false;
 
         resetLocalSettings();
         m_testRunner->removeAllWebNotificationPermissions();
 
-        page()->resetAfterTest();
+        InjectedBundle::page()->resetAfterTest();
 
         return;
     }
+
     if (WKStringIsEqualToUTF8CString(messageName, "CallAddChromeInputFieldCallback")) {
         m_testRunner->callAddChromeInputFieldCallback();
         return;
     }
+
     if (WKStringIsEqualToUTF8CString(messageName, "CallRemoveChromeInputFieldCallback")) {
         m_testRunner->callRemoveChromeInputFieldCallback();
         return;
     }
+
     if (WKStringIsEqualToUTF8CString(messageName, "CallFocusWebViewCallback")) {
         m_testRunner->callFocusWebViewCallback();
         return;
     }
+
     if (WKStringIsEqualToUTF8CString(messageName, "CallSetBackingScaleFactorCallback")) {
         m_testRunner->callSetBackingScaleFactorCallback();
         return;
     }
+
     if (WKStringIsEqualToUTF8CString(messageName, "WorkQueueProcessedCallback")) {
         if (!topLoadingFrame() && !m_testRunner->waitToDump())
-            page()->dump();
+            InjectedBundle::page()->dump();
         return;
     }
 
     WKRetainPtr<WKStringRef> errorMessageName(AdoptWK, WKStringCreateWithUTF8CString("Error"));
     WKRetainPtr<WKStringRef> errorMessageBody(AdoptWK, WKStringCreateWithUTF8CString("Unknown"));
-    WKBundlePostMessage(m_bundle, errorMessageName.get(), errorMessageBody.get());
-}
-
-void InjectedBundle::didReceiveMessageToPage(WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody)
-{
-    WKRetainPtr<WKStringRef> errorMessageName(AdoptWK, WKStringCreateWithUTF8CString("Error"));
-    WKRetainPtr<WKStringRef> errorMessageBody(AdoptWK, WKStringCreateWithUTF8CString("Unknown"));
-    WKBundlePostMessage(m_bundle, errorMessageName.get(), errorMessageBody.get());
+    WKBundlePagePostMessage(page, errorMessageName.get(), errorMessageBody.get());
 }
 
 bool InjectedBundle::booleanForKey(WKDictionaryRef dictionary, const char* key)
@@ -238,8 +250,6 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings)
     m_textInputController = TextInputController::create();
     m_accessibilityController = AccessibilityController::create();
 
-    WKBundleSetShouldTrackVisitedLinks(m_bundle, false);
-    WKBundleRemoveAllVisitedLinks(m_bundle);
     WKBundleSetAllowUniversalAccessFromFileURLs(m_bundle, m_pageGroup, true);
     WKBundleSetJavaScriptCanAccessClipboard(m_bundle, m_pageGroup, true);
     WKBundleSetPrivateBrowsingEnabled(m_bundle, m_pageGroup, false);
@@ -250,9 +260,6 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings)
     WKBundleSetAllowFileAccessFromFileURLs(m_bundle, m_pageGroup, true);
     WKBundleSetPluginsEnabled(m_bundle, m_pageGroup, true);
     WKBundleSetPopupBlockingEnabled(m_bundle, m_pageGroup, false);
-    WKBundleSetAlwaysAcceptCookies(m_bundle, false);
-    WKBundleSetSerialLoadingEnabled(m_bundle, false);
-    WKBundleSetCacheModel(m_bundle, 1 /*CacheModelDocumentBrowser*/);
 
     WKBundleRemoveAllUserContent(m_bundle, m_pageGroup);
 
@@ -263,7 +270,8 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings)
     m_testRunner->setAcceptsEditing(true);
     m_testRunner->setTabKeyCyclesThroughElements(true);
 
-    m_testRunner->setCustomTimeout(m_timeout);
+    if (m_timeout > 0)
+        m_testRunner->setCustomTimeout(m_timeout);
 
     page()->prepare();
 
@@ -285,6 +293,8 @@ void InjectedBundle::done()
     page()->stopLoading();
     setTopLoadingFrame(0);
 
+    m_testRunner->invalidateWaitToDumpWatchdogTimer();
+
     m_accessibilityController->resetToConsistentState();
 
     WKRetainPtr<WKStringRef> doneMessageName(AdoptWK, WKStringCreateWithUTF8CString("Done"));
@@ -299,7 +309,7 @@ void InjectedBundle::done()
     WKRetainPtr<WKStringRef> audioResultKey = adoptWK(WKStringCreateWithUTF8CString("AudioResult"));
     WKDictionarySetItem(doneMessageBody.get(), audioResultKey.get(), m_audioResult.get());
 
-    WKBundlePostMessage(m_bundle, doneMessageName.get(), doneMessageBody.get());
+    WKBundlePagePostMessage(page()->page(), doneMessageName.get(), doneMessageBody.get());
 
     closeOtherPages();
 
@@ -332,60 +342,67 @@ void InjectedBundle::outputText(const String& output)
         return;
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("TextOutput"));
     WKRetainPtr<WKStringRef> messageBody(AdoptWK, WKStringCreateWithUTF8CString(output.utf8().data()));
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::postNewBeforeUnloadReturnValue(bool value)
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("BeforeUnloadReturnValue"));
     WKRetainPtr<WKBooleanRef> messageBody(AdoptWK, WKBooleanCreate(value));
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::postAddChromeInputField()
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("AddChromeInputField"));
-    WKBundlePostMessage(m_bundle, messageName.get(), 0);
+    WKBundlePagePostMessage(page()->page(), messageName.get(), 0);
 }
 
 void InjectedBundle::postRemoveChromeInputField()
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("RemoveChromeInputField"));
-    WKBundlePostMessage(m_bundle, messageName.get(), 0);
+    WKBundlePagePostMessage(page()->page(), messageName.get(), 0);
 }
 
 void InjectedBundle::postFocusWebView()
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("FocusWebView"));
-    WKBundlePostMessage(m_bundle, messageName.get(), 0);
+    WKBundlePagePostMessage(page()->page(), messageName.get(), 0);
 }
 
 void InjectedBundle::postSetBackingScaleFactor(double backingScaleFactor)
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("SetBackingScaleFactor"));
     WKRetainPtr<WKDoubleRef> messageBody(AdoptWK, WKDoubleCreate(backingScaleFactor));
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::postSetWindowIsKey(bool isKey)
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("SetWindowIsKey"));
     WKRetainPtr<WKBooleanRef> messageBody(AdoptWK, WKBooleanCreate(isKey));
-    WKBundlePostSynchronousMessage(m_bundle, messageName.get(), messageBody.get(), 0);
+    WKBundlePagePostSynchronousMessage(page()->page(), messageName.get(), messageBody.get(), 0);
 }
 
 void InjectedBundle::postSimulateWebNotificationClick(uint64_t notificationID)
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("SimulateWebNotificationClick"));
     WKRetainPtr<WKUInt64Ref> messageBody(AdoptWK, WKUInt64Create(notificationID));
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
+}
+
+void InjectedBundle::postSetAddsVisitedLinks(bool addsVisitedLinks)
+{
+    WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("SetAddsVisitedLinks"));
+    WKRetainPtr<WKBooleanRef> messageBody(AdoptWK, WKBooleanCreate(addsVisitedLinks));
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::setGeolocationPermission(bool enabled)
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("SetGeolocationPermission"));
     WKRetainPtr<WKBooleanRef> messageBody(AdoptWK, WKBooleanCreate(enabled));
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::setMockGeolocationPosition(double latitude, double longitude, double accuracy, bool providesAltitude, double altitude, bool providesAltitudeAccuracy, double altitudeAccuracy, bool providesHeading, double heading, bool providesSpeed, double speed)
@@ -438,13 +455,20 @@ void InjectedBundle::setMockGeolocationPosition(double latitude, double longitud
     WKRetainPtr<WKDoubleRef> speedWK(AdoptWK, WKDoubleCreate(speed));
     WKDictionarySetItem(messageBody.get(), speedKeyWK.get(), speedWK.get());
 
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::setMockGeolocationPositionUnavailableError(WKStringRef errorMessage)
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("SetMockGeolocationPositionUnavailableError"));
-    WKBundlePostMessage(m_bundle, messageName.get(), errorMessage);
+    WKBundlePagePostMessage(page()->page(), messageName.get(), errorMessage);
+}
+
+void InjectedBundle::setUserMediaPermission(bool enabled)
+{
+    auto messageName = adoptWK(WKStringCreateWithUTF8CString("SetUserMediaPermission"));
+    auto messageBody = adoptWK(WKBooleanCreate(enabled));
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::setCustomPolicyDelegate(bool enabled, bool permissive)
@@ -461,7 +485,7 @@ void InjectedBundle::setCustomPolicyDelegate(bool enabled, bool permissive)
     WKRetainPtr<WKBooleanRef> permissiveWK(AdoptWK, WKBooleanCreate(permissive));
     WKDictionarySetItem(messageBody.get(), permissiveKeyWK.get(), permissiveWK.get());
 
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::setHidden(bool hidden)
@@ -473,7 +497,14 @@ void InjectedBundle::setHidden(bool hidden)
     WKRetainPtr<WKBooleanRef> isInitialWK(AdoptWK, WKBooleanCreate(hidden));
     WKDictionarySetItem(messageBody.get(), isInitialKeyWK.get(), isInitialWK.get());
 
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
+}
+
+void InjectedBundle::setCacheModel(int model)
+{
+    WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("SetCacheModel"));
+    WKRetainPtr<WKUInt64Ref> messageBody(AdoptWK, WKUInt64Create(model));
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 bool InjectedBundle::shouldProcessWorkQueue() const
@@ -483,7 +514,7 @@ bool InjectedBundle::shouldProcessWorkQueue() const
 
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("IsWorkQueueEmpty"));
     WKTypeRef resultToPass = 0;
-    WKBundlePostSynchronousMessage(m_bundle, messageName.get(), 0, &resultToPass);
+    WKBundlePagePostSynchronousMessage(page()->page(), messageName.get(), 0, &resultToPass);
     WKRetainPtr<WKBooleanRef> isEmpty(AdoptWK, static_cast<WKBooleanRef>(resultToPass));
 
     return !WKBooleanGetValue(isEmpty.get());
@@ -492,7 +523,7 @@ bool InjectedBundle::shouldProcessWorkQueue() const
 void InjectedBundle::processWorkQueue()
 {
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("ProcessWorkQueue"));
-    WKBundlePostMessage(m_bundle, messageName.get(), 0);
+    WKBundlePagePostMessage(page()->page(), messageName.get(), 0);
 }
 
 void InjectedBundle::queueBackNavigation(unsigned howFarBackward)
@@ -501,7 +532,7 @@ void InjectedBundle::queueBackNavigation(unsigned howFarBackward)
 
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueBackNavigation"));
     WKRetainPtr<WKUInt64Ref> messageBody(AdoptWK, WKUInt64Create(howFarBackward));
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::queueForwardNavigation(unsigned howFarForward)
@@ -510,10 +541,10 @@ void InjectedBundle::queueForwardNavigation(unsigned howFarForward)
 
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueForwardNavigation"));
     WKRetainPtr<WKUInt64Ref> messageBody(AdoptWK, WKUInt64Create(howFarForward));
-    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), messageBody.get());
 }
 
-void InjectedBundle::queueLoad(WKStringRef url, WKStringRef target)
+void InjectedBundle::queueLoad(WKStringRef url, WKStringRef target, bool shouldOpenExternalURLs)
 {
     m_useWorkQueue = true;
 
@@ -527,7 +558,11 @@ void InjectedBundle::queueLoad(WKStringRef url, WKStringRef target)
     WKRetainPtr<WKStringRef> targetKey(AdoptWK, WKStringCreateWithUTF8CString("target"));
     WKDictionarySetItem(loadData.get(), targetKey.get(), target);
 
-    WKBundlePostMessage(m_bundle, messageName.get(), loadData.get());
+    WKRetainPtr<WKStringRef> shouldOpenExternalURLsKey(AdoptWK, WKStringCreateWithUTF8CString("shouldOpenExternalURLs"));
+    WKRetainPtr<WKBooleanRef> shouldOpenExternalURLsValue(AdoptWK, WKBooleanCreate(shouldOpenExternalURLs));
+    WKDictionarySetItem(loadData.get(), shouldOpenExternalURLsKey.get(), shouldOpenExternalURLsValue.get());
+
+    WKBundlePagePostMessage(page()->page(), messageName.get(), loadData.get());
 }
 
 void InjectedBundle::queueLoadHTMLString(WKStringRef content, WKStringRef baseURL, WKStringRef unreachableURL)
@@ -551,7 +586,7 @@ void InjectedBundle::queueLoadHTMLString(WKStringRef content, WKStringRef baseUR
         WKDictionarySetItem(loadData.get(), unreachableURLKey.get(), unreachableURL);
     }
 
-    WKBundlePostMessage(m_bundle, messageName.get(), loadData.get());
+    WKBundlePagePostMessage(page()->page(), messageName.get(), loadData.get());
 }
 
 void InjectedBundle::queueReload()
@@ -559,7 +594,7 @@ void InjectedBundle::queueReload()
     m_useWorkQueue = true;
 
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueReload"));
-    WKBundlePostMessage(m_bundle, messageName.get(), 0);
+    WKBundlePagePostMessage(page()->page(), messageName.get(), 0);
 }
 
 void InjectedBundle::queueLoadingScript(WKStringRef script)
@@ -567,7 +602,7 @@ void InjectedBundle::queueLoadingScript(WKStringRef script)
     m_useWorkQueue = true;
 
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueLoadingScript"));
-    WKBundlePostMessage(m_bundle, messageName.get(), script);
+    WKBundlePagePostMessage(page()->page(), messageName.get(), script);
 }
 
 void InjectedBundle::queueNonLoadingScript(WKStringRef script)
@@ -575,7 +610,14 @@ void InjectedBundle::queueNonLoadingScript(WKStringRef script)
     m_useWorkQueue = true;
 
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueNonLoadingScript"));
-    WKBundlePostMessage(m_bundle, messageName.get(), script);
+    WKBundlePagePostMessage(page()->page(), messageName.get(), script);
+}
+
+bool InjectedBundle::isAllowedHost(WKStringRef host)
+{
+    if (m_allowedHosts.isEmpty())
+        return false;
+    return m_allowedHosts.contains(toWTFString(host));
 }
 
 } // namespace WTR

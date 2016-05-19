@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,9 +28,6 @@
 #ifndef SQLStatement_h
 #define SQLStatement_h
 
-#if ENABLE(SQL_DATABASE)
-
-#include "AbstractSQLStatement.h"
 #include "SQLCallbackWrapper.h"
 #include "SQLResultSet.h"
 #include "SQLValue.h"
@@ -40,36 +37,34 @@
 
 namespace WebCore {
 
-class AbstractSQLStatementBackend;
 class Database;
 class SQLError;
+class SQLStatementBackend;
 class SQLStatementCallback;
 class SQLStatementErrorCallback;
 class SQLTransaction;
 
-class SQLStatement : public AbstractSQLStatement {
+class SQLStatement {
 public:
-    SQLStatement(Database*, PassRefPtr<SQLStatementCallback>, PassRefPtr<SQLStatementErrorCallback>);
+    SQLStatement(Database&, PassRefPtr<SQLStatementCallback>, PassRefPtr<SQLStatementErrorCallback>);
 
     bool performCallback(SQLTransaction*);
 
-    virtual void setBackend(AbstractSQLStatementBackend*);
+    void setBackend(SQLStatementBackend*);
 
-    virtual bool hasCallback();
-    virtual bool hasErrorCallback();
+    bool hasCallback();
+    bool hasErrorCallback();
 
 private:
-    // The AbstractSQLStatementBackend owns the SQLStatement. Hence, the backend is
+    // The SQLStatementBackend owns the SQLStatement. Hence, the backend is
     // guaranteed to be outlive the SQLStatement, and it is safe for us to refer
     // to the backend using a raw pointer here.
-    AbstractSQLStatementBackend* m_backend;
+    SQLStatementBackend* m_backend;
 
     SQLCallbackWrapper<SQLStatementCallback> m_statementCallbackWrapper;
     SQLCallbackWrapper<SQLStatementErrorCallback> m_statementErrorCallbackWrapper;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)
 
 #endif // SQLStatement_h

@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -79,11 +79,11 @@ private:
 };
 
 WTF_EXPORT_PRIVATE void base64Encode(const void*, unsigned, Vector<char>&, Base64EncodePolicy = Base64DoNotInsertLFs);
-WTF_EXPORT_PRIVATE void base64Encode(ConstSignedOrUnsignedCharVectorAdapter, Vector<char>&, Base64EncodePolicy = Base64DoNotInsertLFs);
-WTF_EXPORT_PRIVATE void base64Encode(const CString&, Vector<char>&, Base64EncodePolicy = Base64DoNotInsertLFs);
+void base64Encode(ConstSignedOrUnsignedCharVectorAdapter, Vector<char>&, Base64EncodePolicy = Base64DoNotInsertLFs);
+void base64Encode(const CString&, Vector<char>&, Base64EncodePolicy = Base64DoNotInsertLFs);
 WTF_EXPORT_PRIVATE String base64Encode(const void*, unsigned, Base64EncodePolicy = Base64DoNotInsertLFs);
-WTF_EXPORT_PRIVATE String base64Encode(ConstSignedOrUnsignedCharVectorAdapter, Base64EncodePolicy = Base64DoNotInsertLFs);
-WTF_EXPORT_PRIVATE String base64Encode(const CString&, Base64EncodePolicy = Base64DoNotInsertLFs);
+String base64Encode(ConstSignedOrUnsignedCharVectorAdapter, Base64EncodePolicy = Base64DoNotInsertLFs);
+String base64Encode(const CString&, Base64EncodePolicy = Base64DoNotInsertLFs);
 
 WTF_EXPORT_PRIVATE bool base64Decode(const String&, SignedOrUnsignedCharVectorAdapter, Base64DecodePolicy = Base64FailOnInvalidCharacter);
 WTF_EXPORT_PRIVATE bool base64Decode(const Vector<char>&, SignedOrUnsignedCharVectorAdapter, Base64DecodePolicy = Base64FailOnInvalidCharacter);
@@ -115,11 +115,12 @@ inline String base64Encode(const CString& in, Base64EncodePolicy policy)
 // ======================================================================================
 
 WTF_EXPORT_PRIVATE void base64URLEncode(const void*, unsigned, Vector<char>&);
-WTF_EXPORT_PRIVATE void base64URLEncode(ConstSignedOrUnsignedCharVectorAdapter, Vector<char>&);
-WTF_EXPORT_PRIVATE void base64URLEncode(const CString&, Vector<char>&);
+void base64URLEncode(ConstSignedOrUnsignedCharVectorAdapter, Vector<char>&);
+void base64URLEncode(const CString&, Vector<char>&);
+
 WTF_EXPORT_PRIVATE String base64URLEncode(const void*, unsigned);
-WTF_EXPORT_PRIVATE String base64URLEncode(ConstSignedOrUnsignedCharVectorAdapter);
-WTF_EXPORT_PRIVATE String base64URLEncode(const CString&);
+String base64URLEncode(ConstSignedOrUnsignedCharVectorAdapter);
+String base64URLEncode(const CString&);
 
 WTF_EXPORT_PRIVATE bool base64URLDecode(const String&, SignedOrUnsignedCharVectorAdapter);
 WTF_EXPORT_PRIVATE bool base64URLDecode(const Vector<char>&, SignedOrUnsignedCharVectorAdapter);

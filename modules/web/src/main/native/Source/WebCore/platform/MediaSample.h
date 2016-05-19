@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,6 +26,7 @@
 #ifndef MediaSample_h
 #define MediaSample_h
 
+#include "FloatSize.h"
 #include <wtf/MediaTime.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomicString.h>
@@ -55,6 +56,10 @@ public:
     virtual MediaTime decodeTime() const = 0;
     virtual MediaTime duration() const = 0;
     virtual AtomicString trackID() const = 0;
+    virtual size_t sizeInBytes() const = 0;
+    virtual FloatSize presentationSize() const = 0;
+    virtual void offsetTimestampsBy(const MediaTime&) = 0;
+    virtual void setTimestamps(const MediaTime&, const MediaTime&) = 0;
 
     enum SampleFlags {
         None = 0,
@@ -66,6 +71,8 @@ public:
 
     bool isSync() const { return flags() & IsSync; }
     bool isNonDisplaying() const { return flags() & NonDisplaying; }
+
+    virtual void dump(PrintStream&) const = 0;
 };
 
 }

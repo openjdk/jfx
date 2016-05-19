@@ -27,10 +27,7 @@
 #define LLIntSlowPaths_h
 
 #include "CommonSlowPaths.h"
-#include <wtf/Platform.h>
 #include <wtf/StdLibExtras.h>
-
-#if ENABLE(LLINT)
 
 namespace JSC {
 
@@ -65,7 +62,6 @@ LLINT_SLOW_PATH_HIDDEN_DECL(entry_osr_function_for_construct_arityCheck);
 LLINT_SLOW_PATH_HIDDEN_DECL(loop_osr);
 LLINT_SLOW_PATH_HIDDEN_DECL(replace);
 LLINT_SLOW_PATH_HIDDEN_DECL(stack_check);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_create_activation);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_new_object);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_new_array);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_new_array_with_size);
@@ -79,11 +75,12 @@ LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_by_id);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_del_by_id);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_get_by_val);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_get_argument_by_val);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_get_by_pname);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_by_val);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_by_val_direct);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_del_by_val);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_by_index);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_getter_by_id);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_setter_by_id);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_getter_setter);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jtrue);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jfalse);
@@ -104,15 +101,12 @@ LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_construct);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_size_frame_for_varargs);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_varargs);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_construct_varargs);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_eval);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_tear_off_activation);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_tear_off_arguments);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_strcat);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_to_primitive);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_get_pnames);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_next_pname);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_push_with_scope);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_pop_scope);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_push_name_scope);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_throw);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_throw_static_error);
@@ -125,14 +119,12 @@ LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_resolve_scope);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_get_from_scope);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_to_scope);
 extern "C" SlowPathReturnType llint_throw_stack_overflow_error(VM*, ProtoCallFrame*) WTF_INTERNAL;
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
 extern "C" SlowPathReturnType llint_stack_check_at_vm_entry(VM*, Register*) WTF_INTERNAL;
 #endif
 extern "C" NO_RETURN_DUE_TO_CRASH void llint_crash() WTF_INTERNAL;
 
 } } // namespace JSC::LLInt
-
-#endif // ENABLE(LLINT)
 
 #endif // LLIntSlowPaths_h
 

@@ -29,7 +29,7 @@ namespace WebCore {
 
 class SVGStyleElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGStyleElement> create(const QualifiedName&, Document&, bool createdByParser);
+    static Ref<SVGStyleElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~SVGStyleElement();
 
     CSSStyleSheet* sheet() const { return m_styleSheetOwner.sheet(); }
@@ -49,7 +49,6 @@ public:
 private:
     SVGStyleElement(const QualifiedName&, Document&, bool createdByParser);
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
     virtual void removedFrom(ContainerNode&) override;
@@ -62,13 +61,11 @@ private:
     virtual bool isLoading() const { return m_styleSheetOwner.isLoading(); }
     virtual bool sheetLoaded() override { return m_styleSheetOwner.sheetLoaded(document()); }
     virtual void startLoadingDynamicSheet() override { m_styleSheetOwner.startLoadingDynamicSheet(document()); }
-    virtual Timer<SVGElement>* svgLoadEventTimer() override { return &m_svgLoadEventTimer; }
+    virtual Timer* svgLoadEventTimer() override { return &m_svgLoadEventTimer; }
 
     InlineStyleSheetOwner m_styleSheetOwner;
-    Timer<SVGElement> m_svgLoadEventTimer;
+    Timer m_svgLoadEventTimer;
 };
-
-NODE_TYPE_CASTS(SVGStyleElement)
 
 } // namespace WebCore
 

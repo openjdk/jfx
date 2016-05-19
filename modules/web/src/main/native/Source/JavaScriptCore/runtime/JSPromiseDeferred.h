@@ -31,19 +31,18 @@
 
 namespace JSC {
 
-class JSPromiseDeferred : public JSCell {
+class JSPromiseDeferred final : public JSCell {
 public:
     typedef JSCell Base;
+    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     JS_EXPORT_PRIVATE static JSPromiseDeferred* create(ExecState*, JSGlobalObject*);
     JS_EXPORT_PRIVATE static JSPromiseDeferred* create(VM&, JSObject* promise, JSValue resolve, JSValue reject);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
     }
-
-    static const bool hasImmortalStructure = true;
 
     DECLARE_EXPORT_INFO;
 
@@ -54,26 +53,12 @@ public:
 private:
     JSPromiseDeferred(VM&);
     void finishCreation(VM&, JSObject*, JSValue, JSValue);
-    static const unsigned StructureFlags = OverridesVisitChildren | Base::StructureFlags;
     static void visitChildren(JSCell*, SlotVisitor&);
 
     WriteBarrier<JSObject> m_promise;
     WriteBarrier<Unknown> m_resolve;
     WriteBarrier<Unknown> m_reject;
 };
-
-enum ThenableStatus {
-    WasAThenable,
-    NotAThenable
-};
-
-JSValue createJSPromiseDeferredFromConstructor(ExecState*, JSValue constructor);
-ThenableStatus updateDeferredFromPotentialThenable(ExecState*, JSValue, JSPromiseDeferred*);
-
-void performDeferredResolve(ExecState*, JSPromiseDeferred*, JSValue argument);
-void performDeferredReject(ExecState*, JSPromiseDeferred*, JSValue argument);
-
-JSValue abruptRejection(ExecState*, JSPromiseDeferred*);
 
 } // namespace JSC
 

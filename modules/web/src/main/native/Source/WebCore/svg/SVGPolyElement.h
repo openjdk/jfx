@@ -43,9 +43,7 @@ protected:
 
 private:
     virtual bool isValid() const override { return SVGTests::isValid(); }
-    virtual bool supportsFocus() const override { return true; }
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
@@ -53,20 +51,21 @@ private:
 
     // Custom 'points' property
     static void synchronizePoints(SVGElement* contextElement);
-    static PassRefPtr<SVGAnimatedProperty> lookupOrCreatePointsWrapper(SVGElement* contextElement);
+    static Ref<SVGAnimatedProperty> lookupOrCreatePointsWrapper(SVGElement* contextElement);
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGPolyElement)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
+        DECLARE_ANIMATED_BOOLEAN_OVERRIDE(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 
 protected:
     mutable SVGSynchronizableAnimatedProperty<SVGPointList> m_points;
 };
 
-void isSVGPolyElement(const SVGPolyElement&); // Catch unnecessary runtime check of type known at compile time.
-bool isSVGPolyElement(const Node&);
-NODE_TYPE_CASTS(SVGPolyElement)
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGPolyElement)
+    static bool isType(const WebCore::SVGElement& element) { return element.hasTagName(WebCore::SVGNames::polygonTag) || element.hasTagName(WebCore::SVGNames::polylineTag); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

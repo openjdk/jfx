@@ -87,12 +87,13 @@ void JSMutationCallback::call(const Vector<RefPtr<MutationRecord>>& mutations, M
 
     InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionCall(context, callType, callData);
 
-    JSMainThreadExecState::call(exec, callback, callType, callData, jsObserver, args);
+    NakedPtr<Exception> exception;
+    JSMainThreadExecState::call(exec, callback, callType, callData, jsObserver, args, exception);
 
     InspectorInstrumentation::didCallFunction(cookie, context);
 
-    if (exec->hadException())
-        reportCurrentException(exec);
+    if (exception)
+        reportException(exec, exception);
 }
 
 } // namespace WebCore

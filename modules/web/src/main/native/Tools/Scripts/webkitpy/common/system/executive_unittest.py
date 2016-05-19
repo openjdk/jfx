@@ -33,6 +33,7 @@ import signal
 import subprocess
 import sys
 import time
+import unittest
 
 # Since we execute this script directly as part of the unit tests, we need to ensure
 # that Tools/Scripts is in sys.path for the next imports to work correctly.
@@ -42,8 +43,6 @@ if script_dir not in sys.path:
 third_party_py = os.path.join(script_dir, "webkitpy", "thirdparty", "autoinstalled")
 if third_party_py not in sys.path:
     sys.path.append(third_party_py)
-
-import unittest2 as unittest
 
 from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.system.filesystem_mock import MockFileSystem
@@ -178,9 +177,10 @@ class ExecutiveTest(unittest.TestCase):
         elif sys.platform == "cygwin":
             # FIXME: https://bugs.webkit.org/show_bug.cgi?id=98196
             # cygwin seems to give us either SIGABRT or SIGKILL
-            self.assertIn(process.wait(), (-signal.SIGABRT, -signal.SIGKILL))
+            # Native Windows (via Cygwin) returns ENOTBLK (-15)
+            self.assertIn(process.wait(), (-signal.SIGABRT, -signal.SIGKILL, -15))
         else:
-            expected_exit_code = -signal.SIGKILL
+            expected_exit_code = -signal.SIGTERM
             self.assertEqual(process.wait(), expected_exit_code)
 
         # Killing again should fail silently.

@@ -28,7 +28,6 @@
 #include "ShadowRoot.h"
 
 #include "ElementTraversal.h"
-#include "HistogramSupport.h"
 #include "InsertionPoint.h"
 #include "RenderElement.h"
 #include "RuntimeEnabledFeatures.h"
@@ -132,10 +131,15 @@ void ShadowRoot::childrenChanged(const ChildChange& change)
     invalidateDistribution();
 }
 
+RefPtr<Node> ShadowRoot::cloneNodeInternal(Document&, CloningOperation)
+{
+    return nullptr; // ShadowRoots should never be cloned.
+}
+
 void ShadowRoot::removeAllEventListeners()
 {
     DocumentFragment::removeAllEventListeners();
-    for (Node* node = firstChild(); node; node = NodeTraversal::next(node))
+    for (Node* node = firstChild(); node; node = NodeTraversal::next(*node))
         node->removeAllEventListeners();
 }
 

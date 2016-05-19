@@ -58,8 +58,16 @@ public:
     virtual void enableInput(const String& inputDeviceId) = 0;
 
     virtual void startRendering() = 0;
+    virtual void resume(std::function<void()>) { }
+    virtual void suspend(std::function<void()>) { }
+    virtual void close(std::function<void()>) { }
 
     AudioSourceProvider* localAudioInputProvider() { return &m_localAudioInputProvider; }
+
+    virtual bool isPlaying() { return false; }
+    virtual void isPlayingDidChange() override;
+    bool isPlayingAudio() const { return m_isEffectivelyPlayingAudio; }
+    void setMuted(bool muted) { m_muted = muted; }
 
 protected:
     // LocalAudioInputProvider allows us to expose an AudioSourceProvider for local/live audio input.
@@ -93,10 +101,16 @@ protected:
     virtual double tailTime() const override { return 0; }
     virtual double latencyTime() const override { return 0; }
 
+    void setIsSilent(bool);
+    void updateIsEffectivelyPlayingAudio();
+
     // Counts the number of sample-frames processed by the destination.
     size_t m_currentSampleFrame;
 
     LocalAudioInputProvider m_localAudioInputProvider;
+    bool m_isSilent;
+    bool m_isEffectivelyPlayingAudio;
+    bool m_muted;
 };
 
 } // namespace WebCore

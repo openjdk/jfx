@@ -27,8 +27,6 @@
 #ifndef CSSFilterImageValue_h
 #define CSSFilterImageValue_h
 
-#if ENABLE(CSS_FILTERS)
-
 #include "CSSImageGeneratorValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CachedImageClient.h"
@@ -48,25 +46,25 @@ class StyleResolver;
 class CSSFilterImageValue : public CSSImageGeneratorValue {
     friend class FilterSubimageObserverProxy;
 public:
-    static PassRef<CSSFilterImageValue> create(PassRef<CSSValue> imageValue, PassRef<CSSValue> filterValue)
+    static Ref<CSSFilterImageValue> create(Ref<CSSValue>&& imageValue, Ref<CSSValue>&& filterValue)
     {
-        return adoptRef(*new CSSFilterImageValue(std::move(imageValue), std::move(filterValue)));
+        return adoptRef(*new CSSFilterImageValue(WTF::move(imageValue), WTF::move(filterValue)));
     }
 
     ~CSSFilterImageValue();
 
     String customCSSText() const;
 
-    PassRefPtr<Image> image(RenderElement*, const IntSize&);
+    PassRefPtr<Image> image(RenderElement*, const FloatSize&);
     bool isFixedSize() const { return true; }
-    IntSize fixedSize(const RenderElement*);
+    FloatSize fixedSize(const RenderElement*);
 
     bool isPending() const;
     bool knownToBeOpaque(const RenderElement*) const;
 
-    void loadSubimages(CachedResourceLoader*);
+    void loadSubimages(CachedResourceLoader&, const ResourceLoaderOptions&);
 
-    bool hasFailedOrCanceledSubresources() const;
+    bool traverseSubresources(const std::function<bool (const CachedResource&)>& handler) const;
 
     bool equals(const CSSFilterImageValue&) const;
 
@@ -90,7 +88,7 @@ private:
     {
     }
 
-    class FilterSubimageObserverProxy : public CachedImageClient {
+    class FilterSubimageObserverProxy final : public CachedImageClient {
     public:
         FilterSubimageObserverProxy(CSSFilterImageValue* ownerValue)
             : m_ownerValue(ownerValue)
@@ -99,7 +97,7 @@ private:
         }
 
         virtual ~FilterSubimageObserverProxy() { }
-        virtual void imageChanged(CachedImage*, const IntRect* = 0) override;
+        virtual void imageChanged(CachedImage*, const IntRect* = nullptr) override;
         void setReady(bool ready) { m_ready = ready; }
     private:
         CSSFilterImageValue* m_ownerValue;
@@ -119,10 +117,8 @@ private:
     FilterSubimageObserverProxy m_filterSubimageObserver;
 };
 
-CSS_VALUE_TYPE_CASTS(CSSFilterImageValue, isFilterImageValue())
-
 } // namespace WebCore
 
-#endif // ENABLE(CSS_FILTERS)
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSFilterImageValue, isFilterImageValue())
 
 #endif // CSSFilterImageValue_h

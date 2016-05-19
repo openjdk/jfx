@@ -32,14 +32,11 @@
 #ifndef ScriptCallStack_h
 #define ScriptCallStack_h
 
+#include "InspectorProtocolObjects.h"
 #include "ScriptCallFrame.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
-
-#if ENABLE(INSPECTOR)
-#include "InspectorJSTypeBuilders.h"
-#endif
 
 namespace Inspector {
 
@@ -47,20 +44,24 @@ class JS_EXPORT_PRIVATE ScriptCallStack : public RefCounted<ScriptCallStack> {
 public:
     static const size_t maxCallStackSizeToCapture = 200;
 
-    static PassRefPtr<ScriptCallStack> create(Vector<ScriptCallFrame>&);
+    static Ref<ScriptCallStack> create();
+    static Ref<ScriptCallStack> create(Vector<ScriptCallFrame>&);
 
     ~ScriptCallStack();
 
     const ScriptCallFrame& at(size_t) const;
     size_t size() const;
 
+    const ScriptCallFrame* firstNonNativeCallFrame() const;
+
+    void append(const ScriptCallFrame&);
+
     bool isEqual(ScriptCallStack*) const;
 
-#if ENABLE(INSPECTOR)
-    PassRefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Console::CallFrame>> buildInspectorArray() const;
-#endif
+    Ref<Inspector::Protocol::Console::StackTrace> buildInspectorArray() const;
 
 private:
+    ScriptCallStack();
     ScriptCallStack(Vector<ScriptCallFrame>&);
 
     Vector<ScriptCallFrame> m_frames;

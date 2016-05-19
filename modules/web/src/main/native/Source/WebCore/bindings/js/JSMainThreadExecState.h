@@ -28,6 +28,7 @@
 
 #include "JSDOMBinding.h"
 #include <runtime/Completion.h>
+#include <runtime/Microtask.h>
 #include <wtf/MainThread.h>
 
 #if PLATFORM(IOS)
@@ -49,23 +50,36 @@ public:
         return s_mainThreadState;
     };
 
-    static JSC::JSValue call(JSC::ExecState* exec, JSC::JSValue functionObject, JSC::CallType callType, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args)
+    static JSC::JSValue call(JSC::ExecState* exec, JSC::JSValue functionObject, JSC::CallType callType, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args, NakedPtr<JSC::Exception>& returnedException)
     {
         JSMainThreadExecState currentState(exec);
-        return JSC::call(exec, functionObject, callType, callData, thisValue, args);
+        return JSC::call(exec, functionObject, callType, callData, thisValue, args, returnedException);
     };
 
-    static JSC::JSValue evaluate(JSC::ExecState* exec, const JSC::SourceCode& source, JSC::JSValue thisValue, JSC::JSValue* exception)
+    static JSC::JSValue evaluate(JSC::ExecState* exec, const JSC::SourceCode& source, JSC::JSValue thisValue, NakedPtr<JSC::Exception>& returnedException)
     {
         JSMainThreadExecState currentState(exec);
-        JSC::JSLockHolder lock(exec);
-        return JSC::evaluate(exec, source, thisValue, exception);
+        return JSC::evaluate(exec, source, thisValue, returnedException);
     };
+
+    static JSC::JSValue evaluate(JSC::ExecState* exec, const JSC::SourceCode& source, JSC::JSValue thisValue = JSC::JSValue())
+    {
+        NakedPtr<JSC::Exception> unused;
+        return evaluate(exec, source, thisValue, unused);
+    };
+
+    static void runTask(JSC::ExecState* exec, JSC::Microtask& task)
+    {
+        JSMainThreadExecState currentState(exec);
+        task.run(exec);
+    }
 
     static InspectorInstrumentationCookie instrumentFunctionCall(ScriptExecutionContext*, JSC::CallType, const JSC::CallData&);
 
+private:
     explicit JSMainThreadExecState(JSC::ExecState* exec)
         : m_previousState(s_mainThreadState)
+        , m_lock(exec)
     {
         ASSERT(isMainThread());
         s_mainThreadState = exec;
@@ -74,6 +88,7 @@ public:
     ~JSMainThreadExecState()
     {
         ASSERT(isMainThread());
+        ASSERT(!s_mainThreadState->hadException());
 
         bool didExitJavaScript = s_mainThreadState && !m_previousState;
 
@@ -83,9 +98,9 @@ public:
             didLeaveScriptContext();
     }
 
-private:
     static JSC::ExecState* s_mainThreadState;
     JSC::ExecState* m_previousState;
+    JSC::JSLockHolder m_lock;
 
     static void didLeaveScriptContext();
 };
@@ -112,8 +127,8 @@ private:
     JSC::ExecState* m_previousState;
 };
 
-JSC::JSValue functionCallHandlerFromAnyThread(JSC::ExecState*, JSC::JSValue functionObject, JSC::CallType callType, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args);
-JSC::JSValue evaluateHandlerFromAnyThread(JSC::ExecState*, const JSC::SourceCode&, JSC::JSValue thisValue, JSC::JSValue* exception);
+JSC::JSValue functionCallHandlerFromAnyThread(JSC::ExecState*, JSC::JSValue functionObject, JSC::CallType, const JSC::CallData&, JSC::JSValue thisValue, const JSC::ArgList& args, NakedPtr<JSC::Exception>& returnedException);
+JSC::JSValue evaluateHandlerFromAnyThread(JSC::ExecState*, const JSC::SourceCode&, JSC::JSValue thisValue, NakedPtr<JSC::Exception>& returnedException);
 
 } // namespace WebCore
 

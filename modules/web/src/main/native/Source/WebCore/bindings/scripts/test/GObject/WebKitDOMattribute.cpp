@@ -25,6 +25,7 @@
 #include "DOMObjectCache.h"
 #include "Document.h"
 #include "ExceptionCode.h"
+#include "ExceptionCodeDescription.h"
 #include "JSMainThreadExecState.h"
 #include "WebKitDOMPrivate.h"
 #include "WebKitDOMattributePrivate.h"
@@ -32,7 +33,7 @@
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
 
-#define WEBKIT_DOM_ATTRIBUTE_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_TYPE_DOM_ATTRIBUTE, WebKitDOMattributePrivate)
+#define WEBKIT_DOM_ATTRIBUTE_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_DOM_TYPE_ATTRIBUTE, WebKitDOMattributePrivate)
 
 typedef struct _WebKitDOMattributePrivate {
     RefPtr<WebCore::attribute> coreObject;
@@ -59,12 +60,12 @@ WebCore::attribute* core(WebKitDOMattribute* request)
 WebKitDOMattribute* wrapattribute(WebCore::attribute* coreObject)
 {
     ASSERT(coreObject);
-    return WEBKIT_DOM_ATTRIBUTE(g_object_new(WEBKIT_TYPE_DOM_ATTRIBUTE, "core-object", coreObject, NULL));
+    return WEBKIT_DOM_ATTRIBUTE(g_object_new(WEBKIT_DOM_TYPE_ATTRIBUTE, "core-object", coreObject, nullptr));
 }
 
 } // namespace WebKit
 
-G_DEFINE_TYPE(WebKitDOMattribute, webkit_dom_attribute, WEBKIT_TYPE_DOM_OBJECT)
+G_DEFINE_TYPE(WebKitDOMattribute, webkit_dom_attribute, WEBKIT_DOM_TYPE_OBJECT)
 
 enum {
     PROP_0,
@@ -83,16 +84,12 @@ static void webkit_dom_attribute_finalize(GObject* object)
 
 static void webkit_dom_test_exception_get_property(GObject* object, guint propertyId, GValue* value, GParamSpec* pspec)
 {
-    WebCore::JSMainThreadNullState state;
-
     WebKitDOMTestException* self = WEBKIT_DOM_TEST_EXCEPTION(object);
-    WebCore::TestException* coreSelf = WebKit::core(self);
 
     switch (propertyId) {
-    case PROP_NAME: {
-        g_value_take_string(value, convertToUTF8String(coreSelf->name()));
+    case PROP_NAME:
+        g_value_take_string(value, webkit_dom_test_exception_get_name(self));
         break;
-    }
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propertyId, pspec);
         break;
@@ -100,16 +97,12 @@ static void webkit_dom_test_exception_get_property(GObject* object, guint proper
 }
 static void webkit_dom_attribute_get_property(GObject* object, guint propertyId, GValue* value, GParamSpec* pspec)
 {
-    WebCore::JSMainThreadNullState state;
-
     WebKitDOMattribute* self = WEBKIT_DOM_ATTRIBUTE(object);
-    WebCore::attribute* coreSelf = WebKit::core(self);
 
     switch (propertyId) {
-    case PROP_READONLY: {
-        g_value_take_string(value, convertToUTF8String(coreSelf->readonly()));
+    case PROP_READONLY:
+        g_value_take_string(value, webkit_dom_attribute_get_readonly(self));
         break;
-    }
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propertyId, pspec);
         break;

@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-class PasswordInputType : public BaseTextInputType {
+class PasswordInputType final : public BaseTextInputType {
 public:
     explicit PasswordInputType(HTMLInputElement& element) : BaseTextInputType(element) { }
 
@@ -47,7 +47,6 @@ private:
     virtual bool shouldUseInputMethod() const override;
     virtual bool shouldResetOnDocumentActivation() override;
     virtual bool shouldRespectListAttribute() override;
-    virtual bool shouldRespectSpeechAttribute() override;
     virtual bool isPasswordField() const override;
 };
 

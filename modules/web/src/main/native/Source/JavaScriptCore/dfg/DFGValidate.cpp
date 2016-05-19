@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "CodeBlockWithJITType.h"
+#include "DFGMayExit.h"
 #include "JSCInlines.h"
 #include <wtf/Assertions.h>
 #include <wtf/BitVector.h>
@@ -37,17 +38,19 @@ namespace JSC { namespace DFG {
 
 class Validate {
 public:
-    Validate(Graph& graph, GraphDumpMode graphDumpMode)
+    Validate(Graph& graph, GraphDumpMode graphDumpMode, CString graphDumpBeforePhase)
         : m_graph(graph)
         , m_graphDumpMode(graphDumpMode)
+        , m_graphDumpBeforePhase(graphDumpBeforePhase)
     {
     }
 
     #define VALIDATE(context, assertion) do { \
         if (!(assertion)) { \
+            startCrashing(); \
             dataLogF("\n\n\nAt "); \
             reportValidationContext context; \
-            dataLogF(": validation %s (%s:%d) failed.\n", #assertion, __FILE__, __LINE__); \
+            dataLogF(": validation failed: %s (%s:%d).\n", #assertion, __FILE__, __LINE__); \
             dumpGraphIfAppropriate(); \
             WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #assertion); \
             CRASH(); \
@@ -56,13 +59,14 @@ public:
 
     #define V_EQUAL(context, left, right) do { \
         if (left != right) { \
+            startCrashing(); \
             dataLogF("\n\n\nAt "); \
             reportValidationContext context; \
-            dataLogF(": validation (%s = ", #left); \
+            dataLogF(": validation failed: (%s = ", #left); \
             dataLog(left); \
             dataLogF(") == (%s = ", #right); \
             dataLog(right); \
-            dataLogF(") (%s:%d) failed.\n", __FILE__, __LINE__); \
+            dataLogF(") (%s:%d).\n", __FILE__, __LINE__); \
             dumpGraphIfAppropriate(); \
             WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #left " == " #right); \
             CRASH(); \
@@ -115,6 +119,9 @@ public:
 
                     m_myRefCounts.find(edge.node())->value++;
 
+                    validateEdgeWithDoubleResultIfNecessary(node, edge);
+                    VALIDATE((node, edge), edge->hasInt52Result() == (edge.useKind() == Int52RepUse));
+
                     if (m_graph.m_form == SSA) {
                         // In SSA, all edges must hasResult().
                         VALIDATE((node, edge), edge->hasResult());
@@ -139,31 +146,6 @@ public:
                             break;
                         VALIDATE((node, edge), edge->variableAccessData() == node->variableAccessData());
                         break;
-                    case Phantom:
-                        switch (m_graph.m_form) {
-                        case LoadStore:
-                            if (j) {
-                                VALIDATE((node, edge), edge->hasResult());
-                                break;
-                            }
-                            switch (edge->op()) {
-                            case Phi:
-                            case SetArgument:
-                            case SetLocal:
-                                break;
-                            default:
-                                VALIDATE((node, edge), edge->hasResult());
-                                break;
-                            }
-                            break;
-                        case ThreadedCPS:
-                            VALIDATE((node, edge), edge->hasResult());
-                            break;
-                        case SSA:
-                            RELEASE_ASSERT_NOT_REACHED();
-                            break;
-                        }
-                        break;
                     default:
                         VALIDATE((node, edge), edge->hasResult());
                         break;
@@ -180,20 +162,103 @@ public:
                 Node* node = block->node(i);
                 if (m_graph.m_refCountState == ExactRefCount)
                     V_EQUAL((node), m_myRefCounts.get(node), node->adjustedRefCount());
-                else
-                    V_EQUAL((node), node->refCount(), 1);
             }
 
-            for (size_t i = 0 ; i < block->size() - 1; ++i) {
+            bool foundTerminal = false;
+            for (size_t i = 0 ; i < block->size(); ++i) {
                 Node* node = block->at(i);
-                VALIDATE((node), !node->isTerminal());
+                if (node->isTerminal()) {
+                    foundTerminal = true;
+                    for (size_t j = i + 1; j < block->size(); ++j) {
+                        node = block->at(j);
+                        VALIDATE((node), node->op() == Phantom || node->op() == PhantomLocal || node->op() == Flush || node->op() == Check);
+                        m_graph.doToChildren(
+                            node,
+                            [&] (Edge edge) {
+                                VALIDATE((node, edge), shouldNotHaveTypeCheck(edge.useKind()));
+                            });
+                    }
+                    break;
+                }
             }
+            VALIDATE((block), foundTerminal);
 
             for (size_t i = 0; i < block->size(); ++i) {
                 Node* node = block->at(i);
 
-                if (node->hasStructure())
-                    VALIDATE((node), !!node->structure());
+                VALIDATE((node), node->origin.semantic.isSet() == node->origin.forExit.isSet());
+                VALIDATE((node), !mayExit(m_graph, node) || node->origin.forExit.isSet());
+                VALIDATE((node), !node->hasStructure() || !!node->structure());
+                VALIDATE((node), !node->hasCellOperand() || node->cellOperand()->value().isCell());
+                VALIDATE((node), !node->hasCellOperand() || !!node->cellOperand()->value());
+
+                if (!(node->flags() & NodeHasVarArgs)) {
+                    if (!node->child2())
+                        VALIDATE((node), !node->child3());
+                    if (!node->child1())
+                        VALIDATE((node), !node->child2());
+                }
+
+                switch (node->op()) {
+                case Identity:
+                    VALIDATE((node), canonicalResultRepresentation(node->result()) == canonicalResultRepresentation(node->child1()->result()));
+                    break;
+                case SetLocal:
+                case PutStack:
+                case Upsilon:
+                    VALIDATE((node), !!node->child1());
+                    switch (node->child1().useKind()) {
+                    case UntypedUse:
+                    case CellUse:
+                    case Int32Use:
+                    case Int52RepUse:
+                    case DoubleRepUse:
+                    case BooleanUse:
+                        break;
+                    default:
+                        VALIDATE((node), !"Bad use kind");
+                        break;
+                    }
+                    break;
+                case MakeRope:
+                case ValueAdd:
+                case ArithAdd:
+                case ArithSub:
+                case ArithMul:
+                case ArithIMul:
+                case ArithDiv:
+                case ArithMod:
+                case ArithMin:
+                case ArithMax:
+                case ArithPow:
+                case CompareLess:
+                case CompareLessEq:
+                case CompareGreater:
+                case CompareGreaterEq:
+                case CompareEq:
+                case CompareEqConstant:
+                case CompareStrictEq:
+                    VALIDATE((node), !!node->child1());
+                    VALIDATE((node), !!node->child2());
+                    break;
+                case PutStructure:
+                    VALIDATE((node), !node->transition()->previous->dfgShouldWatch());
+                    break;
+                case MultiPutByOffset:
+                    for (unsigned i = node->multiPutByOffsetData().variants.size(); i--;) {
+                        const PutByIdVariant& variant = node->multiPutByOffsetData().variants[i];
+                        if (variant.kind() != PutByIdVariant::Transition)
+                            continue;
+                        VALIDATE((node), !variant.oldStructureForTransition()->dfgShouldWatch());
+                    }
+                    break;
+                case DoubleConstant:
+                case Int52Constant:
+                    VALIDATE((node), node->isNumberConstant());
+                    break;
+                default:
+                    break;
+                }
             }
         }
 
@@ -212,6 +277,7 @@ public:
 private:
     Graph& m_graph;
     GraphDumpMode m_graphDumpMode;
+    CString m_graphDumpBeforePhase;
 
     HashMap<Node*, unsigned> m_myRefCounts;
     HashSet<Node*> m_acceptableNodes;
@@ -341,6 +407,7 @@ private:
                 Node* node = block->at(i);
                 ASSERT(nodesInThisBlock.contains(node));
                 VALIDATE((node), node->op() != Phi);
+                VALIDATE((node), node->origin.forExit.isSet());
                 for (unsigned j = 0; j < m_graph.numChildren(node); ++j) {
                     Edge edge = m_graph.child(node, j);
                     if (!edge)
@@ -351,38 +418,62 @@ private:
                     case GetLocal:
                     case Flush:
                         break;
-                    case Phantom:
-                        if (m_graph.m_form == LoadStore && !j)
-                            break;
-                        FALLTHROUGH;
                     default:
                         VALIDATE((node, edge), !phisInThisBlock.contains(edge.node()));
                         break;
                     }
                 }
 
+                switch (node->op()) {
+                case Phi:
+                case Upsilon:
+                case CheckInBounds:
+                case PhantomNewObject:
+                case PhantomNewFunction:
+                case PhantomCreateActivation:
+                case GetMyArgumentByVal:
+                case PutHint:
+                case CheckStructureImmediate:
+                case MaterializeNewObject:
+                case MaterializeCreateActivation:
+                case PutStack:
+                case KillStack:
+                case GetStack:
+                    VALIDATE((node), !"unexpected node type in CPS");
+                    break;
+                case Phantom:
+                    VALIDATE((node), m_graph.m_fixpointState != FixpointNotConverged);
+                    break;
+                default:
+                    break;
+                }
+
                 if (!node->shouldGenerate())
                     continue;
                 switch (node->op()) {
                 case GetLocal:
-                    if (node->variableAccessData()->isCaptured())
-                        break;
                     // Ignore GetLocal's that we know to be dead, but that the graph
                     // doesn't yet know to be dead.
                     if (!m_myRefCounts.get(node))
                         break;
-                    if (m_graph.m_form == ThreadedCPS)
+                    if (m_graph.m_form == ThreadedCPS) {
                         VALIDATE((node, block), getLocalPositions.operand(node->local()) == notSet);
+                        VALIDATE((node, block), !!node->child1());
+                    }
                     getLocalPositions.operand(node->local()) = i;
                     break;
                 case SetLocal:
-                    if (node->variableAccessData()->isCaptured())
-                        break;
                     // Only record the first SetLocal. There may be multiple SetLocals
                     // because of flushing.
                     if (setLocalPositions.operand(node->local()) != notSet)
                         break;
                     setLocalPositions.operand(node->local()) = i;
+                    break;
+                case SetArgument:
+                    // This acts like a reset. It's ok to have a second GetLocal for a local in the same
+                    // block if we had a SetArgument for that local.
+                    getLocalPositions.operand(node->local()) = notSet;
+                    setLocalPositions.operand(node->local()) = notSet;
                     break;
                 default:
                     break;
@@ -413,19 +504,29 @@ private:
             if (!block)
                 continue;
 
+            VALIDATE((block), block->phis.isEmpty());
+
             unsigned nodeIndex = 0;
-            for (; nodeIndex < block->size() && !block->at(nodeIndex)->origin.isSet(); nodeIndex++) { }
+            for (; nodeIndex < block->size() && !block->at(nodeIndex)->origin.forExit.isSet(); nodeIndex++) { }
 
             VALIDATE((block), nodeIndex < block->size());
 
             for (; nodeIndex < block->size(); nodeIndex++)
-                VALIDATE((block->at(nodeIndex)), block->at(nodeIndex)->origin.isSet());
+                VALIDATE((block->at(nodeIndex)), block->at(nodeIndex)->origin.forExit.isSet());
 
             for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                 Node* node = block->at(nodeIndex);
                 switch (node->op()) {
                 case Phi:
-                    VALIDATE((node), !node->origin.isSet());
+                    VALIDATE((node), !node->origin.forExit.isSet());
+                    break;
+
+                case GetLocal:
+                case SetLocal:
+                case GetLocalUnlinked:
+                case SetArgument:
+                case Phantom:
+                    VALIDATE((node), !"bad node type for SSA");
                     break;
 
                 default:
@@ -433,8 +534,49 @@ private:
                     // https://bugs.webkit.org/show_bug.cgi?id=123471
                     break;
                 }
+                switch (node->op()) {
+                case PhantomNewObject:
+                case PhantomNewFunction:
+                case PhantomCreateActivation:
+                case PhantomDirectArguments:
+                case PhantomClonedArguments:
+                case MovHint:
+                case Upsilon:
+                case ForwardVarargs:
+                case CallForwardVarargs:
+                case ConstructForwardVarargs:
+                case GetMyArgumentByVal:
+                    break;
+
+                case Check:
+                    // FIXME: This is probably not correct.
+                    break;
+
+                case PutHint:
+                    VALIDATE((node), node->child1()->isPhantomAllocation());
+                    break;
+
+                default:
+                    m_graph.doToChildren(
+                        node,
+                        [&] (const Edge& edge) {
+                            VALIDATE((node), !edge->isPhantomAllocation());
+                        });
+                    break;
+                }
             }
         }
+    }
+
+    void validateEdgeWithDoubleResultIfNecessary(Node* node, Edge edge)
+    {
+        if (!edge->hasDoubleResult())
+            return;
+
+        if (m_graph.m_planStage < PlanStage::AfterFixup)
+            return;
+
+        VALIDATE((node, edge), edge.useKind() == DoubleRepUse || edge.useKind() == DoubleRepRealUse || edge.useKind() == DoubleRepMachineIntUse);
     }
 
     void checkOperand(
@@ -471,23 +613,23 @@ private:
     void reportValidationContext(VirtualRegister local, BasicBlock* block)
     {
         if (!block) {
-            dataLog("r", local, " in null Block ");
+            dataLog(local, " in null Block ");
             return;
         }
 
-        dataLog("r", local, " in Block ", *block);
+        dataLog(local, " in Block ", *block);
     }
 
     void reportValidationContext(
         VirtualRegister local, BasicBlock* sourceBlock, BasicBlock* destinationBlock)
     {
-        dataLog("r", local, " in Block ", *sourceBlock, " -> ", *destinationBlock);
+        dataLog(local, " in Block ", *sourceBlock, " -> ", *destinationBlock);
     }
 
     void reportValidationContext(
         VirtualRegister local, BasicBlock* sourceBlock, Node* prevNode)
     {
-        dataLog(prevNode, " for r", local, " in Block ", *sourceBlock);
+        dataLog(prevNode, " for ", local, " in Block ", *sourceBlock);
     }
 
     void reportValidationContext(Node* node, BasicBlock* block)
@@ -510,14 +652,19 @@ private:
     {
         if (m_graphDumpMode == DontDumpGraph)
             return;
+        dataLog("\n");
+        if (!m_graphDumpBeforePhase.isNull()) {
+            dataLog("Before phase:\n");
+            dataLog(m_graphDumpBeforePhase);
+        }
         dataLog("At time of failure:\n");
         m_graph.dump();
     }
 };
 
-void validate(Graph& graph, GraphDumpMode graphDumpMode)
+void validate(Graph& graph, GraphDumpMode graphDumpMode, CString graphDumpBeforePhase)
 {
-    Validate validationObject(graph, graphDumpMode);
+    Validate validationObject(graph, graphDumpMode, graphDumpBeforePhase);
     validationObject.validate();
 }
 

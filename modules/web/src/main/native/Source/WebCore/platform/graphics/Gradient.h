@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -57,19 +57,19 @@ namespace WebCore {
 
     class Gradient : public RefCounted<Gradient> {
     public:
-        static PassRefPtr<Gradient> create(const FloatPoint& p0, const FloatPoint& p1)
+        static Ref<Gradient> create(const FloatPoint& p0, const FloatPoint& p1)
         {
-            return adoptRef(new Gradient(p0, p1));
+            return adoptRef(*new Gradient(p0, p1));
         }
-        static PassRefPtr<Gradient> create(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1, float aspectRatio = 1)
+        static Ref<Gradient> create(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1, float aspectRatio = 1)
         {
-            return adoptRef(new Gradient(p0, r0, p1, r1, aspectRatio));
+            return adoptRef(*new Gradient(p0, r0, p1, r1, aspectRatio));
         }
-        ~Gradient();
+        WEBCORE_EXPORT ~Gradient();
 
         struct ColorStop;
-        void addColorStop(const ColorStop&);
-        void addColorStop(float, const Color&);
+        WEBCORE_EXPORT void addColorStop(const ColorStop&);
+        WEBCORE_EXPORT void addColorStop(float, const Color&);
 
         bool hasAlpha() const;
 
@@ -150,7 +150,7 @@ namespace WebCore {
         AffineTransform gradientSpaceTransform() const { return m_gradientSpaceTransformation; }
 
         void fill(GraphicsContext*, const FloatRect&);
-        void adjustParametersForTiledDrawing(IntSize&, FloatRect&);
+        void adjustParametersForTiledDrawing(FloatSize&, FloatRect&);
 
         void setPlatformGradientSpaceTransform(const AffineTransform& gradientSpaceTransformation);
 
@@ -165,7 +165,7 @@ namespace WebCore {
 #endif
 
     private:
-        Gradient(const FloatPoint& p0, const FloatPoint& p1);
+        WEBCORE_EXPORT Gradient(const FloatPoint& p0, const FloatPoint& p1);
         Gradient(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1, float aspectRatio);
 
         void platformInit() { m_gradient = 0; }

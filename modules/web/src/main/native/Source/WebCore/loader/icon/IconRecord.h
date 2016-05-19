@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,7 +32,6 @@
 #include "PageURLRecord.h"
 #include "SharedBuffer.h"
 #include <wtf/HashSet.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
@@ -75,9 +74,9 @@ private:
 class IconRecord : public RefCounted<IconRecord> {
     friend class PageURLRecord;
 public:
-    static PassRefPtr<IconRecord> create(const String& url)
+    static Ref<IconRecord> create(const String& url)
     {
-        return adoptRef(new IconRecord(url));
+        return adoptRef(*new IconRecord(url));
     }
     ~IconRecord();
 

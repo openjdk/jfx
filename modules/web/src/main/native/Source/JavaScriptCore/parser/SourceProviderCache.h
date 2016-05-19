@@ -28,8 +28,6 @@
 
 #include "SourceProviderCacheItem.h"
 #include <wtf/HashMap.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 
 namespace JSC {
@@ -45,7 +43,7 @@ public:
     const SourceProviderCacheItem* get(int sourcePosition) const { return m_map.get(sourcePosition); }
 
 private:
-    HashMap<int, std::unique_ptr<SourceProviderCacheItem>> m_map;
+    HashMap<int, std::unique_ptr<SourceProviderCacheItem>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int>> m_map;
 };
 
 }

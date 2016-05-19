@@ -44,15 +44,13 @@ class DOMEditor;
 class Document;
 class Node;
 
-#if ENABLE(INSPECTOR)
-
-class DOMPatchSupport {
+class DOMPatchSupport final {
     WTF_MAKE_NONCOPYABLE(DOMPatchSupport);
 public:
     static void patchDocument(Document*, const String& markup);
 
     DOMPatchSupport(DOMEditor*, Document*);
-    virtual ~DOMPatchSupport();
+    ~DOMPatchSupport();
 
     void patchDocument(const String& markup);
     Node* patchNode(Node&, const String& markup, ExceptionCode&);
@@ -78,8 +76,6 @@ private:
 
     UnusedNodesMap m_unusedNodesMap;
 };
-
-#endif // ENABLE(INSPECTOR)
 
 } // namespace WebCore
 

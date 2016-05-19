@@ -1,4 +1,5 @@
 # Copyright (C) 2010 Google Inc. All rights reserved.
+# Copyright (C) 2014 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -53,16 +54,28 @@ class WorkItems(db.Model, QueuePropertyMixin):
         return None
 
     @staticmethod
-    def _unguarded_add(key, attachment_id):
+    def _unguarded_add(key, high_priority_items, items):
         work_items = db.get(key)
-        if attachment_id in work_items.item_ids:
-            return
-        work_items.item_ids.append(attachment_id)
+        added_items = []
+        for item in high_priority_items[::-1]:
+            if item in work_items.item_ids:
+                continue
+            work_items.item_ids.insert(0, item)
+            added_items.insert(0, item)
+        for item in items:
+            if item in work_items.item_ids:
+                continue
+            work_items.item_ids.append(item)
+            added_items.append(item)
         work_items.put()
+        return added_items
 
     # Because this uses .key() self.is_saved() must be True or this will throw NotSavedError.
     def add_work_item(self, attachment_id):
-        db.run_in_transaction(self._unguarded_add, self.key(), attachment_id)
+        db.run_in_transaction(self._unguarded_add, self.key(), [], [attachment_id])
+
+    def add_work_items(self, high_priority_items, items):
+        return db.run_in_transaction(self._unguarded_add, self.key(), high_priority_items, items)
 
     @staticmethod
     def _unguarded_remove(key, attachment_id):
@@ -75,3 +88,15 @@ class WorkItems(db.Model, QueuePropertyMixin):
     # Because this uses .key() self.is_saved() must be True or this will throw NotSavedError.
     def remove_work_item(self, attachment_id):
         db.run_in_transaction(self._unguarded_remove, self.key(), attachment_id)
+
+    @staticmethod
+    def _unguarded_move_to_end(key, attachment_id):
+        work_items = db.get(key)
+        if attachment_id in work_items.item_ids:
+            # We should never have more than one entry for a work item, so we only need remove the first.
+            work_items.item_ids.remove(attachment_id)
+            work_items.item_ids.append(attachment_id)
+        work_items.put()
+
+    def move_to_end(self, attachment_id):
+        db.run_in_transaction(self._unguarded_move_to_end, self.key(), attachment_id)

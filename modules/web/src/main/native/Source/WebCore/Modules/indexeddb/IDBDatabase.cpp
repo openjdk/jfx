@@ -31,13 +31,11 @@
 #include "DOMStringList.h"
 #include "EventQueue.h"
 #include "ExceptionCode.h"
-#include "HistogramSupport.h"
 #include "IDBAny.h"
 #include "IDBDatabaseCallbacks.h"
 #include "IDBDatabaseError.h"
 #include "IDBDatabaseException.h"
 #include "IDBEventDispatcher.h"
-#include "IDBHistograms.h"
 #include "IDBIndex.h"
 #include "IDBKeyPath.h"
 #include "IDBObjectStore.h"
@@ -52,17 +50,18 @@
 
 namespace WebCore {
 
-PassRefPtr<IDBDatabase> IDBDatabase::create(ScriptExecutionContext* context, PassRefPtr<IDBDatabaseBackend> database, PassRefPtr<IDBDatabaseCallbacks> callbacks)
+Ref<IDBDatabase> IDBDatabase::create(ScriptExecutionContext* context, PassRefPtr<IDBDatabaseBackend> database, PassRefPtr<IDBDatabaseCallbacks> callbacks)
 {
-    RefPtr<IDBDatabase> idbDatabase(adoptRef(new IDBDatabase(context, database, callbacks)));
+    Ref<IDBDatabase> idbDatabase(adoptRef(*new IDBDatabase(context, database, callbacks)));
     idbDatabase->suspendIfNeeded();
-    return idbDatabase.release();
+    return idbDatabase;
 }
 
 IDBDatabase::IDBDatabase(ScriptExecutionContext* context, PassRefPtr<IDBDatabaseBackend> backend, PassRefPtr<IDBDatabaseCallbacks> callbacks)
     : ActiveDOMObject(context)
     , m_backend(backend)
     , m_closePending(false)
+    , m_isClosed(false)
     , m_contextStopped(false)
     , m_databaseCallbacks(callbacks)
 {
@@ -72,7 +71,26 @@ IDBDatabase::IDBDatabase(ScriptExecutionContext* context, PassRefPtr<IDBDatabase
 
 IDBDatabase::~IDBDatabase()
 {
-    close();
+    // This does what IDBDatabase::close does, but without any ref/deref of the
+    // database since it is already in the process of being deleted. The logic here
+    // is also simpler since we know there are no transactions (since they ref the
+    // database when they are alive).
+
+    ASSERT(m_transactions.isEmpty());
+
+    if (!m_closePending) {
+        m_closePending = true;
+        m_backend->close(m_databaseCallbacks);
+    }
+
+    if (auto* context = scriptExecutionContext()) {
+        // Remove any pending versionchange events scheduled to fire on this
+        // connection. They would have been scheduled by the backend when another
+        // connection called setVersion, but the frontend connection is being
+        // closed before they could fire.
+        for (auto& event : m_enqueuedEvents)
+            context->eventQueue().cancelEvent(*event);
+    }
 }
 
 int64_t IDBDatabase::nextTransactionId()
@@ -105,7 +123,7 @@ void IDBDatabase::transactionFinished(IDBTransaction* transaction)
 
     if (transaction->isVersionChange()) {
         ASSERT(m_versionChangeTransaction == transaction);
-        m_versionChangeTransaction = 0;
+        m_versionChangeTransaction = nullptr;
     }
 
     if (m_closePending && m_transactions.isEmpty())
@@ -127,8 +145,8 @@ void IDBDatabase::onComplete(int64_t transactionId)
 PassRefPtr<DOMStringList> IDBDatabase::objectStoreNames() const
 {
     RefPtr<DOMStringList> objectStoreNames = DOMStringList::create();
-    for (IDBDatabaseMetadata::ObjectStoreMap::const_iterator it = m_metadata.objectStores.begin(); it != m_metadata.objectStores.end(); ++it)
-        objectStoreNames->append(it->value.name);
+    for (auto& objectStore : m_metadata.objectStores.values())
+        objectStoreNames->append(objectStore.name);
     objectStoreNames->sort();
     return objectStoreNames.release();
 }
@@ -161,7 +179,6 @@ PassRefPtr<IDBObjectStore> IDBDatabase::createObjectStore(const String& name, co
 PassRefPtr<IDBObjectStore> IDBDatabase::createObjectStore(const String& name, const IDBKeyPath& keyPath, bool autoIncrement, ExceptionCode& ec)
 {
     LOG(StorageAPI, "IDBDatabase::createObjectStore");
-    HistogramSupport::histogramEnumeration("WebCore.IndexedDB.FrontEndAPICalls", IDBCreateObjectStoreCall, IDBMethodsMax);
     if (!m_versionChangeTransaction) {
         ec = IDBDatabaseException::InvalidStateError;
         return 0;
@@ -201,7 +218,6 @@ PassRefPtr<IDBObjectStore> IDBDatabase::createObjectStore(const String& name, co
 void IDBDatabase::deleteObjectStore(const String& name, ExceptionCode& ec)
 {
     LOG(StorageAPI, "IDBDatabase::deleteObjectStore");
-    HistogramSupport::histogramEnumeration("WebCore.IndexedDB.FrontEndAPICalls", IDBDeleteObjectStoreCall, IDBMethodsMax);
     if (!m_versionChangeTransaction) {
         ec = IDBDatabaseException::InvalidStateError;
         return;
@@ -225,7 +241,6 @@ void IDBDatabase::deleteObjectStore(const String& name, ExceptionCode& ec)
 PassRefPtr<IDBTransaction> IDBDatabase::transaction(ScriptExecutionContext* context, const Vector<String>& scope, const String& modeString, ExceptionCode& ec)
 {
     LOG(StorageAPI, "IDBDatabase::transaction");
-    HistogramSupport::histogramEnumeration("WebCore.IndexedDB.FrontEndAPICalls", IDBTransactionCall, IDBMethodsMax);
     if (!scope.size()) {
         ec = IDBDatabaseException::InvalidAccessError;
         return 0;
@@ -241,8 +256,8 @@ PassRefPtr<IDBTransaction> IDBDatabase::transaction(ScriptExecutionContext* cont
     }
 
     Vector<int64_t> objectStoreIds;
-    for (size_t i = 0; i < scope.size(); ++i) {
-        int64_t objectStoreId = findObjectStoreId(scope[i]);
+    for (auto& name : scope) {
+        int64_t objectStoreId = findObjectStoreId(name);
         if (objectStoreId == IDBObjectStoreMetadata::InvalidId) {
             ec = IDBDatabaseException::NotFoundError;
             return 0;
@@ -266,8 +281,8 @@ PassRefPtr<IDBTransaction> IDBDatabase::transaction(ScriptExecutionContext* cont
 
 void IDBDatabase::forceClose()
 {
-    for (TransactionMap::const_iterator::Values it = m_transactions.begin().values(), end = m_transactions.end().values(); it != end; ++it)
-        (*it)->abort(IGNORE_EXCEPTION);
+    for (auto& transaction : m_transactions.values())
+        transaction->abort(IGNORE_EXCEPTION);
     this->close();
 }
 
@@ -288,6 +303,10 @@ void IDBDatabase::closeConnection()
     ASSERT(m_closePending);
     ASSERT(m_transactions.isEmpty());
 
+    // Closing may result in deallocating the last transaction, which could result in deleting
+    // this IDBDatabase. We need the deallocation to happen after we are through.
+    Ref<IDBDatabase> protect(*this);
+
     m_backend->close(m_databaseCallbacks);
 
     if (m_contextStopped || !scriptExecutionContext())
@@ -298,13 +317,15 @@ void IDBDatabase::closeConnection()
     // connection. They would have been scheduled by the backend when another
     // connection called setVersion, but the frontend connection is being
     // closed before they could fire.
-    for (size_t i = 0; i < m_enqueuedEvents.size(); ++i) {
-        bool removed = eventQueue.cancelEvent(*m_enqueuedEvents[i]);
+    for (auto& event : m_enqueuedEvents) {
+        bool removed = eventQueue.cancelEvent(*event);
         ASSERT_UNUSED(removed, removed);
     }
+
+    m_isClosed = true;
 }
 
-void IDBDatabase::onVersionChange(uint64_t oldVersion, uint64_t newVersion, IndexedDB::VersionNullness newVersionNullness)
+void IDBDatabase::onVersionChange(uint64_t oldVersion, uint64_t newVersion)
 {
     LOG(StorageAPI, "IDBDatabase::onVersionChange");
     if (m_contextStopped || !scriptExecutionContext())
@@ -313,12 +334,14 @@ void IDBDatabase::onVersionChange(uint64_t oldVersion, uint64_t newVersion, Inde
     if (m_closePending)
         return;
 
-    enqueueEvent(IDBVersionChangeEvent::create(oldVersion, newVersion, newVersionNullness));
+    ASSERT(newVersion != IDBDatabaseMetadata::NoIntVersion && newVersion != IDBDatabaseMetadata::DefaultIntVersion);
+    enqueueEvent(IDBVersionChangeEvent::create(oldVersion, newVersion, eventNames().versionchangeEvent));
 }
 
 void IDBDatabase::enqueueEvent(PassRefPtr<Event> event)
 {
     ASSERT(!m_contextStopped);
+    ASSERT(!m_isClosed);
     ASSERT(scriptExecutionContext());
     event->setTarget(this);
     scriptExecutionContext()->eventQueue().enqueueEvent(event.get());
@@ -338,10 +361,10 @@ bool IDBDatabase::dispatchEvent(PassRefPtr<Event> event)
 
 int64_t IDBDatabase::findObjectStoreId(const String& name) const
 {
-    for (IDBDatabaseMetadata::ObjectStoreMap::const_iterator it = m_metadata.objectStores.begin(); it != m_metadata.objectStores.end(); ++it) {
-        if (it->value.name == name) {
-            ASSERT(it->key != IDBObjectStoreMetadata::InvalidId);
-            return it->key;
+    for (auto& objectStore : m_metadata.objectStores) {
+        if (objectStore.value.name == name) {
+            ASSERT(objectStore.key != IDBObjectStoreMetadata::InvalidId);
+            return objectStore.key;
         }
     }
     return IDBObjectStoreMetadata::InvalidId;
@@ -360,6 +383,16 @@ void IDBDatabase::stop()
     close();
 
     m_contextStopped = true;
+}
+
+const char* IDBDatabase::activeDOMObjectName() const
+{
+    return "IDBDatabase";
+}
+
+bool IDBDatabase::canSuspendForPageCache() const
+{
+    return m_isClosed;
 }
 
 } // namespace WebCore

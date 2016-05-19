@@ -23,11 +23,14 @@
 
 """unit testing code for webkitpy."""
 
+import StringIO
+import itertools
+import json
 import logging
 import multiprocessing
+import operator
 import optparse
 import os
-import StringIO
 import sys
 import time
 import traceback
@@ -72,6 +75,17 @@ def main():
     return not tester.run()
 
 
+def _print_results_as_json(stream, all_test_names, failures, errors):
+    def result_dict_from_tuple(result_tuple):
+        return {'name': result_tuple[0], 'result': result_tuple[1]}
+
+    results = {}
+    results['failures'] = map(result_dict_from_tuple, sorted(failures, key=operator.itemgetter(0)))
+    results['errors'] = map(result_dict_from_tuple, sorted(errors, key=operator.itemgetter(0)))
+    results['passes'] = sorted(set(all_test_names) - set(map(operator.itemgetter(0), failures)) - set(map(operator.itemgetter(0), errors)))
+
+    json.dump(results, stream, separators=(',', ':'))
+
 class Tester(object):
     def __init__(self, filesystem=None):
         self.finder = Finder(filesystem or FileSystem())
@@ -102,6 +116,8 @@ class Tester(object):
                           help='display per-test execution time (implies --verbose)')
         parser.add_option('-v', '--verbose', action='count', default=0,
                           help='verbose output (specify once for individual test results, twice for debug messages)')
+        parser.add_option('--json', action='store_true', default=False,
+                          help='write JSON formatted test results to stdout')
 
         parser.epilog = ('[args...] is an optional list of modules, test_classes, or individual tests. '
                          'If no args are given, all the tests will be run.')
@@ -129,13 +145,7 @@ class Tester(object):
         # and not have to worry about autoinstalling packages concurrently.
         self.printer.write_update("Checking autoinstalled packages ...")
         from webkitpy.thirdparty import autoinstall_everything
-        installed_something = autoinstall_everything()
-
-        # FIXME: There appears to be a bug in Python 2.6.1 that is causing multiprocessing
-        # to hang after we install the packages in a clean checkout.
-        if installed_something:
-            _log.warning("We installed new packages, so running things serially at first")
-            self._options.child_processes = 1
+        autoinstall_everything()
 
         if self._options.coverage:
             _log.warning("Checking code coverage, so running things serially")
@@ -161,6 +171,9 @@ class Tester(object):
         test_runner.run(serial_tests, 1)
 
         self.printer.print_result(time.time() - start)
+
+        if self._options.json:
+            _print_results_as_json(sys.stdout, itertools.chain(parallel_tests, serial_tests), test_runner.failures, test_runner.errors)
 
         if self._options.coverage:
             cov.stop()

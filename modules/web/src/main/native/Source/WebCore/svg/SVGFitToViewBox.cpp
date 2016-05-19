@@ -22,22 +22,21 @@
 #include "SVGFitToViewBox.h"
 
 #include "AffineTransform.h"
-#include "Attribute.h"
 #include "Document.h"
 #include "FloatRect.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include "SVGPreserveAspectRatio.h"
-#include <wtf/text/StringImpl.h>
+#include <wtf/text/StringView.h>
 
 namespace WebCore {
 
 bool SVGFitToViewBox::parseViewBox(Document* doc, const String& s, FloatRect& viewBox)
 {
-    const UChar* c = s.deprecatedCharacters();
-    const UChar* end = c + s.length();
-    return parseViewBox(doc, c, end, viewBox, true);
+    auto upconvertedCharacters = StringView(s).upconvertedCharacters();
+    const UChar* characters = upconvertedCharacters;
+    return parseViewBox(doc, characters, characters + s.length(), viewBox, true);
 }
 
 bool SVGFitToViewBox::parseViewBox(Document* doc, const UChar*& c, const UChar* end, FloatRect& viewBox, bool validate)
@@ -56,21 +55,21 @@ bool SVGFitToViewBox::parseViewBox(Document* doc, const UChar*& c, const UChar* 
         return true;
     }
     if (!valid) {
-        doc->accessSVGExtensions()->reportWarning("Problem parsing viewBox=\"" + str + "\"");
+        doc->accessSVGExtensions().reportWarning("Problem parsing viewBox=\"" + str + "\"");
         return false;
     }
 
     if (width < 0.0) { // check that width is positive
-        doc->accessSVGExtensions()->reportError("A negative value for ViewBox width is not allowed");
+        doc->accessSVGExtensions().reportError("A negative value for ViewBox width is not allowed");
         return false;
     }
     if (height < 0.0) { // check that height is positive
-        doc->accessSVGExtensions()->reportError("A negative value for ViewBox height is not allowed");
+        doc->accessSVGExtensions().reportError("A negative value for ViewBox height is not allowed");
         return false;
     }
     skipOptionalSVGSpaces(c, end);
     if (c < end) { // nothing should come after the last, fourth number
-        doc->accessSVGExtensions()->reportWarning("Problem parsing viewBox=\"" + str + "\"");
+        doc->accessSVGExtensions().reportWarning("Problem parsing viewBox=\"" + str + "\"");
         return false;
     }
 
@@ -80,7 +79,7 @@ bool SVGFitToViewBox::parseViewBox(Document* doc, const UChar*& c, const UChar* 
 
 AffineTransform SVGFitToViewBox::viewBoxToViewTransform(const FloatRect& viewBoxRect, const SVGPreserveAspectRatio& preserveAspectRatio, float viewWidth, float viewHeight)
 {
-    if (!viewBoxRect.width() || !viewBoxRect.height())
+    if (!viewBoxRect.width() || !viewBoxRect.height() || !viewWidth || !viewHeight)
         return AffineTransform();
 
     return preserveAspectRatio.getCTM(viewBoxRect.x(), viewBoxRect.y(), viewBoxRect.width(), viewBoxRect.height(), viewWidth, viewHeight);

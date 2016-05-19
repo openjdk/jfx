@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,18 +33,18 @@
 namespace WebCore {
 
 class CapabilityRange;
-class MediaStreamSourceCapabilities;
+class RealtimeMediaSourceCapabilities;
 
 class AllVideoCapabilities : public MediaStreamCapabilities {
 public:
-    static RefPtr<AllVideoCapabilities> create(PassRefPtr<MediaStreamSourceCapabilities> capabilities)
+    static Ref<AllVideoCapabilities> create(PassRefPtr<RealtimeMediaSourceCapabilities> capabilities)
     {
-        return adoptRef(new AllVideoCapabilities(capabilities));
+        return adoptRef(*new AllVideoCapabilities(capabilities));
     }
     virtual ~AllVideoCapabilities() { }
 
 private:
-    explicit AllVideoCapabilities(PassRefPtr<MediaStreamSourceCapabilities> capabilities)
+    explicit AllVideoCapabilities(PassRefPtr<RealtimeMediaSourceCapabilities> capabilities)
         : MediaStreamCapabilities(capabilities)
     {
     }

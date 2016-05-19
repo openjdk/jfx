@@ -22,7 +22,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebUserContentURLPattern.h"
 
 #include "MarshallingHelpers.h"
@@ -37,13 +36,13 @@ inline WebUserContentURLPattern::WebUserContentURLPattern()
     : m_refCount(0)
 {
     ++gClassCount;
-    gClassNameCount.add("WebUserContentURLPattern");
+    gClassNameCount().add("WebUserContentURLPattern");
 }
 
 WebUserContentURLPattern::~WebUserContentURLPattern()
 {
     --gClassCount;
-    gClassNameCount.remove("WebUserContentURLPattern");
+    gClassNameCount().remove("WebUserContentURLPattern");
 }
 
 COMPtr<WebUserContentURLPattern> WebUserContentURLPattern::createInstance()

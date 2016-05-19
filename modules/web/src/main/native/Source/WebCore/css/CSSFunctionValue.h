@@ -35,12 +35,12 @@ struct CSSParserFunction;
 
 class CSSFunctionValue : public CSSValue {
 public:
-    static PassRef<CSSFunctionValue> create(CSSParserFunction* function)
+    static Ref<CSSFunctionValue> create(CSSParserFunction* function)
     {
         return adoptRef(*new CSSFunctionValue(function));
     }
 
-    static PassRef<CSSFunctionValue> create(String name, PassRefPtr<CSSValueList> args)
+    static Ref<CSSFunctionValue> create(const String& name, PassRefPtr<CSSValueList> args)
     {
         return adoptRef(*new CSSFunctionValue(name, args));
     }
@@ -53,14 +53,15 @@ public:
 
 private:
     explicit CSSFunctionValue(CSSParserFunction*);
-    CSSFunctionValue(String, PassRefPtr<CSSValueList>);
+    CSSFunctionValue(const String&, PassRefPtr<CSSValueList>);
 
     String m_name;
     RefPtr<CSSValueList> m_args;
 };
 
-CSS_VALUE_TYPE_CASTS(CSSFunctionValue, isFunctionValue())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSFunctionValue, isFunctionValue())
+
 #endif
 

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebMutableURLRequest.h"
 
@@ -54,7 +53,7 @@ WebMutableURLRequest::WebMutableURLRequest(bool isMutable)
     , m_isMutable(isMutable)
 {
     gClassCount++;
-    gClassNameCount.add("WebMutableURLRequest");
+    gClassNameCount().add("WebMutableURLRequest");
 }
 
 WebMutableURLRequest* WebMutableURLRequest::createInstance()
@@ -98,7 +97,7 @@ WebMutableURLRequest* WebMutableURLRequest::createImmutableInstance(const Resour
 WebMutableURLRequest::~WebMutableURLRequest()
 {
     gClassCount--;
-    gClassNameCount.remove("WebMutableURLRequest");
+    gClassNameCount().remove("WebMutableURLRequest");
 }
 
 // IUnknown -------------------------------------------------------------------
@@ -366,13 +365,12 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setAllowsAnyHTTPSCertificate(voi
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setClientCertificate(
-    /* [in] */ OLE_HANDLE cert)
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setClientCertificate(/* [in] */ ULONG_PTR cert)
 {
     if (!cert)
         return E_POINTER;
 
-    PCCERT_CONTEXT certContext = reinterpret_cast<PCCERT_CONTEXT>((ULONG64)cert);
+    PCCERT_CONTEXT certContext = reinterpret_cast<PCCERT_CONTEXT>(cert);
     RetainPtr<CFDataRef> certData = WebCore::copyCertificateToData(certContext);
     ResourceHandle::setClientCertificate(m_request.url().host(), certData.get());
     return S_OK;
@@ -409,11 +407,6 @@ void WebMutableURLRequest::setFormData(const PassRefPtr<FormData> data)
 const PassRefPtr<FormData> WebMutableURLRequest::formData() const
 {
     return m_request.httpBody();
-}
-
-void WebMutableURLRequest::addHTTPHeaderFields(const HTTPHeaderMap& headerFields)
-{
-    m_request.addHTTPHeaderFields(headerFields);
 }
 
 const HTTPHeaderMap& WebMutableURLRequest::httpHeaderFields() const

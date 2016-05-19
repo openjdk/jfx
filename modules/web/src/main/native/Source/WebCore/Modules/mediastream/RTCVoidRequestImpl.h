@@ -44,19 +44,21 @@ class VoidCallback;
 
 class RTCVoidRequestImpl : public RTCVoidRequest, public ActiveDOMObject {
 public:
-    static PassRefPtr<RTCVoidRequestImpl> create(ScriptExecutionContext*, PassRefPtr<VoidCallback>, PassRefPtr<RTCPeerConnectionErrorCallback>);
+    static Ref<RTCVoidRequestImpl> create(ScriptExecutionContext*, PassRefPtr<VoidCallback>, PassRefPtr<RTCPeerConnectionErrorCallback>);
     virtual ~RTCVoidRequestImpl();
 
-    virtual void requestSucceeded();
-    virtual void requestFailed(const String& error);
-
-    // ActiveDOMObject
-    virtual void stop() override;
+    virtual void requestSucceeded() override;
+    virtual void requestFailed(const String& error) override;
 
 private:
     RTCVoidRequestImpl(ScriptExecutionContext*, PassRefPtr<VoidCallback>, PassRefPtr<RTCPeerConnectionErrorCallback>);
 
     void clear();
+
+    // ActiveDOMObject
+    void stop() override;
+    const char* activeDOMObjectName() const override;
+    bool canSuspendForPageCache() const override;
 
     RefPtr<VoidCallback> m_successCallback;
     RefPtr<RTCPeerConnectionErrorCallback> m_errorCallback;

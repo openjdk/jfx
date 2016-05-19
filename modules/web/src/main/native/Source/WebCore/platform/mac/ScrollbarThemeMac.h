@@ -37,55 +37,55 @@ public:
 
     void preferencesChanged();
 
-    virtual void updateEnabledState(ScrollbarThemeClient*);
+    virtual void updateEnabledState(Scrollbar&) override;
 
-    virtual bool paint(ScrollbarThemeClient*, GraphicsContext*, const IntRect& damageRect);
+    virtual bool paint(Scrollbar&, GraphicsContext&, const IntRect& damageRect) override;
 
-    virtual int scrollbarThickness(ScrollbarControlSize = RegularScrollbar);
+    virtual int scrollbarThickness(ScrollbarControlSize = RegularScrollbar) override;
 
-    virtual bool supportsControlTints() const { return true; }
-    virtual bool usesOverlayScrollbars() const;
+    virtual bool supportsControlTints() const override { return true; }
+    virtual bool usesOverlayScrollbars() const  override;
     virtual void usesOverlayScrollbarsChanged() override;
-    virtual void updateScrollbarOverlayStyle(ScrollbarThemeClient*);
+    virtual void updateScrollbarOverlayStyle(Scrollbar&)  override;
 
-    virtual double initialAutoscrollTimerDelay();
-    virtual double autoscrollTimerDelay();
+    virtual double initialAutoscrollTimerDelay() override;
+    virtual double autoscrollTimerDelay() override;
 
-    virtual ScrollbarButtonsPlacement buttonsPlacement() const;
+    virtual ScrollbarButtonsPlacement buttonsPlacement() const override;
 
-    virtual void registerScrollbar(ScrollbarThemeClient*);
-    virtual void unregisterScrollbar(ScrollbarThemeClient*);
+    virtual void registerScrollbar(Scrollbar&) override;
+    virtual void unregisterScrollbar(Scrollbar&) override;
 
-    void setNewPainterForScrollbar(ScrollbarThemeClient*, ScrollbarPainter);
-    ScrollbarPainter painterForScrollbar(ScrollbarThemeClient*);
+    void setNewPainterForScrollbar(Scrollbar&, ScrollbarPainter);
+    ScrollbarPainter painterForScrollbar(Scrollbar&);
 
-    void setPaintCharacteristicsForScrollbar(ScrollbarThemeClient*);
+    void setPaintCharacteristicsForScrollbar(Scrollbar&);
 
     static bool isCurrentlyDrawingIntoLayer();
     static void setIsCurrentlyDrawingIntoLayer(bool);
 
 #if ENABLE(RUBBER_BANDING)
-    static void setUpOverhangAreaBackground(CALayer *, const Color& customBackgroundColor = Color());
-    static void removeOverhangAreaBackground(CALayer *);
+    WEBCORE_EXPORT static void setUpOverhangAreaBackground(CALayer *, const Color& customBackgroundColor = Color());
+    WEBCORE_EXPORT static void removeOverhangAreaBackground(CALayer *);
 
-    static void setUpOverhangAreaShadow(CALayer *);
-    static void removeOverhangAreaShadow(CALayer *);
+    WEBCORE_EXPORT static void setUpOverhangAreaShadow(CALayer *);
+    WEBCORE_EXPORT static void removeOverhangAreaShadow(CALayer *);
 #endif
 
 protected:
-    virtual bool hasButtons(ScrollbarThemeClient*);
-    virtual bool hasThumb(ScrollbarThemeClient*);
+    virtual bool hasButtons(Scrollbar&) override;
+    virtual bool hasThumb(Scrollbar&) override;
 
-    virtual IntRect backButtonRect(ScrollbarThemeClient*, ScrollbarPart, bool painting = false);
-    virtual IntRect forwardButtonRect(ScrollbarThemeClient*, ScrollbarPart, bool painting = false);
-    virtual IntRect trackRect(ScrollbarThemeClient*, bool painting = false);
+    virtual IntRect backButtonRect(Scrollbar&, ScrollbarPart, bool painting = false) override;
+    virtual IntRect forwardButtonRect(Scrollbar&, ScrollbarPart, bool painting = false) override;
+    virtual IntRect trackRect(Scrollbar&, bool painting = false) override;
 
-    virtual int maxOverlapBetweenPages() { return 40; }
+    virtual int maxOverlapBetweenPages() override { return 40; }
 
-    virtual int minimumThumbLength(ScrollbarThemeClient*);
+    virtual int minimumThumbLength(Scrollbar&) override;
 
-    virtual bool shouldCenterOnThumb(ScrollbarThemeClient*, const PlatformMouseEvent&);
-    virtual bool shouldDragDocumentInsteadOfThumb(ScrollbarThemeClient*, const PlatformMouseEvent&);
+    virtual bool shouldCenterOnThumb(Scrollbar&, const PlatformMouseEvent&) override;
+    virtual bool shouldDragDocumentInsteadOfThumb(Scrollbar&, const PlatformMouseEvent&) override;
     int scrollbarPartToHIPressedState(ScrollbarPart);
 
 #if ENABLE(RUBBER_BANDING)

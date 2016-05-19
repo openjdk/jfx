@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -60,7 +60,6 @@
 #define ThreadSafeRefCounted_h
 
 #include <atomic>
-#include <wtf/DynamicAnnotations.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 
@@ -94,9 +93,7 @@ protected:
     // Returns whether the pointer should be freed or not.
     bool derefBase()
     {
-        WTF_ANNOTATE_HAPPENS_BEFORE(&m_refCount);
         if (--m_refCount <= 0) {
-            WTF_ANNOTATE_HAPPENS_AFTER(&m_refCount);
             return true;
         }
 

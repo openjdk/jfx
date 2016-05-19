@@ -17,7 +17,7 @@ static const char* UILanguage()
 {
     // Chrome's UI language can be different from the OS UI language on Windows.
     // We want to return Chrome's UI language here.
-    DEFINE_STATIC_LOCAL(CString, locale, (defaultLanguage().latin1()));
+    DEPRECATED_DEFINE_STATIC_LOCAL(CString, locale, (defaultLanguage().latin1()));
     return locale.data();
 }
 

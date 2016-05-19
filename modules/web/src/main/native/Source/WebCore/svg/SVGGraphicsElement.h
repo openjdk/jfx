@@ -51,12 +51,13 @@ public:
 
     // "base class" methods for all the elements which render as paths
     virtual void toClipPath(Path&);
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
 
 protected:
     SVGGraphicsElement(const QualifiedName&, Document&);
 
-    bool isSupportedAttribute(const QualifiedName&);
+    virtual bool supportsFocus() const override { return Element::supportsFocus() || hasFocusEventListeners(); }
+
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
@@ -66,6 +67,8 @@ protected:
 
 private:
     virtual bool isSVGGraphicsElement() const override { return true; }
+
+    static bool isSupportedAttribute(const QualifiedName&);
 
     // SVGTests
     virtual void synchronizeRequiredFeatures() override { SVGTests::synchronizeRequiredFeatures(this); }
@@ -79,11 +82,11 @@ private:
     bool m_shouldIsolateBlending;
 };
 
-void isSVGGraphicsElement(const SVGGraphicsElement&); // Catch unnecessary runtime check of type known at compile time.
-inline bool isSVGGraphicsElement(const SVGElement& element) { return element.isSVGGraphicsElement(); }
-inline bool isSVGGraphicsElement(const Node& node) { return node.isSVGElement() && toSVGElement(node).isSVGGraphicsElement(); }
-NODE_TYPE_CASTS(SVGGraphicsElement)
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGGraphicsElement)
+    static bool isType(const WebCore::SVGElement& element) { return element.isSVGGraphicsElement(); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // SVGGraphicsElement_h

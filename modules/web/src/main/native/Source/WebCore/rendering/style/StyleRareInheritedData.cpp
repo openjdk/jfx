@@ -113,17 +113,18 @@ StyleRareInheritedData::StyleRareInheritedData()
     , m_textDecorationSkip(RenderStyle::initialTextDecorationSkip())
     , m_textUnderlinePosition(RenderStyle::initialTextUnderlinePosition())
     , m_rubyPosition(RenderStyle::initialRubyPosition())
+    , m_textZoom(RenderStyle::initialTextZoom())
 #if PLATFORM(IOS)
     , touchCalloutEnabled(RenderStyle::initialTouchCalloutEnabled())
+#endif
+#if ENABLE(CSS_TRAILING_WORD)
+    , trailingWord(static_cast<unsigned>(RenderStyle::initialTrailingWord()))
 #endif
     , hyphenationLimitBefore(-1)
     , hyphenationLimitAfter(-1)
     , hyphenationLimitLines(-1)
     , m_lineGrid(RenderStyle::initialLineGrid())
     , m_tabSize(RenderStyle::initialTabSize())
-#if PLATFORM(IOS)
-    , compositionFillColor(RenderStyle::initialCompositionFillColor())
-#endif
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     , textSizeAdjust(RenderStyle::initialTextSizeAdjust())
 #endif
@@ -194,8 +195,12 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , m_textDecorationSkip(o.m_textDecorationSkip)
     , m_textUnderlinePosition(o.m_textUnderlinePosition)
     , m_rubyPosition(o.m_rubyPosition)
+    , m_textZoom(o.m_textZoom)
 #if PLATFORM(IOS)
     , touchCalloutEnabled(o.touchCalloutEnabled)
+#endif
+#if ENABLE(CSS_TRAILING_WORD)
+    , trailingWord(o.trailingWord)
 #endif
     , hyphenationString(o.hyphenationString)
     , hyphenationLimitBefore(o.hyphenationLimitBefore)
@@ -205,9 +210,6 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textEmphasisCustomMark(o.textEmphasisCustomMark)
     , m_lineGrid(o.m_lineGrid)
     , m_tabSize(o.m_tabSize)
-#if PLATFORM(IOS)
-    , compositionFillColor(o.compositionFillColor)
-#endif
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     , textSizeAdjust(o.textSizeAdjust)
 #endif
@@ -220,7 +222,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
 {
 }
 
-PassRef<StyleRareInheritedData> StyleRareInheritedData::copy() const
+Ref<StyleRareInheritedData> StyleRareInheritedData::copy() const
 {
     return adoptRef(*new StyleRareInheritedData(*this));
 }
@@ -298,7 +300,6 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && m_lineBoxContain == o.m_lineBoxContain
 #if PLATFORM(IOS)
         && touchCalloutEnabled == o.touchCalloutEnabled
-        && compositionFillColor == o.compositionFillColor
 #endif
         && hyphenationString == o.hyphenationString
         && locale == o.locale
@@ -322,8 +323,12 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && m_textDecorationSkip == o.m_textDecorationSkip
         && m_textUnderlinePosition == o.m_textUnderlinePosition
         && m_rubyPosition == o.m_rubyPosition
+        && m_textZoom == o.m_textZoom
         && m_lineSnap == o.m_lineSnap
         && m_lineAlign == o.m_lineAlign
+#if ENABLE(CSS_TRAILING_WORD)
+        && trailingWord == o.trailingWord
+#endif
         && StyleImage::imagesEquivalent(listStyleImage.get(), o.listStyleImage.get());
 }
 

@@ -33,8 +33,8 @@
 
 namespace WebCore {
 
-RenderSVGPath::RenderSVGPath(SVGGraphicsElement& element, PassRef<RenderStyle> style)
-    : RenderSVGShape(element, std::move(style))
+RenderSVGPath::RenderSVGPath(SVGGraphicsElement& element, Ref<RenderStyle>&& style)
+    : RenderSVGShape(element, WTF::move(style))
 {
 }
 
@@ -67,9 +67,9 @@ FloatRect RenderSVGPath::calculateUpdatedStrokeBoundingBox() const
 static void useStrokeStyleToFill(GraphicsContext* context)
 {
     if (Gradient* gradient = context->strokeGradient())
-        context->setFillGradient(gradient);
+        context->setFillGradient(*gradient);
     else if (Pattern* pattern = context->strokePattern())
-        context->setFillPattern(pattern);
+        context->setFillPattern(*pattern);
     else
         context->setFillColor(context->strokeColor(), context->strokeColorSpace());
 }
@@ -131,7 +131,7 @@ bool RenderSVGPath::shouldStrokeZeroLengthSubpath() const
 
 Path* RenderSVGPath::zeroLengthLinecapPath(const FloatPoint& linecapPosition) const
 {
-    DEFINE_STATIC_LOCAL(Path, tempPath, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(Path, tempPath, ());
 
     tempPath.clear();
     if (style().svgStyle().capStyle() == SquareCap)
@@ -157,6 +157,13 @@ void RenderSVGPath::updateZeroLengthSubpaths()
     SVGSubpathData subpathData(m_zeroLengthLinecapLocations);
     path().apply(&subpathData, SVGSubpathData::updateFromPathElement);
     subpathData.pathIsDone();
+}
+
+bool RenderSVGPath::isRenderingDisabled() const
+{
+    // For a polygon, polyline or path, rendering is disabled if there is no path data.
+    // No path data is possible in the case of a missing or empty 'd' or 'points' attribute.
+    return path().isEmpty();
 }
 
 }

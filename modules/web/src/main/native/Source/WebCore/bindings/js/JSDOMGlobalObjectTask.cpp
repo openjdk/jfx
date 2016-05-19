@@ -38,9 +38,9 @@ namespace WebCore {
 
 class JSGlobalObjectCallback final : public RefCounted<JSGlobalObjectCallback>, private ActiveDOMCallback {
 public:
-    static PassRefPtr<JSGlobalObjectCallback> create(JSDOMGlobalObject* globalObject, PassRefPtr<Microtask> task)
+    static Ref<JSGlobalObjectCallback> create(JSDOMGlobalObject* globalObject, PassRefPtr<Microtask> task)
     {
-        return adoptRef(new JSGlobalObjectCallback(globalObject, task));
+        return adoptRef(*new JSGlobalObjectCallback(globalObject, task));
     }
 
     void call()
@@ -60,11 +60,11 @@ public:
 
         // When on the main thread (e.g. the document's thread), we need to make sure to
         // push the current ExecState on to the JSMainThreadExecState stack.
-        if (context->isDocument()) {
-            JSMainThreadExecState currentState(exec);
+        if (context->isDocument())
+            JSMainThreadExecState::runTask(exec, *m_task.get());
+        else
             m_task->run(exec);
-        } else
-            m_task->run(exec);
+        ASSERT(!exec->hadException());
     }
 
 private:
@@ -80,17 +80,12 @@ private:
 };
 
 JSGlobalObjectTask::JSGlobalObjectTask(JSDOMGlobalObject* globalObject, PassRefPtr<Microtask> task)
-    : m_callback(JSGlobalObjectCallback::create(globalObject, task))
+    : ScriptExecutionContext::Task(nullptr)
 {
-}
-
-JSGlobalObjectTask::~JSGlobalObjectTask()
-{
-}
-
-void JSGlobalObjectTask::performTask(ScriptExecutionContext*)
-{
-    m_callback->call();
+    RefPtr<JSGlobalObjectCallback> callback = JSGlobalObjectCallback::create(globalObject, task);
+    m_task = [callback] (ScriptExecutionContext&) {
+        callback->call();
+    };
 }
 
 } // namespace WebCore

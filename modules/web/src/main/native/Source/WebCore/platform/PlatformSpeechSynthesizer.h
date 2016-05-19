@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,12 +29,17 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "PlatformSpeechSynthesisVoice.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 OBJC_CLASS WebSpeechSynthesisWrapper;
+#endif
+
+#if PLATFORM(EFL)
+namespace WebCore {
+class PlatformSpeechSynthesisProviderEfl;
+}
 #endif
 
 namespace WebCore {
@@ -59,13 +64,13 @@ protected:
     virtual ~PlatformSpeechSynthesizerClient() { }
 };
 
-class PlatformSpeechSynthesizer {
+class WEBCORE_EXPORT PlatformSpeechSynthesizer {
 public:
-    static PassOwnPtr<PlatformSpeechSynthesizer> create(PlatformSpeechSynthesizerClient*);
+    WEBCORE_EXPORT explicit PlatformSpeechSynthesizer(PlatformSpeechSynthesizerClient*);
 
     // FIXME: We have multiple virtual functions just so we can support a mock for testing.
     // Seems wasteful. Would be nice to find a better way.
-    virtual ~PlatformSpeechSynthesizer();
+    WEBCORE_EXPORT virtual ~PlatformSpeechSynthesizer();
 
     const Vector<RefPtr<PlatformSpeechSynthesisVoice>>& voiceList() const;
     virtual void speak(PassRefPtr<PlatformSpeechSynthesisUtterance>);
@@ -76,8 +81,6 @@ public:
     PlatformSpeechSynthesizerClient* client() const { return m_speechSynthesizerClient; }
 
 protected:
-    explicit PlatformSpeechSynthesizer(PlatformSpeechSynthesizerClient*);
-
     Vector<RefPtr<PlatformSpeechSynthesisVoice>> m_voiceList;
 
 private:
@@ -88,6 +91,9 @@ private:
 
 #if PLATFORM(COCOA)
     RetainPtr<WebSpeechSynthesisWrapper> m_platformSpeechWrapper;
+#endif
+#if PLATFORM(EFL)
+    std::unique_ptr<PlatformSpeechSynthesisProviderEfl> m_platformSpeechWrapper;
 #endif
 };
 

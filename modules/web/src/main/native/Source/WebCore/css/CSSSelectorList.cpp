@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2012, 2013, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,11 +32,6 @@
 
 namespace WebCore {
 
-CSSSelectorList::~CSSSelectorList()
-{
-    deleteSelectors();
-}
-
 CSSSelectorList::CSSSelectorList(const CSSSelectorList& other)
 {
     unsigned otherComponentCount = other.componentCount();
@@ -47,12 +42,11 @@ CSSSelectorList::CSSSelectorList(const CSSSelectorList& other)
         new (NotNull, &m_selectorArray[i]) CSSSelector(other.m_selectorArray[i]);
 }
 
-void CSSSelectorList::adopt(CSSSelectorList& list)
+CSSSelectorList::CSSSelectorList(CSSSelectorList&& other)
+    : m_selectorArray(other.m_selectorArray)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(componentCount());
-    deleteSelectors();
-    m_selectorArray = list.m_selectorArray;
-    list.m_selectorArray = 0;
+    other.m_selectorArray = nullptr;
 }
 
 void CSSSelectorList::adoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>& selectorVector)
@@ -102,6 +96,16 @@ unsigned CSSSelectorList::componentCount() const
     return (current - m_selectorArray) + 1;
 }
 
+CSSSelectorList& CSSSelectorList::operator=(CSSSelectorList&& other)
+{
+    deleteSelectors();
+    m_selectorArray = other.m_selectorArray;
+    other.m_selectorArray = nullptr;
+
+    ASSERT_WITH_SECURITY_IMPLICATION(componentCount());
+    return *this;
+}
+
 void CSSSelectorList::deleteSelectors()
 {
     if (!m_selectorArray)
@@ -118,14 +122,18 @@ void CSSSelectorList::deleteSelectors()
 String CSSSelectorList::selectorsText() const
 {
     StringBuilder result;
-
-    for (const CSSSelector* s = first(); s; s = next(s)) {
-        if (s != first())
-            result.append(", ");
-        result.append(s->selectorText());
-    }
-
+    buildSelectorsText(result);
     return result.toString();
+}
+
+void CSSSelectorList::buildSelectorsText(StringBuilder& stringBuilder) const
+{
+    const CSSSelector* firstSubSelector = first();
+    for (const CSSSelector* subSelector = firstSubSelector; subSelector; subSelector = CSSSelectorList::next(subSelector)) {
+        if (subSelector != firstSubSelector)
+            stringBuilder.appendLiteral(", ");
+        stringBuilder.append(subSelector->selectorText());
+    }
 }
 
 template <typename Functor>
@@ -162,7 +170,7 @@ class SelectorNeedsNamespaceResolutionFunctor {
 public:
     bool operator()(const CSSSelector* selector)
     {
-        if (selector->m_match == CSSSelector::Tag && selector->tagQName().prefix() != nullAtom && selector->tagQName().prefix() != starAtom)
+        if (selector->match() == CSSSelector::Tag && selector->tagQName().prefix() != nullAtom && selector->tagQName().prefix() != starAtom)
             return true;
         if (selector->isAttributeSelector() && selector->attribute().prefix() != nullAtom && selector->attribute().prefix() != starAtom)
             return true;

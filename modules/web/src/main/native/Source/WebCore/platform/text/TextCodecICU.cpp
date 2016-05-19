@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -66,10 +66,10 @@ static UConverter*& cachedConverterICU()
     return threadGlobalData().cachedConverterICU().converter;
 }
 
-PassOwnPtr<TextCodec> TextCodecICU::create(const TextEncoding& encoding, const void* additionalData)
+std::unique_ptr<TextCodec> TextCodecICU::create(const TextEncoding& encoding, const void* additionalData)
 {
     // Name strings are persistently kept in TextEncodingRegistry maps, so they are never deleted.
-    return adoptPtr(new TextCodecICU(encoding.name(), static_cast<const char*>(additionalData)));
+    return std::make_unique<TextCodecICU>(encoding.name(), static_cast<const char*>(additionalData));
 }
 
 void TextCodecICU::registerEncodingNames(EncodingNameRegistrar registrar)
@@ -491,18 +491,26 @@ CString TextCodecICU::encode(const UChar* characters, size_t length, Unencodable
     // FIXME: We should see if there is "force ASCII range" mode in ICU;
     // until then, we change the backslash into a yen sign.
     // Encoding will change the yen sign back into a backslash.
-    String copy;
-    const UChar* source;
-    const UChar* sourceLimit;
+    Vector<UChar> copy;
+    const UChar* source = characters;
     if (shouldShowBackslashAsCurrencySymbolIn(m_encodingName)) {
-        copy.append(characters, length);
-        copy.replace('\\', 0xA5);
-        source = copy.deprecatedCharacters();
-        sourceLimit = source + copy.length();
-    } else {
-        source = characters;
-        sourceLimit = source + length;
+        for (size_t i = 0; i < length; ++i) {
+            if (characters[i] == '\\') {
+                copy.reserveInitialCapacity(length);
+                for (size_t j = 0; j < i; ++j)
+                    copy.uncheckedAppend(characters[j]);
+                for (size_t j = i; j < length; ++j) {
+                    UChar character = characters[j];
+                    if (character == '\\')
+                        character = yenSign;
+                    copy.uncheckedAppend(character);
+                }
+                source = copy.data();
+                break;
+            }
+        }
     }
+    const UChar* sourceLimit = source + length;
 
     UErrorCode err = U_ZERO_ERROR;
 

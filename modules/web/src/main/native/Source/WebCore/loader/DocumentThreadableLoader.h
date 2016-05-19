@@ -36,7 +36,6 @@
 #include "FrameLoaderTypes.h"
 #include "ThreadableLoader.h"
 #include <wtf/Forward.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -57,15 +56,15 @@ namespace WebCore {
         static PassRefPtr<DocumentThreadableLoader> create(Document&, ThreadableLoaderClient&, const ResourceRequest&, const ThreadableLoaderOptions&);
         virtual ~DocumentThreadableLoader();
 
-        virtual void cancel();
+        virtual void cancel() override;
         virtual void setDefersLoading(bool);
 
         using RefCounted<DocumentThreadableLoader>::ref;
         using RefCounted<DocumentThreadableLoader>::deref;
 
     protected:
-        virtual void refThreadableLoader() { ref(); }
-        virtual void derefThreadableLoader() { deref(); }
+        virtual void refThreadableLoader() override { ref(); }
+        virtual void derefThreadableLoader() override { deref(); }
 
     private:
         enum BlockingBehavior {
@@ -97,6 +96,8 @@ namespace WebCore {
         void loadRequest(const ResourceRequest&, SecurityCheckPolicy);
         bool isAllowedRedirect(const URL&);
 
+        bool isXMLHttpRequest() const override final;
+
         SecurityOrigin* securityOrigin() const;
 
         CachedResourceHandle<CachedRawResource> m_resource;
@@ -106,7 +107,7 @@ namespace WebCore {
         bool m_sameOriginRequest;
         bool m_simpleRequest;
         bool m_async;
-        OwnPtr<ResourceRequest> m_actualRequest;  // non-null during Access Control preflight checks
+        std::unique_ptr<ResourceRequest> m_actualRequest; // non-null during Access Control preflight checks
     };
 
 } // namespace WebCore

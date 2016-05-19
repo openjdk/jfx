@@ -46,6 +46,9 @@ void VariableEvent::dump(PrintStream& out) const
     case BirthToSpill:
         dumpSpillInfo("BirthToSpill", out);
         break;
+    case Birth:
+        out.print("Birth(", id(), ")");
+        break;
     case Fill:
         dumpFillInfo("Fill", out);
         break;
@@ -56,11 +59,11 @@ void VariableEvent::dump(PrintStream& out) const
         out.print("Death(", id(), ")");
         break;
     case MovHintEvent:
-        out.print("MovHint(", id(), ", r", bytecodeRegister(), ")");
+        out.print("MovHint(", id(), ", ", bytecodeRegister(), ")");
         break;
     case SetLocalEvent:
         out.print(
-            "SetLocal(machine:r", machineRegister(), " -> bytecode:r", bytecodeRegister(),
+            "SetLocal(machine:", machineRegister(), " -> bytecode:", bytecodeRegister(),
             ", ", dataFormatToString(dataFormat()), ")");
         break;
     default:
@@ -85,7 +88,7 @@ void VariableEvent::dumpFillInfo(const char* name, PrintStream& out) const
 
 void VariableEvent::dumpSpillInfo(const char* name, PrintStream& out) const
 {
-    out.print(name, "(", id(), ", r", spillRegister(), ", ", dataFormatToString(dataFormat()), ")");
+    out.print(name, "(", id(), ", ", spillRegister(), ", ", dataFormatToString(dataFormat()), ")");
 }
 
 } } // namespace JSC::DFG

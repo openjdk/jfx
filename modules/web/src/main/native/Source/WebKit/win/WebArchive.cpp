@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebArchive.h"
 
@@ -55,13 +54,13 @@ WebArchive::WebArchive(PassRefPtr<LegacyWebArchive> coreArchive)
     , m_archive(coreArchive)
 {
     gClassCount++;
-    gClassNameCount.add("WebArchive");
+    gClassNameCount().add("WebArchive");
 }
 
 WebArchive::~WebArchive()
 {
     gClassCount--;
-    gClassNameCount.remove("WebArchive");
+    gClassNameCount().remove("WebArchive");
 }
 
 HRESULT STDMETHODCALLTYPE WebArchive::QueryInterface(REFIID riid, void** ppvObject)

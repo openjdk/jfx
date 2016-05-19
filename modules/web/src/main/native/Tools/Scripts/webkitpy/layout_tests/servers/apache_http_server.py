@@ -1,3 +1,4 @@
+# Copyright (C) 2015 Apple Inc. All rights reserved.
 # Copyright (C) 2011 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -42,12 +43,12 @@ _log = logging.getLogger(__name__)
 
 
 class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
-    def __init__(self, port_obj, output_dir, additional_dirs=None, number_of_servers=None):
+    def __init__(self, port_obj, output_dir, additional_dirs=None):
         """Args:
           port_obj: handle to the platform-specific routines
           output_dir: the absolute path to the layout test result directory
         """
-        http_server_base.HttpServerBase.__init__(self, port_obj, number_of_servers)
+        http_server_base.HttpServerBase.__init__(self, port_obj)
         # We use the name "httpd" instead of "apache" to make our paths (e.g. the pid file: /tmp/WebKit/httpd.pid)
         # match old-run-webkit-tests: https://bugs.webkit.org/show_bug.cgi?id=63956
         self._name = 'httpd'
@@ -60,6 +61,17 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
         self._pid_file = self._filesystem.join(self._runtime_path, '%s.pid' % self._name)
 
         test_dir = self._port_obj.layout_tests_dir()
+
+        if port_obj.host.platform.is_win():
+            # Convert to MSDOS file naming:
+            precompiledBuildbot = re.compile('^/home/buildbot')
+            precompiledDrive = re.compile('^/cygdrive/c')
+            output_dir = precompiledBuildbot.sub("C:/cygwin/home/buildbot", output_dir)
+            output_dir = precompiledDrive.sub("C:", output_dir)
+            test_dir = precompiledBuildbot.sub("C:/cygwin/home/buildbot", test_dir)
+            test_dir = precompiledDrive.sub("C:", test_dir)
+            self._pid_file = self._filesystem.join("C:/xampp/apache/logs", '%s.pid' % self._name)
+
         js_test_resources_dir = self._filesystem.join(test_dir, "resources")
         media_resources_dir = self._filesystem.join(test_dir, "media")
         mime_types_path = self._filesystem.join(test_dir, "http", "conf", "mime.types")
@@ -79,9 +91,11 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
             '-c', "\'TypesConfig \"%s\"\'" % mime_types_path,
             '-c', "\'CustomLog \"%s\" common\'" % access_log,
             '-c', "\'ErrorLog \"%s\"\'" % error_log,
-            '-C', "\'User \"%s\"\'" % os.environ.get("USERNAME", os.environ.get("USER", "")),
             '-c', "\'PidFile %s'" % self._pid_file,
             '-k', "start"]
+
+        if not port_obj.host.platform.is_win():
+            start_cmd.extend(['-C', "\'User \"%s\"\'" % os.environ.get("USERNAME", os.environ.get("USER", ""))])
 
         enable_ipv6 = self._port_obj.http_server_supports_ipv6()
         # Perform part of the checks Apache's APR does when trying to listen to
@@ -115,11 +129,6 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
                         '-c', "\'RemoveHandler .cgi .pl\'",
                         '-c', "\'</Location>\'"]
 
-        if self._number_of_servers:
-            start_cmd += ['-c', "\'StartServers %d\'" % self._number_of_servers,
-                          '-c', "\'MinSpareServers %d\'" % self._number_of_servers,
-                          '-c', "\'MaxSpareServers %d\'" % self._number_of_servers]
-
         stop_cmd = [executable,
             '-f', "\"%s\"" % self._get_apache_config_file_path(test_dir, output_dir),
             '-c', "\'PidFile %s'" % self._pid_file,
@@ -146,6 +155,13 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
         # FIXME: Why do we need to copy the config file since we're not modifying it?
         self._filesystem.write_text_file(httpd_config_copy, httpd_conf)
 
+        if self._port_obj.host.platform.is_win():
+            # Convert to MSDOS file naming:
+            precompiledDrive = re.compile('^/cygdrive/c')
+            httpd_config_copy = precompiledDrive.sub("C:", httpd_config_copy)
+            precompiledBuildbot = re.compile('^/home/buildbot')
+            httpd_config_copy = precompiledBuildbot.sub("C:/cygwin/home/buildbot", httpd_config_copy)
+
         return httpd_config_copy
 
     def _spawn_process(self):
@@ -164,11 +180,17 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
     def _stop_running_server(self):
         # If apache was forcefully killed, the pid file will not have been deleted, so check
         # that the process specified by the pid_file no longer exists before deleting the file.
-        if self._pid and not self._executive.check_running_pid(self._pid):
+        if self._pid and not self._port_obj.host.platform.is_win() and not self._executive.check_running_pid(self._pid):
             self._filesystem.remove(self._pid_file)
             return
 
         retval, err = self._run(self._stop_cmd)
+
+        # Windows httpd outputs shutdown status in stderr:
+        if self._port_obj.host.platform.is_win() and not retval and len(err):
+            _log.debug('Shutdown: %s' % err)
+            err = ""
+
         if retval or len(err):
             raise http_server_base.ServerError('Failed to stop %s: %s' % (self._name, err))
 
@@ -176,6 +198,10 @@ class LayoutTestApacheHttpd(http_server_base.HttpServerBase):
         # the stop command returns, so we wait a little while longer for the
         # pid file to be removed.
         if not self._wait_for_action(lambda: not self._filesystem.exists(self._pid_file)):
+            if self._port_obj.host.platform.is_win():
+                self._remove_pid_file()
+                return
+
             raise http_server_base.ServerError('Failed to stop %s: pid file still exists' % self._name)
 
     def _run(self, cmd):

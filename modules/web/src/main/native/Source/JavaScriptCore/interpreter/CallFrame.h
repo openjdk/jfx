@@ -24,16 +24,17 @@
 #define CallFrame_h
 
 #include "AbstractPC.h"
-#include "VM.h"
 #include "JSStack.h"
 #include "MacroAssemblerCodeRef.h"
 #include "Register.h"
 #include "StackVisitor.h"
+#include "VM.h"
+#include "VMEntryRecord.h"
 
 namespace JSC  {
 
     class Arguments;
-    class JSActivation;
+    class JSLexicalEnvironment;
     class Interpreter;
     class JSScope;
 
@@ -42,16 +43,17 @@ namespace JSC  {
     class ExecState : private Register {
     public:
         JSValue calleeAsValue() const { return this[JSStack::Callee].jsValue(); }
-        JSObject* callee() const { return this[JSStack::Callee].function(); }
+        JSObject* callee() const { return this[JSStack::Callee].object(); }
         CodeBlock* codeBlock() const { return this[JSStack::CodeBlock].Register::codeBlock(); }
-        JSScope* scope() const
+        JSScope* scope(int scopeRegisterOffset) const
         {
-            ASSERT(this[JSStack::ScopeChain].Register::scope());
-            return this[JSStack::ScopeChain].Register::scope();
+            ASSERT(this[scopeRegisterOffset].Register::scope());
+            return this[scopeRegisterOffset].Register::scope();
         }
 
-        bool hasActivation() const { return !!uncheckedActivation(); }
-        JSActivation* activation() const;
+        bool hasActivation() const;
+        JSLexicalEnvironment* lexicalEnvironment() const;
+        JSLexicalEnvironment* lexicalEnvironmentOrNullptr() const;
         JSValue uncheckedActivation() const;
 
         // Global object in which execution began.
@@ -73,42 +75,19 @@ namespace JSC  {
         // But they're used in many places in legacy code, so they're not going away any time soon.
 
         void clearException() { vm().clearException(); }
-        void clearSupplementaryExceptionInfo()
-        {
-            vm().clearExceptionStack();
-        }
 
-        JSValue exception() const { return vm().exception(); }
-        bool hadException() const { return !vm().exception().isEmpty(); }
+        Exception* exception() const { return vm().exception(); }
+        bool hadException() const { return !!vm().exception(); }
 
+        Exception* lastException() const { return vm().lastException(); }
+        void clearLastException() { vm().clearLastException(); }
+
+        AtomicStringTable* atomicStringTable() const { return vm().atomicStringTable(); }
         const CommonIdentifiers& propertyNames() const { return *vm().propertyNames; }
         const MarkedArgumentBuffer& emptyList() const { return *vm().emptyList; }
         Interpreter* interpreter() { return vm().interpreter; }
         Heap* heap() { return &vm().heap; }
-#ifndef NDEBUG
-        void dumpCaller();
-#endif
-        static const HashTable& arrayConstructorTable(VM& vm) { return *vm.arrayConstructorTable; }
-        static const HashTable& arrayPrototypeTable(VM& vm) { return *vm.arrayPrototypeTable; }
-        static const HashTable& booleanPrototypeTable(VM& vm) { return *vm.booleanPrototypeTable; }
-        static const HashTable& dataViewTable(VM& vm) { return *vm.dataViewTable; }
-        static const HashTable& dateTable(VM& vm) { return *vm.dateTable; }
-        static const HashTable& dateConstructorTable(VM& vm) { return *vm.dateConstructorTable; }
-        static const HashTable& errorPrototypeTable(VM& vm) { return *vm.errorPrototypeTable; }
-        static const HashTable& globalObjectTable(VM& vm) { return *vm.globalObjectTable; }
-        static const HashTable& jsonTable(VM& vm) { return *vm.jsonTable; }
-        static const HashTable& numberConstructorTable(VM& vm) { return *vm.numberConstructorTable; }
-        static const HashTable& numberPrototypeTable(VM& vm) { return *vm.numberPrototypeTable; }
-        static const HashTable& objectConstructorTable(VM& vm) { return *vm.objectConstructorTable; }
-        static const HashTable& privateNamePrototypeTable(VM& vm) { return *vm.privateNamePrototypeTable; }
-        static const HashTable& regExpTable(VM& vm) { return *vm.regExpTable; }
-        static const HashTable& regExpConstructorTable(VM& vm) { return *vm.regExpConstructorTable; }
-        static const HashTable& regExpPrototypeTable(VM& vm) { return *vm.regExpPrototypeTable; }
-        static const HashTable& stringConstructorTable(VM& vm) { return *vm.stringConstructorTable; }
-#if ENABLE(PROMISES)
-        static const HashTable& promisePrototypeTable(VM& vm) { return *vm.promisePrototypeTable; }
-        static const HashTable& promiseConstructorTable(VM& vm) { return *vm.promiseConstructorTable; }
-#endif
+
 
         static CallFrame* create(Register* callFrameBase) { return static_cast<CallFrame*>(callFrameBase); }
         Register* registers() { return this; }
@@ -116,7 +95,10 @@ namespace JSC  {
 
         CallFrame& operator=(const Register& r) { *static_cast<Register*>(this) = r; return *this; }
 
-        CallFrame* callerFrame() const { return callerFrameAndPC().callerFrame; }
+        CallFrame* callerFrame() const { return static_cast<CallFrame*>(callerFrameOrVMEntryFrame()); }
+
+        JS_EXPORT_PRIVATE CallFrame* callerFrame(VMEntryFrame*&);
+
         static ptrdiff_t callerFrameOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, callerFrame); }
 
         ReturnAddressPtr returnPC() const { return ReturnAddressPtr(callerFrameAndPC().pc); }
@@ -183,7 +165,7 @@ namespace JSC  {
 
         Register* topOfFrame()
         {
-            if (isVMEntrySentinel() || !codeBlock())
+            if (!codeBlock())
                 return registers();
             return topOfFrameInternal();
         }
@@ -191,12 +173,10 @@ namespace JSC  {
 #if USE(JSVALUE32_64)
         Instruction* currentVPC() const
         {
-            ASSERT(!isVMEntrySentinel());
             return bitwise_cast<Instruction*>(this[JSStack::ArgumentCount].tag());
         }
         void setCurrentVPC(Instruction* vpc)
         {
-            ASSERT(!isVMEntrySentinel());
             this[JSStack::ArgumentCount].tag() = bitwise_cast<int32_t>(vpc);
         }
 #else
@@ -205,16 +185,15 @@ namespace JSC  {
 #endif
 
         void setCallerFrame(CallFrame* frame) { callerFrameAndPC().callerFrame = frame; }
-        void setScope(JSScope* scope) { static_cast<Register*>(this)[JSStack::ScopeChain] = scope; }
-        void setActivation(JSActivation*);
+        void setScope(int scopeRegisterOffset, JSScope* scope) { static_cast<Register*>(this)[scopeRegisterOffset] = scope; }
+        void setActivation(JSLexicalEnvironment*);
 
-        ALWAYS_INLINE void init(CodeBlock* codeBlock, Instruction* vPC, JSScope* scope,
+        ALWAYS_INLINE void init(CodeBlock* codeBlock, Instruction* vPC,
             CallFrame* callerFrame, int argc, JSObject* callee)
         {
-            ASSERT(callerFrame == noCaller() || callerFrame->isVMEntrySentinel() || callerFrame->stack()->containsAddress(this));
+            ASSERT(callerFrame == noCaller() || callerFrame->stack()->containsAddress(this));
 
             setCodeBlock(codeBlock);
-            setScope(scope);
             setCallerFrame(callerFrame);
             setReturnPC(vPC); // This is either an Instruction* or a pointer into JIT generated code stored as an Instruction*.
             setArgumentCountIncludingThis(argc); // original argument count (for the sake of the "arguments" object)
@@ -223,8 +202,10 @@ namespace JSC  {
 
         // Read a register from the codeframe (or constant from the CodeBlock).
         Register& r(int);
+        Register& r(VirtualRegister);
         // Read a register for a non-constant
         Register& uncheckedR(int);
+        Register& uncheckedR(VirtualRegister);
 
         // Access to arguments as passed. (After capture, arguments may move to a different location.)
         size_t argumentCount() const { return argumentCountIncludingThis() - 1; }
@@ -257,51 +238,31 @@ namespace JSC  {
             this[argumentOffset(argument)] = value;
         }
 
+        JSValue getArgumentUnsafe(size_t argIndex)
+        {
+            // User beware! This method does not verify that there is a valid
+            // argument at the specified argIndex. This is used for debugging
+            // and verification code only. The caller is expected to know what
+            // he/she is doing when calling this method.
+            return this[argumentOffset(argIndex)].jsValue();
+        }
+
         static int thisArgumentOffset() { return argumentOffsetIncludingThis(0); }
         JSValue thisValue() { return this[thisArgumentOffset()].jsValue(); }
         void setThisValue(JSValue value) { this[thisArgumentOffset()] = value; }
+
+        // Under the constructor implemented in C++, thisValue holds the newTarget instead of the automatically constructed value.
+        // The result of this function is only effective under the "construct" context.
+        JSValue newTarget() { return thisValue(); }
 
         JSValue argumentAfterCapture(size_t argument);
 
         static int offsetFor(size_t argumentCountIncludingThis) { return argumentCountIncludingThis + JSStack::ThisArgument - 1; }
 
-        // FIXME: Remove these.
-        int hostThisRegister() { return thisArgumentOffset(); }
-        JSValue hostThisValue() { return thisValue(); }
-
         static CallFrame* noCaller() { return 0; }
 
-        bool isVMEntrySentinel() const
-        {
-            return !!this && codeBlock() == vmEntrySentinelCodeBlock();
-        }
-
-        CallFrame* vmEntrySentinelCallerFrame() const
-        {
-            ASSERT(isVMEntrySentinel());
-            return this[JSStack::ScopeChain].callFrame();
-        }
-
-        void initializeVMEntrySentinelFrame(CallFrame* callFrame)
-        {
-            setCallerFrame(noCaller());
-            setReturnPC(0);
-            setCodeBlock(vmEntrySentinelCodeBlock());
-            static_cast<Register*>(this)[JSStack::ScopeChain] = callFrame;
-            setCallee(0);
-            setArgumentCountIncludingThis(0);
-        }
-
-        CallFrame* callerFrameSkippingVMEntrySentinel()
-        {
-            CallFrame* caller = callerFrame();
-            if (caller->isVMEntrySentinel())
-                return caller->vmEntrySentinelCallerFrame();
-            return caller;
-        }
-
         void setArgumentCountIncludingThis(int count) { static_cast<Register*>(this)[JSStack::ArgumentCount].payload() = count; }
-        void setCallee(JSObject* callee) { static_cast<Register*>(this)[JSStack::Callee] = Register::withCallee(callee); }
+        void setCallee(JSObject* callee) { static_cast<Register*>(this)[JSStack::Callee] = callee; }
         void setCodeBlock(CodeBlock* codeBlock) { static_cast<Register*>(this)[JSStack::CodeBlock] = codeBlock; }
         void setReturnPC(void* value) { callerFrameAndPC().pc = reinterpret_cast<Instruction*>(value); }
 
@@ -313,8 +274,10 @@ namespace JSC  {
             StackVisitor::visit<Functor>(this, functor);
         }
 
+        void dump(PrintStream&);
+        JS_EXPORT_PRIVATE const char* describeFrame();
+
     private:
-        static const intptr_t s_VMEntrySentinel = 1;
 
 #ifndef NDEBUG
         JSStack* stack();
@@ -344,22 +307,12 @@ namespace JSC  {
             return argIndex;
         }
 
-        JSValue getArgumentUnsafe(size_t argIndex)
-        {
-            // User beware! This method does not verify that there is a valid
-            // argument at the specified argIndex. This is used for debugging
-            // and verification code only. The caller is expected to know what
-            // he/she is doing when calling this method.
-            return this[argumentOffset(argIndex)].jsValue();
-        }
+        void* callerFrameOrVMEntryFrame() const { return callerFrameAndPC().callerFrame; }
 
         CallerFrameAndPC& callerFrameAndPC() { return *reinterpret_cast<CallerFrameAndPC*>(this); }
         const CallerFrameAndPC& callerFrameAndPC() const { return *reinterpret_cast<const CallerFrameAndPC*>(this); }
 
-        static CodeBlock* vmEntrySentinelCodeBlock() { return reinterpret_cast<CodeBlock*>(s_VMEntrySentinel); }
-
         friend class JSStack;
-        friend class VMInspector;
     };
 
 } // namespace JSC

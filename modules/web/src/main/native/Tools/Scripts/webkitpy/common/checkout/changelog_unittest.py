@@ -27,7 +27,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest2 as unittest
+import unittest
 
 from StringIO import StringIO
 
@@ -241,15 +241,18 @@ class ChangeLogTest(unittest.TestCase):
         self.assertEqual(parsed_entries[0].date(), "2009-08-17")
         self.assertEqual(parsed_entries[0].reviewer_text(), "David Levin")
         self.assertEqual(parsed_entries[0].is_touched_files_text_clean(), False)
+        self.assertIsNone(parsed_entries[0].bug_description())
         self.assertEqual(parsed_entries[1].date_line(), "2009-08-16  David Kilzer  <ddkilzer@apple.com>")
         self.assertEqual(parsed_entries[1].date(), "2009-08-16")
         self.assertEqual(parsed_entries[1].author_email(), "ddkilzer@apple.com")
+        self.assertEqual(parsed_entries[1].bug_description(), "Backed out r47343 which was mistakenly committed")
         self.assertEqual(parsed_entries[1].touched_files_text(), "        * Scripts/bugzilla-tool:\n        * Scripts/modules/scm.py:\n")
         self.assertEqual(parsed_entries[1].is_touched_files_text_clean(), True)
         self.assertEqual(parsed_entries[2].reviewer_text(), "Mark Rowe")
         self.assertEqual(parsed_entries[2].touched_files(), ["DumpRenderTree/mac/DumpRenderTreeWindow.mm"])
         self.assertEqual(parsed_entries[2].touched_functions(), {"DumpRenderTree/mac/DumpRenderTreeWindow.mm": ["-[DumpRenderTreeWindow close]"]})
         self.assertEqual(parsed_entries[2].is_touched_files_text_clean(), False)
+        self.assertIsNone(parsed_entries[2].bug_description())
         self.assertEqual(parsed_entries[3].author_name(), "Benjamin Poulain")
         self.assertEqual(parsed_entries[3].touched_files(), ["platform/cf/KURLCFNet.cpp", "platform/mac/KURLMac.mm",
             "WebCoreSupport/ChromeClientEfl.cpp", "ewk/ewk_private.h", "ewk/ewk_view.cpp"])
@@ -260,9 +263,13 @@ class ChangeLogTest(unittest.TestCase):
         self.assertEqual(parsed_entries[4].reviewer_text(), "David Hyatt")
         self.assertIsNone(parsed_entries[4].bug_description())
         self.assertEqual(parsed_entries[5].reviewer_text(), "Adam Roben")
+        self.assertIsNone(parsed_entries[5].bug_description())
         self.assertEqual(parsed_entries[6].reviewer_text(), "Tony Chang")
+        self.assertIsNone(parsed_entries[6].bug_description())
         self.assertIsNone(parsed_entries[7].reviewer_text())
+        self.assertEqual(parsed_entries[7].bug_description(), "Unreviewed warning fix.")
         self.assertEqual(parsed_entries[8].reviewer_text(), 'Darin Adler')
+        self.assertEqual(parsed_entries[8].bug_description(), 'Resolve regular and visited link style in a single pass')
 
     def test_parse_log_entries_from_annotated_file(self):
         # Note that there are trailing spaces on some of the lines intentionally.
@@ -471,6 +478,7 @@ class ChangeLogTest(unittest.TestCase):
         self._assert_has_valid_reviewer("Rubber stamped by Eric.", False)
         self._assert_has_valid_reviewer("Rubber stamped by Eric Seidel.", True)
         self._assert_has_valid_reviewer("Unreviewed build fix.", True)
+        self._assert_has_valid_reviewer("Reviewed by Gabor Rapcsanyi.", False)
 
     def test_is_touched_files_text_clean(self):
         tests = [
@@ -556,6 +564,16 @@ class ChangeLogTest(unittest.TestCase):
         * Scripts/bugzilla-tool:
 '''
 
+    _new_entry_boilerplate_with_unreviewed = '''2009-08-19  Eric Seidel  <eric@webkit.org>
+
+        Need a short description (OOPS!).
+        https://bugs.webkit.org/show_bug.cgi?id=12345
+
+        Unreviewed.
+
+        * Scripts/bugzilla-tool:
+'''
+
     _new_entry_boilerplate_with_multiple_bugurl = '''2009-08-19  Eric Seidel  <eric@webkit.org>
 
         Need a short description (OOPS!).
@@ -594,6 +612,12 @@ class ChangeLogTest(unittest.TestCase):
         actual_contents = fs.read_text_file(self._changelog_path)
         expected_contents = changelog_contents.replace('NOBODY (OOPS!)', reviewer_name)
         self.assertEqual(actual_contents.splitlines(), expected_contents.splitlines())
+
+        changelog_contents = u"%s\n%s" % (self._new_entry_boilerplate_with_unreviewed, self._example_changelog)
+        fs.write_text_file(self._changelog_path, changelog_contents)
+        ChangeLog(self._changelog_path, fs).set_reviewer(reviewer_name)
+        actual_contents = fs.read_text_file(self._changelog_path)
+        self.assertEqual(actual_contents.splitlines(), changelog_contents.splitlines())
 
         changelog_contents_without_reviewer_line = u"%s\n%s" % (self._new_entry_boilerplate_without_reviewer_line, self._example_changelog)
         fs.write_text_file(self._changelog_path, changelog_contents_without_reviewer_line)

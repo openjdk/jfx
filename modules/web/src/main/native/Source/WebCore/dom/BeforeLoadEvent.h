@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE, INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -35,26 +35,26 @@ namespace WebCore {
 struct BeforeLoadEventInit : public EventInit {
     BeforeLoadEventInit()
     {
-    };
+    }
 
     String url;
 };
 
-class BeforeLoadEvent : public Event {
+class BeforeLoadEvent final : public Event {
 public:
-    static PassRefPtr<BeforeLoadEvent> create()
+    static Ref<BeforeLoadEvent> create()
     {
-        return adoptRef(new BeforeLoadEvent);
+        return adoptRef(*new BeforeLoadEvent);
     }
 
-    static PassRefPtr<BeforeLoadEvent> create(const String& url)
+    static Ref<BeforeLoadEvent> create(const String& url)
     {
-        return adoptRef(new BeforeLoadEvent(url));
+        return adoptRef(*new BeforeLoadEvent(url));
     }
 
-    static PassRefPtr<BeforeLoadEvent> create(const AtomicString& type, const BeforeLoadEventInit& initializer)
+    static Ref<BeforeLoadEvent> create(const AtomicString& type, const BeforeLoadEventInit& initializer)
     {
-        return adoptRef(new BeforeLoadEvent(type, initializer));
+        return adoptRef(*new BeforeLoadEvent(type, initializer));
     }
 
     const String& url() const { return m_url; }

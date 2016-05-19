@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,16 +31,16 @@
 
 #include "WebGLContextGroup.h"
 #include "WebGLFramebuffer.h"
-#include "WebGLRenderingContext.h"
+#include "WebGLRenderingContextBase.h"
 
 namespace WebCore {
 
-PassRefPtr<WebGLTexture> WebGLTexture::create(WebGLRenderingContext* ctx)
+Ref<WebGLTexture> WebGLTexture::create(WebGLRenderingContextBase* ctx)
 {
-    return adoptRef(new WebGLTexture(ctx));
+    return adoptRef(*new WebGLTexture(ctx));
 }
 
-WebGLTexture::WebGLTexture(WebGLRenderingContext* ctx)
+WebGLTexture::WebGLTexture(WebGLRenderingContextBase* ctx)
     : WebGLSharedObject(ctx)
     , m_target(0)
     , m_minFilter(GraphicsContext3D::NEAREST_MIPMAP_LINEAR)
@@ -216,6 +216,15 @@ bool WebGLTexture::isValid(GC3Denum target, GC3Dint level) const
     if (!info)
         return 0;
     return info->valid;
+}
+
+void WebGLTexture::markInvalid(GC3Denum target, GC3Dint level)
+{
+    int index = mapTargetToIndex(target);
+    if (index < 0)
+        return;
+    m_info[index][level].valid = false;
+    update();
 }
 
 bool WebGLTexture::isNPOT(GC3Dsizei width, GC3Dsizei height)

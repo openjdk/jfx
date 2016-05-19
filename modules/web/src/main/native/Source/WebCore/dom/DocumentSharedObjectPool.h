@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,8 +27,8 @@
 #ifndef DocumentSharedObjectPool_h
 #define DocumentSharedObjectPool_h
 
+#include <memory>
 #include <wtf/HashMap.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/StringHash.h>
 
@@ -39,14 +39,9 @@ class ShareableElementData;
 
 class DocumentSharedObjectPool {
 public:
-    static PassOwnPtr<DocumentSharedObjectPool> create() { return adoptPtr(new DocumentSharedObjectPool); }
-    ~DocumentSharedObjectPool();
-
-    PassRef<ShareableElementData> cachedShareableElementDataWithAttributes(const Vector<Attribute>&);
+    Ref<ShareableElementData> cachedShareableElementDataWithAttributes(const Vector<Attribute>&);
 
 private:
-    DocumentSharedObjectPool();
-
     typedef HashMap<unsigned, RefPtr<ShareableElementData>, AlreadyHashed> ShareableElementDataCache;
     ShareableElementDataCache m_shareableElementDataCache;
 };

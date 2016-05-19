@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,8 +29,6 @@
 #include "config.h"
 #include "DatabaseThread.h"
 
-#if ENABLE(SQL_DATABASE)
-
 #include "Database.h"
 #include "DatabaseTask.h"
 #include "Logging.h"
@@ -47,7 +45,7 @@ DatabaseThread::DatabaseThread()
 #endif
     , m_transactionClient(std::make_unique<SQLTransactionClient>())
     , m_transactionCoordinator(std::make_unique<SQLTransactionCoordinator>())
-    , m_cleanupSync(0)
+    , m_cleanupSync(nullptr)
 {
     m_selfRef = this;
 }
@@ -107,10 +105,10 @@ void DatabaseThread::databaseThreadStart(void* vDatabaseThread)
 #if PLATFORM(IOS)
 class DatabaseUnpauseTask : public DatabaseTask {
 public:
-    static std::unique_ptr<DatabaseUnpauseTask> create(DatabaseThread* thread)
-    {
-        return std::unique_ptr<DatabaseUnpauseTask>(new DatabaseUnpauseTask(thread));
-    }
+    explicit DatabaseUnpauseTask(DatabaseThread& thread)
+        : DatabaseTask(0, 0)
+        , m_thread(thread)
+    { }
 
     virtual bool shouldPerformWhilePaused() const
     {
@@ -123,20 +121,15 @@ public:
     }
 
 private:
-    DatabaseUnpauseTask(DatabaseThread* thread)
-        : DatabaseTask(0, 0)
-        , m_thread(thread)
-    {}
-
     virtual void doPerformTask()
     {
-        m_thread->handlePausedQueue();
+        m_thread.handlePausedQueue();
     }
 #if !LOG_DISABLED
     virtual const char* debugTaskName() const { return "DatabaseUnpauseTask"; }
 #endif
 
-    DatabaseThread* m_thread;
+    DatabaseThread& m_thread;
 };
 
 
@@ -148,23 +141,23 @@ void DatabaseThread::setPaused(bool paused)
     MutexLocker pausedLocker(m_pausedMutex);
     m_paused = paused;
     if (!m_paused)
-        scheduleTask(DatabaseUnpauseTask::create(this));
+        scheduleTask(std::make_unique<DatabaseUnpauseTask>(*this));
 }
 
 void DatabaseThread::handlePausedQueue()
 {
     Vector<std::unique_ptr<DatabaseTask> > pausedTasks;
     while (auto task = m_pausedQueue.tryGetMessage())
-        pausedTasks.append(std::move(task));
+        pausedTasks.append(WTF::move(task));
 
-    for (unsigned i = 0; i < pausedTasks.size(); ++i) {
+    for (auto& pausedTask : pausedTasks) {
         AutodrainedPool pool;
 
-        std::unique_ptr<DatabaseTask> task(pausedTasks[i].release());
+        std::unique_ptr<DatabaseTask> task(pausedTask.release());
         {
             MutexLocker pausedLocker(m_pausedMutex);
             if (m_paused) {
-                m_pausedQueue.append(std::move(task));
+                m_pausedQueue.append(WTF::move(task));
                 continue;
             }
         }
@@ -193,7 +186,7 @@ void DatabaseThread::databaseThread()
         if (!m_paused || task->shouldPerformWhilePaused())
             task->performTask();
         else
-            m_pausedQueue.append(std::move(task));
+            m_pausedQueue.append(WTF::move(task));
 #else
         task->performTask();
 #endif
@@ -210,9 +203,8 @@ void DatabaseThread::databaseThread()
         // As the call to close will modify the original set, we must take a copy to iterate over.
         DatabaseSet openSetCopy;
         openSetCopy.swap(m_openDatabaseSet);
-        DatabaseSet::iterator end = openSetCopy.end();
-        for (DatabaseSet::iterator it = openSetCopy.begin(); it != end; ++it)
-            (*it).get()->close();
+        for (auto& openDatabase : openSetCopy)
+            openDatabase->close();
     }
 
     // Detach the thread so its resources are no longer of any concern to anyone else
@@ -221,13 +213,13 @@ void DatabaseThread::databaseThread()
     DatabaseTaskSynchronizer* cleanupSync = m_cleanupSync;
 
     // Clear the self refptr, possibly resulting in deletion
-    m_selfRef = 0;
+    m_selfRef = nullptr;
 
     if (cleanupSync) // Someone wanted to know when we were done cleaning up.
         cleanupSync->taskCompleted();
 }
 
-void DatabaseThread::recordDatabaseOpen(DatabaseBackend* database)
+void DatabaseThread::recordDatabaseOpen(Database* database)
 {
     ASSERT(currentThread() == m_threadID);
     ASSERT(database);
@@ -235,7 +227,7 @@ void DatabaseThread::recordDatabaseOpen(DatabaseBackend* database)
     m_openDatabaseSet.add(database);
 }
 
-void DatabaseThread::recordDatabaseClosed(DatabaseBackend* database)
+void DatabaseThread::recordDatabaseClosed(Database* database)
 {
     ASSERT(currentThread() == m_threadID);
     ASSERT(database);
@@ -246,29 +238,38 @@ void DatabaseThread::recordDatabaseClosed(DatabaseBackend* database)
 void DatabaseThread::scheduleTask(std::unique_ptr<DatabaseTask> task)
 {
     ASSERT(!task->hasSynchronizer() || task->hasCheckedForTermination());
-    m_queue.append(std::move(task));
+    m_queue.append(WTF::move(task));
 }
 
 void DatabaseThread::scheduleImmediateTask(std::unique_ptr<DatabaseTask> task)
 {
     ASSERT(!task->hasSynchronizer() || task->hasCheckedForTermination());
-    m_queue.prepend(std::move(task));
+    m_queue.prepend(WTF::move(task));
 }
 
 class SameDatabasePredicate {
 public:
-    SameDatabasePredicate(const DatabaseBackend* database) : m_database(database) { }
+    SameDatabasePredicate(const Database* database) : m_database(database) { }
     bool operator()(const DatabaseTask& task) const { return task.database() == m_database; }
 private:
-    const DatabaseBackend* m_database;
+    const Database* m_database;
 };
 
-void DatabaseThread::unscheduleDatabaseTasks(DatabaseBackend* database)
+void DatabaseThread::unscheduleDatabaseTasks(Database* database)
 {
     // Note that the thread loop is running, so some tasks for the database
     // may still be executed. This is unavoidable.
     SameDatabasePredicate predicate(database);
     m_queue.removeIf(predicate);
 }
+
+bool DatabaseThread::hasPendingDatabaseActivity() const
+{
+    for (auto& database : m_openDatabaseSet) {
+        if (database->hasPendingCreationEvent() || database->hasPendingTransaction())
+            return true;
+    }
+    return false;
+}
+
 } // namespace WebCore
-#endif

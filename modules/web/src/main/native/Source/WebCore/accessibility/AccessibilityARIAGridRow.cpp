@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -44,9 +44,9 @@ AccessibilityARIAGridRow::~AccessibilityARIAGridRow()
 {
 }
 
-PassRefPtr<AccessibilityARIAGridRow> AccessibilityARIAGridRow::create(RenderObject* renderer)
+Ref<AccessibilityARIAGridRow> AccessibilityARIAGridRow::create(RenderObject* renderer)
 {
-    return adoptRef(new AccessibilityARIAGridRow(renderer));
+    return adoptRef(*new AccessibilityARIAGridRow(renderer));
 }
 
 bool AccessibilityARIAGridRow::isARIATreeGridRow() const
@@ -63,7 +63,7 @@ void AccessibilityARIAGridRow::disclosedRows(AccessibilityChildrenVector& disclo
     // The contiguous disclosed rows will be the rows in the table that
     // have an aria-level of plus 1 from this row.
     AccessibilityObject* parent = parentObjectUnignored();
-    if (!parent || !parent->isAccessibilityTable())
+    if (!is<AccessibilityTable>(*parent) || !downcast<AccessibilityTable>(*parent).isExposableThroughAccessibility())
         return;
 
     // Search for rows that match the correct level.
@@ -73,7 +73,7 @@ void AccessibilityARIAGridRow::disclosedRows(AccessibilityChildrenVector& disclo
         return;
 
     unsigned level = hierarchicalLevel();
-    auto& allRows = toAccessibilityTable(parent)->rows();
+    auto& allRows = downcast<AccessibilityTable>(*parent).rows();
     int rowCount = allRows.size();
     for (int k = index + 1; k < rowCount; ++k) {
         AccessibilityObject* row = allRows[k].get();
@@ -90,20 +90,20 @@ AccessibilityObject* AccessibilityARIAGridRow::disclosedByRow() const
     // The row that discloses this one is the row in the table
     // that is aria-level subtract 1 from this row.
     AccessibilityObject* parent = parentObjectUnignored();
-    if (!parent || !parent->isAccessibilityTable())
-        return 0;
+    if (!is<AccessibilityTable>(*parent) || !downcast<AccessibilityTable>(*parent).isExposableThroughAccessibility())
+        return nullptr;
 
     // If the level is 1 or less, than nothing discloses this row.
     unsigned level = hierarchicalLevel();
     if (level <= 1)
-        return 0;
+        return nullptr;
 
     // Search for the previous row that matches the correct level.
     int index = rowIndex();
-    auto& allRows = toAccessibilityTable(parent)->rows();
+    auto& allRows = downcast<AccessibilityTable>(parent)->rows();
     int rowCount = allRows.size();
     if (index >= rowCount)
-        return 0;
+        return nullptr;
 
     for (int k = index - 1; k >= 0; --k) {
         AccessibilityObject* row = allRows[k].get();
@@ -114,14 +114,22 @@ AccessibilityObject* AccessibilityARIAGridRow::disclosedByRow() const
     return nullptr;
 }
 
+AccessibilityObject* AccessibilityARIAGridRow::parentObjectUnignored() const
+{
+    return parentTable();
+}
+
 AccessibilityTable* AccessibilityARIAGridRow::parentTable() const
 {
     // The parent table might not be the direct ancestor of the row unfortunately. ARIA states that role="grid" should
     // only have "row" elements, but if not, we still should handle it gracefully by finding the right table.
     for (AccessibilityObject* parent = parentObject(); parent; parent = parent->parentObject()) {
         // The parent table for an ARIA grid row should be an ARIA table.
-        if (parent->isTable() && parent->isAccessibilityTable() && toAccessibilityTable(parent)->isAriaTable())
-            return toAccessibilityTable(parent);
+        if (is<AccessibilityTable>(*parent)) {
+            AccessibilityTable& tableParent = downcast<AccessibilityTable>(*parent);
+            if (tableParent.isExposableThroughAccessibility() && tableParent.isAriaTable())
+                return &tableParent;
+        }
     }
 
     return nullptr;

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitGraphics.h"
 
 #include "WebKit.h"
@@ -31,13 +30,13 @@
 
 #include "WebPreferences.h"
 
-#include <WebCore/Font.h>
-#include <WebCore/FontCache.h>
+#include <WebCore/FontCascade.h>
 #include <WebCore/FontDescription.h>
 #include <WebCore/FontSelector.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/StringTruncator.h>
 #include <WebCore/WebCoreTextRenderer.h>
+#include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -47,7 +46,7 @@
 
 using namespace WebCore;
 
-static Font makeFont(const WebFontDescription& description)
+static FontCascade makeFont(const WebFontDescription& description)
 {
     AtomicString::init();
 
@@ -57,7 +56,7 @@ static Font makeFont(const WebFontDescription& description)
     f.setOneFamily(fontFamilyString);
     f.setSpecifiedSize(description.size);
     f.setComputedSize(description.size);
-    f.setItalic(description.italic);
+    f.setIsItalic(description.italic);
     f.setWeight(description.bold ? FontWeightBold : FontWeightNormal);
     f.setIsAbsoluteSize(true);
 
@@ -65,7 +64,7 @@ static Font makeFont(const WebFontDescription& description)
     if (SUCCEEDED(WebPreferences::sharedStandardPreferences()->fontSmoothing(&smoothingType)))
         f.setRenderingMode(smoothingType == FontSmoothingTypeWindows ? AlternateRenderingMode : NormalRenderingMode);
 
-    Font font(f, 0, 0);
+    FontCascade font(f, 0, 0);
     font.update(0);
 
     return font;
@@ -97,7 +96,7 @@ void FontMetrics(const WebFontDescription& description, int* ascent, int* descen
     if (!ascent && !descent && !lineSpacing)
         return;
 
-    Font font(makeFont(description));
+    FontCascade font(makeFont(description));
     const WebCore::FontMetrics& fontMetrics(font.fontMetrics());
 
     if (ascent)
@@ -114,10 +113,8 @@ unsigned CenterTruncateStringToWidth(LPCTSTR text, int length, const WebFontDesc
 {
     ASSERT(buffer);
 
-    FontCachePurgePreventer fontCachePurgePreventer;
-
     String result = StringTruncator::centerTruncate(String(text, length), width, makeFont(description), StringTruncator::EnableRoundingHacks);
-    memcpy(buffer, result.deprecatedCharacters(), result.length() * sizeof(UChar));
+    StringView(result).getCharactersWithUpconvert(buffer);
     buffer[result.length()] = '\0';
     return result.length();
 }
@@ -126,10 +123,8 @@ unsigned RightTruncateStringToWidth(LPCTSTR text, int length, const WebFontDescr
 {
     ASSERT(buffer);
 
-    FontCachePurgePreventer fontCachePurgePreventer;
-
     String result = StringTruncator::rightTruncate(String(text, length), width, makeFont(description), StringTruncator::EnableRoundingHacks);
-    memcpy(buffer, result.deprecatedCharacters(), result.length() * sizeof(UChar));
+    StringView(result).getCharactersWithUpconvert(buffer);
     buffer[result.length()] = '\0';
     return result.length();
 }

@@ -30,6 +30,7 @@
 #include "StyleTransformData.h"
 #include "StyleImage.h"
 #include "StyleResolver.h"
+#include "StyleScrollSnapPoints.h"
 
 namespace WebCore {
 
@@ -41,25 +42,28 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , m_perspectiveOriginX(RenderStyle::initialPerspectiveOriginX())
     , m_perspectiveOriginY(RenderStyle::initialPerspectiveOriginY())
     , lineClamp(RenderStyle::initialLineClamp())
+    , m_initialLetter(RenderStyle::initialInitialLetter())
     , m_deprecatedFlexibleBox(StyleDeprecatedFlexibleBoxData::create())
     , m_flexibleBox(StyleFlexibleBoxData::create())
     , m_marquee(StyleMarqueeData::create())
     , m_multiCol(StyleMultiColData::create())
     , m_transform(StyleTransformData::create())
-#if ENABLE(CSS_FILTERS)
     , m_filter(StyleFilterData::create())
+#if ENABLE(FILTERS_LEVEL_2)
+    , m_backdropFilter(StyleFilterData::create())
 #endif
+#if ENABLE(CSS_GRID_LAYOUT)
     , m_grid(StyleGridData::create())
     , m_gridItem(StyleGridItemData::create())
+#endif
+#if ENABLE(CSS_SCROLL_SNAP)
+    , m_scrollSnapPoints(StyleScrollSnapPoints::create())
+#endif
     , m_mask(FillLayer(MaskFillLayer))
     , m_pageSize()
-#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
-    , m_shapeInside(RenderStyle::initialShapeInside())
-#endif
 #if ENABLE(CSS_SHAPES)
     , m_shapeOutside(RenderStyle::initialShapeOutside())
     , m_shapeMargin(RenderStyle::initialShapeMargin())
-    , m_shapePadding(RenderStyle::initialShapePadding())
     , m_shapeImageThreshold(RenderStyle::initialShapeImageThreshold())
 #endif
     , m_clipPath(RenderStyle::initialClipPath())
@@ -67,6 +71,15 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , m_order(RenderStyle::initialOrder())
     , m_flowThread(RenderStyle::initialFlowThread())
     , m_regionThread(RenderStyle::initialRegionThread())
+    , m_alignContent(RenderStyle::initialContentAlignment())
+    , m_alignItems(RenderStyle::initialSelfAlignment())
+    , m_alignSelf(RenderStyle::initialSelfAlignment())
+    , m_justifyContent(RenderStyle::initialContentAlignment())
+    , m_justifyItems(RenderStyle::initialSelfAlignment())
+    , m_justifySelf(RenderStyle::initialSelfAlignment())
+#if ENABLE(CSS_SCROLL_SNAP)
+    , m_scrollSnapType(static_cast<unsigned>(RenderStyle::initialScrollSnapType()))
+#endif
     , m_regionFragment(RenderStyle::initialRegionFragment())
     , m_regionBreakAfter(RenderStyle::initialPageBreak())
     , m_regionBreakBefore(RenderStyle::initialPageBreak())
@@ -74,10 +87,6 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , m_pageSizeType(PAGE_SIZE_AUTO)
     , m_transformStyle3D(RenderStyle::initialTransformStyle3D())
     , m_backfaceVisibility(RenderStyle::initialBackfaceVisibility())
-    , m_alignContent(RenderStyle::initialAlignContent())
-    , m_alignItems(RenderStyle::initialAlignItems())
-    , m_alignSelf(RenderStyle::initialAlignSelf())
-    , m_justifyContent(RenderStyle::initialJustifyContent())
     , userDrag(RenderStyle::initialUserDrag())
     , textOverflow(RenderStyle::initialTextOverflow())
     , marginBeforeCollapse(MCOLLAPSE)
@@ -86,12 +95,11 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , m_borderFit(RenderStyle::initialBorderFit())
     , m_textCombine(RenderStyle::initialTextCombine())
     , m_textDecorationStyle(RenderStyle::initialTextDecorationStyle())
-    , m_wrapFlow(RenderStyle::initialWrapFlow())
-    , m_wrapThrough(RenderStyle::initialWrapThrough())
     , m_runningAcceleratedAnimation(false)
     , m_aspectRatioType(RenderStyle::initialAspectRatioType())
 #if ENABLE(CSS_COMPOSITING)
     , m_effectiveBlendMode(RenderStyle::initialBlendMode())
+    , m_isolation(RenderStyle::initialIsolation())
 #endif
     , m_objectFit(RenderStyle::initialObjectFit())
 {
@@ -107,32 +115,36 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , m_perspectiveOriginX(o.m_perspectiveOriginX)
     , m_perspectiveOriginY(o.m_perspectiveOriginY)
     , lineClamp(o.lineClamp)
+    , m_initialLetter(o.m_initialLetter)
     , m_deprecatedFlexibleBox(o.m_deprecatedFlexibleBox)
     , m_flexibleBox(o.m_flexibleBox)
     , m_marquee(o.m_marquee)
     , m_multiCol(o.m_multiCol)
     , m_transform(o.m_transform)
-#if ENABLE(CSS_FILTERS)
     , m_filter(o.m_filter)
+#if ENABLE(FILTERS_LEVEL_2)
+    , m_backdropFilter(o.m_backdropFilter)
 #endif
+#if ENABLE(CSS_GRID_LAYOUT)
     , m_grid(o.m_grid)
     , m_gridItem(o.m_gridItem)
+#endif
+#if ENABLE(CSS_SCROLL_SNAP)
+    , m_scrollSnapPoints(o.m_scrollSnapPoints)
+#endif
     , m_content(o.m_content ? o.m_content->clone() : nullptr)
     , m_counterDirectives(o.m_counterDirectives ? clone(*o.m_counterDirectives) : nullptr)
+    , m_altText(o.m_altText)
     , m_boxShadow(o.m_boxShadow ? std::make_unique<ShadowData>(*o.m_boxShadow) : nullptr)
     , m_boxReflect(o.m_boxReflect)
-    , m_animations(o.m_animations ? adoptPtr(new AnimationList(*o.m_animations)) : nullptr)
-    , m_transitions(o.m_transitions ? adoptPtr(new AnimationList(*o.m_transitions)) : nullptr)
+    , m_animations(o.m_animations ? std::make_unique<AnimationList>(*o.m_animations) : nullptr)
+    , m_transitions(o.m_transitions ? std::make_unique<AnimationList>(*o.m_transitions) : nullptr)
     , m_mask(o.m_mask)
     , m_maskBoxImage(o.m_maskBoxImage)
     , m_pageSize(o.m_pageSize)
-#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
-    , m_shapeInside(o.m_shapeInside)
-#endif
 #if ENABLE(CSS_SHAPES)
     , m_shapeOutside(o.m_shapeOutside)
     , m_shapeMargin(o.m_shapeMargin)
-    , m_shapePadding(o.m_shapePadding)
     , m_shapeImageThreshold(o.m_shapeImageThreshold)
 #endif
     , m_clipPath(o.m_clipPath)
@@ -147,6 +159,15 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , m_order(o.m_order)
     , m_flowThread(o.m_flowThread)
     , m_regionThread(o.m_regionThread)
+    , m_alignContent(o.m_alignContent)
+    , m_alignItems(o.m_alignItems)
+    , m_alignSelf(o.m_alignSelf)
+    , m_justifyContent(o.m_justifyContent)
+    , m_justifyItems(o.m_justifyItems)
+    , m_justifySelf(o.m_justifySelf)
+#if ENABLE(CSS_SCROLL_SNAP)
+    , m_scrollSnapType(o.m_scrollSnapType)
+#endif
     , m_regionFragment(o.m_regionFragment)
     , m_regionBreakAfter(o.m_regionBreakAfter)
     , m_regionBreakBefore(o.m_regionBreakBefore)
@@ -154,10 +175,6 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , m_pageSizeType(o.m_pageSizeType)
     , m_transformStyle3D(o.m_transformStyle3D)
     , m_backfaceVisibility(o.m_backfaceVisibility)
-    , m_alignContent(o.m_alignContent)
-    , m_alignItems(o.m_alignItems)
-    , m_alignSelf(o.m_alignSelf)
-    , m_justifyContent(o.m_justifyContent)
     , userDrag(o.userDrag)
     , textOverflow(o.textOverflow)
     , marginBeforeCollapse(o.marginBeforeCollapse)
@@ -166,18 +183,17 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , m_borderFit(o.m_borderFit)
     , m_textCombine(o.m_textCombine)
     , m_textDecorationStyle(o.m_textDecorationStyle)
-    , m_wrapFlow(o.m_wrapFlow)
-    , m_wrapThrough(o.m_wrapThrough)
     , m_runningAcceleratedAnimation(o.m_runningAcceleratedAnimation)
     , m_aspectRatioType(o.m_aspectRatioType)
 #if ENABLE(CSS_COMPOSITING)
     , m_effectiveBlendMode(o.m_effectiveBlendMode)
+    , m_isolation(o.m_isolation)
 #endif
     , m_objectFit(o.m_objectFit)
 {
 }
 
-PassRef<StyleRareNonInheritedData> StyleRareNonInheritedData::copy() const
+Ref<StyleRareNonInheritedData> StyleRareNonInheritedData::copy() const
 {
     return adoptRef(*new StyleRareNonInheritedData(*this));
 }
@@ -195,6 +211,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_perspectiveOriginX == o.m_perspectiveOriginX
         && m_perspectiveOriginY == o.m_perspectiveOriginY
         && lineClamp == o.lineClamp
+        && m_initialLetter == o.m_initialLetter
 #if ENABLE(DASHBOARD_SUPPORT)
         && m_dashboardRegions == o.m_dashboardRegions
 #endif
@@ -203,11 +220,17 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_marquee == o.m_marquee
         && m_multiCol == o.m_multiCol
         && m_transform == o.m_transform
-#if ENABLE(CSS_FILTERS)
         && m_filter == o.m_filter
+#if ENABLE(FILTERS_LEVEL_2)
+        && m_backdropFilter == o.m_backdropFilter
 #endif
+#if ENABLE(CSS_GRID_LAYOUT)
         && m_grid == o.m_grid
         && m_gridItem == o.m_gridItem
+#endif
+#if ENABLE(CSS_SCROLL_SNAP)
+        && m_scrollSnapPoints == o.m_scrollSnapPoints
+#endif
         && contentDataEquivalent(o)
         && counterDataEquivalent(o)
         && shadowDataEquivalent(o)
@@ -217,13 +240,9 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_mask == o.m_mask
         && m_maskBoxImage == o.m_maskBoxImage
         && m_pageSize == o.m_pageSize
-#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
-    && m_shapeInside == o.m_shapeInside
-#endif
 #if ENABLE(CSS_SHAPES)
         && m_shapeOutside == o.m_shapeOutside
         && m_shapeMargin == o.m_shapeMargin
-        && m_shapePadding == o.m_shapePadding
         && m_shapeImageThreshold == o.m_shapeImageThreshold
 #endif
         && m_clipPath == o.m_clipPath
@@ -237,6 +256,12 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_visitedLinkBorderBottomColor == o.m_visitedLinkBorderBottomColor
         && m_order == o.m_order
         && m_flowThread == o.m_flowThread
+        && m_alignContent == o.m_alignContent
+        && m_alignItems == o.m_alignItems
+        && m_alignSelf == o.m_alignSelf
+        && m_justifyContent == o.m_justifyContent
+        && m_justifyItems == o.m_justifyItems
+        && m_justifySelf == o.m_justifySelf
         && m_regionThread == o.m_regionThread
         && m_regionFragment == o.m_regionFragment
         && m_regionBreakAfter == o.m_regionBreakAfter
@@ -245,10 +270,6 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_pageSizeType == o.m_pageSizeType
         && m_transformStyle3D == o.m_transformStyle3D
         && m_backfaceVisibility == o.m_backfaceVisibility
-        && m_alignContent == o.m_alignContent
-        && m_alignItems == o.m_alignItems
-        && m_alignSelf == o.m_alignSelf
-        && m_justifyContent == o.m_justifyContent
         && userDrag == o.userDrag
         && textOverflow == o.textOverflow
         && marginBeforeCollapse == o.marginBeforeCollapse
@@ -257,11 +278,13 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_borderFit == o.m_borderFit
         && m_textCombine == o.m_textCombine
         && m_textDecorationStyle == o.m_textDecorationStyle
-        && m_wrapFlow == o.m_wrapFlow
-        && m_wrapThrough == o.m_wrapThrough
+#if ENABLE(CSS_SCROLL_SNAP)
+        && m_scrollSnapType == o.m_scrollSnapType
+#endif
         && !m_runningAcceleratedAnimation && !o.m_runningAcceleratedAnimation
 #if ENABLE(CSS_COMPOSITING)
         && m_effectiveBlendMode == o.m_effectiveBlendMode
+        && m_isolation == o.m_isolation
 #endif
         && m_aspectRatioType == o.m_aspectRatioType
         && m_objectFit == o.m_objectFit;
@@ -330,11 +353,14 @@ bool StyleRareNonInheritedData::transitionDataEquivalent(const StyleRareNonInher
 
 bool StyleRareNonInheritedData::hasFilters() const
 {
-#if ENABLE(CSS_FILTERS)
     return m_filter.get() && !m_filter->m_operations.isEmpty();
-#else
-    return false;
-#endif
 }
+
+#if ENABLE(FILTERS_LEVEL_2)
+bool StyleRareNonInheritedData::hasBackdropFilters() const
+{
+    return m_backdropFilter.get() && !m_backdropFilter->m_operations.isEmpty();
+}
+#endif
 
 } // namespace WebCore

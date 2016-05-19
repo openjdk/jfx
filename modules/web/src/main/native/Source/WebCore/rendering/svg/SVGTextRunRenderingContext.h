@@ -21,7 +21,7 @@
 #ifndef SVGTextRunRenderingContext_h
 #define SVGTextRunRenderingContext_h
 
-#include "Font.h"
+#include "FontCascade.h"
 #include "TextRun.h"
 
 namespace WebCore {
@@ -31,7 +31,7 @@ class RenderSVGResource;
 
 class SVGTextRunRenderingContext final : public TextRun::RenderingContext {
 public:
-    static PassRef<SVGTextRunRenderingContext> create(RenderObject& renderer)
+    static Ref<SVGTextRunRenderingContext> create(RenderObject& renderer)
     {
         return adoptRef(*new SVGTextRunRenderingContext(renderer));
     }
@@ -42,10 +42,10 @@ public:
     RenderSVGResource* activePaintingResource() const { return m_activePaintingResource; }
     void setActivePaintingResource(RenderSVGResource* object) { m_activePaintingResource = object; }
 
-    virtual GlyphData glyphDataForCharacter(const Font&, WidthIterator&, UChar32 character, bool mirror, int currentCharacter, unsigned& advanceLength) override;
-    virtual void drawSVGGlyphs(GraphicsContext*, const SimpleFontData*, const GlyphBuffer&, int from, int to, const FloatPoint&) const override;
-    virtual float floatWidthUsingSVGFont(const Font&, const TextRun&, int& charsConsumed, String& glyphName) const override;
-    virtual bool applySVGKerning(const SimpleFontData*, WidthIterator&, GlyphBuffer*, int from) const override;
+    virtual GlyphData glyphDataForCharacter(const FontCascade&, WidthIterator&, UChar32 character, bool mirror, int currentCharacter, unsigned& advanceLength, String& normalizedSpacesStringCache) override;
+    virtual void drawSVGGlyphs(GraphicsContext*, const Font*, const GlyphBuffer&, int from, int to, const FloatPoint&) const override;
+    virtual float floatWidthUsingSVGFont(const FontCascade&, const TextRun&, int& charsConsumed, String& glyphName) const override;
+    virtual bool applySVGKerning(const Font*, WidthIterator&, GlyphBuffer*, int from) const override;
 #endif
 
 private:
@@ -58,6 +58,10 @@ private:
     }
 
     virtual ~SVGTextRunRenderingContext() { }
+
+#if ENABLE(SVG_FONTS)
+    virtual std::unique_ptr<GlyphToPathTranslator> createGlyphToPathTranslator(const Font&, const TextRun*, const GlyphBuffer&, int from, int numGlyphs, const FloatPoint&) const override;
+#endif
 
     RenderObject& m_renderer;
 

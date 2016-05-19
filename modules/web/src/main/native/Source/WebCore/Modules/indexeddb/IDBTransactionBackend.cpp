@@ -41,13 +41,13 @@
 
 namespace WebCore {
 
-PassRefPtr<IDBTransactionBackend> IDBTransactionBackend::create(IDBDatabaseBackend* databaseBackend, int64_t id, PassRefPtr<IDBDatabaseCallbacks> callbacks, const Vector<int64_t>& objectStoreIds, IndexedDB::TransactionMode mode)
+Ref<IDBTransactionBackend> IDBTransactionBackend::create(IDBDatabaseBackend* databaseBackend, int64_t id, PassRefPtr<IDBDatabaseCallbacks> callbacks, const Vector<int64_t>& objectStoreIds, IndexedDB::TransactionMode mode)
 {
     HashSet<int64_t> objectStoreHashSet;
-    for (size_t i = 0; i < objectStoreIds.size(); ++i)
-        objectStoreHashSet.add(objectStoreIds[i]);
+    for (auto& id : objectStoreIds)
+        objectStoreHashSet.add(id);
 
-    return adoptRef(new IDBTransactionBackend(databaseBackend, id, callbacks, objectStoreHashSet, mode));
+    return adoptRef(*new IDBTransactionBackend(databaseBackend, id, callbacks, objectStoreHashSet, mode));
 }
 
 IDBTransactionBackend::IDBTransactionBackend(IDBDatabaseBackend* databaseBackend, int64_t id, PassRefPtr<IDBDatabaseCallbacks> callbacks, const HashSet<int64_t>& objectStoreIds, IndexedDB::TransactionMode mode)
@@ -57,7 +57,7 @@ IDBTransactionBackend::IDBTransactionBackend(IDBDatabaseBackend* databaseBackend
     , m_commitPending(false)
     , m_callbacks(callbacks)
     , m_database(databaseBackend)
-    , m_taskTimer(this, &IDBTransactionBackend::taskTimerFired)
+    , m_taskTimer(*this, &IDBTransactionBackend::taskTimerFired)
     , m_pendingPreemptiveEvents(0)
     , m_id(id)
 {
@@ -74,6 +74,10 @@ IDBTransactionBackend::IDBTransactionBackend(IDBDatabaseBackend* databaseBackend
             });
             return;
         }
+
+        // Handle the case where the transaction was aborted before the server connection finished opening the transaction.
+        if (backend->m_state == Finished)
+            return;
 
         backend->m_state = Unused;
         if (backend->hasPendingTasks())
@@ -137,7 +141,7 @@ void IDBTransactionBackend::abort(PassRefPtr<IDBDatabaseError> error)
     m_taskTimer.stop();
 
     if (wasRunning)
-        m_database->serverConnection().rollbackTransaction(m_id, []() { });
+        m_database->serverConnection().rollbackTransactionSync(m_id);
 
     // Run the abort tasks, if any.
     while (!m_abortTaskQueue.isEmpty()) {
@@ -150,7 +154,7 @@ void IDBTransactionBackend::abort(PassRefPtr<IDBDatabaseError> error)
     // itself to be released, and order is critical.
     closeOpenCursors();
 
-    m_database->serverConnection().resetTransaction(m_id, []() { });
+    m_database->serverConnection().resetTransactionSync(m_id);
 
     // Transactions must also be marked as completed before the front-end is notified, as
     // the transaction completion unblocks operations like closing connections.
@@ -266,11 +270,11 @@ void IDBTransactionBackend::commit()
             m_database->transactionFinishedAndAbortFired(this);
         }
 
-        m_database = 0;
+        m_database = nullptr;
     });
 }
 
-void IDBTransactionBackend::taskTimerFired(Timer<IDBTransactionBackend>&)
+void IDBTransactionBackend::taskTimerFired()
 {
     LOG(StorageAPI, "IDBTransactionBackend::taskTimerFired");
 
@@ -303,8 +307,8 @@ void IDBTransactionBackend::taskTimerFired(Timer<IDBTransactionBackend>&)
 
 void IDBTransactionBackend::closeOpenCursors()
 {
-    for (HashSet<IDBCursorBackend*>::iterator i = m_openCursors.begin(); i != m_openCursors.end(); ++i)
-        (*i)->close();
+    for (auto& cursor : m_openCursors)
+        cursor->close();
     m_openCursors.clear();
 }
 

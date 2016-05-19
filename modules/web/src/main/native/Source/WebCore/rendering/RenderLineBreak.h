@@ -32,7 +32,7 @@ class Position;
 
 class RenderLineBreak final : public RenderBoxModelObject {
 public:
-    RenderLineBreak(HTMLElement&, PassRef<RenderStyle>);
+    RenderLineBreak(HTMLElement&, Ref<RenderStyle>&&);
     virtual ~RenderLineBreak();
 
     // FIXME: The lies here keep render tree dump based test results unchanged.
@@ -46,19 +46,23 @@ public:
     void deleteInlineBoxWrapper();
     void replaceInlineBoxWrapper(InlineElementBox&);
     void dirtyLineBoxes(bool fullLayout);
+    void deleteLineBoxesBeforeSimpleLineLayout();
 
     IntRect linesBoundingBox() const;
 
     virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
     virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
+#if PLATFORM(IOS)
+virtual void collectSelectionRects(Vector<SelectionRect>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max()) override;
+#endif
 
 private:
     void node() const = delete;
 
     virtual bool canHaveChildren() const override { return false; }
-    virtual void paint(PaintInfo&, const LayoutPoint&) override final { }
+    virtual void paint(PaintInfo&, const LayoutPoint&) override { }
 
-    virtual VisiblePosition positionForPoint(const LayoutPoint&) override;
+    virtual VisiblePosition positionForPoint(const LayoutPoint&, const RenderRegion*) override;
     virtual int caretMinOffset() const override;
     virtual int caretMaxOffset() const override;
     virtual bool canBeSelectionLeaf() const override;
@@ -90,8 +94,8 @@ private:
     bool m_isWBR;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderLineBreak, isLineBreak())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderLineBreak, isLineBreak())
 
 #endif // RenderLineBreak_h

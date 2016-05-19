@@ -26,10 +26,17 @@
 #import "config.h"
 #import "TestController.h"
 
+#import "CrashReporterInfo.h"
 #import "PlatformWebView.h"
 #import "PoseAsClass.h"
+#import "TestInvocation.h"
 #import "WebKitTestRunnerPasteboard.h"
-#import <WebKit2/WKStringCF.h>
+#import <WebKit/WKContextPrivate.h>
+#import <WebKit/WKPageGroup.h>
+#import <WebKit/WKStringCF.h>
+#import <WebKit/WKURLCF.h>
+#import <WebKit/_WKUserContentExtensionStore.h>
+#import <WebKit/_WKUserContentExtensionStorePrivate.h>
 #import <mach-o/dyld.h>
 
 @interface NSSound (Details)
@@ -66,6 +73,71 @@ void TestController::initializeTestPluginDirectory()
     m_testPluginDirectory.adopt(WKStringCreateWithCFString((CFStringRef)[[NSBundle mainBundle] bundlePath]));
 }
 
+void TestController::platformWillRunTest(const TestInvocation& testInvocation)
+{
+    setCrashReportApplicationSpecificInformationToURL(testInvocation.url());
+}
+
+static bool shouldUseThreadedScrolling(const TestInvocation& test)
+{
+    return test.urlContains("tiled-drawing/");
+}
+
+void TestController::platformResetPreferencesToConsistentValues()
+{
+#if WK_API_ENABLED
+    __block bool doneRemoving = false;
+    [[_WKUserContentExtensionStore defaultStore] removeContentExtensionForIdentifier:@"TestContentExtensions" completionHandler:^(NSError *error)
+    {
+        doneRemoving = true;
+    }];
+    platformRunUntil(doneRemoving, 0);
+    [[_WKUserContentExtensionStore defaultStore] _removeAllContentExtensions];
+#endif
+}
+
+void TestController::platformConfigureViewForTest(const TestInvocation& test)
+{
+    auto viewOptions = adoptWK(WKMutableDictionaryCreate());
+    auto useThreadedScrollingKey = adoptWK(WKStringCreateWithUTF8CString("ThreadedScrolling"));
+    auto useThreadedScrollingValue = adoptWK(WKBooleanCreate(shouldUseThreadedScrolling(test)));
+    WKDictionarySetItem(viewOptions.get(), useThreadedScrollingKey.get(), useThreadedScrollingValue.get());
+
+    auto useRemoteLayerTreeKey = adoptWK(WKStringCreateWithUTF8CString("RemoteLayerTree"));
+    auto useRemoteLayerTreeValue = adoptWK(WKBooleanCreate(shouldUseRemoteLayerTree()));
+    WKDictionarySetItem(viewOptions.get(), useRemoteLayerTreeKey.get(), useRemoteLayerTreeValue.get());
+
+    auto shouldShowWebViewKey = adoptWK(WKStringCreateWithUTF8CString("ShouldShowWebView"));
+    auto shouldShowWebViewValue = adoptWK(WKBooleanCreate(shouldShowWebView()));
+    WKDictionarySetItem(viewOptions.get(), shouldShowWebViewKey.get(), shouldShowWebViewValue.get());
+
+    ensureViewSupportsOptions(viewOptions.get());
+
+#if WK_API_ENABLED
+    if (!test.urlContains("contentextensions/"))
+        return;
+
+    RetainPtr<CFURLRef> testURL = adoptCF(WKURLCopyCFURL(kCFAllocatorDefault, test.url()));
+    NSURL *filterURL = [(NSURL *)testURL.get() URLByAppendingPathExtension:@"json"];
+
+    NSStringEncoding encoding;
+    NSString *contentExtensionString = [[NSString alloc] initWithContentsOfURL:filterURL usedEncoding:&encoding error:NULL];
+    if (!contentExtensionString)
+        return;
+
+    __block bool doneCompiling = false;
+    [[_WKUserContentExtensionStore defaultStore] compileContentExtensionForIdentifier:@"TestContentExtensions" encodedContentExtension:contentExtensionString completionHandler:^(_WKUserContentFilter *filter, NSError *error)
+    {
+        if (!error)
+            WKPageGroupAddUserContentFilter(WKPageGetPageGroup(TestController::singleton().mainWebView()->page()), (__bridge WKUserContentFilterRef)filter);
+        else
+            NSLog(@"%@", [error helpAnchor]);
+        doneCompiling = true;
+    }];
+    platformRunUntil(doneCompiling, 0);
+#endif
+}
+
 void TestController::platformRunUntil(bool& done, double timeout)
 {
     NSDate *endDate = (timeout > 0) ? [NSDate dateWithTimeIntervalSinceNow:timeout] : [NSDate distantFuture];
@@ -74,8 +146,176 @@ void TestController::platformRunUntil(bool& done, double timeout)
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:endDate];
 }
 
+#if ENABLE(PLATFORM_FONT_LOOKUP)
+static NSSet *allowedFontFamilySet()
+{
+    static NSSet *fontFamilySet = [[NSSet setWithObjects:
+        @"Ahem",
+        @"Al Bayan",
+        @"American Typewriter",
+        @"Andale Mono",
+        @"Apple Braille",
+        @"Apple Color Emoji",
+        @"Apple Chancery",
+        @"Apple Garamond BT",
+        @"Apple LiGothic",
+        @"Apple LiSung",
+        @"Apple Symbols",
+        @"AppleGothic",
+        @"AppleMyungjo",
+        @"Arial Black",
+        @"Arial Hebrew",
+        @"Arial Narrow",
+        @"Arial Rounded MT Bold",
+        @"Arial Unicode MS",
+        @"Arial",
+        @"Ayuthaya",
+        @"Baghdad",
+        @"Baskerville",
+        @"BiauKai",
+        @"Big Caslon",
+        @"Brush Script MT",
+        @"Chalkboard",
+        @"Chalkduster",
+        @"Charcoal CY",
+        @"Cochin",
+        @"Comic Sans MS",
+        @"Copperplate",
+        @"Corsiva Hebrew",
+        @"Courier New",
+        @"Courier",
+        @"DecoType Naskh",
+        @"Devanagari MT",
+        @"Didot",
+        @"Euphemia UCAS",
+        @"Futura",
+        @"GB18030 Bitmap",
+        @"Geeza Pro",
+        @"Geneva CY",
+        @"Geneva",
+        @"Georgia",
+        @"Gill Sans",
+        @"Gujarati MT",
+        @"GungSeo",
+        @"Gurmukhi MT",
+        @"HeadLineA",
+        @"Hei",
+        @"Heiti SC",
+        @"Heiti TC",
+        @"Helvetica CY",
+        @"Helvetica Neue",
+        @"Helvetica",
+        @"Herculanum",
+        @"Hiragino Kaku Gothic Pro",
+        @"Hiragino Kaku Gothic ProN",
+        @"Hiragino Kaku Gothic Std",
+        @"Hiragino Kaku Gothic StdN",
+        @"Hiragino Maru Gothic Monospaced",
+        @"Hiragino Maru Gothic Pro",
+        @"Hiragino Maru Gothic ProN",
+        @"Hiragino Mincho Pro",
+        @"Hiragino Mincho ProN",
+        @"Hiragino Sans GB",
+        @"Hoefler Text",
+        @"Impact",
+        @"InaiMathi",
+        @"Kai",
+        @"Kailasa",
+        @"Kokonor",
+        @"Krungthep",
+        @"KufiStandardGK",
+        @"LiHei Pro",
+        @"LiSong Pro",
+        @"Lucida Grande",
+        @"Marker Felt",
+        @"Menlo",
+        @"Microsoft Sans Serif",
+        @"Monaco",
+        @"Mshtakan",
+        @"Nadeem",
+        @"New Peninim MT",
+        @"Optima",
+        @"Osaka",
+        @"Papyrus",
+        @"PCMyungjo",
+        @"PilGi",
+        @"Plantagenet Cherokee",
+        @"Raanana",
+        @"Sathu",
+        @"Silom",
+        @"Skia",
+        @"Songti SC",
+        @"Songti TC",
+        @"STFangsong",
+        @"STHeiti",
+        @"STIXGeneral",
+        @"STIXSizeOneSym",
+        @"STKaiti",
+        @"STSong",
+        @"Symbol",
+        @"System Font",
+        @"Tahoma",
+        @"Thonburi",
+        @"Times New Roman",
+        @"Times",
+        @"Trebuchet MS",
+        @"Verdana",
+        @"Webdings",
+        @"WebKit WeightWatcher",
+        @"Wingdings 2",
+        @"Wingdings 3",
+        @"Wingdings",
+        @"Zapf Dingbats",
+        @"Zapfino",
+        nil] retain];
+
+    return fontFamilySet;
+}
+
+static NSSet *systemHiddenFontFamilySet()
+{
+    static NSSet *fontFamilySet = [[NSSet setWithObjects:
+        @".LucidaGrandeUI",
+        nil] retain];
+
+    return fontFamilySet;
+}
+
+static WKRetainPtr<WKArrayRef> generateWhitelist()
+{
+    WKMutableArrayRef result = WKMutableArrayCreate();
+    for (NSString *fontFamily in allowedFontFamilySet()) {
+        NSArray *fontsForFamily = [[NSFontManager sharedFontManager] availableMembersOfFontFamily:fontFamily];
+        WKRetainPtr<WKStringRef> familyInFont = adoptWK(WKStringCreateWithUTF8CString([fontFamily UTF8String]));
+        WKArrayAppendItem(result, familyInFont.get());
+        for (NSArray *fontInfo in fontsForFamily) {
+            // Font name is the first entry in the array.
+            WKRetainPtr<WKStringRef> fontName = adoptWK(WKStringCreateWithUTF8CString([[fontInfo objectAtIndex:0] UTF8String]));
+            WKArrayAppendItem(result, fontName.get());
+        }
+    }
+
+    for (NSString *hiddenFontFamily in systemHiddenFontFamilySet())
+        WKArrayAppendItem(result, WKStringCreateWithUTF8CString([hiddenFontFamily UTF8String]));
+
+    return adoptWK(result);
+}
+#endif
+
 void TestController::platformInitializeContext()
 {
+    // Testing uses a private session, which is memory only. However creating one instantiates a shared NSURLCache,
+    // and if we haven't created one yet, the default one will be created on disk.
+    // Making the shared cache memory-only avoids touching the file system.
+    RetainPtr<NSURLCache> sharedCache =
+        adoptNS([[NSURLCache alloc] initWithMemoryCapacity:1024 * 1024
+                                      diskCapacity:0
+                                          diskPath:nil]);
+    [NSURLCache setSharedURLCache:sharedCache.get()];
+
+#if ENABLE(PLATFORM_FONT_LOOKUP)
+    WKContextSetFontWhitelist(m_context.get(), generateWhitelist().get());
+#endif
 }
 
 void TestController::setHidden(bool hidden)

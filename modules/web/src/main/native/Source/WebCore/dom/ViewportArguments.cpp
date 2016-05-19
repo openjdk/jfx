@@ -28,18 +28,11 @@
 #include "config.h"
 #include "ViewportArguments.h"
 
-#include "Chrome.h"
-#include "Console.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "Frame.h"
 #include "IntSize.h"
 #include "Page.h"
 #include "ScriptableDocumentParser.h"
-
-#if PLATFORM(IOS)
-#include "WebCoreSystemInterface.h"
-#endif
 
 namespace WebCore {
 
@@ -93,7 +86,6 @@ ViewportAttributes ViewportArguments::resolve(const FloatSize& initialViewportSi
     float resultZoom = zoom;
     float resultMinZoom = minZoom;
     float resultMaxZoom = maxZoom;
-    float resultUserZoom = userZoom;
 
     switch (int(resultWidth)) {
     case ViewportArguments::ValueDeviceWidth:
@@ -251,8 +243,9 @@ ViewportAttributes ViewportArguments::resolve(const FloatSize& initialViewportSi
     // if (resultZoom == ViewportArguments::ValueAuto)
     //    result.initialScale = ViewportArguments::ValueAuto;
 
-    result.userScalable = resultUserZoom;
+    result.userScalable = userZoom;
     result.orientation = orientation;
+    result.shrinkToFit = shrinkToFit;
 
     return result;
 }
@@ -267,13 +260,6 @@ static FloatSize convertToUserSpace(const FloatSize& deviceSize, float devicePix
 
 ViewportAttributes computeViewportAttributes(ViewportArguments args, int desktopWidth, int deviceWidth, int deviceHeight, float devicePixelRatio, IntSize visibleViewport)
 {
-#if PLATFORM(IOS)
-    // FIXME: This should probably be fixed elsewhere on iOS. iOS may only use computeViewportAttributes for tests.
-    CGSize screenSize = wkGetViewportScreenSize();
-    visibleViewport.setWidth(screenSize.width);
-    visibleViewport.setHeight(screenSize.height);
-#endif
-
     FloatSize initialViewportSize = convertToUserSpace(visibleViewport, devicePixelRatio);
     FloatSize deviceSize = convertToUserSpace(FloatSize(deviceWidth, deviceHeight), devicePixelRatio);
 
@@ -368,7 +354,7 @@ static float findScaleValue(const String& keyString, const String& valueString, 
     return value;
 }
 
-static float findUserScalableValue(const String& keyString, const String& valueString, Document* document)
+static float findBooleanValue(const String& keyString, const String& valueString, Document* document)
 {
     // yes and no are used as keywords.
     // Numbers >= 1, numbers <= -1, device-width and device-height are mapped to yes.
@@ -406,31 +392,17 @@ void setViewportFeature(const String& keyString, const String& valueString, Docu
     else if (keyString == "maximum-scale")
         arguments->maxZoom = findScaleValue(keyString, valueString, document);
     else if (keyString == "user-scalable")
-        arguments->userZoom = findUserScalableValue(keyString, valueString, document);
+        arguments->userZoom = findBooleanValue(keyString, valueString, document);
 #if PLATFORM(IOS)
     else if (keyString == "minimal-ui")
-        arguments->minimalUI = true;
+        // FIXME: Ignore silently for now. This should eventually fall back to the warning.
+        { }
 #endif
+    else if (keyString == "shrink-to-fit")
+        arguments->shrinkToFit = findBooleanValue(keyString, valueString, document);
     else
         reportViewportWarning(document, UnrecognizedViewportArgumentKeyError, keyString, String());
 }
-
-#if PLATFORM(IOS)
-void finalizeViewportArguments(ViewportArguments& arguments)
-{
-    CGSize screenSize = wkGetViewportScreenSize();
-
-    if (arguments.width == ViewportArguments::ValueDeviceWidth)
-        arguments.width = screenSize.width;
-    else if (arguments.width == ViewportArguments::ValueDeviceHeight)
-        arguments.width = screenSize.height;
-
-    if (arguments.height == ViewportArguments::ValueDeviceWidth)
-        arguments.height = screenSize.width;
-    else if (arguments.height == ViewportArguments::ValueDeviceHeight)
-        arguments.height = screenSize.height;
-}
-#endif
 
 static const char* viewportErrorMessageTemplate(ViewportErrorCode errorCode)
 {

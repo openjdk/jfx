@@ -32,38 +32,28 @@ class HTMLFormElement;
 
 class HTMLObjectElement final : public HTMLPlugInImageElement, public FormAssociatedElement {
 public:
-    static PassRefPtr<HTMLObjectElement> create(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
+    static Ref<HTMLObjectElement> create(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
     virtual ~HTMLObjectElement();
 
     bool isDocNamedItem() const { return m_docNamedItem; }
-
-    const String& classId() const { return m_classId; }
-
     bool containsJavaApplet() const;
 
+    bool hasFallbackContent() const;
     virtual bool useFallbackContent() const override { return m_useFallbackContent; }
     void renderFallbackContent();
 
-    // Implementations of FormAssociatedElement
-    HTMLFormElement* form() const { return FormAssociatedElement::form(); }
+    virtual bool willValidate() const override { return false; }
 
-    virtual bool isFormControlElement() const override { return false; }
-
-    virtual bool isEnumeratable() const override { return true; }
-    virtual bool appendFormData(FormDataList&, bool) override;
-
-    // Implementations of constraint validation API.
+    // Implementation of constraint validation API.
     // Note that the object elements are always barred from constraint validation.
-    virtual String validationMessage() const override { return String(); }
-    bool checkValidity() { return true; }
+    static bool checkValidity() { return true; }
     virtual void setCustomValidity(const String&) override { }
+    virtual String validationMessage() const override { return String(); }
 
-    using Node::ref;
-    using Node::deref;
+    using HTMLPlugInImageElement::ref;
+    using HTMLPlugInImageElement::deref;
 
-    virtual bool canContainRangeEndPoint() const override { return useFallbackContent(); }
-
-    bool hasFallbackContent() const;
+    using FormAssociatedElement::form;
 
 private:
     HTMLObjectElement(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
@@ -82,7 +72,7 @@ private:
     virtual bool isURLAttribute(const Attribute&) const override;
     virtual const AtomicString& imageSourceURL() const override;
 
-    virtual RenderWidget* renderWidgetForJSBindings() const override;
+    virtual RenderWidget* renderWidgetLoadingPlugin() const override;
 
     virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
@@ -95,21 +85,26 @@ private:
 
     bool shouldAllowQuickTimeClassIdQuirk();
     bool hasValidClassId();
+    void clearUseFallbackContent() { m_useFallbackContent = false; }
 
     virtual void refFormAssociatedElement() override { ref(); }
     virtual void derefFormAssociatedElement() override { deref(); }
     virtual HTMLFormElement* virtualForm() const override;
 
-    virtual FormNamedItem* asFormNamedItem() override final { return this; }
-    virtual HTMLObjectElement& asHTMLElement() override final { return *this; }
-    virtual const HTMLObjectElement& asHTMLElement() const override final { return *this; }
+    virtual FormNamedItem* asFormNamedItem() override { return this; }
+    virtual HTMLObjectElement& asHTMLElement() override { return *this; }
+    virtual const HTMLObjectElement& asHTMLElement() const override { return *this; }
 
-    String m_classId;
+    virtual bool isFormControlElement() const override { return false; }
+
+    virtual bool isEnumeratable() const override { return true; }
+    virtual bool appendFormData(FormDataList&, bool) override;
+
+    virtual bool canContainRangeEndPoint() const override;
+
     bool m_docNamedItem : 1;
     bool m_useFallbackContent : 1;
 };
-
-NODE_TYPE_CASTS(HTMLObjectElement)
 
 }
 

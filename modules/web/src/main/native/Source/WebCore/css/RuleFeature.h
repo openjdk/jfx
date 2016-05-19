@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2011, 2014 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -47,21 +47,22 @@ struct RuleFeature {
 struct RuleFeatureSet {
     RuleFeatureSet()
         : usesFirstLineRules(false)
-        , usesBeforeAfterRules(false)
+        , usesFirstLetterRules(false)
     { }
 
     void add(const RuleFeatureSet&);
     void clear();
-
-    void collectFeaturesFromSelector(const CSSSelector*);
+    void shrinkToFit();
+    void collectFeaturesFromSelector(const CSSSelector&, bool& hasSiblingSelector);
 
     HashSet<AtomicStringImpl*> idsInRules;
     HashSet<AtomicStringImpl*> classesInRules;
-    HashSet<AtomicStringImpl*> attrsInRules;
+    HashSet<AtomicStringImpl*> attributeCanonicalLocalNamesInRules;
+    HashSet<AtomicStringImpl*> attributeLocalNamesInRules;
     Vector<RuleFeature> siblingRules;
     Vector<RuleFeature> uncommonAttributeRules;
     bool usesFirstLineRules;
-    bool usesBeforeAfterRules;
+    bool usesFirstLetterRules;
 };
 
 } // namespace WebCore

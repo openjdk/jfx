@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp.toker@collabora.co.uk>
  * Copyright (C) 2008, Google Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc
@@ -13,10 +13,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,6 +28,8 @@
 
 #include "config.h"
 #include "ImageSource.h"
+
+#if !USE(CG)
 
 #include "ImageDecoder.h"
 
@@ -94,6 +96,16 @@ String ImageSource::filenameExtension() const
     return m_decoder ? m_decoder->filenameExtension() : String();
 }
 
+SubsamplingLevel ImageSource::subsamplingLevelForScale(float) const
+{
+    return 0;
+}
+
+bool ImageSource::allowSubsamplingOfFrameAtIndex(size_t) const
+{
+    return false;
+}
+
 bool ImageSource::isSizeAvailable()
 {
     return m_decoder && m_decoder->isSizeAvailable();
@@ -101,10 +113,10 @@ bool ImageSource::isSizeAvailable()
 
 IntSize ImageSource::size(ImageOrientationDescription description) const
 {
-    return frameSizeAtIndex(0, description);
+    return frameSizeAtIndex(0, 0, description);
 }
 
-IntSize ImageSource::frameSizeAtIndex(size_t index, ImageOrientationDescription description) const
+IntSize ImageSource::frameSizeAtIndex(size_t index, SubsamplingLevel, ImageOrientationDescription description) const
 {
     if (!m_decoder)
         return IntSize();
@@ -136,10 +148,8 @@ size_t ImageSource::frameCount() const
     return m_decoder ? m_decoder->frameCount() : 0;
 }
 
-PassNativeImagePtr ImageSource::createFrameAtIndex(size_t index, float* scale)
+PassNativeImagePtr ImageSource::createFrameAtIndex(size_t index, SubsamplingLevel)
 {
-    UNUSED_PARAM(scale);
-
     if (!m_decoder)
         return 0;
 
@@ -197,7 +207,7 @@ bool ImageSource::frameIsCompleteAtIndex(size_t index)
     return buffer && buffer->status() == ImageFrame::FrameComplete;
 }
 
-unsigned ImageSource::frameBytesAtIndex(size_t index) const
+unsigned ImageSource::frameBytesAtIndex(size_t index, SubsamplingLevel) const
 {
     if (!m_decoder)
         return 0;
@@ -205,3 +215,5 @@ unsigned ImageSource::frameBytesAtIndex(size_t index) const
 }
 
 }
+
+#endif // USE(CG)

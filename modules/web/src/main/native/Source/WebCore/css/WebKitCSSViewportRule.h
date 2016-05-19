@@ -41,24 +41,25 @@ class CSSStyleDeclaration;
 class StyleRuleViewport;
 class StyleRuleCSSStyleDeclaration;
 
-class WebKitCSSViewportRule: public CSSRule {
+class WebKitCSSViewportRule final : public CSSRule {
 public:
-    static PassRefPtr<WebKitCSSViewportRule> create(StyleRuleViewport* viewportRule, CSSStyleSheet* sheet)
+    static Ref<WebKitCSSViewportRule> create(StyleRuleViewport& viewportRule, CSSStyleSheet* sheet)
     {
-        return adoptRef(new WebKitCSSViewportRule(viewportRule, sheet));
+        return adoptRef(*new WebKitCSSViewportRule(viewportRule, sheet));
     }
-    ~WebKitCSSViewportRule();
+    virtual ~WebKitCSSViewportRule();
 
-    virtual CSSRule::Type type() const override { return WEBKIT_VIEWPORT_RULE; }
     virtual String cssText() const override;
-    virtual void reattach(StyleRuleBase*) override;
+    virtual void reattach(StyleRuleBase&) override;
 
-    CSSStyleDeclaration* style();
+    CSSStyleDeclaration& style();
 
 private:
-    WebKitCSSViewportRule(StyleRuleViewport*, CSSStyleSheet*);
+    WebKitCSSViewportRule(StyleRuleViewport&, CSSStyleSheet*);
 
-    RefPtr<StyleRuleViewport> m_viewportRule;
+    virtual CSSRule::Type type() const override { return WEBKIT_VIEWPORT_RULE; }
+
+    Ref<StyleRuleViewport> m_viewportRule;
     mutable RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;
 };
 

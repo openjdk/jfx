@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -48,29 +48,28 @@ public:
         RebalanceAllWhitespaces
     };
 
-    static PassRefPtr<InsertTextCommand> create(Document& document, const String& text, bool selectInsertedText = false,
-        RebalanceType rebalanceType = RebalanceLeadingAndTrailingWhitespaces)
+    static Ref<InsertTextCommand> create(Document& document, const String& text, bool selectInsertedText = false,
+        RebalanceType rebalanceType = RebalanceLeadingAndTrailingWhitespaces, EditAction editingAction = EditActionInsert)
     {
-        return adoptRef(new InsertTextCommand(document, text, selectInsertedText, rebalanceType));
+        return adoptRef(*new InsertTextCommand(document, text, selectInsertedText, rebalanceType, editingAction));
     }
 
-    static PassRefPtr<InsertTextCommand> createWithMarkerSupplier(Document& document, const String& text, PassRefPtr<TextInsertionMarkerSupplier> markerSupplier)
+    static Ref<InsertTextCommand> createWithMarkerSupplier(Document& document, const String& text, PassRefPtr<TextInsertionMarkerSupplier> markerSupplier, EditAction editingAction = EditActionInsert)
     {
-        return adoptRef(new InsertTextCommand(document, text, markerSupplier));
+        return adoptRef(*new InsertTextCommand(document, text, markerSupplier, editingAction));
     }
+
+protected:
+    InsertTextCommand(Document&, const String& text, PassRefPtr<TextInsertionMarkerSupplier>, EditAction);
+    InsertTextCommand(Document&, const String& text, bool selectInsertedText, RebalanceType, EditAction);
 
 private:
 
-    InsertTextCommand(Document&, const String& text, bool selectInsertedText, RebalanceType);
-    InsertTextCommand(Document&, const String& text, PassRefPtr<TextInsertionMarkerSupplier>);
-
     void deleteCharacter();
 
-    virtual void doApply();
+    virtual void doApply() override;
 
-#if PLATFORM(IOS)
     virtual bool isInsertTextCommand() const override { return true; }
-#endif
 
     Position positionInsideTextNode(const Position&);
     Position insertTab(const Position&);

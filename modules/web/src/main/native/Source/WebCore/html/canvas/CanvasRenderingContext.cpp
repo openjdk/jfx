@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -64,7 +64,7 @@ bool CanvasRenderingContext::wouldTaintOrigin(const HTMLImageElement* image)
     if (!cachedImage->image()->hasSingleSecurityOrigin())
         return true;
 
-    return wouldTaintOrigin(cachedImage->response().url()) && !cachedImage->passesAccessControlCheck(canvas()->securityOrigin());
+    return wouldTaintOrigin(cachedImage->responseForSameOriginPolicyChecks().url()) && !cachedImage->passesAccessControlCheck(*canvas()->securityOrigin());
 }
 
 bool CanvasRenderingContext::wouldTaintOrigin(const HTMLVideoElement* video)
@@ -92,7 +92,7 @@ bool CanvasRenderingContext::wouldTaintOrigin(const HTMLVideoElement* video)
 
 bool CanvasRenderingContext::wouldTaintOrigin(const URL& url)
 {
-    if (!canvas()->originClean() || m_cleanURLs.contains(url.string()))
+    if (!canvas()->originClean())
         return false;
 
     if (canvas()->securityOrigin()->taintsCanvas(url))
@@ -101,7 +101,6 @@ bool CanvasRenderingContext::wouldTaintOrigin(const URL& url)
     if (url.protocolIsData())
         return false;
 
-    m_cleanURLs.add(url.string());
     return false;
 }
 

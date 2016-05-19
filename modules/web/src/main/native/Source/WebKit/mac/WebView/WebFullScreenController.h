@@ -26,7 +26,6 @@
 #if ENABLE(FULLSCREEN_API) && !PLATFORM(IOS)
 
 #import <WebCore/IntPoint.h>
-#import <wtf/OwnPtr.h>
 #import <wtf/RefPtr.h>
 #import <wtf/RetainPtr.h>
 
@@ -51,12 +50,16 @@ namespace WebCore {
     NSRect _initialFrame;
     NSRect _finalFrame;
     WebCore::IntPoint _scrollPosition;
+    float _savedScale;
 
     BOOL _isEnteringFullScreen;
     BOOL _isExitingFullScreen;
     BOOL _isFullScreen;
     BOOL _isPlaying;
 }
+
+@property (readonly) NSRect initialFrame;
+@property (readonly) NSRect finalFrame;
 
 - (WebView*)webView;
 - (void)setWebView:(WebView*)webView;

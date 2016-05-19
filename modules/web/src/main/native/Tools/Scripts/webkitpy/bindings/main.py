@@ -9,10 +9,10 @@
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
 #
-# THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
 # CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
 # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
 # PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -34,10 +34,11 @@ from webkitpy.common.system.executive import ScriptError
 
 class BindingsTests:
 
-    def __init__(self, reset_results, generators, executive):
+    def __init__(self, reset_results, generators, executive, verbose):
         self.reset_results = reset_results
         self.generators = generators
         self.executive = executive
+        self.verbose = verbose
 
     def generate_from_idl(self, generator, idl_file, output_directory, supplemental_dependency_file):
         cmd = ['perl', '-w',
@@ -61,7 +62,7 @@ class BindingsTests:
             exit_code = e.exit_code
         return exit_code
 
-    def generate_supplemental_dependency(self, input_directory, supplemental_dependency_file, window_constructors_file, workerglobalscope_constructors_file, sharedworkerglobalscope_constructors_file, dedicatedworkerglobalscope_constructors_file):
+    def generate_supplemental_dependency(self, input_directory, supplemental_dependency_file, window_constructors_file, workerglobalscope_constructors_file, dedicatedworkerglobalscope_constructors_file):
         idl_files_list = tempfile.mkstemp()
         for input_file in os.listdir(input_directory):
             (name, extension) = os.path.splitext(input_file)
@@ -78,7 +79,6 @@ class BindingsTests:
                '--supplementalDependencyFile', supplemental_dependency_file,
                '--windowConstructorsFile', window_constructors_file,
                '--workerGlobalScopeConstructorsFile', workerglobalscope_constructors_file,
-               '--sharedWorkerGlobalScopeConstructorsFile', sharedworkerglobalscope_constructors_file,
                '--dedicatedWorkerGlobalScopeConstructorsFile', dedicatedworkerglobalscope_constructors_file]
 
         exit_code = 0
@@ -112,7 +112,7 @@ class BindingsTests:
                 print 'FAIL: (%s) %s' % (generator, output_file)
                 print output
                 changes_found = True
-            else:
+            elif self.verbose:
                 print 'PASS: (%s) %s' % (generator, output_file)
         return changes_found
 
@@ -156,14 +156,12 @@ class BindingsTests:
         supplemental_dependency_file = tempfile.mkstemp()[1]
         window_constructors_file = tempfile.mkstemp()[1]
         workerglobalscope_constructors_file = tempfile.mkstemp()[1]
-        sharedworkerglobalscope_constructors_file = tempfile.mkstemp()[1]
         dedicatedworkerglobalscope_constructors_file = tempfile.mkstemp()[1]
-        if self.generate_supplemental_dependency(input_directory, supplemental_dependency_file, window_constructors_file, workerglobalscope_constructors_file, sharedworkerglobalscope_constructors_file, dedicatedworkerglobalscope_constructors_file):
+        if self.generate_supplemental_dependency(input_directory, supplemental_dependency_file, window_constructors_file, workerglobalscope_constructors_file, dedicatedworkerglobalscope_constructors_file):
             print 'Failed to generate a supplemental dependency file.'
             os.remove(supplemental_dependency_file)
             os.remove(window_constructors_file)
             os.remove(workerglobalscope_constructors_file)
-            os.remove(sharedworkerglobalscope_constructors_file)
             os.remove(dedicatedworkerglobalscope_constructors_file)
             return -1
 
@@ -176,7 +174,6 @@ class BindingsTests:
         os.remove(supplemental_dependency_file)
         os.remove(window_constructors_file)
         os.remove(workerglobalscope_constructors_file)
-        os.remove(sharedworkerglobalscope_constructors_file)
         os.remove(dedicatedworkerglobalscope_constructors_file)
         print ''
         if all_tests_passed:

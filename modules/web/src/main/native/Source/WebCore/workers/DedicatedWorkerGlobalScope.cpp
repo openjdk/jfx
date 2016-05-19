@@ -39,15 +39,15 @@
 
 namespace WebCore {
 
-PassRefPtr<DedicatedWorkerGlobalScope> DedicatedWorkerGlobalScope::create(const URL& url, const String& userAgent, std::unique_ptr<GroupSettings> settings, DedicatedWorkerThread& thread, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, PassRefPtr<SecurityOrigin> topOrigin)
+Ref<DedicatedWorkerGlobalScope> DedicatedWorkerGlobalScope::create(const URL& url, const String& userAgent, DedicatedWorkerThread& thread, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, PassRefPtr<SecurityOrigin> topOrigin)
 {
-    RefPtr<DedicatedWorkerGlobalScope> context = adoptRef(new DedicatedWorkerGlobalScope(url, userAgent, std::move(settings), thread, topOrigin));
+    Ref<DedicatedWorkerGlobalScope> context = adoptRef(*new DedicatedWorkerGlobalScope(url, userAgent, thread, topOrigin));
     context->applyContentSecurityPolicyFromString(contentSecurityPolicy, contentSecurityPolicyType);
-    return context.release();
+    return context;
 }
 
-DedicatedWorkerGlobalScope::DedicatedWorkerGlobalScope(const URL& url, const String& userAgent, std::unique_ptr<GroupSettings> settings, DedicatedWorkerThread& thread, PassRefPtr<SecurityOrigin> topOrigin)
-    : WorkerGlobalScope(url, userAgent, std::move(settings), thread, topOrigin)
+DedicatedWorkerGlobalScope::DedicatedWorkerGlobalScope(const URL& url, const String& userAgent, DedicatedWorkerThread& thread, PassRefPtr<SecurityOrigin> topOrigin)
+    : WorkerGlobalScope(url, userAgent, thread, topOrigin)
 {
 }
 
@@ -74,7 +74,7 @@ void DedicatedWorkerGlobalScope::postMessage(PassRefPtr<SerializedScriptValue> m
     std::unique_ptr<MessagePortChannelArray> channels = MessagePort::disentanglePorts(ports, ec);
     if (ec)
         return;
-    thread().workerObjectProxy().postMessageToWorkerObject(message, std::move(channels));
+    thread().workerObjectProxy().postMessageToWorkerObject(message, WTF::move(channels));
 }
 
 void DedicatedWorkerGlobalScope::importScripts(const Vector<String>& urls, ExceptionCode& ec)

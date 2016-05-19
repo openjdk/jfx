@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2004, 2008, 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Collabora Ltd.
@@ -12,10 +13,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -36,15 +37,15 @@ namespace JSC { namespace Yarr {
 
 class RegularExpression::Private : public RefCounted<RegularExpression::Private> {
 public:
-    static PassRefPtr<Private> create(const String& pattern, TextCaseSensitivity caseSensitivity, MultilineMode multilineMode)
+    static Ref<Private> create(const String& pattern, TextCaseSensitivity caseSensitivity, MultilineMode multilineMode)
     {
-        return adoptRef(new Private(pattern, caseSensitivity, multilineMode));
+        return adoptRef(*new Private(pattern, caseSensitivity, multilineMode));
     }
 
     int lastMatchLength;
 
     unsigned m_numSubpatterns;
-    OwnPtr<JSC::Yarr::BytecodePattern> m_regExpByteCode;
+    std::unique_ptr<JSC::Yarr::BytecodePattern> m_regExpByteCode;
 
 private:
     Private(const String& pattern, TextCaseSensitivity caseSensitivity, MultilineMode multilineMode)
@@ -54,7 +55,7 @@ private:
     {
     }
 
-    PassOwnPtr<JSC::Yarr::BytecodePattern> compile(const String& patternString, TextCaseSensitivity caseSensitivity, MultilineMode multilineMode)
+    std::unique_ptr<JSC::Yarr::BytecodePattern> compile(const String& patternString, TextCaseSensitivity caseSensitivity, MultilineMode multilineMode)
     {
         JSC::Yarr::YarrPattern pattern(patternString, (caseSensitivity == TextCaseInsensitive), (multilineMode == MultilineEnabled), &m_constructionError);
         if (m_constructionError) {
@@ -178,7 +179,7 @@ void replace(String& string, const RegularExpression& target, const String& repl
 
 bool RegularExpression::isValid() const
 {
-    return d->m_regExpByteCode;
+    return d->m_regExpByteCode.get();
 }
 
 } } // namespace JSC::Yarr

@@ -30,7 +30,7 @@ import logging
 import optparse
 import sys
 import tempfile
-import unittest2 as unittest
+import unittest
 
 from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.system import executive_mock
@@ -108,6 +108,11 @@ class PortTest(unittest.TestCase):
         port.diff_text(
             u'a\xac\u1234\u20ac\U00008000', 'act', 'exp.txt', 'act.txt')
 
+        t1 = "A\n\nB"
+        t2 = "A\n\nB\n\n\n"
+        t3 = "--- exp.txt\n+++ act.txt\n@@ -1,3 +1,5 @@\n A\n \n-B\n\ No newline at end of file\n+B\n+\n+\n"
+        self.assertEqual(t3, port.diff_text(t1, t2, 'exp.txt', 'act.txt'))
+
         # And make sure we actually get diff output.
         diff = port.diff_text('foo', 'bar', 'exp.txt', 'act.txt')
         self.assertIn('foo', diff)
@@ -142,8 +147,8 @@ class PortTest(unittest.TestCase):
         add_text_file('inspector', 'test2.html')
         add_text_file('inspector/resources', 'resource_file.html')
         add_text_file('unsupported', 'unsupported_test2.html')
-        add_text_file('', 'Skipped', '\n'.join(['Layout', '', 'SunSpider', 'Supported/some-test.html']))
-        self.assertEqual(port.skipped_perf_tests(), ['Layout', 'SunSpider', 'Supported/some-test.html'])
+        add_text_file('', 'Skipped', '\n'.join(['Layout', '', 'SunSpider', 'Supported/some-test.html', '[ExoticPort] UnskippedTest.html', '[baseport] SkippedTest.html']))
+        self.assertEqual(port.skipped_perf_tests(), ['Layout', 'SunSpider', 'Supported/some-test.html', 'SkippedTest.html'])
 
     def test_get_option__set(self):
         options, args = optparse.OptionParser().parse_args([])
@@ -345,19 +350,11 @@ class PortTest(unittest.TestCase):
         self.assertTrue(port.test_exists('passes/text.html'))
         self.assertFalse(port.test_exists('passes/does_not_exist.html'))
 
-        self.assertTrue(port.test_exists('virtual'))
-        self.assertFalse(port.test_exists('virtual/does_not_exist.html'))
-        self.assertTrue(port.test_exists('virtual/passes/text.html'))
-
     def test_test_isfile(self):
         port = self.make_port(with_tests=True)
         self.assertFalse(port.test_isfile('passes'))
         self.assertTrue(port.test_isfile('passes/text.html'))
         self.assertFalse(port.test_isfile('passes/does_not_exist.html'))
-
-        self.assertFalse(port.test_isfile('virtual'))
-        self.assertTrue(port.test_isfile('virtual/passes/text.html'))
-        self.assertFalse(port.test_isfile('virtual/does_not_exist.html'))
 
     def test_test_isdir(self):
         port = self.make_port(with_tests=True)
@@ -366,32 +363,20 @@ class PortTest(unittest.TestCase):
         self.assertFalse(port.test_isdir('passes/does_not_exist.html'))
         self.assertFalse(port.test_isdir('passes/does_not_exist/'))
 
-        self.assertTrue(port.test_isdir('virtual'))
-        self.assertFalse(port.test_isdir('virtual/does_not_exist.html'))
-        self.assertFalse(port.test_isdir('virtual/does_not_exist/'))
-        self.assertFalse(port.test_isdir('virtual/passes/text.html'))
-
     def test_tests(self):
         port = self.make_port(with_tests=True)
         tests = port.tests([])
         self.assertIn('passes/text.html', tests)
-        self.assertIn('virtual/passes/text.html', tests)
 
         tests = port.tests(['passes'])
         self.assertIn('passes/text.html', tests)
-        self.assertIn('passes/passes/test-virtual-passes.html', tests)
-        self.assertNotIn('virtual/passes/text.html', tests)
-
-        tests = port.tests(['virtual/passes'])
-        self.assertNotIn('passes/text.html', tests)
-        self.assertIn('virtual/passes/test-virtual-passes.html', tests)
-        self.assertIn('virtual/passes/passes/test-virtual-passes.html', tests)
-        self.assertNotIn('virtual/passes/test-virtual-virtual/passes.html', tests)
-        self.assertNotIn('virtual/passes/virtual/passes/test-virtual-passes.html', tests)
 
     def test_build_path(self):
         port = self.make_port(options=optparse.Values({'build_directory': '/my-build-directory/'}))
-        self.assertEqual(port._build_path(), '/my-build-directory/Release')
+        if port.get_option('configuration') == 'Debug':
+            self.assertEqual(port._build_path(), '/my-build-directory/Debug')
+        else:
+            self.assertEqual(port._build_path(), '/my-build-directory/Release')
 
 
 class NaturalCompareTest(unittest.TestCase):

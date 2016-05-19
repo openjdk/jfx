@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,8 +30,6 @@
 
 #include "config.h"
 #include "InjectedScriptManager.h"
-
-#if ENABLE(INSPECTOR)
 
 #include "Completion.h"
 #include "InjectedScriptHost.h"
@@ -94,15 +92,19 @@ int InjectedScriptManager::injectedScriptIdFor(ExecState* scriptState)
 
 InjectedScript InjectedScriptManager::injectedScriptForObjectId(const String& objectId)
 {
-    RefPtr<InspectorValue> parsedObjectId = InspectorValue::parseJSON(objectId);
-    if (parsedObjectId && parsedObjectId->type() == InspectorValue::TypeObject) {
-        long injectedScriptId = 0;
-        bool success = parsedObjectId->asObject()->getNumber(ASCIILiteral("injectedScriptId"), &injectedScriptId);
-        if (success)
-            return m_idToInjectedScript.get(injectedScriptId);
-    }
+    RefPtr<InspectorValue> parsedObjectId;
+    if (!InspectorValue::parseJSON(objectId, parsedObjectId))
+        return InjectedScript();
 
-    return InjectedScript();
+    RefPtr<InspectorObject> resultObject;
+    if (!parsedObjectId->asObject(resultObject))
+        return InjectedScript();
+
+    long injectedScriptId = 0;
+    if (!resultObject->getInteger(ASCIILiteral("injectedScriptId"), injectedScriptId))
+        return InjectedScript();
+
+    return m_idToInjectedScript.get(injectedScriptId);
 }
 
 void InjectedScriptManager::discardInjectedScripts()
@@ -114,13 +116,19 @@ void InjectedScriptManager::discardInjectedScripts()
 
 void InjectedScriptManager::releaseObjectGroup(const String& objectGroup)
 {
-    for (auto it = m_idToInjectedScript.begin(); it != m_idToInjectedScript.end(); ++it)
-        it->value.releaseObjectGroup(objectGroup);
+    for (auto& injectedScript : m_idToInjectedScript.values())
+        injectedScript.releaseObjectGroup(objectGroup);
+}
+
+void InjectedScriptManager::clearExceptionValue()
+{
+    for (auto& injectedScript : m_idToInjectedScript.values())
+        injectedScript.clearExceptionValue();
 }
 
 String InjectedScriptManager::injectedScriptSource()
 {
-    return String(reinterpret_cast<const char*>(InjectedScriptSource_js), sizeof(InjectedScriptSource_js));
+    return StringImpl::createWithoutCopying(InjectedScriptSource_js, sizeof(InjectedScriptSource_js));
 }
 
 Deprecated::ScriptObject InjectedScriptManager::createInjectedScript(const String& source, ExecState* scriptState, int id)
@@ -131,9 +139,9 @@ Deprecated::ScriptObject InjectedScriptManager::createInjectedScript(const Strin
     JSGlobalObject* globalObject = scriptState->lexicalGlobalObject();
     JSValue globalThisValue = scriptState->globalThisValue();
 
-    JSValue evaluationException;
+    NakedPtr<Exception> evaluationException;
     InspectorEvaluateHandler evaluateHandler = m_environment.evaluateHandler();
-    JSValue functionValue = evaluateHandler(scriptState, sourceCode, globalThisValue, &evaluationException);
+    JSValue functionValue = evaluateHandler(scriptState, sourceCode, globalThisValue, evaluationException);
     if (evaluationException)
         return Deprecated::ScriptObject();
 
@@ -148,6 +156,7 @@ Deprecated::ScriptObject InjectedScriptManager::createInjectedScript(const Strin
     args.append(jsNumber(id));
 
     JSValue result = JSC::call(scriptState, functionValue, callType, callData, globalThisValue, args);
+    scriptState->clearException();
     if (result.isObject())
         return Deprecated::ScriptObject(scriptState, result.getObject());
 
@@ -181,4 +190,3 @@ void InjectedScriptManager::didCreateInjectedScript(InjectedScript)
 
 } // namespace Inspector
 
-#endif // ENABLE(INSPECTOR)

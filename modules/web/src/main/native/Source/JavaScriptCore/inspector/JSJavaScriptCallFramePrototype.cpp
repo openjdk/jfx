@@ -26,12 +26,10 @@
 #include "config.h"
 #include "JSJavaScriptCallFramePrototype.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "Error.h"
 #include "GetterSetter.h"
 #include "Identifier.h"
-#include "JSCJSValueInlines.h"
+#include "JSCInlines.h"
 #include "JSFunction.h"
 #include "JSJavaScriptCallFrame.h"
 
@@ -59,15 +57,16 @@ static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameConstantLOCAL_SCOPE(Exe
 static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameConstantWITH_SCOPE(ExecState*);
 static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameConstantCLOSURE_SCOPE(ExecState*);
 static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameConstantCATCH_SCOPE(ExecState*);
+static EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameConstantFUNCTION_NAME_SCOPE(ExecState*);
 
-const ClassInfo JSJavaScriptCallFramePrototype::s_info = { "JavaScriptCallFrame", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSJavaScriptCallFramePrototype) };
+const ClassInfo JSJavaScriptCallFramePrototype::s_info = { "JavaScriptCallFrame", &Base::s_info, 0, CREATE_METHOD_TABLE(JSJavaScriptCallFramePrototype) };
 
 #define JSC_NATIVE_NON_INDEX_ACCESSOR(jsName, cppName, attributes) \
     { \
-        Identifier identifier(&vm, jsName); \
-        GetterSetter* accessor = GetterSetter::create(vm); \
+        Identifier identifier = Identifier::fromString(&vm, jsName); \
+        GetterSetter* accessor = GetterSetter::create(vm, globalObject); \
         JSFunction* function = JSFunction::create(vm, globalObject, 0, identifier.string(), cppName); \
-        accessor->setGetter(vm, function); \
+        accessor->setGetter(vm, globalObject, function); \
         putDirectNonIndexAccessor(vm, identifier, accessor, (attributes)); \
     }
 
@@ -94,11 +93,12 @@ void JSJavaScriptCallFramePrototype::finishCreation(VM& vm, JSGlobalObject* glob
     JSC_NATIVE_NON_INDEX_ACCESSOR("WITH_SCOPE", jsJavaScriptCallFrameConstantWITH_SCOPE, DontEnum | Accessor);
     JSC_NATIVE_NON_INDEX_ACCESSOR("CLOSURE_SCOPE", jsJavaScriptCallFrameConstantCLOSURE_SCOPE, DontEnum | Accessor);
     JSC_NATIVE_NON_INDEX_ACCESSOR("CATCH_SCOPE", jsJavaScriptCallFrameConstantCATCH_SCOPE, DontEnum | Accessor);
+    JSC_NATIVE_NON_INDEX_ACCESSOR("FUNCTION_NAME_SCOPE", jsJavaScriptCallFrameConstantFUNCTION_NAME_SCOPE, DontEnum | Accessor);
 }
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionEvaluate(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -109,7 +109,7 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionEvaluate(Exec
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionScopeType(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -120,7 +120,7 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFramePrototypeFunctionScopeType(Exe
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeCaller(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -131,7 +131,7 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeCaller(ExecState* exe
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeSourceID(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -142,7 +142,7 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeSourceID(ExecState* e
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeLine(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -153,7 +153,7 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeLine(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeColumn(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -164,7 +164,7 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeColumn(ExecState* exe
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeFunctionName(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -175,7 +175,7 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeFunctionName(ExecStat
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeScopeChain(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -186,7 +186,7 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeScopeChain(ExecState*
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeThisObject(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -197,7 +197,7 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeThisObject(ExecState*
 
 EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameAttributeType(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     JSJavaScriptCallFrame* castedThis = jsDynamicCast<JSJavaScriptCallFrame*>(thisValue);
     if (!castedThis)
         return throwVMTypeError(exec);
@@ -231,6 +231,9 @@ EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameConstantCATCH_SCOPE(ExecState*
     return JSValue::encode(jsNumber(JSJavaScriptCallFrame::CATCH_SCOPE));
 }
 
-} // namespace Inspector
+EncodedJSValue JSC_HOST_CALL jsJavaScriptCallFrameConstantFUNCTION_NAME_SCOPE(ExecState*)
+{
+    return JSValue::encode(jsNumber(JSJavaScriptCallFrame::FUNCTION_NAME_SCOPE));
+}
 
-#endif // ENABLE(INSPECTOR)
+} // namespace Inspector

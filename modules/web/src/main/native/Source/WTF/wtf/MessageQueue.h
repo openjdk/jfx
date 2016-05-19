@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -92,7 +92,7 @@ namespace WTF {
     inline void MessageQueue<DataType>::append(std::unique_ptr<DataType> message)
     {
         MutexLocker lock(m_mutex);
-        m_queue.append(std::move(message));
+        m_queue.append(WTF::move(message));
         m_condition.signal();
     }
 
@@ -100,7 +100,7 @@ namespace WTF {
     inline void MessageQueue<DataType>::appendAndKill(std::unique_ptr<DataType> message)
     {
         MutexLocker lock(m_mutex);
-        m_queue.append(std::move(message));
+        m_queue.append(WTF::move(message));
         m_killed = true;
         m_condition.broadcast();
     }
@@ -111,7 +111,7 @@ namespace WTF {
     {
         MutexLocker lock(m_mutex);
         bool wasEmpty = m_queue.isEmpty();
-        m_queue.append(std::move(message));
+        m_queue.append(WTF::move(message));
         m_condition.signal();
         return wasEmpty;
     }
@@ -120,7 +120,7 @@ namespace WTF {
     inline void MessageQueue<DataType>::prepend(std::unique_ptr<DataType> message)
     {
         MutexLocker lock(m_mutex);
-        m_queue.prepend(std::move(message));
+        m_queue.prepend(WTF::move(message));
         m_condition.signal();
     }
 
@@ -165,7 +165,7 @@ namespace WTF {
         }
 
         ASSERT(found != m_queue.end());
-        std::unique_ptr<DataType> message = std::move(*found);
+        std::unique_ptr<DataType> message = WTF::move(*found);
         m_queue.remove(found);
         result = MessageQueueMessageReceived;
         return message;

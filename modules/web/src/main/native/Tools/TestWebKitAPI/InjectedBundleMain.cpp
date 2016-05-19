@@ -24,8 +24,11 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "InjectedBundleController.h"
-#include <WebKit2/WKBundleInitialize.h>
+#include <WebKit/WKBundleInitialize.h>
 
 #if defined(WIN32) || defined(_WIN32)
 extern "C" __declspec(dllexport)
@@ -34,5 +37,7 @@ extern "C"
 #endif
 void WKBundleInitialize(WKBundleRef bundle, WKTypeRef initializationUserData)
 {
-    TestWebKitAPI::InjectedBundleController::shared().initialize(bundle, initializationUserData);
+    TestWebKitAPI::InjectedBundleController::singleton().initialize(bundle, initializationUserData);
 }
+
+#endif

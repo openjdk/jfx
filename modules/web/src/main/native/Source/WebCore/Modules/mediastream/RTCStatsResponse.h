@@ -30,7 +30,6 @@
 #include "DOMStringList.h"
 #include "Event.h"
 #include "EventListener.h"
-#include "EventNames.h"
 #include "EventTarget.h"
 #include "MediaStreamTrack.h"
 #include "RTCStatsReport.h"
@@ -42,7 +41,7 @@ namespace WebCore {
 
 class RTCStatsResponse : public RTCStatsResponseBase, public ScriptWrappable {
 public:
-    static PassRefPtr<RTCStatsResponse> create();
+    static Ref<RTCStatsResponse> create();
 
     const Vector<RefPtr<RTCStatsReport>>& result() const { return m_result; };
 

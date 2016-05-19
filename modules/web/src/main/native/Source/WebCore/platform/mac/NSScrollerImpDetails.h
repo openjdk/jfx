@@ -26,8 +26,6 @@
 #ifndef WebCore_NSScrollerImpDetails_h
 #define WebCore_NSScrollerImpDetails_h
 
-#include "config.h"
-
 // Public APIs not available on versions of Mac on which we build
 
 @interface NSObject (ScrollbarPainter)
@@ -40,6 +38,7 @@
 - (void)setBoundsSize:(NSSize)boundsSize;
 - (void)setDoubleValue:(double)doubleValue;
 - (void)setPresentationValue:(double)presentationValue;
+- (BOOL)shouldUsePresentationValue;
 - (void)setUsePresentationValue:(BOOL)usePresentationValue;
 - (void)setKnobProportion:(CGFloat)proportion;
 - (void)setKnobStyle:(NSScrollerKnobStyle)knobStyle;
@@ -63,6 +62,9 @@
 - (void)drawKnob;
 - (void)mouseEnteredScroller;
 - (void)mouseExitedScroller;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+- (void)setNeedsDisplay:(BOOL)flag;
+#endif
 @end
 
 @interface NSObject (ScrollbarPainterController)

@@ -40,9 +40,9 @@ inline HTMLLegendElement::HTMLLegendElement(const QualifiedName& tagName, Docume
     ASSERT(hasTagName(legendTag));
 }
 
-PassRefPtr<HTMLLegendElement> HTMLLegendElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLLegendElement> HTMLLegendElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLLegendElement(tagName, document));
+    return adoptRef(*new HTMLLegendElement(tagName, document));
 }
 
 HTMLFormControlElement* HTMLLegendElement::associatedControl()
@@ -79,10 +79,10 @@ HTMLFormElement* HTMLLegendElement::virtualForm() const
     // its parent, then the form attribute must return the same value as the
     // form attribute on that fieldset element. Otherwise, it must return null.
     ContainerNode* fieldset = parentNode();
-    if (!fieldset || !fieldset->hasTagName(fieldsetTag))
-        return 0;
+    if (!is<HTMLFieldSetElement>(fieldset))
+        return nullptr;
 
-    return toHTMLFieldSetElement(fieldset)->form();
+    return downcast<HTMLFieldSetElement>(*fieldset).form();
 }
 
 } // namespace

@@ -25,7 +25,6 @@
 #include "FloatPoint.h"
 #include "FloatSize.h"
 #include "SVGAngle.h"
-#include "SVGSVGElement.h"
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -135,27 +134,27 @@ const String& SVGTransform::transformTypePrefixForParsing(SVGTransformType type)
     case SVG_TRANSFORM_UNKNOWN:
         return emptyString();
     case SVG_TRANSFORM_MATRIX: {
-        DEFINE_STATIC_LOCAL(String, matrixString, (ASCIILiteral("matrix(")));
+        DEPRECATED_DEFINE_STATIC_LOCAL(String, matrixString, (ASCIILiteral("matrix(")));
         return matrixString;
     }
     case SVG_TRANSFORM_TRANSLATE: {
-        DEFINE_STATIC_LOCAL(String, translateString, (ASCIILiteral("translate(")));
+        DEPRECATED_DEFINE_STATIC_LOCAL(String, translateString, (ASCIILiteral("translate(")));
         return translateString;
     }
     case SVG_TRANSFORM_SCALE: {
-        DEFINE_STATIC_LOCAL(String, scaleString, (ASCIILiteral("scale(")));
+        DEPRECATED_DEFINE_STATIC_LOCAL(String, scaleString, (ASCIILiteral("scale(")));
         return scaleString;
     }
     case SVG_TRANSFORM_ROTATE: {
-        DEFINE_STATIC_LOCAL(String, rotateString, (ASCIILiteral("rotate(")));
+        DEPRECATED_DEFINE_STATIC_LOCAL(String, rotateString, (ASCIILiteral("rotate(")));
         return rotateString;
     }
     case SVG_TRANSFORM_SKEWX: {
-        DEFINE_STATIC_LOCAL(String, skewXString, (ASCIILiteral("skewX(")));
+        DEPRECATED_DEFINE_STATIC_LOCAL(String, skewXString, (ASCIILiteral("skewX(")));
         return skewXString;
     }
     case SVG_TRANSFORM_SKEWY: {
-        DEFINE_STATIC_LOCAL(String, skewYString, (ASCIILiteral("skewY(")));
+        DEPRECATED_DEFINE_STATIC_LOCAL(String, skewYString, (ASCIILiteral("skewY(")));
         return skewYString;
     }
     }

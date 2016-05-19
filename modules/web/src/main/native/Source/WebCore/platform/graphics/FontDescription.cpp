@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -44,27 +44,19 @@ COMPILE_ASSERT(sizeof(FontDescription) == sizeof(SameSizeAsFontDescription), Fon
 
 FontWeight FontDescription::lighterWeight(void) const
 {
-    // FIXME: Should actually return the CSS weight corresponding to next lightest
-    // weight of the currently used font family.
     switch (m_weight) {
         case FontWeight100:
         case FontWeight200:
-            return FontWeight100;
-
         case FontWeight300:
-            return FontWeight200;
-
         case FontWeight400:
         case FontWeight500:
-            return FontWeight300;
+            return FontWeight100;
 
         case FontWeight600:
         case FontWeight700:
             return FontWeight400;
 
         case FontWeight800:
-            return FontWeight500;
-
         case FontWeight900:
             return FontWeight700;
     }
@@ -74,13 +66,9 @@ FontWeight FontDescription::lighterWeight(void) const
 
 FontWeight FontDescription::bolderWeight(void) const
 {
-    // FIXME: Should actually return the CSS weight corresponding to next heaviest
-    // weight of the currently used font family.
     switch (m_weight) {
         case FontWeight100:
         case FontWeight200:
-            return FontWeight300;
-
         case FontWeight300:
             return FontWeight400;
 
@@ -90,8 +78,6 @@ FontWeight FontDescription::bolderWeight(void) const
 
         case FontWeight600:
         case FontWeight700:
-            return FontWeight800;
-
         case FontWeight800:
         case FontWeight900:
             return FontWeight900;
@@ -106,13 +92,6 @@ FontTraitsMask FontDescription::traitsMask() const
             | (m_smallCaps ? FontVariantSmallCapsMask : FontVariantNormalMask)
             | (FontWeight100Mask << (m_weight - FontWeight100)));
 
-}
-
-FontDescription FontDescription::makeNormalFeatureSettings() const
-{
-    FontDescription normalDescription(*this);
-    normalDescription.setFeatureSettings(0);
-    return normalDescription;
 }
 
 #if ENABLE(IOS_TEXT_AUTOSIZING)

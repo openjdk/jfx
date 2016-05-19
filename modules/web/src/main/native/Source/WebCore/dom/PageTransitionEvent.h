@@ -36,19 +36,19 @@ struct PageTransitionEventInit : public EventInit {
     bool persisted;
 };
 
-class PageTransitionEvent : public Event {
+class PageTransitionEvent final : public Event {
 public:
-    static PassRefPtr<PageTransitionEvent> create()
+    static Ref<PageTransitionEvent> create()
     {
-        return adoptRef(new PageTransitionEvent);
+        return adoptRef(*new PageTransitionEvent);
     }
-    static PassRefPtr<PageTransitionEvent> create(const AtomicString& type, bool persisted)
+    static Ref<PageTransitionEvent> create(const AtomicString& type, bool persisted)
     {
-        return adoptRef(new PageTransitionEvent(type, persisted));
+        return adoptRef(*new PageTransitionEvent(type, persisted));
     }
-    static PassRefPtr<PageTransitionEvent> create(const AtomicString& type, const PageTransitionEventInit& initializer)
+    static Ref<PageTransitionEvent> create(const AtomicString& type, const PageTransitionEventInit& initializer)
     {
-        return adoptRef(new PageTransitionEvent(type, initializer));
+        return adoptRef(*new PageTransitionEvent(type, initializer));
     }
 
     virtual ~PageTransitionEvent();

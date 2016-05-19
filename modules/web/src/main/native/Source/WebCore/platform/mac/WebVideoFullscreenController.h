@@ -23,16 +23,17 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if ENABLE(VIDEO)
+#import <wtf/Platform.h>
+
+#if PLATFORM(MAC) && ENABLE(VIDEO)
 
 #import <AppKit/NSWindowController.h>
 #import <AppKit/NSScreen.h>
-#import <wtf/OwnPtr.h>
 #import <wtf/RefPtr.h>
 
 namespace WebCore {
     class DisplaySleepDisabler;
-    class HTMLMediaElement;
+    class HTMLVideoElement;
 }
 
 @protocol WebVideoFullscreenControllerDelegate;
@@ -40,9 +41,9 @@ namespace WebCore {
 @class WebWindowFadeAnimation;
 @class CALayer;
 
-@interface WebVideoFullscreenController : NSWindowController {
+WEBCORE_EXPORT @interface WebVideoFullscreenController : NSWindowController {
 @private
-    RefPtr<WebCore::HTMLMediaElement> _mediaElement; // (retain)
+    RefPtr<WebCore::HTMLVideoElement> _videoElement; // (retain)
     id <WebVideoFullscreenControllerDelegate> _delegate; // (assign)
 
     NSWindow *_backgroundFullscreenWindow; // (retain)
@@ -53,19 +54,19 @@ namespace WebCore {
     BOOL _isEndingFullscreen;
     BOOL _forceDisableAnimation;
 
-    OwnPtr<WebCore::DisplaySleepDisabler> _displaySleepDisabler;
+    std::unique_ptr<WebCore::DisplaySleepDisabler> _displaySleepDisabler;
 }
 
 - (id <WebVideoFullscreenControllerDelegate>)delegate;
 - (void)setDelegate:(id <WebVideoFullscreenControllerDelegate>)delegate;
 
 - (void)setupVideoOverlay:(CALayer*)layer;
-- (void)setMediaElement:(WebCore::HTMLMediaElement*)mediaElement;
-- (WebCore::HTMLMediaElement*)mediaElement;
+- (void)setVideoElement:(WebCore::HTMLVideoElement*)videoElement;
+- (WebCore::HTMLVideoElement*)videoElement;
 
 - (void)enterFullscreen:(NSScreen *)screen;
 - (void)exitFullscreen;
 
 @end
 
-#endif // ENABLE(VIDEO)
+#endif

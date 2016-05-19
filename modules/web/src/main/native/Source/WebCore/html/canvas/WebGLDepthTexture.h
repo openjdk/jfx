@@ -27,21 +27,17 @@
 #define WebGLDepthTexture_h
 
 #include "WebGLExtension.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-class WebGLDepthTexture : public WebGLExtension {
+class WebGLDepthTexture final : public WebGLExtension {
 public:
-    static OwnPtr<WebGLDepthTexture> create(WebGLRenderingContext*);
+    explicit WebGLDepthTexture(WebGLRenderingContextBase*);
+    virtual ~WebGLDepthTexture();
 
     static bool supported(GraphicsContext3D*);
 
-    virtual ~WebGLDepthTexture();
     virtual ExtensionName getName() const override;
-
-private:
-    WebGLDepthTexture(WebGLRenderingContext*);
 };
 
 } // namespace WebCore

@@ -12,7 +12,7 @@
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
 #     documentation and/or other materials provided with the distribution. 
-# 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+# 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
 #     from this software without specific prior written permission. 
 #
@@ -50,7 +50,6 @@ BEGIN {
         &callSilently
         &canonicalizePath
         &changeLogEmailAddress
-        &changeLogFileName
         &changeLogName
         &chdirReturningRelativePath
         &decodeGitBinaryChunk
@@ -61,11 +60,13 @@ BEGIN {
         &exitStatus
         &fixChangeLogPatch
         &gitBranch
+        &gitTreeDirectory
         &gitdiff2svndiff
         &isGit
         &isGitSVN
         &isGitBranchBuild
         &isGitDirectory
+        &isGitSVNDirectory
         &isSVN
         &isSVNDirectory
         &isSVNVersion16OrNewer
@@ -224,21 +225,39 @@ sub isGit()
     return $isGit;
 }
 
-sub isGitSVN()
+sub isGitSVNDirectory($)
 {
-    return $isGitSVN if defined $isGitSVN;
+    my ($directory) = @_;
+
+    my $savedWorkingDirectory = Cwd::getcwd();
+    chdir($directory);
 
     # There doesn't seem to be an officially documented way to determine
     # if you're in a git-svn checkout. The best suggestions seen so far
     # all use something like the following:
     my $output = `git config --get svn-remote.svn.fetch 2>& 1`;
     $isGitSVN = $output ne '';
+    chdir($savedWorkingDirectory);
+    return $isGitSVN;
+}
+
+sub isGitSVN()
+{
+    return $isGitSVN if defined $isGitSVN;
+
+    $isGitSVN = isGitSVNDirectory(".");
     return $isGitSVN;
 }
 
 sub gitDirectory()
 {
     chomp(my $result = `git rev-parse --git-dir`);
+    return $result;
+}
+
+sub gitTreeDirectory()
+{
+    chomp(my $result = `git rev-parse --show-toplevel`);
     return $result;
 }
 
@@ -375,7 +394,9 @@ sub determineSVNRoot()
 sub determineVCSRoot()
 {
     if (isGit()) {
-        return dirname(gitDirectory());
+        # This is the working tree root. If WebKit is a submodule,
+        # then the relevant metadata directory is somewhere else.
+        return gitTreeDirectory();
     }
 
     if (!isSVN()) {
@@ -1887,23 +1908,6 @@ sub gitConfig($)
     my $result = `git config $config`;
     chomp $result;
     return $result;
-}
-
-sub changeLogSuffix()
-{
-    my $rootPath = determineVCSRoot();
-    my $changeLogSuffixFile = File::Spec->catfile($rootPath, ".changeLogSuffix");
-    return "" if ! -e $changeLogSuffixFile;
-    open FILE, $changeLogSuffixFile or die "Could not open $changeLogSuffixFile: $!";
-    my $changeLogSuffix = <FILE>;
-    chomp $changeLogSuffix;
-    close FILE;
-    return $changeLogSuffix;
-}
-
-sub changeLogFileName()
-{
-    return "ChangeLog" . changeLogSuffix()
 }
 
 sub changeLogNameError($)

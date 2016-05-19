@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -25,12 +25,14 @@
 
 #import "WebCache.h"
 
+#import "WebApplicationCacheInternal.h"
 #import "WebNSObjectExtras.h"
 #import "WebPreferences.h"
 #import "WebSystemInterface.h"
 #import "WebView.h"
 #import "WebViewInternal.h"
 #import <WebCore/ApplicationCacheStorage.h>
+#import <WebCore/CredentialStorage.h>
 #import <WebCore/CrossOriginPreflightResultCache.h>
 #import <WebCore/MemoryCache.h>
 #import <runtime/InitializeThreading.h>
@@ -41,7 +43,6 @@
 #import "MemoryMeasure.h"
 #import "WebFrameInternal.h"
 #import <WebCore/CachedImage.h>
-#import <WebCore/CredentialStorage.h>
 #import <WebCore/Frame.h>
 #import <WebCore/PageCache.h>
 #import <WebCore/WebCoreThreadRun.h>
@@ -65,7 +66,7 @@
 
 + (NSArray *)statistics
 {
-    WebCore::MemoryCache::Statistics s = WebCore::memoryCache()->getStatistics();
+    WebCore::MemoryCache::Statistics s = WebCore::MemoryCache::singleton().getStatistics();
 
     return [NSArray arrayWithObjects:
         [NSDictionary dictionaryWithObjectsAndKeys:
@@ -108,38 +109,6 @@
 #endif
             [NSNumber numberWithInt:s.scripts.decodedSize], @"JavaScript",
             nil],
-        [NSDictionary dictionaryWithObjectsAndKeys:
-            [NSNumber numberWithInt:s.images.purgeableSize], @"Images",
-            [NSNumber numberWithInt:s.cssStyleSheets.purgeableSize] ,@"CSS",
-#if ENABLE(XSLT)
-            [NSNumber numberWithInt:s.xslStyleSheets.purgeableSize], @"XSL",
-#else
-            [NSNumber numberWithInt:0], @"XSL",
-#endif
-            [NSNumber numberWithInt:s.scripts.purgeableSize], @"JavaScript",
-            nil],
-        [NSDictionary dictionaryWithObjectsAndKeys:
-            [NSNumber numberWithInt:s.images.purgedSize], @"Images",
-            [NSNumber numberWithInt:s.cssStyleSheets.purgedSize] ,@"CSS",
-#if ENABLE(XSLT)
-            [NSNumber numberWithInt:s.xslStyleSheets.purgedSize], @"XSL",
-#else
-            [NSNumber numberWithInt:0], @"XSL",
-#endif
-            [NSNumber numberWithInt:s.scripts.purgedSize], @"JavaScript",
-            nil],
-#if ENABLE(DISK_IMAGE_CACHE) && PLATFORM(IOS)
-        [NSDictionary dictionaryWithObjectsAndKeys:
-            [NSNumber numberWithInt:s.images.mappedSize], @"Images",
-            [NSNumber numberWithInt:s.cssStyleSheets.mappedSize] ,@"CSS",
-#if ENABLE(XSLT)
-            [NSNumber numberWithInt:s.xslStyleSheets.mappedSize], @"XSL",
-#else
-            [NSNumber numberWithInt:0], @"XSL",
-#endif
-            [NSNumber numberWithInt:s.scripts.mappedSize], @"JavaScript",
-            nil],
-#endif // ENABLE(DISK_IMAGE_CACHE) && PLATFORM(IOS)
         nil];
 }
 
@@ -151,10 +120,10 @@
     [WebView _setCacheModel:cacheModel];
 
     // Empty the application cache.
-    WebCore::cacheStorage().empty();
+    webApplicationCacheStorage().empty();
 
     // Empty the Cross-Origin Preflight cache
-    WebCore::CrossOriginPreflightResultCache::shared().empty();
+    WebCore::CrossOriginPreflightResultCache::singleton().empty();
 }
 
 #if PLATFORM(IOS)
@@ -172,13 +141,13 @@
         [WebView _setCacheModel:WebCacheModelDocumentViewer];
         [WebView _setCacheModel:cacheModel];
 
-        WebCore::memoryCache()->pruneLiveResources(true);
+        WebCore::MemoryCache::singleton().pruneLiveResources(true);
     });
 }
 
 + (void)sizeOfDeadResources:(int *)resources
 {
-    WebCore::MemoryCache::Statistics stats = WebCore::memoryCache()->getStatistics();
+    WebCore::MemoryCache::Statistics stats = WebCore::MemoryCache::singleton().getStatistics();
     if (resources) {
         *resources = (stats.images.size - stats.images.liveSize)
                      + (stats.cssStyleSheets.size - stats.cssStyleSheets.liveSize)
@@ -187,11 +156,6 @@
 #endif
                      + (stats.scripts.size - stats.scripts.liveSize);
     }
-}
-
-+ (void)clearCachedCredentials
-{
-    WebCore::CredentialStorage::clearCredentials();
 }
 
 + (bool)addImageToCache:(CGImageRef)image forURL:(NSURL *)url
@@ -208,7 +172,7 @@
     if (frame)
         topOrigin = core(frame)->document()->topOrigin();
 #endif
-    return WebCore::memoryCache()->addImageToCache(image, url, topOrigin ? topOrigin->cachePartition() : emptyString());
+    return WebCore::MemoryCache::singleton().addImageToCache(image, url, topOrigin ? topOrigin->domainForCachePartition() : emptyString());
 }
 
 + (void)removeImageFromCacheForURL:(NSURL *)url
@@ -225,7 +189,7 @@
     if (frame)
         topOrigin = core(frame)->document()->topOrigin();
 #endif
-    WebCore::memoryCache()->removeImageFromCache(url, topOrigin ? topOrigin->cachePartition() : emptyString());
+    WebCore::MemoryCache::singleton().removeImageFromCache(url, topOrigin ? topOrigin->domainForCachePartition() : emptyString());
 }
 
 + (CGImageRef)imageForURL:(NSURL *)url
@@ -233,13 +197,14 @@
     if (!url)
         return nullptr;
 
-    WebCore::CachedResource* cachedResource = WebCore::memoryCache()->resourceForURL(url);
-    if (!cachedResource || !cachedResource->isImage())
+    WebCore::ResourceRequest request(url);
+    WebCore::CachedResource* cachedResource = WebCore::MemoryCache::singleton().resourceForRequest(request, WebCore::SessionID::defaultSessionID());
+    if (!is<WebCore::CachedImage>(cachedResource))
         return nullptr;
-    WebCore::CachedImage* cachedImage = WebCore::toCachedImage(cachedResource);
-    if (!cachedImage || !cachedImage->hasImage())
+    WebCore::CachedImage& cachedImage = downcast<WebCore::CachedImage>(*cachedResource);
+    if (!cachedImage.hasImage())
         return nullptr;
-    return cachedImage->image()->getCGImageRef();
+    return cachedImage.image()->getCGImageRef();
 }
 
 #endif // PLATFORM(IOS)
@@ -249,12 +214,18 @@
     if (!pthread_main_np())
         return [[self _webkit_invokeOnMainThread] setDisabled:disabled];
 
-    WebCore::memoryCache()->setDisabled(disabled);
+    WebCore::MemoryCache::singleton().setDisabled(disabled);
 }
 
 + (BOOL)isDisabled
 {
-    return WebCore::memoryCache()->disabled();
+    return WebCore::MemoryCache::singleton().disabled();
+}
+
++ (void)clearCachedCredentials
+{
+    [WebView _makeAllWebViewsPerformSelector:@selector(_clearCredentials)];
+    WebCore::CredentialStorage::defaultCredentialStorage().clearCredentials();
 }
 
 @end

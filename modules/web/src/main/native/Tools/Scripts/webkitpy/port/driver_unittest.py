@@ -26,7 +26,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest2 as unittest
+import unittest
 
 from webkitpy.common.system.systemhost_mock import MockSystemHost
 
@@ -101,7 +101,11 @@ class DriverTest(unittest.TestCase):
 
     def test_profiler_as_wrapper(self):
         driver = Driver(self.make_port(MockSystemHost(os_name='linux'), MockOptions(profile=True, profiler='perf')), None, False)
-        self.assertEqual(driver._command_wrapper(), ['perf', 'record', '--call-graph', '--output', '/mock-build/layout-test-results/test.data'])
+        self.assertEqual(driver._command_wrapper(), ['perf', 'record', '-g', '--output', '/mock-build/layout-test-results/test.data'])
+
+    def test_profiler_and_wrapper(self):
+        driver = Driver(self.make_port(MockSystemHost(os_name='linux'), MockOptions(profile=True, profiler='perf', wrapper='valgrind')), None, False)
+        self.assertEqual(driver._command_wrapper(), ['valgrind', 'perf', 'record', '-g', '--output', '/mock-build/layout-test-results/test.data'])
 
     def test_test_to_uri(self):
         port = self.make_port()
@@ -109,6 +113,7 @@ class DriverTest(unittest.TestCase):
         self.assertEqual(driver.test_to_uri('foo/bar.html'), 'file://%s/foo/bar.html' % port.layout_tests_dir())
         self.assertEqual(driver.test_to_uri('http/tests/foo.html'), 'http://127.0.0.1:8000/foo.html')
         self.assertEqual(driver.test_to_uri('http/tests/ssl/bar.html'), 'https://127.0.0.1:8443/ssl/bar.html')
+        self.assertEqual(driver.test_to_uri('imported/w3c/web-platform-tests/foo/bar.html'), 'http://localhost:8800/foo/bar.html')
 
     def test_uri_to_test(self):
         port = self.make_port()
@@ -116,6 +121,7 @@ class DriverTest(unittest.TestCase):
         self.assertEqual(driver.uri_to_test('file://%s/foo/bar.html' % port.layout_tests_dir()), 'foo/bar.html')
         self.assertEqual(driver.uri_to_test('http://127.0.0.1:8000/foo.html'), 'http/tests/foo.html')
         self.assertEqual(driver.uri_to_test('https://127.0.0.1:8443/ssl/bar.html'), 'http/tests/ssl/bar.html')
+        self.assertEqual(driver.uri_to_test('http://localhost:8800/foo/bar.html'), 'imported/w3c/web-platform-tests/foo/bar.html')
 
     def test_read_block(self):
         port = TestWebKitPort()
@@ -195,10 +201,10 @@ class DriverTest(unittest.TestCase):
                 pass
 
         def assert_crash(driver, error_line, crashed, name, pid, unresponsive=False):
-            self.assertEqual(driver._check_for_driver_crash(error_line), crashed)
+            self.assertEqual(driver._check_for_driver_crash_or_unresponsiveness(error_line), crashed)
             self.assertEqual(driver._crashed_process_name, name)
             self.assertEqual(driver._crashed_pid, pid)
-            self.assertEqual(driver._subprocess_was_unresponsive, unresponsive)
+            self.assertEqual(driver._driver_timed_out, unresponsive)
             driver.stop()
 
         driver._server_process = FakeServerProcess(False)
@@ -207,37 +213,37 @@ class DriverTest(unittest.TestCase):
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
-        driver._subprocess_was_unresponsive = False
+        driver._driver_timed_out = False
         assert_crash(driver, '#CRASHED\n', True, 'FakeServerProcess', 1234)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
-        driver._subprocess_was_unresponsive = False
+        driver._driver_timed_out = False
         assert_crash(driver, '#CRASHED - WebProcess\n', True, 'WebProcess', None)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
-        driver._subprocess_was_unresponsive = False
+        driver._driver_timed_out = False
         assert_crash(driver, '#CRASHED - WebProcess (pid 8675)\n', True, 'WebProcess', 8675)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
-        driver._subprocess_was_unresponsive = False
-        assert_crash(driver, '#PROCESS UNRESPONSIVE - WebProcess (pid 8675)\n', True, 'WebProcess', 8675, True)
+        driver._driver_timed_out = False
+        assert_crash(driver, '#PROCESS UNRESPONSIVE - WebProcess (pid 8675)\n', True, None, None, True)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(False)
-        driver._subprocess_was_unresponsive = False
+        driver._driver_timed_out = False
         assert_crash(driver, '#CRASHED - renderer (pid 8675)\n', True, 'renderer', 8675)
 
         driver._crashed_process_name = None
         driver._crashed_pid = None
         driver._server_process = FakeServerProcess(True)
-        driver._subprocess_was_unresponsive = False
+        driver._driver_timed_out = False
         assert_crash(driver, '', True, 'FakeServerProcess', 1234)
 
     def test_creating_a_port_does_not_write_to_the_filesystem(self):

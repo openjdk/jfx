@@ -2,11 +2,13 @@
  * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
+
+#include "BridgeUtils.h"
+
 #include "WebPage.h"
 #include "DbgUtils.h"
 
 #include "AdjustViewSizeOrNot.h"
-#include "BridgeUtils.h"
 //#include "Cache.h"
 #include "CharacterData.h"
 #include "Chrome.h"
@@ -18,7 +20,6 @@
 #include "DragClientJava.h"
 #include "DragController.h"
 #include "DragData.h"
-#include "DragSession.h"
 #include "Editor.h"
 #include "EditorClientJava.h"
 #include "EventHandler.h"
@@ -64,28 +65,38 @@
 #include "SecurityPolicy.h"
 #include "Settings.h"
 #include "ScriptController.h"
+#include "Storage/WebDatabaseProvider.h"
+#include "Storage/StorageNamespaceImpl.h"
+#include "StorageNamespaceProvider.h"
 #include "Text.h"
 #include "TextIterator.h"
+#include "PageConfiguration.h"
 #if USE(ACCELERATED_COMPOSITING)
 #include "TextureMapper.h"
 #include "TextureMapperLayer.h"
 #include "GraphicsLayerTextureMapper.h"
 #endif
+#include "VisitedLinkStoreJava.h"
 #include "WebKitVersion.h" //generated
 #include "Widget.h"
 #include "WorkerThread.h"
 
 #include <wtf/text/WTFString.h>
+#include <wtf/Ref.h>
 #include <runtime/InitializeThreading.h>
 #include <runtime/JSObject.h>
 #include <runtime/JSCJSValue.h>
-#include <API/APIShims.h>
+#include <JSLock.h>
 #include <API/APICast.h>
 
 #include "runtime_root.h"
 #if OS(UNIX)
 #include <sys/utsname.h>
 #endif
+#if OS(WINDOWS)
+#include <platform/win/SystemInfo.h>
+#endif
+
 
 #include "com_sun_webkit_WebPage.h"
 #include "com_sun_webkit_event_WCFocusEvent.h"
@@ -99,14 +110,17 @@
 
 namespace WebCore {
 
-WebPage::WebPage(PassOwnPtr<Page> page)
-    : m_page(page)
-    , m_suppressNextKeypressEvent(false)
+WebPage::WebPage(std::unique_ptr<Page> page)
+    :
+    // m_page(page)
+    // ,
+     m_suppressNextKeypressEvent(false)
     , m_isDebugging(false)
 #if USE(ACCELERATED_COMPOSITING)
     , m_syncLayers(false)
 #endif
 {
+    m_page = WTF::move(page);
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     if(!NotificationController::clientFrom(m_page.get())) {
         provideNotification(m_page.get(), NotificationClientJava::instance());
@@ -140,9 +154,8 @@ JLObject WebPage::jobjectFromPage(Page* page)
     if (!page)
         return NULL;
 
-    ChromeClientJava* client = dynamic_cast<ChromeClientJava*>(&page->chrome().client());
-    return client
-        ? client->platformPage()
+    return page->chrome().client().isJavaChromeClient()
+        ? (static_cast<ChromeClientJava*>(&page->chrome().client()))->platformPage()
         : NULL;
 }
 
@@ -236,7 +249,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 
     // TODO: Following JS synchronization is not necessary for single thread model
     JSGlobalContextRef globalContext = toGlobalRef(mainFrame->script().globalObject(mainThreadNormalWorld())->globalExec());
-    JSC::APIEntryShim sw( toJS(globalContext) );
+    JSC::JSLockHolder sw(toJS(globalContext)); //XXX: was JSC::APIEntryShim sw( toJS(globalContext) );
 
     frameView->paint(&gc, IntRect(x, y, w, h));
     if (m_page->settings().showDebugBorders()) {
@@ -266,7 +279,7 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
         if (m_page->settings().showDebugBorders()) {
             drawDebugLed(gc, IntRect(x, y, w, h), Color(0, 192, 0, 128));
         }
-        if (toTextureMapperLayer(m_rootLayer.get())->descendantsOrSelfHaveRunningAnimations()) {
+        if (downcast<GraphicsLayerTextureMapper>(m_rootLayer.get())->layer().descendantsOrSelfHaveRunningAnimations()) {
             requestJavaRepaint(pageRect());
         }
     }
@@ -320,11 +333,31 @@ void WebPage::repaint(const IntRect& rect)
     requestJavaRepaint(rect);
 }
 
+void WebPage::requestJavaRepaint(const IntRect& rect)
+{
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    static jmethodID mid = env->GetMethodID(
+            PG_GetWebPageClass(env),
+            "fwkRepaint",
+            "(IIII)V");
+    ASSERT(mid);
+
+    env->CallVoidMethod(
+            jobjectFromPage(m_page.get()),
+            mid,
+            rect.x(),
+            rect.y(),
+            rect.width(),
+            rect.height());
+    CheckAndClearException(env);
+}
+
 #if USE(ACCELERATED_COMPOSITING)
 void WebPage::setRootChildLayer(GraphicsLayer* layer)
 {
     if (layer) {
-        m_rootLayer = adoptPtr(GraphicsLayer::create(0, this).release());
+        m_rootLayer = adoptPtr(GraphicsLayer::create(nullptr, this).release());
         m_rootLayer->setDrawsContent(true);
         m_rootLayer->setContentsOpaque(true);
         m_rootLayer->setSize(pageRect().size());
@@ -332,11 +365,11 @@ void WebPage::setRootChildLayer(GraphicsLayer* layer)
         m_rootLayer->addChild(layer);
 
         m_textureMapper = TextureMapper::create();
-        toTextureMapperLayer(m_rootLayer.get())
-                ->setTextureMapper(m_textureMapper.get());
+        downcast<GraphicsLayerTextureMapper>(m_rootLayer.get())->layer()
+                .setTextureMapper(m_textureMapper.get());
     } else {
-        m_rootLayer.clear();
-        m_textureMapper.clear();
+        m_rootLayer.reset();
+        m_textureMapper.reset();
     }
 }
 
@@ -376,26 +409,6 @@ void WebPage::syncLayers()
                                 //syncCompositingStateIncludingSubframes();
 }
 
-void WebPage::requestJavaRepaint(const IntRect& rect)
-{
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(
-            PG_GetWebPageClass(env),
-            "fwkRepaint",
-            "(IIII)V");
-    ASSERT(mid);
-
-    env->CallVoidMethod(
-            jobjectFromPage(m_page.get()),
-            mid,
-            rect.x(),
-            rect.y(),
-            rect.width(),
-            rect.height());
-    CheckAndClearException(env);
-}
-
 IntRect WebPage::pageRect()
 {
     ChromeClient& client = m_page->chrome().client();
@@ -407,20 +420,20 @@ void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& cl
     ASSERT(m_rootLayer);
     ASSERT(m_textureMapper);
 
-    TextureMapperLayer* rootTextureMapperLayer = toTextureMapperLayer(m_rootLayer.get());
+    TextureMapperLayer rootTextureMapperLayer = downcast<GraphicsLayerTextureMapper>(m_rootLayer.get())->layer();
 
-    m_textureMapper->setGraphicsContext(&context);
-    m_textureMapper->setImageInterpolationQuality(context.imageInterpolationQuality());
-    m_textureMapper->setTextDrawingMode(context.textDrawingMode());
+    m_textureMapper.setGraphicsContext(&context);
+    m_textureMapper.setImageInterpolationQuality(context.imageInterpolationQuality());
+    m_textureMapper.setTextDrawingMode(context.textDrawingMode());
     TransformationMatrix matrix;
-    rootTextureMapperLayer->setTransform(matrix);
-    m_textureMapper->beginPainting();
-    m_textureMapper->beginClip(matrix, clip);
-    //rootTextureMapperLayer->syncAnimationsRecursive();
-    rootTextureMapperLayer->applyAnimationsRecursively();
-    rootTextureMapperLayer->paint();
-    m_textureMapper->endClip();
-    m_textureMapper->endPainting();
+    rootTextureMapperLayer.setTransform(matrix);
+    m_textureMapper.beginPainting();
+    m_textureMapper.beginClip(matrix, clip);
+    //rootTextureMapperLayer.syncAnimationsRecursive();
+    rootTextureMapperLayer.applyAnimationsRecursively();
+    rootTextureMapperLayer.paint();
+    m_textureMapper.endClip();
+    m_textureMapper.endPainting();
 }
 
 void WebPage::notifyAnimationStarted(const GraphicsLayer*, double)
@@ -700,7 +713,7 @@ static String agentOS()
 
 static String defaultUserAgent()
 {
-    DEFINE_STATIC_LOCAL(String, userAgentString, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, userAgentString, ());
     if (userAgentString.isNull()) {
         String wkVersion = String::format("%d.%d", WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION);
         userAgentString = makeString("Mozilla/5.0 (", agentOS(),
@@ -718,7 +731,7 @@ int WebPage::beginPrinting(float width, float height)
     frame->document()->updateLayout();
 
     ASSERT(!m_printContext);
-    m_printContext = adoptPtr(new PrintContext(frame));
+    m_printContext = std::unique_ptr<PrintContext>(new PrintContext(frame));
     m_printContext->begin(width, height);
     m_printContext->computePageRects(FloatRect(0, 0, width, height), 0, 0, 1, height);
     return m_printContext->pageCount();
@@ -731,7 +744,7 @@ void WebPage::endPrinting()
         return;
 
     m_printContext->end();
-    m_printContext.clear();
+    m_printContext.reset();
 }
 
 void WebPage::print(GraphicsContext& gc, int pageIndex, float pageWidth)
@@ -769,14 +782,14 @@ void WebPage::debugEnded() {
 }
 void WebPage::enableWatchdog() {
     if (globalDebugSessionCounter == 0) {
-        JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld().vm());
+        JSContextGroupRef contextGroup = toRef(&mainThreadNormalWorld().vm());
         JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
     }
 }
 
 void WebPage::disableWatchdog() {
     if (globalDebugSessionCounter > 0) {
-        JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld().vm());
+        JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorld().vm()));
         JSContextGroupClearExecutionTimeLimit(contextGroup);
     }
 }
@@ -786,6 +799,32 @@ void WebPage::disableWatchdog() {
 
 using namespace WebCore;
 using namespace WTF;
+
+class WebStorageNamespaceProviderJava final : public WebCore::StorageNamespaceProvider {
+public:
+    void setLocalStorageDatabasePath(const String& path) {
+        m_localStorageDatabasePath = path;
+    }
+private:
+    String m_localStorageDatabasePath;
+
+    RefPtr<StorageNamespace> createSessionStorageNamespace(Page&, unsigned quota) override
+    {
+        return StorageNamespaceImpl::createSessionStorageNamespace(quota);
+    }
+
+    RefPtr<StorageNamespace> createLocalStorageNamespace(unsigned quota) override
+    {
+        return StorageNamespaceImpl::getOrCreateLocalStorageNamespace(m_localStorageDatabasePath, quota);
+    }
+
+    RefPtr<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned quota) override
+    {
+        // FIXME: A smarter implementation would create a special namespace type instead of just piggy-backing off
+        // SessionStorageNamespace here.
+        return StorageNamespaceImpl::createSessionStorageNamespace(quota);
+    }
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -803,8 +842,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 
     //DBG_CHECKPOINTEX("twkCreatePage", 3, 5);
 
-
-    PageGroup::setShouldTrackVisitedLinks(true);
+    VisitedLinkStoreJava::setShouldTrackVisitedLinks(true);
 
 #if !LOG_DISABLED
     initializeLoggingChannelsIfNecessary();
@@ -814,12 +852,18 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     JLObject jlself(self, true);
 
     //utaTODO: history agent implementation
-    Page::PageClients pc;
+    //XXX: PageClients -> PageConfiguration
+
+    PageConfiguration pc;
+    fillWithEmptyClients(pc);
     pc.chromeClient = new ChromeClientJava(jlself);
     pc.contextMenuClient = new ContextMenuClientJava(jlself);
     pc.editorClient = new EditorClientJava(jlself);
     pc.dragClient = new DragClientJava(jlself);
     pc.inspectorClient = new InspectorClientJava(jlself);
+    pc.databaseProvider = &WebDatabaseProvider::singleton();
+    pc.storageNamespaceProvider = new WebStorageNamespaceProviderJava();
+    pc.visitedLinkStore = VisitedLinkStoreJava::create();
 
     FrameLoaderClientJava* flc = new FrameLoaderClientJava(jlself);
     pc.loaderClientForMainFrame = flc;
@@ -827,7 +871,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 
  //   pc.backForwardClient = BackForwardListImpl::create(NULL);
 
-    return ptr_to_jlong(new WebPage(adoptPtr(new Page(pc))));
+    return ptr_to_jlong(new WebPage(std::unique_ptr<Page>(new Page(pc))));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
@@ -861,11 +905,15 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     RuntimeEnabledFeatures::sharedFeatures().setCSSRegionsEnabled(true);
     page->setDeviceScaleFactor(devicePixelScale);
 
-    dynamic_cast<FrameLoaderClientJava*>(&page->mainFrame().loader().client())->setFrame(&page->mainFrame());
+    // dynamic_cast<FrameLoaderClientJava*>(&page->mainFrame().loader().client())->setFrame(&page->mainFrame());
+    if (page->mainFrame().loader().client().isJavaFrameLoaderClient()) {
+        static_cast<FrameLoaderClientJava*>(&page->mainFrame().loader().client())
+                                                ->setFrame(&page->mainFrame());
+    }
 
     page->mainFrame().init();
 
-    JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld().vm());
+    JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorld().vm()));
     JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
 
     WebPage::webPageFromJLong(pPage)->enableWatchdog();
@@ -1049,7 +1097,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
 
     frame->loader().load(FrameLoadRequest(
         frame,
-        ResourceRequest(URL(emptyParent, String(env, url)))
+        ResourceRequest(URL(emptyParent, String(env, url))),
+        ShouldOpenExternalURLsPolicy::ShouldNotAllow //XXX: recheck policy value
     ));
 }
 
@@ -1066,14 +1115,16 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     RefPtr<SharedBuffer> buffer = SharedBuffer::create(stringChars, (int)stringLen);
 
     static const URL emptyUrl(ParsedURLString, "");
+    ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8");
     frame->loader().load(FrameLoadRequest(
         frame,
         ResourceRequest(emptyUrl),
+        ShouldOpenExternalURLsPolicy::ShouldNotAllow, //XXX: recheck policy value
         SubstituteData(
             buffer,
-            String(env, contentType),
-            "UTF-8",
-            emptyUrl)
+            URL(),
+            response,
+            SubstituteData::SessionHistoryVisibility::Visible) //XXX: or Hidden?
     ));
 
     env->ReleaseStringUTFChars(text, stringChars);
@@ -1521,7 +1572,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
                                                        getWebCoreMouseEventType(id),
                                                        clickCount,
                                                        shift, ctrl, alt, meta,
-                                                       timestamp);
+                                                       timestamp, ForceAtClick); //XXX: handle force?
     switch (id) {
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:
         //frame->focusWindow();
@@ -1719,11 +1770,11 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
     if (editor.hasComposition()) {
         RefPtr<Range> range = editor.compositionRange();
         ExceptionCode ec = 0;
-        for (Node* node = range.get()->startContainer(ec); node; node = NodeTraversal::next(node)) {
+        for (Node* node = range.get()->startContainer(ec); node; node = NodeTraversal::next(*node)) {
             RenderObject* renderer = node->renderer();
             IntRect content = renderer->absoluteBoundingBoxRect();
             VisiblePosition targetPosition(renderer->positionForPoint(LayoutPoint(point.x() - content.x(),
-                                                                            point.y() - content.y())));
+                                                                            point.y() - content.y()), nullptr)); //XXX: recheck nullptr
             offset = targetPosition.deepEquivalent().offsetInContainerNode();
             if (offset >= editor.compositionStart() && offset < editor.compositionEnd()) {
                 offset -= editor.compositionStart();
@@ -1773,7 +1824,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedTextLength
         RefPtr<Range> range = rangeOfContents(*(Node*)frame->selection().selection().start().element());
         // Code derived from Range::toString
         Node* pastLast = range.get()->pastLastNode();
-        for (Node* n = range.get()->firstNode(); n != pastLast; n = NodeTraversal::next(n)) {
+        for (Node* n = range.get()->firstNode(); n != pastLast; n = NodeTraversal::next(*n)) {
             if (n->nodeType() == Node::TEXT_NODE || n->nodeType() == Node::CDATA_SECTION_NODE) {
                 length += static_cast<CharacterData*>(n)->data().length();
             }
@@ -1816,7 +1867,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
                     t = s + t.substring(end, length - start);
                 }
             }
-            text = env->NewString(reinterpret_cast<const jchar *>(t.deprecatedCharacters()), t.length());
+            text = env->NewStringUTF(t.utf8().data());
             CheckAndClearException(env); // OOME
         }
     }
@@ -1832,7 +1883,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetSelectedText
     jstring text = 0;
 
     String t = frame->editor().selectedText();
-    text = env->NewString(reinterpret_cast<const jchar *>(t.deprecatedCharacters()), t.length());
+    text = env->NewStringUTF(t.utf8().data());
     CheckAndClearException(env); // OOME
 
     return text;
@@ -1902,16 +1953,16 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
         setCopyKeyState(ACTION_COPY == javaAction);
         switch(actionId){
         case com_sun_webkit_WebPage_DND_DST_EXIT:
-        dc.dragExited(dragData);
+            dc.dragExited(dragData);
             return 0;
         case com_sun_webkit_WebPage_DND_DST_ENTER:
-            return dragOperationToDragCursor( dc.dragEntered(dragData).operation);
+            return dragOperationToDragCursor(dc.dragEntered(dragData));
         case com_sun_webkit_WebPage_DND_DST_OVER:
         case com_sun_webkit_WebPage_DND_DST_CHANGE:
-            return dragOperationToDragCursor(dc.dragUpdated(dragData).operation);
+            return dragOperationToDragCursor(dc.dragUpdated(dragData));
         case com_sun_webkit_WebPage_DND_DST_DROP:
             {
-                int ret = dc.performDrag(dragData) ? 1 : 0;
+                int ret = dc.performDragOperation(dragData) ? 1 : 0;
                 WebPage::pageFromJLong(pPage)->dragController().dragEnded();
                 return ret;
             }
@@ -1928,7 +1979,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
                 : NoButton,
             PlatformEvent::MouseMoved,
             0,
-            false, false, false, false, 0.0);
+            false, false, false, false, 0.0, ForceAtClick); //XXX: handle force?
         switch(actionId){
         case com_sun_webkit_WebPage_DND_SRC_EXIT:
         case com_sun_webkit_WebPage_DND_SRC_ENTER:
@@ -2136,6 +2187,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetLocalStorageDatabasePat
     ASSERT(page);
     Settings& settings = page->settings();
     settings.setLocalStorageDatabasePath(String(env, path));
+    static_cast<WebStorageNamespaceProviderJava*>(
+      &page->storageNamespaceProvider())
+        ->setLocalStorageDatabasePath(settings.localStorageDatabasePath());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetLocalStorageEnabled
@@ -2183,7 +2237,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
         InspectorController& ic = page->inspectorController();
     InspectorClientJava *icj = static_cast<InspectorClientJava *>(ic.inspectorClient());
     if (icj) {
-      ic.connectFrontend(icj);
+      ic.connectFrontend(icj, false);
     }
 
     }
@@ -2197,7 +2251,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDisconnectInspectorFronten
     if (!page) {
         return;
     }
-    page->inspectorController().disconnectFrontend(Inspector::InspectorDisconnectReason::InspectedTargetDestroyed);
+    page->inspectorController().disconnectFrontend(Inspector::DisconnectReason::InspectedTargetDestroyed);
     WebPage::webPageFromJLong(pPage)->debugEnded();
 }
 
@@ -2223,7 +2277,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkWorkerThreadCount
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection
   (JNIEnv*, jclass)
 {
-    gcController().garbageCollectNow();
+    GCController::singleton().garbageCollectNow();
 }
 
 #ifdef __cplusplus

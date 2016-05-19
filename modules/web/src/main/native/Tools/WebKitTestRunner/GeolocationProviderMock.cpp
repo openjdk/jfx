@@ -26,7 +26,7 @@
 #include "config.h"
 #include "GeolocationProviderMock.h"
 
-#include <WebKit2/WKGeolocationManager.h>
+#include <WebKit/WKGeolocationManager.h>
 #include <string.h>
 #include <wtf/Assertions.h>
 #include <wtf/CurrentTime.h>
@@ -52,7 +52,7 @@ GeolocationProviderMock::GeolocationProviderMock(WKContextRef context)
     m_geolocationManager = WKContextGetGeolocationManager(context);
 
     WKGeolocationProviderV1 providerCallback;
-    memset(&providerCallback, 0, sizeof(WKGeolocationProvider));
+    memset(&providerCallback, 0, sizeof(WKGeolocationProviderV1));
     providerCallback.base.version = 1;
     providerCallback.base.clientInfo = this;
     providerCallback.startUpdating = startUpdatingCallback;

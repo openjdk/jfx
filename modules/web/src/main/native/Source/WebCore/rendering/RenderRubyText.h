@@ -37,12 +37,16 @@ namespace WebCore {
 
 class RenderRubyText final : public RenderBlockFlow {
 public:
-    RenderRubyText(Element&, PassRef<RenderStyle>);
+    RenderRubyText(Element&, Ref<RenderStyle>&&);
     virtual ~RenderRubyText();
 
-    Element& element() const { return toElement(nodeForNonAnonymous()); }
+    Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
     virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
+
+    RenderRubyRun* rubyRun() const;
+
+    bool canBreakBefore(const LazyLineBreakIterator&) const;
 
 private:
     virtual const char* renderName() const override { return "RenderRubyText"; }
@@ -55,5 +59,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyText, isRubyText())
 
 #endif // RenderRubyText_h

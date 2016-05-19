@@ -52,7 +52,7 @@ namespace WebCore {
             EventData(PassRefPtr<SerializedScriptValue> message, std::unique_ptr<MessagePortChannelArray>);
 
             PassRefPtr<SerializedScriptValue> message() { return m_message; }
-            std::unique_ptr<MessagePortChannelArray> channels() { return std::move(m_channels); }
+            std::unique_ptr<MessagePortChannelArray> channels() { return WTF::move(m_channels); }
 
         private:
             RefPtr<SerializedScriptValue> m_message;
@@ -62,7 +62,7 @@ namespace WebCore {
         // Wrapper for MessageQueue that allows us to do thread safe sharing by two proxies.
         class MessagePortQueue : public ThreadSafeRefCounted<MessagePortQueue> {
         public:
-            static PassRefPtr<MessagePortQueue> create() { return adoptRef(new MessagePortQueue()); }
+            static Ref<MessagePortQueue> create() { return adoptRef(*new MessagePortQueue()); }
 
             std::unique_ptr<PlatformMessagePortChannel::EventData> tryGetMessage()
             {
@@ -71,7 +71,7 @@ namespace WebCore {
 
             bool appendAndCheckEmpty(std::unique_ptr<PlatformMessagePortChannel::EventData> message)
             {
-                return m_queue.appendAndCheckEmpty(std::move(message));
+                return m_queue.appendAndCheckEmpty(WTF::move(message));
             }
 
             bool isEmpty()
@@ -87,7 +87,7 @@ namespace WebCore {
 
         ~PlatformMessagePortChannel();
 
-        static PassRefPtr<PlatformMessagePortChannel> create(PassRefPtr<MessagePortQueue> incoming, PassRefPtr<MessagePortQueue> outgoing);
+        static Ref<PlatformMessagePortChannel> create(PassRefPtr<MessagePortQueue> incoming, PassRefPtr<MessagePortQueue> outgoing);
         PlatformMessagePortChannel(PassRefPtr<MessagePortQueue> incoming, PassRefPtr<MessagePortQueue> outgoing);
 
         PassRefPtr<PlatformMessagePortChannel> entangledChannel();

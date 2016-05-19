@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,7 +26,7 @@
 #ifndef TouchList_h
 #define TouchList_h
 
-#if PLATFORM(IOS)
+#if ENABLE(IOS_TOUCH_EVENTS)
 #include <WebKitAdditions/TouchListIOS.h>
 #elif ENABLE(TOUCH_EVENTS)
 
@@ -38,9 +38,9 @@ namespace WebCore {
 
 class TouchList : public RefCounted<TouchList> {
 public:
-    static PassRefPtr<TouchList> create()
+    static Ref<TouchList> create()
     {
-        return adoptRef(new TouchList);
+        return adoptRef(*new TouchList);
     }
 
     unsigned length() const { return m_values.size(); }

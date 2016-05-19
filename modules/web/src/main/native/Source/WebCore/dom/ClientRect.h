@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,7 +29,7 @@
 
 #include "FloatRect.h"
 #include "ScriptWrappable.h"
-#include <wtf/PassRefPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -38,9 +38,9 @@ namespace WebCore {
 
     class ClientRect : public ScriptWrappable, public RefCounted<ClientRect> {
     public:
-        static PassRefPtr<ClientRect> create() { return adoptRef(new ClientRect); }
-        static PassRefPtr<ClientRect> create(const IntRect& rect) { return adoptRef(new ClientRect(rect)); }
-        static PassRefPtr<ClientRect> create(const FloatRect& rect) { return adoptRef(new ClientRect(rect)); }
+        static Ref<ClientRect> create() { return adoptRef(*new ClientRect); }
+        static Ref<ClientRect> create(const IntRect& rect) { return adoptRef(*new ClientRect(rect)); }
+        static Ref<ClientRect> create(const FloatRect& rect) { return adoptRef(*new ClientRect(rect)); }
 
         float top() const { return m_rect.y(); }
         float right() const { return m_rect.maxX(); }
@@ -50,9 +50,9 @@ namespace WebCore {
         float height() const { return m_rect.height(); }
 
     private:
-        ClientRect();
-        explicit ClientRect(const IntRect&);
-        explicit ClientRect(const FloatRect&);
+        WEBCORE_EXPORT ClientRect();
+        WEBCORE_EXPORT explicit ClientRect(const IntRect&);
+        WEBCORE_EXPORT explicit ClientRect(const FloatRect&);
 
         FloatRect m_rect;
     };

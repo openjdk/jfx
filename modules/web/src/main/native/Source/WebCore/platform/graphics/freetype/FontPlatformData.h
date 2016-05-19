@@ -28,12 +28,12 @@
 
 #include "FontCache.h"
 #include "FontDescription.h"
-#include "FontOrientation.h"
 #include "GlyphBuffer.h"
 #include "HarfBuzzFace.h"
 #include "OpenTypeVerticalData.h"
 #include "RefPtrCairo.h"
 #include "SharedBuffer.h"
+#include "TextFlags.h"
 #include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
 
@@ -77,6 +77,7 @@ public:
     void setSize(float size) { m_size = size; }
     bool syntheticBold() const { return m_syntheticBold; }
     bool syntheticOblique() const { return m_syntheticOblique; }
+    void setSyntheticOblique(bool);
     bool hasCompatibleCharmap();
 
     FontOrientation orientation() const { return m_orientation; }
@@ -112,11 +113,10 @@ public:
     mutable RefPtr<HarfBuzzFace> m_harfBuzzFace;
 
 private:
-    void initializeWithFontFace(cairo_font_face_t*, const FontDescription& = FontDescription());
+    void buildScaledFont(cairo_font_face_t*);
     static cairo_scaled_font_t* hashTableDeletedFontValue() { return reinterpret_cast<cairo_scaled_font_t*>(-1); }
 
     FontOrientation m_orientation;
-    cairo_matrix_t m_horizontalOrientationMatrix;
 };
 
 }

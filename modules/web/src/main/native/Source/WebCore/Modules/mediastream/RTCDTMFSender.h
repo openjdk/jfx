@@ -43,7 +43,7 @@ class RTCDTMFSenderHandler;
 
 class RTCDTMFSender final : public RefCounted<RTCDTMFSender>, public ScriptWrappable, public EventTargetWithInlineData, public RTCDTMFSenderHandlerClient, public ActiveDOMObject {
 public:
-    static PassRefPtr<RTCDTMFSender> create(ScriptExecutionContext*, RTCPeerConnectionHandler*, PassRefPtr<MediaStreamTrack>, ExceptionCode&);
+    static RefPtr<RTCDTMFSender> create(ScriptExecutionContext*, RTCPeerConnectionHandler*, PassRefPtr<MediaStreamTrack>, ExceptionCode&);
     ~RTCDTMFSender();
 
     bool canInsertDTMF() const;
@@ -56,14 +56,9 @@ public:
     void insertDTMF(const String& tones, long duration, ExceptionCode&);
     void insertDTMF(const String& tones, long duration, long interToneGap, ExceptionCode&);
 
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(tonechange);
-
     // EventTarget
     virtual EventTargetInterface eventTargetInterface() const override { return RTCDTMFSenderEventTargetInterfaceType; }
     virtual ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
-
-    // ActiveDOMObject
-    virtual void stop() override;
 
     using RefCounted<RTCDTMFSender>::ref;
     using RefCounted<RTCDTMFSender>::deref;
@@ -71,8 +66,13 @@ public:
 private:
     RTCDTMFSender(ScriptExecutionContext*, PassRefPtr<MediaStreamTrack>, std::unique_ptr<RTCDTMFSenderHandler>);
 
+    // ActiveDOMObject
+    void stop() override;
+    const char* activeDOMObjectName() const override;
+    bool canSuspendForPageCache() const override;
+
     void scheduleDispatchEvent(PassRefPtr<Event>);
-    void scheduledEventTimerFired(Timer<RTCDTMFSender>*);
+    void scheduledEventTimerFired();
 
     // EventTarget
     virtual void refEventTarget() override { ref(); }
@@ -89,7 +89,7 @@ private:
 
     bool m_stopped;
 
-    Timer<RTCDTMFSender> m_scheduledEventTimer;
+    Timer m_scheduledEventTimer;
     Vector<RefPtr<Event>> m_scheduledEvents;
 };
 

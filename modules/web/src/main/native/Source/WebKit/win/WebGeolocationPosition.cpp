@@ -22,7 +22,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebGeolocationPosition.h"
 #include <WebCore/COMPtr.h>
@@ -40,13 +39,13 @@ WebGeolocationPosition::WebGeolocationPosition()
     : m_refCount(0)
 {
     gClassCount++;
-    gClassNameCount.add("WebGeolocationPosition");
+    gClassNameCount().add("WebGeolocationPosition");
 }
 
 WebGeolocationPosition::~WebGeolocationPosition()
 {
     gClassCount--;
-    gClassNameCount.remove("WebGeolocationPosition");
+    gClassNameCount().remove("WebGeolocationPosition");
 }
 
 HRESULT WebGeolocationPosition::QueryInterface(REFIID riid, void** ppvObject)

@@ -33,26 +33,27 @@ namespace WebCore {
 
 class HTMLTableSectionElement final : public HTMLTablePartElement {
 public:
-    static PassRefPtr<HTMLTableSectionElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLTableSectionElement> create(const QualifiedName&, Document&);
 
-    PassRefPtr<HTMLElement> insertRow(int index, ExceptionCode&);
+    RefPtr<HTMLElement> insertRow(ExceptionCode& ec) { return insertRow(-1, ec); }
+    RefPtr<HTMLElement> insertRow(int index, ExceptionCode&);
     void deleteRow(int index, ExceptionCode&);
 
     int numRows() const;
 
-    String align() const;
-    void setAlign(const String&);
+    const AtomicString& align() const;
+    void setAlign(const AtomicString&);
 
-    String ch() const;
-    void setCh(const String&);
+    const AtomicString& ch() const;
+    void setCh(const AtomicString&);
 
-    String chOff() const;
-    void setChOff(const String&);
+    const AtomicString& chOff() const;
+    void setChOff(const AtomicString&);
 
-    String vAlign() const;
-    void setVAlign(const String&);
+    const AtomicString& vAlign() const;
+    void setVAlign(const AtomicString&);
 
-    PassRefPtr<HTMLCollection> rows();
+    Ref<HTMLCollection> rows();
 
 private:
     HTMLTableSectionElement(const QualifiedName& tagName, Document&);
@@ -60,13 +61,11 @@ private:
     virtual const StyleProperties* additionalPresentationAttributeStyle() override;
 };
 
-inline bool isHTMLTableSectionElement(const Node& node)
-{
-    return node.hasTagName(HTMLNames::theadTag) || node.hasTagName(HTMLNames::tfootTag) || node.hasTagName(HTMLNames::tbodyTag);
-}
+} // namespace WebCore
 
-NODE_TYPE_CASTS(HTMLTableSectionElement)
-
-} //namespace
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLTableSectionElement)
+    static bool isType(const WebCore::HTMLElement& element) { return element.hasTagName(WebCore::HTMLNames::theadTag) || element.hasTagName(WebCore::HTMLNames::tfootTag) || element.hasTagName(WebCore::HTMLNames::tbodyTag); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::HTMLElement>(node) && isType(downcast<WebCore::HTMLElement>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

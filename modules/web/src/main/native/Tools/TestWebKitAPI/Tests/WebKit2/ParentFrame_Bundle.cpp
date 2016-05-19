@@ -24,12 +24,15 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "InjectedBundleTest.h"
 
 #include "PlatformUtilities.h"
-#include <WebKit2/WKBundlePage.h>
-#include <WebKit2/WKBundleFrame.h>
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKBundlePage.h>
+#include <WebKit/WKBundleFrame.h>
+#include <WebKit/WKRetainPtr.h>
 
 namespace TestWebKitAPI {
 
@@ -77,3 +80,5 @@ void ParentFrameTest::didCreatePage(WKBundleRef bundle, WKBundlePageRef page)
 }
 
 } // namespace TestWebKitAPI
+
+#endif

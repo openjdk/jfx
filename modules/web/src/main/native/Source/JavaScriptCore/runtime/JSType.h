@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2015 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -23,18 +23,20 @@
 
 namespace JSC {
 
-enum JSType {
+enum JSType : uint8_t {
     UnspecifiedType,
     UndefinedType,
     BooleanType,
     NumberType,
     NullType,
-    StringType,
-    LeafType,
 
-    // The CompoundType value must come before any JSType that may have children.
-    CompoundType,
+    // The CellType value must come before any JSType that is a JSCell.
+    CellType,
+    StringType,
+    SymbolType,
+
     GetterSetterType,
+    CustomGetterSetterType,
     APIValueWrapperType,
 
     EvalExecutableType,
@@ -49,20 +51,36 @@ enum JSType {
     // The ObjectType value must come before any JSType that is a subclass of JSObject.
     ObjectType,
     FinalObjectType,
+    JSCalleeType,
     JSFunctionType,
-    NameInstanceType,
     NumberObjectType,
     ErrorInstanceType,
-    ProxyType,
+    PureForwardingProxyType,
+    ImpureProxyType,
     WithScopeType,
+    DirectArgumentsType,
+    ScopedArgumentsType,
+
+    Int8ArrayType,
+    Int16ArrayType,
+    Int32ArrayType,
+    Uint8ArrayType,
+    Uint8ClampedArrayType,
+    Uint16ArrayType,
+    Uint32ArrayType,
+    Float32ArrayType,
+    Float64ArrayType,
+    DataViewType,
 
     NameScopeObjectType,
-    // VariableObjectType must be less than MOST of the types of its subclasses and only its subclasses.
-    // We use >=VariableObjectType checks to test for Global & Activation objects, but exclude NameScopes.
-    VariableObjectType,
+
     GlobalObjectType,
     ActivationObjectType,
+
+    LastJSCObjectType = ActivationObjectType,
 };
+
+COMPILE_ASSERT(sizeof(JSType) == sizeof(uint8_t), sizeof_jstype_is_one_byte);
 
 } // namespace JSC
 

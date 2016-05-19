@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -71,29 +71,27 @@ using namespace WebCore;
     if (!renderer)
         return 0;
 
-    if (!renderer->isRenderBlockFlow())
+    if (!is<RenderBlockFlow>(*renderer))
         renderer = renderer->containingBlock();
 
-    if (!renderer->isBox() || !renderer->hasOverflowClip())
+    if (!is<RenderBox>(*renderer) || !renderer->hasOverflowClip())
         return 0;
 
-    RenderBox *renderBox = toRenderBox(renderer);
-    return renderBox->layer()->scrollXOffset();
+    return downcast<RenderBox>(*renderer).layer()->scrollXOffset();
 }
 
 - (int)scrollYOffset
 {
-    RenderObject *renderer = core(self)->renderer();
+    RenderObject* renderer = core(self)->renderer();
     if (!renderer)
         return 0;
 
-    if (!renderer->isRenderBlockFlow())
+    if (!is<RenderBlockFlow>(*renderer))
         renderer = renderer->containingBlock();
-    if (!renderer->isBox() || !renderer->hasOverflowClip())
+    if (!is<RenderBox>(*renderer) || !renderer->hasOverflowClip())
         return 0;
 
-    RenderBox *renderBox = toRenderBox(renderer);
-    return renderBox->layer()->scrollYOffset();
+    return downcast<RenderBox>(*renderer).layer()->scrollYOffset();
 }
 
 - (void)setScrollXOffset:(int)x scrollYOffset:(int)y
@@ -103,17 +101,16 @@ using namespace WebCore;
 
 - (void)setScrollXOffset:(int)x scrollYOffset:(int)y adjustForIOSCaret:(BOOL)adjustForIOSCaret
 {
-    RenderObject *renderer = core(self)->renderer();
+    RenderObject* renderer = core(self)->renderer();
     if (!renderer)
         return;
 
-    if (!renderer->isRenderBlockFlow())
+    if (!is<RenderBlockFlow>(*renderer))
         renderer = renderer->containingBlock();
-    if (!renderer->hasOverflowClip() || !renderer->isBox())
+    if (!renderer->hasOverflowClip() || !is<RenderBox>(*renderer))
         return;
 
-    RenderBox *renderBox = toRenderBox(renderer);
-    RenderLayer *layer = renderBox->layer();
+    RenderLayer* layer = downcast<RenderBox>(*renderer).layer();
     if (adjustForIOSCaret)
         layer->setAdjustForIOSCaretWhenScrolling(true);
     layer->scrollToOffset(IntSize(x, y));
@@ -155,7 +152,7 @@ using namespace WebCore;
 - (DOMDocumentFragment *)createDocumentFragmentWithText:(NSString *)text
 {
     // FIXME: Since this is not a contextual fragment, it won't handle whitespace properly.
-    return kit(createFragmentFromText(*core(self)->createRange().get(), text).get());
+    return kit(createFragmentFromText(core(self)->createRange(), text).get());
 }
 
 @end
@@ -175,7 +172,6 @@ using namespace WebCore;
 
 @end
 
-
 @implementation DOMHTMLInputElement (FormAutoFillTransition)
 
 - (BOOL)_isTextField
@@ -183,49 +179,10 @@ using namespace WebCore;
     return core(self)->isTextField();
 }
 
-#if !PLATFORM(IOS)
-- (NSRect)_rectOnScreen
-{
-    // Returns bounding rect of text field, in screen coordinates.
-    NSRect result = [self boundingBox];
-    if (!core(self)->document().view())
-        return result;
-
-    NSView* view = core(self)->document().view()->documentView();
-    result = [view convertRect:result toView:nil];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    result.origin = [[view window] convertBaseToScreen:result.origin];
-#pragma clang diagnostic pop
-    return result;
-}
-#endif
-
-- (void)_replaceCharactersInRange:(NSRange)targetRange withString:(NSString *)replacementString selectingFromIndex:(int)index
-{
-    WebCore::HTMLInputElement* inputElement = core(self);
-    if (inputElement) {
-        WTF::String newValue = inputElement->value();
-        newValue.replace(targetRange.location, targetRange.length, replacementString);
-        inputElement->setValue(newValue);
-        inputElement->setSelectionRange(index, newValue.length());
-    }
-}
-
-- (NSRange)_selectedRange
-{
-    WebCore::HTMLInputElement* inputElement = core(self);
-    if (inputElement) {
-        int start = inputElement->selectionStart();
-        int end = inputElement->selectionEnd();
-        return NSMakeRange(start, end - start);
-    }
-    return NSMakeRange(NSNotFound, 0);
-}
-
+#if PLATFORM(IOS)
 - (BOOL)_isAutofilled
 {
-    return core(self)->isAutofilled();
+    return core(self)->isAutoFilled();
 }
 
 - (void)_setAutofilled:(BOOL)filled
@@ -233,8 +190,9 @@ using namespace WebCore;
     // This notifies the input element that the content has been autofilled
     // This allows WebKit to obey the -webkit-autofill pseudo style, which
     // changes the background color.
-    core(self)->setAutofilled(filled);
+    core(self)->setAutoFilled(filled);
 }
+#endif // PLATFORM(IOS)
 
 @end
 
@@ -258,6 +216,8 @@ using namespace WebCore;
 
 @end
 
+#if PLATFORM(IOS)
+
 @implementation DOMHTMLInputElement (FormPromptAdditions)
 
 - (BOOL)_isEdited
@@ -276,7 +236,6 @@ using namespace WebCore;
 
 @end
 
-#if PLATFORM(IOS)
 @implementation DOMHTMLInputElement (AutocapitalizeAdditions)
 
 - (WebAutocapitalizeType)_autocapitalizeType

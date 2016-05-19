@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007, 2014-2015 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,11 +29,13 @@
 #include "config.h"
 #include "EditingDelegate.h"
 
+#include <comutil.h>
 #include "DumpRenderTree.h"
 #include "TestRunner.h"
 #include <WebCore/COMPtr.h>
 #include <wtf/Assertions.h>
 #include <wtf/Platform.h>
+#include <wtf/StringExtras.h>
 #include <string>
 #include <tchar.h>
 
@@ -46,13 +48,17 @@ EditingDelegate::EditingDelegate()
 }
 
 // IUnknown
-HRESULT STDMETHODCALLTYPE EditingDelegate::QueryInterface(REFIID riid, void** ppvObject)
+HRESULT EditingDelegate::QueryInterface(REFIID riid, void** ppvObject)
 {
     *ppvObject = 0;
     if (IsEqualGUID(riid, IID_IUnknown))
-        *ppvObject = static_cast<IWebEditingDelegate*>(this);
+        *ppvObject = static_cast<IWebEditingDelegate2*>(this);
     else if (IsEqualGUID(riid, IID_IWebEditingDelegate))
         *ppvObject = static_cast<IWebEditingDelegate*>(this);
+    else if (IsEqualGUID(riid, IID_IWebEditingDelegate2))
+        *ppvObject = static_cast<IWebEditingDelegate2*>(this);
+    else if (IsEqualGUID(riid, IID_IWebNotificationObserver))
+        *ppvObject = static_cast<IWebNotificationObserver*>(this);
     else
         return E_NOINTERFACE;
 
@@ -60,12 +66,12 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::QueryInterface(REFIID riid, void** pp
     return S_OK;
 }
 
-ULONG STDMETHODCALLTYPE EditingDelegate::AddRef(void)
+ULONG EditingDelegate::AddRef(void)
 {
     return ++m_refCount;
 }
 
-ULONG STDMETHODCALLTYPE EditingDelegate::Release(void)
+ULONG EditingDelegate::Release(void)
 {
     ULONG newRef = --m_refCount;
     if (!newRef)
@@ -74,54 +80,51 @@ ULONG STDMETHODCALLTYPE EditingDelegate::Release(void)
     return newRef;
 }
 
-static wstring dumpPath(IDOMNode* node)
+static std::string dumpPath(IDOMNode* node)
 {
     ASSERT(node);
 
-    wstring result;
+    std::string result;
 
-    BSTR name;
-    if (FAILED(node->nodeName(&name)))
+    _bstr_t name;
+    if (FAILED(node->nodeName(&name.GetBSTR())))
         return result;
-    result.assign(name, SysStringLen(name));
-    SysFreeString(name);
+    result.assign(static_cast<const char*>(name), name.length());
 
     COMPtr<IDOMNode> parent;
     if (SUCCEEDED(node->parentNode(&parent)))
-        result += TEXT(" > ") + dumpPath(parent.get());
+        result += " > " + dumpPath(parent.get());
 
     return result;
 }
 
-static wstring dump(IDOMRange* range)
+static std::string dump(IDOMRange* range)
 {
-    ASSERT(range);
+    if (!range)
+        return std::string();
 
     int startOffset;
     if (FAILED(range->startOffset(&startOffset)))
-        return 0;
+        return std::string();
 
     int endOffset;
     if (FAILED(range->endOffset(&endOffset)))
-        return 0;
+        return std::string();
 
     COMPtr<IDOMNode> startContainer;
     if (FAILED(range->startContainer(&startContainer)))
-        return 0;
+        return std::string();
 
     COMPtr<IDOMNode> endContainer;
     if (FAILED(range->endContainer(&endContainer)))
-        return 0;
+        return std::string();
 
-    wchar_t buffer[1024];
-    _snwprintf(buffer, ARRAYSIZE(buffer), L"range from %ld of %s to %ld of %s", startOffset, dumpPath(startContainer.get()), endOffset, dumpPath(endContainer.get()));
+    char buffer[1024];
+    snprintf(buffer, ARRAYSIZE(buffer), "range from %ld of %s to %ld of %s", startOffset, dumpPath(startContainer.get()).c_str(), endOffset, dumpPath(endContainer.get()).c_str());
     return buffer;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldBeginEditingInDOMRange(
-    /* [in] */ IWebView* webView,
-    /* [in] */ IDOMRange* range,
-    /* [retval][out] */ BOOL* result)
+HRESULT EditingDelegate::shouldBeginEditingInDOMRange(IWebView* /*webView*/, IDOMRange* range, BOOL* result)
 {
     if (!result) {
         ASSERT_NOT_REACHED();
@@ -129,16 +132,13 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldBeginEditingInDOMRange(
     }
 
     if (::gTestRunner->dumpEditingCallbacks() && !done)
-        _tprintf(TEXT("EDITING DELEGATE: shouldBeginEditingInDOMRange:%s\n"), dump(range));
+        printf("EDITING DELEGATE: shouldBeginEditingInDOMRange:%s\n", dump(range).c_str());
 
     *result = m_acceptsEditing;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldEndEditingInDOMRange(
-    /* [in] */ IWebView* webView,
-    /* [in] */ IDOMRange* range,
-    /* [retval][out] */ BOOL* result)
+HRESULT EditingDelegate::shouldEndEditingInDOMRange(IWebView* /*webView*/, IDOMRange* range, BOOL* result)
 {
     if (!result) {
         ASSERT_NOT_REACHED();
@@ -146,59 +146,96 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldEndEditingInDOMRange(
     }
 
     if (::gTestRunner->dumpEditingCallbacks() && !done)
-        _tprintf(TEXT("EDITING DELEGATE: shouldEndEditingInDOMRange:%s\n"), dump(range));
+        printf("EDITING DELEGATE: shouldEndEditingInDOMRange:%s\n", dump(range).c_str());
 
     *result = m_acceptsEditing;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldInsertNode(
-    /* [in] */ IWebView* webView,
-    /* [in] */ IDOMNode* node,
-    /* [in] */ IDOMRange* range,
-    /* [in] */ WebViewInsertAction action)
+// IWebEditingDelegate
+HRESULT EditingDelegate::shouldInsertNode(IWebView* webView, IDOMNode* node, IDOMRange* range, WebViewInsertAction action)
 {
-    static LPCTSTR insertactionstring[] = {
-        TEXT("WebViewInsertActionTyped"),
-        TEXT("WebViewInsertActionPasted"),
-        TEXT("WebViewInsertActionDropped"),
+    BOOL ignore;
+    return shouldInsertNode(webView, node, range, action, &ignore);
+}
+
+// IWebEditingDelegate2
+HRESULT EditingDelegate::shouldInsertNode(IWebView* /*webView*/, IDOMNode* node, IDOMRange* range, WebViewInsertAction action, BOOL* result)
+{
+    static const char* insertActionString[] = {
+        "WebViewInsertActionTyped",
+        "WebViewInsertActionPasted",
+        "WebViewInsertActionDropped",
     };
 
     if (::gTestRunner->dumpEditingCallbacks() && !done)
-        _tprintf(TEXT("EDITING DELEGATE: shouldInsertNode:%s replacingDOMRange:%s givenAction:%s\n"), dumpPath(node), dump(range), insertactionstring[action]);
+        printf("EDITING DELEGATE: shouldInsertNode:%s replacingDOMRange:%s givenAction:%s\n", dumpPath(node).c_str(), dump(range).c_str(), insertActionString[action]);
 
+    *result = m_acceptsEditing;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldInsertText(
-    /* [in] */ IWebView* webView,
-    /* [in] */ BSTR text,
-    /* [in] */ IDOMRange* range,
-    /* [in] */ WebViewInsertAction action,
-    /* [retval][out] */ BOOL* result)
+HRESULT EditingDelegate::shouldInsertText(IWebView* /*webView*/, BSTR text, IDOMRange* range, WebViewInsertAction action, BOOL* result)
 {
     if (!result) {
         ASSERT_NOT_REACHED();
         return E_POINTER;
     }
 
-    static LPCTSTR insertactionstring[] = {
-        TEXT("WebViewInsertActionTyped"),
-        TEXT("WebViewInsertActionPasted"),
-        TEXT("WebViewInsertActionDropped"),
+    static const char* insertactionstring[] = {
+        "WebViewInsertActionTyped",
+        "WebViewInsertActionPasted",
+        "WebViewInsertActionDropped",
+    };
+
+    if (::gTestRunner->dumpEditingCallbacks() && !done) {
+        _bstr_t textBstr(text);
+        printf("EDITING DELEGATE: shouldInsertText:%s replacingDOMRange:%s givenAction:%s\n", static_cast<const char*>(textBstr), dump(range).c_str(), insertactionstring[action]);
+    }
+
+    *result = m_acceptsEditing;
+    return S_OK;
+}
+
+HRESULT EditingDelegate::shouldDeleteDOMRange(IWebView* /*webView*/, IDOMRange* range, BOOL* result)
+{
+    if (!result) {
+        ASSERT_NOT_REACHED();
+        return E_POINTER;
+    }
+
+    if (::gTestRunner->dumpEditingCallbacks() && !done)
+        printf("EDITING DELEGATE: shouldDeleteDOMRange:%s\n", dump(range).c_str());
+
+    *result = m_acceptsEditing;
+    return S_OK;
+}
+
+HRESULT EditingDelegate::shouldChangeSelectedDOMRange(IWebView* /*webView*/, IDOMRange* currentRange, IDOMRange* proposedRange,
+    WebSelectionAffinity selectionAffinity, BOOL stillSelecting, BOOL* result)
+{
+    if (!result) {
+        ASSERT_NOT_REACHED();
+        return E_POINTER;
+    }
+
+    static const char* affinityString[] = {
+        "NSSelectionAffinityUpstream",
+        "NSSelectionAffinityDownstream"
+    };
+    static const char* boolstring[] = {
+        "FALSE",
+        "TRUE"
     };
 
     if (::gTestRunner->dumpEditingCallbacks() && !done)
-        _tprintf(TEXT("EDITING DELEGATE: shouldInsertText:%s replacingDOMRange:%s givenAction:%s\n"), text ? text : TEXT(""), dump(range), insertactionstring[action]);
+        printf("EDITING DELEGATE: shouldChangeSelectedDOMRange:%s toDOMRange:%s affinity:%s stillSelecting:%s\n", dump(currentRange).c_str(), dump(proposedRange).c_str(), affinityString[selectionAffinity], boolstring[stillSelecting]);
 
     *result = m_acceptsEditing;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldDeleteDOMRange(
-    /* [in] */ IWebView* webView,
-    /* [in] */ IDOMRange* range,
-    /* [retval][out] */ BOOL* result)
+HRESULT EditingDelegate::shouldApplyStyle(IWebView* /*webView*/, IDOMCSSStyleDeclaration* style, IDOMRange* range, BOOL* result)
 {
     if (!result) {
         ASSERT_NOT_REACHED();
@@ -206,46 +243,13 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldDeleteDOMRange(
     }
 
     if (::gTestRunner->dumpEditingCallbacks() && !done)
-        _tprintf(TEXT("EDITING DELEGATE: shouldDeleteDOMRange:%s\n"), dump(range));
+        printf("EDITING DELEGATE: shouldApplyStyle:%s toElementsInDOMRange:%s\n", "'style description'"/*[[style description] UTF8String]*/, dump(range).c_str());
 
     *result = m_acceptsEditing;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldChangeSelectedDOMRange(
-    /* [in] */ IWebView* webView,
-    /* [in] */ IDOMRange* currentRange,
-    /* [in] */ IDOMRange* proposedRange,
-    /* [in] */ WebSelectionAffinity selectionAffinity,
-    /* [in] */ BOOL stillSelecting,
-    /* [retval][out] */ BOOL* result)
-{
-    if (!result) {
-        ASSERT_NOT_REACHED();
-        return E_POINTER;
-    }
-
-    static LPCTSTR affinitystring[] = {
-        TEXT("NSSelectionAffinityUpstream"),
-        TEXT("NSSelectionAffinityDownstream")
-    };
-    static LPCTSTR boolstring[] = {
-        TEXT("FALSE"),
-        TEXT("TRUE")
-    };
-
-    if (::gTestRunner->dumpEditingCallbacks() && !done)
-        _tprintf(TEXT("EDITING DELEGATE: shouldChangeSelectedDOMRange:%s toDOMRange:%s affinity:%s stillSelecting:%s\n"), dump(currentRange), dump(proposedRange), affinitystring[selectionAffinity], boolstring[stillSelecting]);
-
-    *result = m_acceptsEditing;
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldApplyStyle(
-    /* [in] */ IWebView* webView,
-    /* [in] */ IDOMCSSStyleDeclaration* style,
-    /* [in] */ IDOMRange* range,
-    /* [retval][out] */ BOOL* result)
+HRESULT EditingDelegate::shouldChangeTypingStyle(IWebView* /*webView*/, IDOMCSSStyleDeclaration* currentStyle, IDOMCSSStyleDeclaration* proposedStyle, BOOL* result)
 {
     if (!result) {
         ASSERT_NOT_REACHED();
@@ -253,103 +257,74 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldApplyStyle(
     }
 
     if (::gTestRunner->dumpEditingCallbacks() && !done)
-        _tprintf(TEXT("EDITING DELEGATE: shouldApplyStyle:%s toElementsInDOMRange:%s\n"), TEXT("'style description'")/*[[style description] UTF8String]*/, dump(range));
+        printf("EDITING DELEGATE: shouldChangeTypingStyle:%s toStyle:%s\n", "'currentStyle description'", "'proposedStyle description'");
 
     *result = m_acceptsEditing;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldChangeTypingStyle(
-    /* [in] */ IWebView* webView,
-    /* [in] */ IDOMCSSStyleDeclaration* currentStyle,
-    /* [in] */ IDOMCSSStyleDeclaration* proposedStyle,
-    /* [retval][out] */ BOOL* result)
+HRESULT EditingDelegate::doPlatformCommand(IWebView* /*webView*/, BSTR command, BOOL* result)
 {
     if (!result) {
         ASSERT_NOT_REACHED();
         return E_POINTER;
     }
 
-    if (::gTestRunner->dumpEditingCallbacks() && !done)
-        _tprintf(TEXT("EDITING DELEGATE: shouldChangeTypingStyle:%s toStyle:%s\n"), TEXT("'currentStyle description'"), TEXT("'proposedStyle description'"));
+    if (::gTestRunner->dumpEditingCallbacks() && !done) {
+        _bstr_t commandBSTR(command);
+        printf("EDITING DELEGATE: doPlatformCommand:%s\n", static_cast<const char*>(commandBSTR));
+    }
 
     *result = m_acceptsEditing;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::doPlatformCommand(
-    /* [in] */ IWebView *webView,
-    /* [in] */ BSTR command,
-    /* [retval][out] */ BOOL *result)
-{
-    if (!result) {
-        ASSERT_NOT_REACHED();
-        return E_POINTER;
-    }
-
-    if (::gTestRunner->dumpEditingCallbacks() && !done)
-        _tprintf(TEXT("EDITING DELEGATE: doPlatformCommand:%s\n"), command ? command : TEXT(""));
-
-    *result = m_acceptsEditing;
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidBeginEditing(
-    /* [in] */ IWebNotification* notification)
+HRESULT EditingDelegate::webViewDidBeginEditing(IWebNotification* notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {
-        BSTR name;
-        notification->name(&name);
-        _tprintf(TEXT("EDITING DELEGATE: webViewDidBeginEditing:%s\n"), name ? name : TEXT(""));
-        SysFreeString(name);
+        _bstr_t name;
+        notification->name(&name.GetBSTR());
+        printf("EDITING DELEGATE: webViewDidBeginEditing:%s\n", static_cast<const char*>(name));
     }
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChange(
-    /* [in] */ IWebNotification *notification)
+HRESULT EditingDelegate::webViewDidChange(IWebNotification* notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {
-        BSTR name;
-        notification->name(&name);
-        _tprintf(TEXT("EDITING DELEGATE: webViewDidBeginEditing:%s\n"), name ? name : TEXT(""));
-        SysFreeString(name);
+        _bstr_t name;
+        notification->name(&name.GetBSTR());
+        printf("EDITING DELEGATE: webViewDidChange:%s\n", static_cast<const char*>(name));
     }
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidEndEditing(
-    /* [in] */ IWebNotification *notification)
+HRESULT EditingDelegate::webViewDidEndEditing(IWebNotification* notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {
-        BSTR name;
-        notification->name(&name);
-        _tprintf(TEXT("EDITING DELEGATE: webViewDidEndEditing:%s\n"), name ? name : TEXT(""));
-        SysFreeString(name);
+        _bstr_t name;
+        notification->name(&name.GetBSTR());
+        printf("EDITING DELEGATE: webViewDidEndEditing:%s\n", static_cast<const char*>(name));
     }
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChangeTypingStyle(
-    /* [in] */ IWebNotification *notification)
+HRESULT EditingDelegate::webViewDidChangeTypingStyle(IWebNotification* notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {
-        BSTR name;
-        notification->name(&name);
-        _tprintf(TEXT("EDITING DELEGATE: webViewDidChangeTypingStyle:%s\n"), name ? name : TEXT(""));
-        SysFreeString(name);
+        _bstr_t name;
+        notification->name(&name.GetBSTR());
+        printf("EDITING DELEGATE: webViewDidChangeTypingStyle:%s\n", static_cast<const char*>(name));
     }
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChangeSelection(
-    /* [in] */ IWebNotification *notification)
+HRESULT EditingDelegate::webViewDidChangeSelection(IWebNotification* notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {
-        BSTR name;
-        notification->name(&name);
-        _tprintf(TEXT("EDITING DELEGATE: webViewDidChangeSelection:%s\n"), name ? name : TEXT(""));
-        SysFreeString(name);
+        _bstr_t name;
+        notification->name(&name.GetBSTR());
+        printf("EDITING DELEGATE: webViewDidChangeSelection:%s\n", static_cast<const char*>(name));
     }
     return S_OK;
 }
@@ -370,7 +345,7 @@ static int wordLength(const TCHAR* text)
     return cursor - text;
 };
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::checkSpellingOfString(
+HRESULT EditingDelegate::checkSpellingOfString(
             /* [in] */ IWebView* view,
             /* [in] */ LPCTSTR text,
             /* [in] */ int length,
@@ -419,6 +394,37 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::checkSpellingOfString(
             break;
         }
     }
+
+    return S_OK;
+}
+
+HRESULT EditingDelegate::onNotify(IWebNotification* notification)
+{
+    _bstr_t notificationName;
+    HRESULT hr = notification->name(&notificationName.GetBSTR());
+    if (FAILED(hr))
+        return hr;
+
+    static _bstr_t webViewDidBeginEditingNotificationName(WebViewDidBeginEditingNotification);
+    static _bstr_t webViewDidChangeSelectionNotificationName(WebViewDidChangeSelectionNotification);
+    static _bstr_t webViewDidEndEditingNotificationName(WebViewDidEndEditingNotification);
+    static _bstr_t webViewDidChangeTypingStyleNotificationName(WebViewDidChangeTypingStyleNotification);
+    static _bstr_t webViewDidChangeNotificationName(WebViewDidChangeNotification);
+
+    if (!wcscmp(notificationName, webViewDidBeginEditingNotificationName))
+        return webViewDidBeginEditing(notification);
+
+    if (!wcscmp(notificationName, webViewDidChangeSelectionNotificationName))
+        return webViewDidChangeSelection(notification);
+
+    if (!wcscmp(notificationName, webViewDidEndEditingNotificationName))
+        return webViewDidEndEditing(notification);
+
+    if (!wcscmp(notificationName, webViewDidChangeTypingStyleNotificationName))
+        return webViewDidChangeTypingStyle(notification);
+
+    if (!wcscmp(notificationName, webViewDidChangeNotificationName))
+        return webViewDidChange(notification);
 
     return S_OK;
 }

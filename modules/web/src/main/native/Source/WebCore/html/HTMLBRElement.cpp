@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLBRElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "HTMLNames.h"
@@ -39,14 +38,14 @@ HTMLBRElement::HTMLBRElement(const QualifiedName& tagName, Document& document)
     ASSERT(hasTagName(brTag));
 }
 
-PassRefPtr<HTMLBRElement> HTMLBRElement::create(Document& document)
+Ref<HTMLBRElement> HTMLBRElement::create(Document& document)
 {
-    return adoptRef(new HTMLBRElement(brTag, document));
+    return adoptRef(*new HTMLBRElement(brTag, document));
 }
 
-PassRefPtr<HTMLBRElement> HTMLBRElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLBRElement> HTMLBRElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLBRElement(tagName, document));
+    return adoptRef(*new HTMLBRElement(tagName, document));
 }
 
 bool HTMLBRElement::isPresentationAttribute(const QualifiedName& name) const
@@ -71,12 +70,12 @@ void HTMLBRElement::collectStyleForPresentationAttribute(const QualifiedName& na
         HTMLElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
-RenderPtr<RenderElement> HTMLBRElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> HTMLBRElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
     if (style.get().hasContent())
-        return RenderElement::createFor(*this, std::move(style));
+        return RenderElement::createFor(*this, WTF::move(style));
 
-    return createRenderer<RenderLineBreak>(*this, std::move(style));
+    return createRenderer<RenderLineBreak>(*this, WTF::move(style));
 }
 
 }

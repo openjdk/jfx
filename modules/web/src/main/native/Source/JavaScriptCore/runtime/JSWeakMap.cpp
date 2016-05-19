@@ -28,12 +28,13 @@
 
 #include "JSCJSValueInlines.h"
 #include "SlotVisitorInlines.h"
+#include "StructureInlines.h"
 #include "WeakMapData.h"
 #include "WriteBarrierInlines.h"
 
 namespace JSC {
 
-const ClassInfo JSWeakMap::s_info = { "WeakMap", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSWeakMap) };
+const ClassInfo JSWeakMap::s_info = { "WeakMap", &Base::s_info, 0, CREATE_METHOD_TABLE(JSWeakMap) };
 
 void JSWeakMap::finishCreation(VM& vm)
 {

@@ -33,13 +33,14 @@ sub GenerateStrings($)
 
     my @result = ();
 
-    while ( my ($name, $value) = each %strings ) {
-        push(@result, "static const LChar ${name}String8[] = \"${value}\";\n");
+    for my $name (sort keys %strings) {
+        push(@result, "static const LChar ${name}String8[] = \"$strings{$name}\";\n");
     }
 
     push(@result, "\n");
 
-    while ( my ($name, $value) = each %strings ) {
+    for my $name (sort keys %strings) {
+        my $value = $strings{$name};
         my $length = length($value);
         my $hash = Hasher::GenerateHashValue($value);
         push(@result, <<END);
@@ -47,8 +48,6 @@ static StringImpl::StaticASCIILiteral ${name}Data = {
     StringImpl::StaticASCIILiteral::s_initialRefCount,
     $length,
     ${name}String8,
-    0,
-    nullptr,
     StringImpl::StaticASCIILiteral::s_initialFlags | (${hash} << StringImpl::StaticASCIILiteral::s_hashShift)
 };
 END
@@ -68,7 +67,7 @@ sub GenerateStringAsserts($)
 
     push(@result, "#ifndef NDEBUG\n");
 
-    while ( my ($name, $value) = each %strings ) {
+    for my $name (sort keys %strings) {
         push(@result, "    reinterpret_cast<StringImpl*>(&${name}Data)->assertHashIsCorrect();\n");
     }
 

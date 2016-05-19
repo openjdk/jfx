@@ -27,27 +27,21 @@
 #include "config.h"
 #include "TestController.h"
 
+#include "PlatformWebView.h"
 #include <gtk/gtk.h>
 #include <wtf/Platform.h>
-#include <wtf/gobject/GUniquePtr.h>
+#include <wtf/glib/GMainLoopSource.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTR {
 
-static guint gTimeoutSourceId = 0;
-
-static void cancelTimeout()
-{
-    if (!gTimeoutSourceId)
-        return;
-    g_source_remove(gTimeoutSourceId);
-    gTimeoutSourceId = 0;
-}
+static GMainLoopSource timeoutSource;
 
 void TestController::notifyDone()
 {
     gtk_main_quit();
-    cancelTimeout();
+    timeoutSource.cancel();
 }
 
 void TestController::platformInitialize()
@@ -58,20 +52,19 @@ void TestController::platformDestroy()
 {
 }
 
-static gboolean timeoutCallback(gpointer)
+void TestController::platformWillRunTest(const TestInvocation&)
 {
-    fprintf(stderr, "FAIL: TestControllerRunLoop timed out.\n");
-    gtk_main_quit();
-    return FALSE;
 }
 
 void TestController::platformRunUntil(bool&, double timeout)
 {
-    cancelTimeout();
-    if (timeout != m_noTimeout) {
-        gTimeoutSourceId = g_timeout_add(timeout * 1000, timeoutCallback, 0);
-        g_source_set_name_by_id(gTimeoutSourceId, "[WebKit] timeoutCallback");
-    }
+    if (timeout > 0) {
+        timeoutSource.scheduleAfterDelay("[WTR] Test timeout source", [] {
+            fprintf(stderr, "FAIL: TestControllerRunLoop timed out.\n");
+            gtk_main_quit();
+        }, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(timeout)));
+    } else
+        timeoutSource.cancel();
     gtk_main();
 }
 
@@ -102,9 +95,14 @@ void TestController::platformInitializeContext()
 {
 }
 
-void TestController::setHidden(bool)
+void TestController::setHidden(bool hidden)
 {
-    // FIXME: Need to implement this to test visibilityState.
+    if (!m_mainWebView)
+        return;
+    if (hidden)
+        gtk_widget_unmap(GTK_WIDGET(m_mainWebView->platformView()));
+    else
+        gtk_widget_map(GTK_WIDGET(m_mainWebView->platformView()));
 }
 
 void TestController::runModal(PlatformWebView*)
@@ -115,6 +113,17 @@ void TestController::runModal(PlatformWebView*)
 const char* TestController::platformLibraryPathForTesting()
 {
     return 0;
+}
+
+void TestController::platformConfigureViewForTest(const TestInvocation&)
+{
+}
+
+void TestController::platformResetPreferencesToConsistentValues()
+{
+    if (!m_mainWebView)
+        return;
+    m_mainWebView->dismissAllPopupMenus();
 }
 
 } // namespace WTR

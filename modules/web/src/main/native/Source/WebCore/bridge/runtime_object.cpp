@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -35,7 +35,7 @@ using namespace WebCore;
 namespace JSC {
 namespace Bindings {
 
-const ClassInfo RuntimeObject::s_info = { "RuntimeObject", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(RuntimeObject) };
+WEBCORE_EXPORT const ClassInfo RuntimeObject::s_info = { "RuntimeObject", &Base::s_info, 0, CREATE_METHOD_TABLE(RuntimeObject) };
 
 RuntimeObject::RuntimeObject(VM& vm, Structure* structure, PassRefPtr<Instance> instance)
     : JSDestructibleObject(vm, structure)
@@ -59,7 +59,7 @@ void RuntimeObject::invalidate()
     ASSERT(m_instance);
     if (m_instance)
         m_instance->willInvalidateRuntimeObject();
-    m_instance = 0;
+    m_instance = nullptr;
 }
 
 EncodedJSValue RuntimeObject::fallbackObjectGetter(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName propertyName)

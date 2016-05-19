@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2008-2009 Torch Mobile, Inc.
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
  * Copyright (C) 2009 Nokia Corporation and/or its subsidiary(-ies)
@@ -13,10 +13,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -168,6 +168,48 @@ namespace WebCore {
             }
             *dest = (a << 24 | r << 16 | g << 8 | b);
         }
+
+#if ENABLE(APNG)
+        static inline unsigned divide255(unsigned a)
+        {
+            return (a + (a >> 8) + 1) >> 8;
+        }
+
+        inline void overRGBA(PixelData* dest, unsigned r, unsigned g, unsigned b, unsigned a)
+        {
+            if (!a)
+                return;
+
+            if (a < 255) {
+                unsigned aDest = ((*dest) >> 24) & 255;
+                if (aDest) {
+                    unsigned rDest = ((*dest) >> 16) & 255;
+                    unsigned gDest = ((*dest) >> 8) & 255;
+                    unsigned bDest = (*dest) & 255;
+                    unsigned aAux = 255 - a;
+                    if (!m_premultiplyAlpha) {
+                        rDest = divide255(rDest * aDest);
+                        gDest = divide255(gDest * aDest);
+                        bDest = divide255(bDest * aDest);
+                    }
+                    r = divide255(r * a + rDest * aAux);
+                    g = divide255(g * a + gDest * aAux);
+                    b = divide255(b * a + bDest * aAux);
+                    a += divide255(aDest * aAux);
+                    if (!m_premultiplyAlpha) {
+                        r = (r * 255 + a - 1) / a;
+                        g = (g * 255 + a - 1) / a;
+                        b = (b * 255 + a - 1) / a;
+                    }
+                } else if (m_premultiplyAlpha) {
+                    r = divide255(r * a);
+                    g = divide255(g * a);
+                    b = divide255(b * a);
+                }
+            }
+            *dest = (a << 24 | r << 16 | g << 8 | b);
+        }
+#endif
 
     private:
         int width() const
@@ -324,13 +366,8 @@ namespace WebCore {
                     size_t length = CFDataGetLength(iccProfile);
                     const unsigned char* systemProfile = CFDataGetBytePtr(iccProfile);
                     outputDeviceProfile = qcms_profile_from_memory(systemProfile, length);
+                    CFRelease(iccProfile);
                 }
-#else
-                // FIXME: add support for multiple monitors.
-                ColorProfile profile;
-                screenColorProfile(profile);
-                if (!profile.isEmpty())
-                    outputDeviceProfile = qcms_profile_from_memory(profile.data(), profile.size());
 #endif
                 if (outputDeviceProfile && qcms_profile_is_bogus(outputDeviceProfile)) {
                     qcms_profile_release(outputDeviceProfile);

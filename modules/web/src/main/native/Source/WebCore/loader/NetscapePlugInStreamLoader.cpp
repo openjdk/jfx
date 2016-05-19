@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -34,12 +34,21 @@
 #include "FrameLoaderClient.h"
 #include <wtf/Ref.h>
 
+#if ENABLE(CONTENT_EXTENSIONS)
+#include "ResourceLoadInfo.h"
+#endif
+
 namespace WebCore {
 
+// FIXME: Skip Content Security Policy check when associated plugin element is in a user agent shadow tree.
+// See <https://bugs.webkit.org/show_bug.cgi?id=146663>.
 NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(DocumentLoader* documentLoader, NetscapePlugInStreamLoaderClient* client)
-    : ResourceLoader(documentLoader, ResourceLoaderOptions(SendCallbacks, SniffContent, DoNotBufferData, AllowStoredCredentials, AskClientForAllCredentials, SkipSecurityCheck, UseDefaultOriginRestrictionsForType))
+    : ResourceLoader(documentLoader, ResourceLoaderOptions(SendCallbacks, SniffContent, DoNotBufferData, AllowStoredCredentials, AskClientForAllCredentials, SkipSecurityCheck, UseDefaultOriginRestrictionsForType, DoNotIncludeCertificateInfo, ContentSecurityPolicyImposition::DoPolicyCheck))
     , m_client(client)
 {
+#if ENABLE(CONTENT_EXTENSIONS)
+    m_resourceType = ResourceType::PlugInStream;
+#endif
 }
 
 NetscapePlugInStreamLoader::~NetscapePlugInStreamLoader()
@@ -49,10 +58,8 @@ NetscapePlugInStreamLoader::~NetscapePlugInStreamLoader()
 PassRefPtr<NetscapePlugInStreamLoader> NetscapePlugInStreamLoader::create(DocumentLoader* documentLoader, NetscapePlugInStreamLoaderClient* client, const ResourceRequest& request)
 {
     RefPtr<NetscapePlugInStreamLoader> loader(adoptRef(new NetscapePlugInStreamLoader(documentLoader, client)));
-    loader->documentLoader()->addPlugInStreamLoader(loader.get());
     if (!loader->init(request))
-        return 0;
-
+        return nullptr;
     return loader.release();
 }
 

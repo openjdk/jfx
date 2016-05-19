@@ -29,18 +29,18 @@
 // FIXME: We should consider merging this file with RuntimeApplicationChecks.h.
 namespace WebCore {
 
-bool applicationIsMobileMail();
-bool applicationIsMobileSafari();
+WEBCORE_EXPORT bool applicationIsMobileMail();
+WEBCORE_EXPORT bool applicationIsMobileSafari();
 bool applicationIsDumpRenderTree();
 bool applicationIsMobileStore();
-bool applicationIsWebApp();
-bool applicationIsOkCupid();
-bool applicationIsFacebook();
+WEBCORE_EXPORT bool applicationIsWebApp();
+WEBCORE_EXPORT bool applicationIsOkCupid();
+WEBCORE_EXPORT bool applicationIsFacebook();
 bool applicationIsEpicurious();
-bool applicationIsDaijisenDictionary();
+WEBCORE_EXPORT bool applicationIsDaijisenDictionary();
 bool applicationIsNASAHD();
 bool applicationIsMASH();
-bool applicationIsTheEconomistOnIPhone();
+WEBCORE_EXPORT bool applicationIsTheEconomistOnIPhone();
 bool applicationIsWebProcess();
 bool applicationIsIBooksOnIOS();
 

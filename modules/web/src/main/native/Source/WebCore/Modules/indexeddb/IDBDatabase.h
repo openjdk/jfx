@@ -51,7 +51,7 @@ typedef int ExceptionCode;
 
 class IDBDatabase final : public RefCounted<IDBDatabase>, public ScriptWrappable, public EventTargetWithInlineData, public ActiveDOMObject {
 public:
-    static PassRefPtr<IDBDatabase> create(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackend>, PassRefPtr<IDBDatabaseCallbacks>);
+    static Ref<IDBDatabase> create(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackend>, PassRefPtr<IDBDatabaseCallbacks>);
     ~IDBDatabase();
 
     void setMetadata(const IDBDatabaseMetadata& metadata) { m_metadata = metadata; }
@@ -71,17 +71,10 @@ public:
     void deleteObjectStore(const String& name, ExceptionCode&);
     void close();
 
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(versionchange);
-
     // IDBDatabaseCallbacks
-    virtual void onVersionChange(uint64_t oldVersion, uint64_t newVersion, IndexedDB::VersionNullness newVersionNullness);
+    virtual void onVersionChange(uint64_t oldVersion, uint64_t newVersion);
     virtual void onAbort(int64_t, PassRefPtr<IDBDatabaseError>);
     virtual void onComplete(int64_t);
-
-    // ActiveDOMObject
-    virtual bool hasPendingActivity() const override;
 
     // EventTarget
     virtual EventTargetInterface eventTargetInterface() const override final { return IDBDatabaseEventTargetInterfaceType; }
@@ -108,11 +101,16 @@ public:
     using RefCounted<IDBDatabase>::ref;
     using RefCounted<IDBDatabase>::deref;
 
+    // ActiveDOMObject API.
+    bool hasPendingActivity() const override;
+
 private:
     IDBDatabase(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackend>, PassRefPtr<IDBDatabaseCallbacks>);
 
-    // ActiveDOMObject
-    virtual void stop() override;
+    // ActiveDOMObject API.
+    void stop() override;
+    const char* activeDOMObjectName() const override;
+    bool canSuspendForPageCache() const override;
 
     // EventTarget
     virtual void refEventTarget() override final { ref(); }
@@ -127,6 +125,7 @@ private:
     TransactionMap m_transactions;
 
     bool m_closePending;
+    bool m_isClosed;
     bool m_contextStopped;
 
     // Keep track of the versionchange events waiting to be fired on this

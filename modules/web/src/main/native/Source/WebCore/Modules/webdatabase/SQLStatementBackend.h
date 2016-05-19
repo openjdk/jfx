@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,9 +28,6 @@
 #ifndef SQLStatementBackend_h
 #define SQLStatementBackend_h
 
-#if ENABLE(SQL_DATABASE)
-
-#include "AbstractSQLStatementBackend.h"
 #include "SQLValue.h"
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
@@ -38,17 +35,19 @@
 
 namespace WebCore {
 
-class AbstractSQLStatement;
 class DatabaseBackend;
 class SQLError;
+class SQLResultSet;
+class SQLStatement;
 class SQLTransactionBackend;
 
-class SQLStatementBackend : public AbstractSQLStatementBackend {
+class SQLStatementBackend : public ThreadSafeRefCounted<SQLStatementBackend> {
 public:
-    static PassRefPtr<SQLStatementBackend> create(std::unique_ptr<AbstractSQLStatement>,
+    static Ref<SQLStatementBackend> create(std::unique_ptr<SQLStatement>,
         const String& sqlStatement, const Vector<SQLValue>& arguments, int permissions);
+    virtual ~SQLStatementBackend();
 
-    bool execute(DatabaseBackend*);
+    bool execute(DatabaseBackend&);
     bool lastExecutionFailedDueToQuota() const;
 
     bool hasStatementCallback() const { return m_hasCallback; }
@@ -57,18 +56,18 @@ public:
     void setDatabaseDeletedError();
     void setVersionMismatchedError();
 
-    AbstractSQLStatement* frontend();
-    virtual PassRefPtr<SQLError> sqlError() const;
-    virtual PassRefPtr<SQLResultSet> sqlResultSet() const;
+    SQLStatement* frontend();
+    PassRefPtr<SQLError> sqlError() const;
+    PassRefPtr<SQLResultSet> sqlResultSet() const;
 
 private:
-    SQLStatementBackend(std::unique_ptr<AbstractSQLStatement>, const String& statement,
+    SQLStatementBackend(std::unique_ptr<SQLStatement>, const String& statement,
         const Vector<SQLValue>& arguments, int permissions);
 
     void setFailureDueToQuota();
     void clearFailureDueToQuota();
 
-    std::unique_ptr<AbstractSQLStatement> m_frontend;
+    std::unique_ptr<SQLStatement> m_frontend;
     String m_statement;
     Vector<SQLValue> m_arguments;
     bool m_hasCallback;
@@ -81,7 +80,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)
 
 #endif // SQLStatementBackend_h

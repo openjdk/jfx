@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -139,7 +139,7 @@ void ResourceLoadNotifier::dispatchWillSendRequest(DocumentLoader* loader, unsig
     InspectorInstrumentation::willSendRequest(&m_frame, identifier, loader, request, redirectResponse);
 
     // Report WebTiming for all frames.
-    if (loader && !request.isNull() && request.url() == loader->requestURL())
+    if (loader && !request.isNull() && request.url() == loader->url())
         request.setReportLoadTiming(true);
 
 #if ENABLE(RESOURCE_TIMING)
@@ -149,7 +149,7 @@ void ResourceLoadNotifier::dispatchWillSendRequest(DocumentLoader* loader, unsig
 
 void ResourceLoadNotifier::dispatchDidReceiveResponse(DocumentLoader* loader, unsigned long identifier, const ResourceResponse& r, ResourceLoader* resourceLoader)
 {
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willReceiveResourceResponse(&m_frame, identifier, r);
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willReceiveResourceResponse(&m_frame);
     m_frame.loader().client().dispatchDidReceiveResponse(loader, identifier, r);
     InspectorInstrumentation::didReceiveResourceResponse(cookie, identifier, loader, r, resourceLoader);
 }

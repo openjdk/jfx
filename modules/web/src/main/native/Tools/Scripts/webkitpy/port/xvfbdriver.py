@@ -1,4 +1,5 @@
 # Copyright (C) 2010 Google Inc. All rights reserved.
+# Copyright (C) 2014 Igalia S.L.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -41,7 +42,10 @@ _log = logging.getLogger(__name__)
 class XvfbDriver(Driver):
     @staticmethod
     def check_driver(port):
-        xvfb_found = port.host.executive.run_command(['which', 'Xvfb'], return_exit_code=True) is 0
+        xvfb_findcmd = ['which', 'Xvfb']
+        if port._should_use_jhbuild():
+                xvfb_findcmd = port._jhbuild_wrapper + xvfb_findcmd
+        xvfb_found = port.host.executive.run_command(xvfb_findcmd, return_exit_code=True) is 0
         if not xvfb_found:
             _log.error("No Xvfb found. Cannot run layout tests.")
         return xvfb_found
@@ -55,10 +59,10 @@ class XvfbDriver(Driver):
         running_pids = self._port.host.executive.run_command(['ps', '-eo', 'comm,command'])
         reserved_screens = set()
         for pid in running_pids.split('\n'):
-            match = re.match('(X|Xvfb|Xorg)\s+.*\s:(?P<screen_number>\d+)', pid)
+            match = re.match('(X|Xvfb|Xorg|Xorg\.bin)\s+.*\s:(?P<screen_number>\d+)', pid)
             if match:
                 reserved_screens.add(int(match.group('screen_number')))
-        for i in range(99):
+        for i in range(1, 99):
             if i not in reserved_screens:
                 _guard_lock_file = self._port.host.filesystem.join('/tmp', 'WebKitXvfb.lock.%i' % i)
                 self._guard_lock = self._port.host.make_file_lock(_guard_lock_file)
@@ -77,16 +81,21 @@ class XvfbDriver(Driver):
         display_id = self._next_free_display()
         self._lock_file = "/tmp/.X%d-lock" % display_id
 
-        run_xvfb = ["Xvfb", ":%d" % display_id, "-screen",  "0", "800x600x%s" % self._xvfb_screen_depth(), "-nolisten", "tcp"]
+        server_name = self._port.driver_name()
+        environment = self._port.setup_environ_for_server(server_name)
+
+        run_xvfb = ["Xvfb", ":%d" % display_id, "-screen",  "0", "1024x768x%s" % self._xvfb_screen_depth(), "-nolisten", "tcp"]
+
+        if self._port._should_use_jhbuild():
+                run_xvfb = self._port._jhbuild_wrapper + run_xvfb
+
         with open(os.devnull, 'w') as devnull:
-            self._xvfb_process = self._port.host.executive.popen(run_xvfb, stderr=devnull)
+            self._xvfb_process = self._port.host.executive.popen(run_xvfb, stderr=devnull, env=environment)
 
         # Crashes intend to occur occasionally in the first few tests that are run through each
         # worker because the Xvfb display isn't ready yet. Halting execution a bit should avoid that.
         time.sleep(self._startup_delay_secs)
 
-        server_name = self._port.driver_name()
-        environment = self._port.setup_environ_for_server(server_name)
         # We must do this here because the DISPLAY number depends on _worker_number
         environment['DISPLAY'] = ":%d" % display_id
         self._driver_tempdir = self._port.host.filesystem.mkdtemp(prefix='%s-' % self._port.driver_name())

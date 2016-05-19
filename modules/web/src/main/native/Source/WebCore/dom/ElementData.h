@@ -29,6 +29,7 @@
 #include "Attribute.h"
 #include "SpaceSplitString.h"
 #include <wtf/RefCounted.h>
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
@@ -104,7 +105,7 @@ public:
     const Attribute* findAttributeByName(const QualifiedName&) const;
     unsigned findAttributeIndexByName(const QualifiedName&) const;
     unsigned findAttributeIndexByName(const AtomicString& name, bool shouldIgnoreAttributeCase) const;
-    unsigned findAttributeIndexByNameForAttributeNode(const Attr*, bool shouldIgnoreAttributeCase = false) const;
+    const Attribute* findLanguageAttribute() const;
 
     bool hasID() const { return !m_idForStyleResolution.isNull(); }
     bool hasClass() const { return !m_classNames.isEmpty(); }
@@ -175,9 +176,8 @@ private:
 
     const Attribute* attributeBase() const;
     const Attribute* findAttributeByName(const AtomicString& name, bool shouldIgnoreAttributeCase) const;
-    unsigned findAttributeIndexByNameSlowCase(const AtomicString& name, bool shouldIgnoreAttributeCase) const;
 
-    PassRef<UniqueElementData> makeUniqueCopy() const;
+    Ref<UniqueElementData> makeUniqueCopy() const;
 };
 
 #if COMPILER(MSVC)
@@ -187,7 +187,7 @@ private:
 
 class ShareableElementData : public ElementData {
 public:
-    static PassRef<ShareableElementData> createWithAttributes(const Vector<Attribute>&);
+    static Ref<ShareableElementData> createWithAttributes(const Vector<Attribute>&);
 
     explicit ShareableElementData(const Vector<Attribute>&);
     explicit ShareableElementData(const UniqueElementData&);
@@ -204,8 +204,8 @@ public:
 
 class UniqueElementData : public ElementData {
 public:
-    static PassRef<UniqueElementData> create();
-    PassRef<ShareableElementData> makeShareableCopy() const;
+    static Ref<UniqueElementData> create();
+    Ref<ShareableElementData> makeShareableCopy() const;
 
     // These functions do no error/duplicate checking.
     void addAttribute(const QualifiedName&, const AtomicString&);
@@ -234,43 +234,43 @@ inline void ElementData::deref()
 
 inline unsigned ElementData::length() const
 {
-    if (isUnique())
-        return static_cast<const UniqueElementData*>(this)->m_attributeVector.size();
+    if (is<UniqueElementData>(*this))
+        return downcast<UniqueElementData>(*this).m_attributeVector.size();
     return arraySize();
 }
 
 inline const Attribute* ElementData::attributeBase() const
 {
-    if (isUnique())
-        return static_cast<const UniqueElementData*>(this)->m_attributeVector.data();
-    return static_cast<const ShareableElementData*>(this)->m_attributeArray;
+    if (is<UniqueElementData>(*this))
+        return downcast<UniqueElementData>(*this).m_attributeVector.data();
+    return downcast<ShareableElementData>(*this).m_attributeArray;
 }
 
 inline const StyleProperties* ElementData::presentationAttributeStyle() const
 {
-    if (!isUnique())
-        return 0;
-    return static_cast<const UniqueElementData*>(this)->m_presentationAttributeStyle.get();
+    if (!is<UniqueElementData>(*this))
+        return nullptr;
+    return downcast<UniqueElementData>(*this).m_presentationAttributeStyle.get();
 }
 
 inline AttributeIteratorAccessor ElementData::attributesIterator() const
 {
-    if (isUnique()) {
-        const Vector<Attribute, 4>& attributeVector = static_cast<const UniqueElementData*>(this)->m_attributeVector;
+    if (is<UniqueElementData>(*this)) {
+        const Vector<Attribute, 4>& attributeVector = downcast<UniqueElementData>(*this).m_attributeVector;
         return AttributeIteratorAccessor(attributeVector.data(), attributeVector.size());
     }
-    return AttributeIteratorAccessor(static_cast<const ShareableElementData*>(this)->m_attributeArray, arraySize());
+    return AttributeIteratorAccessor(downcast<ShareableElementData>(*this).m_attributeArray, arraySize());
 }
 
-inline const Attribute* ElementData::findAttributeByName(const AtomicString& name, bool shouldIgnoreAttributeCase) const
+ALWAYS_INLINE const Attribute* ElementData::findAttributeByName(const AtomicString& name, bool shouldIgnoreAttributeCase) const
 {
     unsigned index = findAttributeIndexByName(name, shouldIgnoreAttributeCase);
     if (index != attributeNotFound)
         return &attributeAt(index);
-    return 0;
+    return nullptr;
 }
 
-inline unsigned ElementData::findAttributeIndexByName(const QualifiedName& name) const
+ALWAYS_INLINE unsigned ElementData::findAttributeIndexByName(const QualifiedName& name) const
 {
     const Attribute* attributes = attributeBase();
     for (unsigned i = 0, count = length(); i < count; ++i) {
@@ -282,27 +282,33 @@ inline unsigned ElementData::findAttributeIndexByName(const QualifiedName& name)
 
 // We use a boolean parameter instead of calling shouldIgnoreAttributeCase so that the caller
 // can tune the behavior (hasAttribute is case sensitive whereas getAttribute is not).
-inline unsigned ElementData::findAttributeIndexByName(const AtomicString& name, bool shouldIgnoreAttributeCase) const
+ALWAYS_INLINE unsigned ElementData::findAttributeIndexByName(const AtomicString& name, bool shouldIgnoreAttributeCase) const
 {
+    unsigned attributeCount = length();
+    if (!attributeCount)
+        return attributeNotFound;
+
     const Attribute* attributes = attributeBase();
-    bool doSlowCheck = shouldIgnoreAttributeCase;
-    const AtomicString& caseAdjustedName = shouldIgnoreAttributeCase ? name.lower() : name;
+    const AtomicString& caseAdjustedName = shouldIgnoreAttributeCase ? name.convertToASCIILowercase() : name;
 
-    // Optimize for the case where the attribute exists and its name exactly matches.
-    for (unsigned i = 0, count = length(); i < count; ++i) {
-        if (!attributes[i].name().hasPrefix()) {
-            if (caseAdjustedName == attributes[i].localName())
-                return i;
-        } else
-            doSlowCheck = true;
-    }
+    unsigned attributeIndex = 0;
+    do {
+        const Attribute& attribute = attributes[attributeIndex];
+        if (!attribute.name().hasPrefix()) {
+            if (attribute.localName() == caseAdjustedName)
+                return attributeIndex;
+        } else {
+            if (attribute.name().toString() == caseAdjustedName)
+                return attributeIndex;
+        }
 
-    if (doSlowCheck)
-        return findAttributeIndexByNameSlowCase(name, shouldIgnoreAttributeCase);
+        ++attributeIndex;
+    } while (attributeIndex < attributeCount);
+
     return attributeNotFound;
 }
 
-inline const Attribute* ElementData::findAttributeByName(const QualifiedName& name) const
+ALWAYS_INLINE const Attribute* ElementData::findAttributeByName(const QualifiedName& name) const
 {
     const Attribute* attributes = attributeBase();
     for (unsigned i = 0, count = length(); i < count; ++i) {
@@ -333,7 +339,15 @@ inline Attribute& UniqueElementData::attributeAt(unsigned index)
     return m_attributeVector.at(index);
 }
 
-}
+} // namespace WebCore
 
-#endif
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ShareableElementData)
+    static bool isType(const WebCore::ElementData& elementData) { return !elementData.isUnique(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::UniqueElementData)
+    static bool isType(const WebCore::ElementData& elementData) { return elementData.isUnique(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // ElementData_h
 

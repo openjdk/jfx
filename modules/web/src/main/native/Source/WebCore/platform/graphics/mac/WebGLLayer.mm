@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,22 +30,34 @@
 #import "WebGLLayer.h"
 
 #import "GraphicsContext3D.h"
+#import "GraphicsContextCG.h"
 #import "GraphicsLayer.h"
+#import <wtf/FastMalloc.h>
+#import <wtf/RetainPtr.h>
+
 #if !PLATFORM(IOS)
 #import <OpenGL/OpenGL.h>
 #import <OpenGL/gl.h>
 #endif
-#import <wtf/FastMalloc.h>
-#import <wtf/RetainPtr.h>
 
 using namespace WebCore;
 
 @implementation WebGLLayer
 
+@synthesize context=_context;
+
 -(id)initWithGraphicsContext3D:(GraphicsContext3D*)context
 {
-    m_context = context;
+    _context = context;
     self = [super init];
+    _devicePixelRatio = context->getContextAttributes().devicePixelRatio;
+#if PLATFORM(MAC)
+    self.contentsScale = _devicePixelRatio;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
+    if ([self respondsToSelector:@selector(setColorspace:)])
+        [self setColorspace:sRGBColorSpaceRef()];
+#endif
+#endif
     return self;
 }
 
@@ -59,23 +71,28 @@ using namespace WebCore;
     // If needed we will have to set the display mask in the Canvas CGLContext and
     // make sure it matches.
     UNUSED_PARAM(mask);
-    return CGLRetainPixelFormat(CGLGetPixelFormat(m_context->platformGraphicsContext3D()));
+    return CGLRetainPixelFormat(CGLGetPixelFormat(_context->platformGraphicsContext3D()));
 }
 
 -(CGLContextObj)copyCGLContextForPixelFormat:(CGLPixelFormatObj)pixelFormat
 {
     CGLContextObj contextObj;
-    CGLCreateContext(pixelFormat, m_context->platformGraphicsContext3D(), &contextObj);
+    CGLCreateContext(pixelFormat, _context->platformGraphicsContext3D(), &contextObj);
     return contextObj;
 }
 
 -(void)drawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
 {
-    m_context->prepareTexture();
+    if (!_context)
+        return;
+
+    _context->prepareTexture();
 
     CGLSetCurrentContext(glContext);
 
     CGRect frame = [self frame];
+    frame.size.width *= _devicePixelRatio;
+    frame.size.height *= _devicePixelRatio;
 
     // draw the FBO into the layer
     glViewport(0, 0, frame.size.width, frame.size.height);
@@ -86,7 +103,7 @@ using namespace WebCore;
     glLoadIdentity();
 
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, m_context->platformTexture());
+    glBindTexture(GL_TEXTURE_2D, _context->platformTexture());
 
     glBegin(GL_TRIANGLE_FAN);
         glTexCoord2f(0, 0);
@@ -114,11 +131,14 @@ static void freeData(void *, const void *data, size_t /* size */)
 
 -(CGImageRef)copyImageSnapshotWithColorSpace:(CGColorSpaceRef)colorSpace
 {
+    if (!_context)
+        return nullptr;
+
 #if PLATFORM(IOS)
     UNUSED_PARAM(colorSpace);
-    return 0;
+    return nullptr;
 #else
-    CGLSetCurrentContext(m_context->platformGraphicsContext3D());
+    CGLSetCurrentContext(_context->platformGraphicsContext3D());
 
     RetainPtr<CGColorSpaceRef> imageColorSpace = colorSpace;
     if (!imageColorSpace)
@@ -126,14 +146,14 @@ static void freeData(void *, const void *data, size_t /* size */)
 
     CGRect layerBounds = CGRectIntegral([self bounds]);
 
-    size_t width = layerBounds.size.width;
-    size_t height = layerBounds.size.height;
+    size_t width = layerBounds.size.width * _devicePixelRatio;
+    size_t height = layerBounds.size.height * _devicePixelRatio;
 
     size_t rowBytes = (width * 4 + 15) & ~15;
     size_t dataSize = rowBytes * height;
     void* data = fastMalloc(dataSize);
     if (!data)
-        return 0;
+        return nullptr;
 
     glPixelStorei(GL_PACK_ROW_LENGTH, rowBytes / 4);
     glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, data);
@@ -150,11 +170,15 @@ static void freeData(void *, const void *data, size_t /* size */)
 
 - (void)display
 {
+    if (!_context)
+        return;
+
 #if PLATFORM(IOS)
-    m_context->endPaint();
+    _context->endPaint();
 #else
     [super display];
 #endif
+    _context->markLayerComposited();
 }
 
 @end

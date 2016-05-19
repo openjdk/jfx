@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2004, 2005, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2003, 2004, 2005, 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,8 +31,8 @@
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
 #else
-#import <WebKit/WAKAppKitStubs.h>
-#import <WebKit/WAKView.h>
+#import <WebKitLegacy/WAKAppKitStubs.h>
+#import <WebKitLegacy/WAKView.h>
 #if !defined(IBAction)
 #define IBAction void
 #endif
@@ -53,6 +53,12 @@
 @class WebPreferences;
 @class WebScriptObject;
 @class WebViewPrivate;
+
+@protocol WebDownloadDelegate;
+@protocol WebFrameLoadDelegate;
+@protocol WebPolicyDelegate;
+@protocol WebResourceLoadDelegate;
+@protocol WebUIDelegate;
 
 // Element dictionary keys
 extern NSString *WebElementDOMNodeKey;          // DOMNode of the element
@@ -222,31 +228,31 @@ extern NSString *WebViewProgressFinishedNotification;
     @property UIDelegate
     @abstract The WebView's WebUIDelegate.
 */
-@property (nonatomic, assign) id UIDelegate;
+@property (nonatomic, assign) id <WebUIDelegate> UIDelegate;
 
 /*!
     @property resourceLoadDelegate
     @abstract The WebView's WebResourceLoadDelegate.
 */
-@property (nonatomic, assign) id resourceLoadDelegate;
+@property (nonatomic, assign) id <WebResourceLoadDelegate> resourceLoadDelegate;
 
 /*!
     @property downloadDelegate
     @abstract The WebView's WebDownloadDelegate.
 */
-@property (nonatomic, assign) id downloadDelegate;
+@property (nonatomic, assign) id <WebDownloadDelegate> downloadDelegate;
 
 /*!
     @property frameLoadDelegate
     @abstract The WebView's WebFrameLoadDelegate delegate.
 */
-@property (nonatomic, assign) id frameLoadDelegate;
+@property (nonatomic, assign) id <WebFrameLoadDelegate> frameLoadDelegate;
 
 /*!
     @property policyDelegate
     @abstract The WebView's WebPolicyDelegate.
 */
-@property (nonatomic, assign) id policyDelegate;
+@property (nonatomic, assign) id <WebPolicyDelegate> policyDelegate;
 
 /*!
     @property mainFrame

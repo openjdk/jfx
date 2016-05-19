@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,7 +26,7 @@
 
 #include "config.h"
 
-#if USE(3D_GRAPHICS)
+#if ENABLE(GRAPHICS_CONTEXT_3D)
 
 #include "GraphicsContext3D.h"
 #if PLATFORM(IOS)
@@ -43,6 +43,10 @@
 #include <cstring>
 #include <wtf/MainThread.h>
 #include <wtf/text/CString.h>
+
+#if USE(ACCELERATE)
+#include <Accelerate/Accelerate.h>
+#endif
 
 #if PLATFORM(IOS)
 #import <OpenGLES/ES2/glext.h>
@@ -65,7 +69,32 @@ void GraphicsContext3D::releaseShaderCompiler()
 
 void GraphicsContext3D::readPixelsAndConvertToBGRAIfNecessary(int x, int y, int width, int height, unsigned char* pixels)
 {
-    ::glReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
+    // NVIDIA drivers have a bug where calling readPixels in BGRA can return the wrong values for the alpha channel when the alpha is off for the context.
+    if (!m_attrs.alpha && getExtensions()->isNVIDIA()) {
+        ::glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+#if USE(ACCELERATE)
+        vImage_Buffer src;
+        src.height = height;
+        src.width = width;
+        src.rowBytes = width * 4;
+        src.data = pixels;
+
+        vImage_Buffer dest;
+        dest.height = height;
+        dest.width = width;
+        dest.rowBytes = width * 4;
+        dest.data = pixels;
+
+        // Swap pixel channels from RGBA to BGRA.
+        const uint8_t map[4] = { 2, 1, 0, 3 };
+        vImagePermuteChannels_ARGB8888(&src, &dest, map, kvImageNoFlags);
+#else
+        int totalBytes = width * height * 4;
+        for (int i = 0; i < totalBytes; i += 4)
+            std::swap(pixels[i], pixels[i + 2]);
+#endif
+    } else
+        ::glReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
 }
 
 void GraphicsContext3D::validateAttributes()
@@ -240,6 +269,16 @@ void GraphicsContext3D::getIntegerv(GC3Denum pname, GC3Dint* value)
         *value /= 4;
         break;
 #endif
+    case MAX_TEXTURE_SIZE:
+        ::glGetIntegerv(MAX_TEXTURE_SIZE, value);
+        if (getExtensions()->requiresRestrictedMaximumTextureSize())
+            *value = std::min(4096, *value);
+        break;
+    case MAX_CUBE_MAP_TEXTURE_SIZE:
+        ::glGetIntegerv(MAX_CUBE_MAP_TEXTURE_SIZE, value);
+        if (getExtensions()->requiresRestrictedMaximumTextureSize())
+            *value = std::min(1024, *value);
+        break;
     default:
         ::glGetIntegerv(pname, value);
     }
@@ -283,14 +322,15 @@ bool GraphicsContext3D::texImage2D(GC3Denum target, GC3Dint level, GC3Denum inte
         return false;
     }
 
+    GC3Denum openGLFormat = format;
     GC3Denum openGLInternalFormat = internalformat;
+#if !PLATFORM(IOS)
     if (type == GL_FLOAT) {
         if (format == GL_RGBA)
             openGLInternalFormat = GL_RGBA32F_ARB;
         else if (format == GL_RGB)
             openGLInternalFormat = GL_RGB32F_ARB;
     } else if (type == HALF_FLOAT_OES) {
-#if !PLATFORM(IOS)
         if (format == GL_RGBA)
             openGLInternalFormat = GL_RGBA16F_ARB;
         else if (format == GL_RGB)
@@ -302,9 +342,14 @@ bool GraphicsContext3D::texImage2D(GC3Denum target, GC3Dint level, GC3Denum inte
         else if (format == GL_LUMINANCE_ALPHA)
             openGLInternalFormat = GL_LUMINANCE_ALPHA16F_ARB;
         type = GL_HALF_FLOAT_ARB;
-#endif
     }
-    texImage2DDirect(target, level, openGLInternalFormat, width, height, border, format, type, pixels);
+
+    if (format == Extensions3D::SRGB_ALPHA_EXT)
+        openGLFormat = GL_RGBA;
+    else if (format == Extensions3D::SRGB_EXT)
+        openGLFormat = GL_RGB;
+#endif
+    texImage2DDirect(target, level, openGLInternalFormat, width, height, border, openGLFormat, type, pixels);
     return true;
 }
 
@@ -331,7 +376,7 @@ void GraphicsContext3D::clearDepth(GC3Dclampf depth)
 Extensions3D* GraphicsContext3D::getExtensions()
 {
     if (!m_extensions)
-        m_extensions = adoptPtr(new Extensions3DOpenGL(this));
+        m_extensions = std::make_unique<Extensions3DOpenGL>(this);
     return m_extensions.get();
 }
 
@@ -353,4 +398,4 @@ void GraphicsContext3D::readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsi
 
 }
 
-#endif // USE(3D_GRAPHICS)
+#endif // ENABLE(GRAPHICS_CONTEXT_3D)

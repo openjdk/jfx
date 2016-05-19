@@ -27,9 +27,9 @@
 #define PopupMenuStyle_h
 
 #include "Color.h"
-#include "Font.h"
+#include "FontCascade.h"
 #include "Length.h"
-#include "TextDirection.h"
+#include "TextFlags.h"
 
 namespace WebCore {
 
@@ -37,41 +37,54 @@ class PopupMenuStyle {
 public:
     enum PopupMenuType { SelectPopup, AutofillPopup };
     enum BackgroundColorType { DefaultBackgroundColor, CustomBackgroundColor };
-    PopupMenuStyle(const Color& foreground, const Color& background, const Font& font, bool visible, bool isDisplayNone, Length textIndent, TextDirection textDirection, bool hasTextDirectionOverride, BackgroundColorType backgroundColorType = DefaultBackgroundColor, PopupMenuType menuType = SelectPopup)
+    enum PopupMenuSize {
+        PopupMenuSizeNormal,
+        PopupMenuSizeSmall,
+        PopupMenuSizeMini
+    };
+
+    PopupMenuStyle(const Color& foreground, const Color& background, const FontCascade& font, bool visible, bool isDisplayNone, bool hasDefaultAppearance, Length textIndent, TextDirection textDirection, bool hasTextDirectionOverride, BackgroundColorType backgroundColorType = DefaultBackgroundColor, PopupMenuType menuType = SelectPopup, PopupMenuSize menuSize = PopupMenuSizeNormal)
         : m_foregroundColor(foreground)
         , m_backgroundColor(background)
         , m_font(font)
         , m_visible(visible)
         , m_isDisplayNone(isDisplayNone)
+        , m_hasDefaultAppearance(hasDefaultAppearance)
         , m_textIndent(textIndent)
         , m_textDirection(textDirection)
         , m_hasTextDirectionOverride(hasTextDirectionOverride)
         , m_backgroundColorType(backgroundColorType)
         , m_menuType(menuType)
+        , m_menuSize(menuSize)
     {
     }
 
     const Color& foregroundColor() const { return m_foregroundColor; }
     const Color& backgroundColor() const { return m_backgroundColor; }
-    const Font& font() const { return m_font; }
+    const FontCascade& font() const { return m_font; }
     bool isVisible() const { return m_visible; }
     bool isDisplayNone() const { return m_isDisplayNone; }
+    bool hasDefaultAppearance() const { return m_hasDefaultAppearance; }
     Length textIndent() const { return m_textIndent; }
     TextDirection textDirection() const { return m_textDirection; }
     bool hasTextDirectionOverride() const { return m_hasTextDirectionOverride; }
     BackgroundColorType backgroundColorType() const { return m_backgroundColorType; }
     PopupMenuType menuType() const { return m_menuType; }
+    PopupMenuSize menuSize() const { return m_menuSize; }
+
 private:
     Color m_foregroundColor;
     Color m_backgroundColor;
-    Font m_font;
+    FontCascade m_font;
     bool m_visible;
     bool m_isDisplayNone;
+    bool m_hasDefaultAppearance;
     Length m_textIndent;
     TextDirection m_textDirection;
     bool m_hasTextDirectionOverride;
     BackgroundColorType m_backgroundColorType;
     PopupMenuType m_menuType;
+    PopupMenuSize m_menuSize;
 };
 
 } // namespace WebCore

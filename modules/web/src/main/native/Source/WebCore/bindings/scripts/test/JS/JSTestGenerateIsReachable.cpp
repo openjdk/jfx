@@ -21,6 +21,7 @@
 #include "config.h"
 #include "JSTestGenerateIsReachable.h"
 
+#include "JSDOMBinding.h"
 #include "TestGenerateIsReachable.h"
 #include <wtf/GetPtr.h>
 
@@ -28,15 +29,57 @@ using namespace JSC;
 
 namespace WebCore {
 
-/* Hash table for constructor */
+// Attributes
 
-static const HashTableValue JSTestGenerateIsReachableConstructorTableValues[] =
-{
-    { 0, 0, NoIntrinsic, 0, 0 }
+JSC::EncodedJSValue jsTestGenerateIsReachableConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+
+class JSTestGenerateIsReachablePrototype : public JSC::JSNonFinalObject {
+public:
+    typedef JSC::JSNonFinalObject Base;
+    static JSTestGenerateIsReachablePrototype* create(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::Structure* structure)
+    {
+        JSTestGenerateIsReachablePrototype* ptr = new (NotNull, JSC::allocateCell<JSTestGenerateIsReachablePrototype>(vm.heap)) JSTestGenerateIsReachablePrototype(vm, globalObject, structure);
+        ptr->finishCreation(vm);
+        return ptr;
+    }
+
+    DECLARE_INFO;
+    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
+    {
+        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
+    }
+
+private:
+    JSTestGenerateIsReachablePrototype(JSC::VM& vm, JSC::JSGlobalObject*, JSC::Structure* structure)
+        : JSC::JSNonFinalObject(vm, structure)
+    {
+    }
+
+    void finishCreation(JSC::VM&);
 };
 
-static const HashTable JSTestGenerateIsReachableConstructorTable = { 1, 0, false, JSTestGenerateIsReachableConstructorTableValues, 0 };
-const ClassInfo JSTestGenerateIsReachableConstructor::s_info = { "TestGenerateIsReachableConstructor", &Base::s_info, &JSTestGenerateIsReachableConstructorTable, 0, CREATE_METHOD_TABLE(JSTestGenerateIsReachableConstructor) };
+class JSTestGenerateIsReachableConstructor : public DOMConstructorObject {
+private:
+    JSTestGenerateIsReachableConstructor(JSC::Structure*, JSDOMGlobalObject*);
+    void finishCreation(JSC::VM&, JSDOMGlobalObject*);
+
+public:
+    typedef DOMConstructorObject Base;
+    static JSTestGenerateIsReachableConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
+    {
+        JSTestGenerateIsReachableConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestGenerateIsReachableConstructor>(vm.heap)) JSTestGenerateIsReachableConstructor(structure, globalObject);
+        ptr->finishCreation(vm, globalObject);
+        return ptr;
+    }
+
+    DECLARE_INFO;
+    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
+    {
+        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
+    }
+};
+
+const ClassInfo JSTestGenerateIsReachableConstructor::s_info = { "TestGenerateIsReachableConstructor", &Base::s_info, 0, CREATE_METHOD_TABLE(JSTestGenerateIsReachableConstructor) };
 
 JSTestGenerateIsReachableConstructor::JSTestGenerateIsReachableConstructor(Structure* structure, JSDOMGlobalObject* globalObject)
     : DOMConstructorObject(structure, globalObject)
@@ -47,13 +90,8 @@ void JSTestGenerateIsReachableConstructor::finishCreation(VM& vm, JSDOMGlobalObj
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
-    putDirect(vm, vm.propertyNames->prototype, JSTestGenerateIsReachablePrototype::self(vm, globalObject), DontDelete | ReadOnly);
+    putDirect(vm, vm.propertyNames->prototype, JSTestGenerateIsReachable::getPrototype(vm, globalObject), DontDelete | ReadOnly);
     putDirect(vm, vm.propertyNames->length, jsNumber(0), ReadOnly | DontDelete | DontEnum);
-}
-
-bool JSTestGenerateIsReachableConstructor::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
-{
-    return getStaticValueSlot<JSTestGenerateIsReachableConstructor, JSDOMWrapper>(exec, JSTestGenerateIsReachableConstructorTable, jsCast<JSTestGenerateIsReachableConstructor*>(object), propertyName, slot);
 }
 
 /* Hash table for prototype */
@@ -61,40 +99,32 @@ bool JSTestGenerateIsReachableConstructor::getOwnPropertySlot(JSObject* object, 
 static const HashTableValue JSTestGenerateIsReachablePrototypeTableValues[] =
 {
     { "constructor", DontEnum | ReadOnly, NoIntrinsic, (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestGenerateIsReachableConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) },
-    { 0, 0, NoIntrinsic, 0, 0 }
 };
 
-static const HashTable JSTestGenerateIsReachablePrototypeTable = { 2, 1, true, JSTestGenerateIsReachablePrototypeTableValues, 0 };
-const ClassInfo JSTestGenerateIsReachablePrototype::s_info = { "TestGenerateIsReachablePrototype", &Base::s_info, &JSTestGenerateIsReachablePrototypeTable, 0, CREATE_METHOD_TABLE(JSTestGenerateIsReachablePrototype) };
+const ClassInfo JSTestGenerateIsReachablePrototype::s_info = { "TestGenerateIsReachablePrototype", &Base::s_info, 0, CREATE_METHOD_TABLE(JSTestGenerateIsReachablePrototype) };
 
-JSObject* JSTestGenerateIsReachablePrototype::self(VM& vm, JSGlobalObject* globalObject)
-{
-    return getDOMPrototype<JSTestGenerateIsReachable>(vm, globalObject);
-}
-
-bool JSTestGenerateIsReachablePrototype::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
-{
-    JSTestGenerateIsReachablePrototype* thisObject = jsCast<JSTestGenerateIsReachablePrototype*>(object);
-    return getStaticPropertySlot<JSTestGenerateIsReachablePrototype, JSObject>(exec, JSTestGenerateIsReachablePrototypeTable, thisObject, propertyName, slot);
-}
-
-const ClassInfo JSTestGenerateIsReachable::s_info = { "TestGenerateIsReachable", &Base::s_info, 0, 0 , CREATE_METHOD_TABLE(JSTestGenerateIsReachable) };
-
-JSTestGenerateIsReachable::JSTestGenerateIsReachable(Structure* structure, JSDOMGlobalObject* globalObject, PassRefPtr<TestGenerateIsReachable> impl)
-    : JSDOMWrapper(structure, globalObject)
-    , m_impl(impl.leakRef())
-{
-}
-
-void JSTestGenerateIsReachable::finishCreation(VM& vm)
+void JSTestGenerateIsReachablePrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(info()));
+    reifyStaticProperties(vm, JSTestGenerateIsReachablePrototypeTableValues, *this);
+}
+
+const ClassInfo JSTestGenerateIsReachable::s_info = { "TestGenerateIsReachable", &Base::s_info, 0, CREATE_METHOD_TABLE(JSTestGenerateIsReachable) };
+
+JSTestGenerateIsReachable::JSTestGenerateIsReachable(Structure* structure, JSDOMGlobalObject* globalObject, Ref<TestGenerateIsReachable>&& impl)
+    : JSDOMWrapper(structure, globalObject)
+    , m_impl(&impl.leakRef())
+{
 }
 
 JSObject* JSTestGenerateIsReachable::createPrototype(VM& vm, JSGlobalObject* globalObject)
 {
     return JSTestGenerateIsReachablePrototype::create(vm, globalObject, JSTestGenerateIsReachablePrototype::createStructure(vm, globalObject, globalObject->objectPrototype()));
+}
+
+JSObject* JSTestGenerateIsReachable::getPrototype(VM& vm, JSGlobalObject* globalObject)
+{
+    return getDOMPrototype<JSTestGenerateIsReachable>(vm, globalObject);
 }
 
 void JSTestGenerateIsReachable::destroy(JSC::JSCell* cell)
@@ -105,20 +135,11 @@ void JSTestGenerateIsReachable::destroy(JSC::JSCell* cell)
 
 JSTestGenerateIsReachable::~JSTestGenerateIsReachable()
 {
-    releaseImplIfNotNull();
+    releaseImpl();
 }
 
-bool JSTestGenerateIsReachable::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+EncodedJSValue jsTestGenerateIsReachableConstructor(ExecState* exec, JSObject* baseValue, EncodedJSValue, PropertyName)
 {
-    JSTestGenerateIsReachable* thisObject = jsCast<JSTestGenerateIsReachable*>(object);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    return Base::getOwnPropertySlot(thisObject, exec, propertyName, slot);
-}
-
-EncodedJSValue jsTestGenerateIsReachableConstructor(ExecState* exec, JSObject* baseValue, EncodedJSValue thisValue, PropertyName)
-{
-    UNUSED_PARAM(baseValue);
-    UNUSED_PARAM(thisValue);
     JSTestGenerateIsReachablePrototype* domObject = jsDynamicCast<JSTestGenerateIsReachablePrototype*>(baseValue);
     if (!domObject)
         return throwVMTypeError(exec);
@@ -130,28 +151,18 @@ JSValue JSTestGenerateIsReachable::getConstructor(VM& vm, JSGlobalObject* global
     return getDOMConstructor<JSTestGenerateIsReachableConstructor>(vm, jsCast<JSDOMGlobalObject*>(globalObject));
 }
 
-static inline bool isObservable(JSTestGenerateIsReachable* jsTestGenerateIsReachable)
-{
-    if (jsTestGenerateIsReachable->hasCustomProperties())
-        return true;
-    return false;
-}
-
 bool JSTestGenerateIsReachableOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor)
 {
-    JSTestGenerateIsReachable* jsTestGenerateIsReachable = jsCast<JSTestGenerateIsReachable*>(handle.get().asCell());
-    if (!isObservable(jsTestGenerateIsReachable))
-        return false;
+    auto* jsTestGenerateIsReachable = jsCast<JSTestGenerateIsReachable*>(handle.slot()->asCell());
     TestGenerateIsReachable* root = &jsTestGenerateIsReachable->impl();
     return visitor.containsOpaqueRoot(root);
 }
 
 void JSTestGenerateIsReachableOwner::finalize(JSC::Handle<JSC::Unknown> handle, void* context)
 {
-    JSTestGenerateIsReachable* jsTestGenerateIsReachable = jsCast<JSTestGenerateIsReachable*>(handle.get().asCell());
-    DOMWrapperWorld& world = *static_cast<DOMWrapperWorld*>(context);
+    auto* jsTestGenerateIsReachable = jsCast<JSTestGenerateIsReachable*>(handle.slot()->asCell());
+    auto& world = *static_cast<DOMWrapperWorld*>(context);
     uncacheWrapper(world, &jsTestGenerateIsReachable->impl(), jsTestGenerateIsReachable);
-    jsTestGenerateIsReachable->releaseImpl();
 }
 
 #if ENABLE(BINDING_INTEGRITY)
@@ -162,11 +173,11 @@ extern "C" { extern void (*const __identifier("??_7TestGenerateIsReachable@WebCo
 extern "C" { extern void* _ZTVN7WebCore23TestGenerateIsReachableE[]; }
 #endif
 #endif
-JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TestGenerateIsReachable* impl)
+JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject* globalObject, TestGenerateIsReachable* impl)
 {
     if (!impl)
         return jsNull();
-    if (JSValue result = getExistingWrapper<JSTestGenerateIsReachable>(exec, impl))
+    if (JSValue result = getExistingWrapper<JSTestGenerateIsReachable>(globalObject, impl))
         return result;
 
 #if ENABLE(BINDING_INTEGRITY)
@@ -187,13 +198,14 @@ JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TestGen
     // by adding the SkipVTableValidation attribute to the interface IDL definition
     RELEASE_ASSERT(actualVTablePointer == expectedVTablePointer);
 #endif
-    ReportMemoryCost<TestGenerateIsReachable>::reportMemoryCost(exec, impl);
-    return createNewWrapper<JSTestGenerateIsReachable>(exec, globalObject, impl);
+    return createNewWrapper<JSTestGenerateIsReachable>(globalObject, impl);
 }
 
-TestGenerateIsReachable* toTestGenerateIsReachable(JSC::JSValue value)
+TestGenerateIsReachable* JSTestGenerateIsReachable::toWrapped(JSC::JSValue value)
 {
-    return value.inherits(JSTestGenerateIsReachable::info()) ? &jsCast<JSTestGenerateIsReachable*>(value)->impl() : 0;
+    if (auto* wrapper = jsDynamicCast<JSTestGenerateIsReachable*>(value))
+        return &wrapper->impl();
+    return nullptr;
 }
 
 }

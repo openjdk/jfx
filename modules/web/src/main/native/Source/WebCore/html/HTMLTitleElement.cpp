@@ -44,9 +44,9 @@ inline HTMLTitleElement::HTMLTitleElement(const QualifiedName& tagName, Document
     ASSERT(hasTagName(titleTag));
 }
 
-PassRefPtr<HTMLTitleElement> HTMLTitleElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLTitleElement> HTMLTitleElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLTitleElement(tagName, document));
+    return adoptRef(*new HTMLTitleElement(tagName, document));
 }
 
 Node::InsertionNotificationRequest HTMLTitleElement::insertedInto(ContainerNode& insertionPoint)
@@ -78,7 +78,7 @@ void HTMLTitleElement::childrenChanged(const ChildChange& change)
 
 String HTMLTitleElement::text() const
 {
-    return TextNodeTraversal::contentsAsString(this);
+    return TextNodeTraversal::contentsAsString(*this);
 }
 
 StringWithDirection HTMLTitleElement::textWithDirection()
@@ -93,25 +93,25 @@ StringWithDirection HTMLTitleElement::textWithDirection()
     return StringWithDirection(text(), direction);
 }
 
-void HTMLTitleElement::setText(const String &value)
+void HTMLTitleElement::setText(const String& value)
 {
     Ref<HTMLTitleElement> protectFromMutationEvents(*this);
 
-    int numChildren = childNodeCount();
-
-    if (numChildren == 1 && firstChild()->isTextNode())
-        toText(firstChild())->setData(value, IGNORE_EXCEPTION);
-    else {
-        // We make a copy here because entity of "value" argument can be Document::m_title,
-        // which goes empty during removeChildren() invocation below,
-        // which causes HTMLTitleElement::childrenChanged(), which ends up Document::setTitle().
-        String valueCopy(value);
-
-        if (numChildren > 0)
-            removeChildren();
-
-        appendChild(document().createTextNode(valueCopy.impl()), IGNORE_EXCEPTION);
+    if (!value.isEmpty() && hasOneChild() && is<Text>(*firstChild())) {
+        downcast<Text>(*firstChild()).setData(value, IGNORE_EXCEPTION);
+        return;
     }
+
+    // We make a copy here because entity of "value" argument can be Document::m_title,
+    // which goes empty during removeChildren() invocation below,
+    // which causes HTMLTitleElement::childrenChanged(), which ends up Document::setTitle().
+    String valueCopy(value);
+
+    if (hasChildNodes())
+        removeChildren();
+
+    if (!valueCopy.isEmpty())
+        appendChild(document().createTextNode(valueCopy), IGNORE_EXCEPTION);
 }
 
 }

@@ -27,8 +27,8 @@
 
 namespace WebCore {
 
-RenderSVGTransformableContainer::RenderSVGTransformableContainer(SVGGraphicsElement& element, PassRef<RenderStyle> style)
-    : RenderSVGContainer(element, std::move(style))
+RenderSVGTransformableContainer::RenderSVGTransformableContainer(SVGGraphicsElement& element, Ref<RenderStyle>&& style)
+    : RenderSVGContainer(element, WTF::move(style))
     , m_needsTransformUpdate(true)
     , m_didTransformToRootUpdate(false)
 {
@@ -41,13 +41,13 @@ bool RenderSVGTransformableContainer::calculateLocalTransform()
     // If we're either the renderer for a <use> element, or for any <g> element inside the shadow
     // tree, that was created during the use/symbol/svg expansion in SVGUseElement. These containers
     // need to respect the translations induced by their corresponding use elements x/y attributes.
-    SVGUseElement* useElement = 0;
-    if (isSVGUseElement(element))
-        useElement = &toSVGUseElement(element);
-    else if (element.isInShadowTree() && isSVGGElement(element)) {
+    SVGUseElement* useElement = nullptr;
+    if (is<SVGUseElement>(element))
+        useElement = &downcast<SVGUseElement>(element);
+    else if (element.isInShadowTree() && is<SVGGElement>(element)) {
         SVGElement* correspondingElement = element.correspondingElement();
-        if (correspondingElement && isSVGUseElement(correspondingElement))
-            useElement = toSVGUseElement(correspondingElement);
+        if (is<SVGUseElement>(correspondingElement))
+            useElement = downcast<SVGUseElement>(correspondingElement);
     }
 
     if (useElement) {

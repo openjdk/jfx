@@ -20,7 +20,7 @@
 #include "SharedBuffer.h"
 
 #include "FileSystem.h"
-#include <wtf/gobject/GUniquePtr.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/CString.h>
 
 #include <glib.h>
@@ -28,7 +28,7 @@
 
 namespace WebCore {
 
-PassRefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePath)
+RefPtr<SharedBuffer> SharedBuffer::createFromReadingFile(const String& filePath)
 {
     if (filePath.isEmpty())
         return 0;

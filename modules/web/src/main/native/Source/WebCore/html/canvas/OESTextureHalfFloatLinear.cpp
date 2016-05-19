@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-OESTextureHalfFloatLinear::OESTextureHalfFloatLinear(WebGLRenderingContext* context)
+OESTextureHalfFloatLinear::OESTextureHalfFloatLinear(WebGLRenderingContextBase* context)
     : WebGLExtension(context)
 {
 }
@@ -42,11 +42,6 @@ OESTextureHalfFloatLinear::~OESTextureHalfFloatLinear()
 WebGLExtension::ExtensionName OESTextureHalfFloatLinear::getName() const
 {
     return OESTextureHalfFloatLinearName;
-}
-
-OwnPtr<OESTextureHalfFloatLinear> OESTextureHalfFloatLinear::create(WebGLRenderingContext* context)
-{
-    return adoptPtr(new OESTextureHalfFloatLinear(context));
 }
 
 } // namespace WebCore

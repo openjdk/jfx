@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -35,15 +35,17 @@ namespace WebCore {
 
     class DocumentFragment;
 
-    class TextEvent : public UIEvent {
+    enum class MailBlockquoteHandling;
+
+    class TextEvent final : public UIEvent {
     public:
 
-        static PassRefPtr<TextEvent> create();
-        static PassRefPtr<TextEvent> create(PassRefPtr<AbstractView>, const String& data, TextEventInputType = TextEventInputKeyboard);
-        static PassRefPtr<TextEvent> createForPlainTextPaste(PassRefPtr<AbstractView> view, const String& data, bool shouldSmartReplace);
-        static PassRefPtr<TextEvent> createForFragmentPaste(PassRefPtr<AbstractView> view, PassRefPtr<DocumentFragment> data, bool shouldSmartReplace, bool shouldMatchStyle);
-        static PassRefPtr<TextEvent> createForDrop(PassRefPtr<AbstractView> view, const String& data);
-        static PassRefPtr<TextEvent> createForDictation(PassRefPtr<AbstractView>, const String& data, const Vector<DictationAlternative>& dictationAlternatives);
+        static Ref<TextEvent> create();
+        static Ref<TextEvent> create(PassRefPtr<AbstractView>, const String& data, TextEventInputType = TextEventInputKeyboard);
+        static Ref<TextEvent> createForPlainTextPaste(PassRefPtr<AbstractView>, const String& data, bool shouldSmartReplace);
+        static Ref<TextEvent> createForFragmentPaste(PassRefPtr<AbstractView>, PassRefPtr<DocumentFragment> data, bool shouldSmartReplace, bool shouldMatchStyle, MailBlockquoteHandling);
+        static Ref<TextEvent> createForDrop(PassRefPtr<AbstractView>, const String& data);
+        static Ref<TextEvent> createForDictation(PassRefPtr<AbstractView>, const String& data, const Vector<DictationAlternative>& dictationAlternatives);
 
         virtual ~TextEvent();
 
@@ -62,6 +64,7 @@ namespace WebCore {
 
         bool shouldSmartReplace() const { return m_shouldSmartReplace; }
         bool shouldMatchStyle() const { return m_shouldMatchStyle; }
+        MailBlockquoteHandling mailBlockquoteHandling() const { return m_mailBlockquoteHandling; }
         DocumentFragment* pastingFragment() const { return m_pastingFragment.get(); }
         const Vector<DictationAlternative>& dictationAlternatives() const { return m_dictationAlternatives; }
 
@@ -69,8 +72,7 @@ namespace WebCore {
         TextEvent();
 
         TextEvent(PassRefPtr<AbstractView>, const String& data, TextEventInputType = TextEventInputKeyboard);
-        TextEvent(PassRefPtr<AbstractView>, const String& data, PassRefPtr<DocumentFragment>,
-                  bool shouldSmartReplace, bool shouldMatchStyle);
+        TextEvent(PassRefPtr<AbstractView>, const String& data, PassRefPtr<DocumentFragment>, bool shouldSmartReplace, bool shouldMatchStyle, MailBlockquoteHandling);
         TextEvent(PassRefPtr<AbstractView>, const String& data, const Vector<DictationAlternative>& dictationAlternatives);
 
         virtual bool isTextEvent() const override;
@@ -81,11 +83,12 @@ namespace WebCore {
         RefPtr<DocumentFragment> m_pastingFragment;
         bool m_shouldSmartReplace;
         bool m_shouldMatchStyle;
+        MailBlockquoteHandling m_mailBlockquoteHandling;
         Vector<DictationAlternative> m_dictationAlternatives;
     };
 
-EVENT_TYPE_CASTS(TextEvent)
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENT(TextEvent)
 
 #endif // TextEvent_h

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,15 +32,15 @@ namespace WebCore {
 
 class SinkDocument final : public HTMLDocument {
 public:
-    static PassRefPtr<SinkDocument> create(Frame* frame, const URL& url)
+    static Ref<SinkDocument> create(Frame* frame, const URL& url)
     {
-        return adoptRef(new SinkDocument(frame, url));
+        return adoptRef(*new SinkDocument(frame, url));
     }
 
 private:
     SinkDocument(Frame*, const URL&);
 
-    virtual PassRefPtr<DocumentParser> createParser();
+    virtual Ref<DocumentParser> createParser();
 };
 
 

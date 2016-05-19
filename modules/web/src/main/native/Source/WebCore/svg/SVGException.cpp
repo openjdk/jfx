@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,6 +28,8 @@
 
 #include "config.h"
 #include "SVGException.h"
+
+#include "ExceptionCodeDescription.h"
 
 namespace WebCore {
 
@@ -52,8 +54,8 @@ bool SVGException::initializeDescription(ExceptionCode ec, ExceptionCodeDescript
     size_t tableSize = WTF_ARRAY_LENGTH(svgExceptions);
     size_t tableIndex = ec - SVG_WRONG_TYPE_ERR;
 
-    description->name = tableIndex < tableSize ? svgExceptions[tableIndex].name : 0;
-    description->description = tableIndex < tableSize ? svgExceptions[tableIndex].description : 0;
+    description->name = tableIndex < tableSize ? svgExceptions[tableIndex].name : nullptr;
+    description->description = tableIndex < tableSize ? svgExceptions[tableIndex].description : nullptr;
 
     return true;
 }

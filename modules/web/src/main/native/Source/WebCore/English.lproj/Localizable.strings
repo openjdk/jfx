@@ -1,3 +1,12 @@
+/* File Upload multiple photos label */
+"# Photos (file upload on page label for multiple photos)" = "%@ Photos";
+
+/* File Upload images and videos label */
+"# Photos and # Videos (file upload on page label for image and videos)" = "%@ and %@";
+
+/* File Upload multiple videos label */
+"# Videos (file upload on page label for multiple videos)" = "%@ Videos";
+
 /* accessibility help text for media controller time value >= 1 day */
 "%1$d days %2$d hours %3$d minutes %4$d seconds" = "%1$d days %2$d hours %3$d minutes %4$d seconds";
 
@@ -40,11 +49,17 @@
 /* Visible name of the web process. The argument is the application name. */
 "%@ Web Content" = "%@ Web Content";
 
+/* Visible name of Web Inspector's web process. The argument is the application name. */
+"%@ Web Inspector" = "%@ Web Inspector";
+
 /* Name of application's single WebCrypto master key in Keychain */
 "%@ WebCrypto Master Key" = "%@ WebCrypto Master Key";
 
 /* Label to describe the number of files selected in a file upload control that allows multiple files */
 "%d files" = "%d files";
+
+/* Label for PDF page number indicator. */
+"%d of %d" = "%d of %d";
 
 /* Present the number of selected <option> items in a <select multiple> element (iOS only) */
 "%zu Items" = "%zu Items";
@@ -54,6 +69,12 @@
 
 /* Present the element <select multiple> when a single <option> is selected (iOS only) */
 "1 Item" = "1 Item";
+
+/* File Upload single photo label */
+"1 Photo (file upload on page label for one photo)" = "1 Photo";
+
+/* File Upload single video label */
+"1 Video (file upload on page label for one video)" = "1 Video";
 
 /* Menu item title for KEYGEN pop-up menu */
 "1024 (Medium Grade)" = "1024 (Medium Grade)";
@@ -67,6 +88,9 @@
 /* window title for a standalone image (uses multiplication symbol, not x) */
 "<filename> %d×%d pixels" = "<filename> %d×%d pixels";
 
+/* WKErrorJavaScriptExceptionOccurred description */
+"A JavaScript exception occurred" = "A JavaScript exception occurred";
+
 /* Title for Add to Reading List action button */
 "Add to Reading List" = "Add to Reading List";
 
@@ -75,6 +99,9 @@
 
 /* Undo action name */
 "Align Right (Undo action name)" = "Align Right";
+
+/* WKErrorUnknown description */
+"An unknown error occurred" = "An unknown error occurred";
 
 /* Menu item label for automatic track selection behavior */
 "Auto (Recommended)" = "Auto (Recommended)";
@@ -93,6 +120,12 @@
 
 /* Undo action name */
 "Bold (Undo action name)" = "Bold";
+
+/* menu item title for phone number */
+"Call Using iPhone:" = "Call Using iPhone:";
+
+/* File Upload alert sheet button string to cancel */
+"Cancel (file upload action sheet)" = "Cancel";
 
 /* Title for Cancel button label in button bar */
 "Cancel button label in button bar" = "Cancel";
@@ -127,11 +160,14 @@
 /* Title for file button used in HTML forms for media files */
 "Choose Media (Single)" = "Choose Media (Single)";
 
+/* Clear button in date input popover */
+"Clear Button Date Popover" = "Clear";
+
 /* menu item in Recent Searches menu that empties menu's contents */
 "Clear Recent Searches" = "Clear Recent Searches";
 
 /* Message to display in browser window when in webkit full screen mode. */
-"Click to exit full screen mode" = "Click to exit full screen mode";
+"Click to Exit Full Screen" = "Click to Exit Full Screen";
 
 /* Subtitle of the label to show on a snapshotted plug-in */
 "Click to restart" = "Click to restart";
@@ -146,7 +182,7 @@
 "Copy" = "Copy";
 
 /* Title for Copy Link or Image action button */
-"Copy ActionSheet Link" = "Copy";
+"Copy (ActionSheet)" = "Copy";
 
 /* Copy Audio Address Location context menu item */
 "Copy Audio Address" = "Copy Audio Address";
@@ -175,13 +211,13 @@
 /* Default writing direction context menu item */
 "Default" = "Default";
 
-/* Undo action name (Used only by PLATFORM(IOS) code) */
+/* Undo action name */
 "Delete (Undo action name)" = "Delete";
 
 /* text to display in <details> tag when it has no <summary> child */
 "Details" = "Details";
 
-/* Undo action name (Used only by PLATFORM(IOS) code) */
+/* Undo action name */
 "Dictation (Undo action name)" = "Dictation";
 
 /* Download Audio To Disk context menu item */
@@ -262,6 +298,9 @@
 /* Title for action sheet for JavaScript link */
 "JavaScript Action Sheet Title" = "JavaScript";
 
+/* WKErrorJavaScriptResultTypeIsUnsupported description */
+"JavaScript execution returned a result of an unsupported type" = "JavaScript execution returned a result of an unsupported type";
+
 /* Undo action name */
 "Justify (Undo action name)" = "Justify";
 
@@ -279,6 +318,9 @@
 
 /* Media controller status message when the media is loading */
 "Loading..." = "Loading...";
+
+/* 'Website' name displayed when local documents have stored local data */
+"Local documents on your computer" = "Local documents on your computer";
 
 /* Look Up in Dictionary context menu item */
 "Look Up in Dictionary" = "Look Up in Dictionary";
@@ -313,17 +355,23 @@
 /* No Guesses Found context menu item */
 "No Guesses Found" = "No Guesses Found";
 
+/* Empty select list */
+"No Options Select Popover" = "No Options";
+
 /* Label for only item in menu that appears when clicking on the search field image, when no searches have been performed */
 "No recent searches" = "No recent searches";
 
 /* WebKitErrorCannotUseRestrictedPort description */
 "Not allowed to use restricted network port" = "Not allowed to use restricted network port";
 
+/* OK button label in PDF password failure alert */
+"OK (PDF password failure alert)" = "OK";
+
 /* Menu item label for the track that represents disabling closed captions */
 "Off" = "Off";
 
 /* Title for Open Link action button */
-"Open ActionSheet Link" = "Open";
+"Open" = "Open";
 
 /* Open Audio in New Window context menu item */
 "Open Audio in New Window" = "Open Audio in New Window";
@@ -342,6 +390,12 @@
 
 /* Open Video in New Window context menu item */
 "Open Video in New Window" = "Open Video in New Window";
+
+/* Title for Open in Safari Link action button */
+"Open in Safari" = "Open in Safari";
+
+/* Title for Open in External Application Link action button */
+"Open in “%@”" = "Open in “%@”";
 
 /* context menu item for PDF */
 "Open with %@" = "Open with %@";
@@ -372,6 +426,9 @@
 
 /* Media Pause context menu item */
 "Pause" = "Pause";
+
+/* File Upload alert sheet button string for choosing an existing media item from the Photo Library */
+"Photo Library (file upload action sheet)" = "Photo Library";
 
 /* Media Play context menu item */
 "Play" = "Play";
@@ -520,14 +577,32 @@
 /* Undo action name */
 "Superscript (Undo action name)" = "Superscript";
 
+/* File Upload alert sheet camera button string for taking only photos */
+"Take Photo (file upload action sheet)" = "Take Photo";
+
+/* File Upload alert sheet camera button string for taking photos or videos */
+"Take Photo or Video (file upload action sheet)" = "Take Photo or Video";
+
+/* File Upload alert sheet camera button string for taking only videos */
+"Take Video (file upload action sheet)" = "Take Video";
+
 /* Text Replacement context menu item */
 "Text Replacement" = "Text Replacement";
 
 /* WebKitErrorCannotShowURL description */
 "The URL can’t be shown" = "The URL can’t be shown";
 
+/* WKErrorWebViewInvalidated description */
+"The WKWebView was invalidated" = "The WKWebView was invalidated";
+
+/* WKErrorWebContentProcessTerminated description */
+"The Web Content process was terminated" = "The Web Content process was terminated";
+
 /* WebKitErrorGeolocationLocationUnknown description */
 "The current location cannot be found." = "The current location cannot be found.";
+
+/* PDF password failure alert message */
+"The document could not be opened with that password." = "The document could not be opened with that password.";
 
 /* WebKitErrorCannotFindPlugin description */
 "The plug-in can’t be found" = "The plug-in can’t be found";
@@ -568,7 +643,7 @@
 /* Undo action name */
 "Turn Off Ligatures (Undo action name)" = "Turn Off Ligatures";
 
-/* We don't care if we find this string, but searching for it will load the plist and save the results. */
+/* Undo action name */
 "Typing (Undo action name)" = "Typing";
 
 /* Underline context menu item */
@@ -576,6 +651,9 @@
 
 /* Undo action name */
 "Underline (Undo action name)" = "Underline";
+
+/* Menu item label for an audio track that has no other name */
+"Unknown (audio track)" = "Unknown";
 
 /* Unknown filesize FTP directory listing item */
 "Unknown (filesize)" = "Unknown";
@@ -924,6 +1002,9 @@
 
 /* Verb stating the action that will occur when a radio button is clicked, as used by accessibility */
 "select" = "select";
+
+/* accessibility role description for a horizontal rule [<hr>] */
+"separator" = "separator";
 
 /* HTTP result code string */
 "server error" = "server error";

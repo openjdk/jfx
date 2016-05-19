@@ -51,11 +51,11 @@ void EditorClientJava::pageDestroyed()
 
 void dump(int indent, Node* node)
 {
-    for (int i=0; i<indent; i++) cout << " ";
-    cout << node->nodeType() << node->nodeName().deprecatedCharacters() << endl;
-    for (int i=0; i<node->childNodes()->length(); i++) {
-        dump(indent+2, node->childNodes()->item(i));
-    }
+    // for (int i=0; i<indent; i++) cout << " "; //XXX: uncomment
+    // cout << node->nodeType() << StringView(node->nodeName()) << endl;
+    // for (int i=0; i<node->childNodes()->length(); i++) {
+    //     dump(indent+2, node->childNodes()->item(i));
+    // }
 }
 
 //
@@ -419,6 +419,10 @@ bool EditorClientJava::shouldApplyStyle(StyleProperties*, Range*)
     return true;
 }
 
+void EditorClientJava::didApplyStyle() {
+    notImplemented();
+}
+
 void EditorClientJava::didBeginEditing()
 {
     notImplemented();
@@ -447,6 +451,10 @@ void EditorClientJava::respondToChangedSelection(Frame *frame)
         frame->editor().cancelComposition();
         setInputMethodState(false);
     }
+}
+
+void EditorClientJava::didChangeSelectionAndUpdateLayout() {
+    notImplemented();
 }
 
 void EditorClientJava::didEndEditing()
@@ -546,6 +554,10 @@ void EditorClientJava::textDidChangeInTextArea(Element*)
     notImplemented();
 }
 
+void EditorClientJava::overflowScrollPositionChanged() {
+    notImplemented();
+}
+
 void EditorClientJava::updateSpellingUIWithGrammarString(const String&, const GrammarDetail&)
 {
     notImplemented();
@@ -609,6 +621,10 @@ bool EditorClientJava::canCopyCut(Frame*, bool defaultValue) const
 bool EditorClientJava::canPaste(Frame*, bool defaultValue) const
 {
     return defaultValue;
+}
+
+void EditorClientJava::discardedComposition(Frame*) {
+    notImplemented();
 }
 
 const int gc_maximumm_undoStackDepth = 1000;

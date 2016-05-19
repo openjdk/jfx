@@ -49,7 +49,7 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(
 {
     ConstructionContext context(exec->vm(), structure, length, sizeof(typename Adaptor::Type));
     if (!context) {
-        exec->vm().throwException(exec, createOutOfMemoryError(structure->globalObject()));
+        exec->vm().throwException(exec, createOutOfMemoryError(exec));
         return 0;
     }
     JSGenericTypedArrayView* result =
@@ -67,7 +67,7 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::createUninit
         exec->vm(), structure, length, sizeof(typename Adaptor::Type),
         ConstructionContext::DontInitialize);
     if (!context) {
-        exec->vm().throwException(exec, createOutOfMemoryError(structure->globalObject()));
+        exec->vm().throwException(exec, createOutOfMemoryError(exec));
         return 0;
     }
     JSGenericTypedArrayView* result =
@@ -83,10 +83,14 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(
     unsigned byteOffset, unsigned length)
 {
     RefPtr<ArrayBuffer> buffer = passedBuffer;
-    if (!ArrayBufferView::verifySubRange<typename Adaptor::Type>(buffer, byteOffset, length)) {
-        exec->vm().throwException(
-            exec, createRangeError(exec, "Byte offset and length out of range of buffer"));
-        return 0;
+    size_t size = sizeof(typename Adaptor::Type);
+    if (!ArrayBufferView::verifySubRangeLength(buffer, byteOffset, length, size)) {
+        exec->vm().throwException(exec, createRangeError(exec, "Length out of range of buffer"));
+        return nullptr;
+    }
+    if (!ArrayBufferView::verifyByteOffsetAlignment(byteOffset, size)) {
+        exec->vm().throwException(exec, createRangeError(exec, "Byte offset is not aligned"));
+        return nullptr;
     }
     ConstructionContext context(exec->vm(), structure, buffer, byteOffset, length);
     ASSERT(context);
@@ -266,7 +270,8 @@ bool JSGenericTypedArrayView<Adaptor>::set(
             return false;
         // We could optimize this case. But right now, we don't.
         for (unsigned i = 0; i < length; ++i) {
-            if (!setIndexQuickly(exec, offset + i, object->get(exec, i)))
+            JSValue value = object->get(exec, i);
+            if (!setIndex(exec, offset + i, value))
                 return false;
         }
         return true;
@@ -297,9 +302,9 @@ bool JSGenericTypedArrayView<Adaptor>::getOwnPropertySlot(
         return true;
     }
 
-    unsigned index = propertyName.asIndex();
-    if (index != PropertyName::NotAnIndex && thisObject->canGetIndexQuickly(index)) {
-        slot.setValue(thisObject, DontDelete | ReadOnly, thisObject->getIndexQuickly(index));
+    Optional<uint32_t> index = parseIndex(propertyName);
+    if (index && thisObject->canGetIndexQuickly(index.value())) {
+        slot.setValue(thisObject, DontDelete | ReadOnly, thisObject->getIndexQuickly(index.value()));
         return true;
     }
 
@@ -319,9 +324,8 @@ void JSGenericTypedArrayView<Adaptor>::put(
         return;
     }
 
-    unsigned index = propertyName.asIndex();
-    if (index != PropertyName::NotAnIndex) {
-        putByIndex(thisObject, exec, index, value, slot.isStrictMode());
+    if (Optional<uint32_t> index = parseIndex(propertyName)) {
+        putByIndex(thisObject, exec, index.value(), value, slot.isStrictMode());
         return;
     }
 
@@ -338,8 +342,7 @@ bool JSGenericTypedArrayView<Adaptor>::defineOwnProperty(
     // This is matching Firefox behavior. In particular, it rejects all attempts to
     // defineOwnProperty for indexed properties on typed arrays, even if they're out
     // of bounds.
-    if (propertyName == exec->propertyNames().length
-        || propertyName.asIndex() != PropertyName::NotAnIndex)
+    if (propertyName == exec->propertyNames().length || parseIndex(propertyName))
         return reject(exec, shouldThrow, "Attempting to write to a read-only typed array property.");
 
     return Base::defineOwnProperty(thisObject, exec, propertyName, descriptor, shouldThrow);
@@ -351,8 +354,7 @@ bool JSGenericTypedArrayView<Adaptor>::deleteProperty(
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(cell);
 
-    if (propertyName == exec->propertyNames().length
-        || propertyName.asIndex() != PropertyName::NotAnIndex)
+    if (propertyName == exec->propertyNames().length || parseIndex(propertyName))
         return false;
 
     return Base::deleteProperty(thisObject, exec, propertyName);
@@ -389,13 +391,7 @@ void JSGenericTypedArrayView<Adaptor>::putByIndex(
         return;
     }
 
-    if (!thisObject->canSetIndexQuickly(propertyName)) {
-        // Yes, really. Firefox returns without throwing anything if you store beyond
-        // the bounds.
-        return;
-    }
-
-    thisObject->setIndexQuickly(exec, propertyName, value);
+    thisObject->setIndex(exec, propertyName, value);
 }
 
 template<typename Adaptor>
@@ -416,7 +412,7 @@ void JSGenericTypedArrayView<Adaptor>::getOwnNonIndexPropertyNames(
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
 
-    if (mode == IncludeDontEnumProperties)
+    if (mode.includeDontEnumProperties())
         array.add(exec->propertyNames().length);
 
     Base::getOwnNonIndexPropertyNames(thisObject, exec, array, mode);
@@ -428,8 +424,10 @@ void JSGenericTypedArrayView<Adaptor>::getOwnPropertyNames(
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
 
-    for (unsigned i = 0; i < thisObject->m_length; ++i)
-        array.add(Identifier::from(exec, i));
+    if (array.includeStringProperties()) {
+        for (unsigned i = 0; i < thisObject->m_length; ++i)
+            array.add(Identifier::from(exec, i));
+    }
 
     return Base::getOwnPropertyNames(object, exec, array, mode);
 }
@@ -447,7 +445,7 @@ void JSGenericTypedArrayView<Adaptor>::visitChildren(JSCell* cell, SlotVisitor& 
     }
 
     case OversizeTypedArray: {
-        visitor.reportExtraMemoryUsage(thisObject, thisObject->byteSize());
+        visitor.reportExtraMemoryVisited(thisObject, thisObject->byteSize());
         break;
     }
 

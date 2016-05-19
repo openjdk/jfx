@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -59,17 +59,13 @@ public:
 
     void clear();
 
-    bool requestFrame(HTMLFrameOwnerElement&, const String& url, const AtomicString& frameName, bool lockHistory = true, bool lockBackForwardList = true);
+    bool requestFrame(HTMLFrameOwnerElement&, const String& url, const AtomicString& frameName, LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
     bool requestObject(HTMLPlugInImageElement&, const String& url, const AtomicString& frameName,
         const String& serviceType, const Vector<String>& paramNames, const Vector<String>& paramValues);
 
-#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-    PassRefPtr<Widget> loadMediaPlayerProxyPlugin(HTMLMediaElement&, const URL&, const Vector<String>& paramNames, const Vector<String>& paramValues);
-#endif
-
     PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const Vector<String>& paramNames, const Vector<String>& paramValues);
 
-    bool allowPlugins(ReasonForCallingAllowPlugins);
+    WEBCORE_EXPORT bool allowPlugins(ReasonForCallingAllowPlugins);
 
     bool containsPlugins() const { return m_containsPlugins; }
 
@@ -77,7 +73,7 @@ public:
 
 private:
     bool requestPlugin(HTMLPlugInImageElement&, const URL&, const String& serviceType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback);
-    Frame* loadOrRedirectSubframe(HTMLFrameOwnerElement&, const URL&, const AtomicString& frameName, bool lockHistory, bool lockBackForwardList);
+    Frame* loadOrRedirectSubframe(HTMLFrameOwnerElement&, const URL&, const AtomicString& frameName, LockHistory, LockBackForwardList);
     Frame* loadSubframe(HTMLFrameOwnerElement&, const URL&, const String& name, const String& referrer);
     bool loadPlugin(HTMLPlugInImageElement&, const URL&, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback);
 

@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLDivElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "HTMLNames.h"
@@ -38,14 +37,14 @@ HTMLDivElement::HTMLDivElement(const QualifiedName& tagName, Document& document)
     ASSERT(hasTagName(divTag));
 }
 
-PassRefPtr<HTMLDivElement> HTMLDivElement::create(Document& document)
+Ref<HTMLDivElement> HTMLDivElement::create(Document& document)
 {
-    return adoptRef(new HTMLDivElement(divTag, document));
+    return adoptRef(*new HTMLDivElement(divTag, document));
 }
 
-PassRefPtr<HTMLDivElement> HTMLDivElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLDivElement> HTMLDivElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLDivElement(tagName, document));
+    return adoptRef(*new HTMLDivElement(tagName, document));
 }
 
 bool HTMLDivElement::isPresentationAttribute(const QualifiedName& name) const

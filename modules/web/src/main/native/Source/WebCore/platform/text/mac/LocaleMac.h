@@ -47,12 +47,10 @@ class DateComponents;
 
 class LocaleMac : public Locale {
 public:
-    static PassOwnPtr<LocaleMac> create(const String&);
-    static PassOwnPtr<LocaleMac> create(NSLocale*);
+    explicit LocaleMac(NSLocale*);
     ~LocaleMac();
 
 #if PLATFORM(IOS)
-    virtual float maximumWidthForDateType(DateComponents::Type, const Font&) override;
     virtual String formatDateTime(const DateComponents&, FormatType = FormatTypeUnspecified) override;
 #endif
 
@@ -72,7 +70,6 @@ public:
 #endif
 
 private:
-    explicit LocaleMac(NSLocale*);
     RetainPtr<NSDateFormatter> shortDateFormatter();
     virtual void initializeLocaleData() override;
 

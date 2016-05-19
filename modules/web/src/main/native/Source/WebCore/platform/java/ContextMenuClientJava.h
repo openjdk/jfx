@@ -27,6 +27,8 @@ namespace WebCore {
         virtual bool isSpeaking();
         virtual void speak(const String&);
         virtual void stopSpeaking();
+
+        virtual ContextMenuItem shareMenuItem(const HitTestResult&) override;
     private:
         JGObject m_webPage;
     };

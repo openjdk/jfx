@@ -31,10 +31,10 @@
 #ifndef InspectorIndexedDBAgent_h
 #define InspectorIndexedDBAgent_h
 
-#if ENABLE(INSPECTOR) && ENABLE(INDEXED_DATABASE)
+#if ENABLE(INDEXED_DATABASE)
 
 #include "InspectorWebAgentBase.h"
-#include "InspectorWebBackendDispatchers.h"
+#include <inspector/InspectorBackendDispatchers.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
@@ -47,29 +47,30 @@ class InspectorPageAgent;
 
 typedef String ErrorString;
 
-class InspectorIndexedDBAgent : public InspectorAgentBase, public Inspector::InspectorIndexedDBBackendDispatcherHandler {
+class InspectorIndexedDBAgent final : public InspectorAgentBase, public Inspector::IndexedDBBackendDispatcherHandler {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorIndexedDBAgent(InstrumentingAgents*, Inspector::InjectedScriptManager*, InspectorPageAgent*);
-    ~InspectorIndexedDBAgent();
+    virtual ~InspectorIndexedDBAgent();
 
-    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
-    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
+    virtual void didCreateFrontendAndBackend(Inspector::FrontendChannel*, Inspector::BackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
 
     // Called from the front-end.
-    virtual void enable(ErrorString*) override;
-    virtual void disable(ErrorString*) override;
-    virtual void requestDatabaseNames(ErrorString*, const String& securityOrigin, PassRefPtr<RequestDatabaseNamesCallback>) override;
-    virtual void requestDatabase(ErrorString*, const String& securityOrigin, const String& databaseName, PassRefPtr<RequestDatabaseCallback>) override;
-    virtual void requestData(ErrorString*, const String& securityOrigin, const String& databaseName, const String& objectStoreName, const String& indexName, int skipCount, int pageSize, const RefPtr<Inspector::InspectorObject>* keyRange, PassRefPtr<RequestDataCallback>) override;
-    virtual void clearObjectStore(ErrorString*, const String& in_securityOrigin, const String& in_databaseName, const String& in_objectStoreName, PassRefPtr<ClearObjectStoreCallback>) override;
+    virtual void enable(ErrorString&) override;
+    virtual void disable(ErrorString&) override;
+    virtual void requestDatabaseNames(ErrorString&, const String& securityOrigin, Ref<RequestDatabaseNamesCallback>&&) override;
+    virtual void requestDatabase(ErrorString&, const String& securityOrigin, const String& databaseName, Ref<RequestDatabaseCallback>&&) override;
+    virtual void requestData(ErrorString&, const String& securityOrigin, const String& databaseName, const String& objectStoreName, const String& indexName, int skipCount, int pageSize, const Inspector::InspectorObject* keyRange, Ref<RequestDataCallback>&&) override;
+    virtual void clearObjectStore(ErrorString&, const String& in_securityOrigin, const String& in_databaseName, const String& in_objectStoreName, Ref<ClearObjectStoreCallback>&&) override;
 
 private:
     Inspector::InjectedScriptManager* m_injectedScriptManager;
     InspectorPageAgent* m_pageAgent;
-    RefPtr<Inspector::InspectorIndexedDBBackendDispatcher> m_backendDispatcher;
+    RefPtr<Inspector::IndexedDBBackendDispatcher> m_backendDispatcher;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(INSPECTOR) && ENABLE(INDEXED_DATABASE)
+#endif // ENABLE(INDEXED_DATABASE)
 #endif // !defined(InspectorIndexedDBAgent_h)

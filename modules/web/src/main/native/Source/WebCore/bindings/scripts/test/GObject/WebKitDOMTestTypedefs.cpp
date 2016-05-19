@@ -25,18 +25,17 @@
 #include "DOMObjectCache.h"
 #include "Document.h"
 #include "ExceptionCode.h"
+#include "ExceptionCodeDescription.h"
 #include "JSMainThreadExecState.h"
-#include "WebKitDOMDOMString[]Private.h"
+#include "SerializedScriptValue.h"
 #include "WebKitDOMPrivate.h"
 #include "WebKitDOMSVGPointPrivate.h"
-#include "WebKitDOMSerializedScriptValuePrivate.h"
 #include "WebKitDOMTestTypedefsPrivate.h"
-#include "WebKitDOMlong[]Private.h"
 #include "gobject/ConvertToUTF8String.h"
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
 
-#define WEBKIT_DOM_TEST_TYPEDEFS_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_TYPE_DOM_TEST_TYPEDEFS, WebKitDOMTestTypedefsPrivate)
+#define WEBKIT_DOM_TEST_TYPEDEFS_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_DOM_TYPE_TEST_TYPEDEFS, WebKitDOMTestTypedefsPrivate)
 
 typedef struct _WebKitDOMTestTypedefsPrivate {
     RefPtr<WebCore::TestTypedefs> coreObject;
@@ -63,12 +62,12 @@ WebCore::TestTypedefs* core(WebKitDOMTestTypedefs* request)
 WebKitDOMTestTypedefs* wrapTestTypedefs(WebCore::TestTypedefs* coreObject)
 {
     ASSERT(coreObject);
-    return WEBKIT_DOM_TEST_TYPEDEFS(g_object_new(WEBKIT_TYPE_DOM_TEST_TYPEDEFS, "core-object", coreObject, NULL));
+    return WEBKIT_DOM_TEST_TYPEDEFS(g_object_new(WEBKIT_DOM_TYPE_TEST_TYPEDEFS, "core-object", coreObject, nullptr));
 }
 
 } // namespace WebKit
 
-G_DEFINE_TYPE(WebKitDOMTestTypedefs, webkit_dom_test_typedefs, WEBKIT_TYPE_DOM_OBJECT)
+G_DEFINE_TYPE(WebKitDOMTestTypedefs, webkit_dom_test_typedefs, WEBKIT_DOM_TYPE_OBJECT)
 
 enum {
     PROP_0,
@@ -92,34 +91,24 @@ static void webkit_dom_test_typedefs_finalize(GObject* object)
 
 static void webkit_dom_test_typedefs_set_property(GObject* object, guint propertyId, const GValue* value, GParamSpec* pspec)
 {
-    WebCore::JSMainThreadNullState state;
-
     WebKitDOMTestTypedefs* self = WEBKIT_DOM_TEST_TYPEDEFS(object);
-    WebCore::TestTypedefs* coreSelf = WebKit::core(self);
 
     switch (propertyId) {
-    case PROP_UNSIGNED_LONG_LONG_ATTR: {
-        coreSelf->setUnsignedLongLongAttr((g_value_get_uint64(value)));
+    case PROP_UNSIGNED_LONG_LONG_ATTR:
+        webkit_dom_test_typedefs_set_unsigned_long_long_attr(self, g_value_get_uint64(value));
         break;
-    }
-    case PROP_ATTR_WITH_GETTER_EXCEPTION: {
-        coreSelf->setAttrWithGetterException((g_value_get_long(value)));
+    case PROP_ATTR_WITH_GETTER_EXCEPTION:
+        webkit_dom_test_typedefs_set_attr_with_getter_exception(self, g_value_get_long(value));
         break;
-    }
-    case PROP_ATTR_WITH_SETTER_EXCEPTION: {
-        WebCore::ExceptionCode ec = 0;
-        coreSelf->setAttrWithSetterException((g_value_get_long(value)), ec);
+    case PROP_ATTR_WITH_SETTER_EXCEPTION:
+        webkit_dom_test_typedefs_set_attr_with_setter_exception(self, g_value_get_long(value), nullptr);
         break;
-    }
-    case PROP_STRING_ATTR_WITH_GETTER_EXCEPTION: {
-        coreSelf->setStringAttrWithGetterException(WTF::String::fromUTF8(g_value_get_string(value)));
+    case PROP_STRING_ATTR_WITH_GETTER_EXCEPTION:
+        webkit_dom_test_typedefs_set_string_attr_with_getter_exception(self, g_value_get_string(value));
         break;
-    }
-    case PROP_STRING_ATTR_WITH_SETTER_EXCEPTION: {
-        WebCore::ExceptionCode ec = 0;
-        coreSelf->setStringAttrWithSetterException(WTF::String::fromUTF8(g_value_get_string(value)), ec);
+    case PROP_STRING_ATTR_WITH_SETTER_EXCEPTION:
+        webkit_dom_test_typedefs_set_string_attr_with_setter_exception(self, g_value_get_string(value), nullptr);
         break;
-    }
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propertyId, pspec);
         break;
@@ -128,39 +117,27 @@ static void webkit_dom_test_typedefs_set_property(GObject* object, guint propert
 
 static void webkit_dom_test_typedefs_get_property(GObject* object, guint propertyId, GValue* value, GParamSpec* pspec)
 {
-    WebCore::JSMainThreadNullState state;
-
     WebKitDOMTestTypedefs* self = WEBKIT_DOM_TEST_TYPEDEFS(object);
-    WebCore::TestTypedefs* coreSelf = WebKit::core(self);
 
     switch (propertyId) {
-    case PROP_UNSIGNED_LONG_LONG_ATTR: {
-        g_value_set_uint64(value, coreSelf->unsignedLongLongAttr());
+    case PROP_UNSIGNED_LONG_LONG_ATTR:
+        g_value_set_uint64(value, webkit_dom_test_typedefs_get_unsigned_long_long_attr(self));
         break;
-    }
-    case PROP_IMMUTABLE_SERIALIZED_SCRIPT_VALUE: {
-        RefPtr<WebCore::SerializedScriptValue> ptr = coreSelf->immutableSerializedScriptValue();
-        g_value_set_object(value, WebKit::kit(ptr.get()));
+    case PROP_IMMUTABLE_SERIALIZED_SCRIPT_VALUE:
+        g_value_set_object(value, webkit_dom_test_typedefs_get_immutable_serialized_script_value(self));
         break;
-    }
-    case PROP_ATTR_WITH_GETTER_EXCEPTION: {
-        WebCore::ExceptionCode ec = 0;
-        g_value_set_long(value, coreSelf->attrWithGetterException(ec));
+    case PROP_ATTR_WITH_GETTER_EXCEPTION:
+        g_value_set_long(value, webkit_dom_test_typedefs_get_attr_with_getter_exception(self, nullptr));
         break;
-    }
-    case PROP_ATTR_WITH_SETTER_EXCEPTION: {
-        g_value_set_long(value, coreSelf->attrWithSetterException());
+    case PROP_ATTR_WITH_SETTER_EXCEPTION:
+        g_value_set_long(value, webkit_dom_test_typedefs_get_attr_with_setter_exception(self));
         break;
-    }
-    case PROP_STRING_ATTR_WITH_GETTER_EXCEPTION: {
-        WebCore::ExceptionCode ec = 0;
-        g_value_take_string(value, convertToUTF8String(coreSelf->stringAttrWithGetterException(ec)));
+    case PROP_STRING_ATTR_WITH_GETTER_EXCEPTION:
+        g_value_take_string(value, webkit_dom_test_typedefs_get_string_attr_with_getter_exception(self, nullptr));
         break;
-    }
-    case PROP_STRING_ATTR_WITH_SETTER_EXCEPTION: {
-        g_value_take_string(value, convertToUTF8String(coreSelf->stringAttrWithSetterException()));
+    case PROP_STRING_ATTR_WITH_SETTER_EXCEPTION:
+        g_value_take_string(value, webkit_dom_test_typedefs_get_string_attr_with_setter_exception(self));
         break;
-    }
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propertyId, pspec);
         break;
@@ -193,7 +170,7 @@ static void webkit_dom_test_typedefs_class_init(WebKitDOMTestTypedefsClass* requ
         g_param_spec_uint64(
             "unsigned-long-long-attr",
             "TestTypedefs:unsigned-long-long-attr",
-            "read-only guint64 TestTypedefs:unsigned-long-long-attr",
+            "read-write guint64 TestTypedefs:unsigned-long-long-attr",
             0, G_MAXUINT64, 0,
             WEBKIT_PARAM_READWRITE));
 
@@ -203,9 +180,9 @@ static void webkit_dom_test_typedefs_class_init(WebKitDOMTestTypedefsClass* requ
         g_param_spec_object(
             "immutable-serialized-script-value",
             "TestTypedefs:immutable-serialized-script-value",
-            "read-only WebKitDOMSerializedScriptValue* TestTypedefs:immutable-serialized-script-value",
-            WEBKIT_TYPE_DOM_SERIALIZED_SCRIPT_VALUE,
-            WEBKIT_PARAM_READWRITE));
+            "read-only gchar* TestTypedefs:immutable-serialized-script-value",
+            WEBKIT_DOM_TYPE_SERIALIZED_SCRIPT_VALUE,
+            WEBKIT_PARAM_READABLE));
 
     g_object_class_install_property(
         gobjectClass,
@@ -213,7 +190,7 @@ static void webkit_dom_test_typedefs_class_init(WebKitDOMTestTypedefsClass* requ
         g_param_spec_long(
             "attr-with-getter-exception",
             "TestTypedefs:attr-with-getter-exception",
-            "read-only glong TestTypedefs:attr-with-getter-exception",
+            "read-write glong TestTypedefs:attr-with-getter-exception",
             G_MINLONG, G_MAXLONG, 0,
             WEBKIT_PARAM_READWRITE));
 
@@ -223,7 +200,7 @@ static void webkit_dom_test_typedefs_class_init(WebKitDOMTestTypedefsClass* requ
         g_param_spec_long(
             "attr-with-setter-exception",
             "TestTypedefs:attr-with-setter-exception",
-            "read-only glong TestTypedefs:attr-with-setter-exception",
+            "read-write glong TestTypedefs:attr-with-setter-exception",
             G_MINLONG, G_MAXLONG, 0,
             WEBKIT_PARAM_READWRITE));
 
@@ -233,7 +210,7 @@ static void webkit_dom_test_typedefs_class_init(WebKitDOMTestTypedefsClass* requ
         g_param_spec_string(
             "string-attr-with-getter-exception",
             "TestTypedefs:string-attr-with-getter-exception",
-            "read-only gchar* TestTypedefs:string-attr-with-getter-exception",
+            "read-write gchar* TestTypedefs:string-attr-with-getter-exception",
             "",
             WEBKIT_PARAM_READWRITE));
 
@@ -243,7 +220,7 @@ static void webkit_dom_test_typedefs_class_init(WebKitDOMTestTypedefsClass* requ
         g_param_spec_string(
             "string-attr-with-setter-exception",
             "TestTypedefs:string-attr-with-setter-exception",
-            "read-only gchar* TestTypedefs:string-attr-with-setter-exception",
+            "read-write gchar* TestTypedefs:string-attr-with-setter-exception",
             "",
             WEBKIT_PARAM_READWRITE));
 
@@ -255,14 +232,14 @@ static void webkit_dom_test_typedefs_init(WebKitDOMTestTypedefs* request)
     new (priv) WebKitDOMTestTypedefsPrivate();
 }
 
-void webkit_dom_test_typedefs_func(WebKitDOMTestTypedefs* self, WebKitDOMlong[]* x)
+void webkit_dom_test_typedefs_func(WebKitDOMTestTypedefs* self, glong x)
 {
     WebCore::JSMainThreadNullState state;
     g_return_if_fail(WEBKIT_DOM_IS_TEST_TYPEDEFS(self));
     g_return_if_fail(WEBKIT_DOM_IS_LONG[](x));
     WebCore::TestTypedefs* item = WebKit::core(self);
     WebCore::long[]* convertedX = WebKit::core(x);
-    item->func(convertedX);
+    item->func(x);
 }
 
 void webkit_dom_test_typedefs_set_shadow(WebKitDOMTestTypedefs* self, gfloat width, gfloat height, gfloat blur, const gchar* color, gfloat alpha)
@@ -275,7 +252,7 @@ void webkit_dom_test_typedefs_set_shadow(WebKitDOMTestTypedefs* self, gfloat wid
     item->setShadow(width, height, blur, convertedColor, alpha);
 }
 
-void webkit_dom_test_typedefs_nullable_array_arg(WebKitDOMTestTypedefs* self, WebKitDOMDOMString[]* arrayArg)
+void webkit_dom_test_typedefs_nullable_array_arg(WebKitDOMTestTypedefs* self, const gchar* arrayArg)
 {
     WebCore::JSMainThreadNullState state;
     g_return_if_fail(WEBKIT_DOM_IS_TEST_TYPEDEFS(self));
@@ -291,40 +268,6 @@ WebKitDOMSVGPoint* webkit_dom_test_typedefs_immutable_point_function(WebKitDOMTe
     g_return_val_if_fail(WEBKIT_DOM_IS_TEST_TYPEDEFS(self), 0);
     WebCore::TestTypedefs* item = WebKit::core(self);
     RefPtr<WebCore::SVGPoint> gobjectResult = WTF::getPtr(item->immutablePointFunction());
-    return WebKit::kit(gobjectResult.get());
-}
-
-WebKitDOMDOMString[]* webkit_dom_test_typedefs_string_array_function(WebKitDOMTestTypedefs* self, WebKitDOMDOMString[]* values, GError** error)
-{
-    WebCore::JSMainThreadNullState state;
-    g_return_val_if_fail(WEBKIT_DOM_IS_TEST_TYPEDEFS(self), 0);
-    g_return_val_if_fail(WEBKIT_DOM_IS_DOM_STRING[](values), 0);
-    g_return_val_if_fail(!error || !*error, 0);
-    WebCore::TestTypedefs* item = WebKit::core(self);
-    WebCore::DOMString[]* convertedValues = WebKit::core(values);
-    WebCore::ExceptionCode ec = 0;
-    RefPtr<WebCore::DOMString[]> gobjectResult = WTF::getPtr(item->stringArrayFunction(convertedValues, ec));
-    if (ec) {
-        WebCore::ExceptionCodeDescription ecdesc(ec);
-        g_set_error_literal(error, g_quark_from_string("WEBKIT_DOM"), ecdesc.code, ecdesc.name);
-    }
-    return WebKit::kit(gobjectResult.get());
-}
-
-WebKitDOMDOMString[]* webkit_dom_test_typedefs_string_array_function2(WebKitDOMTestTypedefs* self, WebKitDOMDOMString[]* values, GError** error)
-{
-    WebCore::JSMainThreadNullState state;
-    g_return_val_if_fail(WEBKIT_DOM_IS_TEST_TYPEDEFS(self), 0);
-    g_return_val_if_fail(WEBKIT_DOM_IS_DOM_STRING[](values), 0);
-    g_return_val_if_fail(!error || !*error, 0);
-    WebCore::TestTypedefs* item = WebKit::core(self);
-    WebCore::DOMString[]* convertedValues = WebKit::core(values);
-    WebCore::ExceptionCode ec = 0;
-    RefPtr<WebCore::DOMString[]> gobjectResult = WTF::getPtr(item->stringArrayFunction2(convertedValues, ec));
-    if (ec) {
-        WebCore::ExceptionCodeDescription ecdesc(ec);
-        g_set_error_literal(error, g_quark_from_string("WEBKIT_DOM"), ecdesc.code, ecdesc.name);
-    }
     return WebKit::kit(gobjectResult.get());
 }
 
@@ -359,23 +302,22 @@ void webkit_dom_test_typedefs_set_unsigned_long_long_attr(WebKitDOMTestTypedefs*
     item->setUnsignedLongLongAttr(value);
 }
 
-WebKitDOMSerializedScriptValue* webkit_dom_test_typedefs_get_immutable_serialized_script_value(WebKitDOMTestTypedefs* self)
+gchar* webkit_dom_test_typedefs_get_immutable_serialized_script_value(WebKitDOMTestTypedefs* self)
 {
     WebCore::JSMainThreadNullState state;
     g_return_val_if_fail(WEBKIT_DOM_IS_TEST_TYPEDEFS(self), 0);
     WebCore::TestTypedefs* item = WebKit::core(self);
-    RefPtr<WebCore::SerializedScriptValue> gobjectResult = WTF::getPtr(item->immutableSerializedScriptValue());
-    return WebKit::kit(gobjectResult.get());
+    gchar* result = convertToUTF8String(item->immutableSerializedScriptValue()->toString());
+    return result;
 }
 
-void webkit_dom_test_typedefs_set_immutable_serialized_script_value(WebKitDOMTestTypedefs* self, WebKitDOMSerializedScriptValue* value)
+void webkit_dom_test_typedefs_set_immutable_serialized_script_value(WebKitDOMTestTypedefs* self, const gchar* value)
 {
     WebCore::JSMainThreadNullState state;
     g_return_if_fail(WEBKIT_DOM_IS_TEST_TYPEDEFS(self));
-    g_return_if_fail(WEBKIT_DOM_IS_SERIALIZED_SCRIPT_VALUE(value));
+    g_return_if_fail(value);
     WebCore::TestTypedefs* item = WebKit::core(self);
-    WebCore::SerializedScriptValue* convertedValue = WebKit::core(value);
-    item->setImmutableSerializedScriptValue(convertedValue);
+    item->setImmutableSerializedScriptValue(WebCore::SerializedScriptValue::create(WTF::String::fromUTF8(value)));
 }
 
 glong webkit_dom_test_typedefs_get_attr_with_getter_exception(WebKitDOMTestTypedefs* self, GError** error)

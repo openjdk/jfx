@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Electronic Arts, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -37,12 +38,16 @@
 #if COMPILER(MSVC)
 // FIXME: why a COMPILER check instead of OS? also, these should be HAVE checks
 
+#include <errno.h>
+
 inline int snprintf(char* buffer, size_t count, const char* format, ...)
 {
     int result;
     va_list args;
     va_start(args, format);
     result = _vsnprintf(buffer, count, format, args);
+    if (result < 0 && errno != EINVAL)
+        result = _vscprintf(format, args);
     va_end(args);
 
     // In the case where the string entirely filled the buffer, _vsnprintf will not
@@ -56,6 +61,8 @@ inline int snprintf(char* buffer, size_t count, const char* format, ...)
 inline double wtf_vsnprintf(char* buffer, size_t count, const char* format, va_list args)
 {
     int result = _vsnprintf(buffer, count, format, args);
+    if (result < 0 && errno != EINVAL)
+        result = _vscprintf(format, args);
 
     // In the case where the string entirely filled the buffer, _vsnprintf will not
     // null-terminate it, but vsnprintf must.
@@ -68,25 +75,6 @@ inline double wtf_vsnprintf(char* buffer, size_t count, const char* format, va_l
 // Work around a difference in Microsoft's implementation of vsnprintf, where
 // vsnprintf does not null terminate the buffer. WebKit can rely on the null termination.
 #define vsnprintf(buffer, count, format, args) wtf_vsnprintf(buffer, count, format, args)
-
-#if OS(WINCE)
-
-inline int strnicmp(const char* string1, const char* string2, size_t count)
-{
-    return _strnicmp(string1, string2, count);
-}
-
-inline int stricmp(const char* string1, const char* string2)
-{
-    return _stricmp(string1, string2);
-}
-
-inline char* strdup(const char* strSource)
-{
-    return _strdup(strSource);
-}
-
-#endif
 
 inline int strncasecmp(const char* s1, const char* s2, size_t len)
 {

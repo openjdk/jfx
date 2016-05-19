@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "AccessibleImage.h"
 
 #include <WebCore/AccessibilityRenderObject.h>
@@ -41,16 +40,16 @@ AccessibleImage::AccessibleImage(AccessibilityObject* obj, HWND window)
 
 String AccessibleImage::name() const
 {
-    if (!m_object->isAccessibilityRenderObject())
+    if (!is<AccessibilityRenderObject>(*m_object))
         return AccessibleBase::name();
 
-    AccessibilityRenderObject* obj = toAccessibilityRenderObject(m_object);
+    AccessibilityRenderObject& obj = downcast<AccessibilityRenderObject>(*m_object);
 
-    String ariaLabel = obj->ariaLabeledByAttribute();
+    String ariaLabel = obj.ariaLabeledByAttribute();
     if (!ariaLabel.isEmpty())
         return ariaLabel;
 
-    const AtomicString& altText = obj->getAttribute(HTMLNames::altAttr);
+    const AtomicString& altText = obj.getAttribute(HTMLNames::altAttr);
     if (!altText.isEmpty())
         return altText;
 

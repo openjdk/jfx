@@ -92,12 +92,6 @@ static RealNumberRenderSize calculateRenderSize(const Decimal& value)
     return RealNumberRenderSize(sizeOfSign + sizeOfZero , numberOfZeroAfterDecimalPoint + sizeOfDigits);
 }
 
-void NumberInputType::attach()
-{
-    TextFieldInputType::attach();
-    observeFeatureIfVisible(FeatureObserver::InputTypeNumber);
-}
-
 const AtomicString& NumberInputType::formControlType() const
 {
     return InputTypeNames::number();
@@ -158,7 +152,7 @@ bool NumberInputType::typeMismatch() const
 
 StepRange NumberInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
-    DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (numberDefaultStep, numberDefaultStepBase, numberStepScaleFactor));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (numberDefaultStep, numberDefaultStepBase, numberStepScaleFactor));
     const Decimal stepBase = parseToDecimalForNumberType(element().fastGetAttribute(minAttr), numberDefaultStepBase);
     // FIXME: We should use numeric_limits<double>::max for number input type.
     const Decimal floatMax = Decimal::fromDouble(std::numeric_limits<float>::max());
@@ -277,11 +271,6 @@ bool NumberInputType::hasBadInput() const
 String NumberInputType::badInputText() const
 {
     return validationMessageBadInputForNumberText();
-}
-
-bool NumberInputType::shouldRespectSpeechAttribute()
-{
-    return true;
 }
 
 bool NumberInputType::supportsPlaceholder() const

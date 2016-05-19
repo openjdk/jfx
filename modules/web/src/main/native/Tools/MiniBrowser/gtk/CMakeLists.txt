@@ -19,11 +19,15 @@ set(MiniBrowser_SOURCES
 )
 
 set(MiniBrowser_INCLUDE_DIRECTORIES
+    ${CMAKE_BINARY_DIR}
     ${DERIVED_SOURCES_MINIBROWSER_DIR}
     ${DERIVED_SOURCES_WEBKIT2GTK_DIR}
     ${FORWARDING_HEADERS_WEBKIT2GTK_DIR}
     ${FORWARDING_HEADERS_DIR}
     ${CMAKE_SOURCE_DIR}/Source
+)
+
+set(MiniBrowser_SYSTEM_INCLUDE_DIRECTORIES
     ${GTK3_INCLUDE_DIRS}
     ${GLIB_INCLUDE_DIRS}
     ${LIBSOUP_INCLUDE_DIRS}
@@ -44,10 +48,16 @@ add_custom_command(
     COMMAND glib-genmarshal --prefix=browser_marshal ${MINIBROWSER_DIR}/browser-marshal.list --header > ${DERIVED_SOURCES_MINIBROWSER_DIR}/BrowserMarshal.h
     VERBATIM)
 
-add_definitions(-DWEBKIT_EXEC_PATH="${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-add_definitions(-DWEBKIT_INJECTED_BUNDLE_PATH="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+if (DEVELOPER_MODE)
+    add_definitions(-DWEBKIT_INJECTED_BUNDLE_PATH="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+endif ()
+
+add_definitions(-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_6)
 
 include_directories(${MiniBrowser_INCLUDE_DIRECTORIES})
+include_directories(SYSTEM ${MiniBrowser_SYSTEM_INCLUDE_DIRECTORIES})
 add_executable(MiniBrowser ${MiniBrowser_SOURCES})
 target_link_libraries(MiniBrowser ${MiniBrowser_LIBRARIES})
 set_target_properties(MiniBrowser PROPERTIES FOLDER "Tools")
+
+install(TARGETS MiniBrowser DESTINATION "${EXEC_INSTALL_DIR}")

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2012 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2009, 2012, 2015 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,20 +28,23 @@
 
 #include "Error.h"
 #include "JSCInlines.h"
+#include "JSCatchScope.h"
+#include "JSFunctionNameScope.h"
 
 namespace JSC {
 
-const ClassInfo JSNameScope::s_info = { "NameScope", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSNameScope) };
+const ClassInfo JSNameScope::s_info = { "NameScope", &Base::s_info, 0, CREATE_METHOD_TABLE(JSNameScope) };
 
-void JSNameScope::visitChildren(JSCell* cell, SlotVisitor& visitor)
+JSNameScope* JSNameScope::create(VM& vm, JSGlobalObject* globalObject, JSScope* currentScope, SymbolTable* symbolTable, JSValue value, Type type)
 {
-    JSNameScope* thisObject = jsCast<JSNameScope*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-
-    Base::visitChildren(thisObject, visitor);
-    visitor.append(&thisObject->m_registerStore);
+    switch (type) {
+    case CatchScope:
+        return JSCatchScope::create(vm, globalObject, currentScope, symbolTable, value);
+    case FunctionNameScope:
+        return JSFunctionNameScope::create(vm, globalObject, currentScope, symbolTable, value);
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 JSValue JSNameScope::toThis(JSCell*, ExecState* exec, ECMAMode ecmaMode)

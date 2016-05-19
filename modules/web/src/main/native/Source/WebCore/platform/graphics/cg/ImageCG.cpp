@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -116,7 +116,12 @@ void Image::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRect, const 
     float h = CGImageGetHeight(tileImage);
 
     RetainPtr<CGImageRef> subImage;
-    if (tileRect.size() == size())
+#if PLATFORM(IOS)
+    FloatSize imageSize = originalSize();
+#else
+    FloatSize imageSize = size();
+#endif
+    if (tileRect.size() == imageSize)
         subImage = tileImage;
     else {
         // Copying a sub-image out of a partially-decoded image stops the decoding of the original image. It should never happen
@@ -128,16 +133,13 @@ void Image::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRect, const 
     // Adjust the color space.
     subImage = Image::imageWithColorSpace(subImage.get(), styleColorSpace);
 
-    // Leopard has an optimized call for the tiling of image patterns, but we can only use it if the image has been decoded enough that
-    // its buffer is the same size as the overall image.  Because a partially decoded CGImageRef with a smaller width or height than the
-    // overall image buffer needs to tile with "gaps", we can't use the optimized tiling call in that case.
-    // FIXME: We cannot use CGContextDrawTiledImage with scaled tiles on Leopard, because it suffers from rounding errors.  Snow Leopard is ok.
+    // If we need to paint gaps between tiles because we have a partially loaded image or non-zero spaceSize(),
+    // fall back to the less efficient CGPattern-based mechanism.
     float scaledTileWidth = tileRect.width() * narrowPrecisionToFloat(patternTransform.a());
     float w = CGImageGetWidth(tileImage);
     if (w == size().width() && h == size().height() && !spaceSize().width() && !spaceSize().height())
         CGContextDrawTiledImage(context, FloatRect(adjustedX, adjustedY, scaledTileWidth, scaledTileHeight), subImage.get());
     else {
-        // On Leopard and newer, this code now only runs for partially decoded images whose buffers do not yet match the overall size of the image.
         static const CGPatternCallbacks patternCallbacks = { 0, drawPatternCallback, patternReleaseCallback };
         CGAffineTransform matrix = CGAffineTransformMake(narrowPrecisionToCGFloat(patternTransform.a()), 0, 0, narrowPrecisionToCGFloat(patternTransform.d()), adjustedX, adjustedY);
         matrix = CGAffineTransformConcat(matrix, CGContextGetCTM(context));

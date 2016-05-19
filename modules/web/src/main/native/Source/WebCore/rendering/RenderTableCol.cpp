@@ -30,15 +30,15 @@
 #include "HTMLTableColElement.h"
 #include "RenderIterator.h"
 #include "RenderTable.h"
+#include "RenderTableCaption.h"
 #include "RenderTableCell.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderTableCol::RenderTableCol(Element& element, PassRef<RenderStyle> style)
-    : RenderBox(element, std::move(style), 0)
-    , m_span(1)
+RenderTableCol::RenderTableCol(Element& element, Ref<RenderStyle>&& style)
+    : RenderBox(element, WTF::move(style), 0)
 {
     // init RenderObject attributes
     setInline(true); // our object is not Inline
@@ -48,24 +48,23 @@ RenderTableCol::RenderTableCol(Element& element, PassRef<RenderStyle> style)
 void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBox::styleDidChange(diff, oldStyle);
-
+    RenderTable* table = this->table();
+    if (!table)
+        return;
     // If border was changed, notify table.
-    if (parent()) {
-        RenderTable* table = this->table();
-        if (table && !table->selfNeedsLayout() && !table->normalChildNeedsLayout() && oldStyle && oldStyle->border() != style().border())
-            table->invalidateCollapsedBorders();
-        else if (oldStyle->width() != style().width()) {
-            table->recalcSectionsIfNeeded();
-            for (auto& section : childrenOfType<RenderTableSection>(*table)) {
-                unsigned nEffCols = table->numEffCols();
-                for (unsigned j = 0; j < nEffCols; j++) {
-                    unsigned rowCount = section.numRows();
-                    for (unsigned i = 0; i < rowCount; i++) {
-                        RenderTableCell* cell = section.primaryCellAt(i, j);
-                        if (!cell)
-                            continue;
-                        cell->setPreferredLogicalWidthsDirty(true);
-                    }
+    if (oldStyle && oldStyle->border() != style().border())
+        table->invalidateCollapsedBorders();
+    else if (oldStyle->width() != style().width()) {
+        table->recalcSectionsIfNeeded();
+        for (auto& section : childrenOfType<RenderTableSection>(*table)) {
+            unsigned nEffCols = table->numEffCols();
+            for (unsigned j = 0; j < nEffCols; j++) {
+                unsigned rowCount = section.numRows();
+                for (unsigned i = 0; i < rowCount; i++) {
+                    RenderTableCell* cell = section.primaryCellAt(i, j);
+                    if (!cell)
+                        continue;
+                    cell->setPreferredLogicalWidthsDirty(true);
                 }
             }
         }
@@ -139,44 +138,44 @@ void RenderTableCol::clearPreferredLogicalWidthsDirtyBits()
 RenderTable* RenderTableCol::table() const
 {
     auto table = parent();
-    if (table && !table->isTable())
+    if (table && !is<RenderTable>(*table))
         table = table->parent();
-    return table && table->isTable() ? toRenderTable(table) : 0;
+    return is<RenderTable>(table) ? downcast<RenderTable>(table) : nullptr;
 }
 
 RenderTableCol* RenderTableCol::enclosingColumnGroup() const
 {
-    if (!parent()->isRenderTableCol())
-        return 0;
+    if (!is<RenderTableCol>(*parent()))
+        return nullptr;
 
-    RenderTableCol* parentColumnGroup = toRenderTableCol(parent());
-    ASSERT(parentColumnGroup->isTableColumnGroup());
+    RenderTableCol& parentColumnGroup = downcast<RenderTableCol>(*parent());
+    ASSERT(parentColumnGroup.isTableColumnGroup());
     ASSERT(isTableColumn());
-    return parentColumnGroup;
+    return &parentColumnGroup;
 }
 
 RenderTableCol* RenderTableCol::nextColumn() const
 {
     // If |this| is a column-group, the next column is the colgroup's first child column.
     if (RenderObject* firstChild = this->firstChild())
-        return toRenderTableCol(firstChild);
+        return downcast<RenderTableCol>(firstChild);
 
     // Otherwise it's the next column along.
     RenderObject* next = nextSibling();
 
     // Failing that, the child is the last column in a column-group, so the next column is the next column/column-group after its column-group.
-    if (!next && parent()->isRenderTableCol())
+    if (!next && is<RenderTableCol>(*parent()))
         next = parent()->nextSibling();
 
-    for (; next && !next->isRenderTableCol(); next = next->nextSibling()) {
+    for (; next && !is<RenderTableCol>(*next); next = next->nextSibling()) {
         // We allow captions mixed with columns and column-groups.
-        if (next->isTableCaption())
+        if (is<RenderTableCaption>(*next))
             continue;
 
-        return 0;
+        return nullptr;
     }
 
-    return toRenderTableCol(next);
+    return downcast<RenderTableCol>(next);
 }
 
 const BorderValue& RenderTableCol::borderAdjoiningCellStartBorder(const RenderTableCell*) const
@@ -199,6 +198,26 @@ const BorderValue& RenderTableCol::borderAdjoiningCellAfter(const RenderTableCel
 {
     ASSERT_UNUSED(cell, table()->colElement(cell->col() - 1) == this);
     return style().borderEnd();
+}
+
+LayoutUnit RenderTableCol::offsetLeft() const
+{
+    return table()->offsetLeftForColumn(*this);
+}
+
+LayoutUnit RenderTableCol::offsetTop() const
+{
+    return table()->offsetTopForColumn(*this);
+}
+
+LayoutUnit RenderTableCol::offsetWidth() const
+{
+    return table()->offsetWidthForColumn(*this);
+}
+
+LayoutUnit RenderTableCol::offsetHeight() const
+{
+    return table()->offsetHeightForColumn(*this);
 }
 
 }

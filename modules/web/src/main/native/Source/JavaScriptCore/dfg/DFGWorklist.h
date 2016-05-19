@@ -26,8 +26,6 @@
 #ifndef DFGWorklist_h
 #define DFGWorklist_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "DFGPlan.h"
@@ -35,7 +33,6 @@
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/ThreadingPrimitives.h>
 
 namespace JSC {
@@ -51,7 +48,7 @@ public:
 
     ~Worklist();
 
-    static PassRefPtr<Worklist> create(unsigned numberOfThreads);
+    static Ref<Worklist> create(CString worklistName, unsigned numberOfThreads, int relativePriority = 0);
 
     void enqueue(PassRefPtr<Plan>);
 
@@ -71,15 +68,17 @@ public:
     void suspendAllThreads();
     void resumeAllThreads();
 
-    bool isActive() const { return !!m_plans.size(); }
+    bool isActiveForVM(VM&) const;
 
-    void visitChildren(SlotVisitor&, CodeBlockSet&); // Only called on the main thread after suspending all threads.
+    // Only called on the main thread after suspending all threads.
+    void visitWeakReferences(SlotVisitor&, CodeBlockSet&);
+    void removeDeadPlans(VM&);
 
     void dump(PrintStream&) const;
 
 private:
-    Worklist();
-    void finishCreation(unsigned numberOfThreads);
+    Worklist(CString worklistName);
+    void finishCreation(unsigned numberOfThreads, int);
 
     void runThread(ThreadData*);
     static void threadFunction(void* argument);
@@ -87,6 +86,8 @@ private:
     void removeAllReadyPlansForVM(VM&, Vector<RefPtr<Plan>, 8>&);
 
     void dump(const MutexLocker&, PrintStream&) const;
+
+    CString m_threadName;
 
     // Used to inform the thread about what work there is left to do.
     Deque<RefPtr<Plan>> m_queue;
@@ -101,6 +102,8 @@ private:
     // Used to quickly find which plans have been compiled and are ready to
     // be completed.
     Vector<RefPtr<Plan>, 16> m_readyPlans;
+
+    Mutex m_suspensionLock;
 
     mutable Mutex m_lock;
     ThreadCondition m_planEnqueued;

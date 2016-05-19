@@ -21,6 +21,7 @@
 #include "config.h"
 #include "StringConstructor.h"
 
+#include "Error.h"
 #include "Executable.h"
 #include "JITCode.h"
 #include "JSFunction.h"
@@ -31,6 +32,7 @@
 namespace JSC {
 
 static EncodedJSValue JSC_HOST_CALL stringFromCharCode(ExecState*);
+static EncodedJSValue JSC_HOST_CALL stringFromCodePoint(ExecState*);
 
 }
 
@@ -38,11 +40,13 @@ static EncodedJSValue JSC_HOST_CALL stringFromCharCode(ExecState*);
 
 namespace JSC {
 
-const ClassInfo StringConstructor::s_info = { "Function", &InternalFunction::s_info, 0, ExecState::stringConstructorTable, CREATE_METHOD_TABLE(StringConstructor) };
+const ClassInfo StringConstructor::s_info = { "Function", &InternalFunction::s_info, &stringConstructorTable, CREATE_METHOD_TABLE(StringConstructor) };
 
 /* Source for StringConstructor.lut.h
 @begin stringConstructorTable
   fromCharCode          stringFromCharCode         DontEnum|Function 1
+  fromCodePoint         stringFromCodePoint        DontEnum|Function 1
+  raw                   stringRaw                  DontEnum|Function 1
 @end
 */
 
@@ -62,7 +66,7 @@ void StringConstructor::finishCreation(VM& vm, StringPrototype* stringPrototype)
 
 bool StringConstructor::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    return getStaticFunctionSlot<InternalFunction>(exec, ExecState::stringConstructorTable(exec->vm()), jsCast<StringConstructor*>(object), propertyName, slot);
+    return getStaticFunctionSlot<InternalFunction>(exec, stringConstructorTable, jsCast<StringConstructor*>(object), propertyName, slot);
 }
 
 // ------------------------------ Functions --------------------------------
@@ -89,6 +93,33 @@ JSCell* JSC_HOST_CALL stringFromCharCode(ExecState* exec, int32_t arg)
     return jsSingleCharacterString(exec, arg);
 }
 
+static EncodedJSValue JSC_HOST_CALL stringFromCodePoint(ExecState* exec)
+{
+    unsigned length = exec->argumentCount();
+    StringBuilder builder;
+    builder.reserveCapacity(length);
+
+    for (unsigned i = 0; i < length; ++i) {
+        double codePointAsDouble = exec->uncheckedArgument(i).toNumber(exec);
+        if (exec->hadException())
+            return JSValue::encode(jsUndefined());
+
+        uint32_t codePoint = static_cast<uint32_t>(codePointAsDouble);
+
+        if (codePoint != codePointAsDouble || codePoint > UCHAR_MAX_VALUE)
+            return throwVMError(exec, createRangeError(exec, ASCIILiteral("Arguments contain a value that is out of range of code points")));
+
+        if (U_IS_BMP(codePoint))
+            builder.append(static_cast<UChar>(codePoint));
+        else {
+            builder.append(U16_LEAD(codePoint));
+            builder.append(U16_TRAIL(codePoint));
+        }
+    }
+
+    return JSValue::encode(jsString(exec, builder.toString()));
+}
+
 static EncodedJSValue JSC_HOST_CALL constructWithStringConstructor(ExecState* exec)
 {
     JSGlobalObject* globalObject = asInternalFunction(exec->callee())->globalObject();
@@ -106,11 +137,18 @@ ConstructType StringConstructor::getConstructData(JSCell*, ConstructData& constr
     return ConstructTypeHost;
 }
 
+JSCell* stringConstructor(ExecState* exec, JSValue argument)
+{
+    if (argument.isSymbol())
+        return jsNontrivialString(exec, asSymbol(argument)->descriptiveString());
+    return argument.toString(exec);
+}
+
 static EncodedJSValue JSC_HOST_CALL callStringConstructor(ExecState* exec)
 {
     if (!exec->argumentCount())
         return JSValue::encode(jsEmptyString(exec));
-    return JSValue::encode(exec->uncheckedArgument(0).toString(exec));
+    return JSValue::encode(stringConstructor(exec, exec->uncheckedArgument(0)));
 }
 
 CallType StringConstructor::getCallData(JSCell*, CallData& callData)

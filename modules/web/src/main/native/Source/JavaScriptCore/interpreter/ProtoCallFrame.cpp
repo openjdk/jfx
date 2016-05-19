@@ -32,21 +32,19 @@
 
 namespace JSC {
 
-void ProtoCallFrame::init(CodeBlock* codeBlock, JSScope* scope, JSObject* callee, JSValue thisValue, int argCountIncludingThis, JSValue* otherArgs)
+void ProtoCallFrame::init(CodeBlock* codeBlock, JSObject* callee, JSValue thisValue, int argCountIncludingThis, JSValue* otherArgs)
 {
     this->args = otherArgs;
     this->setCodeBlock(codeBlock);
-    this->setScope(scope);
     this->setCallee(callee);
     this->setArgumentCountIncludingThis(argCountIncludingThis);
-    size_t paddedArgsCount = argCountIncludingThis;
-    if (codeBlock) {
-        size_t numParameters = codeBlock->numParameters();
-        if (paddedArgsCount < numParameters)
-            paddedArgsCount = numParameters;
-    }
-    // Round up paddedArgsCount to keep the stack frame size aligned.
-    paddedArgsCount = roundArgumentCountToAlignFrame(paddedArgsCount);
+    if (codeBlock && argCountIncludingThis < codeBlock->numParameters())
+        this->arityMissMatch = true;
+    else
+        this->arityMissMatch = false;
+
+    // Round up argCountIncludingThis to keep the stack frame size aligned.
+    size_t paddedArgsCount = roundArgumentCountToAlignFrame(argCountIncludingThis);
     this->setPaddedArgCount(paddedArgsCount);
     this->clearCurrentVPC();
     this->setThisValue(thisValue);

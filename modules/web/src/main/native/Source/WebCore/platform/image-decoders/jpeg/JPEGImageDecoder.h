@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2008-2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,16 +29,6 @@
 
 #include "ImageDecoder.h"
 #include <stdio.h> // Needed by jpeglib.h for FILE.
-#include <wtf/OwnPtr.h>
-
-#if OS(WINCE)
-// Remove warning: 'FAR' macro redefinition
-#undef FAR
-
-// jmorecfg.h in libjpeg checks for XMD_H with the comment: "X11/xmd.h correctly defines INT32"
-// fix INT32 redefinition error by pretending we are X11/xmd.h
-#define XMD_H
-#endif
 
 extern "C" {
 #include "jpeglib.h"
@@ -88,7 +78,7 @@ namespace WebCore {
         template <J_COLOR_SPACE colorSpace, bool isScaled>
         bool outputScanlines(ImageFrame& buffer);
 
-        OwnPtr<JPEGImageReader> m_reader;
+        std::unique_ptr<JPEGImageReader> m_reader;
     };
 
 } // namespace WebCore

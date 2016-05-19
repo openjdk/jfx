@@ -11,13 +11,13 @@
 # are met:
 #
 # 1.  Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer. 
+#     notice, this list of conditions and the following disclaimer.
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
-#     documentation and/or other materials provided with the distribution. 
-# 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+#     documentation and/or other materials provided with the distribution.
+# 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
-#     from this software without specific prior written permission. 
+#     from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -45,7 +45,6 @@ use webkitperl::FeatureList qw(getFeatureOptionList);
 use POSIX;
 
 sub cMakeArgsFromFeatures();
-sub formatBuildTime($);
 sub writeCongrats();
 
 my $originalWorkingDirectory = getcwd();
@@ -60,12 +59,15 @@ my $prefixPath;
 my $makeArgs = "";
 my $cmakeArgs = "";
 my $onlyWebKitProject = 0;
-my $noWebKit1 = 0;
-my $noWebKit2 = 0;
 my $coverageSupport = 0;
+my $shouldRunStaticAnalyzer = 0;
 my $startTime = time();
 
 my @features = getFeatureOptionList();
+
+#foreach (sort keys %ENV) {
+#  print "$_  =  $ENV{$_}\n";
+#}
 
 # Additional environment parameters
 push @ARGV, split(/ /, $ENV{'BUILD_WEBKIT_ARGS'}) if ($ENV{'BUILD_WEBKIT_ARGS'});
@@ -90,16 +92,17 @@ Usage: $programName [options] [options to pass to build system]
   --debug                           Compile with Debug configuration
   --release                         Compile with Release configuration
   --sdk=<sdk>                       Use a specific Xcode SDK (iOS and Mac only)
-  --device                          Use the current iphoneos.internal SDK (iOS only)
-  --simulator                       Use the current iphonesimulator SDK (iOS only)
-  --coverage                        Enable Code Coverage support (Mac only)
+  --device                          Use "iphoneos.internal" SDK if installed, else "iphoneos" SDK (iOS only)
+  --ios-simulator                   Use the current iphonesimulator SDK (iOS only)
+  --coverage                        Enable code coverage support (Mac only)
+  --analyze                         Enable static anaylsis (iOS and Mac only)
 
+  --java                            Build the Open JavaFX port
   --efl                             Build the EFL port
   --gtk                             Build the GTK+ port
   --wincairo                        Build using Cairo (rather than CoreGraphics) on Windows
-  --wince                           Build the WinCE port
 
-  --inspector-frontend              Copy changes to the inspector front-end files to the build directory
+  --inspector-frontend              Copy Web Inspector user interface resources to the build directory
 
   --prefix=<path>                   Set installation prefix to the given path (Gtk/Efl only)
   --makeargs=<arguments>            Optional Makefile flags
@@ -108,8 +111,6 @@ Usage: $programName [options] [options to pass to build system]
   --minimal                         No optional features, unless explicitly enabled
 
   --only-webkit                     Build only the WebKit project
-  --no-webkit1                      Omit WebKit1 code from the build (EFL/GTK only)
-  --no-webkit2                      Omit WebKit2 code from the build
 
 EOF
 
@@ -123,9 +124,8 @@ my %options = (
     'cmakeargs=s' => \$cmakeArgs,
     'minimal' => \$minimal,
     'only-webkit' => \$onlyWebKitProject,
-    'no-webkit1' => \$noWebKit1,
-    'no-webkit2' => \$noWebKit2,
     'coverage' => \$coverageSupport,
+    'analyze' => \$shouldRunStaticAnalyzer,
 );
 
 # Build usage text and options list from features
@@ -147,23 +147,13 @@ setConfiguration();
 
 my $productDir = productDir();
 
-sub unlinkZeroFiles()
-{
-    my $file = $File::Find::name;
-    # Remove 0 byte sized files, except
-    # - directories (Because they are always 0 byte sized on Windows)
-    # - .d files used for dependency tracking
-    if (! -d $file && ! -s $file && $file !~ m/\.d$/) {
-        unlink $file;
-        print "0 byte sized file removed from build directory: $file\n";
-    }
-}
-
 # Check that all the project directories are there.
 my @projects = ("Source/JavaScriptCore", "Source/WebCore", "Source/WebKit");
 
 # Build WTF as a separate static library on ports which support it.
 splice @projects, 0, 0, "Source/WTF" if isAppleMacWebKit() or isAppleWinWebKit() or isWinCairo();
+
+splice @projects, 0, 0, "Source/bmalloc" if isAppleMacWebKit(); #//XXX remove?
 
 for my $dir (@projects) {
     if (! -d $dir) {
@@ -176,7 +166,6 @@ if (!isIOSWebKit() && !isJava() && !-d "WebKitLibraries") {
 }
 
 my @options = ();
-my $hasFTLJIT = 0;
 
 if (isAppleMacWebKit()) {
     push @options, XcodeOptions();
@@ -189,42 +178,34 @@ if (isAppleMacWebKit()) {
 
     foreach (@features) {
         my $option = option($_->{define}, ${$_->{value}}, $_->{default});
-        $hasFTLJIT = 1 if ($_->{define} eq "ENABLE_FTL_JIT") and (${$_->{value}});
         push @options, $option unless $option eq "";
-    }
-
-    if (isIOSWebKit()) {
-        # FIXME: Remove the inclusion of both WebKit System Interface and WebKit Additions projects
-        # once the iOS build is stable.
-
-        # WebKitSystemInterface should always be built just before WebKit.
-        my $webKitIndex = first { $projects[$_] eq "Source/WebKit" } 0..$#projects;
-        splice(@projects, $webKitIndex, 0, "../Internal/WebKitSystemInterface");
-
-        # WebKitAdditions must come before WebCore
-        splice(@projects, 0, 0, "../Internal/WebKitAdditions");
     }
 
     # ANGLE must come before WebCore
     splice @projects, 0, 0, "Source/ThirdParty/ANGLE";
 
-    if (!isIOSWebKit()) {
-        # WebKit2 is only supported in SnowLeopard and later at present.
-        push @projects, ("Source/WebKit2", "Tools/MiniBrowser") if osXVersion()->{"minor"} >= 6 and !$noWebKit2;
+    push @projects, ("Source/WebKit2");
 
-        # WebInspectorUI must come before WebKit and WebKit2
-        unshift @projects, ("Source/WebInspectorUI");
+    if (!isIOSWebKit()) {
+        push @projects, ("Tools/MiniBrowser");
+
+        # WebInspectorUI must come after JavaScriptCore and WebCore but before WebKit and WebKit2
+        my $webKitIndex = first { $projects[$_] eq "Source/WebKit" } 0..$#projects;
+        splice(@projects, $webKitIndex, 0, "Source/WebInspectorUI");
 
         # Copy library and header from WebKitLibraries to a findable place in the product directory.
-        my @copyLibrariesArgs = ("perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory", "--wksi");
-        if ($hasFTLJIT) {
-            push @copyLibrariesArgs, "--llvm";
-        }
-        push @copyLibrariesArgs, productDir();
+        my @copyLibrariesArgs = ("perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory", "--wksi", "--llvm", productDir());
         print(join(" ", @copyLibrariesArgs) . "\n");
         (system(@copyLibrariesArgs) == 0) or die;
     } else {
-        push @projects, ("Source/WebKit2") if !$noWebKit2;
+        my @copyLibrariesArgs = (
+            "perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory",
+            "--sdk", xcodeSDK(), "--wksi", "--llvm", "--prefer-system-llvm",
+            "--llvm-subdirectory", "internal-llvm", productDir(),
+            "--llvm-prefix", "/usr/local"
+        );
+        print(join(" ", @copyLibrariesArgs) . "\n");
+        (system(@copyLibrariesArgs) == 0) or die;
     }
 
     # Build Tools needed for Apple ports
@@ -256,19 +237,16 @@ if (isAppleMacWebKit()) {
 my $result = 0;
 
 if (isInspectorFrontend()) {
-    $result = copyInspectorFrontendFiles();
-    exit exitStatus($result) if exitStatus($result);
+    die "The --inspector-frontend option is not supported for CMake-based builds." if isCMakeBuild();
     @projects = ("Source/WebInspectorUI");
 }
 
 if (isCMakeBuild()) {
-    $cmakeArgs = "-DENABLE_WEBKIT=OFF "  . $cmakeArgs if $noWebKit1;
-    $cmakeArgs = "-DENABLE_WEBKIT2=OFF " . $cmakeArgs if $noWebKit2;
-
+    print "// XXX CMake build\n";
     # By default we build using all of the available CPUs.
-    if (!isWinCE()) {
-        $makeArgs .= ($makeArgs ? " " : "") . "-j" . numberOfCPUs() if $makeArgs !~ /-j\s*\d+/;
-    }
+    $makeArgs .= ($makeArgs ? " " : "") . "-j" . numberOfCPUs() if $makeArgs !~ /-j\s*\d+/;
+    my $maxCPULoad = maxCPULoad() if $makeArgs !~ /-l\s*\d+\.?\d*/;
+    $makeArgs .= " -l" . maxCPULoad() if defined $maxCPULoad;
 
     # We remove CMakeCache to avoid the bots to reuse cached flags when
     # we enable new features. This forces a reconfiguration.
@@ -282,38 +260,47 @@ if (isCMakeBuild()) {
 for my $dir (@projects) {
     chdir $dir or die;
     $result = 0;
-
-    # For Gtk the WebKit project builds all others
-    if ((isJava() || isGtkAutotools()) && $dir ne "Source/WebKit") {
-        chdirWebKit();
-        next;
-    }
-
+#    if (isJava() && $dir ne "Source/WebKit") { # //XXX remove?
+#        print "==================== hii ii i i\n";
+#        chdirWebKit();
+#        next;
+#    }
     my $project = basename($dir);
     my $baseProductDir = baseProductDir();
-    if (isGtkAutotools()) {
-        $result = buildGtkProject($project, $clean, $prefixPath, $makeArgs, $noWebKit1, $noWebKit2, @features);
-    } elsif (isJava()) {
-        $result = buildQMakeJavaProject("java", $dir, $clean, @options);
-    } elsif (isAppleMacWebKit()) {
+#    if (isJava()) {
+#        $result = buildQMakeJavaProject("java", $dir, $clean, @options); # //XXX qmake -> cmake
+#    } els
+if (isAppleMacWebKit()) {
         my @local_options = @options;
         push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
+        push @local_options, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
         my $projectPath = $project =~ /gtest/ ? "xcode/gtest" : $project;
         if (isIOSWebKit()){
             push @local_options, qw(-target WebKitTestRunnerApp) if ($project eq "WebKitTestRunner") && !$clean;
         }
         $result = buildXCodeProject($projectPath, $clean, @local_options, @ARGV);
     } elsif (isAppleWinWebKit() || isWinCairo()) {
-        if ($project eq "WebKit") {
-            my $webkitSolutionPath = "WebKit.vcxproj/WebKit.sln";
-            $result = buildVisualStudioProject($webkitSolutionPath, $clean);
-            my $vsConfiguration = configuration();
-            if (usingVisualStudioExpress()) {
-                # Visual Studio Express is so lame it can't stdout build failures.
-                # So we find its logs and dump them to the console ourselves.
-                open(my $OUTPUT_HANDLE, '<', "$baseProductDir/$vsConfiguration/BuildOutput.htm") or die "Could not open build log file at $baseProductDir/$vsConfiguration/BuildOutput.htm";
-                print while (<$OUTPUT_HANDLE>);
+        chdirWebKit();
+        if (isWinCairo()) {
+            if (exitStatus(generateBuildSystemFromCMakeProject("WinCairo"))) {
+                die "Run \"C:/Program Files (x86)/Microsoft Visual Studio 12.0/VC/vcvarsall.bat\" before build-webkit when using ninja";
             }
+            if (canUseNinja()) {
+                chdir "WebKitBuild/" . configuration();
+                $result = system("ninja");
+            } else {
+                $result = buildVisualStudioProject("WebKitBuild/" . configuration() . "/WebKit.sln", $clean);
+            }
+        } else {
+            my $webkitSolutionPath = "Source/WebKit/WebKit.vcxproj/WebKit.sln";
+            $result = buildVisualStudioProject($webkitSolutionPath, $clean);
+        }
+        if (usingVisualStudioExpress()) {
+            # Visual Studio Express is so lame it can't stdout build failures.
+            # So we find its logs and dump them to the console ourselves.
+            my $vsConfiguration = configuration();
+            open(my $OUTPUT_HANDLE, '<', "$baseProductDir/$vsConfiguration/BuildOutput.htm") or die "Could not open build log file at $baseProductDir/$vsConfiguration/BuildOutput.htm";
+            print while (<$OUTPUT_HANDLE>);
         }
     }
     # Various build* calls above may change the CWD.
@@ -356,20 +343,6 @@ sub cMakeArgsFromFeatures()
         }
     }
     return @args;
-}
-
-sub formatBuildTime($)
-{
-    my ($buildTime) = @_;
-
-    my $buildHours = int($buildTime / 3600);
-    my $buildMins = int(($buildTime - $buildHours * 3600) / 60);
-    my $buildSecs = $buildTime - $buildHours * 3600 - $buildMins * 60;
-
-    if ($buildHours) {
-        return sprintf("%dh:%02dm:%02ds", $buildHours, $buildMins, $buildSecs);
-    }
-    return sprintf("%02dm:%02ds", $buildMins, $buildSecs);
 }
 
 sub writeCongrats()

@@ -50,7 +50,7 @@ void Watchdog::destroyTimer()
     m_timer.clear();
 }
 
-void Watchdog::startTimer(double limit)
+void Watchdog::startTimer(std::chrono::microseconds limit)
 {
     JSC_GETJAVAENV_CHKRET(env);
 
@@ -60,7 +60,7 @@ void Watchdog::startTimer(double limit)
             "(D)V");
     ASSERT(mid);
 
-    env->CallVoidMethod(m_timer, mid, (jdouble) limit);
+    env->CallVoidMethod(m_timer, mid, (jdouble) (limit.count() / (1000.0 * 1000.0)));
     CheckAndClearException(env);
 }
 
@@ -80,9 +80,7 @@ void Watchdog::stopTimer()
 
 } // namespace JSC
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WatchdogTimer_twkFire
   (JNIEnv*, jobject, jlong nativePointer)
@@ -92,6 +90,4 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WatchdogTimer_twkFire
     *timerDidFireAddress = true;
 }
 
-#ifdef __cplusplus
 }
-#endif

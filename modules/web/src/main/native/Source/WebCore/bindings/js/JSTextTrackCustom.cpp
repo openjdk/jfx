@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,7 +26,9 @@
 #include "config.h"
 
 #if ENABLE(VIDEO_TRACK)
+
 #include "JSTextTrack.h"
+
 #include "JSTextTrackCueList.h"
 #include "JSTrackCustom.h"
 
@@ -34,45 +36,34 @@ using namespace JSC;
 
 namespace WebCore {
 
-void JSTextTrack::visitChildren(JSCell* cell, SlotVisitor& visitor)
+void JSTextTrack::visitAdditionalChildren(SlotVisitor& visitor)
 {
-    JSTextTrack* jsTextTrack = jsCast<JSTextTrack*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(jsTextTrack, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(jsTextTrack->structure()->typeInfo().overridesVisitChildren());
-    Base::visitChildren(jsTextTrack, visitor);
-
-    TextTrack& textTrack = jsTextTrack->impl();
-    visitor.addOpaqueRoot(root(&textTrack));
-
-    textTrack.visitJSEventListeners(visitor);
+    visitor.addOpaqueRoot(root(&impl()));
 }
 
 void JSTextTrack::setKind(ExecState* exec, JSValue value)
 {
-    UNUSED_PARAM(exec);
 #if ENABLE(MEDIA_SOURCE)
-    const String& nativeValue(value.isEmpty() ? String() : value.toString(exec)->value(exec));
+    auto& string = value.toString(exec)->value(exec);
     if (exec->hadException())
         return;
-    impl().setKind(nativeValue);
+    impl().setKind(string);
 #else
+    UNUSED_PARAM(exec);
     UNUSED_PARAM(value);
-    return;
 #endif
 }
 
 void JSTextTrack::setLanguage(ExecState* exec, JSValue value)
 {
-    UNUSED_PARAM(exec);
 #if ENABLE(MEDIA_SOURCE)
-    const String& nativeValue(value.isEmpty() ? String() : value.toString(exec)->value(exec));
+    auto& string = value.toString(exec)->value(exec);
     if (exec->hadException())
         return;
-    impl().setLanguage(nativeValue);
+    impl().setLanguage(string);
 #else
+    UNUSED_PARAM(exec);
     UNUSED_PARAM(value);
-    return;
 #endif
 }
 

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,7 +32,7 @@
 
 #if ENABLE(WEB_AUDIO)
 
-#if OS(DARWIN) && !USE(WEBAUDIO_FFMPEG)
+#if OS(DARWIN)
 
 #include "FFTFrame.h"
 
@@ -188,6 +188,6 @@ float* FFTFrame::imagData() const
 
 } // namespace WebCore
 
-#endif // #if OS(DARWIN) && !USE(WEBAUDIO_FFMPEG)
+#endif // #if OS(DARWIN)
 
 #endif // ENABLE(WEB_AUDIO)

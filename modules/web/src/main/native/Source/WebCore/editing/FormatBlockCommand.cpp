@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,6 +33,7 @@
 #include "HTMLNames.h"
 #include "Range.h"
 #include "VisibleUnits.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -42,7 +43,7 @@ static Node* enclosingBlockToSplitTreeTo(Node* startNode);
 static bool isElementForFormatBlock(const QualifiedName& tagName);
 static inline bool isElementForFormatBlock(Node* node)
 {
-    return node->isElementNode() && isElementForFormatBlock(toElement(node)->tagQName());
+    return is<Element>(*node) && isElementForFormatBlock(downcast<Element>(*node).tagQName());
 }
 
 FormatBlockCommand::FormatBlockCommand(Document& document, const QualifiedName& tagName)
@@ -99,50 +100,50 @@ void FormatBlockCommand::formatRange(const Position& start, const Position& end,
 Element* FormatBlockCommand::elementForFormatBlockCommand(Range* range)
 {
     if (!range)
-        return 0;
+        return nullptr;
 
     Node* commonAncestor = range->commonAncestorContainer(IGNORE_EXCEPTION);
     while (commonAncestor && !isElementForFormatBlock(commonAncestor))
         commonAncestor = commonAncestor->parentNode();
 
     if (!commonAncestor)
-        return 0;
+        return nullptr;
 
     Element* rootEditableElement = range->startContainer()->rootEditableElement();
     if (!rootEditableElement || commonAncestor->contains(rootEditableElement))
-        return 0;
+        return nullptr;
 
-    return commonAncestor->isElementNode() ? toElement(commonAncestor) : 0;
+    return commonAncestor->isElementNode() ? downcast<Element>(commonAncestor) : nullptr;
 }
 
 bool isElementForFormatBlock(const QualifiedName& tagName)
 {
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, blockTags, ());
-    if (blockTags.isEmpty()) {
-        blockTags.add(addressTag);
-        blockTags.add(articleTag);
-        blockTags.add(asideTag);
-        blockTags.add(blockquoteTag);
-        blockTags.add(ddTag);
-        blockTags.add(divTag);
-        blockTags.add(dlTag);
-        blockTags.add(dtTag);
-        blockTags.add(footerTag);
-        blockTags.add(h1Tag);
-        blockTags.add(h2Tag);
-        blockTags.add(h3Tag);
-        blockTags.add(h4Tag);
-        blockTags.add(h5Tag);
-        blockTags.add(h6Tag);
-        blockTags.add(headerTag);
-        blockTags.add(hgroupTag);
-        blockTags.add(mainTag);
-        blockTags.add(navTag);
-        blockTags.add(pTag);
-        blockTags.add(preTag);
-        blockTags.add(sectionTag);
+    static NeverDestroyed<HashSet<QualifiedName>> blockTags;
+    if (blockTags.get().isEmpty()) {
+        blockTags.get().add(addressTag);
+        blockTags.get().add(articleTag);
+        blockTags.get().add(asideTag);
+        blockTags.get().add(blockquoteTag);
+        blockTags.get().add(ddTag);
+        blockTags.get().add(divTag);
+        blockTags.get().add(dlTag);
+        blockTags.get().add(dtTag);
+        blockTags.get().add(footerTag);
+        blockTags.get().add(h1Tag);
+        blockTags.get().add(h2Tag);
+        blockTags.get().add(h3Tag);
+        blockTags.get().add(h4Tag);
+        blockTags.get().add(h5Tag);
+        blockTags.get().add(h6Tag);
+        blockTags.get().add(headerTag);
+        blockTags.get().add(hgroupTag);
+        blockTags.get().add(mainTag);
+        blockTags.get().add(navTag);
+        blockTags.get().add(pTag);
+        blockTags.get().add(preTag);
+        blockTags.get().add(sectionTag);
     }
-    return blockTags.contains(tagName);
+    return blockTags.get().contains(tagName);
 }
 
 Node* enclosingBlockToSplitTreeTo(Node* startNode)

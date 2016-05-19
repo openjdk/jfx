@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc.  All rights reserved.
- * Copyright (C) 2012, 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2012, 2013, 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -36,7 +36,7 @@
 
 #include "EventTarget.h"
 #include "HTMLElement.h"
-#include <wtf/PassOwnPtr.h>
+#include <wtf/MediaTime.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -46,10 +46,11 @@ class TextTrack;
 class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData {
 public:
     static PassRefPtr<TextTrackCue> create(ScriptExecutionContext&, double start, double end, const String& content);
+    static PassRefPtr<TextTrackCue> create(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, const String& content);
 
     static const AtomicString& cueShadowPseudoId()
     {
-        DEFINE_STATIC_LOCAL(const AtomicString, cue, ("cue", AtomicString::ConstructFromLiteral));
+        DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, cue, ("cue", AtomicString::ConstructFromLiteral));
         return cue;
     }
 
@@ -61,10 +62,14 @@ public:
     const String& id() const { return m_id; }
     void setId(const String&);
 
-    double startTime() const { return m_startTime; }
+    MediaTime startMediaTime() const { return m_startTime; }
+    double startTime() const { return startMediaTime().toDouble(); }
+    void setStartTime(const MediaTime&);
     void setStartTime(double, ExceptionCode&);
 
-    double endTime() const { return m_endTime; }
+    MediaTime endMediaTime() const { return m_endTime; }
+    double endTime() const { return endMediaTime().toDouble(); }
+    void setEndTime(const MediaTime&);
     void setEndTime(double, ExceptionCode&);
 
     bool pauseOnExit() const { return m_pauseOnExit; }
@@ -83,6 +88,9 @@ public:
     virtual ScriptExecutionContext* scriptExecutionContext() const override final { return &m_scriptExecutionContext; }
 
     virtual bool isOrderedBefore(const TextTrackCue*) const;
+    virtual bool isPositionedAbove(const TextTrackCue* cue) const { return isOrderedBefore(cue); }
+
+    bool hasEquivalentStartTime(const TextTrackCue&) const;
 
     enum CueType {
         Data,
@@ -92,19 +100,24 @@ public:
     virtual CueType cueType() const = 0;
     virtual bool isRenderable() const { return false; }
 
+    enum CueMatchRules {
+        MatchAllFields,
+        IgnoreDuration,
+    };
+    virtual bool isEqual(const TextTrackCue&, CueMatchRules) const;
+    virtual bool cueContentsMatch(const TextTrackCue&) const;
+    virtual bool doesExtendCue(const TextTrackCue&) const;
+
     void willChange();
     virtual void didChange();
-
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(enter);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(exit);
 
     using RefCounted<TextTrackCue>::ref;
     using RefCounted<TextTrackCue>::deref;
 
 protected:
-    TextTrackCue(ScriptExecutionContext&, double start, double end);
+    TextTrackCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end);
 
-    Document& ownerDocument() { return toDocument(m_scriptExecutionContext); }
+    Document& ownerDocument() { return downcast<Document>(m_scriptExecutionContext); }
 
 private:
 
@@ -112,8 +125,8 @@ private:
     virtual void derefEventTarget() override final { deref(); }
 
     String m_id;
-    double m_startTime;
-    double m_endTime;
+    MediaTime m_startTime;
+    MediaTime m_endTime;
     int m_cueIndex;
     int m_processingCueChanges;
 
@@ -121,8 +134,8 @@ private:
 
     ScriptExecutionContext& m_scriptExecutionContext;
 
-    bool m_isActive;
-    bool m_pauseOnExit;
+    bool m_isActive : 1;
+    bool m_pauseOnExit : 1;
 };
 
 } // namespace WebCore

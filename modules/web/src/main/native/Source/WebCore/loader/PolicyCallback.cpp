@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -61,7 +61,7 @@ void PolicyCallback::set(const ResourceRequest& request, PassRefPtr<FormState> f
     m_formState = formState;
     m_frameName = String();
 
-    m_navigationFunction = std::move(function);
+    m_navigationFunction = WTF::move(function);
     m_newWindowFunction = nullptr;
     m_contentFunction = nullptr;
 }
@@ -74,7 +74,7 @@ void PolicyCallback::set(const ResourceRequest& request, PassRefPtr<FormState> f
     m_navigationAction = navigationAction;
 
     m_navigationFunction = nullptr;
-    m_newWindowFunction = std::move(function);
+    m_newWindowFunction = WTF::move(function);
     m_contentFunction = nullptr;
 }
 
@@ -86,7 +86,7 @@ void PolicyCallback::set(ContentPolicyDecisionFunction function)
 
     m_navigationFunction = nullptr;
     m_newWindowFunction = nullptr;
-    m_contentFunction = std::move(function);
+    m_contentFunction = WTF::move(function);
 }
 
 void PolicyCallback::call(bool shouldContinue)

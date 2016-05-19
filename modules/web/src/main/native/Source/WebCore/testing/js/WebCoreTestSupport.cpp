@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2011, 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,13 @@
 #include "Internals.h"
 #include "JSDocument.h"
 #include "JSInternals.h"
+#include "Page.h"
+#include "WheelEventTestTrigger.h"
 #include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/JSValueRef.h>
+#include <JavaScriptCore/Profile.h>
 #include <interpreter/CallFrame.h>
+#include <runtime/IdentifierInlines.h>
 
 using namespace JSC;
 using namespace WebCore;
@@ -45,8 +50,8 @@ void injectInternalsObject(JSContextRef context)
     JSLockHolder lock(exec);
     JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
     ScriptExecutionContext* scriptContext = globalObject->scriptExecutionContext();
-    if (scriptContext->isDocument())
-        globalObject->putDirect(exec->vm(), Identifier(exec, Internals::internalsId), toJS(exec, globalObject, Internals::create(toDocument(scriptContext))));
+    if (is<Document>(*scriptContext))
+        globalObject->putDirect(exec->vm(), Identifier::fromString(exec, Internals::internalsId), toJS(exec, globalObject, Internals::create(downcast<Document>(scriptContext))));
 }
 
 void resetInternalsObject(JSContextRef context)
@@ -55,9 +60,41 @@ void resetInternalsObject(JSContextRef context)
     JSLockHolder lock(exec);
     JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
     ScriptExecutionContext* scriptContext = globalObject->scriptExecutionContext();
-    Page* page = toDocument(scriptContext)->frame()->page();
+    Page* page = downcast<Document>(scriptContext)->frame()->page();
     Internals::resetToConsistentState(page);
     InternalSettings::from(page)->resetToConsistentState();
+}
+
+void monitorWheelEvents(WebCore::Frame& frame)
+{
+    Page* page = frame.page();
+    if (!page)
+        return;
+
+    page->ensureTestTrigger();
+}
+
+void setTestCallbackAndStartNotificationTimer(WebCore::Frame& frame, JSContextRef context, JSObjectRef jsCallbackFunction)
+{
+    Page* page = frame.page();
+    if (!page || !page->expectsWheelEventTriggers())
+        return;
+
+    JSValueProtect(context, jsCallbackFunction);
+
+    page->ensureTestTrigger().setTestCallbackAndStartNotificationTimer([=](void) {
+        JSObjectCallAsFunction(context, jsCallbackFunction, nullptr, 0, nullptr, nullptr);
+        JSValueUnprotect(context, jsCallbackFunction);
+    });
+}
+
+void clearWheelEventTestTrigger(WebCore::Frame& frame)
+{
+    Page* page = frame.page();
+    if (!page)
+        return;
+
+    page->clearTrigger();
 }
 
 }

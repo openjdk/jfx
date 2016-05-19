@@ -22,6 +22,7 @@
 #if ENABLE(SVG_FONTS)
 #include "SVGFontData.h"
 
+#include "GlyphPage.h"
 #include "RenderElement.h"
 #include "SVGAltGlyphElement.h"
 #include "SVGFontElement.h"
@@ -41,6 +42,9 @@ using namespace Unicode;
 
 namespace WebCore {
 
+static String createStringWithMirroredCharacters(StringView);
+static void computeNormalizedSpaces(const TextRun&, bool mirror, String& normalizedSpacesStringCache);
+
 SVGFontData::SVGFontData(SVGFontFaceElement* fontFaceElement)
     : m_svgFontFaceElement(fontFaceElement)
     , m_horizontalOriginX(fontFaceElement->horizontalOriginX())
@@ -53,22 +57,15 @@ SVGFontData::SVGFontData(SVGFontFaceElement* fontFaceElement)
     ASSERT_ARG(fontFaceElement, fontFaceElement);
 }
 
-void SVGFontData::initializeFontData(SimpleFontData* fontData, float fontSize)
+void SVGFontData::initializeFont(Font* font, float fontSize)
 {
-    ASSERT(fontData);
+    ASSERT(font);
 
     SVGFontFaceElement* svgFontFaceElement = this->svgFontFaceElement();
     ASSERT(svgFontFaceElement);
 
-    SVGFontElement* svgFontElement = svgFontFaceElement->associatedFontElement();
-    ASSERT(svgFontElement);
-    GlyphData missingGlyphData;
-    missingGlyphData.fontData = fontData;
-    missingGlyphData.glyph = svgFontElement->missingGlyph();
-    fontData->setMissingGlyphData(missingGlyphData);
-
-    fontData->setZeroWidthSpaceGlyph(0);
-    fontData->determinePitch();
+    font->setZeroWidthSpaceGlyph(0);
+    font->determinePitch();
 
     unsigned unitsPerEm = svgFontFaceElement->unitsPerEm();
     float scale = scaleEmToUnits(fontSize, unitsPerEm);
@@ -77,15 +74,15 @@ void SVGFontData::initializeFontData(SimpleFontData* fontData, float fontSize)
     float descent = svgFontFaceElement->descent() * scale;
     float lineGap = 0.1f * fontSize;
 
-    GlyphPage* glyphPageZero = GlyphPageTreeNode::getRootChild(fontData, 0)->page();
+    const GlyphPage* glyphPageZero = font->glyphPage(0);
 
     if (!xHeight && glyphPageZero) {
         // Fallback if x_heightAttr is not specified for the font element.
         Glyph letterXGlyph = glyphPageZero->glyphDataForCharacter('x').glyph;
-        xHeight = letterXGlyph ? fontData->widthForGlyph(letterXGlyph) : 2 * ascent / 3;
+        xHeight = letterXGlyph ? font->widthForGlyph(letterXGlyph) : 2 * ascent / 3;
     }
 
-    FontMetrics& fontMetrics = fontData->fontMetrics();
+    FontMetrics& fontMetrics = font->fontMetrics();
     fontMetrics.setUnitsPerEm(unitsPerEm);
     fontMetrics.setAscent(ascent);
     fontMetrics.setDescent(descent);
@@ -94,25 +91,25 @@ void SVGFontData::initializeFontData(SimpleFontData* fontData, float fontSize)
     fontMetrics.setXHeight(xHeight);
 
     if (!glyphPageZero) {
-        fontData->setSpaceGlyph(0);
-        fontData->setSpaceWidth(0);
-        fontData->setAvgCharWidth(0);
-        fontData->setMaxCharWidth(ascent);
+        font->setSpaceGlyph(0);
+        font->setSpaceWidths(0);
+        font->setAvgCharWidth(0);
+        font->setMaxCharWidth(ascent);
         return;
     }
 
     // Calculate space width.
     Glyph spaceGlyph = glyphPageZero->glyphDataForCharacter(' ').glyph;
-    fontData->setSpaceGlyph(spaceGlyph);
-    fontData->setSpaceWidth(fontData->widthForGlyph(spaceGlyph));
+    font->setSpaceGlyph(spaceGlyph);
+    font->setSpaceWidths(font->widthForGlyph(spaceGlyph));
 
     // Estimate average character width.
     Glyph numeralZeroGlyph = glyphPageZero->glyphDataForCharacter('0').glyph;
-    fontData->setAvgCharWidth(numeralZeroGlyph ? fontData->widthForGlyph(numeralZeroGlyph) : fontData->spaceWidth());
+    font->setAvgCharWidth(numeralZeroGlyph ? font->widthForGlyph(numeralZeroGlyph) : font->spaceWidth());
 
     // Estimate maximum character width.
     Glyph letterWGlyph = glyphPageZero->glyphDataForCharacter('W').glyph;
-    fontData->setMaxCharWidth(letterWGlyph ? fontData->widthForGlyph(letterWGlyph) : ascent);
+    font->setMaxCharWidth(letterWGlyph ? font->widthForGlyph(letterWGlyph) : ascent);
 }
 
 float SVGFontData::widthForSVGGlyph(Glyph glyph, float fontSize) const
@@ -128,27 +125,11 @@ float SVGFontData::widthForSVGGlyph(Glyph glyph, float fontSize) const
     return svgGlyph.horizontalAdvanceX * scaleEmToUnits(fontSize, svgFontFaceElement->unitsPerEm());
 }
 
-bool SVGFontData::applySVGGlyphSelection(WidthIterator& iterator, GlyphData& glyphData, bool mirror, int currentCharacter, unsigned& advanceLength) const
+bool SVGFontData::applySVGGlyphSelection(WidthIterator& iterator, GlyphData& glyphData, bool mirror, int currentCharacter, unsigned& advanceLength, String& normalizedSpacesStringCache) const
 {
     const TextRun& run = iterator.run();
     Vector<SVGGlyph::ArabicForm>& arabicForms = iterator.arabicForms();
-    ASSERT(int(run.charactersLength()) >= currentCharacter);
-
-    // Associate text with arabic forms, if needed.
-    String remainingTextInRun;
-
-    if (run.is8Bit()) {
-        remainingTextInRun = String(run.data8(currentCharacter), run.charactersLength() - currentCharacter);
-        remainingTextInRun = Font::normalizeSpaces(remainingTextInRun.characters8(), remainingTextInRun.length());
-    } else {
-        remainingTextInRun = String(run.data16(currentCharacter), run.charactersLength() - currentCharacter);
-        remainingTextInRun = Font::normalizeSpaces(remainingTextInRun.characters16(), remainingTextInRun.length());
-    }
-
-    if (mirror)
-        remainingTextInRun = createStringWithMirroredCharacters(remainingTextInRun.deprecatedCharacters(), remainingTextInRun.length());
-    if (!currentCharacter && arabicForms.isEmpty())
-        arabicForms = charactersWithArabicForm(remainingTextInRun, mirror);
+    ASSERT(run.charactersLength() >= static_cast<unsigned>(currentCharacter));
 
     SVGFontFaceElement* svgFontFaceElement = this->svgFontFaceElement();
     ASSERT(svgFontFaceElement);
@@ -156,7 +137,7 @@ bool SVGFontData::applySVGGlyphSelection(WidthIterator& iterator, GlyphData& gly
     SVGFontElement* associatedFontElement = svgFontFaceElement->associatedFontElement();
     ASSERT(associatedFontElement);
 
-    RenderObject* renderObject = 0;
+    RenderObject* renderObject = nullptr;
     if (TextRun::RenderingContext* renderingContext = run.renderingContext())
         renderObject = &static_cast<SVGTextRunRenderingContext*>(renderingContext)->renderer();
 
@@ -165,54 +146,57 @@ bool SVGFontData::applySVGGlyphSelection(WidthIterator& iterator, GlyphData& gly
     Vector<String> altGlyphNames;
 
     if (renderObject) {
-        RenderElement* parentRenderer = renderObject->isRenderElement() ? toRenderElement(renderObject) : renderObject->parent();
-        ASSERT(parentRenderer);
+        RenderElement& parentRenderer = is<RenderElement>(*renderObject) ? downcast<RenderElement>(*renderObject) : *renderObject->parent();
 
-        isVerticalText = parentRenderer->style().svgStyle().isVerticalWritingMode();
-        if (Element* parentRendererElement = parentRenderer->element()) {
+        isVerticalText = parentRenderer.style().svgStyle().isVerticalWritingMode();
+        if (Element* parentRendererElement = parentRenderer.element()) {
             language = parentRendererElement->getAttribute(XMLNames::langAttr);
 
-            if (isSVGAltGlyphElement(parentRendererElement)) {
-                SVGAltGlyphElement* altGlyph = toSVGAltGlyphElement(parentRendererElement);
-                if (!altGlyph->hasValidGlyphElements(altGlyphNames))
+            if (is<SVGAltGlyphElement>(*parentRendererElement)) {
+                SVGAltGlyphElement& altGlyph = downcast<SVGAltGlyphElement>(*parentRendererElement);
+                if (!altGlyph.hasValidGlyphElements(altGlyphNames))
                     altGlyphNames.clear();
             }
         }
     }
 
     Vector<SVGGlyph> glyphs;
-    size_t altGlyphNamesSize = altGlyphNames.size();
-    if (altGlyphNamesSize) {
-        for (size_t index = 0; index < altGlyphNamesSize; ++index)
-            associatedFontElement->collectGlyphsForGlyphName(altGlyphNames[index], glyphs);
+    if (!altGlyphNames.isEmpty()) {
+        for (auto& name : altGlyphNames)
+            associatedFontElement->collectGlyphsForGlyphName(name, glyphs);
 
         // Assign the unicodeStringLength now that its known.
-        size_t glyphsSize = glyphs.size();
-        for (size_t i = 0; i < glyphsSize; ++i)
-            glyphs[i].unicodeStringLength = run.length();
+        for (auto& glyph : glyphs)
+            glyph.unicodeStringLength = run.length();
 
         // Do not check alt glyphs for compatibility. Just return the first one.
         // Later code will fail if we do not do this and the glyph is incompatible.
-        if (glyphsSize) {
+        if (!glyphs.isEmpty()) {
             SVGGlyph& svgGlyph = glyphs[0];
             iterator.setLastGlyphName(svgGlyph.glyphName);
             glyphData.glyph = svgGlyph.tableEntry;
             advanceLength = svgGlyph.unicodeStringLength;
             return true;
         }
-    } else
-        associatedFontElement->collectGlyphsForString(remainingTextInRun, glyphs);
+    } else {
+        // Associate text with arabic forms, if needed.
+        computeNormalizedSpaces(run, mirror, normalizedSpacesStringCache);
+        auto remainingTextInRun = normalizedSpacesStringCache.substring(currentCharacter);
 
-    size_t glyphsSize = glyphs.size();
-    for (size_t i = 0; i < glyphsSize; ++i) {
-        SVGGlyph& svgGlyph = glyphs[i];
-        if (svgGlyph.isPartOfLigature)
+        if (!currentCharacter && arabicForms.isEmpty())
+            arabicForms = charactersWithArabicForm(remainingTextInRun, mirror);
+
+        associatedFontElement->collectGlyphsForString(remainingTextInRun, glyphs);
+    }
+
+    for (auto& glyph : glyphs) {
+        if (glyph.isPartOfLigature)
             continue;
-        if (!isCompatibleGlyph(svgGlyph, isVerticalText, language, arabicForms, currentCharacter, currentCharacter + svgGlyph.unicodeStringLength))
+        if (!isCompatibleGlyph(glyph, isVerticalText, language, arabicForms, currentCharacter, currentCharacter + glyph.unicodeStringLength))
             continue;
-        iterator.setLastGlyphName(svgGlyph.glyphName);
-        glyphData.glyph = svgGlyph.tableEntry;
-        advanceLength = svgGlyph.unicodeStringLength;
+        iterator.setLastGlyphName(glyph.glyphName);
+        glyphData.glyph = glyph.tableEntry;
+        advanceLength = glyph.unicodeStringLength;
         return true;
     }
 
@@ -220,10 +204,10 @@ bool SVGFontData::applySVGGlyphSelection(WidthIterator& iterator, GlyphData& gly
     return false;
 }
 
-bool SVGFontData::fillSVGGlyphPage(GlyphPage* pageToFill, unsigned offset, unsigned length, UChar* buffer, unsigned bufferLength, const SimpleFontData* fontData) const
+bool SVGFontData::fillSVGGlyphPage(GlyphPage* pageToFill, unsigned offset, unsigned length, UChar* buffer, unsigned bufferLength, const Font* font) const
 {
-    ASSERT(fontData->isCustomFont());
-    ASSERT(fontData->isSVGFont());
+    ASSERT(font->isCustomFont());
+    ASSERT(font->isSVGFont());
 
     SVGFontFaceElement* fontFaceElement = this->svgFontFaceElement();
     ASSERT(fontFaceElement);
@@ -232,13 +216,13 @@ bool SVGFontData::fillSVGGlyphPage(GlyphPage* pageToFill, unsigned offset, unsig
     ASSERT(fontElement);
 
     if (bufferLength == length)
-        return fillBMPGlyphs(fontElement, pageToFill, offset, length, buffer, fontData);
+        return fillBMPGlyphs(fontElement, pageToFill, offset, length, buffer, font);
 
     ASSERT(bufferLength == 2 * length);
-    return fillNonBMPGlyphs(fontElement, pageToFill, offset, length, buffer, fontData);
+    return fillNonBMPGlyphs(fontElement, pageToFill, offset, length, buffer, font);
 }
 
-bool SVGFontData::fillBMPGlyphs(SVGFontElement* fontElement, GlyphPage* pageToFill, unsigned offset, unsigned length, UChar* buffer, const SimpleFontData* fontData) const
+bool SVGFontData::fillBMPGlyphs(SVGFontElement* fontElement, GlyphPage* pageToFill, unsigned offset, unsigned length, UChar* buffer, const Font* font) const
 {
     bool haveGlyphs = false;
     Vector<SVGGlyph> glyphs;
@@ -255,14 +239,14 @@ bool SVGFontData::fillBMPGlyphs(SVGFontElement* fontElement, GlyphPage* pageToFi
         // care of matching to the correct glyph, if multiple ones are available, as that's
         // only possible within the context of a string (eg. arabic form matching).
         haveGlyphs = true;
-        pageToFill->setGlyphDataForIndex(offset + i, glyphs.first().tableEntry, fontData);
+        pageToFill->setGlyphDataForIndex(offset + i, glyphs.first().tableEntry, font);
         glyphs.clear();
     }
 
     return haveGlyphs;
 }
 
-bool SVGFontData::fillNonBMPGlyphs(SVGFontElement* fontElement, GlyphPage* pageToFill, unsigned offset, unsigned length, UChar* buffer, const SimpleFontData* fontData) const
+bool SVGFontData::fillNonBMPGlyphs(SVGFontElement* fontElement, GlyphPage* pageToFill, unsigned offset, unsigned length, UChar* buffer, const Font* font) const
 {
     bool haveGlyphs = false;
     Vector<SVGGlyph> glyphs;
@@ -280,25 +264,35 @@ bool SVGFontData::fillNonBMPGlyphs(SVGFontElement* fontElement, GlyphPage* pageT
         // care of matching to the correct glyph, if multiple ones are available, as that's
         // only possible within the context of a string (eg. arabic form matching).
         haveGlyphs = true;
-        pageToFill->setGlyphDataForIndex(offset + i, glyphs.first().tableEntry, fontData);
+        pageToFill->setGlyphDataForIndex(offset + i, glyphs.first().tableEntry, font);
         glyphs.clear();
     }
 
     return haveGlyphs;
 }
 
-String SVGFontData::createStringWithMirroredCharacters(const UChar* characters, unsigned length) const
+void computeNormalizedSpaces(const TextRun& run, bool mirror, String& normalizedSpacesStringCache)
 {
+    if (normalizedSpacesStringCache.length() == static_cast<unsigned>(run.charactersLength()))
+        return;
+    if (run.is8Bit())
+        normalizedSpacesStringCache = FontCascade::normalizeSpaces(run.characters8(), run.charactersLength());
+    else
+        normalizedSpacesStringCache = FontCascade::normalizeSpaces(run.characters16(), run.charactersLength());
+    if (mirror)
+        normalizedSpacesStringCache = createStringWithMirroredCharacters(normalizedSpacesStringCache);
+}
+
+String createStringWithMirroredCharacters(StringView string)
+{
+    unsigned length = string.length();
     StringBuilder mirroredCharacters;
     mirroredCharacters.reserveCapacity(length);
-
-    unsigned i = 0;
-    while (i < length) {
+    for (unsigned i = 0; i < length; ) {
         UChar32 character;
-        U16_NEXT(characters, i, length, character);
+        U16_NEXT(string, i, length, character);
         mirroredCharacters.append(u_charMirror(character));
     }
-
     return mirroredCharacters.toString();
 }
 

@@ -30,6 +30,7 @@
 #include "RuleSet.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -37,11 +38,11 @@ namespace WebCore {
 typedef HashMap<const CSSStyleRule*, String> SelectorTextCache;
 static SelectorTextCache& selectorTextCache()
 {
-    DEFINE_STATIC_LOCAL(SelectorTextCache, cache, ());
+    static NeverDestroyed<SelectorTextCache> cache;
     return cache;
 }
 
-CSSStyleRule::CSSStyleRule(StyleRule* styleRule, CSSStyleSheet* parent)
+CSSStyleRule::CSSStyleRule(StyleRule& styleRule, CSSStyleSheet* parent)
     : CSSRule(parent)
     , m_styleRule(styleRule)
 {
@@ -58,23 +59,16 @@ CSSStyleRule::~CSSStyleRule()
     }
 }
 
-CSSStyleDeclaration* CSSStyleRule::style()
+CSSStyleDeclaration& CSSStyleRule::style()
 {
-    if (!m_propertiesCSSOMWrapper) {
+    if (!m_propertiesCSSOMWrapper)
         m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_styleRule->mutableProperties(), *this);
-    }
-    return m_propertiesCSSOMWrapper.get();
+    return *m_propertiesCSSOMWrapper;
 }
 
 String CSSStyleRule::generateSelectorText() const
 {
-    StringBuilder builder;
-    for (const CSSSelector* selector = m_styleRule->selectorList().first(); selector; selector = CSSSelectorList::next(selector)) {
-        if (selector != m_styleRule->selectorList().first())
-            builder.appendLiteral(", ");
-        builder.append(selector->selectorText());
-    }
-    return builder.toString();
+    return m_styleRule->selectorList().selectorsText();
 }
 
 String CSSStyleRule::selectorText() const
@@ -93,6 +87,11 @@ String CSSStyleRule::selectorText() const
 
 void CSSStyleRule::setSelectorText(const String& selectorText)
 {
+    // FIXME: getMatchedCSSRules can return CSSStyleRules that are missing parent stylesheet pointer while
+    // referencing StyleRules that are part of stylesheet. Disallow mutations in this case.
+    if (!parentStyleSheet())
+        return;
+
     CSSParser p(parserContext());
     CSSSelectorList selectorList;
     p.parseSelector(selectorText, selectorList);
@@ -126,11 +125,9 @@ String CSSStyleRule::cssText() const
     return result.toString();
 }
 
-void CSSStyleRule::reattach(StyleRuleBase* rule)
+void CSSStyleRule::reattach(StyleRuleBase& rule)
 {
-    ASSERT(rule);
-    ASSERT_WITH_SECURITY_IMPLICATION(rule->isStyleRule());
-    m_styleRule = static_cast<StyleRule*>(rule);
+    m_styleRule = downcast<StyleRule>(rule);
     if (m_propertiesCSSOMWrapper)
         m_propertiesCSSOMWrapper->reattach(m_styleRule->mutableProperties());
 }

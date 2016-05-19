@@ -32,10 +32,11 @@
 #include "config.h"
 #include "BlobRegistryImpl.h"
 
-#if ENABLE(BLOB)
-
+#include "BlobData.h"
+#include "BlobPart.h"
 #include "BlobResourceHandle.h"
-#include "BlobStorageData.h"
+#include "FileMetadata.h"
+#include "FileSystem.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
 #include "ResourceRequest.h"
@@ -60,7 +61,7 @@ static PassRefPtr<ResourceHandle> createResourceHandle(const ResourceRequest& re
 
 static void loadResourceSynchronously(NetworkingContext*, const ResourceRequest& request, StoredCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
-    BlobStorageData* blobData = static_cast<BlobRegistryImpl&>(blobRegistry()).getBlobDataFromURL(request.url());
+    BlobData* blobData = static_cast<BlobRegistryImpl&>(blobRegistry()).getBlobDataFromURL(request.url());
     BlobResourceHandle::loadResourceSynchronously(blobData, request, error, response, data);
 }
 
@@ -84,52 +85,54 @@ PassRefPtr<ResourceHandle> BlobRegistryImpl::createResourceHandle(const Resource
     return handle.release();
 }
 
-void BlobRegistryImpl::appendStorageItems(BlobStorageData* blobStorageData, const BlobDataItemList& items)
-{
-    for (BlobDataItemList::const_iterator iter = items.begin(); iter != items.end(); ++iter) {
-        if (iter->type == BlobDataItem::Data)
-            blobStorageData->m_data.appendData(iter->data, iter->offset, iter->length);
-        else {
-            ASSERT(iter->type == BlobDataItem::File);
-            blobStorageData->m_data.appendFile(iter->path, iter->offset, iter->length, iter->expectedModificationTime);
-        }
-    }
-}
-
-void BlobRegistryImpl::appendStorageItems(BlobStorageData* blobStorageData, const BlobDataItemList& items, long long offset, long long length)
+void BlobRegistryImpl::appendStorageItems(BlobData* blobData, const BlobDataItemList& items, long long offset, long long length)
 {
     ASSERT(length != BlobDataItem::toEndOfFile);
 
     BlobDataItemList::const_iterator iter = items.begin();
     if (offset) {
         for (; iter != items.end(); ++iter) {
-            if (offset >= iter->length)
-                offset -= iter->length;
+            if (offset >= iter->length())
+                offset -= iter->length();
             else
                 break;
         }
     }
 
     for (; iter != items.end() && length > 0; ++iter) {
-        long long currentLength = iter->length - offset;
+        long long currentLength = iter->length() - offset;
         long long newLength = currentLength > length ? length : currentLength;
         if (iter->type == BlobDataItem::Data)
-            blobStorageData->m_data.appendData(iter->data, iter->offset + offset, newLength);
+            blobData->appendData(iter->data, iter->offset() + offset, newLength);
         else {
             ASSERT(iter->type == BlobDataItem::File);
-            blobStorageData->m_data.appendFile(iter->path, iter->offset + offset, newLength, iter->expectedModificationTime);
+            blobData->appendFile(iter->file.get(), iter->offset() + offset, newLength);
         }
         length -= newLength;
         offset = 0;
     }
+    ASSERT(!length);
 }
 
-void BlobRegistryImpl::registerBlobURL(const URL& url, std::unique_ptr<BlobData> blobData)
+void BlobRegistryImpl::registerFileBlobURL(const URL& url, PassRefPtr<BlobDataFileReference> file, const String& contentType)
 {
     ASSERT(isMainThread());
     registerBlobResourceHandleConstructor();
 
-    RefPtr<BlobStorageData> blobStorageData = BlobStorageData::create(blobData->contentType(), blobData->contentDisposition());
+    RefPtr<BlobData> blobData = BlobData::create();
+    blobData->setContentType(contentType);
+
+    blobData->appendFile(file);
+    m_blobs.set(url.string(), blobData.release());
+}
+
+void BlobRegistryImpl::registerBlobURL(const URL& url, Vector<BlobPart> blobParts, const String& contentType)
+{
+    ASSERT(isMainThread());
+    registerBlobResourceHandleConstructor();
+
+    RefPtr<BlobData> blobData = BlobData::create();
+    blobData->setContentType(contentType);
 
     // The blob data is stored in the "canonical" way. That is, it only contains a list of Data and File items.
     // 1) The Data item is denoted by the raw data and the range.
@@ -137,35 +140,72 @@ void BlobRegistryImpl::registerBlobURL(const URL& url, std::unique_ptr<BlobData>
     // 3) The URL item is denoted by the URL, the range and the expected modification time.
     // All the Blob items in the passing blob data are resolved and expanded into a set of Data and File items.
 
-    for (BlobDataItemList::const_iterator iter = blobData->items().begin(); iter != blobData->items().end(); ++iter) {
-        switch (iter->type) {
-        case BlobDataItem::Data:
-            blobStorageData->m_data.appendData(iter->data, 0, iter->data->length());
+    for (BlobPart& part : blobParts) {
+        switch (part.type()) {
+        case BlobPart::Data: {
+            RefPtr<RawData> rawData = RawData::create(part.moveData());
+            blobData->appendData(rawData.release());
             break;
-        case BlobDataItem::File:
-            blobStorageData->m_data.appendFile(iter->path, iter->offset, iter->length, iter->expectedModificationTime);
+        }
+        case BlobPart::Blob: {
+            if (!m_blobs.contains(part.url().string()))
+                return;
+            for (const BlobDataItem& item : m_blobs.get(part.url().string())->items())
+                blobData->m_items.append(item);
             break;
-        case BlobDataItem::Blob:
-            if (m_blobs.contains(iter->url.string()))
-                appendStorageItems(blobStorageData.get(), m_blobs.get(iter->url.string())->items(), iter->offset, iter->length);
-            break;
+        }
         }
     }
 
-    m_blobs.set(url.string(), blobStorageData);
+    m_blobs.set(url.string(), blobData.release());
 }
 
 void BlobRegistryImpl::registerBlobURL(const URL& url, const URL& srcURL)
 {
     ASSERT(isMainThread());
-    registerBlobResourceHandleConstructor();
 
-    RefPtr<BlobStorageData> src = m_blobs.get(srcURL.string());
-    ASSERT(src);
+    BlobData* src = getBlobDataFromURL(srcURL);
     if (!src)
         return;
 
     m_blobs.set(url.string(), src);
+}
+
+void BlobRegistryImpl::registerBlobURLForSlice(const URL& url, const URL& srcURL, long long start, long long end)
+{
+    ASSERT(isMainThread());
+    BlobData* originalData = getBlobDataFromURL(srcURL);
+    if (!originalData)
+        return;
+
+    unsigned long long originalSize = blobSize(srcURL);
+
+    // Convert the negative value that is used to select from the end.
+    if (start < 0)
+        start = start + originalSize;
+    if (end < 0)
+        end = end + originalSize;
+
+    // Clamp the range if it exceeds the size limit.
+    if (start < 0)
+        start = 0;
+    if (end < 0)
+        end = 0;
+    if (static_cast<unsigned long long>(start) >= originalSize) {
+        start = 0;
+        end = 0;
+    } else if (end < start)
+        end = start;
+    else if (static_cast<unsigned long long>(end) > originalSize)
+        end = originalSize;
+
+    unsigned long long newLength = end - start;
+    RefPtr<BlobData> newData = BlobData::create();
+    newData->setContentType(originalData->contentType());
+
+    appendStorageItems(newData.get(), originalData->items(), start, newLength);
+
+    m_blobs.set(url.string(), newData.release());
 }
 
 void BlobRegistryImpl::unregisterBlobURL(const URL& url)
@@ -174,12 +214,24 @@ void BlobRegistryImpl::unregisterBlobURL(const URL& url)
     m_blobs.remove(url.string());
 }
 
-BlobStorageData* BlobRegistryImpl::getBlobDataFromURL(const URL& url) const
+BlobData* BlobRegistryImpl::getBlobDataFromURL(const URL& url) const
 {
     ASSERT(isMainThread());
     return m_blobs.get(url.string());
 }
 
-} // namespace WebCore
+unsigned long long BlobRegistryImpl::blobSize(const URL& url)
+{
+    ASSERT(isMainThread());
+    BlobData* data = getBlobDataFromURL(url);
+    if (!data)
+        return 0;
 
-#endif
+    unsigned long long result = 0;
+    for (const BlobDataItem& item : data->items())
+        result += item.length();
+
+    return result;
+}
+
+} // namespace WebCore

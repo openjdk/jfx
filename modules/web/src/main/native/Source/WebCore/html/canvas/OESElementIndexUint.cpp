@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-OESElementIndexUint::OESElementIndexUint(WebGLRenderingContext* context)
+OESElementIndexUint::OESElementIndexUint(WebGLRenderingContextBase* context)
     : WebGLExtension(context)
 {
 }
@@ -43,11 +43,6 @@ OESElementIndexUint::~OESElementIndexUint()
 WebGLExtension::ExtensionName OESElementIndexUint::getName() const
 {
     return OESElementIndexUintName;
-}
-
-OwnPtr<OESElementIndexUint> OESElementIndexUint::create(WebGLRenderingContext* context)
-{
-    return adoptPtr(new OESElementIndexUint(context));
 }
 
 } // namespace WebCore

@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,7 +27,7 @@
 
 #include "config.h"
 
-#if ENABLE(INDEXED_DATABASE)
+#if ENABLE(INDEXED_DATABASE_IN_WORKERS)
 
 #include "WorkerGlobalScopeIndexedDatabase.h"
 
@@ -38,8 +38,7 @@
 
 namespace WebCore {
 
-WorkerGlobalScopeIndexedDatabase::WorkerGlobalScopeIndexedDatabase(const String& databaseDirectoryIdentifier)
-    : m_databaseDirectoryIdentifier(databaseDirectoryIdentifier)
+WorkerGlobalScopeIndexedDatabase::WorkerGlobalScopeIndexedDatabase()
 {
 }
 
@@ -56,13 +55,9 @@ WorkerGlobalScopeIndexedDatabase* WorkerGlobalScopeIndexedDatabase::from(ScriptE
 {
     WorkerGlobalScopeIndexedDatabase* supplement = static_cast<WorkerGlobalScopeIndexedDatabase*>(Supplement<ScriptExecutionContext>::from(context, supplementName()));
     if (!supplement) {
-        String databaseDirectoryIdentifier;
-        const GroupSettings* groupSettings = toWorkerGlobalScope(context)->groupSettings();
-        if (groupSettings)
-            databaseDirectoryIdentifier = groupSettings->indexedDBDatabasePath();
-
-        supplement = new WorkerGlobalScopeIndexedDatabase(databaseDirectoryIdentifier);
-        provideTo(context, supplementName(), adoptPtr(supplement));
+        auto newSupplement = std::make_unique<WorkerGlobalScopeIndexedDatabase>();
+        supplement = newSupplement.get();
+        provideTo(context, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -75,7 +70,7 @@ IDBFactory* WorkerGlobalScopeIndexedDatabase::indexedDB(ScriptExecutionContext* 
 IDBFactory* WorkerGlobalScopeIndexedDatabase::indexedDB()
 {
     if (!m_factoryBackend)
-        m_factoryBackend = IDBFactoryBackendInterface::create(m_databaseDirectoryIdentifier);
+        m_factoryBackend = IDBFactoryBackendInterface::create();
     if (!m_idbFactory)
         m_idbFactory = IDBFactory::create(m_factoryBackend.get());
     return m_idbFactory.get();

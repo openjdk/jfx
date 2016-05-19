@@ -21,11 +21,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
 import StringIO
+import logging
 
+from webkitpy.common.system import outputcapture
 from webkitpy.common.system.systemhost import SystemHost
 from webkitpy.layout_tests.views.metered_stream import MeteredStream
+from webkitpy.tool.grammar import pluralize
 
 _log = logging.getLogger(__name__)
 
@@ -103,8 +105,6 @@ class Printer(object):
         handler.addFilter(testing_filter)
 
         if self.options.pass_through:
-            # FIXME: Can't import at top of file, as outputcapture needs unittest2
-            from webkitpy.common.system import outputcapture
             outputcapture.OutputCapture.stream_wrapper = _CaptureAndPassThroughStream
 
     def write_update(self, msg):
@@ -178,7 +178,7 @@ class Printer(object):
 
     def print_result(self, run_time):
         write = self.meter.writeln
-        write('Ran %d test%s in %.3fs' % (self.num_started, self.num_started != 1 and "s" or "", run_time))
+        write('Ran %s in %.3fs' % (pluralize(self.num_started, "test"), run_time))
         if self.num_failures or self.num_errors:
             write('FAILED (failures=%d, errors=%d)\n' % (self.num_failures, self.num_errors))
         else:

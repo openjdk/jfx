@@ -48,6 +48,11 @@ from webkitpy.common.memoized import memoized
 _exact_matches = {
     # These builders are on build.webkit.org.
 
+    "Apple Yosemite Release WK1 (Tests)": {"port_name": "mac-yosemite", "is_debug": False},
+    "Apple Yosemite Debug WK1 (Tests)": {"port_name": "mac-yosemite", "is_debug": True},
+    "Apple Yosemite Release WK2 (Tests)": {"port_name": "mac-yosemite-wk2", "is_debug": False},
+    "Apple Yosemite Debug WK2 (Tests)": {"port_name": "mac-yosemite-wk2", "is_debug": True},
+
     "Apple Mavericks Release WK1 (Tests)": {"port_name": "mac-mavericks", "is_debug": False},
     "Apple Mavericks Debug WK1 (Tests)": {"port_name": "mac-mavericks", "is_debug": True},
     "Apple Mavericks Release WK2 (Tests)": {"port_name": "mac-mavericks-wk2", "is_debug": False},
@@ -67,12 +72,10 @@ _exact_matches = {
     # FIXME: Remove rebaseline_override_dir once there is an Apple buildbot that corresponds to platform/win.
     "Apple Win 7 Release (Tests)": {"port_name": "win-7sp0", "is_debug": False, "rebaseline_override_dir": "win"},
 
-    "GTK Linux 32-bit Release": {"port_name": "gtk", "is_debug": False},
-    "GTK Linux 64-bit Debug WK1": {"port_name": "gtk", "is_debug": True},
-    "GTK Linux 64-bit Release": {"port_name": "gtk-wk2", "is_debug": False},
-    "GTK Linux 64-bit Release WK1 (Tests)": {"port_name": "gtk", "is_debug": False},
+    "GTK Linux 32-bit Release": {"port_name": "gtk-wk2", "is_debug": False},
+    "GTK Linux 64-bit Debug (Tests)": {"port_name": "gtk-wk2", "is_debug": True},
+    "GTK Linux 64-bit Release (Tests)": {"port_name": "gtk-wk2", "is_debug": False},
 
-    "EFL Linux 64-bit Release": {"port_name": "efl", "is_debug": False},
     "EFL Linux 64-bit Release WK2": {"port_name": "efl-wk2", "is_debug": False},
     "EFL Linux 64-bit Debug WK2": {"port_name": "efl-wk2", "is_debug": True},
 }
@@ -88,6 +91,8 @@ _fuzzy_matches = {
 
 
 _ports_without_builders = [
+    r"ios-simulator",
+    r"ios-simulator-wk2",
 ]
 
 

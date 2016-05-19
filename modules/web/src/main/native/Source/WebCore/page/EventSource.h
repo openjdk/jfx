@@ -51,7 +51,7 @@ class ThreadableLoader;
 class EventSource final : public RefCounted<EventSource>, public EventTargetWithInlineData, private ThreadableLoaderClient, public ActiveDOMObject {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassRefPtr<EventSource> create(ScriptExecutionContext&, const String& url, const Dictionary&, ExceptionCode&);
+    static RefPtr<EventSource> create(ScriptExecutionContext&, const String& url, const Dictionary&, ExceptionCode&);
     virtual ~EventSource();
 
     static const unsigned long long defaultReconnectDelay;
@@ -65,10 +65,6 @@ public:
     static const State CLOSED = 2;
 
     State readyState() const;
-
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(open);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(message);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
 
     void close();
 
@@ -91,13 +87,16 @@ private:
     virtual void didFailAccessControlCheck(const ResourceError&) override;
     virtual void didFailRedirectCheck() override;
 
-    virtual void stop() override;
+    // ActiveDOMObject API.
+    void stop() override;
+    const char* activeDOMObjectName() const override;
+    bool canSuspendForPageCache() const override;
 
     void connect();
     void networkRequestEnded();
     void scheduleInitialConnect();
     void scheduleReconnect();
-    void connectTimerFired(Timer<EventSource>&);
+    void connectTimerFired();
     void abortConnectionAttempt();
     void parseEventStream();
     void parseEventStreamLine(unsigned pos, int fieldLength, int lineLength);
@@ -109,7 +108,7 @@ private:
 
     RefPtr<TextResourceDecoder> m_decoder;
     RefPtr<ThreadableLoader> m_loader;
-    Timer<EventSource> m_connectTimer;
+    Timer m_connectTimer;
     Vector<UChar> m_receiveBuf;
     bool m_discardTrailingNewline;
     bool m_requestInFlight;

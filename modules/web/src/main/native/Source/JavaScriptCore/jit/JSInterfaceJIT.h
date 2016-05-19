@@ -50,9 +50,7 @@ namespace JSC {
         }
 
 #if USE(JSVALUE32_64)
-        // Can't just propogate JSValue::Int32Tag as visual studio doesn't like it
-        static const unsigned Int32Tag = 0xffffffff;
-        COMPILE_ASSERT(Int32Tag == JSValue::Int32Tag, Int32Tag_out_of_sync);
+        static const unsigned Int32Tag = static_cast<unsigned>(JSValue::Int32Tag);
 #else
         static const unsigned Int32Tag = static_cast<unsigned>(TagTypeNumber >> 32);
 #endif
@@ -73,7 +71,7 @@ namespace JSC {
         void emitFastArithIntToImmNoCheck(RegisterID src, RegisterID dest);
 #endif
 
-        Jump emitJumpIfNotType(RegisterID baseReg, RegisterID scratchReg, JSType);
+        Jump emitJumpIfNotType(RegisterID baseReg, JSType);
 
         void emitGetFromCallFrameHeaderPtr(JSStack::CallFrameHeaderEntry, RegisterID to, RegisterID from = callFrameRegister);
         void emitPutToCallFrameHeader(RegisterID from, JSStack::CallFrameHeaderEntry);
@@ -224,10 +222,9 @@ namespace JSC {
     }
 #endif
 
-    ALWAYS_INLINE JSInterfaceJIT::Jump JSInterfaceJIT::emitJumpIfNotType(RegisterID baseReg, RegisterID scratchReg, JSType type)
+    ALWAYS_INLINE JSInterfaceJIT::Jump JSInterfaceJIT::emitJumpIfNotType(RegisterID baseReg, JSType type)
     {
-        loadPtr(Address(baseReg, JSCell::structureOffset()), scratchReg);
-        return branch8(NotEqual, Address(scratchReg, Structure::typeInfoTypeOffset()), TrustedImm32(type));
+        return branch8(NotEqual, Address(baseReg, JSCell::typeInfoTypeOffset()), TrustedImm32(type));
     }
 
     ALWAYS_INLINE void JSInterfaceJIT::emitGetFromCallFrameHeaderPtr(JSStack::CallFrameHeaderEntry entry, RegisterID to, RegisterID from)

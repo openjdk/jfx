@@ -26,8 +26,6 @@
 #ifndef DFGPhase_h
 #define DFGPhase_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "DFGCommon.h"
@@ -69,6 +67,8 @@ private:
     // Call these hooks when starting and finishing.
     void beginPhase();
     void endPhase();
+
+    CString m_graphDumpBeforePhase;
 };
 
 template<typename PhaseType>

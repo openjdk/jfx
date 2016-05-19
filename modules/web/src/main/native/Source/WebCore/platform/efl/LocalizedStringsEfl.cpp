@@ -17,10 +17,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -158,7 +158,7 @@ String contextMenuItemTagShowMediaControls()
     return String::fromUTF8("Show Media Controls");
 }
 
-String contextMenuitemTagHideMediaControls()
+String contextMenuItemTagHideMediaControls()
 {
     return String::fromUTF8("Hide Media Controls");
 }
@@ -643,12 +643,6 @@ String insecurePluginVersionText()
     return String();
 }
 
-String inactivePluginText()
-{
-    notImplemented();
-    return String();
-}
-
 String unacceptableTLSCertificate()
 {
     return String::fromUTF8("Unacceptable TLS certificate");
@@ -660,11 +654,6 @@ String localizedString(const char* key)
 }
 
 #if ENABLE(VIDEO_TRACK)
-String textTrackClosedCaptionsText()
-{
-    return String::fromUTF8("Closed Captions");
-}
-
 String textTrackSubtitlesText()
 {
     return String::fromUTF8("Subtitles");
@@ -681,6 +670,11 @@ String textTrackAutomaticMenuItemText()
 }
 
 String textTrackNoLabelText()
+{
+    return String::fromUTF8("No label");
+}
+
+String audioTrackNoLabelText()
 {
     return String::fromUTF8("No label");
 }

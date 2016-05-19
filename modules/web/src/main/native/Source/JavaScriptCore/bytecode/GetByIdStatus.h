@@ -26,6 +26,7 @@
 #ifndef GetByIdStatus_h
 #define GetByIdStatus_h
 
+#include "CallLinkStatus.h"
 #include "CodeOrigin.h"
 #include "ConcurrentJITLock.h"
 #include "ExitingJITType.h"
@@ -66,10 +67,10 @@ public:
         m_variants.append(variant);
     }
 
-    static GetByIdStatus computeFor(CodeBlock*, StubInfoMap&, unsigned bytecodeIndex, StringImpl* uid);
-    static GetByIdStatus computeFor(VM&, Structure*, StringImpl* uid);
+    static GetByIdStatus computeFor(CodeBlock*, StubInfoMap&, unsigned bytecodeIndex, UniquedStringImpl* uid);
+    static GetByIdStatus computeFor(const StructureSet&, UniquedStringImpl* uid);
 
-    static GetByIdStatus computeFor(CodeBlock* baselineBlock, CodeBlock* dfgBlock, StubInfoMap& baselineMap, StubInfoMap& dfgMap, CodeOrigin, StringImpl* uid);
+    static GetByIdStatus computeFor(CodeBlock* baselineBlock, CodeBlock* dfgBlock, StubInfoMap& baselineMap, StubInfoMap& dfgMap, CodeOrigin, UniquedStringImpl* uid);
 
     State state() const { return m_state; }
 
@@ -83,7 +84,7 @@ public:
     const GetByIdVariant& operator[](size_t index) const { return at(index); }
 
     bool takesSlowPath() const { return m_state == TakesSlowPath || m_state == MakesCalls; }
-    bool makesCalls() const { return m_state == MakesCalls; }
+    bool makesCalls() const;
 
     bool wasSeenInJIT() const { return m_wasSeenInJIT; }
 
@@ -91,13 +92,16 @@ public:
 
 private:
 #if ENABLE(DFG_JIT)
-    static bool hasExitSite(const ConcurrentJITLocker&, CodeBlock*, unsigned bytecodeIndex, ExitingJITType = ExitFromAnything);
+    static bool hasExitSite(const ConcurrentJITLocker&, CodeBlock*, unsigned bytecodeIndex);
 #endif
 #if ENABLE(JIT)
-    static GetByIdStatus computeForStubInfo(const ConcurrentJITLocker&, CodeBlock*, StructureStubInfo*, StringImpl* uid);
+    static GetByIdStatus computeForStubInfo(
+        const ConcurrentJITLocker&, CodeBlock* profiledBlock, StructureStubInfo*,
+        UniquedStringImpl* uid, CallLinkStatus::ExitSiteData);
 #endif
-    bool computeForChain(CodeBlock*, StringImpl* uid, PassRefPtr<IntendedStructureChain>);
-    static GetByIdStatus computeFromLLInt(CodeBlock*, unsigned bytecodeIndex, StringImpl* uid);
+    static GetByIdStatus computeFromLLInt(CodeBlock*, unsigned bytecodeIndex, UniquedStringImpl* uid);
+
+    bool appendVariant(const GetByIdVariant&);
 
     State m_state;
     Vector<GetByIdVariant, 1> m_variants;

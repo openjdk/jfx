@@ -29,7 +29,7 @@
              [Reflect] attribute DOMString title;
              [Reflect] attribute DOMString lang;
              attribute boolean             translate;
-             [Reflect] attribute DOMString dir;
+             attribute DOMString dir;
 
              attribute long              tabIndex;
              attribute boolean           draggable;
@@ -38,11 +38,9 @@
              [Reflect] attribute DOMString accessKey;
 
     // Extensions
-             [TreatNullAs=NullString, SetterRaisesException] attribute DOMString innerHTML;
-             [TreatNullAs=NullString, SetterRaisesException] attribute DOMString innerText;
-             [TreatNullAs=NullString, SetterRaisesException] attribute DOMString outerHTML;
-             [TreatNullAs=NullString, SetterRaisesException] attribute DOMString outerText;
-
+    [TreatNullAs=NullString, SetterRaisesException] attribute DOMString innerText;
+    [TreatNullAs=NullString, SetterRaisesException] attribute DOMString outerText;
+             
     [RaisesException] Element insertAdjacentElement([Default=Undefined] optional DOMString where,
                                   [Default=Undefined] optional Element element);
     [RaisesException] void insertAdjacentHTML([Default=Undefined] optional DOMString where,
@@ -50,7 +48,9 @@
     [RaisesException] void insertAdjacentText([Default=Undefined] optional DOMString where,
                             [Default=Undefined] optional DOMString text);
 
+#if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
     readonly attribute HTMLCollection children;
+#endif
 
              [TreatNullAs=NullString, SetterRaisesException] attribute DOMString contentEditable;
     readonly attribute boolean isContentEditable;

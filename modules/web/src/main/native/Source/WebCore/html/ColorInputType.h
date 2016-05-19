@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-class ColorInputType : public BaseClickableWithKeyInputType, public ColorChooserClient {
+class ColorInputType final : public BaseClickableWithKeyInputType, public ColorChooserClient {
 public:
     explicit ColorInputType(HTMLInputElement& element) : BaseClickableWithKeyInputType(element) { }
     virtual ~ColorInputType();
@@ -51,7 +51,6 @@ public:
     virtual Vector<Color> suggestions() const override;
 
 private:
-    virtual void attach() override;
     virtual bool isColorControl() const override;
     virtual const AtomicString& formControlType() const override;
     virtual bool supportsRequired() const override;
@@ -70,7 +69,7 @@ private:
     void updateColorSwatch();
     HTMLElement* shadowColorSwatch() const;
 
-    OwnPtr<ColorChooser> m_chooser;
+    std::unique_ptr<ColorChooser> m_chooser;
 };
 
 } // namespace WebCore

@@ -17,7 +17,6 @@ namespace WebCore {
   /*
 String FileChooser::basenameForWidth(const Font& font, int width) const
 {
-/*
     if (m_filenames.size() == 0) {
         return fileButtonNoFileSelectedLabel();
     }

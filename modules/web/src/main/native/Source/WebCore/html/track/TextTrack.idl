@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,6 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+enum TextTrackMode { "disabled",  "hidden",  "showing" };
+enum TextTrackKind { "subtitles",  "captions",  "descriptions",  "chapters", "metadata" };
+
 [
     Conditional=VIDEO_TRACK,
     EventTarget,
@@ -31,31 +34,29 @@
     SkipVTableValidation,
 ] interface TextTrack {
     readonly attribute DOMString id;
-    [CustomSetter] attribute DOMString kind;
+    [CustomSetter] attribute TextTrackKind kind;
     readonly attribute DOMString label;
     [CustomSetter] attribute DOMString language;
+    readonly attribute DOMString inBandMetadataTrackDispatchType;
 
-    attribute DOMString mode;
+    attribute TextTrackMode mode;
 
     readonly attribute TextTrackCueList cues;
     readonly attribute TextTrackCueList activeCues;
-             attribute EventListener oncuechange;
 
     [RaisesException] void addCue(TextTrackCue cue);
     [RaisesException] void removeCue(TextTrackCue cue);
 
-#if defined(ENABLE_WEBVTT_REGIONS) && ENABLE_WEBVTT_REGIONS
-    readonly attribute TextTrackRegionList regions;
-    void addRegion(TextTrackRegion region);
-    [RaisesException] void removeRegion(TextTrackRegion region);
+    attribute EventHandler oncuechange;
+
+#if !defined(LANGUAGE_GOBJECT) || !LANGUAGE_GOBJECT // Work around shortcomings in the gobject binding generator handling of conditional features by turning these off for gobject.
+    [Conditional=WEBVTT_REGIONS] readonly attribute VTTRegionList regions;
+    [Conditional=WEBVTT_REGIONS] void addRegion(VTTRegion region);
+    [Conditional=WEBVTT_REGIONS, RaisesException] void removeRegion(VTTRegion region);
 #endif
 
     // EventTarget interface
-    void addEventListener(DOMString type, 
-                          EventListener listener, 
-                          optional boolean useCapture);
-    void removeEventListener(DOMString type, 
-                             EventListener listener, 
-                             optional boolean useCapture);
-    [RaisesException] boolean dispatchEvent(Event evt);
+    void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    [RaisesException] boolean dispatchEvent(Event event);
 };

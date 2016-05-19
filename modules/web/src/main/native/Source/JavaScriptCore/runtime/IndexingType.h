@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,27 +31,43 @@
 
 namespace JSC {
 
+/*
+    Structure of the IndexingType
+    =============================
+    Conceptually, the IndexingType looks like this:
+
+    struct IndexingType {
+        uint8_t isArray:1;                    // bit 0
+        uint8_t shape:4;                      // bit 1 - 3
+        uint8_t mayHaveIndexedAccessors:1;    // bit 4
+    };
+
+    The shape values (e.g. Int32Shape, ContiguousShape, etc) are an enumeration of
+    various shapes (though not necessarily sequential in terms of their values).
+    Hence, shape values are not bitwise exclusive with respect to each other.
+*/
+
 typedef uint8_t IndexingType;
 
 // Flags for testing the presence of capabilities.
 static const IndexingType IsArray                  = 0x01;
 
 // The shape of the indexed property storage.
-static const IndexingType IndexingShapeMask        = 0x1E;
+static const IndexingType IndexingShapeMask        = 0x0E;
 static const IndexingType NoIndexingShape          = 0x00;
 static const IndexingType UndecidedShape           = 0x02; // Only useful for arrays.
-static const IndexingType Int32Shape               = 0x14;
-static const IndexingType DoubleShape              = 0x16;
-static const IndexingType ContiguousShape          = 0x1A;
-static const IndexingType ArrayStorageShape        = 0x1C;
-static const IndexingType SlowPutArrayStorageShape = 0x1E;
+static const IndexingType Int32Shape               = 0x04;
+static const IndexingType DoubleShape              = 0x06;
+static const IndexingType ContiguousShape          = 0x08;
+static const IndexingType ArrayStorageShape        = 0x0A;
+static const IndexingType SlowPutArrayStorageShape = 0x0C;
 
 static const IndexingType IndexingShapeShift       = 1;
-static const IndexingType NumberOfIndexingShapes   = 16;
+static const IndexingType NumberOfIndexingShapes   = 7;
 
 // Additional flags for tracking the history of the type. These are usually
 // masked off unless you ask for them directly.
-static const IndexingType MayHaveIndexedAccessors  = 0x20;
+static const IndexingType MayHaveIndexedAccessors  = 0x10;
 
 // List of acceptable array types.
 static const IndexingType NonArray                        = 0x0;
@@ -121,16 +137,14 @@ static inline bool hasContiguous(IndexingType indexingType)
     return (indexingType & IndexingShapeMask) == ContiguousShape;
 }
 
-// FIXME: This is an awkward name. This should really be called hasArrayStorage()
-// and then next method down should be called hasAnyArrayStorage().
-static inline bool hasFastArrayStorage(IndexingType indexingType)
+static inline bool hasArrayStorage(IndexingType indexingType)
 {
     return (indexingType & IndexingShapeMask) == ArrayStorageShape;
 }
 
-static inline bool hasArrayStorage(IndexingType indexingType)
+static inline bool hasAnyArrayStorage(IndexingType indexingType)
 {
-    return static_cast<uint8_t>((indexingType & IndexingShapeMask) - ArrayStorageShape) <= static_cast<uint8_t>(SlowPutArrayStorageShape - ArrayStorageShape);
+    return static_cast<uint8_t>(indexingType & IndexingShapeMask) >= ArrayStorageShape;
 }
 
 static inline bool shouldUseSlowPut(IndexingType indexingType)
@@ -148,10 +162,10 @@ void dumpIndexingType(PrintStream&, IndexingType);
 MAKE_PRINT_ADAPTOR(IndexingTypeDump, IndexingType, dumpIndexingType);
 
 // Mask of all possible types.
-static const IndexingType AllArrayTypes            = 31;
+static const IndexingType AllArrayTypes            = IndexingShapeMask | IsArray;
 
 // Mask of all possible types including the history.
-static const IndexingType AllArrayTypesAndHistory  = 127;
+static const IndexingType AllArrayTypesAndHistory  = AllArrayTypes | MayHaveIndexedAccessors;
 
 } // namespace JSC
 

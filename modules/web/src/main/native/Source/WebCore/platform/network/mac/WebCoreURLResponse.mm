@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,6 +37,7 @@
 
 namespace WebCore {
 
+#if PLATFORM(MAC)
 // <rdar://problem/7007389> CoreTypes UTI map is missing 100+ file extensions that GateKeeper knew about
 // When we disabled content sniffing for file URLs we caused problems with these 100+ extensions that CoreTypes
 // doesn't know about.
@@ -322,10 +323,11 @@ void adjustMIMETypeIfNecessary(CFURLResponseRef cfResponse)
     if (result != originalResult)
         wkSetCFURLResponseMIMEType(cfResponse, result.get());
 }
+#endif
 
+#if !USE(CFNETWORK)
 NSURLResponse *synthesizeRedirectResponseIfNecessary(NSURLConnection *connection, NSURLRequest *newRequest, NSURLResponse *redirectResponse)
 {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     if (redirectResponse)
         return redirectResponse;
 
@@ -336,11 +338,7 @@ NSURLResponse *synthesizeRedirectResponseIfNecessary(NSURLConnection *connection
     // This is critical for HSTS (<rdar://problem/14241270>).
     NSDictionary *synthesizedResponseHeaderFields = @{ @"Location": [[newRequest URL] absoluteString], @"Cache-Control": @"no-store" };
     return [[[NSHTTPURLResponse alloc] initWithURL:[[connection currentRequest] URL] statusCode:302 HTTPVersion:(NSString *)kCFHTTPVersion1_1 headerFields:synthesizedResponseHeaderFields] autorelease];
-#else
-    UNUSED_PARAM(connection);
-    UNUSED_PARAM(newRequest);
-    return redirectResponse;
-#endif
 }
+#endif
 
 }

@@ -22,7 +22,6 @@
 [
     CustomToJSObject,
     ConstructorTemplate=Event,
-    JSNoStaticTables,
     ObjCPolymorphic,
 ] interface Event {
 
@@ -76,7 +75,7 @@
              attribute boolean          cancelBubble;
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-    [Custom] readonly attribute Clipboard        clipboardData;
+    [Custom] readonly attribute DataTransfer        clipboardData;
 #endif
 
 };

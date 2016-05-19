@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,10 +28,12 @@
 #include "config.h"
 #include "CSSValue.h"
 
+#include "CSSAnimationTriggerScrollValue.h"
 #include "CSSAspectRatioValue.h"
 #include "CSSBorderImageSliceValue.h"
 #include "CSSCalculationValue.h"
 #include "CSSCanvasValue.h"
+#include "CSSContentDistributionValue.h"
 #include "CSSCrossfadeValue.h"
 #include "CSSCursorImageValue.h"
 #include "CSSFilterImageValue.h"
@@ -40,12 +42,12 @@
 #include "CSSFontValue.h"
 #include "CSSFunctionValue.h"
 #include "CSSGradientValue.h"
-#include "CSSGridTemplateAreasValue.h"
 #include "CSSImageSetValue.h"
 #include "CSSImageValue.h"
 #include "CSSInheritedValue.h"
 #include "CSSInitialValue.h"
 #include "CSSLineBoxContainValue.h"
+#include "CSSNamedImageValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSReflectValue.h"
 #include "CSSShadowValue.h"
@@ -57,6 +59,11 @@
 #include "WebKitCSSFilterValue.h"
 #include "WebKitCSSTransformValue.h"
 
+#if ENABLE(CSS_GRID_LAYOUT)
+#include "CSSGridLineNamesValue.h"
+#include "CSSGridTemplateAreasValue.h"
+#endif
+
 namespace WebCore {
 
 struct SameSizeAsCSSValue : public RefCounted<SameSizeAsCSSValue> {
@@ -67,7 +74,7 @@ COMPILE_ASSERT(sizeof(CSSValue) == sizeof(SameSizeAsCSSValue), CSS_value_should_
 
 class TextCloneCSSValue : public CSSValue {
 public:
-    static PassRef<TextCloneCSSValue> create(ClassType classType, const String& text)
+    static Ref<TextCloneCSSValue> create(ClassType classType, const String& text)
     {
         return adoptRef(*new TextCloneCSSValue(classType, text));
     }
@@ -87,7 +94,7 @@ private:
 
 bool CSSValue::isImplicitInitialValue() const
 {
-    return m_classType == InitialClass && toCSSInitialValue(this)->isImplicit();
+    return m_classType == InitialClass && downcast<CSSInitialValue>(*this).isImplicit();
 }
 
 CSSValue::Type CSSValue::cssValueType() const
@@ -108,36 +115,34 @@ void CSSValue::addSubresourceStyleURLs(ListHashSet<URL>& urls, const StyleSheetC
     // This should get called for internal instances only.
     ASSERT(!isCSSOMSafe());
 
-    if (isPrimitiveValue())
-        toCSSPrimitiveValue(this)->addSubresourceStyleURLs(urls, styleSheet);
-    else if (isValueList())
-        toCSSValueList(this)->addSubresourceStyleURLs(urls, styleSheet);
-    else if (classType() == FontFaceSrcClass)
-        toCSSFontFaceSrcValue(this)->addSubresourceStyleURLs(urls, styleSheet);
-    else if (classType() == ReflectClass)
-        toCSSReflectValue(this)->addSubresourceStyleURLs(urls, styleSheet);
+    if (is<CSSPrimitiveValue>(*this))
+        downcast<CSSPrimitiveValue>(*this).addSubresourceStyleURLs(urls, styleSheet);
+    else if (is<CSSValueList>(*this))
+        downcast<CSSValueList>(*this).addSubresourceStyleURLs(urls, styleSheet);
+    else if (is<CSSFontFaceSrcValue>(*this))
+        downcast<CSSFontFaceSrcValue>(*this).addSubresourceStyleURLs(urls, styleSheet);
+    else if (is<CSSReflectValue>(*this))
+        downcast<CSSReflectValue>(*this).addSubresourceStyleURLs(urls, styleSheet);
 }
 
-bool CSSValue::hasFailedOrCanceledSubresources() const
+bool CSSValue::traverseSubresources(const std::function<bool (const CachedResource&)>& handler) const
 {
     // This should get called for internal instances only.
     ASSERT(!isCSSOMSafe());
 
-    if (isValueList())
-        return toCSSValueList(this)->hasFailedOrCanceledSubresources();
-    if (classType() == FontFaceSrcClass)
-        return toCSSFontFaceSrcValue(this)->hasFailedOrCanceledSubresources();
-    if (classType() == ImageClass)
-        return toCSSImageValue(this)->hasFailedOrCanceledSubresources();
-    if (classType() == CrossfadeClass)
-        return toCSSCrossfadeValue(this)->hasFailedOrCanceledSubresources();
-#if ENABLE(CSS_FILTERS)
-    if (classType() == FilterImageClass)
-        return toCSSFilterImageValue(this)->hasFailedOrCanceledSubresources();
-#endif
+    if (is<CSSValueList>(*this))
+        return downcast<CSSValueList>(*this).traverseSubresources(handler);
+    if (is<CSSFontFaceSrcValue>(*this))
+        return downcast<CSSFontFaceSrcValue>(*this).traverseSubresources(handler);
+    if (is<CSSImageValue>(*this))
+        return downcast<CSSImageValue>(*this).traverseSubresources(handler);
+    if (is<CSSCrossfadeValue>(*this))
+        return downcast<CSSCrossfadeValue>(*this).traverseSubresources(handler);
+    if (is<CSSFilterImageValue>(*this))
+        return downcast<CSSFilterImageValue>(*this).traverseSubresources(handler);
 #if ENABLE(CSS_IMAGE_SET)
-    if (classType() == ImageSetClass)
-        return toCSSImageSetValue(this)->hasFailedOrCanceledSubresources();
+    if (is<CSSImageSetValue>(*this))
+        return downcast<CSSImageSetValue>(*this).traverseSubresources(handler);
 #endif
     return false;
 }
@@ -163,12 +168,12 @@ bool CSSValue::equals(const CSSValue& other) const
             return compareCSSValues<CSSBorderImageSliceValue>(*this, other);
         case CanvasClass:
             return compareCSSValues<CSSCanvasValue>(*this, other);
+        case NamedImageClass:
+            return compareCSSValues<CSSNamedImageValue>(*this, other);
         case CursorImageClass:
             return compareCSSValues<CSSCursorImageValue>(*this, other);
-#if ENABLE(CSS_FILTERS)
         case FilterImageClass:
             return compareCSSValues<CSSFilterImageValue>(*this, other);
-#endif
         case FontClass:
             return compareCSSValues<CSSFontValue>(*this, other);
         case FontFaceSrcClass:
@@ -189,8 +194,12 @@ bool CSSValue::equals(const CSSValue& other) const
             return compareCSSValues<CSSInheritedValue>(*this, other);
         case InitialClass:
             return compareCSSValues<CSSInitialValue>(*this, other);
+#if ENABLE(CSS_GRID_LAYOUT)
+        case GridLineNamesClass:
+            return compareCSSValues<CSSGridLineNamesValue>(*this, other);
         case GridTemplateAreasClass:
             return compareCSSValues<CSSGridTemplateAreasValue>(*this, other);
+#endif
         case PrimitiveClass:
             return compareCSSValues<CSSPrimitiveValue>(*this, other);
         case ReflectClass:
@@ -215,21 +224,25 @@ bool CSSValue::equals(const CSSValue& other) const
         case ImageSetClass:
             return compareCSSValues<CSSImageSetValue>(*this, other);
 #endif
-#if ENABLE(CSS_FILTERS)
         case WebKitCSSFilterClass:
             return compareCSSValues<WebKitCSSFilterValue>(*this, other);
-#endif
         case SVGColorClass:
             return compareCSSValues<SVGColor>(*this, other);
         case SVGPaintClass:
             return compareCSSValues<SVGPaint>(*this, other);
+#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
+        case AnimationTriggerScrollClass:
+            return compareCSSValues<CSSAnimationTriggerScrollValue>(*this, other);
+#endif
+        case CSSContentDistributionClass:
+            return compareCSSValues<CSSContentDistributionValue>(*this, other);
         default:
             ASSERT_NOT_REACHED();
             return false;
         }
-    } else if (m_classType == ValueListClass && other.m_classType != ValueListClass)
-        return toCSSValueList(this)->equals(other);
-    else if (m_classType != ValueListClass && other.m_classType == ValueListClass)
+    } else if (is<CSSValueList>(*this) && !is<CSSValueList>(other))
+        return downcast<CSSValueList>(*this).equals(other);
+    else if (!is<CSSValueList>(*this) && is<CSSValueList>(other))
         return static_cast<const CSSValueList&>(other).equals(*this);
     return false;
 }
@@ -244,71 +257,79 @@ String CSSValue::cssText() const
 
     switch (classType()) {
     case AspectRatioClass:
-        return toCSSAspectRatioValue(this)->customCSSText();
+        return downcast<CSSAspectRatioValue>(*this).customCSSText();
     case BorderImageSliceClass:
-        return toCSSBorderImageSliceValue(this)->customCSSText();
+        return downcast<CSSBorderImageSliceValue>(*this).customCSSText();
     case CanvasClass:
-        return toCSSCanvasValue(this)->customCSSText();
+        return downcast<CSSCanvasValue>(*this).customCSSText();
+    case NamedImageClass:
+        return downcast<CSSNamedImageValue>(*this).customCSSText();
     case CursorImageClass:
-        return toCSSCursorImageValue(this)->customCSSText();
-#if ENABLE(CSS_FILTERS)
+        return downcast<CSSCursorImageValue>(*this).customCSSText();
     case FilterImageClass:
-        return toCSSFilterImageValue(this)->customCSSText();
-#endif
+        return downcast<CSSFilterImageValue>(*this).customCSSText();
     case FontClass:
-        return toCSSFontValue(this)->customCSSText();
+        return downcast<CSSFontValue>(*this).customCSSText();
     case FontFaceSrcClass:
-        return toCSSFontFaceSrcValue(this)->customCSSText();
+        return downcast<CSSFontFaceSrcValue>(*this).customCSSText();
     case FontFeatureClass:
-        return toCSSFontFeatureValue(this)->customCSSText();
+        return downcast<CSSFontFeatureValue>(*this).customCSSText();
     case FunctionClass:
-        return toCSSFunctionValue(this)->customCSSText();
+        return downcast<CSSFunctionValue>(*this).customCSSText();
     case LinearGradientClass:
-        return toCSSLinearGradientValue(this)->customCSSText();
+        return downcast<CSSLinearGradientValue>(*this).customCSSText();
     case RadialGradientClass:
-        return toCSSRadialGradientValue(this)->customCSSText();
+        return downcast<CSSRadialGradientValue>(*this).customCSSText();
     case CrossfadeClass:
-        return toCSSCrossfadeValue(this)->customCSSText();
+        return downcast<CSSCrossfadeValue>(*this).customCSSText();
     case ImageClass:
-        return toCSSImageValue(this)->customCSSText();
+        return downcast<CSSImageValue>(*this).customCSSText();
     case InheritedClass:
-        return toCSSInheritedValue(this)->customCSSText();
+        return downcast<CSSInheritedValue>(*this).customCSSText();
     case InitialClass:
-        return toCSSInitialValue(this)->customCSSText();
+        return downcast<CSSInitialValue>(*this).customCSSText();
+#if ENABLE(CSS_GRID_LAYOUT)
+    case GridLineNamesClass:
+        return downcast<CSSGridLineNamesValue>(*this).customCSSText();
     case GridTemplateAreasClass:
-        return toCSSGridTemplateAreasValue(this)->customCSSText();
+        return downcast<CSSGridTemplateAreasValue>(*this).customCSSText();
+#endif
     case PrimitiveClass:
-        return toCSSPrimitiveValue(this)->customCSSText();
+        return downcast<CSSPrimitiveValue>(*this).customCSSText();
     case ReflectClass:
-        return toCSSReflectValue(this)->customCSSText();
+        return downcast<CSSReflectValue>(*this).customCSSText();
     case ShadowClass:
-        return toCSSShadowValue(this)->customCSSText();
+        return downcast<CSSShadowValue>(*this).customCSSText();
     case CubicBezierTimingFunctionClass:
-        return toCSSCubicBezierTimingFunctionValue(this)->customCSSText();
+        return downcast<CSSCubicBezierTimingFunctionValue>(*this).customCSSText();
     case StepsTimingFunctionClass:
-        return toCSSStepsTimingFunctionValue(this)->customCSSText();
+        return downcast<CSSStepsTimingFunctionValue>(*this).customCSSText();
     case UnicodeRangeClass:
-        return toCSSUnicodeRangeValue(this)->customCSSText();
+        return downcast<CSSUnicodeRangeValue>(*this).customCSSText();
     case ValueListClass:
-        return toCSSValueList(this)->customCSSText();
+        return downcast<CSSValueList>(*this).customCSSText();
     case WebKitCSSTransformClass:
-        return toWebKitCSSTransformValue(this)->customCSSText();
+        return downcast<WebKitCSSTransformValue>(*this).customCSSText();
     case LineBoxContainClass:
-        return toCSSLineBoxContainValue(this)->customCSSText();
+        return downcast<CSSLineBoxContainValue>(*this).customCSSText();
     case CalculationClass:
-        return toCSSCalcValue(this)->customCSSText();
+        return downcast<CSSCalcValue>(*this).customCSSText();
 #if ENABLE(CSS_IMAGE_SET)
     case ImageSetClass:
-        return toCSSImageSetValue(this)->customCSSText();
+        return downcast<CSSImageSetValue>(*this).customCSSText();
 #endif
-#if ENABLE(CSS_FILTERS)
     case WebKitCSSFilterClass:
-        return toWebKitCSSFilterValue(this)->customCSSText();
-#endif
+        return downcast<WebKitCSSFilterValue>(*this).customCSSText();
     case SVGColorClass:
-        return toSVGColor(this)->customCSSText();
+        return downcast<SVGColor>(*this).customCSSText();
     case SVGPaintClass:
-        return toSVGPaint(this)->customCSSText();
+        return downcast<SVGPaint>(*this).customCSSText();
+#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
+    case AnimationTriggerScrollClass:
+        return downcast<CSSAnimationTriggerScrollValue>(*this).customCSSText();
+#endif
+    case CSSContentDistributionClass:
+        return downcast<CSSContentDistributionValue>(*this).customCSSText();
     }
     ASSERT_NOT_REACHED();
     return String();
@@ -325,98 +346,112 @@ void CSSValue::destroy()
 
     switch (classType()) {
     case AspectRatioClass:
-        delete toCSSAspectRatioValue(this);
+        delete downcast<CSSAspectRatioValue>(this);
         return;
     case BorderImageSliceClass:
-        delete toCSSBorderImageSliceValue(this);
+        delete downcast<CSSBorderImageSliceValue>(this);
         return;
     case CanvasClass:
-        delete toCSSCanvasValue(this);
+        delete downcast<CSSCanvasValue>(this);
+        return;
+    case NamedImageClass:
+        delete downcast<CSSNamedImageValue>(this);
         return;
     case CursorImageClass:
-        delete toCSSCursorImageValue(this);
+        delete downcast<CSSCursorImageValue>(this);
         return;
     case FontClass:
-        delete toCSSFontValue(this);
+        delete downcast<CSSFontValue>(this);
         return;
     case FontFaceSrcClass:
-        delete toCSSFontFaceSrcValue(this);
+        delete downcast<CSSFontFaceSrcValue>(this);
         return;
     case FontFeatureClass:
-        delete toCSSFontFeatureValue(this);
+        delete downcast<CSSFontFeatureValue>(this);
         return;
     case FunctionClass:
-        delete toCSSFunctionValue(this);
+        delete downcast<CSSFunctionValue>(this);
         return;
     case LinearGradientClass:
-        delete toCSSLinearGradientValue(this);
+        delete downcast<CSSLinearGradientValue>(this);
         return;
     case RadialGradientClass:
-        delete toCSSRadialGradientValue(this);
+        delete downcast<CSSRadialGradientValue>(this);
         return;
     case CrossfadeClass:
-        delete toCSSCrossfadeValue(this);
+        delete downcast<CSSCrossfadeValue>(this);
         return;
     case ImageClass:
-        delete toCSSImageValue(this);
+        delete downcast<CSSImageValue>(this);
         return;
     case InheritedClass:
-        delete toCSSInheritedValue(this);
+        delete downcast<CSSInheritedValue>(this);
         return;
     case InitialClass:
-        delete toCSSInitialValue(this);
+        delete downcast<CSSInitialValue>(this);
+        return;
+#if ENABLE(CSS_GRID_LAYOUT)
+    case GridLineNamesClass:
+        delete downcast<CSSGridLineNamesValue>(this);
         return;
     case GridTemplateAreasClass:
-        delete toCSSGridTemplateAreasValue(this);
+        delete downcast<CSSGridTemplateAreasValue>(this);
         return;
+#endif
     case PrimitiveClass:
-        delete toCSSPrimitiveValue(this);
+        delete downcast<CSSPrimitiveValue>(this);
         return;
     case ReflectClass:
-        delete toCSSReflectValue(this);
+        delete downcast<CSSReflectValue>(this);
         return;
     case ShadowClass:
-        delete toCSSShadowValue(this);
+        delete downcast<CSSShadowValue>(this);
         return;
     case CubicBezierTimingFunctionClass:
-        delete toCSSCubicBezierTimingFunctionValue(this);
+        delete downcast<CSSCubicBezierTimingFunctionValue>(this);
         return;
     case StepsTimingFunctionClass:
-        delete toCSSStepsTimingFunctionValue(this);
+        delete downcast<CSSStepsTimingFunctionValue>(this);
         return;
     case UnicodeRangeClass:
-        delete toCSSUnicodeRangeValue(this);
+        delete downcast<CSSUnicodeRangeValue>(this);
         return;
     case ValueListClass:
-        delete toCSSValueList(this);
+        delete downcast<CSSValueList>(this);
         return;
     case WebKitCSSTransformClass:
-        delete toWebKitCSSTransformValue(this);
+        delete downcast<WebKitCSSTransformValue>(this);
         return;
     case LineBoxContainClass:
-        delete toCSSLineBoxContainValue(this);
+        delete downcast<CSSLineBoxContainValue>(this);
         return;
     case CalculationClass:
-        delete toCSSCalcValue(this);
+        delete downcast<CSSCalcValue>(this);
         return;
 #if ENABLE(CSS_IMAGE_SET)
     case ImageSetClass:
-        delete toCSSImageSetValue(this);
+        delete downcast<CSSImageSetValue>(this);
         return;
 #endif
-#if ENABLE(CSS_FILTERS)
     case FilterImageClass:
-        delete toCSSFilterImageValue(this);
+        delete downcast<CSSFilterImageValue>(this);
         return;
     case WebKitCSSFilterClass:
-        delete toWebKitCSSFilterValue(this);
+        delete downcast<WebKitCSSFilterValue>(this);
         return;
-#endif
     case SVGColorClass:
-        delete toSVGColor(this);
+        delete downcast<SVGColor>(this);
         return;
     case SVGPaintClass:
-        delete toSVGPaint(this);
+        delete downcast<SVGPaint>(this);
+        return;
+#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
+    case AnimationTriggerScrollClass:
+        delete downcast<CSSAnimationTriggerScrollValue>(this);
+        return;
+#endif
+    case CSSContentDistributionClass:
+        delete downcast<CSSContentDistributionValue>(this);
         return;
     }
     ASSERT_NOT_REACHED();
@@ -426,26 +461,24 @@ PassRefPtr<CSSValue> CSSValue::cloneForCSSOM() const
 {
     switch (classType()) {
     case PrimitiveClass:
-        return toCSSPrimitiveValue(this)->cloneForCSSOM();
+        return downcast<CSSPrimitiveValue>(*this).cloneForCSSOM();
     case ValueListClass:
-        return toCSSValueList(this)->cloneForCSSOM();
+        return downcast<CSSValueList>(*this).cloneForCSSOM();
     case ImageClass:
     case CursorImageClass:
-        return toCSSImageValue(this)->cloneForCSSOM();
-#if ENABLE(CSS_FILTERS)
+        return downcast<CSSImageValue>(*this).cloneForCSSOM();
     case WebKitCSSFilterClass:
-        return toWebKitCSSFilterValue(this)->cloneForCSSOM();
-#endif
+        return downcast<WebKitCSSFilterValue>(*this).cloneForCSSOM();
     case WebKitCSSTransformClass:
-        return toWebKitCSSTransformValue(this)->cloneForCSSOM();
+        return downcast<WebKitCSSTransformValue>(*this).cloneForCSSOM();
 #if ENABLE(CSS_IMAGE_SET)
     case ImageSetClass:
-        return toCSSImageSetValue(this)->cloneForCSSOM();
+        return downcast<CSSImageSetValue>(*this).cloneForCSSOM();
 #endif
     case SVGColorClass:
-        return toSVGColor(this)->cloneForCSSOM();
+        return downcast<SVGColor>(*this).cloneForCSSOM();
     case SVGPaintClass:
-        return toSVGPaint(this)->cloneForCSSOM();
+        return downcast<SVGPaint>(*this).cloneForCSSOM();
     default:
         ASSERT(!isSubtypeExposedToCSSOM());
         return TextCloneCSSValue::create(classType(), cssText());

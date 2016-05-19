@@ -19,9 +19,6 @@
 #ifndef ExceptionCode_h
 #define ExceptionCode_h
 
-// FIXME: Move this header into the files that actually need it.
-#include "ExceptionCodeDescription.h"
-
 namespace WebCore {
 
     // The DOM standards use unsigned short for exception codes.
@@ -68,6 +65,7 @@ namespace WebCore {
         // WebIDL exception types, handled by the binding layer.
         // FIXME: Add GeneralError, EvalError, etc. when implemented in the bindings.
         TypeError = 105,
+        RangeError = 106,
     };
 
 } // namespace WebCore

@@ -23,17 +23,16 @@
 #ifndef SpotLightSource_h
 #define SpotLightSource_h
 
-#if ENABLE(FILTERS)
 #include "LightSource.h"
 
 namespace WebCore {
 
 class SpotLightSource : public LightSource {
 public:
-    static PassRefPtr<SpotLightSource> create(const FloatPoint3D& position,
+    static Ref<SpotLightSource> create(const FloatPoint3D& position,
         const FloatPoint3D& direction, float specularExponent, float limitingConeAngle)
     {
-        return adoptRef(new SpotLightSource(position, direction, specularExponent, limitingConeAngle));
+        return adoptRef(*new SpotLightSource(position, direction, specularExponent, limitingConeAngle));
     }
 
     const FloatPoint3D& position() const { return m_position; }
@@ -51,10 +50,10 @@ public:
     virtual bool setSpecularExponent(float) override;
     virtual bool setLimitingConeAngle(float) override;
 
-    virtual void initPaintingData(PaintingData&);
-    virtual void updatePaintingData(PaintingData&, int x, int y, float z);
+    virtual void initPaintingData(PaintingData&) override;
+    virtual void updatePaintingData(PaintingData&, int x, int y, float z) override;
 
-    virtual TextStream& externalRepresentation(TextStream&) const;
+    virtual TextStream& externalRepresentation(TextStream&) const override;
 
 private:
     SpotLightSource(const FloatPoint3D& position, const FloatPoint3D& direction,
@@ -75,7 +74,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // SpotLightSource_h

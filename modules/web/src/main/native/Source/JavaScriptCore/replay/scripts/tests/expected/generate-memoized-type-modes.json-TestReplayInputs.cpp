@@ -47,7 +47,7 @@ ScalarInput::~ScalarInput()
 
 MapInput::MapInput(std::unique_ptr<MapType> data)
     : NondeterministicInput<MapInput>()
-    , m_data(std::move(data))
+    , m_data(WTF::move(data))
 {
 }
 
@@ -57,9 +57,9 @@ MapInput::~MapInput()
 } // namespace Test
 
 namespace JSC {
-const AtomicString& InputTraits<Test::ScalarInput>::type()
+const String& InputTraits<Test::ScalarInput>::type()
 {
-    static NeverDestroyed<const AtomicString> type("ScalarInput", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const String> type(ASCIILiteral("ScalarInput"));
     return type;
 }
 
@@ -78,9 +78,9 @@ bool InputTraits<Test::ScalarInput>::decode(EncodedValue& encodedValue, std::uni
     return true;
 }
 
-const AtomicString& InputTraits<Test::MapInput>::type()
+const String& InputTraits<Test::MapInput>::type()
 {
-    static NeverDestroyed<const AtomicString> type("MapInput", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const String> type(ASCIILiteral("MapInput"));
     return type;
 }
 
@@ -95,7 +95,7 @@ bool InputTraits<Test::MapInput>::decode(EncodedValue& encodedValue, std::unique
     if (!encodedValue.get<MapType>(ASCIILiteral("data"), data))
         return false;
 
-    input = std::make_unique<Test::MapInput>(std::move(data));
+    input = std::make_unique<Test::MapInput>(WTF::move(data));
     return true;
 }
 

@@ -2,9 +2,9 @@ namespace=Exception
 
 DOMCoreException
 EventException
-FileException conditional=BLOB
+FileException
 RangeException
-SQLException conditional=SQL_DATABASE
+SQLException
 SVGException
 XMLHttpRequestException
 XPathException

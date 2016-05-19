@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Baidu Inc. All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -696,6 +696,9 @@ static JSValueRef beginDragWithFilesCallback(JSContextRef context, JSObjectRef f
     hDropMedium.tymed = TYMED_HGLOBAL;
     SIZE_T dropFilesSize = sizeof(DROPFILES) + (sizeof(WCHAR) * files.size());
     hDropMedium.hGlobal = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, dropFilesSize);
+    if (!hDropMedium.hGlobal)
+        return JSValueMakeUndefined(context);
+
     DROPFILES* dropFiles = reinterpret_cast<DROPFILES*>(GlobalLock(hDropMedium.hGlobal));
     memset(dropFiles, 0, sizeof(DROPFILES));
     dropFiles->pFiles = sizeof(DROPFILES);
@@ -710,6 +713,9 @@ static JSValueRef beginDragWithFilesCallback(JSContextRef context, JSObjectRef f
     hFileNameMedium.tymed = TYMED_HGLOBAL;
     SIZE_T hFileNameSize = sizeof(WCHAR) * files.size();
     hFileNameMedium.hGlobal = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, hFileNameSize);
+    if (!hFileNameMedium.hGlobal)
+        return JSValueMakeUndefined(context);
+
     WCHAR* hFileName = static_cast<WCHAR*>(GlobalLock(hFileNameMedium.hGlobal));
     for (size_t i = 0; i < files.size(); i++)
         hFileName[i] = files[i];
@@ -745,6 +751,35 @@ static JSValueRef beginDragWithFilesCallback(JSContextRef context, JSObjectRef f
     return JSValueMakeUndefined(context);
 }
 
+static JSValueRef scalePageByCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+
+    COMPtr<IWebView> webView;
+    if (FAILED(frame->webView(&webView)))
+        return JSValueMakeUndefined(context);
+
+    COMPtr<IWebViewPrivate2> webViewPrivate;
+    if (FAILED(webView->QueryInterface(&webViewPrivate)))
+        return JSValueMakeUndefined(context);
+
+    POINT origin;
+    origin.x = 0;
+    origin.y = 0;
+
+    double scale = JSValueToNumber(context, arguments[0], exception);
+
+    if (argumentCount > 1)
+        origin.x = JSValueToNumber(context, arguments[1], exception);
+    if (argumentCount > 2)
+        origin.y = JSValueToNumber(context, arguments[2], exception);
+
+    webViewPrivate->scaleWebView(scale, origin);
+
+    return JSValueMakeUndefined(context);
+}
+
 static JSStaticFunction staticFunctions[] = {
     { "contextClick", contextClickCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
     { "mouseDown", mouseDownCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -758,6 +793,7 @@ static JSStaticFunction staticFunctions[] = {
     { "zoomPageIn", zoomPageInCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
     { "zoomPageOut", zoomPageOutCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
     { "beginDragWithFiles", beginDragWithFilesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "scalePageBy", scalePageByCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
     { 0, 0, 0 }
 };
 

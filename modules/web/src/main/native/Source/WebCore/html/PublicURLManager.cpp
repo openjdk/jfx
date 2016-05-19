@@ -26,9 +26,6 @@
 
 #include "config.h"
 #include "PublicURLManager.h"
-
-#if ENABLE(BLOB)
-
 #include "URL.h"
 #include "URLRegistry.h"
 #include <wtf/text/StringHash.h>
@@ -83,6 +80,15 @@ void PublicURLManager::stop()
     m_registryToURL.clear();
 }
 
+bool PublicURLManager::canSuspendForPageCache() const
+{
+    // Suspending an PublicURLManager is safe as it does not cause any JS to be executed.
+    return true;
 }
 
-#endif // ENABLE(BLOB)
+const char* PublicURLManager::activeDOMObjectName() const
+{
+    return "PublicURLManager";
+}
+
+} // namespace WebCore

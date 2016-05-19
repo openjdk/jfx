@@ -34,8 +34,8 @@ class RenderTextControl : public RenderBlockFlow {
 public:
     virtual ~RenderTextControl();
 
-    HTMLTextFormControlElement& textFormControlElement() const;
-    virtual PassRef<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const = 0;
+    WEBCORE_EXPORT HTMLTextFormControlElement& textFormControlElement() const;
+    virtual Ref<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const = 0;
 
 #if PLATFORM(IOS)
     bool canScroll() const;
@@ -45,13 +45,13 @@ public:
 #endif
 
 protected:
-    RenderTextControl(HTMLTextFormControlElement&, PassRef<RenderStyle>);
+    RenderTextControl(HTMLTextFormControlElement&, Ref<RenderStyle>&&);
 
     // This convenience function should not be made public because innerTextElement may outlive the render tree.
     TextControlInnerTextElement* innerTextElement() const;
 
     int scrollbarThickness() const;
-    void adjustInnerTextStyle(const RenderStyle* startStyle, RenderStyle* textBlockStyle) const;
+    void adjustInnerTextStyle(const RenderStyle* startStyle, RenderStyle& textBlockStyle) const;
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
@@ -62,12 +62,10 @@ protected:
 
     float scaleEmToUnits(int x) const;
 
-    static bool hasValidAvgCharWidth(AtomicString family);
-    virtual float getAvgCharWidth(AtomicString family);
+    virtual float getAverageCharWidth();
     virtual LayoutUnit preferredContentLogicalWidth(float charWidth) const = 0;
     virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const = 0;
 
-    virtual void updateFromElement() override;
     virtual void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const override;
     virtual RenderObject* layoutSpecialExcludedChild(bool relayoutChildren) override;
 
@@ -89,16 +87,14 @@ private:
     virtual bool requiresForcedStyleRecalcPropagation() const override { return true; }
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderTextControl, isTextControl())
-
 // Renderer for our inner container, for <search> and others.
 // We can't use RenderFlexibleBox directly, because flexboxes have a different
 // baseline definition, and then inputs of different types wouldn't line up
 // anymore.
 class RenderTextControlInnerContainer final : public RenderFlexibleBox {
 public:
-    explicit RenderTextControlInnerContainer(Element& element, PassRef<RenderStyle> style)
-        : RenderFlexibleBox(element, std::move(style))
+    explicit RenderTextControlInnerContainer(Element& element, Ref<RenderStyle>&& style)
+        : RenderFlexibleBox(element, WTF::move(style))
     { }
     virtual ~RenderTextControlInnerContainer() { }
 
@@ -106,12 +102,13 @@ public:
     {
         return RenderBlock::baselinePosition(baseline, firstLine, direction, position);
     }
-    virtual int firstLineBaseline() const override { return RenderBlock::firstLineBaseline(); }
-    virtual int inlineBlockBaseline(LineDirectionMode direction) const override { return RenderBlock::inlineBlockBaseline(direction); }
+    virtual Optional<int> firstLineBaseline() const override { return RenderBlock::firstLineBaseline(); }
+    virtual Optional<int> inlineBlockBaseline(LineDirectionMode direction) const override { return RenderBlock::inlineBlockBaseline(direction); }
 
 };
 
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControl, isTextControl())
 
 #endif // RenderTextControl_h

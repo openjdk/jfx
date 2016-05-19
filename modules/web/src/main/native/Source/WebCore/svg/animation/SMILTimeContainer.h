@@ -31,7 +31,6 @@
 #include "Timer.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
@@ -44,7 +43,7 @@ class SVGSVGElement;
 
 class SMILTimeContainer : public RefCounted<SMILTimeContainer>  {
 public:
-    static PassRefPtr<SMILTimeContainer> create(SVGSVGElement* owner) { return adoptRef(new SMILTimeContainer(owner)); }
+    static Ref<SMILTimeContainer> create(SVGSVGElement* owner) { return adoptRef(*new SMILTimeContainer(owner)); }
     ~SMILTimeContainer();
 
     void schedule(SVGSMILElement*, SVGElement*, const QualifiedName&);
@@ -67,7 +66,7 @@ public:
 private:
     SMILTimeContainer(SVGSVGElement* owner);
 
-    void timerFired(Timer<SMILTimeContainer>*);
+    void timerFired();
     void startTimer(SMILTime fireTime, SMILTime minimumDelay = 0);
     void updateAnimations(SMILTime elapsed, bool seekToTime = false);
 
@@ -82,7 +81,7 @@ private:
 
     bool m_documentOrderIndexesDirty;
 
-    Timer<SMILTimeContainer> m_timer;
+    Timer m_timer;
 
     typedef std::pair<SVGElement*, QualifiedName> ElementAttributePair;
     typedef Vector<SVGSMILElement*> AnimationsVector;

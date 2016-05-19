@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,9 +32,9 @@
 
 namespace WebCore {
 
-class HTMLSourceElement final : public HTMLElement {
+class HTMLSourceElement final : public HTMLElement, public ActiveDOMObject {
 public:
-    static PassRefPtr<HTMLSourceElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLSourceElement> create(const QualifiedName&, Document&);
 
     String media() const;
     String type() const;
@@ -52,12 +52,18 @@ private:
     virtual void removedFrom(ContainerNode&) override;
     virtual bool isURLAttribute(const Attribute&) const override;
 
-    void errorEventTimerFired(Timer<HTMLSourceElement>&);
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const override;
+    bool canSuspendForPageCache() const override;
+    void suspend(ReasonForSuspension) override;
+    void resume() override;
+    void stop() override;
 
-    Timer<HTMLSourceElement> m_errorEventTimer;
+    void errorEventTimerFired();
+
+    Timer m_errorEventTimer;
+    bool m_shouldRescheduleErrorEventOnResume { false };
 };
-
-NODE_TYPE_CASTS(HTMLSourceElement)
 
 } //namespace
 

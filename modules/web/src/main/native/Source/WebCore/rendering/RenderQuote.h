@@ -29,7 +29,7 @@ namespace WebCore {
 
 class RenderQuote final : public RenderInline {
 public:
-    RenderQuote(Document&, PassRef<RenderStyle>, QuoteType);
+    RenderQuote(Document&, Ref<RenderStyle>&&, QuoteType);
     virtual ~RenderQuote();
 
     void attachQuote();
@@ -37,9 +37,8 @@ public:
 private:
     void detachQuote();
 
-    virtual void willBeDestroyed() override;
     virtual const char* renderName() const override { return "RenderQuote"; }
-    virtual bool isQuote() const override { return true; };
+    virtual bool isQuote() const override { return true; }
     virtual void styleDidChange(StyleDifference, const RenderStyle*) override;
     virtual void willBeRemovedFromTree() override;
 
@@ -47,16 +46,16 @@ private:
     void updateText();
     void updateDepth();
 
-    QuoteType m_type;
-    int m_depth;
-    RenderQuote* m_next;
-    RenderQuote* m_previous;
-    bool m_isAttached;
+    const QuoteType m_type;
+    int m_depth { -1 };
+    RenderQuote* m_next { nullptr };
+    RenderQuote* m_previous { nullptr };
+    bool m_isAttached { false };
     String m_text;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderQuote, isQuote())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderQuote, isQuote())
 
 #endif // RenderQuote_h

@@ -31,8 +31,6 @@
 #ifndef FileReader_h
 #define FileReader_h
 
-#if ENABLE(BLOB)
-
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "FileError.h"
@@ -56,7 +54,7 @@ typedef int ExceptionCode;
 
 class FileReader final : public RefCounted<FileReader>, public ActiveDOMObject, public EventTargetWithInlineData, public FileReaderLoaderClient {
 public:
-    static PassRefPtr<FileReader> create(ScriptExecutionContext&);
+    static Ref<FileReader> create(ScriptExecutionContext&);
 
     virtual ~FileReader();
 
@@ -94,19 +92,13 @@ public:
     using RefCounted<FileReader>::ref;
     using RefCounted<FileReader>::deref;
 
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(loadstart);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(progress);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(load);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(loadend);
-
 private:
     explicit FileReader(ScriptExecutionContext&);
 
-    // ActiveDOMObject
-    virtual bool canSuspend() const override;
-    virtual void stop() override;
+    // ActiveDOMObject API.
+    const char* activeDOMObjectName() const override;
+    bool canSuspendForPageCache() const override;
+    void stop() override;
 
     // EventTarget
     virtual void refEventTarget() override { ref(); }
@@ -128,7 +120,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(BLOB)
 
 #endif // FileReader_h

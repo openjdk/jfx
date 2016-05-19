@@ -37,6 +37,7 @@
 #include "Document.h"
 #include "DocumentLoadTiming.h"
 #include "DocumentLoader.h"
+#include "HTTPHeaderNames.h"
 #include "URL.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
@@ -48,7 +49,7 @@ namespace WebCore {
 static double monotonicTimeToDocumentMilliseconds(Document* document, double seconds)
 {
     ASSERT(seconds >= 0.0);
-    return document->loader()->timing()->monotonicTimeToZeroBasedDocumentTime(seconds) * 1000.0;
+    return document->loader()->timing().monotonicTimeToZeroBasedDocumentTime(seconds) * 1000.0;
 }
 
 static bool passesTimingAllowCheck(const ResourceResponse& response, Document* requestingDocument)
@@ -57,7 +58,7 @@ static bool passesTimingAllowCheck(const ResourceResponse& response, Document* r
     if (resourceOrigin->isSameSchemeHostPort(requestingDocument->securityOrigin()))
         return true;
 
-    const String& timingAllowOriginString = response.httpHeaderField("timing-allow-origin");
+    const String& timingAllowOriginString = response.httpHeaderField(HTTPHeaderName::TimingAllowOrigin);
     if (timingAllowOriginString.isEmpty() || equalIgnoringCase(timingAllowOriginString, "null"))
         return false;
 
@@ -66,10 +67,11 @@ static bool passesTimingAllowCheck(const ResourceResponse& response, Document* r
 
     const String& securityOrigin = requestingDocument->securityOrigin()->toString();
     Vector<String> timingAllowOrigins;
-    timingAllowOriginString.split(" ", timingAllowOrigins);
-    for (size_t i = 0; i < timingAllowOrigins.size(); ++i)
-        if (timingAllowOrigins[i] == securityOrigin)
+    timingAllowOriginString.split(' ', timingAllowOrigins);
+    for (auto& origin : timingAllowOrigins) {
+        if (origin == securityOrigin)
             return true;
+    }
 
     return false;
 }
@@ -79,7 +81,6 @@ PerformanceResourceTiming::PerformanceResourceTiming(const AtomicString& initiat
     , m_initiatorType(initiatorType)
     , m_timing(response.resourceLoadTiming())
     , m_finishTime(finishTime)
-    , m_didReuseConnection(response.connectionReused())
     , m_shouldReportDetails(passesTimingAllowCheck(response, requestingDocument))
     , m_requestingDocument(requestingDocument)
 {
@@ -120,10 +121,10 @@ double PerformanceResourceTiming::domainLookupStart() const
     if (!m_shouldReportDetails)
         return 0.0;
 
-    if (!m_timing || m_timing->dnsStart < 0)
+    if (m_timing.domainLookupStart < 0)
         return fetchStart();
 
-    return resourceTimeToDocumentMilliseconds(m_timing->dnsStart);
+    return resourceTimeToDocumentMilliseconds(m_timing.domainLookupStart);
 }
 
 double PerformanceResourceTiming::domainLookupEnd() const
@@ -131,10 +132,10 @@ double PerformanceResourceTiming::domainLookupEnd() const
     if (!m_shouldReportDetails)
         return 0.0;
 
-    if (!m_timing || m_timing->dnsEnd < 0)
+    if (m_timing.domainLookupEnd < 0)
         return domainLookupStart();
 
-    return resourceTimeToDocumentMilliseconds(m_timing->dnsEnd);
+    return resourceTimeToDocumentMilliseconds(m_timing.domainLookupEnd);
 }
 
 double PerformanceResourceTiming::connectStart() const
@@ -143,13 +144,13 @@ double PerformanceResourceTiming::connectStart() const
         return 0.0;
 
     // connectStart will be -1 when a network request is not made.
-    if (!m_timing || m_timing->connectStart < 0 || m_didReuseConnection)
+    if (m_timing.connectStart < 0)
         return domainLookupEnd();
 
     // connectStart includes any DNS time, so we may need to trim that off.
-    int connectStart = m_timing->connectStart;
-    if (m_timing->dnsEnd >= 0)
-        connectStart = m_timing->dnsEnd;
+    int connectStart = m_timing.connectStart;
+    if (m_timing.domainLookupEnd >= 0)
+        connectStart = m_timing.domainLookupEnd;
 
     return resourceTimeToDocumentMilliseconds(connectStart);
 }
@@ -160,10 +161,10 @@ double PerformanceResourceTiming::connectEnd() const
         return 0.0;
 
     // connectStart will be -1 when a network request is not made.
-    if (!m_timing || m_timing->connectEnd < 0 || m_didReuseConnection)
+    if (m_timing.connectEnd < 0)
         return connectStart();
 
-    return resourceTimeToDocumentMilliseconds(m_timing->connectEnd);
+    return resourceTimeToDocumentMilliseconds(m_timing.connectEnd);
 }
 
 double PerformanceResourceTiming::secureConnectionStart() const
@@ -171,10 +172,10 @@ double PerformanceResourceTiming::secureConnectionStart() const
     if (!m_shouldReportDetails)
         return 0.0;
 
-    if (!m_timing || m_timing->sslStart < 0) // Secure connection not negotiated.
+    if (m_timing.secureConnectionStart < 0) // Secure connection not negotiated.
         return 0.0;
 
-    return resourceTimeToDocumentMilliseconds(m_timing->sslStart);
+    return resourceTimeToDocumentMilliseconds(m_timing.secureConnectionStart);
 }
 
 double PerformanceResourceTiming::requestStart() const
@@ -182,28 +183,11 @@ double PerformanceResourceTiming::requestStart() const
     if (!m_shouldReportDetails)
         return 0.0;
 
-    if (!m_timing)
-        return connectEnd();
-
-    return resourceTimeToDocumentMilliseconds(m_timing->sendStart);
-}
-
-double PerformanceResourceTiming::responseStart() const
-{
-    if (!m_shouldReportDetails)
-        return 0.0;
-
-    if (!m_timing)
-        return requestStart();
-    // FIXME: This number isn't exactly correct. See the notes in PerformanceTiming::responseStart().
-    return resourceTimeToDocumentMilliseconds(m_timing->receiveHeadersEnd);
+    return resourceTimeToDocumentMilliseconds(m_timing.requestStart);
 }
 
 double PerformanceResourceTiming::responseEnd() const
 {
-    if (!m_finishTime)
-        return responseStart();
-
     return monotonicTimeToDocumentMilliseconds(m_requestingDocument.get(), m_finishTime);
 }
 
@@ -211,7 +195,7 @@ double PerformanceResourceTiming::resourceTimeToDocumentMilliseconds(int deltaMi
 {
     if (!deltaMilliseconds)
         return 0.0;
-    return monotonicTimeToDocumentMilliseconds(m_requestingDocument.get(), m_timing->requestTime) + deltaMilliseconds;
+    return monotonicTimeToDocumentMilliseconds(m_requestingDocument.get(), m_requestingDocument->loader()->timing().navigationStart()) + deltaMilliseconds;
 }
 
 } // namespace WebCore

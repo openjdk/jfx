@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,7 +30,9 @@
 #include "AccessibilityList.h"
 
 #include "AXObjectCache.h"
+#include "HTMLElement.h"
 #include "HTMLNames.h"
+#include "PseudoElement.h"
 #include "RenderListItem.h"
 #include "RenderObject.h"
 #include "RenderStyle.h"
@@ -48,9 +50,9 @@ AccessibilityList::~AccessibilityList()
 {
 }
 
-PassRefPtr<AccessibilityList> AccessibilityList::create(RenderObject* renderer)
+Ref<AccessibilityList> AccessibilityList::create(RenderObject* renderer)
 {
-    return adoptRef(new AccessibilityList(renderer));
+    return adoptRef(*new AccessibilityList(renderer));
 }
 
 bool AccessibilityList::computeAccessibilityIsIgnored() const
@@ -96,6 +98,35 @@ bool AccessibilityList::isDescriptionList() const
     return node && node->hasTagName(dlTag);
 }
 
+bool AccessibilityList::childHasPseudoVisibleListItemMarkers(RenderObject* listItem)
+{
+    // Check if the list item has a pseudo-element that should be accessible (e.g. an image or text)
+    Element* listItemElement = downcast<Element>(listItem->node());
+    if (!listItemElement || !listItemElement->beforePseudoElement())
+        return false;
+
+    AccessibilityObject* axObj = axObjectCache()->getOrCreate(listItemElement->beforePseudoElement()->renderer());
+    if (!axObj)
+        return false;
+
+    if (!axObj->accessibilityIsIgnored())
+        return true;
+
+    for (const auto& child : axObj->children()) {
+        if (!child->accessibilityIsIgnored())
+            return true;
+    }
+
+    // Platforms which expose rendered text content through the parent element will treat
+    // those renderers as "ignored" objects.
+#if PLATFORM(GTK) || PLATFORM(EFL)
+    String text = axObj->textUnderElement();
+    return !text.isEmpty() && !text.containsOnlyWhitespace();
+#else
+    return false;
+#endif
+}
+
 AccessibilityRole AccessibilityList::determineAccessibilityRole()
 {
     m_ariaRole = determineAriaRoleAttribute();
@@ -130,21 +161,33 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
             listItemCount++;
         else if (child->roleValue() == ListItemRole) {
             RenderObject* listItem = child->renderer();
-            if (listItem && listItem->isListItem()) {
-                if (listItem->style().listStyleType() != NoneListStyle || listItem->style().listStyleImage())
+            if (!listItem)
+                continue;
+
+            // Rendered list items always count.
+            if (listItem->isListItem()) {
+                if (!hasVisibleMarkers && (listItem->style().listStyleType() != NoneListStyle || listItem->style().listStyleImage() || childHasPseudoVisibleListItemMarkers(listItem)))
                     hasVisibleMarkers = true;
                 listItemCount++;
+            } else if (listItem->node() && listItem->node()->hasTagName(liTag)) {
+                // Inline elements that are in a list with an explicit role should also count.
+                if (m_ariaRole == ListRole)
+                    listItemCount++;
+
+                if (childHasPseudoVisibleListItemMarkers(listItem)) {
+                    hasVisibleMarkers = true;
+                    listItemCount++;
+                }
             }
         }
     }
 
-    bool unorderedList = isUnorderedList();
     // Non <ul> lists and ARIA lists only need to have one child.
-    // <ul> lists need to have 1 child, or visible markers.
-    if (!unorderedList || ariaRoleAttribute() != UnknownRole) {
+    // <ul>, <ol> lists need to have visible markers.
+    if (ariaRoleAttribute() != UnknownRole) {
         if (!listItemCount)
             role = GroupRole;
-    } else if (unorderedList && listItemCount <= 1 && !hasVisibleMarkers)
+    } else if (!hasVisibleMarkers)
         role = GroupRole;
 
     return role;

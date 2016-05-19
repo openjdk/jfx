@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Igalia S.L.
+ * Copyright (C) 2011, 2013 Igalia S.L.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,6 +21,8 @@
 
 #include "IntPoint.h"
 #include <gtk/gtk.h>
+#include <wtf/glib/GLibUtilities.h>
+#include <wtf/glib/GUniquePtr.h>
 
 namespace WebCore {
 
@@ -51,5 +53,31 @@ bool widgetIsOnscreenToplevelWindow(GtkWidget* widget)
 {
     return gtk_widget_is_toplevel(widget) && GTK_IS_WINDOW(widget) && !GTK_IS_OFFSCREEN_WINDOW(widget);
 }
+
+#if ENABLE(DEVELOPER_MODE)
+static CString topLevelPath()
+{
+    if (const char* topLevelDirectory = g_getenv("WEBKIT_TOP_LEVEL"))
+        return topLevelDirectory;
+
+    // If the environment variable wasn't provided then assume we were built into
+    // WebKitBuild/Debug or WebKitBuild/Release. Obviously this will fail if the build
+    // directory is non-standard, but we can't do much more about this.
+    GUniquePtr<char> parentPath(g_path_get_dirname(getCurrentExecutablePath().data()));
+    GUniquePtr<char> layoutTestsPath(g_build_filename(parentPath.get(), "..", "..", "..", nullptr));
+    GUniquePtr<char> absoluteTopLevelPath(realpath(layoutTestsPath.get(), 0));
+    return absoluteTopLevelPath.get();
+}
+
+CString webkitBuildDirectory()
+{
+    const char* webkitOutputDir = g_getenv("WEBKIT_OUTPUTDIR");
+    if (webkitOutputDir)
+        return webkitOutputDir;
+
+    GUniquePtr<char> outputDir(g_build_filename(topLevelPath().data(), "WebKitBuild", nullptr));
+    return outputDir.get();
+}
+#endif
 
 } // namespace WebCore

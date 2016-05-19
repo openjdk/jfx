@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2006 Michael Emmel mike.emmel@gmail.com
  * Copyright (C) 2007, 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2007 Holger Hans Peter Freyther
@@ -14,7 +14,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,11 +31,10 @@
  */
 
 #include "config.h"
-#include "SimpleFontData.h"
+#include "Font.h"
 
 #include "FloatConversion.h"
 #include "FloatRect.h"
-#include "Font.h"
 #include "FontCache.h"
 #include "FontDescription.h"
 #include "GlyphBuffer.h"
@@ -52,7 +51,7 @@
 
 namespace WebCore {
 
-void SimpleFontData::platformInit()
+void Font::platformInit()
 {
     if (!m_platformData.m_size)
         return;
@@ -63,10 +62,12 @@ void SimpleFontData::platformInit()
 
     float ascent = narrowPrecisionToFloat(fontExtents.ascent);
     float descent = narrowPrecisionToFloat(fontExtents.descent);
+    float capHeight = narrowPrecisionToFloat(fontExtents.height);
     float lineGap = narrowPrecisionToFloat(fontExtents.height - fontExtents.ascent - fontExtents.descent);
 
     m_fontMetrics.setAscent(ascent);
     m_fontMetrics.setDescent(descent);
+    m_fontMetrics.setCapHeight(capHeight);
 
 #if PLATFORM(EFL)
     m_fontMetrics.setLineSpacing(ascent + descent + lineGap);
@@ -92,21 +93,17 @@ void SimpleFontData::platformInit()
     m_syntheticBoldOffset = m_platformData.syntheticBold() ? 1.0f : 0.f;
 }
 
-void SimpleFontData::platformCharWidthInit()
+void Font::platformCharWidthInit()
 {
     m_avgCharWidth = 0.f;
     m_maxCharWidth = 0.f;
     initCharWidths();
 }
 
-void SimpleFontData::platformDestroy()
-{
-}
-
-PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
+PassRefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescription, float scaleFactor) const
 {
     ASSERT(m_platformData.scaledFont());
-    return SimpleFontData::create(FontPlatformData(cairo_scaled_font_get_font_face(m_platformData.scaledFont()),
+    return Font::create(FontPlatformData(cairo_scaled_font_get_font_face(m_platformData.scaledFont()),
         scaleFactor * fontDescription.computedSize(),
         m_platformData.syntheticBold(),
         m_platformData.syntheticOblique(),
@@ -114,33 +111,12 @@ PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const Fo
         isCustomFont(), false);
 }
 
-bool SimpleFontData::containsCharacters(const UChar* characters, int bufferLength) const
-{
-    ASSERT(m_platformData.scaledFont());
-    FT_Face face = cairo_ft_scaled_font_lock_face(m_platformData.scaledFont());
-    if (!face)
-        return false;
-
-    UTF16UChar32Iterator iterator(characters, bufferLength);
-    UChar32 character = iterator.next();
-    while (character != iterator.end()) {
-        if (!FcFreeTypeCharIndex(face, character)) {
-            cairo_ft_scaled_font_unlock_face(m_platformData.scaledFont());
-            return false;
-        }
-        character = iterator.next();
-    }
-
-    cairo_ft_scaled_font_unlock_face(m_platformData.scaledFont());
-    return true;
-}
-
-void SimpleFontData::determinePitch()
+void Font::determinePitch()
 {
     m_treatAsFixedPitch = m_platformData.isFixedPitch();
 }
 
-FloatRect SimpleFontData::platformBoundsForGlyph(Glyph glyph) const
+FloatRect Font::platformBoundsForGlyph(Glyph glyph) const
 {
     if (!m_platformData.size())
         return FloatRect();
@@ -155,7 +131,7 @@ FloatRect SimpleFontData::platformBoundsForGlyph(Glyph glyph) const
     return FloatRect();
 }
 
-float SimpleFontData::platformWidthForGlyph(Glyph glyph) const
+float Font::platformWidthForGlyph(Glyph glyph) const
 {
     if (!m_platformData.size())
         return 0;
@@ -171,10 +147,10 @@ float SimpleFontData::platformWidthForGlyph(Glyph glyph) const
 }
 
 #if USE(HARFBUZZ)
-bool SimpleFontData::canRenderCombiningCharacterSequence(const UChar* characters, size_t length) const
+bool Font::canRenderCombiningCharacterSequence(const UChar* characters, size_t length) const
 {
     if (!m_combiningCharacterSequenceSupport)
-        m_combiningCharacterSequenceSupport = adoptPtr(new HashMap<String, bool>);
+        m_combiningCharacterSequenceSupport = std::make_unique<HashMap<String, bool>>();
 
     WTF::HashMap<String, bool>::AddResult addResult = m_combiningCharacterSequenceSupport->add(String(characters, length), false);
     if (!addResult.isNewEntry)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,28 +28,111 @@
 
 #if ENABLE(FTL_JIT)
 
+#include "DFGNode.h"
 #include "JITInlineCacheGenerator.h"
 #include "MacroAssembler.h"
 
 namespace JSC { namespace FTL {
 
-// These sizes are x86-64-specific, and were found empirically. They have to cover the worst
-// possible combination of registers leading to the largest possible encoding of each
-// instruction in the IC.
+using namespace DFG;
+
+// The default sizes are x86-64-specific, and were found empirically. They have to cover the worst
+// possible combination of registers leading to the largest possible encoding of each instruction in
+// the IC.
+//
+// FIXME: The ARM64 sizes are overestimates; if there is any branch compaction then we should be able
+// to get away with less. The branch compaction code currently validates the size of the IC before
+// doing any compaction, so we need to overestimate and give the uncompacted size. This would be
+// relatively easy to fix.
+// https://bugs.webkit.org/show_bug.cgi?id=129335
 
 size_t sizeOfGetById()
 {
+#if CPU(ARM64)
+    return 36;
+#else
     return 30;
+#endif
 }
 
 size_t sizeOfPutById()
 {
+#if CPU(ARM64)
+    return 44;
+#else
     return 32;
+#endif
 }
 
 size_t sizeOfCall()
 {
-    return 43;
+#if CPU(ARM64)
+    return 56;
+#else
+    return 53;
+#endif
+}
+
+size_t sizeOfCallVarargs()
+{
+#if CPU(ARM64)
+    return 332;
+#else
+    return 275;
+#endif
+}
+
+size_t sizeOfCallForwardVarargs()
+{
+#if CPU(ARM64)
+    return 312;
+#else
+    return 262;
+#endif
+}
+
+size_t sizeOfConstructVarargs()
+{
+    return sizeOfCallVarargs(); // Should be the same size.
+}
+
+size_t sizeOfConstructForwardVarargs()
+{
+    return sizeOfCallForwardVarargs(); // Should be the same size.
+}
+
+size_t sizeOfIn()
+{
+#if CPU(ARM64)
+    return 4;
+#else
+    return 5;
+#endif
+}
+
+size_t sizeOfICFor(Node* node)
+{
+    switch (node->op()) {
+    case GetById:
+        return sizeOfGetById();
+    case PutById:
+        return sizeOfPutById();
+    case Call:
+    case Construct:
+        return sizeOfCall();
+    case CallVarargs:
+        return sizeOfCallVarargs();
+    case CallForwardVarargs:
+        return sizeOfCallForwardVarargs();
+    case ConstructVarargs:
+        return sizeOfConstructVarargs();
+    case ConstructForwardVarargs:
+        return sizeOfConstructForwardVarargs();
+    case In:
+        return sizeOfIn();
+    default:
+        return 0;
+    }
 }
 
 } } // namespace JSC::FTL

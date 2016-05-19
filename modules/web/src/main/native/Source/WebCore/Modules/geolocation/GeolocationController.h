@@ -30,6 +30,7 @@
 
 #include "Geolocation.h"
 #include "Page.h"
+#include "ViewStateChangeObserver.h"
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
@@ -41,12 +42,12 @@ class GeolocationError;
 class GeolocationPosition;
 class Page;
 
-class GeolocationController : public Supplement<Page> {
+class GeolocationController : public Supplement<Page>, private ViewStateChangeObserver {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(GeolocationController);
 public:
+    GeolocationController(Page&, GeolocationClient&);
     ~GeolocationController();
-
-    static PassOwnPtr<GeolocationController> create(GeolocationClient*);
 
     void addObserver(Geolocation*, bool enableHighAccuracy);
     void removeObserver(Geolocation*);
@@ -54,26 +55,31 @@ public:
     void requestPermission(Geolocation*);
     void cancelPermissionRequest(Geolocation*);
 
-    void positionChanged(GeolocationPosition*);
-    void errorOccurred(GeolocationError*);
+    WEBCORE_EXPORT void positionChanged(GeolocationPosition*);
+    WEBCORE_EXPORT void errorOccurred(GeolocationError*);
 
     GeolocationPosition* lastPosition();
 
-    GeolocationClient* client() { return m_client; }
+    GeolocationClient& client() { return m_client; }
 
-    static const char* supplementName();
+    WEBCORE_EXPORT static const char* supplementName();
     static GeolocationController* from(Page* page) { return static_cast<GeolocationController*>(Supplement<Page>::from(page, supplementName())); }
 
 private:
-    GeolocationController(GeolocationClient*);
+    Page& m_page;
+    GeolocationClient& m_client;
 
-    GeolocationClient* m_client;
+    virtual void viewStateDidChange(ViewState::Flags oldViewState, ViewState::Flags newViewState) override;
 
     RefPtr<GeolocationPosition> m_lastPosition;
+
     typedef HashSet<RefPtr<Geolocation>> ObserversSet;
     // All observers; both those requesting high accuracy and those not.
     ObserversSet m_observers;
     ObserversSet m_highAccuracyObservers;
+
+    // While the page is not visible, we pend permission requests.
+    HashSet<RefPtr<Geolocation>> m_pendedPermissionRequest;
 };
 
 } // namespace WebCore

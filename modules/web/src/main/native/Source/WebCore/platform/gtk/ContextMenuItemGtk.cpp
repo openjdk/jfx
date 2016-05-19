@@ -26,8 +26,8 @@
 
 #include "ContextMenu.h"
 #include <gtk/gtk.h>
-#include <wtf/gobject/GRefPtr.h>
-#include <wtf/gobject/GUniquePtr.h>
+#include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/CString.h>
 
 #define WEBKIT_CONTEXT_MENU_ACTION "webkit-context-menu"
@@ -138,6 +138,11 @@ static PlatformMenuItemDescription createPlatformMenuItemDescription(ContextMenu
     g_object_set_data(G_OBJECT(item), WEBKIT_CONTEXT_MENU_ACTION, GINT_TO_POINTER(action));
 
     return item;
+}
+
+ContextMenuItem::ContextMenuItem()
+    : m_platformDescription(nullptr)
+{
 }
 
 // Extract the ActionType from the menu item
@@ -281,6 +286,11 @@ void ContextMenuItem::setEnabled(bool shouldEnable)
 GtkAction* ContextMenuItem::gtkAction() const
 {
     return gtk_activatable_get_related_action(GTK_ACTIVATABLE(m_platformDescription));
+}
+
+ContextMenuItem ContextMenuItem::shareMenuItem(const URL&, const URL&, Image*, const String&)
+{
+    return ContextMenuItem();
 }
 
 }

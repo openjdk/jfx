@@ -24,12 +24,15 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "PlatformUtilities.h"
 #include "PlatformWebView.h"
 #include "Test.h"
 #include <JavaScriptCore/JSContextRef.h>
-#include <WebKit2/WKRetainPtr.h>
-#include <WebKit2/WKSerializedScriptValue.h>
+#include <WebKit/WKRetainPtr.h>
+#include <WebKit/WKSerializedScriptValue.h>
 
 namespace TestWebKitAPI {
 
@@ -68,3 +71,5 @@ TEST(WebKit2, PreventEmptyUserAgent)
 }
 
 } // namespace TestWebKitAPI
+
+#endif

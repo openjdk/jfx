@@ -176,7 +176,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetChi
      it != item->children().end();
      ++it)
     {
-        env->SetObjectArrayElement(children, i++, (jobject)createEntry(&**it, jpage));
+        env->SetObjectArrayElement(children, i++, (jobject)createEntry(const_cast<HistoryItem*>(&(&(*it))->get()), jpage)); //XXX recheck
     }
     return children;
 }

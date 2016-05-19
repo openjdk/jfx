@@ -47,6 +47,11 @@ public:
         return m_left.nonZero(!haveImage) || m_right.nonZero(!haveImage) || m_top.nonZero(!haveImage) || m_bottom.nonZero(!haveImage);
     }
 
+    bool hasFill() const
+    {
+        return m_image.hasImage() && m_image.fill();
+    }
+
     bool hasBorderRadius() const
     {
         if (!m_topLeft.width().isZero())
@@ -86,6 +91,11 @@ public:
         if (!m_image.hasImage() && (m_bottom.style() == BNONE || m_bottom.style() == BHIDDEN))
             return 0;
         return m_bottom.width();
+    }
+
+    FloatBoxExtent borderWidth() const
+    {
+        return FloatBoxExtent(borderTopWidth(), borderRightWidth(), borderBottomWidth(), borderLeftWidth());
     }
 
     bool operator==(const BorderData& o) const

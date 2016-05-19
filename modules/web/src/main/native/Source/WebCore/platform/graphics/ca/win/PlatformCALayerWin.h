@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -37,26 +37,26 @@ public:
 
     ~PlatformCALayerWin();
 
-    virtual bool usesTiledBackingLayer() const override { return false; }
+    virtual void setNeedsDisplayInRect(const FloatRect& dirtyRect) override;
+    virtual void setNeedsDisplay() override;
 
-    virtual void setNeedsDisplay(const FloatRect* dirtyRect = 0) override;
-
-    virtual void setContentsChanged() override;
+    virtual void copyContentsFromLayer(PlatformCALayer*) override;
 
     virtual PlatformCALayer* superlayer() const override;
     virtual void removeFromSuperlayer() override;
     virtual void setSublayers(const PlatformCALayerList&) override;
     virtual void removeAllSublayers() override;
-    virtual void appendSublayer(PlatformCALayer*) override;
-    virtual void insertSublayer(PlatformCALayer*, size_t index) override;
-    virtual void replaceSublayer(PlatformCALayer* reference, PlatformCALayer*) override;
-    virtual const PlatformCALayerList* customSublayers() const override { return nullptr; }
-    virtual void adoptSublayers(PlatformCALayer* source) override;
+    virtual void appendSublayer(PlatformCALayer&) override;
+    virtual void insertSublayer(PlatformCALayer&, size_t index) override;
+    virtual void replaceSublayer(PlatformCALayer& reference, PlatformCALayer&) override;
+    virtual const PlatformCALayerList* customSublayers() const override { return m_customSublayers.get(); }
+    virtual void adoptSublayers(PlatformCALayer& source) override;
 
-    virtual void addAnimationForKey(const String& key, PlatformCAAnimation*) override;
+    virtual void addAnimationForKey(const String& key, PlatformCAAnimation&) override;
     virtual void removeAnimationForKey(const String& key) override;
     virtual PassRefPtr<PlatformCAAnimation> animationForKey(const String& key) override;
-    virtual void animationStarted(CFTimeInterval beginTime) override;
+    virtual void animationStarted(const String& key, CFTimeInterval beginTime) override;
+    virtual void animationEnded(const String& key) override;
 
     virtual void setMask(PlatformCALayer*) override;
 
@@ -79,6 +79,9 @@ public:
     virtual void setSublayerTransform(const TransformationMatrix&) override;
 
     virtual void setHidden(bool) override;
+
+    virtual void setBackingStoreAttached(bool) override;
+    virtual bool backingStoreAttached() const override;
 
     virtual void setGeometryFlipped(bool) override;
 
@@ -109,11 +112,9 @@ public:
     virtual float opacity() const override;
     virtual void setOpacity(float) override;
 
-#if ENABLE(CSS_FILTERS)
     virtual void setFilters(const FilterOperations&) override;
     static bool filtersCanBeComposited(const FilterOperations&) { return false; }
-    virtual void copyFiltersFrom(const PlatformCALayer*) override;
-#endif
+    virtual void copyFiltersFrom(const PlatformCALayer&) override;
 
     virtual void setName(const String&) override;
 
@@ -124,12 +125,24 @@ public:
     virtual float contentsScale() const override;
     virtual void setContentsScale(float) override;
 
-    virtual void setEdgeAntialiasingMask(unsigned) override { ASSERT_NOT_REACHED(); }
+    virtual float cornerRadius() const override;
+    virtual void setCornerRadius(float) override;
+
+    virtual FloatRoundedRect shapeRoundedRect() const override;
+    virtual void setShapeRoundedRect(const FloatRoundedRect&) override;
+
+    virtual Path shapePath() const override;
+    virtual void setShapePath(const Path&) override;
+
+    virtual WindRule shapeWindRule() const override;
+    virtual void setShapeWindRule(WindRule) override;
+
+    virtual void setEdgeAntialiasingMask(unsigned) override;
 
     virtual GraphicsLayer::CustomAppearance customAppearance() const override { return m_customAppearance; }
     virtual void updateCustomAppearance(GraphicsLayer::CustomAppearance customAppearance) override { m_customAppearance = customAppearance; }
 
-    virtual TiledBacking* tiledBacking() override { return nullptr; }
+    virtual TiledBacking* tiledBacking() override;
 
     virtual PlatformCALayer* rootLayer() const override;
     virtual void setNeedsLayout() override;
@@ -147,6 +160,7 @@ private:
     PlatformCALayerWin(LayerType, PlatformLayer*, PlatformCALayerClient* owner);
 
     HashMap<String, RefPtr<PlatformCAAnimation>> m_animations;
+    std::unique_ptr<PlatformCALayerList> m_customSublayers;
     GraphicsLayer::CustomAppearance m_customAppearance;
 };
 

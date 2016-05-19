@@ -28,6 +28,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
+enum EndOfStreamError {
+    "network",
+    "decode"
+};
+
 [
     Conditional=MEDIA_SOURCE,
     ActiveDOMObject,
@@ -44,14 +49,14 @@
     // Subset of sourceBuffers that provide data for the selected/enabled tracks.
     readonly attribute SourceBufferList activeSourceBuffers;
 
-    [SetterRaisesException] attribute double duration;
+    [SetterRaisesException] attribute unrestricted double duration;
 
     [RaisesException] SourceBuffer addSourceBuffer(DOMString type);
     [RaisesException] void removeSourceBuffer(SourceBuffer buffer);
 
     readonly attribute DOMString readyState;
     
-    [RaisesException] void endOfStream([Default=NullString] optional DOMString error);
+    [RaisesException] void endOfStream(optional EndOfStreamError error);
 
     static boolean isTypeSupported (DOMString type);
 };

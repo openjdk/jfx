@@ -31,15 +31,14 @@
 #include "config.h"
 #include "PageVisibilityState.h"
 
-#if ENABLE(PAGE_VISIBILITY_API)
 
 namespace WebCore {
 
 String pageVisibilityStateString(PageVisibilityState state)
 {
-    DEFINE_STATIC_LOCAL(const String, visible, (ASCIILiteral("visible")));
-    DEFINE_STATIC_LOCAL(const String, hidden, (ASCIILiteral("hidden")));
-    DEFINE_STATIC_LOCAL(const String, prerender, (ASCIILiteral("prerender")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, visible, (ASCIILiteral("visible")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, hidden, (ASCIILiteral("hidden")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, prerender, (ASCIILiteral("prerender")));
 
     switch (state) {
     case PageVisibilityStateVisible:
@@ -55,5 +54,3 @@ String pageVisibilityStateString(PageVisibilityState state)
 }
 
 } // namespace WebCore
-
-#endif // if ENABLE(PAGE_VISIBILITY_API)

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,6 +31,7 @@
 
 #import <CoreFoundation/CoreFoundation.h>
 #import <Foundation/NSThread.h>
+#import <dispatch/dispatch.h>
 #import <stdio.h>
 #import <wtf/Assertions.h>
 #import <wtf/HashSet.h>
@@ -106,7 +107,10 @@ static void timerFired(CFRunLoopTimerRef timer, void*)
 {
     CFRelease(timer);
     isTimerPosted = false;
-    WTF::dispatchFunctionsFromMainThread();
+
+    @autoreleasepool {
+        WTF::dispatchFunctionsFromMainThread();
+    }
 }
 
 static void postTimer()
@@ -137,6 +141,17 @@ void scheduleDispatchFunctionsOnMainThread()
 
     ASSERT(mainThreadNSThread);
     [staticMainThreadCaller performSelector:@selector(call) onThread:mainThreadNSThread withObject:nil waitUntilDone:NO];
+}
+
+void callOnWebThreadOrDispatchAsyncOnMainThread(void (^block)())
+{
+#if USE(WEB_THREAD)
+    if (WebCoreWebThreadIsEnabled && WebCoreWebThreadIsEnabled()) {
+        WebCoreWebThreadRun(block);
+        return;
+    }
+#endif
+    dispatch_async(dispatch_get_main_queue(), block);
 }
 
 #if USE(WEB_THREAD)

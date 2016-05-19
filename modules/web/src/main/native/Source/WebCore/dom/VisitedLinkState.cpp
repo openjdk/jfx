@@ -34,8 +34,7 @@
 #include "HTMLAnchorElement.h"
 #include "Page.h"
 #include "PageGroup.h"
-#include "PlatformStrategies.h"
-#include "VisitedLinkStrategy.h"
+#include "VisitedLinkStore.h"
 #include "XLinkNames.h"
 
 namespace WebCore {
@@ -51,11 +50,6 @@ inline static const AtomicString* linkAttribute(Element& element)
     if (element.isSVGElement())
         return &element.getAttribute(XLinkNames::hrefAttr);
     return 0;
-}
-
-PassOwnPtr<VisitedLinkState> VisitedLinkState::create(Document& document)
-{
-    return adoptPtr(new VisitedLinkState(document));
 }
 
 VisitedLinkState::VisitedLinkState(Document& document)
@@ -75,8 +69,8 @@ void VisitedLinkState::invalidateStyleForAllLinks()
 
 inline static LinkHash linkHashForElement(Document& document, Element& element)
 {
-    if (isHTMLAnchorElement(element))
-        return toHTMLAnchorElement(element).visitedLinkHash();
+    if (is<HTMLAnchorElement>(element))
+        return downcast<HTMLAnchorElement>(element).visitedLinkHash();
     if (const AtomicString* attribute = linkAttribute(element))
         return WebCore::visitedLinkHash(document.baseURL(), *attribute);
     return 0;
@@ -106,8 +100,8 @@ EInsideLink VisitedLinkState::determineLinkStateSlowCase(Element& element)
         return InsideVisitedLink;
 
     LinkHash hash;
-    if (isHTMLAnchorElement(element))
-        hash = toHTMLAnchorElement(element).visitedLinkHash();
+    if (is<HTMLAnchorElement>(element))
+        hash = downcast<HTMLAnchorElement>(element).visitedLinkHash();
     else
         hash = WebCore::visitedLinkHash(element.document().baseURL(), *attribute);
 
@@ -124,7 +118,10 @@ EInsideLink VisitedLinkState::determineLinkStateSlowCase(Element& element)
 
     m_linksCheckedForVisitedState.add(hash);
 
-    return platformStrategies()->visitedLinkStrategy()->isLinkVisited(page, hash, element.document().baseURL(), *attribute) ? InsideVisitedLink : InsideUnvisitedLink;
+    if (!page->visitedLinkStore().isLinkVisited(*page, hash, element.document().baseURL(), *attribute))
+        return InsideUnvisitedLink;
+
+    return InsideVisitedLink;
 }
 
-}
+} // namespace WebCore

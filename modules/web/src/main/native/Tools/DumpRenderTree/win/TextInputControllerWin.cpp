@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,6 +30,7 @@
 #include "TextInputController.h"
 
 #include "DumpRenderTree.h"
+#include <JavaScriptCore/JSStringRefBSTR.h>
 #include <WebCore/COMPtr.h>
 #include <WebKit/WebKit.h>
 #include <comutil.h>
@@ -43,11 +44,11 @@ void TextInputController::setMarkedText(JSStringRef text, unsigned int from, uns
     if (FAILED(frame->webView(&webView)))
         return;
 
-    COMPtr<IWebViewPrivate> viewPrivate;
+    COMPtr<IWebViewPrivate2> viewPrivate;
     if (FAILED(webView->QueryInterface(&viewPrivate)))
         return;
 
-    _bstr_t bstr(wstring(JSStringGetCharactersPtr(text), JSStringGetLength(text)).data());
+    _bstr_t bstr(JSStringCopyBSTR(text), false);
 
     viewPrivate->setCompositionForTesting(bstr, from, length);
 }
@@ -58,7 +59,7 @@ bool TextInputController::hasMarkedText()
     if (FAILED(frame->webView(&webView)))
         return false;
 
-    COMPtr<IWebViewPrivate> viewPrivate;
+    COMPtr<IWebViewPrivate2> viewPrivate;
     if (FAILED(webView->QueryInterface(&viewPrivate)))
         return false;
 
@@ -73,7 +74,7 @@ void TextInputController::unmarkText()
     if (FAILED(frame->webView(&webView)))
         return;
 
-    COMPtr<IWebViewPrivate> viewPrivate;
+    COMPtr<IWebViewPrivate2> viewPrivate;
     if (FAILED(webView->QueryInterface(&viewPrivate)))
         return;
 
@@ -90,7 +91,7 @@ vector<int> TextInputController::markedRange()
     if (FAILED(frame->webView(&webView)))
         return result;
 
-    COMPtr<IWebViewPrivate> viewPrivate;
+    COMPtr<IWebViewPrivate2> viewPrivate;
     if (FAILED(webView->QueryInterface(&viewPrivate)))
         return result;
 
@@ -111,11 +112,11 @@ void TextInputController::insertText(JSStringRef text)
     if (FAILED(frame->webView(&webView)))
         return;
 
-    COMPtr<IWebViewPrivate> viewPrivate;
+    COMPtr<IWebViewPrivate2> viewPrivate;
     if (FAILED(webView->QueryInterface(&viewPrivate)))
         return;
 
-    _bstr_t bstr(wstring(JSStringGetCharactersPtr(text), JSStringGetLength(text)).data());
+    _bstr_t bstr(JSStringCopyBSTR(text), false);
 
     viewPrivate->confirmCompositionForTesting(bstr);
 }
@@ -129,7 +130,7 @@ vector<int> TextInputController::firstRectForCharacterRange(unsigned int start, 
     if (FAILED(frame->webView(&webView)))
         return result;
 
-    COMPtr<IWebViewPrivate> viewPrivate;
+    COMPtr<IWebViewPrivate2> viewPrivate;
     if (FAILED(webView->QueryInterface(&viewPrivate)))
         return result;
 
@@ -154,7 +155,7 @@ vector<int> TextInputController::selectedRange()
     if (FAILED(frame->webView(&webView)))
         return result;
 
-    COMPtr<IWebViewPrivate> viewPrivate;
+    COMPtr<IWebViewPrivate2> viewPrivate;
     if (FAILED(webView->QueryInterface(&viewPrivate)))
         return result;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
 #ifndef AudioSession_h
 #define AudioSession_h
 
+#include "PlatformExportMacros.h"
+
 #if USE(AUDIO_SESSION)
 
 #include <memory>
@@ -34,13 +36,12 @@
 
 namespace WebCore {
 
-class AudioSessionListener;
 class AudioSessionPrivate;
 
 class AudioSession {
     WTF_MAKE_NONCOPYABLE(AudioSession);
 public:
-    static AudioSession& sharedSession();
+    WEBCORE_EXPORT static AudioSession& sharedSession();
 
     enum CategoryType {
         None,
@@ -51,32 +52,25 @@ public:
         PlayAndRecord,
         AudioProcessing,
     };
-    void setCategory(CategoryType);
+    WEBCORE_EXPORT void setCategory(CategoryType);
     CategoryType category() const;
 
     void setCategoryOverride(CategoryType);
     CategoryType categoryOverride() const;
 
-    void addListener(AudioSessionListener*);
-    void removeListener(AudioSessionListener*);
-
     float sampleRate() const;
     size_t numberOfOutputChannels() const;
 
-    void setActive(bool);
+    bool tryToSetActive(bool);
 
     size_t preferredBufferSize() const;
     void setPreferredBufferSize(size_t);
-
-    void beganAudioInterruption();
-    void endedAudioInterruption();
 
 private:
     AudioSession();
     ~AudioSession();
 
     std::unique_ptr<AudioSessionPrivate> m_private;
-    HashSet<AudioSessionListener*> m_listeners;
 };
 
 }

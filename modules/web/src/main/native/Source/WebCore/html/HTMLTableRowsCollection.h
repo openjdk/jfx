@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -38,13 +38,13 @@ class HTMLTableRowElement;
 
 class HTMLTableRowsCollection final : public HTMLCollection {
 public:
-    static PassRef<HTMLTableRowsCollection> create(HTMLTableElement&, CollectionType);
+    static Ref<HTMLTableRowsCollection> create(HTMLTableElement&, CollectionType);
 
-    HTMLTableElement& tableElement() { return toHTMLTableElement(ownerNode()); }
-    const HTMLTableElement& tableElement() const { return toHTMLTableElement(ownerNode()); }
+    HTMLTableElement& tableElement() { return downcast<HTMLTableElement>(ownerNode()); }
+    const HTMLTableElement& tableElement() const { return downcast<HTMLTableElement>(ownerNode()); }
 
-    static HTMLTableRowElement* rowAfter(HTMLTableElement*, HTMLTableRowElement*);
-    static HTMLTableRowElement* lastRow(HTMLTableElement*);
+    static HTMLTableRowElement* rowAfter(HTMLTableElement&, HTMLTableRowElement*);
+    static HTMLTableRowElement* lastRow(HTMLTableElement&);
 
 private:
     explicit HTMLTableRowsCollection(HTMLTableElement&);
@@ -52,6 +52,8 @@ private:
     virtual Element* customElementAfter(Element*) const override;
 };
 
-} // namespace
+} // namespace WebCore
 
-#endif
+SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(HTMLTableRowsCollection, TableRows)
+
+#endif // HTMLTableRowsCollection_h

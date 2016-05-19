@@ -36,20 +36,23 @@ class RenderMathMLRoot;
 
 class RenderMathMLRow : public RenderMathMLBlock {
 public:
-    RenderMathMLRow(Element&, PassRef<RenderStyle>);
-    RenderMathMLRow(Document&, PassRef<RenderStyle>);
+    RenderMathMLRow(Element&, Ref<RenderStyle>&&);
+    RenderMathMLRow(Document&, Ref<RenderStyle>&&);
 
     static RenderPtr<RenderMathMLRow> createAnonymousWithParentRenderer(RenderMathMLRoot&);
+    void updateOperatorProperties();
 
 protected:
-    virtual void layout();
+    virtual void layout() override;
 
 private:
     virtual bool isRenderMathMLRow() const override final { return true; }
     virtual const char* renderName() const override { return isAnonymous() ? "RenderMathMLRow (anonymous)" : "RenderMathMLRow"; }
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMathMLRow, isRenderMathMLRow())
 
 #endif // ENABLE(MATHML)
 #endif // RenderMathMLRow_h

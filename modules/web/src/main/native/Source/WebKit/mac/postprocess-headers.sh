@@ -6,18 +6,38 @@ postProcessInDirectory()
 
     local unifdefOptions sedExpression
 
-    if [[ ${PLATFORM_NAME} == iphoneos ]]; then
-        unifdefOptions="-DTARGET_OS_EMBEDDED=1 -DTARGET_OS_IPHONE=1 -DTARGET_IPHONE_SIMULATOR=0";
-    elif [[ ${PLATFORM_NAME} == iphonesimulator ]]; then
-        unifdefOptions="-DTARGET_OS_EMBEDDED=0 -DTARGET_OS_IPHONE=1 -DTARGET_IPHONE_SIMULATOR=1";
+    if [[ ${USE_INTERNAL_SDK} == "YES" ]]; then
+        USE_APPLE_INTERNAL_SDK=1
     else
-        unifdefOptions="-DTARGET_OS_EMBEDDED=0 -DTARGET_OS_IPHONE=0 -DTARGET_IPHONE_SIMULATOR=0";
+        USE_APPLE_INTERNAL_SDK=0
     fi
 
-    if [[ ${PLATFORM_NAME} == iphone* ]]; then
-        sedExpression='s/ *WEBKIT_((CLASS_|ENUM_)?AVAILABLE|DEPRECATED)_MAC\([^)]+\)//g';
+    if [[ ${PLATFORM_NAME} == macosx ]]; then
+        unifdefOptions="-DTARGET_OS_EMBEDDED=0 -DTARGET_OS_IPHONE=0 -DTARGET_IPHONE_SIMULATOR=0";
+    elif [[ ${PLATFORM_NAME} == *simulator* ]]; then
+        unifdefOptions="-DTARGET_OS_EMBEDDED=0 -DTARGET_OS_IPHONE=1 -DTARGET_IPHONE_SIMULATOR=1 -DUSE_APPLE_INTERNAL_SDK=${USE_APPLE_INTERNAL_SDK}";
     else
+        unifdefOptions="-DTARGET_OS_EMBEDDED=1 -DTARGET_OS_IPHONE=1 -DTARGET_IPHONE_SIMULATOR=0 -DUSE_APPLE_INTERNAL_SDK=${USE_APPLE_INTERNAL_SDK}";
+    fi
+
+    # FIXME: We should consider making this logic general purpose so as to support keeping or removing
+    # code guarded by an arbitrary feature define. For now it's sufficient to process touch- and gesture-
+    # guarded code.
+    for featureDefine in "ENABLE_TOUCH_EVENTS" "ENABLE_IOS_GESTURE_EVENTS"
+    do
+        # We assume a disabled feature is either undefined or has the empty string as its value.
+        eval "isFeatureEnabled=\$$featureDefine"
+        if [[ -z $isFeatureEnabled ]]; then
+            unifdefOptions="$unifdefOptions -D$featureDefine=0"
+        else
+            unifdefOptions="$unifdefOptions -D$featureDefine=1"
+        fi
+    done
+
+    if [[ ${PLATFORM_NAME} == macosx ]]; then
         sedExpression='s/WEBKIT_((CLASS_|ENUM_)?AVAILABLE|DEPRECATED)/NS_\1/g';
+    else
+        sedExpression='s/ *WEBKIT_((CLASS_|ENUM_)?AVAILABLE|DEPRECATED)_MAC\([^)]+\)//g';
     fi
 
     for header in $(find . -name '*.h' -type f); do

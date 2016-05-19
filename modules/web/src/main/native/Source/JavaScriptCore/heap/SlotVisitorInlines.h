@@ -108,12 +108,13 @@ ALWAYS_INLINE void SlotVisitor::internalAppend(void* from, JSCell* cell)
 #if ENABLE(GC_VALIDATION)
     validate(cell);
 #endif
-    if (Heap::testAndSetMarked(cell) || !cell->structure())
+    if (Heap::testAndSetMarked(cell) || !cell->structure()) {
+        ASSERT(cell->structure());
         return;
+    }
 
+    cell->setMarked();
     m_bytesVisited += MarkedBlock::blockFor(cell)->cellSize();
-
-    MARK_LOG_CHILD(*this, cell);
 
     unconditionallyAppend(cell);
 }
@@ -172,7 +173,7 @@ inline void SlotVisitor::addOpaqueRoot(void* root)
 #endif
 }
 
-inline bool SlotVisitor::containsOpaqueRoot(void* root)
+inline bool SlotVisitor::containsOpaqueRoot(void* root) const
 {
     ASSERT(!m_isInParallelMode);
 #if ENABLE(PARALLEL_GC)
@@ -183,7 +184,7 @@ inline bool SlotVisitor::containsOpaqueRoot(void* root)
 #endif
 }
 
-inline TriState SlotVisitor::containsOpaqueRootTriState(void* root)
+inline TriState SlotVisitor::containsOpaqueRootTriState(void* root) const
 {
     if (m_opaqueRoots.contains(root))
         return TrueTriState;
@@ -238,9 +239,16 @@ inline void SlotVisitor::copyLater(JSCell* owner, CopyToken token, void* ptr, si
     ASSERT(bytes);
     CopiedBlock* block = CopiedSpace::blockFor(ptr);
     if (block->isOversize()) {
+        ASSERT(bytes <= block->size());
+        // FIXME: We should be able to shrink the allocation if bytes went below the block size.
+        // For now, we just make sure that our accounting of how much memory we are actually using
+        // is correct.
+        // https://bugs.webkit.org/show_bug.cgi?id=144749
+        bytes = block->size();
         m_shared.m_copiedSpace->pin(block);
-        return;
     }
+
+    ASSERT(heap()->m_storageSpace.contains(block));
 
     SpinLockHolder locker(&block->workListLock());
     if (heap()->operationInProgress() == FullCollection || block->shouldReportLiveBytes(locker, owner)) {
@@ -249,32 +257,24 @@ inline void SlotVisitor::copyLater(JSCell* owner, CopyToken token, void* ptr, si
     }
 }
 
-inline void SlotVisitor::reportExtraMemoryUsage(JSCell* owner, size_t size)
+inline void SlotVisitor::reportExtraMemoryVisited(JSCell* owner, size_t size)
 {
-#if ENABLE(GGC)
-    // We don't want to double-count the extra memory that was reported in previous collections.
-    if (heap()->operationInProgress() == EdenCollection && MarkedBlock::blockFor(owner)->isRemembered(owner))
-        return;
-#else
-    UNUSED_PARAM(owner);
-#endif
-
-    size_t* counter = &m_shared.m_vm->heap.m_extraMemoryUsage;
-
-#if ENABLE(COMPARE_AND_SWAP)
-    for (;;) {
-        size_t oldSize = *counter;
-        if (WTF::weakCompareAndSwapSize(counter, oldSize, oldSize + size))
-            return;
-    }
-#else
-    (*counter) += size;
-#endif
+    heap()->reportExtraMemoryVisited(owner, size);
 }
 
 inline Heap* SlotVisitor::heap() const
 {
     return &sharedData().m_vm->heap;
+}
+
+inline VM& SlotVisitor::vm()
+{
+    return *sharedData().m_vm;
+}
+
+inline const VM& SlotVisitor::vm() const
+{
+    return *sharedData().m_vm;
 }
 
 } // namespace JSC

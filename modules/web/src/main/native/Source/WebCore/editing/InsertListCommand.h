@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,17 +31,18 @@
 namespace WebCore {
 
 class HTMLElement;
+class HTMLQualifiedName;
 
 class InsertListCommand : public CompositeEditCommand {
 public:
     enum Type { OrderedList, UnorderedList };
 
-    static PassRefPtr<InsertListCommand> create(Document& document, Type listType)
+    static Ref<InsertListCommand> create(Document& document, Type listType)
     {
-        return adoptRef(new InsertListCommand(document, listType));
+        return adoptRef(*new InsertListCommand(document, listType));
     }
 
-    static PassRefPtr<HTMLElement> insertList(Document&, Type);
+    static RefPtr<HTMLElement> insertList(Document&, Type);
 
     virtual bool preservesTypingStyle() const { return true; }
 
@@ -53,10 +54,10 @@ private:
 
     HTMLElement* fixOrphanedListChild(Node*);
     bool selectionHasListOfType(const VisibleSelection& selection, const QualifiedName&);
-    PassRefPtr<HTMLElement> mergeWithNeighboringLists(PassRefPtr<HTMLElement>);
-    void doApplyForSingleParagraph(bool forceCreateList, const QualifiedName&, Range* currentSelection);
+    RefPtr<HTMLElement> mergeWithNeighboringLists(PassRefPtr<HTMLElement>);
+    void doApplyForSingleParagraph(bool forceCreateList, const HTMLQualifiedName&, Range* currentSelection);
     void unlistifyParagraph(const VisiblePosition& originalStart, HTMLElement* listNode, Node* listChildNode);
-    PassRefPtr<HTMLElement> listifyParagraph(const VisiblePosition& originalStart, const QualifiedName& listTag);
+    RefPtr<HTMLElement> listifyParagraph(const VisiblePosition& originalStart, const QualifiedName& listTag);
     RefPtr<HTMLElement> m_listElement;
     Type m_type;
 };

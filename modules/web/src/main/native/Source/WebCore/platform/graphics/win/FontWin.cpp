@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -24,14 +24,14 @@
  */
 
 #include "config.h"
-#include "Font.h"
+#include "FontCascade.h"
 
-#include "FontGlyphs.h"
+#include "Font.h"
 #include "GlyphBuffer.h"
 #include "GraphicsContext.h"
 #include "IntRect.h"
+#include "LayoutRect.h"
 #include "Logging.h"
-#include "SimpleFontData.h"
 #include "TextRun.h"
 #include "UniscribeController.h"
 #include <wtf/MathExtras.h>
@@ -40,18 +40,17 @@ using namespace std;
 
 namespace WebCore {
 
-bool Font::canReturnFallbackFontsForComplexText()
+bool FontCascade::canReturnFallbackFontsForComplexText()
 {
     return true;
 }
 
-bool Font::canExpandAroundIdeographsInComplexText()
+bool FontCascade::canExpandAroundIdeographsInComplexText()
 {
     return false;
 }
 
-FloatRect Font::selectionRectForComplexText(const TextRun& run, const FloatPoint& point, int h,
-                                            int from, int to) const
+void FontCascade::adjustSelectionRectForComplexText(const TextRun& run, LayoutRect& selectionRect, int from, int to) const
 {
     UniscribeController it(this, run);
     it.advance(from);
@@ -59,17 +58,15 @@ FloatRect Font::selectionRectForComplexText(const TextRun& run, const FloatPoint
     it.advance(to);
     float afterWidth = it.runWidthSoFar();
 
-    // Using roundf() rather than ceilf() for the right edge as a compromise to ensure correct caret positioning
     if (run.rtl()) {
         it.advance(run.length());
-        float totalWidth = it.runWidthSoFar();
-        return FloatRect(point.x() + floorf(totalWidth - afterWidth), point.y(), roundf(totalWidth - beforeWidth) - floorf(totalWidth - afterWidth), h);
-    }
-
-    return FloatRect(point.x() + floorf(beforeWidth), point.y(), roundf(afterWidth) - floorf(beforeWidth), h);
+        selectionRect.move(it.runWidthSoFar() - afterWidth, 0);
+    } else
+        selectionRect.move(beforeWidth, 0);
+    selectionRect.setWidth(afterWidth - beforeWidth);
 }
 
-float Font::getGlyphsAndAdvancesForComplexText(const TextRun& run, int from, int to, GlyphBuffer& glyphBuffer, ForTextEmphasisOrNot forTextEmphasis) const
+float FontCascade::getGlyphsAndAdvancesForComplexText(const TextRun& run, int from, int to, GlyphBuffer& glyphBuffer, ForTextEmphasisOrNot forTextEmphasis) const
 {
     if (forTextEmphasis) {
         // FIXME: Add forTextEmphasis paremeter to UniscribeController and use it.
@@ -94,7 +91,7 @@ float Font::getGlyphsAndAdvancesForComplexText(const TextRun& run, int from, int
     return beforeWidth;
 }
 
-float Font::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to) const
+float FontCascade::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to) const
 {
     // This glyph buffer holds our glyphs + advances + font data for each glyph.
     GlyphBuffer glyphBuffer;
@@ -111,7 +108,7 @@ float Font::drawComplexText(GraphicsContext* context, const TextRun& run, const 
     return startPoint.x() - startX;
 }
 
-void Font::drawEmphasisMarksForComplexText(GraphicsContext* context, const TextRun& run, const AtomicString& mark, const FloatPoint& point, int from, int to) const
+void FontCascade::drawEmphasisMarksForComplexText(GraphicsContext* context, const TextRun& run, const AtomicString& mark, const FloatPoint& point, int from, int to) const
 {
     GlyphBuffer glyphBuffer;
     float initialAdvance = getGlyphsAndAdvancesForComplexText(run, from, to, glyphBuffer, ForTextEmphasis);
@@ -122,7 +119,7 @@ void Font::drawEmphasisMarksForComplexText(GraphicsContext* context, const TextR
     drawEmphasisMarks(context, run, glyphBuffer, mark, FloatPoint(point.x() + initialAdvance, point.y()));
 }
 
-float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
+float FontCascade::floatWidthForComplexText(const TextRun& run, HashSet<const Font*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
 {
     UniscribeController controller(this, run, fallbackFonts);
     controller.advance(run.length());
@@ -135,10 +132,10 @@ float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFon
     return controller.runWidthSoFar();
 }
 
-int Font::offsetForPositionForComplexText(const TextRun& run, float xFloat, bool includePartialGlyphs) const
+int FontCascade::offsetForPositionForComplexText(const TextRun& run, float xFloat, bool includePartialGlyphs) const
 {
     // FIXME: This truncation is not a problem for HTML, but only affects SVG, which passes floating-point numbers
-    // to Font::offsetForPosition(). Bug http://webkit.org/b/40673 tracks fixing this problem.
+    // to FontCascade::offsetForPosition(). Bug http://webkit.org/b/40673 tracks fixing this problem.
     int x = static_cast<int>(xFloat);
 
     UniscribeController controller(this, run);

@@ -24,10 +24,13 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "PlatformUtilities.h"
 #include "PlatformWebView.h"
 #include "Test.h"
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKRetainPtr.h>
 
 namespace TestWebKitAPI {
 
@@ -152,4 +155,26 @@ TEST(WebKit2, PageLoadBasic)
     Util::run(&test1Done);
 }
 
+TEST(WebKit2, PageReload)
+{
+    WKRetainPtr<WKContextRef> context(AdoptWK, WKContextCreate());
+    PlatformWebView webView(context.get());
+
+    // Reload test before url loading.
+    WKPageReload(webView.page());
+    WKPageReload(webView.page());
+
+    WKRetainPtr<WKURLRef> url(AdoptWK, Util::createURLForResource("simple", "html"));
+    WKPageLoadURL(webView.page(), url.get());
+
+    // Reload test after url loading.
+    WKPageReload(webView.page());
+
+    WKRetainPtr<WKURLRef> activeUrl = adoptWK(WKPageCopyActiveURL(webView.page()));
+    ASSERT_NOT_NULL(activeUrl.get());
+    EXPECT_TRUE(WKURLIsEqual(activeUrl.get(), url.get()));
+}
+
 } // namespace TestWebKitAPI
+
+#endif

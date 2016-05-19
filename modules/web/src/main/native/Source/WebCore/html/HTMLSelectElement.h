@@ -28,22 +28,22 @@
 
 #include "Event.h"
 #include "HTMLFormControlElementWithState.h"
+#include "HTMLOptionElement.h"
 #include "TypeAhead.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-class HTMLOptionElement;
 class HTMLOptionsCollection;
 
 class HTMLSelectElement : public HTMLFormControlElementWithState, public TypeAheadDataSource {
 public:
-    static PassRefPtr<HTMLSelectElement> create(const QualifiedName&, Document&, HTMLFormElement*);
+    static Ref<HTMLSelectElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
-    int selectedIndex() const;
+    WEBCORE_EXPORT int selectedIndex() const;
     void setSelectedIndex(int);
 
-    void optionSelectedByUser(int index, bool dispatchChangeEvent, bool allowMultipleSelection = false);
+    WEBCORE_EXPORT void optionSelectedByUser(int index, bool dispatchChangeEvent, bool allowMultipleSelection = false);
 
     // For ValidityState
     virtual String validationMessage() const override;
@@ -57,17 +57,18 @@ public:
     bool usesMenuList() const;
 
     void add(HTMLElement*, HTMLElement* beforeElement, ExceptionCode&);
+    void add(HTMLElement*, int beforeIndex, ExceptionCode&);
 
     using Node::remove;
     // Should be remove(int) but it conflicts with Node::remove(ExceptionCode&).
     void removeByIndex(int);
     void remove(HTMLOptionElement*);
 
-    String value() const;
+    WEBCORE_EXPORT String value() const;
     void setValue(const String&);
 
-    PassRefPtr<HTMLOptionsCollection> options();
-    PassRefPtr<HTMLCollection> selectedOptions();
+    Ref<HTMLOptionsCollection> options();
+    Ref<HTMLCollection> selectedOptions();
 
     void optionElementChildrenChanged();
 
@@ -75,7 +76,7 @@ public:
     void invalidateSelectedItems();
     void updateListItemSelectedStates();
 
-    const Vector<HTMLElement*>& listItems() const;
+    WEBCORE_EXPORT const Vector<HTMLElement*>& listItems() const;
 
     virtual void accessKeyAction(bool sendMouseEvents) override;
     void accessKeySetSelectedIndex(int);
@@ -87,8 +88,8 @@ public:
     void setOption(unsigned index, HTMLOptionElement*, ExceptionCode&);
     void setLength(unsigned, ExceptionCode&);
 
-    Node* namedItem(const AtomicString& name);
-    Node* item(unsigned index);
+    HTMLOptionElement* namedItem(const AtomicString& name);
+    HTMLOptionElement* item(unsigned index);
 
     void scrollToSelection();
 
@@ -122,8 +123,8 @@ private:
     virtual bool isKeyboardFocusable(KeyboardEvent*) const override;
     virtual bool isMouseFocusable() const override;
 
-    virtual void dispatchFocusEvent(PassRefPtr<Element> oldFocusedElement, FocusDirection) override final;
-    virtual void dispatchBlurEvent(PassRefPtr<Element> newFocusedElement) override final;
+    virtual void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, FocusDirection) override final;
+    virtual void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) override final;
 
     virtual bool canStartSelection() const override { return false; }
 
@@ -137,7 +138,7 @@ private:
     virtual bool isPresentationAttribute(const QualifiedName&) const override;
 
     virtual bool childShouldCreateRenderer(const Node&) const override;
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
     virtual bool appendFormData(FormDataList&, bool) override;
 
     virtual void reset() override;
@@ -151,7 +152,7 @@ private:
     void recalcListItems(bool updateSelectedStates = true) const;
 
     void deselectItems(HTMLOptionElement* excludeElement = 0);
-    void typeAheadFind(KeyboardEvent*);
+    void typeAheadFind(KeyboardEvent&);
     void saveLastSelection();
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
@@ -211,8 +212,6 @@ private:
     bool m_allowsNonContiguousSelection;
     mutable bool m_shouldRecalcListItems;
 };
-
-NODE_TYPE_CASTS(HTMLSelectElement)
 
 } // namespace
 

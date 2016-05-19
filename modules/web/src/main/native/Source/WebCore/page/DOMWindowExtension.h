@@ -27,7 +27,6 @@
 #define DOMWindowExtension_h
 
 #include "DOMWindowProperty.h"
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
@@ -39,9 +38,9 @@ class Frame;
 
 class DOMWindowExtension : public RefCounted<DOMWindowExtension>, public DOMWindowProperty {
 public:
-    static PassRefPtr<DOMWindowExtension> create(Frame* frame, DOMWrapperWorld& world)
+    static Ref<DOMWindowExtension> create(Frame* frame, DOMWrapperWorld& world)
     {
-        return adoptRef(new DOMWindowExtension(frame, world));
+        return adoptRef(*new DOMWindowExtension(frame, world));
     }
 
     virtual void disconnectFrameForPageCache() override;
@@ -53,7 +52,7 @@ public:
     DOMWrapperWorld& world() const { return *m_world; }
 
 private:
-    DOMWindowExtension(Frame*, DOMWrapperWorld&);
+    WEBCORE_EXPORT DOMWindowExtension(Frame*, DOMWrapperWorld&);
 
     RefPtr<DOMWrapperWorld> m_world;
     RefPtr<Frame> m_disconnectedFrame;

@@ -70,8 +70,7 @@ static jobject convertArrayInstanceToJavaArray(ExecState* exec, JSArray* jsArray
                 for (unsigned i = 0; i < length; i++) {
                     JSValue item = jsArray->get(exec, i);
                     String stringValue = item.toString(exec)->value(exec);
-                    env->SetObjectArrayElement(jarray, i,
-                        env->functions->NewString(env, (const jchar *)stringValue.deprecatedCharacters(), stringValue.length()));
+                    env->SetObjectArrayElement(jarray, i, env->NewStringUTF(stringValue.utf8().data()));
                 }
             }
             break;
@@ -107,7 +106,7 @@ static jobject convertArrayInstanceToJavaArray(ExecState* exec, JSArray* jsArray
                 String stringValue = item.toString(exec)->value(exec);
                 jchar value = 0;
                 if (stringValue.length() > 0)
-                    value = ((const jchar*)stringValue.deprecatedCharacters())[0];
+                    value = (const jchar)StringView(stringValue)[0];
                 env->SetCharArrayRegion((jcharArray)jarray, (jsize)i, (jsize)1, &value);
             }
             break;
@@ -277,7 +276,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                 if (value.isString() && !strcmp(javaClassName, "java.lang.Object")) {
                     String stringValue = asString(value)->value(exec);
                     JNIEnv* env = getJNIEnv();
-                    jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.deprecatedCharacters(), stringValue.length());
+                    jobject javaString = env->NewStringUTF(stringValue.utf8().data());
                     result.l = javaString;
                 } else if (value.isString() && !strcmp(javaClassName, "java.lang.Character")) {
                     JNIEnv* env = getJNIEnv();
@@ -317,7 +316,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                 if (!value.isNull()) {
                     String stringValue = value.toString(exec)->value(exec);
                     JNIEnv* env = getJNIEnv();
-                    jobject javaString = env->functions->NewString(env, (const jchar*)stringValue.deprecatedCharacters(), stringValue.length());
+                    jobject javaString = env->NewStringUTF(stringValue.utf8().data());
                     result.l = javaString;
                 }
             }

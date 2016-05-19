@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -35,11 +35,10 @@ namespace WebCore {
 
 class MIMETypeRegistry {
 public:
-    static String getMIMETypeForExtension(const String& extension);
-    static String getWellKnownMIMETypeForExtension(const String& extension);
+    WEBCORE_EXPORT static String getMIMETypeForExtension(const String& extension);
 
     static Vector<String> getExtensionsForMIMEType(const String& type);
-    static String getPreferredExtensionForMIMEType(const String& type);
+    WEBCORE_EXPORT static String getPreferredExtensionForMIMEType(const String& type);
     static String getMediaMIMETypeForExtension(const String& extension);
     static Vector<String> getMediaMIMETypesForExtension(const String& extension);
 
@@ -47,11 +46,11 @@ public:
 
     // Check to see if a mime type is suitable for being loaded inline as an
     // image (e.g., <img> tags).
-    static bool isSupportedImageMIMEType(const String& mimeType);
+    WEBCORE_EXPORT static bool isSupportedImageMIMEType(const String& mimeType);
 
     // Check to see if a mime type is suitable for being loaded as an image
     // document in a frame.
-    static bool isSupportedImageResourceMIMEType(const String& mimeType);
+    WEBCORE_EXPORT static bool isSupportedImageResourceMIMEType(const String& mimeType);
 
     // Check to see if a mime type is suitable for being encoded.
     static bool isSupportedImageMIMETypeForEncoding(const String& mimeType);
@@ -62,37 +61,39 @@ public:
 
     // Check to see if a non-image mime type is suitable for being loaded as a
     // document in a frame.  Includes supported JavaScript MIME types.
-    static bool isSupportedNonImageMIMEType(const String& mimeType);
+    WEBCORE_EXPORT static bool isSupportedNonImageMIMEType(const String& mimeType);
 
     // Check to see if a mime type is suitable for being loaded using <video> and <audio>
-    static bool isSupportedMediaMIMEType(const String& mimeType);
+    WEBCORE_EXPORT static bool isSupportedMediaMIMEType(const String& mimeType);
 
     // Check to see if the mime type is not suitable for being loaded as a text
     // document in a frame. Only valid for mime types begining with "text/".
     static bool isUnsupportedTextMIMEType(const String& mimeType);
 
     // Check to see if a mime type is a valid Java applet mime type
-    static bool isJavaAppletMIMEType(const String& mimeType);
+    WEBCORE_EXPORT static bool isJavaAppletMIMEType(const String& mimeType);
 
     // Check to see if a mime type is a plugin implemented by the
     // browser (e.g. a Qt Plugin).
     static bool isApplicationPluginMIMEType(const String& mimeType);
 
     // Check to see if a mime type is one of the common PDF/PS types.
-    static bool isPDFOrPostScriptMIMEType(const String& mimeType);
+    WEBCORE_EXPORT static bool isPDFOrPostScriptMIMEType(const String& mimeType);
+    static bool isPDFMIMEType(const String& mimeType);
 
     // Check to see if a mime type is suitable for being shown inside a page.
     // Returns true if any of isSupportedImageMIMEType(), isSupportedNonImageMIMEType(), isSupportedMediaMIMEType() returns true
     // or if given mime type begins with "text/" and isUnsupportedTextMIMEType() returns false.
-    static bool canShowMIMEType(const String& mimeType);
+    WEBCORE_EXPORT static bool canShowMIMEType(const String& mimeType);
 
-    static HashSet<String>& getSupportedImageMIMETypes();
+    WEBCORE_EXPORT static HashSet<String>& getSupportedImageMIMETypes();
     static HashSet<String>& getSupportedImageResourceMIMETypes();
     static HashSet<String>& getSupportedImageMIMETypesForEncoding();
-    static HashSet<String>& getSupportedNonImageMIMETypes();
-    static HashSet<String>& getSupportedMediaMIMETypes();
+    WEBCORE_EXPORT static HashSet<String>& getSupportedNonImageMIMETypes();
+    WEBCORE_EXPORT static HashSet<String>& getSupportedMediaMIMETypes();
+    WEBCORE_EXPORT static HashSet<String>& getPDFMIMETypes();
     static HashSet<String>& getPDFAndPostScriptMIMETypes();
-    static HashSet<String>& getUnsupportedTextMIMETypes();
+    WEBCORE_EXPORT static HashSet<String>& getUnsupportedTextMIMETypes();
 
     static String getNormalizedMIMEType(const String&);
 };

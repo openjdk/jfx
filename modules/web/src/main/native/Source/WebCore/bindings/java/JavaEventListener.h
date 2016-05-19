@@ -31,7 +31,7 @@ public:
 
     JGObject m_joListener;
     static ScriptExecutionContext* scriptExecutionContext();
-
+    virtual bool isJavaEventListener() const override { return true; }
 private:
     static Vector<ScriptExecutionContext*> sm_vScriptExecutionContexts;
 };

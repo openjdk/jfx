@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,14 +31,9 @@
 
 namespace WebCore {
 
-PassOwnPtr<PlatformSpeechSynthesizerMock> PlatformSpeechSynthesizerMock::create(PlatformSpeechSynthesizerClient* client)
-{
-    return adoptPtr(new PlatformSpeechSynthesizerMock(client));
-}
-
 PlatformSpeechSynthesizerMock::PlatformSpeechSynthesizerMock(PlatformSpeechSynthesizerClient* client)
     : PlatformSpeechSynthesizer(client)
-    , m_speakingFinishedTimer(this, &PlatformSpeechSynthesizerMock::speakingFinished)
+    , m_speakingFinishedTimer(*this, &PlatformSpeechSynthesizerMock::speakingFinished)
 {
 }
 
@@ -46,11 +41,13 @@ PlatformSpeechSynthesizerMock::~PlatformSpeechSynthesizerMock()
 {
 }
 
-void PlatformSpeechSynthesizerMock::speakingFinished(Timer<PlatformSpeechSynthesizerMock>*)
+void PlatformSpeechSynthesizerMock::speakingFinished()
 {
     ASSERT(m_utterance.get());
-    client()->didFinishSpeaking(m_utterance);
-    m_utterance = 0;
+    RefPtr<PlatformSpeechSynthesisUtterance> protect(m_utterance);
+    m_utterance = nullptr;
+
+    client()->didFinishSpeaking(protect);
 }
 
 void PlatformSpeechSynthesizerMock::initializeVoiceList()
@@ -81,7 +78,7 @@ void PlatformSpeechSynthesizerMock::cancel()
 
     m_speakingFinishedTimer.stop();
     client()->speakingErrorOccurred(m_utterance);
-    m_utterance = 0;
+    m_utterance = nullptr;
 }
 
 void PlatformSpeechSynthesizerMock::pause()

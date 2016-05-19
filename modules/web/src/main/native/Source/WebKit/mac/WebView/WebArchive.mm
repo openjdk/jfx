@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -178,23 +178,21 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 
     RefPtr<ArchiveResource> coreMainResource = mainResource ? [mainResource _coreResource] : 0;
 
-    Vector<PassRefPtr<ArchiveResource>> coreResources;
-    NSEnumerator *enumerator = [subresources objectEnumerator];
-    WebResource *subresource;
-    while ((subresource = [enumerator nextObject]) != nil)
+    Vector<RefPtr<ArchiveResource>> coreResources;
+    for (WebResource *subresource in subresources)
         coreResources.append([subresource _coreResource]);
 
-    Vector<PassRefPtr<LegacyWebArchive>> coreArchives;
-    enumerator = [subframeArchives objectEnumerator];
-    WebArchive *subframeArchive;
-    while ((subframeArchive = [enumerator nextObject]) != nil)
+    Vector<RefPtr<LegacyWebArchive>> coreArchives;
+    for (WebArchive *subframeArchive in subframeArchives)
         coreArchives.append([subframeArchive->_private coreArchive]);
 
-    [_private setCoreArchive:LegacyWebArchive::create(coreMainResource.release(), coreResources, coreArchives)];
-    if (![_private coreArchive]) {
+    RefPtr<LegacyWebArchive> coreArchive = LegacyWebArchive::create(coreMainResource.release(), WTF::move(coreResources), WTF::move(coreArchives));
+    if (!coreArchive) {
         [self release];
         return nil;
     }
+
+    [_private setCoreArchive:coreArchive.release()];
 
     return self;
 }

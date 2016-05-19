@@ -41,22 +41,21 @@ public:
     {
     }
 
-    void notify(Node&);
+    void notify(Node&, NodeVector& postInsertionNotificationTargets);
 
 private:
-    void notifyDescendantInsertedIntoDocument(ContainerNode&);
-    void notifyDescendantInsertedIntoTree(ContainerNode&);
-    void notifyNodeInsertedIntoDocument(Node&);
-    void notifyNodeInsertedIntoTree(ContainerNode&);
+    void notifyDescendantInsertedIntoDocument(ContainerNode&, NodeVector& postInsertionNotificationTargets);
+    void notifyDescendantInsertedIntoTree(ContainerNode&, NodeVector& postInsertionNotificationTargets);
+    void notifyNodeInsertedIntoDocument(Node&, NodeVector& postInsertionNotificationTargets);
+    void notifyNodeInsertedIntoTree(ContainerNode&, NodeVector& postInsertionNotificationTargets);
 
     ContainerNode& m_insertionPoint;
-    Vector<Ref<Node>> m_postInsertionNotificationTargets;
 };
 
 class ChildNodeRemovalNotifier {
 public:
-    explicit ChildNodeRemovalNotifier(ContainerNode& insertionPoint)
-        : m_insertionPoint(insertionPoint)
+    explicit ChildNodeRemovalNotifier(ContainerNode& removalPoint)
+        : m_removalPoint(removalPoint)
     {
     }
 
@@ -68,7 +67,7 @@ private:
     void notifyNodeRemovedFromDocument(Node&);
     void notifyNodeRemovedFromTree(ContainerNode&);
 
-    ContainerNode& m_insertionPoint;
+    ContainerNode& m_removalPoint;
 };
 
 namespace Private {
@@ -78,8 +77,7 @@ namespace Private {
 
 }
 
-// Helper functions for TreeShared-derived classes, which have a 'Node' style interface
-// This applies to 'ContainerNode' and 'SVGElementInstance'
+// This no longer needs to be generic. It's only used for Node and ContainerNode now.
 template<class GenericNode, class GenericNodeContainer>
 inline void removeDetachedChildrenInContainer(GenericNodeContainer& container)
 {
@@ -194,61 +192,56 @@ namespace Private {
 
 } // namespace Private
 
-inline void ChildNodeInsertionNotifier::notifyNodeInsertedIntoDocument(Node& node)
+inline void ChildNodeInsertionNotifier::notifyNodeInsertedIntoDocument(Node& node, NodeVector& postInsertionNotificationTargets)
 {
     ASSERT(m_insertionPoint.inDocument());
-    if (Node::InsertionShouldCallDidNotifySubtreeInsertions == node.insertedInto(m_insertionPoint))
-        m_postInsertionNotificationTargets.append(node);
-    if (node.isContainerNode())
-        notifyDescendantInsertedIntoDocument(toContainerNode(node));
+    if (Node::InsertionShouldCallFinishedInsertingSubtree == node.insertedInto(m_insertionPoint))
+        postInsertionNotificationTargets.append(node);
+    if (is<ContainerNode>(node))
+        notifyDescendantInsertedIntoDocument(downcast<ContainerNode>(node), postInsertionNotificationTargets);
 }
 
-inline void ChildNodeInsertionNotifier::notifyNodeInsertedIntoTree(ContainerNode& node)
+inline void ChildNodeInsertionNotifier::notifyNodeInsertedIntoTree(ContainerNode& node, NodeVector& postInsertionNotificationTargets)
 {
     NoEventDispatchAssertion assertNoEventDispatch;
     ASSERT(!m_insertionPoint.inDocument());
 
-    if (Node::InsertionShouldCallDidNotifySubtreeInsertions == node.insertedInto(m_insertionPoint))
-        m_postInsertionNotificationTargets.append(node);
-    notifyDescendantInsertedIntoTree(node);
+    if (Node::InsertionShouldCallFinishedInsertingSubtree == node.insertedInto(m_insertionPoint))
+        postInsertionNotificationTargets.append(node);
+    notifyDescendantInsertedIntoTree(node, postInsertionNotificationTargets);
 }
 
-inline void ChildNodeInsertionNotifier::notify(Node& node)
+inline void ChildNodeInsertionNotifier::notify(Node& node, NodeVector& postInsertionNotificationTargets)
 {
-    ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
+    ASSERT_WITH_SECURITY_IMPLICATION(!NoEventDispatchAssertion::isEventDispatchForbidden());
 
-#if ENABLE(INSPECTOR)
-    InspectorInstrumentation::didInsertDOMNode(&node.document(), &node);
-#endif
+    InspectorInstrumentation::didInsertDOMNode(node.document(), node);
 
     Ref<Document> protectDocument(node.document());
     Ref<Node> protectNode(node);
 
     if (m_insertionPoint.inDocument())
-        notifyNodeInsertedIntoDocument(node);
-    else if (node.isContainerNode())
-        notifyNodeInsertedIntoTree(toContainerNode(node));
-
-    for (size_t i = 0; i < m_postInsertionNotificationTargets.size(); ++i)
-        m_postInsertionNotificationTargets[i]->didNotifySubtreeInsertions(&m_insertionPoint);
+        notifyNodeInsertedIntoDocument(node, postInsertionNotificationTargets);
+    else if (is<ContainerNode>(node))
+        notifyNodeInsertedIntoTree(downcast<ContainerNode>(node), postInsertionNotificationTargets);
 }
 
 
 inline void ChildNodeRemovalNotifier::notifyNodeRemovedFromDocument(Node& node)
 {
-    ASSERT(m_insertionPoint.inDocument());
-    node.removedFrom(m_insertionPoint);
+    ASSERT(m_removalPoint.inDocument());
+    node.removedFrom(m_removalPoint);
 
-    if (node.isContainerNode())
-        notifyDescendantRemovedFromDocument(toContainerNode(node));
+    if (is<ContainerNode>(node))
+        notifyDescendantRemovedFromDocument(downcast<ContainerNode>(node));
 }
 
 inline void ChildNodeRemovalNotifier::notifyNodeRemovedFromTree(ContainerNode& node)
 {
     NoEventDispatchAssertion assertNoEventDispatch;
-    ASSERT(!m_insertionPoint.inDocument());
+    ASSERT(!m_removalPoint.inDocument());
 
-    node.removedFrom(m_insertionPoint);
+    node.removedFrom(m_removalPoint);
     notifyDescendantRemovedFromTree(node);
 }
 
@@ -257,8 +250,8 @@ inline void ChildNodeRemovalNotifier::notify(Node& node)
     if (node.inDocument()) {
         notifyNodeRemovedFromDocument(node);
         node.document().notifyRemovePendingSheetIfNeeded();
-    } else if (node.isContainerNode())
-        notifyNodeRemovedFromTree(toContainerNode(node));
+    } else if (is<ContainerNode>(node))
+        notifyNodeRemovedFromTree(downcast<ContainerNode>(node));
 }
 
 enum SubframeDisconnectPolicy {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005, 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2010 Igalia S.L.
  *
@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -34,8 +34,8 @@
 #include "InjectedBundleUtilities.h"
 #include <fontconfig/fontconfig.h>
 #include <gtk/gtk.h>
-#include <wtf/gobject/GUniquePtr.h>
-#include <wtf/gobject/GlibUtilities.h>
+#include <wtf/glib/GLibUtilities.h>
+#include <wtf/glib/GUniquePtr.h>
 
 namespace WTR {
 
@@ -68,7 +68,7 @@ CString getOutputDir()
 static CString getFontsPath()
 {
     CString webkitOutputDir = getOutputDir();
-    GUniquePtr<char> fontsPath(g_build_filename(webkitOutputDir.data(), "Dependencies", "Root", "webkitgtk-test-fonts", nullptr));
+    GUniquePtr<char> fontsPath(g_build_filename(webkitOutputDir.data(), "DependenciesGTK", "Root", "webkitgtk-test-fonts", nullptr));
     if (g_file_test(fontsPath.get(), static_cast<GFileTest>(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
         return fontsPath.get();
 

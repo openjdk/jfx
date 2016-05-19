@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -51,10 +51,10 @@ unsigned TextTrackList::length() const
     return m_addTrackTracks.size() + m_elementTracks.size() + m_inbandTracks.size();
 }
 
-int TextTrackList::getTrackIndex(TextTrack *textTrack)
+int TextTrackList::getTrackIndex(TextTrack* textTrack)
 {
-    if (textTrack->trackType() == TextTrack::TrackElement)
-        return static_cast<LoadableTextTrack*>(textTrack)->trackElementIndex();
+    if (is<LoadableTextTrack>(textTrack))
+        return downcast<LoadableTextTrack>(*textTrack).trackElementIndex();
 
     if (textTrack->trackType() == TextTrack::AddTrack)
         return m_elementTracks.size() + m_addTrackTracks.find(textTrack);
@@ -176,9 +176,9 @@ void TextTrackList::append(PassRefPtr<TextTrack> prpTrack)
 
     if (track->trackType() == TextTrack::AddTrack)
         m_addTrackTracks.append(track);
-    else if (track->trackType() == TextTrack::TrackElement) {
+    else if (is<LoadableTextTrack>(*track)) {
         // Insert tracks added for <track> element in tree order.
-        size_t index = static_cast<LoadableTextTrack*>(track.get())->trackElementIndex();
+        size_t index = downcast<LoadableTextTrack>(*track).trackElementIndex();
         m_elementTracks.insert(index, track);
     } else if (track->trackType() == TextTrack::InBand) {
         // Insert tracks added for in-band in the media file order.
@@ -195,7 +195,7 @@ void TextTrackList::append(PassRefPtr<TextTrack> prpTrack)
     scheduleAddTrackEvent(track.release());
 }
 
-void TextTrackList::remove(TrackBase* track)
+void TextTrackList::remove(TrackBase* track, bool scheduleEvent)
 {
     TextTrack* textTrack = toTextTrack(track);
     Vector<RefPtr<TrackBase>>* tracks = 0;
@@ -219,7 +219,9 @@ void TextTrackList::remove(TrackBase* track)
 
     RefPtr<TrackBase> trackRef = (*tracks)[index];
     tracks->remove(index);
-    scheduleRemoveTrackEvent(trackRef.release());
+
+    if (scheduleEvent)
+        scheduleRemoveTrackEvent(trackRef.release());
 }
 
 bool TextTrackList::contains(TrackBase* track) const

@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -70,9 +70,7 @@ Touch::Touch(Frame* frame, EventTarget* target, unsigned identifier, int screenX
     , m_force(force)
 {
     float scaleFactor = frame->pageZoomFactor() * frame->frameScaleFactor();
-    float x = pageX * scaleFactor;
-    float y = pageY * scaleFactor;
-    m_absoluteLocation = roundedLayoutPoint(FloatPoint(x, y));
+    m_absoluteLocation = LayoutPoint(pageX * scaleFactor, pageY * scaleFactor);
 }
 
 Touch::Touch(EventTarget* target, unsigned identifier, int clientX, int clientY, int screenX, int screenY, int pageX, int pageY, int radiusX, int radiusY, float rotationAngle, float force, LayoutPoint absoluteLocation)
@@ -92,9 +90,9 @@ Touch::Touch(EventTarget* target, unsigned identifier, int clientX, int clientY,
 {
 }
 
-PassRefPtr<Touch> Touch::cloneWithNewTarget(EventTarget* eventTarget) const
+Ref<Touch> Touch::cloneWithNewTarget(EventTarget* eventTarget) const
 {
-    return adoptRef(new Touch(eventTarget, m_identifier, m_clientX, m_clientY, m_screenX, m_screenY, m_pageX, m_pageY, m_radiusX, m_radiusY, m_rotationAngle, m_force, m_absoluteLocation));
+    return adoptRef(*new Touch(eventTarget, m_identifier, m_clientX, m_clientY, m_screenX, m_screenY, m_pageX, m_pageY, m_radiusX, m_radiusY, m_rotationAngle, m_force, m_absoluteLocation));
 }
 
 } // namespace WebCore

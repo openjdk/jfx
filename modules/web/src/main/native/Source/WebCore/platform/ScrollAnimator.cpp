@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2014-2015 Apple Inc.  All rights reserved.
  * Copyright (c) 2010, Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,22 +33,25 @@
 #include "ScrollAnimator.h"
 
 #include "FloatPoint.h"
+#include "LayoutSize.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollableArea.h"
 #include <algorithm>
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
 #if !ENABLE(SMOOTH_SCROLLING) && !PLATFORM(IOS)
-PassOwnPtr<ScrollAnimator> ScrollAnimator::create(ScrollableArea* scrollableArea)
+std::unique_ptr<ScrollAnimator> ScrollAnimator::create(ScrollableArea& scrollableArea)
 {
-    return adoptPtr(new ScrollAnimator(scrollableArea));
+    return std::make_unique<ScrollAnimator>(scrollableArea);
 }
 #endif
 
-ScrollAnimator::ScrollAnimator(ScrollableArea* scrollableArea)
+ScrollAnimator::ScrollAnimator(ScrollableArea& scrollableArea)
     : m_scrollableArea(scrollableArea)
+#if ENABLE(CSS_SCROLL_SNAP) || ENABLE(RUBBER_BANDING)
+    , m_scrollController(*this)
+#endif
     , m_currentPosX(0)
     , m_currentPosY(0)
 {
@@ -60,7 +64,7 @@ ScrollAnimator::~ScrollAnimator()
 bool ScrollAnimator::scroll(ScrollbarOrientation orientation, ScrollGranularity, float step, float multiplier)
 {
     float* currentPos = (orientation == HorizontalScrollbar) ? &m_currentPosX : &m_currentPosY;
-    float newPos = std::max(std::min(*currentPos + (step * multiplier), static_cast<float>(m_scrollableArea->scrollSize(orientation))), 0.0f);
+    float newPos = std::max(std::min(*currentPos + (step * multiplier), static_cast<float>(m_scrollableArea.scrollSize(orientation))), 0.0f);
     float delta = *currentPos - newPos;
     if (*currentPos == newPos)
         return false;
@@ -77,10 +81,34 @@ void ScrollAnimator::scrollToOffsetWithoutAnimation(const FloatPoint& offset)
     m_currentPosX = offset.x();
     m_currentPosY = offset.y();
     notifyPositionChanged(delta);
+    updateActiveScrollSnapIndexForOffset();
 }
+
+#if ENABLE(CSS_SCROLL_SNAP)
+#if PLATFORM(MAC)
+bool ScrollAnimator::processWheelEventForScrollSnap(const PlatformWheelEvent& wheelEvent)
+{
+    return m_scrollController.processWheelEventForScrollSnap(wheelEvent);
+}
+#endif
+
+bool ScrollAnimator::activeScrollSnapIndexDidChange() const
+{
+    return m_scrollController.activeScrollSnapIndexDidChange();
+}
+
+unsigned ScrollAnimator::activeScrollSnapIndexForAxis(ScrollEventAxis axis) const
+{
+    return m_scrollController.activeScrollSnapIndexForAxis(axis);
+}
+#endif
 
 bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& e)
 {
+#if ENABLE(CSS_SCROLL_SNAP) && PLATFORM(MAC)
+    if (!m_scrollController.processWheelEventForScrollSnap(e))
+        return false;
+#endif
 #if PLATFORM(COCOA)
     // Events in the PlatformWheelEventPhaseMayBegin phase have no deltas, and therefore never passes through the scroll handling logic below.
     // This causes us to return with an 'unhandled' return state, even though this event was successfully processed.
@@ -91,8 +119,8 @@ bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& e)
         return true;
 #endif
 
-    Scrollbar* horizontalScrollbar = m_scrollableArea->horizontalScrollbar();
-    Scrollbar* verticalScrollbar = m_scrollableArea->verticalScrollbar();
+    Scrollbar* horizontalScrollbar = m_scrollableArea.horizontalScrollbar();
+    Scrollbar* verticalScrollbar = m_scrollableArea.verticalScrollbar();
 
     // Accept the event if we have a scrollbar in that direction and can still
     // scroll any further.
@@ -102,8 +130,8 @@ bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& e)
     bool handled = false;
 
     ScrollGranularity granularity = ScrollByPixel;
-    IntSize maxForwardScrollDelta = m_scrollableArea->maximumScrollPosition() - m_scrollableArea->scrollPosition();
-    IntSize maxBackwardScrollDelta = m_scrollableArea->scrollPosition() - m_scrollableArea->minimumScrollPosition();
+    IntSize maxForwardScrollDelta = m_scrollableArea.maximumScrollPosition() - m_scrollableArea.scrollPosition();
+    IntSize maxBackwardScrollDelta = m_scrollableArea.scrollPosition() - m_scrollableArea.minimumScrollPosition();
     if ((deltaX < 0 && maxForwardScrollDelta.width() > 0)
         || (deltaX > 0 && maxBackwardScrollDelta.width() > 0)
         || (deltaY < 0 && maxForwardScrollDelta.height() > 0)
@@ -113,7 +141,7 @@ bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& e)
         if (deltaY) {
             if (e.granularity() == ScrollByPageWheelEvent) {
                 bool negative = deltaY < 0;
-                deltaY = std::max(std::max(static_cast<float>(m_scrollableArea->visibleHeight()) * Scrollbar::minFractionToStepWhenPaging(), static_cast<float>(m_scrollableArea->visibleHeight() - Scrollbar::maxOverlapBetweenPages())), 1.0f);
+                deltaY = Scrollbar::pageStepDelta(m_scrollableArea.visibleHeight());
                 if (negative)
                     deltaY = -deltaY;
             }
@@ -123,7 +151,7 @@ bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& e)
         if (deltaX) {
             if (e.granularity() == ScrollByPageWheelEvent) {
                 bool negative = deltaX < 0;
-                deltaX = std::max(std::max(static_cast<float>(m_scrollableArea->visibleWidth()) * Scrollbar::minFractionToStepWhenPaging(), static_cast<float>(m_scrollableArea->visibleWidth() - Scrollbar::maxOverlapBetweenPages())), 1.0f);
+                deltaX = Scrollbar::pageStepDelta(m_scrollableArea.visibleWidth());
                 if (negative)
                     deltaX = -deltaX;
             }
@@ -144,6 +172,7 @@ void ScrollAnimator::setCurrentPosition(const FloatPoint& position)
 {
     m_currentPosX = position.x();
     m_currentPosY = position.y();
+    updateActiveScrollSnapIndexForOffset();
 }
 
 FloatPoint ScrollAnimator::currentPosition() const
@@ -151,10 +180,65 @@ FloatPoint ScrollAnimator::currentPosition() const
     return FloatPoint(m_currentPosX, m_currentPosY);
 }
 
+void ScrollAnimator::updateActiveScrollSnapIndexForOffset()
+{
+#if ENABLE(CSS_SCROLL_SNAP)
+    m_scrollController.setActiveScrollSnapIndicesForOffset(m_currentPosX, m_currentPosY);
+    if (m_scrollController.activeScrollSnapIndexDidChange()) {
+        m_scrollableArea.setCurrentHorizontalSnapPointIndex(m_scrollController.activeScrollSnapIndexForAxis(ScrollEventAxis::Horizontal));
+        m_scrollableArea.setCurrentVerticalSnapPointIndex(m_scrollController.activeScrollSnapIndexForAxis(ScrollEventAxis::Vertical));
+    }
+#endif
+}
+
 void ScrollAnimator::notifyPositionChanged(const FloatSize& delta)
 {
     UNUSED_PARAM(delta);
-    m_scrollableArea->setScrollOffsetFromAnimation(IntPoint(m_currentPosX, m_currentPosY));
+    m_scrollableArea.setScrollOffsetFromAnimation(IntPoint(m_currentPosX, m_currentPosY));
 }
+
+#if ENABLE(CSS_SCROLL_SNAP)
+void ScrollAnimator::updateScrollSnapState()
+{
+    m_scrollController.updateScrollSnapState(m_scrollableArea);
+}
+
+LayoutUnit ScrollAnimator::scrollOffsetOnAxis(ScrollEventAxis axis) const
+{
+    return axis == ScrollEventAxis::Horizontal ? m_currentPosX : m_currentPosY;
+}
+
+void ScrollAnimator::immediateScrollOnAxis(ScrollEventAxis axis, float delta)
+{
+    FloatPoint currentPosition = this->currentPosition();
+    if (axis == ScrollEventAxis::Horizontal)
+        scrollToOffsetWithoutAnimation(FloatPoint(currentPosition.x() + delta, currentPosition.y()));
+    else
+        scrollToOffsetWithoutAnimation(FloatPoint(currentPosition.x(), currentPosition.y() + delta));
+}
+
+LayoutSize ScrollAnimator::scrollExtent() const
+{
+    return m_scrollableArea.contentsSize();
+}
+#endif
+
+#if (ENABLE(CSS_SCROLL_SNAP) || ENABLE(RUBBER_BANDING)) && PLATFORM(MAC)
+void ScrollAnimator::deferTestsForReason(WheelEventTestTrigger::ScrollableAreaIdentifier identifier, WheelEventTestTrigger::DeferTestTriggerReason reason) const
+{
+    if (!m_wheelEventTestTrigger)
+        return;
+
+    m_wheelEventTestTrigger->deferTestsForReason(identifier, reason);
+}
+
+void ScrollAnimator::removeTestDeferralForReason(WheelEventTestTrigger::ScrollableAreaIdentifier identifier, WheelEventTestTrigger::DeferTestTriggerReason reason) const
+{
+    if (!m_wheelEventTestTrigger)
+        return;
+
+    m_wheelEventTestTrigger->removeTestDeferralForReason(identifier, reason);
+}
+#endif
 
 } // namespace WebCore

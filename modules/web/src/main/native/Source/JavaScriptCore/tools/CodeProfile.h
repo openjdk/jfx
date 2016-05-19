@@ -37,11 +37,11 @@ class CodeProfile {
 public:
     CodeProfile(const SourceCode& source, CodeProfile* parent)
         : m_file(source.provider()->url().utf8())
-        , m_lineNo(source.firstLine())
+        , m_lineNumber(source.firstLine())
         , m_parent(parent)
     {
         if (parent)
-            parent->addChild(this);
+            parent->addChild(std::unique_ptr<CodeProfile>(this));
     }
 
     void sample(void* pc, void** framePointer);
@@ -52,9 +52,9 @@ public:
         return m_parent;
     }
 
-    void addChild(CodeProfile* child)
+    void addChild(std::unique_ptr<CodeProfile> child)
     {
-        m_children.append(adoptPtr(child));
+        m_children.append(WTF::move(child));
     }
 
 private:
@@ -80,9 +80,9 @@ private:
     };
 
     CString m_file;
-    unsigned m_lineNo;
+    unsigned m_lineNumber;
     CodeProfile* m_parent;
-    Vector< OwnPtr<CodeProfile>> m_children;
+    Vector<std::unique_ptr<CodeProfile>> m_children;
     TieredMMapArray<CodeRecord> m_samples;
 
     static const char* s_codeTypeNames[NumberOfCodeTypes];

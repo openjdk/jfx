@@ -26,6 +26,7 @@
 #include "SVGAnimatedProperty.h"
 #include "SVGAttributeToPropertyMap.h"
 #include "SVGPropertyTraits.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -70,29 +71,25 @@ struct SVGSynchronizableAnimatedProperty {
 #define BEGIN_REGISTER_ANIMATED_PROPERTIES(OwnerType) \
 SVGAttributeToPropertyMap& OwnerType::attributeToPropertyMap() \
 { \
-    DEFINE_STATIC_LOCAL(SVGAttributeToPropertyMap, s_attributeToPropertyMap, ()); \
-    return s_attributeToPropertyMap; \
+    static NeverDestroyed<SVGAttributeToPropertyMap> map; \
+    return map; \
 } \
 \
 static void registerAnimatedPropertiesFor##OwnerType() \
 { \
-    SVGAttributeToPropertyMap& map = OwnerType::attributeToPropertyMap(); \
+    auto& map = OwnerType::attributeToPropertyMap(); \
     if (!map.isEmpty()) \
         return; \
     typedef OwnerType UseOwnerType;
 
-#define REGISTER_LOCAL_ANIMATED_PROPERTY(LowerProperty) \
-     map.addProperty(UseOwnerType::LowerProperty##PropertyInfo());
-
-#define REGISTER_PARENT_ANIMATED_PROPERTIES(ClassName) \
-     map.addProperties(ClassName::attributeToPropertyMap()); \
-
+#define REGISTER_LOCAL_ANIMATED_PROPERTY(LowerProperty) map.addProperty(*UseOwnerType::LowerProperty##PropertyInfo());
+#define REGISTER_PARENT_ANIMATED_PROPERTIES(ClassName) map.addProperties(ClassName::attributeToPropertyMap());
 #define END_REGISTER_ANIMATED_PROPERTIES }
 
 // Property definition helpers (used in SVG*.cpp files)
 #define DEFINE_ANIMATED_PROPERTY(AnimatedPropertyTypeEnum, OwnerType, DOMAttribute, SVGDOMAttributeIdentifier, UpperProperty, LowerProperty) \
 const SVGPropertyInfo* OwnerType::LowerProperty##PropertyInfo() { \
-    DEFINE_STATIC_LOCAL(const SVGPropertyInfo, s_propertyInfo, \
+    DEPRECATED_DEFINE_STATIC_LOCAL(const SVGPropertyInfo, s_propertyInfo, \
                         (AnimatedPropertyTypeEnum, \
                          PropertyIsReadWrite, \
                          DOMAttribute, \
@@ -103,7 +100,7 @@ const SVGPropertyInfo* OwnerType::LowerProperty##PropertyInfo() { \
 }
 
 // Property declaration helpers (used in SVG*.h files)
-#define BEGIN_DECLARE_ANIMATED_PROPERTIES(OwnerType) \
+#define BEGIN_DECLARE_ANIMATED_PROPERTIES_BASE(OwnerType) \
 public: \
     static SVGAttributeToPropertyMap& attributeToPropertyMap(); \
     virtual SVGAttributeToPropertyMap& localAttributeToPropertyMap() \
@@ -112,7 +109,16 @@ public: \
     } \
     typedef OwnerType UseOwnerType;
 
-#define DECLARE_ANIMATED_PROPERTY(TearOffType, PropertyType, UpperProperty, LowerProperty) \
+#define BEGIN_DECLARE_ANIMATED_PROPERTIES(OwnerType) \
+public: \
+    static SVGAttributeToPropertyMap& attributeToPropertyMap(); \
+    SVGAttributeToPropertyMap& localAttributeToPropertyMap() override \
+    { \
+        return attributeToPropertyMap(); \
+    } \
+    typedef OwnerType UseOwnerType;
+
+#define DECLARE_ANIMATED_PROPERTY(TearOffType, PropertyType, UpperProperty, LowerProperty, OverrideSpecifier) \
 public: \
     static const SVGPropertyInfo* LowerProperty##PropertyInfo(); \
     PropertyType& LowerProperty() const \
@@ -124,21 +130,21 @@ public: \
         return m_##LowerProperty.value; \
     } \
 \
-    PropertyType& LowerProperty##BaseValue() const \
+    PropertyType& LowerProperty##BaseValue() const OverrideSpecifier \
     { \
         return m_##LowerProperty.value; \
     } \
 \
-    void set##UpperProperty##BaseValue(const PropertyType& type, const bool validValue = true) \
+    void set##UpperProperty##BaseValue(const PropertyType& type, const bool validValue = true) OverrideSpecifier \
     { \
         m_##LowerProperty.value = type; \
         m_##LowerProperty.isValid = validValue; \
     } \
 \
-    PassRefPtr<TearOffType> LowerProperty##Animated() \
+    Ref<TearOffType> LowerProperty##Animated() \
     { \
         m_##LowerProperty.shouldSynchronize = true; \
-        return static_pointer_cast<TearOffType>(lookupOrCreate##UpperProperty##Wrapper(this)); \
+        return static_reference_cast<TearOffType>(lookupOrCreate##UpperProperty##Wrapper(this)); \
     } \
 \
     bool LowerProperty##IsValid() const \
@@ -155,7 +161,7 @@ private: \
         m_##LowerProperty.synchronize(this, LowerProperty##PropertyInfo()->attributeName, value); \
     } \
 \
-    static PassRefPtr<SVGAnimatedProperty> lookupOrCreate##UpperProperty##Wrapper(SVGElement* maskedOwnerType) \
+    static Ref<SVGAnimatedProperty> lookupOrCreate##UpperProperty##Wrapper(SVGElement* maskedOwnerType) \
     { \
         ASSERT(maskedOwnerType); \
         UseOwnerType* ownerType = static_cast<UseOwnerType*>(maskedOwnerType); \
@@ -175,7 +181,7 @@ private: \
 
 // List specific definition/declaration helpers
 #define DECLARE_ANIMATED_LIST_PROPERTY(TearOffType, PropertyType, UpperProperty, LowerProperty) \
-DECLARE_ANIMATED_PROPERTY(TearOffType, PropertyType, UpperProperty, LowerProperty) \
+DECLARE_ANIMATED_PROPERTY(TearOffType, PropertyType, UpperProperty, LowerProperty, ) \
 void detachAnimated##UpperProperty##ListWrappers(unsigned newListSize) \
 { \
     if (TearOffType* wrapper = SVGAnimatedProperty::lookupWrapper<UseOwnerType, TearOffType>(this, LowerProperty##PropertyInfo())) \

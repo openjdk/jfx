@@ -26,7 +26,7 @@
 #ifndef GraphicsLayerUpdater_h
 #define GraphicsLayerUpdater_h
 
-#include "DisplayRefreshMonitor.h"
+#include "DisplayRefreshMonitorClient.h"
 #include "PlatformScreen.h"
 
 namespace WebCore {
@@ -36,7 +36,10 @@ class GraphicsLayerUpdater;
 class GraphicsLayerUpdaterClient {
 public:
     virtual ~GraphicsLayerUpdaterClient() { }
-    virtual void flushLayers(GraphicsLayerUpdater*) = 0;
+    virtual void flushLayersSoon(GraphicsLayerUpdater&) = 0;
+#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+    virtual RefPtr<DisplayRefreshMonitor> createDisplayRefreshMonitor(PlatformDisplayID) const = 0;
+#endif
 };
 
 class GraphicsLayerUpdater
@@ -45,17 +48,22 @@ class GraphicsLayerUpdater
 #endif
 {
 public:
-    GraphicsLayerUpdater(GraphicsLayerUpdaterClient*, PlatformDisplayID);
+    GraphicsLayerUpdater(GraphicsLayerUpdaterClient&, PlatformDisplayID);
     virtual ~GraphicsLayerUpdater();
 
     void scheduleUpdate();
     void screenDidChange(PlatformDisplayID);
 
-private:
-    virtual void displayRefreshFired(double timestamp);
+#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+    virtual RefPtr<DisplayRefreshMonitor> createDisplayRefreshMonitor(PlatformDisplayID) const override;
+#endif
 
-    GraphicsLayerUpdaterClient* m_client;
-    bool m_scheduled;
+private:
+#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+    virtual void displayRefreshFired(double timestamp) override;
+    GraphicsLayerUpdaterClient& m_client;
+#endif
+    bool m_scheduled { false };
 };
 
 } // namespace WebCore

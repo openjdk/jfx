@@ -31,8 +31,6 @@
 #ifndef PageDebuggerAgent_h
 #define PageDebuggerAgent_h
 
-#if ENABLE(INSPECTOR)
-
 #include "PageScriptDebugServer.h"
 #include "WebDebuggerAgent.h"
 
@@ -53,6 +51,8 @@ public:
 
     void didClearMainFrameWindowObject();
 
+    virtual PageScriptDebugServer& scriptDebugServer() override;
+
 protected:
     virtual void enable() override;
     virtual void disable(bool isBeingDestroyed) override;
@@ -62,21 +62,19 @@ protected:
 private:
     virtual void startListeningScriptDebugServer() override;
     virtual void stopListeningScriptDebugServer(bool isBeingDestroyed) override;
-    virtual PageScriptDebugServer& scriptDebugServer() override;
     virtual void muteConsole() override;
     virtual void unmuteConsole() override;
 
     virtual void breakpointActionLog(JSC::ExecState*, const String&) override;
 
-    virtual Inspector::InjectedScript injectedScriptForEval(ErrorString*, const int* executionContextId) override;
-    virtual void setOverlayMessage(ErrorString*, const String*) override;
+    virtual Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
+    virtual void setOverlayMessage(ErrorString&, const String*) override;
 
     InspectorPageAgent* m_pageAgent;
     InspectorOverlay* m_overlay;
+    PageScriptDebugServer m_scriptDebugServer;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(PageDebuggerAgent_h)

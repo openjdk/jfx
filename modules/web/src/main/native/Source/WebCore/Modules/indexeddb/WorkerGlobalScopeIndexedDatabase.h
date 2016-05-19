@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,7 +27,7 @@
 #ifndef WorkerGlobalScopeIndexedDatabase_h
 #define WorkerGlobalScopeIndexedDatabase_h
 
-#if ENABLE(INDEXED_DATABASE)
+#if ENABLE(INDEXED_DATABASE_IN_WORKERS)
 
 #include "Supplementable.h"
 #include <wtf/text/WTFString.h>
@@ -40,18 +40,16 @@ class ScriptExecutionContext;
 
 class WorkerGlobalScopeIndexedDatabase : public Supplement<ScriptExecutionContext> {
 public:
+    explicit WorkerGlobalScopeIndexedDatabase();
     virtual ~WorkerGlobalScopeIndexedDatabase();
     static WorkerGlobalScopeIndexedDatabase* from(ScriptExecutionContext*);
 
     static IDBFactory* indexedDB(ScriptExecutionContext*);
 
 private:
-    explicit WorkerGlobalScopeIndexedDatabase(const String& databaseDirectoryIdentifier);
-
     IDBFactory* indexedDB();
     static const char* supplementName();
 
-    String m_databaseDirectoryIdentifier;
     RefPtr<IDBFactoryBackendInterface> m_factoryBackend;
     RefPtr<IDBFactory> m_idbFactory;
 };

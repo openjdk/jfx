@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE, INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -40,17 +40,17 @@ using namespace JSC;
 
 namespace WebCore {
 
-RefPtr<CapabilityRange> CapabilityRange::create(const MediaStreamSourceCapabilityRange& rangeInfo)
+Ref<CapabilityRange> CapabilityRange::create(const RealtimeMediaSourceCapabilityRange& rangeInfo)
 {
-    return adoptRef(new CapabilityRange(rangeInfo));
+    return adoptRef(*new CapabilityRange(rangeInfo));
 }
 
-CapabilityRange::CapabilityRange(const MediaStreamSourceCapabilityRange& rangeInfo)
+CapabilityRange::CapabilityRange(const RealtimeMediaSourceCapabilityRange& rangeInfo)
     : m_rangeInfo(rangeInfo)
 {
 }
 
-static Deprecated::ScriptValue scriptValue(ExecState* exec, const MediaStreamSourceCapabilityRange::ValueUnion& value, MediaStreamSourceCapabilityRange::Type type)
+static Deprecated::ScriptValue scriptValue(ExecState* exec, const RealtimeMediaSourceCapabilityRange::ValueUnion& value, RealtimeMediaSourceCapabilityRange::Type type)
 {
     // NOTE: the spec says:
     //      ... an implementation should make a reasonable attempt to translate and scale the hardware's setting
@@ -62,13 +62,13 @@ static Deprecated::ScriptValue scriptValue(ExecState* exec, const MediaStreamSou
     // "Custom" and return jsUndefined() from the custom getter to support it.
 
     switch (type) {
-    case MediaStreamSourceCapabilityRange::Float:
+    case RealtimeMediaSourceCapabilityRange::Float:
         return Deprecated::ScriptValue(exec->vm(), JSValue(value.asFloat));
         break;
-    case MediaStreamSourceCapabilityRange::ULong:
+    case RealtimeMediaSourceCapabilityRange::ULong:
         return Deprecated::ScriptValue(exec->vm(), JSValue(value.asULong));
         break;
-    case MediaStreamSourceCapabilityRange::Undefined:
+    case RealtimeMediaSourceCapabilityRange::Undefined:
         return Deprecated::ScriptValue(exec->vm(), jsUndefined());
         break;
     }

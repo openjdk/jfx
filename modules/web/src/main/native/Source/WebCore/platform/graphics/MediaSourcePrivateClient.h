@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,7 +28,7 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-#include "TimeRanges.h"
+#include "PlatformTimeRanges.h"
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -39,9 +39,10 @@ class MediaSourcePrivateClient : public RefCounted<MediaSourcePrivateClient> {
 public:
     virtual ~MediaSourcePrivateClient() { }
 
-    virtual void setPrivateAndOpen(PassRef<MediaSourcePrivate>) = 0;
-    virtual double duration() const = 0;
-    virtual PassRefPtr<TimeRanges> buffered() const = 0;
+    virtual void setPrivateAndOpen(Ref<MediaSourcePrivate>&&) = 0;
+    virtual MediaTime duration() const = 0;
+    virtual std::unique_ptr<PlatformTimeRanges> buffered() const = 0;
+    virtual void seekToTime(const MediaTime&) = 0;
 };
 
 }

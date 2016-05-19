@@ -37,14 +37,14 @@ from HTMLParser import HTMLParser
 _log = logging.getLogger(__name__)
 
 
-def convert_for_webkit(new_path, filename, host=Host()):
+def convert_for_webkit(new_path, filename, reference_support_info, host=Host(), convert_test_harness_links=True):
     """ Converts a file's |contents| so it will function correctly in its |new_path| in Webkit.
 
     Returns the list of modified properties and the modified text if the file was modifed, None otherwise."""
     contents = host.filesystem.read_binary_file(filename)
-    converter = _W3CTestConverter(new_path, filename, host)
+    converter = _W3CTestConverter(new_path, filename, reference_support_info, host, convert_test_harness_links)
     if filename.endswith('.css'):
-        return converter.add_webkit_prefix_to_unprefixed_properties(contents)
+        return converter.add_webkit_prefix_to_unprefixed_properties_and_values(contents)
     else:
         converter.feed(contents)
         converter.close()
@@ -52,7 +52,7 @@ def convert_for_webkit(new_path, filename, host=Host()):
 
 
 class _W3CTestConverter(HTMLParser):
-    def __init__(self, new_path, filename, host=Host()):
+    def __init__(self, new_path, filename, reference_support_info, host=Host(), convert_test_harness_links=True):
         HTMLParser.__init__(self)
 
         self._host = host
@@ -61,92 +61,130 @@ class _W3CTestConverter(HTMLParser):
 
         self.converted_data = []
         self.converted_properties = []
+        self.converted_property_values = []
         self.in_style_tag = False
         self.style_data = []
         self.filename = filename
+        self.reference_support_info = reference_support_info
 
         resources_path = self.path_from_webkit_root('LayoutTests', 'resources')
         resources_relpath = self._filesystem.relpath(resources_path, new_path)
         self.new_test_harness_path = resources_relpath
+        self.convert_test_harness_links = convert_test_harness_links
 
         # These settings might vary between WebKit and Blink
         self._css_property_file = self.path_from_webkit_root('Source', 'WebCore', 'css', 'CSSPropertyNames.in')
-        self._css_property_split_string = '='
+        self._css_property_value_file = self.path_from_webkit_root('Source', 'WebCore', 'css', 'CSSValueKeywords.in')
 
         self.test_harness_re = re.compile('/resources/testharness')
 
-        self.prefixed_properties = self.read_webkit_prefixed_css_property_list()
+        self.prefixed_properties = self.read_webkit_prefixed_css_property_list(self._css_property_file)
         prop_regex = '([\s{]|^)(' + "|".join(prop.replace('-webkit-', '') for prop in self.prefixed_properties) + ')(\s+:|:)'
         self.prop_re = re.compile(prop_regex)
 
+        self.prefixed_property_values = self.read_webkit_prefixed_css_property_list(self._css_property_value_file)
+        prop_value_regex = '(:\s*|^\s*)(' + "|".join(value.replace('-webkit-', '') for value in self.prefixed_property_values) + ')(\s*;|\s*}|\s*$)'
+        self.prop_value_re = re.compile(prop_value_regex)
+
     def output(self):
-        return (self.converted_properties, ''.join(self.converted_data))
+        return (self.converted_properties, self.converted_property_values, ''.join(self.converted_data))
 
     def path_from_webkit_root(self, *comps):
         return self._filesystem.abspath(self._filesystem.join(self._webkit_root, *comps))
 
-    def read_webkit_prefixed_css_property_list(self):
+    def read_webkit_prefixed_css_property_list(self, file_name):
+        contents = self._filesystem.read_text_file(file_name)
         prefixed_properties = []
         unprefixed_properties = set()
 
-        contents = self._filesystem.read_text_file(self._css_property_file)
         for line in contents.splitlines():
-            if re.match('^(#|//)', line):
-                # skip comments and preprocessor directives
+            if re.match('^(#|//)', line) or len(line.strip()) == 0:
+                # skip comments and preprocessor directives and empty lines.
                 continue
-            fields = line.split(self._css_property_split_string)
-            for prop in fields:
-                # Find properties starting with the -webkit- prefix.
-                match = re.match('-webkit-([\w|-]*)', prop)
-                if match:
-                    prefixed_properties.append(match.group(1))
-                else:
-                    unprefixed_properties.add(prop.strip())
+            # Property name is always first on the line.
+            property_name = line.split(' ', 1)[0]
+            # Find properties starting with the -webkit- prefix.
+            match = re.match('-webkit-([\w|-]*)', property_name)
+            if match:
+                prefixed_properties.append(match.group(1))
+            else:
+                unprefixed_properties.add(property_name.strip())
 
         # Ignore any prefixed properties for which an unprefixed version is supported
         return [prop for prop in prefixed_properties if prop not in unprefixed_properties]
 
-    def add_webkit_prefix_to_unprefixed_properties(self, text):
-        """ Searches |text| for instances of properties requiring the -webkit- prefix and adds the prefix to them.
+    def add_webkit_prefix_to_unprefixed_properties_and_values(self, text):
+        """ Searches |text| for instances of properties and values requiring the -webkit- prefix and adds the prefix to them.
 
-        Returns the list of converted properties and the modified text."""
+        Returns the list of converted properties, values and the modified text."""
 
-        converted_properties = set()
+        converted_properties = self.add_webkit_prefix_following_regex(text, self.prop_re)
+        converted_property_values = self.add_webkit_prefix_following_regex(converted_properties[1], self.prop_value_re)
+
+        # FIXME: Handle the JS versions of these properties and values and GetComputedStyle, too.
+        return (converted_properties[0], converted_property_values[0], converted_property_values[1])
+
+    def add_webkit_prefix_following_regex(self, text, regex):
+        converted_list = set()
         text_chunks = []
         cur_pos = 0
-        for m in self.prop_re.finditer(text):
+        for m in regex.finditer(text):
             text_chunks.extend([text[cur_pos:m.start()], m.group(1), '-webkit-', m.group(2), m.group(3)])
-            converted_properties.add(m.group(2))
+            converted_list.add(m.group(2))
             cur_pos = m.end()
         text_chunks.append(text[cur_pos:])
 
-        for prop in converted_properties:
-            _log.info('  converting %s', prop)
+        for item in converted_list:
+            _log.info('  converting %s', item)
 
-        # FIXME: Handle the JS versions of these properties and GetComputedStyle, too.
-        return (converted_properties, ''.join(text_chunks))
+        return (converted_list, ''.join(text_chunks))
+
+    def convert_reference_relpaths(self, text):
+        """ Searches |text| for instances of files in reference_support_info and updates the relative path to be correct for the new ref file location"""
+        converted = text
+        for path in self.reference_support_info['files']:
+            if text.find(path) != -1:
+                # FIXME: This doesn't handle an edge case where simply removing the relative path doesn't work.
+                # See http://webkit.org/b/135677 for details.
+                new_path = re.sub(self.reference_support_info['reference_relpath'], '', path, 1)
+                converted = re.sub(path, new_path, text)
+
+        return converted
 
     def convert_style_data(self, data):
-        converted = self.add_webkit_prefix_to_unprefixed_properties(data)
+        converted = self.add_webkit_prefix_to_unprefixed_properties_and_values(data)
         if converted[0]:
             self.converted_properties.extend(list(converted[0]))
-        return converted[1]
+        if converted[1]:
+            self.converted_property_values.extend(list(converted[1]))
+
+        if self.reference_support_info is None or self.reference_support_info == {}:
+            return converted[2]
+
+        return self.convert_reference_relpaths(converted[2])
 
     def convert_attributes_if_needed(self, tag, attrs):
         converted = self.get_starttag_text()
-        if tag in ('script', 'link'):
+        if self.convert_test_harness_links and tag in ('script', 'link'):
             attr_name = 'src'
             if tag != 'script':
                 attr_name = 'href'
             for attr in attrs:
                 if attr[0] == attr_name:
                     new_path = re.sub(self.test_harness_re, self.new_test_harness_path + '/testharness', attr[1])
-                    converted = re.sub(attr[1], new_path, converted)
+                    converted = re.sub(re.escape(attr[1]), new_path, converted)
 
         for attr in attrs:
             if attr[0] == 'style':
                 new_style = self.convert_style_data(attr[1])
-                converted = re.sub(attr[1], new_style, converted)
+                converted = re.sub(re.escape(attr[1]), new_style, converted)
+
+        src_tags = ('script', 'style', 'img', 'frame', 'iframe', 'input', 'layer', 'textarea', 'video', 'audio')
+        if tag in src_tags and self.reference_support_info is not None and  self.reference_support_info != {}:
+            for attr_name, attr_value in attrs:
+                if attr_name == 'src':
+                    new_path = self.convert_reference_relpaths(attr_value)
+                    converted = re.sub(re.escape(attr_value), new_path, converted)
 
         self.converted_data.append(converted)
 

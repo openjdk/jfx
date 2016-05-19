@@ -350,6 +350,33 @@ String contextMenuItemTagEnterVideoFullscreen()
     return String(); // UNSUPPORTED: getLocalizedProperty("contextMenuItemTagEnterVideoFullscreen");
 }
 
+#if ENABLE(VIDEO_TRACK)
+String textTrackSubtitlesText()
+{
+    return String::fromUTF8("Subtitles");
+}
+
+String textTrackOffMenuItemText()
+{
+    return String::fromUTF8("Off");
+}
+
+String textTrackAutomaticMenuItemText()
+{
+    return String::fromUTF8("Auto");
+}
+
+String textTrackNoLabelText()
+{
+    return String::fromUTF8("No label");
+}
+
+String audioTrackNoLabelText()
+{
+    return String::fromUTF8("No label");
+}
+#endif
+
 String contextMenuItemTagMediaPlay()
 {
     return String(); // UNSUPPORTED: getLocalizedProperty("contextMenuItemTagMediaPlay");
@@ -508,6 +535,10 @@ String AXMenuListActionVerb()
     return getLocalizedProperty("AXMenuListActionVerb");
 }
 
+String AXSearchFieldCancelButtonText() {
+    notImplemented();
+    return String(); // UNSUPPORTED: getLocalizedProperty("AXSearchFieldCancelButtonText");
+}
 
 String validationMessageValueMissingText()
 {

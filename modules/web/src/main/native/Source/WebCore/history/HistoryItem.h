@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2011, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,7 +27,9 @@
 #ifndef HistoryItem_h
 #define HistoryItem_h
 
+#include "FloatRect.h"
 #include "IntPoint.h"
+#include "IntRect.h"
 #include "SerializedScriptValue.h"
 #include <memory>
 #include <wtf/RefCounted.h>
@@ -53,88 +55,82 @@ class Document;
 class FormData;
 class HistoryItem;
 class Image;
-class KeyedDecoder;
-class KeyedEncoder;
 class ResourceRequest;
 class URL;
+enum class PruningReason;
 
-typedef Vector<RefPtr<HistoryItem>> HistoryItemVector;
+typedef Vector<Ref<HistoryItem>> HistoryItemVector;
 
-extern void (*notifyHistoryItemChanged)(HistoryItem*);
+WEBCORE_EXPORT extern void (*notifyHistoryItemChanged)(HistoryItem*);
 
 class HistoryItem : public RefCounted<HistoryItem> {
     friend class PageCache;
 
 public:
-    static PassRefPtr<HistoryItem> create() { return adoptRef(new HistoryItem); }
-    static PassRefPtr<HistoryItem> create(const String& urlString, const String& title)
+    static Ref<HistoryItem> create() { return adoptRef(*new HistoryItem); }
+    static Ref<HistoryItem> create(const String& urlString, const String& title)
     {
-        return adoptRef(new HistoryItem(urlString, title));
+        return adoptRef(*new HistoryItem(urlString, title));
     }
-    static PassRefPtr<HistoryItem> create(const String& urlString, const String& title, const String& alternateTitle)
+    static Ref<HistoryItem> create(const String& urlString, const String& title, const String& alternateTitle)
     {
-        return adoptRef(new HistoryItem(urlString, title, alternateTitle));
+        return adoptRef(*new HistoryItem(urlString, title, alternateTitle));
     }
-    static PassRefPtr<HistoryItem> create(const URL& url, const String& target, const String& parent, const String& title)
+    static Ref<HistoryItem> create(const URL& url, const String& target, const String& parent, const String& title)
     {
-        return adoptRef(new HistoryItem(url, target, parent, title));
+        return adoptRef(*new HistoryItem(url, target, parent, title));
     }
 
-    ~HistoryItem();
+    WEBCORE_EXPORT ~HistoryItem();
 
-    PassRefPtr<HistoryItem> copy() const;
+    WEBCORE_EXPORT Ref<HistoryItem> copy() const;
 
     // Resets the HistoryItem to its initial state, as returned by create().
     void reset();
 
-    void encodeBackForwardTree(Encoder&) const;
-    void encodeBackForwardTree(KeyedEncoder&) const;
-    static PassRefPtr<HistoryItem> decodeBackForwardTree(const String& urlString, const String& title, const String& originalURLString, Decoder&);
-    static PassRefPtr<HistoryItem> decodeBackForwardTree(const String& urlString, const String& title, const String& originalURLString, KeyedDecoder&);
-
-    const String& originalURLString() const;
-    const String& urlString() const;
-    const String& title() const;
+    WEBCORE_EXPORT const String& originalURLString() const;
+    WEBCORE_EXPORT const String& urlString() const;
+    WEBCORE_EXPORT const String& title() const;
 
     bool isInPageCache() const { return m_cachedPage.get(); }
-    bool hasCachedPageExpired() const;
+    WEBCORE_EXPORT bool hasCachedPageExpired() const;
 
-    void setAlternateTitle(const String& alternateTitle);
-    const String& alternateTitle() const;
+    WEBCORE_EXPORT void setAlternateTitle(const String&);
+    WEBCORE_EXPORT const String& alternateTitle() const;
 
     const String& parent() const;
-    URL url() const;
-    URL originalURL() const;
-    const String& referrer() const;
-    const String& target() const;
-    bool isTargetItem() const;
+    WEBCORE_EXPORT URL url() const;
+    WEBCORE_EXPORT URL originalURL() const;
+    WEBCORE_EXPORT const String& referrer() const;
+    WEBCORE_EXPORT const String& target() const;
+    WEBCORE_EXPORT bool isTargetItem() const;
 
-    FormData* formData();
-    String formContentType() const;
+    WEBCORE_EXPORT FormData* formData();
+    WEBCORE_EXPORT String formContentType() const;
 
     bool lastVisitWasFailure() const { return m_lastVisitWasFailure; }
 
-    const IntPoint& scrollPoint() const;
-    void setScrollPoint(const IntPoint&);
+    WEBCORE_EXPORT const IntPoint& scrollPoint() const;
+    WEBCORE_EXPORT void setScrollPoint(const IntPoint&);
     void clearScrollPoint();
 
-    float pageScaleFactor() const;
-    void setPageScaleFactor(float);
+    WEBCORE_EXPORT float pageScaleFactor() const;
+    WEBCORE_EXPORT void setPageScaleFactor(float);
 
-    const Vector<String>& documentState() const;
-    void setDocumentState(const Vector<String>&);
+    WEBCORE_EXPORT const Vector<String>& documentState() const;
+    WEBCORE_EXPORT void setDocumentState(const Vector<String>&);
     void clearDocumentState();
 
     void setURL(const URL&);
-    void setURLString(const String&);
-    void setOriginalURLString(const String&);
-    void setReferrer(const String&);
-    void setTarget(const String&);
+    WEBCORE_EXPORT void setURLString(const String&);
+    WEBCORE_EXPORT void setOriginalURLString(const String&);
+    WEBCORE_EXPORT void setReferrer(const String&);
+    WEBCORE_EXPORT void setTarget(const String&);
     void setParent(const String&);
-    void setTitle(const String&);
-    void setIsTargetItem(bool);
+    WEBCORE_EXPORT void setTitle(const String&);
+    WEBCORE_EXPORT void setIsTargetItem(bool);
 
-    void setStateObject(PassRefPtr<SerializedScriptValue> object);
+    WEBCORE_EXPORT void setStateObject(PassRefPtr<SerializedScriptValue>);
     PassRefPtr<SerializedScriptValue> stateObject() const { return m_stateObject; }
 
     void setItemSequenceNumber(long long number) { m_itemSequenceNumber = number; }
@@ -144,38 +140,38 @@ public:
     long long documentSequenceNumber() const { return m_documentSequenceNumber; }
 
     void setFormInfoFromRequest(const ResourceRequest&);
-    void setFormData(PassRefPtr<FormData>);
-    void setFormContentType(const String&);
+    WEBCORE_EXPORT void setFormData(PassRefPtr<FormData>);
+    WEBCORE_EXPORT void setFormContentType(const String&);
 
     void setLastVisitWasFailure(bool wasFailure) { m_lastVisitWasFailure = wasFailure; }
 
-    void addChildItem(PassRefPtr<HistoryItem>);
-    void setChildItem(PassRefPtr<HistoryItem>);
-    HistoryItem* childItemWithTarget(const String&) const;
-    HistoryItem* childItemWithDocumentSequenceNumber(long long number) const;
-    HistoryItem* targetItem();
-    const HistoryItemVector& children() const;
-    bool hasChildren() const;
+    WEBCORE_EXPORT void addChildItem(Ref<HistoryItem>&&);
+    void setChildItem(Ref<HistoryItem>&&);
+    WEBCORE_EXPORT HistoryItem* childItemWithTarget(const String&);
+    HistoryItem* childItemWithDocumentSequenceNumber(long long number);
+    WEBCORE_EXPORT HistoryItem* targetItem();
+    WEBCORE_EXPORT const HistoryItemVector& children() const;
+    WEBCORE_EXPORT bool hasChildren() const;
     void clearChildren();
-    bool isAncestorOf(const HistoryItem*) const;
+    bool isAncestorOf(const HistoryItem&) const;
 
-    bool shouldDoSameDocumentNavigationTo(HistoryItem* otherItem) const;
-    bool hasSameFrames(HistoryItem* otherItem) const;
+    bool shouldDoSameDocumentNavigationTo(HistoryItem& otherItem) const;
+    bool hasSameFrames(HistoryItem& otherItem) const;
 
-    void addRedirectURL(const String&);
-    Vector<String>* redirectURLs() const;
-    void setRedirectURLs(std::unique_ptr<Vector<String>>);
+    WEBCORE_EXPORT void addRedirectURL(const String&);
+    WEBCORE_EXPORT Vector<String>* redirectURLs() const;
+    WEBCORE_EXPORT void setRedirectURLs(std::unique_ptr<Vector<String>>);
 
-    bool isCurrentDocument(Document*) const;
+    bool isCurrentDocument(Document&) const;
 
 #if PLATFORM(COCOA)
-    id viewState() const;
-    void setViewState(id);
+    WEBCORE_EXPORT id viewState() const;
+    WEBCORE_EXPORT void setViewState(id);
 
     // Transient properties may be of any ObjC type.  They are intended to be used to store state per back/forward list entry.
     // The properties will not be persisted; when the history item is removed, the properties will be lost.
-    id getTransientProperty(const String&) const;
-    void setTransientProperty(const String&, id);
+    WEBCORE_EXPORT id getTransientProperty(const String&) const;
+    WEBCORE_EXPORT void setTransientProperty(const String&, id);
 #endif
 #if PLATFORM(JAVA)
     JLObject hostObject();
@@ -188,8 +184,21 @@ public:
 #endif
 
 #if PLATFORM(IOS)
+    FloatRect exposedContentRect() const { return m_exposedContentRect; }
+    void setExposedContentRect(FloatRect exposedContentRect) { m_exposedContentRect = exposedContentRect; }
+
+    IntRect unobscuredContentRect() const { return m_unobscuredContentRect; }
+    void setUnobscuredContentRect(IntRect unobscuredContentRect) { m_unobscuredContentRect = unobscuredContentRect; }
+
+    FloatSize minimumLayoutSizeInScrollViewCoordinates() const { return m_minimumLayoutSizeInScrollViewCoordinates; }
+    void setMinimumLayoutSizeInScrollViewCoordinates(FloatSize minimumLayoutSizeInScrollViewCoordinates) { m_minimumLayoutSizeInScrollViewCoordinates = minimumLayoutSizeInScrollViewCoordinates; }
+
+    IntSize contentSize() const { return m_contentSize; }
+    void setContentSize(IntSize contentSize) { m_contentSize = contentSize; }
+
     float scale() const { return m_scale; }
     bool scaleIsInitial() const { return m_scaleIsInitial; }
+    void setScaleIsInitial(bool scaleIsInitial) { m_scaleIsInitial = scaleIsInitial; }
     void setScale(float newScale, bool isInitial)
     {
         m_scale = newScale;
@@ -205,20 +214,19 @@ public:
     void setSharedLinkUniqueIdentifier(const String& sharedLinkUniqueidentifier) { m_sharedLinkUniqueIdentifier = sharedLinkUniqueidentifier; }
 #endif
 
+    void notifyChanged();
+
 private:
-    HistoryItem();
-    HistoryItem(const String& urlString, const String& title);
-    HistoryItem(const String& urlString, const String& title, const String& alternateTitle);
-    HistoryItem(const URL& url, const String& frameName, const String& parent, const String& title);
+    WEBCORE_EXPORT HistoryItem();
+    WEBCORE_EXPORT HistoryItem(const String& urlString, const String& title);
+    WEBCORE_EXPORT HistoryItem(const String& urlString, const String& title, const String& alternateTitle);
+    WEBCORE_EXPORT HistoryItem(const URL&, const String& frameName, const String& parent, const String& title);
 
-    explicit HistoryItem(const HistoryItem&);
+    HistoryItem(const HistoryItem&);
 
-    bool hasSameDocumentTree(HistoryItem* otherItem) const;
+    bool hasSameDocumentTree(HistoryItem& otherItem) const;
 
     HistoryItem* findTargetItem();
-
-    void encodeBackForwardTreeNode(Encoder&) const;
-    void encodeBackForwardTreeNode(KeyedEncoder&) const;
 
     String m_urlString;
     String m_originalURLString;
@@ -258,11 +266,14 @@ private:
     String m_formContentType;
 
     // PageCache controls these fields.
-    HistoryItem* m_next;
-    HistoryItem* m_prev;
     std::unique_ptr<CachedPage> m_cachedPage;
+    PruningReason m_pruningReason;
 
 #if PLATFORM(IOS)
+    FloatRect m_exposedContentRect;
+    IntRect m_unobscuredContentRect;
+    FloatSize m_minimumLayoutSizeInScrollViewCoordinates;
+    IntSize m_contentSize;
     float m_scale;
     bool m_scaleIsInitial;
     ViewportArguments m_viewportArguments;

@@ -30,7 +30,7 @@
 #include "PlatformWebView.h"
 #include "TestController.h"
 #include <ImageIO/CGImageDestination.h>
-#include <WebKit2/WKImageCG.h>
+#include <WebKit/WKImageCG.h>
 #include <wtf/MD5.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StringExtras.h>
@@ -156,13 +156,8 @@ static void paintRepaintRectOverlay(CGContextRef context, WKImageRef image, WKAr
 
 void TestInvocation::dumpPixelsAndCompareWithExpected(WKImageRef image, WKArrayRef repaintRects)
 {
-    PlatformWebView* webView = TestController::shared().mainWebView();
+    PlatformWebView* webView = TestController::singleton().mainWebView();
     WKRetainPtr<WKImageRef> windowSnapshot = webView->windowSnapshotImage();
-
-    // There is no way at this time to fake a window's scale factor, so we need to avoid the window
-    // snapshots for HiDPI tests.
-    if (WKPageGetBackingScaleFactor(webView->page()) != 1)
-        windowSnapshot = 0;
 
     RetainPtr<CGContextRef> context;
     if (windowSnapshot)

@@ -99,8 +99,8 @@ static void populateAxisNamesMap(HashMap<String, Step::Axis>& axisNames)
         { "preceding-sibling", Step::PrecedingSiblingAxis },
         { "self", Step::SelfAxis }
     };
-    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(axisNameList); ++i)
-        axisNames.add(axisNameList[i].name, axisNameList[i].axis);
+    for (auto& axisName : axisNameList)
+        axisNames.add(axisName.name, axisName.axis);
 }
 
 static bool parseAxisName(const String& name, Step::Axis& type)
@@ -472,7 +472,7 @@ std::unique_ptr<Expression> Parser::parseStatement(const String& statement, XPat
         return nullptr;
     }
 
-    return std::move(parser.m_result);
+    return WTF::move(parser.m_result);
 }
 
 } }

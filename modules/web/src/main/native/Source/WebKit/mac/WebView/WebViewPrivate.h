@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,8 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WebView.h>
-#import <WebKit/WebFramePrivate.h>
+#import <WebKitLegacy/WebView.h>
+#import <WebKitLegacy/WebFramePrivate.h>
 #import <JavaScriptCore/JSBase.h>
 
 #if TARGET_OS_IPHONE
@@ -45,6 +45,14 @@
 #if !defined(ENABLE_REMOTE_INSPECTOR)
 // FIXME: Should we just remove this ENABLE flag everywhere?
 #define ENABLE_REMOTE_INSPECTOR 1
+#endif
+
+#if !defined(ENABLE_TOUCH_EVENTS)
+#if TARGET_OS_IPHONE
+#define ENABLE_TOUCH_EVENTS 1
+#else
+#define ENABLE_TOUCH_EVENTS 0
+#endif
 #endif
 
 @class NSError;
@@ -184,6 +192,7 @@ typedef enum {
 @interface WebView (WebViewEditingActionsPendingPublic)
 
 - (void)outdent:(id)sender;
+- (NSDictionary *)typingAttributes;
 
 @end
 
@@ -319,33 +328,14 @@ typedef enum {
 - (void)setAllowsRemoteInspection:(BOOL)allow;
 
 /*!
-    @method setIndicatingForRemoteInspector
+    @method setShowingInspectorIndication
     @param enabled Show the indication when true, hide when false.
     @abstract indicate this WebView on screen for a remote inspector.
 */
-- (void)setIndicatingForRemoteInspector:(BOOL)enabled;
+- (void)setShowingInspectorIndication:(BOOL)enabled;
+
 #if TARGET_OS_IPHONE
-/*!
-    @method setHostApplicationBundleId:name
-    @param bundleId The application that this WebView was created for.
-    @param name That application's localized display name.
-    @abstract When a WebView is created out of process for an application,
-    you can clarify to a Remote Debugger which application this WebView
-    is intended to belong to; the application which hosts the WebView.
-*/
-- (void)setHostApplicationBundleId:(NSString *)bundleId name:(NSString *)name;
-
-/*!
-    @method hostApplicationBundleId
-    @result Returns the host application bundle id.
-*/
-- (NSString *)hostApplicationBundleId;
-
-/*!
-    @method hostApplicationName
-    @result Returns the host application name.
-*/
-- (NSString *)hostApplicationName;
+- (void)_setHostApplicationProcessIdentifier:(pid_t)pid auditToken:(audit_token_t)auditToken;
 #endif
 
 #endif // ENABLE_REMOTE_INSPECTOR
@@ -452,6 +442,7 @@ Could be worth adding to the API.
 - (DOMCSSStyleDeclaration *)styleAtSelectionStart;
 
 - (NSUInteger)_renderTreeSize;
+- (NSSize)_contentsSizeRespectingOverflow;
 
 /*!
  * @method _handleMemoryWarning
@@ -463,15 +454,12 @@ Could be worth adding to the API.
 - (void)_setResourceLoadSchedulerSuspended:(BOOL)suspend;
 + (void)_setTileCacheLayerPoolCapacity:(unsigned)capacity;
 
-+ (void)_setAcceleratedImageDecoding:(BOOL)enabled;
-+ (BOOL)_acceleratedImageDecoding;
 + (void)_setAllowCookies:(BOOL)allow;
 + (BOOL)_allowCookies;
 + (BOOL)_isUnderMemoryPressure;
 + (void)_clearMemoryPressure;
 + (BOOL)_shouldWaitForMemoryClearMessage;
 + (void)_releaseMemoryNow;
-+ (void)_clearPrivateBrowsingSessionCookieStorage;
 
 - (void)_replaceCurrentHistoryItem:(WebHistoryItem *)item;
 #endif // PLATFORM(IOS)
@@ -530,10 +518,6 @@ Could be worth adding to the API.
 + (NSString *)_decodeData:(NSData *)data;
 
 + (void)_setAlwaysUsesComplexTextCodePath:(BOOL)f;
-#if !TARGET_OS_IPHONE
-// This is the old name of the above method. Needed for Safari versions that call it.
-+ (void)_setAlwaysUseATSU:(BOOL)f;
-#endif
 
 + (void)_setAllowsRoundingHacks:(BOOL)allowsRoundingHacks;
 + (BOOL)_allowsRoundingHacks;
@@ -572,8 +556,6 @@ Could be worth adding to the API.
 - (void)_setAllowsMessaging:(BOOL)aFlag;
 - (BOOL)_allowsMessaging;
 
-- (void)_setNetworkStateIsOnline:(BOOL)isOnLine;
-
 - (void)_setCustomFixedPositionLayoutRectInWebThread:(CGRect)rect synchronize:(BOOL)synchronize;
 - (void)_setCustomFixedPositionLayoutRect:(CGRect)rect;
 
@@ -582,7 +564,16 @@ Could be worth adding to the API.
 - (void)_viewGeometryDidChange;
 - (void)_overflowScrollPositionChangedTo:(CGPoint)offset forNode:(DOMNode *)node isUserScroll:(BOOL)userScroll;
 
+#if ENABLE_TOUCH_EVENTS
 - (NSArray *)_touchEventRegions;
+#endif
+
+/*!
+    @method _doNotStartObservingNetworkReachability
+    @abstract Does not start observation of network reachability in any WebView.
+    @discussion To take effect, this method must be called before the first WebView is created.
+ */
++ (void)_doNotStartObservingNetworkReachability;
 #endif
 
 #if !TARGET_OS_IPHONE
@@ -730,12 +721,6 @@ Could be worth adding to the API.
  */
 - (WebTextIterator *)textIteratorForRect:(NSRect)rect;
 
-#if ENABLE_DASHBOARD_SUPPORT
-// <rdar://problem/5217124> Clients other than Dashboard, don't use this.
-// As of this writing, Dashboard uses this on Tiger, but not on Leopard or newer.
-- (void)handleAuthenticationForResource:(id)identifier challenge:(NSURLAuthenticationChallenge *)challenge fromDataSource:(WebDataSource *)dataSource;
-#endif
-
 #if !TARGET_OS_IPHONE
 - (void)_clearUndoRedoOperations;
 #endif
@@ -756,10 +741,6 @@ Could be worth adding to the API.
 
 - (void)setMemoryCacheDelegateCallsEnabled:(BOOL)suspend;
 - (BOOL)areMemoryCacheDelegateCallsEnabled;
-
-#if !TARGET_OS_IPHONE
-+ (NSCursor *)_pointingHandCursor;
-#endif
 
 // SPI for DumpRenderTree
 - (BOOL)_postsAcceleratedCompositingNotifications;
@@ -989,9 +970,10 @@ Could be worth adding to the API.
 @protocol WebGeolocationProvider;
 
 @protocol WebGeolocationProviderInitializationListener <NSObject>
-- (void)initializationAllowedWebView:(WebView *)webView provider:(id<WebGeolocationProvider>)provider;
-- (void)initializationDeniedWebView:(WebView *)webView provider:(id<WebGeolocationProvider>)provider;
+- (void)initializationAllowedWebView:(WebView *)webView;
+- (void)initializationDeniedWebView:(WebView *)webView;
 @end
+
 #endif
 
 @interface WebView (WebViewUserMedia)
@@ -1006,7 +988,6 @@ Could be worth adding to the API.
 #if TARGET_OS_IPHONE
 - (void)setEnableHighAccuracy:(BOOL)enableHighAccuracy;
 - (void)initializeGeolocationForWebView:(WebView *)webView listener:(id<WebGeolocationProviderInitializationListener>)listener;
-- (void)cancelWarmUpForWebView:(WebView *)webView;
 - (void)stopTrackingWebView:(WebView *)webView;
 #endif
 @end
@@ -1046,6 +1027,10 @@ Could be worth adding to the API.
 - (void)_notificationsDidClose:(NSArray *)notificationIDs;
 
 - (uint64_t)_notificationIDForTesting:(JSValueRef)jsNotification;
+@end
+
+@interface WebView (WebViewFontSelection)
++ (void)_setFontWhitelist:(NSArray *)whitelist;
 @end
 
 #if TARGET_OS_IPHONE

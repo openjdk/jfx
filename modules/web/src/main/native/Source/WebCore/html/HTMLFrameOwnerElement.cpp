@@ -34,7 +34,7 @@ namespace WebCore {
 
 HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
-    , m_contentFrame(0)
+    , m_contentFrame(nullptr)
     , m_sandboxFlags(SandboxNone)
 {
 }
@@ -43,9 +43,9 @@ RenderWidget* HTMLFrameOwnerElement::renderWidget() const
 {
     // HTMLObjectElement and HTMLEmbedElement may return arbitrary renderers
     // when using fallback content.
-    if (!renderer() || !renderer()->isWidget())
-        return 0;
-    return toRenderWidget(renderer());
+    if (!is<RenderWidget>(renderer()))
+        return nullptr;
+    return downcast<RenderWidget>(renderer());
 }
 
 void HTMLFrameOwnerElement::setContentFrame(Frame* frame)
@@ -113,24 +113,22 @@ bool HTMLFrameOwnerElement::isKeyboardFocusable(KeyboardEvent* event) const
 
 SVGDocument* HTMLFrameOwnerElement::getSVGDocument(ExceptionCode& ec) const
 {
-    Document* doc = contentDocument();
-    if (doc && doc->isSVGDocument())
-        return toSVGDocument(doc);
+    Document* document = contentDocument();
+    if (is<SVGDocument>(document))
+        return downcast<SVGDocument>(document);
     // Spec: http://www.w3.org/TR/SVG/struct.html#InterfaceGetSVGDocument
     ec = NOT_SUPPORTED_ERR;
-    return 0;
-}
-
-static void needsStyleRecalcCallback(Node& node, unsigned data)
-{
-    node.setNeedsStyleRecalc(static_cast<StyleChangeType>(data));
+    return nullptr;
 }
 
 void HTMLFrameOwnerElement::scheduleSetNeedsStyleRecalc(StyleChangeType changeType)
 {
-    if (postAttachCallbacksAreSuspended())
-        queuePostAttachCallback(needsStyleRecalcCallback, *this, static_cast<unsigned>(changeType));
-    else
+    if (Style::postResolutionCallbacksAreSuspended()) {
+        RefPtr<HTMLFrameOwnerElement> element = this;
+        Style::queuePostResolutionCallback([element, changeType]{
+            element->setNeedsStyleRecalc(changeType);
+        });
+    } else
         setNeedsStyleRecalc(changeType);
 }
 

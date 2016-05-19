@@ -17,7 +17,7 @@
 namespace JSC {
 
 SlotVisitor::SlotVisitor(GCThreadSharedData& shared)
-    : m_stack(shared.m_vm->heap.blockAllocator())
+    : m_stack()
     , m_bytesVisited(0)
     , m_bytesCopied(0)
     , m_visitCount(0)
@@ -372,5 +372,11 @@ void SlotVisitor::validate(JSCell*)
 {
 }
 #endif
+
+void SlotVisitor::dump(PrintStream&) const
+{
+    for (const JSCell* cell : markStack())
+        dataLog(*cell, "\n");
+}
 
 } // namespace JSC

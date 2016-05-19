@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Computer Inc.
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
@@ -51,14 +51,14 @@ private:
     virtual bool isSVGRootInlineBox() const override { return true; }
     void reorderValueLists(Vector<SVGTextLayoutAttributes*>&);
     void layoutCharactersInTextBoxes(InlineFlowBox*, SVGTextLayoutEngine&);
-    void layoutChildBoxes(InlineFlowBox*, FloatRect* = 0);
+    void layoutChildBoxes(InlineFlowBox*, FloatRect* = nullptr);
     void layoutRootBox(const FloatRect&);
 
     float m_logicalHeight;
 };
 
-INLINE_BOX_OBJECT_TYPE_CASTS(SVGRootInlineBox, isSVGRootInlineBox())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INLINE_BOX(SVGRootInlineBox, isSVGRootInlineBox())
 
 #endif // SVGRootInlineBox_h

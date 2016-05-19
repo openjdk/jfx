@@ -1,5 +1,5 @@
- /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+/*
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,29 +26,27 @@
 #ifndef DFGClobberize_h
 #define DFGClobberize_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "DFGAbstractHeap.h"
 #include "DFGEdgeUsesStructure.h"
 #include "DFGGraph.h"
+#include "DFGHeapLocation.h"
+#include "DFGLazyNode.h"
+#include "DFGPureValue.h"
 
 namespace JSC { namespace DFG {
 
-template<typename ReadFunctor, typename WriteFunctor>
-void clobberizeForAllocation(ReadFunctor& read, WriteFunctor& write)
-{
-    read(GCState);
-    read(BarrierState);
-    write(GCState);
-    write(BarrierState);
-}
-
-template<typename ReadFunctor, typename WriteFunctor>
-void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write)
+template<typename ReadFunctor, typename WriteFunctor, typename DefFunctor>
+void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFunctor& write, const DefFunctor& def)
 {
     // Some notes:
+    //
+    // - The canonical way of clobbering the world is to read world and write
+    //   heap. This is because World subsumes Heap and Stack, and Stack can be
+    //   read by anyone but only written to by explicit stack writing operations.
+    //   Of course, claiming to also write World is not wrong; it'll just
+    //   pessimise some important optimizations.
     //
     // - We cannot hoist, or sink, anything that has effects. This means that the
     //   easiest way of indicating that something cannot be hoisted is to claim
@@ -62,9 +60,9 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     //   versions of those nodes that backward-exit instead, but I'm not convinced
     //   of the soundness.
     //
-    // - Some nodes lie, and claim that they do not read the JSCell_structure.
-    //   These are nodes that use the structure in a way that does not depend on
-    //   things that change under structure transitions.
+    // - Some nodes lie, and claim that they do not read the JSCell_structureID,
+    //   JSCell_typeInfoFlags, etc. These are nodes that use the structure in a way
+    //   that does not depend on things that change under structure transitions.
     //
     // - It's implicitly understood that OSR exits read the world. This is why we
     //   generally don't move or eliminate stores. Every node can exit, so the
@@ -79,89 +77,238 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     //   can use it for IR dumps. No promises on whether the answers are sound
     //   prior to type inference - though they probably could be if we did some
     //   small hacking.
+    //
+    // - If you do read(Stack) or read(World), then make sure that readTop() in
+    //   PreciseLocalClobberize is correct.
+
+    // While read() and write() are fairly self-explanatory - they track what sorts of things the
+    // node may read or write - the def() functor is more tricky. It tells you the heap locations
+    // (not just abstract heaps) that are defined by a node. A heap location comprises an abstract
+    // heap, some nodes, and a LocationKind. Briefly, a location defined by a node is a location
+    // whose value can be deduced from looking at the node itself. The locations returned must obey
+    // the following properties:
+    //
+    // - If someone wants to CSE a load from the heap, then a HeapLocation object should be
+    //   sufficient to find a single matching node.
+    //
+    // - The abstract heap is the only abstract heap that could be clobbered to invalidate any such
+    //   CSE attempt. I.e. if clobberize() reports that on every path between some node and a node
+    //   that defines a HeapLocation that it wanted, there were no writes to any abstract heap that
+    //   overlap the location's heap, then we have a sound match. Effectively, the semantics of
+    //   write() and def() are intertwined such that for them to be sound they must agree on what
+    //   is CSEable.
+    //
+    // read(), write(), and def() for heap locations is enough to do GCSE on effectful things. To
+    // keep things simple, this code will also def() pure things. def() must be overloaded to also
+    // accept PureValue. This way, a client of clobberize() can implement GCSE entirely using the
+    // information that clobberize() passes to write() and def(). Other clients of clobberize() can
+    // just ignore def() by using a NoOpClobberize functor.
 
     if (edgesUseStructure(graph, node))
-        read(JSCell_structure);
+        read(JSCell_structureID);
 
     switch (node->op()) {
     case JSConstant:
-    case WeakJSConstant:
+    case DoubleConstant:
+    case Int52Constant:
+        def(PureValue(node, node->constant()));
+        return;
+
     case Identity:
     case Phantom:
-    case HardPhantom:
-    case Breakpoint:
-    case ProfileWillCall:
-    case ProfileDidCall:
+    case Check:
+    case ExtractOSREntryLocal:
+    case CheckStructureImmediate:
+        return;
+
     case BitAnd:
     case BitOr:
     case BitXor:
     case BitLShift:
     case BitRShift:
     case BitURShift:
-    case ValueToInt32:
-    case ArithAdd:
-    case ArithSub:
-    case ArithNegate:
-    case ArithMul:
     case ArithIMul:
-    case ArithDiv:
-    case ArithMod:
     case ArithAbs:
+    case ArithClz32:
     case ArithMin:
     case ArithMax:
+    case ArithPow:
     case ArithSqrt:
+    case ArithFRound:
     case ArithSin:
     case ArithCos:
+    case ArithLog:
     case GetScope:
     case SkipScope:
-    case CheckFunction:
     case StringCharCodeAt:
     case StringFromCharCode:
     case CompareEqConstant:
-    case CompareStrictEqConstant:
     case CompareStrictEq:
     case IsUndefined:
     case IsBoolean:
     case IsNumber:
     case IsString:
+    case IsObject:
     case LogicalNot:
-    case Int32ToDouble:
-    case ExtractOSREntryLocal:
-    case Int52ToDouble:
-    case Int52ToValue:
     case CheckInBounds:
-    case ConstantStoragePointer:
-    case UInt32ToNumber:
+    case DoubleRep:
+    case ValueRep:
+    case Int52Rep:
+    case BooleanToNumber:
+    case FiatInt52:
+    case MakeRope:
+    case ValueToInt32:
+    case GetExecutable:
+    case BottomValue:
+    case TypeOf:
+        def(PureValue(node));
+        return;
+
+    case HasGenericProperty:
+    case HasStructureProperty:
+    case GetEnumerableLength:
+    case GetPropertyEnumerator: {
+        read(Heap);
+        write(SideState);
+        return;
+    }
+
+    case GetDirectPname: {
+        // This reads and writes heap because it can end up calling a generic getByVal
+        // if the Structure changed, which could in turn end up calling a getter.
+        read(World);
+        write(Heap);
+        return;
+    }
+
+    case ToIndexString:
+    case GetEnumeratorStructurePname:
+    case GetEnumeratorGenericPname: {
+        def(PureValue(node));
+        return;
+    }
+
+    case HasIndexedProperty: {
+        read(JSObject_butterfly);
+        ArrayMode mode = node->arrayMode();
+        switch (mode.type()) {
+        case Array::Int32: {
+            if (mode.isInBounds()) {
+                read(Butterfly_publicLength);
+                read(IndexedInt32Properties);
+                def(HeapLocation(HasIndexedPropertyLoc, IndexedInt32Properties, node->child1(), node->child2()), LazyNode(node));
+                return;
+            }
+            read(Heap);
+            return;
+        }
+
+        case Array::Double: {
+            if (mode.isInBounds()) {
+                read(Butterfly_publicLength);
+                read(IndexedDoubleProperties);
+                def(HeapLocation(HasIndexedPropertyLoc, IndexedDoubleProperties, node->child1(), node->child2()), LazyNode(node));
+                return;
+            }
+            read(Heap);
+            return;
+        }
+
+        case Array::Contiguous: {
+            if (mode.isInBounds()) {
+                read(Butterfly_publicLength);
+                read(IndexedContiguousProperties);
+                def(HeapLocation(HasIndexedPropertyLoc, IndexedContiguousProperties, node->child1(), node->child2()), LazyNode(node));
+                return;
+            }
+            read(Heap);
+            return;
+        }
+
+        case Array::ArrayStorage: {
+            if (mode.isInBounds()) {
+                read(Butterfly_vectorLength);
+                read(IndexedArrayStorageProperties);
+                return;
+            }
+            read(Heap);
+            return;
+        }
+
+        default: {
+            read(World);
+            write(Heap);
+            return;
+        }
+        }
+        RELEASE_ASSERT_NOT_REACHED();
+        return;
+    }
+
+    case ArithAdd:
+    case ArithSub:
+    case ArithNegate:
+    case ArithMul:
+    case ArithDiv:
+    case ArithMod:
     case DoubleAsInt32:
-    case Check:
+    case UInt32ToNumber:
+        def(PureValue(node, node->arithMode()));
+        return;
+
+    case ArithRound:
+        def(PureValue(node, static_cast<uintptr_t>(node->arithRoundingMode())));
+        return;
+
+    case CheckCell:
+        def(PureValue(CheckCell, AdjacencyList(AdjacencyList::Fixed, node->child1()), node->cellOperand()));
+        return;
+
+    case CheckNotEmpty:
+        def(PureValue(CheckNotEmpty, AdjacencyList(AdjacencyList::Fixed, node->child1())));
+        return;
+
+    case ConstantStoragePointer:
+        def(PureValue(node, node->storagePointer()));
         return;
 
     case MovHint:
     case ZombieHint:
+    case KillStack:
     case Upsilon:
     case Phi:
-    case Flush:
     case PhantomLocal:
     case SetArgument:
-    case PhantomArguments:
     case Jump:
     case Branch:
     case Switch:
     case Throw:
     case ForceOSRExit:
+    case CheckBadCell:
     case Return:
     case Unreachable:
     case CheckTierUpInLoop:
     case CheckTierUpAtReturn:
     case CheckTierUpAndOSREnter:
+    case CheckTierUpWithNestedTriggerAndOSREnter:
     case LoopHint:
-    case InvalidationPoint:
+    case Breakpoint:
+    case ProfileWillCall:
+    case ProfileDidCall:
+    case ProfileType:
+    case ProfileControlFlow:
+    case StoreBarrier:
+    case PutHint:
         write(SideState);
         return;
 
-    case VariableWatchpoint:
-    case TypedArrayWatchpoint:
-        read(Watchpoint_fire);
+    case InvalidationPoint:
+        write(SideState);
+        def(HeapLocation(InvalidationPointLoc, Watchpoint_fire), LazyNode(node));
+        return;
+
+    case Flush:
+        read(AbstractHeap(Stack, node->local()));
         write(SideState);
         return;
 
@@ -170,63 +317,147 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         write(SideState);
         return;
 
-    case CreateActivation:
-    case CreateArguments:
-        clobberizeForAllocation(read, write);
-        write(SideState);
-        write(Watchpoint_fire);
+    case CreateActivation: {
+        SymbolTable* table = node->castOperand<SymbolTable*>();
+        if (table->singletonScope()->isStillValid())
+            write(Watchpoint_fire);
+        read(HeapObjectCount);
+        write(HeapObjectCount);
+        return;
+    }
+
+    case CreateDirectArguments:
+    case CreateScopedArguments:
+    case CreateClonedArguments:
+        read(Stack);
+        read(HeapObjectCount);
+        write(HeapObjectCount);
         return;
 
-    case FunctionReentryWatchpoint:
-        read(Watchpoint_fire);
+    case PhantomDirectArguments:
+    case PhantomClonedArguments:
+        // DFG backend requires that the locals that this reads are flushed. FTL backend can handle those
+        // locals being promoted.
+        if (!isFTL(graph.m_plan.mode))
+            read(Stack);
+
+        // Even though it's phantom, it still has the property that one can't be replaced with another.
+        read(HeapObjectCount);
+        write(HeapObjectCount);
         return;
 
     case ToThis:
     case CreateThis:
         read(MiscFields);
-        clobberizeForAllocation(read, write);
+        read(HeapObjectCount);
+        write(HeapObjectCount);
         return;
 
     case VarInjectionWatchpoint:
-    case AllocationProfileWatchpoint:
-    case IsObject:
-    case IsFunction:
-    case TypeOf:
         read(MiscFields);
+        def(HeapLocation(VarInjectionWatchpointLoc, MiscFields), LazyNode(node));
+        return;
+
+    case IsObjectOrNull:
+        read(MiscFields);
+        def(HeapLocation(IsObjectOrNullLoc, MiscFields, node->child1()), LazyNode(node));
+        return;
+
+    case IsFunction:
+        read(MiscFields);
+        def(HeapLocation(IsFunctionLoc, MiscFields, node->child1()), LazyNode(node));
         return;
 
     case GetById:
     case GetByIdFlush:
     case PutById:
+    case PutByIdFlush:
     case PutByIdDirect:
     case ArrayPush:
     case ArrayPop:
     case Call:
     case Construct:
+    case NativeCall:
+    case NativeConstruct:
+    case CallVarargs:
+    case CallForwardVarargs:
+    case ConstructVarargs:
+    case ConstructForwardVarargs:
     case ToPrimitive:
     case In:
-    case GetMyArgumentsLengthSafe:
-    case GetMyArgumentByValSafe:
     case ValueAdd:
         read(World);
-        write(World);
+        write(Heap);
+        return;
+
+    case GetGetter:
+        read(GetterSetter_getter);
+        def(HeapLocation(GetterLoc, GetterSetter_getter, node->child1()), LazyNode(node));
+        return;
+
+    case GetSetter:
+        read(GetterSetter_setter);
+        def(HeapLocation(SetterLoc, GetterSetter_setter, node->child1()), LazyNode(node));
         return;
 
     case GetCallee:
-        read(AbstractHeap(Variables, JSStack::Callee));
+        read(AbstractHeap(Stack, JSStack::Callee));
+        def(HeapLocation(StackLoc, AbstractHeap(Stack, JSStack::Callee)), LazyNode(node));
+        return;
+
+    case GetArgumentCount:
+        read(AbstractHeap(Stack, JSStack::ArgumentCount));
+        def(HeapLocation(StackPayloadLoc, AbstractHeap(Stack, JSStack::ArgumentCount)), LazyNode(node));
         return;
 
     case GetLocal:
-    case GetArgument:
-        read(AbstractHeap(Variables, node->local()));
+        read(AbstractHeap(Stack, node->local()));
+        def(HeapLocation(StackLoc, AbstractHeap(Stack, node->local())), LazyNode(node));
         return;
 
     case SetLocal:
-        write(AbstractHeap(Variables, node->local()));
+        write(AbstractHeap(Stack, node->local()));
+        def(HeapLocation(StackLoc, AbstractHeap(Stack, node->local())), LazyNode(node->child1().node()));
         return;
 
+    case GetStack: {
+        AbstractHeap heap(Stack, node->stackAccessData()->local);
+        read(heap);
+        def(HeapLocation(StackLoc, heap), LazyNode(node));
+        return;
+    }
+
+    case PutStack: {
+        AbstractHeap heap(Stack, node->stackAccessData()->local);
+        write(heap);
+        def(HeapLocation(StackLoc, heap), LazyNode(node->child1().node()));
+        return;
+    }
+
+    case LoadVarargs: {
+        read(World);
+        write(Heap);
+        LoadVarargsData* data = node->loadVarargsData();
+        write(AbstractHeap(Stack, data->count.offset()));
+        for (unsigned i = data->limit; i--;)
+            write(AbstractHeap(Stack, data->start.offset() + static_cast<int>(i)));
+        return;
+    }
+
+    case ForwardVarargs: {
+        // We could be way more precise here.
+        read(Stack);
+
+        LoadVarargsData* data = node->loadVarargsData();
+        write(AbstractHeap(Stack, data->count.offset()));
+        for (unsigned i = data->limit; i--;)
+            write(AbstractHeap(Stack, data->start.offset() + static_cast<int>(i)));
+        return;
+    }
+
     case GetLocalUnlinked:
-        read(AbstractHeap(Variables, node->unlinkedLocal()));
+        read(AbstractHeap(Stack, node->unlinkedLocal()));
+        def(HeapLocation(StackLoc, AbstractHeap(Stack, node->unlinkedLocal())), LazyNode(node));
         return;
 
     case GetByVal: {
@@ -237,7 +468,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         case Array::Undecided:
             // Assume the worst since we don't have profiling yet.
             read(World);
-            write(World);
+            write(Heap);
             return;
 
         case Array::ForceExit:
@@ -246,61 +477,71 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
 
         case Array::Generic:
             read(World);
-            write(World);
+            write(Heap);
             return;
 
         case Array::String:
             if (mode.isOutOfBounds()) {
                 read(World);
-                write(World);
+                write(Heap);
                 return;
             }
             // This appears to read nothing because it's only reading immutable data.
+            def(PureValue(node, mode.asWord()));
             return;
 
-        case Array::Arguments:
-            read(Arguments_registers);
-            read(Variables);
+        case Array::DirectArguments:
+            read(DirectArgumentsProperties);
+            def(HeapLocation(IndexedPropertyLoc, DirectArgumentsProperties, node->child1(), node->child2()), LazyNode(node));
+            return;
+
+        case Array::ScopedArguments:
+            read(ScopeProperties);
+            def(HeapLocation(IndexedPropertyLoc, ScopeProperties, node->child1(), node->child2()), LazyNode(node));
             return;
 
         case Array::Int32:
             if (mode.isInBounds()) {
                 read(Butterfly_publicLength);
-                read(Butterfly_vectorLength);
                 read(IndexedInt32Properties);
+                def(HeapLocation(IndexedPropertyLoc, IndexedInt32Properties, node->child1(), node->child2()), LazyNode(node));
                 return;
             }
             read(World);
-            write(World);
+            write(Heap);
             return;
 
         case Array::Double:
             if (mode.isInBounds()) {
                 read(Butterfly_publicLength);
-                read(Butterfly_vectorLength);
                 read(IndexedDoubleProperties);
+                def(HeapLocation(IndexedPropertyLoc, IndexedDoubleProperties, node->child1(), node->child2()), LazyNode(node));
                 return;
             }
             read(World);
-            write(World);
+            write(Heap);
             return;
 
         case Array::Contiguous:
             if (mode.isInBounds()) {
                 read(Butterfly_publicLength);
-                read(Butterfly_vectorLength);
                 read(IndexedContiguousProperties);
+                def(HeapLocation(IndexedPropertyLoc, IndexedContiguousProperties, node->child1(), node->child2()), LazyNode(node));
                 return;
             }
             read(World);
-            write(World);
+            write(Heap);
             return;
 
         case Array::ArrayStorage:
         case Array::SlowPutArrayStorage:
-            // Give up on life for now.
+            if (mode.isInBounds()) {
+                read(Butterfly_vectorLength);
+                read(IndexedArrayStorageProperties);
+                return;
+            }
             read(World);
-            write(World);
+            write(Heap);
             return;
 
         case Array::Int8Array:
@@ -313,11 +554,18 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         case Array::Float32Array:
         case Array::Float64Array:
             read(TypedArrayProperties);
-            read(JSArrayBufferView_vector);
-            read(JSArrayBufferView_length);
+            read(MiscFields);
+            def(HeapLocation(IndexedPropertyLoc, TypedArrayProperties, node->child1(), node->child2()), LazyNode(node));
             return;
         }
         RELEASE_ASSERT_NOT_REACHED();
+        return;
+    }
+
+    case GetMyArgumentByVal: {
+        read(Stack);
+        // FIXME: It would be trivial to have a def here.
+        // https://bugs.webkit.org/show_bug.cgi?id=143077
         return;
     }
 
@@ -325,14 +573,16 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case PutByVal:
     case PutByValAlias: {
         ArrayMode mode = node->arrayMode();
+        Node* base = graph.varArgChild(node, 0).node();
+        Node* index = graph.varArgChild(node, 1).node();
+        Node* value = graph.varArgChild(node, 2).node();
         switch (mode.modeForPut().type()) {
         case Array::SelectUsingPredictions:
         case Array::Unprofiled:
         case Array::Undecided:
-        case Array::String:
             // Assume the worst since we don't have profiling yet.
             read(World);
-            write(World);
+            write(Heap);
             return;
 
         case Array::ForceExit:
@@ -341,57 +591,59 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
 
         case Array::Generic:
             read(World);
-            write(World);
-            return;
-
-        case Array::Arguments:
-            read(Arguments_registers);
-            read(Arguments_numArguments);
-            read(Arguments_slowArguments);
-            write(Variables);
+            write(Heap);
             return;
 
         case Array::Int32:
             if (node->arrayMode().isOutOfBounds()) {
                 read(World);
-                write(World);
+                write(Heap);
                 return;
             }
             read(Butterfly_publicLength);
             read(Butterfly_vectorLength);
             read(IndexedInt32Properties);
             write(IndexedInt32Properties);
+            if (node->arrayMode().mayStoreToHole())
+                write(Butterfly_publicLength);
+            def(HeapLocation(IndexedPropertyLoc, IndexedInt32Properties, base, index), LazyNode(value));
             return;
 
         case Array::Double:
             if (node->arrayMode().isOutOfBounds()) {
                 read(World);
-                write(World);
+                write(Heap);
                 return;
             }
             read(Butterfly_publicLength);
             read(Butterfly_vectorLength);
             read(IndexedDoubleProperties);
             write(IndexedDoubleProperties);
+            if (node->arrayMode().mayStoreToHole())
+                write(Butterfly_publicLength);
+            def(HeapLocation(IndexedPropertyLoc, IndexedDoubleProperties, base, index), LazyNode(value));
             return;
 
         case Array::Contiguous:
             if (node->arrayMode().isOutOfBounds()) {
                 read(World);
-                write(World);
+                write(Heap);
                 return;
             }
             read(Butterfly_publicLength);
             read(Butterfly_vectorLength);
             read(IndexedContiguousProperties);
             write(IndexedContiguousProperties);
+            if (node->arrayMode().mayStoreToHole())
+                write(Butterfly_publicLength);
+            def(HeapLocation(IndexedPropertyLoc, IndexedContiguousProperties, base, index), LazyNode(value));
             return;
 
         case Array::ArrayStorage:
         case Array::SlowPutArrayStorage:
             // Give up on life for now.
             read(World);
-            write(World);
+            write(Heap);
             return;
 
         case Array::Int8Array:
@@ -403,9 +655,15 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         case Array::Uint32Array:
         case Array::Float32Array:
         case Array::Float64Array:
-            read(JSArrayBufferView_vector);
-            read(JSArrayBufferView_length);
+            read(MiscFields);
             write(TypedArrayProperties);
+            // FIXME: We can't def() anything here because these operations truncate their inputs.
+            // https://bugs.webkit.org/show_bug.cgi?id=134737
+            return;
+        case Array::String:
+        case Array::DirectArguments:
+        case Array::ScopedArguments:
+            DFG_CRASH(graph, node, "impossible array mode for put");
             return;
         }
         RELEASE_ASSERT_NOT_REACHED();
@@ -413,70 +671,111 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     }
 
     case CheckStructure:
-    case StructureTransitionWatchpoint:
-    case CheckArray:
-    case CheckHasInstance:
-    case InstanceOf:
-        read(JSCell_structure);
+        read(JSCell_structureID);
         return;
 
-    case CheckExecutable:
-        read(JSFunction_executable);
+    case CheckArray:
+        read(JSCell_indexingType);
+        read(JSCell_typeInfoType);
+        read(JSCell_structureID);
+        return;
+
+    case CheckHasInstance:
+        read(JSCell_typeInfoFlags);
+        def(HeapLocation(CheckHasInstanceLoc, JSCell_typeInfoFlags, node->child1()), LazyNode(node));
+        return;
+
+    case InstanceOf:
+        read(JSCell_structureID);
+        def(HeapLocation(InstanceOfLoc, JSCell_structureID, node->child1(), node->child2()), LazyNode(node));
         return;
 
     case PutStructure:
-    case PhantomPutStructure:
-        write(JSCell_structure);
+        write(JSCell_structureID);
+        write(JSCell_typeInfoType);
+        write(JSCell_typeInfoFlags);
+        write(JSCell_indexingType);
         return;
 
     case AllocatePropertyStorage:
         write(JSObject_butterfly);
-        clobberizeForAllocation(read, write);
+        def(HeapLocation(ButterflyLoc, JSObject_butterfly, node->child1()), LazyNode(node));
         return;
 
     case ReallocatePropertyStorage:
         read(JSObject_butterfly);
         write(JSObject_butterfly);
-        clobberizeForAllocation(read, write);
+        def(HeapLocation(ButterflyLoc, JSObject_butterfly, node->child1()), LazyNode(node));
         return;
 
     case GetButterfly:
         read(JSObject_butterfly);
+        def(HeapLocation(ButterflyLoc, JSObject_butterfly, node->child1()), LazyNode(node));
         return;
 
     case Arrayify:
     case ArrayifyToStructure:
-        read(JSCell_structure);
+        read(JSCell_structureID);
+        read(JSCell_indexingType);
         read(JSObject_butterfly);
-        write(JSCell_structure);
+        write(JSCell_structureID);
+        write(JSCell_indexingType);
         write(JSObject_butterfly);
-        clobberizeForAllocation(read, write);
+        write(Watchpoint_fire);
         return;
 
     case GetIndexedPropertyStorage:
-        if (node->arrayMode().type() == Array::String)
+        if (node->arrayMode().type() == Array::String) {
+            def(PureValue(node, node->arrayMode().asWord()));
             return;
-        read(JSArrayBufferView_vector);
+        }
+        read(MiscFields);
+        def(HeapLocation(IndexedPropertyStorageLoc, MiscFields, node->child1()), LazyNode(node));
         return;
 
     case GetTypedArrayByteOffset:
-        read(JSArrayBufferView_vector);
-        read(JSArrayBufferView_mode);
-        read(Butterfly_arrayBuffer);
-        read(ArrayBuffer_data);
+        read(MiscFields);
+        def(HeapLocation(TypedArrayByteOffsetLoc, MiscFields, node->child1()), LazyNode(node));
         return;
 
     case GetByOffset:
-        read(AbstractHeap(NamedProperties, graph.m_storageAccessData[node->storageAccessDataIndex()].identifierNumber));
+    case GetGetterSetterByOffset: {
+        unsigned identifierNumber = node->storageAccessData().identifierNumber;
+        AbstractHeap heap(NamedProperties, identifierNumber);
+        read(heap);
+        def(HeapLocation(NamedPropertyLoc, heap, node->child2()), LazyNode(node));
         return;
+    }
 
-    case MultiGetByOffset:
-        read(AbstractHeap(NamedProperties, node->multiGetByOffsetData().identifierNumber));
+    case MultiGetByOffset: {
+        read(JSCell_structureID);
+        read(JSObject_butterfly);
+        AbstractHeap heap(NamedProperties, node->multiGetByOffsetData().identifierNumber);
+        read(heap);
+        def(HeapLocation(NamedPropertyLoc, heap, node->child1()), LazyNode(node));
         return;
+    }
 
-    case PutByOffset:
-        write(AbstractHeap(NamedProperties, graph.m_storageAccessData[node->storageAccessDataIndex()].identifierNumber));
+    case MultiPutByOffset: {
+        read(JSCell_structureID);
+        read(JSObject_butterfly);
+        AbstractHeap heap(NamedProperties, node->multiPutByOffsetData().identifierNumber);
+        write(heap);
+        if (node->multiPutByOffsetData().writesStructures())
+            write(JSCell_structureID);
+        if (node->multiPutByOffsetData().reallocatesStorage())
+            write(JSObject_butterfly);
+        def(HeapLocation(NamedPropertyLoc, heap, node->child1()), LazyNode(node->child2().node()));
         return;
+    }
+
+    case PutByOffset: {
+        unsigned identifierNumber = node->storageAccessData().identifierNumber;
+        AbstractHeap heap(NamedProperties, identifierNumber);
+        write(heap);
+        def(HeapLocation(NamedPropertyLoc, heap, node->child2()), LazyNode(node->child3().node()));
+        return;
+    }
 
     case GetArrayLength: {
         ArrayMode mode = node->arrayMode();
@@ -487,76 +786,178 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         case Array::ArrayStorage:
         case Array::SlowPutArrayStorage:
             read(Butterfly_publicLength);
+            def(HeapLocation(ArrayLengthLoc, Butterfly_publicLength, node->child1()), LazyNode(node));
             return;
 
         case Array::String:
+            def(PureValue(node, mode.asWord()));
             return;
 
-        case Array::Arguments:
-            read(Arguments_overrideLength);
-            read(Arguments_numArguments);
+        case Array::DirectArguments:
+        case Array::ScopedArguments:
+            read(MiscFields);
+            def(HeapLocation(ArrayLengthLoc, MiscFields, node->child1()), LazyNode(node));
             return;
 
         default:
-            read(JSArrayBufferView_length);
+            ASSERT(mode.typedArrayType() != NotTypedArray);
+            read(MiscFields);
+            def(HeapLocation(ArrayLengthLoc, MiscFields, node->child1()), LazyNode(node));
             return;
         }
     }
 
-    case GetMyScope:
-        read(AbstractHeap(Variables, JSStack::ScopeChain));
-        return;
-
-    case SkipTopScope:
-        read(AbstractHeap(Variables, graph.activationRegister()));
-        return;
-
-    case GetClosureRegisters:
-        read(JSVariableObject_registers);
-        return;
-
     case GetClosureVar:
-        read(AbstractHeap(Variables, node->varNumber()));
+        read(AbstractHeap(ScopeProperties, node->scopeOffset().offset()));
+        def(HeapLocation(ClosureVariableLoc, AbstractHeap(ScopeProperties, node->scopeOffset().offset()), node->child1()), LazyNode(node));
         return;
 
     case PutClosureVar:
-        write(AbstractHeap(Variables, node->varNumber()));
+        write(AbstractHeap(ScopeProperties, node->scopeOffset().offset()));
+        def(HeapLocation(ClosureVariableLoc, AbstractHeap(ScopeProperties, node->scopeOffset().offset()), node->child1()), LazyNode(node->child2().node()));
         return;
 
+    case GetFromArguments: {
+        AbstractHeap heap(DirectArgumentsProperties, node->capturedArgumentsOffset().offset());
+        read(heap);
+        def(HeapLocation(DirectArgumentsLoc, heap, node->child1()), LazyNode(node));
+        return;
+    }
+
+    case PutToArguments: {
+        AbstractHeap heap(DirectArgumentsProperties, node->capturedArgumentsOffset().offset());
+        write(heap);
+        def(HeapLocation(DirectArgumentsLoc, heap, node->child1()), LazyNode(node->child2().node()));
+        return;
+    }
+
     case GetGlobalVar:
-        read(AbstractHeap(Absolute, node->registerPointer()));
+        read(AbstractHeap(Absolute, node->variablePointer()));
+        def(HeapLocation(GlobalVariableLoc, AbstractHeap(Absolute, node->variablePointer())), LazyNode(node));
         return;
 
     case PutGlobalVar:
-        write(AbstractHeap(Absolute, node->registerPointer()));
+        write(AbstractHeap(Absolute, node->variablePointer()));
+        def(HeapLocation(GlobalVariableLoc, AbstractHeap(Absolute, node->variablePointer())), LazyNode(node->child2().node()));
         return;
 
-    case NewObject:
-    case NewArray:
     case NewArrayWithSize:
-    case NewArrayBuffer:
-    case NewRegexp:
-    case NewStringObject:
-    case MakeRope:
-    case NewFunctionNoCheck:
-    case NewFunction:
-    case NewFunctionExpression:
-        clobberizeForAllocation(read, write);
+    case NewTypedArray:
+        read(HeapObjectCount);
+        write(HeapObjectCount);
         return;
 
-    case NewTypedArray:
-        clobberizeForAllocation(read, write);
-        switch (node->child1().useKind()) {
-        case Int32Use:
+    case NewArray: {
+        read(HeapObjectCount);
+        write(HeapObjectCount);
+
+        unsigned numElements = node->numChildren();
+
+        def(HeapLocation(ArrayLengthLoc, Butterfly_publicLength, node),
+            LazyNode(graph.freeze(jsNumber(numElements))));
+
+        if (!numElements)
             return;
-        case UntypedUse:
-            read(World);
-            write(World);
-            return;
+
+        AbstractHeap heap;
+        switch (node->indexingType()) {
+        case ALL_DOUBLE_INDEXING_TYPES:
+            heap = IndexedDoubleProperties;
+            break;
+
+        case ALL_INT32_INDEXING_TYPES:
+            heap = IndexedInt32Properties;
+            break;
+
+        case ALL_CONTIGUOUS_INDEXING_TYPES:
+            heap = IndexedContiguousProperties;
+            break;
+
         default:
-            RELEASE_ASSERT_NOT_REACHED();
             return;
         }
+
+        if (numElements < graph.m_uint32ValuesInUse.size()) {
+            for (unsigned operandIdx = 0; operandIdx < numElements; ++operandIdx) {
+                Edge use = graph.m_varArgChildren[node->firstChild() + operandIdx];
+                def(HeapLocation(IndexedPropertyLoc, heap, node, LazyNode(graph.freeze(jsNumber(operandIdx)))),
+                    LazyNode(use.node()));
+            }
+        } else {
+            for (uint32_t operandIdx : graph.m_uint32ValuesInUse) {
+                if (operandIdx >= numElements)
+                    continue;
+                Edge use = graph.m_varArgChildren[node->firstChild() + operandIdx];
+                def(HeapLocation(IndexedPropertyLoc, heap, node, LazyNode(graph.freeze(jsNumber(operandIdx)))),
+                    LazyNode(use.node()));
+            }
+        }
+        return;
+    }
+
+    case NewArrayBuffer: {
+        read(HeapObjectCount);
+        write(HeapObjectCount);
+
+        unsigned numElements = node->numConstants();
+        def(HeapLocation(ArrayLengthLoc, Butterfly_publicLength, node),
+            LazyNode(graph.freeze(jsNumber(numElements))));
+
+        AbstractHeap heap;
+        NodeType op = JSConstant;
+        switch (node->indexingType()) {
+        case ALL_DOUBLE_INDEXING_TYPES:
+            heap = IndexedDoubleProperties;
+            op = DoubleConstant;
+            break;
+
+        case ALL_INT32_INDEXING_TYPES:
+            heap = IndexedInt32Properties;
+            break;
+
+        case ALL_CONTIGUOUS_INDEXING_TYPES:
+            heap = IndexedContiguousProperties;
+            break;
+
+        default:
+            return;
+        }
+
+        JSValue* data = graph.m_codeBlock->constantBuffer(node->startConstant());
+        if (numElements < graph.m_uint32ValuesInUse.size()) {
+            for (unsigned index = 0; index < numElements; ++index) {
+                def(HeapLocation(IndexedPropertyLoc, heap, node, LazyNode(graph.freeze(jsNumber(index)))),
+                    LazyNode(graph.freeze(data[index]), op));
+            }
+        } else {
+            for (uint32_t index : graph.m_uint32ValuesInUse) {
+                if (index >= numElements)
+                    continue;
+                def(HeapLocation(IndexedPropertyLoc, heap, node, LazyNode(graph.freeze(jsNumber(index)))),
+                    LazyNode(graph.freeze(data[index]), op));
+            }
+        }
+        return;
+    }
+
+    case NewObject:
+    case NewRegexp:
+    case NewStringObject:
+    case PhantomNewObject:
+    case MaterializeNewObject:
+    case PhantomNewFunction:
+    case PhantomCreateActivation:
+    case MaterializeCreateActivation:
+        read(HeapObjectCount);
+        write(HeapObjectCount);
+        return;
+
+    case NewFunction:
+        if (node->castOperand<FunctionExecutable*>()->singletonFunction()->isStillValid())
+            write(Watchpoint_fire);
+        read(HeapObjectCount);
+        write(HeapObjectCount);
+        return;
 
     case RegExpExec:
     case RegExpTest:
@@ -567,9 +968,10 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case StringCharAt:
         if (node->arrayMode().isOutOfBounds()) {
             read(World);
-            write(World);
+            write(Heap);
             return;
         }
+        def(PureValue(node));
         return;
 
     case CompareEq:
@@ -577,22 +979,27 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case CompareLessEq:
     case CompareGreater:
     case CompareGreaterEq:
-        if (!node->isBinaryUseKind(UntypedUse))
+        if (!node->isBinaryUseKind(UntypedUse)) {
+            def(PureValue(node));
             return;
+        }
         read(World);
-        write(World);
+        write(Heap);
         return;
 
     case ToString:
+    case CallStringConstructor:
         switch (node->child1().useKind()) {
         case StringObjectUse:
         case StringOrStringObjectUse:
+            // These don't def a pure value, unfortunately. I'll avoid load-eliminating these for
+            // now.
             return;
 
         case CellUse:
         case UntypedUse:
             read(World);
-            write(World);
+            write(Heap);
             return;
 
         default:
@@ -600,30 +1007,10 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             return;
         }
 
-    case TearOffActivation:
-        write(JSVariableObject_registers);
-        return;
-
-    case TearOffArguments:
-        write(Arguments_registers);
-        return;
-
-    case GetMyArgumentsLength:
-        read(AbstractHeap(Variables, graph.argumentsRegisterFor(node->origin.semantic)));
-        read(AbstractHeap(Variables, JSStack::ArgumentCount));
-        return;
-
-    case GetMyArgumentByVal:
-        read(Variables);
-        return;
-
-    case CheckArgumentsNotCreated:
-        read(AbstractHeap(Variables, graph.argumentsRegisterFor(node->origin.semantic)));
-        return;
-
     case ThrowReferenceError:
         write(SideState);
-        clobberizeForAllocation(read, write);
+        read(HeapObjectCount);
+        write(HeapObjectCount);
         return;
 
     case CountExecution:
@@ -632,25 +1019,19 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         write(InternalState);
         return;
 
-    case StoreBarrier:
-    case ConditionalStoreBarrier:
-    case StoreBarrierWithNullCheck:
-        read(BarrierState);
-        write(BarrierState);
-        return;
-
     case LastNodeType:
         RELEASE_ASSERT_NOT_REACHED();
         return;
     }
 
-    RELEASE_ASSERT_NOT_REACHED();
+    DFG_CRASH(graph, node, toCString("Unrecognized node type: ", Graph::opName(node->op())).data());
 }
 
 class NoOpClobberize {
 public:
     NoOpClobberize() { }
-    void operator()(AbstractHeap) { }
+    template<typename... T>
+    void operator()(T...) const { }
 };
 
 class CheckClobberize {
@@ -660,12 +1041,13 @@ public:
     {
     }
 
-    void operator()(AbstractHeap) { m_result = true; }
+    template<typename... T>
+    void operator()(T...) const { m_result = true; }
 
     bool result() const { return m_result; }
 
 private:
-    bool m_result;
+    mutable bool m_result;
 };
 
 bool doesWrites(Graph&, Node*);
@@ -678,7 +1060,7 @@ public:
     {
     }
 
-    void operator()(AbstractHeap otherHeap)
+    void operator()(AbstractHeap otherHeap) const
     {
         if (m_result)
             return;
@@ -689,10 +1071,79 @@ public:
 
 private:
     AbstractHeap m_heap;
-    bool m_result;
+    mutable bool m_result;
 };
 
+bool accessesOverlap(Graph&, Node*, AbstractHeap);
 bool writesOverlap(Graph&, Node*, AbstractHeap);
+
+bool clobbersHeap(Graph&, Node*);
+
+// We would have used bind() for these, but because of the overlaoding that we are doing,
+// it's quite a bit of clearer to just write this out the traditional way.
+
+template<typename T>
+class ReadMethodClobberize {
+public:
+    ReadMethodClobberize(T& value)
+        : m_value(value)
+    {
+    }
+
+    void operator()(AbstractHeap heap) const
+    {
+        m_value.read(heap);
+    }
+private:
+    T& m_value;
+};
+
+template<typename T>
+class WriteMethodClobberize {
+public:
+    WriteMethodClobberize(T& value)
+        : m_value(value)
+    {
+    }
+
+    void operator()(AbstractHeap heap) const
+    {
+        m_value.write(heap);
+    }
+private:
+    T& m_value;
+};
+
+template<typename T>
+class DefMethodClobberize {
+public:
+    DefMethodClobberize(T& value)
+        : m_value(value)
+    {
+    }
+
+    void operator()(PureValue value) const
+    {
+        m_value.def(value);
+    }
+
+    void operator()(HeapLocation location, LazyNode node) const
+    {
+        m_value.def(location, node);
+    }
+
+private:
+    T& m_value;
+};
+
+template<typename Adaptor>
+void clobberize(Graph& graph, Node* node, Adaptor& adaptor)
+{
+    ReadMethodClobberize<Adaptor> read(adaptor);
+    WriteMethodClobberize<Adaptor> write(adaptor);
+    DefMethodClobberize<Adaptor> def(adaptor);
+    clobberize(graph, node, read, write, def);
+}
 
 } } // namespace JSC::DFG
 

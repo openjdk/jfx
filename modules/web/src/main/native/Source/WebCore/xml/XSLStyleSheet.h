@@ -31,7 +31,8 @@
 #include <libxml/parser.h>
 #include <libxslt/transform.h>
 
-#include <wtf/PassRefPtr.h>
+#include <wtf/Ref.h>
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
@@ -40,24 +41,24 @@ class XSLImportRule;
 
 class XSLStyleSheet final : public StyleSheet {
 public:
-    static PassRefPtr<XSLStyleSheet> create(XSLImportRule* parentImport, const String& originalURL, const URL& finalURL)
+    static Ref<XSLStyleSheet> create(XSLImportRule* parentImport, const String& originalURL, const URL& finalURL)
     {
-        return adoptRef(new XSLStyleSheet(parentImport, originalURL, finalURL));
+        return adoptRef(*new XSLStyleSheet(parentImport, originalURL, finalURL));
     }
-    static PassRefPtr<XSLStyleSheet> create(ProcessingInstruction* parentNode, const String& originalURL, const URL& finalURL)
+    static Ref<XSLStyleSheet> create(ProcessingInstruction* parentNode, const String& originalURL, const URL& finalURL)
     {
-        return adoptRef(new XSLStyleSheet(parentNode, originalURL, finalURL, false));
+        return adoptRef(*new XSLStyleSheet(parentNode, originalURL, finalURL, false));
     }
-    static PassRefPtr<XSLStyleSheet> createEmbedded(ProcessingInstruction* parentNode, const URL& finalURL)
+    static Ref<XSLStyleSheet> createEmbedded(ProcessingInstruction* parentNode, const URL& finalURL)
     {
-        return adoptRef(new XSLStyleSheet(parentNode, finalURL.string(), finalURL, true));
+        return adoptRef(*new XSLStyleSheet(parentNode, finalURL.string(), finalURL, true));
     }
 
     // Taking an arbitrary node is unsafe, because owner node pointer can become stale.
     // XSLTProcessor ensures that the stylesheet doesn't outlive its parent, in part by not exposing it to JavaScript.
-    static PassRefPtr<XSLStyleSheet> createForXSLTProcessor(Node* parentNode, const String& originalURL, const URL& finalURL)
+    static Ref<XSLStyleSheet> createForXSLTProcessor(Node* parentNode, const String& originalURL, const URL& finalURL)
     {
-        return adoptRef(new XSLStyleSheet(parentNode, originalURL, finalURL, false));
+        return adoptRef(*new XSLStyleSheet(parentNode, originalURL, finalURL, false));
     }
 
     virtual ~XSLStyleSheet();
@@ -93,15 +94,15 @@ public:
     virtual String href() const override { return m_originalURL; }
     virtual String title() const override { return emptyString(); }
 
-    virtual void clearOwnerNode() override { m_ownerNode = 0; }
+    virtual void clearOwnerNode() override { m_ownerNode = nullptr; }
     virtual URL baseURL() const override { return m_finalURL; }
     virtual bool isLoading() const override;
-
-    virtual bool isXSLStyleSheet() const override { return true; }
 
 private:
     XSLStyleSheet(Node* parentNode, const String& originalURL, const URL& finalURL, bool embedded);
     XSLStyleSheet(XSLImportRule* parentImport, const String& originalURL, const URL& finalURL);
+
+    virtual bool isXSLStyleSheet() const override { return true; }
 
     Node* m_ownerNode;
     String m_originalURL;
@@ -120,6 +121,10 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::XSLStyleSheet)
+    static bool isType(const WebCore::StyleSheet& styleSheet) { return styleSheet.isXSLStyleSheet(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(XSLT)
 

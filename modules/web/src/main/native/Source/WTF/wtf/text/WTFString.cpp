@@ -89,13 +89,11 @@ String::String(ASCIILiteral characters)
 
 void String::append(const String& str)
 {
+    // FIXME: This is extremely inefficient. So much so that we might want to take this out of String's API.
+
     if (str.isEmpty())
        return;
 
-    // FIXME: This is extremely inefficient. So much so that we might want to take this
-    // out of String's API. We can make it better by optimizing the case where exactly
-    // one String is pointing at this StringImpl, but even then it's going to require a
-    // call to fastMalloc every single time.
     if (str.m_impl) {
         if (m_impl) {
             if (m_impl->is8Bit() && str.m_impl->is8Bit()) {
@@ -112,41 +110,54 @@ void String::append(const String& str)
             if (str.length() > std::numeric_limits<unsigned>::max() - m_impl->length())
                 CRASH();
             RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(m_impl->length() + str.length(), data);
-            memcpy(data, m_impl->deprecatedCharacters(), m_impl->length() * sizeof(UChar));
-            memcpy(data + m_impl->length(), str.deprecatedCharacters(), str.length() * sizeof(UChar));
+            StringView(*m_impl).getCharactersWithUpconvert(data);
+            StringView(str).getCharactersWithUpconvert(data + m_impl->length());
             m_impl = newImpl.release();
         } else
             m_impl = str.m_impl;
     }
 }
 
-template <typename CharacterType>
-inline void String::appendInternal(CharacterType c)
+void String::append(LChar character)
 {
-    // FIXME: This is extremely inefficient. So much so that we might want to take this
-    // out of String's API. We can make it better by optimizing the case where exactly
-    // one String is pointing at this StringImpl, but even then it's going to require a
-    // call to fastMalloc every single time.
-    if (m_impl) {
-        UChar* data;
-        if (m_impl->length() >= std::numeric_limits<unsigned>::max())
-            CRASH();
-        RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(m_impl->length() + 1, data);
-        memcpy(data, m_impl->deprecatedCharacters(), m_impl->length() * sizeof(UChar));
-        data[m_impl->length()] = c;
-        m_impl = newImpl.release();
-    } else
-        m_impl = StringImpl::create(&c, 1);
+    // FIXME: This is extremely inefficient. So much so that we might want to take this out of String's API.
+
+    if (!m_impl) {
+        m_impl = StringImpl::create(&character, 1);
+        return;
+    }
+    if (!is8Bit()) {
+        append(static_cast<UChar>(character));
+        return;
+    }
+    if (m_impl->length() >= std::numeric_limits<unsigned>::max())
+        CRASH();
+    LChar* data;
+    RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(m_impl->length() + 1, data);
+    memcpy(data, m_impl->characters8(), m_impl->length());
+    data[m_impl->length()] = character;
+    m_impl = newImpl.release();
 }
 
-void String::append(LChar c)
+void String::append(UChar character)
 {
-    appendInternal(c);
-}
+    // FIXME: This is extremely inefficient. So much so that we might want to take this out of String's API.
 
-void String::append(UChar c)
-{
-    appendInternal(c);
+    if (!m_impl) {
+        m_impl = StringImpl::create(&character, 1);
+        return;
+    }
+    if (character <= 0xFF && is8Bit()) {
+        append(static_cast<LChar>(character));
+        return;
+    }
+    if (m_impl->length() >= std::numeric_limits<unsigned>::max())
+        CRASH();
+    UChar* data;
+    RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(m_impl->length() + 1, data);
+    StringView(*m_impl).getCharactersWithUpconvert(data);
+    data[m_impl->length()] = character;
+    m_impl = newImpl.release();
 }
 
 int codePointCompare(const String& a, const String& b)
@@ -154,20 +165,49 @@ int codePointCompare(const String& a, const String& b)
     return codePointCompare(a.impl(), b.impl());
 }
 
-void String::insert(const String& str, unsigned pos)
+void String::insert(const String& string, unsigned position)
 {
-    if (str.isEmpty()) {
-        if (str.isNull())
+    // FIXME: This is extremely inefficient. So much so that we might want to take this out of String's API.
+
+    unsigned lengthToInsert = string.length();
+
+    if (!lengthToInsert) {
+        if (string.isNull())
             return;
         if (isNull())
-            m_impl = str.impl();
+            m_impl = string.impl();
         return;
     }
-    insert(str.deprecatedCharacters(), str.length(), pos);
+
+    if (position >= length()) {
+        append(string);
+        return;
+    }
+
+    if (lengthToInsert > std::numeric_limits<unsigned>::max() - length())
+        CRASH();
+
+    RefPtr<StringImpl> newString;
+    if (is8Bit() && string.is8Bit()) {
+        LChar* data;
+        newString = StringImpl::createUninitialized(length() + lengthToInsert, data);
+        StringView(*m_impl).substring(0, position).getCharactersWithUpconvert(data);
+        StringView(string).getCharactersWithUpconvert(data + position);
+        StringView(*m_impl).substring(position).getCharactersWithUpconvert(data + position + lengthToInsert);
+    } else {
+        UChar* data;
+        newString = StringImpl::createUninitialized(length() + lengthToInsert, data);
+        StringView(*m_impl).substring(0, position).getCharactersWithUpconvert(data);
+        StringView(string).getCharactersWithUpconvert(data + position);
+        StringView(*m_impl).substring(position).getCharactersWithUpconvert(data + position + lengthToInsert);
+    }
+    m_impl = newString.release();
 }
 
 void String::append(const LChar* charactersToAppend, unsigned lengthToAppend)
 {
+    // FIXME: This is extremely inefficient. So much so that we might want to take this out of String's API.
+
     if (!m_impl) {
         if (!charactersToAppend)
             return;
@@ -204,6 +244,8 @@ void String::append(const LChar* charactersToAppend, unsigned lengthToAppend)
 
 void String::append(const UChar* charactersToAppend, unsigned lengthToAppend)
 {
+    // FIXME: This is extremely inefficient. So much so that we might want to take this out of String's API.
+
     if (!m_impl) {
         if (!charactersToAppend)
             return;
@@ -230,29 +272,6 @@ void String::append(const UChar* charactersToAppend, unsigned lengthToAppend)
 }
 
 
-void String::insert(const UChar* charactersToInsert, unsigned lengthToInsert, unsigned position)
-{
-    if (position >= length()) {
-        append(charactersToInsert, lengthToInsert);
-        return;
-    }
-
-    ASSERT(m_impl);
-
-    if (!lengthToInsert)
-        return;
-
-    ASSERT(charactersToInsert);
-    UChar* data;
-    if (lengthToInsert > std::numeric_limits<unsigned>::max() - length())
-        CRASH();
-    RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(length() + lengthToInsert, data);
-    memcpy(data, deprecatedCharacters(), position * sizeof(UChar));
-    memcpy(data + position, charactersToInsert, lengthToInsert * sizeof(UChar));
-    memcpy(data + position + lengthToInsert, deprecatedCharacters() + position, (length() - position) * sizeof(UChar));
-    m_impl = newImpl.release();
-}
-
 UChar32 String::characterStartingAt(unsigned i) const
 {
     if (!m_impl || i >= m_impl->length())
@@ -262,12 +281,8 @@ UChar32 String::characterStartingAt(unsigned i) const
 
 void String::truncate(unsigned position)
 {
-    if (position >= length())
-        return;
-    UChar* data;
-    RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(position, data);
-    memcpy(data, deprecatedCharacters(), position * sizeof(UChar));
-    m_impl = newImpl.release();
+    if (m_impl)
+        m_impl = m_impl->substring(0, position);
 }
 
 template <typename CharacterType>
@@ -318,6 +333,14 @@ String String::substringSharingImpl(unsigned offset, unsigned length) const
     if (!offset && length == stringLength)
         return *this;
     return String(StringImpl::createSubstringSharingImpl(m_impl, offset, length));
+}
+
+String String::convertToASCIILowercase() const
+{
+    // FIXME: Should this function, and the many others like it, be inlined?
+    if (!m_impl)
+        return String();
+    return m_impl->convertToASCIILowercase();
 }
 
 String String::lower() const
@@ -398,7 +421,10 @@ bool String::percentage(int& result) const
     if ((*m_impl)[m_impl->length() - 1] != '%')
        return false;
 
-    result = charactersToIntStrict(m_impl->deprecatedCharacters(), m_impl->length() - 1);
+    if (m_impl->is8Bit())
+        result = charactersToIntStrict(m_impl->characters8(), m_impl->length() - 1);
+    else
+        result = charactersToIntStrict(m_impl->characters16(), m_impl->length() - 1);
     return true;
 }
 
@@ -426,33 +452,8 @@ Vector<UChar> String::charactersWithNullTermination() const
 
 String String::format(const char *format, ...)
 {
-#if OS(WINCE)
     va_list args;
     va_start(args, format);
-
-    Vector<char, 256> buffer;
-
-    int bufferSize = 256;
-    buffer.resize(bufferSize);
-    for (;;) {
-        int written = vsnprintf(buffer.data(), bufferSize, format, args);
-        va_end(args);
-
-        if (written == 0)
-            return String("");
-        if (written > 0)
-            return StringImpl::create(reinterpret_cast<const LChar*>(buffer.data()), written);
-
-        bufferSize <<= 1;
-        buffer.resize(bufferSize);
-        va_start(args, format);
-    }
-
-#else
-    va_list args;
-    va_start(args, format);
-
-    Vector<char, 256> buffer;
 
     // Do the format once to get the length.
 #if COMPILER(MSVC)
@@ -460,30 +461,25 @@ String String::format(const char *format, ...)
 #else
     char ch;
     int result = vsnprintf(&ch, 1, format, args);
-    // We need to call va_end() and then va_start() again here, as the
-    // contents of args is undefined after the call to vsnprintf
-    // according to http://man.cx/snprintf(3)
-    //
-    // Not calling va_end/va_start here happens to work on lots of
-    // systems, but fails e.g. on 64bit Linux.
-    va_end(args);
-    va_start(args, format);
 #endif
+    va_end(args);
 
     if (result == 0)
         return String("");
     if (result < 0)
         return String();
+
+    Vector<char, 256> buffer;
     unsigned len = result;
     buffer.grow(len + 1);
 
+    va_start(args, format);
     // Now do the formatting again, guaranteed to fit.
     vsnprintf(buffer.data(), buffer.size(), format, args);
 
     va_end(args);
 
     return StringImpl::create(reinterpret_cast<const LChar*>(buffer.data()), len);
-#endif
 }
 
 String String::number(int number)
@@ -662,12 +658,12 @@ String String::isolatedCopy() const &
     return m_impl->isolatedCopy();
 }
 
-String String::isolatedCopy() const &&
+String String::isolatedCopy() &&
 {
     if (isSafeToSendToAnotherThread()) {
         // Since we know that our string is a temporary that will be destroyed
         // we can just steal the m_impl from it, thus avoiding a copy.
-        return String(std::move(*this));
+        return String(WTF::move(*this));
     }
 
     if (!m_impl)
@@ -688,13 +684,13 @@ bool String::isSafeToSendToAnotherThread() const
 {
     if (!impl())
         return true;
+    if (isEmpty())
+        return true;
     // AtomicStrings are not safe to send between threads as ~StringImpl()
     // will try to remove them from the wrong AtomicStringTable.
     if (impl()->isAtomic())
         return false;
     if (impl()->hasOneRef())
-        return true;
-    if (isEmpty())
         return true;
     return false;
 }
@@ -1180,7 +1176,7 @@ String* string(const char* s)
 Vector<char> asciiDebug(StringImpl* impl)
 {
     if (!impl)
-        return asciiDebug(String("[null]").impl());
+        return asciiDebug(String(ASCIILiteral("[null]")).impl());
 
     Vector<char> buffer;
     for (unsigned i = 0; i < impl->length(); ++i) {

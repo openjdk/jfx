@@ -1,9 +1,7 @@
 /*
- * CSS Media Query
- *
  * Copyright (C) 2006 Kimmo Kinnunen <kimmo.t.kinnunen@nokia.com>.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -17,7 +15,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -47,12 +45,16 @@ static inline bool featureWithCSSValueID(const AtomicString& mediaFeature, const
 #if ENABLE(VIEW_MODE_CSS_MEDIA)
         || mediaFeature == MediaFeatureNames::view_modeMediaFeature
 #endif // ENABLE(VIEW_MODE_CSS_MEDIA)
+        || mediaFeature == MediaFeatureNames::any_hoverMediaFeature
+        || mediaFeature == MediaFeatureNames::any_pointerMediaFeature
+        || mediaFeature == MediaFeatureNames::hoverMediaFeature
+        || mediaFeature == MediaFeatureNames::inverted_colorsMediaFeature
         || mediaFeature == MediaFeatureNames::pointerMediaFeature;
 }
 
 static inline bool featureWithValidPositiveLenghtOrNumber(const AtomicString& mediaFeature, const CSSParserValue* value)
 {
-    if (!(((value->unit >= CSSPrimitiveValue::CSS_EMS && value->unit <= CSSPrimitiveValue::CSS_PC) || value->unit == CSSPrimitiveValue::CSS_REMS) || value->unit == CSSPrimitiveValue::CSS_NUMBER) || value->fValue < 0)
+    if (!(CSSPrimitiveValue::isLength(value->unit) || value->unit == CSSPrimitiveValue::CSS_NUMBER) || value->fValue < 0)
         return false;
 
     return mediaFeature == MediaFeatureNames::heightMediaFeature
@@ -71,7 +73,7 @@ static inline bool featureWithValidPositiveLenghtOrNumber(const AtomicString& me
 
 static inline bool featureWithValidDensity(const AtomicString& mediaFeature, const CSSParserValue* value)
 {
-    if ((value->unit != CSSPrimitiveValue::CSS_DPPX && value->unit != CSSPrimitiveValue::CSS_DPI && value->unit != CSSPrimitiveValue::CSS_DPCM) || value->fValue <= 0)
+    if (!CSSPrimitiveValue::isResolution(value->unit) || value->fValue <= 0)
         return false;
 
     return mediaFeature == MediaFeatureNames::resolutionMediaFeature
@@ -113,8 +115,7 @@ static inline bool featureWithZeroOrOne(const AtomicString& mediaFeature, const 
     if (!value->isInt || !(value->fValue == 1 || !value->fValue))
         return false;
 
-    return mediaFeature == MediaFeatureNames::gridMediaFeature
-        || mediaFeature == MediaFeatureNames::hoverMediaFeature;
+    return mediaFeature == MediaFeatureNames::gridMediaFeature;
 }
 
 static inline bool featureWithAspectRatio(const AtomicString& mediaFeature)
@@ -130,7 +131,9 @@ static inline bool featureWithAspectRatio(const AtomicString& mediaFeature)
 static inline bool featureWithoutValue(const AtomicString& mediaFeature)
 {
     // Media features that are prefixed by min/max cannot be used without a value.
-    return mediaFeature == MediaFeatureNames::monochromeMediaFeature
+    return mediaFeature == MediaFeatureNames::any_hoverMediaFeature
+        || mediaFeature == MediaFeatureNames::any_pointerMediaFeature
+        || mediaFeature == MediaFeatureNames::monochromeMediaFeature
         || mediaFeature == MediaFeatureNames::colorMediaFeature
         || mediaFeature == MediaFeatureNames::color_indexMediaFeature
         || mediaFeature == MediaFeatureNames::gridMediaFeature
@@ -146,6 +149,7 @@ static inline bool featureWithoutValue(const AtomicString& mediaFeature)
         || mediaFeature == MediaFeatureNames::transform_3dMediaFeature
         || mediaFeature == MediaFeatureNames::transitionMediaFeature
         || mediaFeature == MediaFeatureNames::animationMediaFeature
+        || mediaFeature == MediaFeatureNames::inverted_colorsMediaFeature
 #if ENABLE(VIEW_MODE_CSS_MEDIA)
         || mediaFeature == MediaFeatureNames::view_modeMediaFeature
 #endif // ENABLE(VIEW_MODE_CSS_MEDIA)
@@ -156,8 +160,6 @@ static inline bool featureWithoutValue(const AtomicString& mediaFeature)
 
 MediaQueryExp::MediaQueryExp(const AtomicString& mediaFeature, CSSParserValueList* valueList)
     : m_mediaFeature(mediaFeature)
-    , m_value(0)
-    , m_isValid(false)
 {
     // Initialize media query expression that must have 1 or more values.
     if (valueList) {
@@ -222,10 +224,6 @@ MediaQueryExp::MediaQueryExp(const AtomicString& mediaFeature, CSSParserValueLis
         m_isValid = true;
 }
 
-MediaQueryExp::~MediaQueryExp()
-{
-}
-
 String MediaQueryExp::serialize() const
 {
     if (!m_serializationCache.isNull())
@@ -240,7 +238,7 @@ String MediaQueryExp::serialize() const
     }
     result.append(')');
 
-    const_cast<MediaQueryExp*>(this)->m_serializationCache = result.toString();
+    m_serializationCache = result.toString();
     return m_serializationCache;
 }
 

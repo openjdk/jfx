@@ -26,8 +26,6 @@
 #ifndef JSJavaScriptCallFramePrototype_h
 #define JSJavaScriptCallFramePrototype_h
 
-#if ENABLE(INSPECTOR)
-
 #include "JSObject.h"
 
 namespace Inspector {
@@ -35,6 +33,7 @@ namespace Inspector {
 class JSJavaScriptCallFramePrototype : public JSC::JSNonFinalObject {
 public:
     typedef JSC::JSNonFinalObject Base;
+    static const unsigned StructureFlags = Base::StructureFlags | JSC::OverridesGetOwnPropertySlot;
 
     DECLARE_INFO;
 
@@ -50,9 +49,6 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
-protected:
-    static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | Base::StructureFlags;
-
 private:
     JSJavaScriptCallFramePrototype(JSC::VM& vm, JSC::JSGlobalObject*, JSC::Structure* structure)
         : JSC::JSNonFinalObject(vm, structure)
@@ -62,7 +58,5 @@ private:
 };
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(JSJavaScriptCallFramePrototype_h)

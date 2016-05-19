@@ -38,19 +38,19 @@ public:
     HostWindow() { }
     virtual ~HostWindow() { }
 
-    // Requests the host invalidate the root view, not the contents. If immediate is true do so synchronously, otherwise async.
-    virtual void invalidateRootView(const IntRect& updateRect, bool immediate) = 0;
+    // Requests the host invalidate the root view, not the contents.
+    virtual void invalidateRootView(const IntRect& updateRect) = 0;
 
-    // Requests the host invalidate the contents and the root view. If immediate is true do so synchronously, otherwise async.
-    virtual void invalidateContentsAndRootView(const IntRect& updateRect, bool immediate) = 0;
+    // Requests the host invalidate the contents and the root view.
+    virtual void invalidateContentsAndRootView(const IntRect& updateRect) = 0;
 
     // Requests the host scroll backingstore by the specified delta, rect to scroll, and clip rect.
     virtual void scroll(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect) = 0;
 
     // Requests the host invalidate the contents, not the root view. This is the slow path for scrolling.
-    virtual void invalidateContentsForSlowScroll(const IntRect& updateRect, bool immediate) = 0;
+    virtual void invalidateContentsForSlowScroll(const IntRect& updateRect) = 0;
 
-#if USE(TILED_BACKING_STORE)
+#if USE(COORDINATED_GRAPHICS)
     // Requests the host to do the actual scrolling. This is only used in combination with a tiled backing store.
     virtual void delegatedScrollRequested(const IntPoint& scrollPoint) = 0;
 #endif
@@ -58,6 +58,10 @@ public:
     // Methods for doing coordinate conversions to and from screen coordinates.
     virtual IntPoint screenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToScreen(const IntRect&) const = 0;
+#if PLATFORM(IOS)
+    virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
+    virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;
+#endif
 
     // Method for retrieving the native client of the page.
     virtual PlatformPageClient platformPageClient() const = 0;
@@ -76,6 +80,9 @@ public:
 
     virtual PlatformDisplayID displayID() const = 0;
     virtual void windowScreenDidChange(PlatformDisplayID) = 0;
+
+    virtual FloatSize screenSize() const = 0;
+    virtual FloatSize availableScreenSize() const = 0;
 };
 
 } // namespace WebCore

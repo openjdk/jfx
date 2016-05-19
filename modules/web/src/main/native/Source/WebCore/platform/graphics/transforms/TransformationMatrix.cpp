@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2013 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005, 2006, 2013 Apple Inc.  All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -1040,61 +1040,61 @@ TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix&
     const double* rightMatrix = &(mat.m_matrix[0][0]);
     asm volatile (
         // First, load the leftMatrix completely in memory. The leftMatrix is in v16-v23.
-        "mov      x4, %[leftMatrix]\n\t"
-        "ld1.2d   {v16, v17, v18, v19}, [%[leftMatrix]], #64\n\t"
-        "ld1.2d   {v20, v21, v22, v23}, [%[leftMatrix]]\n\t"
+        "mov   x4, %[leftMatrix]\n\t"
+        "ld1   {v16.2d, v17.2d, v18.2d, v19.2d}, [%[leftMatrix]], #64\n\t"
+        "ld1   {v20.2d, v21.2d, v22.2d, v23.2d}, [%[leftMatrix]]\n\t"
 
         // First row.
-        "ld4r.2d  {v24, v25, v26, v27}, [%[rightMatrix]], #32\n\t"
-        "fmul.2d  v28, v24, v16\n\t"
-        "fmul.2d  v29, v24, v17\n\t"
-        "fmla.2d  v28, v25, v18\n\t"
-        "fmla.2d  v29, v25, v19\n\t"
-        "fmla.2d  v28, v26, v20\n\t"
-        "fmla.2d  v29, v26, v21\n\t"
-        "fmla.2d  v28, v27, v22\n\t"
-        "fmla.2d  v29, v27, v23\n\t"
+        "ld4r  {v24.2d, v25.2d, v26.2d, v27.2d}, [%[rightMatrix]], #32\n\t"
+        "fmul  v28.2d, v24.2d, v16.2d\n\t"
+        "fmul  v29.2d, v24.2d, v17.2d\n\t"
+        "fmla  v28.2d, v25.2d, v18.2d\n\t"
+        "fmla  v29.2d, v25.2d, v19.2d\n\t"
+        "fmla  v28.2d, v26.2d, v20.2d\n\t"
+        "fmla  v29.2d, v26.2d, v21.2d\n\t"
+        "fmla  v28.2d, v27.2d, v22.2d\n\t"
+        "fmla  v29.2d, v27.2d, v23.2d\n\t"
 
-        "ld4r.2d  {v0, v1, v2, v3}, [%[rightMatrix]], #32\n\t"
-        "st1.2d  {v28, v29}, [x4], #32\n\t"
+        "ld4r  {v0.2d, v1.2d, v2.2d, v3.2d}, [%[rightMatrix]], #32\n\t"
+        "st1  {v28.2d, v29.2d}, [x4], #32\n\t"
 
         // Second row.
-        "fmul.2d  v30, v0, v16\n\t"
-        "fmul.2d  v31, v0, v17\n\t"
-        "fmla.2d  v30, v1, v18\n\t"
-        "fmla.2d  v31, v1, v19\n\t"
-        "fmla.2d  v30, v2, v20\n\t"
-        "fmla.2d  v31, v2, v21\n\t"
-        "fmla.2d  v30, v3, v22\n\t"
-        "fmla.2d  v31, v3, v23\n\t"
+        "fmul  v30.2d, v0.2d, v16.2d\n\t"
+        "fmul  v31.2d, v0.2d, v17.2d\n\t"
+        "fmla  v30.2d, v1.2d, v18.2d\n\t"
+        "fmla  v31.2d, v1.2d, v19.2d\n\t"
+        "fmla  v30.2d, v2.2d, v20.2d\n\t"
+        "fmla  v31.2d, v2.2d, v21.2d\n\t"
+        "fmla  v30.2d, v3.2d, v22.2d\n\t"
+        "fmla  v31.2d, v3.2d, v23.2d\n\t"
 
-        "ld4r.2d  {v24, v25, v26, v27}, [%[rightMatrix]], #32\n\t"
-        "st1.2d   {v30, v31}, [x4], #32\n\t"
+        "ld4r  {v24.2d, v25.2d, v26.2d, v27.2d}, [%[rightMatrix]], #32\n\t"
+        "st1   {v30.2d, v31.2d}, [x4], #32\n\t"
 
         // Third row.
-        "fmul.2d  v28, v24, v16\n\t"
-        "fmul.2d  v29, v24, v17\n\t"
-        "fmla.2d  v28, v25, v18\n\t"
-        "fmla.2d  v29, v25, v19\n\t"
-        "fmla.2d  v28, v26, v20\n\t"
-        "fmla.2d  v29, v26, v21\n\t"
-        "fmla.2d  v28, v27, v22\n\t"
-        "fmla.2d  v29, v27, v23\n\t"
+        "fmul  v28.2d, v24.2d, v16.2d\n\t"
+        "fmul  v29.2d, v24.2d, v17.2d\n\t"
+        "fmla  v28.2d, v25.2d, v18.2d\n\t"
+        "fmla  v29.2d, v25.2d, v19.2d\n\t"
+        "fmla  v28.2d, v26.2d, v20.2d\n\t"
+        "fmla  v29.2d, v26.2d, v21.2d\n\t"
+        "fmla  v28.2d, v27.2d, v22.2d\n\t"
+        "fmla  v29.2d, v27.2d, v23.2d\n\t"
 
-        "ld4r.2d  {v0, v1, v2, v3}, [%[rightMatrix]], #32\n\t"
-        "st1.2d   {v28, v29}, [x4], #32\n\t"
+        "ld4r  {v0.2d, v1.2d, v2.2d, v3.2d}, [%[rightMatrix]], #32\n\t"
+        "st1   {v28.2d, v29.2d}, [x4], #32\n\t"
 
         // Fourth row.
-        "fmul.2d  v30, v0, v16\n\t"
-        "fmul.2d  v31, v0, v17\n\t"
-        "fmla.2d  v30, v1, v18\n\t"
-        "fmla.2d  v31, v1, v19\n\t"
-        "fmla.2d  v30, v2, v20\n\t"
-        "fmla.2d  v31, v2, v21\n\t"
-        "fmla.2d  v30, v3, v22\n\t"
-        "fmla.2d  v31, v3, v23\n\t"
+        "fmul  v30.2d, v0.2d, v16.2d\n\t"
+        "fmul  v31.2d, v0.2d, v17.2d\n\t"
+        "fmla  v30.2d, v1.2d, v18.2d\n\t"
+        "fmla  v31.2d, v1.2d, v19.2d\n\t"
+        "fmla  v30.2d, v2.2d, v20.2d\n\t"
+        "fmla  v31.2d, v2.2d, v21.2d\n\t"
+        "fmla  v30.2d, v3.2d, v22.2d\n\t"
+        "fmla  v31.2d, v3.2d, v23.2d\n\t"
 
-        "st1.2d  {v30, v31}, [x4]\n\t"
+        "st1  {v30.2d, v31.2d}, [x4]\n\t"
 
         : [leftMatrix]"+r"(leftMatrix), [rightMatrix]"+r"(rightMatrix)
         :
@@ -1579,6 +1579,9 @@ bool TransformationMatrix::decompose2(Decomposed2Type& decomp) const
         memset(&decomp, 0, sizeof(decomp));
         decomp.scaleX = 1;
         decomp.scaleY = 1;
+        decomp.m11 = 1;
+        decomp.m22 = 1;
+        return true;
     }
 
     return WebCore::decompose2(m_matrix, decomp);
@@ -1592,6 +1595,7 @@ bool TransformationMatrix::decompose4(Decomposed4Type& decomp) const
         decomp.scaleX = 1;
         decomp.scaleY = 1;
         decomp.scaleZ = 1;
+        return true;
     }
 
     return WebCore::decompose4(m_matrix, decomp);

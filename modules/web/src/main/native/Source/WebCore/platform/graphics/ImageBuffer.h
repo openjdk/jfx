@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,8 +30,6 @@
 
 #include "AffineTransform.h"
 #include "ColorSpace.h"
-#include "FloatRect.h"
-#include "GraphicsContext.h"
 #include "GraphicsTypes.h"
 #include "GraphicsTypes3D.h"
 #include "IntSize.h"
@@ -39,130 +37,137 @@
 #include "PlatformLayer.h"
 #include <runtime/Uint8ClampedArray.h>
 #include <wtf/Forward.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-    class Image;
-    class ImageData;
-    class IntPoint;
-    class IntRect;
-    class GraphicsContext3D;
+class FloatRect;
+class GraphicsContext;
+class GraphicsContext3D;
+class Image;
+class ImageData;
+class IntPoint;
+class IntRect;
 
-    enum Multiply {
-        Premultiplied,
-        Unmultiplied
-    };
+enum Multiply {
+    Premultiplied,
+    Unmultiplied
+};
 
-    enum RenderingMode {
-        Unaccelerated,
-        UnacceleratedNonPlatformBuffer, // Use plain memory allocation rather than platform API to allocate backing store.
-        Accelerated
-    };
+enum RenderingMode {
+    Unaccelerated,
+    UnacceleratedNonPlatformBuffer, // Use plain memory allocation rather than platform API to allocate backing store.
+    Accelerated
+};
 
-    enum BackingStoreCopy {
-        CopyBackingStore, // Guarantee subsequent draws don't affect the copy.
-        DontCopyBackingStore // Subsequent draws may affect the copy.
-    };
+enum BackingStoreCopy {
+    CopyBackingStore, // Guarantee subsequent draws don't affect the copy.
+    DontCopyBackingStore // Subsequent draws may affect the copy.
+};
 
-    enum ScaleBehavior {
-        Scaled,
-        Unscaled
-    };
+enum ScaleBehavior {
+    Scaled,
+    Unscaled
+};
 
-    class ImageBuffer {
-        WTF_MAKE_NONCOPYABLE(ImageBuffer); WTF_MAKE_FAST_ALLOCATED;
-    public:
-        // Will return a null pointer on allocation failure.
-        static std::unique_ptr<ImageBuffer> create(const IntSize& size, float resolutionScale = 1, ColorSpace colorSpace = ColorSpaceDeviceRGB, RenderingMode renderingMode = Unaccelerated)
-        {
-            bool success = false;
-            std::unique_ptr<ImageBuffer> buffer(new ImageBuffer(size, resolutionScale, colorSpace, renderingMode, success));
-            if (!success)
-                return nullptr;
-            return buffer;
-        }
+class ImageBuffer {
+    WTF_MAKE_NONCOPYABLE(ImageBuffer); WTF_MAKE_FAST_ALLOCATED;
+public:
+    // Will return a null pointer on allocation failure.
+    static std::unique_ptr<ImageBuffer> create(const FloatSize& size, float resolutionScale = 1, ColorSpace colorSpace = ColorSpaceDeviceRGB, RenderingMode renderingMode = Unaccelerated)
+    {
+        bool success = false;
+        std::unique_ptr<ImageBuffer> buffer(new ImageBuffer(size, resolutionScale, colorSpace, renderingMode, success));
+        if (!success)
+            return nullptr;
+        return buffer;
+    }
 
-        static std::unique_ptr<ImageBuffer> createCompatibleBuffer(const IntSize&, float resolutionScale, ColorSpace, const GraphicsContext*, bool hasAlpha);
+    static std::unique_ptr<ImageBuffer> createCompatibleBuffer(const FloatSize&, float resolutionScale, ColorSpace, const GraphicsContext*, bool hasAlpha);
 
-        ~ImageBuffer();
+    WEBCORE_EXPORT ~ImageBuffer();
 
-        // The actual resolution of the backing store
-        const IntSize& internalSize() const { return m_size; }
-        const IntSize& logicalSize() const { return m_logicalSize; }
+    // The actual resolution of the backing store
+    const IntSize& internalSize() const { return m_size; }
+    const IntSize& logicalSize() const { return m_logicalSize; }
 
-        GraphicsContext* context() const;
+    float resolutionScale() const { return m_resolutionScale; }
 
-        PassRefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, ScaleBehavior = Scaled) const;
-        // Give hints on the faster copyImage Mode, return DontCopyBackingStore if it supports the DontCopyBackingStore behavior
-        // or return CopyBackingStore if it doesn't.
-        static BackingStoreCopy fastCopyImageMode();
+    WEBCORE_EXPORT GraphicsContext* context() const;
 
-        enum CoordinateSystem { LogicalCoordinateSystem, BackingStoreCoordinateSystem };
+    WEBCORE_EXPORT RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, ScaleBehavior = Scaled) const;
+    // Give hints on the faster copyImage Mode, return DontCopyBackingStore if it supports the DontCopyBackingStore behavior
+    // or return CopyBackingStore if it doesn't.
+    static BackingStoreCopy fastCopyImageMode();
 
-        PassRefPtr<Uint8ClampedArray> getUnmultipliedImageData(const IntRect&, CoordinateSystem = LogicalCoordinateSystem) const;
-        PassRefPtr<Uint8ClampedArray> getPremultipliedImageData(const IntRect&, CoordinateSystem = LogicalCoordinateSystem) const;
+    enum CoordinateSystem { LogicalCoordinateSystem, BackingStoreCoordinateSystem };
 
-        void putByteArray(Multiply multiplied, Uint8ClampedArray*, const IntSize& sourceSize, const IntRect& sourceRect, const IntPoint& destPoint, CoordinateSystem = LogicalCoordinateSystem);
+    PassRefPtr<Uint8ClampedArray> getUnmultipliedImageData(const IntRect&, CoordinateSystem = LogicalCoordinateSystem) const;
+    PassRefPtr<Uint8ClampedArray> getPremultipliedImageData(const IntRect&, CoordinateSystem = LogicalCoordinateSystem) const;
 
-        void convertToLuminanceMask();
+    void putByteArray(Multiply multiplied, Uint8ClampedArray*, const IntSize& sourceSize, const IntRect& sourceRect, const IntPoint& destPoint, CoordinateSystem = LogicalCoordinateSystem);
 
-        String toDataURL(const String& mimeType, const double* quality = 0, CoordinateSystem = LogicalCoordinateSystem) const;
+    void convertToLuminanceMask();
+
+    String toDataURL(const String& mimeType, const double* quality = 0, CoordinateSystem = LogicalCoordinateSystem) const;
 #if !USE(CG)
-        AffineTransform baseTransform() const { return AffineTransform(); }
-        void transformColorSpace(ColorSpace srcColorSpace, ColorSpace dstColorSpace);
-        void platformTransformColorSpace(const Vector<int>&);
+    AffineTransform baseTransform() const { return AffineTransform(); }
+    void transformColorSpace(ColorSpace srcColorSpace, ColorSpace dstColorSpace);
+    void platformTransformColorSpace(const Vector<int>&);
 #else
-        AffineTransform baseTransform() const { return AffineTransform(1, 0, 0, -1, 0, m_data.m_backingStoreSize.height()); }
+    AffineTransform baseTransform() const { return AffineTransform(1, 0, 0, -1, 0, m_data.backingStoreSize.height()); }
 #endif
-        PlatformLayer* platformLayer() const;
+    PlatformLayer* platformLayer() const;
 
-        // FIXME: current implementations of this method have the restriction that they only work
-        // with textures that are RGB or RGBA format, and UNSIGNED_BYTE type.
-        bool copyToPlatformTexture(GraphicsContext3D&, Platform3DObject, GC3Denum, bool, bool);
+    // FIXME: current implementations of this method have the restriction that they only work
+    // with textures that are RGB or RGBA format, and UNSIGNED_BYTE type.
+    bool copyToPlatformTexture(GraphicsContext3D&, Platform3DObject, GC3Denum, bool, bool);
 
-        FloatSize spaceSize() const { return m_space; }
-        void setSpaceSize(const FloatSize& space)
-        {
-            m_space = space;
-        }
+    FloatSize spaceSize() const { return m_space; }
+    void setSpaceSize(const FloatSize& space) { m_space = space; }
 
-    private:
+    // These functions are used when clamping the ImageBuffer which is created for filter, masker or clipper.
+    static bool sizeNeedsClamping(const FloatSize&);
+    static bool sizeNeedsClamping(const FloatSize&, FloatSize& scale);
+    static FloatSize clampedSize(const FloatSize&);
+    static FloatSize clampedSize(const FloatSize&, FloatSize& scale);
+    static FloatRect clampedRect(const FloatRect&);
+
+private:
 #if USE(CG)
-        // The returned image might be larger than the internalSize(). If you want the smaller
-        // image, crop the result.
-        RetainPtr<CGImageRef> copyNativeImage(BackingStoreCopy = CopyBackingStore) const;
-        void flushContext() const;
+    // The returned image might be larger than the internalSize(). If you want the smaller
+    // image, crop the result.
+    RetainPtr<CGImageRef> copyNativeImage(BackingStoreCopy = CopyBackingStore) const;
+    void flushContext() const;
 #endif
-        void clip(GraphicsContext*, const FloatRect&) const;
+    void clip(GraphicsContext*, const FloatRect&) const;
 
-        void draw(GraphicsContext*, ColorSpace, const FloatRect& destRect, const FloatRect& srcRect = FloatRect(0, 0, -1, -1), CompositeOperator = CompositeSourceOver, BlendMode = BlendModeNormal, bool useLowQualityScale = false);
-        void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal);
+    void draw(GraphicsContext*, ColorSpace, const FloatRect& destRect, const FloatRect& srcRect = FloatRect(0, 0, -1, -1), CompositeOperator = CompositeSourceOver, BlendMode = BlendModeNormal, bool useLowQualityScale = false);
+    void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal);
 
-        inline void genericConvertToLuminanceMask();
+    inline void genericConvertToLuminanceMask();
 
-        friend class GraphicsContext;
-        friend class GeneratedImage;
-        friend class CrossfadeGeneratedImage;
-        friend class GradientImage;
+    friend class GraphicsContext;
+    friend class GeneratedImage;
+    friend class CrossfadeGeneratedImage;
+    friend class NamedImageGeneratedImage;
+    friend class GradientImage;
 
-    private:
-        ImageBufferData m_data;
-        IntSize m_size;
-        IntSize m_logicalSize;
-        float m_resolutionScale;
-        OwnPtr<GraphicsContext> m_context;
-        FloatSize m_space;
+private:
+    ImageBufferData m_data;
+    IntSize m_size;
+    IntSize m_logicalSize;
+    float m_resolutionScale;
+    FloatSize m_space;
 
-        // This constructor will place its success into the given out-variable
-        // so that create() knows when it should return failure.
-        ImageBuffer(const IntSize&, float resolutionScale, ColorSpace, RenderingMode, bool& success);
-    };
+    // This constructor will place its success into the given out-variable
+    // so that create() knows when it should return failure.
+    WEBCORE_EXPORT ImageBuffer(const FloatSize&, float resolutionScale, ColorSpace, RenderingMode, bool& success);
+};
 
 #if USE(CG)
-    String ImageDataToDataURL(const ImageData&, const String& mimeType, const double* quality);
+String ImageDataToDataURL(const ImageData&, const String& mimeType, const double* quality);
 #endif
 
 } // namespace WebCore

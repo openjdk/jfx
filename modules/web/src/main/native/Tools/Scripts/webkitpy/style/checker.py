@@ -45,6 +45,7 @@ from checkers.featuredefines import FeatureDefinesChecker
 from checkers.js import JSChecker
 from checkers.jsonchecker import JSONChecker
 from checkers.jsonchecker import JSONContributorsChecker
+from checkers.jsonchecker import JSONFeaturesChecker
 from checkers.messagesin import MessagesInChecker
 from checkers.png import PNGChecker
 from checkers.python import PythonChecker
@@ -146,11 +147,6 @@ _PATH_RULES_SPECIFIER = [
       "Source/WebCore/css/CSSParser.cpp"],
      ["-readability/naming"]),
 
-    ([# The GTK+ port uses the autotoolsconfig.h header in some C sources
-      # to serve the same purpose of config.h.
-      "Tools/GtkLauncher/main.c"],
-     ["-build/include_order"]),
-
     ([# The GTK+ APIs use GTK+ naming style, which includes
       # lower-cased, underscore-separated values, whitespace before
       # parens for function calls, and always having variable names.
@@ -158,6 +154,8 @@ _PATH_RULES_SPECIFIER = [
       "Source/WebCore/bindings/gobject/WebKitDOMCustom.h",
       "Source/WebCore/bindings/gobject/WebKitDOMDeprecated.h",
       "Source/WebCore/bindings/gobject/WebKitDOMEventTarget.h",
+      "Source/WebCore/bindings/gobject/WebKitDOMNodeFilter.h",
+      "Source/WebCore/bindings/gobject/WebKitDOMXPathNSResolver.h",
       "Source/WebCore/bindings/scripts/test/GObject",
       "Source/WebKit/gtk/webkit/",
       "Tools/DumpRenderTree/gtk/"],
@@ -165,6 +163,8 @@ _PATH_RULES_SPECIFIER = [
       "-readability/parameter_name",
       "-readability/null",
       "-readability/enum_casing",
+      "-whitespace/declaration",
+      "-whitespace/indent",
       "-whitespace/parens"]),
 
     ([# The GTK+ API use upper case, underscore separated, words in
@@ -190,13 +190,12 @@ _PATH_RULES_SPECIFIER = [
     ([# The EFL APIs use EFL naming style, which includes
       # both lower-cased and camel-cased, underscore-sparated
       # values.
-      "Source/WebKit/efl/ewk/",
-      "Source/WebKit2/UIProcess/API/efl/"],
+      "Source/WebKit2/UIProcess/API/efl/",
+      "Source/WebKit2/WebProcess/InjectedBundle/API/efl/"],
      ["-readability/naming",
       "-readability/parameter_name"]),
-    ([# EWebLauncher and MiniBrowser are EFL simple application.
+    ([# MiniBrowser/efl are EFL simple application.
       # They need to use efl coding style and they don't have config.h.
-      "Tools/EWebLauncher/",
       "Tools/MiniBrowser/efl/"],
      ["-readability/naming",
       "-readability/parameter_name",
@@ -226,6 +225,8 @@ _PATH_RULES_SPECIFIER = [
       "Source/WebCore/bindings/gobject/WebKitDOMCustom.cpp",
       "Source/WebCore/bindings/gobject/WebKitDOMDeprecated.cpp",
       "Source/WebCore/bindings/gobject/WebKitDOMEventTarget.cpp",
+      "Source/WebCore/bindings/gobject/WebKitDOMNodeFilter.cpp",
+      "Source/WebCore/bindings/gobject/WebKitDOMXPathNSResolver.cpp",
       "Source/WebCore/platform/graphics/gstreamer/VideoSinkGStreamer1.cpp",
       "Source/WebCore/platform/graphics/gstreamer/VideoSinkGStreamer.cpp",
       "Source/WebCore/platform/graphics/gstreamer/WebKitWebSourceGStreamer.cpp",
@@ -262,6 +263,8 @@ _CPP_FILE_EXTENSIONS = [
     'c',
     'cpp',
     'h',
+    'mm',
+    'm',
     ]
 
 _JS_FILE_EXTENSION = 'js'
@@ -282,7 +285,6 @@ _TEXT_FILE_EXTENSIONS = [
     'html',
     'idl',
     'in',
-    'mm',
     'php',
     'pl',
     'pm',
@@ -329,9 +331,6 @@ _SKIPPED_FILES_WITH_WARNING = [
 # with FileType.NONE are automatically skipped without warning.
 _SKIPPED_FILES_WITHOUT_WARNING = [
     "LayoutTests" + os.path.sep,
-    "Source/ThirdParty/leveldb" + os.path.sep,
-    # Prevents this being recognized as a text file.
-    "Source/WebCore/GNUmakefile.features.am.in",
     ]
 
 # Extensions of files which are allowed to contain carriage returns.
@@ -621,6 +620,8 @@ class CheckerDispatcher(object):
             basename = os.path.basename(file_path)
             if commit_queue and basename == 'contributors.json':
                 checker = JSONContributorsChecker(file_path, handle_style_error)
+            if basename == 'features.json':
+                checker = JSONFeaturesChecker(file_path, handle_style_error)
             else:
                 checker = JSONChecker(file_path, handle_style_error)
         elif file_type == FileType.PYTHON:

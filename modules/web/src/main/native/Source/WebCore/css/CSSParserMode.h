@@ -58,7 +58,7 @@ struct CSSParserContext {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
-    CSSParserContext(Document&, const URL& baseURL = URL(), const String& charset = emptyString());
+    WEBCORE_EXPORT CSSParserContext(Document&, const URL& baseURL = URL(), const String& charset = emptyString());
 
     URL baseURL;
     String charset;
@@ -66,7 +66,6 @@ public:
     bool isHTMLDocument;
     bool isCSSRegionsEnabled;
     bool isCSSCompositingEnabled;
-    bool isCSSGridLayoutEnabled;
     bool needsSiteSpecificQuirks;
     bool enforcesCSSMIMETypeInNoQuirksMode;
     bool useLegacyBackgroundSizeShorthandBehavior;
@@ -75,7 +74,7 @@ public:
 bool operator==(const CSSParserContext&, const CSSParserContext&);
 inline bool operator!=(const CSSParserContext& a, const CSSParserContext& b) { return !(a == b); }
 
-const CSSParserContext& strictCSSParserContext();
+WEBCORE_EXPORT const CSSParserContext& strictCSSParserContext();
 
 };
 

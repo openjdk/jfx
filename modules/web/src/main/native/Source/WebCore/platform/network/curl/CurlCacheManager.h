@@ -45,13 +45,17 @@ public:
     const String& cacheDirectory() { return m_cacheDir; }
     void setStorageSizeLimit(size_t);
 
-    bool isCached(const String&);
+    bool isCached(const String&) const;
     HTTPHeaderMap& requestHeaders(const String&); // Load headers
+    bool getCachedResponse(const String& url, ResourceResponse&);
 
-    void didReceiveResponse(ResourceHandle*, ResourceResponse&);
-    void didReceiveData(const String&, const char*, size_t); // Save data
-    void didFinishLoading(const String&);
-    void didFail(const String&);
+    void didReceiveResponse(ResourceHandle&, ResourceResponse&);
+    void didReceiveData(ResourceHandle&, const char*, size_t); // Save data
+    void didFinishLoading(ResourceHandle&);
+    void didFail(ResourceHandle&);
+
+    void addCacheEntryClient(const String& url, ResourceHandle* job);
+    void removeCacheEntryClient(const String& url, ResourceHandle* job);
 
 private:
     CurlCacheManager();

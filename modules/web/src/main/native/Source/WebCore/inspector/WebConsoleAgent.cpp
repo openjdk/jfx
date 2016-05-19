@@ -27,14 +27,10 @@
 #include "config.h"
 #include "WebConsoleAgent.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "CommandLineAPIHost.h"
-#include "Console.h"
 #include "DOMWindow.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
-#include "ScriptProfiler.h"
 #include "ScriptState.h"
 #include "WebInjectedScriptManager.h"
 #include <inspector/ConsoleMessage.h>
@@ -51,7 +47,7 @@ WebConsoleAgent::WebConsoleAgent(WebInjectedScriptManager* injectedScriptManager
 {
 }
 
-void WebConsoleAgent::setMonitoringXHREnabled(ErrorString*, bool enabled)
+void WebConsoleAgent::setMonitoringXHREnabled(ErrorString&, bool enabled)
 {
     m_monitoringXHREnabled = enabled;
 }
@@ -78,7 +74,7 @@ void WebConsoleAgent::didFinishXHRLoading(unsigned long requestIdentifier, const
 
     if (m_frontendDispatcher && m_monitoringXHREnabled) {
         String message = "XHR finished loading: \"" + url + "\".";
-        addMessageToConsole(MessageSource::Network, MessageType::Log, MessageLevel::Debug, message, sendURL, sendLineNumber, sendColumnNumber, nullptr, requestIdentifier);
+        addMessageToConsole(std::make_unique<ConsoleMessage>(MessageSource::Network, MessageType::Log, MessageLevel::Debug, message, sendURL, sendLineNumber, sendColumnNumber, nullptr, requestIdentifier));
     }
 }
 
@@ -89,7 +85,7 @@ void WebConsoleAgent::didReceiveResponse(unsigned long requestIdentifier, const 
 
     if (response.httpStatusCode() >= 400) {
         String message = "Failed to load resource: the server responded with a status of " + String::number(response.httpStatusCode()) + " (" + response.httpStatusText() + ')';
-        addMessageToConsole(MessageSource::Network, MessageType::Log, MessageLevel::Error, message, response.url().string(), 0, 0, nullptr, requestIdentifier);
+        addMessageToConsole(std::make_unique<ConsoleMessage>(MessageSource::Network, MessageType::Log, MessageLevel::Error, message, response.url().string(), 0, 0, nullptr, requestIdentifier));
     }
 }
 
@@ -109,31 +105,7 @@ void WebConsoleAgent::didFailLoading(unsigned long requestIdentifier, const Reso
         message.append(error.localizedDescription());
     }
 
-    addMessageToConsole(MessageSource::Network, MessageType::Log, MessageLevel::Error, message.toString(), error.failingURL(), 0, 0, nullptr, requestIdentifier);
-}
-
-class InspectableHeapObject final : public CommandLineAPIHost::InspectableObject {
-public:
-    explicit InspectableHeapObject(int heapObjectId)
-        : m_heapObjectId(heapObjectId)
-    {
-    }
-
-    virtual Deprecated::ScriptValue get(JSC::ExecState*) override
-    {
-        return ScriptProfiler::objectByHeapObjectId(m_heapObjectId);
-    }
-
-private:
-    int m_heapObjectId;
-};
-
-void WebConsoleAgent::addInspectedHeapObject(ErrorString*, int inspectedHeapObjectId)
-{
-    if (CommandLineAPIHost* commandLineAPIHost = static_cast<WebInjectedScriptManager*>(m_injectedScriptManager)->commandLineAPIHost())
-        commandLineAPIHost->addInspectedObject(std::make_unique<InspectableHeapObject>(inspectedHeapObjectId));
+    addMessageToConsole(std::make_unique<ConsoleMessage>(MessageSource::Network, MessageType::Log, MessageLevel::Error, message.toString(), error.failingURL(), 0, 0, nullptr, requestIdentifier));
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

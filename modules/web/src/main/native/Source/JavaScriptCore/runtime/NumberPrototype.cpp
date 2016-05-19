@@ -55,7 +55,7 @@ static EncodedJSValue JSC_HOST_CALL numberProtoFuncToPrecision(ExecState*);
 
 namespace JSC {
 
-const ClassInfo NumberPrototype::s_info = { "Number", &NumberObject::s_info, 0, ExecState::numberPrototypeTable, CREATE_METHOD_TABLE(NumberPrototype) };
+const ClassInfo NumberPrototype::s_info = { "Number", &NumberObject::s_info, &numberPrototypeTable, CREATE_METHOD_TABLE(NumberPrototype) };
 
 /* Source for NumberPrototype.lut.h
 @begin numberPrototypeTable
@@ -85,7 +85,7 @@ void NumberPrototype::finishCreation(VM& vm, JSGlobalObject*)
 
 bool NumberPrototype::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    return getStaticFunctionSlot<NumberObject>(exec, ExecState::numberPrototypeTable(exec->vm()), jsCast<NumberPrototype*>(object), propertyName, slot);
+    return getStaticFunctionSlot<NumberObject>(exec, numberPrototypeTable, jsCast<NumberPrototype*>(object), propertyName, slot);
 }
 
 // ------------------------------ Functions ---------------------------
@@ -102,7 +102,7 @@ static ALWAYS_INLINE bool toThisNumber(JSValue thisValue, double& x)
         return true;
     }
 
-    if (thisValue.isCell() && thisValue.asCell()->structure()->typeInfo().isNumberObject()) {
+    if (thisValue.isCell() && thisValue.asCell()->type() == NumberObjectType) {
         x = static_cast<const NumberObject*>(thisValue.asCell())->internalValue().asNumber();
         return true;
     }
@@ -365,7 +365,7 @@ static String toStringWithRadix(int32_t number, unsigned radix)
 EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(ExecState* exec)
 {
     double x;
-    if (!toThisNumber(exec->hostThisValue(), x))
+    if (!toThisNumber(exec->thisValue(), x))
         return throwVMTypeError(exec);
 
     // Get the argument.
@@ -376,7 +376,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(ExecState* exec)
 
     // Handle NaN and Infinity.
     if (!std::isfinite(x))
-        return JSValue::encode(jsString(exec, String::numberToStringECMAScript(x)));
+        return JSValue::encode(jsNontrivialString(exec, String::numberToStringECMAScript(x)));
 
     // Round if the argument is not undefined, always format as exponential.
     char buffer[WTF::NumberToStringBufferLength];
@@ -396,7 +396,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL numberProtoFuncToFixed(ExecState* exec)
 {
     double x;
-    if (!toThisNumber(exec->hostThisValue(), x))
+    if (!toThisNumber(exec->thisValue(), x))
         return throwVMTypeError(exec);
 
     // Get the argument.
@@ -429,7 +429,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToFixed(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL numberProtoFuncToPrecision(ExecState* exec)
 {
     double x;
-    if (!toThisNumber(exec->hostThisValue(), x))
+    if (!toThisNumber(exec->thisValue(), x))
         return throwVMTypeError(exec);
 
     // Get the argument.
@@ -444,7 +444,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToPrecision(ExecState* exec)
 
     // Handle NaN and Infinity.
     if (!std::isfinite(x))
-        return JSValue::encode(jsString(exec, String::numberToStringECMAScript(x)));
+        return JSValue::encode(jsNontrivialString(exec, String::numberToStringECMAScript(x)));
 
     NumberToStringBuffer buffer;
     return JSValue::encode(jsString(exec, String(numberToFixedPrecisionString(x, significantFigures, buffer))));
@@ -486,7 +486,7 @@ static inline EncodedJSValue integerValueToString(ExecState* exec, int32_t radix
 EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(ExecState* exec)
 {
     double doubleValue;
-    if (!toThisNumber(exec->hostThisValue(), doubleValue))
+    if (!toThisNumber(exec->thisValue(), doubleValue))
         return throwVMTypeError(exec);
 
     int32_t radix = extractRadixFromArgs(exec);
@@ -503,7 +503,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(ExecState* exec)
     }
 
     if (!std::isfinite(doubleValue))
-        return JSValue::encode(jsString(exec, String::numberToStringECMAScript(doubleValue)));
+        return JSValue::encode(jsNontrivialString(exec, String::numberToStringECMAScript(doubleValue)));
 
     RadixBuffer s;
     return JSValue::encode(jsString(exec, toStringWithRadix(s, doubleValue, radix)));
@@ -512,7 +512,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL numberProtoFuncToLocaleString(ExecState* exec)
 {
     double x;
-    if (!toThisNumber(exec->hostThisValue(), x))
+    if (!toThisNumber(exec->thisValue(), x))
         return throwVMTypeError(exec);
 
     return JSValue::encode(jsNumber(x).toString(exec));
@@ -521,7 +521,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToLocaleString(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL numberProtoFuncValueOf(ExecState* exec)
 {
     double x;
-    if (!toThisNumber(exec->hostThisValue(), x))
+    if (!toThisNumber(exec->thisValue(), x))
         return throwVMTypeError(exec);
     return JSValue::encode(jsNumber(x));
 }

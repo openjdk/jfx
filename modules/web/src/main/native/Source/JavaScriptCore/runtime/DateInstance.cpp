@@ -32,7 +32,7 @@ using namespace WTF;
 
 namespace JSC {
 
-const ClassInfo DateInstance::s_info = {"Date", &JSWrapperObject::s_info, 0, 0, CREATE_METHOD_TABLE(DateInstance)};
+const ClassInfo DateInstance::s_info = {"Date", &JSWrapperObject::s_info, 0, CREATE_METHOD_TABLE(DateInstance)};
 
 DateInstance::DateInstance(VM& vm, Structure* structure)
     : JSWrapperObject(vm, structure)
@@ -69,7 +69,7 @@ const GregorianDateTime* DateInstance::calculateGregorianDateTime(ExecState* exe
         m_data = vm.dateInstanceCache.add(milli);
 
     if (m_data->m_gregorianDateTimeCachedForMS != milli) {
-        msToGregorianDateTime(vm, milli, false, m_data->m_cachedGregorianDateTime);
+        msToGregorianDateTime(vm, milli, WTF::LocalTime, m_data->m_cachedGregorianDateTime);
         m_data->m_gregorianDateTimeCachedForMS = milli;
     }
     return &m_data->m_cachedGregorianDateTime;
@@ -86,7 +86,7 @@ const GregorianDateTime* DateInstance::calculateGregorianDateTimeUTC(ExecState* 
         m_data = vm.dateInstanceCache.add(milli);
 
     if (m_data->m_gregorianDateTimeUTCCachedForMS != milli) {
-        msToGregorianDateTime(vm, milli, true, m_data->m_cachedGregorianDateTimeUTC);
+        msToGregorianDateTime(vm, milli, WTF::UTCTime, m_data->m_cachedGregorianDateTimeUTC);
         m_data->m_gregorianDateTimeUTCCachedForMS = milli;
     }
     return &m_data->m_cachedGregorianDateTimeUTC;

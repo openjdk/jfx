@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -41,9 +41,9 @@ class RenderElement;
 // for a single RenderElement.
 class ImplicitAnimation : public AnimationBase {
 public:
-    static PassRefPtr<ImplicitAnimation> create(const Animation& animation, CSSPropertyID animatingProperty, RenderElement* renderer, CompositeAnimation* compositeAnimation, RenderStyle* fromStyle)
+    static Ref<ImplicitAnimation> create(Animation& animation, CSSPropertyID animatingProperty, RenderElement* renderer, CompositeAnimation* compositeAnimation, RenderStyle* fromStyle)
     {
-        return adoptRef(new ImplicitAnimation(animation, animatingProperty, renderer, compositeAnimation, fromStyle));
+        return adoptRef(*new ImplicitAnimation(animation, animatingProperty, renderer, compositeAnimation, fromStyle));
     };
 
     CSSPropertyID transitionProperty() const { return m_transitionProperty; }
@@ -54,9 +54,11 @@ public:
     virtual void pauseAnimation(double timeOffset) override;
     virtual void endAnimation() override;
 
-    virtual void animate(CompositeAnimation*, RenderElement*, const RenderStyle* currentStyle, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle) override;
+    virtual bool animate(CompositeAnimation*, RenderElement*, const RenderStyle* currentStyle, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle) override;
     virtual void getAnimatedStyle(RefPtr<RenderStyle>& animatedStyle) override;
     virtual void reset(RenderStyle* to);
+
+    bool computeExtentOfTransformAnimation(LayoutRect&) const override;
 
     void setOverridden(bool);
     virtual bool overridden() const override { return m_overridden; }
@@ -79,22 +81,24 @@ protected:
     bool sendTransitionEvent(const AtomicString&, double elapsedTime);
 
     void validateTransformFunctionList();
-#if ENABLE(CSS_FILTERS)
     void checkForMatchingFilterFunctionLists();
+#if ENABLE(FILTERS_LEVEL_2)
+    void checkForMatchingBackdropFilterFunctionLists();
 #endif
 
 private:
-    ImplicitAnimation(const Animation&, CSSPropertyID, RenderElement*, CompositeAnimation*, RenderStyle*);
+    ImplicitAnimation(Animation&, CSSPropertyID, RenderElement*, CompositeAnimation*, RenderStyle*);
     virtual ~ImplicitAnimation();
-
-    CSSPropertyID m_transitionProperty; // Transition property as specified in the RenderStyle.
-    CSSPropertyID m_animatingProperty; // Specific property for this ImplicitAnimation
-    bool m_overridden;          // true when there is a keyframe animation that overrides the transitioning property
-    bool m_active;              // used for culling the list of transitions
 
     // The two styles that we are blending.
     RefPtr<RenderStyle> m_fromStyle;
     RefPtr<RenderStyle> m_toStyle;
+
+    CSSPropertyID m_transitionProperty; // Transition property as specified in the RenderStyle.
+    CSSPropertyID m_animatingProperty; // Specific property for this ImplicitAnimation
+
+    bool m_active { true }; // Used for culling the list of transitions.
+    bool m_overridden { false }; // True when there is a keyframe animation that overrides the transitioning property
 };
 
 } // namespace WebCore

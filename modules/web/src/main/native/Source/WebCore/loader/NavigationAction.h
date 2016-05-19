@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,28 +37,41 @@
 
 namespace WebCore {
 
-    class NavigationAction {
-    public:
-        NavigationAction();
-        explicit NavigationAction(const ResourceRequest&);
-        NavigationAction(const ResourceRequest&, NavigationType);
-        NavigationAction(const ResourceRequest&, FrameLoadType, bool isFormSubmission);
-        NavigationAction(const ResourceRequest&, NavigationType, PassRefPtr<Event>);
-        NavigationAction(const ResourceRequest&, FrameLoadType, bool isFormSubmission, PassRefPtr<Event>);
+class NavigationAction {
+public:
+    WEBCORE_EXPORT NavigationAction();
+    WEBCORE_EXPORT explicit NavigationAction(const ResourceRequest&);
+    WEBCORE_EXPORT NavigationAction(const ResourceRequest&, NavigationType);
+    WEBCORE_EXPORT NavigationAction(const ResourceRequest&, FrameLoadType, bool isFormSubmission);
 
-        bool isEmpty() const { return m_resourceRequest.url().isEmpty(); }
+    NavigationAction(const ResourceRequest&, ShouldOpenExternalURLsPolicy);
+    NavigationAction(const ResourceRequest&, NavigationType, Event*);
+    NavigationAction(const ResourceRequest&, NavigationType, Event*, ShouldOpenExternalURLsPolicy);
+    NavigationAction(const ResourceRequest&, NavigationType, ShouldOpenExternalURLsPolicy);
+    NavigationAction(const ResourceRequest&, FrameLoadType, bool isFormSubmission, Event*);
+    NavigationAction(const ResourceRequest&, FrameLoadType, bool isFormSubmission, Event*, ShouldOpenExternalURLsPolicy);
 
-        URL url() const { return m_resourceRequest.url(); }
-        const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
+    NavigationAction copyWithShouldOpenExternalURLsPolicy(ShouldOpenExternalURLsPolicy) const;
 
-        NavigationType type() const { return m_type; }
-        const Event* event() const { return m_event.get(); }
+    bool isEmpty() const { return m_resourceRequest.url().isEmpty(); }
 
-    private:
-        ResourceRequest m_resourceRequest;
-        NavigationType m_type;
-        RefPtr<Event> m_event;
-    };
+    URL url() const { return m_resourceRequest.url(); }
+    const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
+
+    NavigationType type() const { return m_type; }
+    const Event* event() const { return m_event.get(); }
+
+    bool processingUserGesture() const { return m_processingUserGesture; }
+
+    ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy() const { return m_shouldOpenExternalURLsPolicy; }
+
+private:
+    ResourceRequest m_resourceRequest;
+    NavigationType m_type;
+    RefPtr<Event> m_event;
+    bool m_processingUserGesture;
+    ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy;
+};
 
 }
 

@@ -33,7 +33,7 @@ namespace WebCore {
 
 class MathMLMencloseElement final: public MathMLInlineContainerElement {
 public:
-    static PassRefPtr<MathMLMencloseElement> create(const QualifiedName& tagName, Document&);
+    static Ref<MathMLMencloseElement> create(const QualifiedName& tagName, Document&);
     const Vector<String>& notationValues() const { return m_notationValues; }
     bool isRadical() const { return m_isRadicalValue; }
     String longDivLeftPadding() const;
@@ -41,7 +41,7 @@ public:
 
 private:
     MathMLMencloseElement(const QualifiedName&, Document&);
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
     virtual bool isPresentationAttribute(const QualifiedName&) const override;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
     virtual void finishParsingChildren() override;
@@ -49,12 +49,6 @@ private:
     Vector<String> m_notationValues;
     bool m_isRadicalValue;
 };
-
-inline MathMLMencloseElement* toMathMLMencloseElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || (node->isElementNode() && toElement(node)->hasTagName(MathMLNames::mencloseTag)));
-    return static_cast<MathMLMencloseElement*>(node);
-}
 
 }
 

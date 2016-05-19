@@ -22,7 +22,7 @@ ALWAYS_INLINE JNIEnv* JNICALL JavaScriptCore_GetJavaEnv()
     JNIEnv* _env_var = JavaScriptCore_GetJavaEnv(); \
     if (!_env_var) return __VA_ARGS__;
 
-extern bool CheckAndClearException(JNIEnv* env);
+bool CheckAndClearException(JNIEnv* env);
 
 #define jlong_to_ptr(a) ((void*)(uintptr_t)(a))
 #define ptr_to_jlong(a) ((jlong)(uintptr_t)(a))

@@ -32,6 +32,8 @@
 #include "Document.h"
 #include "JSAudioBuffer.h"
 #include "JSAudioContext.h"
+#include "JSDOMBinding.h"
+#include "JSDOMPromise.h"
 #include "JSOfflineAudioContext.h"
 #include "OfflineAudioContext.h"
 #include <runtime/ArrayBuffer.h>
@@ -42,9 +44,9 @@ using namespace JSC;
 
 namespace WebCore {
 
-EncodedJSValue JSC_HOST_CALL JSAudioContextConstructor::constructJSAudioContext(ExecState* exec)
+EncodedJSValue JSC_HOST_CALL constructJSAudioContext(ExecState* exec)
 {
-    JSAudioContextConstructor* jsConstructor = jsCast<JSAudioContextConstructor*>(exec->callee());
+    DOMConstructorObject* jsConstructor = jsCast<DOMConstructorObject*>(exec->callee());
     if (!jsConstructor)
         return throwVMError(exec, createReferenceError(exec, "AudioContext constructor callee is unavailable"));
 
@@ -52,10 +54,10 @@ EncodedJSValue JSC_HOST_CALL JSAudioContextConstructor::constructJSAudioContext(
     if (!scriptExecutionContext)
         return throwVMError(exec, createReferenceError(exec, "AudioContext constructor script execution context is unavailable"));
 
-    if (!scriptExecutionContext->isDocument())
+    if (!is<Document>(*scriptExecutionContext))
         return throwVMError(exec, createReferenceError(exec, "AudioContext constructor called in a script execution context which is not a document"));
 
-    Document& document = toDocument(*scriptExecutionContext);
+    Document& document = downcast<Document>(*scriptExecutionContext);
 
     RefPtr<AudioContext> audioContext;
 
@@ -106,7 +108,7 @@ EncodedJSValue JSC_HOST_CALL JSAudioContextConstructor::constructJSAudioContext(
     if (!audioContext.get())
         return throwVMError(exec, createReferenceError(exec, "Error creating AudioContext"));
 
-    return JSValue::encode(CREATE_DOM_WRAPPER(exec, jsConstructor->globalObject(), AudioContext, audioContext.get()));
+    return JSValue::encode(CREATE_DOM_WRAPPER(jsConstructor->globalObject(), AudioContext, audioContext.get()));
 }
 
 } // namespace WebCore

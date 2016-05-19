@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-EXTTextureFilterAnisotropic::EXTTextureFilterAnisotropic(WebGLRenderingContext* context)
+EXTTextureFilterAnisotropic::EXTTextureFilterAnisotropic(WebGLRenderingContextBase* context)
     : WebGLExtension(context)
 {
 }
@@ -43,11 +43,6 @@ EXTTextureFilterAnisotropic::~EXTTextureFilterAnisotropic()
 WebGLExtension::ExtensionName EXTTextureFilterAnisotropic::getName() const
 {
     return EXTTextureFilterAnisotropicName;
-}
-
-OwnPtr<EXTTextureFilterAnisotropic> EXTTextureFilterAnisotropic::create(WebGLRenderingContext* context)
-{
-    return adoptPtr(new EXTTextureFilterAnisotropic(context));
 }
 
 } // namespace WebCore

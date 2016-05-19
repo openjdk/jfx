@@ -25,8 +25,8 @@
 
 [
     Conditional=INDEXED_DATABASE,
-    JSNoStaticTables,
+    EnabledAtRuntime=IndexedDB,
 ] interface IDBVersionChangeEvent : Event {
     readonly attribute unsigned long long oldVersion;
-    readonly attribute unsigned long long? newVersion;
+    readonly attribute unsigned long long newVersion;
 };

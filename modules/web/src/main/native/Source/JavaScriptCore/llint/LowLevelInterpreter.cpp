@@ -25,19 +25,15 @@
 
 #include "config.h"
 #include "LowLevelInterpreter.h"
-
-#if ENABLE(LLINT)
-
 #include "LLIntOfflineAsmConfig.h"
 #include <wtf/InlineASM.h>
 
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
 #include "CodeBlock.h"
 #include "CommonSlowPaths.h"
 #include "LLIntCLoop.h"
 #include "LLIntSlowPaths.h"
 #include "JSCInlines.h"
-#include "VMInspector.h"
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
 
@@ -104,6 +100,8 @@ using namespace JSC::LLInt;
     } while (false)
 
 #define OFFLINE_ASM_OPCODE_LABEL(opcode) DEFINE_OPCODE(opcode) USE_LABEL(opcode); TRACE_OPCODE(opcode);
+
+#define OFFLINE_ASM_GLOBAL_LABEL(label)  OFFLINE_ASM_GLUE_LABEL(label)
 
 #if ENABLE(COMPUTED_GOTO_OPCODES)
 #define OFFLINE_ASM_GLUE_LABEL(label)  label: USE_LABEL(label);
@@ -325,7 +323,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     // 2. 32 bit result values will be in the low 32-bit of t0.
     // 3. 64 bit result values will be in t0.
 
-    CLoopRegister t0, t1, t2, t3, t5, sp, cfr, lr, pc;
+    CLoopRegister t0, t1, t2, t3, t5, t7, sp, cfr, lr, pc;
 #if USE(JSVALUE64)
     CLoopRegister pcBase, tagTypeNumber, tagMask;
 #endif
@@ -339,7 +337,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     CallFrame* startCFR = cfr.callFrame;
 #endif
 
-    // Initialize the incoming args for doCallToJavaScript:
+    // Initialize the incoming args for doVMEntryToJavaScript:
     t0.vp = executableAddress;
     t1.vm = vm;
     t2.protoCallFrame = protoCallFrame;
@@ -492,38 +490,28 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 //
 
 // These are for building an interpreter from generated assembly code:
-#if CPU(X86_64) && COMPILER(CLANG)
-#define OFFLINE_ASM_BEGIN   asm (                \
-    ".cfi_startproc\n"
-
-#define OFFLINE_ASM_END                          \
-    ".cfi_endproc\n"                             \
-                            );
-#else
 #define OFFLINE_ASM_BEGIN   asm (
 #define OFFLINE_ASM_END     );
-#endif
 
-#define OFFLINE_ASM_OPCODE_LABEL(__opcode) OFFLINE_ASM_GLOBAL_LABEL(llint_##__opcode)
-#define OFFLINE_ASM_GLUE_LABEL(__opcode)   OFFLINE_ASM_GLOBAL_LABEL(__opcode)
+#define OFFLINE_ASM_OPCODE_LABEL(__opcode) OFFLINE_ASM_LOCAL_LABEL(llint_##__opcode)
+#define OFFLINE_ASM_GLUE_LABEL(__opcode)   OFFLINE_ASM_LOCAL_LABEL(__opcode)
 
 #if CPU(ARM_THUMB2)
 #define OFFLINE_ASM_GLOBAL_LABEL(label)          \
     ".text\n"                                    \
+    ".align 4\n"                                 \
     ".globl " SYMBOL_STRING(label) "\n"          \
     HIDE_SYMBOL(label) "\n"                      \
     ".thumb\n"                                   \
     ".thumb_func " THUMB_FUNC_PARAM(label) "\n"  \
     SYMBOL_STRING(label) ":\n"
-#elif CPU(XXX86_64) && COMPILER(CLANG)
+#elif CPU(ARM64)
 #define OFFLINE_ASM_GLOBAL_LABEL(label)         \
     ".text\n"                                   \
+    ".align 4\n"                                \
     ".globl " SYMBOL_STRING(label) "\n"         \
     HIDE_SYMBOL(label) "\n"                     \
-    SYMBOL_STRING(label) ":\n"                  \
-    ".cfi_def_cfa_offset 16\n"                  \
-    ".cfi_offset %rbp, -16\n"                   \
-    ".cfi_def_cfa_register rbp\n"
+    SYMBOL_STRING(label) ":\n"
 #else
 #define OFFLINE_ASM_GLOBAL_LABEL(label)         \
     ".text\n"                                   \
@@ -538,6 +526,4 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 // for the interpreter, as compiled from LowLevelInterpreter.asm.
 #include "LLIntAssembly.h"
 
-#endif // !ENABLE(LLINT_C_LOOP)
-
-#endif // ENABLE(LLINT)
+#endif // ENABLE(JIT)

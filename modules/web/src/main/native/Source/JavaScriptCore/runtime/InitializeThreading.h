@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -35,9 +35,9 @@
 
 namespace JSC {
 
-    // This function must be called from the main thread. It is safe to call it repeatedly.
-    // Darwin is an exception to this rule: it is OK to call this function from any thread, even reentrantly.
-    JS_EXPORT_PRIVATE void initializeThreading();
+// This function must be called from the main thread. It is safe to call it repeatedly.
+// Darwin is an exception to this rule: it is OK to call this function from any thread, even reentrantly.
+JS_EXPORT_PRIVATE void initializeThreading();
 
 }
 

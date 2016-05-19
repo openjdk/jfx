@@ -24,7 +24,6 @@
 #define HTMLNameCollection_h
 
 #include "HTMLCollection.h"
-
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
@@ -33,9 +32,9 @@ class Document;
 
 class HTMLNameCollection : public HTMLCollection {
 public:
-    ~HTMLNameCollection();
+    virtual ~HTMLNameCollection();
 
-    Document& document() { return toDocument(ownerNode()); }
+    Document& document() { return downcast<Document>(ownerNode()); }
 
 protected:
     HTMLNameCollection(Document&, CollectionType, const AtomicString& name);
@@ -45,16 +44,16 @@ protected:
 
 class WindowNameCollection final : public HTMLNameCollection {
 public:
-    static PassRef<WindowNameCollection> create(Document& document, CollectionType type, const AtomicString& name)
+    static Ref<WindowNameCollection> create(Document& document, CollectionType type, const AtomicString& name)
     {
         return adoptRef(*new WindowNameCollection(document, type, name));
     }
 
-    bool nodeMatches(Element* element) const { return nodeMatches(element, m_name.impl()); }
+    bool elementMatches(const Element& element) const { return elementMatches(element, m_name.impl()); }
 
-    static bool nodeMatchesIfIdAttributeMatch(Element*) { return true; }
-    static bool nodeMatchesIfNameAttributeMatch(Element*);
-    static bool nodeMatches(Element*, const AtomicStringImpl*);
+    static bool elementMatchesIfIdAttributeMatch(const Element&) { return true; }
+    static bool elementMatchesIfNameAttributeMatch(const Element&);
+    static bool elementMatches(const Element&, const AtomicStringImpl*);
 
 private:
     WindowNameCollection(Document& document, CollectionType type, const AtomicString& name)
@@ -66,16 +65,16 @@ private:
 
 class DocumentNameCollection final : public HTMLNameCollection {
 public:
-    static PassRef<DocumentNameCollection> create(Document& document, CollectionType type, const AtomicString& name)
+    static Ref<DocumentNameCollection> create(Document& document, CollectionType type, const AtomicString& name)
     {
         return adoptRef(*new DocumentNameCollection(document, type, name));
     }
 
-    static bool nodeMatchesIfIdAttributeMatch(Element*);
-    static bool nodeMatchesIfNameAttributeMatch(Element*);
-    bool nodeMatches(Element* element) const { return nodeMatches(element, m_name.impl()); }
+    static bool elementMatchesIfIdAttributeMatch(const Element&);
+    static bool elementMatchesIfNameAttributeMatch(const Element&);
+    bool elementMatches(const Element& element) const { return elementMatches(element, m_name.impl()); }
 
-    static bool nodeMatches(Element*, const AtomicStringImpl*);
+    static bool elementMatches(const Element&, const AtomicStringImpl*);
 
 private:
     DocumentNameCollection(Document& document, CollectionType type, const AtomicString& name)
@@ -85,6 +84,9 @@ private:
     }
 };
 
-}
+} // namespace WebCore
 
-#endif
+SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(WindowNameCollection, WindowNamedItems)
+SPECIALIZE_TYPE_TRAITS_HTMLCOLLECTION(DocumentNameCollection, DocumentNamedItems)
+
+#endif // HTMLNameCollection_h

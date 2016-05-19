@@ -39,24 +39,9 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-void TextInputType::attach()
-{
-    TextFieldInputType::attach();
-    const AtomicString& type = element().fastGetAttribute(typeAttr);
-    if (equalIgnoringCase(type, InputTypeNames::datetime()))
-        observeFeatureIfVisible(FeatureObserver::InputTypeDateTimeFallback);
-    else if (equalIgnoringCase(type, InputTypeNames::week()))
-        observeFeatureIfVisible(FeatureObserver::InputTypeWeekFallback);
-}
-
 const AtomicString& TextInputType::formControlType() const
 {
     return InputTypeNames::text();
-}
-
-bool TextInputType::shouldRespectSpeechAttribute()
-{
-    return true;
 }
 
 } // namespace WebCore

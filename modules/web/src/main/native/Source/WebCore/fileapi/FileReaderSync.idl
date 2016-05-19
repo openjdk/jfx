@@ -30,9 +30,7 @@
 
 [
     GlobalContext=WorkerGlobalScope,
-    Conditional=BLOB,
     Constructor,
-    JSNoStaticTables,
 ] interface FileReaderSync {
     [CallWith=ScriptExecutionContext, RaisesException] ArrayBuffer readAsArrayBuffer(Blob blob);
     [CallWith=ScriptExecutionContext, RaisesException] DOMString readAsBinaryString(Blob blob);

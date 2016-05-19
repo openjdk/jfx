@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebGeolocationPolicyListener.h"
 
@@ -43,13 +42,13 @@ WebGeolocationPolicyListener::WebGeolocationPolicyListener(PassRefPtr<Geolocatio
     , m_geolocation(geolocation)
 {
     gClassCount++;
-    gClassNameCount.add("WebGeolocationPolicyListener");
+    gClassNameCount().add("WebGeolocationPolicyListener");
 }
 
 WebGeolocationPolicyListener::~WebGeolocationPolicyListener()
 {
     gClassCount--;
-    gClassNameCount.remove("WebGeolocationPolicyListener");
+    gClassNameCount().remove("WebGeolocationPolicyListener");
 }
 
 // IUnknown -------------------------------------------------------------------

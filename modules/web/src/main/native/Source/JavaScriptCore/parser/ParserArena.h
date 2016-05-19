@@ -26,6 +26,7 @@
 #ifndef ParserArena_h
 #define ParserArena_h
 
+#include "CommonIdentifiers.h"
 #include "Identifier.h"
 #include <array>
 #include <wtf/SegmentedVector.h>
@@ -33,7 +34,6 @@
 namespace JSC {
 
     class ParserArenaDeletable;
-    class ParserArenaRefCounted;
 
     class IdentifierArena {
         WTF_MAKE_FAST_ALLOCATED;
@@ -45,11 +45,10 @@ namespace JSC {
 
         template <typename T>
         ALWAYS_INLINE const Identifier& makeIdentifier(VM*, const T* characters, size_t length);
+        ALWAYS_INLINE const Identifier& makeEmptyIdentifier(VM*);
         ALWAYS_INLINE const Identifier& makeIdentifierLCharFromUChar(VM*, const UChar* characters, size_t length);
 
         const Identifier& makeNumericIdentifier(VM*, double number);
-
-        bool isEmpty() const { return m_identifiers.isEmpty(); }
 
     public:
         static const int MaximumCachableCharacter = 128;
@@ -72,27 +71,36 @@ namespace JSC {
     template <typename T>
     ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifier(VM* vm, const T* characters, size_t length)
     {
+        if (!length)
+            return vm->propertyNames->emptyIdentifier;
         if (characters[0] >= MaximumCachableCharacter) {
-            m_identifiers.append(Identifier(vm, characters, length));
+            m_identifiers.append(Identifier::fromString(vm, characters, length));
             return m_identifiers.last();
         }
         if (length == 1) {
             if (Identifier* ident = m_shortIdentifiers[characters[0]])
                 return *ident;
-            m_identifiers.append(Identifier(vm, characters, length));
+            m_identifiers.append(Identifier::fromString(vm, characters, length));
             m_shortIdentifiers[characters[0]] = &m_identifiers.last();
             return m_identifiers.last();
         }
         Identifier* ident = m_recentIdentifiers[characters[0]];
         if (ident && Identifier::equal(ident->impl(), characters, length))
             return *ident;
-        m_identifiers.append(Identifier(vm, characters, length));
+        m_identifiers.append(Identifier::fromString(vm, characters, length));
         m_recentIdentifiers[characters[0]] = &m_identifiers.last();
         return m_identifiers.last();
     }
 
+    ALWAYS_INLINE const Identifier& IdentifierArena::makeEmptyIdentifier(VM* vm)
+    {
+        return vm->propertyNames->emptyIdentifier;
+    }
+
     ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifierLCharFromUChar(VM* vm, const UChar* characters, size_t length)
     {
+        if (!length)
+            return vm->propertyNames->emptyIdentifier;
         if (characters[0] >= MaximumCachableCharacter) {
             m_identifiers.append(Identifier::createLCharFromUChar(vm, characters, length));
             return m_identifiers.last();
@@ -100,7 +108,7 @@ namespace JSC {
         if (length == 1) {
             if (Identifier* ident = m_shortIdentifiers[characters[0]])
                 return *ident;
-            m_identifiers.append(Identifier(vm, characters, length));
+            m_identifiers.append(Identifier::fromString(vm, characters, length));
             m_shortIdentifiers[characters[0]] = &m_identifiers.last();
             return m_identifiers.last();
         }
@@ -114,7 +122,7 @@ namespace JSC {
 
     inline const Identifier& IdentifierArena::makeNumericIdentifier(VM* vm, double number)
     {
-        m_identifiers.append(Identifier(vm, String::numberToStringECMAScript(number)));
+        m_identifiers.append(Identifier::fromString(vm, String::numberToStringECMAScript(number)));
         return m_identifiers.last();
     }
 
@@ -131,7 +139,6 @@ namespace JSC {
             m_identifierArena.swap(otherArena.m_identifierArena);
             m_freeablePools.swap(otherArena.m_freeablePools);
             m_deletableObjects.swap(otherArena.m_deletableObjects);
-            m_refCountedObjects.swap(otherArena.m_refCountedObjects);
         }
 
         void* allocateFreeable(size_t size)
@@ -154,18 +161,10 @@ namespace JSC {
             return deletable;
         }
 
-        void derefWithArena(PassRefPtr<ParserArenaRefCounted>);
-        bool contains(ParserArenaRefCounted*) const;
-        ParserArenaRefCounted* last() const;
-        void removeLast();
-
-        bool isEmpty() const;
-        JS_EXPORT_PRIVATE void reset();
-
         IdentifierArena& identifierArena()
         {
             if (UNLIKELY (!m_identifierArena))
-                m_identifierArena = adoptPtr(new IdentifierArena);
+                m_identifierArena = std::make_unique<IdentifierArena>();
             return *m_identifierArena;
         }
 
@@ -184,10 +183,9 @@ namespace JSC {
         char* m_freeableMemory;
         char* m_freeablePoolEnd;
 
-        OwnPtr<IdentifierArena> m_identifierArena;
+        std::unique_ptr<IdentifierArena> m_identifierArena;
         Vector<void*> m_freeablePools;
         Vector<ParserArenaDeletable*> m_deletableObjects;
-        Vector<RefPtr<ParserArenaRefCounted>> m_refCountedObjects;
     };
 
 }

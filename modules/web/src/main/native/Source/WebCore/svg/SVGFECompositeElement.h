@@ -21,7 +21,6 @@
 #ifndef SVGFECompositeElement_h
 #define SVGFECompositeElement_h
 
-#if ENABLE(FILTERS)
 #include "FEComposite.h"
 #include "SVGAnimatedEnumeration.h"
 #include "SVGAnimatedNumber.h"
@@ -76,16 +75,15 @@ struct SVGPropertyTraits<CompositeOperationType> {
 
 class SVGFECompositeElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFECompositeElement> create(const QualifiedName&, Document&);
+    static Ref<SVGFECompositeElement> create(const QualifiedName&, Document&);
 
 private:
     SVGFECompositeElement(const QualifiedName&, Document&);
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
+    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFECompositeElement)
         DECLARE_ANIMATED_STRING(In1, in1)
@@ -100,5 +98,4 @@ private:
 
 } // namespace WebCore
 
-#endif
 #endif

@@ -37,10 +37,15 @@ static bool isWindowFeaturesSeparator(UChar c)
 }
 
 WindowFeatures::WindowFeatures(const String& features)
-    : xSet(false)
+    : x(0)
+    , xSet(false)
+    , y(0)
     , ySet(false)
+    , width(0)
     , widthSet(false)
+    , height(0)
     , heightSet(false)
+    , resizable(true)
     , fullscreen(false)
     , dialog(false)
 {
@@ -53,13 +58,12 @@ WindowFeatures::WindowFeatures(const String& features)
      We always allow a window to be resized, which is consistent with Firefox.
      */
 
-    if (features.length() == 0) {
+    if (features.isEmpty()) {
         menuBarVisible = true;
         statusBarVisible = true;
         toolBarVisible = true;
         locationBarVisible = true;
         scrollbarsVisible = true;
-        resizable = true;
         return;
     }
 
@@ -68,16 +72,14 @@ WindowFeatures::WindowFeatures(const String& features)
     toolBarVisible = false;
     locationBarVisible = false;
     scrollbarsVisible = false;
-    resizable = true;
 
     // Tread lightly in this code -- it was specifically designed to mimic Win IE's parsing behavior.
-    int keyBegin, keyEnd;
-    int valueBegin, valueEnd;
+    unsigned keyBegin, keyEnd;
+    unsigned valueBegin, valueEnd;
 
-    int i = 0;
-    int length = features.length();
     String buffer = features.lower();
-    while (i < length) {
+    unsigned length = buffer.length();
+    for (unsigned i = 0; i < length; ) {
         // skip to first non-separator, but don't skip past the end of the string
         while (isWindowFeaturesSeparator(buffer[i])) {
             if (i >= length)
@@ -238,10 +240,7 @@ void WindowFeatures::parseDialogFeatures(const String& string, DialogFeaturesMap
 {
     Vector<String> vector;
     string.split(';', vector);
-    size_t size = vector.size();
-    for (size_t i = 0; i < size; ++i) {
-        const String& featureString = vector[i];
-
+    for (auto& featureString : vector) {
         size_t separatorPosition = featureString.find('=');
         size_t colonPosition = featureString.find(':');
         if (separatorPosition != notFound && colonPosition != notFound)

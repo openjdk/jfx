@@ -29,24 +29,21 @@ namespace WebCore {
 
 class Comment final : public CharacterData {
 public:
-    static PassRefPtr<Comment> create(Document&, const String&);
-    static PassRefPtr<Comment> create(ScriptExecutionContext&, const String&);
+    static Ref<Comment> create(Document&, const String&);
 
 private:
     Comment(Document&, const String&);
 
     virtual String nodeName() const override;
     virtual NodeType nodeType() const override;
-    virtual PassRefPtr<Node> cloneNode(bool deep) override;
+    virtual RefPtr<Node> cloneNodeInternal(Document&, CloningOperation) override;
     virtual bool childTypeAllowed(NodeType) const override;
 };
 
-inline bool isComment(const Node& node) { return node.nodeType() == Node::COMMENT_NODE; }
-void isComment(const Comment&); // Catch unnecessary runtime check of type known at compile time.
-void isComment(const ContainerNode&); // Catch unnecessary runtime check of type known at compile time.
-
-NODE_TYPE_CASTS(Comment)
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Comment)
+    static bool isType(const WebCore::Node& node) { return node.nodeType() == WebCore::Node::COMMENT_NODE; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // Comment_h

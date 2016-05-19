@@ -43,48 +43,48 @@
 
 namespace WebCore {
 
-PassRefPtr<IDBTransaction> IDBTransaction::create(ScriptExecutionContext* context, int64_t id, const Vector<String>& objectStoreNames, IndexedDB::TransactionMode mode, IDBDatabase* db)
+Ref<IDBTransaction> IDBTransaction::create(ScriptExecutionContext* context, int64_t id, const Vector<String>& objectStoreNames, IndexedDB::TransactionMode mode, IDBDatabase* db)
 {
-    IDBOpenDBRequest* openDBRequest = 0;
-    RefPtr<IDBTransaction> transaction(adoptRef(new IDBTransaction(context, id, objectStoreNames, mode, db, openDBRequest, IDBDatabaseMetadata())));
+    IDBOpenDBRequest* openDBRequest = nullptr;
+    Ref<IDBTransaction> transaction(adoptRef(*new IDBTransaction(context, id, objectStoreNames, mode, db, openDBRequest, IDBDatabaseMetadata())));
     transaction->suspendIfNeeded();
-    return transaction.release();
+    return transaction;
 }
 
-PassRefPtr<IDBTransaction> IDBTransaction::create(ScriptExecutionContext* context, int64_t id, IDBDatabase* db, IDBOpenDBRequest* openDBRequest, const IDBDatabaseMetadata& previousMetadata)
+Ref<IDBTransaction> IDBTransaction::create(ScriptExecutionContext* context, int64_t id, IDBDatabase* db, IDBOpenDBRequest* openDBRequest, const IDBDatabaseMetadata& previousMetadata)
 {
-    RefPtr<IDBTransaction> transaction(adoptRef(new IDBTransaction(context, id, Vector<String>(), IndexedDB::TransactionMode::VersionChange, db, openDBRequest, previousMetadata)));
+    Ref<IDBTransaction> transaction(adoptRef(*new IDBTransaction(context, id, Vector<String>(), IndexedDB::TransactionMode::VersionChange, db, openDBRequest, previousMetadata)));
     transaction->suspendIfNeeded();
-    return transaction.release();
+    return transaction;
 }
 
 const AtomicString& IDBTransaction::modeReadOnly()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, readonly, ("readonly", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, readonly, ("readonly", AtomicString::ConstructFromLiteral));
     return readonly;
 }
 
 const AtomicString& IDBTransaction::modeReadWrite()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, readwrite, ("readwrite", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, readwrite, ("readwrite", AtomicString::ConstructFromLiteral));
     return readwrite;
 }
 
 const AtomicString& IDBTransaction::modeVersionChange()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, versionchange, ("versionchange", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, versionchange, ("versionchange", AtomicString::ConstructFromLiteral));
     return versionchange;
 }
 
 const AtomicString& IDBTransaction::modeReadOnlyLegacy()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, readonly, ("0", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, readonly, ("0", AtomicString::ConstructFromLiteral));
     return readonly;
 }
 
 const AtomicString& IDBTransaction::modeReadWriteLegacy()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, readwrite, ("1", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, readwrite, ("1", AtomicString::ConstructFromLiteral));
     return readwrite;
 }
 
@@ -239,8 +239,8 @@ void IDBTransaction::OpenCursorNotifier::cursorFinished()
 {
     if (m_cursor) {
         m_transaction->unregisterOpenCursor(m_cursor);
-        m_cursor = 0;
-        m_transaction.clear();
+        m_cursor = nullptr;
+        m_transaction = nullptr;
     }
 }
 
@@ -258,8 +258,8 @@ void IDBTransaction::closeOpenCursors()
 {
     HashSet<IDBCursor*> cursors;
     cursors.swap(m_openCursors);
-    for (HashSet<IDBCursor*>::iterator i = cursors.begin(); i != cursors.end(); ++i)
-        (*i)->close();
+    for (auto& cursor : cursors)
+        cursor->close();
 }
 
 void IDBTransaction::registerRequest(IDBRequest* request)
@@ -297,8 +297,8 @@ void IDBTransaction::onAbort(PassRefPtr<IDBDatabaseError> prpError)
     }
 
     if (isVersionChange()) {
-        for (IDBObjectStoreMetadataMap::iterator it = m_objectStoreCleanupMap.begin(); it != m_objectStoreCleanupMap.end(); ++it)
-            it->key->setMetadata(it->value);
+        for (auto& objectStore : m_objectStoreCleanupMap)
+            objectStore.key->setMetadata(objectStore.value);
         m_database->setMetadata(m_previousMetadata);
         m_database->close();
     }
@@ -348,15 +348,12 @@ const AtomicString& IDBTransaction::modeToString(IndexedDB::TransactionMode mode
     switch (mode) {
     case IndexedDB::TransactionMode::ReadOnly:
         return IDBTransaction::modeReadOnly();
-        break;
 
     case IndexedDB::TransactionMode::ReadWrite:
         return IDBTransaction::modeReadWrite();
-        break;
 
     case IndexedDB::TransactionMode::VersionChange:
         return IDBTransaction::modeVersionChange();
-        break;
     }
 
     ASSERT_NOT_REACHED();
@@ -373,11 +370,11 @@ bool IDBTransaction::dispatchEvent(PassRefPtr<Event> event)
     m_state = Finished;
 
     // Break reference cycles.
-    for (IDBObjectStoreMap::iterator it = m_objectStoreMap.begin(); it != m_objectStoreMap.end(); ++it)
-        it->value->transactionFinished();
+    for (auto& objectStore : m_objectStoreMap)
+        objectStore.value->transactionFinished();
     m_objectStoreMap.clear();
-    for (IDBObjectStoreSet::iterator it = m_deletedObjectStores.begin(); it != m_deletedObjectStores.end(); ++it)
-        (*it)->transactionFinished();
+    for (auto& objectStore : m_deletedObjectStores)
+        objectStore->transactionFinished();
     m_deletedObjectStores.clear();
 
     Vector<RefPtr<EventTarget>> targets;
@@ -397,7 +394,7 @@ bool IDBTransaction::dispatchEvent(PassRefPtr<Event> event)
     return returnValue;
 }
 
-bool IDBTransaction::canSuspend() const
+bool IDBTransaction::canSuspendForPageCache() const
 {
     // FIXME: Technically we can suspend before the first request is schedule
     //        and after the complete/abort event is enqueued.
@@ -409,6 +406,11 @@ void IDBTransaction::stop()
     m_contextStopped = true;
 
     abort(IGNORE_EXCEPTION);
+}
+
+const char* IDBTransaction::activeDOMObjectName() const
+{
+    return "IDBTransaction";
 }
 
 void IDBTransaction::enqueueEvent(PassRefPtr<Event> event)

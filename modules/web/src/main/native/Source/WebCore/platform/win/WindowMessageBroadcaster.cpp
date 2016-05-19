@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -79,6 +79,7 @@ void WindowMessageBroadcaster::addListener(WindowMessageListener* listener)
 #pragma warning(disable: 4244 4312)
         m_originalWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(m_subclassedWindow, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(SubclassedWndProc)));
     }
+    ASSERT(m_originalWndProc);
 
     m_listeners.add(listener);
 }
@@ -108,6 +109,8 @@ LRESULT CALLBACK WindowMessageBroadcaster::SubclassedWndProc(HWND hwnd, UINT mes
 {
     WindowMessageBroadcaster* broadcaster = instancesMap().get(hwnd);
     ASSERT(broadcaster);
+    if (!broadcaster)
+        return 0;
 
     ListenerSet::const_iterator end = broadcaster->listeners().end();
     for (ListenerSet::const_iterator it = broadcaster->listeners().begin(); it != end; ++it)

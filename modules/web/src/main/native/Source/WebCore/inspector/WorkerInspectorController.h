@@ -31,8 +31,6 @@
 #ifndef WorkerInspectorController_h
 #define WorkerInspectorController_h
 
-#if ENABLE(INSPECTOR)
-
 #include "InspectorInstrumentationCookie.h"
 #include "InspectorWebAgentBase.h"
 #include <inspector/InspectorAgentRegistry.h>
@@ -42,10 +40,6 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
-
-namespace Inspector {
-class InspectorBackendDispatcher;
-}
 
 namespace WebCore {
 
@@ -60,10 +54,10 @@ class WorkerInspectorController final : public Inspector::InspectorEnvironment {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit WorkerInspectorController(WorkerGlobalScope&);
-    ~WorkerInspectorController();
+    virtual ~WorkerInspectorController();
 
     void connectFrontend();
-    void disconnectFrontend(Inspector::InspectorDisconnectReason);
+    void disconnectFrontend(Inspector::DisconnectReason);
     void dispatchMessageFromFrontend(const String&);
     void resume();
 
@@ -73,22 +67,23 @@ public:
     virtual Inspector::InspectorEvaluateHandler evaluateHandler() const override;
     virtual void willCallInjectedScriptFunction(JSC::ExecState*, const String& scriptName, int scriptLine) override;
     virtual void didCallInjectedScriptFunction(JSC::ExecState*) override;
+    virtual void frontendInitialized() override { }
+    virtual Ref<WTF::Stopwatch> executionStopwatch() override;
 
 private:
-    friend InstrumentingAgents* instrumentationForWorkerGlobalScope(WorkerGlobalScope*);
+    friend class InspectorInstrumentation;
 
     WorkerGlobalScope& m_workerGlobalScope;
     RefPtr<InstrumentingAgents> m_instrumentingAgents;
     std::unique_ptr<WebInjectedScriptManager> m_injectedScriptManager;
     WorkerRuntimeAgent* m_runtimeAgent;
-    Inspector::InspectorAgentRegistry m_agents;
-    std::unique_ptr<InspectorFrontendChannel> m_frontendChannel;
-    RefPtr<Inspector::InspectorBackendDispatcher> m_backendDispatcher;
+    Inspector::AgentRegistry m_agents;
+    std::unique_ptr<Inspector::FrontendChannel> m_frontendChannel;
+    Ref<WTF::Stopwatch> m_executionStopwatch;
+    RefPtr<Inspector::BackendDispatcher> m_backendDispatcher;
     Vector<InspectorInstrumentationCookie, 2> m_injectedScriptInstrumentationCookies;
 };
 
 }
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(WorkerInspectorController_h)

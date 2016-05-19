@@ -2,12 +2,13 @@
     Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
                   2004, 2005, 2007 Rob Buis <buis@kde.org>
     Copyright (C) Research In Motion Limited 2010. All rights reserved.
+    Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
 
     Based on khtml code by:
     Copyright (C) 1999 Antti Koivisto (koivisto@kde.org)
     Copyright (C) 1999-2003 Lars Knoll (knoll@kde.org)
     Copyright (C) 2002-2003 Dirk Mueller (mueller@kde.org)
-    Copyright (C) 2002 Apple Computer, Inc.
+    Copyright (C) 2002 Apple Inc.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -56,7 +57,7 @@ inline StyleFillData::StyleFillData(const StyleFillData& other)
 {
 }
 
-PassRef<StyleFillData> StyleFillData::copy() const
+Ref<StyleFillData> StyleFillData::copy() const
 {
     return adoptRef(*new StyleFillData(*this));
 }
@@ -75,8 +76,8 @@ bool StyleFillData::operator==(const StyleFillData& other) const
 StyleStrokeData::StyleStrokeData()
     : opacity(SVGRenderStyle::initialStrokeOpacity())
     , miterLimit(SVGRenderStyle::initialStrokeMiterLimit())
-    , width(SVGRenderStyle::initialStrokeWidth())
-    , dashOffset(SVGRenderStyle::initialStrokeDashOffset())
+    , width(RenderStyle::initialOneLength())
+    , dashOffset(RenderStyle::initialZeroLength())
     , dashArray(SVGRenderStyle::initialStrokeDashArray())
     , paintType(SVGRenderStyle::initialStrokePaintType())
     , paintColor(SVGRenderStyle::initialStrokePaintColor())
@@ -103,7 +104,7 @@ inline StyleStrokeData::StyleStrokeData(const StyleStrokeData& other)
 {
 }
 
-PassRef<StyleStrokeData> StyleStrokeData::copy() const
+Ref<StyleStrokeData> StyleStrokeData::copy() const
 {
     return adoptRef(*new StyleStrokeData(*this));
 }
@@ -136,7 +137,7 @@ inline StyleStopData::StyleStopData(const StyleStopData& other)
 {
 }
 
-PassRef<StyleStopData> StyleStopData::copy() const
+Ref<StyleStopData> StyleStopData::copy() const
 {
     return adoptRef(*new StyleStopData(*this));
 }
@@ -158,7 +159,7 @@ inline StyleTextData::StyleTextData(const StyleTextData& other)
 {
 }
 
-PassRef<StyleTextData> StyleTextData::copy() const
+Ref<StyleTextData> StyleTextData::copy() const
 {
     return adoptRef(*new StyleTextData(*this));
 }
@@ -185,7 +186,7 @@ inline StyleMiscData::StyleMiscData(const StyleMiscData& other)
 {
 }
 
-PassRef<StyleMiscData> StyleMiscData::copy() const
+Ref<StyleMiscData> StyleMiscData::copy() const
 {
     return adoptRef(*new StyleMiscData(*this));
 }
@@ -208,7 +209,7 @@ inline StyleShadowSVGData::StyleShadowSVGData(const StyleShadowSVGData& other)
 {
 }
 
-PassRef<StyleShadowSVGData> StyleShadowSVGData::copy() const
+Ref<StyleShadowSVGData> StyleShadowSVGData::copy() const
 {
     return adoptRef(*new StyleShadowSVGData(*this));
 }
@@ -237,7 +238,7 @@ inline StyleResourceData::StyleResourceData(const StyleResourceData& other)
 {
 }
 
-PassRef<StyleResourceData> StyleResourceData::copy() const
+Ref<StyleResourceData> StyleResourceData::copy() const
 {
     return adoptRef(*new StyleResourceData(*this));
 }
@@ -264,7 +265,7 @@ inline StyleInheritedResourceData::StyleInheritedResourceData(const StyleInherit
 {
 }
 
-PassRef<StyleInheritedResourceData> StyleInheritedResourceData::copy() const
+Ref<StyleInheritedResourceData> StyleInheritedResourceData::copy() const
 {
     return adoptRef(*new StyleInheritedResourceData(*this));
 }
@@ -274,6 +275,45 @@ bool StyleInheritedResourceData::operator==(const StyleInheritedResourceData& ot
     return markerStart == other.markerStart
         && markerMid == other.markerMid
         && markerEnd == other.markerEnd;
+}
+
+StyleLayoutData::StyleLayoutData()
+    : cx(RenderStyle::initialZeroLength())
+    , cy(RenderStyle::initialZeroLength())
+    , r(RenderStyle::initialZeroLength())
+    , rx(RenderStyle::initialZeroLength())
+    , ry(RenderStyle::initialZeroLength())
+    , x(RenderStyle::initialZeroLength())
+    , y(RenderStyle::initialZeroLength())
+{
+}
+
+inline StyleLayoutData::StyleLayoutData(const StyleLayoutData& other)
+    : RefCounted<StyleLayoutData>()
+    , cx(other.cx)
+    , cy(other.cy)
+    , r(other.r)
+    , rx(other.rx)
+    , ry(other.ry)
+    , x(other.x)
+    , y(other.y)
+{
+}
+
+Ref<StyleLayoutData> StyleLayoutData::copy() const
+{
+    return adoptRef(*new StyleLayoutData(*this));
+}
+
+bool StyleLayoutData::operator==(const StyleLayoutData& other) const
+{
+    return cx == other.cx
+        && cy == other.cy
+        && r == other.r
+        && rx == other.rx
+        && ry == other.ry
+        && x == other.x
+        && y == other.y;
 }
 
 }

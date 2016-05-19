@@ -28,6 +28,7 @@
 
 #include "LLIntThunks.h"
 #include "JSCInlines.h"
+#include "ProtoCallFrame.h"
 #include "RegisterPreservationWrapperGenerator.h"
 #include <wtf/PrintStream.h>
 
@@ -42,9 +43,42 @@ JITCode::~JITCode()
 {
 }
 
+const char* JITCode::typeName(JITType jitType)
+{
+    switch (jitType) {
+    case None:
+        return "None";
+    case HostCallThunk:
+        return "Host";
+    case InterpreterThunk:
+        return "LLInt";
+    case BaselineJIT:
+        return "Baseline";
+    case DFGJIT:
+        return "DFG";
+    case FTLJIT:
+        return "FTL";
+    default:
+        CRASH();
+        return "";
+    }
+}
+
+void JITCode::validateReferences(const TrackedReferences&)
+{
+}
+
 JSValue JITCode::execute(VM* vm, ProtoCallFrame* protoCallFrame)
 {
-    JSValue result = JSValue::decode(callToJavaScript(executableAddress(), vm, protoCallFrame));
+    void* entryAddress;
+    JSFunction* function = jsDynamicCast<JSFunction*>(protoCallFrame->callee());
+
+    if (!function || !protoCallFrame->needArityCheck()) {
+        ASSERT(!protoCallFrame->needArityCheck());
+        entryAddress = executableAddress();
+    } else
+        entryAddress = addressForCall(*vm, function->executable(), MustCheckArity, RegisterPreservationNotRequired).executableAddress();
+    JSValue result = JSValue::decode(vmEntryToJavaScript(entryAddress, vm, protoCallFrame));
     return vm->exception() ? jsNull() : result;
 }
 
@@ -224,29 +258,7 @@ namespace WTF {
 
 void printInternal(PrintStream& out, JSC::JITCode::JITType type)
 {
-    switch (type) {
-    case JSC::JITCode::None:
-        out.print("None");
-        return;
-    case JSC::JITCode::HostCallThunk:
-        out.print("Host");
-        return;
-    case JSC::JITCode::InterpreterThunk:
-        out.print("LLInt");
-        return;
-    case JSC::JITCode::BaselineJIT:
-        out.print("Baseline");
-        return;
-    case JSC::JITCode::DFGJIT:
-        out.print("DFG");
-        return;
-    case JSC::JITCode::FTLJIT:
-        out.print("FTL");
-        return;
-    default:
-        CRASH();
-        return;
-    }
+    out.print(JSC::JITCode::typeName(type));
 }
 
 } // namespace WTF

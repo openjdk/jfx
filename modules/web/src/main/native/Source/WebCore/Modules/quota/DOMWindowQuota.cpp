@@ -60,8 +60,9 @@ DOMWindowQuota* DOMWindowQuota::from(DOMWindow* window)
 {
     DOMWindowQuota* supplement = static_cast<DOMWindowQuota*>(Supplement<DOMWindow>::from(window, supplementName()));
     if (!supplement) {
-        supplement = new DOMWindowQuota(window);
-        provideTo(window, supplementName(), adoptPtr(supplement));
+        auto newSupplement = std::make_unique<DOMWindowQuota>(window);
+        supplement = newSupplement.get();
+        provideTo(window, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }

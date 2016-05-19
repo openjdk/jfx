@@ -1,5 +1,5 @@
 # Copyright (C) 2010 Google Inc. All rights reserved.
-# Copyright (C) 2013 Apple Inc. All rights reserved.
+# Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -49,7 +49,7 @@ class WinPort(ApplePort):
 
     VERSION_FALLBACK_ORDER = ["win-xp", "win-vista", "win-7sp0", "win"]
 
-    ARCHITECTURES = ['x86']
+    ARCHITECTURES = ['x86', 'x86_64']
 
     CRASH_LOG_PREFIX = "CrashLog"
 
@@ -87,21 +87,22 @@ class WinPort(ApplePort):
             fallback_names.append('mac-wk2')
             # Note we do not add 'wk2' here, even though it's included in _skipped_search_paths().
         # FIXME: Perhaps we should get this list from MacPort?
-        fallback_names.extend(['mac-mountainlion', 'mac'])
+        fallback_names.append('mac')
         return map(self._webkit_baseline_path, fallback_names)
+
+    def setup_environ_for_server(self, server_name=None):
+        env = super(WinPort, self).setup_environ_for_server(server_name)
+        env['XML_CATALOG_FILES'] = ''  # work around missing /etc/catalog <rdar://problem/4292995>
+        return env
 
     def operating_system(self):
         return 'win'
 
     def default_child_processes(self):
-        return self._executive.cpu_count() / 2
+        return 1
 
     def show_results_html_file(self, results_filename):
         self._run_script('run-safari', [abspath_to_uri(SystemHost().platform, results_filename)])
-
-    # FIXME: webkitperl/httpd.pm installs /usr/lib/apache/libphp4.dll on cycwin automatically
-    # as part of running old-run-webkit-tests.  That's bad design, but we may need some similar hack.
-    # We might use setup_environ_for_server for such a hack (or modify apache_http_server.py).
 
     def _runtime_feature_list(self):
         supported_features_command = [self._path_to_driver(), '--print-supported-features']
@@ -117,9 +118,16 @@ class WinPort(ApplePort):
             return None
         return match_object.group('features_string').split(' ')
 
-    # Note: These are based on the stock Cygwin locations for these files.
+    # Note: These are based on the stock XAMPP locations for these files.
     def _uses_apache(self):
-        return False
+        return True
+
+    def _path_to_apache(self):
+        httpdPath = "C:/xampp/apache/bin/httpd.exe"
+        if self._filesystem.exists(httpdPath):
+            return httpdPath
+        _log.error("Could not find apache. Not installed or unknown path.")
+        return None
 
     def _path_to_lighttpd(self):
         return "/usr/sbin/lighttpd"

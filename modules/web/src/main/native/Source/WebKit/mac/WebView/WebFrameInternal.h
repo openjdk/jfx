@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -73,7 +73,7 @@ WebCore::EditableLinkBehavior core(WebKitEditableLinkBehavior);
 WebCore::TextDirectionSubmenuInclusionBehavior core(WebTextDirectionSubmenuInclusionBehavior);
 
 #if defined(__cplusplus) && PLATFORM(IOS)
-PassOwnPtr<Vector<Vector<String>>> vectorForDictationPhrasesArray(NSArray *);
+Vector<Vector<String>> vectorForDictationPhrasesArray(NSArray *);
 #endif
 
 WebView *getWebView(WebFrame *webFrame);
@@ -101,7 +101,7 @@ WebView *getWebView(WebFrame *webFrame);
 @interface WebFrame (WebInternal)
 
 + (void)_createMainFrameWithPage:(WebCore::Page*)page frameName:(const WTF::String&)name frameView:(WebFrameView *)frameView;
-+ (PassRefPtr<WebCore::Frame>)_createSubframeWithOwnerElement:(WebCore::HTMLFrameOwnerElement*)ownerElement frameName:(const WTF::String&)name frameView:(WebFrameView *)frameView;
++ (Ref<WebCore::Frame>)_createSubframeWithOwnerElement:(WebCore::HTMLFrameOwnerElement*)ownerElement frameName:(const WTF::String&)name frameView:(WebFrameView *)frameView;
 - (id)_initWithWebFrameView:(WebFrameView *)webFrameView webView:(WebView *)webView;
 
 - (void)_clearCoreFrame;

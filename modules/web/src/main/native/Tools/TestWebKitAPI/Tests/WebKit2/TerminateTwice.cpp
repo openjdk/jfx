@@ -24,10 +24,16 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "PlatformUtilities.h"
 #include "PlatformWebView.h"
 
 namespace TestWebKitAPI {
+
+// Disabled in debug mode while investigating <https://bugs.webkit.org/show_bug.cgi?id=136012>.
+#ifdef NDEBUG
 
 static bool loaded;
 
@@ -62,5 +68,8 @@ TEST(WebKit2, TerminateTwice)
     WKPageTerminate(webView.page());
 }
 
+#endif
+
 } // namespace TestWebKitAPI
 
+#endif

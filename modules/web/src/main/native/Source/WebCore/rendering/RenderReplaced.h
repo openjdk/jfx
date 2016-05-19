@@ -30,7 +30,7 @@ class RenderReplaced : public RenderBox {
 public:
     virtual ~RenderReplaced();
 
-    virtual LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ComputeActual) const override;
+    virtual LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ComputeActual) const override;
     virtual LayoutUnit computeReplacedLogicalHeight() const override;
 
     LayoutRect replacedContentRect(const LayoutSize& intrinsicSize) const;
@@ -39,16 +39,14 @@ public:
     bool hasReplacedLogicalHeight() const;
 
 protected:
-    RenderReplaced(Element&, PassRef<RenderStyle>);
-    RenderReplaced(Element&, PassRef<RenderStyle>, const LayoutSize& intrinsicSize);
-    RenderReplaced(Document&, PassRef<RenderStyle>, const LayoutSize& intrinsicSize);
-
-    virtual void willBeDestroyed() override;
+    RenderReplaced(Element&, Ref<RenderStyle>&&);
+    RenderReplaced(Element&, Ref<RenderStyle>&&, const LayoutSize& intrinsicSize);
+    RenderReplaced(Document&, Ref<RenderStyle>&&, const LayoutSize& intrinsicSize);
 
     virtual void layout() override;
 
     virtual LayoutSize intrinsicSize() const override final { return m_intrinsicSize; }
-    virtual void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio, bool& isPercentageIntrinsicSize) const override;
+    virtual void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const override;
 
     virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override final;
 
@@ -68,6 +66,8 @@ protected:
     bool shouldPaint(PaintInfo&, const LayoutPoint&);
     LayoutRect localSelectionRect(bool checkWhetherSelected = true) const; // This is in local coordinates, but it's a physical rect (so the top left corner is physical top left).
 
+    virtual void willBeDestroyed() override;
+
 private:
     virtual RenderBox* embeddedContentBox() const { return 0; }
     virtual const char* renderName() const override { return "RenderReplaced"; }
@@ -79,18 +79,20 @@ private:
 
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
 
-    virtual VisiblePosition positionForPoint(const LayoutPoint&) override final;
+    virtual VisiblePosition positionForPoint(const LayoutPoint&, const RenderRegion*) override final;
 
     virtual bool canBeSelectionLeaf() const override { return true; }
 
     virtual LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) override final;
-    void computeAspectRatioInformationForRenderBox(RenderBox*, FloatSize& constrainedSize, double& intrinsicRatio, bool& isPercentageIntrinsicSize) const;
+    void computeAspectRatioInformationForRenderBox(RenderBox*, FloatSize& constrainedSize, double& intrinsicRatio) const;
+
+    virtual bool shouldDrawSelectionTint() const;
 
     mutable LayoutSize m_intrinsicSize;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderReplaced, isRenderReplaced())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderReplaced, isRenderReplaced())
 
 #endif

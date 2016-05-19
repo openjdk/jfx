@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,16 +30,15 @@
 
 #include "WebGLShader.h"
 
-#include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-class WebGLProgram : public WebGLSharedObject {
+class WebGLProgram final : public WebGLSharedObject {
 public:
     virtual ~WebGLProgram();
 
-    static PassRefPtr<WebGLProgram> create(WebGLRenderingContext*);
+    static Ref<WebGLProgram> create(WebGLRenderingContextBase*);
 
     unsigned numActiveAttribLocations();
     GC3Dint getActiveAttribLocation(GC3Duint index);
@@ -62,7 +61,7 @@ public:
     bool detachShader(WebGLShader*);
 
 protected:
-    WebGLProgram(WebGLRenderingContext*);
+    WebGLProgram(WebGLRenderingContextBase*);
 
     virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
 

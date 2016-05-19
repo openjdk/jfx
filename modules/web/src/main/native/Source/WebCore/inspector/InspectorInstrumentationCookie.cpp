@@ -31,20 +31,17 @@
 #include "config.h"
 #include "InspectorInstrumentationCookie.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "InstrumentingAgents.h"
 
 namespace WebCore {
 
 InspectorInstrumentationCookie::InspectorInstrumentationCookie()
-    : m_instrumentingAgents(nullptr)
-    , m_timelineAgentId(0)
+    : m_timelineAgentId(0)
 {
 }
 
-InspectorInstrumentationCookie::InspectorInstrumentationCookie(InstrumentingAgents* agents, int timelineAgentId)
-    : m_instrumentingAgents(agents)
+InspectorInstrumentationCookie::InspectorInstrumentationCookie(InstrumentingAgents& agents, int timelineAgentId)
+    : m_instrumentingAgents(&agents)
     , m_timelineAgentId(timelineAgentId)
 {
 }
@@ -70,5 +67,3 @@ InspectorInstrumentationCookie::~InspectorInstrumentationCookie()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

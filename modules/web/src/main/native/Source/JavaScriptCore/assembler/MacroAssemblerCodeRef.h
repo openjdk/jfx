@@ -36,7 +36,7 @@
 
 // ASSERT_VALID_CODE_POINTER checks that ptr is a non-null pointer, and that it is a valid
 // instruction address on the platform (for example, check any alignment requirements).
-#if CPU(ARM_THUMB2) && !ENABLE(LLINT_C_LOOP)
+#if CPU(ARM_THUMB2) && ENABLE(JIT)
 // ARM instructions must be 16-bit aligned. Thumb2 code pointers to be loaded into
 // into the processor are decorated with the bottom bit set, while traditional ARM has
 // the lower bit clear. Since we don't know what kind of pointer, we check for both
@@ -132,6 +132,12 @@ public:
         ASSERT_VALID_CODE_POINTER(m_value);
     }
 
+    template<typename returnType, typename argType1, typename argType2, typename argType3, typename argType4, typename argType5, typename argType6>
+    FunctionPtr(returnType(*value)(argType1, argType2, argType3, argType4, argType5, argType6))
+        : m_value((void*)value)
+    {
+        ASSERT_VALID_CODE_POINTER(m_value);
+    }
 // MSVC doesn't seem to treat functions with different calling conventions as
 // different types; these methods already defined for fastcall, below.
 #if CALLING_CONVENTION_IS_STDCALL && !OS(WINDOWS)
@@ -293,12 +299,10 @@ public:
         return result;
     }
 
-#if ENABLE(LLINT)
-    static MacroAssemblerCodePtr createLLIntCodePtr(LLIntCode codeId)
+    static MacroAssemblerCodePtr createLLIntCodePtr(OpcodeID codeId)
     {
         return createFromExecutableAddress(LLInt::getCodePtr(codeId));
     }
-#endif
 
     explicit MacroAssemblerCodePtr(ReturnAddressPtr ra)
         : m_value(ra.value())
@@ -314,11 +318,7 @@ public:
     void* dataLocation() const { ASSERT_VALID_CODE_POINTER(m_value); return m_value; }
 #endif
 
-    typedef void* (MacroAssemblerCodePtr::*UnspecifiedBoolType);
-    operator UnspecifiedBoolType*() const
-    {
-        return !!m_value ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0;
-    }
+    explicit operator bool() const { return m_value; }
 
     bool operator==(const MacroAssemblerCodePtr& other) const
     {
@@ -410,13 +410,11 @@ public:
         return MacroAssemblerCodeRef(codePtr);
     }
 
-#if ENABLE(LLINT)
     // Helper for creating self-managed code refs from LLInt.
-    static MacroAssemblerCodeRef createLLIntCodeRef(LLIntCode codeId)
+    static MacroAssemblerCodeRef createLLIntCodeRef(OpcodeID codeId)
     {
         return createSelfManagedCodeRef(MacroAssemblerCodePtr::createFromExecutableAddress(LLInt::getCodePtr(codeId)));
     }
-#endif
 
     ExecutableMemoryHandle* executableMemory() const
     {
@@ -440,11 +438,7 @@ public:
         return JSC::tryToDisassemble(m_codePtr, size(), prefix, WTF::dataFile());
     }
 
-    typedef void* (MacroAssemblerCodeRef::*UnspecifiedBoolType);
-    operator UnspecifiedBoolType*() const
-    {
-        return !!m_codePtr ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0;
-    }
+    explicit operator bool() const { return !!m_codePtr; }
 
     void dump(PrintStream& out) const
     {

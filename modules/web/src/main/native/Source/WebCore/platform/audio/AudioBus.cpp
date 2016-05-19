@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -46,13 +46,13 @@ using namespace VectorMath;
 
 const unsigned MaxBusChannels = 32;
 
-PassRefPtr<AudioBus> AudioBus::create(unsigned numberOfChannels, size_t length, bool allocate)
+RefPtr<AudioBus> AudioBus::create(unsigned numberOfChannels, size_t length, bool allocate)
 {
     ASSERT(numberOfChannels <= MaxBusChannels);
     if (numberOfChannels > MaxBusChannels)
-        return 0;
+        return nullptr;
 
-    return adoptRef(new AudioBus(numberOfChannels, length, allocate));
+    return adoptRef(*new AudioBus(numberOfChannels, length, allocate));
 }
 
 AudioBus::AudioBus(unsigned numberOfChannels, size_t length, bool allocate)
@@ -65,7 +65,7 @@ AudioBus::AudioBus(unsigned numberOfChannels, size_t length, bool allocate)
 
     for (unsigned i = 0; i < numberOfChannels; ++i) {
         auto channel = allocate ? std::make_unique<AudioChannel>(length) : std::make_unique<AudioChannel>(nullptr, length);
-        m_channels.append(std::move(channel));
+        m_channels.append(WTF::move(channel));
     }
 
     m_layout = LayoutCanonical; // for now this is the only layout we define
@@ -167,7 +167,7 @@ bool AudioBus::topologyMatches(const AudioBus& bus) const
     return true;
 }
 
-PassRefPtr<AudioBus> AudioBus::createBufferFromRange(const AudioBus* sourceBuffer, unsigned startFrame, unsigned endFrame)
+RefPtr<AudioBus> AudioBus::createBufferFromRange(const AudioBus* sourceBuffer, unsigned startFrame, unsigned endFrame)
 {
     size_t numberOfSourceFrames = sourceBuffer->length();
     unsigned numberOfChannels = sourceBuffer->numberOfChannels();
@@ -176,7 +176,7 @@ PassRefPtr<AudioBus> AudioBus::createBufferFromRange(const AudioBus* sourceBuffe
     bool isRangeSafe = startFrame < endFrame && endFrame <= numberOfSourceFrames;
     ASSERT(isRangeSafe);
     if (!isRangeSafe)
-        return 0;
+        return nullptr;
 
     size_t rangeLength = endFrame - startFrame;
 
@@ -521,12 +521,12 @@ void AudioBus::copyWithSampleAccurateGainValuesFrom(const AudioBus &sourceBus, f
     }
 }
 
-PassRefPtr<AudioBus> AudioBus::createBySampleRateConverting(const AudioBus* sourceBus, bool mixToMono, double newSampleRate)
+RefPtr<AudioBus> AudioBus::createBySampleRateConverting(const AudioBus* sourceBus, bool mixToMono, double newSampleRate)
 {
     // sourceBus's sample-rate must be known.
     ASSERT(sourceBus && sourceBus->sampleRate());
     if (!sourceBus || !sourceBus->sampleRate())
-        return 0;
+        return nullptr;
 
     double sourceSampleRate = sourceBus->sampleRate();
     double destinationSampleRate = newSampleRate;
@@ -584,7 +584,7 @@ PassRefPtr<AudioBus> AudioBus::createBySampleRateConverting(const AudioBus* sour
     return destinationBus;
 }
 
-PassRefPtr<AudioBus> AudioBus::createByMixingToMono(const AudioBus* sourceBus)
+RefPtr<AudioBus> AudioBus::createByMixingToMono(const AudioBus* sourceBus)
 {
     if (sourceBus->isSilent())
         return create(1, sourceBus->length());
@@ -613,7 +613,7 @@ PassRefPtr<AudioBus> AudioBus::createByMixingToMono(const AudioBus* sourceBus)
     }
 
     ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 bool AudioBus::isSilent() const

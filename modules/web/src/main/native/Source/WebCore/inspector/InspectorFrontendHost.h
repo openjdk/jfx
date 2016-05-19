@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -45,13 +45,13 @@ class Page;
 
 class InspectorFrontendHost : public RefCounted<InspectorFrontendHost> {
 public:
-    static PassRefPtr<InspectorFrontendHost> create(InspectorFrontendClient* client, Page* frontendPage)
+    static Ref<InspectorFrontendHost> create(InspectorFrontendClient* client, Page* frontendPage)
     {
-        return adoptRef(new InspectorFrontendHost(client, frontendPage));
+        return adoptRef(*new InspectorFrontendHost(client, frontendPage));
     }
 
-    ~InspectorFrontendHost();
-    void disconnectClient();
+    WEBCORE_EXPORT ~InspectorFrontendHost();
+    WEBCORE_EXPORT void disconnectClient();
 
     void loaded();
     void requestSetDockSide(const String&);
@@ -64,6 +64,7 @@ public:
     void setAttachedWindowWidth(unsigned);
     void setToolbarHeight(unsigned);
 
+    void startWindowDrag();
     void moveWindowBy(float x, float y) const;
 
     String localizedStringsURL();
@@ -83,9 +84,8 @@ public:
     void sendMessageToBackend(const String& message);
     void dispatchEventAsContextMenuEvent(Event*);
 
-    String loadResourceSynchronously(const String& url);
-
     bool isUnderTest();
+    void unbufferedLog(const String& message);
 
     void beep();
 
@@ -96,7 +96,7 @@ private:
 #if ENABLE(CONTEXT_MENUS)
     friend class FrontendMenuProvider;
 #endif
-    InspectorFrontendHost(InspectorFrontendClient*, Page* frontendPage);
+    WEBCORE_EXPORT InspectorFrontendHost(InspectorFrontendClient*, Page* frontendPage);
 
     InspectorFrontendClient* m_client;
     Page* m_frontendPage;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,6 @@
 
 #ifndef DFGOSRExitCompilerCommon_h
 #define DFGOSRExitCompilerCommon_h
-
-#include <wtf/Platform.h>
 
 #if ENABLE(DFG_JIT)
 

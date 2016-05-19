@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,7 +30,7 @@
 
 #include "MediaPlayerPrivateFullscreenWindow.h"
 
-#include <WebCore/HTMLMediaElement.h>
+#include <WebCore/HTMLVideoElement.h>
 #include <WebCore/Image.h>
 #include <WebCore/IntPoint.h>
 #include <WebCore/IntSize.h>
@@ -107,8 +107,8 @@ public:
     FullscreenVideoController();
     virtual ~FullscreenVideoController();
 
-    void setMediaElement(WebCore::HTMLMediaElement*);
-    WebCore::HTMLMediaElement* mediaElement() const { return m_mediaElement.get(); }
+    void setVideoElement(WebCore::HTMLVideoElement*);
+    WebCore::HTMLVideoElement* videoElement() const { return m_videoElement.get(); }
 
     void enterFullscreen();
     void exitFullscreen();
@@ -138,7 +138,7 @@ private:
     static void registerHUDWindowClass();
     static LRESULT CALLBACK hudWndProc(HWND, UINT message, WPARAM, LPARAM);
     void createHUDWindow();
-    void timerFired(WebCore::Timer<FullscreenVideoController>*);
+    void timerFired();
 
     void togglePlay();
     void draw();
@@ -149,17 +149,17 @@ private:
     void onMouseUp(const WebCore::IntPoint&);
     void onKeyDown(int virtualKey);
 
-    RefPtr<WebCore::HTMLMediaElement> m_mediaElement;
+    RefPtr<WebCore::HTMLVideoElement> m_videoElement;
 
     HWND m_hudWindow;
     GDIObject<HBITMAP> m_bitmap;
     WebCore::IntSize m_fullscreenSize;
     WebCore::IntPoint m_hudPosition;
-    OwnPtr<WebCore::MediaPlayerPrivateFullscreenWindow> m_fullscreenWindow;
+    std::unique_ptr<WebCore::MediaPlayerPrivateFullscreenWindow> m_fullscreenWindow;
 
     class LayerClient;
     friend class LayerClient;
-    OwnPtr<LayerClient> m_layerClient;
+    std::unique_ptr<LayerClient> m_layerClient;
     RefPtr<WebCore::PlatformCALayer> m_rootChild;
 
     HUDButton m_playPauseButton;
@@ -174,7 +174,7 @@ private:
     HUDWidget* m_hitWidget;
     WebCore::IntPoint m_moveOffset;
     bool m_movingWindow;
-    WebCore::Timer<FullscreenVideoController> m_timer;
+    WebCore::Timer m_timer;
 };
 
 #endif

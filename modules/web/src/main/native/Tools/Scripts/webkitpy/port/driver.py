@@ -37,6 +37,7 @@ import os
 
 from webkitpy.common.system import path
 from webkitpy.common.system.profiler import ProfilerFactory
+from webkitpy.layout_tests.servers.web_platform_test_server import WebPlatformTestServer
 
 
 _log = logging.getLogger(__name__)
@@ -107,6 +108,12 @@ class DriverOutput(object):
         for pattern in patterns:
             self.text = re.sub(pattern[0], pattern[1], self.text)
 
+    def strip_stderror_patterns(self, patterns):
+        if not self.error:
+            return
+        for pattern in patterns:
+            self.error = re.sub(pattern[0], pattern[1], self.error)
+
 class Driver(object):
     """object for running test(s) using DumpRenderTree/WebKitTestRunner."""
 
@@ -124,16 +131,14 @@ class Driver(object):
         self._no_timeout = no_timeout
 
         self._driver_tempdir = None
-        # WebKitTestRunner can report back subprocess crashes by printing
-        # "#CRASHED - PROCESSNAME".  Since those can happen at any time
-        # and ServerProcess won't be aware of them (since the actual tool
-        # didn't crash, just a subprocess) we record the crashed subprocess name here.
+        # WebKitTestRunner/LayoutTestRelay can report back subprocess crashes by printing
+        # "#CRASHED - PROCESSNAME".  Since those can happen at any time and ServerProcess
+        # won't be aware of them (since the actual tool didn't crash, just a subprocess)
+        # we record the crashed subprocess name here.
         self._crashed_process_name = None
         self._crashed_pid = None
 
-        # WebKitTestRunner can report back subprocesses that became unresponsive
-        # This could mean they crashed.
-        self._subprocess_was_unresponsive = False
+        self._driver_timed_out = False
 
         # stderr reading is scoped on a per-test (not per-block) basis, so we store the accumulated
         # stderr output, as well as if we've seen #EOF on this driver instance.
@@ -151,6 +156,9 @@ class Driver(object):
         else:
             self._profiler = None
 
+        self.web_platform_test_server_doc_root = self._port.web_platform_test_server_doc_root()
+        self.web_platform_test_server_base_url = self._port.web_platform_test_server_base_url()
+
     def __del__(self):
         self.stop()
 
@@ -166,11 +174,22 @@ class Driver(object):
         start_time = time.time()
         self.start(driver_input.should_run_pixel_test, driver_input.args)
         test_begin_time = time.time()
+        self._driver_timed_out = False
+        self._crash_report_from_driver = None
         self.error_from_test = str()
         self.err_seen_eof = False
 
         command = self._command_from_driver_input(driver_input)
-        deadline = test_begin_time + int(driver_input.timeout) / 1000.0
+
+        # Certain timeouts are detected by the tool itself; tool detection is better,
+        # because results contain partial output in this case. Make script timeout longer
+        # by 5 seconds to avoid racing for which timeout is detected first.
+        # FIXME: It's not the job of the driver to decide what the timeouts should be.
+        # Move the additional timeout to driver_input.
+        if self._no_timeout:
+            deadline = test_begin_time + 60 * 60 * 24 * 7  # 7 days. Using sys.maxint causes a hang.
+        else:
+            deadline = test_begin_time + int(driver_input.timeout) / 1000.0 + 5
 
         self._server_process.write(command)
         text, audio = self._read_first_block(deadline)  # First block is either text or audio
@@ -178,6 +197,7 @@ class Driver(object):
 
         crashed = self.has_crashed()
         timed_out = self._server_process.timed_out
+        driver_timed_out = self._driver_timed_out
         pid = self._server_process.pid()
 
         if stop_when_done or crashed or timed_out:
@@ -191,16 +211,14 @@ class Driver(object):
             self._server_process = None
 
         crash_log = None
-        if crashed:
+        if self._crash_report_from_driver:
+            crash_log = self._crash_report_from_driver
+        elif crashed:
             self.error_from_test, crash_log = self._get_crash_log(text, self.error_from_test, newer_than=start_time)
-
             # If we don't find a crash log use a placeholder error message instead.
             if not crash_log:
                 pid_str = str(self._crashed_pid) if self._crashed_pid else "unknown pid"
                 crash_log = 'No crash log found for %s:%s.\n' % (self._crashed_process_name, pid_str)
-                # If we were unresponsive append a message informing there may not have been a crash.
-                if self._subprocess_was_unresponsive:
-                    crash_log += 'Process failed to become responsive before timing out.\n'
 
                 # Print stdout and stderr to the placeholder crash log; we want as much context as possible.
                 if self.error_from_test:
@@ -208,7 +226,7 @@ class Driver(object):
 
         return DriverOutput(text, image, actual_image_hash, audio,
             crash=crashed, test_time=time.time() - test_begin_time, measurements=self._measurements,
-            timeout=timed_out, error=self.error_from_test,
+            timeout=timed_out or driver_timed_out, error=self.error_from_test,
             crashed_process_name=self._crashed_process_name,
             crashed_pid=self._crashed_pid, crash_log=crash_log, pid=pid)
 
@@ -217,11 +235,12 @@ class Driver(object):
 
     def _command_wrapper(self):
         # Hook for injecting valgrind or other runtime instrumentation, used by e.g. tools/valgrind/valgrind_tests.py.
-        if self._port.get_option('wrapper'):
-            return shlex.split(self._port.get_option('wrapper'))
+        wrapper_arguments = []
         if self._profiler:
-            return self._profiler.wrapper_arguments()
-        return []
+            wrapper_arguments = self._profiler.wrapper_arguments()
+        if self._port.get_option('wrapper'):
+            return shlex.split(self._port.get_option('wrapper')) + wrapper_arguments
+        return wrapper_arguments
 
     HTTP_DIR = "http/tests/"
     HTTP_LOCAL_DIR = "http/tests/local/"
@@ -229,8 +248,14 @@ class Driver(object):
     def is_http_test(self, test_name):
         return test_name.startswith(self.HTTP_DIR) and not test_name.startswith(self.HTTP_LOCAL_DIR)
 
+    def is_web_platform_test(self, test_name):
+        return test_name.startswith(self.web_platform_test_server_doc_root)
+
     def test_to_uri(self, test_name):
         """Convert a test name to a URI."""
+        if self.is_web_platform_test(test_name):
+            return self.web_platform_test_server_base_url + test_name[len(self.web_platform_test_server_doc_root):]
+
         if not self.is_http_test(test_name):
             return path.abspath_to_uri(self._port.host.platform, self._port.abspath_for_test(test_name))
 
@@ -254,6 +279,8 @@ class Driver(object):
             if not prefix.endswith('/'):
                 prefix += '/'
             return uri[len(prefix):]
+        if uri.startswith(self.web_platform_test_server_base_url):
+            return uri.replace(self.web_platform_test_server_base_url, self.web_platform_test_server_doc_root)
         if uri.startswith("http://"):
             return uri.replace('http://127.0.0.1:8000/', self.HTTP_DIR)
         if uri.startswith("https://"):
@@ -292,6 +319,7 @@ class Driver(object):
         #environment['DUMPRENDERTREE_TEMP'] = str(self._port._driver_tempdir_for_environment())
         environment['DUMPRENDERTREE_TEMP'] = str(self._driver_tempdir)
         environment['LOCAL_RESOURCE_ROOT'] = self._port.layout_tests_dir()
+        environment['ASAN_OPTIONS'] = "allocator_may_return_null=1"
         if 'WEBKIT_OUTPUTDIR' in os.environ:
             environment['WEBKIT_OUTPUTDIR'] = os.environ['WEBKIT_OUTPUTDIR']
         if self._profiler:
@@ -344,7 +372,10 @@ class Driver(object):
             cmd.append('--threaded')
         if self._no_timeout:
             cmd.append('--no-timeout')
-        # FIXME: We need to pass --timeout=SECONDS to WebKitTestRunner for WebKit2.
+
+        for allowed_host in self._port.allowed_hosts():
+            cmd.append('--allowed-host')
+            cmd.append(allowed_host)
 
         cmd.extend(self._port.get_option('additional_drt_flag', []))
         cmd.extend(self._port.additional_drt_flag())
@@ -354,27 +385,36 @@ class Driver(object):
         cmd.append('-')
         return cmd
 
-    def _check_for_driver_crash(self, error_line):
+    def _check_for_driver_timeout(self, out_line):
+        if out_line == "FAIL: Timed out waiting for notifyDone to be called\n":
+            self._driver_timed_out = True
+
+    def _check_for_address_sanitizer_violation(self, error_line):
+        if "ERROR: AddressSanitizer" in error_line:
+            return True
+
+    def _check_for_driver_crash_or_unresponsiveness(self, error_line):
         if error_line == "#CRASHED\n":
-            # This is used on Windows to report that the process has crashed
-            # See http://trac.webkit.org/changeset/65537.
             self._crashed_process_name = self._server_process.name()
             self._crashed_pid = self._server_process.pid()
-        elif (error_line.startswith("#CRASHED - ")
-            or error_line.startswith("#PROCESS UNRESPONSIVE - ")):
-            # WebKitTestRunner uses this to report that the WebProcess subprocess crashed.
-            match = re.match('#(?:CRASHED|PROCESS UNRESPONSIVE) - (\S+)', error_line)
+            return True
+        elif error_line.startswith("#CRASHED - "):
+            match = re.match('#CRASHED - (\S+)', error_line)
             self._crashed_process_name = match.group(1) if match else 'WebProcess'
             match = re.search('pid (\d+)', error_line)
-            pid = int(match.group(1)) if match else None
-            self._crashed_pid = pid
-            # FIXME: delete this after we're sure this code is working :)
-            _log.debug('%s crash, pid = %s, error_line = %s' % (self._crashed_process_name, str(pid), error_line))
-            if error_line.startswith("#PROCESS UNRESPONSIVE - "):
-                self._subprocess_was_unresponsive = True
-                self._port.sample_process(self._crashed_process_name, self._crashed_pid)
-                # We want to show this since it's not a regular crash and probably we don't have a crash log.
-                self.error_from_test += error_line
+            self._crashed_pid = int(match.group(1)) if match else None
+            _log.debug('%s crash, pid = %s' % (self._crashed_process_name, str(self._crashed_pid)))
+            return True
+        elif error_line.startswith("#PROCESS UNRESPONSIVE - "):
+            match = re.match('#PROCESS UNRESPONSIVE - (\S+)', error_line)
+            child_process_name = match.group(1) if match else 'WebProcess'
+            match = re.search('pid (\d+)', error_line)
+            child_process_pid = int(match.group(1)) if match else None
+            _log.debug('%s is unresponsive, pid = %s' % (child_process_name, str(child_process_pid)))
+            self._driver_timed_out = True
+            if child_process_pid:
+                self._port.sample_process(child_process_name, child_process_pid)
+            self.error_from_test += error_line
             return True
         return self.has_crashed()
 
@@ -382,7 +422,7 @@ class Driver(object):
         # FIXME: performance tests pass in full URLs instead of test names.
         if driver_input.test_name.startswith('http://') or driver_input.test_name.startswith('https://')  or driver_input.test_name == ('about:blank'):
             command = driver_input.test_name
-        elif self.is_http_test(driver_input.test_name):
+        elif self.is_http_test(driver_input.test_name) or self.is_web_platform_test(driver_input.test_name):
             command = self.test_to_uri(driver_input.test_name)
         else:
             command = self._port.abspath_for_test(driver_input.test_name)
@@ -447,6 +487,7 @@ class Driver(object):
     def _read_block(self, deadline, wait_for_stderr_eof=False):
         block = ContentBlock()
         out_seen_eof = False
+        asan_violation_detected = False
 
         while not self.has_crashed():
             if out_seen_eof and (self.err_seen_eof or not wait_for_stderr_eof):
@@ -472,6 +513,7 @@ class Driver(object):
                 err_line, self.err_seen_eof = self._strip_eof(err_line)
 
             if out_line:
+                self._check_for_driver_timeout(out_line)
                 if out_line[-1] != "\n":
                     _log.error("Last character read from DRT stdout line was not a newline!  This indicates either a NRWT or DRT bug.")
                 content_length_before_header_check = block._content_length
@@ -482,12 +524,58 @@ class Driver(object):
                     block.content = self._server_process.read_stdout(deadline, block._content_length)
 
             if err_line:
-                if self._check_for_driver_crash(err_line):
+                if self._check_for_driver_crash_or_unresponsiveness(err_line):
                     break
-                self.error_from_test += err_line
+                elif self._check_for_address_sanitizer_violation(err_line):
+                    asan_violation_detected = True
+                    self._crash_report_from_driver = ""
+                    # ASan report starts with a nondescript line, we only detect the second line.
+                    end_of_previous_error_line = self.error_from_test.rfind('\n', 0, -1)
+                    if end_of_previous_error_line > 0:
+                        self.error_from_test = self.error_from_test[:end_of_previous_error_line]
+                    else:
+                        self.error_from_test = ""
+                    # Symbolication can take a very long time, give it 10 extra minutes to finish.
+                    # FIXME: This can likely be removed once <rdar://problem/18701447> is fixed.
+                    deadline += 10 * 60 * 1000
+                if asan_violation_detected:
+                    self._crash_report_from_driver += err_line
+                else:
+                    self.error_from_test += err_line
+
+        if asan_violation_detected and not self._crashed_process_name:
+            self._crashed_process_name = self._server_process.name()
+            self._crashed_pid = self._server_process.pid()
 
         block.decode_content()
         return block
+
+    @staticmethod
+    def check_driver(port):
+        # This checks if the required system dependencies for the driver are met.
+        # Since this is the generic class implementation, just return True.
+        return True
+
+
+class IOSSimulatorDriver(Driver):
+    def cmd_line(self, pixel_tests, per_test_args):
+        cmd = super(IOSSimulatorDriver, self).cmd_line(pixel_tests, per_test_args)
+        relay_tool = self._port.relay_path
+        dump_tool = cmd[0]
+        dump_tool_args = cmd[1:]
+        product_dir = self._port._build_path()
+        relay_args = [
+            '-runtime', self._port.simulator_runtime.identifier,
+            '-deviceType', self._port.simulator_device_type.identifier,
+            '-suffix', str(self._worker_number),
+            '-productDir', product_dir,
+            '-app', dump_tool,
+        ]
+        return [relay_tool] + relay_args + ['--'] + dump_tool_args
+
+    def _setup_environ_for_driver(self, environment):
+        environment['DEVELOPER_DIR'] = self._port.developer_dir
+        return super(IOSSimulatorDriver, self)._setup_environ_for_driver(environment)
 
 
 class ContentBlock(object):
@@ -539,13 +627,6 @@ class DriverProxy(object):
         return self._driver.uri_to_test(uri)
 
     def run_test(self, driver_input, stop_when_done):
-        base = self._port.lookup_virtual_test_base(driver_input.test_name)
-        if base:
-            virtual_driver_input = copy.copy(driver_input)
-            virtual_driver_input.test_name = base
-            virtual_driver_input.args = self._port.lookup_virtual_test_args(driver_input.test_name)
-            return self.run_test(virtual_driver_input, stop_when_done)
-
         pixel_tests_needed = driver_input.should_run_pixel_test
         cmd_line_key = self._cmd_line_as_key(pixel_tests_needed, driver_input.args)
         if cmd_line_key != self._driver_cmd_line:

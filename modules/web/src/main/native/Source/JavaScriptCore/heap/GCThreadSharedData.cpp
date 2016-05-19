@@ -73,7 +73,7 @@ GCThreadSharedData::GCThreadSharedData(VM* vm)
     : m_vm(vm)
     , m_copiedSpace(&vm->heap.m_storageSpace)
     , m_shouldHashCons(false)
-    , m_sharedMarkStack(vm->heap.blockAllocator())
+    , m_sharedMarkStack()
     , m_numberOfActiveParallelMarkers(0)
     , m_parallelMarkersShouldExit(false)
     , m_copyIndex(0)
@@ -81,15 +81,12 @@ GCThreadSharedData::GCThreadSharedData(VM* vm)
     , m_gcThreadsShouldWait(false)
     , m_currentPhase(NoPhase)
 {
-    m_copyLock.Init();
 #if ENABLE(PARALLEL_GC)
     // Grab the lock so the new GC threads can be properly initialized before they start running.
     std::unique_lock<std::mutex> lock(m_phaseMutex);
     for (unsigned i = 1; i < Options::numberOfGCMarkers(); ++i) {
         m_numberOfActiveGCThreads++;
-        SlotVisitor* slotVisitor = new SlotVisitor(*this);
-        CopyVisitor* copyVisitor = new CopyVisitor(*this);
-        GCThread* newThread = new GCThread(*this, slotVisitor, copyVisitor);
+        GCThread* newThread = new GCThread(*this, std::make_unique<SlotVisitor>(*this), std::make_unique<CopyVisitor>(*this));
         ThreadIdentifier threadID = createThread(GCThread::gcThreadStartFunc, newThread, "JavaScriptCore::Marking");
         newThread->initializeThreadID(threadID);
         m_gcThreads.append(newThread);

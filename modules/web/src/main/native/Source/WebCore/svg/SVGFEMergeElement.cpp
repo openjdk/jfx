@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SVGFEMergeElement.h"
 
 #include "ElementIterator.h"
@@ -37,12 +35,12 @@ inline SVGFEMergeElement::SVGFEMergeElement(const QualifiedName& tagName, Docume
     ASSERT(hasTagName(SVGNames::feMergeTag));
 }
 
-PassRefPtr<SVGFEMergeElement> SVGFEMergeElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFEMergeElement> SVGFEMergeElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFEMergeElement(tagName, document));
+    return adoptRef(*new SVGFEMergeElement(tagName, document));
 }
 
-PassRefPtr<FilterEffect> SVGFEMergeElement::build(SVGFilterBuilder* filterBuilder, Filter* filter)
+RefPtr<FilterEffect> SVGFEMergeElement::build(SVGFilterBuilder* filterBuilder, Filter& filter)
 {
     RefPtr<FilterEffect> effect = FEMerge::create(filter);
     FilterEffectVector& mergeInputs = effect->inputEffects();
@@ -57,9 +55,7 @@ PassRefPtr<FilterEffect> SVGFEMergeElement::build(SVGFilterBuilder* filterBuilde
     if (mergeInputs.isEmpty())
         return nullptr;
 
-    return effect.release();
+    return effect;
 }
 
 }
-
-#endif // ENABLE(FILTERS)

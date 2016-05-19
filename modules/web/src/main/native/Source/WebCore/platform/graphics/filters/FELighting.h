@@ -27,7 +27,6 @@
 #ifndef FELighting_h
 #define FELighting_h
 
-#if ENABLE(FILTERS)
 #include "Color.h"
 #include "Filter.h"
 #include "FilterEffect.h"
@@ -89,7 +88,7 @@ protected:
     static void platformApplyGenericWorker(PlatformApplyGenericParameters*);
     static void platformApplyNeonWorker(FELightingPaintingDataForNeon*);
 
-    FELighting(Filter*, LightingType, const Color&, float, float, float, float, float, float, PassRefPtr<LightSource>);
+    FELighting(Filter&, LightingType, const Color&, float, float, float, float, float, float, PassRefPtr<LightSource>);
 
     bool drawLighting(Uint8ClampedArray*, int, int);
     inline void inlineSetPixel(int offset, LightingData&, LightSource::PaintingData&,
@@ -120,7 +119,5 @@ protected:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // FELighting_h

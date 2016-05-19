@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,10 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "DefaultPolicyDelegate.h"
 
+#include <comutil.h>
 #include <WebCore/BString.h>
 #include <WebCore/COMPtr.h>
 #include <wtf/text/WTFString.h>
@@ -44,13 +44,13 @@ DefaultPolicyDelegate::DefaultPolicyDelegate()
     : m_refCount(0)
 {
     gClassCount++;
-    gClassNameCount.add("DefaultPolicyDelegate");
+    gClassNameCount().add("DefaultPolicyDelegate");
 }
 
 DefaultPolicyDelegate::~DefaultPolicyDelegate()
 {
     gClassCount--;
-    gClassNameCount.remove("DefaultPolicyDelegate");
+    gClassNameCount().remove("DefaultPolicyDelegate");
 }
 
 DefaultPolicyDelegate* DefaultPolicyDelegate::sharedInstance()
@@ -98,20 +98,16 @@ ULONG STDMETHODCALLTYPE DefaultPolicyDelegate::Release()
     return newRef;
 }
 
-HRESULT STDMETHODCALLTYPE DefaultPolicyDelegate::decidePolicyForNavigationAction(
-    /*[in]*/ IWebView* webView,
-    /*[in]*/ IPropertyBag* actionInformation,
-    /*[in]*/ IWebURLRequest* request,
-    /*[in]*/ IWebFrame* /*frame*/,
-    /*[in]*/ IWebPolicyDecisionListener* listener)
+HRESULT DefaultPolicyDelegate::decidePolicyForNavigationAction(IWebView* webView, IPropertyBag* actionInformation,
+    IWebURLRequest* request, IWebFrame* /*frame*/, IWebPolicyDecisionListener* listener)
 {
     int navType = 0;
-    VARIANT var;
-    if (SUCCEEDED(actionInformation->Read(WebActionNavigationTypeKey, &var, 0))) {
-        V_VT(&var) = VT_I4;
+    _variant_t var;
+    if (SUCCEEDED(actionInformation->Read(WebActionNavigationTypeKey, &var.GetVARIANT(), nullptr))) {
+        var.ChangeType(VT_I4, nullptr);
         navType = V_I4(&var);
     }
-    COMPtr<IWebViewPrivate> wvPrivate(Query, webView);
+    COMPtr<IWebViewPrivate2> wvPrivate(Query, webView);
     if (wvPrivate) {
         BOOL canHandleRequest = FALSE;
         if (SUCCEEDED(wvPrivate->canHandleRequest(request, &canHandleRequest)) && canHandleRequest)

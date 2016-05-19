@@ -54,9 +54,12 @@ void* prepareOSREntry(
             bytecodeIndex, ".\n");
     }
 
+    if (bytecodeIndex)
+        jsCast<ScriptExecutable*>(executable)->setDidTryToEnterInLoop(true);
+
     if (bytecodeIndex != entryCode->bytecodeIndex()) {
         if (Options::verboseOSR())
-            dataLog("    OSR failed because we don't have an entrypoint for bc#", bytecodeIndex, "; ours is for bc#", entryCode->bytecodeIndex());
+            dataLog("    OSR failed because we don't have an entrypoint for bc#", bytecodeIndex, "; ours is for bc#", entryCode->bytecodeIndex(), "\n");
         return 0;
     }
 
@@ -70,7 +73,7 @@ void* prepareOSREntry(
     for (int argument = values.numberOfArguments(); argument--;) {
         JSValue valueOnStack = exec->r(virtualRegisterForArgument(argument).offset()).jsValue();
         JSValue reconstructedValue = values.argument(argument);
-        if (valueOnStack == reconstructedValue)
+        if (valueOnStack == reconstructedValue || !argument)
             continue;
         dataLog("Mismatch between reconstructed values and the the value on the stack for argument arg", argument, " for ", *entryCodeBlock, " at bc#", bytecodeIndex, ":\n");
         dataLog("    Value on stack: ", valueOnStack, "\n");

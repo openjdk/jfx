@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2008, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2007 David Smith (catfish.man@gmail.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -35,21 +35,14 @@
 
 namespace WebCore {
 
-ClassNodeList::ClassNodeList(ContainerNode& rootNode, const String& classNames)
-    : LiveNodeList(rootNode, ClassNodeListType, InvalidateOnClassAttrChange)
-    , m_classNames(classNames, document().inQuirksMode())
-    , m_originalClassNames(classNames)
+Ref<ClassNodeList> ClassNodeList::create(ContainerNode& rootNode, const AtomicString& classNames)
 {
+    return adoptRef(*new ClassNodeList(rootNode, classNames));
 }
 
 ClassNodeList::~ClassNodeList()
 {
-    ownerNode().nodeLists()->removeCacheWithName(this, m_originalClassNames);
-}
-
-bool ClassNodeList::nodeMatches(Element* testNode) const
-{
-    return nodeMatchesInlined(testNode);
+    ownerNode().nodeLists()->removeCacheWithAtomicName(this, m_originalClassNames);
 }
 
 } // namespace WebCore

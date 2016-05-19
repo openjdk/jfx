@@ -24,6 +24,7 @@
 #define CSSRule_h
 
 #include <wtf/RefCounted.h>
+#include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -48,11 +49,9 @@ public:
         // 7 was VARIABLES_RULE; we now match other browsers with 7 as
         // KEYFRAMES_RULE:
         // <https://bugs.webkit.org/show_bug.cgi?id=71293>.
-        WEBKIT_KEYFRAMES_RULE,
-        WEBKIT_KEYFRAME_RULE,
-#if ENABLE(CSS3_CONDITIONAL_RULES)
+        KEYFRAMES_RULE,
+        KEYFRAME_RULE,
         SUPPORTS_RULE = 12,
-#endif
 #if ENABLE(CSS_DEVICE_ADAPTATION)
         WEBKIT_VIEWPORT_RULE = 15,
 #endif
@@ -61,9 +60,14 @@ public:
 #endif
     };
 
+    enum DeprecatedType {
+        WEBKIT_KEYFRAMES_RULE = 7,
+        WEBKIT_KEYFRAME_RULE = 8
+    };
+
     virtual Type type() const = 0;
     virtual String cssText() const = 0;
-    virtual void reattach(StyleRuleBase*) = 0;
+    virtual void reattach(StyleRuleBase&) = 0;
 
     void setParentStyleSheet(CSSStyleSheet* styleSheet)
     {
@@ -113,5 +117,10 @@ private:
 };
 
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_CSS_RULE(ToValueTypeName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::CSSRule& rule) { return rule.type() == WebCore::predicate; } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // CSSRule_h

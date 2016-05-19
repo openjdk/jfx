@@ -24,14 +24,17 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "InjectedBundleTest.h"
-#include <WebKit2/WKBundleDOMWindowExtension.h>
-#include <WebKit2/WKBundleFrame.h>
-#include <WebKit2/WKBundlePage.h>
-#include <WebKit2/WKBundlePageGroup.h>
-#include <WebKit2/WKBundlePrivate.h>
-#include <WebKit2/WKBundleScriptWorld.h>
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKBundleDOMWindowExtension.h>
+#include <WebKit/WKBundleFrame.h>
+#include <WebKit/WKBundlePage.h>
+#include <WebKit/WKBundlePageGroup.h>
+#include <WebKit/WKBundlePrivate.h>
+#include <WebKit/WKBundleScriptWorld.h>
+#include <WebKit/WKRetainPtr.h>
 #include <wtf/HashMap.h>
 #include <assert.h>
 
@@ -257,3 +260,5 @@ static void willDestroyGlobalObjectForDOMWindowExtensionCallback(WKBundlePageRef
 }
 
 } // namespace TestWebKitAPI
+
+#endif

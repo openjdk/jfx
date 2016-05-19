@@ -52,9 +52,9 @@ inline ProcessingInstruction::ProcessingInstruction(Document& document, const St
 {
 }
 
-PassRefPtr<ProcessingInstruction> ProcessingInstruction::create(Document& document, const String& target, const String& data)
+Ref<ProcessingInstruction> ProcessingInstruction::create(Document& document, const String& target, const String& data)
 {
-    return adoptRef(new ProcessingInstruction(document, target, data));
+    return adoptRef(*new ProcessingInstruction(document, target, data));
 }
 
 ProcessingInstruction::~ProcessingInstruction()
@@ -79,11 +79,11 @@ Node::NodeType ProcessingInstruction::nodeType() const
     return PROCESSING_INSTRUCTION_NODE;
 }
 
-PassRefPtr<Node> ProcessingInstruction::cloneNode(bool /*deep*/)
+RefPtr<Node> ProcessingInstruction::cloneNodeInternal(Document& targetDocument, CloningOperation)
 {
     // FIXME: Is it a problem that this does not copy m_localHref?
     // What about other data members?
-    return create(document(), m_target, data());
+    return create(targetDocument, m_target, data());
 }
 
 void ProcessingInstruction::checkStyleSheet()
@@ -147,7 +147,7 @@ void ProcessingInstruction::checkStyleSheet()
             CachedResourceRequest request(ResourceRequest(document().completeURL(href)));
 #if ENABLE(XSLT)
             if (m_isXSL)
-                m_cachedSheet = document().cachedResourceLoader()->requestXSLStyleSheet(request);
+                m_cachedSheet = document().cachedResourceLoader().requestXSLStyleSheet(request);
             else
 #endif
             {
@@ -156,7 +156,7 @@ void ProcessingInstruction::checkStyleSheet()
                     charset = document().charset();
                 request.setCharset(charset);
 
-                m_cachedSheet = document().cachedResourceLoader()->requestCSSStyleSheet(request);
+                m_cachedSheet = document().cachedResourceLoader().requestCSSStyleSheet(request);
             }
             if (m_cachedSheet)
                 m_cachedSheet->addClient(this);
@@ -202,12 +202,12 @@ void ProcessingInstruction::setCSSStyleSheet(const String& href, const URL& base
     cssSheet.get().setTitle(m_title);
     cssSheet.get().setMediaQueries(MediaQuerySet::create(m_media));
 
-    m_sheet = std::move(cssSheet);
+    m_sheet = WTF::move(cssSheet);
 
     // We don't need the cross-origin security check here because we are
     // getting the sheet text in "strict" mode. This enforces a valid CSS MIME
     // type.
-    parseStyleSheet(sheet->sheetText(true));
+    parseStyleSheet(sheet->sheetText());
 }
 
 #if ENABLE(XSLT)
@@ -215,6 +215,7 @@ void ProcessingInstruction::setXSLStyleSheet(const String& href, const URL& base
 {
     ASSERT(m_isXSL);
     m_sheet = XSLStyleSheet::create(this, href, baseURL);
+    Ref<Document> protect(document());
     parseStyleSheet(sheet);
 }
 #endif
@@ -222,10 +223,10 @@ void ProcessingInstruction::setXSLStyleSheet(const String& href, const URL& base
 void ProcessingInstruction::parseStyleSheet(const String& sheet)
 {
     if (m_isCSS)
-        static_cast<CSSStyleSheet*>(m_sheet.get())->contents().parseString(sheet);
+        downcast<CSSStyleSheet>(*m_sheet).contents().parseString(sheet);
 #if ENABLE(XSLT)
     else if (m_isXSL)
-        static_cast<XSLStyleSheet*>(m_sheet.get())->parseString(sheet);
+        downcast<XSLStyleSheet>(*m_sheet).parseString(sheet);
 #endif
 
     if (m_cachedSheet)
@@ -235,10 +236,10 @@ void ProcessingInstruction::parseStyleSheet(const String& sheet)
     m_loading = false;
 
     if (m_isCSS)
-        static_cast<CSSStyleSheet*>(m_sheet.get())->contents().checkLoaded();
+        downcast<CSSStyleSheet>(*m_sheet).contents().checkLoaded();
 #if ENABLE(XSLT)
     else if (m_isXSL)
-        static_cast<XSLStyleSheet*>(m_sheet.get())->checkLoaded();
+        downcast<XSLStyleSheet>(*m_sheet).checkLoaded();
 #endif
 }
 
@@ -280,7 +281,7 @@ void ProcessingInstruction::removedFrom(ContainerNode& insertionPoint)
     if (m_sheet) {
         ASSERT(m_sheet->ownerNode() == this);
         m_sheet->clearOwnerNode();
-        m_sheet = 0;
+        m_sheet = nullptr;
     }
 
     // If we're in document teardown, then we don't need to do any notification of our sheet's removal.

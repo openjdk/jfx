@@ -31,11 +31,10 @@
 #include "GCController.h"
 #include "TestRunner.h"
 #include "TextInputController.h"
-#include <WebKit2/WKBase.h>
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKBase.h>
+#include <WebKit/WKRetainPtr.h>
 #include <sstream>
 #include <wtf/Forward.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
@@ -45,7 +44,7 @@ class InjectedBundlePage;
 
 class InjectedBundle {
 public:
-    static InjectedBundle& shared();
+    static InjectedBundle& singleton();
 
     // Initialize the InjectedBundle.
     void initialize(WKBundleRef, WKTypeRef initializationUserData);
@@ -86,11 +85,15 @@ public:
     void postSetBackingScaleFactor(double);
     void postSetWindowIsKey(bool);
     void postSimulateWebNotificationClick(uint64_t notificationID);
+    void postSetAddsVisitedLinks(bool);
 
     // Geolocation.
     void setGeolocationPermission(bool);
     void setMockGeolocationPosition(double latitude, double longitude, double accuracy, bool providesAltitude, double altitude, bool providesAltitudeAccuracy, double altitudeAccuracy, bool providesHeading, double heading, bool providesSpeed, double speed);
     void setMockGeolocationPositionUnavailableError(WKStringRef errorMessage);
+
+    // MediaStream.
+    void setUserMediaPermission(bool);
 
     // Policy delegate.
     void setCustomPolicyDelegate(bool enabled, bool permissive);
@@ -98,16 +101,21 @@ public:
     // Page Visibility.
     void setHidden(bool);
 
+    // Cache.
+    void setCacheModel(int);
+
     // Work queue.
     bool shouldProcessWorkQueue() const;
     void processWorkQueue();
     void queueBackNavigation(unsigned howFarBackward);
     void queueForwardNavigation(unsigned howFarForward);
-    void queueLoad(WKStringRef url, WKStringRef target);
+    void queueLoad(WKStringRef url, WKStringRef target, bool shouldOpenExternalURLs = false);
     void queueLoadHTMLString(WKStringRef content, WKStringRef baseURL = 0, WKStringRef unreachableURL = 0);
     void queueReload();
     void queueLoadingScript(WKStringRef script);
     void queueNonLoadingScript(WKStringRef script);
+
+    bool isAllowedHost(WKStringRef);
 
 private:
     InjectedBundle();
@@ -134,7 +142,7 @@ private:
 
     WKBundleRef m_bundle;
     WKBundlePageGroupRef m_pageGroup;
-    Vector<OwnPtr<InjectedBundlePage> > m_pages;
+    Vector<std::unique_ptr<InjectedBundlePage>> m_pages;
 
     RefPtr<AccessibilityController> m_accessibilityController;
     RefPtr<TestRunner> m_testRunner;
@@ -159,6 +167,8 @@ private:
     WKRetainPtr<WKDataRef> m_audioResult;
     WKRetainPtr<WKImageRef> m_pixelResult;
     WKRetainPtr<WKArrayRef> m_repaintRects;
+
+    Vector<String> m_allowedHosts;
 };
 
 } // namespace WTR

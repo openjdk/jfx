@@ -38,7 +38,8 @@
 #import <JavaScriptCore/JSRetainPtr.h>
 #import <JavaScriptCore/JSStringRef.h>
 #import <JavaScriptCore/JSStringRefCF.h>
-#import <WebKit2/WKBundleFrame.h>
+#import <WebKit/WKBundleFrame.h>
+#import <objc/runtime.h>
 #import <wtf/RetainPtr.h>
 
 @interface NSObject (WebAccessibilityObjectWrapperAdditions)
@@ -77,7 +78,7 @@
 {
     [self stopObserving];
 
-    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(WTR::InjectedBundle::shared().page()->page());
+    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(WTR::InjectedBundle::singleton().page()->page());
     JSContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame);
 
     JSValueUnprotect(context, m_notificationFunctionCallback);
@@ -91,7 +92,7 @@
     if (!callback)
         return;
 
-    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(WTR::InjectedBundle::shared().page()->page());
+    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(WTR::InjectedBundle::singleton().page()->page());
     JSContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame);
 
     if (m_notificationFunctionCallback)
@@ -101,20 +102,67 @@
     JSValueProtect(context, m_notificationFunctionCallback);
 }
 
+static Class webAccessibilityObjectWrapperClass()
+{
+    static Class cls = objc_getClass("WebAccessibilityObjectWrapper");
+    ASSERT(cls);
+    return cls;
+}
+
 - (void)startObserving
 {
     // Once we start requesting notifications, it's on for the duration of the program.
     // This is to avoid any race conditions between tests turning this flag on and off. Instead
     // AccessibilityNotificationHandler can ignore events it doesn't care about.
-    id webAccessibilityObjectWrapperClass = NSClassFromString(@"WebAccessibilityObjectWrapper");
-    ASSERT(webAccessibilityObjectWrapperClass);
-    [webAccessibilityObjectWrapperClass accessibilitySetShouldRepostNotifications:YES];
+    [webAccessibilityObjectWrapperClass() accessibilitySetShouldRepostNotifications:YES];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_notificationReceived:) name:@"AXDRTNotification" object:nil];
 }
 
 - (void)stopObserving
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+static JSValueRef makeValueRefForValue(JSContextRef context, id value)
+{
+    if ([value isKindOfClass:[NSString class]])
+        return JSValueMakeString(context, adopt([value createJSStringRef]).get());
+    if ([value isKindOfClass:[NSNumber class]]) {
+        if (!strcmp([value objCType], @encode(BOOL)))
+            return JSValueMakeBoolean(context, [value boolValue]);
+        return JSValueMakeNumber(context, [value doubleValue]);
+    }
+    if ([value isKindOfClass:webAccessibilityObjectWrapperClass()])
+        return toJS(context, WTR::AccessibilityUIElement::create(static_cast<PlatformUIElement>(value)).get());
+    if ([value isKindOfClass:[NSDictionary class]])
+        return makeObjectRefForDictionary(context, value);
+    if ([value isKindOfClass:[NSArray class]])
+        return makeArrayRefForArray(context, value);
+    return nullptr;
+}
+
+static JSValueRef makeArrayRefForArray(JSContextRef context, NSArray *array)
+{
+    NSUInteger count = array.count;
+    JSValueRef arguments[count];
+
+    for (NSUInteger i = 0; i < count; i++)
+        arguments[i] = makeValueRefForValue(context, [array objectAtIndex:i]);
+
+    return JSObjectMakeArray(context, count, arguments, nullptr);
+}
+
+static JSValueRef makeObjectRefForDictionary(JSContextRef context, NSDictionary *dictionary)
+{
+    JSObjectRef object = JSObjectMake(context, nullptr, nullptr);
+
+    [dictionary enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop)
+    {
+        if (JSValueRef propertyValue = makeValueRefForValue(context, obj))
+            JSObjectSetProperty(context, object, adopt([key createJSStringRef]).get(), propertyValue, kJSPropertyAttributeNone, nullptr);
+    }];
+
+    return object;
 }
 
 - (void)_notificationReceived:(NSNotification *)notification
@@ -125,20 +173,26 @@
     if (m_platformElement && m_platformElement != [notification object])
         return;
 
-    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(WTR::InjectedBundle::shared().page()->page());
+    NSDictionary *userInfo = [[notification userInfo] objectForKey:@"userInfo"];
+
+    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(WTR::InjectedBundle::singleton().page()->page());
     JSContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame);
 
-    JSRetainPtr<JSStringRef> jsNotification(Adopt, [notificationName createJSStringRef]);
-    JSValueRef notificationNameArgument = JSValueMakeString(context, jsNotification.get());
+    JSValueRef notificationNameArgument = JSValueMakeString(context, adopt([notificationName createJSStringRef]).get());
+    JSValueRef userInfoArgument = makeObjectRefForDictionary(context, userInfo);
     if (m_platformElement) {
-        // Listener for one element just gets one argument, the notification name.
-        JSObjectCallAsFunction(context, const_cast<JSObjectRef>(m_notificationFunctionCallback), 0, 1, &notificationNameArgument, 0);
-    } else {
-        // A global listener gets the element and the notification name as arguments.
+        // Listener for one element gets the notification name and userInfo.
         JSValueRef arguments[2];
-        arguments[0] = toJS(context, WTF::getPtr(WTR::AccessibilityUIElement::create([notification object])));
-        arguments[1] = notificationNameArgument;
+        arguments[0] = notificationNameArgument;
+        arguments[1] = userInfoArgument;
         JSObjectCallAsFunction(context, const_cast<JSObjectRef>(m_notificationFunctionCallback), 0, 2, arguments, 0);
+    } else {
+        // A global listener gets the element, notification name and userInfo.
+        JSValueRef arguments[3];
+        arguments[0] = toJS(context, WTR::AccessibilityUIElement::create([notification object]).get());
+        arguments[1] = notificationNameArgument;
+        arguments[2] = userInfoArgument;
+        JSObjectCallAsFunction(context, const_cast<JSObjectRef>(m_notificationFunctionCallback), 0, 3, arguments, 0);
     }
 }
 

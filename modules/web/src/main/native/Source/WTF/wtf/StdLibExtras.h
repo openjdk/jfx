@@ -32,16 +32,18 @@
 #include <wtf/Assertions.h>
 #include <wtf/CheckedArithmetic.h>
 
-// Use these to declare and define a static local variable (static T;) so that
-//  it is leaked so that its destructors are not called at exit. Using this
-//  macro also allows workarounds a compiler bug present in Apple's version of GCC 4.0.1.
-#ifndef DEFINE_STATIC_LOCAL
+// This was used to declare and define a static local variable (static T;) so that
+//  it was leaked so that its destructors were not called at exit. Using this
+//  macro also allowed to workaround a compiler bug present in Apple's version of GCC 4.0.1.
+//
+// Newly written code should use static NeverDestroyed<T> instead.
+#ifndef DEPRECATED_DEFINE_STATIC_LOCAL
 #if COMPILER(GCC) && defined(__APPLE_CC__) && __GNUC__ == 4 && __GNUC_MINOR__ == 0 && __GNUC_PATCHLEVEL__ == 1
-#define DEFINE_STATIC_LOCAL(type, name, arguments) \
+#define DEPRECATED_DEFINE_STATIC_LOCAL(type, name, arguments) \
     static type* name##Ptr = new type arguments; \
     type& name = *name##Ptr
 #else
-#define DEFINE_STATIC_LOCAL(type, name, arguments) \
+#define DEPRECATED_DEFINE_STATIC_LOCAL(type, name, arguments) \
     static type& name = *new type arguments
 #endif
 #endif
@@ -49,14 +51,16 @@
 // Use this macro to declare and define a debug-only global variable that may have a
 // non-trivial constructor and destructor. When building with clang, this will suppress
 // warnings about global constructors and exit-time destructors.
-#ifndef NDEBUG
-#if COMPILER(CLANG)
-#define DEFINE_DEBUG_ONLY_GLOBAL(type, name, arguments) \
+#define DEFINE_GLOBAL_FOR_LOGGING(type, name, arguments) \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wglobal-constructors\"") \
     _Pragma("clang diagnostic ignored \"-Wexit-time-destructors\"") \
     static type name arguments; \
     _Pragma("clang diagnostic pop")
+
+#ifndef NDEBUG
+#if COMPILER(CLANG)
+#define DEFINE_DEBUG_ONLY_GLOBAL(type, name, arguments) DEFINE_GLOBAL_FOR_LOGGING(type, name, arguments)
 #else
 #define DEFINE_DEBUG_ONLY_GLOBAL(type, name, arguments) \
     static type name arguments;
@@ -114,6 +118,16 @@ inline bool isPointerTypeAlignmentOkay(Type*)
 #endif
 
 namespace WTF {
+
+template<typename T>
+ALWAYS_INLINE typename std::remove_reference<T>::type&& move(T&& value)
+{
+    static_assert(std::is_lvalue_reference<T>::value, "T is not an lvalue reference; move() is unnecessary.");
+
+    using NonRefQualifiedType = typename std::remove_reference<T>::type;
+    static_assert(!std::is_const<NonRefQualifiedType>::value, "T is const qualified.");
+    return std::move(value);
+}
 
 static const size_t KB = 1024;
 static const size_t MB = 1024 * 1024;
@@ -276,32 +290,12 @@ inline void insertIntoBoundedVector(VectorType& vector, size_t size, const Eleme
     vector[index] = element;
 }
 
+// This is here instead of CompilationThread.h to prevent that header from being included
+// everywhere. The fact that this method, and that header, exist outside of JSC is a bug.
+// https://bugs.webkit.org/show_bug.cgi?id=131815
+WTF_EXPORT_PRIVATE bool isCompilationThread();
+
 } // namespace WTF
-
-#if OS(WINCE)
-// Windows CE CRT has does not implement bsearch().
-inline void* wtf_bsearch(const void* key, const void* base, size_t count, size_t size, int (*compare)(const void *, const void *))
-{
-    const char* first = static_cast<const char*>(base);
-
-    while (count) {
-        size_t pos = (count - 1) >> 1;
-        const char* item = first + pos * size;
-        int compareResult = compare(item, key);
-        if (!compareResult)
-            return const_cast<char*>(item);
-        if (compareResult < 0) {
-            count -= (pos + 1);
-            first += (pos + 1) * size;
-        } else
-            count = pos;
-    }
-
-    return 0;
-}
-
-#define bsearch(key, base, count, size, compare) wtf_bsearch(key, base, count, size, compare)
-#endif
 
 // This version of placement new omits a 0 check.
 enum NotNullTag { NotNull };
@@ -310,16 +304,6 @@ inline void* operator new(size_t, NotNullTag, void* location)
     ASSERT(location);
     return location;
 }
-
-#if (COMPILER(GCC) && !COMPILER(CLANG) && !GCC_VERSION_AT_LEAST(4, 8, 1))
-
-// Work-around for Pre-C++11 syntax in MSVC 2010, and prior as well as GCC < 4.8.1.
-namespace std {
-    template<class T> struct is_trivially_destructible {
-        static const bool value = std::has_trivial_destructor<T>::value;
-    };
-}
-#endif
 
 // This adds various C++14 features for versions of the STL that may not yet have them.
 namespace std {
@@ -373,6 +357,16 @@ template<size_t currentIndex, size_t...indexes> struct make_index_sequence_helpe
 
 template<size_t length> struct make_index_sequence : public make_index_sequence_helper<length>::type { };
 
+// std::exchange
+template<class T, class U = T>
+T exchange(T& t, U&& newValue)
+{
+    T oldValue = std::move(t);
+    t = std::forward<U>(newValue);
+
+    return oldValue;
+}
+
 #if COMPILER_SUPPORTS(CXX_USER_LITERALS)
 // These literals are available in C++14, so once we require C++14 compilers we can get rid of them here.
 // (User-literals need to have a leading underscore so we add it here - the "real" literals don't have underscores).
@@ -394,6 +388,7 @@ namespace chrono_literals {
 
 using WTF::KB;
 using WTF::MB;
+using WTF::isCompilationThread;
 using WTF::insertIntoBoundedVector;
 using WTF::isPointerAligned;
 using WTF::is8ByteAligned;

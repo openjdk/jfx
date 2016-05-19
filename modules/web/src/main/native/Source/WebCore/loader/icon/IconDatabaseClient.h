@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -42,6 +42,7 @@ public:
     virtual void didChangeIconForPageURL(const String&) = 0;
     virtual void didRemoveAllIcons() = 0;
     virtual void didFinishURLImport() = 0;
+    virtual void didClose() { }
 };
 
 } // namespace WebCore

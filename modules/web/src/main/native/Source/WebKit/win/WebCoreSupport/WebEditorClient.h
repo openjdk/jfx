@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,7 +29,6 @@
 #include "WebKit.h"
 #include <WebCore/EditorClient.h>
 #include <WebCore/TextCheckerClient.h>
-#include <wtf/OwnPtr.h>
 
 class WebView;
 class WebNotification;
@@ -60,11 +59,14 @@ public:
 
     virtual void respondToChangedContents();
     virtual void respondToChangedSelection(WebCore::Frame*);
+    virtual void didChangeSelectionAndUpdateLayout() override { }
+    virtual void discardedComposition(WebCore::Frame*) override;
 
     bool shouldDeleteRange(WebCore::Range*);
 
     bool shouldInsertNode(WebCore::Node*, WebCore::Range* replacingRange, WebCore::EditorInsertAction);
     bool shouldApplyStyle(WebCore::StyleProperties*, WebCore::Range*);
+    void didApplyStyle();
     bool shouldMoveRangeAfterDelete(WebCore::Range*, WebCore::Range*);
     bool shouldChangeTypingStyle(WebCore::StyleProperties* currentStyle, WebCore::StyleProperties* toProposedStyle);
 
@@ -93,6 +95,7 @@ public:
     virtual bool doTextFieldCommandFromEvent(WebCore::Element*, WebCore::KeyboardEvent*) override;
     virtual void textWillBeDeletedInTextField(WebCore::Element* input) override;
     virtual void textDidChangeInTextArea(WebCore::Element*) override;
+    virtual void overflowScrollPositionChanged() override { }
 
     void handleKeyboardEvent(WebCore::KeyboardEvent*);
     void handleInputMethodKeydown(WebCore::KeyboardEvent*);

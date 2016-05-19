@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -46,16 +46,17 @@ class TimerBase {
     WTF_MAKE_NONCOPYABLE(TimerBase);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    TimerBase();
-    virtual ~TimerBase();
+    WEBCORE_EXPORT TimerBase();
+    WEBCORE_EXPORT virtual ~TimerBase();
 
-    void start(double nextFireInterval, double repeatInterval);
+    WEBCORE_EXPORT void start(double nextFireInterval, double repeatInterval);
 
     void startRepeating(double repeatInterval) { start(repeatInterval, repeatInterval); }
+    void startRepeating(std::chrono::milliseconds repeatInterval) { startRepeating(repeatInterval.count() * 0.001); }
     void startOneShot(double interval) { start(interval, 0); }
     void startOneShot(std::chrono::milliseconds interval) { startOneShot(interval.count() * 0.001); }
 
-    void stop();
+    WEBCORE_EXPORT void stop();
     bool isActive() const;
 
     double nextFireInterval() const;
@@ -111,19 +112,24 @@ private:
     friend class TimerHeapReference;
 };
 
-template <typename TimerFiredClass> class Timer : public TimerBase {
-public:
-    typedef void (TimerFiredClass::*TimerFiredFunction)(Timer&);
-    typedef void (TimerFiredClass::*DeprecatedTimerFiredFunction)(Timer*);
 
-    Timer(TimerFiredClass* object , TimerFiredFunction function)
-        : m_function(std::bind(function, object, std::ref(*this)))
+class Timer : public TimerBase {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    template <typename TimerFiredClass, typename TimerFiredBaseClass>
+    Timer(TimerFiredClass& object, void (TimerFiredBaseClass::*function)())
+        : m_function(std::bind(function, &object))
     {
     }
 
-    Timer(TimerFiredClass* object, DeprecatedTimerFiredFunction function)
-        : m_function(std::bind(function, object, this))
+    Timer(std::function<void ()> function)
+        : m_function(WTF::move(function))
     {
+    }
+
+    Timer() //XXX remove this stub timer
+    {
+        m_function = [](){};
     }
 
 private:
@@ -141,24 +147,21 @@ inline bool TimerBase::isActive() const
 #if !PLATFORM(IOS)
     ASSERT(m_thread == currentThread());
 #else
-    // On iOS timers are always run on the main thread or the Web Thread.
-    // Unless we have workers enabled in which case timers can run on other threads.
-#if ENABLE(WORKERS)
     ASSERT(WebThreadIsCurrent() || pthread_main_np() || m_thread == currentThread());
-#else
-    ASSERT(WebThreadIsCurrent() || pthread_main_np());
-#endif
 #endif // PLATFORM(IOS)
     return m_nextFireTime;
 }
 
-template <typename TimerFiredClass> class DeferrableOneShotTimer : protected TimerBase {
+class DeferrableOneShotTimer : protected TimerBase {
 public:
-    typedef void (TimerFiredClass::*TimerFiredFunction)(DeferrableOneShotTimer&);
+    template<typename TimerFiredClass>
+    DeferrableOneShotTimer(TimerFiredClass& object, void (TimerFiredClass::*function)(), std::chrono::milliseconds delay)
+        : DeferrableOneShotTimer(std::bind(function, &object), delay)
+    {
+    }
 
-    DeferrableOneShotTimer(TimerFiredClass* object, TimerFiredFunction function, double delay)
-        : m_object(object)
-        , m_function(function)
+    DeferrableOneShotTimer(std::function<void ()> function, std::chrono::milliseconds delay)
+        : m_function(WTF::move(function))
         , m_delay(delay)
         , m_shouldRestartWhenTimerFires(false)
     {
@@ -194,13 +197,12 @@ private:
             return;
         }
 
-        (m_object->*m_function)(*this);
+        m_function();
     }
 
-    TimerFiredClass* m_object;
-    TimerFiredFunction m_function;
+    std::function<void ()> m_function;
 
-    double m_delay;
+    std::chrono::milliseconds m_delay;
     bool m_shouldRestartWhenTimerFires;
 };
 

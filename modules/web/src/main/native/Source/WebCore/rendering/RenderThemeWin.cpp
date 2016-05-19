@@ -36,8 +36,8 @@
 #include "Settings.h"
 #include "SoftLinking.h"
 #include "SystemInfo.h"
-#include "UserAgentScripts.h"
 #include "UserAgentStyleSheets.h"
+#include "WebCoreBundleWin.h"
 #include <wtf/win/GDIObject.h>
 
 #if ENABLE(VIDEO)
@@ -182,18 +182,16 @@ void RenderThemeWin::setWebKitIsBeingUnloaded()
     gWebKitIsBeingUnloaded = true;
 }
 
-PassRefPtr<RenderTheme> RenderThemeWin::create()
+Ref<RenderTheme> RenderThemeWin::create()
 {
-    return adoptRef(new RenderThemeWin);
+    return adoptRef(*new RenderThemeWin);
 }
 
-#if !USE(SAFARI_THEME)
 PassRefPtr<RenderTheme> RenderTheme::themeForPage(Page* page)
 {
-    static RenderTheme* winTheme = RenderThemeWin::create().leakRef();
-    return winTheme;
+    static RenderTheme& winTheme = RenderThemeWin::create().leakRef();
+    return &winTheme;
 }
-#endif
 
 RenderThemeWin::RenderThemeWin()
     : m_buttonTheme(0)
@@ -291,7 +289,7 @@ String RenderThemeWin::extraQuirksStyleSheet()
     return String(themeWinQuirksUserAgentStyleSheet, sizeof(themeWinQuirksUserAgentStyleSheet));
 }
 
-bool RenderThemeWin::supportsHover(const RenderStyle*) const
+bool RenderThemeWin::supportsHover(const RenderStyle&) const
 {
     // The Classic/2k look has no hover effects.
     return haveTheme;
@@ -323,29 +321,14 @@ Color RenderThemeWin::platformInactiveSelectionForegroundColor() const
 static void fillFontDescription(FontDescription& fontDescription, LOGFONT& logFont, float fontSize)
 {
     fontDescription.setIsAbsoluteSize(true);
-    fontDescription.setGenericFamily(FontDescription::NoFamily);
     fontDescription.setOneFamily(String(logFont.lfFaceName));
     fontDescription.setSpecifiedSize(fontSize);
     fontDescription.setWeight(logFont.lfWeight >= 700 ? FontWeightBold : FontWeightNormal); // FIXME: Use real weight.
-    fontDescription.setItalic(logFont.lfItalic);
+    fontDescription.setIsItalic(logFont.lfItalic);
 }
 
-static void fillFontDescription(FontDescription& fontDescription, LOGFONT& logFont)
+void RenderThemeWin::updateCachedSystemFontDescription(CSSValueID valueID, FontDescription& fontDescription) const
 {
-    fillFontDescription(fontDescription, logFont, abs(logFont.lfHeight));
-}
-
-void RenderThemeWin::systemFont(CSSValueID valueID, FontDescription& fontDescription) const
-{
-    static FontDescription captionFont;
-    static FontDescription controlFont;
-    static FontDescription smallCaptionFont;
-    static FontDescription menuFont;
-    static FontDescription iconFont;
-    static FontDescription messageBoxFont;
-    static FontDescription statusBarFont;
-    static FontDescription systemFont;
-
     static bool initialized;
     static NONCLIENTMETRICS ncm;
 
@@ -355,66 +338,41 @@ void RenderThemeWin::systemFont(CSSValueID valueID, FontDescription& fontDescrip
         ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0);
     }
 
+    LOGFONT logFont;
+    bool shouldUseDefaultControlFontPixelSize = false;
     switch (valueID) {
-    case CSSValueIcon: {
-        if (!iconFont.isAbsoluteSize()) {
-            LOGFONT logFont;
-            ::SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(logFont), &logFont, 0);
-            fillFontDescription(iconFont, logFont);
-        }
-        fontDescription = iconFont;
+    case CSSValueIcon:
+        ::SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(logFont), &logFont, 0);
         break;
-    }
     case CSSValueMenu:
-        if (!menuFont.isAbsoluteSize())
-            fillFontDescription(menuFont, ncm.lfMenuFont);
-        fontDescription = menuFont;
+        logFont = ncm.lfMenuFont;
         break;
     case CSSValueMessageBox:
-        if (!messageBoxFont.isAbsoluteSize())
-            fillFontDescription(messageBoxFont, ncm.lfMessageFont);
-        fontDescription = messageBoxFont;
+        logFont = ncm.lfMessageFont;
         break;
     case CSSValueStatusBar:
-        if (!statusBarFont.isAbsoluteSize())
-            fillFontDescription(statusBarFont, ncm.lfStatusFont);
-        fontDescription = statusBarFont;
+        logFont = ncm.lfStatusFont;
         break;
     case CSSValueCaption:
-        if (!captionFont.isAbsoluteSize())
-            fillFontDescription(captionFont, ncm.lfCaptionFont);
-        fontDescription = captionFont;
+        logFont = ncm.lfCaptionFont;
         break;
     case CSSValueSmallCaption:
-        if (!smallCaptionFont.isAbsoluteSize())
-            fillFontDescription(smallCaptionFont, ncm.lfSmCaptionFont);
-        fontDescription = smallCaptionFont;
+        logFont = ncm.lfSmCaptionFont;
         break;
     case CSSValueWebkitSmallControl:
     case CSSValueWebkitMiniControl: // Just map to small.
     case CSSValueWebkitControl: // Just map to small.
-        if (!controlFont.isAbsoluteSize()) {
-            HGDIOBJ hGDI = ::GetStockObject(DEFAULT_GUI_FONT);
-            if (hGDI) {
-                LOGFONT logFont;
-                if (::GetObject(hGDI, sizeof(logFont), &logFont) > 0)
-                    fillFontDescription(controlFont, logFont, defaultControlFontPixelSize);
-            }
-        }
-        fontDescription = controlFont;
-        break;
+        shouldUseDefaultControlFontPixelSize = true;
+        FALLTHROUGH;
     default: { // Everything else uses the stock GUI font.
-        if (!systemFont.isAbsoluteSize()) {
-            HGDIOBJ hGDI = ::GetStockObject(DEFAULT_GUI_FONT);
-            if (hGDI) {
-                LOGFONT logFont;
-                if (::GetObject(hGDI, sizeof(logFont), &logFont) > 0)
-                    fillFontDescription(systemFont, logFont);
-            }
-        }
-        fontDescription = systemFont;
+        HGDIOBJ hGDI = ::GetStockObject(DEFAULT_GUI_FONT);
+        if (!hGDI)
+            return;
+        if (::GetObject(hGDI, sizeof(logFont), &logFont) <= 0)
+            return;
     }
     }
+    fillFontDescription(fontDescription, logFont, shouldUseDefaultControlFontPixelSize ? defaultControlFontPixelSize : abs(logFont.lfHeight));
 }
 
 bool RenderThemeWin::supportsFocus(ControlPart appearance) const
@@ -429,15 +387,15 @@ bool RenderThemeWin::supportsFocus(ControlPart appearance) const
     }
 }
 
-bool RenderThemeWin::supportsFocusRing(const RenderStyle* style) const
+bool RenderThemeWin::supportsFocusRing(const RenderStyle& style) const
 {
-    return supportsFocus(style->appearance());
+    return supportsFocus(style.appearance());
 }
 
-unsigned RenderThemeWin::determineClassicState(RenderObject* o, ControlSubPart subPart)
+unsigned RenderThemeWin::determineClassicState(const RenderObject& o, ControlSubPart subPart)
 {
     unsigned state = 0;
-    switch (o->style().appearance()) {
+    switch (o.style().appearance()) {
         case PushButtonPart:
         case ButtonPart:
         case DefaultButtonPart:
@@ -449,7 +407,7 @@ unsigned RenderThemeWin::determineClassicState(RenderObject* o, ControlSubPart s
             break;
         case RadioPart:
         case CheckboxPart:
-            state = (o->style().appearance() == RadioPart) ? DFCS_BUTTONRADIO : DFCS_BUTTONCHECK;
+            state = (o.style().appearance() == RadioPart) ? DFCS_BUTTONRADIO : DFCS_BUTTONCHECK;
             if (isChecked(o))
                 state |= DFCS_CHECKED;
             if (!isEnabled(o))
@@ -481,10 +439,10 @@ unsigned RenderThemeWin::determineClassicState(RenderObject* o, ControlSubPart s
     return state;
 }
 
-unsigned RenderThemeWin::determineState(RenderObject* o)
+unsigned RenderThemeWin::determineState(const RenderObject& o)
 {
     unsigned result = TS_NORMAL;
-    ControlPart appearance = o->style().appearance();
+    ControlPart appearance = o.style().appearance();
     if (!isEnabled(o))
         result = TS_DISABLED;
     else if (isReadOnlyControl(o) && (TextFieldPart == appearance || TextAreaPart == appearance || SearchFieldPart == appearance))
@@ -502,12 +460,12 @@ unsigned RenderThemeWin::determineState(RenderObject* o)
     return result;
 }
 
-unsigned RenderThemeWin::determineSliderThumbState(RenderObject* o)
+unsigned RenderThemeWin::determineSliderThumbState(const RenderObject& o)
 {
     unsigned result = TUS_NORMAL;
     if (!isEnabled(o))
         result = TUS_DISABLED;
-    else if (supportsFocus(o->style().appearance()) && isFocused(o))
+    else if (supportsFocus(o.style().appearance()) && isFocused(o))
         result = TUS_FOCUSED;
     else if (isPressed(o))
         result = TUS_PRESSED;
@@ -516,14 +474,14 @@ unsigned RenderThemeWin::determineSliderThumbState(RenderObject* o)
     return result;
 }
 
-unsigned RenderThemeWin::determineButtonState(RenderObject* o)
+unsigned RenderThemeWin::determineButtonState(const RenderObject& o)
 {
     unsigned result = PBS_NORMAL;
     if (!isEnabled(o))
         result = PBS_DISABLED;
     else if (isPressed(o))
         result = PBS_PRESSED;
-    else if (supportsFocus(o->style().appearance()) && isFocused(o))
+    else if (supportsFocus(o.style().appearance()) && isFocused(o))
         result = PBS_DEFAULTED;
     else if (isHovered(o))
         result = PBS_HOT;
@@ -532,7 +490,7 @@ unsigned RenderThemeWin::determineButtonState(RenderObject* o)
     return result;
 }
 
-unsigned RenderThemeWin::determineSpinButtonState(RenderObject* o, ControlSubPart subPart)
+unsigned RenderThemeWin::determineSpinButtonState(const RenderObject& o, ControlSubPart subPart)
 {
     bool isUpButton = subPart == SpinButtonUp;
     unsigned result = isUpButton ? UPS_NORMAL : DNS_NORMAL;
@@ -545,10 +503,10 @@ unsigned RenderThemeWin::determineSpinButtonState(RenderObject* o, ControlSubPar
     return result;
 }
 
-ThemeData RenderThemeWin::getClassicThemeData(RenderObject* o, ControlSubPart subPart)
+ThemeData RenderThemeWin::getClassicThemeData(const RenderObject& o, ControlSubPart subPart)
 {
     ThemeData result;
-    switch (o->style().appearance()) {
+    switch (o.style().appearance()) {
         case PushButtonPart:
         case ButtonPart:
         case DefaultButtonPart:
@@ -597,13 +555,13 @@ ThemeData RenderThemeWin::getClassicThemeData(RenderObject* o, ControlSubPart su
     return result;
 }
 
-ThemeData RenderThemeWin::getThemeData(RenderObject* o, ControlSubPart subPart)
+ThemeData RenderThemeWin::getThemeData(const RenderObject& o, ControlSubPart subPart)
 {
     if (!haveTheme)
         return getClassicThemeData(o, subPart);
 
     ThemeData result;
-    switch (o->style().appearance()) {
+    switch (o.style().appearance()) {
         case PushButtonPart:
         case ButtonPart:
         case DefaultButtonPart:
@@ -618,9 +576,7 @@ ThemeData RenderThemeWin::getThemeData(RenderObject* o, ControlSubPart subPart)
         case MenulistButtonPart: {
             const bool isVistaOrLater = (windowsVersion() >= WindowsVista);
             result.m_part = isVistaOrLater ? CP_DROPDOWNBUTTONRIGHT : CP_DROPDOWNBUTTON;
-            if (isVistaOrLater && o->frame().settings().applicationChromeMode()) {
-                // The "readonly" look we use in application chrome mode
-                // only uses a "normal" look for the drop down button.
+            if (isVistaOrLater) {
                 result.m_state = TS_NORMAL;
             } else
                 result.m_state = determineState(o);
@@ -665,7 +621,7 @@ ThemeData RenderThemeWin::getThemeData(RenderObject* o, ControlSubPart subPart)
     return result;
 }
 
-static void drawControl(GraphicsContext* context, RenderObject* o, HANDLE theme, const ThemeData& themeData, const IntRect& r)
+static void drawControl(GraphicsContext* context, const RenderObject& o, HANDLE theme, const ThemeData& themeData, const IntRect& r)
 {
     bool alphaBlend = false;
     if (theme)
@@ -685,10 +641,10 @@ static void drawControl(GraphicsContext* context, RenderObject* o, HANDLE theme,
         } else if (themeData.m_part == TKP_TRACK || themeData.m_part == TKP_TRACKVERT) {
             ::DrawEdge(hdc, &widgetRect, EDGE_SUNKEN, BF_RECT | BF_ADJUST);
             ::FillRect(hdc, &widgetRect, (HBRUSH)GetStockObject(GRAY_BRUSH));
-        } else if ((o->style().appearance() == SliderThumbHorizontalPart ||
-                    o->style().appearance() == SliderThumbVerticalPart) &&
-                   (themeData.m_part == TKP_THUMBBOTTOM || themeData.m_part == TKP_THUMBTOP ||
-                    themeData.m_part == TKP_THUMBLEFT || themeData.m_part == TKP_THUMBRIGHT)) {
+        } else if ((o.style().appearance() == SliderThumbHorizontalPart
+        || o.style().appearance() == SliderThumbVerticalPart)
+        && (themeData.m_part == TKP_THUMBBOTTOM || themeData.m_part == TKP_THUMBTOP
+        || themeData.m_part == TKP_THUMBLEFT || themeData.m_part == TKP_THUMBRIGHT)) {
             ::DrawEdge(hdc, &widgetRect, EDGE_RAISED, BF_RECT | BF_SOFT | BF_MIDDLE | BF_ADJUST);
             if (themeData.m_state == TUS_DISABLED) {
                 static WORD patternBits[8] = {0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55};
@@ -710,7 +666,7 @@ static void drawControl(GraphicsContext* context, RenderObject* o, HANDLE theme,
             }
         } else {
             // Push buttons, buttons, checkboxes and radios, and the dropdown arrow in menulists.
-            if (o->style().appearance() == DefaultButtonPart) {
+            if (o.style().appearance() == DefaultButtonPart) {
                 HBRUSH brush = ::GetSysColorBrush(COLOR_3DDKSHADOW);
                 ::FrameRect(hdc, &widgetRect, brush);
                 ::InflateRect(&widgetRect, -1, -1);
@@ -724,22 +680,22 @@ static void drawControl(GraphicsContext* context, RenderObject* o, HANDLE theme,
         DIBPixelData::setRGBABitmapAlpha(windowsContext.hdc(), r, 255);
 }
 
-bool RenderThemeWin::paintButton(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWin::paintButton(const RenderObject& o, const PaintInfo& i, const IntRect& r)
 {
     drawControl(i.context,  o, buttonTheme(), getThemeData(o), r);
     return false;
 }
 
-void RenderThemeWin::adjustInnerSpinButtonStyle(StyleResolver* styleResolver, RenderStyle* style, Element* e) const
+void RenderThemeWin::adjustInnerSpinButtonStyle(StyleResolver& styleResolver, RenderStyle& style, Element*) const
 {
     int width = ::GetSystemMetrics(SM_CXVSCROLL);
     if (width <= 0)
         width = 17; // Vista's default.
-    style->setWidth(Length(width, Fixed));
-    style->setMinWidth(Length(width, Fixed));
+    style.setWidth(Length(width, Fixed));
+    style.setMinWidth(Length(width, Fixed));
 }
 
-bool RenderThemeWin::paintInnerSpinButton(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWin::paintInnerSpinButton(const RenderObject& o, const PaintInfo& i, const IntRect& r)
 {
     // We split the specified rectangle into two vertically. We can't draw a
     // spin button of which height is less than 2px.
@@ -755,86 +711,83 @@ bool RenderThemeWin::paintInnerSpinButton(RenderObject* o, const PaintInfo& i, c
     return false;
 }
 
-void RenderThemeWin::setCheckboxSize(RenderStyle* style) const
+void RenderThemeWin::setCheckboxSize(RenderStyle& style) const
 {
     // If the width and height are both specified, then we have nothing to do.
-    if (!style->width().isIntrinsicOrAuto() && !style->height().isAuto())
+    if (!style.width().isIntrinsicOrAuto() && !style.height().isAuto())
         return;
 
     // FIXME:  A hard-coded size of 13 is used.  This is wrong but necessary for now.  It matches Firefox.
     // At different DPI settings on Windows, querying the theme gives you a larger size that accounts for
     // the higher DPI.  Until our entire engine honors a DPI setting other than 96, we can't rely on the theme's
     // metrics.
-    if (style->width().isIntrinsicOrAuto())
-        style->setWidth(Length(13, Fixed));
-    if (style->height().isAuto())
-        style->setHeight(Length(13, Fixed));
+    if (style.width().isIntrinsicOrAuto())
+        style.setWidth(Length(13, Fixed));
+    if (style.height().isAuto())
+        style.setHeight(Length(13, Fixed));
 }
 
-bool RenderThemeWin::paintTextField(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWin::paintTextField(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
 {
-    drawControl(i.context,  o, textFieldTheme(), getThemeData(o), r);
+    drawControl(i.context,  o, textFieldTheme(), getThemeData(o), IntRect(r));
     return false;
 }
 
-bool RenderThemeWin::paintMenuList(RenderObject* renderer, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeWin::paintMenuList(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
     HANDLE theme;
     int part;
     if (haveTheme && (windowsVersion() >= WindowsVista)) {
         theme = menuListTheme();
-        if (renderer->frame().settings().applicationChromeMode())
-            part = CP_READONLY;
-        else
-            part = CP_BORDER;
+        part = CP_READONLY;
     } else {
         theme = textFieldTheme();
         part = TFP_TEXTFIELD;
     }
 
-    drawControl(paintInfo.context,  renderer, theme, ThemeData(part, determineState(renderer)), rect);
+    drawControl(paintInfo.context, renderer, theme, ThemeData(part, determineState(renderer)), IntRect(rect));
 
-    return paintMenuListButtonDecorations(renderer, paintInfo, rect);
+    return paintMenuListButtonDecorations(renderer, paintInfo, FloatRect(rect));
 }
 
-void RenderThemeWin::adjustMenuListStyle(StyleResolver* styleResolver, RenderStyle* style, Element* e) const
+void RenderThemeWin::adjustMenuListStyle(StyleResolver& styleResolver, RenderStyle& style, Element* e) const
 {
-    style->resetBorder();
+    style.resetBorder();
     adjustMenuListButtonStyle(styleResolver, style, e);
 }
 
-void RenderThemeWin::adjustMenuListButtonStyle(StyleResolver* styleResolver, RenderStyle* style, Element* e) const
+void RenderThemeWin::adjustMenuListButtonStyle(StyleResolver& styleResolver, RenderStyle& style, Element*) const
 {
     // These are the paddings needed to place the text correctly in the <select> box
     const int dropDownBoxPaddingTop    = 2;
-    const int dropDownBoxPaddingRight  = style->direction() == LTR ? 4 + dropDownButtonWidth : 4;
+    const int dropDownBoxPaddingRight  = style.direction() == LTR ? 4 + dropDownButtonWidth : 4;
     const int dropDownBoxPaddingBottom = 2;
-    const int dropDownBoxPaddingLeft   = style->direction() == LTR ? 4 : 4 + dropDownButtonWidth;
+    const int dropDownBoxPaddingLeft   = style.direction() == LTR ? 4 : 4 + dropDownButtonWidth;
     // The <select> box must be at least 12px high for the button to render nicely on Windows
     const int dropDownBoxMinHeight = 12;
 
     // Position the text correctly within the select box and make the box wide enough to fit the dropdown button
-    style->setPaddingTop(Length(dropDownBoxPaddingTop, Fixed));
-    style->setPaddingRight(Length(dropDownBoxPaddingRight, Fixed));
-    style->setPaddingBottom(Length(dropDownBoxPaddingBottom, Fixed));
-    style->setPaddingLeft(Length(dropDownBoxPaddingLeft, Fixed));
+    style.setPaddingTop(Length(dropDownBoxPaddingTop, Fixed));
+    style.setPaddingRight(Length(dropDownBoxPaddingRight, Fixed));
+    style.setPaddingBottom(Length(dropDownBoxPaddingBottom, Fixed));
+    style.setPaddingLeft(Length(dropDownBoxPaddingLeft, Fixed));
 
     // Height is locked to auto
-    style->setHeight(Length(Auto));
+    style.setHeight(Length(Auto));
 
     // Calculate our min-height
-    int minHeight = style->fontMetrics().height();
+    int minHeight = style.fontMetrics().height();
     minHeight = max(minHeight, dropDownBoxMinHeight);
 
-    style->setMinHeight(Length(minHeight, Fixed));
+    style.setMinHeight(Length(minHeight, Fixed));
 
-    style->setLineHeight(RenderStyle::initialLineHeight());
+    style.setLineHeight(RenderStyle::initialLineHeight());
 
     // White-space is locked to pre
-    style->setWhiteSpace(PRE);
+    style.setWhiteSpace(PRE);
 }
 
-bool RenderThemeWin::paintMenuListButtonDecorations(RenderObject* renderer, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeWin::paintMenuListButtonDecorations(const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
 {
     // FIXME: Don't make hardcoded assumptions about the thickness of the textfield border.
     int borderThickness = haveTheme ? 1 : 2;
@@ -843,7 +796,7 @@ bool RenderThemeWin::paintMenuListButtonDecorations(RenderObject* renderer, cons
     // leaving space for the text field's 1px border
     IntRect buttonRect(rect);
     buttonRect.inflate(-borderThickness);
-    if (renderer->style().direction() == LTR)
+    if (renderer.style().direction() == LTR)
         buttonRect.setX(buttonRect.maxX() - dropDownButtonWidth);
     buttonRect.setWidth(dropDownButtonWidth);
 
@@ -861,14 +814,14 @@ bool RenderThemeWin::paintMenuListButtonDecorations(RenderObject* renderer, cons
 
 const int trackWidth = 4;
 
-bool RenderThemeWin::paintSliderTrack(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWin::paintSliderTrack(const RenderObject& o, const PaintInfo& i, const IntRect& r)
 {
     IntRect bounds = r;
 
-    if (o->style().appearance() ==  SliderHorizontalPart) {
+    if (o.style().appearance() ==  SliderHorizontalPart) {
         bounds.setHeight(trackWidth);
         bounds.setY(r.y() + r.height() / 2 - trackWidth / 2);
-    } else if (o->style().appearance() == SliderVerticalPart) {
+    } else if (o.style().appearance() == SliderVerticalPart) {
         bounds.setWidth(trackWidth);
         bounds.setX(r.x() + r.width() / 2 - trackWidth / 2);
     }
@@ -877,7 +830,7 @@ bool RenderThemeWin::paintSliderTrack(RenderObject* o, const PaintInfo& i, const
     return false;
 }
 
-bool RenderThemeWin::paintSliderThumb(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWin::paintSliderThumb(const RenderObject& o, const PaintInfo& i, const IntRect& r)
 {
     drawControl(i.context,  o, sliderTheme(), getThemeData(o), r);
     return false;
@@ -886,15 +839,15 @@ bool RenderThemeWin::paintSliderThumb(RenderObject* o, const PaintInfo& i, const
 const int sliderThumbWidth = 7;
 const int sliderThumbHeight = 15;
 
-void RenderThemeWin::adjustSliderThumbSize(RenderStyle* style, Element*) const
+void RenderThemeWin::adjustSliderThumbSize(RenderStyle& style, Element*) const
 {
-    ControlPart part = style->appearance();
+    ControlPart part = style.appearance();
     if (part == SliderThumbVerticalPart) {
-        style->setWidth(Length(sliderThumbHeight, Fixed));
-        style->setHeight(Length(sliderThumbWidth, Fixed));
+        style.setWidth(Length(sliderThumbHeight, Fixed));
+        style.setHeight(Length(sliderThumbWidth, Fixed));
     } else if (part == SliderThumbHorizontalPart) {
-        style->setWidth(Length(sliderThumbWidth, Fixed));
-        style->setHeight(Length(sliderThumbHeight, Fixed));
+        style.setWidth(Length(sliderThumbWidth, Fixed));
+        style.setHeight(Length(sliderThumbHeight, Fixed));
     }
 #if ENABLE(VIDEO) && USE(CG)
     else if (part == MediaSliderThumbPart || part == MediaVolumeSliderThumbPart)
@@ -902,33 +855,31 @@ void RenderThemeWin::adjustSliderThumbSize(RenderStyle* style, Element*) const
 #endif
 }
 
-bool RenderThemeWin::paintSearchField(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWin::paintSearchField(const RenderObject& o, const PaintInfo& i, const IntRect& r)
 {
     return paintTextField(o, i, r);
 }
 
-void RenderThemeWin::adjustSearchFieldStyle(StyleResolver* styleResolver, RenderStyle* style, Element* e) const
+void RenderThemeWin::adjustSearchFieldStyle(StyleResolver& styleResolver, RenderStyle& style, Element* e) const
 {
     // Override paddingSize to match AppKit text positioning.
     const int padding = 1;
-    style->setPaddingLeft(Length(padding, Fixed));
-    style->setPaddingRight(Length(padding, Fixed));
-    style->setPaddingTop(Length(padding, Fixed));
-    style->setPaddingBottom(Length(padding, Fixed));
+    style.setPaddingLeft(Length(padding, Fixed));
+    style.setPaddingRight(Length(padding, Fixed));
+    style.setPaddingTop(Length(padding, Fixed));
+    style.setPaddingBottom(Length(padding, Fixed));
     if (e && e->focused() && e->document().frame()->selection().isFocusedAndActive())
-        style->setOutlineOffset(-2);
+        style.setOutlineOffset(-2);
 }
 
-bool RenderThemeWin::paintSearchFieldCancelButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeWin::paintSearchFieldCancelButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
 {
     IntRect bounds = r;
-    ASSERT(o->parent());
-    if (!o->parent() || !o->parent()->isBox())
+    ASSERT(o.parent());
+    if (!is<RenderBox>(o.parent()))
         return false;
 
-    RenderBox* parentRenderBox = toRenderBox(o->parent());
-
-    IntRect parentBox = parentRenderBox->absoluteContentBox();
+    IntRect parentBox = downcast<RenderBox>(*o.parent()).absoluteContentBox();
 
     // Make sure the scaled button stays square and will fit in its parent's box
     bounds.setHeight(min(parentBox.width(), min(parentBox.height(), bounds.height())));
@@ -940,45 +891,44 @@ bool RenderThemeWin::paintSearchFieldCancelButton(RenderObject* o, const PaintIn
 
     static Image* cancelImage = Image::loadPlatformResource("searchCancel").leakRef();
     static Image* cancelPressedImage = Image::loadPlatformResource("searchCancelPressed").leakRef();
-    paintInfo.context->drawImage(isPressed(o) ? cancelPressedImage : cancelImage, o->style().colorSpace(), bounds);
+    paintInfo.context->drawImage(isPressed(o) ? cancelPressedImage : cancelImage, o.style().colorSpace(), bounds);
     return false;
 }
 
-void RenderThemeWin::adjustSearchFieldCancelButtonStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeWin::adjustSearchFieldCancelButtonStyle(StyleResolver&, RenderStyle& style, Element*) const
 {
     // Scale the button size based on the font size
-    float fontScale = style->fontSize() / defaultControlFontPixelSize;
+    float fontScale = style.fontSize() / defaultControlFontPixelSize;
     int cancelButtonSize = lroundf(min(max(minCancelButtonSize, defaultCancelButtonSize * fontScale), maxCancelButtonSize));
-    style->setWidth(Length(cancelButtonSize, Fixed));
-    style->setHeight(Length(cancelButtonSize, Fixed));
+    style.setWidth(Length(cancelButtonSize, Fixed));
+    style.setHeight(Length(cancelButtonSize, Fixed));
 }
 
-void RenderThemeWin::adjustSearchFieldDecorationPartStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeWin::adjustSearchFieldDecorationPartStyle(StyleResolver&, RenderStyle& style, Element*) const
 {
     IntSize emptySize(1, 11);
-    style->setWidth(Length(emptySize.width(), Fixed));
-    style->setHeight(Length(emptySize.height(), Fixed));
+    style.setWidth(Length(emptySize.width(), Fixed));
+    style.setHeight(Length(emptySize.height(), Fixed));
 }
 
-void RenderThemeWin::adjustSearchFieldResultsDecorationPartStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeWin::adjustSearchFieldResultsDecorationPartStyle(StyleResolver&, RenderStyle& style, Element*) const
 {
     // Scale the decoration size based on the font size
-    float fontScale = style->fontSize() / defaultControlFontPixelSize;
+    float fontScale = style.fontSize() / defaultControlFontPixelSize;
     int magnifierSize = lroundf(min(max(minSearchFieldResultsDecorationSize, defaultSearchFieldResultsDecorationSize * fontScale),
                                      maxSearchFieldResultsDecorationSize));
-    style->setWidth(Length(magnifierSize, Fixed));
-    style->setHeight(Length(magnifierSize, Fixed));
+    style.setWidth(Length(magnifierSize, Fixed));
+    style.setHeight(Length(magnifierSize, Fixed));
 }
 
-bool RenderThemeWin::paintSearchFieldResultsDecorationPart(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeWin::paintSearchFieldResultsDecorationPart(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
 {
     IntRect bounds = r;
-    ASSERT(o->parent());
-    if (!o->parent() || !o->parent()->isBox())
+    ASSERT(o.parent());
+    if (!is<RenderBox>(o.parent()))
         return false;
 
-    RenderBox* parentRenderBox = toRenderBox(o->parent());
-    IntRect parentBox = parentRenderBox->absoluteContentBox();
+    IntRect parentBox = downcast<RenderBox>(*o.parent()).absoluteContentBox();
 
     // Make sure the scaled decoration stays square and will fit in its parent's box
     bounds.setHeight(min(parentBox.width(), min(parentBox.height(), bounds.height())));
@@ -989,32 +939,31 @@ bool RenderThemeWin::paintSearchFieldResultsDecorationPart(RenderObject* o, cons
     bounds.setY(parentBox.y() + (parentBox.height() - bounds.height() + 1) / 2);
 
     static Image* magnifierImage = Image::loadPlatformResource("searchMagnifier").leakRef();
-    paintInfo.context->drawImage(magnifierImage, o->style().colorSpace(), bounds);
+    paintInfo.context->drawImage(magnifierImage, o.style().colorSpace(), bounds);
     return false;
 }
 
-void RenderThemeWin::adjustSearchFieldResultsButtonStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeWin::adjustSearchFieldResultsButtonStyle(StyleResolver&, RenderStyle& style, Element*) const
 {
     // Scale the button size based on the font size
-    float fontScale = style->fontSize() / defaultControlFontPixelSize;
+    float fontScale = style.fontSize() / defaultControlFontPixelSize;
     int magnifierHeight = lroundf(min(max(minSearchFieldResultsDecorationSize, defaultSearchFieldResultsDecorationSize * fontScale),
                                    maxSearchFieldResultsDecorationSize));
     int magnifierWidth = lroundf(magnifierHeight * defaultSearchFieldResultsButtonWidth / defaultSearchFieldResultsDecorationSize);
-    style->setWidth(Length(magnifierWidth, Fixed));
-    style->setHeight(Length(magnifierHeight, Fixed));
+    style.setWidth(Length(magnifierWidth, Fixed));
+    style.setHeight(Length(magnifierHeight, Fixed));
 }
 
-bool RenderThemeWin::paintSearchFieldResultsButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeWin::paintSearchFieldResultsButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
 {
     IntRect bounds = r;
-    ASSERT(o->parent());
-    if (!o->parent())
+    ASSERT(o.parent());
+    if (!o.parent())
         return false;
-    if (!o->parent() || !o->parent()->isBox())
+    if (!is<RenderBox>(o.parent()))
         return false;
 
-    RenderBox* parentRenderBox = toRenderBox(o->parent());
-    IntRect parentBox = parentRenderBox->absoluteContentBox();
+    IntRect parentBox = downcast<RenderBox>(*o.parent()).absoluteContentBox();
 
     // Make sure the scaled decoration will fit in its parent's box
     bounds.setHeight(min(parentBox.height(), bounds.height()));
@@ -1025,7 +974,7 @@ bool RenderThemeWin::paintSearchFieldResultsButton(RenderObject* o, const PaintI
     bounds.setY(parentBox.y() + (parentBox.height() - bounds.height() + 1) / 2);
 
     static Image* magnifierImage = Image::loadPlatformResource("searchMagnifierResults").leakRef();
-    paintInfo.context->drawImage(magnifierImage, o->style().colorSpace(), bounds);
+    paintInfo.context->drawImage(magnifierImage, o.style().colorSpace(), bounds);
     return false;
 }
 
@@ -1076,10 +1025,65 @@ Color RenderThemeWin::systemColor(CSSValueID cssValueId) const
 }
 
 #if ENABLE(VIDEO)
+static const size_t maximumReasonableBufferSize = 32768;
+
+static void fillBufferWithContentsOfFile(PlatformFileHandle file, long long filesize, Vector<char>& buffer)
+{
+    // Load the file content into buffer
+    buffer.resize(filesize + 1);
+
+    int bufferPosition = 0;
+    int bufferReadSize = 4096;
+    int bytesRead = 0;
+    while (filesize > bufferPosition) {
+        if (filesize - bufferPosition < bufferReadSize)
+            bufferReadSize = filesize - bufferPosition;
+
+        bytesRead = readFromFile(file, buffer.data() + bufferPosition, bufferReadSize);
+        if (bytesRead != bufferReadSize) {
+            buffer.clear();
+            return;
+        }
+
+        bufferPosition += bufferReadSize;
+    }
+
+    buffer[filesize] = 0;
+}
+
+String RenderThemeWin::stringWithContentsOfFile(CFStringRef name, CFStringRef type)
+{
+    RetainPtr<CFURLRef> requestedURLRef = adoptCF(CFBundleCopyResourceURL(webKitBundle(), name, type, 0));
+    if (!requestedURLRef)
+        return String();
+
+    UInt8 requestedFilePath[MAX_PATH];
+    if (!CFURLGetFileSystemRepresentation(requestedURLRef.get(), false, requestedFilePath, MAX_PATH))
+        return String();
+
+    PlatformFileHandle requestedFileHandle = openFile(requestedFilePath, OpenForRead);
+    if (!isHandleValid(requestedFileHandle))
+        return String();
+
+    long long filesize = -1;
+    if (!getFileSize(requestedFileHandle, filesize)) {
+        closeFile(requestedFileHandle);
+        return String();
+    }
+
+    Vector<char> fileContents;
+    fillBufferWithContentsOfFile(requestedFileHandle, filesize, fileContents);
+    closeFile(requestedFileHandle);
+
+    return String(fileContents.data(), static_cast<size_t>(filesize));
+}
+
 String RenderThemeWin::mediaControlsStyleSheet()
 {
 #if ENABLE(MEDIA_CONTROLS_SCRIPT)
-    return String(mediaControlsAppleUserAgentStyleSheet, sizeof(mediaControlsAppleUserAgentStyleSheet));
+    if (m_mediaControlsStyleSheet.isEmpty())
+        m_mediaControlsStyleSheet = stringWithContentsOfFile(CFSTR("mediaControlsApple"), CFSTR("css"));
+    return m_mediaControlsStyleSheet;
 #else
     return emptyString();
 #endif
@@ -1088,7 +1092,13 @@ String RenderThemeWin::mediaControlsStyleSheet()
 String RenderThemeWin::mediaControlsScript()
 {
 #if ENABLE(MEDIA_CONTROLS_SCRIPT)
-    return String(mediaControlsAppleJavaScript, sizeof(mediaControlsAppleJavaScript));
+    if (m_mediaControlsScript.isEmpty()) {
+        StringBuilder scriptBuilder;
+        scriptBuilder.append(stringWithContentsOfFile(CFSTR("mediaControlsLocalizedStrings"), CFSTR("js")));
+        scriptBuilder.append(stringWithContentsOfFile(CFSTR("mediaControlsApple"), CFSTR("js")));
+        m_mediaControlsScript = scriptBuilder.toString();
+    }
+    return m_mediaControlsScript;
 #else
     return emptyString();
 #endif
@@ -1096,9 +1106,9 @@ String RenderThemeWin::mediaControlsScript()
 #endif
 
 #if ENABLE(METER_ELEMENT)
-void RenderThemeWin::adjustMeterStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeWin::adjustMeterStyle(StyleResolver&, RenderStyle& style, Element*) const
 {
-    style->setBoxShadow(nullptr);
+    style.setBoxShadow(nullptr);
 }
 
 bool RenderThemeWin::supportsMeter(ControlPart part) const
@@ -1111,17 +1121,17 @@ bool RenderThemeWin::supportsMeter(ControlPart part) const
     }
 }
 
-IntSize RenderThemeWin::meterSizeForBounds(const RenderMeter*, const IntRect& bounds) const
+IntSize RenderThemeWin::meterSizeForBounds(const RenderMeter&, const IntRect& bounds) const
 {
     return bounds.size();
 }
 
-bool RenderThemeWin::paintMeter(RenderObject* renderObject, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeWin::paintMeter(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& rect)
 {
-    if (!renderObject->isMeter())
+    if (!is<RenderMeter>(renderObject))
         return true;
 
-    HTMLMeterElement* element = toRenderMeter(renderObject)->meterElement();
+    HTMLMeterElement* element = downcast<RenderMeter>(renderObject).meterElement();
 
     ThemeData theme = getThemeData(renderObject);
 

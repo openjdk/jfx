@@ -24,10 +24,12 @@
  */
 
 #include "config.h"
+
+#if !USE(SOUP)
+
 #include "NetworkStorageSession.h"
 
 #include "NetworkingContext.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
@@ -53,7 +55,7 @@ std::unique_ptr<NetworkStorageSession> NetworkStorageSession::createPrivateBrows
 
 NetworkStorageSession& NetworkStorageSession::defaultStorageSession()
 {
-    DEFINE_STATIC_LOCAL(NetworkStorageSession, session, (0));
+    DEPRECATED_DEFINE_STATIC_LOCAL(NetworkStorageSession, session, (0));
     return session;
 }
 
@@ -62,3 +64,5 @@ void NetworkStorageSession::switchToNewTestingSession()
 }
 
 }
+
+#endif

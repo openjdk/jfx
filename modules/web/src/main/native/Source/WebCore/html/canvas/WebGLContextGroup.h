@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,9 +26,8 @@
 #ifndef WebGLContextGroup_h
 #define WebGLContextGroup_h
 
-#include <WebGLRenderingContext.h>
+#include "WebGLRenderingContextBase.h"
 #include <wtf/HashSet.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -36,24 +35,24 @@ namespace WebCore {
 class GraphicsContext3D;
 class WebGLExtension;
 class WebGLSharedObject;
-class WebGLRenderingContext;
+class WebGLRenderingContextBase;
 
 typedef int ExceptionCode;
 
-class WebGLContextGroup : public RefCounted<WebGLContextGroup> {
+class WebGLContextGroup final : public RefCounted<WebGLContextGroup> {
 public:
-    static PassRefPtr<WebGLContextGroup> create();
-    virtual ~WebGLContextGroup();
+    static Ref<WebGLContextGroup> create();
+    ~WebGLContextGroup();
 
-    void addContext(WebGLRenderingContext*);
-    void removeContext(WebGLRenderingContext*);
+    void addContext(WebGLRenderingContextBase*);
+    void removeContext(WebGLRenderingContextBase*);
 
     void addObject(WebGLSharedObject*);
     void removeObject(WebGLSharedObject*);
 
     GraphicsContext3D* getAGraphicsContext3D();
 
-    void loseContextGroup(WebGLRenderingContext::LostContextMode);
+    void loseContextGroup(WebGLRenderingContextBase::LostContextMode);
 
   private:
     friend class WebGLObject;
@@ -62,7 +61,7 @@ public:
 
     void detachAndRemoveAllObjects();
 
-    HashSet<WebGLRenderingContext*> m_contexts;
+    HashSet<WebGLRenderingContextBase*> m_contexts;
     HashSet<WebGLSharedObject*> m_groupObjects;
 };
 

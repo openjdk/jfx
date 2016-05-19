@@ -20,7 +20,7 @@
 #include "config.h"
 #include "SVGTextLayoutEngineSpacing.h"
 
-#include "Font.h"
+#include "FontCascade.h"
 #include "SVGLengthContext.h"
 #include "SVGRenderStyle.h"
 
@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-SVGTextLayoutEngineSpacing::SVGTextLayoutEngineSpacing(const Font& font)
+SVGTextLayoutEngineSpacing::SVGTextLayoutEngineSpacing(const FontCascade& font)
     : m_font(font)
     , m_lastCharacter(0)
 {
@@ -41,16 +41,16 @@ SVGTextLayoutEngineSpacing::SVGTextLayoutEngineSpacing(const Font& font)
 float SVGTextLayoutEngineSpacing::calculateSVGKerning(bool isVerticalText, const SVGTextMetrics::Glyph& currentGlyph)
 {
 #if ENABLE(SVG_FONTS)
-    const SimpleFontData* fontData = m_font.primaryFont();
-    if (!fontData->isSVGFont()) {
+    const Font& font = m_font.primaryFont();
+    if (!font.isSVGFont()) {
         m_lastGlyph.isValid = false;
         return 0;
     }
 
-    ASSERT(fontData->isCustomFont());
-    ASSERT(fontData->isSVGFont());
+    ASSERT(font.isCustomFont());
+    ASSERT(font.isSVGFont());
 
-    const SVGFontData* svgFontData = static_cast<const SVGFontData*>(fontData->fontData());
+    auto* svgFontData = static_cast<const SVGFontData*>(font.svgData());
     SVGFontFaceElement* svgFontFace = svgFontData->svgFontFaceElement();
     ASSERT(svgFontFace);
 
@@ -98,7 +98,7 @@ float SVGTextLayoutEngineSpacing::calculateCSSKerningAndSpacing(const SVGRenderS
 
     float spacing = m_font.letterSpacing() + kerning;
     if (currentCharacter && lastCharacter && m_font.wordSpacing()) {
-        if (Font::treatAsSpace(*currentCharacter) && !Font::treatAsSpace(*lastCharacter))
+        if (FontCascade::treatAsSpace(*currentCharacter) && !FontCascade::treatAsSpace(*lastCharacter))
             spacing += m_font.wordSpacing();
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012, 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,10 +52,10 @@ class Operands {
 public:
     Operands() { }
 
-    explicit Operands(size_t numArguments, size_t numLocals)
+    explicit Operands(size_t numArguments, size_t numLocals, const T& initialValue = Traits::defaultValue())
     {
-        m_arguments.fill(Traits::defaultValue(), numArguments);
-        m_locals.fill(Traits::defaultValue(), numLocals);
+        m_arguments.fill(initialValue, numArguments);
+        m_locals.fill(initialValue, numLocals);
     }
 
     template<typename U, typename OtherTraits>
@@ -96,7 +96,7 @@ public:
         return local(idx);
     }
 
-    void ensureLocals(size_t size)
+    void ensureLocals(size_t size, const T& ensuredValue = Traits::defaultValue())
     {
         if (size <= m_locals.size())
             return;
@@ -104,7 +104,7 @@ public:
         size_t oldSize = m_locals.size();
         m_locals.resize(size);
         for (size_t i = oldSize; i < m_locals.size(); ++i)
-            m_locals[i] = Traits::defaultValue();
+            m_locals[i] = ensuredValue;
     }
 
     void setLocal(size_t idx, const T& value)
@@ -149,6 +149,7 @@ public:
     }
 
     const T& operand(int operand) const { return const_cast<const T&>(const_cast<Operands*>(this)->operand(operand)); }
+    const T& operand(VirtualRegister operand) const { return const_cast<const T&>(const_cast<Operands*>(this)->operand(operand)); }
 
     bool hasOperand(int operand) const
     {
@@ -209,6 +210,10 @@ public:
             return virtualRegisterForArgument(index).offset();
         return virtualRegisterForLocal(index - numberOfArguments()).offset();
     }
+    VirtualRegister virtualRegisterForIndex(size_t index) const
+    {
+        return VirtualRegister(operandForIndex(index));
+    }
     size_t indexForOperand(int operand) const
     {
         if (operandIsArgument(operand))
@@ -252,11 +257,7 @@ public:
     }
 
     void dumpInContext(PrintStream& out, DumpContext* context) const;
-
-    void dump(PrintStream& out) const
-    {
-        dumpInContext(out, 0);
-    }
+    void dump(PrintStream& out) const;
 
 private:
     Vector<T, 8> m_arguments;

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,6 +26,7 @@
 #ifndef URL_h
 #define URL_h
 
+#include "PlatformExportMacros.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/RetainPtr.h>
@@ -61,7 +62,7 @@ public:
     // The argument is an absolute URL string. The string is assumed to be output of URL::string() called on a valid
     // URL object, or indiscernible from such.
     // It is usually best to avoid repeatedly parsing a string, unless memory saving outweigh the possible slow-downs.
-    URL(ParsedURLStringTag, const String&);
+    WEBCORE_EXPORT URL(ParsedURLStringTag, const String&);
     explicit URL(WTF::HashTableDeletedValueType) : m_string(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return string().isHashTableDeletedValue(); }
 
@@ -72,8 +73,11 @@ public:
     // FIXME: If the base URL is invalid, this always creates an invalid
     // URL. Instead I think it would be better to treat all invalid base URLs
     // the same way we treate null and empty base URLs.
-    URL(const URL& base, const String& relative);
+    WEBCORE_EXPORT URL(const URL& base, const String& relative);
     URL(const URL& base, const String& relative, const TextEncoding&);
+
+    static URL fakeURLWithRelativePart(const String&);
+    static URL fileURLWithFileSystemPath(const String&);
 
     String strippedForUseAsReferrer() const;
 
@@ -82,9 +86,9 @@ public:
     // standard String constructor.
 
     // Makes a deep copy. Helpful only if you need to use a URL on another
-    // thread.  Since the underlying StringImpl objects are immutable, there's
-    // no other reason to ever prefer copy() over plain old assignment.
-    URL copy() const;
+    // thread. Since the underlying StringImpl objects are immutable, there's
+    // no other reason to ever prefer isolatedCopy() over plain old assignment.
+    URL isolatedCopy() const;
 
     bool isNull() const;
     bool isEmpty() const;
@@ -101,31 +105,36 @@ public:
 
     String stringCenterEllipsizedToLength(unsigned length = 1024) const;
 
-    String protocol() const;
-    String host() const;
-    unsigned short port() const;
+    WEBCORE_EXPORT String protocol() const;
+    WEBCORE_EXPORT String host() const;
+    WEBCORE_EXPORT unsigned short port() const;
     bool hasPort() const;
-    String user() const;
-    String pass() const;
-    String path() const;
-    String lastPathComponent() const;
-    String query() const;
-    String fragmentIdentifier() const;
-    bool hasFragmentIdentifier() const;
+    WEBCORE_EXPORT String user() const;
+    WEBCORE_EXPORT String pass() const;
+    WEBCORE_EXPORT String path() const;
+    WEBCORE_EXPORT String lastPathComponent() const;
+    WEBCORE_EXPORT String query() const;
+    WEBCORE_EXPORT String fragmentIdentifier() const;
+    WEBCORE_EXPORT bool hasFragmentIdentifier() const;
 
-    String baseAsString() const;
+    // Unlike user() and pass(), these functions don't decode escape sequences.
+    // This is necessary for accurate round-tripping, because encoding doesn't encode '%' characters.
+    String encodedUser() const;
+    String encodedPass() const;
 
-    String fileSystemPath() const;
+    WEBCORE_EXPORT String baseAsString() const;
+
+    WEBCORE_EXPORT String fileSystemPath() const;
 
     // Returns true if the current URL's protocol is the same as the null-
     // terminated ASCII argument. The argument must be lower-case.
-    bool protocolIs(const char*) const;
+    WEBCORE_EXPORT bool protocolIs(const char*) const;
     bool protocolIsData() const { return protocolIs("data"); }
     bool protocolIsInHTTPFamily() const;
-    bool isLocalFile() const;
+    WEBCORE_EXPORT bool isLocalFile() const;
     bool isBlankURL() const;
 
-    bool setProtocol(const String&);
+    WEBCORE_EXPORT bool setProtocol(const String&);
     void setHost(const String&);
 
     void removePort();
@@ -139,7 +148,7 @@ public:
 
     // If you pass an empty path for HTTP or HTTPS URLs, the resulting path
     // will be "/".
-    void setPath(const String&);
+    WEBCORE_EXPORT void setPath(const String&);
 
     // The query may begin with a question mark, or, if not, one will be added
     // for you. Setting the query to the empty string will leave a "?" in the
@@ -149,9 +158,9 @@ public:
     void setFragmentIdentifier(const String&);
     void removeFragmentIdentifier();
 
-    friend bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
+    WEBCORE_EXPORT friend bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
 
-    friend bool protocolHostAndPortAreEqual(const URL&, const URL&);
+    WEBCORE_EXPORT friend bool protocolHostAndPortAreEqual(const URL&, const URL&);
 
     unsigned hostStart() const;
     unsigned hostEnd() const;
@@ -163,8 +172,8 @@ public:
     operator const String&() const { return string(); }
 
 #if USE(CF)
-    URL(CFURLRef);
-    RetainPtr<CFURLRef> createCFURL() const;
+    WEBCORE_EXPORT URL(CFURLRef);
+    WEBCORE_EXPORT RetainPtr<CFURLRef> createCFURL() const;
 #endif
 
 #if USE(SOUP)
@@ -173,15 +182,14 @@ public:
 #endif
 
 #if USE(FOUNDATION)
-    URL(NSURL*);
-    operator NSURL*() const;
+    WEBCORE_EXPORT URL(NSURL*);
+    WEBCORE_EXPORT operator NSURL*() const;
 #endif
 #ifdef __OBJC__
     operator NSString*() const { return string(); }
 #endif
 
 #if PLATFORM(JAVA)
-    String deprecatedString() const;
     bool isJarFile() const { return m_protocolIsInJar; }
 #endif
     const URL* innerURL() const { return 0; }
@@ -193,7 +201,7 @@ public:
     bool isSafeToSendToAnotherThread() const;
 
 private:
-    void invalidate();
+    WEBCORE_EXPORT void invalidate();
     static bool protocolIs(const String&, const char*);
     void init(const URL&, const String&, const TextEncoding&);
     void copyToBuffer(Vector<char, 512>& buffer) const;
@@ -232,19 +240,19 @@ bool operator!=(const URL&, const URL&);
 bool operator!=(const URL&, const String&);
 bool operator!=(const String&, const URL&);
 
-bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
-bool protocolHostAndPortAreEqual(const URL&, const URL&);
+WEBCORE_EXPORT bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
+WEBCORE_EXPORT bool protocolHostAndPortAreEqual(const URL&, const URL&);
 
-const URL& blankURL();
+WEBCORE_EXPORT const URL& blankURL();
 
 // Functions to do URL operations on strings.
 // These are operations that aren't faster on a parsed URL.
 // These are also different from the URL functions in that they don't require the string to be a valid and parsable URL.
 // This is especially important because valid javascript URLs are not necessarily considered valid by URL.
 
-bool protocolIs(const String& url, const char* protocol);
-bool protocolIsJavaScript(const String& url);
-bool protocolIsInHTTPFamily(const String& url);
+WEBCORE_EXPORT bool protocolIs(const String& url, const char* protocol);
+WEBCORE_EXPORT bool protocolIsJavaScript(const String& url);
+WEBCORE_EXPORT bool protocolIsInHTTPFamily(const String& url);
 
 bool isDefaultPortForProtocol(unsigned short port, const String& protocol);
 bool portAllowed(const URL&); // Blacklist ports that should never be used for Web resources.
@@ -252,15 +260,34 @@ bool portAllowed(const URL&); // Blacklist ports that should never be used for W
 bool isValidProtocol(const String&);
 
 String mimeTypeFromDataURL(const String& url);
-String mimeTypeFromURL(const URL&);
+WEBCORE_EXPORT String mimeTypeFromURL(const URL&);
 
 // Unescapes the given string using URL escaping rules, given an optional
 // encoding (defaulting to UTF-8 otherwise). DANGER: If the URL has "%00"
 // in it, the resulting string will have embedded null characters!
-String decodeURLEscapeSequences(const String&);
+WEBCORE_EXPORT String decodeURLEscapeSequences(const String&);
 String decodeURLEscapeSequences(const String&, const TextEncoding&);
 
-String encodeWithURLEscapeSequences(const String&);
+// FIXME: This is a wrong concept to expose, different parts of a URL need different escaping per the URL Standard.
+WEBCORE_EXPORT String encodeWithURLEscapeSequences(const String&);
+
+#if PLATFORM(IOS)
+WEBCORE_EXPORT void enableURLSchemeCanonicalization(bool);
+#endif
+
+// Like StringCapture, but for URLs.
+class URLCapture {
+public:
+    explicit URLCapture(const URL&);
+    explicit URLCapture(URL&&);
+    URLCapture(const URLCapture&);
+    const URL& url() const;
+    URL releaseURL();
+
+private:
+    void operator=(const URLCapture&) = delete;
+    URL m_URL;
+};
 
 // Inlines.
 
@@ -352,9 +379,30 @@ inline unsigned URL::pathAfterLastSlash() const
     return m_pathAfterLastSlash;
 }
 
-#if PLATFORM(IOS)
-void enableURLSchemeCanonicalization(bool);
-#endif
+inline URLCapture::URLCapture(const URL& url)
+    : m_URL(url)
+{
+}
+
+inline URLCapture::URLCapture(URL&& url)
+    : m_URL(url)
+{
+}
+
+inline URLCapture::URLCapture(const URLCapture& other)
+    : m_URL(other.m_URL.isolatedCopy())
+{
+}
+
+inline const URL& URLCapture::url() const
+{
+    return m_URL;
+}
+
+inline URL URLCapture::releaseURL()
+{
+    return WTF::move(m_URL);
+}
 
 } // namespace WebCore
 

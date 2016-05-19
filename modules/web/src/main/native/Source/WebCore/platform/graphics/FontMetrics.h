@@ -84,6 +84,14 @@ public:
     bool hasXHeight() const { return m_hasXHeight && m_xHeight > 0; }
     void setHasXHeight(bool hasXHeight) { m_hasXHeight = hasXHeight; }
 
+    bool hasCapHeight() const { return m_hasCapHeight && m_capHeight > 0; }
+    float floatCapHeight() const { return m_capHeight; }
+    void setCapHeight(float capHeight)
+    {
+        m_capHeight = capHeight;
+        m_hasCapHeight = true;
+    }
+
     // Integer variants of certain metrics, used for HTML rendering.
     int ascent(FontBaseline baselineType = AlphabeticBaseline) const
     {
@@ -107,6 +115,8 @@ public:
     int lineGap() const { return lroundf(m_lineGap); }
     int lineSpacing() const { return lroundf(m_lineSpacing); }
 
+    int capHeight() const { return lroundf(m_capHeight); }
+
     bool hasIdenticalAscentDescentAndLineGap(const FontMetrics& other) const
     {
         return ascent() == other.ascent() && descent() == other.descent() && lineGap() == other.lineGap();
@@ -123,7 +133,7 @@ public:
     void setHasZeroWidth(bool hasZeroWidth) { m_hasZeroWidth = hasZeroWidth; }
 
 private:
-    friend class SimpleFontData;
+    friend class Font;
 
     void reset()
     {
@@ -142,8 +152,10 @@ private:
     float m_lineGap;
     float m_lineSpacing;
     float m_xHeight;
+    float m_capHeight;
     float m_zeroWidth;
     bool m_hasXHeight;
+    bool m_hasCapHeight;
     bool m_hasZeroWidth;
 };
 

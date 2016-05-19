@@ -171,7 +171,7 @@ class AbstractPatchProcessingCommand(Command):
 
         # It's nice to print out total statistics.
         bugs_to_patches = self._collect_patches_by_bug(patches)
-        _log.info("Processing %s from %s." % (pluralize("patch", len(patches)), pluralize("bug", len(bugs_to_patches))))
+        _log.info("Processing %s from %s." % (pluralize(len(patches), "patch"), pluralize(len(bugs_to_patches), "bug")))
 
         for patch in patches:
             self._process_patch(patch, options, args, tool)
@@ -216,13 +216,13 @@ class ProcessBugsMixin(object):
         all_patches = []
         for bug_id in args:
             patches = tool.bugs.fetch_bug(bug_id).reviewed_patches()
-            _log.info("%s found on bug %s." % (pluralize("reviewed patch", len(patches)), bug_id))
+            _log.info("%s found on bug %s." % (pluralize(len(patches), "reviewed patch"), bug_id))
             all_patches += patches
         if not all_patches:
             _log.info("No reviewed patches found, looking for unreviewed patches.")
             for bug_id in args:
                 patches = tool.bugs.fetch_bug(bug_id).patches()
-                _log.info("%s found on bug %s." % (pluralize("patch", len(patches)), bug_id))
+                _log.info("%s found on bug %s." % (pluralize(len(patches), "patch"), bug_id))
                 all_patches += patches
         return all_patches
 
@@ -234,7 +234,7 @@ class ProcessURLsMixin(object):
             bug_id = urls.parse_bug_id(url)
             if bug_id:
                 patches = tool.bugs.fetch_bug(bug_id).patches()
-                _log.info("%s found on bug %s." % (pluralize("patch", len(patches)), bug_id))
+                _log.info("%s found on bug %s." % (pluralize(len(patches), "patch"), bug_id))
                 all_patches += patches
 
             attachment_id = urls.parse_attachment_id(url)
@@ -394,6 +394,8 @@ class AbstractRolloutPrepCommand(AbstractSequencedCommand):
 
     def _prepare_state(self, options, args, tool):
         revision_list = []
+        description_list = []
+        bug_id_list = []
         for revision in str(args[0]).split():
             if revision.isdigit():
                 revision_list.append(int(revision))
@@ -401,21 +403,31 @@ class AbstractRolloutPrepCommand(AbstractSequencedCommand):
                 raise ScriptError(message="Invalid svn revision number: " + revision)
         revision_list.sort()
 
-        # We use the earliest revision for the bug info
         earliest_revision = revision_list[0]
         state = {
             "revision": earliest_revision,
             "revision_list": revision_list,
             "reason": args[1],
+            "bug_id": None,
+            "bug_id_list": bug_id_list,
+            "description_list": description_list,
         }
-        commit_info = self._commit_info(earliest_revision)
-        if commit_info:
-            state["bug_id"] = commit_info.bug_id()
-            cc_list = sorted([party.bugzilla_email()
+        for revision in revision_list:
+            commit_info = self._commit_info(revision)
+            if commit_info:
+                # We use the earliest revision for the bug info
+                if revision == earliest_revision:
+                    state["bug_blocked"] = commit_info.bug_id()
+                    cc_list = sorted([party.bugzilla_email()
                             for party in commit_info.responsible_parties()
                             if party.bugzilla_email()])
-            # FIXME: We should used the list as the canonical representation.
-            state["bug_cc"] = ",".join(cc_list)
+                    # FIXME: We should used the list as the canonical representation.
+                    state["bug_cc"] = ",".join(cc_list)
+                description_list.append(commit_info.bug_description())
+                bug_id_list.append(commit_info.bug_id())
+            else:
+                description_list.append(None)
+                bug_id_list.append(None)
         return state
 
 
@@ -448,14 +460,6 @@ class CreateRollout(AbstractRolloutPrepCommand):
 
     def _prepare_state(self, options, args, tool):
         state = AbstractRolloutPrepCommand._prepare_state(self, options, args, tool)
-        # Currently, state["bug_id"] points to the bug that caused the
-        # regression.  We want to create a new bug that blocks the old bug
-        # so we move state["bug_id"] to state["bug_blocked"] and delete the
-        # old state["bug_id"] so that steps.CreateBug will actually create
-        # the new bug that we want (and subsequently store its bug id into
-        # state["bug_id"])
-        state["bug_blocked"] = state["bug_id"]
-        del state["bug_id"]
         state["bug_title"] = "REGRESSION(r%s): %s" % (state["revision"], state["reason"])
         state["bug_description"] = "%s broke the build:\n%s" % (urls.view_revision_url(state["revision"]), state["reason"])
         # FIXME: If we had more context here, we could link to other open bugs

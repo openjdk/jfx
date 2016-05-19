@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,10 +27,9 @@
 #define DragImage_h
 
 #include "FloatSize.h"
-#include "FontRenderingMode.h"
-#include "FrameSnapshotting.h"
 #include "ImageOrientation.h"
 #include "IntSize.h"
+#include "TextFlags.h"
 #include <wtf/Forward.h>
 
 #if PLATFORM(IOS)
@@ -84,7 +83,7 @@ DragImageRef createDragImageFromImage(Image*, ImageOrientationDescription);
 DragImageRef createDragImageIconForCachedImageFilename(const String&);
 
 DragImageRef createDragImageForNode(Frame&, Node&);
-DragImageRef createDragImageForSelection(Frame&, bool forceBlackText = false);
+WEBCORE_EXPORT DragImageRef createDragImageForSelection(Frame&, bool forceBlackText = false);
 DragImageRef createDragImageForRange(Frame&, Range&, bool forceBlackText = false);
 DragImageRef createDragImageForImage(Frame&, Node&, IntRect& imageRect, IntRect& elementRect);
 DragImageRef createDragImageForLink(URL&, const String& label, FontRenderingMode);

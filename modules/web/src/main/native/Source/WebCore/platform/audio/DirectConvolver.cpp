@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -44,9 +44,6 @@ using namespace VectorMath;
 
 DirectConvolver::DirectConvolver(size_t inputBlockSize)
     : m_inputBlockSize(inputBlockSize)
-#if USE(WEBAUDIO_IPP)
-    , m_overlayBuffer(inputBlockSize)
-#endif // USE(WEBAUDIO_IPP)
     , m_buffer(inputBlockSize * 2)
 {
 }
@@ -71,19 +68,6 @@ void DirectConvolver::process(AudioFloatArray* convolutionKernel, const float* s
     if (!isCopyGood)
         return;
 
-#if USE(WEBAUDIO_IPP)
-    float* outputBuffer = m_buffer.data();
-    float* overlayBuffer = m_overlayBuffer.data();
-    bool isCopyGood2 = overlayBuffer && m_overlayBuffer.size() >= kernelSize && m_buffer.size() == m_inputBlockSize * 2;
-    ASSERT(isCopyGood2);
-    if (!isCopyGood2)
-        return;
-
-    ippsConv_32f(static_cast<const Ipp32f*>(sourceP), framesToProcess, static_cast<Ipp32f*>(kernelP), kernelSize, static_cast<Ipp32f*>(outputBuffer));
-
-    vadd(outputBuffer, 1, overlayBuffer, 1, destP, 1, framesToProcess);
-    memcpy(overlayBuffer, outputBuffer + m_inputBlockSize, sizeof(float) * kernelSize);
-#else
     float* inputP = m_buffer.data() + m_inputBlockSize;
 
     // Copy samples to 2nd half of input buffer.
@@ -91,7 +75,10 @@ void DirectConvolver::process(AudioFloatArray* convolutionKernel, const float* s
 
 #if OS(DARWIN)
 #if defined(__ppc__) || defined(__i386__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     conv(inputP - kernelSize + 1, 1, kernelP + kernelSize - 1, -1, destP, 1, framesToProcess, kernelSize);
+#pragma clang diagnostic pop
 #else
     vDSP_conv(inputP - kernelSize + 1, 1, kernelP + kernelSize - 1, -1, destP, 1, framesToProcess, kernelSize);
 #endif // defined(__ppc__) || defined(__i386__)
@@ -369,15 +356,11 @@ void DirectConvolver::process(AudioFloatArray* convolutionKernel, const float* s
 
     // Copy 2nd half of input buffer to 1st half.
     memcpy(m_buffer.data(), inputP, sizeof(float) * framesToProcess);
-#endif
 }
 
 void DirectConvolver::reset()
 {
     m_buffer.zero();
-#if USE(WEBAUDIO_IPP)
-    m_overlayBuffer.zero();
-#endif // USE(WEBAUDIO_IPP)
 }
 
 } // namespace WebCore

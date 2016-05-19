@@ -34,9 +34,10 @@
 
 namespace JSC {
 
-class WeakMapData : public JSCell {
+class WeakMapData final : public JSCell {
 public:
     typedef JSCell Base;
+    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     static WeakMapData* create(VM& vm)
     {
@@ -47,11 +48,10 @@ public:
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
     }
 
     static const bool needsDestruction = true;
-    static const bool hasImmortalStructure = true;
 
     void set(VM&, JSObject*, JSValue);
     JSValue get(JSObject*);
@@ -61,7 +61,11 @@ public:
 
     DECLARE_INFO;
 
-    static const unsigned StructureFlags = OverridesVisitChildren | Base::StructureFlags;
+    typedef HashMap<JSObject*, WriteBarrier<Unknown>> MapType;
+    MapType::const_iterator begin() const { return m_map.begin(); }
+    MapType::const_iterator end() const { return m_map.end(); }
+
+    int size() const { return m_map.size(); }
 
 private:
     WeakMapData(VM&);
@@ -78,11 +82,10 @@ private:
     private:
         virtual void visitWeakReferences(SlotVisitor&) override;
         virtual void finalizeUnconditionally() override;
-        int m_liveKeyCount;
+        unsigned m_liveKeyCount;
         WeakMapData* m_target;
     };
     DeadKeyCleaner m_deadKeyCleaner;
-    typedef HashMap<JSObject*, WriteBarrier<Unknown>> MapType;
     MapType m_map;
 };
 

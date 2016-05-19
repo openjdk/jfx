@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -45,11 +45,10 @@ public:
     CFURLConnectionClient_V6 makeConnectionClient() const;
     virtual void setupRequest(CFMutableURLRequestRef) = 0;
     virtual void setupConnectionScheduling(CFURLConnectionRef) = 0;
-    void releaseHandle();
+    virtual void releaseHandle();
 
     virtual void continueWillSendRequest(CFURLRequestRef) = 0;
     virtual void continueDidReceiveResponse() = 0;
-    virtual void continueShouldUseCredentialStorage(bool) = 0;
     virtual void continueWillCacheResponse(CFCachedURLResponseRef) = 0;
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
     virtual void continueCanAuthenticateAgainstProtectionSpace(bool) = 0;
@@ -60,6 +59,8 @@ protected:
     ResourceRequest createResourceRequest(CFURLRequestRef, CFURLResponseRef);
 
 private:
+    static const void* retain(const void*);
+    static void release(const void*);
     static CFURLRequestRef willSendRequestCallback(CFURLConnectionRef, CFURLRequestRef, CFURLResponseRef, const void* clientInfo);
     static void didReceiveResponseCallback(CFURLConnectionRef, CFURLResponseRef, const void* clientInfo);
     static void didReceiveDataCallback(CFURLConnectionRef, CFDataRef, CFIndex originalLength, const void* clientInfo);
@@ -77,7 +78,7 @@ private:
 #endif // USE(NETWORK_CFDATA_ARRAY_CALLBACK)
 
     virtual CFURLRequestRef willSendRequest(CFURLRequestRef, CFURLResponseRef) = 0;
-    virtual void didReceiveResponse(CFURLResponseRef) = 0;
+    virtual void didReceiveResponse(CFURLConnectionRef, CFURLResponseRef) = 0;
     virtual void didReceiveData(CFDataRef, CFIndex originalLength) = 0;
     virtual void didFinishLoading() = 0;
     virtual void didFail(CFErrorRef) = 0;
@@ -94,6 +95,7 @@ private:
 
 protected:
     ResourceHandle* m_handle;
+    RetainPtr<CFStringRef> m_originalScheme;
 };
 
 } // namespace WebCore.

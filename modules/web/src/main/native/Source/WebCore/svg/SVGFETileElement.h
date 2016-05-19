@@ -21,7 +21,6 @@
 #ifndef SVGFETileElement_h
 #define SVGFETileElement_h
 
-#if ENABLE(FILTERS)
 #include "FETile.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
@@ -29,15 +28,14 @@ namespace WebCore {
 
 class SVGFETileElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFETileElement> create(const QualifiedName&, Document&);
+    static Ref<SVGFETileElement> create(const QualifiedName&, Document&);
 
 private:
     SVGFETileElement(const QualifiedName&, Document&);
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
+    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFETileElement)
         DECLARE_ANIMATED_STRING(In1, in1)
@@ -46,5 +44,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
 #endif

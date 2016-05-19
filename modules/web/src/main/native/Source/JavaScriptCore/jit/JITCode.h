@@ -31,7 +31,6 @@
 #include "Disassembler.h"
 #include "JITStubs.h"
 #include "JSCJSValue.h"
-#include "LegacyProfiler.h"
 #include "MacroAssemblerCodeRef.h"
 #include "RegisterPreservationMode.h"
 
@@ -47,6 +46,7 @@ class JITCode;
 }
 
 struct ProtoCallFrame;
+class TrackedReferences;
 class VM;
 
 class JITCode : public ThreadSafeRefCounted<JITCode> {
@@ -62,6 +62,8 @@ public:
         DFGJIT,
         FTLJIT
     };
+
+    static const char* typeName(JITType);
 
     static JITType bottomTierJIT()
     {
@@ -181,6 +183,8 @@ public:
     virtual DFG::JITCode* dfg();
     virtual FTL::JITCode* ftl();
     virtual FTL::ForOSREntryJITCode* ftlForOSREntry();
+
+    virtual void validateReferences(const TrackedReferences&);
 
     JSValue execute(VM*, ProtoCallFrame*);
 

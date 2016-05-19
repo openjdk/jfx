@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +26,10 @@
 #ifndef DFGLazyJSValue_h
 #define DFGLazyJSValue_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
-#include "JSCJSValue.h"
+#include "DFGCommon.h"
+#include "DFGFrozenValue.h"
 #include <wtf/text/StringImpl.h>
 
 namespace JSC { namespace DFG {
@@ -46,10 +45,10 @@ enum LazinessKind {
 
 class LazyJSValue {
 public:
-    LazyJSValue(JSValue value = JSValue())
+    LazyJSValue(FrozenValue* value = FrozenValue::emptySingleton())
         : m_kind(KnownValue)
     {
-        u.value = JSValue::encode(value);
+        u.value = value;
     }
 
     static LazyJSValue singleCharacterString(UChar character)
@@ -68,19 +67,19 @@ public:
         return result;
     }
 
-    JSValue tryGetValue() const
+    FrozenValue* tryGetValue(Graph&) const
     {
         if (m_kind == KnownValue)
             return value();
-        return JSValue();
+        return nullptr;
     }
 
     JSValue getValue(VM&) const;
 
-    JSValue value() const
+    FrozenValue* value() const
     {
         ASSERT(m_kind == KnownValue);
-        return JSValue::decode(u.value);
+        return u.value;
     }
 
     UChar character() const
@@ -97,28 +96,14 @@ public:
 
     TriState strictEqual(const LazyJSValue& other) const;
 
-    unsigned switchLookupValue() const
-    {
-        // NB. Not every kind of JSValue will be able to give you a switch lookup
-        // value, and this method will assert, or do bad things, if you use it
-        // for a kind of value that can't.
-        switch (m_kind) {
-        case KnownValue:
-            return value().asInt32();
-        case SingleCharacterString:
-            return character();
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-            return 0;
-        }
-    }
+    uintptr_t switchLookupValue(SwitchKind) const;
 
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
 
 private:
     union {
-        EncodedJSValue value;
+        FrozenValue* value;
         UChar character;
         StringImpl* stringImpl;
     } u;

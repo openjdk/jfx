@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -48,21 +48,21 @@ public:
     enum EAddStyledElement { AddStyledElement, DoNotAddStyledElement };
     typedef bool (*IsInlineElementToRemoveFunction)(const Element*);
 
-    static PassRefPtr<ApplyStyleCommand> create(Document& document, const EditingStyle* style, EditAction action = EditActionChangeAttributes, EPropertyLevel level = PropertyDefault)
+    static Ref<ApplyStyleCommand> create(Document& document, const EditingStyle* style, EditAction action = EditActionChangeAttributes, EPropertyLevel level = PropertyDefault)
     {
-        return adoptRef(new ApplyStyleCommand(document, style, action, level));
+        return adoptRef(*new ApplyStyleCommand(document, style, action, level));
     }
-    static PassRefPtr<ApplyStyleCommand> create(Document& document, const EditingStyle* style, const Position& start, const Position& end, EditAction action = EditActionChangeAttributes, EPropertyLevel level = PropertyDefault)
+    static Ref<ApplyStyleCommand> create(Document& document, const EditingStyle* style, const Position& start, const Position& end, EditAction action = EditActionChangeAttributes, EPropertyLevel level = PropertyDefault)
     {
-        return adoptRef(new ApplyStyleCommand(document, style, start, end, action, level));
+        return adoptRef(*new ApplyStyleCommand(document, style, start, end, action, level));
     }
-    static PassRefPtr<ApplyStyleCommand> create(PassRefPtr<Element> element, bool removeOnly = false, EditAction action = EditActionChangeAttributes)
+    static Ref<ApplyStyleCommand> create(PassRefPtr<Element> element, bool removeOnly = false, EditAction action = EditActionChangeAttributes)
     {
-        return adoptRef(new ApplyStyleCommand(element, removeOnly, action));
+        return adoptRef(*new ApplyStyleCommand(element, removeOnly, action));
     }
-    static PassRefPtr<ApplyStyleCommand> create(Document& document, const EditingStyle* style, IsInlineElementToRemoveFunction isInlineElementToRemoveFunction, EditAction action = EditActionChangeAttributes)
+    static Ref<ApplyStyleCommand> create(Document& document, const EditingStyle* style, IsInlineElementToRemoveFunction isInlineElementToRemoveFunction, EditAction action = EditActionChangeAttributes)
     {
-        return adoptRef(new ApplyStyleCommand(document, style, isInlineElementToRemoveFunction, action));
+        return adoptRef(*new ApplyStyleCommand(document, style, isInlineElementToRemoveFunction, action));
     }
 
 private:
@@ -72,7 +72,6 @@ private:
     ApplyStyleCommand(Document&, const EditingStyle*, bool (*isInlineElementToRemove)(const Element*), EditAction);
 
     virtual void doApply() override;
-    virtual EditAction editingAction() const override;
 
     // style-removal helpers
     bool isStyledInlineElementToRemove(Element*) const;
@@ -122,7 +121,6 @@ private:
     Position endPosition();
 
     RefPtr<EditingStyle> m_style;
-    EditAction m_editingAction;
     EPropertyLevel m_propertyLevel;
     Position m_start;
     Position m_end;
@@ -136,7 +134,7 @@ enum ShouldStyleAttributeBeEmpty { AllowNonEmptyStyleAttribute, StyleAttributeSh
 bool isEmptyFontTag(const Element*, ShouldStyleAttributeBeEmpty = StyleAttributeShouldBeEmpty);
 bool isLegacyAppleStyleSpan(const Node*);
 bool isStyleSpanOrSpanWithOnlyStyleAttribute(const Element*);
-PassRefPtr<HTMLElement> createStyleSpanElement(Document&);
+RefPtr<HTMLElement> createStyleSpanElement(Document&);
 
 } // namespace WebCore
 

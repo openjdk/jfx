@@ -30,8 +30,8 @@
 
 #include "GraphicsLayer.h"
 #include "ScrollingCoordinator.h"
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
+#include <wtf/RefCounted.h>
+#include <wtf/TypeCasts.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -71,13 +71,31 @@ public:
         : m_platformLayer(platformLayer)
         , m_layerID(0)
         , m_representation(PlatformLayerRepresentation)
-    { }
+    {
+        retainPlatformLayer(platformLayer);
+    }
 
     LayerRepresentation(GraphicsLayer::PlatformLayerID layerID)
         : m_graphicsLayer(nullptr)
         , m_layerID(layerID)
         , m_representation(PlatformLayerIDRepresentation)
-    { }
+    {
+    }
+
+    LayerRepresentation(const LayerRepresentation& other)
+        : m_platformLayer(other.m_platformLayer)
+        , m_layerID(other.m_layerID)
+        , m_representation(other.m_representation)
+    {
+        if (m_representation == PlatformLayerRepresentation)
+            retainPlatformLayer(m_platformLayer);
+    }
+
+    ~LayerRepresentation()
+    {
+        if (m_representation == PlatformLayerRepresentation)
+            releasePlatformLayer(m_platformLayer);
+    }
 
     operator GraphicsLayer*() const
     {
@@ -91,13 +109,30 @@ public:
         return m_platformLayer;
     }
 
+    GraphicsLayer::PlatformLayerID layerID() const
+    {
+        return m_layerID;
+    }
+
     operator GraphicsLayer::PlatformLayerID() const
     {
         ASSERT(m_representation != PlatformLayerRepresentation);
         return m_layerID;
     }
 
-    bool operator ==(const LayerRepresentation& other) const
+    LayerRepresentation& operator=(const LayerRepresentation& other)
+    {
+        m_platformLayer = other.m_platformLayer;
+        m_layerID = other.m_layerID;
+        m_representation = other.m_representation;
+
+        if (m_representation == PlatformLayerRepresentation)
+            retainPlatformLayer(m_platformLayer);
+
+        return *this;
+    }
+
+    bool operator==(const LayerRepresentation& other) const
     {
         if (m_representation != other.m_representation)
             return false;
@@ -136,6 +171,9 @@ public:
     bool representsPlatformLayerID() const { return m_representation == PlatformLayerIDRepresentation; }
 
 private:
+    WEBCORE_EXPORT void retainPlatformLayer(PlatformLayer*);
+    WEBCORE_EXPORT void releasePlatformLayer(PlatformLayer*);
+
     union {
         GraphicsLayer* m_graphicsLayer;
         PlatformLayer *m_platformLayer;
@@ -145,15 +183,22 @@ private:
     Type m_representation;
 };
 
-class ScrollingStateNode {
+class ScrollingStateNode : public RefCounted<ScrollingStateNode> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ScrollingStateNode(ScrollingNodeType, ScrollingStateTree&, ScrollingNodeID);
     virtual ~ScrollingStateNode();
 
     ScrollingNodeType nodeType() const { return m_nodeType; }
 
-    virtual PassOwnPtr<ScrollingStateNode> clone(ScrollingStateTree& adoptiveTree) = 0;
-    PassOwnPtr<ScrollingStateNode> cloneAndReset(ScrollingStateTree& adoptiveTree);
+    bool isFixedNode() const { return m_nodeType == FixedNode; }
+    bool isStickyNode() const { return m_nodeType == StickyNode; }
+    bool isScrollingNode() const { return m_nodeType == FrameScrollingNode || m_nodeType == OverflowScrollingNode; }
+    bool isFrameScrollingNode() const { return m_nodeType == FrameScrollingNode; }
+    bool isOverflowScrollingNode() const { return m_nodeType == OverflowScrollingNode; }
+
+    virtual Ref<ScrollingStateNode> clone(ScrollingStateTree& adoptiveTree) = 0;
+    PassRefPtr<ScrollingStateNode> cloneAndReset(ScrollingStateTree& adoptiveTree);
     void cloneAndResetChildren(ScrollingStateNode&, ScrollingStateTree& adoptiveTree);
 
     enum {
@@ -173,7 +218,7 @@ public:
     virtual void syncLayerPositionForViewportRect(const LayoutRect& /*viewportRect*/) { }
 
     const LayerRepresentation& layer() const { return m_layer; }
-    void setLayer(const LayerRepresentation&);
+    WEBCORE_EXPORT void setLayer(const LayerRepresentation&);
 
     ScrollingStateTree& scrollingStateTree() const { return m_scrollingStateTree; }
 
@@ -183,10 +228,9 @@ public:
     void setParent(ScrollingStateNode* parent) { m_parent = parent; }
     ScrollingNodeID parentNodeID() const { return m_parent ? m_parent->scrollingNodeID() : 0; }
 
-    Vector<OwnPtr<ScrollingStateNode>>* children() const { return m_children.get(); }
+    Vector<RefPtr<ScrollingStateNode>>* children() const { return m_children.get(); }
 
-    void appendChild(PassOwnPtr<ScrollingStateNode>);
-    void removeChild(ScrollingStateNode*);
+    void appendChild(PassRefPtr<ScrollingStateNode>);
 
     String scrollingStateTreeAsText() const;
 
@@ -197,7 +241,6 @@ private:
     void dump(TextStream&, int indent) const;
 
     virtual void dumpProperties(TextStream&, int indent) const = 0;
-    void willBeRemovedFromStateTree();
 
     const ScrollingNodeType m_nodeType;
     ScrollingNodeID m_nodeID;
@@ -206,15 +249,17 @@ private:
     ScrollingStateTree& m_scrollingStateTree;
 
     ScrollingStateNode* m_parent;
-    OwnPtr<Vector<OwnPtr<ScrollingStateNode>>> m_children;
+    std::unique_ptr<Vector<RefPtr<ScrollingStateNode>>> m_children;
 
     LayerRepresentation m_layer;
 };
 
-#define SCROLLING_STATE_NODE_TYPE_CASTS(ToValueTypeName, predicate) \
-    TYPE_CASTS_BASE(ToValueTypeName, ScrollingStateNode, value, value->predicate, value.predicate)
-
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_SCROLLING_STATE_NODE(ToValueTypeName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::ScrollingStateNode& node) { return node.predicate; } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
 

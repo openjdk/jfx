@@ -19,7 +19,7 @@
 #include "Logging.h"
 
 #include <gst/gst.h>
-#include <gst/video/video.h>
+#include <gst/video/video-format.h>
 
 #define LOG_MEDIA_MESSAGE(...) do { \
     GST_DEBUG(__VA_ARGS__); \
@@ -72,6 +72,7 @@ char* getGstBufferDataPointer(GstBuffer*);
 void mapGstBuffer(GstBuffer*);
 void unmapGstBuffer(GstBuffer*);
 bool initializeGStreamer();
-unsigned getGstPlaysFlag(const char* nick);
+unsigned getGstPlayFlag(const char* nick);
+GstClockTime toGstClockTime(float time);
 
 }

@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-CSSPageRule::CSSPageRule(StyleRulePage* pageRule, CSSStyleSheet* parent)
+CSSPageRule::CSSPageRule(StyleRulePage& pageRule, CSSStyleSheet* parent)
     : CSSRule(parent)
     , m_pageRule(pageRule)
 {
@@ -46,11 +46,11 @@ CSSPageRule::~CSSPageRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleDeclaration* CSSPageRule::style()
+CSSStyleDeclaration& CSSPageRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
         m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_pageRule->mutableProperties(), *this);
-    return m_propertiesCSSOMWrapper.get();
+    return *m_propertiesCSSOMWrapper;
 }
 
 String CSSPageRule::selectorText() const
@@ -94,13 +94,11 @@ String CSSPageRule::cssText() const
     return result.toString();
 }
 
-void CSSPageRule::reattach(StyleRuleBase* rule)
+void CSSPageRule::reattach(StyleRuleBase& rule)
 {
-    ASSERT(rule);
-    ASSERT_WITH_SECURITY_IMPLICATION(rule->isPageRule());
-    m_pageRule = static_cast<StyleRulePage*>(rule);
+    m_pageRule = downcast<StyleRulePage>(rule);
     if (m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper->reattach(m_pageRule->mutableProperties());
+        m_propertiesCSSOMWrapper->reattach(m_pageRule.get().mutableProperties());
 }
 
 } // namespace WebCore

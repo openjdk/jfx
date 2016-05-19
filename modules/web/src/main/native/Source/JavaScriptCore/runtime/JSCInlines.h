@@ -40,6 +40,8 @@
 #include "CallFrameInlines.h"
 #include "ExceptionHelpers.h"
 #include "GCIncomingRefCountedInlines.h"
+#include "HeapInlines.h"
+#include "IdentifierInlines.h"
 #include "Interpreter.h"
 #include "JSArrayBufferViewInlines.h"
 #include "JSCJSValueInlines.h"
@@ -49,5 +51,6 @@
 #include "Operations.h"
 #include "SlotVisitorInlines.h"
 #include "StructureInlines.h"
+#include "WeakGCMapInlines.h"
 
 #endif // JSCInlines_h

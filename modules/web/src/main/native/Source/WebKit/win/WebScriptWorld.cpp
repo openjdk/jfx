@@ -22,7 +22,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebScriptWorld.h"
 
@@ -49,7 +48,7 @@ inline WebScriptWorld::WebScriptWorld(PassRefPtr<DOMWrapperWorld> world)
     allWorlds().add(m_world.get(), this);
 
     ++gClassCount;
-    gClassNameCount.add("WebScriptWorld");
+    gClassNameCount().add("WebScriptWorld");
 }
 
 WebScriptWorld::~WebScriptWorld()
@@ -58,7 +57,7 @@ WebScriptWorld::~WebScriptWorld()
     allWorlds().remove(m_world.get());
 
     --gClassCount;
-    gClassNameCount.remove("WebScriptWorld");
+    gClassNameCount().remove("WebScriptWorld");
 }
 
 WebScriptWorld* WebScriptWorld::standardWorld()

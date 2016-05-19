@@ -58,7 +58,7 @@ using namespace WTR;
 
 - (NSWindow *)draggingDestinationWindow
 {
-    return [TestController::shared().mainWebView()->platformView() window];
+    return [TestController::singleton().mainWebView()->platformView() window];
 }
 
 - (NSDragOperation)draggingSourceOperationMask
@@ -69,13 +69,13 @@ using namespace WTR;
 
 - (NSPoint)draggingLocation
 {
-    WKPoint location = TestController::shared().eventSenderProxy()->position();
+    WKPoint location = TestController::singleton().eventSenderProxy()->position();
     return NSMakePoint(location.x, location.y);
 }
 
 - (NSPoint)draggedImageLocation
 {
-    WKPoint location = TestController::shared().eventSenderProxy()->position();
+    WKPoint location = TestController::singleton().eventSenderProxy()->position();
     return NSMakePoint(location.x + _offset.width, location.y + _offset.height);
 }
 
@@ -145,5 +145,16 @@ using namespace WTR;
 {
     // Ignored.
 }
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
+-(NSSpringLoadingHighlight)springLoadingHighlight
+{
+    return NSSpringLoadingHighlightNone;
+}
+
+- (void)resetSpringLoading
+{
+}
+#endif
 
 @end

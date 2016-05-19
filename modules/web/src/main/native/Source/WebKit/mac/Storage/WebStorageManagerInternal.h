@@ -23,4 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import "WebStorageManagerPrivate.h"
+
 void WebKitInitializeStorageIfNecessary();

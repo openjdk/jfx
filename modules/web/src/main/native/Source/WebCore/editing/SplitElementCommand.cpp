@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -70,7 +70,7 @@ void SplitElementCommand::executeApply()
 
 void SplitElementCommand::doApply()
 {
-    m_element1 = m_element2->cloneElementWithoutChildren();
+    m_element1 = m_element2->cloneElementWithoutChildren(document());
 
     executeApply();
 }
@@ -91,8 +91,9 @@ void SplitElementCommand::doUnapply()
         m_element2->insertBefore(children[i].get(), refChild.get(), IGNORE_EXCEPTION);
 
     // Recover the id attribute of the original element.
-    if (m_element1->hasAttribute(HTMLNames::idAttr))
-        m_element2->setAttribute(HTMLNames::idAttr, m_element1->getAttribute(HTMLNames::idAttr));
+    const AtomicString& id = m_element1->getIdAttribute();
+    if (!id.isNull())
+        m_element2->setIdAttribute(id);
 
     m_element1->remove(IGNORE_EXCEPTION);
 }

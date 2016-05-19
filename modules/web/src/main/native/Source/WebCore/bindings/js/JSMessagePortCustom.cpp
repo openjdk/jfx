@@ -30,32 +30,26 @@
 #include "Event.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
+#include "JSDOMBinding.h"
 #include "JSDOMGlobalObject.h"
 #include "JSEvent.h"
 #include "JSEventListener.h"
 #include "JSMessagePortCustom.h"
 #include "MessagePort.h"
-#include <runtime/JSArrayBuffer.h>
+#include <heap/SlotVisitorInlines.h>
 #include <runtime/Error.h>
+#include <runtime/JSArrayBuffer.h>
 #include <wtf/text/AtomicString.h>
 
 using namespace JSC;
 
 namespace WebCore {
 
-void JSMessagePort::visitChildren(JSCell* cell, SlotVisitor& visitor)
+void JSMessagePort::visitAdditionalChildren(SlotVisitor& visitor)
 {
-    JSMessagePort* thisObject = jsCast<JSMessagePort*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-    Base::visitChildren(thisObject, visitor);
-
     // If we have a locally entangled port, we can directly mark it as reachable. Ports that are remotely entangled are marked in-use by markActiveObjectsForContext().
-    if (MessagePort* port = thisObject->m_impl->locallyEntangledPort())
+    if (MessagePort* port = impl().locallyEntangledPort())
         visitor.addOpaqueRoot(port);
-
-    thisObject->m_impl->visitJSEventListeners(visitor);
 }
 
 JSC::JSValue JSMessagePort::postMessage(JSC::ExecState* exec)
@@ -90,7 +84,7 @@ void fillMessagePortArray(JSC::ExecState* exec, JSC::JSValue value, MessagePortA
         }
 
         // Validation of Objects implementing an interface, per WebIDL spec 4.1.15.
-        RefPtr<MessagePort> port = toMessagePort(value);
+        RefPtr<MessagePort> port = JSMessagePort::toWrapped(value);
         if (port) {
             // Check for duplicate ports.
             if (portArray.contains(port)) {

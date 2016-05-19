@@ -17,24 +17,13 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INSPECTOR)
 #include "EflInspectorUtilities.h"
-
-#include <unistd.h>
-#include <wtf/text/CString.h>
 
 namespace WebCore {
 
 String inspectorResourcePath()
 {
-    String inspectorResourcePath = String::fromUTF8(WEB_INSPECTOR_INSTALL_DIR);
-    if (access(inspectorResourcePath.utf8().data(), R_OK))
-        inspectorResourcePath = WEB_INSPECTOR_DIR;
-
-    return inspectorResourcePath;
+    return String::fromUTF8(WEB_INSPECTOR_DIR);
 }
 
 } // namespace WebCore
-
-#endif

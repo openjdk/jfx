@@ -21,13 +21,12 @@
 #include "config.h"
 #include "SVGLineElement.h"
 
-#include "Attribute.h"
 #include "FloatPoint.h"
 #include "RenderSVGPath.h"
 #include "RenderSVGResource.h"
-#include "SVGElementInstance.h"
 #include "SVGLength.h"
 #include "SVGNames.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -58,32 +57,30 @@ inline SVGLineElement::SVGLineElement(const QualifiedName& tagName, Document& do
     registerAnimatedPropertiesForSVGLineElement();
 }
 
-PassRefPtr<SVGLineElement> SVGLineElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGLineElement> SVGLineElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGLineElement(tagName, document));
+    return adoptRef(*new SVGLineElement(tagName, document));
 }
 
 bool SVGLineElement::isSupportedAttribute(const QualifiedName& attrName)
 {
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty()) {
+    static NeverDestroyed<HashSet<QualifiedName>> supportedAttributes;
+    if (supportedAttributes.get().isEmpty()) {
         SVGLangSpace::addSupportedAttributes(supportedAttributes);
         SVGExternalResourcesRequired::addSupportedAttributes(supportedAttributes);
-        supportedAttributes.add(SVGNames::x1Attr);
-        supportedAttributes.add(SVGNames::x2Attr);
-        supportedAttributes.add(SVGNames::y1Attr);
-        supportedAttributes.add(SVGNames::y2Attr);
+        supportedAttributes.get().add(SVGNames::x1Attr);
+        supportedAttributes.get().add(SVGNames::x2Attr);
+        supportedAttributes.get().add(SVGNames::y1Attr);
+        supportedAttributes.get().add(SVGNames::y2Attr);
     }
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.get().contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGLineElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     SVGParsingError parseError = NoError;
 
-    if (!isSupportedAttribute(name))
-        SVGGraphicsElement::parseAttribute(name, value);
-    else if (name == SVGNames::x1Attr)
+    if (name == SVGNames::x1Attr)
         setX1BaseValue(SVGLength::construct(LengthModeWidth, value, parseError));
     else if (name == SVGNames::y1Attr)
         setY1BaseValue(SVGLength::construct(LengthModeHeight, value, parseError));
@@ -91,12 +88,11 @@ void SVGLineElement::parseAttribute(const QualifiedName& name, const AtomicStrin
         setX2BaseValue(SVGLength::construct(LengthModeWidth, value, parseError));
     else if (name == SVGNames::y2Attr)
         setY2BaseValue(SVGLength::construct(LengthModeHeight, value, parseError));
-    else if (SVGLangSpace::parseAttribute(name, value)
-             || SVGExternalResourcesRequired::parseAttribute(name, value)) {
-    } else
-        ASSERT_NOT_REACHED();
 
     reportAttributeParsingError(parseError, name, value);
+
+    SVGGraphicsElement::parseAttribute(name, value);
+    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -106,7 +102,7 @@ void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
         return;
     }
 
-    SVGElementInstance::InvalidationGuard invalidationGuard(this);
+    InstanceInvalidationGuard guard(*this);
 
     bool isLengthAttribute = attrName == SVGNames::x1Attr
                           || attrName == SVGNames::y1Attr
@@ -116,7 +112,7 @@ void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
     if (isLengthAttribute)
         updateRelativeLengthsInformation();
 
-    RenderSVGShape* renderer = toRenderSVGShape(this->renderer());
+    auto* renderer = downcast<RenderSVGShape>(this->renderer());
     if (!renderer)
         return;
 

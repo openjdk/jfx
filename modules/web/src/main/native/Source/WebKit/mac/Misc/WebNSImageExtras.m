@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,9 +28,9 @@
 
 #if !PLATFORM(IOS)
 
-#import <WebKit/WebNSImageExtras.h>
+#import <WebKitLegacy/WebNSImageExtras.h>
 
-#import <WebKit/WebKitLogging.h>
+#import <WebKitLegacy/WebKitLogging.h>
 
 @implementation NSImage (WebExtras)
 
@@ -91,18 +91,6 @@
     [self unlockFocus];
 
     [dissolvedImage release];
-}
-
-- (void)_web_saveAndOpen
-{
-    char path[] = "/tmp/XXXXXX.tiff";
-    int fd = mkstemps(path, 5);
-    if (fd != -1) {
-        NSData *data = [self TIFFRepresentation];
-        write(fd, [data bytes], [data length]);
-        close(fd);
-        [[NSWorkspace sharedWorkspace] openFile:[NSString stringWithUTF8String:path]];
-    }
 }
 
 @end

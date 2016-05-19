@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/Assertions.h>
+#include <wtf/HexNumber.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StringExtras.h>
 #include <wtf/text/StringBuilder.h>
@@ -52,9 +53,18 @@ using namespace Unicode;
 
 namespace JSC {
 
-static JSValue encode(ExecState* exec, const char* doNotEscape)
+template<unsigned charactersCount>
+static Bitmap<256> makeCharacterBitmap(const char (&characters)[charactersCount])
 {
-    CString cstr = exec->argument(0).toString(exec)->value(exec).utf8(StrictConversion);
+    Bitmap<256> bitmap;
+    for (unsigned i = 0; i < charactersCount; ++i)
+        bitmap.set(characters[i]);
+    return bitmap;
+}
+
+static JSValue encode(ExecState* exec, const Bitmap<256>& doNotEscape)
+{
+    CString cstr = exec->argument(0).toString(exec)->view(exec).get().utf8(StrictConversion);
     if (!cstr.data())
         return exec->vm().throwException(exec, createURIError(exec, ASCIILiteral("String contained an illegal UTF-16 sequence.")));
 
@@ -62,12 +72,11 @@ static JSValue encode(ExecState* exec, const char* doNotEscape)
     const char* p = cstr.data();
     for (size_t k = 0; k < cstr.length(); k++, p++) {
         char c = *p;
-        if (c && strchr(doNotEscape, c))
-            builder.append(c);
+        if (c && doNotEscape.get(static_cast<LChar>(c)))
+            builder.append(static_cast<LChar>(c));
         else {
-            char tmp[4];
-            snprintf(tmp, sizeof(tmp), "%%%02X", static_cast<unsigned char>(c));
-            builder.append(tmp);
+            builder.append(static_cast<LChar>('%'));
+            appendByteAsHex(c, builder);
         }
     }
     return builder.build(exec);
@@ -75,7 +84,7 @@ static JSValue encode(ExecState* exec, const char* doNotEscape)
 
 template <typename CharType>
 ALWAYS_INLINE
-static JSValue decode(ExecState* exec, const CharType* characters, int length, const char* doNotUnescape, bool strict)
+static JSValue decode(ExecState* exec, const CharType* characters, int length, const Bitmap<256>& doNotUnescape, bool strict)
 {
     JSStringBuilder builder;
     int k = 0;
@@ -127,11 +136,8 @@ static JSValue decode(ExecState* exec, const CharType* characters, int length, c
                     u = Lexer<UChar>::convertUnicode(p[2], p[3], p[4], p[5]);
                 }
             }
-            if (charLen && (u == 0 || u >= 128 || !strchr(doNotUnescape, u))) {
-                if (u < 256)
-                    builder.append(static_cast<LChar>(u));
-                else
-                    builder.append(u);
+            if (charLen && (u == 0 || u >= 128 || !doNotUnescape.get(static_cast<LChar>(u)))) {
+                builder.append(u);
                 k += charLen;
                 continue;
             }
@@ -142,10 +148,9 @@ static JSValue decode(ExecState* exec, const CharType* characters, int length, c
     return builder.build(exec);
 }
 
-static JSValue decode(ExecState* exec, const char* doNotUnescape, bool strict)
+static JSValue decode(ExecState* exec, const Bitmap<256>& doNotUnescape, bool strict)
 {
-    JSStringBuilder builder;
-    String str = exec->argument(0).toString(exec)->value(exec);
+    StringView str = exec->argument(0).toString(exec)->view(exec);
 
     if (str.is8Bit())
         return decode(exec, str.characters8(), str.length(), doNotUnescape, strict);
@@ -189,7 +194,7 @@ static int parseDigit(unsigned short c, int radix)
     return digit;
 }
 
-double parseIntOverflow(const LChar* s, int length, int radix)
+double parseIntOverflow(const LChar* s, unsigned length, int radix)
 {
     double number = 0.0;
     double radixMultiplier = 1.0;
@@ -211,7 +216,7 @@ double parseIntOverflow(const LChar* s, int length, int radix)
     return number;
 }
 
-double parseIntOverflow(const UChar* s, int length, int radix)
+static double parseIntOverflow(const UChar* s, unsigned length, int radix)
 {
     double number = 0.0;
     double radixMultiplier = 1.0;
@@ -233,10 +238,17 @@ double parseIntOverflow(const UChar* s, int length, int radix)
     return number;
 }
 
+static double parseIntOverflow(StringView string, int radix)
+{
+    if (string.is8Bit())
+        return parseIntOverflow(string.characters8(), string.length(), radix);
+    return parseIntOverflow(string.characters16(), string.length(), radix);
+}
+
 // ES5.1 15.1.2.2
 template <typename CharType>
 ALWAYS_INLINE
-static double parseInt(const String& s, const CharType* data, int radix)
+static double parseInt(StringView s, const CharType* data, int radix)
 {
     // 1. Let inputString be ToString(string).
     // 2. Let S be a newly created substring of inputString consisting of the first character that is not a
@@ -279,7 +291,7 @@ static double parseInt(const String& s, const CharType* data, int radix)
 
     // 8.a If R < 2 or R > 36, then return NaN.
     if (radix < 2 || radix > 36)
-        return QNaN;
+        return PNaN;
 
     // 13. Let mathInt be the mathematical integer value that is represented by Z in radix-R notation, using the letters
     //     A-Z and a-z for digits with values 10 through 35. (However, if R is 10 and Z contains more than 20 significant
@@ -302,22 +314,22 @@ static double parseInt(const String& s, const CharType* data, int radix)
 
     // 12. If Z is empty, return NaN.
     if (!sawDigit)
-        return QNaN;
+        return PNaN;
 
     // Alternate code path for certain large numbers.
     if (number >= mantissaOverflowLowerBound) {
         if (radix == 10) {
             size_t parsedLength;
-            number = parseDouble(s.deprecatedCharacters() + firstDigitPosition, p - firstDigitPosition, parsedLength);
+            number = parseDouble(s.substring(firstDigitPosition, p - firstDigitPosition), parsedLength);
         } else if (radix == 2 || radix == 4 || radix == 8 || radix == 16 || radix == 32)
-            number = parseIntOverflow(s.substringSharingImpl(firstDigitPosition, p - firstDigitPosition).utf8().data(), p - firstDigitPosition, radix);
+            number = parseIntOverflow(s.substring(firstDigitPosition, p - firstDigitPosition), radix);
     }
 
     // 15. Return sign x number.
     return sign * number;
 }
 
-static double parseInt(const String& s, int radix)
+static double parseInt(StringView s, int radix)
 {
     if (s.is8Bit())
         return parseInt(s, s.characters8(), radix);
@@ -340,7 +352,51 @@ static bool isInfinity(const CharType* data, const CharType* end)
         && data[7] == 'y';
 }
 
-// See ecma-262 9.3.1
+// See ecma-262 6th 11.8.3
+template <typename CharType>
+static double jsBinaryIntegerLiteral(const CharType*& data, const CharType* end)
+{
+    // Binary number.
+    data += 2;
+    const CharType* firstDigitPosition = data;
+    double number = 0;
+    while (true) {
+        number = number * 2 + (*data - '0');
+        ++data;
+        if (data == end)
+            break;
+        if (!isASCIIBinaryDigit(*data))
+            break;
+    }
+    if (number >= mantissaOverflowLowerBound)
+        number = parseIntOverflow(firstDigitPosition, data - firstDigitPosition, 2);
+
+    return number;
+}
+
+// See ecma-262 6th 11.8.3
+template <typename CharType>
+static double jsOctalIntegerLiteral(const CharType*& data, const CharType* end)
+{
+    // Octal number.
+    data += 2;
+    const CharType* firstDigitPosition = data;
+    double number = 0;
+    while (true) {
+        number = number * 8 + (*data - '0');
+        ++data;
+        if (data == end)
+            break;
+        if (!isASCIIOctalDigit(*data))
+            break;
+    }
+    if (number >= mantissaOverflowLowerBound)
+        number = parseIntOverflow(firstDigitPosition, data - firstDigitPosition, 8);
+
+    return number;
+}
+
+// See ecma-262 6th 11.8.3
 template <typename CharType>
 static double jsHexIntegerLiteral(const CharType*& data, const CharType* end)
 {
@@ -362,7 +418,7 @@ static double jsHexIntegerLiteral(const CharType*& data, const CharType* end)
     return number;
 }
 
-// See ecma-262 9.3.1
+// See ecma-262 6th 11.8.3
 template <typename CharType>
 static double jsStrDecimalLiteral(const CharType*& data, const CharType* end)
 {
@@ -400,7 +456,7 @@ static double jsStrDecimalLiteral(const CharType*& data, const CharType* end)
     }
 
     // Not a number.
-    return QNaN;
+    return PNaN;
 }
 
 template <typename CharType>
@@ -419,9 +475,16 @@ static double toDouble(const CharType* characters, unsigned size)
         return 0.0;
 
     double number;
-    if (characters[0] == '0' && characters + 2 < endCharacters && (characters[1] | 0x20) == 'x' && isASCIIHexDigit(characters[2]))
-        number = jsHexIntegerLiteral(characters, endCharacters);
-    else
+    if (characters[0] == '0' && characters + 2 < endCharacters) {
+        if ((characters[1] | 0x20) == 'x' && isASCIIHexDigit(characters[2]))
+            number = jsHexIntegerLiteral(characters, endCharacters);
+        else if ((characters[1] | 0x20) == 'o' && isASCIIOctalDigit(characters[2]))
+            number = jsOctalIntegerLiteral(characters, endCharacters);
+        else if ((characters[1] | 0x20) == 'b' && isASCIIBinaryDigit(characters[2]))
+            number = jsBinaryIntegerLiteral(characters, endCharacters);
+        else
+            number = jsStrDecimalLiteral(characters, endCharacters);
+    } else
         number = jsStrDecimalLiteral(characters, endCharacters);
 
     // Allow trailing white space.
@@ -430,13 +493,13 @@ static double toDouble(const CharType* characters, unsigned size)
             break;
     }
     if (characters != endCharacters)
-        return QNaN;
+        return PNaN;
 
     return number;
 }
 
-// See ecma-262 9.3.1
-double jsToNumber(const String& s)
+// See ecma-262 6th 11.8.3
+double jsToNumber(StringView s)
 {
     unsigned size = s.length();
 
@@ -446,7 +509,7 @@ double jsToNumber(const String& s)
             return c - '0';
         if (isStrWhiteSpace(c))
             return 0;
-        return QNaN;
+        return PNaN;
     }
 
     if (s.is8Bit())
@@ -454,7 +517,7 @@ double jsToNumber(const String& s)
     return toDouble(s.characters16(), size);
 }
 
-static double parseFloat(const String& s)
+static double parseFloat(StringView s)
 {
     unsigned size = s.length();
 
@@ -462,7 +525,7 @@ static double parseFloat(const String& s)
         UChar c = s[0];
         if (isASCIIDigit(c))
             return c - '0';
-        return QNaN;
+        return PNaN;
     }
 
     if (s.is8Bit()) {
@@ -477,7 +540,7 @@ static double parseFloat(const String& s)
 
         // Empty string.
         if (data == end)
-            return QNaN;
+            return PNaN;
 
         return jsStrDecimalLiteral(data, end);
     }
@@ -493,7 +556,7 @@ static double parseFloat(const String& s)
 
     // Empty string.
     if (data == end)
-        return QNaN;
+        return PNaN;
 
     return jsStrDecimalLiteral(data, end);
 }
@@ -517,7 +580,8 @@ EncodedJSValue JSC_HOST_CALL globalFuncEval(ExecState* exec)
     }
 
     JSGlobalObject* calleeGlobalObject = exec->callee()->globalObject();
-    EvalExecutable* eval = EvalExecutable::create(exec, makeSource(s), false);
+    VariableEnvironment emptyTDZVariables; // Indirect eval does not have access to the lexical scope.
+    EvalExecutable* eval = EvalExecutable::create(exec, makeSource(s), false, ThisTDZMode::CheckIfNeeded, &emptyTDZVariables);
     if (!eval)
         return JSValue::encode(jsUndefined());
 
@@ -547,7 +611,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncParseInt(ExecState* exec)
     }
 
     // If ToString throws, we shouldn't call ToInt32.
-    String s = value.toString(exec)->value(exec);
+    StringView s = value.toString(exec)->view(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
 
@@ -556,7 +620,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncParseInt(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL globalFuncParseFloat(ExecState* exec)
 {
-    return JSValue::encode(jsNumber(parseFloat(exec->argument(0).toString(exec)->value(exec))));
+    return JSValue::encode(jsNumber(parseFloat(exec->argument(0).toString(exec)->view(exec))));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncIsNaN(ExecState* exec)
@@ -572,59 +636,63 @@ EncodedJSValue JSC_HOST_CALL globalFuncIsFinite(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL globalFuncDecodeURI(ExecState* exec)
 {
-    static const char do_not_unescape_when_decoding_URI[] =
-        "#$&+,/:;=?@";
+    static Bitmap<256> doNotUnescapeWhenDecodingURI = makeCharacterBitmap(
+        "#$&+,/:;=?@"
+    );
 
-    return JSValue::encode(decode(exec, do_not_unescape_when_decoding_URI, true));
+    return JSValue::encode(decode(exec, doNotUnescapeWhenDecodingURI, true));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncDecodeURIComponent(ExecState* exec)
 {
-    return JSValue::encode(decode(exec, "", true));
+    static Bitmap<256> emptyBitmap;
+    return JSValue::encode(decode(exec, emptyBitmap, true));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncEncodeURI(ExecState* exec)
 {
-    static const char do_not_escape_when_encoding_URI[] =
+    static Bitmap<256> doNotEscapeWhenEncodingURI = makeCharacterBitmap(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789"
-        "!#$&'()*+,-./:;=?@_~";
+        "!#$&'()*+,-./:;=?@_~"
+    );
 
-    return JSValue::encode(encode(exec, do_not_escape_when_encoding_URI));
+    return JSValue::encode(encode(exec, doNotEscapeWhenEncodingURI));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncEncodeURIComponent(ExecState* exec)
 {
-    static const char do_not_escape_when_encoding_URI_component[] =
+    static Bitmap<256> doNotEscapeWhenEncodingURIComponent = makeCharacterBitmap(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789"
-        "!'()*-._~";
+        "!'()*-._~"
+    );
 
-    return JSValue::encode(encode(exec, do_not_escape_when_encoding_URI_component));
+    return JSValue::encode(encode(exec, doNotEscapeWhenEncodingURIComponent));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
 {
-    static const char do_not_escape[] =
+    static Bitmap<256> doNotEscape = makeCharacterBitmap(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789"
-        "*+-./@_";
+        "*+-./@_"
+    );
 
     JSStringBuilder builder;
-    String str = exec->argument(0).toString(exec)->value(exec);
+    StringView str = exec->argument(0).toString(exec)->view(exec);
     if (str.is8Bit()) {
         const LChar* c = str.characters8();
         for (unsigned k = 0; k < str.length(); k++, c++) {
             int u = c[0];
-            if (u && strchr(do_not_escape, static_cast<char>(u)))
-                builder.append(c, 1);
+            if (u && doNotEscape.get(static_cast<LChar>(u)))
+                builder.append(*c);
             else {
-                char tmp[4];
-                snprintf(tmp, sizeof(tmp), "%%%02X", u);
-                builder.append(tmp);
+                builder.append(static_cast<LChar>('%'));
+                appendByteAsHex(static_cast<LChar>(u), builder);
             }
         }
 
@@ -635,15 +703,15 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
     for (unsigned k = 0; k < str.length(); k++, c++) {
         int u = c[0];
         if (u > 255) {
-            char tmp[7];
-            snprintf(tmp, sizeof(tmp), "%%u%04X", u);
-            builder.append(tmp);
-        } else if (u != 0 && strchr(do_not_escape, static_cast<char>(u)))
-            builder.append(c, 1);
+            builder.append(static_cast<LChar>('%'));
+            builder.append(static_cast<LChar>('u'));
+            appendByteAsHex(u >> 8, builder);
+            appendByteAsHex(u & 0xFF, builder);
+        } else if (u != 0 && doNotEscape.get(static_cast<LChar>(u)))
+            builder.append(*c);
         else {
-            char tmp[4];
-            snprintf(tmp, sizeof(tmp), "%%%02X", u);
-            builder.append(tmp);
+            builder.append(static_cast<LChar>('%'));
+            appendByteAsHex(u, builder);
         }
     }
 
@@ -653,7 +721,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL globalFuncUnescape(ExecState* exec)
 {
     StringBuilder builder;
-    String str = exec->argument(0).toString(exec)->value(exec);
+    StringView str = exec->argument(0).toString(exec)->view(exec);
     int k = 0;
     int len = str.length();
 
@@ -738,6 +806,9 @@ private:
 
 EncodedJSValue JSC_HOST_CALL globalFuncProtoGetter(ExecState* exec)
 {
+    if (exec->thisValue().isUndefinedOrNull())
+        return throwVMError(exec, createTypeError(exec, "Can't convert undefined or null to object"));
+
     JSObject* thisObject = jsDynamicCast<JSObject*>(exec->thisValue().toThis(exec, NotStrictMode));
 
     if (!thisObject)
@@ -776,8 +847,18 @@ private:
     JSObject* m_thisObject;
 };
 
+bool checkProtoSetterAccessAllowed(ExecState* exec, JSObject* object)
+{
+    GlobalFuncProtoSetterFunctor functor(object);
+    exec->iterate(functor);
+    return functor.allowsAccess();
+}
+
 EncodedJSValue JSC_HOST_CALL globalFuncProtoSetter(ExecState* exec)
 {
+    if (exec->thisValue().isUndefinedOrNull())
+        return throwVMError(exec, createTypeError(exec, "Can't convert undefined or null to object"));
+
     JSValue value = exec->argument(0);
 
     JSObject* thisObject = jsDynamicCast<JSObject*>(exec->thisValue().toThis(exec, NotStrictMode));
@@ -786,9 +867,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncProtoSetter(ExecState* exec)
     if (!thisObject)
         return JSValue::encode(jsUndefined());
 
-    GlobalFuncProtoSetterFunctor functor(thisObject);
-    exec->iterate(functor);
-    if (!functor.allowsAccess())
+    if (!checkProtoSetterAccessAllowed(exec, thisObject))
         return JSValue::encode(jsUndefined());
 
     // Setting __proto__ to a non-object, non-null value is silently ignored to match Mozilla.
@@ -799,7 +878,13 @@ EncodedJSValue JSC_HOST_CALL globalFuncProtoSetter(ExecState* exec)
         return throwVMError(exec, createTypeError(exec, StrictModeReadonlyPropertyWriteError));
 
     if (!thisObject->setPrototypeWithCycleCheck(exec, value))
-        exec->vm().throwException(exec, createError(exec, "cyclic __proto__ value"));
+        exec->vm().throwException(exec, createError(exec, ASCIILiteral("cyclic __proto__ value")));
+    return JSValue::encode(jsUndefined());
+}
+
+EncodedJSValue JSC_HOST_CALL globalFuncBuiltinLog(ExecState* exec)
+{
+    dataLog(exec->argument(0).toWTFString(exec), "\n");
     return JSValue::encode(jsUndefined());
 }
 

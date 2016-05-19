@@ -29,22 +29,24 @@
 #include "RTCStatsRequestImpl.h"
 
 #include "MediaStreamTrack.h"
+#include "RTCPeerConnectionErrorCallback.h"
 #include "RTCStatsCallback.h"
 #include "RTCStatsRequest.h"
 #include "RTCStatsResponse.h"
 
 namespace WebCore {
 
-PassRefPtr<RTCStatsRequestImpl> RTCStatsRequestImpl::create(ScriptExecutionContext* context, PassRefPtr<RTCStatsCallback> callback, PassRefPtr<MediaStreamTrack> selector)
+Ref<RTCStatsRequestImpl> RTCStatsRequestImpl::create(ScriptExecutionContext* context, PassRefPtr<RTCStatsCallback> successCallback, PassRefPtr<RTCPeerConnectionErrorCallback> errorCallback, PassRefPtr<MediaStreamTrackPrivate> selector)
 {
-    RefPtr<RTCStatsRequestImpl> request = adoptRef(new RTCStatsRequestImpl(context, callback, selector));
+    Ref<RTCStatsRequestImpl> request = adoptRef(*new RTCStatsRequestImpl(context, successCallback, errorCallback, selector));
     request->suspendIfNeeded();
-    return request.release();
+    return request;
 }
 
-RTCStatsRequestImpl::RTCStatsRequestImpl(ScriptExecutionContext* context, PassRefPtr<RTCStatsCallback> callback, PassRefPtr<MediaStreamTrack> selector)
+RTCStatsRequestImpl::RTCStatsRequestImpl(ScriptExecutionContext* context, PassRefPtr<RTCStatsCallback> successCallback, PassRefPtr<RTCPeerConnectionErrorCallback> errorCallback, PassRefPtr<MediaStreamTrackPrivate> selector)
     : ActiveDOMObject(context)
-    , m_successCallback(callback)
+    , m_successCallback(successCallback)
+    , m_errorCallback(errorCallback)
     , m_track(selector)
 {
 }
@@ -63,7 +65,7 @@ bool RTCStatsRequestImpl::hasSelector()
     return m_track;
 }
 
-MediaStreamTrack* RTCStatsRequestImpl::track()
+MediaStreamTrackPrivate* RTCStatsRequestImpl::track()
 {
     return m_track.get();
 }
@@ -76,14 +78,33 @@ void RTCStatsRequestImpl::requestSucceeded(PassRefPtr<RTCStatsResponseBase> resp
     clear();
 }
 
+void RTCStatsRequestImpl::requestFailed(const String& error)
+{
+    if (m_errorCallback)
+        m_errorCallback->handleEvent(DOMError::create(error).ptr());
+
+    clear();
+}
+
 void RTCStatsRequestImpl::stop()
 {
     clear();
 }
 
+const char* RTCStatsRequestImpl::activeDOMObjectName() const
+{
+    return "RTCStatsRequestImpl";
+}
+
+bool RTCStatsRequestImpl::canSuspendForPageCache() const
+{
+    // FIXME: We should try and do better here.
+    return false;
+}
+
 void RTCStatsRequestImpl::clear()
 {
-    m_successCallback.clear();
+    m_successCallback = nullptr;
 }
 
 

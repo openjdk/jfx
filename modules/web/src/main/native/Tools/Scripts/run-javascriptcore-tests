@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2005, 2013 Apple Computer, Inc.  All rights reserved.
+# Copyright (C) 2005, 2013-2015 Apple Inc.  All rights reserved.
 # Copyright (C) 2007 Eric Seidel <eric@webkit.org>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -12,7 +12,7 @@
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
 #     documentation and/or other materials provided with the distribution.
-# 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+# 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
 #     from this software without specific prior written permission.
 #
@@ -42,63 +42,56 @@ use POSIX;
 setConfiguration();
 my $configuration = configuration();
 
-my @testsToSkip = (
-    # Various ecma/Date tests sometimes fail on Windows (but not Mac) https://bugs.webkit.org/show_bug.cgi?id=25160
-    "ecma/Date/15.9.2.1.js",
-    "ecma/Date/15.9.2.2-1.js",
-    "ecma/Date/15.9.2.2-2.js",
-    "ecma/Date/15.9.2.2-3.js",
-    "ecma/Date/15.9.2.2-4.js",
-    "ecma/Date/15.9.2.2-5.js",
-    "ecma/Date/15.9.2.2-6.js",
-    # ecma_3/Date/15.9.5.7.js fails on Mac (but not Windows) https://bugs.webkit.org/show_bug.cgi?id=25161
-    "ecma_3/Date/15.9.5.6.js",
-    "ecma_3/Date/15.9.5.7.js",
-    # These three fail on Linux in certain time zones, at certain times
-    # of the year (!): https://bugs.webkit.org/show_bug.cgi?id=71371
-    "ecma/Date/15.9.5.14.js",
-    "ecma/Date/15.9.5.31-1.js",
-    "ecma/Date/15.9.5.34-1.js",
-);
-
-my $jsDriverArgs = "-L " . join(" ", @testsToSkip);
 # These variables are intentionally left undefined.
 my $root;
 my $showHelp;
 my $extraTests;
+my $jsDriverArgs;
+my $childProcesses;
+my $shellRunner;
+my $makeRunner;
 
 my $buildJSC = 1;
 
 my $runTestAPI = isAppleMacWebKit() || isAppleWinWebKit() || isWinCairo();
 
-my $runMozilla = 0;
+my $runJSCStress = 1;
 
-# FIXME: run-jsc-stress-tests should be ported to other platforms.
-# https://bugs.webkit.org/show_bug.cgi?id=120809
-my $runJSCStress = !isAppleWinWebKit();
-
-my $enableFTL = 0;
-
+my $enableFTL = isAppleMacWebKit();
 my $createTarball = 0;
 my $remoteHost = 0;
+my $remoteConfigFile;
 
 my $programName = basename($0);
 my $buildJSCDefault = $buildJSC ? "will check" : "will not check";
 my $testapiDefault = $runTestAPI ? "will run" : "will not run";
-my $mozillaDefault = $runMozilla ? "will run" : "will not run";
 my $jscStressDefault = $runJSCStress ? "will run" : " will not run";
+my $filter;
 my $usage = <<EOF;
 Usage: $programName [options] [options to pass to build system]
   --help                        Show this help message
-  --jsDriver-args=              A string of arguments to pass to jsDriver.pl
   --root=                       Path to pre-built root containing jsc
-  --extra-tests=                Path to a file containing extra tests
   --[no-]ftl-jit                Turn the FTL JIT on or off
   --[no-]build                  Check (or don't check) to see if the jsc build is up-to-date (default: $buildJSCDefault)
   --[no-]testapi                Run (or don't run) testapi (default: $testapiDefault)
   --[no-]jsc-stress             Run (or don't run) the JSC stress tests (default: $jscStressDefault)
+
+  Mozilla tests only options (--no-jsc-stress):
+  ----------------------------------------------
+  --jsDriver-args=              A string of arguments to pass to jsDriver.pl
+
+  JSC stress tests only options (--jsc-stress):
+  ----------------------------------------------
   --tarball                     Create a tarball of the bundle produced by running the JSC stress tests.
   --remote=                     Run the JSC stress tests on the specified remote host. Implies --tarball.
+  --remote-config-file=         Same as remote, but read config from JSON file.
+  --extra-tests=                Path to a file containing extra tests
+  --child-processes=            Specify the number of child processes.
+  --shell-runner                Uses the shell-based test runner instead of the default make-based runner.
+                                In general the shell runner is slower than the make runner.
+  --make-runner                 Uses the faster make-based runner.
+  --filter                      Only run tests whose name matches the given regular expression.
+
 EOF
 
 GetOptions(
@@ -111,6 +104,11 @@ GetOptions(
     'jsc-stress!' => \$runJSCStress,
     'tarball!' => \$createTarball,
     'remote=s' => \$remoteHost,
+    'remote-config-file=s' => \$remoteConfigFile,
+    'child-processes=s' => \$childProcesses,
+    'shell-runner' => \$shellRunner,
+    'make-runner' => \$makeRunner,
+    'filter=s' => \$filter,
     'help' => \$showHelp
 );
 
@@ -121,9 +119,6 @@ my @buildArgs = @ARGV;
 if ($enableFTL) {
     push(@buildArgs, '--ftl-jit');
 }
-
-# Arguments passed to --jsDriver-args (if any) are passed to jsDriver.pl
-my @jsArgs = split(" ", $jsDriverArgs);
 
 if ($showHelp) {
    print STDERR $usage;
@@ -136,7 +131,7 @@ if (!defined($root) && $buildJSC) {
     chdirWebKit();
 
     push(@buildArgs, argumentsForConfiguration());
-    
+
     print "Running: build-jsc " . join(" ", @buildArgs) . "\n";
     my $buildResult = system "perl", "Tools/Scripts/build-jsc", @buildArgs;
     if ($buildResult) {
@@ -148,7 +143,8 @@ if (!defined($root) && $buildJSC) {
 
 my $productDir = jscProductDir();
 $ENV{DYLD_FRAMEWORK_PATH} = $productDir;
-$ENV{JSC_timeout} = 60; # Set a 60 second timeout on all jsc tests.
+$ENV{JSC_timeout} = 60 unless $ENV{JSC_timeout}; # Set a 60 second timeout on all jsc tests (if environment variable not defined already).
+$ENV{TZ}="US/Pacific"; # Some tests fail if the time zone is not set to US/Pacific (<https://webkit.org/b/136363>)
 setPathForRunningWebKitApp(\%ENV) if isCygwin();
 
 sub testapiPath($)
@@ -169,31 +165,44 @@ if ($runTestAPI) {
     # Use an "indirect object" so that system() won't get confused if the path
     # contains spaces (see perldoc -f exec).
     my $testapiResult = system { $command[0] } @command;
-    exit exitStatus($testapiResult)  if $testapiResult;
+    my $exitStatus = exitStatus($testapiResult);
+    print "testAPI completed with rc=$testapiResult ($exitStatus)\n";
+    exit exitStatus($testapiResult) if $testapiResult;
 }
 
 # Find JavaScriptCore directory
 chdirWebKit();
 
-$runMozilla = !$runJSCStress;
+if ($runJSCStress) {
+    runJSCStressTests();
+} else {
+    runMozillaTests();
+}
 
-my %mozillaFailures;
-my %newMozillaFailures;
-
-if ($runMozilla) {
+sub runMozillaTests
+{
+    my %mozillaFailures;
+    my %newMozillaFailures;
     chdir("Source/JavaScriptCore");
     chdir "tests/mozilla" or die "Failed to switch directory to 'tests/mozilla'\n";
+
+    # determine the list of skipped tests for Mozilla tests if --jsDriver-args command line argument isn't set
+    $jsDriverArgs ||= defaultJsDriverArgsForMozillaTests();
+
+    # Arguments passed to --jsDriver-args (if any) are passed to jsDriver.pl
+    my @jsArgs = split(" ", $jsDriverArgs);
+
     my @jsMozillaDriverCmd = ("perl", "jsDriver.pl", "-e", "squirrelfish", "-s", jscPath($productDir), "-f", "actual.html", @jsArgs);
     if (isGtk() || isEfl()) {
         my @jhbuildPrefix = sourceDir() . "/Tools/jhbuild/jhbuild-wrapper";
-    
+
         if (isEfl()) {
             push(@jhbuildPrefix, '--efl');
         } elsif (isGtk()) {
             push(@jhbuildPrefix, '--gtk');
         }
         push(@jhbuildPrefix, 'run');
-    
+
         unshift(@jsMozillaDriverCmd, @jhbuildPrefix);
     } elsif (isIOSWebKit() && willUseIOSSimulatorSDKWhenBuilding()) {
         push @jsMozillaDriverCmd, ("--sdk", xcodeSDK());
@@ -201,7 +210,7 @@ if ($runMozilla) {
     print "Running: " . join(" ", @jsMozillaDriverCmd) . "\n";
     my $result = system(@jsMozillaDriverCmd);
     exit exitStatus($result)  if $result;
-    
+
     open EXPECTED, "expected.html" or die "Failed to open 'expected.html'\n";
     while (<EXPECTED>) {
         last if /failures reported\.$/;
@@ -211,7 +220,7 @@ if ($runMozilla) {
         $mozillaFailures{$_} = 1;
     }
     close EXPECTED;
-    
+
     open ACTUAL, "actual.html" or die "Failed to open 'actual.html'";
     while (<ACTUAL>) {
         last if /failures reported\.$/;
@@ -225,36 +234,98 @@ if ($runMozilla) {
         }
     }
     close ACTUAL;
+
+    my $numNewMozillaFailures = keys %newMozillaFailures;
+    if ($numNewMozillaFailures) {
+        print "\n** The following Mozilla test failures have been introduced:\n";
+        foreach my $mozillaFailure (sort keys %newMozillaFailures) {
+            print "\t$mozillaFailure\n";
+        }
+    }
+
+    my $numOldMozillaFailures = keys %mozillaFailures;
+    if ($numOldMozillaFailures) {
+        print "\nYou fixed the following test";
+        print "s" if $numOldMozillaFailures != 1;
+        print ":\n";
+        foreach my $mozillaFailure (sort keys %mozillaFailures) {
+            print "\t$mozillaFailure\n";
+        }
+    }
+
+    print "\nResults for Mozilla tests:\n";
+    printThingsFound($numNewMozillaFailures, "regression", "regressions", "found");
+    printThingsFound($numOldMozillaFailures, "test", "tests", "fixed");
+    print "    OK.\n" if $numNewMozillaFailures == 0;
+    print "\n";
+
+    exit(1) if $numNewMozillaFailures;
 }
 
-chdirWebKit();
-my $jscStressResultsDir = $productDir . "/jsc-stress-results";
+sub runJSCStressTests
+{
+    my $jscStressResultsDir = $productDir . "/jsc-stress-results";
 
-if ($runJSCStress) {
     # Set LANG environment variable so the stress tests will work with newer ruby (<rdar://problem/15010705>)
     $ENV{LANG}="en_US.UTF-8";
     my @jscStressDriverCmd = (
         "/usr/bin/env", "ruby", "Tools/Scripts/run-jsc-stress-tests",
         "-j", jscPath($productDir), "-o", $jscStressResultsDir,
         "PerformanceTests/SunSpider/tests/sunspider-1.0",
+        "PerformanceTests/JetStream/cdjs/cdjs-tests.yaml",
+        "Source/JavaScriptCore/tests/executableAllocationFuzz.yaml",
+        "Source/JavaScriptCore/tests/exceptionFuzz.yaml",
         "PerformanceTests/SunSpider/no-architecture-specific-optimizations.yaml",
         "PerformanceTests/SunSpider/tests/v8-v6",
         "Source/JavaScriptCore/tests/mozilla/mozilla-tests.yaml",
         "Source/JavaScriptCore/tests/stress",
         "LayoutTests/js/regress/script-tests",
         "PerformanceTests/SunSpider/profiler-test.yaml",
-        "LayoutTests/jsc-layout-tests.yaml"
+        "LayoutTests/jsc-layout-tests.yaml",
+        "Source/JavaScriptCore/tests/typeProfiler.yaml",
+        "Source/JavaScriptCore/tests/controlFlowProfiler.yaml"
     );
+    if (isWindows() && !isCygwin()) {
+        shift @jscStressDriverCmd; # Remove /usr/bin/env
+    }
     if ($enableFTL) {
         push(@jscStressDriverCmd, "--ftl-jit");
     }
     if ($createTarball) {
         push(@jscStressDriverCmd, "--tarball");
     }
+
     if ($remoteHost) {
         push(@jscStressDriverCmd, "--remote");
         push(@jscStressDriverCmd, $remoteHost);
     }
+
+    if ($remoteConfigFile) {
+        push(@jscStressDriverCmd, "--remote-config-file");
+        push(@jscStressDriverCmd, $remoteConfigFile);
+    }
+
+    if ($childProcesses) {
+        push(@jscStressDriverCmd, "--child-processes");
+        push(@jscStressDriverCmd, $childProcesses);
+    }
+
+    if ($shellRunner) {
+        push(@jscStressDriverCmd, "--shell-runner");
+    }
+
+    if ($makeRunner) {
+        push(@jscStressDriverCmd, "--make-runner");
+    }
+    
+    if ($filter) {
+        push(@jscStressDriverCmd, "--filter");
+        push(@jscStressDriverCmd, $filter);
+    }
+
+    # End option processing, the rest of the arguments are tests
+    push(@jscStressDriverCmd, "--");
+
     if (defined($extraTests)) {
         push(@jscStressDriverCmd, $extraTests);
     }
@@ -264,24 +335,26 @@ if ($runJSCStress) {
     print "Running: " . join(" ", @jscStressDriverCmd) . "\n";
     my $result = system(@jscStressDriverCmd);
     exit exitStatus($result) if $result;
-}
 
-my $numNewMozillaFailures = keys %newMozillaFailures;
-if ($numNewMozillaFailures) {
-    print "\n** The following Mozilla test failures have been introduced:\n";
-    foreach my $mozillaFailure (sort keys %newMozillaFailures) {
-        print "\t$mozillaFailure\n";
-    }
-}
+    my @jscStressFailList = readAllLines($jscStressResultsDir . "/failed");
+    @jscStressFailList = sort @jscStressFailList;
+    my $numJSCStressFailures = @jscStressFailList;
 
-my $numOldMozillaFailures = keys %mozillaFailures;
-if ($numOldMozillaFailures) {
-    print "\nYou fixed the following test";
-    print "s" if $numOldMozillaFailures != 1;
-    print ":\n";
-    foreach my $mozillaFailure (sort keys %mozillaFailures) {
-        print "\t$mozillaFailure\n";
+    if ($numJSCStressFailures) {
+        print "\n** The following JSC stress test failures have been introduced:\n";
+        foreach my $testFailure (@jscStressFailList) {
+            print "\t$testFailure";
+        }
     }
+    print "\n";
+
+    print "Results for JSC stress tests:\n";
+    printThingsFound($numJSCStressFailures, "failure", "failures", "found");
+    print "    OK.\n" if $numJSCStressFailures == 0;
+
+    print "\n";
+
+    exit(1) if $numJSCStressFailures;
 }
 
 sub readAllLines
@@ -310,33 +383,49 @@ sub printThingsFound
     print " $verb.\n";
 }
 
-my @jscStressFailList = readAllLines($jscStressResultsDir . "/failed");
-my $numJSCStressFailures = @jscStressFailList;
+sub defaultJsDriverArgsForMozillaTests
+{
+    my @testsToSkipOnWindows = (
+        # Various ecma/Date tests sometimes fail on Windows (but not Mac) https://bugs.webkit.org/show_bug.cgi?id=25160
+        "ecma/Date/15.9.2.1.js",
+        "ecma/Date/15.9.2.2-1.js",
+        "ecma/Date/15.9.2.2-2.js",
+        "ecma/Date/15.9.2.2-3.js",
+        "ecma/Date/15.9.2.2-4.js",
+        "ecma/Date/15.9.2.2-5.js",
+        "ecma/Date/15.9.2.2-6.js",
+        "ecma/Date/15.9.5.31-1.js",
+        "ecma_3/Date/15.9.5.7.js",
+        "ecma/Date/15.9.3.1-1.js",
+        "ecma/Date/15.9.3.1-2.js",
+        "ecma/Date/15.9.3.1-3.js",
+        "ecma/Date/15.9.3.1-4.js",
+        "ecma/Date/15.9.3.1-5.js",
+        "ecma/Date/15.9.3.2-1.js",
+        "ecma/Date/15.9.3.2-2.js",
+        "ecma/Date/15.9.3.2-3.js",
+        "ecma/Date/15.9.3.2-4.js",
+        "ecma/Date/15.9.3.2-5.js",
+        "ecma/Date/15.9.4.2-1.js",
+        "ecma/Date/15.9.5.26-1.js",
+        "ecma/Date/15.9.5.27-1.js",
+        "ecma/Date/15.9.5.28-1.js",
+        "ecma/Date/15.9.5.30-1.js",
+    );
 
-if ($numJSCStressFailures) {
-    print "\n** The following JSC stress test failures have been introduced:\n";
-    foreach my $testFailure (@jscStressFailList) {
-        print "\t$testFailure";
-    }
+    my @testsToSkipOnNonWindows = (
+        # ecma_3/Date/15.9.5.7.js fails on Mac (but not Windows) https://bugs.webkit.org/show_bug.cgi?id=25161
+        "ecma_3/Date/15.9.5.7.js",
+    );
+
+    my @testsToSkip = (
+        # function.arguments have been disabled
+        "js1_4/Functions/function-001.js",
+    );
+
+    @testsToSkip = (@testsToSkip, @testsToSkipOnWindows) if isAppleWinWebKit();
+    @testsToSkip = (@testsToSkip, @testsToSkipOnNonWindows) if !isAppleWinWebKit();
+    my $jsDriverArgs = "-L " . join(" ", @testsToSkip) if @testsToSkip;
+
+    return $jsDriverArgs;
 }
-
-print "\n";
-
-if ($runMozilla) {
-    print "Results for Mozilla tests:\n";
-    printThingsFound($numNewMozillaFailures, "regression", "regressions", "found");
-    printThingsFound($numOldMozillaFailures, "test", "tests", "fixed");
-    print "    OK.\n" if $numNewMozillaFailures == 0;
-    
-    print "\n";
-}
-
-if ($runJSCStress) {
-    print "Results for JSC stress tests:\n";
-    printThingsFound($numJSCStressFailures, "failure", "failures", "found");
-    print "    OK.\n" if $numJSCStressFailures == 0;
-    
-    print "\n";
-}
-
-exit(1)  if ($runMozilla && $numNewMozillaFailures) || ($runJSCStress && $numJSCStressFailures);

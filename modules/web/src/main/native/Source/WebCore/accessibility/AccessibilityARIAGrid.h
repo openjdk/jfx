@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,23 +37,21 @@ namespace WebCore {
 class AccessibilityTableCell;
 class AccessibilityTableHeaderContainer;
 
-class AccessibilityARIAGrid : public AccessibilityTable {
-
-private:
-    explicit AccessibilityARIAGrid(RenderObject*);
+class AccessibilityARIAGrid final : public AccessibilityTable {
 public:
-    static PassRefPtr<AccessibilityARIAGrid> create(RenderObject*);
+    static Ref<AccessibilityARIAGrid> create(RenderObject*);
     virtual ~AccessibilityARIAGrid();
-
-    virtual bool isAriaTable() const override { return true; }
 
     virtual void addChildren() override;
 
 private:
+    explicit AccessibilityARIAGrid(RenderObject*);
+
     // ARIA treegrids and grids support selected rows.
     virtual bool supportsSelectedRows() override { return true; }
     virtual bool isMultiSelectable() const override { return true; }
-    virtual bool isTableExposableThroughAccessibility() const override { return true; }
+    virtual bool computeIsTableExposableThroughAccessibility() const override { return true; }
+    virtual bool isAriaTable() const override { return true; }
 
     void addRowDescendant(AccessibilityObject*, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount);
     bool addTableCellChild(AccessibilityObject*, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount);

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2007, 2008, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -34,7 +34,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 LabelsNodeList::LabelsNodeList(LabelableElement& forNode)
-    : LiveNodeList(forNode, LabelsNodeListType, InvalidateOnForAttrChange, NodeListIsRootedAtDocument)
+    : CachedLiveNodeList(forNode, InvalidateOnForAttrChange)
 {
 }
 
@@ -43,9 +43,9 @@ LabelsNodeList::~LabelsNodeList()
     ownerNode().nodeLists()->removeCacheWithAtomicName(this, starAtom);
 }
 
-bool LabelsNodeList::nodeMatches(Element* testNode) const
+bool LabelsNodeList::elementMatches(Element& testNode) const
 {
-    return isHTMLLabelElement(testNode) && toHTMLLabelElement(testNode)->control() == &ownerNode();
+    return is<HTMLLabelElement>(testNode) && downcast<HTMLLabelElement>(testNode).control() == &ownerNode();
 }
 
 } // namespace WebCore

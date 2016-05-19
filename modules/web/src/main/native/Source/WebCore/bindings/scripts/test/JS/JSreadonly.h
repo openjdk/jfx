@@ -21,28 +21,28 @@
 #ifndef JSreadonly_h
 #define JSreadonly_h
 
-#include "JSDOMBinding.h"
+#include "JSDOMWrapper.h"
 #include "readonly.h"
-#include <runtime/JSGlobalObject.h>
-#include <runtime/JSObject.h>
-#include <runtime/ObjectPrototype.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
 class JSreadonly : public JSDOMWrapper {
 public:
     typedef JSDOMWrapper Base;
-    static JSreadonly* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, PassRefPtr<readonly> impl)
+    static JSreadonly* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<readonly>&& impl)
     {
-        JSreadonly* ptr = new (NotNull, JSC::allocateCell<JSreadonly>(globalObject->vm().heap)) JSreadonly(structure, globalObject, impl);
+        JSreadonly* ptr = new (NotNull, JSC::allocateCell<JSreadonly>(globalObject->vm().heap)) JSreadonly(structure, globalObject, WTF::move(impl));
         ptr->finishCreation(globalObject->vm());
         return ptr;
     }
 
     static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
+    static JSC::JSObject* getPrototype(JSC::VM&, JSC::JSGlobalObject*);
+    static readonly* toWrapped(JSC::JSValue);
     static void destroy(JSC::JSCell*);
     ~JSreadonly();
+
     DECLARE_INFO;
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
@@ -52,22 +52,19 @@ public:
 
     static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
     readonly& impl() const { return *m_impl; }
-    void releaseImpl() { m_impl->deref(); m_impl = 0; }
-
-    void releaseImplIfNotNull()
-    {
-        if (m_impl) {
-            m_impl->deref();
-            m_impl = 0;
-        }
-    }
+    void releaseImpl() { std::exchange(m_impl, nullptr)->deref(); }
 
 private:
     readonly* m_impl;
 protected:
-    JSreadonly(JSC::Structure*, JSDOMGlobalObject*, PassRefPtr<readonly>);
-    void finishCreation(JSC::VM&);
-    static const unsigned StructureFlags = JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertySlot | Base::StructureFlags;
+    JSreadonly(JSC::Structure*, JSDOMGlobalObject*, Ref<readonly>&&);
+
+    void finishCreation(JSC::VM& vm)
+    {
+        Base::finishCreation(vm);
+        ASSERT(inherits(info()));
+    }
+
 };
 
 class JSreadonlyOwner : public JSC::WeakHandleOwner {
@@ -78,69 +75,13 @@ public:
 
 inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, readonly*)
 {
-    DEFINE_STATIC_LOCAL(JSreadonlyOwner, jsreadonlyOwner, ());
-    return &jsreadonlyOwner;
-}
-
-inline void* wrapperContext(DOMWrapperWorld& world, readonly*)
-{
-    return &world;
+    static NeverDestroyed<JSreadonlyOwner> owner;
+    return &owner.get();
 }
 
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, readonly*);
-readonly* toreadonly(JSC::JSValue);
+inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, readonly& impl) { return toJS(exec, globalObject, &impl); }
 
-class JSreadonlyPrototype : public JSC::JSNonFinalObject {
-public:
-    typedef JSC::JSNonFinalObject Base;
-    static JSC::JSObject* self(JSC::VM&, JSC::JSGlobalObject*);
-    static JSreadonlyPrototype* create(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::Structure* structure)
-    {
-        JSreadonlyPrototype* ptr = new (NotNull, JSC::allocateCell<JSreadonlyPrototype>(vm.heap)) JSreadonlyPrototype(vm, globalObject, structure);
-        ptr->finishCreation(vm);
-        return ptr;
-    }
-
-    DECLARE_INFO;
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
-    }
-
-private:
-    JSreadonlyPrototype(JSC::VM& vm, JSC::JSGlobalObject*, JSC::Structure* structure) : JSC::JSNonFinalObject(vm, structure) { }
-protected:
-    static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | Base::StructureFlags;
-};
-
-class JSreadonlyConstructor : public DOMConstructorObject {
-private:
-    JSreadonlyConstructor(JSC::Structure*, JSDOMGlobalObject*);
-    void finishCreation(JSC::VM&, JSDOMGlobalObject*);
-
-public:
-    typedef DOMConstructorObject Base;
-    static JSreadonlyConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
-    {
-        JSreadonlyConstructor* ptr = new (NotNull, JSC::allocateCell<JSreadonlyConstructor>(vm.heap)) JSreadonlyConstructor(structure, globalObject);
-        ptr->finishCreation(vm, globalObject);
-        return ptr;
-    }
-
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    DECLARE_INFO;
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
-    }
-protected:
-    static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | JSC::ImplementsHasInstance | DOMConstructorObject::StructureFlags;
-};
-
-// Attributes
-
-JSC::EncodedJSValue jsreadonlyConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
 
 } // namespace WebCore
 

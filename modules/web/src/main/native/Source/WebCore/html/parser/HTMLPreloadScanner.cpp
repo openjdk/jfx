@@ -30,9 +30,11 @@
 
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLSrcsetParser.h"
 #include "HTMLTokenizer.h"
 #include "InputTypeNames.h"
 #include "LinkRelAttribute.h"
+#include "SourceSizeList.h"
 #include <wtf/MainThread.h>
 
 namespace WebCore {
@@ -56,6 +58,8 @@ TokenPreloadScanner::TagId TokenPreloadScanner::tagIdFor(const HTMLToken::DataVe
         return TagId::Base;
     if (tagName == templateTag)
         return TagId::Template;
+    if (tagName == metaTag)
+        return TagId::Meta;
     return TagId::Unknown;
 }
 
@@ -74,6 +78,7 @@ String TokenPreloadScanner::initiatorFor(TagId tagId)
     case TagId::Style:
     case TagId::Base:
     case TagId::Template:
+    case TagId::Meta:
         ASSERT_NOT_REACHED();
         return "unknown";
     }
@@ -86,28 +91,34 @@ public:
     explicit StartTagScanner(TagId tagId, float deviceScaleFactor = 1.0)
         : m_tagId(tagId)
         , m_linkIsStyleSheet(false)
+        , m_metaIsViewport(false)
         , m_inputIsImage(false)
         , m_deviceScaleFactor(deviceScaleFactor)
     {
     }
 
-    void processAttributes(const HTMLToken::AttributeList& attributes)
+    void processAttributes(const HTMLToken::AttributeList& attributes, Document& document)
     {
         ASSERT(isMainThread());
         if (m_tagId >= TagId::Unknown)
             return;
+
         for (HTMLToken::AttributeList::const_iterator iter = attributes.begin(); iter != attributes.end(); ++iter) {
             AtomicString attributeName(iter->name);
             String attributeValue = StringImpl::create8BitIfPossible(iter->value);
             processAttribute(attributeName, attributeValue);
         }
 
-        // Resolve between src and srcSet if we have them.
-        if (!m_srcSetAttribute.isEmpty()) {
-            ImageWithScale imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, m_urlToLoad, m_srcSetAttribute);
-            String srcMatchingScale = imageCandidate.imageURL(m_urlToLoad, m_srcSetAttribute);
-            setUrlToLoad(srcMatchingScale, true);
+        // Resolve between src and srcSet if we have them and the tag is img.
+        if (m_tagId == TagId::Img && !m_srcSetAttribute.isEmpty()) {
+            float sourceSize = 0;
+            sourceSize = parseSizesAttribute(m_sizesAttribute, document.renderView(), document.frame());
+            ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, m_urlToLoad, m_srcSetAttribute, sourceSize);
+            setUrlToLoad(imageCandidate.string.toString(), true);
         }
+
+        if (m_metaIsViewport && !m_metaContent.isNull())
+            document.processViewport(m_metaContent, ViewportArguments::ViewportMeta);
     }
 
     std::unique_ptr<PreloadRequest> createPreloadRequest(const URL& predictedBaseURL)
@@ -138,8 +149,10 @@ private:
         if (m_tagId == TagId::Script || m_tagId == TagId::Img) {
             if (match(attributeName, srcAttr))
                 setUrlToLoad(attributeValue);
-            else if (match(attributeName, srcsetAttr))
+            else if (match(attributeName, srcsetAttr) && m_srcSetAttribute.isNull())
                 m_srcSetAttribute = attributeValue;
+            else if (match(attributeName, sizesAttr) && m_sizesAttribute.isNull())
+                m_sizesAttribute = attributeValue;
             else if (match(attributeName, crossoriginAttr) && !attributeValue.isNull())
                 m_crossOriginMode = stripLeadingAndTrailingHTMLSpaces(attributeValue);
         } else if (m_tagId == TagId::Link) {
@@ -154,13 +167,18 @@ private:
                 setUrlToLoad(attributeValue);
             else if (match(attributeName, typeAttr))
                 m_inputIsImage = equalIgnoringCase(attributeValue, InputTypeNames::image());
+        } else if (m_tagId == TagId::Meta) {
+            if (match(attributeName, contentAttr))
+                m_metaContent = attributeValue;
+            else if (match(attributeName, nameAttr))
+                m_metaIsViewport = equalIgnoringCase(attributeValue, "viewport");
         }
     }
 
     static bool relAttributeIsStyleSheet(const String& attributeValue)
     {
-        LinkRelAttribute rel(attributeValue);
-        return rel.m_isStyleSheet && !rel.m_isAlternate && rel.m_iconType == InvalidIcon && !rel.m_isDNSPrefetch;
+        LinkRelAttribute parsedAttribute { attributeValue };
+        return parsedAttribute.isStyleSheet && !parsedAttribute.isAlternate && parsedAttribute.iconType == InvalidIcon && !parsedAttribute.isDNSPrefetch;
     }
 
     void setUrlToLoad(const String& value, bool allowReplacement = false)
@@ -217,63 +235,34 @@ private:
     TagId m_tagId;
     String m_urlToLoad;
     String m_srcSetAttribute;
+    String m_sizesAttribute;
     String m_charset;
     String m_crossOriginMode;
     bool m_linkIsStyleSheet;
     String m_mediaAttribute;
+    String m_metaContent;
+    bool m_metaIsViewport;
     bool m_inputIsImage;
     float m_deviceScaleFactor;
 };
 
 TokenPreloadScanner::TokenPreloadScanner(const URL& documentURL, float deviceScaleFactor)
     : m_documentURL(documentURL)
-    , m_inStyle(false)
     , m_deviceScaleFactor(deviceScaleFactor)
-#if ENABLE(TEMPLATE_ELEMENT)
-    , m_templateCount(0)
-#endif
 {
 }
 
-TokenPreloadScanner::~TokenPreloadScanner()
-{
-}
-
-TokenPreloadScannerCheckpoint TokenPreloadScanner::createCheckpoint()
-{
-    TokenPreloadScannerCheckpoint checkpoint = m_checkpoints.size();
-    m_checkpoints.append(Checkpoint(m_predictedBaseElementURL, m_inStyle
-#if ENABLE(TEMPLATE_ELEMENT)
-                                    , m_templateCount
-#endif
-                                    ));
-    return checkpoint;
-}
-
-void TokenPreloadScanner::rewindTo(TokenPreloadScannerCheckpoint checkpointIndex)
-{
-    ASSERT(checkpointIndex < m_checkpoints.size()); // If this ASSERT fires, checkpointIndex is invalid.
-    const Checkpoint& checkpoint = m_checkpoints[checkpointIndex];
-    m_predictedBaseElementURL = checkpoint.predictedBaseElementURL;
-    m_inStyle = checkpoint.inStyle;
-#if ENABLE(TEMPLATE_ELEMENT)
-    m_templateCount = checkpoint.templateCount;
-#endif
-    m_cssScanner.reset();
-    m_checkpoints.clear();
-}
-
-void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<PreloadRequest>>& requests)
+void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<PreloadRequest>>& requests, Document& document)
 {
     switch (token.type()) {
     case HTMLToken::Character:
         if (!m_inStyle)
             return;
-        m_cssScanner.scan(token.data(), requests);
+        m_cssScanner.scan(token.characters(), requests);
         return;
 
     case HTMLToken::EndTag: {
-        TagId tagId = tagIdFor(token.data());
+        TagId tagId = tagIdFor(token.name());
 #if ENABLE(TEMPLATE_ELEMENT)
         if (tagId == TagId::Template) {
             if (m_templateCount)
@@ -294,7 +283,7 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
         if (m_templateCount)
             return;
 #endif
-        TagId tagId = tagIdFor(token.data());
+        TagId tagId = tagIdFor(token.name());
 #if ENABLE(TEMPLATE_ELEMENT)
         if (tagId == TagId::Template) {
             ++m_templateCount;
@@ -314,9 +303,9 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
         }
 
         StartTagScanner scanner(tagId, m_deviceScaleFactor);
-        scanner.processAttributes(token.attributes());
+        scanner.processAttributes(token.attributes(), document);
         if (auto request = scanner.createPreloadRequest(m_predictedBaseElementURL))
-            requests.append(std::move(request));
+            requests.append(WTF::move(request));
         return;
     }
 
@@ -325,21 +314,16 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
     }
 }
 
-template<typename Token>
-void TokenPreloadScanner::updatePredictedBaseURL(const Token& token)
+void TokenPreloadScanner::updatePredictedBaseURL(const HTMLToken& token)
 {
     ASSERT(m_predictedBaseElementURL.isEmpty());
-    if (const typename Token::Attribute* hrefAttribute = token.getAttributeItem(hrefAttr))
-        m_predictedBaseElementURL = URL(m_documentURL, stripLeadingAndTrailingHTMLSpaces(hrefAttribute->value)).copy();
+    if (auto* hrefAttribute = findAttribute(token.attributes(), hrefAttr.localName().string()))
+        m_predictedBaseElementURL = URL(m_documentURL, stripLeadingAndTrailingHTMLSpaces(StringImpl::create8BitIfPossible(hrefAttribute->value))).isolatedCopy();
 }
 
 HTMLPreloadScanner::HTMLPreloadScanner(const HTMLParserOptions& options, const URL& documentURL, float deviceScaleFactor)
     : m_scanner(documentURL, deviceScaleFactor)
-    , m_tokenizer(std::make_unique<HTMLTokenizer>(options))
-{
-}
-
-HTMLPreloadScanner::~HTMLPreloadScanner()
+    , m_tokenizer(options)
 {
 }
 
@@ -348,9 +332,11 @@ void HTMLPreloadScanner::appendToEnd(const SegmentedString& source)
     m_source.append(source);
 }
 
-void HTMLPreloadScanner::scan(HTMLResourcePreloader* preloader, const URL& startingBaseElementURL)
+void HTMLPreloadScanner::scan(HTMLResourcePreloader& preloader, Document& document)
 {
     ASSERT(isMainThread()); // HTMLTokenizer::updateStateFor only works on the main thread.
+
+    const URL& startingBaseElementURL = document.baseElementURL();
 
     // When we start scanning, our best prediction of the baseElementURL is the real one!
     if (!startingBaseElementURL.isEmpty())
@@ -358,14 +344,24 @@ void HTMLPreloadScanner::scan(HTMLResourcePreloader* preloader, const URL& start
 
     PreloadRequestStream requests;
 
-    while (m_tokenizer->nextToken(m_source, m_token)) {
-        if (m_token.type() == HTMLToken::StartTag)
-            m_tokenizer->updateStateFor(AtomicString(m_token.name()));
-        m_scanner.scan(m_token, requests);
-        m_token.clear();
+    while (auto token = m_tokenizer.nextToken(m_source)) {
+        if (token->type() == HTMLToken::StartTag)
+            m_tokenizer.updateStateFor(AtomicString(token->name()));
+        m_scanner.scan(*token, requests, document);
     }
 
-    preloader->preload(std::move(requests));
+    preloader.preload(WTF::move(requests));
+}
+
+bool testPreloadScannerViewportSupport(Document* document)
+{
+    ASSERT(document);
+    HTMLParserOptions options(*document);
+    HTMLPreloadScanner scanner(options, document->url());
+    HTMLResourcePreloader preloader(*document);
+    scanner.appendToEnd(String("<meta name=viewport content='width=400'>"));
+    scanner.scan(preloader, *document);
+    return (document->viewportArguments().width == 400);
 }
 
 }

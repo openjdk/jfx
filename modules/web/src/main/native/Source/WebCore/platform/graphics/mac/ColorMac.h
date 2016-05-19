@@ -13,10 +13,10 @@
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -39,12 +39,12 @@ namespace WebCore {
 
 #if USE(APPKIT)
     // These functions assume NSColors are in DeviceRGB colorspace
-    Color colorFromNSColor(NSColor *);
-    NSColor *nsColor(const Color&);
+    WEBCORE_EXPORT Color colorFromNSColor(NSColor *);
+    WEBCORE_EXPORT NSColor *nsColor(const Color&);
 #endif
 
-    bool usesTestModeFocusRingColor();
-    void setUsesTestModeFocusRingColor(bool);
+    WEBCORE_EXPORT bool usesTestModeFocusRingColor();
+    WEBCORE_EXPORT void setUsesTestModeFocusRingColor(bool);
 
     // Focus ring color used for testing purposes.
     RGBA32 oldAquaFocusRingColor();

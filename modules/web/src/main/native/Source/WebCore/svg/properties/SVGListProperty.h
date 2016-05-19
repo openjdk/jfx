@@ -44,7 +44,7 @@ public:
 
     typedef typename SVGPropertyTraits<PropertyType>::ListItemType ListItemType;
     typedef SVGPropertyTearOff<ListItemType> ListItemTearOff;
-    typedef PassRefPtr<ListItemTearOff> PassListItemTearOff;
+    typedef RefPtr<ListItemTearOff> PtrListItemTearOff;
     typedef SVGAnimatedListPropertyTearOff<PropertyType> AnimatedListPropertyTearOff;
     typedef typename SVGAnimatedListPropertyTearOff<PropertyType>::ListWrapperCache ListWrapperCache;
 
@@ -62,9 +62,8 @@ public:
     {
         // See SVGPropertyTearOff::detachWrapper() for an explanation about what's happening here.
         ASSERT(wrappers);
-        unsigned size = wrappers->size();
-        for (unsigned i = 0; i < size; ++i) {
-            if (ListItemTearOff* item = wrappers->at(i).get())
+        for (auto& item : *wrappers) {
+            if (item)
                 item->detachWrapper();
         }
 
@@ -138,19 +137,18 @@ public:
         return newItem;
     }
 
-    PassListItemTearOff initializeValuesAndWrappers(PassListItemTearOff passNewItem, ExceptionCode& ec)
+    PtrListItemTearOff initializeValuesAndWrappers(PtrListItemTearOff newItem, ExceptionCode& ec)
     {
         ASSERT(m_wrappers);
         if (!canAlterList(ec))
-            return 0;
+            return nullptr;
 
         // Not specified, but FF/Opera do it this way, and it's just sane.
-        if (!passNewItem) {
+        if (!newItem) {
             ec = SVGException::SVG_WRONG_TYPE_ERR;
-            return 0;
+            return nullptr;
         }
 
-        RefPtr<ListItemTearOff> newItem = passNewItem;
         ASSERT(m_values->size() == m_wrappers->size());
 
         // Spec: If the inserted item is already in a list, it is removed from its previous list before it is inserted into this list.
@@ -164,7 +162,7 @@ public:
         m_wrappers->append(newItem);
 
         commitChange();
-        return newItem.release();
+        return newItem;
     }
 
     // SVGList::getItem()
@@ -187,11 +185,11 @@ public:
         return m_values->at(index);
     }
 
-    PassListItemTearOff getItemValuesAndWrappers(AnimatedListPropertyTearOff* animatedList, unsigned index, ExceptionCode& ec)
+    PtrListItemTearOff getItemValuesAndWrappers(AnimatedListPropertyTearOff* animatedList, unsigned index, ExceptionCode& ec)
     {
         ASSERT(m_wrappers);
         if (!canGetItem(index, ec))
-            return 0;
+            return nullptr;
 
         // Spec: Returns the specified item from the list. The returned item is the item itself and not a copy.
         // Any changes made to the item are immediately reflected in the list.
@@ -232,23 +230,22 @@ public:
         return newItem;
     }
 
-    PassListItemTearOff insertItemBeforeValuesAndWrappers(PassListItemTearOff passNewItem, unsigned index, ExceptionCode& ec)
+    PtrListItemTearOff insertItemBeforeValuesAndWrappers(PtrListItemTearOff newItem, unsigned index, ExceptionCode& ec)
     {
         ASSERT(m_wrappers);
         if (!canAlterList(ec))
-            return 0;
+            return nullptr;
 
         // Not specified, but FF/Opera do it this way, and it's just sane.
-        if (!passNewItem) {
+        if (!newItem) {
             ec = SVGException::SVG_WRONG_TYPE_ERR;
-            return 0;
+            return nullptr;
         }
 
         // Spec: If the index is greater than or equal to numberOfItems, then the new item is appended to the end of the list.
         if (index > m_values->size())
              index = m_values->size();
 
-        RefPtr<ListItemTearOff> newItem = passNewItem;
         ASSERT(m_values->size() == m_wrappers->size());
 
         // Spec: If newItem is already in a list, it is removed from its previous list before it is inserted into this list.
@@ -263,7 +260,7 @@ public:
         m_wrappers->insert(index, newItem);
 
         commitChange();
-        return newItem.release();
+        return newItem;
     }
 
     // SVGList::replaceItem()
@@ -305,31 +302,30 @@ public:
         return newItem;
     }
 
-    PassListItemTearOff replaceItemValuesAndWrappers(PassListItemTearOff passNewItem, unsigned index, ExceptionCode& ec)
+    PtrListItemTearOff replaceItemValuesAndWrappers(PtrListItemTearOff newItem, unsigned index, ExceptionCode& ec)
     {
         ASSERT(m_wrappers);
         if (!canReplaceItem(index, ec))
-            return 0;
+            return nullptr;
 
         // Not specified, but FF/Opera do it this way, and it's just sane.
-        if (!passNewItem) {
+        if (!newItem) {
             ec = SVGException::SVG_WRONG_TYPE_ERR;
-            return 0;
+            return nullptr;
         }
 
         ASSERT(m_values->size() == m_wrappers->size());
-        RefPtr<ListItemTearOff> newItem = passNewItem;
 
         // Spec: If newItem is already in a list, it is removed from its previous list before it is inserted into this list.
         // Spec: If the item is already in this list, note that the index of the item to replace is before the removal of the item.
         if (!processIncomingListItemWrapper(newItem, &index))
-            return newItem.release();
+            return newItem;
 
         if (m_values->isEmpty()) {
             ASSERT(m_wrappers->isEmpty());
-            // 'passNewItem' already lived in our list, we removed it, and now we're empty, which means there's nothing to replace.
+            // 'newItem' already lived in our list, we removed it, and now we're empty, which means there's nothing to replace.
             ec = INDEX_SIZE_ERR;
-            return 0;
+            return nullptr;
         }
 
         // Detach the existing wrapper.
@@ -342,7 +338,7 @@ public:
         m_wrappers->at(index) = newItem;
 
         commitChange();
-        return newItem.release();
+        return newItem;
     }
 
     // SVGList::removeItem()
@@ -371,11 +367,11 @@ public:
         return oldItem;
     }
 
-    PassListItemTearOff removeItemValuesAndWrappers(AnimatedListPropertyTearOff* animatedList, unsigned index, ExceptionCode& ec)
+    PtrListItemTearOff removeItemValuesAndWrappers(AnimatedListPropertyTearOff* animatedList, unsigned index, ExceptionCode& ec)
     {
         ASSERT(m_wrappers);
         if (!canRemoveItem(index, ec))
-            return 0;
+            return nullptr;
 
         ASSERT(m_values->size() == m_wrappers->size());
 
@@ -408,19 +404,18 @@ public:
         return newItem;
     }
 
-    PassListItemTearOff appendItemValuesAndWrappers(PassListItemTearOff passNewItem, ExceptionCode& ec)
+    PtrListItemTearOff appendItemValuesAndWrappers(PtrListItemTearOff newItem, ExceptionCode& ec)
     {
         ASSERT(m_wrappers);
         if (!canAlterList(ec))
-            return 0;
+            return nullptr;
 
         // Not specified, but FF/Opera do it this way, and it's just sane.
-        if (!passNewItem) {
+        if (!newItem) {
             ec = SVGException::SVG_WRONG_TYPE_ERR;
-            return 0;
+            return nullptr;
         }
 
-        RefPtr<ListItemTearOff> newItem = passNewItem;
         ASSERT(m_values->size() == m_wrappers->size());
 
         // Spec: If newItem is already in a list, it is removed from its previous list before it is inserted into this list.
@@ -431,7 +426,7 @@ public:
         m_wrappers->append(newItem);
 
         commitChange(ListModificationAppend);
-        return newItem.release();
+        return newItem;
     }
 
     PropertyType& values()

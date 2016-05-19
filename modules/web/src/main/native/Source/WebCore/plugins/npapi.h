@@ -379,6 +379,9 @@ typedef enum {
   , NPPVpluginCoreAnimationLayer = 1003
 #endif
 
+  /* Used for figuring out whether a plug-in is playing audio. */
+  , NPPVpluginIsPlayingAudio = 4000
+
 } NPPVariable;
 
 /*
@@ -429,6 +432,9 @@ typedef enum {
   , NPNVsupportsCompositingCoreAnimationPluginsBool = 74656 /* TRUE if the browser supports
                                                                CA model compositing */
 #endif /* XP_MACOSX */
+
+  , NPNVmuteAudioBool = 4000
+
 } NPNVariable;
 
 typedef enum {

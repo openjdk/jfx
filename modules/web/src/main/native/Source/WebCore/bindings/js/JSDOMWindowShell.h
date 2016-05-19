@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -59,10 +59,10 @@ namespace WebCore {
 
         static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSValue prototype)
         {
-            return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::ProxyType, StructureFlags), info());
+            return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::PureForwardingProxyType, StructureFlags), info());
         }
 
-        DOMWrapperWorld& world() { return m_world.get(); }
+        DOMWrapperWorld& world() { return m_world; }
 
     protected:
         JSDOMWindowShell(JSC::VM&, JSC::Structure*, DOMWrapperWorld&);

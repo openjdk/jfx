@@ -30,7 +30,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(StringObject);
 
-const ClassInfo StringObject::s_info = { "String", &JSWrapperObject::s_info, 0, 0, CREATE_METHOD_TABLE(StringObject) };
+const ClassInfo StringObject::s_info = { "String", &JSWrapperObject::s_info, 0, CREATE_METHOD_TABLE(StringObject) };
 
 StringObject::StringObject(VM& vm, Structure* structure)
     : JSWrapperObject(vm, structure)
@@ -93,7 +93,7 @@ bool StringObject::defineOwnProperty(JSObject* object, ExecState* exec, Property
         }
         if (descriptor.configurablePresent() && descriptor.configurable()) {
             if (throwException)
-                exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Attempting to configurable attribute of unconfigurable property.")));
+                exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Attempting to change configurable attribute of unconfigurable property.")));
             return false;
         }
         if (descriptor.enumerablePresent() && descriptor.enumerable()) {
@@ -128,9 +128,8 @@ bool StringObject::deleteProperty(JSCell* cell, ExecState* exec, PropertyName pr
     StringObject* thisObject = jsCast<StringObject*>(cell);
     if (propertyName == exec->propertyNames().length)
         return false;
-    unsigned i = propertyName.asIndex();
-    if (thisObject->internalValue()->canGetIndex(i)) {
-        ASSERT(i != PropertyName::NotAnIndex); // No need for an explicit check, the above test would always fail!
+    Optional<uint32_t> index = parseIndex(propertyName);
+    if (index && thisObject->internalValue()->canGetIndex(index.value())) {
         return false;
     }
     return JSObject::deleteProperty(thisObject, exec, propertyName);
@@ -147,10 +146,12 @@ bool StringObject::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned
 void StringObject::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
     StringObject* thisObject = jsCast<StringObject*>(object);
-    int size = thisObject->internalValue()->length();
-    for (int i = 0; i < size; ++i)
-        propertyNames.add(Identifier::from(exec, i));
-    if (mode == IncludeDontEnumProperties)
+    if (propertyNames.includeStringProperties()) {
+        int size = thisObject->internalValue()->length();
+        for (int i = 0; i < size; ++i)
+            propertyNames.add(Identifier::from(exec, i));
+    }
+    if (mode.includeDontEnumProperties())
         propertyNames.add(exec->propertyNames().length);
     return JSObject::getOwnPropertyNames(thisObject, exec, propertyNames, mode);
 }

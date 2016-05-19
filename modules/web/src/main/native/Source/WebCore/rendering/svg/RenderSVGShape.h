@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2006 Apple Computer, Inc
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2009 Google, Inc.
  * Copyright (C) 2011 Renata Hodovan <reni@webkit.org>
  * Copyright (C) 2011 University of Szeged
@@ -31,7 +31,7 @@
 #include "RenderSVGModelObject.h"
 #include "SVGGraphicsElement.h"
 #include "SVGMarkerData.h"
-#include <wtf/OwnPtr.h>
+#include <memory>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -45,11 +45,10 @@ class SVGGraphicsElement;
 
 class RenderSVGShape : public RenderSVGModelObject {
 public:
-    RenderSVGShape(SVGGraphicsElement&, PassRef<RenderStyle>);
-    RenderSVGShape(SVGGraphicsElement&, PassRef<RenderStyle>, Path*, bool);
+    RenderSVGShape(SVGGraphicsElement&, Ref<RenderStyle>&&);
     virtual ~RenderSVGShape();
 
-    SVGGraphicsElement& graphicsElement() const { return toSVGGraphicsElement(RenderSVGModelObject::element()); }
+    SVGGraphicsElement& graphicsElement() const { return downcast<SVGGraphicsElement>(RenderSVGModelObject::element()); }
 
     void setNeedsShapeUpdate() { m_needsShapeUpdate = true; }
     virtual void setNeedsBoundariesUpdate() override final { m_needsBoundariesUpdate = true; }
@@ -57,6 +56,7 @@ public:
     virtual void setNeedsTransformUpdate() override final { m_needsTransformUpdate = true; }
     virtual void fillShape(GraphicsContext*) const;
     virtual void strokeShape(GraphicsContext*) const;
+    virtual bool isRenderingDisabled() const = 0;
 
     bool hasPath() const { return m_path.get(); }
     Path& path() const
@@ -116,14 +116,15 @@ private:
 
     void fillShape(const RenderStyle&, GraphicsContext*);
     void strokeShape(const RenderStyle&, GraphicsContext*);
-    void fillAndStrokeShape(GraphicsContext*);
+    void strokeShape(GraphicsContext*);
+    void fillStrokeMarkers(PaintInfo&);
     void drawMarkers(PaintInfo&);
 
 private:
     FloatRect m_repaintBoundingBox;
     FloatRect m_repaintBoundingBoxExcludingShadow;
     AffineTransform m_localTransform;
-    OwnPtr<Path> m_path;
+    std::unique_ptr<Path> m_path;
     Vector<MarkerPosition> m_markerPositions;
 
     bool m_needsBoundariesUpdate : 1;
@@ -131,8 +132,8 @@ private:
     bool m_needsTransformUpdate : 1;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSVGShape, isSVGShape())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGShape, isSVGShape())
 
-#endif
+#endif // RenderSVGShape_h

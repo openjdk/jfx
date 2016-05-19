@@ -33,7 +33,9 @@ require "cloop"
 BACKENDS =
     [
      "X86",
+     "X86_WIN",
      "X86_64",
+     "X86_64_WIN",
      "ARM",
      "ARMv7",
      "ARMv7_TRADITIONAL",
@@ -51,7 +53,9 @@ BACKENDS =
 WORKING_BACKENDS =
     [
      "X86",
+     "X86_WIN",
      "X86_64",
+     "X86_64_WIN",
      "ARM",
      "ARMv7",
      "ARMv7_TRADITIONAL",
@@ -62,6 +66,37 @@ WORKING_BACKENDS =
     ]
 
 BACKEND_PATTERN = Regexp.new('\\A(' + BACKENDS.join(')|(') + ')\\Z')
+
+$allBackends = {}
+$validBackends = {}
+BACKENDS.each {
+    | backend |
+    $validBackends[backend] = true
+    $allBackends[backend] = true
+}
+
+def includeOnlyBackends(list)
+    newValidBackends = {}
+    list.each {
+        | backend |
+        if $validBackends[backend]
+            newValidBackends[backend] = true
+        end
+    }
+    $validBackends = newValidBackends
+end
+
+def isBackend?(backend)
+    $allBackends[backend]
+end
+
+def isValidBackend?(backend)
+    $validBackends[backend]
+end
+
+def validBackends
+    $validBackends.keys
+end
 
 class Node
     def lower(name)
@@ -79,7 +114,7 @@ end
 
 class Label
     def lower(name)
-        $asm.putsLabel(self.name[1..-1])
+        $asm.putsLabel(self.name[1..-1], @global)
     end
 end
 
@@ -91,8 +126,13 @@ end
 
 class LabelReference
     def asmLabel
-        Assembler.labelReference(name[1..-1])
+        if extern?
+            Assembler.externLabelReference(name[1..-1])
+        else
+            Assembler.labelReference(name[1..-1])
+        end
     end
+
     def cLabel
         Assembler.cLabelReference(name[1..-1])
     end
@@ -102,6 +142,7 @@ class LocalLabelReference
     def asmLabel
         Assembler.localLabelReference("_offlineasm_"+name[1..-1])
     end
+
     def cLabel
         Assembler.cLocalLabelReference("_offlineasm_"+name[1..-1])
     end

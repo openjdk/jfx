@@ -41,10 +41,10 @@ static EncodedJSValue JSC_HOST_CALL arrayBufferProtoFuncSlice(ExecState* exec)
 
     JSArrayBuffer* thisObject = jsDynamicCast<JSArrayBuffer*>(exec->thisValue());
     if (!thisObject)
-        return throwVMError(exec, createTypeError(exec, "Receiver of slice must be an array buffer."));
+        return throwVMError(exec, createTypeError(exec, ASCIILiteral("Receiver of slice must be an array buffer.")));
 
     if (!exec->argumentCount())
-        return throwVMError(exec, createTypeError(exec, "Slice requires at least one argument."));
+        return throwVMError(exec, createTypeError(exec, ASCIILiteral("Slice requires at least one argument.")));
 
     int32_t begin = exec->argument(0).toInt32(exec);
     if (exec->hadException())
@@ -60,7 +60,7 @@ static EncodedJSValue JSC_HOST_CALL arrayBufferProtoFuncSlice(ExecState* exec)
 
     RefPtr<ArrayBuffer> newBuffer = thisObject->impl()->slice(begin, end);
     if (!newBuffer)
-        return throwVMError(exec, createOutOfMemoryError(callee->globalObject()));
+        return throwVMError(exec, createOutOfMemoryError(exec));
 
     Structure* structure = callee->globalObject()->arrayBufferStructure();
 
@@ -70,7 +70,7 @@ static EncodedJSValue JSC_HOST_CALL arrayBufferProtoFuncSlice(ExecState* exec)
 }
 
 const ClassInfo JSArrayBufferPrototype::s_info = {
-    "ArrayBufferPrototype", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSArrayBufferPrototype)
+    "ArrayBufferPrototype", &Base::s_info, 0, CREATE_METHOD_TABLE(JSArrayBufferPrototype)
 };
 
 JSArrayBufferPrototype::JSArrayBufferPrototype(VM& vm, Structure* structure)

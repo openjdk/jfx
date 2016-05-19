@@ -34,29 +34,29 @@ namespace WebCore {
 
 class RenderFullScreen final : public RenderFlexibleBox {
 public:
-    RenderFullScreen(Document&, PassRef<RenderStyle>);
+    RenderFullScreen(Document&, Ref<RenderStyle>&&);
 
-    virtual bool isRenderFullScreen() const override { return true; }
     virtual const char* renderName() const override { return "RenderFullScreen"; }
 
     void setPlaceholder(RenderBlock*);
     RenderBlock* placeholder() { return m_placeholder; }
-    void createPlaceholder(PassRef<RenderStyle>, const LayoutRect& frameRect);
+    void createPlaceholder(Ref<RenderStyle>&&, const LayoutRect& frameRect);
 
     static RenderFullScreen* wrapRenderer(RenderObject*, RenderElement*, Document&);
-    void unwrapRenderer();
+    void unwrapRenderer(bool& requiresRenderTreeRebuild);
 
 private:
+    virtual bool isRenderFullScreen() const override { return true; }
     virtual void willBeDestroyed() override;
 
 protected:
     RenderBlock* m_placeholder;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderFullScreen, isRenderFullScreen())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFullScreen, isRenderFullScreen())
 
-#endif
+#endif // ENABLE(FULLSCREEN_API)
 
-#endif
+#endif // RenderFullScreen_h

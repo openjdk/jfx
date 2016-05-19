@@ -26,8 +26,6 @@
 #ifndef DFGPredictionPropagationPhase_h
 #define DFGPredictionPropagationPhase_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "SpeculatedType.h"
@@ -48,7 +46,7 @@ class Graph;
 bool performPredictionPropagation(Graph&);
 
 // Helper used for FixupPhase for computing the predicted type of a ToPrimitive.
-SpeculatedType resultOfToPrimitive(SpeculatedType type);
+SpeculatedType resultOfToPrimitive(SpeculatedType);
 
 } } // namespace JSC::DFG::Phase
 

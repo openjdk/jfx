@@ -89,13 +89,23 @@ public:
         if (inlineCapacity > JSFinalObject::maxInlineCapacity())
             inlineCapacity = JSFinalObject::maxInlineCapacity();
 
+        Structure* structure = vm.prototypeMap.emptyObjectStructureForPrototype(prototype, inlineCapacity);
+
+        // Ensure that if another thread sees the structure, it will see it properly created
+        WTF::storeStoreFence();
+
         m_allocator = allocator;
-        m_structure.set(vm, owner,
-            vm.prototypeMap.emptyObjectStructureForPrototype(prototype, inlineCapacity));
+        m_structure.set(vm, owner, structure);
     }
 
-    Structure* structure() { return m_structure.get(); }
-    unsigned inlineCapacity() { return m_structure->inlineCapacity(); }
+    Structure* structure()
+    {
+        Structure* structure = m_structure.get();
+        // Ensure that if we see the structure, it has been properly created
+        WTF::loadLoadFence();
+        return structure;
+    }
+    unsigned inlineCapacity() { return structure()->inlineCapacity(); }
 
     void clear()
     {
@@ -117,8 +127,8 @@ private:
             return 0;
 
         size_t count = 0;
-        PropertyNameArray propertyNameArray(&vm);
-        prototype->structure()->getPropertyNamesFromStructure(vm, propertyNameArray, ExcludeDontEnumProperties);
+        PropertyNameArray propertyNameArray(&vm, PropertyNameMode::StringsAndSymbols);
+        prototype->structure()->getPropertyNamesFromStructure(vm, propertyNameArray, EnumerationMode());
         PropertyNameArrayData::PropertyNameVector& propertyNameVector = propertyNameArray.data()->propertyNameVector();
         for (size_t i = 0; i < propertyNameVector.size(); ++i) {
             JSValue value = prototype->getDirect(vm, propertyNameVector[i]);

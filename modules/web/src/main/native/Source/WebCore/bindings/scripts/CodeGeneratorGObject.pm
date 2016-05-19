@@ -23,10 +23,14 @@
 package CodeGeneratorGObject;
 
 use constant FileNamePrefix => "WebKitDOM";
+use File::Basename;
+use FindBin;
 
 # Global Variables
 my %implIncludes = ();
 my %hdrIncludes = ();
+
+my @stableSymbols = ();
 
 my $defineTypeMacro = "G_DEFINE_TYPE";
 my $defineTypeInterfaceImplementation = ")";
@@ -43,13 +47,38 @@ my %baseTypeHash = ("Object" => 1, "Node" => 1, "NodeList" => 1, "NamedNodeMap" 
                     "Event" => 1, "CSSRule" => 1, "CSSValue" => 1, "StyleSheet" => 1, "MediaList" => 1,
                     "Counter" => 1, "Rect" => 1, "RGBColor" => 1, "XPathExpression" => 1, "XPathResult" => 1,
                     "NodeIterator" => 1, "TreeWalker" => 1, "AbstractView" => 1, "Blob" => 1, "DOMTokenList" => 1,
-                    "HTMLCollection" => 1);
+                    "HTMLCollection" => 1, "TextTrackCue" => 1);
+
+# Only objects derived from Node are released by the DOM object cache and can be
+# transfer none. Ideally we could use GetBaseClass with the parent type to check
+# whether it's Node, but unfortunately we only have the name of the return type,
+# and we can't know its parent base class. Since there are fewer classes in the
+# API that are not derived from Node, we will list them here to decide the
+# transfer type.
+my %transferFullTypeHash = ("AudioTrack" => 1, "AudioTrackList" => 1, "BarProp" => 1, "BatteryManager" => 1,
+    "CSSRuleList" => 1, "CSSStyleDeclaration" => 1, "CSSStyleSheet" => 1,
+    "DOMApplicationCache" => 1, "DOMMimeType" => 1, "DOMMimeTypeArray" => 1, "DOMNamedFlowCollection" => 1,
+    "DOMPlugin" => 1, "DOMPluginArray" => 1, "DOMSecurityPolicy" => 1,
+    "DOMSelection" => 1, "DOMSettableTokenList" => 1, "DOMStringList" => 1,
+    "DOMWindow" => 1, "DOMWindowCSS" => 1, "EventTarget" => 1,
+    "File" => 1, "FileList" => 1, "Gamepad" => 1, "GamepadList" => 1,
+    "Geolocation" => 1, "HTMLOptionsCollection" => 1, "History" => 1,
+    "KeyboardEvent" => 1, "MediaError" => 1, "MediaController" => 1,
+    "MouseEvent" => 1, "MediaQueryList" => 1, "Navigator" => 1, "NodeFilter" => 1,
+    "Performance" => 1, "PerformanceEntry" => 1, "PerformanceEntryList" => 1, "PerformanceNavigation" => 1, "PerformanceTiming" => 1,
+    "Range" => 1, "Screen" => 1, "SpeechSynthesis" => 1, "SpeechSynthesisVoice" => 1,
+    "Storage" => 1, "StyleMedia" => 1, "TextTrack" => 1, "TextTrackCueList" => 1,
+    "TimeRanges" => 1, "Touch" => 1, "UIEvent" => 1, "UserMessageHandler" => 1, "UserMessageHandlersNamespace" => 1,
+    "ValidityState" => 1, "VideoTrack" => 1, "WebKitNamedFlow" => 1,
+    "WebKitNamespace" => 1, "WebKitPoint" => 1, "WheelEvent" => 1, "XPathNSResolver" => 1);
 
 # List of function parameters that are allowed to be NULL
 my $canBeNullParams = {
     'webkit_dom_document_create_attribute_ns' => ['namespaceURI'],
     'webkit_dom_document_create_element_ns' => ['namespaceURI'],
     'webkit_dom_document_create_entity_reference' => ['name'],
+    'webkit_dom_document_create_node_iterator' => ['filter'],
+    'webkit_dom_document_create_tree_walker' => ['filter'],
     'webkit_dom_document_evaluate' => ['inResult', 'resolver'],
     'webkit_dom_document_get_override_style' => ['pseudoElement'],
     'webkit_dom_dom_implementation_create_document' => ['namespaceURI', 'doctype'],
@@ -152,6 +181,12 @@ sub decamelize
             s/x_path/xpath/;
             s/web_kit/webkit/;
             s/htmli_frame/html_iframe/;
+            s/htmlbr/html_br/;
+            s/htmlli/html_li/;
+            s/htmlhr/html_hr/;
+            s/htmld/html_d/;
+            s/htmlo/html_o/;
+            s/htmlu/html_u/;
         }
         return $s;
 }
@@ -174,20 +209,14 @@ sub HumanReadableConditional {
 sub GetParentGObjType {
     my $interface = shift;
 
-    return "WEBKIT_TYPE_DOM_OBJECT" unless $interface->parent;
-    return "WEBKIT_TYPE_DOM_" . uc(decamelize(($interface->parent)));
+    return "WEBKIT_DOM_TYPE_OBJECT" unless $interface->parent;
+    return "WEBKIT_DOM_TYPE_" . uc(decamelize(($interface->parent)));
 }
 
 sub GetClassName {
     my $name = shift;
 
     return "WebKitDOM$name";
-}
-
-sub GetCoreObject {
-    my ($interfaceName, $name, $parameter) = @_;
-
-    return "WebCore::${interfaceName}* $name = WebKit::core($parameter);";
 }
 
 sub SkipAttribute {
@@ -231,9 +260,7 @@ sub SkipAttribute {
         return 1;
     }
 
-    if ($attribute->signature->type eq "EventListener") {
-        return 1;
-    }
+    return 1 if $attribute->signature->type eq "EventHandler";
 
     if ($attribute->signature->type eq "MediaQueryListListener") {
         return 1;
@@ -260,6 +287,9 @@ sub SkipFunction {
     my $callWith = $function->signature->extendedAttributes->{"CallWith"};
     my $isUnsupportedCallWith = $codeGenerator->ExtendedAttributeContains($callWith, "ScriptArguments") || $codeGenerator->ExtendedAttributeContains($callWith, "CallStack");
 
+    # Static methods are unsupported
+    return 1 if $function->isStatic;
+
     if (($isCustomFunction || $isUnsupportedCallWith) &&
         $functionName ne "webkit_dom_node_replace_child" &&
         $functionName ne "webkit_dom_node_insert_before" &&
@@ -284,34 +314,22 @@ sub SkipFunction {
         }
     }
 
-    # Skip functions for which we have a custom implementation due to API breaks
-    if ($functionName eq "webkit_dom_html_media_element_set_current_time") {
-        return 1;
-    }
-
     # This is for DataTransferItemList.idl add(File) method
     if ($functionName eq "webkit_dom_data_transfer_item_list_add" && @{$function->parameters} == 1) {
         return 1;
     }
 
-    # Skip dispatch_event methods, except the one already deprecated.
-    if ($parentNode->extendedAttributes->{"EventTarget"} && $function->signature->name eq "dispatchEvent"
-        && $functionName ne "webkit_dom_audio_track_list_dispatch_event"
-        && $functionName ne "webkit_dom_battery_manager_dispatch_event"
-        && $functionName ne "webkit_dom_dom_application_cache_dispatch_event"
-        && $functionName ne "webkit_dom_dom_window_dispatch_event"
-        && $functionName ne "webkit_dom_node_dispatch_event"
-        && $functionName ne "webkit_dom_text_track_cue_dispatch_event"
-        && $functionName ne "webkit_dom_text_track_dispatch_event"
-        && $functionName ne "webkit_dom_text_track_list_dispatch_event"
-        && $functionName ne "webkit_dom_video_track_list_dispatch_event"
-        && $functionName ne "webkit_dom_webkit_named_flow_dispatch_event"
-        && $functionName ne "webkit_dom_test_event_target_dispatch_event") {
+    # Skip dispatch_event methods.
+    if ($parentNode->extendedAttributes->{"EventTarget"} && $function->signature->name eq "dispatchEvent") {
         return 1;
     }
 
     # Skip Console::profile() and Console::profileEnd() as they're not correctly generated for the moment.
     if ($functionName eq "webkit_dom_console_profile" || $functionName eq "webkit_dom_console_profile_end") {
+        return 1;
+    }
+
+    if ($codeGenerator->IsTypedArrayType($function->signature->type) || $codeGenerator->GetArrayType($function->signature->type)) {
         return 1;
     }
 
@@ -347,6 +365,14 @@ sub SkipFunction {
         return 1;
     }
 
+    if ($function->signature->type eq "Promise") {
+        return 1;
+    }
+
+    if ($function->signature->type eq "Date") {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -357,7 +383,9 @@ sub GetGValueTypeName {
     my %types = ("DOMString", "string",
                  "DOMTimeStamp", "uint",
                  "float", "float",
+                 "unrestricted float", "float",
                  "double", "double",
+                 "unrestricted double", "double",
                  "boolean", "boolean",
                  "char", "char",
                  "long", "long",
@@ -384,8 +412,11 @@ sub GetGlibTypeName {
     my %types = ("DOMString", "gchar*",
                  "DOMTimeStamp", "guint32",
                  "CompareHow", "gushort",
+                 "SerializedScriptValue", "gchar*",
                  "float", "gfloat",
+                 "unrestricted float", "gfloat",
                  "double", "gdouble",
+                 "unrestricted double", "gdouble",
                  "boolean", "gboolean",
                  "char", "gchar",
                  "long", "glong",
@@ -408,45 +439,49 @@ sub GetGlibTypeName {
 sub IsGDOMClassType {
     my $type = shift;
 
-    return 0 if $codeGenerator->IsNonPointerType($type) || $codeGenerator->IsStringType($type);
+    return 0 if $codeGenerator->IsNonPointerType($type) || $codeGenerator->IsStringType($type) || $type eq "SerializedScriptValue";
     return 1;
 }
 
-sub GetReadableProperties {
-    my $properties = shift;
-
-    my @result = ();
-
-    foreach my $property (@{$properties}) {
-        if (!SkipAttribute($property)) {
-            push(@result, $property);
-        }
-    }
-
-    return @result;
+sub IsPropertyReadable {
+    my $property = shift;
+    return !SkipAttribute($property);
 }
 
-sub GetWriteableProperties {
-    my $properties = shift;
-    my @result = ();
+sub IsPropertyWriteable {
+    my $property = shift;
 
-    foreach my $property (@{$properties}) {
-        my $gtype = GetGValueTypeName($property->signature->type);
-        my $hasGtypeSignature = ($gtype eq "boolean" || $gtype eq "float" || $gtype eq "double" ||
-                                 $gtype eq "uint64" || $gtype eq "ulong" || $gtype eq "long" || 
-                                 $gtype eq "uint" || $gtype eq "ushort" || $gtype eq "int8" ||
-                                 $gtype eq "uint8" || $gtype eq "uchar" || $gtype eq "char" ||
-                                 $gtype eq "string");
-        # FIXME: We are not generating setters for 'Replaceable'
-        # attributes now, but we should somehow.
-        my $replaceable = $property->signature->extendedAttributes->{"Replaceable"};
-        my $custom = $property->signature->extendedAttributes->{"CustomSetter"};
-        if (!$property->isReadOnly && $hasGtypeSignature && !$replaceable && !$custom) {
-            push(@result, $property);
-        }
+    if (!IsPropertyReadable($property)) {
+        return 0;
     }
 
-    return @result;
+    if ($property->isReadOnly) {
+        return 0;
+    }
+
+    my $gtype = GetGValueTypeName($property->signature->type);
+    my $hasGtypeSignature = $gtype eq "boolean" || $gtype eq "float" || $gtype eq "double" ||
+                            $gtype eq "int64" || $gtype eq "uint64" ||
+                            $gtype eq "long" || $gtype eq "ulong" ||
+                            $gtype eq "int" || $gtype eq "uint" ||
+                            $gtype eq "short" || $gtype eq "ushort" ||
+                            $gtype eq "int8" || $gtype eq "uint8" ||
+                            $gtype eq "char" || $gtype eq "uchar" ||
+                            $gtype eq "string";
+    if (!$hasGtypeSignature) {
+        return 0;
+    }
+
+    # FIXME: We are not generating setters for 'Replaceable' attributes now, but we should somehow.
+    if ($property->signature->extendedAttributes->{"Replaceable"}) {
+        return 0;
+    }
+
+    if ($property->signature->extendedAttributes->{"CustomSetter"}) {
+        return 0;
+    }
+
+    return 1;
 }
 
 sub GenerateConditionalWarning
@@ -486,19 +521,13 @@ sub GenerateProperty {
     my @writeableProperties = @{shift @_};
     my $parentNode = shift;
 
-    my $conditionalString = $codeGenerator->GenerateConditionalString($attribute->signature);
-    my @conditionalWarn = GenerateConditionalWarning($attribute->signature, 8);
-    my $parentConditionalString = $codeGenerator->GenerateConditionalString($parentNode);
-    my @parentConditionalWarn = GenerateConditionalWarning($parentNode, 8);
-    my $camelPropName = $attribute->signature->name;
-    my $setPropNameFunction = $codeGenerator->WK_ucfirst($camelPropName);
-    my $getPropNameFunction = $codeGenerator->WK_lcfirst($camelPropName);
     my $hasGetterException = $attribute->signature->extendedAttributes->{"GetterRaisesException"};
     my $hasSetterException = $attribute->signature->extendedAttributes->{"SetterRaisesException"};
 
-    my $propName = decamelize($camelPropName);
+    my $decamelizeInterfaceName = decamelize($interfaceName);
+    my $propName = decamelize($attribute->signature->name);
+    my $propFunctionName = GetFunctionSignatureName($interfaceName, $attribute);
     my $propNameCaps = uc($propName);
-    $propName =~ s/_/-/g;
     my ${propEnum} = "PROP_${propNameCaps}";
     push(@cBodyProperties, "    ${propEnum},\n");
 
@@ -508,82 +537,43 @@ sub GenerateProperty {
 
     my $gtype = GetGValueTypeName($propType);
     my $gparamflag = "WEBKIT_PARAM_READABLE";
-    my $writeable = !$attribute->isReadOnly;
+    my $writeable = IsPropertyWriteable($attribute);
 
     my $mutableString = "read-only";
     my $hasCustomSetter = $attribute->signature->extendedAttributes->{"CustomSetter"};
     if ($writeable && $hasCustomSetter) {
-        $mutableStringconst = "read-only (due to custom functions needed in webkitdom)";
+        $mutableString = "read-only (due to custom functions needed in webkitdom)";
     } elsif ($writeable) {
         $gparamflag = "WEBKIT_PARAM_READWRITE";
-        $mutableStringconst = "read-write";
+        $mutableString = "read-write";
     }
 
-    my $convertFunction = "";
-    if ($gtype eq "string") {
-        $convertFunction = "WTF::String::fromUTF8";
-    }
+    my @getterArguments = ();
+    push(@getterArguments, "self");
+    push(@getterArguments, "nullptr") if $hasGetterException;
 
-    my ($getterFunctionName, @getterArguments) = $codeGenerator->GetterExpression(\%implIncludes, $interfaceName, $attribute);
-    my ($setterFunctionName, @setterArguments) = $codeGenerator->SetterExpression(\%implIncludes, $interfaceName, $attribute);
-
-    if ($attribute->signature->extendedAttributes->{"ImplementedBy"}) {
-        my $implementedBy = $attribute->signature->extendedAttributes->{"ImplementedBy"};
-        $implIncludes{"${implementedBy}.h"} = 1;
-        push(@setterArguments, "${convertFunction}(g_value_get_$gtype(value))");
-        unshift(@getterArguments, "coreSelf");
-        unshift(@setterArguments, "coreSelf");
-        $getterFunctionName = "WebCore::${implementedBy}::$getterFunctionName";
-        $setterFunctionName = "WebCore::${implementedBy}::$setterFunctionName";
-    } else {
-        push(@setterArguments, "${convertFunction}(g_value_get_$gtype(value))");
-        $getterFunctionName = "coreSelf->$getterFunctionName";
-        $setterFunctionName = "coreSelf->$setterFunctionName";
-    }
-    push(@getterArguments, "isNull") if $attribute->signature->isNullable;
-    push(@getterArguments, "ec") if $hasGetterException;
-    push(@setterArguments, "ec") if $hasSetterException;
+    my @setterArguments = ();
+    push(@setterArguments, "self, g_value_get_$gtype(value)");
+    push(@setterArguments, "nullptr") if $hasSetterException;
 
     if (grep {$_ eq $attribute} @writeableProperties) {
-        push(@txtSetProps, "    case ${propEnum}: {\n");
-        push(@txtSetProps, "#if ${parentConditionalString}\n") if $parentConditionalString;
-        push(@txtSetProps, "#if ${conditionalString}\n") if $conditionalString;
-        push(@txtSetProps, "        WebCore::ExceptionCode ec = 0;\n") if $hasSetterException;
-        push(@txtSetProps, "        ${setterFunctionName}(" . join(", ", @setterArguments) . ");\n");
-        push(@txtSetProps, "#else\n") if $conditionalString;
-        push(@txtSetProps, @conditionalWarn) if scalar(@conditionalWarn);
-        push(@txtSetProps, "#endif /* ${conditionalString} */\n") if $conditionalString;
-        push(@txtSetProps, "#else\n") if $parentConditionalString;
-        push(@txtSetProps, @parentConditionalWarn) if scalar(@parentConditionalWarn);
-        push(@txtSetProps, "#endif /* ${parentConditionalString} */\n") if $parentConditionalString;
-        push(@txtSetProps, "        break;\n    }\n");
+        push(@txtSetProps, "    case ${propEnum}:\n");
+        push(@txtSetProps, "        webkit_dom_${decamelizeInterfaceName}_set_" . $propFunctionName . "(" . join(", ", @setterArguments) . ");\n");
+        push(@txtSetProps, "        break;\n");
     }
 
-    push(@txtGetProps, "    case ${propEnum}: {\n");
-    push(@txtGetProps, "#if ${parentConditionalString}\n") if $parentConditionalString;
-    push(@txtGetProps, "#if ${conditionalString}\n") if $conditionalString;
-    push(@txtGetProps, "        bool isNull = false;\n") if $attribute->signature->isNullable;
-    push(@txtGetProps, "        WebCore::ExceptionCode ec = 0;\n") if $hasGetterException;
+    push(@txtGetProps, "    case ${propEnum}:\n");
 
     # FIXME: Should we return a default value when isNull == true?
 
     my $postConvertFunction = "";
     if ($gtype eq "string") {
-        push(@txtGetProps, "        g_value_take_string(value, convertToUTF8String(${getterFunctionName}(" . join(", ", @getterArguments) . ")));\n");
-    } elsif ($gtype eq "object") {
-        push(@txtGetProps, "        RefPtr<WebCore::${propType}> ptr = ${getterFunctionName}(" . join(", ", @getterArguments) . ");\n");
-        push(@txtGetProps, "        g_value_set_object(value, WebKit::kit(ptr.get()));\n");
+        push(@txtGetProps, "        g_value_take_string(value, webkit_dom_${decamelizeInterfaceName}_get_" . $propFunctionName . "(" . join(", ", @getterArguments) . "));\n");
     } else {
-        push(@txtGetProps, "        g_value_set_$gtype(value, ${convertFunction}${getterFunctionName}(" . join(", ", @getterArguments) . ")${postConvertFunction});\n");
+        push(@txtGetProps, "        g_value_set_$gtype(value, webkit_dom_${decamelizeInterfaceName}_get_" . $propFunctionName . "(" . join(", ", @getterArguments) . "));\n");
     }
 
-    push(@txtGetProps, "#else\n") if $conditionalString;
-    push(@txtGetProps, @conditionalWarn) if scalar(@conditionalWarn);
-    push(@txtGetProps, "#endif /* ${conditionalString} */\n") if $conditionalString;
-    push(@txtGetProps, "#else\n") if $parentConditionalString;
-    push(@txtGetProps, @parentConditionalWarn) if scalar(@parentConditionalWarn);
-    push(@txtGetProps, "#endif /* ${parentConditionalString} */\n") if $parentConditionalString;
-    push(@txtGetProps, "        break;\n    }\n");
+    push(@txtGetProps, "        break;\n");
 
     my %parameterSpecOptions = ("int" =>     [ "G_MININT", "G_MAXINT", "0" ],
                                 "int8" =>    [ "G_MININT8", "G_MAXINT8", "0" ],
@@ -600,10 +590,11 @@ sub GenerateProperty {
                                 "uchar" =>   [ "G_MININT8", "G_MAXINT8", "0" ],
                                 "char" =>    [ "0", "G_MAXUINT8", "0" ],
                                 "string" =>  [ '""', ],
-                                "object" =>  [ "WEBKIT_TYPE_DOM_${ucPropGType}" ]);
+                                "object" =>  [ "WEBKIT_DOM_TYPE_${ucPropGType}" ]);
 
     my $extraParameters = join(", ", @{$parameterSpecOptions{$gtype}});
     my $glibTypeName = GetGlibTypeName($propType);
+    $propName =~ s/_/-/g;
     my $txtInstallProp = << "EOF";
     g_object_class_install_property(
         gobjectClass,
@@ -637,12 +628,11 @@ sub GenerateProperties {
 
     # Properties
     my $implContent = "";
-    my @readableProperties = GetReadableProperties($interface->attributes);
-    my @writeableProperties = GetWriteableProperties(\@readableProperties);
+    my @readableProperties = grep { IsPropertyReadable($_) } @{$interface->attributes};
+    my @writeableProperties = grep { IsPropertyWriteable($_) } @{$interface->attributes};
     my $numProperties = scalar @readableProperties;
 
     # Properties
-    my $privFunction = GetCoreObject($interfaceName, "coreSelf", "self");
     if ($numProperties > 0) {
         $implContent = << "EOF";
 enum {
@@ -650,45 +640,18 @@ enum {
 EOF
         push(@cBodyProperties, $implContent);
 
-        my $txtGetProp = << "EOF";
-static void ${lowerCaseIfaceName}_get_property(GObject* object, guint propertyId, GValue* value, GParamSpec* pspec)
-{
-    WebCore::JSMainThreadNullState state;
-EOF
-        push(@txtGetProps, $txtGetProp);
-        $txtGetProp = << "EOF";
-$conditionGuardStart
-    ${className}* self = WEBKIT_DOM_${clsCaps}(object);
-    $privFunction
-$conditionGuardEnd
-EOF
-        push(@txtGetProps, $txtGetProp);
-
-        $txtGetProp = << "EOF";
-    switch (propertyId) {
-EOF
-        push(@txtGetProps, $txtGetProp);
+        push(@txtGetProps, "static void ${lowerCaseIfaceName}_get_property(GObject* object, guint propertyId, GValue* value, GParamSpec* pspec)\n");
+        push(@txtGetProps, "{\n");
+        push(@txtGetProps, "    ${className}* self = WEBKIT_DOM_${clsCaps}(object);\n");
+        push(@txtGetProps, "\n");
+        push(@txtGetProps, "    switch (propertyId) {\n");
 
         if (scalar @writeableProperties > 0) {
-            my $txtSetProps = << "EOF";
-static void ${lowerCaseIfaceName}_set_property(GObject* object, guint propertyId, const GValue* value, GParamSpec* pspec)
-{
-    WebCore::JSMainThreadNullState state;
-EOF
-            push(@txtSetProps, $txtSetProps);
-
-            $txtSetProps = << "EOF";
-$conditionGuardStart
-    ${className}* self = WEBKIT_DOM_${clsCaps}(object);
-    $privFunction
-$conditionGuardEnd
-EOF
-            push(@txtSetProps, $txtSetProps);
-
-            $txtSetProps = << "EOF";
-    switch (propertyId) {
-EOF
-            push(@txtSetProps, $txtSetProps);
+            push(@txtSetProps, "static void ${lowerCaseIfaceName}_set_property(GObject* object, guint propertyId, const GValue* value, GParamSpec* pspec)\n");
+            push(@txtSetProps, "{\n");
+            push(@txtSetProps, "    ${className}* self = WEBKIT_DOM_${clsCaps}(object);\n");
+            push(@txtSetProps, "\n");
+            push(@txtSetProps, "    switch (propertyId) {\n");
         }
 
         foreach my $attribute (@readableProperties) {
@@ -791,6 +754,8 @@ EOF
             push(@cBodyProperties, "\n");
             push(@cBodyProperties, @txtInstallProps);
         }
+    } else {
+        push(@cBodyProperties, "    UNUSED_PARAM(requestClass);\n");
     }
     $implContent = << "EOF";
 }
@@ -806,6 +771,8 @@ EOF
     new (priv) ${className}Private();
 EOF
         push(@cBodyProperties, $implContent);
+    } else {
+        push(@cBodyProperties, "    UNUSED_PARAM(request);\n");
     }
     $implContent = << "EOF";
 }
@@ -814,8 +781,47 @@ EOF
     push(@cBodyProperties, $implContent);
 }
 
+sub GenerateConstants {
+    my ($interface, $prefix) = @_;
+
+    my $isStableClass = scalar(@stableSymbols);
+
+    if (@{$interface->constants}) {
+        my @constants = @{$interface->constants};
+        foreach my $constant (@constants) {
+            my $conditionalString = $codeGenerator->GenerateConditionalString($constant);
+            my $constantName = $prefix . $constant->name;
+            my $constantValue = $constant->value;
+            my $stableSymbol = grep {$_ =~ /^\Q$constantName/} @stableSymbols;
+            my $stableSymbolVersion;
+            if ($stableSymbol) {
+                ($dummy, $stableSymbolVersion) = split('@', $stableSymbol, 2);
+                push(@symbols, "$constantName\n");
+            }
+
+            my @constantHeader = ();
+            push(@constantHeader, "#if ${conditionalString}") if $conditionalString;
+            push(@constantHeader, "/**");
+            push(@constantHeader, " * ${constantName}:");
+            if ($stableSymbolVersion) {
+                push(@constantHeader, " * Since: ${stableSymbolVersion}");
+            }
+            push(@constantHeader, " */");
+            push(@constantHeader, "#define $constantName $constantValue");
+            push(@constantHeader, "#endif /* ${conditionalString} */") if $conditionalString;
+            push(@constantHeader, "\n");
+
+            if ($stableSymbol or !$isStableClass) {
+                push(@hBody, join("\n", @constantHeader));
+            } else {
+                push(@hBodyUnstable, join("\n", @constantHeader));
+            }
+        }
+    }
+}
+
 sub GenerateHeader {
-    my ($object, $interfaceName, $parentClassName) = @_;
+    my ($object, $interfaceName, $parentClassName, $interface) = @_;
 
     my $implContent = "";
 
@@ -823,14 +829,18 @@ sub GenerateHeader {
     @hPrefix = split("\r", $licenceTemplate);
     push(@hPrefix, "\n");
 
-    # Force single header include.
-    my $headerCheck = << "EOF";
+    my $isStableClass = scalar(@stableSymbols);
+
+    if ($isStableClass) {
+        # Force single header include.
+        my $headerCheck = << "EOF";
 #if !defined(__WEBKITDOM_H_INSIDE__) && !defined(BUILDING_WEBKIT)
 #error "Only <webkitdom/webkitdom.h> can be included directly."
 #endif
 
 EOF
-    push(@hPrefix, $headerCheck);
+        push(@hPrefix, $headerCheck);
+    }
 
     # Header guard
     my $guard = $className . "_h";
@@ -840,6 +850,9 @@ EOF
 #define $guard
 
 EOF
+    if (!$isStableClass) {
+        push(@hPrefixGuard, "#ifdef WEBKIT_DOM_USE_UNSTABLE_API\n\n");
+    }
 
     $implContent = << "EOF";
 G_BEGIN_DECLS
@@ -853,13 +866,24 @@ EOF
     my $lowerCaseIfaceName = "webkit_dom_$decamelize";
 
     $implContent = << "EOF";
-#define WEBKIT_TYPE_DOM_${clsCaps}            (${lowerCaseIfaceName}_get_type())
-#define WEBKIT_DOM_${clsCaps}(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), WEBKIT_TYPE_DOM_${clsCaps}, ${className}))
-#define WEBKIT_DOM_${clsCaps}_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_TYPE_DOM_${clsCaps}, ${className}Class)
-#define WEBKIT_DOM_IS_${clsCaps}(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), WEBKIT_TYPE_DOM_${clsCaps}))
-#define WEBKIT_DOM_IS_${clsCaps}_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  WEBKIT_TYPE_DOM_${clsCaps}))
-#define WEBKIT_DOM_${clsCaps}_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  WEBKIT_TYPE_DOM_${clsCaps}, ${className}Class))
+#define WEBKIT_DOM_TYPE_${clsCaps}            (${lowerCaseIfaceName}_get_type())
+#define WEBKIT_DOM_${clsCaps}(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), WEBKIT_DOM_TYPE_${clsCaps}, ${className}))
+#define WEBKIT_DOM_${clsCaps}_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_DOM_TYPE_${clsCaps}, ${className}Class)
+#define WEBKIT_DOM_IS_${clsCaps}(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), WEBKIT_DOM_TYPE_${clsCaps}))
+#define WEBKIT_DOM_IS_${clsCaps}_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  WEBKIT_DOM_TYPE_${clsCaps}))
+#define WEBKIT_DOM_${clsCaps}_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  WEBKIT_DOM_TYPE_${clsCaps}, ${className}Class))
 
+EOF
+
+    push(@hBody, $implContent);
+
+    if ($isStableClass) {
+        push(@symbols, "GType ${lowerCaseIfaceName}_get_type(void)\n");
+    }
+
+    GenerateConstants($interface, "WEBKIT_DOM_${clsCaps}_");
+
+    $implContent = << "EOF";
 struct _${className} {
     ${parentClassName} parent_instance;
 };
@@ -868,12 +892,12 @@ struct _${className}Class {
     ${parentClassName}Class parent_class;
 };
 
-WEBKIT_API GType
-${lowerCaseIfaceName}_get_type (void);
-
 EOF
 
     push(@hBody, $implContent);
+
+    push(@hBody, "WEBKIT_API GType\n${lowerCaseIfaceName}_get_type(void);\n");
+    push(@hBody, "\n");
 }
 
 sub GetGReturnMacro {
@@ -915,22 +939,58 @@ sub ParamCanBeNull {
     return 0;
 }
 
-sub GetFunctionDeprecationInformation {
-    my($function, $parentNode) = @_;
+sub GetFunctionSignatureName {
+    my ($interfaceName, $function) = @_;
 
-    my $version;
-    my $replacement;
+    my $signatureName = decamelize($function->signature->name);
 
-    if ($parentNode->extendedAttributes->{"EventTarget"} && $function->signature->name eq "dispatchEvent") {
-        # dispatchEvent is implemented already as part fo the WebKitDOMEventTarget interface.
-        # Mark it as deprecated for now in favor of the interface method, and skip it once
-        # we break the API. All other methods of WebKitDOMEventTarget interface are already
-        # skipped because they receive an EventListener as parameter.
-        $version = "2.4";
-        $replacement = "webkit_dom_event_target_dispatch_event";
+    return $signatureName if $signatureName ne "type";
+
+    # For HTML type attribute use type_attr.
+    # Example: webkit_dom_html_link_element_get_type_attr()
+    my $contentAttributeName = $codeGenerator->ContentAttributeName(\%implIncludes, $interfaceName, $function);
+    if ($contentAttributeName) {
+        return "type_attr" if $contentAttributeName eq "WebCore::HTMLNames::typeAttr";
     }
 
-    return ($version, $replacement);
+    # For methods returning a MIME type use content_type.
+    # Examples: webkit_dom_style_sheet_get_content_type(), webkit_dom_dom_mime_type_get_content_type()
+    if ($interfaceName eq "StyleSheet" || $interfaceName eq "DOMMimeType") {
+        return "content_type";
+    }
+
+    # For HTMLFieldSet use field_set_type.
+    # Example: webkit_dom_html_field_set_element_get_field_set_type()
+    if ($interfaceName eq "HTMLFieldSet") {
+        return "field_set_type";
+    }
+
+    # For any other cases use the last word of the interface name.
+    # Examples: webkit_dom_blob_get_blob_type(), webkit_dom_event_get_event_type()
+    my @nameTokens = split('_', decamelize($interfaceName));
+    my $name = $nameTokens[-1];
+
+    # If the last word is element and there are more words, use the previous one.
+    # Example: webkit_dom_html_button_element_get_button_type()
+    if (scalar(@nameTokens) > 1 && $name eq "element") {
+        $name = $nameTokens[-2];
+    }
+
+    return "${name}_type";
+}
+
+sub GetTransferTypeForReturnType {
+    my $returnType = shift;
+
+    # Node is always transfer none.
+    return "none" if $returnType eq "Node";
+
+    # Any base class but Node is transfer full.
+    return "full" if IsBaseType($returnType);
+
+    # Any other class not derived from Node is transfer full.
+    return "full" if $transferFullTypeHash{$returnType};
+    return "none";
 }
 
 sub GenerateFunction {
@@ -942,9 +1002,9 @@ sub GenerateFunction {
         return;
     }
 
-    my ($deprecationVersion, $deprecationReplacement) = GetFunctionDeprecationInformation($function, $parentNode);
     my $functionSigType = $prefix eq "set_" ? "void" : $function->signature->type;
-    my $functionName = "webkit_dom_" . $decamelize . "_" . $prefix . decamelize($function->signature->name);
+    my $functionSigName = GetFunctionSignatureName($interfaceName, $function);
+    my $functionName = "webkit_dom_" . $decamelize . "_" . $prefix . $functionSigName;
     my $returnType = GetGlibTypeName($functionSigType);
     my $returnValueIsGDOMType = IsGDOMClassType($functionSigType);
     my $raisesException = $function->signature->extendedAttributes->{"RaisesException"};
@@ -960,6 +1020,8 @@ sub GenerateFunction {
     my @callImplParams;
     foreach my $param (@{$function->parameters}) {
         my $paramIDLType = $param->type;
+        my $arrayOrSequenceType = $codeGenerator->GetArrayOrSequenceType($paramIDLType);
+        $paramIDLType = $arrayOrSequenceType if $arrayOrSequenceType ne "";
         my $paramType = GetGlibTypeName($paramIDLType);
         my $const = $paramType eq "gchar*" ? "const " : "";
         my $paramName = $param->name;
@@ -976,6 +1038,13 @@ sub GenerateFunction {
         if ($paramIsGDOMType || ($paramIDLType eq "DOMString") || ($paramIDLType eq "CompareHow")) {
             $paramName = "converted" . $codeGenerator->WK_ucfirst($paramName);
         }
+        if ($paramIDLType eq "NodeFilter" || $paramIDLType eq "XPathNSResolver") {
+            $paramName = "WTF::getPtr(" . $paramName . ")";
+        }
+        if ($paramIDLType eq "SerializedScriptValue") {
+            $implIncludes{"SerializedScriptValue.h"} = 1;
+            $paramName = "WebCore::SerializedScriptValue::create(WTF::String::fromUTF8(" . $paramName . "))";
+        }
         push(@callImplParams, $paramName);
     }
 
@@ -986,19 +1055,26 @@ sub GenerateFunction {
     $functionSig .= ", GError** error" if $raisesException;
     $symbolSig .= ", GError**" if $raisesException;
 
-    push(@symbols, "$returnType $functionName($symbolSig)\n");
-
-    if ($deprecationVersion) {
-        push(@hBody, "#if !defined(WEBKIT_DISABLE_DEPRECATED)\n");
+    my $symbol = "$returnType $functionName($symbolSig)";
+    my $isStableClass = scalar(@stableSymbols);
+    my ($stableSymbol) = grep {$_ =~ /^\Q$symbol/} @stableSymbols;
+    my $stableSymbolVersion;
+    if ($stableSymbol and $isStableClass) {
+        ($dummy, $stableSymbolVersion) = split('@', $stableSymbol, 2);
+        push(@symbols, "$symbol\n");
     }
 
+    my @functionHeader = ();
     # Insert introspection annotations
-    push(@hBody, "/**\n");
-    push(@hBody, " * ${functionName}:\n");
-    push(@hBody, " * \@self: A #${className}\n");
+    push(@functionHeader, "/**");
+    push(@functionHeader, " * ${functionName}:");
+    push(@functionHeader, " * \@self: A #${className}");
 
     foreach my $param (@{$function->parameters}) {
-        my $paramType = GetGlibTypeName($param->type);
+        my $paramIDLType = $param->type;
+        my $arrayOrSequenceType = $codeGenerator->GetArrayOrSequenceType($paramIDLType);
+        $paramIDLType = $arrayOrSequenceType if $arrayOrSequenceType ne "";
+        my $paramType = GetGlibTypeName($paramIDLType);
         # $paramType can have a trailing * in some cases
         $paramType =~ s/\*$//;
         my $paramName = $param->name;
@@ -1006,39 +1082,41 @@ sub GenerateFunction {
         if (ParamCanBeNull($functionName, $paramName)) {
             $paramAnnotations = " (allow-none):";
         }
-        push(@hBody, " * \@${paramName}:${paramAnnotations} A #${paramType}\n");
+        push(@functionHeader, " * \@${paramName}:${paramAnnotations} A #${paramType}");
     }
-    push(@hBody, " * \@error: #GError\n") if $raisesException;
-    push(@hBody, " *\n");
+    push(@functionHeader, " * \@error: #GError") if $raisesException;
+    push(@functionHeader, " *");
     my $returnTypeName = $returnType;
+    my $hasReturnTag = 0;
     $returnTypeName =~ s/\*$//;
     if ($returnValueIsGDOMType) {
-        push(@hBody, " * Returns: (transfer none): A #${returnTypeName}\n");
+        my $transferType = GetTransferTypeForReturnType($functionSigType);
+        push(@functionHeader, " * Returns: (transfer $transferType): A #${returnTypeName}");
+        $hasReturnTag = 1;
     } elsif ($returnType ne "void") {
-        push(@hBody, " * Returns: A #${returnTypeName}\n");
+        push(@functionHeader, " * Returns: A #${returnTypeName}");
+        $hasReturnTag = 1;
     }
-    if ($deprecationVersion) {
-        push(@hBody, " *\n");
-        push(@hBody, " * Deprecated: $deprecationVersion");
-        if ($deprecationReplacement) {
-            push(@hBody, ": Use $deprecationReplacement() instead.");
+    if (!$stableSymbol) {
+        if ($hasReturnTag) {
+            push(@functionHeader, " *");
         }
-        push(@hBody, "\n");
+        push(@functionHeader, " * Stability: Unstable");
+    } elsif ($stableSymbolVersion) {
+        if ($hasReturnTag) {
+            push(@functionHeader, " *");
+        }
+        push(@functionHeader, " * Since: ${stableSymbolVersion}");
     }
-    push(@hBody, "**/\n");
+    push(@functionHeader, "**/");
 
-    if ($deprecationVersion && $deprecationReplacement) {
-        push(@hBody, "WEBKIT_DEPRECATED_FOR($deprecationReplacement) ");
-    } elsif ($deprecationVersion) {
-        push(@hBody, "WEBKIT_DEPRECATED ");
+    push(@functionHeader, "WEBKIT_API $returnType\n$functionName($functionSig);");
+    push(@functionHeader, "\n");
+    if ($stableSymbol or !$isStableClass) {
+        push(@hBody, join("\n", @functionHeader));
     } else {
-        push(@hBody, "WEBKIT_API ");
+        push(@hBodyUnstable, join("\n", @functionHeader));
     }
-    push(@hBody, "$returnType\n$functionName($functionSig);\n");
-    if ($deprecationVersion) {
-        push(@hBody, "#endif /* WEBKIT_DISABLE_DEPRECATED */\n");
-    }
-    push(@hBody, "\n");
 
     push(@cBody, "$returnType $functionName($functionSig)\n{\n");
     push(@cBody, "#if ${parentConditionalString}\n") if $parentConditionalString;
@@ -1053,9 +1131,8 @@ sub GenerateFunction {
     foreach my $param (@{$function->parameters}) {
         my $paramName = $param->name;
         my $paramIDLType = $param->type;
-        my $paramTypeIsPrimitive = $codeGenerator->IsPrimitiveType($paramIDLType);
-        my $paramIsGDOMType = IsGDOMClassType($paramIDLType);
-        if (!$paramTypeIsPrimitive) {
+        my $paramTypeIsPointer = !$codeGenerator->IsNonPointerType($paramIDLType);
+        if ($paramTypeIsPointer) {
             $gReturnMacro = GetGReturnMacro($paramName, $paramIDLType, $returnType, $functionName);
             push(@cBody, $gReturnMacro);
         }
@@ -1080,6 +1157,8 @@ sub GenerateFunction {
             push(@cBody, "    WTF::String ${convertedParamName} = WTF::String::fromUTF8($paramName);\n");
         } elsif ($paramIDLType eq "CompareHow") {
             push(@cBody, "    WebCore::Range::CompareHow ${convertedParamName} = static_cast<WebCore::Range::CompareHow>($paramName);\n");
+        } elsif ($paramIDLType eq "NodeFilter" || $paramIDLType eq "XPathNSResolver") {
+            push(@cBody, "    RefPtr<WebCore::$paramIDLType> ${convertedParamName} = WebKit::core($paramName);\n");
         } elsif ($paramIsGDOMType) {
             push(@cBody, "    WebCore::${paramIDLType}* ${convertedParamName} = WebKit::core($paramName);\n");
         }
@@ -1105,6 +1184,11 @@ sub GenerateFunction {
             $assignPost = ")";
         } else {
             $assign = "${returnType} result = ";
+        }
+
+        if ($functionSigType eq "SerializedScriptValue") {
+            $assignPre = "convertToUTF8String(";
+            $assignPost = "->toString())";
         }
     }
 
@@ -1179,7 +1263,7 @@ EOF
             } else {
                 $functionName = "item->${functionName}";
             }
-            $contentHead = "${assign}${assignPre}${functionName}(" . join(", ", @arguments) . "${assignPost});\n";
+            $contentHead = "${assign}${assignPre}${functionName}(" . join(", ", @arguments) . ")${assignPost};\n";
         } elsif ($prefix eq "set_") {
             my ($functionName, @arguments) = $codeGenerator->SetterExpression(\%implIncludes, $interfaceName, $function);
             push(@arguments, @callImplParams);
@@ -1188,10 +1272,10 @@ EOF
                 $implIncludes{"${implementedBy}.h"} = 1;
                 unshift(@arguments, "item");
                 $functionName = "WebCore::${implementedBy}::${functionName}";
-                $contentHead = "${assign}${assignPre}${functionName}(" . join(", ", @arguments) . "${assignPost});\n";
+                $contentHead = "${assign}${assignPre}${functionName}(" . join(", ", @arguments) . ")${assignPost};\n";
             } else {
                 $functionName = "item->${functionName}";
-                $contentHead = "${assign}${assignPre}${functionName}(" . join(", ", @arguments) . "${assignPost});\n";
+                $contentHead = "${assign}${assignPre}${functionName}(" . join(", ", @arguments) . ")${assignPost};\n";
             }
         } else {
             my @arguments = @callImplParams;
@@ -1199,9 +1283,9 @@ EOF
                 my $implementedBy = $function->signature->extendedAttributes->{"ImplementedBy"};
                 $implIncludes{"${implementedBy}.h"} = 1;
                 unshift(@arguments, "item");
-                $contentHead = "${assign}${assignPre}WebCore::${implementedBy}::${functionImplementationName}(" . join(", ", @arguments) . "${assignPost});\n";
+                $contentHead = "${assign}${assignPre}WebCore::${implementedBy}::${functionImplementationName}(" . join(", ", @arguments) . ")${assignPost};\n";
             } else {
-                $contentHead = "${assign}${assignPre}item->${functionImplementationName}(" . join(", ", @arguments) . "${assignPost});\n";
+                $contentHead = "${assign}${assignPre}item->${functionImplementationName}(" . join(", ", @arguments) . ")${assignPost};\n";
             }
         }
         push(@cBody, "    ${contentHead}");
@@ -1231,6 +1315,13 @@ EOF
 
     if ($conditionalString) {
         push(@cBody, "#else\n");
+
+        push(@cBody, "    UNUSED_PARAM(self);\n");
+        foreach my $param (@{$function->parameters}) {
+            push(@cBody, "    UNUSED_PARAM(" . $param->name . ");\n");
+        }
+        push(@cBody, "    UNUSED_PARAM(error);\n") if $raisesException;
+
         push(@cBody, @conditionalWarn) if scalar(@conditionalWarn);
         if ($returnType ne "void") {
             if ($codeGenerator->IsNonPointerType($functionSigType)) {
@@ -1244,6 +1335,13 @@ EOF
 
     if ($parentConditionalString) {
         push(@cBody, "#else\n");
+
+        push(@cBody, "    UNUSED_PARAM(self);\n");
+        foreach my $param (@{$function->parameters}) {
+            push(@cBody, "    UNUSED_PARAM(" . $param->name . ");\n");
+        }
+        push(@cBody, "    UNUSED_PARAM(error);\n") if $raisesException;
+
         push(@cBody, @parentConditionalWarn) if scalar(@parentConditionalWarn);
         if ($returnType ne "void") {
             if ($codeGenerator->IsNonPointerType($functionSigType)) {
@@ -1283,12 +1381,6 @@ sub GenerateFunctions {
             next TOP;
         }
 
-        if ($attribute->signature->name eq "type") {
-            # This will conflict with the get_type() function we define to return a GType
-            # according to GObject conventions.  Skip this for now.
-            next TOP;
-        }
-            
         my $attrNameUpper = $codeGenerator->WK_ucfirst($attribute->signature->name);
         my $getname = "get${attrNameUpper}";
         my $setname = "set${attrNameUpper}";
@@ -1361,7 +1453,7 @@ sub GenerateCFile {
     # for the WebCore wrapped object and make sure we only increment the reference counter once.
     if ($parentImplClassName eq "Object") {
         my $conditionalString = $codeGenerator->GenerateConditionalString($interface);
-        push(@cStructPriv, "#define WEBKIT_DOM_${clsCaps}_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_TYPE_DOM_${clsCaps}, ${className}Private)\n\n");
+        push(@cStructPriv, "#define WEBKIT_DOM_${clsCaps}_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_DOM_TYPE_${clsCaps}, ${className}Private)\n\n");
         push(@cStructPriv, "typedef struct _${className}Private {\n");
         push(@cStructPriv, "#if ${conditionalString}\n") if $conditionalString;
         push(@cStructPriv, "    RefPtr<WebCore::${interfaceName}> coreObject;\n");
@@ -1412,7 +1504,7 @@ WebCore::${interfaceName}* core(${className}* request)
 ${className}* wrap${interfaceName}(WebCore::${interfaceName}* coreObject)
 {
     ASSERT(coreObject);
-    return WEBKIT_DOM_${clsCaps}(g_object_new(WEBKIT_TYPE_DOM_${clsCaps}, "core-object", coreObject, NULL));
+    return WEBKIT_DOM_${clsCaps}(g_object_new(WEBKIT_DOM_TYPE_${clsCaps}, "core-object", coreObject, nullptr));
 }
 
 EOF
@@ -1425,6 +1517,11 @@ EOF
 sub GenerateEndHeader {
     my ($object) = @_;
 
+    my $isStableClass = scalar(@stableSymbols);
+    if (!$isStableClass) {
+        push(@hPrefixGuardEnd, "#endif /* WEBKIT_DOM_USE_UNSTABLE_API */\n");
+    }
+
     #Header guard
     my $guard = $className . "_h";
 
@@ -1435,7 +1532,7 @@ sub GenerateEndHeader {
 sub IsPolymorphic {
     my $type = shift;
 
-    return scalar(grep {$_ eq $type} qw(Blob Event HTMLCollection Node StyleSheet));
+    return scalar(grep {$_ eq $type} qw(Blob Event HTMLCollection Node StyleSheet TextTrackCue));
 }
 
 sub GenerateEventTargetIface {
@@ -1460,27 +1557,44 @@ sub GenerateEventTargetIface {
     push(@cBodyProperties, "    if (ec) {\n        WebCore::ExceptionCodeDescription description(ec);\n");
     push(@cBodyProperties, "        g_set_error_literal(error, g_quark_from_string(\"WEBKIT_DOM\"), description.code, description.name);\n    }\n");
     push(@cBodyProperties, "    return result;\n");
-    push(@cBodyProperties, "#else\n") if $conditionalString;
-    push(@cBodyProperties, @conditionalWarn) if scalar(@conditionalWarn);
-    push(@cBodyProperties, "    return false;\n#endif // ${conditionalString}\n") if $conditionalString;
+    if ($conditionalString) {
+        push(@cBodyProperties, "#else\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(target);\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(event);\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(error);\n");
+        push(@cBodyProperties, @conditionalWarn) if scalar(@conditionalWarn);
+        push(@cBodyProperties, "    return false;\n#endif // ${conditionalString}\n");
+    }
     push(@cBodyProperties, "}\n\n");
 
     push(@cBodyProperties, "static gboolean webkit_dom_${decamelize}_add_event_listener(WebKitDOMEventTarget* target, const char* eventName, GClosure* handler, gboolean useCapture)\n{\n");
     push(@cBodyProperties, "#if ${conditionalString}\n") if $conditionalString;
     push(@cBodyProperties, "    WebCore::${interfaceName}* coreTarget = static_cast<WebCore::${interfaceName}*>(WEBKIT_DOM_OBJECT(target)->coreObject);\n");
     push(@cBodyProperties, "    return WebCore::GObjectEventListener::addEventListener(G_OBJECT(target), coreTarget, eventName, handler, useCapture);\n");
-    push(@cBodyProperties, "#else\n") if $conditionalString;
-    push(@cBodyProperties, @conditionalWarn) if scalar(@conditionalWarn);
-    push(@cBodyProperties, "    return false;\n#endif // ${conditionalString}\n") if $conditionalString;
+    if ($conditionalString) {
+        push(@cBodyProperties, "#else\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(target);\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(eventName);\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(handler);\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(useCapture);\n");
+        push(@cBodyProperties, @conditionalWarn) if scalar(@conditionalWarn);
+        push(@cBodyProperties, "    return false;\n#endif // ${conditionalString}\n");
+    }
     push(@cBodyProperties, "}\n\n");
 
     push(@cBodyProperties, "static gboolean webkit_dom_${decamelize}_remove_event_listener(WebKitDOMEventTarget* target, const char* eventName, GClosure* handler, gboolean useCapture)\n{\n");
     push(@cBodyProperties, "#if ${conditionalString}\n") if $conditionalString;
     push(@cBodyProperties, "    WebCore::${interfaceName}* coreTarget = static_cast<WebCore::${interfaceName}*>(WEBKIT_DOM_OBJECT(target)->coreObject);\n");
     push(@cBodyProperties, "    return WebCore::GObjectEventListener::removeEventListener(G_OBJECT(target), coreTarget, eventName, handler, useCapture);\n");
-    push(@cBodyProperties, "#else\n") if $conditionalString;
-    push(@cBodyProperties, @conditionalWarn) if scalar(@conditionalWarn);
-    push(@cBodyProperties, "    return false;\n#endif // ${conditionalString}\n") if $conditionalString;
+    if ($conditionalString) {
+        push(@cBodyProperties, "#else\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(target);\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(eventName);\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(handler);\n");
+        push(@cBodyProperties, "    UNUSED_PARAM(useCapture);\n");
+        push(@cBodyProperties, @conditionalWarn) if scalar(@conditionalWarn);
+        push(@cBodyProperties, "    return false;\n#endif // ${conditionalString}\n");
+    }
     push(@cBodyProperties, "}\n\n");
 
     push(@cBodyProperties, "static void webkit_dom_event_target_init(WebKitDOMEventTargetIface* iface)\n{\n");
@@ -1489,7 +1603,7 @@ sub GenerateEventTargetIface {
     push(@cBodyProperties, "    iface->remove_event_listener = webkit_dom_${decamelize}_remove_event_listener;\n}\n\n");
 
     $defineTypeMacro = "G_DEFINE_TYPE_WITH_CODE";
-    $defineTypeInterfaceImplementation = ", G_IMPLEMENT_INTERFACE(WEBKIT_TYPE_DOM_EVENT_TARGET, webkit_dom_event_target_init))";
+    $defineTypeInterfaceImplementation = ", G_IMPLEMENT_INTERFACE(WEBKIT_DOM_TYPE_EVENT_TARGET, webkit_dom_event_target_init))";
 }
 
 sub Generate {
@@ -1512,6 +1626,7 @@ sub Generate {
     $implIncludes{"Document.h"} = 1;
     $implIncludes{"JSMainThreadExecState.h"} = 1;
     $implIncludes{"ExceptionCode.h"} = 1;
+    $implIncludes{"ExceptionCodeDescription.h"} = 1;
     $implIncludes{"CSSImportRule.h"} = 1;
     if ($parentImplClassName ne "Object" and IsPolymorphic($baseClassName)) {
         $implIncludes{"WebKitDOM${baseClassName}Private.h"} = 1;
@@ -1519,9 +1634,15 @@ sub Generate {
 
     $hdrIncludes{"webkitdom/${parentClassName}.h"} = 1;
 
-    $object->GenerateHeader($interfaceName, $parentClassName);
+    $object->GenerateHeader($interfaceName, $parentClassName, $interface);
     $object->GenerateCFile($interfaceName, $parentClassName, $parentGObjType, $interface);
     $object->GenerateEndHeader();
+}
+
+sub HasUnstableCustomAPI {
+    my $domClassName = shift;
+
+    return scalar(grep {$_ eq $domClassName} qw(WebKitDOMDOMWindow WebKitDOMUserMessageHandlersNamespace WebKitDOMHTMLLinkElement));
 }
 
 sub WriteData {
@@ -1529,6 +1650,8 @@ sub WriteData {
     my $interface = shift;
     my $outputDir = shift;
     mkdir $outputDir;
+
+    my $isStableClass = scalar(@stableSymbols);
 
     # Write a private header.
     my $interfaceName = $interface->name;
@@ -1553,7 +1676,6 @@ EOF
 
     print PRIVHEADER $text;
     print PRIVHEADER "#if ${conditionalString}\n" if $conditionalString;
-    print PRIVHEADER map { "#include \"$_\"\n" } sort keys(%hdrPropIncludes);
     print PRIVHEADER "\n";
     $text = << "EOF";
 namespace WebKit {
@@ -1587,12 +1709,55 @@ EOF
     print HEADER @hPrefixGuard;
     print HEADER "#include <glib-object.h>\n";
     print HEADER map { "#include <$_>\n" } sort keys(%hdrIncludes);
-    print HEADER "#include <webkitdom/webkitdomdefines.h>\n\n";
+    if ($isStableClass) {
+        print HEADER "#include <webkitdom/webkitdomdefines.h>\n\n";
+    } else {
+        if (HasUnstableCustomAPI($className)) {
+            print HEADER "#include <webkitdom/WebKitDOMCustomUnstable.h>\n";
+        }
+        print HEADER "#include <webkitdom/webkitdomdefines-unstable.h>\n\n";
+    }
     print HEADER @hBodyPre;
     print HEADER @hBody;
     print HEADER @hPrefixGuardEnd;
 
     close(HEADER);
+
+    # Write the unstable header if needed.
+    if ($isStableClass and scalar(@hBodyUnstable)) {
+        my $fullUnstableHeaderFilename = "$outputDir/" . $className . "Unstable.h";
+        open(UNSTABLE, ">$fullUnstableHeaderFilename") or die "Couldn't open file $fullUnstableHeaderFilename";
+
+        print UNSTABLE split("\r", $licenceTemplate);
+        print UNSTABLE "\n";
+
+        $guard = "${className}Unstable_h";
+        $text = << "EOF";
+#ifndef $guard
+#define $guard
+
+#ifdef WEBKIT_DOM_USE_UNSTABLE_API
+
+EOF
+        print UNSTABLE $text;
+        if (HasUnstableCustomAPI($className)) {
+            print UNSTABLE "#include <webkitdom/WebKitDOMCustomUnstable.h>\n";
+        }
+        print UNSTABLE "#include <webkitdom/webkitdomdefines-unstable.h>\n\n";
+
+        print UNSTABLE "#if ${conditionalString}\n\n" if $conditionalString;
+        print UNSTABLE "G_BEGIN_DECLS\n";
+        print UNSTABLE "\n";
+        print UNSTABLE @hBodyUnstable;
+        print UNSTABLE "\n";
+        print UNSTABLE "G_END_DECLS\n";
+        print UNSTABLE "\n";
+        print UNSTABLE "#endif /* ${conditionalString} */\n\n" if $conditionalString;
+        print UNSTABLE "#endif /* WEBKIT_DOM_USE_UNSTABLE_API */\n";
+        print UNSTABLE "#endif /* ${guard} */\n";
+
+        close(UNSTABLE);
+    }
 
     # Write the implementation sources
     my $implFileName = "$outputDir/" . $basename . ".cpp";
@@ -1605,6 +1770,9 @@ EOF
     # Remove the implementation header from the list of included files.
     %includesCopy = %implIncludes;
     print IMPL map { "#include \"$_\"\n" } sort keys(%includesCopy);
+    if ($isStableClass and scalar(@hBodyUnstable)) {
+        print IMPL "#include \"${className}Unstable.h\"\n";
+    }
 
     print IMPL "#include <wtf/GetPtr.h>\n";
     print IMPL "#include <wtf/RefPtr.h>\n\n";
@@ -1622,15 +1790,18 @@ EOF
     close(IMPL);
 
     # Write a symbols file.
-    my $symbolsFileName = "$outputDir/" . $basename . ".symbols";
-    open(SYM, ">$symbolsFileName") or die "Couldn't open file $symbolsFileName";
-    print SYM @symbols;
-    close(SYM);
+    if ($isStableClass) {
+        my $symbolsFileName = "$outputDir/" . $basename . ".symbols";
+        open(SYM, ">$symbolsFileName") or die "Couldn't open file $symbolsFileName";
+        print SYM @symbols;
+        close(SYM);
+    }
 
     %implIncludes = ();
     %hdrIncludes = ();
     @hPrefix = ();
     @hBody = ();
+    @hBodyUnstable = ();
 
     @cPrefix = ();
     @cBody = ();
@@ -1639,6 +1810,56 @@ EOF
     @cStructPriv = ();
 
     @symbols = ();
+    @stableSymbols = ();
+}
+
+sub IsInterfaceSymbol {
+    my ($line, $lowerCaseIfaceName) = @_;
+
+    # Function.
+    return 1 if $line =~ /^[a-zA-Z0-9\*]+\s${lowerCaseIfaceName}_.+$/;
+
+    # Constant.
+    my $prefix = uc($lowerCaseIfaceName);
+    return 1 if $line =~ /^${prefix}_[A-Z_]+$/;
+    return 0;
+}
+
+sub ReadStableSymbols {
+    my $interfaceName = shift;
+
+    @stableSymbols = ();
+
+    my $bindingsDir = dirname($FindBin::Bin);
+    my $fileName = "$bindingsDir/gobject/webkitdom.symbols";
+    open FILE, "<", $fileName or die "Could not open $fileName";
+    my @lines = <FILE>;
+    close FILE;
+
+    my $decamelize = decamelize($interfaceName);
+    my $lowerCaseIfaceName = "webkit_dom_$decamelize";
+
+    foreach $line (@lines) {
+        $line =~ s/\n$//;
+
+        my ($symbol) = split('@', $line, 2);
+
+        if ($symbol eq "GType ${lowerCaseIfaceName}_get_type(void)") {
+            push(@stableSymbols, $line);
+            next;
+        }
+
+        if (scalar(@stableSymbols) and IsInterfaceSymbol($symbol, $lowerCaseIfaceName) and $symbol !~ /^GType/) {
+            push(@stableSymbols, $line);
+            next;
+        }
+
+        if (scalar(@stableSymbols) and $symbol !~ /^GType/) {
+            warn "Symbol %line found, but a get_type was expected";
+        }
+
+        last if scalar(@stableSymbols);
+    }
 }
 
 sub GenerateInterface {
@@ -1646,6 +1867,8 @@ sub GenerateInterface {
 
     # Set up some global variables
     $className = GetClassName($interface->name);
+
+    ReadStableSymbols($interface->name);
 
     $object->Generate($interface);
 }

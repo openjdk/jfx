@@ -26,12 +26,15 @@
 #ifndef CSSValuePool_h
 #define CSSValuePool_h
 
+#include "CSSFontFamily.h"
 #include "CSSInheritedValue.h"
 #include "CSSInitialValue.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
+#include <utility>
 #include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/AtomicStringHash.h>
 
@@ -39,22 +42,24 @@ namespace WebCore {
 
 class CSSValueList;
 
+enum class FromSystemFontID { No, Yes };
+
 class CSSValuePool {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     PassRefPtr<CSSValueList> createFontFaceValue(const AtomicString&);
-    PassRef<CSSPrimitiveValue> createFontFamilyValue(const String&);
-    PassRef<CSSInheritedValue> createInheritedValue() { return m_inheritedValue.get(); }
-    PassRef<CSSInitialValue> createImplicitInitialValue() { return m_implicitInitialValue.get(); }
-    PassRef<CSSInitialValue> createExplicitInitialValue() { return m_explicitInitialValue.get(); }
-    PassRef<CSSPrimitiveValue> createIdentifierValue(CSSValueID identifier);
-    PassRef<CSSPrimitiveValue> createIdentifierValue(CSSPropertyID identifier);
-    PassRef<CSSPrimitiveValue> createColorValue(unsigned rgbValue);
-    PassRef<CSSPrimitiveValue> createValue(double value, CSSPrimitiveValue::UnitTypes);
-    PassRef<CSSPrimitiveValue> createValue(const String& value, CSSPrimitiveValue::UnitTypes type) { return CSSPrimitiveValue::create(value, type); }
-    PassRef<CSSPrimitiveValue> createValue(const Length& value, const RenderStyle* style) { return CSSPrimitiveValue::create(value, style); }
-    PassRef<CSSPrimitiveValue> createValue(const LengthSize& value) { return CSSPrimitiveValue::create(value); }
-    template<typename T> static PassRef<CSSPrimitiveValue> createValue(T value) { return CSSPrimitiveValue::create(value); }
+    Ref<CSSPrimitiveValue> createFontFamilyValue(const String&, FromSystemFontID = FromSystemFontID::No);
+    Ref<CSSInheritedValue> createInheritedValue() { return m_inheritedValue.copyRef(); }
+    Ref<CSSInitialValue> createImplicitInitialValue() { return m_implicitInitialValue.copyRef(); }
+    Ref<CSSInitialValue> createExplicitInitialValue() { return m_explicitInitialValue.copyRef(); }
+    Ref<CSSPrimitiveValue> createIdentifierValue(CSSValueID identifier);
+    Ref<CSSPrimitiveValue> createIdentifierValue(CSSPropertyID identifier);
+    Ref<CSSPrimitiveValue> createColorValue(unsigned rgbValue);
+    Ref<CSSPrimitiveValue> createValue(double value, CSSPrimitiveValue::UnitTypes);
+    Ref<CSSPrimitiveValue> createValue(const String& value, CSSPrimitiveValue::UnitTypes type) { return CSSPrimitiveValue::create(value, type); }
+    Ref<CSSPrimitiveValue> createValue(const Length& value, const RenderStyle& style) { return CSSPrimitiveValue::create(value, style); }
+    Ref<CSSPrimitiveValue> createValue(const LengthSize& value, const RenderStyle& style) { return CSSPrimitiveValue::create(value, style); }
+    template<typename T> static Ref<CSSPrimitiveValue> createValue(T&& value) { return CSSPrimitiveValue::create(std::forward<T>(value)); }
 
     void drain();
 
@@ -82,10 +87,10 @@ private:
     typedef HashMap<AtomicString, RefPtr<CSSValueList>> FontFaceValueCache;
     FontFaceValueCache m_fontFaceValueCache;
 
-    typedef HashMap<String, RefPtr<CSSPrimitiveValue>> FontFamilyValueCache;
+    typedef HashMap<std::pair<String, bool>, RefPtr<CSSPrimitiveValue>> FontFamilyValueCache;
     FontFamilyValueCache m_fontFamilyValueCache;
 
-    friend CSSValuePool& cssValuePool();
+    friend class WTF::NeverDestroyed<CSSValuePool>;
 };
 
 CSSValuePool& cssValuePool() PURE_FUNCTION;

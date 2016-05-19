@@ -31,6 +31,7 @@
 #include "ChromeClient.h"
 #include "Cursor.h"
 #include "Filter.h"
+#include "Frame.h"
 #include "FrameLoaderClient.h"
 #include "FrameView.h"
 #include "Gradient.h"
@@ -41,13 +42,14 @@
 #include "PaintInfo.h"
 #include "Path.h"
 #include "PlatformMouseEvent.h"
+#include "RenderIterator.h"
 #include "RenderView.h"
 #include <wtf/StackStats.h>
 
 namespace WebCore {
 
-RenderSnapshottedPlugIn::RenderSnapshottedPlugIn(HTMLPlugInImageElement& element, PassRef<RenderStyle> style)
-    : RenderEmbeddedObject(element, std::move(style))
+RenderSnapshottedPlugIn::RenderSnapshottedPlugIn(HTMLPlugInImageElement& element, Ref<RenderStyle>&& style)
+    : RenderEmbeddedObject(element, WTF::move(style))
     , m_snapshotResource(std::make_unique<RenderImageResource>())
     , m_isPotentialMouseActivation(false)
 {
@@ -62,7 +64,7 @@ RenderSnapshottedPlugIn::~RenderSnapshottedPlugIn()
 
 HTMLPlugInImageElement& RenderSnapshottedPlugIn::plugInImageElement() const
 {
-    return toHTMLPlugInImageElement(RenderEmbeddedObject::frameOwnerElement());
+    return downcast<HTMLPlugInImageElement>(RenderEmbeddedObject::frameOwnerElement());
 }
 
 void RenderSnapshottedPlugIn::layout()
@@ -85,7 +87,7 @@ void RenderSnapshottedPlugIn::updateSnapshot(PassRefPtr<Image> image)
     if (!image)
         return;
 
-    m_snapshotResource->setCachedImage(new CachedImage(image.get()));
+    m_snapshotResource->setCachedImage(new CachedImage(image.get(), view().frameView().frame().page()->sessionID()));
     repaint();
 }
 
@@ -102,10 +104,10 @@ void RenderSnapshottedPlugIn::paint(PaintInfo& paintInfo, const LayoutPoint& pai
     paintInfoForChild.phase = newPhase;
     paintInfoForChild.updateSubtreePaintRootForChildren(this);
 
-    for (RenderBox* child = firstChildBox(); child; child = child->nextSiblingBox()) {
-        LayoutPoint childPoint = flipForWritingModeForChild(child, paintOffset);
-        if (!child->hasSelfPaintingLayer() && !child->isFloating())
-            child->paint(paintInfoForChild, childPoint);
+    for (auto& child : childrenOfType<RenderBox>(*this)) {
+        LayoutPoint childPoint = flipForWritingModeForChild(&child, paintOffset);
+        if (!child.hasSelfPaintingLayer() && !child.isFloating())
+            child.paint(paintInfoForChild, childPoint);
     }
 
     RenderEmbeddedObject::paint(paintInfo, paintOffset);
@@ -129,7 +131,7 @@ void RenderSnapshottedPlugIn::paintSnapshot(PaintInfo& paintInfo, const LayoutPo
     contentLocation.move(borderLeft() + paddingLeft(), borderTop() + paddingTop());
 
     LayoutRect rect(contentLocation, contentSize);
-    IntRect alignedRect = pixelSnappedIntRect(rect);
+    IntRect alignedRect = snappedIntRect(rect);
     if (alignedRect.width() <= 0 || alignedRect.height() <= 0)
         return;
 
@@ -139,7 +141,7 @@ void RenderSnapshottedPlugIn::paintSnapshot(PaintInfo& paintInfo, const LayoutPo
 #if ENABLE(CSS_IMAGE_ORIENTATION)
     orientationDescription.setImageOrientationEnum(style().imageOrientation());
 #endif
-    context->drawImage(image, style().colorSpace(), alignedRect, CompositeSourceOver, orientationDescription, useLowQualityScaling);
+    context->drawImage(image, style().colorSpace(), alignedRect, ImagePaintingOptions(orientationDescription, useLowQualityScaling));
 }
 
 CursorDirective RenderSnapshottedPlugIn::getCursor(const LayoutPoint& point, Cursor& overrideCursor) const
@@ -153,10 +155,10 @@ CursorDirective RenderSnapshottedPlugIn::getCursor(const LayoutPoint& point, Cur
 
 void RenderSnapshottedPlugIn::handleEvent(Event* event)
 {
-    if (!event->isMouseEvent())
+    if (!is<MouseEvent>(*event))
         return;
 
-    MouseEvent* mouseEvent = toMouseEvent(event);
+    MouseEvent& mouseEvent = downcast<MouseEvent>(*event);
 
     // If we're a snapshotted plugin, we want to make sure we activate on
     // clicks even if the page is preventing our default behaviour. Otherwise
@@ -166,20 +168,20 @@ void RenderSnapshottedPlugIn::handleEvent(Event* event)
     // event. The code below is not completely foolproof, but the worst that
     // could happen is that a snapshotted plugin restarts.
 
-    if (event->type() == eventNames().mouseoutEvent)
+    if (mouseEvent.type() == eventNames().mouseoutEvent)
         m_isPotentialMouseActivation = false;
 
-    if (mouseEvent->button() != LeftButton)
+    if (mouseEvent.button() != LeftButton)
         return;
 
-    if (event->type() == eventNames().clickEvent || (m_isPotentialMouseActivation && event->type() == eventNames().mouseupEvent)) {
+    if (mouseEvent.type() == eventNames().clickEvent || (m_isPotentialMouseActivation && mouseEvent.type() == eventNames().mouseupEvent)) {
         m_isPotentialMouseActivation = false;
-        bool clickWasOnOverlay = plugInImageElement().partOfSnapshotOverlay(event->target()->toNode());
-        plugInImageElement().userDidClickSnapshot(mouseEvent, !clickWasOnOverlay);
-        event->setDefaultHandled();
-    } else if (event->type() == eventNames().mousedownEvent) {
+        bool clickWasOnOverlay = plugInImageElement().partOfSnapshotOverlay(mouseEvent.target()->toNode());
+        plugInImageElement().userDidClickSnapshot(&mouseEvent, !clickWasOnOverlay);
+        mouseEvent.setDefaultHandled();
+    } else if (mouseEvent.type() == eventNames().mousedownEvent) {
         m_isPotentialMouseActivation = true;
-        event->setDefaultHandled();
+        mouseEvent.setDefaultHandled();
     }
 }
 

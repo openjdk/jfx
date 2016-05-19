@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,14 +30,14 @@
 #define InspectorDOMStorageAgent_h
 
 #include "InspectorWebAgentBase.h"
-#include "InspectorWebBackendDispatchers.h"
 #include "StorageArea.h"
+#include <inspector/InspectorBackendDispatchers.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
+class DOMStorageFrontendDispatcher;
 class InspectorArray;
-class InspectorDOMStorageFrontendDispatcher;
 }
 
 namespace WebCore {
@@ -51,34 +51,35 @@ class Storage;
 
 typedef String ErrorString;
 
-class InspectorDOMStorageAgent : public InspectorAgentBase, public Inspector::InspectorDOMStorageBackendDispatcherHandler {
+class InspectorDOMStorageAgent final : public InspectorAgentBase, public Inspector::DOMStorageBackendDispatcherHandler {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorDOMStorageAgent(InstrumentingAgents*, InspectorPageAgent*);
-    ~InspectorDOMStorageAgent();
+    virtual ~InspectorDOMStorageAgent();
 
-    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
-    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
+    virtual void didCreateFrontendAndBackend(Inspector::FrontendChannel*, Inspector::BackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
 
     // Called from the front-end.
-    virtual void enable(ErrorString*) override;
-    virtual void disable(ErrorString*) override;
-    virtual void getDOMStorageItems(ErrorString*, const RefPtr<Inspector::InspectorObject>& storageId, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Array<String>>>& items) override;
-    virtual void setDOMStorageItem(ErrorString*, const RefPtr<Inspector::InspectorObject>& storageId, const String& key, const String& value) override;
-    virtual void removeDOMStorageItem(ErrorString*, const RefPtr<Inspector::InspectorObject>& storageId, const String& key) override;
+    virtual void enable(ErrorString&) override;
+    virtual void disable(ErrorString&) override;
+    virtual void getDOMStorageItems(ErrorString&, const Inspector::InspectorObject& storageId, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Array<String>>>& items) override;
+    virtual void setDOMStorageItem(ErrorString&, const Inspector::InspectorObject& storageId, const String& key, const String& value) override;
+    virtual void removeDOMStorageItem(ErrorString&, const Inspector::InspectorObject& storageId, const String& key) override;
 
     // Called from the injected script.
     String storageId(Storage*);
-    PassRefPtr<Inspector::TypeBuilder::DOMStorage::StorageId> storageId(SecurityOrigin*, bool isLocalStorage);
+    RefPtr<Inspector::Protocol::DOMStorage::StorageId> storageId(SecurityOrigin*, bool isLocalStorage);
 
     // Called from InspectorInstrumentation
     void didDispatchDOMStorageEvent(const String& key, const String& oldValue, const String& newValue, StorageType, SecurityOrigin*, Page*);
 
 private:
-    PassRefPtr<StorageArea> findStorageArea(ErrorString*, const RefPtr<Inspector::InspectorObject>&, Frame*&);
+    RefPtr<StorageArea> findStorageArea(ErrorString&, const Inspector::InspectorObject&, Frame*&);
 
     InspectorPageAgent* m_pageAgent;
-    std::unique_ptr<Inspector::InspectorDOMStorageFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::InspectorDOMStorageBackendDispatcher> m_backendDispatcher;
+    std::unique_ptr<Inspector::DOMStorageFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<Inspector::DOMStorageBackendDispatcher> m_backendDispatcher;
     bool m_enabled;
 };
 

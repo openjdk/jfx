@@ -29,9 +29,9 @@ namespace WebCore {
 
 class SVGHKernElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGHKernElement> create(const QualifiedName&, Document&);
+    static Ref<SVGHKernElement> create(const QualifiedName&, Document&);
 
-    void buildHorizontalKerningPair(SVGKerningMap&);
+    bool buildHorizontalKerningPair(SVGKerningPair& kerningPair) const;
 
 private:
     SVGHKernElement(const QualifiedName&, Document&);
@@ -41,8 +41,6 @@ private:
 
     virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 };
-
-NODE_TYPE_CASTS(SVGHKernElement)
 
 } // namespace WebCore
 

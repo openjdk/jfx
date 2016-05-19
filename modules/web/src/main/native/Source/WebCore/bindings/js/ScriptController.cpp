@@ -34,14 +34,16 @@
 #include "JSDOMWindow.h"
 #include "JSDocument.h"
 #include "JSMainThreadExecState.h"
+#include "MainFrame.h"
+#include "MemoryPressureHandler.h"
 #include "NP_jsobject.h"
 #include "Page.h"
+#include "PageConsoleClient.h"
 #include "PageGroup.h"
-#include "PluginView.h"
+#include "PluginViewBase.h"
 #include "ScriptSourceCode.h"
 #include "ScriptableDocumentParser.h"
 #include "Settings.h"
-#include "StorageNamespace.h"
 #include "UserGestureIndicator.h"
 #include "WebCoreJSClientData.h"
 #include "npruntime_impl.h"
@@ -50,6 +52,7 @@
 #include <debugger/Debugger.h>
 #include <heap/StrongInlines.h>
 #include <inspector/ScriptCallStack.h>
+#include <profiler/Profile.h>
 #include <runtime/InitializeThreading.h>
 #include <runtime/JSLock.h>
 #include <wtf/Threading.h>
@@ -58,6 +61,18 @@
 using namespace JSC;
 
 namespace WebCore {
+
+static void collectGarbageAfterWindowShellDestruction()
+{
+    // Make sure to GC Extra Soon(tm) during memory pressure conditions
+    // to soften high peaks of memory usage during navigation.
+    if (MemoryPressureHandler::singleton().isUnderMemoryPressure()) {
+        // NOTE: We do the collection on next runloop to ensure that there's no pointer
+        //       to the window object on the stack.
+        GCController::singleton().garbageCollectOnNextRunLoop();
+    } else
+        GCController::singleton().garbageCollectSoon();
+}
 
 void ScriptController::initializeThreading()
 {
@@ -87,14 +102,17 @@ ScriptController::~ScriptController()
     if (m_cacheableBindingRootObject) {
         JSLockHolder lock(JSDOMWindowBase::commonVM());
         m_cacheableBindingRootObject->invalidate();
-        m_cacheableBindingRootObject = 0;
+        m_cacheableBindingRootObject = nullptr;
     }
 
     // It's likely that destroying m_windowShells will create a lot of garbage.
     if (!m_windowShells.isEmpty()) {
-        while (!m_windowShells.isEmpty())
-            destroyWindowShell(*m_windowShells.begin()->key);
-        gcController().garbageCollectSoon();
+        while (!m_windowShells.isEmpty()) {
+            ShellMap::iterator iter = m_windowShells.begin();
+            iter->value->window()->setConsoleClient(nullptr);
+            destroyWindowShell(*iter->key);
+        }
+        collectGarbageAfterWindowShellDestruction();
     }
 }
 
@@ -109,7 +127,7 @@ JSDOMWindowShell* ScriptController::createWindowShell(DOMWrapperWorld& world)
 {
     ASSERT(!m_windowShells.contains(&world));
 
-    VM& vm = *world.vm();
+    VM& vm = world.vm();
 
     Structure* structure = JSDOMWindowShell::createStructure(vm, jsNull());
     Strong<JSDOMWindowShell> windowShell(vm, JSDOMWindowShell::create(vm, m_frame.document()->domWindow(), structure, world));
@@ -121,6 +139,8 @@ JSDOMWindowShell* ScriptController::createWindowShell(DOMWrapperWorld& world)
 
 Deprecated::ScriptValue ScriptController::evaluateInWorld(const ScriptSourceCode& sourceCode, DOMWrapperWorld& world)
 {
+    JSLockHolder lock(world.vm());
+
     const SourceCode& jsSourceCode = sourceCode.jsSourceCode();
     String sourceURL = jsSourceCode.provider()->url();
 
@@ -136,17 +156,14 @@ Deprecated::ScriptValue ScriptController::evaluateInWorld(const ScriptSourceCode
     const String* savedSourceURL = m_sourceURL;
     m_sourceURL = &sourceURL;
 
-    JSLockHolder lock(exec);
-
     Ref<Frame> protect(m_frame);
 
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willEvaluateScript(&m_frame, sourceURL, sourceCode.startLine());
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willEvaluateScript(m_frame, sourceURL, sourceCode.startLine());
 
-    JSValue evaluationException;
+    NakedPtr<Exception> evaluationException;
+    JSValue returnValue = JSMainThreadExecState::evaluate(exec, jsSourceCode, shell, evaluationException);
 
-    JSValue returnValue = JSMainThreadExecState::evaluate(exec, jsSourceCode, shell, &evaluationException);
-
-    InspectorInstrumentation::didEvaluateScript(cookie, &m_frame);
+    InspectorInstrumentation::didEvaluateScript(cookie, m_frame);
 
     if (evaluationException) {
         reportException(exec, evaluationException, sourceCode.cachedScript());
@@ -168,9 +185,16 @@ PassRefPtr<DOMWrapperWorld> ScriptController::createWorld()
     return DOMWrapperWorld::create(JSDOMWindow::commonVM());
 }
 
+Vector<JSC::Strong<JSDOMWindowShell>> ScriptController::windowShells()
+{
+    Vector<JSC::Strong<JSDOMWindowShell>> windowShells;
+    copyValuesToVector(m_windowShells, windowShells);
+    return windowShells;
+}
+
 void ScriptController::getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
 {
-    static_cast<WebCoreJSClientData*>(JSDOMWindow::commonVM()->clientData)->getAllWorlds(worlds);
+    static_cast<WebCoreJSClientData*>(JSDOMWindow::commonVM().clientData)->getAllWorlds(worlds);
 }
 
 void ScriptController::clearWindowShell(DOMWindow* newDOMWindow, bool goingIntoPageCache)
@@ -180,14 +204,23 @@ void ScriptController::clearWindowShell(DOMWindow* newDOMWindow, bool goingIntoP
 
     JSLockHolder lock(JSDOMWindowBase::commonVM());
 
-    for (ShellMap::iterator iter = m_windowShells.begin(); iter != m_windowShells.end(); ++iter) {
-        JSDOMWindowShell* windowShell = iter->value.get();
+    Vector<JSC::Strong<JSDOMWindowShell>> windowShells = this->windowShells();
+    for (size_t i = 0; i < windowShells.size(); ++i) {
+        JSDOMWindowShell* windowShell = windowShells[i].get();
 
         if (&windowShell->window()->impl() == newDOMWindow)
             continue;
 
-        // Clear the debugger from the current window before setting the new window.
-        attachDebugger(windowShell, 0);
+        // Clear the debugger and console from the current window before setting the new window.
+        attachDebugger(windowShell, nullptr);
+        windowShell->window()->setConsoleClient(nullptr);
+
+        // FIXME: We should clear console profiles for each frame as soon as the frame is destroyed.
+        // Instead of clearing all of them when the main frame is destroyed.
+        if (m_frame.isMainFrame()) {
+            if (Page* page = m_frame.page())
+                page->console().clearProfiles();
+        }
 
         windowShell->window()->willRemoveFromWindowShell();
         windowShell->setWindow(newDOMWindow);
@@ -200,13 +233,14 @@ void ScriptController::clearWindowShell(DOMWindow* newDOMWindow, bool goingIntoP
         if (Page* page = m_frame.page()) {
             attachDebugger(windowShell, page->debugger());
             windowShell->window()->setProfileGroup(page->group().identifier());
+            windowShell->window()->setConsoleClient(&page->console());
         }
     }
 
     // It's likely that resetting our windows created a lot of garbage, unless
     // it went in a back/forward cache.
     if (!goingIntoPageCache)
-        gcController().garbageCollectSoon();
+        collectGarbageAfterWindowShellDestruction();
 }
 
 JSDOMWindowShell* ScriptController::initScript(DOMWrapperWorld& world)
@@ -219,12 +253,18 @@ JSDOMWindowShell* ScriptController::initScript(DOMWrapperWorld& world)
 
     windowShell->window()->updateDocument();
 
-    if (m_frame.document())
-        windowShell->window()->setEvalEnabled(m_frame.document()->contentSecurityPolicy()->allowEval(0, ContentSecurityPolicy::SuppressReport), m_frame.document()->contentSecurityPolicy()->evalDisabledErrorMessage());
+    if (m_frame.document()) {
+        bool shouldBypassMainWorldContentSecurityPolicy = !world.isNormal();
+        if (shouldBypassMainWorldContentSecurityPolicy)
+            windowShell->window()->setEvalEnabled(true);
+        else
+            windowShell->window()->setEvalEnabled(m_frame.document()->contentSecurityPolicy()->allowEval(0, shouldBypassMainWorldContentSecurityPolicy, ContentSecurityPolicy::ReportingStatus::SuppressReport), m_frame.document()->contentSecurityPolicy()->evalDisabledErrorMessage());
+    }
 
     if (Page* page = m_frame.page()) {
         attachDebugger(windowShell, page->debugger());
         windowShell->window()->setProfileGroup(page->group().identifier());
+        windowShell->window()->setConsoleClient(&page->console());
     }
 
     m_frame.loader().dispatchDidClearWindowObjectInWorld(world);
@@ -234,6 +274,11 @@ JSDOMWindowShell* ScriptController::initScript(DOMWrapperWorld& world)
 
 TextPosition ScriptController::eventHandlerPosition() const
 {
+    // FIXME: If we are not currently parsing, we should use our current location
+    // in JavaScript, to cover cases like "element.setAttribute('click', ...)".
+
+    // FIXME: This location maps to the end of the HTML tag, and not to the
+    // exact column number belonging to the event handler attribute.
     ScriptableDocumentParser* parser = m_frame.document()->scriptableDocumentParser();
     if (parser)
         return parser->textPosition();
@@ -273,8 +318,9 @@ bool ScriptController::canAccessFromCurrentOrigin(Frame *frame)
 
 void ScriptController::attachDebugger(JSC::Debugger* debugger)
 {
-    for (ShellMap::iterator iter = m_windowShells.begin(); iter != m_windowShells.end(); ++iter)
-        attachDebugger(iter->value.get(), debugger);
+    Vector<JSC::Strong<JSDOMWindowShell>> windowShells = this->windowShells();
+    for (size_t i = 0; i < windowShells.size(); ++i)
+        attachDebugger(windowShells[i].get(), debugger);
 }
 
 void ScriptController::attachDebugger(JSDOMWindowShell* shell, JSC::Debugger* debugger)
@@ -283,6 +329,7 @@ void ScriptController::attachDebugger(JSDOMWindowShell* shell, JSC::Debugger* de
         return;
 
     JSDOMWindow* globalObject = shell->window();
+    JSLockHolder lock(globalObject->vm());
     if (debugger)
         debugger->attach(globalObject);
     else if (JSC::Debugger* currentDebugger = globalObject->debugger())
@@ -291,9 +338,11 @@ void ScriptController::attachDebugger(JSDOMWindowShell* shell, JSC::Debugger* de
 
 void ScriptController::updateDocument()
 {
-    for (ShellMap::iterator iter = m_windowShells.begin(); iter != m_windowShells.end(); ++iter) {
-        JSLockHolder lock(iter->key->vm());
-        iter->value->window()->updateDocument();
+    Vector<JSC::Strong<JSDOMWindowShell>> windowShells = this->windowShells();
+    for (size_t i = 0; i < windowShells.size(); ++i) {
+        JSDOMWindowShell* windowShell = windowShells[i].get();
+        JSLockHolder lock(windowShell->world().vm());
+        windowShell->window()->updateDocument();
     }
 }
 
@@ -333,7 +382,6 @@ PassRefPtr<Bindings::RootObject> ScriptController::createRootObject(void* native
     return rootObject.release();
 }
 
-#if ENABLE(INSPECTOR)
 void ScriptController::collectIsolatedContexts(Vector<std::pair<JSC::ExecState*, SecurityOrigin*>>& result)
 {
     for (ShellMap::iterator iter = m_windowShells.begin(); iter != m_windowShells.end(); ++iter) {
@@ -342,19 +390,18 @@ void ScriptController::collectIsolatedContexts(Vector<std::pair<JSC::ExecState*,
         result.append(std::pair<JSC::ExecState*, SecurityOrigin*>(exec, origin));
     }
 }
-#endif
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
 
 NPObject* ScriptController::windowScriptNPObject()
 {
     if (!m_windowScriptNPObject) {
+        JSLockHolder lock(JSDOMWindowBase::commonVM());
         if (canExecuteScripts(NotAboutToExecuteScript)) {
             // JavaScript is enabled, so there is a JavaScript window object.
             // Return an NPObject bound to the window object.
             JSDOMWindow* win = windowShell(pluginWorld())->window();
             ASSERT(win);
-            JSC::JSLockHolder lock(win->globalExec());
             Bindings::RootObject* root = bindingRootObject();
             m_windowScriptNPObject = _NPN_CreateScriptObject(0, win, root);
         } else {
@@ -382,10 +429,10 @@ NPObject* ScriptController::createScriptObjectForPluginElement(HTMLPlugInElement
 #if !PLATFORM(COCOA)
 PassRefPtr<JSC::Bindings::Instance> ScriptController::createScriptInstanceForWidget(Widget* widget)
 {
-    if (!widget->isPluginView())
-        return 0;
+    if (!is<PluginViewBase>(*widget))
+        return nullptr;
 
-    return toPluginView(widget)->bindingInstance();
+    return downcast<PluginViewBase>(*widget).bindingInstance();
 }
 #endif
 
@@ -395,9 +442,10 @@ JSObject* ScriptController::jsObjectForPluginElement(HTMLPlugInElement* plugin)
     if (!canExecuteScripts(NotAboutToExecuteScript))
         return 0;
 
+    JSLockHolder lock(JSDOMWindowBase::commonVM());
+
     // Create a JSObject bound to this element
     JSDOMWindow* globalObj = globalObject(pluginWorld());
-    JSLockHolder lock(globalObj->globalExec());
     // FIXME: is normal okay? - used for NP plugins?
     JSValue jsElementValue = toJS(globalObj->globalExec(), globalObj, plugin);
     if (!jsElementValue || !jsElementValue.isObject())
@@ -441,7 +489,7 @@ void ScriptController::clearScriptObjects()
 
     if (m_bindingRootObject) {
         m_bindingRootObject->invalidate();
-        m_bindingRootObject = 0;
+        m_bindingRootObject = nullptr;
     }
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
@@ -450,7 +498,7 @@ void ScriptController::clearScriptObjects()
         // script object properly.
         // This shouldn't cause any problems for plugins since they should have already been stopped and destroyed at this point.
         _NPN_DeallocateObject(m_windowScriptNPObject);
-        m_windowScriptNPObject = 0;
+        m_windowScriptNPObject = nullptr;
     }
 #endif
 }
@@ -468,7 +516,7 @@ Deprecated::ScriptValue ScriptController::executeScriptInWorld(DOMWrapperWorld& 
 
 bool ScriptController::shouldBypassMainWorldContentSecurityPolicy()
 {
-    CallFrame* callFrame = JSDOMWindow::commonVM()->topCallFrame;
+    CallFrame* callFrame = JSDOMWindow::commonVM().topCallFrame;
     if (callFrame == CallFrame::noCaller())
         return false;
     DOMWrapperWorld& domWrapperWorld = currentWorld(callFrame);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,161 +27,60 @@
 #define StructureSet_h
 
 #include "ArrayProfile.h"
+#include "DumpContext.h"
 #include "SpeculatedType.h"
 #include "Structure.h"
-#include "DumpContext.h"
-#include <wtf/CommaPrinter.h>
-#include <wtf/Vector.h>
+#include <wtf/TinyPtrSet.h>
 
 namespace JSC {
 
+class TrackedReferences;
+
 namespace DFG {
 class StructureAbstractValue;
+struct AbstractValue;
 }
 
-class StructureSet {
+class StructureSet : public TinyPtrSet<Structure*> {
 public:
-    StructureSet() { }
+    // I really want to do this:
+    // using TinyPtrSet::TinyPtrSet;
+    //
+    // But I can't because Windows.
+
+    StructureSet()
+    {
+    }
 
     StructureSet(Structure* structure)
+        : TinyPtrSet(structure)
     {
-        ASSERT(structure);
-        m_structures.append(structure);
     }
 
-    void clear()
+    ALWAYS_INLINE StructureSet(const StructureSet& other)
+        : TinyPtrSet(other)
     {
-        m_structures.clear();
     }
 
-    void add(Structure* structure)
+    Structure* onlyStructure() const
     {
-        ASSERT(structure);
-        ASSERT(!contains(structure));
-        m_structures.append(structure);
+        return onlyEntry();
     }
 
-    bool addAll(const StructureSet& other)
-    {
-        bool changed = false;
-        for (size_t i = 0; i < other.size(); ++i) {
-            if (contains(other[i]))
-                continue;
-            add(other[i]);
-            changed = true;
-        }
-        return changed;
-    }
+#if ENABLE(DFG_JIT)
+    void filter(const DFG::StructureAbstractValue&);
+    void filter(SpeculatedType);
+    void filterArrayModes(ArrayModes);
+    void filter(const DFG::AbstractValue&);
+#endif // ENABLE(DFG_JIT)
 
-    void remove(Structure* structure)
-    {
-        for (size_t i = 0; i < m_structures.size(); ++i) {
-            if (m_structures[i] != structure)
-                continue;
+    SpeculatedType speculationFromStructures() const;
+    ArrayModes arrayModesFromStructures() const;
 
-            m_structures[i] = m_structures.last();
-            m_structures.removeLast();
-            return;
-        }
-    }
+    void dumpInContext(PrintStream&, DumpContext*) const;
+    void dump(PrintStream&) const;
 
-    bool contains(Structure* structure) const
-    {
-        for (size_t i = 0; i < m_structures.size(); ++i) {
-            if (m_structures[i] == structure)
-                return true;
-        }
-        return false;
-    }
-
-    bool containsOnly(Structure* structure) const
-    {
-        if (size() != 1)
-            return false;
-        return singletonStructure() == structure;
-    }
-
-    bool isSubsetOf(const StructureSet& other) const
-    {
-        for (size_t i = 0; i < m_structures.size(); ++i) {
-            if (!other.contains(m_structures[i]))
-                return false;
-        }
-        return true;
-    }
-
-    bool isSupersetOf(const StructureSet& other) const
-    {
-        return other.isSubsetOf(*this);
-    }
-
-    size_t size() const { return m_structures.size(); }
-
-    // Call this if you know that the structure set must consist of exactly
-    // one structure.
-    Structure* singletonStructure() const
-    {
-        ASSERT(m_structures.size() == 1);
-        return m_structures[0];
-    }
-
-    Structure* at(size_t i) const { return m_structures.at(i); }
-
-    Structure* operator[](size_t i) const { return at(i); }
-
-    Structure* last() const { return m_structures.last(); }
-
-    SpeculatedType speculationFromStructures() const
-    {
-        SpeculatedType result = SpecNone;
-
-        for (size_t i = 0; i < m_structures.size(); ++i)
-            mergeSpeculation(result, speculationFromStructure(m_structures[i]));
-
-        return result;
-    }
-
-    ArrayModes arrayModesFromStructures() const
-    {
-        ArrayModes result = 0;
-
-        for (size_t i = 0; i < m_structures.size(); ++i)
-            mergeArrayModes(result, asArrayModes(m_structures[i]->indexingType()));
-
-        return result;
-    }
-
-    bool operator==(const StructureSet& other) const
-    {
-        if (m_structures.size() != other.m_structures.size())
-            return false;
-
-        for (size_t i = 0; i < m_structures.size(); ++i) {
-            if (!other.contains(m_structures[i]))
-                return false;
-        }
-
-        return true;
-    }
-
-    void dumpInContext(PrintStream& out, DumpContext* context) const
-    {
-        CommaPrinter comma;
-        out.print("[");
-        for (size_t i = 0; i < m_structures.size(); ++i)
-            out.print(comma, inContext(*m_structures[i], context));
-        out.print("]");
-    }
-
-    void dump(PrintStream& out) const
-    {
-        dumpInContext(out, 0);
-    }
-
-private:
-    friend class DFG::StructureAbstractValue;
-
-    Vector<Structure*, 2> m_structures;
+    void validateReferences(const TrackedReferences&) const;
 };
 
 } // namespace JSC

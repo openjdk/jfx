@@ -33,41 +33,33 @@
 
 namespace JSC {
 
-    class Profile : public RefCounted<Profile> {
-    public:
-        static PassRefPtr<Profile> create(const String& title, unsigned uid);
-        virtual ~Profile();
+class JS_EXPORT_PRIVATE Profile : public RefCounted<Profile> {
+public:
+    static Ref<Profile> create(const String& title, unsigned uid, double);
+    virtual ~Profile();
 
-        const String& title() const { return m_title; }
-        unsigned uid() const { return m_uid; }
+    const String& title() const { return m_title; }
+    unsigned uid() const { return m_uid; }
 
-        ProfileNode* head() const { return m_head.get(); }
-        void setHead(PassRefPtr<ProfileNode> head) { m_head = head; }
-
-        double totalTime() const { return m_head->totalTime(); }
-
-        double idleTime() const { return m_idleTime; }
-        void setIdleTime(double idleTime) { m_idleTime = idleTime; }
-
-        void forEach(void (ProfileNode::*)());
+    ProfileNode* rootNode() const { return m_rootNode.get(); }
+    void setRootNode(PassRefPtr<ProfileNode> rootNode) { m_rootNode = rootNode; }
 
 #ifndef NDEBUG
-        void debugPrintData() const;
-        void debugPrintDataSampleStyle() const;
+    void debugPrint();
+    void debugPrintSampleStyle();
 #endif
 
-    protected:
-        Profile(const String& title, unsigned uid);
+protected:
+    Profile(const String& title, unsigned uid, double startTime);
 
-    private:
-        void removeProfileStart();
-        void removeProfileEnd();
+private:
+    void removeProfileStart();
+    void removeProfileEnd();
 
-        String m_title;
-        RefPtr<ProfileNode> m_head;
-        unsigned int m_uid;
-        double m_idleTime;
-    };
+    String m_title;
+    RefPtr<ProfileNode> m_rootNode;
+    unsigned m_uid;
+};
 
 } // namespace JSC
 

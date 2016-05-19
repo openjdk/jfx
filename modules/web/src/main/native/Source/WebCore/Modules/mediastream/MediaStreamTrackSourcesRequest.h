@@ -41,7 +41,7 @@ class ScriptExecutionContext;
 
 class MediaStreamTrackSourcesRequest : public MediaStreamTrackSourcesRequestClient {
 public:
-    static PassRefPtr<MediaStreamTrackSourcesRequest> create(ScriptExecutionContext*, PassRefPtr<MediaStreamTrackSourcesCallback>);
+    static Ref<MediaStreamTrackSourcesRequest> create(ScriptExecutionContext*, PassRefPtr<MediaStreamTrackSourcesCallback>);
     virtual ~MediaStreamTrackSourcesRequest() { }
 
 private:
@@ -50,8 +50,6 @@ private:
     // MediaStreamTrackSourcesRequestClient
     virtual const String& requestOrigin() const override { return m_origin; }
     virtual void didCompleteRequest(const Vector<RefPtr<TrackSourceInfo>>&) override;
-
-    void callCompletionHandler();
 
     String m_origin;
     RefPtr<MediaStreamTrackSourcesCallback> m_callback;

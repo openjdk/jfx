@@ -29,10 +29,8 @@
 
 namespace WebCore {
 
-RenderSVGResourceType RenderSVGResourceMasker::s_resourceType = MaskerResourceType;
-
-RenderSVGResourceMasker::RenderSVGResourceMasker(SVGMaskElement& element, PassRef<RenderStyle> style)
-    : RenderSVGResourceContainer(element, std::move(style))
+RenderSVGResourceMasker::RenderSVGResourceMasker(SVGMaskElement& element, Ref<RenderStyle>&& style)
+    : RenderSVGResourceContainer(element, WTF::move(style))
 {
 }
 
@@ -65,21 +63,18 @@ bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const Rende
         m_masker.set(&renderer, std::make_unique<MaskerData>());
 
     MaskerData* maskerData = m_masker.get(&renderer);
-
-    AffineTransform absoluteTransform;
-    SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(renderer, absoluteTransform);
-
+    AffineTransform absoluteTransform = SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(renderer);
     FloatRect repaintRect = renderer.repaintRectInLocalCoordinates();
 
     if (!maskerData->maskImage && !repaintRect.isEmpty()) {
         const SVGRenderStyle& svgStyle = style().svgStyle();
         ColorSpace colorSpace = svgStyle.colorInterpolation() == CI_LINEARRGB ? ColorSpaceLinearRGB : ColorSpaceDeviceRGB;
-        if (!SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, maskerData->maskImage, colorSpace, Unaccelerated))
+        maskerData->maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, colorSpace, Unaccelerated);
+        if (!maskerData->maskImage)
             return false;
 
-        if (!drawContentIntoMaskImage(maskerData, colorSpace, &renderer)) {
+        if (!drawContentIntoMaskImage(maskerData, colorSpace, &renderer))
             maskerData->maskImage.reset();
-        }
     }
 
     if (!maskerData->maskImage)

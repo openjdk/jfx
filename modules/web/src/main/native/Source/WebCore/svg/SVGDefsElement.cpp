@@ -41,9 +41,9 @@ inline SVGDefsElement::SVGDefsElement(const QualifiedName& tagName, Document& do
     registerAnimatedPropertiesForSVGDefsElement();
 }
 
-PassRefPtr<SVGDefsElement> SVGDefsElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGDefsElement> SVGDefsElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGDefsElement(tagName, document));
+    return adoptRef(*new SVGDefsElement(tagName, document));
 }
 
 bool SVGDefsElement::isValid() const
@@ -51,9 +51,9 @@ bool SVGDefsElement::isValid() const
     return SVGTests::isValid();
 }
 
-RenderPtr<RenderElement> SVGDefsElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGDefsElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGHiddenContainer>(*this, std::move(style));
+    return createRenderer<RenderSVGHiddenContainer>(*this, WTF::move(style));
 }
 
 }

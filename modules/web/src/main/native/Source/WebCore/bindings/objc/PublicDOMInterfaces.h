@@ -10,10 +10,10 @@
 //    notice, this list of conditions and the following disclaimer in the
 //    documentation and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+// THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+// PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
 // CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
 // EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
 // PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -107,6 +107,7 @@
 @property (readonly, copy) NSString *preferredStylesheetSet WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *selectedStylesheetSet WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly, copy) NSString *lastModified WEBKIT_AVAILABLE_MAC(10_6);
+@property (readonly, strong) DOMElement *activeElement WEBKIT_AVAILABLE_MAC(10_6);
 - (DOMElement *)createElement:(NSString *)tagName;
 - (DOMDocumentFragment *)createDocumentFragment;
 - (DOMText *)createTextNode:(NSString *)data;
@@ -155,12 +156,13 @@
 - (BOOL)queryCommandSupported:(NSString *)command WEBKIT_AVAILABLE_MAC(10_5);
 - (NSString *)queryCommandValue:(NSString *)command WEBKIT_AVAILABLE_MAC(10_5);
 - (DOMElement *)elementFromPoint:(int)x y:(int)y WEBKIT_AVAILABLE_MAC(10_5);
-- (DOMNodeList *)getElementsByClassName:(NSString *)tagname WEBKIT_AVAILABLE_MAC(10_6);
+- (DOMNodeList *)getElementsByClassName:(NSString *)classNames WEBKIT_AVAILABLE_MAC(10_6);
 - (DOMElement *)querySelector:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_6);
 - (DOMNodeList *)querySelectorAll:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_6);
 #if defined(ENABLE_FULLSCREEN_API) && ENABLE_FULLSCREEN_API
 - (void)webkitCancelFullScreen WEBKIT_AVAILABLE_MAC(10_6);
 #endif
+- (BOOL)hasFocus WEBKIT_AVAILABLE_MAC(10_6);
 @end
 
 @interface DOMDocumentFragment : DOMNode 10_4
@@ -193,6 +195,8 @@
 @property (readonly) int clientLeft WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) int clientTop WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly, copy) NSString *innerText WEBKIT_AVAILABLE_MAC(10_5);
+@property (copy) NSString *innerHTML;
+@property (copy) NSString *outerHTML;
 @property (readonly, strong) DOMElement *firstElementChild WEBKIT_AVAILABLE_MAC(10_6);
 @property (readonly, strong) DOMElement *lastElementChild WEBKIT_AVAILABLE_MAC(10_6);
 @property (readonly, strong) DOMElement *previousElementSibling WEBKIT_AVAILABLE_MAC(10_6);
@@ -312,11 +316,6 @@
 @interface DOMNodeList : DOMObject 10_4
 @property (readonly) unsigned length;
 - (DOMNode *)item:(unsigned)index;
-@end
-
-@interface DOMNotation : DOMNode 10_4
-@property (readonly, copy) NSString *publicId;
-@property (readonly, copy) NSString *systemId;
 @end
 
 @interface DOMProcessingInstruction : DOMCharacterData 10_4
@@ -458,12 +457,10 @@
 @property (copy) NSString *alinkColor WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *linkColor WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *vlinkColor WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, strong) DOMElement *activeElement WEBKIT_AVAILABLE_MAC(10_6);
 @property (readonly, copy) NSString *compatMode WEBKIT_AVAILABLE_MAC(10_6);
 - (void)captureEvents WEBKIT_AVAILABLE_MAC(10_5);
 - (void)releaseEvents WEBKIT_AVAILABLE_MAC(10_5);
 - (void)clear WEBKIT_AVAILABLE_MAC(10_6);
-- (BOOL)hasFocus WEBKIT_AVAILABLE_MAC(10_6);
 - (void)open;
 - (void)close;
 - (void)write:(NSString *)text;
@@ -476,9 +473,7 @@
 @property (copy) NSString *idName;
 @property (copy) NSString *lang;
 @property (copy) NSString *dir;
-@property (copy) NSString *innerHTML;
 @property (copy) NSString *innerText;
-@property (copy) NSString *outerHTML;
 @property (copy) NSString *outerText;
 @property (readonly, strong) DOMHTMLCollection *children;
 @property (copy) NSString *contentEditable;
@@ -1233,7 +1228,7 @@
 // Protocols
 
 @protocol DOMEventListener <NSObject> 10_4
-- (void)handleEvent:(DOMEvent *)evt;
+- (void)handleEvent:(DOMEvent *)event;
 @end
 
 @protocol DOMEventTarget <NSObject, NSCopying> 10_4
@@ -1252,6 +1247,8 @@
 - (NSString *)lookupNamespaceURI:(NSString *)prefix;
 @end
 
+#if defined(USE_APPLE_INTERNAL_SDK) && USE_APPLE_INTERNAL_SDK
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
 #include <WebKitAdditions/PublicDOMInterfacesIOS.h>
+#endif
 #endif

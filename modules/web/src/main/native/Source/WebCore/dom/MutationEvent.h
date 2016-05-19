@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-    class MutationEvent : public Event {
+    class MutationEvent final : public Event {
     public:
         virtual ~MutationEvent();
 
@@ -39,15 +39,15 @@ namespace WebCore {
             REMOVAL         = 3
         };
 
-        static PassRefPtr<MutationEvent> create()
+        static Ref<MutationEvent> create()
         {
-            return adoptRef(new MutationEvent);
+            return adoptRef(*new MutationEvent);
         }
 
-        static PassRefPtr<MutationEvent> create(const AtomicString& type, bool canBubble, PassRefPtr<Node> relatedNode = 0,
+        static Ref<MutationEvent> create(const AtomicString& type, bool canBubble, PassRefPtr<Node> relatedNode = 0,
             const String& prevValue = String(), const String& newValue = String(), const String& attrName = String(), unsigned short attrChange = 0)
         {
-            return adoptRef(new MutationEvent(type, canBubble, false, relatedNode, prevValue, newValue, attrName, attrChange));
+            return adoptRef(*new MutationEvent(type, canBubble, false, relatedNode, prevValue, newValue, attrName, attrChange));
         }
 
         void initMutationEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<Node> relatedNode,
@@ -63,6 +63,10 @@ namespace WebCore {
         virtual EventInterface eventInterface() const override;
 
     private:
+#if PLATFORM(JAVA) //XXX: used in JavaEvent.cpp, or enable RTTI
+        virtual bool isMutationEvent() const override final { return true; }
+#endif
+
         MutationEvent();
         MutationEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<Node> relatedNode,
                       const String& prevValue, const String& newValue,
@@ -76,5 +80,9 @@ namespace WebCore {
     };
 
 } // namespace WebCore
+
+#if PLATFORM(JAVA) //XXX: used in JavaEvent.cpp, or enable RTTI
+SPECIALIZE_TYPE_TRAITS_EVENT(MutationEvent)
+#endif
 
 #endif // MutationEvent_h

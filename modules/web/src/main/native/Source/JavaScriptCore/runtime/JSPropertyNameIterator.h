@@ -1,118 +1,74 @@
 /*
- * Copyright (C) 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- * 2.  Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
- *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL APPLE OR ITS CONTRIBUTORS BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSPropertyNameIterator_h
 #define JSPropertyNameIterator_h
 
 #include "JSObject.h"
-#include "JSString.h"
-#include "PropertyNameArray.h"
-#include <memory>
+#include "JSPropertyNameEnumerator.h"
 
 namespace JSC {
 
-    class Identifier;
-    class JSObject;
-    class LLIntOffsetsExtractor;
+class JSPropertyNameIterator : public JSNonFinalObject {
+public:
+    typedef JSNonFinalObject Base;
 
-    class JSPropertyNameIterator : public JSCell {
-        friend class JIT;
-
-    public:
-        typedef JSCell Base;
-
-        static JSPropertyNameIterator* create(ExecState*, JSObject*);
-
-        static const bool needsDestruction = true;
-        static const bool hasImmortalStructure = true;
-        static void destroy(JSCell*);
-
-        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-        {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, OverridesVisitChildren), info());
-        }
-
-        static void visitChildren(JSCell*, SlotVisitor&);
-
-        JSValue get(ExecState*, JSObject*, size_t i);
-        size_t size() { return m_jsStringsSize; }
-
-        void setCachedStructure(VM& vm, Structure* structure)
-        {
-            ASSERT(!m_cachedStructure);
-            ASSERT(structure);
-            m_cachedStructure.set(vm, this, structure);
-        }
-        Structure* cachedStructure() { return m_cachedStructure.get(); }
-
-        void setCachedPrototypeChain(VM& vm, StructureChain* cachedPrototypeChain) { m_cachedPrototypeChain.set(vm, this, cachedPrototypeChain); }
-        StructureChain* cachedPrototypeChain() { return m_cachedPrototypeChain.get(); }
-
-        DECLARE_EXPORT_INFO;
-
-    protected:
-        void finishCreation(VM& vm, PropertyNameArrayData* propertyNameArrayData, JSObject* object)
-        {
-            Base::finishCreation(vm);
-            PropertyNameArrayData::PropertyNameVector& propertyNameVector = propertyNameArrayData->propertyNameVector();
-            for (size_t i = 0; i < m_jsStringsSize; ++i)
-                m_jsStrings[i].set(vm, this, jsOwnedString(&vm, propertyNameVector[i].string()));
-            m_cachedStructureInlineCapacity = object->structure()->inlineCapacity();
-        }
-
-    private:
-        friend class LLIntOffsetsExtractor;
-
-        JSPropertyNameIterator(ExecState*, PropertyNameArrayData* propertyNameArrayData, size_t numCacheableSlot);
-
-        WriteBarrier<Structure> m_cachedStructure;
-        WriteBarrier<StructureChain> m_cachedPrototypeChain;
-        uint32_t m_numCacheableSlots;
-        uint32_t m_jsStringsSize;
-        unsigned m_cachedStructureInlineCapacity;
-        std::unique_ptr<WriteBarrier<Unknown>[]> m_jsStrings;
+    enum class EnumerationPhase : uint32_t {
+        IndexedNames,
+        StructureNames,
+        GenericNames,
+        Done
     };
 
-    ALWAYS_INLINE JSPropertyNameIterator* Register::propertyNameIterator() const
+    DECLARE_EXPORT_INFO;
+
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return jsCast<JSPropertyNameIterator*>(jsValue().asCell());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-    inline JSPropertyNameIterator* StructureRareData::enumerationCache()
-    {
-        return m_enumerationCache.get();
-    }
+    static JSPropertyNameIterator* create(ExecState*, Structure*, JSObject*);
 
-    inline void StructureRareData::setEnumerationCache(VM& vm, const Structure*, JSPropertyNameIterator* value)
-    {
-        m_enumerationCache.set(vm, this, value);
-    }
+    JSPropertyNameIterator* clone(ExecState*);
+    bool next(ExecState*, JSValue&);
 
-} // namespace JSC
+    static void visitChildren(JSCell*, SlotVisitor&);
+
+private:
+    JSPropertyNameIterator(VM&, Structure*, JSObject*, JSPropertyNameEnumerator*);
+
+    void finishCreation(VM&, JSGlobalObject*);
+
+    static JSPropertyNameIterator* create(ExecState*, Structure*, JSObject*, JSPropertyNameEnumerator*);
+
+    WriteBarrier<JSObject> m_iteratedObject;
+    WriteBarrier<JSPropertyNameEnumerator> m_propertyNameEnumerator;
+    EnumerationPhase m_enumerationPhase;
+    uint32_t m_cursor;
+};
+
+}
 
 #endif // JSPropertyNameIterator_h

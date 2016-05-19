@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -37,30 +37,30 @@ class SQLValue;
 class SQLiteStatement {
     WTF_MAKE_NONCOPYABLE(SQLiteStatement); WTF_MAKE_FAST_ALLOCATED;
 public:
-    SQLiteStatement(SQLiteDatabase&, const String&);
-    ~SQLiteStatement();
+    WEBCORE_EXPORT SQLiteStatement(SQLiteDatabase&, const String&);
+    WEBCORE_EXPORT ~SQLiteStatement();
 
-    int prepare();
-    int bindBlob(int index, const void* blob, int size);
-    int bindBlob(int index, const String&);
-    int bindText(int index, const String&);
-    int bindInt(int index, int);
-    int bindInt64(int index, int64_t);
-    int bindDouble(int index, double);
-    int bindNull(int index);
-    int bindValue(int index, const SQLValue&);
-    unsigned bindParameterCount() const;
+    WEBCORE_EXPORT int prepare();
+    WEBCORE_EXPORT int bindBlob(int index, const void* blob, int size);
+    WEBCORE_EXPORT int bindBlob(int index, const String&);
+    WEBCORE_EXPORT int bindText(int index, const String&);
+    WEBCORE_EXPORT int bindInt(int index, int);
+    WEBCORE_EXPORT int bindInt64(int index, int64_t);
+    WEBCORE_EXPORT int bindDouble(int index, double);
+    WEBCORE_EXPORT int bindNull(int index);
+    WEBCORE_EXPORT int bindValue(int index, const SQLValue&);
+    WEBCORE_EXPORT unsigned bindParameterCount() const;
 
-    int step();
-    int finalize();
-    int reset();
+    WEBCORE_EXPORT int step();
+    WEBCORE_EXPORT int finalize();
+    WEBCORE_EXPORT int reset();
 
     int prepareAndStep() { if (int error = prepare()) return error; return step(); }
 
     // prepares, steps, and finalizes the query.
     // returns true if all 3 steps succeed with step() returning SQLITE_DONE
     // returns false otherwise
-    bool executeCommand();
+    WEBCORE_EXPORT bool executeCommand();
 
     // prepares, steps, and finalizes.
     // returns true is step() returns SQLITE_ROW
@@ -73,24 +73,24 @@ public:
     // returned in the last step()
     int columnCount();
 
-    bool isColumnNull(int col);
-    bool isColumnDeclaredAsBlob(int col);
+    WEBCORE_EXPORT bool isColumnNull(int col);
+    WEBCORE_EXPORT bool isColumnDeclaredAsBlob(int col);
     String getColumnName(int col);
     SQLValue getColumnValue(int col);
-    String getColumnText(int col);
+    WEBCORE_EXPORT String getColumnText(int col);
     double getColumnDouble(int col);
-    int getColumnInt(int col);
-    int64_t getColumnInt64(int col);
-    String getColumnBlobAsString(int col);
-    void getColumnBlobAsVector(int col, Vector<char>&);
-    void getColumnBlobAsVector(int col, Vector<uint8_t>&);
+    WEBCORE_EXPORT int getColumnInt(int col);
+    WEBCORE_EXPORT int64_t getColumnInt64(int col);
+    WEBCORE_EXPORT String getColumnBlobAsString(int col);
+    WEBCORE_EXPORT void getColumnBlobAsVector(int col, Vector<char>&);
+    WEBCORE_EXPORT void getColumnBlobAsVector(int col, Vector<uint8_t>&);
 
     bool returnTextResults(int col, Vector<String>&);
     bool returnIntResults(int col, Vector<int>&);
     bool returnInt64Results(int col, Vector<int64_t>&);
     bool returnDoubleResults(int col, Vector<double>&);
 
-    SQLiteDatabase* database() { return &m_database; }
+    SQLiteDatabase& database() { return m_database; }
 
     const String& query() const { return m_query; }
 

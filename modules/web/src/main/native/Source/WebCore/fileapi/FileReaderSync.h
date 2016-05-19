@@ -31,8 +31,6 @@
 #ifndef FileReaderSync_h
 #define FileReaderSync_h
 
-#if ENABLE(BLOB)
-
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -51,9 +49,9 @@ typedef int ExceptionCode;
 
 class FileReaderSync : public RefCounted<FileReaderSync> {
 public:
-    static PassRefPtr<FileReaderSync> create()
+    static Ref<FileReaderSync> create()
     {
-        return adoptRef(new FileReaderSync());
+        return adoptRef(*new FileReaderSync);
     }
 
     virtual ~FileReaderSync() { }
@@ -74,7 +72,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(BLOB)
 
 #endif // FileReaderSync_h

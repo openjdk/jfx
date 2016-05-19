@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2009 Torch Mobile Inc. http://www.torchmobile.com/
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
@@ -44,7 +44,7 @@ public:
 
     typedef unsigned HitTestRequestType;
 
-    HitTestRequest(HitTestRequestType requestType)
+    HitTestRequest(HitTestRequestType requestType = ReadOnly | Active | DisallowShadowContent)
         : m_requestType(requestType)
     {
     }

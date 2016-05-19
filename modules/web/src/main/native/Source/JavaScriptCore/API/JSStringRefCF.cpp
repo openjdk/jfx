@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -41,23 +41,23 @@ JSStringRef JSStringCreateWithCFString(CFStringRef string)
     // it can hold.  (<rdar://problem/6806478>)
     size_t length = CFStringGetLength(string);
     if (!length)
-        return OpaqueJSString::create(reinterpret_cast<const LChar*>(""), 0).leakRef();
+        return &OpaqueJSString::create(reinterpret_cast<const LChar*>(""), 0).leakRef();
 
     Vector<LChar, 1024> lcharBuffer(length);
     CFIndex usedBufferLength;
     CFIndex convertedSize = CFStringGetBytes(string, CFRangeMake(0, length), kCFStringEncodingISOLatin1, 0, false, lcharBuffer.data(), length, &usedBufferLength);
     if (static_cast<size_t>(convertedSize) == length && static_cast<size_t>(usedBufferLength) == length)
-        return OpaqueJSString::create(lcharBuffer.data(), length).leakRef();
+        return &OpaqueJSString::create(lcharBuffer.data(), length).leakRef();
 
     auto buffer = std::make_unique<UniChar[]>(length);
     CFStringGetCharacters(string, CFRangeMake(0, length), buffer.get());
     static_assert(sizeof(UniChar) == sizeof(UChar), "UniChar and UChar must be same size");
-    return OpaqueJSString::create(reinterpret_cast<UChar*>(buffer.get()), length).leakRef();
+    return &OpaqueJSString::create(reinterpret_cast<UChar*>(buffer.get()), length).leakRef();
 }
 
 CFStringRef JSStringCopyCFString(CFAllocatorRef allocator, JSStringRef string)
 {
-    if (!string->length())
+    if (!string || !string->length())
         return CFSTR("");
 
     if (string->is8Bit())

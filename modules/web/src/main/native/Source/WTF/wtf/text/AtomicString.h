@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2008, 2014 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -41,34 +41,37 @@ class AtomicString {
 public:
     WTF_EXPORT_PRIVATE static void init();
 
-    AtomicString() { }
-    AtomicString(const LChar* s) : m_string(add(s)) { }
-    AtomicString(const char* s) : m_string(add(s)) { }
-    AtomicString(const LChar* s, unsigned length) : m_string(add(s, length)) { }
-    AtomicString(const UChar* s, unsigned length) : m_string(add(s, length)) { }
-    AtomicString(const UChar* s, unsigned length, unsigned existingHash) : m_string(add(s, length, existingHash)) { }
-    AtomicString(const UChar* s) : m_string(add(s)) { }
+    AtomicString();
+    AtomicString(const LChar*);
+    AtomicString(const char*);
+    AtomicString(const LChar*, unsigned length);
+    AtomicString(const UChar*, unsigned length);
+    AtomicString(const UChar*, unsigned length, unsigned existingHash);
+    AtomicString(const UChar*);
 
     template<size_t inlineCapacity>
     explicit AtomicString(const Vector<UChar, inlineCapacity>& characters)
-        : m_string(add(characters.data(), characters.size()))
+        : m_string(AtomicStringImpl::add(characters.data(), characters.size()))
     {
     }
 
-    ATOMICSTRING_CONVERSION AtomicString(StringImpl* imp) : m_string(add(imp)) { }
-    AtomicString(AtomicStringImpl* imp) : m_string(imp) { }
-    ATOMICSTRING_CONVERSION AtomicString(const String& s) : m_string(add(s.impl())) { }
-    AtomicString(StringImpl* baseString, unsigned start, unsigned length) : m_string(add(baseString, start, length)) { }
+    AtomicString(AtomicStringImpl*);
+    ATOMICSTRING_CONVERSION AtomicString(StringImpl*);
+    ATOMICSTRING_CONVERSION AtomicString(const String&);
+    AtomicString(StringImpl* baseString, unsigned start, unsigned length);
+
+    // FIXME: AtomicString doesn’t always have AtomicStringImpl, so one of those two names needs to change..
+    AtomicString(UniquedStringImpl* uid);
 
     enum ConstructFromLiteralTag { ConstructFromLiteral };
     AtomicString(const char* characters, unsigned length, ConstructFromLiteralTag)
-        : m_string(addFromLiteralData(characters, length))
+        : m_string(AtomicStringImpl::addLiteral(characters, length))
     {
     }
 
     template<unsigned charactersCount>
     ALWAYS_INLINE AtomicString(const char (&characters)[charactersCount], ConstructFromLiteralTag)
-        : m_string(addFromLiteralData(characters, charactersCount - 1))
+        : m_string(AtomicStringImpl::addLiteral(characters, charactersCount - 1))
     {
         COMPILE_ASSERT(charactersCount > 1, AtomicStringFromLiteralNotEmpty);
         COMPILE_ASSERT((charactersCount - 1 <= ((unsigned(~0) - sizeof(StringImpl)) / sizeof(LChar))), AtomicStringFromLiteralCannotOverflow);
@@ -77,15 +80,13 @@ public:
     // We have to declare the copy constructor and copy assignment operator as well, otherwise
     // they'll be implicitly deleted by adding the move constructor and move assignment operator.
     AtomicString(const AtomicString& other) : m_string(other.m_string) { }
-    AtomicString(AtomicString&& other) : m_string(std::move(other.m_string)) { }
+    AtomicString(AtomicString&& other) : m_string(WTF::move(other.m_string)) { }
     AtomicString& operator=(const AtomicString& other) { m_string = other.m_string; return *this; }
-    AtomicString& operator=(AtomicString&& other) { m_string = std::move(other.m_string); return *this; }
+    AtomicString& operator=(AtomicString&& other) { m_string = WTF::move(other.m_string); return *this; }
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     AtomicString(WTF::HashTableDeletedValueType) : m_string(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_string.isHashTableDeletedValue(); }
-
-    WTF_EXPORT_STRING_API static AtomicStringImpl* find(const StringImpl*);
 
     operator const String&() const { return m_string; }
     const String& string() const { return m_string; };
@@ -107,16 +108,30 @@ public:
     bool contains(UChar c) const { return m_string.contains(c); }
     bool contains(const LChar* s, bool caseSensitive = true) const
         { return m_string.contains(s, caseSensitive); }
-    bool contains(const String& s, bool caseSensitive = true) const
+    bool contains(const String& s) const
+        { return m_string.contains(s); }
+    bool contains(const String& s, bool caseSensitive) const
         { return m_string.contains(s, caseSensitive); }
+    bool containsIgnoringASCIICase(const String& s) const
+        { return m_string.containsIgnoringASCIICase(s); }
 
     size_t find(UChar c, unsigned start = 0) const { return m_string.find(c, start); }
     size_t find(const LChar* s, unsigned start = 0, bool caseSentitive = true) const
         { return m_string.find(s, start, caseSentitive); }
     size_t find(const String& s, unsigned start = 0, bool caseSentitive = true) const
         { return m_string.find(s, start, caseSentitive); }
+    size_t findIgnoringASCIICase(const String& s) const
+        { return m_string.findIgnoringASCIICase(s); }
+    size_t findIgnoringASCIICase(const String& s, unsigned startOffset) const
+        { return m_string.findIgnoringASCIICase(s, startOffset); }
+    size_t find(CharacterMatchFunctionPtr matchFunction, unsigned start = 0) const
+        { return m_string.find(matchFunction, start); }
 
-    bool startsWith(const String& s, bool caseSensitive = true) const
+    bool startsWith(const String& s) const
+        { return m_string.startsWith(s); }
+    bool startsWithIgnoringASCIICase(const String& s) const
+        { return m_string.startsWithIgnoringASCIICase(s); }
+    bool startsWith(const String& s, bool caseSensitive) const
         { return m_string.startsWith(s, caseSensitive); }
     bool startsWith(UChar character) const
         { return m_string.startsWith(character); }
@@ -124,7 +139,11 @@ public:
     bool startsWith(const char (&prefix)[matchLength], bool caseSensitive = true) const
         { return m_string.startsWith<matchLength>(prefix, caseSensitive); }
 
-    bool endsWith(const String& s, bool caseSensitive = true) const
+    bool endsWith(const String& s) const
+        { return m_string.endsWith(s); }
+    bool endsWithIgnoringASCIICase(const String& s) const
+        { return m_string.endsWithIgnoringASCIICase(s); }
+    bool endsWith(const String& s, bool caseSensitive) const
         { return m_string.endsWith(s, caseSensitive); }
     bool endsWith(UChar character) const
         { return m_string.endsWith(character); }
@@ -132,6 +151,7 @@ public:
     bool endsWith(const char (&prefix)[matchLength], bool caseSensitive = true) const
         { return m_string.endsWith<matchLength>(prefix, caseSensitive); }
 
+    WTF_EXPORT_STRING_API AtomicString convertToASCIILowercase() const;
     WTF_EXPORT_STRING_API AtomicString lower() const;
     AtomicString upper() const { return AtomicString(impl()->upper()); }
 
@@ -143,13 +163,11 @@ public:
     bool isNull() const { return m_string.isNull(); }
     bool isEmpty() const { return m_string.isEmpty(); }
 
-    static void remove(StringImpl*);
-
 #if USE(CF)
-    AtomicString(CFStringRef s) :  m_string(add(s)) { }
+    AtomicString(CFStringRef);
 #endif
 #ifdef __OBJC__
-    AtomicString(NSString* s) : m_string(add((CFStringRef)s)) { }
+    AtomicString(NSString*);
     operator NSString*() const { return m_string; }
 #endif
 
@@ -166,36 +184,12 @@ private:
     // The explicit constructors with AtomicString::ConstructFromLiteral must be used for literals.
     AtomicString(ASCIILiteral);
 
-    String m_string;
-
-    WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> add(const LChar*);
-    ALWAYS_INLINE static PassRefPtr<StringImpl> add(const char* s) { return add(reinterpret_cast<const LChar*>(s)); };
-    WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> add(const LChar*, unsigned length);
-    WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> add(const UChar*, unsigned length);
-    ALWAYS_INLINE static PassRefPtr<StringImpl> add(const char* s, unsigned length) { return add(reinterpret_cast<const LChar*>(s), length); };
-    WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> add(const UChar*, unsigned length, unsigned existingHash);
-    WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> add(const UChar*);
-    WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> add(StringImpl*, unsigned offset, unsigned length);
-    ALWAYS_INLINE static PassRefPtr<StringImpl> add(StringImpl* string)
-    {
-        if (!string || string->isAtomic()) {
-            ASSERT_WITH_MESSAGE(!string || isInAtomicStringTable(string), "The atomic string comes from an other thread!");
-            return string;
-        }
-        return addSlowCase(string);
-    }
-    WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> addFromLiteralData(const char* characters, unsigned length);
-    WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> addSlowCase(StringImpl*);
-#if USE(CF)
-    WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> add(CFStringRef);
-#endif
-
     WTF_EXPORT_STRING_API static AtomicString fromUTF8Internal(const char*, const char*);
 
-#if !ASSERT_DISABLED
-    WTF_EXPORT_STRING_API static bool isInAtomicStringTable(StringImpl*);
-#endif
+    String m_string;
 };
+
+static_assert(sizeof(AtomicString) == sizeof(String), "AtomicString and String must be same size!");
 
 inline bool operator==(const AtomicString& a, const AtomicString& b) { return a.impl() == b.impl(); }
 bool operator==(const AtomicString&, const LChar*);
@@ -222,6 +216,86 @@ inline bool equalIgnoringCase(const AtomicString& a, const String& b) { return e
 inline bool equalIgnoringCase(const LChar* a, const AtomicString& b) { return equalIgnoringCase(a, b.impl()); }
 inline bool equalIgnoringCase(const char* a, const AtomicString& b) { return equalIgnoringCase(reinterpret_cast<const LChar*>(a), b.impl()); }
 inline bool equalIgnoringCase(const String& a, const AtomicString& b) { return equalIgnoringCase(a.impl(), b.impl()); }
+
+inline bool equalIgnoringASCIICase(const AtomicString& a, const AtomicString& b) { return equalIgnoringASCIICase(a.impl(), b.impl()); }
+inline bool equalIgnoringASCIICase(const AtomicString& a, const String& b) { return equalIgnoringASCIICase(a.impl(), b.impl()); }
+inline bool equalIgnoringASCIICase(const String& a, const AtomicString& b) { return equalIgnoringASCIICase(a.impl(), b.impl()); }
+
+template <unsigned charactersCount>
+inline bool equalIgnoringASCIICase(const AtomicString& a, const char (&b)[charactersCount]) { return equalIgnoringASCIICase<charactersCount>(a.impl(), b); }
+
+inline AtomicString::AtomicString()
+{
+}
+
+inline AtomicString::AtomicString(const LChar* s)
+    : m_string(AtomicStringImpl::add(s))
+{
+}
+
+inline AtomicString::AtomicString(const char* s)
+    : m_string(AtomicStringImpl::add(s))
+{
+}
+
+inline AtomicString::AtomicString(const LChar* s, unsigned length)
+    : m_string(AtomicStringImpl::add(s, length))
+{
+}
+
+inline AtomicString::AtomicString(const UChar* s, unsigned length)
+    : m_string(AtomicStringImpl::add(s, length))
+{
+}
+
+inline AtomicString::AtomicString(const UChar* s, unsigned length, unsigned existingHash)
+    : m_string(AtomicStringImpl::add(s, length, existingHash))
+{
+}
+
+inline AtomicString::AtomicString(const UChar* s)
+    : m_string(AtomicStringImpl::add(s))
+{
+}
+
+inline AtomicString::AtomicString(AtomicStringImpl* imp)
+    : m_string(imp)
+{
+}
+
+inline AtomicString::AtomicString(StringImpl* imp)
+    : m_string(AtomicStringImpl::add(imp))
+{
+}
+
+inline AtomicString::AtomicString(const String& s)
+    : m_string(AtomicStringImpl::add(s.impl()))
+{
+}
+
+inline AtomicString::AtomicString(StringImpl* baseString, unsigned start, unsigned length)
+    : m_string(AtomicStringImpl::add(baseString, start, length))
+{
+}
+
+inline AtomicString::AtomicString(UniquedStringImpl* uid)
+    : m_string(uid)
+{
+}
+
+#if USE(CF)
+inline AtomicString::AtomicString(CFStringRef s)
+    :  m_string(AtomicStringImpl::add(s))
+{
+}
+#endif
+
+#ifdef __OBJC__
+inline AtomicString::AtomicString(NSString* s)
+    : m_string(AtomicStringImpl::add((CFStringRef)s))
+{
+}
+#endif
 
 // Define external global variables for the commonly used atomic strings.
 // These are only usable from the main thread.
@@ -250,7 +324,7 @@ inline AtomicString AtomicString::fromUTF8(const char* characters)
         return nullAtom;
     if (!*characters)
         return emptyAtom;
-    return fromUTF8Internal(characters, 0);
+    return fromUTF8Internal(characters, nullptr);
 }
 #endif
 

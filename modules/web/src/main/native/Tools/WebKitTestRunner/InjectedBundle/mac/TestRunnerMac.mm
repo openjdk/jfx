@@ -44,7 +44,7 @@ void TestRunner::invalidateWaitToDumpWatchdogTimer()
 
 static void waitUntilDoneWatchdogTimerFired(CFRunLoopTimerRef timer, void* info)
 {
-    InjectedBundle::shared().testRunner()->waitToDumpWatchdogTimerFired();
+    InjectedBundle::singleton().testRunner()->waitToDumpWatchdogTimerFired();
 }
 
 void TestRunner::initializeWaitToDumpWatchdogTimerIfNeeded()
@@ -52,7 +52,8 @@ void TestRunner::initializeWaitToDumpWatchdogTimerIfNeeded()
     if (m_waitToDumpWatchdogTimer)
         return;
 
-    m_waitToDumpWatchdogTimer = adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + waitToDumpWatchdogTimerInterval, 0, 0, 0, WTR::waitUntilDoneWatchdogTimerFired, NULL));
+    CFTimeInterval interval = m_timeout / 1000.0;
+    m_waitToDumpWatchdogTimer = adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + interval, 0, 0, 0, WTR::waitUntilDoneWatchdogTimerFired, NULL));
     CFRunLoopAddTimer(CFRunLoopGetCurrent(), m_waitToDumpWatchdogTimer.get(), kCFRunLoopCommonModes);
 }
 

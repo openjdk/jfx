@@ -31,7 +31,6 @@
 #include "URL.h"
 #include "URLUtils.h"
 #include <wtf/HashSet.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -44,20 +43,19 @@ class URLRegistrable;
 class DOMURL : public RefCounted<DOMURL>, public URLUtils<DOMURL> {
 
 public:
-    static PassRefPtr<DOMURL> create(const String& url, const String& base, ExceptionCode&);
-    static PassRefPtr<DOMURL> create(const String& url, const DOMURL* base, ExceptionCode&);
-    static PassRefPtr<DOMURL> create(const String& url, ExceptionCode&);
+    static Ref<DOMURL> create(const String& url, const String& base, ExceptionCode&);
+    static Ref<DOMURL> create(const String& url, const DOMURL* base, ExceptionCode&);
+    static Ref<DOMURL> create(const String& url, ExceptionCode&);
 
     URL href() const { return m_url; }
     void setHref(const String& url);
     void setHref(const String&, ExceptionCode&);
 
-#if ENABLE(BLOB)
     static String createObjectURL(ScriptExecutionContext*, Blob*);
     static void revokeObjectURL(ScriptExecutionContext*, const String&);
 
     static String createPublicURL(ScriptExecutionContext*, URLRegistrable*);
-#endif
+
 private:
     DOMURL(const String& url, const String& base, ExceptionCode&);
     DOMURL(const String& url, const DOMURL& base, ExceptionCode&);

@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,7 +31,7 @@
 #define CommandLineAPIHost_h
 
 #include "ScriptState.h"
-#include <inspector/ConsoleTypes.h>
+#include <runtime/ConsoleTypes.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -60,25 +60,21 @@ struct EventListenerInfo;
 
 class CommandLineAPIHost : public RefCounted<CommandLineAPIHost> {
 public:
-    static PassRefPtr<CommandLineAPIHost> create();
+    static Ref<CommandLineAPIHost> create();
     ~CommandLineAPIHost();
 
     void init(Inspector::InspectorAgent* inspectorAgent
         , Inspector::InspectorConsoleAgent* consoleAgent
         , InspectorDOMAgent* domAgent
         , InspectorDOMStorageAgent* domStorageAgent
-#if ENABLE(SQL_DATABASE)
         , InspectorDatabaseAgent* databaseAgent
-#endif
         )
     {
         m_inspectorAgent = inspectorAgent;
         m_consoleAgent = consoleAgent;
         m_domAgent = domAgent;
         m_domStorageAgent = domStorageAgent;
-#if ENABLE(SQL_DATABASE)
         m_databaseAgent = databaseAgent;
-#endif
     }
 
     void disconnect();
@@ -93,15 +89,12 @@ public:
         virtual ~InspectableObject() { }
     };
     void addInspectedObject(std::unique_ptr<InspectableObject>);
-    void clearInspectedObjects();
-    InspectableObject* inspectedObject(unsigned index);
-    void inspectImpl(PassRefPtr<Inspector::InspectorValue> objectToInspect, PassRefPtr<Inspector::InspectorValue> hints);
+    InspectableObject* inspectedObject();
+    void inspectImpl(RefPtr<Inspector::InspectorValue>&& objectToInspect, RefPtr<Inspector::InspectorValue>&& hints);
 
     void getEventListenersImpl(Node*, Vector<EventListenerInfo>& listenersArray);
 
-#if ENABLE(SQL_DATABASE)
     String databaseIdImpl(Database*);
-#endif
     String storageIdImpl(Storage*);
 
 private:
@@ -111,12 +104,9 @@ private:
     Inspector::InspectorConsoleAgent* m_consoleAgent;
     InspectorDOMAgent* m_domAgent;
     InspectorDOMStorageAgent* m_domStorageAgent;
-#if ENABLE(SQL_DATABASE)
     InspectorDatabaseAgent* m_databaseAgent;
-#endif
 
-    Vector<std::unique_ptr<InspectableObject>> m_inspectedObjects;
-    std::unique_ptr<InspectableObject> m_defaultInspectableObject;
+    std::unique_ptr<InspectableObject> m_inspectedObject; // $0
 };
 
 } // namespace WebCore

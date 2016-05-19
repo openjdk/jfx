@@ -36,7 +36,7 @@
 
 namespace JSC {
 
-const ClassInfo WeakMapData::s_info = { "WeakMapData", 0, 0, 0, CREATE_METHOD_TABLE(WeakMapData) };
+const ClassInfo WeakMapData::s_info = { "WeakMapData", 0, 0, CREATE_METHOD_TABLE(WeakMapData) };
 
 WeakMapData::WeakMapData(VM& vm)
     : Base(vm, vm.weakMapDataStructure.get())
@@ -64,7 +64,7 @@ void WeakMapData::visitChildren(JSCell* cell, SlotVisitor& visitor)
     // Rough approximation of the external storage needed for the hashtable.
     // This isn't exact, but it is close enough, and proportional to the actual
     // external mermory usage.
-    visitor.reportExtraMemoryUsage(thisObj, thisObj->m_map.capacity() * (sizeof(JSObject*) + sizeof(WriteBarrier<Unknown>)));
+    visitor.reportExtraMemoryVisited(thisObj, thisObj->m_map.capacity() * (sizeof(JSObject*) + sizeof(WriteBarrier<Unknown>)));
 }
 
 void WeakMapData::set(VM& vm, JSObject* key, JSValue value)

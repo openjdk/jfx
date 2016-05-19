@@ -30,7 +30,7 @@
 #include "RenderLineBreak.h"
 #include "RootInlineBox.h"
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 #include <stdio.h>
 #endif
 
@@ -40,9 +40,10 @@ struct SameSizeAsInlineBox {
     virtual ~SameSizeAsInlineBox() { }
     void* a[4];
     FloatPoint b;
-    float c;
-    uint32_t d : 32;
+    float c[2];
+    unsigned d : 20;
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+    unsigned s;
     bool f;
 #endif
 };
@@ -50,11 +51,31 @@ struct SameSizeAsInlineBox {
 COMPILE_ASSERT(sizeof(InlineBox) == sizeof(SameSizeAsInlineBox), InlineBox_size_guard);
 
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+
+void InlineBox::assertNotDeleted() const
+{
+    ASSERT(m_deletionSentinel == deletionSentinelNotDeletedValue);
+}
+
 InlineBox::~InlineBox()
 {
+    invalidateParentChildList();
+    m_deletionSentinel = deletionSentinelDeletedValue;
+}
+
+void InlineBox::setHasBadParent()
+{
+    assertNotDeleted();
+    m_hasBadParent = true;
+}
+
+void InlineBox::invalidateParentChildList()
+{
+    assertNotDeleted();
     if (!m_hasBadParent && m_parent)
         m_parent->setHasBadChildList();
 }
+
 #endif
 
 void InlineBox::removeFromParent()
@@ -63,45 +84,42 @@ void InlineBox::removeFromParent()
         parent()->removeChild(this);
 }
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
+
 const char* InlineBox::boxName() const
 {
     return "InlineBox";
 }
 
-void InlineBox::showTreeForThis() const
+void InlineBox::showNodeTreeForThis() const
 {
-    m_renderer.showTreeForThis();
+    m_renderer.showNodeTreeForThis();
 }
 
 void InlineBox::showLineTreeForThis() const
 {
-    m_renderer.containingBlock()->showLineTreeAndMark(this, "*");
+    m_renderer.containingBlock()->showLineTreeForThis();
 }
 
-void InlineBox::showLineTreeAndMark(const InlineBox* markedBox1, const char* markedLabel1, const InlineBox* markedBox2, const char* markedLabel2, const RenderObject* obj, int depth) const
+void InlineBox::showLineTreeAndMark(const InlineBox* markedBox, int depth) const
 {
+    showLineBox(markedBox == this, depth);
+}
+
+void InlineBox::showLineBox(bool mark, int depth) const
+{
+    fprintf(stderr, "------- --");
     int printedCharacters = 0;
-    if (this == markedBox1)
-        printedCharacters += fprintf(stderr, "%s", markedLabel1);
-    if (this == markedBox2)
-        printedCharacters += fprintf(stderr, "%s", markedLabel2);
-    if (&m_renderer == obj)
-        printedCharacters += fprintf(stderr, "*");
-    for (; printedCharacters < depth * 2; printedCharacters++)
+    if (mark) {
+        fprintf(stderr, "*");
+        ++printedCharacters;
+    }
+    while (++printedCharacters <= depth * 2)
         fputc(' ', stderr);
-
-    showBox(printedCharacters);
+    fprintf(stderr, "%s  (%.2f, %.2f) (%.2f, %.2f) (%p) renderer->(%p)\n", boxName(), x(), y(), width(), height(), this, &renderer());
 }
 
-void InlineBox::showBox(int printedCharacters) const
-{
-    printedCharacters += fprintf(stderr, "%s\t%p", boxName(), this);
-    for (; printedCharacters < showTreeCharacterOffset; printedCharacters++)
-        fputc(' ', stderr);
-    fprintf(stderr, "\t%s %p\n", renderer().renderName(), &renderer());
-}
-#endif
+#endif // ENABLE(TREE_DEBUGGING)
 
 float InlineBox::logicalHeight() const
 {
@@ -111,8 +129,8 @@ float InlineBox::logicalHeight() const
     const RenderStyle& lineStyle = this->lineStyle();
     if (renderer().isTextOrLineBreak())
         return behavesLikeText() ? lineStyle.fontMetrics().height() : 0;
-    if (renderer().isBox() && parent())
-        return isHorizontal() ? toRenderBox(renderer()).height() : toRenderBox(renderer()).width();
+    if (is<RenderBox>(renderer()) && parent())
+        return isHorizontal() ? downcast<RenderBox>(renderer()).height() : downcast<RenderBox>(renderer()).width();
 
     ASSERT(isInlineFlowBox());
     RenderBoxModelObject* flowObject = boxModelObject();
@@ -158,24 +176,25 @@ void InlineBox::adjustPosition(float dx, float dy)
 {
     m_topLeft.move(dx, dy);
 
+    if (m_renderer.isOutOfFlowPositioned())
+        return;
+
     if (m_renderer.isReplaced())
-        toRenderBox(renderer()).move(dx, dy);
+        downcast<RenderBox>(renderer()).move(dx, dy);
 }
 
 const RootInlineBox& InlineBox::root() const
 {
     if (parent())
         return parent()->root();
-    ASSERT_WITH_SECURITY_IMPLICATION(isRootInlineBox());
-    return toRootInlineBox(*this);
+    return downcast<RootInlineBox>(*this);
 }
 
 RootInlineBox& InlineBox::root()
 {
     if (parent())
         return parent()->root();
-    ASSERT_WITH_SECURITY_IMPLICATION(isRootInlineBox());
-    return toRootInlineBox(*this);
+    return downcast<RootInlineBox>(*this);
 }
 
 bool InlineBox::nextOnLineExists() const
@@ -204,9 +223,9 @@ bool InlineBox::previousOnLineExists() const
 
 InlineBox* InlineBox::nextLeafChild() const
 {
-    InlineBox* leaf = 0;
+    InlineBox* leaf = nullptr;
     for (InlineBox* box = nextOnLine(); box && !leaf; box = box->nextOnLine())
-        leaf = box->isLeaf() ? box : toInlineFlowBox(box)->firstLeafChild();
+        leaf = box->isLeaf() ? box : downcast<InlineFlowBox>(*box).firstLeafChild();
     if (!leaf && parent())
         leaf = parent()->nextLeafChild();
     return leaf;
@@ -214,9 +233,9 @@ InlineBox* InlineBox::nextLeafChild() const
 
 InlineBox* InlineBox::prevLeafChild() const
 {
-    InlineBox* leaf = 0;
+    InlineBox* leaf = nullptr;
     for (InlineBox* box = prevOnLine(); box && !leaf; box = box->prevOnLine())
-        leaf = box->isLeaf() ? box : toInlineFlowBox(box)->lastLeafChild();
+        leaf = box->isLeaf() ? box : downcast<InlineFlowBox>(*box).lastLeafChild();
     if (!leaf && parent())
         leaf = parent()->prevLeafChild();
     return leaf;
@@ -226,7 +245,7 @@ InlineBox* InlineBox::nextLeafChildIgnoringLineBreak() const
 {
     InlineBox* leaf = nextLeafChild();
     if (leaf && leaf->isLineBreak())
-        return 0;
+        return nullptr;
     return leaf;
 }
 
@@ -234,7 +253,7 @@ InlineBox* InlineBox::prevLeafChildIgnoringLineBreak() const
 {
     InlineBox* leaf = prevLeafChild();
     if (leaf && leaf->isLineBreak())
-        return 0;
+        return nullptr;
     return leaf;
 }
 
@@ -309,18 +328,20 @@ LayoutPoint InlineBox::flipForWritingMode(const LayoutPoint& point)
 
 } // namespace WebCore
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 
-void showTree(const WebCore::InlineBox* b)
+void showNodeTree(const WebCore::InlineBox* inlineBox)
 {
-    if (b)
-        b->showTreeForThis();
+    if (!inlineBox)
+        return;
+    inlineBox->showNodeTreeForThis();
 }
 
-void showLineTree(const WebCore::InlineBox* b)
+void showLineTree(const WebCore::InlineBox* inlineBox)
 {
-    if (b)
-        b->showLineTreeForThis();
+    if (!inlineBox)
+        return;
+    inlineBox->showLineTreeForThis();
 }
 
 #endif

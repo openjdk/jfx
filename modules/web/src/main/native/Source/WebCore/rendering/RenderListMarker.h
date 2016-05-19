@@ -35,7 +35,7 @@ String listMarkerText(EListStyleType, int value);
 // The RenderListMarker always has to be a child of a RenderListItem.
 class RenderListMarker final : public RenderBox {
 public:
-    RenderListMarker(RenderListItem&, PassRef<RenderStyle>);
+    RenderListMarker(RenderListItem&, Ref<RenderStyle>&&);
     virtual ~RenderListMarker();
 
     const String& text() const { return m_text; }
@@ -77,7 +77,7 @@ private:
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-    IntRect getRelativeMarkerRect();
+    FloatRect getRelativeMarkerRect();
     LayoutRect localSelectionRect();
 
     String m_text;
@@ -85,8 +85,8 @@ private:
     RenderListItem& m_listItem;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderListMarker, isListMarker())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderListMarker, isListMarker())
 
 #endif // RenderListMarker_h

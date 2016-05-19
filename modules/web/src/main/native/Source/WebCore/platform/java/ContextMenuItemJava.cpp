@@ -93,6 +93,10 @@ ContextMenuItem::ContextMenuItem(PlatformMenuItemDescription descr)
 {
 }
 
+ContextMenuItem::ContextMenuItem()
+    : m_platformDescription(nullptr)
+{
+}
 
 ContextMenuItem::ContextMenuItem(ContextMenu* subMenu)
 {

@@ -30,9 +30,7 @@
 
 [
     NoInterfaceObject,
-    Conditional=BLOB,
     DoNotCheckConstants,
-    JSNoStaticTables,
     ImplementationLacksVTable,
 ] exception FileException {
 

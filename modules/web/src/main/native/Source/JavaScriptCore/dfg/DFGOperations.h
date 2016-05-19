@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,9 @@
 #include "JITOperations.h"
 #include "PutKind.h"
 
-namespace JSC {
+namespace JSC { namespace DFG {
 
-namespace DFG {
+struct OSRExitBase;
 
 extern "C" {
 
@@ -96,15 +96,17 @@ EncodedJSValue JIT_OPERATION operationRegExpExec(ExecState*, JSCell*, JSCell*) W
 size_t JIT_OPERATION operationRegExpTest(ExecState*, JSCell*, JSCell*) WTF_INTERNAL;
 size_t JIT_OPERATION operationCompareStrictEqCell(ExecState*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
 size_t JIT_OPERATION operationCompareStrictEq(ExecState*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
-JSCell* JIT_OPERATION operationCreateInlinedArguments(ExecState*, InlineCallFrame*) WTF_INTERNAL;
-void JIT_OPERATION operationTearOffInlinedArguments(ExecState*, JSCell*, JSCell*, InlineCallFrame*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetInlinedArgumentByVal(ExecState*, int32_t, InlineCallFrame*, int32_t) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetArgumentByVal(ExecState*, int32_t, int32_t) WTF_INTERNAL;
-JSCell* JIT_OPERATION operationNewFunctionNoCheck(ExecState*, JSCell*) WTF_INTERNAL;
+JSCell* JIT_OPERATION operationCreateActivationDirect(ExecState*, Structure*, JSScope*, SymbolTable*, EncodedJSValue);
+JSCell* JIT_OPERATION operationCreateDirectArguments(ExecState*, Structure*, int32_t length, int32_t minCapacity);
+JSCell* JIT_OPERATION operationCreateDirectArgumentsDuringExit(ExecState*, InlineCallFrame*, JSFunction*, int32_t argumentCount);
+JSCell* JIT_OPERATION operationCreateScopedArguments(ExecState*, Structure*, Register* argumentStart, int32_t length, JSFunction* callee, JSLexicalEnvironment*);
+JSCell* JIT_OPERATION operationCreateClonedArgumentsDuringExit(ExecState*, InlineCallFrame*, JSFunction*, int32_t argumentCount);
+JSCell* JIT_OPERATION operationCreateClonedArguments(ExecState*, Structure*, Register* argumentStart, int32_t length, JSFunction* callee);
 double JIT_OPERATION operationFModOnInts(int32_t, int32_t) WTF_INTERNAL;
-size_t JIT_OPERATION operationIsObject(ExecState*, EncodedJSValue) WTF_INTERNAL;
-size_t JIT_OPERATION operationIsFunction(EncodedJSValue) WTF_INTERNAL;
-JSCell* JIT_OPERATION operationTypeOf(ExecState*, JSCell*) WTF_INTERNAL;
+size_t JIT_OPERATION operationObjectIsObject(ExecState*, JSGlobalObject*, JSCell*) WTF_INTERNAL;
+size_t JIT_OPERATION operationObjectIsFunction(ExecState*, JSGlobalObject*, JSCell*) WTF_INTERNAL;
+JSCell* JIT_OPERATION operationTypeOfObject(ExecState*, JSGlobalObject*, JSCell*) WTF_INTERNAL;
+int32_t JIT_OPERATION operationTypeOfObjectAsTypeofType(ExecState*, JSGlobalObject*, JSCell*) WTF_INTERNAL;
 char* JIT_OPERATION operationAllocatePropertyStorageWithInitialCapacity(ExecState*) WTF_INTERNAL;
 char* JIT_OPERATION operationAllocatePropertyStorage(ExecState*, size_t newSize) WTF_INTERNAL;
 char* JIT_OPERATION operationReallocateButterflyToHavePropertyStorageWithInitialCapacity(ExecState*, JSObject*) WTF_INTERNAL;
@@ -112,7 +114,6 @@ char* JIT_OPERATION operationReallocateButterflyToGrowPropertyStorage(ExecState*
 char* JIT_OPERATION operationEnsureInt32(ExecState*, JSCell*);
 char* JIT_OPERATION operationEnsureDouble(ExecState*, JSCell*);
 char* JIT_OPERATION operationEnsureContiguous(ExecState*, JSCell*);
-char* JIT_OPERATION operationRageEnsureContiguous(ExecState*, JSCell*);
 char* JIT_OPERATION operationEnsureArrayStorage(ExecState*, JSCell*);
 StringImpl* JIT_OPERATION operationResolveRope(ExecState*, JSString*);
 JSString* JIT_OPERATION operationSingleCharacterString(ExecState*, int32_t);
@@ -120,18 +121,22 @@ JSString* JIT_OPERATION operationSingleCharacterString(ExecState*, int32_t);
 JSCell* JIT_OPERATION operationNewStringObject(ExecState*, JSString*, Structure*);
 JSCell* JIT_OPERATION operationToStringOnCell(ExecState*, JSCell*);
 JSCell* JIT_OPERATION operationToString(ExecState*, EncodedJSValue);
+JSCell* JIT_OPERATION operationCallStringConstructorOnCell(ExecState*, JSCell*);
+JSCell* JIT_OPERATION operationCallStringConstructor(ExecState*, EncodedJSValue);
 JSCell* JIT_OPERATION operationMakeRope2(ExecState*, JSString*, JSString*);
 JSCell* JIT_OPERATION operationMakeRope3(ExecState*, JSString*, JSString*, JSString*);
 char* JIT_OPERATION operationFindSwitchImmTargetForDouble(ExecState*, EncodedJSValue, size_t tableIndex);
 char* JIT_OPERATION operationSwitchString(ExecState*, size_t tableIndex, JSString*);
-void JIT_OPERATION operationInvalidate(ExecState*, VariableWatchpointSet*);
+int32_t JIT_OPERATION operationSwitchStringAndGetBranchOffset(ExecState*, size_t tableIndex, JSString*);
+void JIT_OPERATION operationNotifyWrite(ExecState*, WatchpointSet*);
+void JIT_OPERATION operationThrowStackOverflowForVarargs(ExecState*) WTF_INTERNAL;
+int32_t JIT_OPERATION operationSizeOfVarargs(ExecState*, EncodedJSValue arguments, int32_t firstVarArgOffset);
+void JIT_OPERATION operationLoadVarargs(ExecState*, int32_t firstElementDest, EncodedJSValue arguments, int32_t offset, int32_t length, int32_t mandatoryMinimum);
 
-#if ENABLE(FTL_JIT)
-// FIXME: Make calls work well. Currently they're a pure regression.
-// https://bugs.webkit.org/show_bug.cgi?id=113621
-EncodedJSValue JIT_OPERATION operationFTLCall(ExecState*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationFTLConstruct(ExecState*) WTF_INTERNAL;
-#endif // ENABLE(FTL_JIT)
+int64_t JIT_OPERATION operationConvertBoxedDoubleToInt52(EncodedJSValue);
+int64_t JIT_OPERATION operationConvertDoubleToInt52(double);
+
+void JIT_OPERATION operationProcessTypeProfilerLogDFG(ExecState*) WTF_INTERNAL;
 
 // These operations implement the implicitly called ToInt32 and ToBoolean conversions from ES5.
 // This conversion returns an int32_t within a size_t such that the value is zero extended to fill the register.
@@ -139,10 +144,11 @@ size_t JIT_OPERATION dfgConvertJSValueToInt32(ExecState*, EncodedJSValue) WTF_IN
 
 void JIT_OPERATION debugOperationPrintSpeculationFailure(ExecState*, void*, void*) WTF_INTERNAL;
 
-void JIT_OPERATION triggerReoptimizationNow(CodeBlock*) WTF_INTERNAL;
+void JIT_OPERATION triggerReoptimizationNow(CodeBlock*, OSRExitBase*) WTF_INTERNAL;
 
 #if ENABLE(FTL_JIT)
 void JIT_OPERATION triggerTierUpNow(ExecState*) WTF_INTERNAL;
+void JIT_OPERATION triggerTierUpNowInLoop(ExecState*) WTF_INTERNAL;
 char* JIT_OPERATION triggerOSREntryNow(ExecState*, int32_t bytecodeIndex, int32_t streamIndex) WTF_INTERNAL;
 #endif // ENABLE(FTL_JIT)
 

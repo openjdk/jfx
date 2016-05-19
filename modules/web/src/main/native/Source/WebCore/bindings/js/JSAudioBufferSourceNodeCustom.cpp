@@ -33,6 +33,7 @@
 #include "AudioBufferSourceNode.h"
 #include "JSAudioBuffer.h"
 #include <runtime/Error.h>
+#include <runtime/JSCJSValueInlines.h>
 
 using namespace JSC;
 
@@ -40,7 +41,7 @@ namespace WebCore {
 
 void JSAudioBufferSourceNode::setBuffer(ExecState* exec, JSValue value)
 {
-    AudioBuffer* buffer = toAudioBuffer(value);
+    AudioBuffer* buffer = JSAudioBuffer::toWrapped(value);
     if (!buffer) {
         exec->vm().throwException(exec, createTypeError(exec, "Value is not of type AudioBuffer"));
         return;

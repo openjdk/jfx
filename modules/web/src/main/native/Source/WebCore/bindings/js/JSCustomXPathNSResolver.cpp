@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,8 +32,9 @@
 #include "JSDOMWindowCustom.h"
 #include "JSMainThreadExecState.h"
 #include "Page.h"
-#include "PageConsole.h"
+#include "PageConsoleClient.h"
 #include "SecurityOrigin.h"
+#include <profiler/Profile.h>
 #include <runtime/JSLock.h>
 #include <wtf/Ref.h>
 
@@ -41,18 +42,18 @@ namespace WebCore {
 
 using namespace JSC;
 
-PassRefPtr<JSCustomXPathNSResolver> JSCustomXPathNSResolver::create(ExecState* exec, JSValue value)
+RefPtr<JSCustomXPathNSResolver> JSCustomXPathNSResolver::create(ExecState* exec, JSValue value)
 {
     if (value.isUndefinedOrNull())
-        return 0;
+        return nullptr;
 
     JSObject* resolverObject = value.getObject();
     if (!resolverObject) {
         setDOMException(exec, TYPE_MISMATCH_ERR);
-        return 0;
+        return nullptr;
     }
 
-    return adoptRef(new JSCustomXPathNSResolver(exec, resolverObject, asJSDOMWindow(exec->vmEntryGlobalObject())));
+    return adoptRef(*new JSCustomXPathNSResolver(exec, resolverObject, asJSDOMWindow(exec->vmEntryGlobalObject())));
 }
 
 JSCustomXPathNSResolver::JSCustomXPathNSResolver(ExecState* exec, JSObject* customResolver, JSDOMWindow* globalObject)
@@ -73,14 +74,14 @@ String JSCustomXPathNSResolver::lookupNamespaceURI(const String& prefix)
 
     ExecState* exec = m_globalObject->globalExec();
 
-    JSValue function = m_customResolver->get(exec, Identifier(exec, "lookupNamespaceURI"));
+    JSValue function = m_customResolver->get(exec, Identifier::fromString(exec, "lookupNamespaceURI"));
     CallData callData;
     CallType callType = getCallData(function, callData);
     if (callType == CallTypeNone) {
         callType = m_customResolver->methodTable()->getCallData(m_customResolver.get(), callData);
         if (callType == CallTypeNone) {
             // FIXME: <http://webkit.org/b/114312> JSCustomXPathNSResolver::lookupNamespaceURI Console Message should include Line, Column, and SourceURL
-            if (PageConsole* console = m_globalObject->impl().pageConsole())
+            if (PageConsoleClient* console = m_globalObject->impl().console())
                 console->addMessage(MessageSource::JS, MessageLevel::Error, ASCIILiteral("XPathNSResolver does not have a lookupNamespaceURI method."));
             return String();
         }
@@ -92,11 +93,12 @@ String JSCustomXPathNSResolver::lookupNamespaceURI(const String& prefix)
     MarkedArgumentBuffer args;
     args.append(jsStringWithCache(exec, prefix));
 
-    JSValue retval = JSMainThreadExecState::call(exec, function, callType, callData, m_customResolver.get(), args);
+    NakedPtr<Exception> exception;
+    JSValue retval = JSMainThreadExecState::call(exec, function, callType, callData, m_customResolver.get(), args, exception);
 
     String result;
-    if (exec->hadException())
-        reportCurrentException(exec);
+    if (exception)
+        reportException(exec, exception);
     else {
         if (!retval.isUndefinedOrNull())
             result = retval.toString(exec)->value(exec);

@@ -26,8 +26,6 @@
 #ifndef FTLAbbreviatedTypes_h
 #define FTLAbbreviatedTypes_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(FTL_JIT)
 
 #include "LLVMAPI.h"
@@ -45,6 +43,7 @@ typedef LLVMModuleRef LModule;
 typedef LLVMRealPredicate LRealPredicate;
 typedef LLVMTypeRef LType;
 typedef LLVMValueRef LValue;
+typedef LLVMMemoryBufferRef LMemoryBuffer;
 
 } } // namespace JSC::FTL
 

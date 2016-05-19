@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -38,19 +38,19 @@ struct WebKitTransitionEventInit : public EventInit {
     String pseudoElement;
 };
 
-class WebKitTransitionEvent : public Event {
+class WebKitTransitionEvent final : public Event {
 public:
-    static PassRefPtr<WebKitTransitionEvent> create()
+    static Ref<WebKitTransitionEvent> create()
     {
-        return adoptRef(new WebKitTransitionEvent);
+        return adoptRef(*new WebKitTransitionEvent);
     }
-    static PassRefPtr<WebKitTransitionEvent> create(const AtomicString& type, const String& propertyName, double elapsedTime, const String& pseudoElement)
+    static Ref<WebKitTransitionEvent> create(const AtomicString& type, const String& propertyName, double elapsedTime, const String& pseudoElement)
     {
-        return adoptRef(new WebKitTransitionEvent(type, propertyName, elapsedTime, pseudoElement));
+        return adoptRef(*new WebKitTransitionEvent(type, propertyName, elapsedTime, pseudoElement));
     }
-    static PassRefPtr<WebKitTransitionEvent> create(const AtomicString& type, const WebKitTransitionEventInit& initializer)
+    static Ref<WebKitTransitionEvent> create(const AtomicString& type, const WebKitTransitionEventInit& initializer)
     {
-        return adoptRef(new WebKitTransitionEvent(type, initializer));
+        return adoptRef(*new WebKitTransitionEvent(type, initializer));
     }
 
     virtual ~WebKitTransitionEvent();

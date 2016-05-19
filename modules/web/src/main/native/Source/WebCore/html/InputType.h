@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,6 @@
 #ifndef InputType_h
 #define InputType_h
 
-#include "FeatureObserver.h"
 #include "HTMLTextFormControlElement.h"
 #include "RenderPtr.h"
 #include "StepRange.h"
@@ -175,6 +174,7 @@ public:
     virtual bool canSetStringValue() const;
     virtual String localizeValue(const String&) const;
     virtual String visibleValue() const;
+    virtual bool isEmptyValue() const;
     // Returing the null string means "use the default value."
     // This function must be called only by HTMLInputElement::sanitizeValue().
     virtual String sanitizeValue(const String&) const;
@@ -224,20 +224,17 @@ public:
     virtual HTMLElement* innerBlockElement() const { return nullptr; }
     virtual TextControlInnerTextElement* innerTextElement() const { return nullptr; }
     virtual HTMLElement* innerSpinButtonElement() const { return nullptr; }
+    virtual HTMLElement* capsLockIndicatorElement() const { return nullptr; }
+    virtual HTMLElement* autoFillButtonElement() const { return nullptr; }
     virtual HTMLElement* resultsButtonElement() const { return nullptr; }
     virtual HTMLElement* cancelButtonElement() const { return nullptr; }
     virtual HTMLElement* sliderThumbElement() const { return nullptr; }
     virtual HTMLElement* sliderTrackElement() const { return nullptr; }
     virtual HTMLElement* placeholderElement() const;
 
-#if ENABLE(INPUT_SPEECH)
-    virtual HTMLElement* speechButtonElement() const { return nullptr; }
-#endif
-
     // Miscellaneous functions
-
     virtual bool rendererIsNeeded();
-    virtual RenderPtr<RenderElement> createInputRenderer(PassRef<RenderStyle>);
+    virtual RenderPtr<RenderElement> createInputRenderer(Ref<RenderStyle>&&);
     virtual void addSearchResult();
     virtual void attach();
     virtual void detach();
@@ -245,6 +242,7 @@ public:
     virtual void stepAttributeChanged();
     virtual void altAttributeChanged();
     virtual void srcAttributeChanged();
+    virtual void maxResultsAttributeChanged();
     virtual bool shouldRespectAlignAttribute();
     virtual FileList* files();
     virtual void setFiles(PassRefPtr<FileList>);
@@ -257,15 +255,12 @@ public:
     virtual String displayString() const;
 #endif
 
-    // Should return true if the corresponding renderer for a type can display a suggested value.
-    virtual bool canSetSuggestedValue();
     virtual bool shouldSendChangeEventAfterCheckedChanged();
     virtual bool canSetValue(const String&);
     virtual bool storesValueSeparateFromAttribute();
     virtual void setValue(const String&, bool valueChanged, TextFieldEventBehavior);
     virtual bool shouldResetOnDocumentActivation();
     virtual bool shouldRespectListAttribute();
-    virtual bool shouldRespectSpeechAttribute();
     virtual bool isEnumeratable();
     virtual bool isCheckable();
     virtual bool isSteppable() const;
@@ -279,9 +274,9 @@ public:
     virtual void disabledAttributeChanged();
     virtual void readonlyAttributeChanged();
     virtual void requiredAttributeChanged();
-    virtual void valueAttributeChanged();
+    virtual void capsLockStateMayHaveChanged();
+    virtual void updateAutoFillButton();
     virtual String defaultToolTip() const;
-    virtual void updateClearButtonVisibility();
 
 #if ENABLE(DATALIST_ELEMENT)
     virtual void listAttributeTargetChanged();
@@ -325,7 +320,6 @@ protected:
     HTMLInputElement& element() const { return m_element; }
     Chrome* chrome() const;
     Decimal parseToNumberOrNaN(const String&) const;
-    void observeFeatureIfVisible(FeatureObserver::Feature) const;
 
 private:
     // Helper for stepUp()/stepDown(). Adds step value * count to the current value.

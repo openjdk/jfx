@@ -44,7 +44,10 @@ enum Attribute {
     Accessor          = 1 << 5,  // property is a getter/setter
     CustomAccessor    = 1 << 6,
     Builtin           = 1 << 7, // property is a builtin function - only used by static hashtables
+    ConstantInteger   = 1 << 8, // property is a constant integer - only used by static hashtables
     BuiltinOrFunction = Builtin | Function, // helper only used by static hashtables
+    BuiltinOrFunctionOrAccessor = Builtin | Function | Accessor, // helper only used by static hashtables
+    BuiltinOrFunctionOrAccessorOrConstant = Builtin | Function | Accessor | ConstantInteger, // helper only used by static hashtables
 };
 
 class PropertySlot {
@@ -52,8 +55,12 @@ class PropertySlot {
         TypeUnset,
         TypeValue,
         TypeGetter,
-        TypeCustom,
-        TypeCustomIndex
+        TypeCustom
+    };
+
+    enum CacheabilityType {
+        CachingDisallowed,
+        CachingAllowed
     };
 
 public:
@@ -61,22 +68,29 @@ public:
         : m_propertyType(TypeUnset)
         , m_offset(invalidOffset)
         , m_thisValue(thisValue)
+        , m_watchpointSet(nullptr)
+        , m_cacheability(CachingAllowed)
     {
     }
 
     typedef EncodedJSValue (*GetValueFunc)(ExecState*, JSObject* slotBase, EncodedJSValue thisValue, PropertyName);
-    typedef EncodedJSValue (*GetIndexValueFunc)(ExecState*, JSObject* slotBase, EncodedJSValue thisValue, unsigned);
 
     JSValue getValue(ExecState*, PropertyName) const;
     JSValue getValue(ExecState*, unsigned propertyName) const;
 
-    bool isCacheable() const { return m_offset != invalidOffset; }
+    bool isCacheable() const { return m_cacheability == CachingAllowed && m_offset != invalidOffset; }
+    bool isUnset() const { return m_propertyType == TypeUnset; }
     bool isValue() const { return m_propertyType == TypeValue; }
     bool isAccessor() const { return m_propertyType == TypeGetter; }
     bool isCustom() const { return m_propertyType == TypeCustom; }
     bool isCacheableValue() const { return isCacheable() && isValue(); }
     bool isCacheableGetter() const { return isCacheable() && isAccessor(); }
     bool isCacheableCustom() const { return isCacheable() && isCustom(); }
+
+    void disableCaching()
+    {
+        m_cacheability = CachingDisallowed;
+    }
 
     unsigned attributes() const { return m_attributes; }
 
@@ -104,9 +118,13 @@ public:
         return m_slotBase;
     }
 
+    WatchpointSet* watchpointSet() const
+    {
+        return m_watchpointSet;
+    }
+
     void setValue(JSObject* slotBase, unsigned attributes, JSValue value)
     {
-        ASSERT(value);
         m_data.value = JSValue::encode(value);
         m_attributes = attributes;
 
@@ -163,19 +181,6 @@ public:
         m_offset = !invalidOffset;
     }
 
-    void setCustomIndex(JSObject* slotBase, unsigned attributes, unsigned index, GetIndexValueFunc getIndexValue)
-    {
-        ASSERT(getIndexValue);
-        m_data.customIndex.getIndexValue = getIndexValue;
-        m_data.customIndex.index = index;
-        m_attributes = attributes;
-
-        ASSERT(slotBase);
-        m_slotBase = slotBase;
-        m_propertyType = TypeCustomIndex;
-        m_offset = invalidOffset;
-    }
-
     void setGetterSlot(JSObject* slotBase, unsigned attributes, GetterSetter* getterSetter)
     {
         ASSERT(getterSetter);
@@ -200,6 +205,11 @@ public:
         m_offset = offset;
     }
 
+    void setThisValue(JSValue thisValue)
+    {
+        m_thisValue = thisValue;
+    }
+
     void setUndefined()
     {
         m_data.value = JSValue::encode(jsUndefined());
@@ -208,6 +218,11 @@ public:
         m_slotBase = 0;
         m_propertyType = TypeValue;
         m_offset = invalidOffset;
+    }
+
+    void setWatchpointSet(WatchpointSet& set)
+    {
+        m_watchpointSet = &set;
     }
 
 private:
@@ -222,17 +237,33 @@ private:
         struct {
             GetValueFunc getValue;
         } custom;
-        struct {
-            GetIndexValueFunc getIndexValue;
-            unsigned index;
-        } customIndex;
     } m_data;
 
     PropertyType m_propertyType;
     PropertyOffset m_offset;
-    const JSValue m_thisValue;
+    JSValue m_thisValue;
     JSObject* m_slotBase;
+    WatchpointSet* m_watchpointSet;
+    CacheabilityType m_cacheability;
 };
+
+ALWAYS_INLINE JSValue PropertySlot::getValue(ExecState* exec, PropertyName propertyName) const
+{
+    if (m_propertyType == TypeValue)
+        return JSValue::decode(m_data.value);
+    if (m_propertyType == TypeGetter)
+        return functionGetter(exec);
+    return JSValue::decode(m_data.custom.getValue(exec, slotBase(), JSValue::encode(m_thisValue), propertyName));
+}
+
+ALWAYS_INLINE JSValue PropertySlot::getValue(ExecState* exec, unsigned propertyName) const
+{
+    if (m_propertyType == TypeValue)
+        return JSValue::decode(m_data.value);
+    if (m_propertyType == TypeGetter)
+        return functionGetter(exec);
+    return JSValue::decode(m_data.custom.getValue(exec, slotBase(), JSValue::encode(m_thisValue), Identifier::from(exec, propertyName)));
+}
 
 } // namespace JSC
 

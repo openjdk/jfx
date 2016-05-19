@@ -26,9 +26,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import StringIO
 import logging
 import os
-import StringIO
 
 from webkitpy.common.system.executive import ScriptError
 
@@ -45,6 +45,9 @@ class MockProcess(object):
 
     def wait(self):
         return
+
+    def communicate(self, input=None):
+        return (self.stdout, self.stderr)
 
 # FIXME: This should be unified with MockExecutive2
 class MockExecutive(object):

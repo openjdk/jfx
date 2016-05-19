@@ -21,7 +21,6 @@
 #ifndef AccessibilityProgressIndicator_h
 #define AccessibilityProgressIndicator_h
 
-#if ENABLE(PROGRESS_ELEMENT) || ENABLE(METER_ELEMENT)
 #include "AccessibilityRenderObject.h"
 
 namespace WebCore {
@@ -31,19 +30,16 @@ class HTMLMeterElement;
 class RenderMeter;
 #endif
 
-#if ENABLE(PROGRESS_ELEMENT)
 class HTMLProgressElement;
 class RenderProgress;
-#endif
 
-class AccessibilityProgressIndicator : public AccessibilityRenderObject {
+class AccessibilityProgressIndicator final : public AccessibilityRenderObject {
 public:
-#if ENABLE(PROGRESS_ELEMENT)
-    static PassRefPtr<AccessibilityProgressIndicator> create(RenderProgress*);
-#endif
+    static Ref<AccessibilityProgressIndicator> create(RenderProgress*);
 #if ENABLE(METER_ELEMENT)
-    static PassRefPtr<AccessibilityProgressIndicator> create(RenderMeter*);
+    static Ref<AccessibilityProgressIndicator> create(RenderMeter*);
 #endif
+    virtual Element* element() const override;
 
 private:
     virtual AccessibilityRole roleValue() const override { return ProgressIndicatorRole; }
@@ -54,10 +50,9 @@ private:
     virtual float maxValueForRange() const override;
     virtual float minValueForRange() const override;
 
-#if ENABLE(PROGRESS_ELEMENT)
     explicit AccessibilityProgressIndicator(RenderProgress*);
     HTMLProgressElement* progressElement() const;
-#endif
+
 #if ENABLE(METER_ELEMENT)
     explicit AccessibilityProgressIndicator(RenderMeter*);
     HTMLMeterElement* meterElement() const;
@@ -68,7 +63,5 @@ private:
 
 
 } // namespace WebCore
-
-#endif // ENABLE(PROGRESS_ELEMENT) || ENABLE(METER_ELEMENT)
 
 #endif // AccessibilityProgressIndicator_h

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,11 +32,14 @@
 #include "Editor.h"
 #include "Element.h"
 #include "Frame.h"
+#include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "InsertLineBreakCommand.h"
 #include "InsertParagraphSeparatorCommand.h"
 #include "InsertTextCommand.h"
+#include "MathMLElement.h"
 #include "RenderElement.h"
+#include "TextIterator.h"
 #include "VisibleUnits.h"
 #include "htmlediting.h"
 
@@ -152,7 +155,7 @@ void TypingCommand::insertText(Document& document, const String& text, Options o
     ASSERT(frame);
 
     if (!text.isEmpty())
-        frame->editor().updateMarkersForWordsAffectedByEditing(isSpaceOrNewline(text.deprecatedCharacters()[0]));
+        frame->editor().updateMarkersForWordsAffectedByEditing(isSpaceOrNewline(text[0]));
 
     insertText(document, text, frame->selection().selection(), options, composition);
 }
@@ -371,7 +374,7 @@ void TypingCommand::insertText(const String &text, bool selectInsertedText)
 void TypingCommand::insertTextRunWithoutNewlines(const String &text, bool selectInsertedText)
 {
     RefPtr<InsertTextCommand> command = InsertTextCommand::create(document(), text, selectInsertedText,
-        m_compositionType == TextCompositionNone ? InsertTextCommand::RebalanceLeadingAndTrailingWhitespaces : InsertTextCommand::RebalanceAllWhitespaces);
+        m_compositionType == TextCompositionNone ? InsertTextCommand::RebalanceLeadingAndTrailingWhitespaces : InsertTextCommand::RebalanceAllWhitespaces, EditActionTyping);
 
     applyCommandToComposite(command, endingSelection());
 
@@ -392,7 +395,7 @@ void TypingCommand::insertParagraphSeparator()
     if (!canAppendNewLineFeedToSelection(endingSelection()))
         return;
 
-    applyCommandToComposite(InsertParagraphSeparatorCommand::create(document()));
+    applyCommandToComposite(InsertParagraphSeparatorCommand::create(document(), false, false, EditActionTyping));
     typingAddedToOpenCommand(InsertParagraphSeparator);
 }
 

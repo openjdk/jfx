@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -139,54 +139,13 @@ static const TypeExtensionPair commonMediaTypes[] = {
     { "audio/x-wav", "wav" }
 };
 
-static const char textPlain[] = "text/plain";
-static const char textHtml[] = "text/html";
-static const char imageJpeg[] = "image/jpeg";
-static const char octetStream[] = "application/octet-stream";
-
-// A table of well known MIME types used when we don't want to leak to the
-// caller information about types known to underlying platform.
-static const TypeExtensionPair wellKnownMimeTypes[] = {
-    { textPlain, "txt" },
-    { textPlain, "text" },
-    { textHtml, "html" },
-    { textHtml, "htm" },
-    { "text/css", "css" },
-    { "text/xml", "xml" },
-    { "text/xsl", "xsl" },
-    { "image/gif", "gif" },
-    { "image/png", "png" },
-    { imageJpeg, "jpeg" },
-    { imageJpeg, "jpg" },
-    { imageJpeg, "jfif" },
-    { imageJpeg, "pjpeg" },
-    { "image/webp", "webp" },
-    { "image/bmp", "bmp" },
-    { "application/xhtml+xml", "xhtml" },
-    { "application/x-javascript", "js" },
-    { "application/json", "json" },
-    { octetStream, "exe" },
-    { octetStream, "com" },
-    { octetStream, "bin" },
-    { "application/zip", "zip" },
-    { "application/gzip", "gz" },
-    { "application/pdf", "pdf" },
-    { "application/postscript", "ps" },
-    { "image/x-icon", "ico" },
-    { "image/tiff", "tiff" },
-    { "image/x-xbitmap", "xbm" },
-    { "image/svg+xml", "svg" },
-    { "application/rss+xml", "rss" },
-    { "application/rdf+xml", "rdf" },
-    { "application/x-shockwave-flash", "swf" },
-};
-
 static HashSet<String>* supportedImageResourceMIMETypes;
 static HashSet<String>* supportedImageMIMETypes;
 static HashSet<String>* supportedImageMIMETypesForEncoding;
 static HashSet<String>* supportedJavaScriptMIMETypes;
 static HashSet<String>* supportedNonImageMIMETypes;
 static HashSet<String>* supportedMediaMIMETypes;
+static HashSet<String>* pdfMIMETypes;
 static HashSet<String>* pdfAndPostScriptMIMETypes;
 static HashSet<String>* unsupportedTextMIMETypes;
 
@@ -312,6 +271,9 @@ static void initializeSupportedImageMIMETypesForEncoding()
     supportedImageMIMETypesForEncoding->add("image/png");
     supportedImageMIMETypesForEncoding->add("image/jpeg");
     supportedImageMIMETypesForEncoding->add("image/bmp");
+#elif PLATFORM(EFL)
+    supportedImageMIMETypesForEncoding->add("image/png");
+    supportedImageMIMETypesForEncoding->add("image/jpeg");
 #elif USE(CAIRO)
     supportedImageMIMETypesForEncoding->add("image/png");
 #endif
@@ -343,15 +305,19 @@ static void initializeSupportedJavaScriptMIMETypes()
       supportedJavaScriptMIMETypes->add(types[i]);
 }
 
-static void initializePDFAndPostScriptMIMETypes()
+static void initializePDFMIMETypes()
 {
     const char* const types[] = {
         "application/pdf",
-        "text/pdf",
-        "application/postscript",
+        "text/pdf"
     };
     for (size_t i = 0; i < WTF_ARRAY_LENGTH(types); ++i)
-        pdfAndPostScriptMIMETypes->add(types[i]);
+        pdfMIMETypes->add(types[i]);
+}
+
+static void initializePostScriptMIMETypes()
+{
+    pdfAndPostScriptMIMETypes->add("application/postscript");
 }
 
 static void initializeSupportedNonImageMimeTypes()
@@ -391,7 +357,7 @@ static void initializeSupportedNonImageMimeTypes()
 
 static MediaMIMETypeMap& mediaMIMETypeMap()
 {
-    DEFINE_STATIC_LOCAL(MediaMIMETypeMap, mediaMIMETypeForExtensionMap, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(MediaMIMETypeMap, mediaMIMETypeForExtensionMap, ());
 
     if (!mediaMIMETypeForExtensionMap.isEmpty())
         return mediaMIMETypeForExtensionMap;
@@ -495,31 +461,14 @@ static void initializeMIMETypeRegistry()
     supportedImageMIMETypes = new HashSet<String>;
     initializeSupportedImageMIMETypes();
 
-    pdfAndPostScriptMIMETypes = new HashSet<String>;
-    initializePDFAndPostScriptMIMETypes();
+    pdfMIMETypes = new HashSet<String>;
+    initializePDFMIMETypes();
+
+    pdfAndPostScriptMIMETypes = new HashSet<String>(*pdfMIMETypes);
+    initializePostScriptMIMETypes();
 
     unsupportedTextMIMETypes = new HashSet<String>;
     initializeUnsupportedTextMIMETypes();
-}
-
-static String findMimeType(const TypeExtensionPair* pairs, unsigned numPairs, const String& extension)
-{
-    if (!extension.isEmpty()) {
-      for (unsigned i = 0; i < numPairs; ++i, ++pairs) {
-          if (equalIgnoringCase(extension, pairs->extension))
-              return String(pairs->type);
-      }
-    }
-    return String();
-}
-
-String MIMETypeRegistry::getWellKnownMIMETypeForExtension(const String& extension)
-{
-    // This method must be thread safe and should not consult the OS/registry.
-    String found = findMimeType(wellKnownMimeTypes, sizeof(wellKnownMimeTypes) / sizeof(wellKnownMimeTypes[0]), extension);
-    if (!found.isEmpty())
-        return found;
-    return findMimeType(commonMediaTypes, sizeof(commonMediaTypes) / sizeof(commonMediaTypes[0]), extension);
 }
 
 String MIMETypeRegistry::getMIMETypeForPath(const String& path)
@@ -619,6 +568,15 @@ bool MIMETypeRegistry::isPDFOrPostScriptMIMEType(const String& mimeType)
     return pdfAndPostScriptMIMETypes->contains(mimeType);
 }
 
+bool MIMETypeRegistry::isPDFMIMEType(const String& mimeType)
+{
+    if (mimeType.isEmpty())
+        return false;
+    if (!pdfMIMETypes)
+        initializeMIMETypeRegistry();
+    return pdfMIMETypes->contains(mimeType);
+}
+
 bool MIMETypeRegistry::canShowMIMEType(const String& mimeType)
 {
     if (isSupportedImageMIMEType(mimeType) || isSupportedNonImageMIMEType(mimeType) || isSupportedMediaMIMEType(mimeType))
@@ -665,6 +623,14 @@ HashSet<String>& MIMETypeRegistry::getSupportedMediaMIMETypes()
     return *supportedMediaMIMETypes;
 }
 
+
+HashSet<String>& MIMETypeRegistry::getPDFMIMETypes()
+{
+    if (!pdfMIMETypes)
+        initializeMIMETypeRegistry();
+    return *pdfMIMETypes;
+}
+
 HashSet<String>& MIMETypeRegistry::getPDFAndPostScriptMIMETypes()
 {
     if (!pdfAndPostScriptMIMETypes)
@@ -681,7 +647,7 @@ HashSet<String>& MIMETypeRegistry::getUnsupportedTextMIMETypes()
 
 const String& defaultMIMEType()
 {
-    DEFINE_STATIC_LOCAL(const String, defaultMIMEType, (ASCIILiteral("application/octet-stream")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, defaultMIMEType, (ASCIILiteral("application/octet-stream")));
     return defaultMIMEType;
 }
 

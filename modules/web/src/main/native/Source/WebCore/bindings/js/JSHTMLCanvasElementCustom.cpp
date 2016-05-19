@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,14 +29,13 @@
 
 #include "CanvasContextAttributes.h"
 #include "HTMLCanvasElement.h"
-#include "InspectorCanvasInstrumentation.h"
 #include "JSCanvasRenderingContext2D.h"
 #include <bindings/ScriptObject.h>
 #include <wtf/GetPtr.h>
 
 #if ENABLE(WEBGL)
 #include "JSDictionary.h"
-#include "JSWebGLRenderingContext.h"
+#include "JSWebGLRenderingContextBase.h"
 #include "WebGLContextAttributes.h"
 #endif
 
@@ -84,20 +83,7 @@ JSValue JSHTMLCanvasElement::getContext(ExecState* exec)
     CanvasRenderingContext* context = canvas.getContext(contextId, attrs.get());
     if (!context)
         return jsNull();
-    JSValue jsValue = toJS(exec, globalObject(), WTF::getPtr(context));
-    if (InspectorInstrumentation::canvasAgentEnabled(&canvas.document())) {
-        Deprecated::ScriptObject contextObject(exec, jsValue.getObject());
-        Deprecated::ScriptObject wrapped;
-        if (context->is2d())
-            wrapped = InspectorInstrumentation::wrapCanvas2DRenderingContextForInstrumentation(&canvas.document(), contextObject);
-#if ENABLE(WEBGL)
-        else if (context->is3d())
-            wrapped = InspectorInstrumentation::wrapWebGLRenderingContextForInstrumentation(&canvas.document(), contextObject);
-#endif
-        if (!wrapped.hasNoValue())
-            return wrapped.jsValue();
-    }
-    return jsValue;
+    return toJS(exec, globalObject(), WTF::getPtr(context));
 }
 
 JSValue JSHTMLCanvasElement::probablySupportsContext(ExecState* exec)

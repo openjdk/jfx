@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,13 +40,15 @@ class RenderStyle;
 // A KeyframeAnimation tracks the state of an explicit animation for a single RenderElement.
 class KeyframeAnimation final : public AnimationBase {
 public:
-    static RefPtr<KeyframeAnimation> create(const Animation& animation, RenderElement* renderer, int index, CompositeAnimation* compositeAnimation, RenderStyle* unanimatedStyle)
+    static Ref<KeyframeAnimation> create(Animation& animation, RenderElement* renderer, int index, CompositeAnimation* compositeAnimation, RenderStyle* unanimatedStyle)
     {
-        return adoptRef(new KeyframeAnimation(animation, renderer, index, compositeAnimation, unanimatedStyle));
+        return adoptRef(*new KeyframeAnimation(animation, renderer, index, compositeAnimation, unanimatedStyle));
     }
 
-    virtual void animate(CompositeAnimation*, RenderElement*, const RenderStyle* currentStyle, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle) override;
+    virtual bool animate(CompositeAnimation*, RenderElement*, const RenderStyle* currentStyle, RenderStyle* targetStyle, RefPtr<RenderStyle>& animatedStyle) override;
     virtual void getAnimatedStyle(RefPtr<RenderStyle>&) override;
+
+    bool computeExtentOfTransformAnimation(LayoutRect&) const override;
 
     const KeyframeList& keyframes() const { return m_keyframes; }
 
@@ -77,27 +79,28 @@ protected:
 
     virtual bool affectsProperty(CSSPropertyID) const override;
 
+    bool computeExtentOfAnimationForMatrixAnimation(const FloatRect& rendererBox, LayoutRect&) const;
+
+    bool computeExtentOfAnimationForMatchingTransformLists(const FloatRect& rendererBox, LayoutRect&) const;
+
     void validateTransformFunctionList();
-#if ENABLE(CSS_FILTERS)
     void checkForMatchingFilterFunctionLists();
+#if ENABLE(FILTERS_LEVEL_2)
+    void checkForMatchingBackdropFilterFunctionLists();
 #endif
 
 private:
-    KeyframeAnimation(const Animation&, RenderElement*, int index, CompositeAnimation*, RenderStyle* unanimatedStyle);
+    KeyframeAnimation(Animation&, RenderElement*, int index, CompositeAnimation*, RenderStyle* unanimatedStyle);
     virtual ~KeyframeAnimation();
 
     // Get the styles for the given property surrounding the current animation time and the progress between them.
     void fetchIntervalEndpointsForProperty(CSSPropertyID, const RenderStyle*& fromStyle, const RenderStyle*& toStyle, double& progress) const;
 
-    // The keyframes that we are blending.
     KeyframeList m_keyframes;
+    RefPtr<RenderStyle> m_unanimatedStyle; // The style just before we started animation
 
-    // The order in which this animation appears in the animation-name style.
-    int m_index;
-    bool m_startEventDispatched;
-
-    // The style just before we started animation
-    RefPtr<RenderStyle> m_unanimatedStyle;
+    int m_index; // The order in which this animation appears in the animation-name style.
+    bool m_startEventDispatched { false };
 };
 
 } // namespace WebCore

@@ -43,7 +43,7 @@ using namespace JSC;
 
 namespace WebCore {
 
-EncodedJSValue JSC_HOST_CALL JSMutationObserverConstructor::constructJSMutationObserver(ExecState* exec)
+EncodedJSValue JSC_HOST_CALL constructJSMutationObserver(ExecState* exec)
 {
     if (exec->argumentCount() < 1)
         return throwVMError(exec, createNotEnoughArgumentsError(exec));
@@ -53,7 +53,7 @@ EncodedJSValue JSC_HOST_CALL JSMutationObserverConstructor::constructJSMutationO
     if (!object || object->methodTable()->getCallData(object, callData) == CallTypeNone)
         return throwVMError(exec, createTypeError(exec, "Callback argument must be a function"));
 
-    JSMutationObserverConstructor* jsConstructor = jsCast<JSMutationObserverConstructor*>(exec->callee());
+    DOMConstructorObject* jsConstructor = jsCast<DOMConstructorObject*>(exec->callee());
     RefPtr<JSMutationCallback> callback = JSMutationCallback::create(object, jsConstructor->globalObject());
     JSObject* jsObserver = asObject(toJS(exec, jsConstructor->globalObject(), MutationObserver::create(callback.release())));
     PrivateName propertyName;
@@ -63,7 +63,7 @@ EncodedJSValue JSC_HOST_CALL JSMutationObserverConstructor::constructJSMutationO
 
 bool JSMutationObserverOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor)
 {
-    MutationObserver& observer = jsCast<JSMutationObserver*>(handle.get().asCell())->impl();
+    MutationObserver& observer = jsCast<JSMutationObserver*>(handle.slot()->asCell())->impl();
     auto observedNodes = observer.getObservedNodes();
     for (auto it = observedNodes.begin(), end = observedNodes.end(); it != end; ++it) {
         if (visitor.containsOpaqueRoot(root(*it)))

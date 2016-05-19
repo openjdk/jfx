@@ -25,12 +25,12 @@
 #define StyleImage_h
 
 #include "CSSValue.h"
+#include "FloatSize.h"
 #include "Image.h"
-#include "IntSize.h"
-#include "LayoutSize.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
@@ -55,15 +55,15 @@ public:
     virtual bool canRender(const RenderObject*, float /*multiplier*/) const { return true; }
     virtual bool isLoaded() const { return true; }
     virtual bool errorOccurred() const { return false; }
-    virtual LayoutSize imageSize(const RenderElement*, float multiplier) const = 0;
+    virtual FloatSize imageSize(const RenderElement*, float multiplier) const = 0;
     virtual void computeIntrinsicDimensions(const RenderElement*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) = 0;
     virtual bool imageHasRelativeWidth() const = 0;
     virtual bool imageHasRelativeHeight() const = 0;
     virtual bool usesImageContainerSize() const = 0;
-    virtual void setContainerSizeForRenderer(const RenderElement*, const IntSize&, float) = 0;
+    virtual void setContainerSizeForRenderer(const RenderElement*, const FloatSize&, float) = 0;
     virtual void addClient(RenderElement*) = 0;
     virtual void removeClient(RenderElement*) = 0;
-    virtual PassRefPtr<Image> image(RenderElement*, const IntSize&) const = 0;
+    virtual PassRefPtr<Image> image(RenderElement*, const FloatSize&) const = 0;
     virtual WrappedImagePtr data() const = 0;
     virtual float imageScaleFactor() const { return 1; }
     virtual bool knownToBeOpaque(const RenderElement*) const = 0;
@@ -93,8 +93,11 @@ protected:
     bool m_isCachedImageSet : 1;
 };
 
-#define STYLE_IMAGE_TYPE_CASTS(ToClassName, FromClassName, predicate) \
-    TYPE_CASTS_BASE(ToClassName, FromClassName, styleImage, styleImage->predicate(), styleImage.predicate())
+} // namespace WebCore
 
-}
-#endif
+#define SPECIALIZE_TYPE_TRAITS_STYLE_IMAGE(ToClassName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToClassName) \
+    static bool isType(const WebCore::StyleImage& image) { return image.predicate(); } \
+SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // StyleImage_h

@@ -30,10 +30,10 @@
 #include "ParserModes.h"
 #include "SourceCode.h"
 #include "Strong.h"
+#include "VariableEnvironment.h"
 #include "WeakRandom.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/Forward.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RandomNumber.h>
 #include <wtf/text/WTFString.h>
 
@@ -43,6 +43,7 @@ class EvalExecutable;
 class FunctionBodyNode;
 class Identifier;
 class JSScope;
+class ParserError;
 class ProgramExecutable;
 class UnlinkedCodeBlock;
 class UnlinkedEvalCodeBlock;
@@ -50,7 +51,6 @@ class UnlinkedFunctionCodeBlock;
 class UnlinkedFunctionExecutable;
 class UnlinkedProgramCodeBlock;
 class VM;
-struct ParserError;
 class SourceCode;
 class SourceProvider;
 
@@ -62,10 +62,15 @@ public:
     {
     }
 
-    SourceCodeKey(const SourceCode& sourceCode, const String& name, CodeType codeType, JSParserStrictness jsParserStrictness)
+    SourceCodeKey(const SourceCode& sourceCode, const String& name, CodeType codeType, JSParserBuiltinMode builtinMode,
+        JSParserStrictMode strictMode, ThisTDZMode thisTDZMode = ThisTDZMode::CheckIfNeeded)
         : m_sourceCode(sourceCode)
         , m_name(name)
-        , m_flags((codeType << 1) | jsParserStrictness)
+        , m_flags(
+            (static_cast<unsigned>(codeType) << 3)
+            | (static_cast<unsigned>(builtinMode) << 2)
+            | (static_cast<unsigned>(strictMode) << 1)
+            | static_cast<unsigned>(thisTDZMode))
         , m_hash(string().impl()->hash())
     {
     }
@@ -145,18 +150,15 @@ public:
     {
     }
 
-    AddResult add(const SourceCodeKey& key, const SourceCodeValue& value)
+    SourceCodeValue* findCacheAndUpdateAge(const SourceCodeKey& key)
     {
         prune();
 
-        AddResult addResult = m_map.add(key, value);
-        if (addResult.isNewEntry) {
-            m_size += key.length();
-            m_age += key.length();
-            return addResult;
-        }
+        iterator findResult = m_map.find(key);
+        if (findResult == m_map.end())
+            return nullptr;
 
-        int64_t age = m_age - addResult.iterator->value.age;
+        int64_t age = m_age - findResult->value.age;
         if (age > m_capacity) {
             // A requested object is older than the cache's capacity. We can
             // infer that requested objects are subject to high eviction probability,
@@ -171,7 +173,20 @@ public:
                 m_capacity = m_minCapacity;
         }
 
-        addResult.iterator->value.age = m_age;
+        findResult->value.age = m_age;
+        m_age += key.length();
+
+        return &findResult->value;
+    }
+
+    AddResult addCache(const SourceCodeKey& key, const SourceCodeValue& value)
+    {
+        prune();
+
+        AddResult addResult = m_map.add(key, value);
+        ASSERT(addResult.isNewEntry);
+
+        m_size += key.length();
         m_age += key.length();
         return addResult;
     }
@@ -235,13 +250,14 @@ private:
 
 // Caches top-level code such as <script>, eval(), new Function, and JSEvaluateScript().
 class CodeCache {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<CodeCache> create() { return adoptPtr(new CodeCache); }
-
-    UnlinkedProgramCodeBlock* getProgramCodeBlock(VM&, ProgramExecutable*, const SourceCode&, JSParserStrictness, DebuggerMode, ProfilerMode, ParserError&);
-    UnlinkedEvalCodeBlock* getEvalCodeBlock(VM&, EvalExecutable*, const SourceCode&, JSParserStrictness, DebuggerMode, ProfilerMode, ParserError&);
-    UnlinkedFunctionExecutable* getFunctionExecutableFromGlobalCode(VM&, const Identifier&, const SourceCode&, ParserError&);
+    CodeCache();
     ~CodeCache();
+
+    UnlinkedProgramCodeBlock* getProgramCodeBlock(VM&, ProgramExecutable*, const SourceCode&, JSParserBuiltinMode, JSParserStrictMode, DebuggerMode, ProfilerMode, ParserError&);
+    UnlinkedEvalCodeBlock* getEvalCodeBlock(VM&, EvalExecutable*, const SourceCode&, JSParserBuiltinMode, JSParserStrictMode, ThisTDZMode, DebuggerMode, ProfilerMode, ParserError&, const VariableEnvironment*);
+    UnlinkedFunctionExecutable* getFunctionExecutableFromGlobalCode(VM&, const Identifier&, const SourceCode&, ParserError&);
 
     void clear()
     {
@@ -249,10 +265,8 @@ public:
     }
 
 private:
-    CodeCache();
-
     template <class UnlinkedCodeBlockType, class ExecutableType>
-    UnlinkedCodeBlockType* getGlobalCodeBlock(VM&, ExecutableType*, const SourceCode&, JSParserStrictness, DebuggerMode, ProfilerMode, ParserError&);
+    UnlinkedCodeBlockType* getGlobalCodeBlock(VM&, ExecutableType*, const SourceCode&, JSParserBuiltinMode, JSParserStrictMode, ThisTDZMode, DebuggerMode, ProfilerMode, ParserError&, const VariableEnvironment*);
 
     CodeCacheMap m_sourceCode;
 };

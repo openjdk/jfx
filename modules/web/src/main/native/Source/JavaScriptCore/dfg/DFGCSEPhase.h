@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #ifndef DFGCSEPhase_h
 #define DFGCSEPhase_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "DFGCommon.h"
@@ -36,14 +34,20 @@ namespace JSC { namespace DFG {
 
 class Graph;
 
-// Block-local common subexpression elimination. This is an optional phase, but
-// it is rather profitable. It has fairly accurate heap modeling and will match
-// a wide range of subexpression similarities. It's known to produce big wins
-// on a few benchmarks, and is relatively cheap to run.
-bool performCSE(Graph&);
+// Block-local common subexpression elimination. It uses clobberize() for heap
+// modeling, which is quite precise. This phase is known to produce big wins on
+// a few benchmarks, and is relatively cheap to run.
+//
+// Note that this phase also gets rid of Identity nodes, which means that it's
+// currently not an optional phase. Basically, DFG IR doesn't have use-lists,
+// so there is no instantaneous replaceAllUsesWith operation. Instead, you turn
+// a node into an Identity and wait for CSE to clean it up.
+bool performLocalCSE(Graph&);
 
-// Perform just block-local store elimination.
-bool performStoreElimination(Graph&);
+// Same, but global. Only works for SSA. This will find common subexpressions
+// both in the same block and in any block that dominates the current block. It
+// has no limits on how far it will look for load-elimination opportunities.
+bool performGlobalCSE(Graph&);
 
 } } // namespace JSC::DFG
 

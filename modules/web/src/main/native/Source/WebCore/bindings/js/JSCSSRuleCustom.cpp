@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,6 +29,8 @@
 #include "CSSCharsetRule.h"
 #include "CSSFontFaceRule.h"
 #include "CSSImportRule.h"
+#include "CSSKeyframeRule.h"
+#include "CSSKeyframesRule.h"
 #include "CSSMediaRule.h"
 #include "CSSPageRule.h"
 #include "CSSStyleRule.h"
@@ -36,18 +38,16 @@
 #include "JSCSSCharsetRule.h"
 #include "JSCSSFontFaceRule.h"
 #include "JSCSSImportRule.h"
+#include "JSCSSKeyframeRule.h"
+#include "JSCSSKeyframesRule.h"
 #include "JSCSSMediaRule.h"
 #include "JSCSSPageRule.h"
 #include "JSCSSStyleRule.h"
 #include "JSCSSSupportsRule.h"
 #include "JSNode.h"
 #include "JSStyleSheetCustom.h"
-#include "JSWebKitCSSKeyframeRule.h"
-#include "JSWebKitCSSKeyframesRule.h"
 #include "JSWebKitCSSRegionRule.h"
 #include "JSWebKitCSSViewportRule.h"
-#include "WebKitCSSKeyframeRule.h"
-#include "WebKitCSSKeyframesRule.h"
 #include "WebKitCSSRegionRule.h"
 #include "WebKitCSSViewportRule.h"
 
@@ -55,67 +55,60 @@ using namespace JSC;
 
 namespace WebCore {
 
-void JSCSSRule::visitChildren(JSCell* cell, SlotVisitor& visitor)
+void JSCSSRule::visitAdditionalChildren(SlotVisitor& visitor)
 {
-    JSCSSRule* thisObject = jsCast<JSCSSRule*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-    Base::visitChildren(thisObject, visitor);
-    visitor.addOpaqueRoot(root(&thisObject->impl()));
+    visitor.addOpaqueRoot(root(&impl()));
 }
 
-JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, CSSRule* rule)
+JSValue toJS(ExecState*, JSDOMGlobalObject* globalObject, CSSRule* rule)
 {
     if (!rule)
         return jsNull();
 
-    JSObject* wrapper = getCachedWrapper(currentWorld(exec), rule);
+    JSObject* wrapper = getCachedWrapper(globalObject->world(), rule);
     if (wrapper)
         return wrapper;
 
     switch (rule->type()) {
         case CSSRule::STYLE_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, CSSStyleRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSStyleRule, rule);
             break;
         case CSSRule::MEDIA_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, CSSMediaRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSMediaRule, rule);
             break;
         case CSSRule::FONT_FACE_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, CSSFontFaceRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSFontFaceRule, rule);
             break;
         case CSSRule::PAGE_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, CSSPageRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSPageRule, rule);
             break;
         case CSSRule::IMPORT_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, CSSImportRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSImportRule, rule);
             break;
         case CSSRule::CHARSET_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, CSSCharsetRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSCharsetRule, rule);
             break;
-        case CSSRule::WEBKIT_KEYFRAME_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, WebKitCSSKeyframeRule, rule);
+        case CSSRule::KEYFRAME_RULE:
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSKeyframeRule, rule);
             break;
-        case CSSRule::WEBKIT_KEYFRAMES_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, WebKitCSSKeyframesRule, rule);
+        case CSSRule::KEYFRAMES_RULE:
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSKeyframesRule, rule);
             break;
-#if ENABLE(CSS3_CONDITIONAL_RULES)
         case CSSRule::SUPPORTS_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, CSSSupportsRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSSupportsRule, rule);
             break;
-#endif
 #if ENABLE(CSS_DEVICE_ADAPTATION)
         case CSSRule::WEBKIT_VIEWPORT_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, WebKitCSSViewportRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, WebKitCSSViewportRule, rule);
             break;
 #endif
 #if ENABLE(CSS_REGIONS)
         case CSSRule::WEBKIT_REGION_RULE:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, WebKitCSSRegionRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, WebKitCSSRegionRule, rule);
             break;
 #endif
         default:
-            wrapper = CREATE_DOM_WRAPPER(exec, globalObject, CSSRule, rule);
+            wrapper = CREATE_DOM_WRAPPER(globalObject, CSSRule, rule);
     }
 
     return wrapper;

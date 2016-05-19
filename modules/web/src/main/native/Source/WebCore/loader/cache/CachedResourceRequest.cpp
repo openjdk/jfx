@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY GOOGLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-CachedResourceRequest::CachedResourceRequest(const ResourceRequest& resourceRequest, const String& charset, ResourceLoadPriority priority)
+CachedResourceRequest::CachedResourceRequest(const ResourceRequest& resourceRequest, const String& charset, Optional<ResourceLoadPriority> priority)
     : m_resourceRequest(resourceRequest)
     , m_charset(charset)
     , m_options(CachedResourceLoader::defaultCachedResourceOptions())
@@ -45,13 +45,12 @@ CachedResourceRequest::CachedResourceRequest(const ResourceRequest& resourceRequ
 CachedResourceRequest::CachedResourceRequest(const ResourceRequest& resourceRequest, const ResourceLoaderOptions& options)
     : m_resourceRequest(resourceRequest)
     , m_options(options)
-    , m_priority(ResourceLoadPriorityUnresolved)
     , m_forPreload(false)
     , m_defer(NoDefer)
 {
 }
 
-CachedResourceRequest::CachedResourceRequest(const ResourceRequest& resourceRequest, ResourceLoadPriority priority)
+CachedResourceRequest::CachedResourceRequest(const ResourceRequest& resourceRequest, Optional<ResourceLoadPriority> priority)
     : m_resourceRequest(resourceRequest)
     , m_options(CachedResourceLoader::defaultCachedResourceOptions())
     , m_priority(priority)
@@ -76,6 +75,11 @@ void CachedResourceRequest::setInitiator(const AtomicString& name)
     m_initiatorName = name;
 }
 
+void CachedResourceRequest::setInitiator(DocumentLoader& documentLoader)
+{
+    m_initiatingDocumentLoader = &documentLoader;
+}
+
 const AtomicString& CachedResourceRequest::initiatorName() const
 {
     if (m_initiatorElement)
@@ -83,7 +87,7 @@ const AtomicString& CachedResourceRequest::initiatorName() const
     if (!m_initiatorName.isEmpty())
         return m_initiatorName;
 
-    DEFINE_STATIC_LOCAL(AtomicString, defaultName, ("resource", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, defaultName, ("resource", AtomicString::ConstructFromLiteral));
     return defaultName;
 }
 

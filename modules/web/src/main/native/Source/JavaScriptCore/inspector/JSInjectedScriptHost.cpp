@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,26 +26,38 @@
 #include "config.h"
 #include "JSInjectedScriptHost.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "DateInstance.h"
+#include "DirectArguments.h"
 #include "Error.h"
 #include "InjectedScriptHost.h"
+#include "IteratorOperations.h"
 #include "JSArray.h"
+#include "JSArrayIterator.h"
+#include "JSBoundFunction.h"
+#include "JSCInlines.h"
 #include "JSFunction.h"
 #include "JSInjectedScriptHostPrototype.h"
+#include "JSMap.h"
+#include "JSMapIterator.h"
+#include "JSPromise.h"
+#include "JSSet.h"
+#include "JSSetIterator.h"
+#include "JSStringIterator.h"
 #include "JSTypedArrays.h"
+#include "JSWeakMap.h"
+#include "JSWeakSet.h"
 #include "ObjectConstructor.h"
-#include "JSCInlines.h"
 #include "RegExpObject.h"
+#include "ScopedArguments.h"
 #include "SourceCode.h"
 #include "TypedArrayInlines.h"
+#include "WeakMapData.h"
 
 using namespace JSC;
 
 namespace Inspector {
 
-const ClassInfo JSInjectedScriptHost::s_info = { "InjectedScriptHost", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSInjectedScriptHost) };
+const ClassInfo JSInjectedScriptHost::s_info = { "InjectedScriptHost", &Base::s_info, 0, CREATE_METHOD_TABLE(JSInjectedScriptHost) };
 
 JSInjectedScriptHost::JSInjectedScriptHost(VM& vm, Structure* structure, PassRefPtr<InjectedScriptHost> impl)
     : JSDestructibleObject(vm, structure)
@@ -72,10 +84,8 @@ void JSInjectedScriptHost::destroy(JSC::JSCell* cell)
 
 void JSInjectedScriptHost::releaseImpl()
 {
-    if (m_impl) {
-        m_impl->deref();
-        m_impl = nullptr;
-    }
+    if (auto impl = std::exchange(m_impl, nullptr))
+        impl->deref();
 }
 
 JSInjectedScriptHost::~JSInjectedScriptHost()
@@ -94,9 +104,8 @@ JSValue JSInjectedScriptHost::internalConstructorName(ExecState* exec)
     if (exec->argumentCount() < 1)
         return jsUndefined();
 
-    JSObject* thisObject = jsCast<JSObject*>(exec->uncheckedArgument(0).toThis(exec, NotStrictMode));
-    String result = thisObject->methodTable()->className(thisObject);
-    return jsString(exec, result);
+    JSObject* object = jsCast<JSObject*>(exec->uncheckedArgument(0).toThis(exec, NotStrictMode));
+    return jsString(exec, JSObject::calculatedClassName(object));
 }
 
 JSValue JSInjectedScriptHost::isHTMLAllCollection(ExecState* exec)
@@ -108,7 +117,7 @@ JSValue JSInjectedScriptHost::isHTMLAllCollection(ExecState* exec)
     return jsBoolean(impl().isHTMLAllCollection(value));
 }
 
-JSValue JSInjectedScriptHost::type(ExecState* exec)
+JSValue JSInjectedScriptHost::subtype(ExecState* exec)
 {
     if (exec->argumentCount() < 1)
         return jsUndefined();
@@ -120,13 +129,45 @@ JSValue JSInjectedScriptHost::type(ExecState* exec)
         return exec->vm().smallStrings.booleanString();
     if (value.isNumber())
         return exec->vm().smallStrings.numberString();
+    if (value.isSymbol())
+        return exec->vm().smallStrings.symbolString();
+
+    JSObject* object = asObject(value);
+    if (object) {
+        if (object->isErrorInstance())
+            return jsNontrivialString(exec, ASCIILiteral("error"));
+
+        // Consider class constructor functions class objects.
+        JSFunction* function = jsDynamicCast<JSFunction*>(value);
+        if (function && function->isClassConstructorFunction())
+            return jsNontrivialString(exec, ASCIILiteral("class"));
+    }
 
     if (value.inherits(JSArray::info()))
         return jsNontrivialString(exec, ASCIILiteral("array"));
+    if (value.inherits(DirectArguments::info()) || value.inherits(ScopedArguments::info()))
+        return jsNontrivialString(exec, ASCIILiteral("array"));
+
     if (value.inherits(DateInstance::info()))
         return jsNontrivialString(exec, ASCIILiteral("date"));
     if (value.inherits(RegExpObject::info()))
         return jsNontrivialString(exec, ASCIILiteral("regexp"));
+
+    if (value.inherits(JSMap::info()))
+        return jsNontrivialString(exec, ASCIILiteral("map"));
+    if (value.inherits(JSSet::info()))
+        return jsNontrivialString(exec, ASCIILiteral("set"));
+    if (value.inherits(JSWeakMap::info()))
+        return jsNontrivialString(exec, ASCIILiteral("weakmap"));
+    if (value.inherits(JSWeakSet::info()))
+        return jsNontrivialString(exec, ASCIILiteral("weakset"));
+
+    if (value.inherits(JSArrayIterator::info())
+        || value.inherits(JSMapIterator::info())
+        || value.inherits(JSSetIterator::info())
+        || value.inherits(JSStringIterator::info()))
+        return jsNontrivialString(exec, ASCIILiteral("iterator"));
+
     if (value.inherits(JSInt8Array::info()) || value.inherits(JSInt16Array::info()) || value.inherits(JSInt32Array::info()))
         return jsNontrivialString(exec, ASCIILiteral("array"));
     if (value.inherits(JSUint8Array::info()) || value.inherits(JSUint16Array::info()) || value.inherits(JSUint32Array::info()))
@@ -134,7 +175,7 @@ JSValue JSInjectedScriptHost::type(ExecState* exec)
     if (value.inherits(JSFloat32Array::info()) || value.inherits(JSFloat64Array::info()))
         return jsNontrivialString(exec, ASCIILiteral("array"));
 
-    return impl().type(exec, value);
+    return impl().subtype(exec, value);
 }
 
 JSValue JSInjectedScriptHost::functionDetails(ExecState* exec)
@@ -146,30 +187,37 @@ JSValue JSInjectedScriptHost::functionDetails(ExecState* exec)
     if (!value.asCell()->inherits(JSFunction::info()))
         return jsUndefined();
 
+    // FIXME: This should provide better details for JSBoundFunctions.
+
     JSFunction* function = jsCast<JSFunction*>(value);
     const SourceCode* sourceCode = function->sourceCode();
     if (!sourceCode)
         return jsUndefined();
 
+    // In the inspector protocol all positions are 0-based while in SourceCode they are 1-based
     int lineNumber = sourceCode->firstLine();
     if (lineNumber)
-        lineNumber -= 1; // In the inspector protocol all positions are 0-based while in SourceCode they are 1-based
+        lineNumber -= 1;
+    int columnNumber = sourceCode->startColumn();
+    if (columnNumber)
+        columnNumber -= 1;
 
     String scriptID = String::number(sourceCode->provider()->asID());
     JSObject* location = constructEmptyObject(exec);
-    location->putDirect(exec->vm(), Identifier(exec, "lineNumber"), jsNumber(lineNumber));
-    location->putDirect(exec->vm(), Identifier(exec, "scriptId"), jsString(exec, scriptID));
+    location->putDirect(exec->vm(), Identifier::fromString(exec, "scriptId"), jsString(exec, scriptID));
+    location->putDirect(exec->vm(), Identifier::fromString(exec, "lineNumber"), jsNumber(lineNumber));
+    location->putDirect(exec->vm(), Identifier::fromString(exec, "columnNumber"), jsNumber(columnNumber));
 
     JSObject* result = constructEmptyObject(exec);
-    result->putDirect(exec->vm(), Identifier(exec, "location"), location);
+    result->putDirect(exec->vm(), Identifier::fromString(exec, "location"), location);
 
     String name = function->name(exec);
     if (!name.isEmpty())
-        result->putDirect(exec->vm(), Identifier(exec, "name"), jsString(exec, name));
+        result->putDirect(exec->vm(), Identifier::fromString(exec, "name"), jsString(exec, name));
 
     String displayName = function->displayName(exec);
     if (!displayName.isEmpty())
-        result->putDirect(exec->vm(), Identifier(exec, "displayName"), jsString(exec, displayName));
+        result->putDirect(exec->vm(), Identifier::fromString(exec, "displayName"), jsString(exec, displayName));
 
     // FIXME: provide function scope data in "scopesRaw" property when JSC supports it.
     // <https://webkit.org/b/87192> [JSC] expose function (closure) inner context to debugger
@@ -177,10 +225,252 @@ JSValue JSInjectedScriptHost::functionDetails(ExecState* exec)
     return result;
 }
 
-JSValue JSInjectedScriptHost::getInternalProperties(ExecState*)
+static JSObject* constructInternalProperty(ExecState* exec, const String& name, JSValue value)
 {
-    // FIXME: <https://webkit.org/b/94533> [JSC] expose object inner properties to debugger
+    JSObject* result = constructEmptyObject(exec);
+    result->putDirect(exec->vm(), Identifier::fromString(exec, "name"), jsString(exec, name));
+    result->putDirect(exec->vm(), Identifier::fromString(exec, "value"), value);
+    return result;
+}
+
+JSValue JSInjectedScriptHost::getInternalProperties(ExecState* exec)
+{
+    if (exec->argumentCount() < 1)
+        return jsUndefined();
+
+    JSValue value = exec->uncheckedArgument(0);
+
+    if (JSPromise* promise = jsDynamicCast<JSPromise*>(value)) {
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(exec, nullptr);
+        switch (promise->status(exec->vm())) {
+        case JSPromise::Status::Pending:
+            array->putDirectIndex(exec, index++, constructInternalProperty(exec, ASCIILiteral("status"), jsNontrivialString(exec, ASCIILiteral("pending"))));
+            break;
+        case JSPromise::Status::Fulfilled:
+            array->putDirectIndex(exec, index++, constructInternalProperty(exec, ASCIILiteral("status"), jsNontrivialString(exec, ASCIILiteral("resolved"))));
+            array->putDirectIndex(exec, index++, constructInternalProperty(exec, ASCIILiteral("result"), promise->result(exec->vm())));
+            break;
+        case JSPromise::Status::Rejected:
+            array->putDirectIndex(exec, index++, constructInternalProperty(exec, ASCIILiteral("status"), jsNontrivialString(exec, ASCIILiteral("rejected"))));
+            array->putDirectIndex(exec, index++, constructInternalProperty(exec, ASCIILiteral("result"), promise->result(exec->vm())));
+            break;
+        }
+        // FIXME: <https://webkit.org/b/141664> Web Inspector: ES6: Improved Support for Promises - Promise Reactions
+        return array;
+    }
+
+    if (JSBoundFunction* boundFunction = jsDynamicCast<JSBoundFunction*>(value)) {
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(exec, nullptr, 3);
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "targetFunction", boundFunction->targetFunction()));
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "boundThis", boundFunction->boundThis()));
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "boundArgs", boundFunction->boundArgs()));
+        return array;
+    }
+
+    if (JSArrayIterator* arrayIterator = jsDynamicCast<JSArrayIterator*>(value)) {
+        String kind;
+        switch (arrayIterator->kind(exec)) {
+        case ArrayIterateKey:
+            kind = ASCIILiteral("key");
+            break;
+        case ArrayIterateValue:
+            kind = ASCIILiteral("value");
+            break;
+        case ArrayIterateKeyValue:
+            kind = ASCIILiteral("key+value");
+            break;
+        }
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(exec, nullptr, 2);
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "array", arrayIterator->iteratedValue(exec)));
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "kind", jsNontrivialString(exec, kind)));
+        return array;
+    }
+
+    if (JSMapIterator* mapIterator = jsDynamicCast<JSMapIterator*>(value)) {
+        String kind;
+        switch (mapIterator->kind()) {
+        case MapIterateKey:
+            kind = ASCIILiteral("key");
+            break;
+        case MapIterateValue:
+            kind = ASCIILiteral("value");
+            break;
+        case MapIterateKeyValue:
+            kind = ASCIILiteral("key+value");
+            break;
+        }
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(exec, nullptr, 2);
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "map", mapIterator->iteratedValue()));
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "kind", jsNontrivialString(exec, kind)));
+        return array;
+    }
+
+    if (JSSetIterator* setIterator = jsDynamicCast<JSSetIterator*>(value)) {
+        String kind;
+        switch (setIterator->kind()) {
+        case SetIterateKey:
+            kind = ASCIILiteral("key");
+            break;
+        case SetIterateValue:
+            kind = ASCIILiteral("value");
+            break;
+        case SetIterateKeyValue:
+            kind = ASCIILiteral("key+value");
+            break;
+        }
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(exec, nullptr, 2);
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "set", setIterator->iteratedValue()));
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "kind", jsNontrivialString(exec, kind)));
+        return array;
+    }
+
+    if (JSStringIterator* stringIterator = jsDynamicCast<JSStringIterator*>(value)) {
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(exec, nullptr, 1);
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "string", stringIterator->iteratedValue(exec)));
+        return array;
+    }
+
     return jsUndefined();
+}
+
+JSValue JSInjectedScriptHost::weakMapSize(ExecState* exec)
+{
+    if (exec->argumentCount() < 1)
+        return jsUndefined();
+
+    JSValue value = exec->uncheckedArgument(0);
+    JSWeakMap* weakMap = jsDynamicCast<JSWeakMap*>(value);
+    if (!weakMap)
+        return jsUndefined();
+
+    return jsNumber(weakMap->weakMapData()->size());
+}
+
+JSValue JSInjectedScriptHost::weakMapEntries(ExecState* exec)
+{
+    if (exec->argumentCount() < 1)
+        return jsUndefined();
+
+    JSValue value = exec->uncheckedArgument(0);
+    JSWeakMap* weakMap = jsDynamicCast<JSWeakMap*>(value);
+    if (!weakMap)
+        return jsUndefined();
+
+    unsigned fetched = 0;
+    unsigned numberToFetch = 100;
+
+    JSValue numberToFetchArg = exec->argument(1);
+    double fetchDouble = numberToFetchArg.toInteger(exec);
+    if (fetchDouble >= 0)
+        numberToFetch = static_cast<unsigned>(fetchDouble);
+
+    JSArray* array = constructEmptyArray(exec, nullptr);
+    for (auto it = weakMap->weakMapData()->begin(); it != weakMap->weakMapData()->end(); ++it) {
+        JSObject* entry = constructEmptyObject(exec);
+        entry->putDirect(exec->vm(), Identifier::fromString(exec, "key"), it->key);
+        entry->putDirect(exec->vm(), Identifier::fromString(exec, "value"), it->value.get());
+        array->putDirectIndex(exec, fetched++, entry);
+        if (numberToFetch && fetched >= numberToFetch)
+            break;
+    }
+
+    return array;
+}
+
+JSValue JSInjectedScriptHost::weakSetSize(ExecState* exec)
+{
+    if (exec->argumentCount() < 1)
+        return jsUndefined();
+
+    JSValue value = exec->uncheckedArgument(0);
+    JSWeakSet* weakSet = jsDynamicCast<JSWeakSet*>(value);
+    if (!weakSet)
+        return jsUndefined();
+
+    return jsNumber(weakSet->weakMapData()->size());
+}
+
+JSValue JSInjectedScriptHost::weakSetEntries(ExecState* exec)
+{
+    if (exec->argumentCount() < 1)
+        return jsUndefined();
+
+    JSValue value = exec->uncheckedArgument(0);
+    JSWeakSet* weakSet = jsDynamicCast<JSWeakSet*>(value);
+    if (!weakSet)
+        return jsUndefined();
+
+    unsigned fetched = 0;
+    unsigned numberToFetch = 100;
+
+    JSValue numberToFetchArg = exec->argument(1);
+    double fetchDouble = numberToFetchArg.toInteger(exec);
+    if (fetchDouble >= 0)
+        numberToFetch = static_cast<unsigned>(fetchDouble);
+
+    JSArray* array = constructEmptyArray(exec, nullptr);
+    for (auto it = weakSet->weakMapData()->begin(); it != weakSet->weakMapData()->end(); ++it) {
+        JSObject* entry = constructEmptyObject(exec);
+        entry->putDirect(exec->vm(), Identifier::fromString(exec, "value"), it->key);
+        array->putDirectIndex(exec, fetched++, entry);
+        if (numberToFetch && fetched >= numberToFetch)
+            break;
+    }
+
+    return array;
+}
+
+JSValue JSInjectedScriptHost::iteratorEntries(ExecState* exec)
+{
+    if (exec->argumentCount() < 1)
+        return jsUndefined();
+
+    JSValue iterator;
+    JSValue value = exec->uncheckedArgument(0);
+    if (JSArrayIterator* arrayIterator = jsDynamicCast<JSArrayIterator*>(value))
+        iterator = arrayIterator->clone(exec);
+    else if (JSMapIterator* mapIterator = jsDynamicCast<JSMapIterator*>(value))
+        iterator = mapIterator->clone(exec);
+    else if (JSSetIterator* setIterator = jsDynamicCast<JSSetIterator*>(value))
+        iterator = setIterator->clone(exec);
+    else if (JSStringIterator* stringIterator = jsDynamicCast<JSStringIterator*>(value))
+        iterator = stringIterator->clone(exec);
+    else
+        return jsUndefined();
+
+    unsigned numberToFetch = 5;
+    JSValue numberToFetchArg = exec->argument(1);
+    double fetchDouble = numberToFetchArg.toInteger(exec);
+    if (fetchDouble >= 0)
+        numberToFetch = static_cast<unsigned>(fetchDouble);
+
+    JSArray* array = constructEmptyArray(exec, nullptr);
+
+    for (unsigned i = 0; i < numberToFetch; ++i) {
+        JSValue next = iteratorStep(exec, iterator);
+        if (exec->hadException())
+            break;
+        if (next.isFalse())
+            break;
+
+        JSValue nextValue = iteratorValue(exec, next);
+        if (exec->hadException())
+            break;
+
+        JSObject* entry = constructEmptyObject(exec);
+        entry->putDirect(exec->vm(), Identifier::fromString(exec, "value"), nextValue);
+        array->putDirectIndex(exec, i, entry);
+    }
+
+    iteratorClose(exec, iterator);
+
+    return array;
 }
 
 JSValue toJS(ExecState* exec, JSGlobalObject* globalObject, InjectedScriptHost* impl)
@@ -201,5 +491,3 @@ JSInjectedScriptHost* toJSInjectedScriptHost(JSValue value)
 }
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)

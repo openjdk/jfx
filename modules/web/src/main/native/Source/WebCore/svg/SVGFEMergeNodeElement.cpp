@@ -19,14 +19,9 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SVGFEMergeNodeElement.h"
 
-#include "Attribute.h"
-#include "RenderObject.h"
 #include "RenderSVGResource.h"
-#include "SVGElementInstance.h"
 #include "SVGFilterElement.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGNames.h"
@@ -47,51 +42,30 @@ inline SVGFEMergeNodeElement::SVGFEMergeNodeElement(const QualifiedName& tagName
     registerAnimatedPropertiesForSVGFEMergeNodeElement();
 }
 
-PassRefPtr<SVGFEMergeNodeElement> SVGFEMergeNodeElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFEMergeNodeElement> SVGFEMergeNodeElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFEMergeNodeElement(tagName, document));
-}
-
-bool SVGFEMergeNodeElement::isSupportedAttribute(const QualifiedName& attrName)
-{
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty())
-        supportedAttributes.add(SVGNames::inAttr);
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return adoptRef(*new SVGFEMergeNodeElement(tagName, document));
 }
 
 void SVGFEMergeNodeElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(name)) {
-        SVGElement::parseAttribute(name, value);
-        return;
-    }
-
     if (name == SVGNames::inAttr) {
         setIn1BaseValue(value);
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGElement::parseAttribute(name, value);
 }
 
 void SVGFEMergeNodeElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (!isSupportedAttribute(attrName)) {
-        SVGElement::svgAttributeChanged(attrName);
-        return;
-    }
-
-    SVGElementInstance::InvalidationGuard invalidationGuard(this);
-
     if (attrName == SVGNames::inAttr) {
+        InstanceInvalidationGuard guard(*this);
         invalidateFilterPrimitiveParent(this);
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGElement::svgAttributeChanged(attrName);
 }
 
 }
-
-#endif // ENABLE(FILTERS)

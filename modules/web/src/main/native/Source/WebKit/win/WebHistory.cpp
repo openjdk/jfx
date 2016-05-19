@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebHistory.h"
 
@@ -34,6 +33,7 @@
 #include "WebKit.h"
 #include "WebNotificationCenter.h"
 #include "WebPreferences.h"
+#include "WebVisitedLinkStore.h"
 #include <WebCore/BString.h>
 #include <WebCore/HistoryItem.h>
 #include <WebCore/URL.h>
@@ -82,7 +82,7 @@ static COMPtr<IPropertyBag> createUserInfoFromArray(BSTR notificationStr, IWebHi
 
     HashMap<String, Vector<COMPtr<IWebHistoryItem>>> dictionary;
     String key(notificationStr, ::SysStringLen(notificationStr));
-    dictionary.set(key, std::move(arrayItem));
+    dictionary.set(key, WTF::move(arrayItem));
     return COMPtr<IPropertyBag>(AdoptCOM, COMPropertyBag<Vector<COMPtr<IWebHistoryItem>>>::adopt(dictionary));
 #endif
 }
@@ -126,12 +126,12 @@ static void getDayBoundaries(DATE day, DATE& beginningOfDay, DATE& beginningOfNe
     addDayToSystemTime(beginningOfNextDayLocalTime);
 
     SYSTEMTIME beginningSystemTime;
-    ::TzSpecificLocalTimeToSystemTime(0, &beginningLocalTime, &beginningSystemTime);
-    ::SystemTimeToVariantTime(&beginningSystemTime, &beginningOfDay);
+    if (::TzSpecificLocalTimeToSystemTime(0, &beginningLocalTime, &beginningSystemTime))
+        ::SystemTimeToVariantTime(&beginningSystemTime, &beginningOfDay);
 
     SYSTEMTIME beginningOfNextDaySystemTime;
-    ::TzSpecificLocalTimeToSystemTime(0, &beginningOfNextDayLocalTime, &beginningOfNextDaySystemTime);
-    ::SystemTimeToVariantTime(&beginningOfNextDaySystemTime, &beginningOfNextDay);
+    if (::TzSpecificLocalTimeToSystemTime(0, &beginningOfNextDayLocalTime, &beginningOfNextDaySystemTime))
+        ::SystemTimeToVariantTime(&beginningOfNextDaySystemTime, &beginningOfNextDay);
 }
 
 static inline DATE beginningOfDay(DATE date)
@@ -158,7 +158,7 @@ WebHistory::WebHistory()
 , m_preferences(0)
 {
     gClassCount++;
-    gClassNameCount.add("WebHistory");
+    gClassNameCount().add("WebHistory");
 
     m_preferences = WebPreferences::sharedStandardPreferences();
 }
@@ -166,7 +166,7 @@ WebHistory::WebHistory()
 WebHistory::~WebHistory()
 {
     gClassCount--;
-    gClassNameCount.remove("WebHistory");
+    gClassNameCount().remove("WebHistory");
 }
 
 WebHistory* WebHistory::createInstance()
@@ -238,7 +238,7 @@ ULONG STDMETHODCALLTYPE WebHistory::Release(void)
 
 static inline COMPtr<WebHistory>& sharedHistoryStorage()
 {
-    DEFINE_STATIC_LOCAL(COMPtr<WebHistory>, sharedHistory, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(COMPtr<WebHistory>, sharedHistory, ());
     return sharedHistory;
 }
 
@@ -262,8 +262,8 @@ HRESULT STDMETHODCALLTYPE WebHistory::setOptionalSharedHistory(
     if (sharedHistoryStorage() == history)
         return S_OK;
     sharedHistoryStorage().query(history);
-    PageGroup::setShouldTrackVisitedLinks(sharedHistoryStorage());
-    PageGroup::removeAllVisitedLinks();
+    WebVisitedLinkStore::setShouldTrackVisitedLinks(sharedHistoryStorage());
+    WebVisitedLinkStore::removeAllVisitedLinks();
     return S_OK;
 }
 
@@ -323,7 +323,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::removeAllItems( void)
 
     m_entriesByURL.clear();
 
-    PageGroup::removeAllVisitedLinks();
+    WebVisitedLinkStore::removeAllVisitedLinks();
 
     return postNotification(kWebHistoryAllItemsRemovedNotification, userInfo.get());
 }
@@ -373,13 +373,13 @@ HRESULT STDMETHODCALLTYPE WebHistory::allItems(
 
 HRESULT WebHistory::setVisitedLinkTrackingEnabled(BOOL visitedLinkTrackingEnabled)
 {
-    PageGroup::setShouldTrackVisitedLinks(visitedLinkTrackingEnabled);
+    WebVisitedLinkStore::setShouldTrackVisitedLinks(visitedLinkTrackingEnabled);
     return S_OK;
 }
 
 HRESULT WebHistory::removeAllVisitedLinks()
 {
-    PageGroup::removeAllVisitedLinks();
+    WebVisitedLinkStore::removeAllVisitedLinks();
     return S_OK;
 }
 
@@ -425,6 +425,8 @@ HRESULT WebHistory::removeItem(IWebHistoryItem* entry)
         return hr;
 
     String urlString(urlBStr, SysStringLen(urlBStr));
+    if (urlString.isEmpty())
+        return E_FAIL;
 
     auto it = m_entriesByURL.find(urlString);
     if (it == m_entriesByURL.end())
@@ -460,6 +462,8 @@ HRESULT WebHistory::addItem(IWebHistoryItem* entry, bool discardDuplicate, bool*
         return hr;
 
     String urlString(urlBStr, SysStringLen(urlBStr));
+    if (urlString.isEmpty())
+        return E_FAIL;
 
     COMPtr<IWebHistoryItem> oldEntry(m_entriesByURL.get(urlString));
 
@@ -496,7 +500,11 @@ HRESULT WebHistory::addItem(IWebHistoryItem* entry, bool discardDuplicate, bool*
 
 void WebHistory::visitedURL(const URL& url, const String& title, const String& httpMethod, bool wasFailure, bool increaseVisitCount)
 {
-    IWebHistoryItem* entry = m_entriesByURL.get(url.string()).get();
+    const String& urlString = url.string();
+    if (urlString.isEmpty())
+        return;
+
+    IWebHistoryItem* entry = m_entriesByURL.get(urlString);
     if (!entry) {
         COMPtr<WebHistoryItem> item(AdoptCOM, WebHistoryItem::createInstance());
         if (!item)
@@ -510,10 +518,10 @@ void WebHistory::visitedURL(const URL& url, const String& title, const String& h
         if (!SystemTimeToVariantTime(&currentTime, &lastVisited))
             return;
 
-        if (FAILED(entry->initWithURLString(BString(url.string()), BString(title), lastVisited)))
+        if (FAILED(entry->initWithURLString(BString(urlString), BString(title), lastVisited)))
             return;
 
-        m_entriesByURL.set(url.string(), entry);
+        m_entriesByURL.set(urlString, entry);
     }
 
     COMPtr<IWebHistoryItemPrivate> entryPrivate(Query, entry);
@@ -530,13 +538,17 @@ void WebHistory::visitedURL(const URL& url, const String& title, const String& h
     postNotification(kWebHistoryItemsAddedNotification, userInfo.get());
 }
 
-HRESULT WebHistory::itemForURL(BSTR url, IWebHistoryItem** item)
+HRESULT WebHistory::itemForURL(BSTR urlBStr, IWebHistoryItem** item)
 {
     if (!item)
         return E_FAIL;
     *item = 0;
 
-    auto it = m_entriesByURL.find(url);
+    String urlString(urlBStr, SysStringLen(urlBStr));
+    if (urlString.isEmpty())
+        return E_FAIL;
+
+    auto it = m_entriesByURL.find(urlString);
     if (it == m_entriesByURL.end())
         return E_FAIL;
 
@@ -546,27 +558,28 @@ HRESULT WebHistory::itemForURL(BSTR url, IWebHistoryItem** item)
 
 HRESULT WebHistory::removeItemForURLString(const WTF::String& urlString)
 {
+    if (urlString.isEmpty())
+        return E_FAIL;
+
     auto it = m_entriesByURL.find(urlString);
     if (it == m_entriesByURL.end())
         return E_FAIL;
 
     if (!m_entriesByURL.size())
-        PageGroup::removeAllVisitedLinks();
+        WebVisitedLinkStore::removeAllVisitedLinks();
 
     return S_OK;
 }
 
 COMPtr<IWebHistoryItem> WebHistory::itemForURLString(const String& urlString) const
 {
-    if (!urlString)
-        return 0;
+    if (urlString.isEmpty())
+        return nullptr;
     return m_entriesByURL.get(urlString);
 }
 
-void WebHistory::addVisitedLinksToPageGroup(PageGroup& group)
+void WebHistory::addVisitedLinksToVisitedLinkStore(WebVisitedLinkStore& visitedLinkStore)
 {
-    for (auto it = m_entriesByURL.begin(); it != m_entriesByURL.end(); ++it) {
-        const String& url = it->key;
-        group.addVisitedLink(url.deprecatedCharacters(), url.length());
-    }
+    for (auto& url : m_entriesByURL.keys())
+        visitedLinkStore.addVisitedLink(url);
 }

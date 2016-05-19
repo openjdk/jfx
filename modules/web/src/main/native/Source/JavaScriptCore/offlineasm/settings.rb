@@ -54,7 +54,28 @@ def computeSettingsCombinations(ast)
         settingsCombinator(settingsCombinations, newMap, remaining[1..-1])
     end
     
-    settingsCombinator(settingsCombinations, {}, (ast.filter(Setting).uniq.collect{|v| v.name} + BACKENDS).uniq)
+    nonBackendSettings = ast.filter(Setting).uniq.collect{ |v| v.name }
+    nonBackendSettings.delete_if {
+        | setting |
+        isBackend? setting
+    }
+    
+    allBackendsFalse = {}
+    BACKENDS.each {
+        | backend |
+        allBackendsFalse[backend] = false
+    }
+    
+    # This will create entries for invalid backends. That's fine. It's necessary
+    # because it ensures that generate_offsets_extractor (which knows about valid
+    # backends) has settings indices that are compatible with what asm will see
+    # (asm doesn't know about valid backends).
+    BACKENDS.each {
+        | backend |
+        map = allBackendsFalse.clone
+        map[backend] = true
+        settingsCombinator(settingsCombinations, map, nonBackendSettings)
+    }
     
     settingsCombinations
 end
@@ -73,15 +94,13 @@ def forSettings(concreteSettings, ast)
     selectedBackend = nil
     BACKENDS.each {
         | backend |
-        isSupported = concreteSettings[backend]
-        raise unless isSupported != nil
-        numClaimedBackends += if isSupported then 1 else 0 end
-        if isSupported
+        if concreteSettings[backend]
+            raise if selectedBackend
             selectedBackend = backend
         end
     }
     
-    return if numClaimedBackends > 1
+    return unless isValidBackend? selectedBackend
     
     # Resolve the AST down to a low-level form (no macros or conditionals).
     lowLevelAST = ast.resolveSettings(concreteSettings)
@@ -172,10 +191,14 @@ end
 #
 
 def emitCodeInConfiguration(concreteSettings, ast, backend)
+    Label.resetReferenced
+
     if !$emitWinAsm
         $output.puts cppSettingsTest(concreteSettings)
     else
-        $output.puts ".MODEL FLAT, C"
+        if backend == "X86_WIN"
+            $output.puts ".MODEL FLAT, C"
+        end
         $output.puts "INCLUDE #{File.basename($output.path)}.sym"
         $output.puts "_TEXT SEGMENT"
     end
@@ -193,6 +216,15 @@ def emitCodeInConfiguration(concreteSettings, ast, backend)
     else
         $output.puts "_TEXT ENDS"
         $output.puts "END"
+
+        # Write symbols needed by MASM
+        File.open("#{File.basename($output.path)}.sym", "w") {
+            | outp |
+            Label.forReferencedExtern {
+                | name |
+                outp.puts "EXTERN #{name[1..-1]} : near"
+            }
+        }
     end
 end
 

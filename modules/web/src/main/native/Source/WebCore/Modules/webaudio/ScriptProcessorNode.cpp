@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-PassRefPtr<ScriptProcessorNode> ScriptProcessorNode::create(AudioContext* context, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels)
+RefPtr<ScriptProcessorNode> ScriptProcessorNode::create(AudioContext* context, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels)
 {
     // Check for valid buffer size.
     switch (bufferSize) {
@@ -65,7 +65,7 @@ PassRefPtr<ScriptProcessorNode> ScriptProcessorNode::create(AudioContext* contex
     if (numberOfOutputChannels > AudioContext::maxNumberOfChannels())
         return nullptr;
 
-    return adoptRef(new ScriptProcessorNode(context, sampleRate, bufferSize, numberOfInputChannels, numberOfOutputChannels));
+    return adoptRef(*new ScriptProcessorNode(context, sampleRate, bufferSize, numberOfInputChannels, numberOfOutputChannels));
 }
 
 ScriptProcessorNode::ScriptProcessorNode(AudioContext* context, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels)
@@ -217,12 +217,6 @@ void ScriptProcessorNode::process(size_t framesToProcess)
     }
 }
 
-void ScriptProcessorNode::setOnaudioprocess(PassRefPtr<EventListener> listener)
-{
-    m_hasAudioProcessListener = listener;
-    setAttributeEventListener(eventNames().audioprocessEvent, listener);
-}
-
 void ScriptProcessorNode::fireProcessEventDispatch(void* userData)
 {
     ScriptProcessorNode* jsAudioNode = static_cast<ScriptProcessorNode*>(userData);
@@ -256,8 +250,12 @@ void ScriptProcessorNode::fireProcessEvent()
         // Let the audio thread know we've gotten to the point where it's OK for it to make another request.
         m_isRequestOutstanding = false;
 
+        // Calculate playbackTime with the buffersize which needs to be processed each time when onaudioprocess is called.
+        // The outputBuffer being passed to JS will be played after exhausting previous outputBuffer by double-buffering.
+        double playbackTime = (context()->currentSampleFrame() + m_bufferSize) / static_cast<double>(context()->sampleRate());
+
         // Call the JavaScript event handler which will do the audio processing.
-        dispatchEvent(AudioProcessingEvent::create(inputBuffer, outputBuffer));
+        dispatchEvent(AudioProcessingEvent::create(inputBuffer, outputBuffer, playbackTime));
     }
 }
 
@@ -280,6 +278,28 @@ double ScriptProcessorNode::tailTime() const
 double ScriptProcessorNode::latencyTime() const
 {
     return std::numeric_limits<double>::infinity();
+}
+
+bool ScriptProcessorNode::addEventListener(const AtomicString& eventType, PassRefPtr<EventListener> listener, bool useCapture)
+{
+    bool success = AudioNode::addEventListener(eventType, listener, useCapture);
+    if (success && eventType == eventNames().audioprocessEvent)
+        m_hasAudioProcessListener = hasEventListeners(eventNames().audioprocessEvent);
+    return success;
+}
+
+bool ScriptProcessorNode::removeEventListener(const AtomicString& eventType, EventListener* listener, bool useCapture)
+{
+    bool success = AudioNode::removeEventListener(eventType, listener, useCapture);
+    if (success && eventType == eventNames().audioprocessEvent)
+        m_hasAudioProcessListener = hasEventListeners(eventNames().audioprocessEvent);
+    return success;
+}
+
+void ScriptProcessorNode::removeAllEventListeners()
+{
+    m_hasAudioProcessListener = false;
+    AudioNode::removeAllEventListeners();
 }
 
 } // namespace WebCore

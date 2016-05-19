@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.
+ * Copyright (C) 2004, 2005, 2006 Apple Inc.
  * Copyright (C) 2013 Intel Corporation. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -25,7 +25,6 @@
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "RenderStyleConstants.h"
-#include "TextDirection.h"
 #include "WritingMode.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
@@ -45,6 +44,16 @@ struct StylePropertyMetadata {
 
     CSSPropertyID shorthandID() const;
 
+    bool operator==(const StylePropertyMetadata& other) const
+    {
+        return m_propertyID == other.m_propertyID
+            && m_isSetFromShorthand == other.m_isSetFromShorthand
+            && m_indexInShorthandsVector == other.m_indexInShorthandsVector
+            && m_important == other.m_important
+            && m_implicit == other.m_implicit
+            && m_inherited == other.m_inherited;
+    }
+
     uint16_t m_propertyID : 10;
     uint16_t m_isSetFromShorthand : 1;
     uint16_t m_indexInShorthandsVector : 2; // If this property was set as part of an ambiguous shorthand, gives the index in the shorthands vector.
@@ -57,13 +66,6 @@ class CSSProperty {
 public:
     CSSProperty(CSSPropertyID propertyID, PassRefPtr<CSSValue> value, bool important = false, bool isSetFromShorthand = false, int indexInShorthandsVector = 0, bool implicit = false)
         : m_metadata(propertyID, isSetFromShorthand, indexInShorthandsVector, important, implicit, isInheritedProperty(propertyID))
-        , m_value(value)
-    {
-    }
-
-    // FIXME: Remove this.
-    CSSProperty(StylePropertyMetadata metadata, CSSValue* value)
-        : m_metadata(metadata)
         , m_value(value)
     {
     }
@@ -83,51 +85,89 @@ public:
 
     const StylePropertyMetadata& metadata() const { return m_metadata; }
 
+    bool operator==(const CSSProperty& other) const
+    {
+        if (!(m_metadata == other.m_metadata))
+            return false;
+
+        if (!m_value && !other.m_value)
+            return true;
+
+        if (!m_value || !other.m_value)
+            return false;
+
+        return m_value->equals(*other.m_value);
+    }
+
 private:
     StylePropertyMetadata m_metadata;
     RefPtr<CSSValue> m_value;
 };
 
-inline CSSPropertyID prefixingVariantForPropertyId(CSSPropertyID propId)
+inline CSSPropertyID prefixingVariantForPropertyId(CSSPropertyID propertyID)
 {
-    CSSPropertyID propertyId = CSSPropertyInvalid;
-    switch (propId) {
+    ASSERT(propertyID != CSSPropertyInvalid);
+
+    switch (propertyID) {
+    case CSSPropertyAnimation:
+        return CSSPropertyWebkitAnimation;
+    case CSSPropertyAnimationDelay:
+        return CSSPropertyWebkitAnimationDelay;
+    case CSSPropertyAnimationDirection:
+        return CSSPropertyWebkitAnimationDirection;
+    case CSSPropertyAnimationDuration:
+        return CSSPropertyWebkitAnimationDuration;
+    case CSSPropertyAnimationFillMode:
+        return CSSPropertyWebkitAnimationFillMode;
+    case CSSPropertyAnimationName:
+        return CSSPropertyWebkitAnimationName;
+    case CSSPropertyAnimationPlayState:
+        return CSSPropertyWebkitAnimationPlayState;
+    case CSSPropertyAnimationIterationCount:
+        return CSSPropertyWebkitAnimationIterationCount;
+    case CSSPropertyAnimationTimingFunction:
+        return CSSPropertyWebkitAnimationTimingFunction;
+    case CSSPropertyWebkitAnimation:
+        return CSSPropertyAnimation;
+    case CSSPropertyWebkitAnimationDelay:
+        return CSSPropertyAnimationDelay;
+    case CSSPropertyWebkitAnimationDirection:
+        return CSSPropertyAnimationDirection;
+    case CSSPropertyWebkitAnimationDuration:
+        return CSSPropertyAnimationDuration;
+    case CSSPropertyWebkitAnimationFillMode:
+        return CSSPropertyAnimationFillMode;
+    case CSSPropertyWebkitAnimationName:
+        return CSSPropertyAnimationName;
+    case CSSPropertyWebkitAnimationPlayState:
+        return CSSPropertyAnimationPlayState;
+    case CSSPropertyWebkitAnimationIterationCount:
+        return CSSPropertyAnimationIterationCount;
+    case CSSPropertyWebkitAnimationTimingFunction:
+        return CSSPropertyAnimationTimingFunction;
     case CSSPropertyTransitionDelay:
-        propertyId = CSSPropertyWebkitTransitionDelay;
-        break;
+        return CSSPropertyWebkitTransitionDelay;
     case CSSPropertyTransitionDuration:
-        propertyId = CSSPropertyWebkitTransitionDuration;
-        break;
+        return CSSPropertyWebkitTransitionDuration;
     case CSSPropertyTransitionProperty:
-        propertyId = CSSPropertyWebkitTransitionProperty;
-        break;
+        return CSSPropertyWebkitTransitionProperty;
     case CSSPropertyTransitionTimingFunction:
-        propertyId = CSSPropertyWebkitTransitionTimingFunction;
-        break;
+        return CSSPropertyWebkitTransitionTimingFunction;
     case CSSPropertyTransition:
-        propertyId = CSSPropertyWebkitTransition;
-        break;
+        return CSSPropertyWebkitTransition;
     case CSSPropertyWebkitTransitionDelay:
-        propertyId = CSSPropertyTransitionDelay;
-        break;
+        return CSSPropertyTransitionDelay;
     case CSSPropertyWebkitTransitionDuration:
-        propertyId = CSSPropertyTransitionDuration;
-        break;
+        return CSSPropertyTransitionDuration;
     case CSSPropertyWebkitTransitionProperty:
-        propertyId = CSSPropertyTransitionProperty;
-        break;
+        return CSSPropertyTransitionProperty;
     case CSSPropertyWebkitTransitionTimingFunction:
-        propertyId = CSSPropertyTransitionTimingFunction;
-        break;
+        return CSSPropertyTransitionTimingFunction;
     case CSSPropertyWebkitTransition:
-        propertyId = CSSPropertyTransition;
-        break;
+        return CSSPropertyTransition;
     default:
-        propertyId = propId;
-        break;
+        return propertyID;
     }
-    ASSERT(propertyId != CSSPropertyInvalid);
-    return propertyId;
 }
 
 } // namespace WebCore

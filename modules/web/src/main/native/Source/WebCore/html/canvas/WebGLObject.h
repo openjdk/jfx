@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -34,7 +34,7 @@ namespace WebCore {
 
 class GraphicsContext3D;
 class WebGLContextGroup;
-class WebGLRenderingContext;
+class WebGLRenderingContextBase;
 
 class WebGLObject : public RefCounted<WebGLObject> {
 public:
@@ -56,10 +56,10 @@ public:
     bool isDeleted() { return m_deleted; }
 
     // True if this object belongs to the group or context.
-    virtual bool validate(const WebGLContextGroup*, const WebGLRenderingContext*) const = 0;
+    virtual bool validate(const WebGLContextGroup*, const WebGLRenderingContextBase*) const = 0;
 
 protected:
-    WebGLObject(WebGLRenderingContext*);
+    WebGLObject(WebGLRenderingContextBase*);
 
     // setObject should be only called once right after creating a WebGLObject.
     void setObject(Platform3DObject);

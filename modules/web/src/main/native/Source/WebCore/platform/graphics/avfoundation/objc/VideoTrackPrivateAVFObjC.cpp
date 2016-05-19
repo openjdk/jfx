@@ -26,6 +26,7 @@
 #import "config.h"
 #import "VideoTrackPrivateAVFObjC.h"
 #import "AVTrackPrivateAVFObjCImpl.h"
+#import "MediaSelectionGroupAVFObjC.h"
 
 #if ENABLE(VIDEO_TRACK)
 
@@ -43,9 +44,19 @@ VideoTrackPrivateAVFObjC::VideoTrackPrivateAVFObjC(AVAssetTrack* track)
     resetPropertiesFromTrack();
 }
 
+VideoTrackPrivateAVFObjC::VideoTrackPrivateAVFObjC(MediaSelectionOptionAVFObjC& option)
+    : m_impl(std::make_unique<AVTrackPrivateAVFObjCImpl>(option))
+{
+    resetPropertiesFromTrack();
+}
+
 void VideoTrackPrivateAVFObjC::resetPropertiesFromTrack()
 {
-    setSelected(m_impl->enabled());
+    // Don't call this->setSelected() because it also sets the enabled state of the
+    // AVPlayerItemTrack
+    VideoTrackPrivateAVF::setSelected(m_impl->enabled());
+
+    setTrackIndex(m_impl->trackID());
     setKind(m_impl->videoKind());
     setId(m_impl->id());
     setLabel(m_impl->label());
@@ -72,6 +83,17 @@ void VideoTrackPrivateAVFObjC::setAssetTrack(AVAssetTrack *track)
 AVAssetTrack* VideoTrackPrivateAVFObjC::assetTrack()
 {
     return m_impl->assetTrack();
+}
+
+void VideoTrackPrivateAVFObjC::setMediaSelectonOption(MediaSelectionOptionAVFObjC& option)
+{
+    m_impl = std::make_unique<AVTrackPrivateAVFObjCImpl>(option);
+    resetPropertiesFromTrack();
+}
+
+MediaSelectionOptionAVFObjC* VideoTrackPrivateAVFObjC::mediaSelectionOption()
+{
+    return m_impl->mediaSelectionOption();
 }
 
 void VideoTrackPrivateAVFObjC::setSelected(bool enabled)

@@ -1,6 +1,6 @@
 /*
  * Copyright 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ namespace WebCore {
 
     class XPathEvaluator : public RefCounted<XPathEvaluator> {
     public:
-        static PassRefPtr<XPathEvaluator> create() { return adoptRef(new XPathEvaluator); }
+        static Ref<XPathEvaluator> create() { return adoptRef(*new XPathEvaluator); }
 
         PassRefPtr<XPathExpression> createExpression(const String& expression, XPathNSResolver*, ExceptionCode&);
         PassRefPtr<XPathNSResolver> createNSResolver(Node* nodeResolver);

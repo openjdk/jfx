@@ -32,6 +32,8 @@
 #include "config.h"
 #include "CSSGridTemplateAreasValue.h"
 
+#if ENABLE(CSS_GRID_LAYOUT)
+
 #include "GridCoordinate.h"
 #include <wtf/text/StringBuilder.h>
 
@@ -53,13 +55,13 @@ static String stringForPosition(const NamedGridAreaMap& gridAreaMap, size_t row,
 
     for (const auto& it : gridAreaMap) {
         const GridCoordinate& coordinate = it.value;
-        if (row >= coordinate.rows.initialPositionIndex && row <= coordinate.rows.finalPositionIndex)
+        if (row >= coordinate.rows.resolvedInitialPosition.toInt() && row <= coordinate.rows.resolvedFinalPosition.toInt())
             candidates.append(it.key);
     }
 
     for (const auto& it : gridAreaMap) {
         const GridCoordinate& coordinate = it.value;
-        if (column >= coordinate.columns.initialPositionIndex && column <= coordinate.columns.finalPositionIndex && candidates.contains(it.key))
+        if (column >= coordinate.columns.resolvedInitialPosition.toInt() && column <= coordinate.columns.resolvedFinalPosition.toInt() && candidates.contains(it.key))
             return it.key;
     }
 
@@ -84,3 +86,5 @@ String CSSGridTemplateAreasValue::customCSSText() const
 }
 
 } // namespace WebCore
+
+#endif /* ENABLE(CSS_GRID_LAYOUT) */

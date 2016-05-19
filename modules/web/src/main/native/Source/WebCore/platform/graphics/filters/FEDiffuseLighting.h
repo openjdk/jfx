@@ -22,7 +22,6 @@
 #ifndef FEDiffuseLighting_h
 #define FEDiffuseLighting_h
 
-#if ENABLE(FILTERS)
 #include "FELighting.h"
 
 namespace WebCore {
@@ -31,7 +30,7 @@ class LightSource;
 
 class FEDiffuseLighting : public FELighting {
 public:
-    static PassRefPtr<FEDiffuseLighting> create(Filter*, const Color&, float, float,
+    static Ref<FEDiffuseLighting> create(Filter&, const Color&, float, float,
         float, float, PassRefPtr<LightSource>);
     virtual ~FEDiffuseLighting();
 
@@ -58,11 +57,9 @@ public:
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;
 
 private:
-    FEDiffuseLighting(Filter*, const Color&, float, float, float, float, PassRefPtr<LightSource>);
+    FEDiffuseLighting(Filter&, const Color&, float, float, float, float, PassRefPtr<LightSource>);
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // FEDiffuseLighting_h

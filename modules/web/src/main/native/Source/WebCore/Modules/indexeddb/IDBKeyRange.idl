@@ -25,8 +25,8 @@
 
 [
     Conditional=INDEXED_DATABASE,
-    JSNoStaticTables,
     ImplementationLacksVTable,
+    EnabledAtRuntime=IndexedDB,
 ] interface IDBKeyRange {
     [ImplementedAs=lowerValue,CallWith=ScriptExecutionContext] readonly attribute any lower;
     [ImplementedAs=upperValue,CallWith=ScriptExecutionContext] readonly attribute any upper;

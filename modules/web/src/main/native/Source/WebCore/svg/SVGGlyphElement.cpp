@@ -24,7 +24,6 @@
 #if ENABLE(SVG_FONTS)
 #include "SVGGlyphElement.h"
 
-#include "Attribute.h"
 #include "SVGFontData.h"
 #include "SVGFontElement.h"
 #include "SVGFontFaceElement.h"
@@ -39,16 +38,16 @@ inline SVGGlyphElement::SVGGlyphElement(const QualifiedName& tagName, Document& 
     ASSERT(hasTagName(SVGNames::glyphTag));
 }
 
-PassRefPtr<SVGGlyphElement> SVGGlyphElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGGlyphElement> SVGGlyphElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGGlyphElement(tagName, document));
+    return adoptRef(*new SVGGlyphElement(tagName, document));
 }
 
 void SVGGlyphElement::invalidateGlyphCache()
 {
     ContainerNode* fontNode = parentNode();
-    if (fontNode && isSVGFontElement(fontNode))
-        toSVGFontElement(fontNode)->invalidateGlyphCache();
+    if (is<SVGFontElement>(fontNode))
+        downcast<SVGFontElement>(*fontNode).invalidateGlyphCache();
 }
 
 void SVGGlyphElement::parseAttribute(const QualifiedName& name, const AtomicString& value)

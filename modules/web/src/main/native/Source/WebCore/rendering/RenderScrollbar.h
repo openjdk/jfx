@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2009, 2015 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ class RenderStyle;
 class RenderScrollbar final : public Scrollbar {
 public:
     friend class Scrollbar;
-    static RefPtr<Scrollbar> createCustomScrollbar(ScrollableArea*, ScrollbarOrientation, Element*, Frame* owningFrame = nullptr);
+    static RefPtr<Scrollbar> createCustomScrollbar(ScrollableArea&, ScrollbarOrientation, Element*, Frame* owningFrame = nullptr);
     virtual ~RenderScrollbar();
 
     RenderBox* owningRenderer() const;
@@ -55,14 +55,14 @@ public:
 
     int minimumThumbLength();
 
-    virtual bool isOverlayScrollbar() const { return false; }
+    virtual bool isOverlayScrollbar() const override { return false; }
 
     float opacity();
 
     PassRefPtr<RenderStyle> getScrollbarPseudoStyle(ScrollbarPart, PseudoId);
 
 private:
-    RenderScrollbar(ScrollableArea*, ScrollbarOrientation, Element*, Frame*);
+    RenderScrollbar(ScrollableArea&, ScrollbarOrientation, Element*, Frame*);
 
     virtual void setParent(ScrollView*) override;
     virtual void setEnabled(bool) override;
@@ -73,8 +73,6 @@ private:
     virtual void setPressedPart(ScrollbarPart) override;
 
     virtual void styleChanged() override;
-
-    virtual bool isCustomScrollbar() const override { return true; }
 
     void updateScrollbarParts();
 
@@ -90,15 +88,10 @@ private:
     HashMap<unsigned, RenderPtr<RenderScrollbarPart>> m_parts;
 };
 
-inline RenderScrollbar* toRenderScrollbar(ScrollbarThemeClient* scrollbar)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!scrollbar || scrollbar->isCustomScrollbar());
-    return static_cast<RenderScrollbar*>(scrollbar);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderScrollbar(const RenderScrollbar*);
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RenderScrollbar)
+    static bool isType(const WebCore::Scrollbar& scrollbar) { return scrollbar.isCustomScrollbar(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // RenderScrollbar_h

@@ -49,7 +49,7 @@ void TreeScopeAdopter::moveTreeToNewScope(Node* root) const
         oldDocument.incDOMTreeVersion();
     }
 
-    for (Node* node = root; node; node = NodeTraversal::next(node, root)) {
+    for (Node* node = root; node; node = NodeTraversal::next(*node, root)) {
         updateTreeScope(node);
 
         if (willMoveToNewDocument)
@@ -60,11 +60,11 @@ void TreeScopeAdopter::moveTreeToNewScope(Node* root) const
                 rareData->nodeLists()->adoptTreeScope();
         }
 
-        if (!node->isElementNode())
+        if (!is<Element>(*node))
             continue;
 
         if (node->hasSyntheticAttrChildNodes()) {
-            const Vector<RefPtr<Attr>>& attrs = toElement(node)->attrNodeList();
+            const Vector<RefPtr<Attr>>& attrs = downcast<Element>(*node).attrNodeList();
             for (unsigned i = 0; i < attrs.size(); ++i)
                 moveTreeToNewScope(attrs[i].get());
         }
@@ -82,7 +82,7 @@ void TreeScopeAdopter::moveTreeToNewScope(Node* root) const
 
 void TreeScopeAdopter::moveShadowTreeToNewDocument(ShadowRoot* shadowRoot, Document* oldDocument, Document* newDocument) const
 {
-    for (Node* node = shadowRoot; node; node = NodeTraversal::next(node, shadowRoot)) {
+    for (Node* node = shadowRoot; node; node = NodeTraversal::next(*node, shadowRoot)) {
         moveNodeToNewDocument(node, oldDocument, newDocument);
         if (ShadowRoot* shadow = node->shadowRoot())
             moveShadowTreeToNewDocument(shadow, oldDocument, newDocument);
@@ -91,7 +91,7 @@ void TreeScopeAdopter::moveShadowTreeToNewDocument(ShadowRoot* shadowRoot, Docum
 
 #ifndef NDEBUG
 static bool didMoveToNewDocumentWasCalled = false;
-static Document* oldDocumentDidMoveToNewDocumentWasCalledWith = 0;
+static Document* oldDocumentDidMoveToNewDocumentWasCalledWith = nullptr;
 
 void TreeScopeAdopter::ensureDidMoveToNewDocumentWasCalled(Document* oldDocument)
 {
@@ -124,8 +124,8 @@ inline void TreeScopeAdopter::moveNodeToNewDocument(Node* node, Document* oldDoc
     if (oldDocument)
         oldDocument->moveNodeIteratorsToNewDocument(node, newDocument);
 
-    if (node->isShadowRoot())
-        toShadowRoot(node)->setDocumentScope(newDocument);
+    if (is<ShadowRoot>(*node))
+        downcast<ShadowRoot>(*node).setDocumentScope(newDocument);
 
 #ifndef NDEBUG
     didMoveToNewDocumentWasCalled = false;

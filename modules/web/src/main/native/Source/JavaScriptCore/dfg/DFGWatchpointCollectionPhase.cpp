@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,14 @@
 #include "DFGPhase.h"
 #include "JSCInlines.h"
 
+// FIXME: Remove this phase entirely by moving the addLazily() calls into either the backend or
+// into the phase that performs the optimization. Moving the calls into the backend makes the most
+// sense when the intermediate phases don't need to know that the watchpoint was set. Moving the
+// calls earlier usually only makes sense if the node's only purpose was to convey the need for
+// the watchpoint (like VarInjectionWatchpoint). But, it can also make sense if the fact that the
+// watchpoint was set enables other optimizations.
+// https://bugs.webkit.org/show_bug.cgi?id=144669
+
 namespace JSC { namespace DFG {
 
 class WatchpointCollectionPhase : public Phase {
@@ -64,8 +72,6 @@ public:
 private:
     void handle()
     {
-        DFG_NODE_DO_TO_CHILDREN(m_graph, m_node, handleEdge);
-
         switch (m_node->op()) {
         case CompareEqConstant:
         case IsUndefined:
@@ -81,86 +87,26 @@ private:
 
         case LogicalNot:
         case Branch:
-            if (m_node->child1().useKind() == ObjectOrOtherUse)
+            switch (m_node->child1().useKind()) {
+            case ObjectOrOtherUse:
+            case UntypedUse:
                 handleMasqueradesAsUndefined();
-            break;
-
-        case GetByVal:
-            if (m_node->arrayMode().type() == Array::Double
-                && m_node->arrayMode().isSaneChain()) {
-                addLazily(globalObject()->arrayPrototype()->structure()->transitionWatchpointSet());
-                addLazily(globalObject()->objectPrototype()->structure()->transitionWatchpointSet());
+                break;
+            default:
+                break;
             }
-
-            if (m_node->arrayMode().type() == Array::String)
-                handleStringGetByVal();
-
-            if (JSArrayBufferView* view = m_graph.tryGetFoldableViewForChild1(m_node))
-                addLazily(view);
-            break;
-
-        case PutByVal:
-            if (JSArrayBufferView* view = m_graph.tryGetFoldableViewForChild1(m_node))
-                addLazily(view);
-            break;
-
-        case StringCharAt:
-            handleStringGetByVal();
             break;
 
         case NewArray:
         case NewArrayWithSize:
         case NewArrayBuffer:
-            if (!globalObject()->isHavingABadTime() && !hasArrayStorage(m_node->indexingType()))
+            if (!globalObject()->isHavingABadTime() && !hasAnyArrayStorage(m_node->indexingType()))
                 addLazily(globalObject()->havingABadTimeWatchpoint());
-            break;
-
-        case AllocationProfileWatchpoint:
-            addLazily(jsCast<JSFunction*>(m_node->function())->allocationProfileWatchpointSet());
-            break;
-
-        case StructureTransitionWatchpoint:
-            m_graph.watchpoints().addLazily(
-                m_node->origin.semantic,
-                m_node->child1()->op() == WeakJSConstant ? BadWeakConstantCacheWatchpoint : BadCacheWatchpoint,
-                m_node->structure()->transitionWatchpointSet());
-            break;
-
-        case VariableWatchpoint:
-            addLazily(m_node->variableWatchpointSet());
             break;
 
         case VarInjectionWatchpoint:
             addLazily(globalObject()->varInjectionWatchpoint());
             break;
-
-        case FunctionReentryWatchpoint:
-            addLazily(m_node->symbolTable()->m_functionEnteredOnce);
-            break;
-
-        case TypedArrayWatchpoint:
-            addLazily(m_node->typedArray());
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    void handleEdge(Node*, Edge edge)
-    {
-        switch (edge.useKind()) {
-        case StringObjectUse:
-        case StringOrStringObjectUse: {
-            Structure* stringObjectStructure = globalObject()->stringObjectStructure();
-            Structure* stringPrototypeStructure = stringObjectStructure->storedPrototype().asCell()->structure();
-            ASSERT(m_graph.watchpoints().isValidOrMixed(stringPrototypeStructure->transitionWatchpointSet()));
-
-            m_graph.watchpoints().addLazily(
-                m_node->origin.semantic, NotStringObject,
-                stringPrototypeStructure->transitionWatchpointSet());
-            break;
-        }
 
         default:
             break;
@@ -173,16 +119,6 @@ private:
             addLazily(globalObject()->masqueradesAsUndefinedWatchpoint());
     }
 
-    void handleStringGetByVal()
-    {
-        if (!m_node->arrayMode().isOutOfBounds())
-            return;
-        if (!globalObject()->stringPrototypeChainIsSane())
-            return;
-        addLazily(globalObject()->stringPrototype()->structure()->transitionWatchpointSet());
-        addLazily(globalObject()->objectPrototype()->structure()->transitionWatchpointSet());
-    }
-
     void addLazily(WatchpointSet* set)
     {
         m_graph.watchpoints().addLazily(set);
@@ -190,10 +126,6 @@ private:
     void addLazily(InlineWatchpointSet& set)
     {
         m_graph.watchpoints().addLazily(set);
-    }
-    void addLazily(JSArrayBufferView* view)
-    {
-        m_graph.watchpoints().addLazily(view);
     }
 
     JSGlobalObject* globalObject()

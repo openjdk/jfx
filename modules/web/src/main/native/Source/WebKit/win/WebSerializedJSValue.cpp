@@ -22,7 +22,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebSerializedJSValue.h"
 
@@ -34,13 +33,13 @@ WebSerializedJSValue::WebSerializedJSValue()
     : m_refCount(0)
 {
     ++gClassCount;
-    gClassNameCount.add("WebSerializedJSValue");
+    gClassNameCount().add("WebSerializedJSValue");
 }
 
 WebSerializedJSValue::~WebSerializedJSValue()
 {
     --gClassCount;
-    gClassNameCount.remove("WebSerializedJSValue");
+    gClassNameCount().remove("WebSerializedJSValue");
 }
 
 COMPtr<WebSerializedJSValue> WebSerializedJSValue::createInstance()

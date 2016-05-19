@@ -106,6 +106,7 @@ protected:
     String customValidationMessage() const;
 
 private:
+    virtual bool willValidate() const = 0;
     virtual void refFormAssociatedElement() = 0;
     virtual void derefFormAssociatedElement() = 0;
 
@@ -117,9 +118,6 @@ private:
     HTMLFormElement* m_form;
     String m_customValidationMessage;
 };
-
-#define FORM_ASSOCIATED_ELEMENT_TYPE_CASTS(ToClassName, predicate) \
-    TYPE_CASTS_BASE(ToClassName, FormAssociatedElement, element, element->predicate, element.predicate)
 
 } // namespace
 

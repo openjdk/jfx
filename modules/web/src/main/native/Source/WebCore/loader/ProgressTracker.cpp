@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -60,6 +60,8 @@ static const unsigned loadStalledHeartbeatCount = 4;
 // How many bytes are required between heartbeats to consider it progress.
 static const unsigned minumumBytesPerHeartbeatForProgress = 1024;
 
+static const std::chrono::milliseconds progressNotificationTimeInterval = std::chrono::milliseconds(200);
+
 struct ProgressItem {
     WTF_MAKE_NONCOPYABLE(ProgressItem); WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -80,12 +82,10 @@ ProgressTracker::ProgressTracker(ProgressTrackerClient& client)
     , m_totalPageAndResourceBytesToLoad(0)
     , m_totalBytesReceived(0)
     , m_lastNotifiedProgressValue(0)
-    , m_progressNotificationInterval(0.02)
-    , m_progressNotificationTimeInterval(std::chrono::milliseconds(100))
     , m_finalProgressChangedSent(false)
     , m_progressValue(0)
     , m_numProgressTrackedFrames(0)
-    , m_progressHeartbeatTimer(this, &ProgressTracker::progressHeartbeatTimerFired)
+    , m_progressHeartbeatTimer(*this, &ProgressTracker::progressHeartbeatTimerFired)
     , m_heartbeatsWithNoProgress(0)
     , m_totalBytesReceivedBeforePreviousHeartbeat(0)
     , m_isMainLoad(false)
@@ -113,7 +113,7 @@ void ProgressTracker::reset()
     m_lastNotifiedProgressTime = std::chrono::steady_clock::time_point();
     m_finalProgressChangedSent = false;
     m_numProgressTrackedFrames = 0;
-    m_originatingProgressFrame = 0;
+    m_originatingProgressFrame = nullptr;
 
     m_heartbeatsWithNoProgress = 0;
     m_totalBytesReceivedBeforePreviousHeartbeat = 0;
@@ -234,7 +234,7 @@ void ProgressTracker::incrementProgress(unsigned long identifier, unsigned bytes
     }
 
     int numPendingOrLoadingRequests = frame->loader().numPendingOrLoadingRequests(true);
-    estimatedBytesForPendingRequests = progressItemDefaultEstimatedLength * numPendingOrLoadingRequests;
+    estimatedBytesForPendingRequests = static_cast<long long>(progressItemDefaultEstimatedLength) * numPendingOrLoadingRequests;
     remainingBytes = ((m_totalPageAndResourceBytesToLoad + estimatedBytesForPendingRequests) - m_totalBytesReceived);
     if (remainingBytes > 0)  // Prevent divide by 0.
         percentOfRemainingBytes = (double)bytesReceived / (double)remainingBytes;
@@ -257,10 +257,7 @@ void ProgressTracker::incrementProgress(unsigned long identifier, unsigned bytes
     auto notifiedProgressTimeDelta = now - m_lastNotifiedProgressTime;
 
     LOG(Progress, "Progress incremented (%p) - value %f, tracked frames %d", this, m_progressValue, m_numProgressTrackedFrames);
-    double notificationProgressDelta = m_progressValue - m_lastNotifiedProgressValue;
-    if ((notificationProgressDelta >= m_progressNotificationInterval ||
-         notifiedProgressTimeDelta >= m_progressNotificationTimeInterval) &&
-        m_numProgressTrackedFrames > 0) {
+    if ((notifiedProgressTimeDelta >= progressNotificationTimeInterval || m_progressValue == 1) && m_numProgressTrackedFrames > 0) {
         if (!m_finalProgressChangedSent) {
             if (m_progressValue == 1)
                 m_finalProgressChangedSent = true;
@@ -308,7 +305,7 @@ bool ProgressTracker::isMainLoadProgressing() const
     return m_progressValue && m_progressValue < finalProgressValue && m_heartbeatsWithNoProgress < loadStalledHeartbeatCount;
 }
 
-void ProgressTracker::progressHeartbeatTimerFired(Timer<ProgressTracker>&)
+void ProgressTracker::progressHeartbeatTimerFired()
 {
     if (m_totalBytesReceived < m_totalBytesReceivedBeforePreviousHeartbeat + minumumBytesPerHeartbeatForProgress)
         ++m_heartbeatsWithNoProgress;

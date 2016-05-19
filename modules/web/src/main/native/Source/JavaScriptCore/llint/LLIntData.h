@@ -28,14 +28,13 @@
 
 #include "JSCJSValue.h"
 #include "Opcode.h"
-#include <wtf/Platform.h>
 
 namespace JSC {
 
 class VM;
 struct Instruction;
 
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
 typedef OpcodeID LLIntCode;
 #else
 typedef void (*LLIntCode)();
@@ -43,15 +42,13 @@ typedef void (*LLIntCode)();
 
 namespace LLInt {
 
-#if ENABLE(LLINT)
-
 class Data {
 public:
     static void performAssertions(VM&);
 
 private:
     static Instruction* s_exceptionInstructions;
-    static Opcode* s_opcodeMap;
+    static Opcode s_opcodeMap[numOpcodeIDs];
 
     friend void initialize();
 
@@ -87,33 +84,12 @@ ALWAYS_INLINE void* getCodePtr(OpcodeID id)
     return reinterpret_cast<void*>(getOpcode(id));
 }
 
-#else // !ENABLE(LLINT)
-
-#if COMPILER(CLANG)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
-#endif
-
-class Data {
-public:
-    static void performAssertions(VM&) { }
-};
-
-#if COMPILER(CLANG)
-#pragma clang diagnostic pop
-#endif
-
-#endif // !ENABLE(LLINT)
-
-ALWAYS_INLINE void* getOpcode(void llintOpcode())
+#if ENABLE(JIT)
+ALWAYS_INLINE LLIntCode getCodeFunctionPtr(OpcodeID codeId)
 {
-    return bitwise_cast<void*>(llintOpcode);
+    return reinterpret_cast<LLIntCode>(getCodePtr(codeId));
 }
-
-ALWAYS_INLINE void* getCodePtr(void glueHelper())
-{
-    return bitwise_cast<void*>(glueHelper);
-}
+#endif
 
 ALWAYS_INLINE void* getCodePtr(JSC::EncodedJSValue glueHelper())
 {

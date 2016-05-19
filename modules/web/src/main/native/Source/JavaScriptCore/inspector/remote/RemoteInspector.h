@@ -31,13 +31,14 @@
 #import "RemoteInspectorXPCConnection.h"
 #import <wtf/Forward.h>
 #import <wtf/HashMap.h>
-#import <wtf/Forward.h>
+#import <wtf/RetainPtr.h>
 
 OBJC_CLASS NSDictionary;
 OBJC_CLASS NSString;
 
 namespace Inspector {
 
+class RemoteInspectorClient;
 class RemoteInspectorDebuggable;
 class RemoteInspectorDebuggableConnection;
 struct RemoteInspectorDebuggableInfo;
@@ -45,13 +46,17 @@ struct RemoteInspectorDebuggableInfo;
 class JS_EXPORT_PRIVATE RemoteInspector final : public RemoteInspectorXPCConnection::Client {
 public:
     static void startDisabled();
-    static RemoteInspector& shared();
+    static RemoteInspector& singleton();
     friend class NeverDestroyed<RemoteInspector>;
 
     void registerDebuggable(RemoteInspectorDebuggable*);
     void unregisterDebuggable(RemoteInspectorDebuggable*);
     void updateDebuggable(RemoteInspectorDebuggable*);
+    void updateDebuggableAutomaticInspectCandidate(RemoteInspectorDebuggable*);
     void sendMessageToRemoteFrontend(unsigned identifier, const String& message);
+    void setupFailed(unsigned identifier);
+    void setupCompleted(unsigned identifier);
+    bool waitingForAutomaticInspection(unsigned identifier);
 
     bool enabled() const { return m_enabled; }
     bool hasActiveDebugSession() const { return m_hasActiveDebugSession; }
@@ -59,10 +64,19 @@ public:
     void start();
     void stop();
 
+    bool hasParentProcessInformation() const { return m_parentProcessIdentifier != 0; }
+    pid_t parentProcessIdentifier() const { return m_parentProcessIdentifier; }
+    RetainPtr<CFDataRef> parentProcessAuditData() const { return m_parentProcessAuditData; }
+    void setParentProcessInformation(pid_t, RetainPtr<CFDataRef> auditData);
+    void setParentProcessInfomationIsDelayed();
+
 private:
     RemoteInspector();
 
     unsigned nextAvailableIdentifier();
+
+    enum class StopSource { API, XPCMessage };
+    void stopInternal(StopSource);
 
     void setupXPCConnectionIfNeeded();
 
@@ -71,6 +85,8 @@ private:
     void pushListingSoon();
 
     void updateHasActiveDebugSession();
+
+    void sendAutomaticInspectionCandidateMessage();
 
     virtual void xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*, NSString *messageName, NSDictionary *userInfo) override;
     virtual void xpcConnectionFailed(RemoteInspectorXPCConnection*) override;
@@ -81,7 +97,10 @@ private:
     void receivedDidCloseMessage(NSDictionary *userInfo);
     void receivedGetListingMessage(NSDictionary *userInfo);
     void receivedIndicateMessage(NSDictionary *userInfo);
+    void receivedProxyApplicationSetupMessage(NSDictionary *userInfo);
     void receivedConnectionDiedMessage(NSDictionary *userInfo);
+    void receivedAutomaticInspectionConfigurationMessage(NSDictionary *userInfo);
+    void receivedAutomaticInspectionRejectMessage(NSDictionary *userInfo);
 
     static bool startEnabled;
 
@@ -94,12 +113,20 @@ private:
     HashMap<unsigned, std::pair<RemoteInspectorDebuggable*, RemoteInspectorDebuggableInfo>> m_debuggableMap;
     HashMap<unsigned, RefPtr<RemoteInspectorDebuggableConnection>> m_connectionMap;
     RefPtr<RemoteInspectorXPCConnection> m_xpcConnection;
+
     dispatch_queue_t m_xpcQueue;
     unsigned m_nextAvailableIdentifier;
     int m_notifyToken;
     bool m_enabled;
     bool m_hasActiveDebugSession;
     bool m_pushScheduled;
+
+    pid_t m_parentProcessIdentifier;
+    RetainPtr<CFDataRef> m_parentProcessAuditData;
+    bool m_shouldSendParentProcessInformation;
+    bool m_automaticInspectionEnabled;
+    bool m_automaticInspectionPaused;
+    unsigned m_automaticInspectionCandidateIdentifier;
 };
 
 } // namespace Inspector

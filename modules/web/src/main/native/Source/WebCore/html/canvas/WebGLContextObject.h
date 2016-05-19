@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class GraphicsContext3D;
-class WebGLRenderingContext;
+class WebGLRenderingContextBase;
 
 // WebGLContextObject the base class for objects that are owned by a specific
 // WebGLRenderingContext.
@@ -39,9 +39,9 @@ class WebGLContextObject : public WebGLObject {
 public:
     virtual ~WebGLContextObject();
 
-    WebGLRenderingContext* context() const { return m_context; }
+    WebGLRenderingContextBase* context() const { return m_context; }
 
-    virtual bool validate(const WebGLContextGroup*, const WebGLRenderingContext* context) const override
+    virtual bool validate(const WebGLContextGroup*, const WebGLRenderingContextBase* context) const override
     {
         return context == m_context;
     }
@@ -49,7 +49,7 @@ public:
     void detachContext();
 
 protected:
-    WebGLContextObject(WebGLRenderingContext*);
+    WebGLContextObject(WebGLRenderingContextBase*);
 
     virtual bool hasGroupOrContext() const override
     {
@@ -59,7 +59,7 @@ protected:
     virtual GraphicsContext3D* getAGraphicsContext3D() const override;
 
 private:
-    WebGLRenderingContext* m_context;
+    WebGLRenderingContextBase* m_context;
 };
 
 } // namespace WebCore

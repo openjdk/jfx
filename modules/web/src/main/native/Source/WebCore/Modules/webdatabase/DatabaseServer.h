@@ -26,53 +26,48 @@
 #ifndef DatabaseServer_h
 #define DatabaseServer_h
 
-#if ENABLE(SQL_DATABASE)
-
 #include "AbstractDatabaseServer.h"
 
 namespace WebCore {
 
 class DatabaseServer: public AbstractDatabaseServer {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     DatabaseServer() { };
     virtual ~DatabaseServer() { }
 
-    virtual void initialize(const String& databasePath);
+    void initialize(const String& databasePath) override;
 
-    virtual void setClient(DatabaseManagerClient*);
-    virtual String databaseDirectoryPath() const;
-    virtual void setDatabaseDirectoryPath(const String&);
+    void setClient(DatabaseManagerClient*) override;
+    String databaseDirectoryPath() const override;
+    void setDatabaseDirectoryPath(const String&) override;
 
-    virtual String fullPathForDatabase(SecurityOrigin*, const String& name, bool createIfDoesNotExist);
+    String fullPathForDatabase(SecurityOrigin*, const String& name, bool createIfDoesNotExist) override;
 
-    virtual PassRefPtr<DatabaseBackendBase> openDatabase(RefPtr<DatabaseBackendContext>&, DatabaseType,
-        const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize,
-        bool setVersionInNewDatabase, DatabaseError&, String& errorMessage, OpenAttempt);
+    RefPtr<DatabaseBackendBase> openDatabase(RefPtr<DatabaseContext>&, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError&, String& errorMessage, OpenAttempt) override;
 
-    virtual bool hasEntryForOrigin(SecurityOrigin*);
-    virtual void origins(Vector<RefPtr<SecurityOrigin>>& result);
-    virtual bool databaseNamesForOrigin(SecurityOrigin*, Vector<String>& result);
-    virtual DatabaseDetails detailsForNameAndOrigin(const String&, SecurityOrigin*);
+    void closeAllDatabases() override;
 
-    virtual unsigned long long usageForOrigin(SecurityOrigin*);
-    virtual unsigned long long quotaForOrigin(SecurityOrigin*);
+    bool hasEntryForOrigin(SecurityOrigin*) override;
+    void origins(Vector<RefPtr<SecurityOrigin>>& result) override;
+    bool databaseNamesForOrigin(SecurityOrigin*, Vector<String>& result) override;
+    DatabaseDetails detailsForNameAndOrigin(const String&, SecurityOrigin*) override;
 
-    virtual void setQuota(SecurityOrigin*, unsigned long long);
+    unsigned long long usageForOrigin(SecurityOrigin*) override;
+    unsigned long long quotaForOrigin(SecurityOrigin*) override;
 
-    virtual void deleteAllDatabases();
-    virtual bool deleteOrigin(SecurityOrigin*);
-    virtual bool deleteDatabase(SecurityOrigin*, const String& name);
+    void setQuota(SecurityOrigin*, unsigned long long) override;
 
-    virtual void interruptAllDatabasesForContext(const DatabaseBackendContext*);
+    void deleteAllDatabases() override;
+    bool deleteOrigin(SecurityOrigin*) override;
+    bool deleteDatabase(SecurityOrigin*, const String& name) override;
+
+    void interruptAllDatabasesForContext(const DatabaseContext*) override;
 
 protected:
-    virtual PassRefPtr<DatabaseBackendBase> createDatabase(RefPtr<DatabaseBackendContext>&, DatabaseType,
-        const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize,
-        bool setVersionInNewDatabase, DatabaseError&, String& errorMessage);
+    virtual RefPtr<DatabaseBackendBase> createDatabase(RefPtr<DatabaseContext>&, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError&, String& errorMessage);
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)
 
 #endif // DatabaseServer_h

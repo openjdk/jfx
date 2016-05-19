@@ -30,8 +30,8 @@
 
 namespace WebCore {
 
-RenderSVGInline::RenderSVGInline(SVGGraphicsElement& element, PassRef<RenderStyle> style)
-    : RenderInline(element, std::move(style))
+RenderSVGInline::RenderSVGInline(SVGGraphicsElement& element, Ref<RenderStyle>&& style)
+    : RenderInline(element, WTF::move(style))
 {
     setAlwaysCreateLineBoxes();
 }
@@ -40,7 +40,7 @@ std::unique_ptr<InlineFlowBox> RenderSVGInline::createInlineFlowBox()
 {
     auto box = std::make_unique<SVGInlineFlowBox>(*this);
     box->setHasVirtualLogicalHeight();
-    return std::move(box);
+    return WTF::move(box);
 }
 
 FloatRect RenderSVGInline::objectBoundingBox() const
@@ -95,7 +95,7 @@ void RenderSVGInline::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) co
 
     FloatRect textBoundingBox = textAncestor->strokeBoundingBox();
     for (InlineFlowBox* box = firstLineBox(); box; box = box->nextLineBox())
-        quads.append(localToAbsoluteQuad(FloatRect(textBoundingBox.x() + box->x(), textBoundingBox.y() + box->y(), box->logicalWidth(), box->logicalHeight()), false, wasFixed));
+        quads.append(localToAbsoluteQuad(FloatRect(textBoundingBox.x() + box->x(), textBoundingBox.y() + box->y(), box->logicalWidth(), box->logicalHeight()), UseTransforms, wasFixed));
 }
 
 void RenderSVGInline::willBeDestroyed()
@@ -110,6 +110,14 @@ void RenderSVGInline::styleDidChange(StyleDifference diff, const RenderStyle* ol
         setNeedsBoundariesUpdate();
     RenderInline::styleDidChange(diff, oldStyle);
     SVGResourcesCache::clientStyleChanged(*this, diff, style());
+}
+
+void RenderSVGInline::updateFromStyle()
+{
+    RenderInline::updateFromStyle();
+
+    // SVG text layout code expects us to be an inline-level element.
+    setInline(true);
 }
 
 void RenderSVGInline::addChild(RenderObject* child, RenderObject* beforeChild)
@@ -130,6 +138,7 @@ void RenderSVGInline::removeChild(RenderObject& child)
         RenderInline::removeChild(child);
         return;
     }
+
     Vector<SVGTextLayoutAttributes*, 2> affectedAttributes;
     textAncestor->subtreeChildWillBeRemoved(&child, affectedAttributes);
     RenderInline::removeChild(child);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2007, 2012 Apple, Inc.  All rights reserved.
+ * Copyright (C) 2005, 2007, 2012, 2014 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,31 +26,28 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <objc/objc.h>
-
-#ifdef __OBJC__
 @class NSString;
 @class NSURL;
-#else
-OBJC_CLASS(NSString);
-OBJC_CLASS(NSURL);
-#endif
 
 namespace WebCore {
 
-NSString *userVisibleString(NSURL *);
-NSURL *URLWithUserTypedString(NSString *, NSURL *);
-NSURL *URLByRemovingUserInfo(NSURL *);
-BOOL hostNameNeedsDecodingWithRange(NSString *, NSRange);
-BOOL hostNameNeedsEncodingWithRange(NSString *, NSRange);
-NSString *decodeHostNameWithRange(NSString *, NSRange);
-NSString *encodeHostNameWithRange(NSString *, NSRange);
-NSString *decodeHostName(NSString *);
-NSString *encodeHostName(NSString *);
-NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *, CFIndex);
-NSURL *URLWithData(NSData *, NSURL *baseURL);
-NSData *originalURLData(NSURL *);
-NSData *dataForURLComponentType(NSURL *, CFIndex);
-BOOL isUserVisibleURL(NSString *);
+WEBCORE_EXPORT NSString *userVisibleString(NSURL *);
+WEBCORE_EXPORT NSURL *URLByCanonicalizingURL(NSURL *);
+WEBCORE_EXPORT NSURL *URLWithUserTypedString(NSString *, NSURL *baseURL);
+WEBCORE_EXPORT NSURL *URLByRemovingUserInfo(NSURL *);
+WEBCORE_EXPORT BOOL hostNameNeedsDecodingWithRange(NSString *, NSRange);
+WEBCORE_EXPORT BOOL hostNameNeedsEncodingWithRange(NSString *, NSRange);
+WEBCORE_EXPORT NSString *decodeHostNameWithRange(NSString *, NSRange);
+WEBCORE_EXPORT NSString *encodeHostNameWithRange(NSString *, NSRange);
+WEBCORE_EXPORT NSString *decodeHostName(NSString *);
+WEBCORE_EXPORT NSString *encodeHostName(NSString *);
+WEBCORE_EXPORT NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *, CFURLComponentType);
+WEBCORE_EXPORT NSURL *URLWithData(NSData *, NSURL *baseURL);
+WEBCORE_EXPORT NSData *originalURLData(NSURL *);
+WEBCORE_EXPORT NSData *dataForURLComponentType(NSURL *, CFURLComponentType);
+
+NSRange rangeOfURLScheme(NSString *);
+WEBCORE_EXPORT BOOL isUserVisibleURL(NSString *);
+WEBCORE_EXPORT BOOL looksLikeAbsoluteURL(NSString *);
 
 } // namespace WebCore

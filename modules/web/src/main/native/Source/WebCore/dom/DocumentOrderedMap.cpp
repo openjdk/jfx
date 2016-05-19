@@ -41,47 +41,6 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-inline bool keyMatchesId(const AtomicStringImpl& key, const Element& element)
-{
-    return element.getIdAttribute().impl() == &key;
-}
-
-inline bool keyMatchesName(const AtomicStringImpl& key, const Element& element)
-{
-    return element.getNameAttribute().impl() == &key;
-}
-
-inline bool keyMatchesMapName(const AtomicStringImpl& key, const Element& element)
-{
-    return isHTMLMapElement(element) && toHTMLMapElement(element).getName().impl() == &key;
-}
-
-inline bool keyMatchesLowercasedMapName(const AtomicStringImpl& key, const Element& element)
-{
-    return isHTMLMapElement(element) && toHTMLMapElement(element).getName().lower().impl() == &key;
-}
-
-inline bool keyMatchesLowercasedUsemap(const AtomicStringImpl& key, const Element& element)
-{
-    // FIXME: HTML5 specification says we should match both image and object elements.
-    return isHTMLImageElement(element) && toHTMLImageElement(element).matchesLowercasedUsemap(key);
-}
-
-inline bool keyMatchesLabelForAttribute(const AtomicStringImpl& key, const Element& element)
-{
-    return isHTMLLabelElement(element) && element.getAttribute(forAttr).impl() == &key;
-}
-
-inline bool keyMatchesWindowNamedItem(const AtomicStringImpl& key, const Element& element)
-{
-    return WindowNameCollection::nodeMatches(const_cast<Element*>(&element), &key);
-}
-
-inline bool keyMatchesDocumentNamedItem(const AtomicStringImpl& key, const Element& element)
-{
-    return DocumentNameCollection::nodeMatches(const_cast<Element*>(&element), &key);
-}
-
 void DocumentOrderedMap::clear()
 {
     m_map.clear();
@@ -126,8 +85,8 @@ void DocumentOrderedMap::remove(const AtomicStringImpl& key, Element& element)
     }
 }
 
-template<bool keyMatches(const AtomicStringImpl&, const Element&)>
-inline Element* DocumentOrderedMap::get(const AtomicStringImpl& key, const TreeScope& scope) const
+template <typename KeyMatchingFunction>
+inline Element* DocumentOrderedMap::get(const AtomicStringImpl& key, const TreeScope& scope, const KeyMatchingFunction& keyMatches) const
 {
     m_map.checkConsistency();
 
@@ -158,42 +117,59 @@ inline Element* DocumentOrderedMap::get(const AtomicStringImpl& key, const TreeS
 
 Element* DocumentOrderedMap::getElementById(const AtomicStringImpl& key, const TreeScope& scope) const
 {
-    return get<keyMatchesId>(key, scope);
+    return get(key, scope, [] (const AtomicStringImpl& key, const Element& element) {
+        return element.getIdAttribute().impl() == &key;
+    });
 }
 
 Element* DocumentOrderedMap::getElementByName(const AtomicStringImpl& key, const TreeScope& scope) const
 {
-    return get<keyMatchesName>(key, scope);
+    return get(key, scope, [] (const AtomicStringImpl& key, const Element& element) {
+        return element.getNameAttribute().impl() == &key;
+    });
 }
 
 HTMLMapElement* DocumentOrderedMap::getElementByMapName(const AtomicStringImpl& key, const TreeScope& scope) const
 {
-    return toHTMLMapElement(get<keyMatchesMapName>(key, scope));
+    return downcast<HTMLMapElement>(get(key, scope, [] (const AtomicStringImpl& key, const Element& element) {
+        return is<HTMLMapElement>(element) && downcast<HTMLMapElement>(element).getName().impl() == &key;
+    }));
 }
 
 HTMLMapElement* DocumentOrderedMap::getElementByLowercasedMapName(const AtomicStringImpl& key, const TreeScope& scope) const
 {
-    return toHTMLMapElement(get<keyMatchesLowercasedMapName>(key, scope));
+    return downcast<HTMLMapElement>(get(key, scope, [] (const AtomicStringImpl& key, const Element& element) {
+        return is<HTMLMapElement>(element) && downcast<HTMLMapElement>(element).getName().lower().impl() == &key;
+    }));
 }
 
 HTMLImageElement* DocumentOrderedMap::getElementByLowercasedUsemap(const AtomicStringImpl& key, const TreeScope& scope) const
 {
-    return toHTMLImageElement(get<keyMatchesLowercasedUsemap>(key, scope));
+    return downcast<HTMLImageElement>(get(key, scope, [] (const AtomicStringImpl& key, const Element& element) {
+        // FIXME: HTML5 specification says we should match both image and object elements.
+        return is<HTMLImageElement>(element) && downcast<HTMLImageElement>(element).matchesLowercasedUsemap(key);
+    }));
 }
 
 HTMLLabelElement* DocumentOrderedMap::getElementByLabelForAttribute(const AtomicStringImpl& key, const TreeScope& scope) const
 {
-    return toHTMLLabelElement(get<keyMatchesLabelForAttribute>(key, scope));
+    return downcast<HTMLLabelElement>(get(key, scope, [] (const AtomicStringImpl& key, const Element& element) {
+        return is<HTMLLabelElement>(element) && element.fastGetAttribute(forAttr).impl() == &key;
+    }));
 }
 
 Element* DocumentOrderedMap::getElementByWindowNamedItem(const AtomicStringImpl& key, const TreeScope& scope) const
 {
-    return get<keyMatchesWindowNamedItem>(key, scope);
+    return get(key, scope, [] (const AtomicStringImpl& key, const Element& element) {
+        return WindowNameCollection::elementMatches(element, &key);
+    });
 }
 
 Element* DocumentOrderedMap::getElementByDocumentNamedItem(const AtomicStringImpl& key, const TreeScope& scope) const
 {
-    return get<keyMatchesDocumentNamedItem>(key, scope);
+    return get(key, scope, [] (const AtomicStringImpl& key, const Element& element) {
+        return DocumentNameCollection::elementMatches(element, &key);
+    });
 }
 
 const Vector<Element*>* DocumentOrderedMap::getAllElementsById(const AtomicStringImpl& key, const TreeScope& scope) const
@@ -216,7 +192,7 @@ const Vector<Element*>* DocumentOrderedMap::getAllElementsById(const AtomicStrin
         auto end = elementDescandents.end();
         for (; it != end; ++it) {
             auto& element = *it;
-            if (!keyMatchesId(key, element))
+            if (element.getIdAttribute().impl() != &key)
                 continue;
             entry.orderedList.append(&element);
         }

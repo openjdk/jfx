@@ -29,41 +29,51 @@
 #if ENABLE(MATHML)
 
 #include "MathMLNames.h"
+#include "RenderElement.h"
+#include "RenderIterator.h"
 
 namespace WebCore {
 
 using namespace MathMLNames;
 
-RenderMathMLToken::RenderMathMLToken(Element& element, PassRef<RenderStyle> style)
-    : RenderMathMLBlock(element, std::move(style))
+RenderMathMLToken::RenderMathMLToken(Element& element, Ref<RenderStyle>&& style)
+    : RenderMathMLBlock(element, WTF::move(style))
+    , m_containsElement(false)
 {
 }
 
-RenderMathMLToken::RenderMathMLToken(Document& document, PassRef<RenderStyle> style)
-    : RenderMathMLBlock(document, std::move(style))
+RenderMathMLToken::RenderMathMLToken(Document& document, Ref<RenderStyle>&& style)
+    : RenderMathMLBlock(document, WTF::move(style))
+    , m_containsElement(false)
 {
 }
 
 void RenderMathMLToken::addChild(RenderObject* newChild, RenderObject* beforeChild)
 {
     createWrapperIfNeeded();
-    toRenderElement(firstChild())->addChild(newChild, beforeChild);
+    downcast<RenderElement>(*firstChild()).addChild(newChild, beforeChild);
 }
 
 void RenderMathMLToken::createWrapperIfNeeded()
 {
     if (!firstChild()) {
         RenderPtr<RenderMathMLBlock> wrapper = createAnonymousMathMLBlock();
-        // This container doesn't offer any useful information to accessibility.
-        wrapper->setIgnoreInAccessibilityTree(true);
         RenderMathMLBlock::addChild(wrapper.leakPtr());
     }
 }
 
 void RenderMathMLToken::updateTokenContent()
 {
-    if (!isEmpty())
+    m_containsElement = false;
+    if (!isEmpty()) {
+        // The renderers corresponding to the children of the token element are wrapped inside an anonymous RenderMathMLBlock.
+        // When one of these renderers is a RenderElement, we handle the RenderMathMLToken differently.
+        // For some reason, an additional anonymous RenderBlock is created as a child of the RenderMathMLToken and the renderers are actually inserted into that RenderBlock so we need to dig down one additional level here.
+        const auto& wrapper = downcast<RenderElement>(firstChild());
+        if (const auto& block = downcast<RenderElement>(wrapper->firstChild()))
+            m_containsElement = childrenOfType<RenderElement>(*block).first();
         updateStyle();
+    }
     setNeedsLayoutAndPrefWidthsRecalc();
 }
 
@@ -71,17 +81,21 @@ void RenderMathMLToken::updateStyle()
 {
     const auto& tokenElement = element();
 
-    // This tries to emulate the default mathvariant value on <mi> using the CSS font-style property.
-    // FIXME: This should be revised when mathvariant is implemented (http://wkbug/85735) and when fonts with Mathematical Alphanumeric Symbols characters are more popular.
-    const auto& wrapper = toRenderElement(firstChild());
+    const auto& wrapper = downcast<RenderElement>(firstChild());
     auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(&style(), FLEX);
-    FontDescription fontDescription(newStyle.get().fontDescription());
-    FontSelector* fontSelector = newStyle.get().font().fontSelector();
-    if (element().textContent().stripWhiteSpace().simplifyWhiteSpace().length() == 1 && !tokenElement.hasAttribute(mathvariantAttr))
-        fontDescription.setItalic(true);
-    if (newStyle.get().setFontDescription(fontDescription))
-        newStyle.get().font().update(fontSelector);
-    wrapper->setStyle(std::move(newStyle));
+
+    if (tokenElement.hasTagName(MathMLNames::miTag)) {
+        // This tries to emulate the default mathvariant value on <mi> using the CSS font-style property.
+        // FIXME: This should be revised when mathvariant is implemented (http://wkbug/85735) and when fonts with Mathematical Alphanumeric Symbols characters are more popular.
+        FontDescription fontDescription(newStyle.get().fontDescription());
+        FontSelector* fontSelector = newStyle.get().fontCascade().fontSelector();
+        if (!m_containsElement && element().textContent().stripWhiteSpace().simplifyWhiteSpace().length() == 1 && !tokenElement.hasAttribute(mathvariantAttr))
+            fontDescription.setItalic(FontItalicOn);
+        if (newStyle.get().setFontDescription(fontDescription))
+            newStyle.get().fontCascade().update(fontSelector);
+    }
+
+    wrapper->setStyle(WTF::move(newStyle));
     wrapper->setNeedsLayoutAndPrefWidthsRecalc();
 }
 

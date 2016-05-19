@@ -26,8 +26,6 @@
 #include "config.h"
 #include "JSGlobalObjectConsoleAgent.h"
 
-#if ENABLE(INSPECTOR)
-
 namespace Inspector {
 
 JSGlobalObjectConsoleAgent::JSGlobalObjectConsoleAgent(InjectedScriptManager* injectedScriptManager)
@@ -35,21 +33,14 @@ JSGlobalObjectConsoleAgent::JSGlobalObjectConsoleAgent(InjectedScriptManager* in
 {
 }
 
-void JSGlobalObjectConsoleAgent::setMonitoringXHREnabled(ErrorString* errorString, bool)
+void JSGlobalObjectConsoleAgent::setMonitoringXHREnabled(ErrorString& errorString, bool)
 {
-    *errorString = ASCIILiteral("Not supported for JavaScript context");
+    errorString = ASCIILiteral("Not supported for JavaScript context");
 }
 
-void JSGlobalObjectConsoleAgent::addInspectedNode(ErrorString* errorString, int)
+void JSGlobalObjectConsoleAgent::addInspectedNode(ErrorString& errorString, int)
 {
-    *errorString = ASCIILiteral("Not supported for JavaScript context");
-}
-
-void JSGlobalObjectConsoleAgent::addInspectedHeapObject(ErrorString* errorString, int)
-{
-    *errorString = ASCIILiteral("Not supported for JavaScript context");
+    errorString = ASCIILiteral("Not supported for JavaScript context");
 }
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)

@@ -30,8 +30,8 @@
 #endif
 
 #include "AtomicString.h"
-#include "DynamicAnnotations.h"
 #include "MainThread.h"
+#include "NeverDestroyed.h"
 #include "StaticConstructors.h"
 #include "StringImpl.h"
 
@@ -43,17 +43,22 @@ namespace WTF {
 
 StringImpl* StringImpl::empty()
 {
-    // FIXME: This works around a bug in our port of PCRE, that a regular expression
-    // run on the empty string may still perform a read from the first element, and
-    // as such we need this to be a valid pointer. No code should ever be reading
-    // from a zero length string, so this should be able to be a non-null pointer
-    // into the zero-page.
-    // Replace this with 'reinterpret_cast<UChar*>(static_cast<intptr_t>(1))' once
-    // PCRE goes away.
-    static LChar emptyLCharData = 0;
-    DEFINE_STATIC_LOCAL(StringImpl, emptyString, (&emptyLCharData, 0, ConstructStaticString));
-    WTF_ANNOTATE_BENIGN_RACE(&emptyString, "Benign race on StringImpl::emptyString reference counter");
-    return &emptyString;
+    static NeverDestroyed<StringImpl> emptyString(ConstructEmptyString);
+    return &emptyString.get();
+}
+
+// In addition to the normal hash value, store specialized hash value for
+// symbolized StringImpl*. And don't use the normal hash value for symbolized
+// StringImpl* when they are treated as Identifiers. Unique nature of these
+// symbolized StringImpl* keys means that we don't need them to match any other
+// string (in fact, that's exactly the oposite of what we want!), and the
+// normal hash would lead to lots of conflicts.
+unsigned StringImpl::nextHashForSymbol()
+{
+    static unsigned s_nextHashForSymbol = 0;
+    s_nextHashForSymbol += 1 << s_flagCount;
+    s_nextHashForSymbol |= 1 << 31;
+    return s_nextHashForSymbol;
 }
 
 WTF_EXPORTDATA DEFINE_GLOBAL(AtomicString, nullAtom)

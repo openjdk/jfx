@@ -39,7 +39,7 @@ namespace WebCore {
 
 PlatformMessagePortChannel::EventData::EventData(PassRefPtr<SerializedScriptValue> message, std::unique_ptr<MessagePortChannelArray> channels)
     : m_message(message)
-    , m_channels(std::move(channels))
+    , m_channels(WTF::move(channels))
 {
 }
 
@@ -54,8 +54,8 @@ void MessagePortChannel::createChannel(PassRefPtr<MessagePort> port1, PassRefPtr
     channel1->m_channel->m_entangledChannel = channel2->m_channel;
     channel2->m_channel->m_entangledChannel = channel1->m_channel;
 
-    port1->entangle(std::move(channel2));
-    port2->entangle(std::move(channel1));
+    port1->entangle(WTF::move(channel2));
+    port2->entangle(WTF::move(channel1));
 }
 
 MessagePortChannel::MessagePortChannel(PassRefPtr<PlatformMessagePortChannel> channel)
@@ -91,7 +91,7 @@ void MessagePortChannel::postMessageToRemote(PassRefPtr<SerializedScriptValue> m
     MutexLocker lock(m_channel->m_mutex);
     if (!m_channel->m_outgoingQueue)
         return;
-    bool wasEmpty = m_channel->m_outgoingQueue->appendAndCheckEmpty(std::make_unique<PlatformMessagePortChannel::EventData>(message, std::move(channels)));
+    bool wasEmpty = m_channel->m_outgoingQueue->appendAndCheckEmpty(std::make_unique<PlatformMessagePortChannel::EventData>(message, WTF::move(channels)));
     if (wasEmpty && m_channel->m_remotePort)
         m_channel->m_remotePort->messageAvailable();
 }
@@ -146,9 +146,9 @@ MessagePort* MessagePortChannel::locallyEntangledPort(const ScriptExecutionConte
     return 0;
 }
 
-PassRefPtr<PlatformMessagePortChannel> PlatformMessagePortChannel::create(PassRefPtr<MessagePortQueue> incoming, PassRefPtr<MessagePortQueue> outgoing)
+Ref<PlatformMessagePortChannel> PlatformMessagePortChannel::create(PassRefPtr<MessagePortQueue> incoming, PassRefPtr<MessagePortQueue> outgoing)
 {
-    return adoptRef(new PlatformMessagePortChannel(incoming, outgoing));
+    return adoptRef(*new PlatformMessagePortChannel(incoming, outgoing));
 }
 
 PlatformMessagePortChannel::PlatformMessagePortChannel(PassRefPtr<MessagePortQueue> incoming, PassRefPtr<MessagePortQueue> outgoing)
@@ -183,9 +183,9 @@ void PlatformMessagePortChannel::closeInternal()
 {
     MutexLocker lock(m_mutex);
     // Disentangle ourselves from the other end. We still maintain a reference to our incoming queue, since previously-existing messages should still be delivered.
-    m_remotePort = 0;
-    m_entangledChannel = 0;
-    m_outgoingQueue = 0;
+    m_remotePort = nullptr;
+    m_entangledChannel = nullptr;
+    m_outgoingQueue = nullptr;
 }
 
 } // namespace WebCore

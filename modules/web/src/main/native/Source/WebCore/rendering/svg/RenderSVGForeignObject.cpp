@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2009 Google, Inc.
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
@@ -31,14 +31,13 @@
 #include "SVGForeignObjectElement.h"
 #include "SVGRenderingContext.h"
 #include "SVGResourcesCache.h"
-#include "SVGSVGElement.h"
 #include "TransformState.h"
 #include <wtf/StackStats.h>
 
 namespace WebCore {
 
-RenderSVGForeignObject::RenderSVGForeignObject(SVGForeignObjectElement& element, PassRef<RenderStyle> style)
-    : RenderSVGBlock(element, std::move(style))
+RenderSVGForeignObject::RenderSVGForeignObject(SVGForeignObjectElement& element, Ref<RenderStyle>&& style)
+    : RenderSVGBlock(element, WTF::move(style))
     , m_needsTransformUpdate(true)
 {
 }
@@ -49,13 +48,15 @@ RenderSVGForeignObject::~RenderSVGForeignObject()
 
 SVGForeignObjectElement& RenderSVGForeignObject::foreignObjectElement() const
 {
-    return toSVGForeignObjectElement(RenderSVGBlock::graphicsElement());
+    return downcast<SVGForeignObjectElement>(RenderSVGBlock::graphicsElement());
 }
 
 void RenderSVGForeignObject::paint(PaintInfo& paintInfo, const LayoutPoint&)
 {
-    if (paintInfo.context->paintingDisabled()
-        || (paintInfo.phase != PaintPhaseForeground && paintInfo.phase != PaintPhaseSelection))
+    if (paintInfo.context->paintingDisabled())
+        return;
+
+    if (paintInfo.phase != PaintPhaseForeground && paintInfo.phase != PaintPhaseSelection)
         return;
 
     PaintInfo childPaintInfo(paintInfo);
@@ -66,30 +67,30 @@ void RenderSVGForeignObject::paint(PaintInfo& paintInfo, const LayoutPoint&)
         childPaintInfo.context->clip(m_viewport);
 
     SVGRenderingContext renderingContext;
-    bool continueRendering = true;
     if (paintInfo.phase == PaintPhaseForeground) {
         renderingContext.prepareToRenderSVGContent(*this, childPaintInfo);
-        continueRendering = renderingContext.isRenderingPrepared();
+        if (!renderingContext.isRenderingPrepared())
+            return;
     }
 
-    if (continueRendering) {
-        // Paint all phases of FO elements atomically, as though the FO element established its
-        // own stacking context.
-        bool preservePhase = paintInfo.phase == PaintPhaseSelection || paintInfo.phase == PaintPhaseTextClip;
-        LayoutPoint childPoint = IntPoint();
-        childPaintInfo.phase = preservePhase ? paintInfo.phase : PaintPhaseBlockBackground;
-        RenderBlock::paint(childPaintInfo, IntPoint());
-        if (!preservePhase) {
-            childPaintInfo.phase = PaintPhaseChildBlockBackgrounds;
-            RenderBlock::paint(childPaintInfo, childPoint);
-            childPaintInfo.phase = PaintPhaseFloat;
-            RenderBlock::paint(childPaintInfo, childPoint);
-            childPaintInfo.phase = PaintPhaseForeground;
-            RenderBlock::paint(childPaintInfo, childPoint);
-            childPaintInfo.phase = PaintPhaseOutline;
-            RenderBlock::paint(childPaintInfo, childPoint);
-        }
+    LayoutPoint childPoint = IntPoint();
+    if (paintInfo.phase == PaintPhaseSelection) {
+        RenderBlock::paint(childPaintInfo, childPoint);
+        return;
     }
+
+    // Paint all phases of FO elements atomically, as though the FO element established its
+    // own stacking context.
+    childPaintInfo.phase = PaintPhaseBlockBackground;
+    RenderBlock::paint(childPaintInfo, childPoint);
+    childPaintInfo.phase = PaintPhaseChildBlockBackgrounds;
+    RenderBlock::paint(childPaintInfo, childPoint);
+    childPaintInfo.phase = PaintPhaseFloat;
+    RenderBlock::paint(childPaintInfo, childPoint);
+    childPaintInfo.phase = PaintPhaseForeground;
+    RenderBlock::paint(childPaintInfo, childPoint);
+    childPaintInfo.phase = PaintPhaseOutline;
+    RenderBlock::paint(childPaintInfo, childPoint);
 }
 
 LayoutRect RenderSVGForeignObject::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
@@ -100,6 +101,13 @@ LayoutRect RenderSVGForeignObject::clippedOverflowRectForRepaint(const RenderLay
 void RenderSVGForeignObject::computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect& repaintRect, bool fixed) const
 {
     SVGRenderSupport::computeFloatRectForRepaint(*this, repaintContainer, repaintRect, fixed);
+}
+
+void RenderSVGForeignObject::computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect& repaintRect, bool fixed) const
+{
+    FloatRect floatRect(repaintRect);
+    computeFloatRectForRepaint(repaintContainer, floatRect, fixed);
+    repaintRect = enclosingLayoutRect(floatRect);
 }
 
 const AffineTransform& RenderSVGForeignObject::localToParentTransform() const
@@ -184,7 +192,7 @@ bool RenderSVGForeignObject::nodeAtFloatPoint(const HitTestRequest& request, Hit
         return false;
 
     // FOs establish a stacking context, so we need to hit-test all layers.
-    HitTestLocation hitTestLocation(roundedLayoutPoint(localPoint));
+    HitTestLocation hitTestLocation(localPoint);
     return RenderBlock::nodeAtPoint(request, result, hitTestLocation, LayoutPoint(), HitTestForeground)
         || RenderBlock::nodeAtPoint(request, result, hitTestLocation, LayoutPoint(), HitTestFloat)
         || RenderBlock::nodeAtPoint(request, result, hitTestLocation, LayoutPoint(), HitTestChildBlockBackgrounds);

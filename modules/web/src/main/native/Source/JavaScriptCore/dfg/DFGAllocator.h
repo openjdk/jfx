@@ -26,12 +26,9 @@
 #ifndef DFGAllocator_h
 #define DFGAllocator_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "DFGCommon.h"
-#include <wtf/PageAllocationAligned.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace DFG {
@@ -52,7 +49,7 @@ public:
     void* allocate(); // Use placement new to allocate, and avoid using this method.
     void free(T*); // Call this method to delete; never use 'delete' directly.
 
-    void freeAll(); // Only call this if T has a trivial destructor.
+    void freeAll(); // Only call this if you've either freed everything or if T has a trivial destructor.
     void reset(); // Like freeAll(), but also returns all memory to the OS.
 
     unsigned indexOf(const T*);
@@ -72,7 +69,7 @@ private:
         bool isInThisRegion(const T* pointer) { return static_cast<unsigned>(pointer - data()) < numberOfThingsPerRegion(); }
         static Region* regionFor(const T* pointer) { return bitwise_cast<Region*>(bitwise_cast<uintptr_t>(pointer) & ~(size() - 1)); }
 
-        PageAllocationAligned m_allocation;
+        void* m_allocation;
         Allocator* m_allocator;
         Region* m_next;
     };
@@ -155,11 +152,14 @@ void Allocator<T>::reset()
 template<typename T>
 unsigned Allocator<T>::indexOf(const T* object)
 {
-    unsigned baseIndex = 0;
+    unsigned numRegions = 0;
+    for (Region* region = m_regionHead; region; region = region->m_next)
+        numRegions++;
+    unsigned regionIndex = 0;
     for (Region* region = m_regionHead; region; region = region->m_next) {
         if (region->isInThisRegion(object))
-            return baseIndex + (object - region->data());
-        baseIndex += Region::numberOfThingsPerRegion();
+            return (numRegions - 1 - regionIndex) * Region::numberOfThingsPerRegion() + (object - region->data());
+        regionIndex++;
     }
     CRASH();
     return 0;
@@ -201,10 +201,8 @@ void* Allocator<T>::allocateSlow()
     if (logCompilationChanges())
         dataLog("Allocating another allocator region.\n");
 
-    PageAllocationAligned allocation = PageAllocationAligned::allocate(Region::size(), Region::size(), OSAllocator::JSGCHeapPages);
-    if (!static_cast<bool>(allocation))
-        CRASH();
-    Region* region = static_cast<Region*>(allocation.base());
+    void* allocation = fastAlignedMalloc(Region::size(), Region::size());
+    Region* region = static_cast<Region*>(allocation);
     region->m_allocation = allocation;
     region->m_allocator = this;
     startBumpingIn(region);
@@ -221,7 +219,7 @@ void Allocator<T>::freeRegionsStartingAt(typename Allocator<T>::Region* region)
 {
     while (region) {
         Region* nextRegion = region->m_next;
-        region->m_allocation.deallocate();
+        fastAlignedFree(region->m_allocation);
         region = nextRegion;
     }
 }

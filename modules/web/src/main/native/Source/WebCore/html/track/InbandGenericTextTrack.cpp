@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc.  All rights reserved.
+ * Copyright (C) 2012-2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -35,6 +35,10 @@
 #include "Logging.h"
 #include <math.h>
 #include <wtf/text/CString.h>
+
+#if ENABLE(WEBVTT_REGIONS)
+#include "VTTRegionList.h"
+#endif
 
 namespace WebCore {
 
@@ -88,9 +92,9 @@ void GenericTextTrackCueMap::remove(TextTrackCue* cue)
     }
 }
 
-PassRefPtr<InbandGenericTextTrack> InbandGenericTextTrack::create(ScriptExecutionContext* context, TextTrackClient* client, PassRefPtr<InbandTextTrackPrivate> playerPrivate)
+Ref<InbandGenericTextTrack> InbandGenericTextTrack::create(ScriptExecutionContext* context, TextTrackClient* client, PassRefPtr<InbandTextTrackPrivate> playerPrivate)
 {
-    return adoptRef(new InbandGenericTextTrack(context, client, playerPrivate));
+    return adoptRef(*new InbandGenericTextTrack(context, client, playerPrivate));
 }
 
 InbandGenericTextTrack::InbandGenericTextTrack(ScriptExecutionContext* context, TextTrackClient* client, PassRefPtr<InbandTextTrackPrivate> trackPrivate)
@@ -106,11 +110,11 @@ void InbandGenericTextTrack::updateCueFromCueData(TextTrackCueGeneric* cue, Gene
 {
     cue->willChange();
 
-    cue->setStartTime(cueData->startTime(), IGNORE_EXCEPTION);
-    double endTime = cueData->endTime();
-    if (std::isinf(endTime) && mediaElement())
-        endTime = mediaElement()->duration();
-    cue->setEndTime(endTime, IGNORE_EXCEPTION);
+    cue->setStartTime(cueData->startTime());
+    MediaTime endTime = cueData->endTime();
+    if (endTime.isPositiveInfinite() && mediaElement())
+        endTime = mediaElement()->durationMediaTime();
+    cue->setEndTime(endTime);
     cue->setText(cueData->content());
     cue->setId(cueData->id());
     cue->setBaseFontSizeRelativeToVideoHeight(cueData->baseFontSize());
@@ -151,10 +155,12 @@ void InbandGenericTextTrack::addGenericCue(InbandTextTrackPrivate* trackPrivate,
 
     RefPtr<TextTrackCueGeneric> cue = TextTrackCueGeneric::create(*scriptExecutionContext(), cueData->startTime(), cueData->endTime(), cueData->content());
     updateCueFromCueData(cue.get(), cueData.get());
-    if (hasCue(cue.get(), VTTCue::IgnoreDuration)) {
-        LOG(Media, "InbandGenericTextTrack::addGenericCue ignoring already added cue: start=%.2f, end=%.2f, content=\"%s\"\n", cueData->startTime(), cueData->endTime(), cueData->content().utf8().data());
+    if (hasCue(cue.get(), TextTrackCue::IgnoreDuration)) {
+        LOG(Media, "InbandGenericTextTrack::addGenericCue ignoring already added cue: start=%s, end=%s, content=\"%s\"\n", toString(cueData->startTime()).utf8().data(), toString(cueData->endTime()).utf8().data(), cueData->content().utf8().data());
         return;
     }
+
+    LOG(Media, "InbandGenericTextTrack::addGenericCue added cue: start=%.2f, end=%.2f, content=\"%s\"\n", cueData->startTime().toDouble(), cueData->endTime().toDouble(), cueData->content().utf8().data());
 
     if (cueData->status() != GenericCueData::Complete)
         m_cueMap.add(cueData.get(), cue.get());
@@ -178,16 +184,71 @@ void InbandGenericTextTrack::removeGenericCue(InbandTextTrackPrivate*, GenericCu
 {
     RefPtr<TextTrackCueGeneric> cue = m_cueMap.find(cueData);
     if (cue) {
-        LOG(Media, "InbandGenericTextTrack::removeGenericCue removing cue: start=%.2f, end=%.2f, content=\"%s\"\n", cueData->startTime(), cueData->endTime(), cueData->content().utf8().data());
+        LOG(Media, "InbandGenericTextTrack::removeGenericCue removing cue: start=%s, end=%s, content=\"%s\"\n",  toString(cueData->startTime()).utf8().data(), toString(cueData->endTime()).utf8().data(), cueData->content().utf8().data());
         removeCue(cue.get(), IGNORE_EXCEPTION);
-    } else
+    } else {
+        LOG(Media, "InbandGenericTextTrack::removeGenericCue UNABLE to find cue: start=%.2f, end=%.2f, content=\"%s\"\n", cueData->startTime().toDouble(), cueData->endTime().toDouble(), cueData->content().utf8().data());
         m_cueMap.remove(cueData);
+    }
 }
 
 void InbandGenericTextTrack::removeCue(TextTrackCue* cue, ExceptionCode& ec)
 {
     m_cueMap.remove(cue);
     TextTrack::removeCue(cue, ec);
+}
+
+WebVTTParser& InbandGenericTextTrack::parser()
+{
+    if (!m_webVTTParser)
+        m_webVTTParser = std::make_unique<WebVTTParser>(static_cast<WebVTTParserClient*>(this), scriptExecutionContext());
+    return *m_webVTTParser;
+}
+
+void InbandGenericTextTrack::parseWebVTTCueData(InbandTextTrackPrivate* trackPrivate, const ISOWebVTTCue& cueData)
+{
+    ASSERT_UNUSED(trackPrivate, trackPrivate == m_private);
+    parser().parseCueData(cueData);
+}
+
+void InbandGenericTextTrack::parseWebVTTFileHeader(InbandTextTrackPrivate* trackPrivate, String header)
+{
+    ASSERT_UNUSED(trackPrivate, trackPrivate == m_private);
+    parser().parseFileHeader(header);
+}
+
+void InbandGenericTextTrack::newCuesParsed()
+{
+    Vector<RefPtr<WebVTTCueData>> cues;
+    parser().getNewCues(cues);
+
+    for (auto& cueData : cues) {
+        RefPtr<VTTCue> vttCue = VTTCue::create(*scriptExecutionContext(), *cueData);
+
+        if (hasCue(vttCue.get(), TextTrackCue::IgnoreDuration)) {
+            LOG(Media, "InbandGenericTextTrack::newCuesParsed ignoring already added cue: start=%.2f, end=%.2f, content=\"%s\"\n", vttCue->startTime(), vttCue->endTime(), vttCue->text().utf8().data());
+            return;
+        }
+        addCue(vttCue.release(), ASSERT_NO_EXCEPTION);
+    }
+}
+
+#if ENABLE(WEBVTT_REGIONS)
+void InbandGenericTextTrack::newRegionsParsed()
+{
+    Vector<RefPtr<VTTRegion>> newRegions;
+    parser().getNewRegions(newRegions);
+
+    for (auto& region : newRegions) {
+        region->setTrack(this);
+        regions()->add(region);
+    }
+}
+#endif
+
+void InbandGenericTextTrack::fileFailedToParse()
+{
+    LOG(Media, "Error parsing WebVTT stream.");
 }
 
 } // namespace WebCore

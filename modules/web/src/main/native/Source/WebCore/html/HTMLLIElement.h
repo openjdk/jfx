@@ -29,8 +29,8 @@ namespace WebCore {
 
 class HTMLLIElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLLIElement> create(Document&);
-    static PassRefPtr<HTMLLIElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLLIElement> create(Document&);
+    static Ref<HTMLLIElement> create(const QualifiedName&, Document&);
 
 private:
     HTMLLIElement(const QualifiedName&, Document&);

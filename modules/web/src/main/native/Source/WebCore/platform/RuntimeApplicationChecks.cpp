@@ -57,8 +57,7 @@ static bool mainBundleIsEqualTo(const String& bundleIdentifierString)
 
 bool applicationIsSafari()
 {
-    // FIXME: For the WebProcess case, ensure that this is Safari's WebProcess.
-    static bool isSafari = mainBundleIsEqualTo("com.apple.Safari") || mainBundleIsEqualTo("com.apple.WebProcess");
+    static bool isSafari = mainBundleIsEqualTo("com.apple.Safari");
     return isSafari;
 }
 
@@ -66,6 +65,12 @@ bool applicationIsAppleMail()
 {
     static bool isAppleMail = mainBundleIsEqualTo("com.apple.mail");
     return isAppleMail;
+}
+
+bool applicationIsIBooks()
+{
+    static bool isIBooks = mainBundleIsEqualTo("com.apple.iBooksX");
+    return isIBooks;
 }
 
 bool applicationIsITunes()
@@ -102,6 +107,12 @@ bool applicationIsMicrosoftOutlook()
 {
     static bool isMicrosoftOutlook = mainBundleIsEqualTo("com.microsoft.Outlook");
     return isMicrosoftOutlook;
+}
+
+bool applicationIsQuickenEssentials()
+{
+    static bool isQuickenEssentials = mainBundleIsEqualTo("com.intuit.QuickenEssentials");
+    return isQuickenEssentials;
 }
 
 bool applicationIsAperture()

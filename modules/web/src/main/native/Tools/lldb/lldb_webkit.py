@@ -30,9 +30,11 @@
 """
 
 import lldb
+import string
 import struct
 
 def __lldb_init_module(debugger, dict):
+    debugger.HandleCommand('command script add -f lldb_webkit.btjs btjs')
     debugger.HandleCommand('type summary add --expand -F lldb_webkit.WTFString_SummaryProvider WTF::String')
     debugger.HandleCommand('type summary add --expand -F lldb_webkit.WTFStringImpl_SummaryProvider WTF::StringImpl')
     debugger.HandleCommand('type summary add --expand -F lldb_webkit.WTFAtomicString_SummaryProvider WTF::AtomicString')
@@ -52,6 +54,8 @@ def WTFString_SummaryProvider(valobj, dict):
 
 def WTFStringImpl_SummaryProvider(valobj, dict):
     provider = WTFStringImplProvider(valobj, dict)
+    if not provider.is_initialized():
+        return ""
     return "{ length = %d, is8bit = %d, contents = '%s' }" % (provider.get_length(), provider.is_8bit(), provider.to_string())
 
 
@@ -79,6 +83,8 @@ def WTFMediaTime_SummaryProvider(valobj, dict):
         return "{ -Infinity }"
     if provider.isIndefinite():
         return "{ Indefinite }"
+    if provider.hasDoubleValue():
+        return "{ %f }" % (provider.timeValueAsDouble())
     return "{ %d/%d, %f }" % (provider.timeValue(), provider.timeScale(), float(provider.timeValue()) / provider.timeScale())
 
 
@@ -95,6 +101,56 @@ def WebCoreLayoutSize_SummaryProvider(valobj, dict):
 def WebCoreLayoutPoint_SummaryProvider(valobj, dict):
     provider = WebCoreLayoutPointProvider(valobj, dict)
     return "{ x = %s, y = %s }" % (provider.get_x(), provider.get_y())
+
+
+def btjs(debugger, command, result, internal_dict):
+    '''Prints a stack trace of current thread with JavaScript frames decoded.  Takes optional frame count argument'''
+
+    target = debugger.GetSelectedTarget()
+    addressFormat = '#0{width}x'.format(width=target.GetAddressByteSize() * 2 + 2)
+    process = target.GetProcess()
+    thread = process.GetSelectedThread()
+
+    if target.FindFunctions("JSC::ExecState::describeFrame").GetSize() or target.FindFunctions("_ZN3JSC9ExecState13describeFrameEv").GetSize():
+        annotateJSFrames = True
+    else:
+        annotateJSFrames = False
+
+    if not annotateJSFrames:
+        print "Warning: Can't find JSC::ExecState::describeFrame() in executable to annotate JavaScript frames"
+
+    backtraceDepth = thread.GetNumFrames()
+
+    if len(command) == 1:
+        try:
+            backtraceDepth = int(command)
+        except ValueError:
+            return
+
+    threadFormat = '* thread #{num}: tid = {tid:#x}, {pcAddr:' + addressFormat + '}, queue = \'{queueName}, stop reason = {stopReason}'
+    print threadFormat.format(num=thread.GetIndexID(), tid=thread.GetThreadID(), pcAddr=thread.GetFrameAtIndex(0).GetPC(), queueName=thread.GetQueueName(), stopReason=thread.GetStopDescription(30))
+
+    for frame in thread:
+        if backtraceDepth < 1:
+            break
+
+        backtraceDepth = backtraceDepth - 1
+
+        function = frame.GetFunction()
+
+        if annotateJSFrames and not frame or not frame.GetSymbol() or frame.GetSymbol().GetName() == "llint_entry":
+            callFrame = frame.GetSP()
+            JSFrameDescription = frame.EvaluateExpression("((JSC::ExecState*)0x%x)->describeFrame()" % frame.GetFP()).GetSummary()
+            if not JSFrameDescription:
+                JSFrameDescription = frame.EvaluateExpression("((JSC::CallFrame*)0x%x)->describeFrame()" % frame.GetFP()).GetSummary()
+            if not JSFrameDescription:
+                JSFrameDescription = frame.EvaluateExpression("(char*)_ZN3JSC9ExecState13describeFrameEv(0x%x)" % frame.GetFP()).GetSummary()
+            if JSFrameDescription:
+                JSFrameDescription = string.strip(JSFrameDescription, '"')
+                frameFormat = '    frame #{num}: {addr:' + addressFormat + '} {desc}'
+                print frameFormat.format(num=frame.GetFrameID(), addr=frame.GetPC(), desc=JSFrameDescription)
+                continue
+        print '    %s' % frame
 
 # FIXME: Provide support for the following types:
 # def WTFVector_SummaryProvider(valobj, dict):
@@ -127,6 +183,9 @@ def ustring_to_string(valobj, error, length=None):
     else:
         length = int(length)
 
+    if length == 0:
+        return ""
+
     pointer = valobj.GetValueAsUnsigned()
     contents = valobj.GetProcess().ReadMemory(pointer, length * 2, lldb.SBError())
 
@@ -143,6 +202,9 @@ def lstring_to_string(valobj, error, length=None):
         length = guess_string_length(valobj, 1, error)
     else:
         length = int(length)
+
+    if length == 0:
+        return ""
 
     pointer = valobj.GetValueAsUnsigned()
     contents = valobj.GetProcess().ReadMemory(pointer, length, lldb.SBError())
@@ -170,6 +232,10 @@ class WTFStringImplProvider:
 
     def to_string(self):
         error = lldb.SBError()
+
+        if not self.is_initialized():
+            return u""
+
         if self.is_8bit():
             return lstring_to_string(self.get_data8(), error, self.get_length())
         return ustring_to_string(self.get_data16(), error, self.get_length())
@@ -177,7 +243,10 @@ class WTFStringImplProvider:
     def is_8bit(self):
         # FIXME: find a way to access WTF::StringImpl::s_hashFlag8BitBuffer
         return bool(self.valobj.GetChildMemberWithName('m_hashAndFlags').GetValueAsUnsigned(0) \
-            & 1 << 5)
+            & 1 << 3)
+
+    def is_initialized(self):
+        return self.valobj.GetValueAsUnsigned() != 0
 
 
 class WTFStringProvider:
@@ -342,6 +411,10 @@ class WTFMediaTimeProvider:
     def timeValue(self):
         return self.valobj.GetChildMemberWithName('m_timeValue').GetValueAsSigned(0)
 
+    def timeValueAsDouble(self):
+        error = lldb.SBError()
+        return self.valobj.GetChildMemberWithName('m_timeValueAsDouble').GetData().GetDouble(error, 0)
+
     def timeScale(self):
         return self.valobj.GetChildMemberWithName('m_timeScale').GetValueAsSigned(0)
 
@@ -356,3 +429,6 @@ class WTFMediaTimeProvider:
 
     def isIndefinite(self):
         return self.valobj.GetChildMemberWithName('m_timeFlags').GetValueAsSigned(0) & (1 << 4)
+
+    def hasDoubleValue(self):
+        return self.valobj.GetChildMemberWithName('m_timeFlags').GetValueAsSigned(0) & (1 << 5)

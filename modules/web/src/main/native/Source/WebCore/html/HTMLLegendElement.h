@@ -32,7 +32,7 @@ class HTMLFormControlElement;
 
 class HTMLLegendElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLLegendElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLLegendElement> create(const QualifiedName&, Document&);
 
 private:
     HTMLLegendElement(const QualifiedName&, Document&);
@@ -44,8 +44,6 @@ private:
     virtual void focus(bool restorePreviousSelection, FocusDirection) override;
     virtual HTMLFormElement* virtualForm() const override;
 };
-
-NODE_TYPE_CASTS(HTMLLegendElement)
 
 } //namespace
 

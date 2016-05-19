@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2003, 2006 Apple Computer, Inc.
+ * Copyright (C) 2003, 2006 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -31,18 +31,18 @@ class HitTestResult;
 class EllipsisBox final : public InlineElementBox {
 public:
     EllipsisBox(RenderBlockFlow&, const AtomicString& ellipsisStr, InlineFlowBox* parent, int width, int height, int y, bool firstLine, bool isVertical, InlineBox* markupBox);
-    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom);
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) override;
+    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override final;
     void setSelectionState(RenderObject::SelectionState s) { m_selectionState = s; }
     IntRect selectionRect();
 
-    RenderBlockFlow& blockFlow() const { return toRenderBlockFlow(InlineBox::renderer()); }
+    RenderBlockFlow& blockFlow() const { return downcast<RenderBlockFlow>(InlineBox::renderer()); }
 
 private:
     void paintMarkupBox(PaintInfo&, const LayoutPoint& paintOffset, LayoutUnit lineTop, LayoutUnit lineBottom, const RenderStyle&);
-    virtual int height() const { return m_height; }
-    virtual RenderObject::SelectionState selectionState() { return m_selectionState; }
-    void paintSelection(GraphicsContext*, const LayoutPoint&, const RenderStyle&, const Font&);
+    int height() const { return m_height; }
+    virtual RenderObject::SelectionState selectionState() override { return m_selectionState; }
+    void paintSelection(GraphicsContext*, const LayoutPoint&, const RenderStyle&, const FontCascade&);
     InlineBox* markupBox() const;
 
     bool m_shouldPaintMarkupBox;

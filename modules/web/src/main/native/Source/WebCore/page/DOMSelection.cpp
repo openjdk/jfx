@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -64,7 +64,7 @@ DOMSelection::DOMSelection(const TreeScope* treeScope)
 
 void DOMSelection::clearTreeScope()
 {
-    m_treeScope = 0;
+    m_treeScope = nullptr;
 }
 
 const VisibleSelection& DOMSelection::visibleSelection() const
@@ -337,7 +337,7 @@ void DOMSelection::extend(Node* node, int offset, ExceptionCode& ec)
         return;
     }
 
-    if (offset < 0 || offset > (node->offsetInCharacters() ? caretMaxOffset(node) : (int)node->childNodeCount())) {
+    if (offset < 0 || offset > (node->offsetInCharacters() ? caretMaxOffset(node) : static_cast<int>(node->countChildNodes()))) {
         ec = INDEX_SIZE_ERR;
         return;
     }
@@ -364,7 +364,7 @@ PassRefPtr<Range> DOMSelection::getRangeAt(int index, ExceptionCode& ec)
 
     if (Node* shadowAncestor = selectionShadowAncestor(m_frame)) {
         ContainerNode* container = shadowAncestor->parentNodeGuaranteedHostFree();
-        int offset = shadowAncestor->nodeIndex();
+        unsigned offset = shadowAncestor->computeNodeIndex();
         return Range::create(shadowAncestor->document(), container, offset, container, offset);
     }
 
@@ -457,7 +457,7 @@ bool DOMSelection::containsNode(Node* n, bool allowPartial) const
     ContainerNode* parentNode = node->parentNode();
     if (!parentNode || !parentNode->inDocument())
         return false;
-    unsigned nodeIndex = node->nodeIndex();
+    unsigned nodeIndex = node->computeNodeIndex();
 
     ExceptionCode ec = 0;
     bool nodeFullySelected = Range::compareBoundaryPoints(parentNode, nodeIndex, selectedRange->startContainer(), selectedRange->startOffset(), ec) >= 0 && !ec
@@ -481,7 +481,7 @@ void DOMSelection::selectAllChildren(Node* n, ExceptionCode& ec)
         return;
 
     // This doesn't (and shouldn't) select text node characters.
-    setBaseAndExtent(n, 0, n, n->childNodeCount(), ec);
+    setBaseAndExtent(n, 0, n, n->countChildNodes(), ec);
 }
 
 String DOMSelection::toString()
@@ -523,7 +523,7 @@ int DOMSelection::shadowAdjustedOffset(const Position& position) const
     if (containerNode == adjustedNode)
         return position.computeOffsetInContainerNode();
 
-    return adjustedNode->nodeIndex();
+    return adjustedNode->computeNodeIndex();
 }
 
 bool DOMSelection::isValidForPosition(Node* node) const

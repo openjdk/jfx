@@ -26,6 +26,7 @@
 namespace WebCore {
 
 class RenderSVGResourceSolidColor final : public RenderSVGResource {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     RenderSVGResourceSolidColor();
     virtual ~RenderSVGResourceSolidColor();
@@ -37,8 +38,7 @@ public:
     virtual void postApplyResource(RenderElement&, GraphicsContext*&, unsigned short resourceMode, const Path*, const RenderSVGShape*) override;
     virtual FloatRect resourceBoundingBox(const RenderObject&) override { return FloatRect(); }
 
-    virtual RenderSVGResourceType resourceType() const override { return s_resourceType; }
-    static RenderSVGResourceType s_resourceType;
+    virtual RenderSVGResourceType resourceType() const override { return SolidColorResourceType; }
 
     const Color& color() const { return m_color; }
     void setColor(const Color& color) { m_color = color; }
@@ -48,5 +48,7 @@ private:
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_RENDER_SVG_RESOURCE(RenderSVGResourceSolidColor, SolidColorResourceType)
 
 #endif

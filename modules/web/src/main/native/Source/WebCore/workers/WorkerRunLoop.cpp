@@ -87,7 +87,7 @@ private:
 };
 
 WorkerRunLoop::WorkerRunLoop()
-    : m_sharedTimer(adoptPtr(new WorkerSharedTimer))
+    : m_sharedTimer(std::make_unique<WorkerSharedTimer>())
     , m_nestedCount(0)
     , m_uniqueId(0)
 {
@@ -192,34 +192,29 @@ void WorkerRunLoop::terminate()
     m_messageQueue.kill();
 }
 
-void WorkerRunLoop::postTask(PassOwnPtr<ScriptExecutionContext::Task> task)
+void WorkerRunLoop::postTask(ScriptExecutionContext::Task task)
 {
-    postTaskForMode(task, defaultMode());
+    postTaskForMode(WTF::move(task), defaultMode());
 }
 
-void WorkerRunLoop::postTaskAndTerminate(PassOwnPtr<ScriptExecutionContext::Task> task)
+void WorkerRunLoop::postTaskAndTerminate(ScriptExecutionContext::Task task)
 {
-    m_messageQueue.appendAndKill(Task::create(task, defaultMode().isolatedCopy()));
+    m_messageQueue.appendAndKill(std::make_unique<Task>(WTF::move(task), defaultMode()));
 }
 
-void WorkerRunLoop::postTaskForMode(PassOwnPtr<ScriptExecutionContext::Task> task, const String& mode)
+void WorkerRunLoop::postTaskForMode(ScriptExecutionContext::Task task, const String& mode)
 {
-    m_messageQueue.append(Task::create(task, mode.isolatedCopy()));
+    m_messageQueue.append(std::make_unique<Task>(WTF::move(task), mode));
 }
 
-std::unique_ptr<WorkerRunLoop::Task> WorkerRunLoop::Task::create(PassOwnPtr<ScriptExecutionContext::Task> task, const String& mode)
+void WorkerRunLoop::Task::performTask(const WorkerRunLoop& runLoop, WorkerGlobalScope* context)
 {
-    return std::unique_ptr<Task>(new Task(task, mode));
+    if ((!context->isClosing() && !runLoop.terminated()) || m_task.isCleanupTask())
+        m_task.performTask(*context);
 }
 
-void WorkerRunLoop::Task::performTask(const WorkerRunLoop& runLoop, ScriptExecutionContext* context)
-{
-    if ((!toWorkerGlobalScope(context)->isClosing() && !runLoop.terminated()) || m_task->isCleanupTask())
-        m_task->performTask(context);
-}
-
-WorkerRunLoop::Task::Task(PassOwnPtr<ScriptExecutionContext::Task> task, const String& mode)
-    : m_task(task)
+WorkerRunLoop::Task::Task(ScriptExecutionContext::Task task, const String& mode)
+    : m_task(WTF::move(task))
     , m_mode(mode.isolatedCopy())
 {
 }

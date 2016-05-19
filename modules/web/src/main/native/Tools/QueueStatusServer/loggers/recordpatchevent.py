@@ -1,4 +1,5 @@
 # Copyright (C) 2013 Google Inc. All rights reserved.
+# Copyright (C) 2014 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -41,32 +42,25 @@ class RecordPatchEvent(object):
             queue_log.put()
 
     @classmethod
-    def retrying(cls, attachment_id, queue_name, bot_id=None):
-        patch_log = PatchLog.lookup_if_exists(attachment_id, queue_name)
-        if not patch_log:
-            WarningLog.record("patchlog missing", "In retrying event.", attachment_id, queue_name, bot_id)
-            return
-
-        if bot_id:
-            patch_log.bot_id = bot_id
-        patch_log.retry_count += 1
-        patch_log.put()
-
-        queue_log = QueueLog.get_current(queue_name, queue_log_duration)
-        queue_log.patch_retry_count += 1
-        queue_log.put()
-
-    @classmethod
     def started(cls, attachment_id, queue_name, bot_id=None):
         patch_log = PatchLog.lookup_if_exists(attachment_id, queue_name)
         if not patch_log:
             WarningLog.record("patchlog missing", "In started event.", attachment_id, queue_name, bot_id)
             return
 
-        # An existing wait_duration implies the patch had been started previously and is being picked up again because it had expired.
-        if not patch_log.wait_duration:
-            if bot_id:
-                patch_log.bot_id = bot_id
+        if bot_id:
+            patch_log.bot_id = bot_id
+
+        # An existing wait_duration implies the patch had been started previously and is
+        # being picked up again because it had expired, or was released.
+        if patch_log.wait_duration is not None:
+            patch_log.retry_count += 1
+            patch_log.put()
+
+            queue_log = QueueLog.get_current(queue_name, queue_log_duration)
+            queue_log.patch_retry_count += 1
+            queue_log.put()
+        else:
             patch_log.calculate_wait_duration()
             patch_log.put()
 
@@ -75,13 +69,13 @@ class RecordPatchEvent(object):
             queue_log.put()
 
     @classmethod
-    def stopped(cls, attachment_id, queue_name, bot_id=None):
+    def stopped(cls, attachment_id, queue_name, status_message, bot_id=None):
         patch_log = PatchLog.lookup_if_exists(attachment_id, queue_name)
         if not patch_log:
             WarningLog.record("patchlog missing", "In stopped event.", attachment_id, queue_name, bot_id)
             return
 
-        if not patch_log.wait_duration:
+        if patch_log.wait_duration is None:
             WarningLog.record("patchlog wait duration missing", "In stopped event.", attachment_id, queue_name, bot_id)
             return
 
@@ -90,6 +84,7 @@ class RecordPatchEvent(object):
                 patch_log.bot_id = bot_id
             patch_log.finished = True
             patch_log.calculate_process_duration()
+            patch_log.latest_message = status_message
             patch_log.put()
 
             queue_log = QueueLog.get_current(queue_name, queue_log_duration)
@@ -97,7 +92,7 @@ class RecordPatchEvent(object):
             queue_log.put()
 
     @classmethod
-    def updated(cls, attachment_id, queue_name, bot_id=None):
+    def updated(cls, attachment_id, queue_name, status_message, bot_id=None):
         patch_log = PatchLog.lookup_if_exists(attachment_id, queue_name)
         if not patch_log:
             WarningLog.record("patchlog missing", "In updated event.", attachment_id, queue_name, bot_id)
@@ -106,6 +101,7 @@ class RecordPatchEvent(object):
         if bot_id:
             patch_log.bot_id = bot_id
         patch_log.status_update_count += 1
+        patch_log.latest_message = status_message
         patch_log.put()
 
         queue_log = QueueLog.get_current(queue_name, queue_log_duration)

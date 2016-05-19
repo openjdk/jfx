@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -132,7 +132,7 @@ PassRefPtr<HRTFKernel> HRTFKernel::createInterpolatedKernel(HRTFKernel* kernel1,
     float frameDelay = (1 - x) * kernel1->frameDelay() + x * kernel2->frameDelay();
 
     std::unique_ptr<FFTFrame> interpolatedFrame = FFTFrame::createInterpolatedFrame(*kernel1->fftFrame(), *kernel2->fftFrame(), x);
-    return HRTFKernel::create(std::move(interpolatedFrame), frameDelay, sampleRate1);
+    return HRTFKernel::create(WTF::move(interpolatedFrame), frameDelay, sampleRate1);
 }
 
 } // namespace WebCore

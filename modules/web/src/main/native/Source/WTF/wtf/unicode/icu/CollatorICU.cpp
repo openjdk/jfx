@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -35,6 +35,7 @@
 
 #include <mutex>
 #include <unicode/ucol.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StringExtras.h>
 #include <wtf/text/StringView.h>
 
@@ -52,11 +53,13 @@ static bool cachedCollatorShouldSortLowercaseFirst;
 static std::mutex& cachedCollatorMutex()
 {
     static std::once_flag onceFlag;
-    static std::mutex* mutex;
+
+    static LazyNeverDestroyed<std::mutex> mutex;
     std::call_once(onceFlag, []{
-        mutex = std::make_unique<std::mutex>().release();
+        mutex.construct();
     });
-    return *mutex;
+
+    return mutex;
 }
 
 #if !(OS(DARWIN) && USE(CF))
@@ -138,24 +141,20 @@ Collator::Collator(const char* locale, bool shouldSortLowercaseFirst)
     ucol_setAttribute(m_collator, UCOL_NORMALIZATION_MODE, UCOL_ON, &status);
     ASSERT(U_SUCCESS(status));
 
-    m_locale = locale ? strdup(locale) : nullptr;
+    m_locale = locale ? fastStrDup(locale) : nullptr;
     m_shouldSortLowercaseFirst = shouldSortLowercaseFirst;
 }
 
 Collator::~Collator()
 {
-    {
-        std::lock_guard<std::mutex> lock(cachedCollatorMutex());
-        if (cachedCollator)
-            ucol_close(cachedCollator);
-        cachedCollator = m_collator;
-        cachedCollatorLocale = m_locale;
-        cachedCollatorShouldSortLowercaseFirst = m_shouldSortLowercaseFirst;
-        m_collator = nullptr;
-        m_locale = nullptr;
+    std::lock_guard<std::mutex> lock(cachedCollatorMutex());
+    if (cachedCollator) {
+        ucol_close(cachedCollator);
+        fastFree(cachedCollatorLocale);
     }
-
-    free(m_locale);
+    cachedCollator = m_collator;
+    cachedCollatorLocale = m_locale;
+    cachedCollatorShouldSortLowercaseFirst = m_shouldSortLowercaseFirst;
 }
 
 static int32_t getIndexLatin1(UCharIterator* iterator, UCharIteratorOrigin origin)

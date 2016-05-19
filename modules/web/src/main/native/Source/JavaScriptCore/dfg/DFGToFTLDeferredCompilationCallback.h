@@ -26,8 +26,6 @@
 #ifndef DFGToFTLDeferredCompilationCallback_h
 #define DFGToFTLDeferredCompilationCallback_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(FTL_JIT)
 
 #include "DeferredCompilationCallback.h"
@@ -47,8 +45,7 @@ protected:
 public:
     virtual ~ToFTLDeferredCompilationCallback();
 
-    static PassRefPtr<ToFTLDeferredCompilationCallback> create(
-        PassRefPtr<CodeBlock> dfgCodeBlock);
+    static Ref<ToFTLDeferredCompilationCallback> create(PassRefPtr<CodeBlock> dfgCodeBlock);
 
     virtual void compilationDidBecomeReadyAsynchronously(CodeBlock*);
     virtual void compilationDidComplete(CodeBlock*, CompilationResult);

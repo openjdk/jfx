@@ -84,6 +84,8 @@ class RegisterID
             "t5"
         when "t6"
             "pcBase"
+        when "t7"
+            "t7"
         when "csr1"
             "tagTypeNumber"
         when "csr2"
@@ -1102,9 +1104,6 @@ class Instruction
                 $asm.putc "POP(#{op.clDump});"
             }
 
-        when "pushCalleeSaves"
-        when "popCalleeSaves"
-
 
         # A convenience and compact call to crash because we don't want to use
         # the generic llint crash mechanism which relies on the availability
@@ -1122,7 +1121,7 @@ class Instruction
             $asm.putc "lr.opcode = getOpcode(llint_cloop_did_return_from_js_#{@@didReturnFromJSLabelCounter});"
             $asm.putc "opcode = #{operands[0].clValue(:opcode)};"
             $asm.putc "DISPATCH_OPCODE();"
-            $asm.putsLabel("llint_cloop_did_return_from_js_#{@@didReturnFromJSLabelCounter}")
+            $asm.putsLabel("llint_cloop_did_return_from_js_#{@@didReturnFromJSLabelCounter}", false)
 
         # We can't do generic function calls with an arbitrary set of args, but
         # fortunately we don't have to here. All native function calls always

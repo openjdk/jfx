@@ -43,12 +43,12 @@
 
 namespace WebCore {
 
-PassRefPtr<IDBDatabaseBackend> IDBDatabaseBackend::create(const String& name, const String& uniqueIdentifier, IDBFactoryBackendInterface* factory, IDBServerConnection& serverConnection)
+Ref<IDBDatabaseBackend> IDBDatabaseBackend::create(const String& name, const String& uniqueIdentifier, IDBFactoryBackendInterface* factory, IDBServerConnection& serverConnection)
 {
-    RefPtr<IDBDatabaseBackend> backend = adoptRef(new IDBDatabaseBackend(name, uniqueIdentifier, factory, serverConnection));
+    Ref<IDBDatabaseBackend> backend = adoptRef(*new IDBDatabaseBackend(name, uniqueIdentifier, factory, serverConnection));
     backend->openInternalAsync();
 
-    return backend.release();
+    return backend;
 }
 
 IDBDatabaseBackend::IDBDatabaseBackend(const String& name, const String& uniqueIdentifier, IDBFactoryBackendInterface* factory, IDBServerConnection& serverConnection)
@@ -244,7 +244,7 @@ void IDBDatabaseBackend::put(int64_t transactionId, int64_t objectStoreId, PassR
     transaction->schedulePutOperation(objectStoreMetadata, value, key, putMode, callbacks, indexIds, indexKeys);
 }
 
-void IDBDatabaseBackend::setIndexKeys(int64_t transactionID, int64_t objectStoreID, PassRefPtr<IDBKey> prpPrimaryKey, const Vector<int64_t>& indexIDs, const Vector<IndexKeys>& indexKeys)
+void IDBDatabaseBackend::setIndexKeys(int64_t transactionID, int64_t objectStoreID, PassRefPtr<IDBKey> prpPrimaryKey, const Vector<int64_t, 1>& indexIDs, const Vector<IndexKeys, 1>& indexKeys)
 {
     LOG(StorageAPI, "IDBDatabaseBackend::setIndexKeys");
     ASSERT(prpPrimaryKey);
@@ -262,7 +262,7 @@ void IDBDatabaseBackend::setIndexKeys(int64_t transactionID, int64_t objectStore
     });
 }
 
-void IDBDatabaseBackend::setIndexesReady(int64_t transactionId, int64_t, const Vector<int64_t>& indexIds)
+void IDBDatabaseBackend::setIndexesReady(int64_t transactionId, int64_t, const Vector<int64_t, 1>& indexIds)
 {
     LOG(StorageAPI, "IDBDatabaseBackend::setIndexesReady");
 
@@ -333,7 +333,7 @@ void IDBDatabaseBackend::transactionFinished(IDBTransactionBackend* rawTransacti
     m_transactions.remove(transaction->id());
     if (transaction->mode() == IndexedDB::TransactionMode::VersionChange) {
         ASSERT(transaction.get() == m_runningVersionChangeTransaction.get());
-        m_runningVersionChangeTransaction.clear();
+        m_runningVersionChangeTransaction = nullptr;
     }
 }
 
@@ -419,7 +419,7 @@ void IDBDatabaseBackend::processPendingOpenCalls(bool success)
             if (m_metadata.id == InvalidId) {
                 // This database was deleted then quickly re-opened.
                 // openInternalAsync() will recreate it in the backing store and then resume processing pending callbacks.
-                pendingOpenCalls.prepend(std::move(pendingOpenCall));
+                pendingOpenCalls.prepend(WTF::move(pendingOpenCall));
                 pendingOpenCalls.swap(m_pendingOpenCalls);
 
                 openInternalAsync();
@@ -497,10 +497,10 @@ void IDBDatabaseBackend::runIntVersionChangeTransaction(PassRefPtr<IDBCallbacks>
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
     RefPtr<IDBDatabaseCallbacks> databaseCallbacks = prpDatabaseCallbacks;
     ASSERT(callbacks);
-    for (DatabaseCallbacksSet::const_iterator it = m_databaseCallbacksSet.begin(); it != m_databaseCallbacksSet.end(); ++it) {
+    for (auto& callback : m_databaseCallbacksSet) {
         // Front end ensures the event is not fired at connections that have closePending set.
-        if (*it != databaseCallbacks)
-            (*it)->onVersionChange(m_metadata.version, requestedVersion, IndexedDB::VersionNullness::Null);
+        if (callback != databaseCallbacks)
+            callback->onVersionChange(m_metadata.version, requestedVersion);
     }
     // The spec dictates we wait until all the version change events are
     // delivered and then check m_databaseCallbacks.empty() before proceeding
@@ -531,9 +531,9 @@ void IDBDatabaseBackend::deleteDatabase(PassRefPtr<IDBCallbacks> prpCallbacks)
 {
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
     if (isDeleteDatabaseBlocked()) {
-        for (DatabaseCallbacksSet::const_iterator it = m_databaseCallbacksSet.begin(); it != m_databaseCallbacksSet.end(); ++it) {
+        for (auto& callback : m_databaseCallbacksSet) {
             // Front end ensures the event is not fired at connections that have closePending set.
-            (*it)->onVersionChange(m_metadata.version, 0, IndexedDB::VersionNullness::Null);
+            callback->onVersionChange(m_metadata.version, 0);
         }
         // FIXME: Only fire onBlocked if there are open connections after the
         // VersionChangeEvents are received, not just set up to fire.
@@ -603,8 +603,8 @@ void IDBDatabaseBackend::close(PassRefPtr<IDBDatabaseCallbacks> prpCallbacks)
     if (!connectionCount() && !m_pendingOpenCalls.size() && !m_pendingDeleteCalls.size()) {
         TransactionMap transactions(m_transactions);
         RefPtr<IDBDatabaseError> error = IDBDatabaseError::create(IDBDatabaseException::UnknownError, "Connection is closing.");
-        for (TransactionMap::const_iterator::Values it = transactions.values().begin(), end = transactions.values().end(); it != end; ++it)
-            (*it)->abort(error);
+        for (auto& transaction : transactions.values())
+            transaction->abort(error);
 
         ASSERT(m_transactions.isEmpty());
 

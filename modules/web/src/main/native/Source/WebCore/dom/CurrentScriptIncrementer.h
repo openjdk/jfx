@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,22 +37,22 @@ namespace WebCore {
 class CurrentScriptIncrementer {
     WTF_MAKE_NONCOPYABLE(CurrentScriptIncrementer);
 public:
-    CurrentScriptIncrementer(Document* document, Element* element)
+    CurrentScriptIncrementer(Document& document, Element* element)
         : m_document(document)
-        , m_isHTMLScriptElement(isHTMLScriptElement(element))
+        , m_isHTMLScriptElement(is<HTMLScriptElement>(*element))
     {
         if (m_isHTMLScriptElement)
-            m_document->pushCurrentScript(toHTMLScriptElement(element));
+            m_document.pushCurrentScript(downcast<HTMLScriptElement>(element));
     }
 
     ~CurrentScriptIncrementer()
     {
         if (m_isHTMLScriptElement)
-            m_document->popCurrentScript();
+            m_document.popCurrentScript();
     }
 
 private:
-    Document* m_document;
+    Document& m_document;
     bool m_isHTMLScriptElement;
 };
 

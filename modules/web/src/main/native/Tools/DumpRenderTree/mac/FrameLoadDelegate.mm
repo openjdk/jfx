@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -44,7 +44,6 @@
 #import "WorkQueueItem.h"
 #import <Foundation/NSNotification.h>
 #import <JavaScriptCore/JavaScriptCore.h>
-#import <WebKitSystemInterface.h>
 #import <WebKit/WebFramePrivate.h>
 #import <WebKit/WebHTMLViewPrivate.h>
 #import <WebKit/WebKit.h>
@@ -147,7 +146,7 @@
 #endif
 
     // if we finish all the commands, we're ready to dump state
-    if (WorkQueue::shared()->processWork() && !gTestRunner->waitToDump())
+    if (WorkQueue::singleton().processWork() && !gTestRunner->waitToDump())
         dump();
 }
 
@@ -156,13 +155,14 @@
     accessibilityController->resetToConsistentState();
 }
 
-- (void)webView:(WebView *)c locationChangeDone:(NSError *)error forDataSource:(WebDataSource *)dataSource
+- (void)webView:(WebView *)webView locationChangeDone:(NSError *)error forDataSource:(WebDataSource *)dataSource
 {
     if ([dataSource webFrame] == topLoadingFrame) {
         topLoadingFrame = nil;
-        WorkQueue::shared()->setFrozen(true); // first complete load freezes the queue for the rest of this test
+        auto& workQueue = WorkQueue::singleton();
+        workQueue.setFrozen(true); // first complete load freezes the queue for the rest of this test
         if (!gTestRunner->waitToDump()) {
-            if (WorkQueue::shared()->count())
+            if (workQueue.count())
                 [self performSelector:@selector(processWork:) withObject:nil afterDelay:0];
             else
                 dump();
@@ -170,36 +170,9 @@
     }
 }
 
-static NSString *testPathFromURL(NSURL* url)
-{
-    if ([url isFileURL]) {
-        NSString *filePath = [url path];
-        NSRange layoutTestsRange = [filePath rangeOfString:@"/LayoutTests/"];
-        if (layoutTestsRange.location == NSNotFound)
-            return nil;
-
-        return [filePath substringFromIndex:NSMaxRange(layoutTestsRange)];
-    }
-
-    // HTTP test URLs look like: http://127.0.0.1:8000/inspector/resource-tree/resource-request-content-after-loading-and-clearing-cache.html
-    if (![[url scheme] isEqualToString:@"http"] && ![[url scheme] isEqualToString:@"https"])
-        return nil;
-
-    if ([[url host] isEqualToString:@"127.0.0.1"] && ([[url port] intValue] == 8000 || [[url port] intValue] == 8443))
-        return [url path];
-
-    return nil;
-}
-
 - (void)webView:(WebView *)sender didStartProvisionalLoadForFrame:(WebFrame *)frame
 {
     ASSERT([frame provisionalDataSource]);
-
-    if (!done && [[sender mainFrame] isEqual:frame]) {
-        NSURL *provisionalLoadURL = [[[frame provisionalDataSource] initialRequest] URL];
-        if (NSString *testPath = testPathFromURL(provisionalLoadURL))
-            WKSetCrashReportApplicationSpecificInformation((CFStringRef)[@"CRASHING TEST: " stringByAppendingString:testPath]);
-    }
 
     if (!done && gTestRunner->dumpFrameLoadCallbacks()) {
         NSString *string = [NSString stringWithFormat:@"%@ - didStartProvisionalLoadForFrame", [frame _drt_descriptionSuitableForTestResult]];
@@ -281,11 +254,6 @@ static NSString *testPathFromURL(NSURL* url)
         printf ("%s\n", [string UTF8String]);
     }
 
-    // FIXME: This call to displayIfNeeded can be removed when <rdar://problem/5092361> is fixed.
-    // After that is fixed, we will reenable painting after WebCore is done loading the document,
-    // and this call will no longer be needed.
-    if ([[sender mainFrame] isEqual:frame])
-        [sender displayIfNeeded];
     [self webView:sender locationChangeDone:nil forDataSource:[frame dataSource]];
     [gNavigationController webView:sender didFinishLoadForFrame:frame];
 }

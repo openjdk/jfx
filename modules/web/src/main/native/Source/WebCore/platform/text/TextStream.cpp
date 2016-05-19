@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -91,13 +91,13 @@ TextStream& TextStream::operator<<(unsigned long long i)
 
 TextStream& TextStream::operator<<(float f)
 {
-    m_text.append(String::numberToStringFixedWidth(f, 2));
+    m_text.appendFixedWidthNumber(f, 2);
     return *this;
 }
 
 TextStream& TextStream::operator<<(double d)
 {
-    m_text.append(String::numberToStringFixedWidth(d, 2));
+    m_text.appendFixedWidthNumber(d, 2);
     return *this;
 }
 
@@ -165,7 +165,7 @@ TextStream& TextStream::operator<<(const LayoutPoint& p)
 TextStream& TextStream::operator<<(const LayoutRect& r)
 {
     // FIXME: These should be printed as floats. Keeping them ints for consistency with previous test expectations.
-    return *this << pixelSnappedIntRect(r);
+    return *this << snappedIntRect(r);
 }
 
 String TextStream::release()

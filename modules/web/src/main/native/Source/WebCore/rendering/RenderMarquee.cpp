@@ -59,10 +59,11 @@ using namespace HTMLNames;
 RenderMarquee::RenderMarquee(RenderLayer* l)
     : m_layer(l), m_currentLoop(0)
     , m_totalLoops(0)
-    , m_timer(this, &RenderMarquee::timerFired)
+    , m_timer(*this, &RenderMarquee::timerFired)
     , m_start(0), m_end(0), m_speed(0), m_reset(false)
     , m_suspended(false), m_stopped(false), m_direction(MAUTO)
 {
+    l->setConstrainsScrollingToContentEdge(false);
 }
 
 RenderMarquee::~RenderMarquee()
@@ -73,8 +74,8 @@ int RenderMarquee::marqueeSpeed() const
 {
     int result = m_layer->renderer().style().marqueeSpeed();
     Element* element = m_layer->renderer().element();
-    if (element && element->hasTagName(marqueeTag))
-        result = std::max(result, toHTMLMarqueeElement(element)->minimumDelay());
+    if (is<HTMLMarqueeElement>(element))
+        result = std::max(result, downcast<HTMLMarqueeElement>(*element).minimumDelay());
     return result;
 }
 
@@ -135,7 +136,7 @@ int RenderMarquee::computePosition(EMarqueeDirection dir, bool stopAtContentEdge
     }
     else {
         int contentHeight = box->layoutOverflowRect().maxY() - box->borderTop() + box->paddingBottom();
-        int clientHeight = box->clientHeight();
+        int clientHeight = roundToInt(box->clientHeight());
         if (dir == MUP) {
             if (stopAtContentEdge)
                  return std::min(contentHeight - clientHeight, 0);
@@ -240,7 +241,7 @@ void RenderMarquee::updateMarqueeStyle()
         m_timer.stop();
 }
 
-void RenderMarquee::timerFired(Timer<RenderMarquee>&)
+void RenderMarquee::timerFired()
 {
     if (m_layer->renderer().view().needsLayout())
         return;
@@ -271,7 +272,7 @@ void RenderMarquee::timerFired(Timer<RenderMarquee>&)
             addIncrement = !addIncrement;
         }
         bool positive = range > 0;
-        int clientSize = (isHorizontal() ? m_layer->renderBox()->clientWidth() : m_layer->renderBox()->clientHeight());
+        int clientSize = (isHorizontal() ? roundToInt(m_layer->renderBox()->clientWidth()) : roundToInt(m_layer->renderBox()->clientHeight()));
         int increment = abs(intValueForLength(m_layer->renderer().style().marqueeIncrement(), clientSize));
         int currentPos = (isHorizontal() ? m_layer->scrollXOffset() : m_layer->scrollYOffset());
         newPos =  currentPos + (addIncrement ? increment : -increment);

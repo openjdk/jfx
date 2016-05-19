@@ -44,11 +44,6 @@ static const int weekDefaultStepBase = -259200000; // The first day of 1970-W01.
 static const int weekDefaultStep = 1;
 static const int weekStepScaleFactor = 604800000;
 
-void WeekInputType::attach()
-{
-    observeFeatureIfVisible(FeatureObserver::InputTypeWeek);
-}
-
 const AtomicString& WeekInputType::formControlType() const
 {
     return InputTypeNames::week();
@@ -61,7 +56,7 @@ DateComponents::Type WeekInputType::dateType() const
 
 StepRange WeekInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
-    DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (weekDefaultStep, weekDefaultStepBase, weekStepScaleFactor, StepRange::ParsedStepValueShouldBeInteger));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (weekDefaultStep, weekDefaultStepBase, weekStepScaleFactor, StepRange::ParsedStepValueShouldBeInteger));
 
     const Decimal stepBase = parseToNumber(element().fastGetAttribute(minAttr), weekDefaultStepBase);
     const Decimal minimum = parseToNumber(element().fastGetAttribute(minAttr), Decimal::fromDouble(DateComponents::minimumWeek()));

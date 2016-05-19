@@ -21,28 +21,28 @@
 #ifndef JSTestMediaQueryListListener_h
 #define JSTestMediaQueryListListener_h
 
-#include "JSDOMBinding.h"
+#include "JSDOMWrapper.h"
 #include "TestMediaQueryListListener.h"
-#include <runtime/JSGlobalObject.h>
-#include <runtime/JSObject.h>
-#include <runtime/ObjectPrototype.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
 class JSTestMediaQueryListListener : public JSDOMWrapper {
 public:
     typedef JSDOMWrapper Base;
-    static JSTestMediaQueryListListener* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, PassRefPtr<TestMediaQueryListListener> impl)
+    static JSTestMediaQueryListListener* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<TestMediaQueryListListener>&& impl)
     {
-        JSTestMediaQueryListListener* ptr = new (NotNull, JSC::allocateCell<JSTestMediaQueryListListener>(globalObject->vm().heap)) JSTestMediaQueryListListener(structure, globalObject, impl);
+        JSTestMediaQueryListListener* ptr = new (NotNull, JSC::allocateCell<JSTestMediaQueryListListener>(globalObject->vm().heap)) JSTestMediaQueryListListener(structure, globalObject, WTF::move(impl));
         ptr->finishCreation(globalObject->vm());
         return ptr;
     }
 
     static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
+    static JSC::JSObject* getPrototype(JSC::VM&, JSC::JSGlobalObject*);
+    static TestMediaQueryListListener* toWrapped(JSC::JSValue);
     static void destroy(JSC::JSCell*);
     ~JSTestMediaQueryListListener();
+
     DECLARE_INFO;
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
@@ -52,22 +52,19 @@ public:
 
     static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
     TestMediaQueryListListener& impl() const { return *m_impl; }
-    void releaseImpl() { m_impl->deref(); m_impl = 0; }
-
-    void releaseImplIfNotNull()
-    {
-        if (m_impl) {
-            m_impl->deref();
-            m_impl = 0;
-        }
-    }
+    void releaseImpl() { std::exchange(m_impl, nullptr)->deref(); }
 
 private:
     TestMediaQueryListListener* m_impl;
 protected:
-    JSTestMediaQueryListListener(JSC::Structure*, JSDOMGlobalObject*, PassRefPtr<TestMediaQueryListListener>);
-    void finishCreation(JSC::VM&);
-    static const unsigned StructureFlags = JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertySlot | Base::StructureFlags;
+    JSTestMediaQueryListListener(JSC::Structure*, JSDOMGlobalObject*, Ref<TestMediaQueryListListener>&&);
+
+    void finishCreation(JSC::VM& vm)
+    {
+        Base::finishCreation(vm);
+        ASSERT(inherits(info()));
+    }
+
 };
 
 class JSTestMediaQueryListListenerOwner : public JSC::WeakHandleOwner {
@@ -78,72 +75,13 @@ public:
 
 inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestMediaQueryListListener*)
 {
-    DEFINE_STATIC_LOCAL(JSTestMediaQueryListListenerOwner, jsTestMediaQueryListListenerOwner, ());
-    return &jsTestMediaQueryListListenerOwner;
-}
-
-inline void* wrapperContext(DOMWrapperWorld& world, TestMediaQueryListListener*)
-{
-    return &world;
+    static NeverDestroyed<JSTestMediaQueryListListenerOwner> owner;
+    return &owner.get();
 }
 
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestMediaQueryListListener*);
-TestMediaQueryListListener* toTestMediaQueryListListener(JSC::JSValue);
+inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TestMediaQueryListListener& impl) { return toJS(exec, globalObject, &impl); }
 
-class JSTestMediaQueryListListenerPrototype : public JSC::JSNonFinalObject {
-public:
-    typedef JSC::JSNonFinalObject Base;
-    static JSC::JSObject* self(JSC::VM&, JSC::JSGlobalObject*);
-    static JSTestMediaQueryListListenerPrototype* create(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::Structure* structure)
-    {
-        JSTestMediaQueryListListenerPrototype* ptr = new (NotNull, JSC::allocateCell<JSTestMediaQueryListListenerPrototype>(vm.heap)) JSTestMediaQueryListListenerPrototype(vm, globalObject, structure);
-        ptr->finishCreation(vm);
-        return ptr;
-    }
-
-    DECLARE_INFO;
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
-    }
-
-private:
-    JSTestMediaQueryListListenerPrototype(JSC::VM& vm, JSC::JSGlobalObject*, JSC::Structure* structure) : JSC::JSNonFinalObject(vm, structure) { }
-protected:
-    static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | Base::StructureFlags;
-};
-
-class JSTestMediaQueryListListenerConstructor : public DOMConstructorObject {
-private:
-    JSTestMediaQueryListListenerConstructor(JSC::Structure*, JSDOMGlobalObject*);
-    void finishCreation(JSC::VM&, JSDOMGlobalObject*);
-
-public:
-    typedef DOMConstructorObject Base;
-    static JSTestMediaQueryListListenerConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
-    {
-        JSTestMediaQueryListListenerConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestMediaQueryListListenerConstructor>(vm.heap)) JSTestMediaQueryListListenerConstructor(structure, globalObject);
-        ptr->finishCreation(vm, globalObject);
-        return ptr;
-    }
-
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    DECLARE_INFO;
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
-    }
-protected:
-    static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | JSC::ImplementsHasInstance | DOMConstructorObject::StructureFlags;
-};
-
-// Functions
-
-JSC::EncodedJSValue JSC_HOST_CALL jsTestMediaQueryListListenerPrototypeFunctionMethod(JSC::ExecState*);
-// Attributes
-
-JSC::EncodedJSValue jsTestMediaQueryListListenerConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
 
 } // namespace WebCore
 

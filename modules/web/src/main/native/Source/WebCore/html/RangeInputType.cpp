@@ -81,11 +81,6 @@ RangeInputType::RangeInputType(HTMLInputElement& element)
 {
 }
 
-void RangeInputType::attach()
-{
-    observeFeatureIfVisible(FeatureObserver::InputTypeRange);
-}
-
 bool RangeInputType::isRangeControl() const
 {
     return true;
@@ -118,7 +113,7 @@ bool RangeInputType::supportsRequired() const
 
 StepRange RangeInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
-    DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (rangeDefaultStep, rangeDefaultStepBase, rangeStepScaleFactor));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (rangeDefaultStep, rangeDefaultStepBase, rangeStepScaleFactor));
 
     const Decimal minimum = parseToNumber(element().fastGetAttribute(minAttr), rangeDefaultMinimum);
     const Decimal maximum = ensureMaximum(parseToNumber(element().fastGetAttribute(maxAttr), rangeDefaultMaximum), minimum, rangeDefaultMaximum);
@@ -176,6 +171,8 @@ void RangeInputType::handleTouchEvent(TouchEvent* event)
         typedSliderThumbElement().setPositionFromPoint(touches->item(0)->absoluteLocation());
         event->setDefaultHandled();
     }
+#else
+    UNUSED_PARAM(event);
 #endif
 }
 
@@ -242,12 +239,10 @@ void RangeInputType::handleKeydownEvent(KeyboardEvent* event)
 
     if (newValue != current) {
         EventQueueScope scope;
-        TextFieldEventBehavior eventBehavior = DispatchChangeEvent;
-        setValueAsDecimal(newValue, eventBehavior, IGNORE_EXCEPTION);
+        setValueAsDecimal(newValue, DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
 
         if (AXObjectCache* cache = element().document().existingAXObjectCache())
             cache->postNotification(&element(), AXObjectCache::AXValueChanged);
-        element().dispatchFormControlChangeEvent();
     }
 
     event->setDefaultHandled();
@@ -273,7 +268,7 @@ HTMLElement* RangeInputType::sliderTrackElement() const
     ASSERT(element().userAgentShadowRoot()->firstChild()->isHTMLElement());
     ASSERT(element().userAgentShadowRoot()->firstChild()->firstChild()); // track
 
-    return &toHTMLElement(*element().userAgentShadowRoot()->firstChild()->firstChild());
+    return downcast<HTMLElement>(element().userAgentShadowRoot()->firstChild()->firstChild());
 }
 
 SliderThumbElement& RangeInputType::typedSliderThumbElement() const
@@ -289,9 +284,9 @@ HTMLElement* RangeInputType::sliderThumbElement() const
     return &typedSliderThumbElement();
 }
 
-RenderPtr<RenderElement> RangeInputType::createInputRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> RangeInputType::createInputRenderer(Ref<RenderStyle>&& style)
 {
-    return createRenderer<RenderSlider>(element(), std::move(style));
+    return createRenderer<RenderSlider>(element(), WTF::move(style));
 }
 
 Decimal RangeInputType::parseToNumber(const String& src, const Decimal& defaultValue) const
@@ -332,6 +327,9 @@ void RangeInputType::setValue(const String& value, bool valueChanged, TextFieldE
     if (!valueChanged)
         return;
 
+    if (eventBehavior == DispatchNoEvent)
+        element().setTextAsOfLastFormControlChangeEvent(value);
+
     typedSliderThumbElement().setPositionFromValue();
 }
 
@@ -370,12 +368,12 @@ void RangeInputType::updateTickMarkValues()
     HTMLDataListElement* dataList = element().dataList();
     if (!dataList)
         return;
-    RefPtr<HTMLCollection> options = dataList->options();
+    Ref<HTMLCollection> options = dataList->options();
     m_tickMarkValues.reserveCapacity(options->length());
     for (unsigned i = 0; i < options->length(); ++i) {
         Node* node = options->item(i);
-        HTMLOptionElement* optionElement = toHTMLOptionElement(node);
-        String optionValue = optionElement->value();
+        HTMLOptionElement& optionElement = downcast<HTMLOptionElement>(*node);
+        String optionValue = optionElement.value();
         if (!element().isValidValue(optionValue))
             continue;
         m_tickMarkValues.append(parseToNumber(optionValue, Decimal::nan()));

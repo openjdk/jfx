@@ -52,15 +52,13 @@ public:
     PassRefPtr<CSSValue> propertyValue(CSSPropertyID, EUpdateLayout = UpdateLayout) const;
 
     // Helper methods for HTML editing.
-    PassRef<MutableStyleProperties> copyPropertiesInSet(const CSSPropertyID* set, unsigned length) const;
-    PassRef<MutableStyleProperties> copyProperties() const;
+    Ref<MutableStyleProperties> copyPropertiesInSet(const CSSPropertyID* set, unsigned length) const;
+    Ref<MutableStyleProperties> copyProperties() const;
     PassRefPtr<CSSPrimitiveValue> getFontSizeCSSValuePreferringKeyword() const;
     bool useFixedFontDefaultSize() const;
     bool propertyMatches(CSSPropertyID, const CSSValue*) const;
 
-#if ENABLE(CSS_FILTERS)
-    static PassRef<CSSValue> valueForFilter(const RenderStyle*, const FilterOperations&, AdjustPixelValuesForComputedStyle = AdjustPixelValues);
-#endif
+    static Ref<CSSValue> valueForFilter(const RenderStyle&, const FilterOperations&, AdjustPixelValuesForComputedStyle = AdjustPixelValues);
 
 private:
     // The styled node is either the node passed into computedPropertyValue, or the
@@ -72,7 +70,7 @@ private:
     PassRefPtr<CSSValue> svgPropertyValue(CSSPropertyID, EUpdateLayout) const;
     PassRefPtr<SVGPaint> adjustSVGPaintForCurrentColor(PassRefPtr<SVGPaint>, RenderStyle*) const;
 
-    static PassRefPtr<CSSValue> valueForShadow(const ShadowData*, CSSPropertyID, const RenderStyle*, AdjustPixelValuesForComputedStyle = AdjustPixelValues);
+    static Ref<CSSValue> valueForShadow(const ShadowData*, CSSPropertyID, const RenderStyle&, AdjustPixelValuesForComputedStyle = AdjustPixelValues);
     PassRefPtr<CSSPrimitiveValue> currentColorOrValidColor(RenderStyle*, const Color&) const;
 
     PassRefPtr<CSSValueList> getCSSPropertyValuesForShorthandProperties(const StylePropertyShorthand&) const;
@@ -85,21 +83,21 @@ private:
     bool m_allowVisitedStyle;
 };
 
-class CSSComputedStyleDeclaration : public CSSStyleDeclaration {
+class CSSComputedStyleDeclaration final : public CSSStyleDeclaration {
 public:
-    static PassRefPtr<CSSComputedStyleDeclaration> create(PassRefPtr<Node> node, bool allowVisitedStyle = false, const String& pseudoElementName = String())
+    static Ref<CSSComputedStyleDeclaration> create(PassRefPtr<Node> node, bool allowVisitedStyle = false, const String& pseudoElementName = String())
     {
-        return adoptRef(new CSSComputedStyleDeclaration(node, allowVisitedStyle, pseudoElementName));
+        return adoptRef(*new CSSComputedStyleDeclaration(node, allowVisitedStyle, pseudoElementName));
     }
     virtual ~CSSComputedStyleDeclaration();
 
-    virtual void ref() override;
-    virtual void deref() override;
+    WEBCORE_EXPORT virtual void ref() override;
+    WEBCORE_EXPORT virtual void deref() override;
 
     String getPropertyValue(CSSPropertyID) const;
 
 private:
-    CSSComputedStyleDeclaration(PassRefPtr<Node>, bool allowVisitedStyle, const String&);
+    WEBCORE_EXPORT CSSComputedStyleDeclaration(PassRefPtr<Node>, bool allowVisitedStyle, const String&);
 
     // CSSOM functions. Don't make these public.
     virtual CSSRule* parentRule() const override;
@@ -116,8 +114,8 @@ private:
     virtual void setCssText(const String&, ExceptionCode&) override;
     virtual PassRefPtr<CSSValue> getPropertyCSSValueInternal(CSSPropertyID) override;
     virtual String getPropertyValueInternal(CSSPropertyID) override;
-    virtual void setPropertyInternal(CSSPropertyID, const String& value, bool important, ExceptionCode&) override;
-    virtual PassRef<MutableStyleProperties> copyProperties() const override;
+    virtual bool setPropertyInternal(CSSPropertyID, const String& value, bool important, ExceptionCode&) override;
+    virtual Ref<MutableStyleProperties> copyProperties() const override;
 
     PassRefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID, EUpdateLayout = UpdateLayout) const;
 

@@ -27,8 +27,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest2 as unittest
 import os
+import unittest
 
 from webkitpy.port.linux_get_crash_log import GDBCrashLogGenerator
 from webkitpy.common.system.filesystem_mock import MockFileSystem
@@ -40,7 +40,7 @@ class GDBCrashLogGeneratorTest(unittest.TestCase):
         generator = GDBCrashLogGenerator('DumpRenderTree', 28529, newer_than=None, filesystem=MockFileSystem({'/path/to/coredumps': ''}), path_to_driver=None)
 
         core_directory = os.environ.get('WEBKIT_CORE_DUMPS_DIRECTORY', '/path/to/coredumps')
-        core_pattern = os.path.join(core_directory, "core-pid_%p-_-process_%e")
+        core_pattern = os.path.join(core_directory, "core-pid_%p-_-process_%E")
         mock_empty_crash_log = """\
 crash log for DumpRenderTree (pid 28529):
 

@@ -39,18 +39,20 @@ namespace WebCore {
 
 class StyleRuleRegion;
 
-class WebKitCSSRegionRule : public CSSGroupingRule {
+class WebKitCSSRegionRule final : public CSSGroupingRule {
 public:
-    static PassRefPtr<WebKitCSSRegionRule> create(StyleRuleRegion* rule, CSSStyleSheet* sheet) { return adoptRef(new WebKitCSSRegionRule(rule, sheet)); }
+    static Ref<WebKitCSSRegionRule> create(StyleRuleRegion& rule, CSSStyleSheet* sheet) { return adoptRef(*new WebKitCSSRegionRule(rule, sheet)); }
 
     virtual CSSRule::Type type() const override { return WEBKIT_REGION_RULE; }
     virtual String cssText() const override;
 
 private:
-    WebKitCSSRegionRule(StyleRuleRegion*, CSSStyleSheet* parent);
+    WebKitCSSRegionRule(StyleRuleRegion&, CSSStyleSheet* parent);
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CSS_RULE(WebKitCSSRegionRule, CSSRule::WEBKIT_REGION_RULE)
 
 #endif // ENABLE(CSS_REGIONS)
 

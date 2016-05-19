@@ -4,7 +4,7 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006 Apple Computer, Inc.
+ * Copyright (C) 2003, 2004, 2005, 2006 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,7 +25,6 @@
 #include "config.h"
 #include "HTMLTablePartElement.h"
 
-#include "Attribute.h"
 #include "CSSImageValue.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
@@ -86,9 +85,9 @@ void HTMLTablePartElement::collectStyleForPresentationAttribute(const QualifiedN
 HTMLTableElement* HTMLTablePartElement::findParentTable() const
 {
     ContainerNode* parent = parentNode();
-    while (parent && !isHTMLTableElement(parent))
+    while (parent && !is<HTMLTableElement>(*parent))
         parent = parent->parentNode();
-    return toHTMLTableElement(parent);
+    return downcast<HTMLTableElement>(parent);
 }
 
 }

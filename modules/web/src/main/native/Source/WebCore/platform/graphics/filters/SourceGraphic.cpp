@@ -18,8 +18,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SourceGraphic.h"
 
 #include "Filter.h"
@@ -30,33 +28,33 @@
 
 namespace WebCore {
 
-PassRefPtr<SourceGraphic> SourceGraphic::create(Filter* filter)
+Ref<SourceGraphic> SourceGraphic::create(Filter& filter)
 {
-    return adoptRef(new SourceGraphic(filter));
+    return adoptRef(*new SourceGraphic(filter));
 }
 
 const AtomicString& SourceGraphic::effectName()
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, s_effectName, ("SourceGraphic", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, s_effectName, ("SourceGraphic", AtomicString::ConstructFromLiteral));
     return s_effectName;
 }
 
 void SourceGraphic::determineAbsolutePaintRect()
 {
-    Filter* filter = this->filter();
-    FloatRect paintRect = filter->sourceImageRect();
-    paintRect.scale(filter->filterResolution().width(), filter->filterResolution().height());
+    Filter& filter = this->filter();
+    FloatRect paintRect = filter.sourceImageRect();
+    paintRect.scale(filter.filterResolution().width(), filter.filterResolution().height());
     setAbsolutePaintRect(enclosingIntRect(paintRect));
 }
 
 void SourceGraphic::platformApplySoftware()
 {
     ImageBuffer* resultImage = createImageBufferResult();
-    Filter* filter = this->filter();
-    if (!resultImage || !filter->sourceImage())
+    Filter& filter = this->filter();
+    if (!resultImage || !filter.sourceImage())
         return;
 
-    resultImage->context()->drawImageBuffer(filter->sourceImage(), ColorSpaceDeviceRGB, IntPoint());
+    resultImage->context()->drawImageBuffer(filter.sourceImage(), ColorSpaceDeviceRGB, IntPoint());
 }
 
 void SourceGraphic::dump()
@@ -71,5 +69,3 @@ TextStream& SourceGraphic::externalRepresentation(TextStream& ts, int indent) co
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)

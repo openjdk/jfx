@@ -53,7 +53,7 @@ namespace WebCore {
 // <ruby> when used as 'display:inline'
 class RenderRubyAsInline final : public RenderInline {
 public:
-    RenderRubyAsInline(Element&, PassRef<RenderStyle>);
+    RenderRubyAsInline(Element&, Ref<RenderStyle>&&);
     virtual ~RenderRubyAsInline();
 
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0) override;
@@ -63,7 +63,7 @@ protected:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
 private:
-    virtual bool isRuby() const override { return true; }
+    virtual bool isRubyInline() const override final { return true; }
     virtual const char* renderName() const override { return "RenderRuby (inline)"; }
     virtual bool createsAnonymousWrapper() const override { return true; }
 };
@@ -71,10 +71,10 @@ private:
 // <ruby> when used as 'display:block' or 'display:inline-block'
 class RenderRubyAsBlock final : public RenderBlockFlow {
 public:
-    RenderRubyAsBlock(Element&, PassRef<RenderStyle>);
+    RenderRubyAsBlock(Element&, Ref<RenderStyle>&&);
     virtual ~RenderRubyAsBlock();
 
-    Element& element() const { return toElement(nodeForNonAnonymous()); }
+    Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0) override;
     virtual void removeChild(RenderObject& child) override;
@@ -83,12 +83,19 @@ protected:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
 private:
-    virtual bool isRuby() const override { return true; }
+    virtual bool isRubyBlock() const override final { return true; }
     virtual const char* renderName() const override { return "RenderRuby (block)"; }
     virtual bool createsAnonymousWrapper() const override { return true; }
     virtual void removeLeftoverAnonymousBlock(RenderBlock*) override { ASSERT_NOT_REACHED(); }
 };
 
+
+inline bool isRuby(const RenderObject& renderer) { return (is<RenderRubyAsInline>(renderer) || is<RenderRubyAsBlock>(renderer)); }
+inline bool isRuby(const RenderObject* renderer) { return (renderer && isRuby(*renderer)); }
+
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyAsInline, isRubyInline())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyAsBlock, isRubyBlock())
 
 #endif // RenderRuby_h

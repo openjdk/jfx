@@ -32,9 +32,9 @@
 
 #if ENABLE(WEB_REPLAY)
 #include "InternalNamespaceImplIncludeDummy.h"
+#include "NondeterministicInput.h"
+#include "PlatformMouseEvent.h"
 #include <platform/ExternalNamespaceImplIncludeDummy.h>
-#include <platform/PlatformMouseEvent.h>
-#include <replay/NondeterministicInput.h>
 
 namespace Test {
 SavedMouseButton::SavedMouseButton(MouseButton button)
@@ -49,95 +49,141 @@ SavedMouseButton::~SavedMouseButton()
 } // namespace Test
 
 namespace JSC {
-const AtomicString& InputTraits<Test::SavedMouseButton>::type()
+const String& InputTraits<Test::SavedMouseButton>::type()
 {
-    static NeverDestroyed<const AtomicString> type("SavedMouseButton", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const String> type(ASCIILiteral("SavedMouseButton"));
     return type;
 }
 
 void InputTraits<Test::SavedMouseButton>::encode(EncodedValue& encodedValue, const Test::SavedMouseButton& input)
 {
-    encodedValue.put<WebCore::MouseButton>(ASCIILiteral("button"), input.button());
+    encodedValue.put<Test::MouseButton>(ASCIILiteral("button"), input.button());
 }
 
 bool InputTraits<Test::SavedMouseButton>::decode(EncodedValue& encodedValue, std::unique_ptr<Test::SavedMouseButton>& input)
 {
-    WebCore::MouseButton button;
-    if (!encodedValue.get<WebCore::MouseButton>(ASCIILiteral("button"), button))
+    Test::MouseButton button;
+    if (!encodedValue.get<Test::MouseButton>(ASCIILiteral("button"), button))
         return false;
 
     input = std::make_unique<Test::SavedMouseButton>(button);
     return true;
 }
-EncodedValue EncodingTraits<InputQueue>::encodeValue(const InputQueue& enumValue)
+EncodedValue EncodingTraits<Test::InputQueue>::encodeValue(const Test::InputQueue& enumValue)
 {
     switch (enumValue) {
-    case InputQueue::EventLoopInput: return EncodedValue::createString("EventLoopInput");
-    case InputQueue::LoaderMemoizedData: return EncodedValue::createString("LoaderMemoizedData");
-    case InputQueue::ScriptMemoizedData: return EncodedValue::createString("ScriptMemoizedData");
+    case Test::InputQueue::EventLoopInput: return EncodedValue::createString("EventLoopInput");
+    case Test::InputQueue::LoaderMemoizedData: return EncodedValue::createString("LoaderMemoizedData");
+    case Test::InputQueue::ScriptMemoizedData: return EncodedValue::createString("ScriptMemoizedData");
     default: ASSERT_NOT_REACHED(); return EncodedValue::createString("Error!");
     }
 }
 
-bool EncodingTraits<InputQueue>::decodeValue(EncodedValue& encodedValue, InputQueue& enumValue)
+bool EncodingTraits<Test::InputQueue>::decodeValue(EncodedValue& encodedValue, Test::InputQueue& enumValue)
 {
     String enumString = encodedValue.convertTo<String>();
     if (enumString == "EventLoopInput") {
-        enumValue = InputQueue::EventLoopInput;
+        enumValue = Test::InputQueue::EventLoopInput;
         return true;
     }
     if (enumString == "LoaderMemoizedData") {
-        enumValue = InputQueue::LoaderMemoizedData;
+        enumValue = Test::InputQueue::LoaderMemoizedData;
         return true;
     }
     if (enumString == "ScriptMemoizedData") {
-        enumValue = InputQueue::ScriptMemoizedData;
+        enumValue = Test::InputQueue::ScriptMemoizedData;
         return true;
     }
     return false;
 }
 
-EncodedValue EncodingTraits<WebCore::MouseButton>::encodeValue(const WebCore::MouseButton& enumValue)
+EncodedValue EncodingTraits<Test::MouseButton>::encodeValue(const Test::MouseButton& enumValue)
 {
     EncodedValue encodedValue = EncodedValue::createArray();
-    if (enumValue & WebCore::NoButton) {
+    if (enumValue & Test::NoButton) {
         encodedValue.append<String>(ASCIILiteral("NoButton"));
-        if (enumValue == WebCore::NoButton)
+        if (enumValue == Test::NoButton)
             return encodedValue;
     }
-    if (enumValue & WebCore::LeftButton) {
+    if (enumValue & Test::LeftButton) {
         encodedValue.append<String>(ASCIILiteral("LeftButton"));
-        if (enumValue == WebCore::LeftButton)
+        if (enumValue == Test::LeftButton)
             return encodedValue;
     }
-    if (enumValue & WebCore::MiddleButton) {
+    if (enumValue & Test::MiddleButton) {
         encodedValue.append<String>(ASCIILiteral("MiddleButton"));
-        if (enumValue == WebCore::MiddleButton)
+        if (enumValue == Test::MiddleButton)
             return encodedValue;
     }
-    if (enumValue & WebCore::RightButton) {
+    if (enumValue & Test::RightButton) {
         encodedValue.append<String>(ASCIILiteral("RightButton"));
-        if (enumValue == WebCore::RightButton)
+        if (enumValue == Test::RightButton)
             return encodedValue;
     }
     return encodedValue;
 }
 
-bool EncodingTraits<WebCore::MouseButton>::decodeValue(EncodedValue& encodedValue, WebCore::MouseButton& enumValue)
+bool EncodingTraits<Test::MouseButton>::decodeValue(EncodedValue& encodedValue, Test::MouseButton& enumValue)
 {
     Vector<String> enumStrings;
     if (!EncodingTraits<Vector<String>>::decodeValue(encodedValue, enumStrings))
         return false;
 
-    for (String enumString : enumStrings) {
+    for (const String& enumString : enumStrings) {
         if (enumString == "NoButton")
-            enumValue = static_cast<WebCore::MouseButton>(enumValue | WebCore::NoButton);
-        if (enumString == "LeftButton")
-            enumValue = static_cast<WebCore::MouseButton>(enumValue | WebCore::LeftButton);
-        if (enumString == "MiddleButton")
-            enumValue = static_cast<WebCore::MouseButton>(enumValue | WebCore::MiddleButton);
-        if (enumString == "RightButton")
-            enumValue = static_cast<WebCore::MouseButton>(enumValue | WebCore::RightButton);
+            enumValue = static_cast<Test::MouseButton>(enumValue | Test::NoButton);
+        else if (enumString == "LeftButton")
+            enumValue = static_cast<Test::MouseButton>(enumValue | Test::LeftButton);
+        else if (enumString == "MiddleButton")
+            enumValue = static_cast<Test::MouseButton>(enumValue | Test::MiddleButton);
+        else if (enumString == "RightButton")
+            enumValue = static_cast<Test::MouseButton>(enumValue | Test::RightButton);
+    }
+
+    return true;
+}
+
+EncodedValue EncodingTraits<Test::PlatformEvent::Type>::encodeValue(const Test::PlatformEvent::Type& enumValue)
+{
+    EncodedValue encodedValue = EncodedValue::createArray();
+    if (enumValue & Test::PlatformEvent::Mouse) {
+        encodedValue.append<String>(ASCIILiteral("Mouse"));
+        if (enumValue == Test::PlatformEvent::Mouse)
+            return encodedValue;
+    }
+    if (enumValue & Test::PlatformEvent::Key) {
+        encodedValue.append<String>(ASCIILiteral("Key"));
+        if (enumValue == Test::PlatformEvent::Key)
+            return encodedValue;
+    }
+    if (enumValue & Test::PlatformEvent::Touch) {
+        encodedValue.append<String>(ASCIILiteral("Touch"));
+        if (enumValue == Test::PlatformEvent::Touch)
+            return encodedValue;
+    }
+    if (enumValue & Test::PlatformEvent::Wheel) {
+        encodedValue.append<String>(ASCIILiteral("Wheel"));
+        if (enumValue == Test::PlatformEvent::Wheel)
+            return encodedValue;
+    }
+    return encodedValue;
+}
+
+bool EncodingTraits<Test::PlatformEvent::Type>::decodeValue(EncodedValue& encodedValue, Test::PlatformEvent::Type& enumValue)
+{
+    Vector<String> enumStrings;
+    if (!EncodingTraits<Vector<String>>::decodeValue(encodedValue, enumStrings))
+        return false;
+
+    for (const String& enumString : enumStrings) {
+        if (enumString == "Mouse")
+            enumValue = static_cast<Test::PlatformEvent::Type>(enumValue | Test::PlatformEvent::Mouse);
+        else if (enumString == "Key")
+            enumValue = static_cast<Test::PlatformEvent::Type>(enumValue | Test::PlatformEvent::Key);
+        else if (enumString == "Touch")
+            enumValue = static_cast<Test::PlatformEvent::Type>(enumValue | Test::PlatformEvent::Touch);
+        else if (enumString == "Wheel")
+            enumValue = static_cast<Test::PlatformEvent::Type>(enumValue | Test::PlatformEvent::Wheel);
     }
 
     return true;

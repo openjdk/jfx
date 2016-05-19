@@ -13,7 +13,7 @@ namespace WebCore {
 
 static String platformLanguage()
 {
-    DEFINE_STATIC_LOCAL(String, computedDefaultLanguage, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, computedDefaultLanguage, ());
     if (computedDefaultLanguage.isEmpty())
         computedDefaultLanguage.append(ChromiumBridge::computedDefaultLanguage());
     return computedDefaultLanguage;

@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -36,16 +36,22 @@ class Document;
 
 class HTMLAudioElement final : public HTMLMediaElement {
 public:
-    static PassRefPtr<HTMLAudioElement> create(const QualifiedName&, Document&, bool);
-    static PassRefPtr<HTMLAudioElement> createForJSConstructor(Document&, const String& src);
+    static Ref<HTMLAudioElement> create(const QualifiedName&, Document&, bool);
+    static Ref<HTMLAudioElement> createForJSConstructor(Document&, const String& src);
 
 private:
     HTMLAudioElement(const QualifiedName&, Document&, bool);
+
+    virtual PlatformMediaSession::MediaType presentationType() const override { return PlatformMediaSession::Audio; }
 };
 
-NODE_TYPE_CASTS(HTMLAudioElement)
+} // namespace WebCore
 
-} //namespace
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLAudioElement)
+    static bool isType(const WebCore::HTMLMediaElement& element) { return element.hasTagName(WebCore::HTMLNames::audioTag); }
+    static bool isType(const WebCore::Element& element) { return is<WebCore::HTMLMediaElement>(element) && isType(downcast<WebCore::HTMLMediaElement>(element)); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::HTMLMediaElement>(node) && isType(downcast<WebCore::HTMLMediaElement>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
-#endif
-#endif
+#endif // ENABLE(VIDEO)
+#endif // HTMLAudioElement_h

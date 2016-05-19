@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2015 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,15 +24,15 @@
 #ifndef ContainerNode_h
 #define ContainerNode_h
 
+#include "CollectionType.h"
 #include "ExceptionCodePlaceholder.h"
 #include "Node.h"
 
-#include <wtf/OwnPtr.h>
-#include <wtf/Vector.h>
-
 namespace WebCore {
 
-class FloatPoint;
+class HTMLCollection;
+class NodeOrString;
+class QualifiedName;
 class RenderElement;
 
 typedef void (*NodeCallback)(Node&, unsigned);
@@ -46,16 +46,21 @@ class NoEventDispatchAssertion {
 public:
     NoEventDispatchAssertion()
     {
-#ifndef NDEBUG
+#if !ASSERT_DISABLED
         if (!isMainThread())
             return;
-        s_count++;
+        ++s_count;
 #endif
+    }
+
+    NoEventDispatchAssertion(const NoEventDispatchAssertion&)
+        : NoEventDispatchAssertion()
+    {
     }
 
     ~NoEventDispatchAssertion()
     {
-#ifndef NDEBUG
+#if !ASSERT_DISABLED
         if (!isMainThread())
             return;
         ASSERT(s_count);
@@ -63,37 +68,43 @@ public:
 #endif
     }
 
-#ifndef NDEBUG
     static bool isEventDispatchForbidden()
     {
-        if (!isMainThread())
-            return false;
-        return s_count;
-    }
+#if ASSERT_DISABLED
+        return false;
+#else
+        return isMainThread() && s_count;
 #endif
+    }
+
+#if !ASSERT_DISABLED
 
 private:
-#ifndef NDEBUG
-    static unsigned s_count;
+    WEBCORE_EXPORT static unsigned s_count;
+
 #endif
 };
 
 class ContainerNode : public Node {
-    friend class PostAttachCallbackDisabler;
 public:
     virtual ~ContainerNode();
 
     Node* firstChild() const { return m_firstChild; }
+    static ptrdiff_t firstChildMemoryOffset() { return OBJECT_OFFSETOF(ContainerNode, m_firstChild); }
     Node* lastChild() const { return m_lastChild; }
     bool hasChildNodes() const { return m_firstChild; }
+    bool hasOneChild() const { return m_firstChild && !m_firstChild->nextSibling(); }
 
-    unsigned childNodeCount() const;
-    Node* childNode(unsigned index) const;
+    bool directChildNeedsStyleRecalc() const { return getFlag(DirectChildNeedsStyleRecalcFlag); }
+    void setDirectChildNeedsStyleRecalc() { setFlag(DirectChildNeedsStyleRecalcFlag); }
+
+    WEBCORE_EXPORT unsigned countChildNodes() const;
+    WEBCORE_EXPORT Node* traverseToChildAt(unsigned) const;
 
     bool insertBefore(PassRefPtr<Node> newChild, Node* refChild, ExceptionCode& = ASSERT_NO_EXCEPTION);
     bool replaceChild(PassRefPtr<Node> newChild, Node* oldChild, ExceptionCode& = ASSERT_NO_EXCEPTION);
-    bool removeChild(Node* child, ExceptionCode& = ASSERT_NO_EXCEPTION);
-    bool appendChild(PassRefPtr<Node> newChild, ExceptionCode& = ASSERT_NO_EXCEPTION);
+    WEBCORE_EXPORT bool removeChild(Node* child, ExceptionCode& = ASSERT_NO_EXCEPTION);
+    WEBCORE_EXPORT bool appendChild(PassRefPtr<Node> newChild, ExceptionCode& = ASSERT_NO_EXCEPTION);
 
     // These methods are only used during parsing.
     // They don't send DOM mutation events or handle reparenting.
@@ -107,8 +118,6 @@ public:
 
     void cloneChildNodes(ContainerNode* clone);
 
-    virtual LayoutRect boundingBox() const override;
-
     enum ChildChangeType { ElementInserted, ElementRemoved, TextInserted, TextRemoved, TextChanged, AllChildrenRemoved, NonContentsChildChanged };
     enum ChildChangeSource { ChildChangeSourceParser, ChildChangeSourceAPI };
     struct ChildChange {
@@ -121,27 +130,34 @@ public:
 
     void disconnectDescendantFrames();
 
-    virtual bool childShouldCreateRenderer(const Node&) const { return true; }
-
     using Node::setAttributeEventListener;
     void setAttributeEventListener(const AtomicString& eventType, const QualifiedName& attributeName, const AtomicString& value);
 
     RenderElement* renderer() const;
 
-    Element* querySelector(const AtomicString& selectors, ExceptionCode&);
-    RefPtr<NodeList> querySelectorAll(const AtomicString& selectors, ExceptionCode&);
+    // Return a bounding box in absolute coordinates enclosing this node and all its descendants.
+    // This gives the area within which events may get handled by a hander registered on this node.
+    virtual LayoutRect absoluteEventHandlerBounds(bool& /* includesFixedPositionElements */) { return LayoutRect(); }
 
-    PassRefPtr<NodeList> getElementsByTagName(const AtomicString&);
-    PassRefPtr<NodeList> getElementsByTagNameNS(const AtomicString& namespaceURI, const AtomicString& localName);
-    PassRefPtr<NodeList> getElementsByName(const String& elementName);
-    PassRefPtr<NodeList> getElementsByClassName(const String& classNames);
-    PassRefPtr<RadioNodeList> radioNodeList(const AtomicString&);
+    Element* querySelector(const String& selectors, ExceptionCode&);
+    RefPtr<NodeList> querySelectorAll(const String& selectors, ExceptionCode&);
+
+    RefPtr<NodeList> getElementsByTagName(const AtomicString&);
+    RefPtr<NodeList> getElementsByTagNameNS(const AtomicString& namespaceURI, const AtomicString& localName);
+    RefPtr<NodeList> getElementsByName(const String& elementName);
+    RefPtr<NodeList> getElementsByClassName(const AtomicString& classNames);
+    RefPtr<RadioNodeList> radioNodeList(const AtomicString&);
+
+    // From the ParentNode interface - https://dom.spec.whatwg.org/#interface-parentnode
+    Ref<HTMLCollection> children();
+    Element* firstElementChild() const;
+    Element* lastElementChild() const;
+    unsigned childElementCount() const;
+    void append(Vector<NodeOrString>&&, ExceptionCode&);
+    void prepend(Vector<NodeOrString>&&, ExceptionCode&);
 
 protected:
     explicit ContainerNode(Document&, ConstructionType = CreateContainer);
-
-    static void queuePostAttachCallback(NodeCallback, Node&, unsigned = 0);
-    static bool postAttachCallbacksAreSuspended();
 
     template<class GenericNode, class GenericNodeContainer>
     friend void appendChildToContainer(GenericNode* child, GenericNodeContainer&);
@@ -153,16 +169,12 @@ protected:
     void setFirstChild(Node* child) { m_firstChild = child; }
     void setLastChild(Node* child) { m_lastChild = child; }
 
+    Ref<HTMLCollection> ensureCachedHTMLCollection(CollectionType);
+    HTMLCollection* cachedHTMLCollection(CollectionType);
+
 private:
     void removeBetween(Node* previousChild, Node* nextChild, Node& oldChild);
     void insertBeforeCommon(Node& nextChild, Node& oldChild);
-
-    static void dispatchPostAttachCallbacks();
-    static void suspendPostAttachCallbacks(Document&);
-    static void resumePostAttachCallbacks(Document&);
-
-    bool getUpperLeftCorner(FloatPoint&) const;
-    bool getLowerRightCorner(FloatPoint&) const;
 
     void notifyChildInserted(Node& child, ChildChangeSource);
     void notifyChildRemoved(Node& child, Node* previousSibling, Node* nextSibling, ChildChangeSource);
@@ -177,11 +189,6 @@ private:
     Node* m_lastChild;
 };
 
-inline bool isContainerNode(const Node& node) { return node.isContainerNode(); }
-void isContainerNode(const ContainerNode&); // Catch unnecessary runtime check of type known at compile time.
-
-NODE_TYPE_CASTS(ContainerNode)
-
 inline ContainerNode::ContainerNode(Document& document, ConstructionType type)
     : Node(document, type)
     , m_firstChild(0)
@@ -189,32 +196,32 @@ inline ContainerNode::ContainerNode(Document& document, ConstructionType type)
 {
 }
 
-inline unsigned Node::childNodeCount() const
+inline unsigned Node::countChildNodes() const
 {
-    if (!isContainerNode())
+    if (!is<ContainerNode>(*this))
         return 0;
-    return toContainerNode(this)->childNodeCount();
+    return downcast<ContainerNode>(*this).countChildNodes();
 }
 
-inline Node* Node::childNode(unsigned index) const
+inline Node* Node::traverseToChildAt(unsigned index) const
 {
-    if (!isContainerNode())
-        return 0;
-    return toContainerNode(this)->childNode(index);
+    if (!is<ContainerNode>(*this))
+        return nullptr;
+    return downcast<ContainerNode>(*this).traverseToChildAt(index);
 }
 
 inline Node* Node::firstChild() const
 {
-    if (!isContainerNode())
-        return 0;
-    return toContainerNode(this)->firstChild();
+    if (!is<ContainerNode>(*this))
+        return nullptr;
+    return downcast<ContainerNode>(*this).firstChild();
 }
 
 inline Node* Node::lastChild() const
 {
-    if (!isContainerNode())
-        return 0;
-    return toContainerNode(this)->lastChild();
+    if (!is<ContainerNode>(*this))
+        return nullptr;
+    return downcast<ContainerNode>(*this).lastChild();
 }
 
 inline Node* Node::highestAncestor() const
@@ -259,18 +266,19 @@ public:
     explicit ChildNodesLazySnapshot(Node& parentNode)
         : m_currentNode(parentNode.firstChild())
         , m_currentIndex(0)
+        , m_hasSnapshot(false)
     {
         m_nextSnapshot = latestSnapshot;
         latestSnapshot = this;
     }
 
-    ~ChildNodesLazySnapshot()
+    ALWAYS_INLINE ~ChildNodesLazySnapshot()
     {
         latestSnapshot = m_nextSnapshot;
     }
 
     // Returns 0 if there is no next Node.
-    PassRefPtr<Node> nextNode()
+    RefPtr<Node> nextNode()
     {
         if (LIKELY(!hasSnapshot())) {
             RefPtr<Node> node = m_currentNode.release();
@@ -278,26 +286,25 @@ public:
                 m_currentNode = node->nextSibling();
             return node.release();
         }
-        Vector<RefPtr<Node>>& nodeVector = *m_childNodes;
-        if (m_currentIndex >= nodeVector.size())
+        if (m_currentIndex >= m_snapshot.size())
             return 0;
-        return nodeVector[m_currentIndex++];
+        return m_snapshot[m_currentIndex++];
     }
 
     void takeSnapshot()
     {
         if (hasSnapshot())
             return;
-        m_childNodes = adoptPtr(new Vector<RefPtr<Node>>());
+        m_hasSnapshot = true;
         Node* node = m_currentNode.get();
         while (node) {
-            m_childNodes->append(node);
+            m_snapshot.append(node);
             node = node->nextSibling();
         }
     }
 
     ChildNodesLazySnapshot* nextSnapshot() { return m_nextSnapshot; }
-    bool hasSnapshot() { return !!m_childNodes.get(); }
+    bool hasSnapshot() { return m_hasSnapshot; }
 
     static void takeChildNodesLazySnapshot()
     {
@@ -313,10 +320,15 @@ private:
 
     RefPtr<Node> m_currentNode;
     unsigned m_currentIndex;
-    OwnPtr<Vector<RefPtr<Node>>> m_childNodes; // Lazily instantiated.
+    bool m_hasSnapshot;
+    Vector<RefPtr<Node>> m_snapshot; // Lazily instantiated.
     ChildNodesLazySnapshot* m_nextSnapshot;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ContainerNode)
+    static bool isType(const WebCore::Node& node) { return node.isContainerNode(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ContainerNode_h

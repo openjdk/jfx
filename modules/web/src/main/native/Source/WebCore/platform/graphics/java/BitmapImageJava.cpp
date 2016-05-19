@@ -35,7 +35,7 @@ bool FrameData::clear(bool clearMetadata)
         env->CallVoidMethod(*m_frame, midDestroyDecodedData);
         CheckAndClearException(env);
 #endif
-        m_frame = 0;
+        m_frame = nullptr;
         return true;
     }
     return false;
@@ -49,6 +49,11 @@ void BitmapImage::checkForSolidColor()
 {
     notImplemented();
     m_checkedForSolidColor = true;
+}
+
+void BitmapImage::determineMinimumSubsamplingLevel() const
+{
+    m_minimumSubsamplingLevel = 0;
 }
 
 void BitmapImage::draw(GraphicsContext *gc, const FloatRect &dstRect, const FloatRect &srcRect,

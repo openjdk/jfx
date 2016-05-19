@@ -46,6 +46,10 @@ public:
 
     virtual TextPosition textPosition() const = 0;
 
+    // Returns true if the parser didn't yield or pause or synchronously execute a script,
+    // so calls to PageConsoleClient should be associated with the parser's text position.
+    virtual bool shouldAssociateConsoleMessagesWithTextPosition() const = 0;
+
     void setWasCreatedByScript(bool wasCreatedByScript) { m_wasCreatedByScript = wasCreatedByScript; }
     bool wasCreatedByScript() const { return m_wasCreatedByScript; }
 
@@ -55,7 +59,7 @@ protected:
     explicit ScriptableDocumentParser(Document&, ParserContentPolicy = AllowScriptingContent);
 
 private:
-    virtual ScriptableDocumentParser* asScriptableDocumentParser() override { return this; }
+    virtual ScriptableDocumentParser* asScriptableDocumentParser() override final { return this; }
 
     // http://www.whatwg.org/specs/web-apps/current-work/#script-created-parser
     bool m_wasCreatedByScript;

@@ -33,7 +33,6 @@
 #include "ScriptCallFrame.h"
 
 #include "InspectorValues.h"
-#include <wtf/PassRefPtr.h>
 
 namespace Inspector {
 
@@ -57,16 +56,14 @@ bool ScriptCallFrame::isEqual(const ScriptCallFrame& o) const
         && m_column == o.m_column;
 }
 
-#if ENABLE(INSPECTOR)
-PassRefPtr<Inspector::TypeBuilder::Console::CallFrame> ScriptCallFrame::buildInspectorObject() const
+Ref<Inspector::Protocol::Console::CallFrame> ScriptCallFrame::buildInspectorObject() const
 {
-    return Inspector::TypeBuilder::Console::CallFrame::create()
+    return Inspector::Protocol::Console::CallFrame::create()
         .setFunctionName(m_functionName)
         .setUrl(m_scriptName)
         .setLineNumber(m_lineNumber)
         .setColumnNumber(m_column)
         .release();
 }
-#endif
 
 } // namespace Inspector

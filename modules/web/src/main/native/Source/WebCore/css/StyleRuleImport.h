@@ -25,6 +25,7 @@
 #include "CachedResourceHandle.h"
 #include "CachedStyleSheetClient.h"
 #include "StyleRule.h"
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
@@ -35,7 +36,7 @@ class StyleSheetContents;
 class StyleRuleImport : public StyleRuleBase {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassRef<StyleRuleImport> create(const String& href, PassRefPtr<MediaQuerySet>);
+    static Ref<StyleRuleImport> create(const String& href, PassRefPtr<MediaQuerySet>);
 
     ~StyleRuleImport();
 
@@ -47,7 +48,7 @@ public:
     StyleSheetContents* styleSheet() const { return m_styleSheet.get(); }
 
     bool isLoading() const;
-    MediaQuerySet* mediaQueries() { return m_mediaQueries.get(); }
+    MediaQuerySet* mediaQueries() const { return m_mediaQueries.get(); }
 
     void requestStyleSheet();
 
@@ -82,5 +83,9 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleImport)
+    static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isImportRule(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

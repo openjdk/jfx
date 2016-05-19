@@ -35,8 +35,8 @@ class SVGTextMetricsBuilder {
     WTF_MAKE_NONCOPYABLE(SVGTextMetricsBuilder);
 public:
     SVGTextMetricsBuilder();
-    void measureTextRenderer(RenderSVGInlineText*);
-    void buildMetricsAndLayoutAttributes(RenderSVGText*, RenderSVGInlineText* stopAtLeaf, SVGCharacterDataMap& allCharactersMap);
+    void measureTextRenderer(RenderSVGInlineText&);
+    void buildMetricsAndLayoutAttributes(RenderSVGText&, RenderSVGInlineText* stopAtLeaf, SVGCharacterDataMap& allCharactersMap);
 
 private:
     bool advance();
@@ -44,9 +44,9 @@ private:
     void advanceComplexText();
     bool currentCharacterStartsSurrogatePair() const;
 
-    void initializeMeasurementWithTextRenderer(RenderSVGInlineText*);
+    void initializeMeasurementWithTextRenderer(RenderSVGInlineText&);
     void walkTree(RenderElement&, RenderSVGInlineText* stopAtLeaf, MeasureTextData*);
-    void measureTextRenderer(RenderSVGInlineText*, MeasureTextData*);
+    void measureTextRenderer(RenderSVGInlineText&, MeasureTextData*);
 
     RenderSVGInlineText* m_text;
     TextRun m_run;
@@ -56,7 +56,7 @@ private:
     float m_totalWidth;
 
     // Simple text only.
-    OwnPtr<WidthIterator> m_simpleWidthIterator;
+    std::unique_ptr<WidthIterator> m_simpleWidthIterator;
 
     // Complex text only.
     SVGTextMetrics m_complexStartToCurrentMetrics;

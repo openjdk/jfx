@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,20 +30,16 @@
 #include "IntSize.h"
 #include "LengthFunctions.h"
 
-#if ENABLE(CSS_FILTERS)
-
 namespace WebCore {
 
 static inline IntSize outsetSizeForBlur(float stdDeviation)
 {
-    unsigned kernelSizeX = 0;
-    unsigned kernelSizeY = 0;
-    FEGaussianBlur::calculateUnscaledKernelSize(kernelSizeX, kernelSizeY, stdDeviation, stdDeviation);
+    IntSize kernelSize = FEGaussianBlur::calculateUnscaledKernelSize(FloatPoint(stdDeviation, stdDeviation));
 
     IntSize outset;
     // We take the half kernel size and multiply it with three, because we run box blur three times.
-    outset.setWidth(3 * kernelSizeX * 0.5f);
-    outset.setHeight(3 * kernelSizeY * 0.5f);
+    outset.setWidth(3 * kernelSize.width() * 0.5f);
+    outset.setHeight(3 * kernelSize.height() * 0.5f);
 
     return outset;
 }
@@ -110,24 +106,24 @@ FilterOutsets FilterOperations::outsets() const
 {
     FilterOutsets totalOutsets;
     for (size_t i = 0; i < m_operations.size(); ++i) {
-        FilterOperation* filterOperation = m_operations.at(i).get();
-        switch (filterOperation->type()) {
+        const FilterOperation& filterOperation = *m_operations.at(i);
+        switch (filterOperation.type()) {
         case FilterOperation::BLUR: {
-            BlurFilterOperation* blurOperation = static_cast<BlurFilterOperation*>(filterOperation);
-            float stdDeviation = floatValueForLength(blurOperation->stdDeviation(), 0);
+            const BlurFilterOperation& blurOperation = downcast<BlurFilterOperation>(filterOperation);
+            float stdDeviation = floatValueForLength(blurOperation.stdDeviation(), 0);
             IntSize outsetSize = outsetSizeForBlur(stdDeviation);
             FilterOutsets outsets(outsetSize.height(), outsetSize.width(), outsetSize.height(), outsetSize.width());
             totalOutsets += outsets;
             break;
         }
         case FilterOperation::DROP_SHADOW: {
-            DropShadowFilterOperation* dropShadowOperation = static_cast<DropShadowFilterOperation*>(filterOperation);
-            IntSize outsetSize = outsetSizeForBlur(dropShadowOperation->stdDeviation());
+            const DropShadowFilterOperation& dropShadowOperation = downcast<DropShadowFilterOperation>(filterOperation);
+            IntSize outsetSize = outsetSizeForBlur(dropShadowOperation.stdDeviation());
             FilterOutsets outsets(
-                std::max(0, outsetSize.height() - dropShadowOperation->y()),
-                std::max(0, outsetSize.width() + dropShadowOperation->x()),
-                std::max(0, outsetSize.height() + dropShadowOperation->y()),
-                std::max(0, outsetSize.width() - dropShadowOperation->x())
+                std::max(0, outsetSize.height() - dropShadowOperation.y()),
+                std::max(0, outsetSize.width() + dropShadowOperation.x()),
+                std::max(0, outsetSize.height() + dropShadowOperation.y()),
+                std::max(0, outsetSize.width() - dropShadowOperation.x())
             );
             totalOutsets += outsets;
             break;
@@ -156,5 +152,3 @@ bool FilterOperations::hasFilterThatMovesPixels() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(CSS_FILTERS)

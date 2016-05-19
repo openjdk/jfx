@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY GOOGLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -47,16 +47,17 @@ bool isPolicyActiveInContext(ScriptExecutionContext* context)
     return context->contentSecurityPolicy()->isActive();
 }
 
-template<bool (ContentSecurityPolicy::*allowWithType)(const String&, const String&, const URL&, ContentSecurityPolicy::ReportingStatus) const>
+template<bool (ContentSecurityPolicy::*allowWithType)(const String&, const String&, const URL&, bool overrideContentSecurityPolicy, ContentSecurityPolicy::ReportingStatus) const>
 bool isAllowedWithType(ScriptExecutionContext* context, const String& type)
 {
     if (!isPolicyActiveInContext(context))
         return true;
 
-    return (context->contentSecurityPolicy()->*allowWithType)(type, type, URL(), ContentSecurityPolicy::SuppressReport);
+    bool overrideContentSecurityPolicy = false;
+    return (context->contentSecurityPolicy()->*allowWithType)(type, type, URL(), overrideContentSecurityPolicy, ContentSecurityPolicy::ReportingStatus::SuppressReport);
 }
 
-template<bool (ContentSecurityPolicy::*allowWithURL)(const URL&, ContentSecurityPolicy::ReportingStatus) const>
+template<bool (ContentSecurityPolicy::*allowWithURL)(const URL&, bool overrideContentSecurityPolicy, ContentSecurityPolicy::ReportingStatus) const>
 bool isAllowedWithURL(ScriptExecutionContext* context, const String& url)
 {
     if (!isPolicyActiveInContext(context))
@@ -66,16 +67,18 @@ bool isAllowedWithURL(ScriptExecutionContext* context, const String& url)
     if (!parsedURL.isValid())
         return false; // FIXME: Figure out how to throw a JavaScript error.
 
-    return (context->contentSecurityPolicy()->*allowWithURL)(parsedURL, ContentSecurityPolicy::SuppressReport);
+    bool overrideContentSecurityPolicy = false;
+    return (context->contentSecurityPolicy()->*allowWithURL)(parsedURL, overrideContentSecurityPolicy, ContentSecurityPolicy::ReportingStatus::SuppressReport);
 }
 
-template<bool (ContentSecurityPolicy::*allowWithContext)(const String&, const WTF::OrdinalNumber&, ContentSecurityPolicy::ReportingStatus) const>
+template<bool (ContentSecurityPolicy::*allowWithContext)(const String&, const WTF::OrdinalNumber&, bool overrideContentSecurityPolicy, ContentSecurityPolicy::ReportingStatus) const>
 bool isAllowed(ScriptExecutionContext* context)
 {
     if (!isPolicyActiveInContext(context))
         return true;
 
-    return (context->contentSecurityPolicy()->*allowWithContext)(String(), WTF::OrdinalNumber::beforeFirst(), ContentSecurityPolicy::SuppressReport);
+    bool overrideContentSecurityPolicy = false;
+    return (context->contentSecurityPolicy()->*allowWithContext)(String(), WTF::OrdinalNumber::beforeFirst(), overrideContentSecurityPolicy, ContentSecurityPolicy::ReportingStatus::SuppressReport);
 }
 
 } // namespace
@@ -119,7 +122,8 @@ bool DOMSecurityPolicy::allowsEval() const
     if (!isActive())
         return true;
 
-    return scriptExecutionContext()->contentSecurityPolicy()->allowEval(0, ContentSecurityPolicy::SuppressReport);
+    bool overrideContentSecurityPolicy = false;
+    return scriptExecutionContext()->contentSecurityPolicy()->allowEval(0, overrideContentSecurityPolicy, ContentSecurityPolicy::ReportingStatus::SuppressReport);
 }
 
 

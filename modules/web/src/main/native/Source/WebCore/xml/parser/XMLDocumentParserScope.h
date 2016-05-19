@@ -39,13 +39,13 @@ namespace WebCore {
     class XMLDocumentParserScope {
         WTF_MAKE_NONCOPYABLE(XMLDocumentParserScope);
     public:
-        XMLDocumentParserScope(CachedResourceLoader* cachedResourceLoader);
+        explicit XMLDocumentParserScope(CachedResourceLoader*);
         ~XMLDocumentParserScope();
 
         static CachedResourceLoader* currentCachedResourceLoader;
 
 #if ENABLE(XSLT)
-        XMLDocumentParserScope(CachedResourceLoader* cachedResourceLoader, xmlGenericErrorFunc genericErrorFunc, xmlStructuredErrorFunc structuredErrorFunc = 0, void* errorContext = 0);
+        XMLDocumentParserScope(CachedResourceLoader*, xmlGenericErrorFunc, xmlStructuredErrorFunc structuredErrorFunc = 0, void* errorContext = nullptr);
 #endif
 
     private:

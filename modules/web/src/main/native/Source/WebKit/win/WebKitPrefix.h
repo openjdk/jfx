@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -27,11 +27,11 @@
  */
 
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0502
+#define _WIN32_WINNT 0x601
 #endif
 
 #ifndef WINVER
-#define WINVER 0x0502
+#define WINVER 0x0601
 #endif
 
 #ifndef _WINSOCKAPI_
@@ -45,3 +45,10 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <WebKit/WebKit.h>
+#include "config.h"
+
+// WebKit.dll is expected to export the symbols in WebCore that have been marked
+// as WEBCORE_EXPORT
+#undef WEBCORE_EXPORT
+#define WEBCORE_EXPORT WTF_EXPORT_DECLARATION
+

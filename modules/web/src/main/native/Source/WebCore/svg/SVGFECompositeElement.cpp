@@ -19,13 +19,9 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SVGFECompositeElement.h"
 
-#include "Attribute.h"
 #include "FilterEffect.h"
-#include "SVGElementInstance.h"
 #include "SVGFilterBuilder.h"
 #include "SVGNames.h"
 
@@ -59,33 +55,13 @@ inline SVGFECompositeElement::SVGFECompositeElement(const QualifiedName& tagName
     registerAnimatedPropertiesForSVGFECompositeElement();
 }
 
-PassRefPtr<SVGFECompositeElement> SVGFECompositeElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFECompositeElement> SVGFECompositeElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFECompositeElement(tagName, document));
-}
-
-bool SVGFECompositeElement::isSupportedAttribute(const QualifiedName& attrName)
-{
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty()) {
-        supportedAttributes.add(SVGNames::inAttr);
-        supportedAttributes.add(SVGNames::in2Attr);
-        supportedAttributes.add(SVGNames::operatorAttr);
-        supportedAttributes.add(SVGNames::k1Attr);
-        supportedAttributes.add(SVGNames::k2Attr);
-        supportedAttributes.add(SVGNames::k3Attr);
-        supportedAttributes.add(SVGNames::k4Attr);
-    }
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return adoptRef(*new SVGFECompositeElement(tagName, document));
 }
 
 void SVGFECompositeElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(name)) {
-        SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
-        return;
-    }
-
     if (name == SVGNames::operatorAttr) {
         CompositeOperationType propertyValue = SVGPropertyTraits<CompositeOperationType>::fromString(value);
         if (propertyValue > 0)
@@ -123,7 +99,7 @@ void SVGFECompositeElement::parseAttribute(const QualifiedName& name, const Atom
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
 }
 
 bool SVGFECompositeElement::setFilterEffectAttribute(FilterEffect* effect, const QualifiedName& attrName)
@@ -147,46 +123,35 @@ bool SVGFECompositeElement::setFilterEffectAttribute(FilterEffect* effect, const
 
 void SVGFECompositeElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (!isSupportedAttribute(attrName)) {
-        SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
-        return;
-    }
-
-    SVGElementInstance::InvalidationGuard invalidationGuard(this);
-
-    if (attrName == SVGNames::operatorAttr
-        || attrName == SVGNames::k1Attr
-        || attrName == SVGNames::k2Attr
-        || attrName == SVGNames::k3Attr
-        || attrName == SVGNames::k4Attr) {
+    if (attrName == SVGNames::operatorAttr || attrName == SVGNames::k1Attr || attrName == SVGNames::k2Attr || attrName == SVGNames::k3Attr || attrName == SVGNames::k4Attr) {
+        InstanceInvalidationGuard guard(*this);
         primitiveAttributeChanged(attrName);
         return;
     }
 
     if (attrName == SVGNames::inAttr || attrName == SVGNames::in2Attr) {
+        InstanceInvalidationGuard guard(*this);
         invalidate();
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-PassRefPtr<FilterEffect> SVGFECompositeElement::build(SVGFilterBuilder* filterBuilder, Filter* filter)
+RefPtr<FilterEffect> SVGFECompositeElement::build(SVGFilterBuilder* filterBuilder, Filter& filter)
 {
     FilterEffect* input1 = filterBuilder->getEffectById(in1());
     FilterEffect* input2 = filterBuilder->getEffectById(in2());
 
     if (!input1 || !input2)
-        return 0;
+        return nullptr;
 
     RefPtr<FilterEffect> effect = FEComposite::create(filter, svgOperator(), k1(), k2(), k3(), k4());
     FilterEffectVector& inputEffects = effect->inputEffects();
     inputEffects.reserveCapacity(2);
     inputEffects.append(input1);
     inputEffects.append(input2);
-    return effect.release();
+    return effect;
 }
 
 }
-
-#endif

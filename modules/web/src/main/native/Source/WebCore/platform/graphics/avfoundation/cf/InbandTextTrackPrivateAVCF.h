@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -36,9 +36,9 @@ namespace WebCore {
 
 class InbandTextTrackPrivateAVCF : public InbandTextTrackPrivateAVF {
 public:
-    static PassRefPtr<InbandTextTrackPrivateAVCF> create(AVFInbandTrackParent* player,  AVCFMediaSelectionOptionRef selection)
+    static PassRefPtr<InbandTextTrackPrivateAVCF> create(AVFInbandTrackParent* player,  AVCFMediaSelectionOptionRef selection, InbandTextTrackPrivate::CueFormat format)
     {
-        return adoptRef(new InbandTextTrackPrivateAVCF(player, selection));
+        return adoptRef(new InbandTextTrackPrivateAVCF(player, selection, format));
     }
 
     ~InbandTextTrackPrivateAVCF() { }
@@ -55,12 +55,13 @@ public:
 
     virtual void disconnect() override;
 
-    virtual bool isLegacyClosedCaptionsTrack() const override { return false; }
+    Category textTrackCategory() const override { return InBand; }
+    bool readNativeSampleBuffer(CFArrayRef nativeSamples, CFIndex, RefPtr<JSC::ArrayBuffer>&, MediaTime&, CMFormatDescriptionRef&) override;
 
     AVCFMediaSelectionOptionRef mediaSelectionOption() const { return m_mediaSelectionOption.get(); }
 
 protected:
-    InbandTextTrackPrivateAVCF(AVFInbandTrackParent*, AVCFMediaSelectionOptionRef);
+    InbandTextTrackPrivateAVCF(AVFInbandTrackParent*, AVCFMediaSelectionOptionRef, InbandTextTrackPrivate::CueFormat);
 
     RetainPtr<AVCFMediaSelectionOptionRef> m_mediaSelectionOption;
 };

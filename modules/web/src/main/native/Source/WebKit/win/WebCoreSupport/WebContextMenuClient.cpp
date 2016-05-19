@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebContextMenuClient.h"
 
 #include "UserGestureIndicator.h"
@@ -53,29 +52,29 @@ void WebContextMenuClient::contextMenuDestroyed()
     delete this;
 }
 
-PassOwnPtr<ContextMenu> WebContextMenuClient::customizeMenu(PassOwnPtr<ContextMenu> popMenu)
+std::unique_ptr<ContextMenu> WebContextMenuClient::customizeMenu(std::unique_ptr<ContextMenu> popMenu)
 {
-    OwnPtr<ContextMenu> menu = popMenu;
+    std::unique_ptr<ContextMenu> menu = WTF::move(popMenu);
 
     COMPtr<IWebUIDelegate> uiDelegate;
     if (FAILED(m_webView->uiDelegate(&uiDelegate)))
-        return menu.release();
+        return menu;
 
     ASSERT(uiDelegate);
 
-    OLE_HANDLE nativeMenu = reinterpret_cast<OLE_HANDLE>(menu->platformContextMenu());
+    HMENU nativeMenu = menu->platformContextMenu();
     COMPtr<WebElementPropertyBag> propertyBag;
     propertyBag.adoptRef(WebElementPropertyBag::createInstance(m_webView->page()->contextMenuController().hitTestResult()));
     // FIXME: We need to decide whether to do the default before calling this delegate method
     if (FAILED(uiDelegate->contextMenuItemsForElement(m_webView, propertyBag.get(), nativeMenu, &nativeMenu))) {
-        ::DestroyMenu(reinterpret_cast<HMENU>(nativeMenu));
-        return menu.release();
+        ::DestroyMenu(nativeMenu);
+        return menu;
     }
 
-    OwnPtr<ContextMenu> customizedMenu = adoptPtr(new ContextMenu(reinterpret_cast<HMENU>(nativeMenu)));
-    ::DestroyMenu(reinterpret_cast<HMENU>(nativeMenu));
+    std::unique_ptr<ContextMenu> customizedMenu = std::unique_ptr<ContextMenu>(new ContextMenu(nativeMenu));
+    ::DestroyMenu(nativeMenu);
 
-    return customizedMenu.release();
+    return customizedMenu;
 }
 
 void WebContextMenuClient::contextMenuItemSelected(ContextMenuItem* item, const ContextMenu* parentMenu)
@@ -121,7 +120,7 @@ void WebContextMenuClient::searchWithGoogle(const Frame* frame)
 
     if (Page* page = frame->page()) {
         UserGestureIndicator indicator(DefinitelyProcessingUserGesture);
-        page->mainFrame().loader().urlSelected(URL(ParsedURLString, url), String(), 0, false, false, MaybeSendReferrer);
+        page->mainFrame().loader().urlSelected(URL(ParsedURLString, url), String(), 0, LockHistory::No, LockBackForwardList::No, MaybeSendReferrer, ShouldOpenExternalURLsPolicy::ShouldNotAllow);
     }
 }
 
@@ -144,4 +143,10 @@ bool WebContextMenuClient::isSpeaking()
 {
     notImplemented();
     return false;
+}
+
+ContextMenuItem WebContextMenuClient::shareMenuItem(const HitTestResult&)
+{
+    notImplemented();
+    return ContextMenuItem();
 }

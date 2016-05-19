@@ -35,10 +35,10 @@ namespace WebCore {
 InlineStyleSheetOwner::InlineStyleSheetOwner(Document& document, bool createdByParser)
     : m_isParsingChildren(createdByParser)
     , m_loading(false)
-    , m_startLineNumber(WTF::OrdinalNumber::beforeFirst())
+    , m_startTextPosition()
 {
     if (createdByParser && document.scriptableDocumentParser() && !document.isInDocumentWrite())
-        m_startLineNumber = document.scriptableDocumentParser()->textPosition().m_line;
+        m_startTextPosition = document.scriptableDocumentParser()->textPosition();
 }
 
 InlineStyleSheetOwner::~InlineStyleSheetOwner()
@@ -94,7 +94,7 @@ void InlineStyleSheetOwner::finishParsingChildren(Element& element)
 
 void InlineStyleSheetOwner::createSheetFromTextContents(Element& element)
 {
-    createSheet(element, TextNodeTraversal::contentsAsString(&element));
+    createSheet(element, TextNodeTraversal::contentsAsString(element));
 }
 
 void InlineStyleSheetOwner::clearSheet()
@@ -105,7 +105,7 @@ void InlineStyleSheetOwner::clearSheet()
 
 inline bool isValidCSSContentType(Element& element, const AtomicString& type)
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, cssContentType, ("text/css", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, cssContentType, ("text/css", AtomicString::ConstructFromLiteral));
     if (type.isEmpty())
         return true;
     return element.isHTMLElement() ? equalIgnoringCase(type, cssContentType) : type == cssContentType;
@@ -123,7 +123,7 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
 
     if (!isValidCSSContentType(element, m_contentType))
         return;
-    if (!document.contentSecurityPolicy()->allowInlineStyle(document.url(), m_startLineNumber))
+    if (!document.contentSecurityPolicy()->allowInlineStyle(document.url(), m_startTextPosition.m_line, element.isInUserAgentShadowTree()))
         return;
 
     RefPtr<MediaQuerySet> mediaQueries;
@@ -144,7 +144,7 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
     m_sheet = CSSStyleSheet::createInline(element, URL(), document.inputEncoding());
     m_sheet->setMediaQueries(mediaQueries.release());
     m_sheet->setTitle(element.title());
-    m_sheet->contents().parseStringAtLine(text, m_startLineNumber.zeroBasedInt(), m_isParsingChildren);
+    m_sheet->contents().parseStringAtPosition(text, m_startTextPosition, m_isParsingChildren);
 
     m_loading = false;
 

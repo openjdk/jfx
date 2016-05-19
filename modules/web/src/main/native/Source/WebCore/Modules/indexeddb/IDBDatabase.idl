@@ -28,9 +28,9 @@
     Conditional=INDEXED_DATABASE,
     ActiveDOMObject,
     EventTarget,
-    JSNoStaticTables,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    EnabledAtRuntime=IndexedDB,
 ] interface IDBDatabase : EventTarget {
     readonly attribute DOMString name;
     readonly attribute unsigned long long version;
@@ -42,9 +42,9 @@
     [CallWith=ScriptExecutionContext, RaisesException] IDBTransaction transaction(sequence<DOMString> storeNames, [Default=NullString] optional DOMString mode);
     void close();
 
-    attribute EventListener onabort;
-    attribute EventListener onerror;
-    attribute EventListener onversionchange;
+    attribute EventHandler onabort;
+    attribute EventHandler onerror;
+    attribute EventHandler onversionchange;
 
 };
 

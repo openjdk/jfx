@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,9 +31,26 @@
 
 #import "WebCoreNSURLExtras.h"
 #import "WebCoreSystemInterface.h"
+#import <Foundation/FoundationErrors.h>
+#import <Foundation/NSFileManager.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/text/CString.h>
 #import <wtf/text/WTFString.h>
+
+@interface WebFileManagerDelegate : NSObject <NSFileManagerDelegate>
+@end
+
+@implementation WebFileManagerDelegate
+
+- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error movingItemAtURL:(NSURL *)srcURL toURL:(NSURL *)dstURL
+{
+    UNUSED_PARAM(fileManager);
+    UNUSED_PARAM(srcURL);
+    UNUSED_PARAM(dstURL);
+    return error.code == NSFileWriteFileExistsError;
+}
+
+@end
 
 namespace WebCore {
 
@@ -67,7 +84,30 @@ String openTemporaryFile(const String& prefix, PlatformFileHandle& platformFileH
     return String::fromUTF8(temporaryFilePath.data());
 }
 
+bool moveFile(const String& oldPath, const String& newPath)
+{
+    // Overwrite existing files.
+    auto manager = adoptNS([[NSFileManager alloc] init]);
+    auto delegate = adoptNS([[WebFileManagerDelegate alloc] init]);
+    [manager setDelegate:delegate.get()];
+
+    return [manager moveItemAtURL:[NSURL fileURLWithPath:oldPath] toURL:[NSURL fileURLWithPath:newPath] error:nil];
+}
+
 #if !PLATFORM(IOS)
+bool deleteEmptyDirectory(const String& path)
+{
+    auto fileManager = adoptNS([[NSFileManager alloc] init]);
+
+    if (NSArray *directoryContents = [fileManager contentsOfDirectoryAtPath:path error:nullptr]) {
+        // Explicitly look for and delete .DS_Store files.
+        if (directoryContents.count == 1 && [directoryContents.firstObject isEqualToString:@".DS_Store"])
+            [fileManager removeItemAtPath:[path stringByAppendingPathComponent:directoryContents.firstObject] error:nullptr];
+    }
+
+    // rmdir(...) returns 0 on successful deletion of the path and non-zero in any other case (including invalid permissions or non-existent file)
+    return !rmdir(fileSystemRepresentation(path).data());
+}
 
 void setMetadataURL(String& URLString, const String& referrer, const String& path)
 {

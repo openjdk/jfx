@@ -29,7 +29,6 @@
  */
 
 #include "config.h"
-#if ENABLE(PROGRESS_ELEMENT)
 #include "ProgressShadowElement.h"
 
 #include "HTMLNames.h"
@@ -47,7 +46,7 @@ ProgressShadowElement::ProgressShadowElement(Document& document)
 
 HTMLProgressElement* ProgressShadowElement::progressElement() const
 {
-    return toHTMLProgressElement(shadowHost());
+    return downcast<HTMLProgressElement>(shadowHost());
 }
 
 bool ProgressShadowElement::rendererIsNeeded(const RenderStyle& style)
@@ -61,9 +60,9 @@ ProgressInnerElement::ProgressInnerElement(Document& document)
 {
 }
 
-RenderPtr<RenderElement> ProgressInnerElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> ProgressInnerElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderProgress>(*this, std::move(style));
+    return createRenderer<RenderProgress>(*this, WTF::move(style));
 }
 
 bool ProgressInnerElement::rendererIsNeeded(const RenderStyle& style)
@@ -88,4 +87,3 @@ void ProgressValueElement::setWidthPercentage(double width)
 }
 
 }
-#endif

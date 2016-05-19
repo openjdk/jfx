@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -56,14 +56,25 @@ void ResourceHandleCFURLConnectionDelegate::releaseHandle()
     m_handle = nullptr;
 }
 
+const void* ResourceHandleCFURLConnectionDelegate::retain(const void* clientInfo)
+{
+    static_cast<ResourceHandleCFURLConnectionDelegate*>(const_cast<void*>(clientInfo))->ref();
+    return clientInfo;
+}
+
+void ResourceHandleCFURLConnectionDelegate::release(const void* clientInfo)
+{
+    static_cast<ResourceHandleCFURLConnectionDelegate*>(const_cast<void*>(clientInfo))->deref();
+}
+
 CFURLRequestRef ResourceHandleCFURLConnectionDelegate::willSendRequestCallback(CFURLConnectionRef, CFURLRequestRef cfRequest, CFURLResponseRef originalRedirectResponse, const void* clientInfo)
 {
     return static_cast<ResourceHandleCFURLConnectionDelegate*>(const_cast<void*>(clientInfo))->willSendRequest(cfRequest, originalRedirectResponse);
 }
 
-void ResourceHandleCFURLConnectionDelegate::didReceiveResponseCallback(CFURLConnectionRef, CFURLResponseRef cfResponse, const void* clientInfo)
+void ResourceHandleCFURLConnectionDelegate::didReceiveResponseCallback(CFURLConnectionRef connection, CFURLResponseRef cfResponse, const void* clientInfo)
 {
-    static_cast<ResourceHandleCFURLConnectionDelegate*>(const_cast<void*>(clientInfo))->didReceiveResponse(cfResponse);
+    static_cast<ResourceHandleCFURLConnectionDelegate*>(const_cast<void*>(clientInfo))->didReceiveResponse(connection, cfResponse);
 }
 
 void ResourceHandleCFURLConnectionDelegate::didReceiveDataCallback(CFURLConnectionRef, CFDataRef data, CFIndex originalLength, const void* clientInfo)
@@ -173,7 +184,10 @@ ResourceRequest ResourceHandleCFURLConnectionDelegate::createResourceRequest(CFU
 
 CFURLConnectionClient_V6 ResourceHandleCFURLConnectionDelegate::makeConnectionClient() const
 {
-    CFURLConnectionClient_V6 client = { 6, this, 0, 0, 0,
+    CFURLConnectionClient_V6 client = { 6, this,
+        &ResourceHandleCFURLConnectionDelegate::retain,
+        &ResourceHandleCFURLConnectionDelegate::release,
+        0, // copyDescription
         &ResourceHandleCFURLConnectionDelegate::willSendRequestCallback,
         &ResourceHandleCFURLConnectionDelegate::didReceiveResponseCallback,
         &ResourceHandleCFURLConnectionDelegate::didReceiveDataCallback,

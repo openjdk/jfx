@@ -34,22 +34,22 @@ class AccessibilityScrollbar;
 class Scrollbar;
 class ScrollView;
 
-class AccessibilityScrollView : public AccessibilityObject {
+class AccessibilityScrollView final : public AccessibilityObject {
 public:
-    static PassRefPtr<AccessibilityScrollView> create(ScrollView*);
+    static Ref<AccessibilityScrollView> create(ScrollView*);
     virtual AccessibilityRole roleValue() const override { return ScrollAreaRole; }
     ScrollView* scrollView() const { return m_scrollView; }
 
     virtual ~AccessibilityScrollView();
     virtual void detach(AccessibilityDetachmentType, AXObjectCache*) override;
 
-protected:
-    virtual ScrollableArea* getScrollableAreaIfScrollable() const override;
-    virtual void scrollTo(const IntPoint&) const override;
+    AccessibilityObject* webAreaObject() const;
 
 private:
     explicit AccessibilityScrollView(ScrollView*);
 
+    virtual ScrollableArea* getScrollableAreaIfScrollable() const override;
+    virtual void scrollTo(const IntPoint&) const override;
     virtual bool computeAccessibilityIsIgnored() const override;
     virtual bool isAccessibilityScrollView() const override { return true; }
     virtual bool isEnabled() const override { return true; }
@@ -73,7 +73,6 @@ private:
     virtual AccessibilityObject* parentObject() const override;
     virtual AccessibilityObject* parentObjectIfExists() const override;
 
-    AccessibilityObject* webAreaObject() const;
     virtual AccessibilityObject* firstChild() const override { return webAreaObject(); }
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);
     void removeChildScrollbar(AccessibilityObject*);
@@ -84,8 +83,8 @@ private:
     bool m_childrenDirty;
 };
 
-ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityScrollView, isAccessibilityScrollView())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityScrollView, isAccessibilityScrollView())
 
 #endif // AccessibilityScrollView_h

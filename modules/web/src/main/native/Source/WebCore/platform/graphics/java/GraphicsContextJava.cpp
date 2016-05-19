@@ -11,8 +11,9 @@
 #include "Color.h"
 #include "FloatRect.h"
 #include "FloatSize.h"
+#include "FloatRoundedRect.h"
 #include "Font.h"
-#include "FontData.h"
+#include "FontRanges.h" //XXX: FontData.h -> FontRanges.h
 #include "GraphicsContext.h"
 #include "GraphicsContextJava.h"
 #include "Gradient.h"
@@ -23,7 +24,7 @@
 #include "Path.h"
 #include "Pattern.h"
 #include "RenderingQueue.h"
-#include "SimpleFontData.h"
+#include "Font.h" //XXX: SimpleFontData.h -> Font.h
 #include "TransformationMatrix.h"
 
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
@@ -36,9 +37,10 @@
 
 namespace WebCore {
 
+
 static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, jint id)
 {
-    Vector<Gradient::ColorStop> stops = gradient.getStops();
+    Vector<Gradient::ColorStop, 2> stops = gradient.getStops(); //XXX recheck;
     int nStops = stops.size();
 
     AffineTransform gt = gradient.gradientSpaceTransform();
@@ -79,7 +81,7 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
 class GraphicsContextPlatformPrivate : public PlatformGraphicsContext {
 };
 
-void GraphicsContext::platformInit(PlatformGraphicsContext* context, bool shouldUseContextColors) // todo tav new param
+void GraphicsContext::platformInit(PlatformGraphicsContext* context) //XXX , bool shouldUseContextColors) // todo tav new param
 {
     m_data = static_cast<GraphicsContextPlatformPrivate *>(context);
 }
@@ -113,7 +115,7 @@ void GraphicsContext::restorePlatformState()
 }
 
 // Draws a filled rectangle with a stroked border.
-void GraphicsContext::drawRect(const FloatRect& rect) // todo tav rect changed from IntRect to FloatRect
+void GraphicsContext::drawRect(const FloatRect& rect, float borderThickness) // todo tav rect changed from IntRect to FloatRect
 {
     if (paintingDisabled())
         return;
@@ -167,14 +169,14 @@ void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point
 }
 
 // This method is only used to draw the little circles used in lists.
-void GraphicsContext::drawEllipse(const IntRect& rect)
+void GraphicsContext::drawEllipse(const FloatRect& rect)
 {
     if (paintingDisabled())
         return;
 
     platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWELLIPSE
-    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
+    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height(); //XXX float to int conversion
 }
 
 // FIXME: This function needs to be adjusted to match the functionality on the Mac side.
@@ -352,7 +354,7 @@ void GraphicsContext::updateDocumentMarkerResources()
   //    NotImplemented(); // todo tav implement
 }
 
-void GraphicsContext::drawLineForText(const FloatPoint& origin, float width, bool printing)
+void GraphicsContext::drawLineForText(const FloatPoint& origin, float width, bool printing, bool doubleLines)
 {
     if (paintingDisabled() || width <= 0)
         return;
@@ -450,7 +452,7 @@ static inline void drawErrorUnderline(GraphicsContext &gc, double x, double y, d
 void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& origin, float width, DocumentMarkerLineStyle style)
 {
     savePlatformState(); //fake stroke
-    switch (style) {
+    switch (style) { //XXX: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
     case DocumentMarkerSpellingLineStyle:
         {
             static Color red(255, 0, 0);
@@ -868,17 +870,19 @@ void GraphicsContext::scale(const FloatSize& size)
     << size.width() << size.height();
 }
 
-void GraphicsContext::fillRoundedRect(const FloatRect& rect, const FloatSize& topLeft, const FloatSize& topRight,
-                      const FloatSize& bottomLeft, const FloatSize& bottomRight, const Color& color, ColorSpace) // todo tav Int to Float
+void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color& color, ColorSpace, BlendMode) // todo tav Int to Float
 {
     if (paintingDisabled())
         return;
 
     platformContext()->rq().freeSpace(56)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILL_ROUNDED_RECT
-    << (jfloat)rect.x() << (jfloat)rect.y() << (jfloat)rect.width() << (jfloat)rect.height()
-    << (jfloat)topLeft.width() << (jfloat)topLeft.height() << (jfloat)topRight.width() << (jfloat)topRight.height()
-    << (jfloat)bottomLeft.width() << (jfloat)bottomLeft.height() << (jfloat)bottomRight.width() << (jfloat)bottomRight.height()
+    << (jfloat)rect.rect().x() << (jfloat)rect.rect().y()
+    << (jfloat)rect.rect().width() << (jfloat)rect.rect().height()
+    << (jfloat)rect.radii().topLeft().width() << (jfloat)rect.radii().topLeft().height()
+    << (jfloat)rect.radii().topRight().width() << (jfloat)rect.radii().topRight().height()
+    << (jfloat)rect.radii().bottomLeft().width() << (jfloat)rect.radii().bottomLeft().height()
+    << (jfloat)rect.radii().bottomRight().width() << (jfloat)rect.radii().bottomRight().height()
     << (jint)color.rgb();
 }
 
@@ -924,7 +928,7 @@ void Gradient::platformDestroy()
 
 void Gradient::fill(GraphicsContext *gc, const FloatRect &rect)
 {
-    gc->setFillGradient(this);
+    gc->setFillGradient(*this);
     gc->fillRect(rect);
 }
 

@@ -48,27 +48,27 @@ using namespace JSC;
 
 namespace WebCore {
 
-JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Blob* blob)
+JSValue toJS(ExecState*, JSDOMGlobalObject* globalObject, Blob* blob)
 {
     if (!blob)
         return jsNull();
 
     if (blob->isFile())
-        return wrap<JSFile>(exec, globalObject, static_cast<File*>(blob));
+        return wrap<JSFile>(globalObject, static_cast<File*>(blob));
 
-    return wrap<JSBlob>(exec, globalObject, blob);
+    return wrap<JSBlob>(globalObject, blob);
 }
 
-EncodedJSValue JSC_HOST_CALL JSBlobConstructor::constructJSBlob(ExecState* exec)
+EncodedJSValue JSC_HOST_CALL constructJSBlob(ExecState* exec)
 {
-    JSBlobConstructor* jsConstructor = jsCast<JSBlobConstructor*>(exec->callee());
+    DOMConstructorObject* jsConstructor = jsCast<DOMConstructorObject*>(exec->callee());
     ScriptExecutionContext* context = jsConstructor->scriptExecutionContext();
     if (!context)
         return throwVMError(exec, createReferenceError(exec, "Blob constructor associated document is unavailable"));
 
     if (!exec->argumentCount()) {
         RefPtr<Blob> blob = Blob::create();
-        return JSValue::encode(CREATE_DOM_WRAPPER(exec, jsConstructor->globalObject(), Blob, blob.get()));
+        return JSValue::encode(CREATE_DOM_WRAPPER(jsConstructor->globalObject(), Blob, blob.get()));
     }
 
     unsigned blobPartsLength = 0;
@@ -117,14 +117,11 @@ EncodedJSValue JSC_HOST_CALL JSBlobConstructor::constructJSBlob(ExecState* exec)
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
 
-#if ENABLE(BLOB)
         if (ArrayBuffer* arrayBuffer = toArrayBuffer(item))
             blobBuilder.append(arrayBuffer);
         else if (RefPtr<ArrayBufferView> arrayBufferView = toArrayBufferView(item))
             blobBuilder.append(arrayBufferView.release());
-        else
-#endif
-        if (Blob* blob = toBlob(item))
+        else if (Blob* blob = JSBlob::toWrapped(item))
             blobBuilder.append(blob);
         else {
             String string = item.toString(exec)->value(exec);
@@ -134,8 +131,9 @@ EncodedJSValue JSC_HOST_CALL JSBlobConstructor::constructJSBlob(ExecState* exec)
         }
     }
 
-    RefPtr<Blob> blob = blobBuilder.getBlob(type);
-    return JSValue::encode(CREATE_DOM_WRAPPER(exec, jsConstructor->globalObject(), Blob, blob.get()));
+    RefPtr<Blob> blob = Blob::create(blobBuilder.finalize(), Blob::normalizedContentType(type));
+
+    return JSValue::encode(CREATE_DOM_WRAPPER(jsConstructor->globalObject(), Blob, blob.get()));
 }
 
 } // namespace WebCore

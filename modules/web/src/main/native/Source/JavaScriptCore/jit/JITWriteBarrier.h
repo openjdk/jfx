@@ -31,6 +31,7 @@
 #include "MacroAssembler.h"
 #include "SlotVisitor.h"
 #include "UnusedPointer.h"
+#include "VM.h"
 #include "WriteBarrier.h"
 
 namespace JSC {
@@ -42,8 +43,7 @@ class VM;
 #define JITWriteBarrierFlag ((void*)2)
 class JITWriteBarrierBase {
 public:
-    typedef void* (JITWriteBarrierBase::*UnspecifiedBoolType);
-    operator UnspecifiedBoolType*() const { return get() ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0; }
+    explicit operator bool() const { return get(); }
     bool operator!() const { return !get(); }
 
     void setFlagOnBarrier()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
  *                     2006 Rob Buis <buis@kde.org>
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *
@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,6 +31,7 @@
 
 #include "FloatPoint.h"
 #include "FloatRect.h"
+#include "FloatRoundedRect.h"
 #include "PathTraversalState.h"
 #include "RoundedRect.h"
 #include <math.h>
@@ -41,59 +42,32 @@ namespace WebCore {
 static void pathLengthApplierFunction(void* info, const PathElement* element)
 {
     PathTraversalState& traversalState = *static_cast<PathTraversalState*>(info);
-    if (traversalState.m_success)
-        return;
-    FloatPoint* points = element->points;
-    float segmentLength = 0;
-    switch (element->type) {
-        case PathElementMoveToPoint:
-            segmentLength = traversalState.moveTo(points[0]);
-            break;
-        case PathElementAddLineToPoint:
-            segmentLength = traversalState.lineTo(points[0]);
-            break;
-        case PathElementAddQuadCurveToPoint:
-            segmentLength = traversalState.quadraticBezierTo(points[0], points[1]);
-            break;
-        case PathElementAddCurveToPoint:
-            segmentLength = traversalState.cubicBezierTo(points[0], points[1], points[2]);
-            break;
-        case PathElementCloseSubpath:
-            segmentLength = traversalState.closeSubpath();
-            break;
-    }
-    traversalState.m_totalLength += segmentLength;
-    traversalState.processSegment();
+    traversalState.processPathElement(element);
 }
 
 float Path::length() const
 {
-    PathTraversalState traversalState(PathTraversalState::TraversalTotalLength);
+    PathTraversalState traversalState(PathTraversalState::Action::TotalLength);
     apply(&traversalState, pathLengthApplierFunction);
-    return traversalState.m_totalLength;
+    return traversalState.totalLength();
 }
 
-FloatPoint Path::pointAtLength(float length, bool& ok) const
+PathTraversalState Path::traversalStateAtLength(float length, bool& success) const
 {
-    PathTraversalState traversalState(PathTraversalState::TraversalPointAtLength);
-    traversalState.m_desiredLength = length;
+    PathTraversalState traversalState(PathTraversalState::Action::VectorAtLength, length);
     apply(&traversalState, pathLengthApplierFunction);
-    ok = traversalState.m_success;
-    return traversalState.m_current;
+    success = traversalState.success();
+    return traversalState;
 }
 
-float Path::normalAngleAtLength(float length, bool& ok) const
+FloatPoint Path::pointAtLength(float length, bool& success) const
 {
-    PathTraversalState traversalState(PathTraversalState::TraversalNormalAngleAtLength);
-    traversalState.m_desiredLength = length ? length : std::numeric_limits<float>::epsilon();
-    apply(&traversalState, pathLengthApplierFunction);
-    ok = traversalState.m_success;
-    return traversalState.m_normalAngle;
+    return traversalStateAtLength(length, success).current();
 }
 
-void Path::addRoundedRect(const RoundedRect& r)
+float Path::normalAngleAtLength(float length, bool& success) const
 {
-    addRoundedRect(r.rect(), r.radii().topLeft(), r.radii().topRight(), r.radii().bottomLeft(), r.radii().bottomRight());
+    return traversalStateAtLength(length, success).normalAngle();
 }
 
 void Path::addRoundedRect(const FloatRect& rect, const FloatSize& roundingRadii, RoundedRectStrategy strategy)
@@ -121,36 +95,36 @@ void Path::addRoundedRect(const FloatRect& rect, const FloatSize& roundingRadii,
     if (radius.height() > halfSize.height())
         radius.setHeight(halfSize.height());
 
-    addPathForRoundedRect(rect, radius, radius, radius, radius, strategy);
+    addRoundedRect(FloatRoundedRect(rect, radius, radius, radius, radius), strategy);
 }
 
-void Path::addRoundedRect(const FloatRect& rect, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius, RoundedRectStrategy strategy)
+void Path::addRoundedRect(const FloatRoundedRect& r, RoundedRectStrategy strategy)
 {
-    if (rect.isEmpty())
+    if (r.isEmpty())
         return;
 
-    if (rect.width() < topLeftRadius.width() + topRightRadius.width()
-            || rect.width() < bottomLeftRadius.width() + bottomRightRadius.width()
-            || rect.height() < topLeftRadius.height() + bottomLeftRadius.height()
-            || rect.height() < topRightRadius.height() + bottomRightRadius.height()) {
+    const FloatRoundedRect::Radii& radii = r.radii();
+    const FloatRect& rect = r.rect();
+
+    if (!r.isRenderable()) {
         // If all the radii cannot be accommodated, return a rect.
         addRect(rect);
         return;
     }
 
-    addPathForRoundedRect(rect, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, strategy);
-}
-
-void Path::addPathForRoundedRect(const FloatRect& rect, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius, RoundedRectStrategy strategy)
-{
     if (strategy == PreferNativeRoundedRect) {
 #if USE(CG)
-        platformAddPathForRoundedRect(rect, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
+        platformAddPathForRoundedRect(rect, radii.topLeft(), radii.topRight(), radii.bottomLeft(), radii.bottomRight());
         return;
 #endif
     }
 
-    addBeziersForRoundedRect(rect, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius);
+    addBeziersForRoundedRect(rect, radii.topLeft(), radii.topRight(), radii.bottomLeft(), radii.bottomRight());
+}
+
+void Path::addRoundedRect(const RoundedRect& r)
+{
+    addRoundedRect(FloatRoundedRect(r));
 }
 
 // Approximation of control point positions on a bezier to simulate a quarter of a circle.

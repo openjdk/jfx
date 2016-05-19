@@ -29,6 +29,7 @@
 #include "CopyToken.h"
 #include "HandleTypes.h"
 #include "MarkStack.h"
+#include "OpaqueRootSet.h"
 
 #include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
@@ -53,7 +54,10 @@ public:
     ~SlotVisitor();
 
     MarkStackArray& markStack() { return m_stack; }
+    const MarkStackArray& markStack() const { return m_stack; }
 
+    VM& vm();
+    const VM& vm() const;
     Heap* heap() const;
 
     void append(ConservativeRoots&);
@@ -74,8 +78,8 @@ public:
     void unconditionallyAppend(JSCell*);
 
     void addOpaqueRoot(void*);
-    bool containsOpaqueRoot(void*);
-    TriState containsOpaqueRootTriState(void*);
+    bool containsOpaqueRoot(void*) const;
+    TriState containsOpaqueRootTriState(void*) const;
     int opaqueRootCount();
 
     GCThreadSharedData& sharedData() const { return m_shared; }
@@ -101,16 +105,16 @@ public:
 
     void copyLater(JSCell*, CopyToken, void*, size_t);
 
-    void reportExtraMemoryUsage(JSCell* owner, size_t);
+    void reportExtraMemoryVisited(JSCell* owner, size_t);
 
     void addWeakReferenceHarvester(WeakReferenceHarvester*);
     void addUnconditionalFinalizer(UnconditionalFinalizer*);
 
-#if ENABLE(OBJECT_MARK_LOGGING)
     inline void resetChildCount() { m_logChildCount = 0; }
     inline unsigned childCount() { return m_logChildCount; }
     inline void incrementChildCount() { m_logChildCount++; }
-#endif
+
+    void dump(PrintStream&) const;
 
 private:
     friend class ParallelModeEnabler;
@@ -132,7 +136,7 @@ private:
     void donateKnownParallel();
 
     MarkStackArray m_stack;
-    HashSet<void*> m_opaqueRoots; // Handle-owning data structures not visible to the garbage collector.
+    OpaqueRootSet m_opaqueRoots; // Handle-owning data structures not visible to the garbage collector.
 
     size_t m_bytesVisited;
     size_t m_bytesCopied;
@@ -145,9 +149,7 @@ private:
     typedef HashMap<StringImpl*, JSValue> UniqueStringMap;
     UniqueStringMap m_uniqueStrings;
 
-#if ENABLE(OBJECT_MARK_LOGGING)
     unsigned m_logChildCount;
-#endif
 
 public:
 #if !ASSERT_DISABLED

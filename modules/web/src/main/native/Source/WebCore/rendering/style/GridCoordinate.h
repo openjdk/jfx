@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2013 Igalia S.L.
+ * Copyright (C) 2013, 2014 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,36 +32,53 @@
 #ifndef GridCoordinate_h
 #define GridCoordinate_h
 
+#if ENABLE(CSS_GRID_LAYOUT)
+
+#include "GridResolvedPosition.h"
 #include <wtf/HashMap.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-// A span in a single direction (either rows or columns). Note that |initialPositionIndex|
-// and |finalPositionIndex| are grid areas' indexes, NOT grid lines'. Iterating over the
-// span should include both |initialPositionIndex| and |finalPositionIndex| to be correct.
+// Recommended maximum size for both explicit and implicit grids.
+const unsigned kGridMaxTracks = 1000000;
+
+// A span in a single direction (either rows or columns). Note that |resolvedInitialPosition|
+// and |resolvedFinalPosition| are grid areas' indexes, NOT grid lines'. Iterating over the
+// span should include both |resolvedInitialPosition| and |resolvedFinalPosition| to be correct.
 class GridSpan {
 public:
-    static PassOwnPtr<GridSpan> create(size_t initialPosition, size_t finalPosition)
+    GridSpan(const GridResolvedPosition& resolvedInitialPosition, const GridResolvedPosition& resolvedFinalPosition)
+        : resolvedInitialPosition(std::min(resolvedInitialPosition.toInt(), kGridMaxTracks - 1))
+        , resolvedFinalPosition(std::min(resolvedFinalPosition.toInt(), kGridMaxTracks))
     {
-        return adoptPtr(new GridSpan(initialPosition, finalPosition));
-    }
-
-    GridSpan(size_t initialPosition, size_t finalPosition)
-        : initialPositionIndex(initialPosition)
-        , finalPositionIndex(finalPosition)
-    {
-        ASSERT(initialPositionIndex <= finalPositionIndex);
+        ASSERT(resolvedInitialPosition <= resolvedFinalPosition);
     }
 
     bool operator==(const GridSpan& o) const
     {
-        return initialPositionIndex == o.initialPositionIndex && finalPositionIndex == o.finalPositionIndex;
+        return resolvedInitialPosition == o.resolvedInitialPosition && resolvedFinalPosition == o.resolvedFinalPosition;
     }
 
-    size_t initialPositionIndex;
-    size_t finalPositionIndex;
+    unsigned integerSpan() const
+    {
+        return resolvedFinalPosition.toInt() - resolvedInitialPosition.toInt() + 1;
+    }
+
+    GridResolvedPosition resolvedInitialPosition;
+    GridResolvedPosition resolvedFinalPosition;
+
+    typedef GridResolvedPosition iterator;
+
+    iterator begin() const
+    {
+        return resolvedInitialPosition;
+    }
+
+    iterator end() const
+    {
+        return resolvedFinalPosition.next();
+    }
 };
 
 // This represents a grid area that spans in both rows' and columns' direction.
@@ -97,5 +114,7 @@ public:
 typedef HashMap<String, GridCoordinate> NamedGridAreaMap;
 
 } // namespace WebCore
+
+#endif /* ENABLE(CSS_GRID_LAYOUT) */
 
 #endif // GridCoordinate_h

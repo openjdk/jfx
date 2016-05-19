@@ -30,7 +30,6 @@ my $idlFilesList;
 my $supplementalDependencyFile;
 my $windowConstructorsFile;
 my $workerGlobalScopeConstructorsFile;
-my $sharedWorkerGlobalScopeConstructorsFile;
 my $dedicatedWorkerGlobalScopeConstructorsFile;
 my $supplementalMakefileDeps;
 
@@ -40,7 +39,6 @@ GetOptions('defines=s' => \$defines,
            'supplementalDependencyFile=s' => \$supplementalDependencyFile,
            'windowConstructorsFile=s' => \$windowConstructorsFile,
            'workerGlobalScopeConstructorsFile=s' => \$workerGlobalScopeConstructorsFile,
-           'sharedWorkerGlobalScopeConstructorsFile=s' => \$sharedWorkerGlobalScopeConstructorsFile,
            'dedicatedWorkerGlobalScopeConstructorsFile=s' => \$dedicatedWorkerGlobalScopeConstructorsFile,
            'supplementalMakefileDeps=s' => \$supplementalMakefileDeps);
 
@@ -48,7 +46,6 @@ die('Must specify #define macros using --defines.') unless defined($defines);
 die('Must specify an output file using --supplementalDependencyFile.') unless defined($supplementalDependencyFile);
 die('Must specify an output file using --windowConstructorsFile.') unless defined($windowConstructorsFile);
 die('Must specify an output file using --workerGlobalScopeConstructorsFile.') unless defined($workerGlobalScopeConstructorsFile);
-die('Must specify an output file using --sharedWorkerGlobalScopeConstructorsFile.') unless defined($sharedWorkerGlobalScopeConstructorsFile);
 die('Must specify an output file using --dedicatedWorkerGlobalScopeConstructorsFile.') unless defined($dedicatedWorkerGlobalScopeConstructorsFile);
 die('Must specify the file listing all IDLs using --idlFilesList.') unless defined($idlFilesList);
 
@@ -63,7 +60,6 @@ my %supplementalDependencies;
 my %supplementals;
 my $windowConstructorsCode = "";
 my $workerGlobalScopeConstructorsCode = "";
-my $sharedWorkerGlobalScopeConstructorsCode = "";
 my $dedicatedWorkerGlobalScopeConstructorsCode = "";
 
 # Get rid of duplicates in idlFiles array.
@@ -80,6 +76,7 @@ foreach my $idlFile (keys %idlFileHash) {
 
 # Parse all IDL files.
 foreach my $idlFile (sort keys %idlFileHash) {
+    $idlFile =~ s/\s*$//g;
     my $fullPath = Cwd::realpath($idlFile);
     my $idlFileContents = getFileContents($fullPath);
     # Handle partial interfaces.
@@ -108,7 +105,6 @@ foreach my $idlFile (sort keys %idlFileHash) {
             my $attributeCode = GenerateConstructorAttribute($interfaceName, $extendedAttributes);
             $windowConstructorsCode .= $attributeCode if grep(/^DOMWindow$/, @globalContexts);
             $workerGlobalScopeConstructorsCode .= $attributeCode if grep(/^WorkerGlobalScope$/, @globalContexts);
-            $sharedWorkerGlobalScopeConstructorsCode .= $attributeCode if grep(/^SharedWorkerGlobalScope$/, @globalContexts);
             $dedicatedWorkerGlobalScopeConstructorsCode .= $attributeCode if grep(/^DedicatedWorkerGlobalScope$/, @globalContexts);
         }
     }
@@ -118,7 +114,6 @@ foreach my $idlFile (sort keys %idlFileHash) {
 # Generate partial interfaces for Constructors.
 GeneratePartialInterface("DOMWindow", $windowConstructorsCode, $windowConstructorsFile);
 GeneratePartialInterface("WorkerGlobalScope", $workerGlobalScopeConstructorsCode, $workerGlobalScopeConstructorsFile);
-GeneratePartialInterface("SharedWorkerGlobalScope", $sharedWorkerGlobalScopeConstructorsCode, $sharedWorkerGlobalScopeConstructorsFile);
 GeneratePartialInterface("DedicatedWorkerGlobalScope", $dedicatedWorkerGlobalScopeConstructorsCode, $dedicatedWorkerGlobalScopeConstructorsFile);
 
 # Resolves partial interfaces and implements dependencies.

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,8 +29,6 @@
 #ifndef SQLResultSetRowList_h
 #define SQLResultSetRowList_h
 
-#if ENABLE(SQL_DATABASE)
-
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include "SQLValue.h"
@@ -39,7 +37,7 @@ namespace WebCore {
 
 class SQLResultSetRowList : public RefCounted<SQLResultSetRowList> {
 public:
-    static PassRefPtr<SQLResultSetRowList> create() { return adoptRef(new SQLResultSetRowList); }
+    static Ref<SQLResultSetRowList> create() { return adoptRef(*new SQLResultSetRowList); }
 
     const Vector<String>& columnNames() const { return m_columns; }
     const Vector<SQLValue>& values() const { return m_result; }
@@ -57,7 +55,5 @@ private:
 };
 
 }
-
-#endif
 
 #endif

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,13 +29,10 @@
 #include "config.h"
 #include "MixedContentChecker.h"
 
-#include "Console.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
-#include "SchemeRegistry.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include <wtf/text/CString.h>
@@ -63,13 +60,13 @@ bool MixedContentChecker::isMixedContent(SecurityOrigin* securityOrigin, const U
     return !SecurityOrigin::isSecure(url);
 }
 
-bool MixedContentChecker::canDisplayInsecureContent(SecurityOrigin* securityOrigin, const URL& url) const
+bool MixedContentChecker::canDisplayInsecureContent(SecurityOrigin* securityOrigin, ContentType type, const URL& url) const
 {
     if (!isMixedContent(securityOrigin, url))
         return true;
 
-    bool allowed = client().allowDisplayingInsecureContent(m_frame.settings().allowDisplayOfInsecureContent(), securityOrigin, url);
-    logWarning(allowed, "displayed", url);
+    bool allowed = m_frame.settings().allowDisplayOfInsecureContent() || type == ContentType::ActiveCanWarn;
+    logWarning(allowed, "display", url);
 
     if (allowed)
         client().didDisplayInsecureContent();
@@ -82,8 +79,8 @@ bool MixedContentChecker::canRunInsecureContent(SecurityOrigin* securityOrigin, 
     if (!isMixedContent(securityOrigin, url))
         return true;
 
-    bool allowed = client().allowRunningInsecureContent(m_frame.settings().allowRunningOfInsecureContent(), securityOrigin, url);
-    logWarning(allowed, "ran", url);
+    bool allowed = m_frame.settings().allowRunningOfInsecureContent();
+    logWarning(allowed, "run", url);
 
     if (allowed)
         client().didRunInsecureContent(securityOrigin, url);
@@ -93,7 +90,8 @@ bool MixedContentChecker::canRunInsecureContent(SecurityOrigin* securityOrigin, 
 
 void MixedContentChecker::logWarning(bool allowed, const String& action, const URL& target) const
 {
-    String message = makeString((allowed ? "" : "[blocked] "), "The page at ", m_frame.document()->url().stringCenterEllipsizedToLength(), " ", action, " insecure content from ", target.stringCenterEllipsizedToLength(), ".\n");
+    const char* errorString = allowed ? " was allowed to " : " was not allowed to ";
+    String message = makeString((allowed ? String() : "[blocked] "), "The page at ", m_frame.document()->url().stringCenterEllipsizedToLength(), errorString, action, " insecure content from ", target.stringCenterEllipsizedToLength(), ".\n");
     m_frame.document()->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, message);
 }
 

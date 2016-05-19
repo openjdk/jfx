@@ -21,7 +21,6 @@
 #ifndef SourceGraphic_h
 #define SourceGraphic_h
 
-#if ENABLE(FILTERS)
 #include "FilterEffect.h"
 #include "Filter.h"
 
@@ -29,7 +28,7 @@ namespace WebCore {
 
 class SourceGraphic : public FilterEffect {
 public:
-    static PassRefPtr<SourceGraphic> create(Filter*);
+    static Ref<SourceGraphic> create(Filter&);
 
     static const AtomicString& effectName();
 
@@ -46,7 +45,7 @@ public:
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;
 
 private:
-    SourceGraphic(Filter* filter)
+    SourceGraphic(Filter& filter)
         : FilterEffect(filter)
     {
         setOperatingColorSpace(ColorSpaceDeviceRGB);
@@ -54,7 +53,5 @@ private:
 };
 
 } //namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // SourceGraphic_h

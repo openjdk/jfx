@@ -38,9 +38,9 @@
 
 namespace WebCore {
 
-PassRefPtr<Storage> Storage::create(Frame* frame, PassRefPtr<StorageArea> storageArea)
+Ref<Storage> Storage::create(Frame* frame, PassRefPtr<StorageArea> storageArea)
 {
-    return adoptRef(new Storage(frame, storageArea));
+    return adoptRef(*new Storage(frame, storageArea));
 }
 
 Storage::Storage(Frame* frame, PassRefPtr<StorageArea> storageArea)
@@ -158,7 +158,7 @@ bool Storage::contains(const String& key, ExceptionCode& ec) const
 
 bool Storage::isDisabledByPrivateBrowsing() const
 {
-    if (!m_frame->page()->settings().privateBrowsingEnabled())
+    if (!m_frame->page()->usesEphemeralSession())
         return false;
 
     if (m_storageArea->storageType() == LocalStorage) {

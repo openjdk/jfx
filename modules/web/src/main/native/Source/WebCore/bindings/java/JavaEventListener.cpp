@@ -22,7 +22,9 @@ ScriptExecutionContext* JavaEventListener::scriptExecutionContext()
 
 bool JavaEventListener::operator==(const EventListener& other)
 {
-    const JavaEventListener* jother = dynamic_cast<const JavaEventListener*>(&other);
+    const JavaEventListener* jother = other.isJavaEventListener()
+                                        ? static_cast<const JavaEventListener*>(&other)
+                                        : NULL;
     return jother && isJavaEquals(m_joListener, jother->m_joListener);
 }
 

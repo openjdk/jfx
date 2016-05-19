@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -39,7 +39,9 @@ namespace WebCore {
 class HTMLPlugInElement;
 class RenderElement;
 class RenderStyle;
+class RenderTreePosition;
 class ShadowRoot;
+class URL;
 
 class PluginReplacement : public RefCounted<PluginReplacement> {
 public:
@@ -49,7 +51,7 @@ public:
     virtual JSC::JSObject* scriptObject() { return 0; }
 
     virtual bool willCreateRenderer() { return false; }
-    virtual RenderPtr<RenderElement> createElementRenderer(HTMLPlugInElement&, PassRef<RenderStyle>) = 0;
+    virtual RenderPtr<RenderElement> createElementRenderer(HTMLPlugInElement&, Ref<RenderStyle>&&, const RenderTreePosition&) = 0;
 
 protected:
     PluginReplacement() { }
@@ -58,13 +60,15 @@ protected:
 typedef PassRefPtr<PluginReplacement> (*CreatePluginReplacement)(HTMLPlugInElement&, const Vector<String>& paramNames, const Vector<String>& paramValues);
 typedef bool (*PluginReplacementSupportsType)(const String&);
 typedef bool (*PluginReplacementSupportsFileExtension)(const String&);
+typedef bool (*PluginReplacementSupportsURL)(const URL&);
 
 class ReplacementPlugin {
 public:
-    ReplacementPlugin(CreatePluginReplacement constructor, PluginReplacementSupportsType supportsType, PluginReplacementSupportsFileExtension supportsFileExtension)
+    ReplacementPlugin(CreatePluginReplacement constructor, PluginReplacementSupportsType supportsType, PluginReplacementSupportsFileExtension supportsFileExtension, PluginReplacementSupportsURL supportsURL)
         : m_constructor(constructor)
         , m_supportsType(supportsType)
         , m_supportsFileExtension(supportsFileExtension)
+        , m_supportsURL(supportsURL)
     {
     }
 
@@ -72,17 +76,20 @@ public:
         : m_constructor(other.m_constructor)
         , m_supportsType(other.m_supportsType)
         , m_supportsFileExtension(other.m_supportsFileExtension)
+        , m_supportsURL(other.m_supportsURL)
     {
     }
 
     PassRefPtr<PluginReplacement> create(HTMLPlugInElement& element, const Vector<String>& paramNames, const Vector<String>& paramValues) const { return m_constructor(element, paramNames, paramValues); }
     bool supportsType(const String& mimeType) const { return m_supportsType(mimeType); }
     bool supportsFileExtension(const String& extension) const { return m_supportsFileExtension(extension); }
+    bool supportsURL(const URL& url) const { return m_supportsURL(url); }
 
 private:
     CreatePluginReplacement m_constructor;
     PluginReplacementSupportsType m_supportsType;
     PluginReplacementSupportsFileExtension m_supportsFileExtension;
+    PluginReplacementSupportsURL m_supportsURL;
 };
 
 typedef void (*PluginReplacementRegistrar)(const ReplacementPlugin&);

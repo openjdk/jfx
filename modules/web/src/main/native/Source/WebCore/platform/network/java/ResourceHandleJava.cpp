@@ -21,7 +21,7 @@ bool ResourceHandle::start()
 {
     ASSERT(!d->m_loader);
     d->m_loader = URLLoader::loadAsynchronously(context(), this);
-    return d->m_loader;
+    return d->m_loader ? true : false; //XXX: recheck
 }
 
 void ResourceHandle::cancel()
@@ -46,13 +46,6 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
 void ResourceHandle::platformSetDefersLoading(bool defers)
 {
     notImplemented();
-}
-
-
-bool ResourceHandle::loadsBlocked()
-{
-    notImplemented();
-    return false;
 }
 
 } // namespace WebCore

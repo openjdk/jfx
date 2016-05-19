@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -147,17 +147,6 @@ void FloatRect::scale(float sx, float sy)
     m_size.setHeight(height() * sy);
 }
 
-FloatRect unionRect(const Vector<FloatRect>& rects)
-{
-    FloatRect result;
-
-    size_t count = rects.size();
-    for (size_t i = 0; i < count; ++i)
-        result.unite(rects[i]);
-
-    return result;
-}
-
 void FloatRect::fitToPoints(const FloatPoint& p0, const FloatPoint& p1)
 {
     float left = std::min(p0.x(), p1.x());
@@ -217,6 +206,13 @@ void FloatRect::fitToPoints(const FloatPoint& p0, const FloatPoint& p1, const Fl
     setLocationAndSizeFromEdges(left, top, right, bottom);
 }
 
+FloatRect encloseRectToDevicePixels(const FloatRect& rect, float deviceScaleFactor)
+{
+    FloatPoint location = floorPointToDevicePixels(rect.minXMinYCorner(), deviceScaleFactor);
+    FloatPoint maxPoint = ceilPointToDevicePixels(rect.maxXMaxYCorner(), deviceScaleFactor);
+    return FloatRect(location, maxPoint - location);
+}
+
 IntRect enclosingIntRect(const FloatRect& rect)
 {
     IntPoint location = flooredIntPoint(rect.minXMinYCorner());
@@ -225,31 +221,9 @@ IntRect enclosingIntRect(const FloatRect& rect)
     return IntRect(location, maxPoint - location);
 }
 
-IntRect enclosedIntRect(const FloatRect& rect)
-{
-    IntPoint location = ceiledIntPoint(rect.minXMinYCorner());
-    IntPoint maxPoint = flooredIntPoint(rect.maxXMaxYCorner());
-    IntSize size = maxPoint - location;
-    size.clampNegativeToZero();
-
-    return IntRect(location, size);
-}
-
 IntRect roundedIntRect(const FloatRect& rect)
 {
     return IntRect(roundedIntPoint(rect.location()), roundedIntSize(rect.size()));
-}
-
-FloatRect mapRect(const FloatRect& r, const FloatRect& srcRect, const FloatRect& destRect)
-{
-    if (srcRect.width() == 0 || srcRect.height() == 0)
-        return FloatRect();
-
-    float widthScale = destRect.width() / srcRect.width();
-    float heightScale = destRect.height() / srcRect.height();
-    return FloatRect(destRect.x() + (r.x() - srcRect.x()) * widthScale,
-                     destRect.y() + (r.y() - srcRect.y()) * heightScale,
-                     r.width() * widthScale, r.height() * heightScale);
 }
 
 void FloatRect::dump(PrintStream& out) const

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +30,24 @@
 #include "Document.h"
 #include "MainFrame.h"
 #include "Page.h"
+#include "ResourceLoadInfo.h"
 #include "UserScript.h"
 #include "UserStyleSheet.h"
 
+#if ENABLE(USER_MESSAGE_HANDLERS)
+#include "UserMessageHandlerDescriptor.h"
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+#include "ContentExtensionCompiler.h"
+#include "ContentExtensionsBackend.h"
+#endif
+
 namespace WebCore {
 
-RefPtr<UserContentController> UserContentController::create()
+Ref<UserContentController> UserContentController::create()
 {
-    return adoptRef(new UserContentController);
+    return adoptRef(*new UserContentController);
 }
 
 UserContentController::UserContentController()
@@ -68,7 +78,7 @@ void UserContentController::addUserScript(DOMWrapperWorld& world, std::unique_pt
     auto& scriptsInWorld = m_userScripts->add(&world, nullptr).iterator->value;
     if (!scriptsInWorld)
         scriptsInWorld = std::make_unique<UserScriptVector>();
-    scriptsInWorld->append(std::move(userScript));
+    scriptsInWorld->append(WTF::move(userScript));
 }
 
 void UserContentController::removeUserScript(DOMWrapperWorld& world, const URL& url)
@@ -106,7 +116,7 @@ void UserContentController::addUserStyleSheet(DOMWrapperWorld& world, std::uniqu
     auto& styleSheetsInWorld = m_userStyleSheets->add(&world, nullptr).iterator->value;
     if (!styleSheetsInWorld)
         styleSheetsInWorld = std::make_unique<UserStyleSheetVector>();
-    styleSheetsInWorld->append(std::move(userStyleSheet));
+    styleSheetsInWorld->append(WTF::move(userStyleSheet));
 
     if (injectionTime == InjectInExistingDocuments)
         invalidateInjectedStyleSheetCacheInAllFrames();
@@ -150,6 +160,72 @@ void UserContentController::removeUserStyleSheets(DOMWrapperWorld& world)
 
     invalidateInjectedStyleSheetCacheInAllFrames();
 }
+
+#if ENABLE(USER_MESSAGE_HANDLERS)
+void UserContentController::addUserMessageHandlerDescriptor(UserMessageHandlerDescriptor& descriptor)
+{
+    if (!m_userMessageHandlerDescriptors)
+        m_userMessageHandlerDescriptors = std::make_unique<UserMessageHandlerDescriptorMap>();
+
+    m_userMessageHandlerDescriptors->add(std::make_pair(descriptor.name(), &descriptor.world()), &descriptor);
+}
+
+void UserContentController::removeUserMessageHandlerDescriptor(UserMessageHandlerDescriptor& descriptor)
+{
+    if (!m_userMessageHandlerDescriptors)
+        return;
+
+    m_userMessageHandlerDescriptors->remove(std::make_pair(descriptor.name(), &descriptor.world()));
+}
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+void UserContentController::addUserContentExtension(const String& name, RefPtr<ContentExtensions::CompiledContentExtension> contentExtension)
+{
+    if (!m_contentExtensionBackend)
+        m_contentExtensionBackend = std::make_unique<ContentExtensions::ContentExtensionsBackend>();
+
+    m_contentExtensionBackend->addContentExtension(name, contentExtension);
+}
+
+void UserContentController::removeUserContentExtension(const String& name)
+{
+    if (!m_contentExtensionBackend)
+        return;
+
+    m_contentExtensionBackend->removeContentExtension(name);
+}
+
+void UserContentController::removeAllUserContentExtensions()
+{
+    if (!m_contentExtensionBackend)
+        return;
+
+    m_contentExtensionBackend->removeAllContentExtensions();
+}
+
+void UserContentController::processContentExtensionRulesForLoad(Page& page, ResourceRequest& request, ResourceType resourceType, DocumentLoader& initiatingDocumentLoader)
+{
+    if (!m_contentExtensionBackend)
+        return;
+
+    if (!page.userContentExtensionsEnabled())
+        return;
+
+    m_contentExtensionBackend->processContentExtensionRulesForLoad(request, resourceType, initiatingDocumentLoader);
+}
+
+Vector<ContentExtensions::Action> UserContentController::actionsForResourceLoad(Page& page, const ResourceLoadInfo& resourceLoadInfo)
+{
+    if (!m_contentExtensionBackend)
+        return Vector<ContentExtensions::Action>();
+
+    if (!page.userContentExtensionsEnabled())
+        return Vector<ContentExtensions::Action>();
+
+    return m_contentExtensionBackend->actionsForResourceLoad(resourceLoadInfo);
+}
+#endif
 
 void UserContentController::removeAllUserContent()
 {

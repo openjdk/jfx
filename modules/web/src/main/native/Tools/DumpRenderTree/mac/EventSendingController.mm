@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2008, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2005, 2006, 2007, 2008, 2014-2015 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Jonas Witt <jonas.witt@gmail.com>
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  * Copyright (C) 2006 Alexey Proskuryakov <ap@nypop.com>
@@ -13,7 +13,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -35,17 +35,18 @@
 #import "DumpRenderTree.h"
 #import "DumpRenderTreeDraggingInfo.h"
 #import "DumpRenderTreeFileDraggingSource.h"
-
+#import "WebCoreTestSupport.h"
 #import <WebKit/DOMPrivate.h>
 #import <WebKit/WebKit.h>
 #import <WebKit/WebViewPrivate.h>
+#import <functional>
 
 #if !PLATFORM(IOS)
-#import <Carbon/Carbon.h>                           // for GetCurrentEventTime()
+#import <Carbon/Carbon.h> // for GetCurrentEventTime()
 #endif
 
 #if PLATFORM(IOS)
-#import <GraphicsServices/GraphicsServices.h>       // for GSCurrentEventTimestamp()
+#import <WebCore/GraphicsServicesSPI.h> // for GSCurrentEventTimestamp()
 #import <WebKit/KeyEventCodesIOS.h>
 #import <WebKit/WAKWindow.h>
 #import <WebKit/WebEvent.h>
@@ -128,6 +129,12 @@ BOOL replayingSavedEvents;
 @end // SyntheticTouch
 #endif
 
+#if !PLATFORM(IOS)
+@interface WebView (WebViewInternalForTesting)
+- (WebCore::Frame*)_mainCoreFrame;
+@end
+#endif
+
 @implementation EventSendingController
 
 + (void)initialize
@@ -184,8 +191,7 @@ BOOL replayingSavedEvents;
 
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)aSelector
 {
-    if (aSelector == @selector(beginDragWithFiles:)
-            || aSelector == @selector(clearKillRing)
+    if (aSelector == @selector(clearKillRing)
             || aSelector == @selector(contextClick)
             || aSelector == @selector(enableDOMUIEventLogging:)
             || aSelector == @selector(fireKeyboardEventsToElement:)
@@ -204,6 +210,11 @@ BOOL replayingSavedEvents;
             || aSelector == @selector(mouseScrollByX:andY:)
             || aSelector == @selector(mouseScrollByX:andY:withWheel:andMomentumPhases:)
             || aSelector == @selector(continuousMouseScrollByX:andY:)
+            || aSelector == @selector(monitorWheelEvents)
+            || aSelector == @selector(callAfterScrollingCompletes:)
+#if PLATFORM(MAC)
+            || aSelector == @selector(beginDragWithFiles:)
+#endif
 #if PLATFORM(IOS)
             || aSelector == @selector(addTouchAtX:y:)
             || aSelector == @selector(updateTouchAtIndex:x:y:)
@@ -231,8 +242,10 @@ BOOL replayingSavedEvents;
 
 + (NSString *)webScriptNameForSelector:(SEL)aSelector
 {
+#if PLATFORM(MAC)
     if (aSelector == @selector(beginDragWithFiles:))
         return @"beginDragWithFiles";
+#endif
     if (aSelector == @selector(contextClick))
         return @"contextClick";
     if (aSelector == @selector(enableDOMUIEventLogging:))
@@ -251,8 +264,6 @@ BOOL replayingSavedEvents;
         return @"mouseUp";
     if (aSelector == @selector(mouseMoveToX:Y:))
         return @"mouseMoveTo";
-    if (aSelector == @selector(setDragMode:))
-        return @"setDragMode";
     if (aSelector == @selector(mouseScrollByX:andY:))
         return @"mouseScrollBy";
     if (aSelector == @selector(mouseScrollByX:andY:withWheel:andMomentumPhases:))
@@ -261,6 +272,10 @@ BOOL replayingSavedEvents;
         return @"continuousMouseScrollBy";
     if (aSelector == @selector(scalePageBy:atX:andY:))
         return @"scalePageBy";
+    if (aSelector == @selector(monitorWheelEvents))
+        return @"monitorWheelEvents";
+    if (aSelector == @selector(callAfterScrollingCompletes:))
+        return @"callAfterScrollingCompletes";
 #if PLATFORM(IOS)
     if (aSelector == @selector(addTouchAtX:y:))
         return @"addTouchPoint";
@@ -667,17 +682,16 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
 #endif
 }
 
-- (void)mouseScrollByX:(int)x andY:(int)y continuously:(BOOL)c
+- (void)mouseScrollByX:(int)x andY:(int)y continuously:(BOOL)continuously
 {
 #if !PLATFORM(IOS)
-    CGScrollEventUnit unit = c?kCGScrollEventUnitPixel:kCGScrollEventUnitLine;
+    CGScrollEventUnit unit = continuously ? kCGScrollEventUnitPixel : kCGScrollEventUnitLine;
     CGEventRef cgScrollEvent = CGEventCreateScrollWheelEvent(NULL, unit, 2, y, x);
 
-    // CGEvent locations are in global display coordinates.
-    CGPoint lastGlobalMousePosition = {
-        lastMousePosition.x,
-        [[NSScreen mainScreen] frame].size.height - lastMousePosition.y
-    };
+    // Set the CGEvent location in flipped coords relative to the first screen, which
+    // compensates for the behavior of +[NSEvent eventWithCGEvent:] when the event has
+    // no associated window. See <rdar://problem/17180591>.
+    CGPoint lastGlobalMousePosition = CGPointMake(lastMousePosition.x, [[[NSScreen screens] objectAtIndex:0] frame].size.height - lastMousePosition.y);
     CGEventSetLocation(cgScrollEvent, lastGlobalMousePosition);
 
     NSEvent *scrollEvent = [NSEvent eventWithCGEvent:cgScrollEvent];
@@ -688,7 +702,8 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
         [NSApp _setCurrentEvent:scrollEvent];
         [subView scrollWheel:scrollEvent];
         [NSApp _setCurrentEvent:nil];
-    }
+    } else
+        printf("mouseScrollByXandYContinuously: Unable to locate target view for current mouse location.");
 #endif
 }
 
@@ -702,19 +717,15 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
     [self mouseScrollByX:x andY:y continuously:NO];
 }
 
-#if !PLATFORM(IOS) && MAC_OS_X_VERSION_MAX_ALLOWED < 1090
-const uint32_t kCGScrollWheelEventMomentumPhase = 123;
-#endif
-
 - (void)mouseScrollByX:(int)x andY:(int)y withWheel:(NSString*)phaseName andMomentumPhases:(NSString*)momentumName
 {
-#if !PLATFORM(IOS)
+#if PLATFORM(MAC)
     uint32_t phase = 0;
     if ([phaseName isEqualToString: @"none"])
         phase = 0;
     else if ([phaseName isEqualToString: @"began"])
         phase = 1; // kCGScrollPhaseBegan
-    else if ([phaseName isEqualToString: @"changd"])
+    else if ([phaseName isEqualToString: @"changed"])
         phase = 2; // kCGScrollPhaseChanged;
     else if ([phaseName isEqualToString: @"ended"])
         phase = 4; // kCGScrollPhaseEnded
@@ -735,9 +746,12 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
 
     CGEventRef cgScrollEvent = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitLine, 2, y, x);
 
-    // CGEvent locations are in global display coordinates.
-    CGPoint lastGlobalMousePosition = CGPointMake(lastMousePosition.x, [[NSScreen mainScreen] frame].size.height - lastMousePosition.y);
+    // Set the CGEvent location in flipped coords relative to the first screen, which
+    // compensates for the behavior of +[NSEvent eventWithCGEvent:] when the event has
+    // no associated window. See <rdar://problem/17180591>.
+    CGPoint lastGlobalMousePosition = CGPointMake(lastMousePosition.x, [[[NSScreen screens] objectAtIndex:0] frame].size.height - lastMousePosition.y);
     CGEventSetLocation(cgScrollEvent, lastGlobalMousePosition);
+    CGEventSetIntegerValueField(cgScrollEvent, kCGScrollWheelEventIsContinuous, 1);
     CGEventSetIntegerValueField(cgScrollEvent, kCGScrollWheelEventScrollPhase, phase);
     CGEventSetIntegerValueField(cgScrollEvent, kCGScrollWheelEventMomentumPhase, momentum);
 
@@ -748,13 +762,14 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
         [NSApp _setCurrentEvent:scrollEvent];
         [targetView scrollWheel:scrollEvent];
         [NSApp _setCurrentEvent:nil];
-    }
+    } else
+        printf("mouseScrollByX...andMomentumPhases: Unable to locate target view for current mouse location.");
 #endif
 }
 
 - (NSArray *)contextClick
 {
-#if !PLATFORM(IOS)
+#if PLATFORM(MAC)
     [[[mainFrame frameView] documentView] layout];
     [self updateClickCountForButton:RightMouseButton];
 
@@ -953,6 +968,8 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
         keyCode = 0x02;
     else if ([character isEqualToString:@"e"])
         keyCode = 0x0E;
+    else if ([character isEqualToString:@"\x1b"])
+        keyCode = 0x1B;
 
     KeyMappingEntry table[] = {
         {0x2F, 0x41, '.', nil},
@@ -1243,6 +1260,33 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
                                            metaKey:NO];
     [target dispatchEvent:domEvent];
 
+}
+
+- (void)monitorWheelEvents
+{
+#if PLATFORM(MAC)
+    WebCore::Frame* frame = [[mainFrame webView] _mainCoreFrame];
+    if (!frame)
+        return;
+
+    WebCoreTestSupport::monitorWheelEvents(*frame);
+#endif
+}
+
+- (void)callAfterScrollingCompletes:(WebScriptObject*)callback
+{
+#if PLATFORM(MAC)
+    JSObjectRef jsCallbackFunction = [callback JSObject];
+    if (!jsCallbackFunction)
+        return;
+
+    WebCore::Frame* frame = [[mainFrame webView] _mainCoreFrame];
+    if (!frame)
+        return;
+
+    JSGlobalContextRef globalContext = [mainFrame globalContext];
+    WebCoreTestSupport::setTestCallbackAndStartNotificationTimer(*frame, globalContext, jsCallbackFunction);
+#endif
 }
 
 #if PLATFORM(IOS)

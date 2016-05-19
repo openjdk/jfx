@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,30 +26,19 @@
 #include "config.h"
 #include "JSNodeFilter.h"
 
-#include "JSDOMWindowBase.h"
-#include "JSNode.h"
 #include "JSNodeFilterCondition.h"
-#include "NodeFilter.h"
-#include "JSDOMBinding.h"
-
-using namespace JSC;
 
 namespace WebCore {
 
-void JSNodeFilter::visitChildren(JSCell* cell, SlotVisitor& visitor)
+void JSNodeFilter::visitAdditionalChildren(JSC::SlotVisitor& visitor)
 {
-    JSNodeFilter* thisObject = jsCast<JSNodeFilter*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-    Base::visitChildren(thisObject, visitor);
-    visitor.addOpaqueRoot(&thisObject->impl());
+    visitor.addOpaqueRoot(&impl());
 }
 
-PassRefPtr<NodeFilter> toNodeFilter(VM& vm, JSValue value)
+PassRefPtr<NodeFilter> JSNodeFilter::toWrapped(JSC::VM& vm, JSC::JSValue value)
 {
     if (value.inherits(JSNodeFilter::info()))
-        return &jsCast<JSNodeFilter*>(asObject(value))->impl();
+        return &JSC::jsCast<JSNodeFilter*>(asObject(value))->impl();
 
     RefPtr<NodeFilter> result = NodeFilter::create();
     result->setCondition(JSNodeFilterCondition::create(vm, result.get(), value));

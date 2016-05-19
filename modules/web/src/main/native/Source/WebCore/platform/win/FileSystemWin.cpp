@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -36,7 +36,7 @@
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/text/StringBuilder.h>
 
 #include <windows.h>
 #include <shlobj.h>
@@ -60,6 +60,19 @@ static bool getFileSizeFromFindData(const WIN32_FIND_DATAW& findData, long long&
     ULARGE_INTEGER fileSize;
     fileSize.HighPart = findData.nFileSizeHigh;
     fileSize.LowPart = findData.nFileSizeLow;
+
+    if (fileSize.QuadPart > static_cast<ULONGLONG>(std::numeric_limits<long long>::max()))
+        return false;
+
+    size = fileSize.QuadPart;
+    return true;
+}
+
+static bool getFileSizeFromByHandleFileInformationStructure(const BY_HANDLE_FILE_INFORMATION& fileInformation, long long& size)
+{
+    ULARGE_INTEGER fileSize;
+    fileSize.HighPart = fileInformation.nFileSizeHigh;
+    fileSize.LowPart = fileInformation.nFileSizeLow;
 
     if (fileSize.QuadPart > static_cast<ULONGLONG>(std::numeric_limits<long long>::max()))
         return false;
@@ -96,6 +109,15 @@ bool getFileSize(const String& path, long long& size)
         return false;
 
     return getFileSizeFromFindData(findData, size);
+}
+
+bool getFileSize(PlatformFileHandle fileHandle, long long& size)
+{
+    BY_HANDLE_FILE_INFORMATION fileInformation;
+    if (!::GetFileInformationByHandle(fileHandle, &fileInformation))
+        return false;
+
+    return getFileSizeFromByHandleFileInformationStructure(fileInformation, size);
 }
 
 bool getFileModificationTime(const String& path, time_t& time)
@@ -158,28 +180,16 @@ String pathByAppendingComponent(const String& path, const String& component)
 {
     Vector<UChar> buffer(MAX_PATH);
 
-#if OS(WINCE)
-    buffer.append(path.deprecatedCharacters(), path.length());
-
-    UChar lastPathCharacter = path[path.length() - 1];
-    if (lastPathCharacter != L'\\' && lastPathCharacter != L'/' && component[0] != L'\\' && component[0] != L'/')
-        buffer.append(PlatformFilePathSeparator);
-
-    buffer.append(component.deprecatedCharacters(), component.length());
-    buffer.shrinkToFit();
-#else
     if (path.length() + 1 > buffer.size())
         return String();
 
-    memcpy(buffer.data(), path.deprecatedCharacters(), path.length() * sizeof(UChar));
+    StringView(path).getCharactersWithUpconvert(buffer.data());
     buffer[path.length()] = '\0';
 
-    String componentCopy = component;
-    if (!PathAppendW(buffer.data(), componentCopy.charactersWithNullTermination().data()))
+    if (!PathAppendW(buffer.data(), component.charactersWithNullTermination().data()))
         return String();
 
-    buffer.resize(wcslen(buffer.data()));
-#endif
+    buffer.shrink(wcslen(buffer.data()));
 
     return String::adopt(buffer);
 }
@@ -188,7 +198,9 @@ String pathByAppendingComponent(const String& path, const String& component)
 
 CString fileSystemRepresentation(const String& path)
 {
-    const UChar* characters = path.deprecatedCharacters();
+    auto upconvertedCharacters = path.upconvertedCharacters();
+
+    const UChar* characters = upconvertedCharacters;
     int size = WideCharToMultiByte(CP_ACP, 0, characters, path.length(), 0, 0, 0, 0) - 1;
 
     char* buffer;
@@ -222,24 +234,7 @@ String homeDirectoryPath()
 
 String pathGetFileName(const String& path)
 {
-#if OS(WINCE)
-    size_t positionSlash = path.reverseFind('/');
-    size_t positionBackslash = path.reverseFind('\\');
-
-    size_t position;
-    if (positionSlash == notFound)
-        position = positionBackslash;
-    else if (positionBackslash == notFound)
-        position =  positionSlash;
-    else
-        position = std::max(positionSlash, positionBackslash);
-
-    if (position == notFound)
-        return path;
-    return path.substring(position + 1);
-#else
     return String(::PathFindFileName(String(path).charactersWithNullTermination().data()));
-#endif
 }
 
 String directoryName(const String& path)
@@ -254,7 +249,7 @@ String directoryName(const String& path)
 
 static String bundleName()
 {
-    DEFINE_STATIC_LOCAL(String, name, (ASCIILiteral("WebKit")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, name, (ASCIILiteral("WebKit")));
 
 #if USE(CF)
     static bool initialized;
@@ -274,22 +269,18 @@ static String bundleName()
 
 static String storageDirectory(DWORD pathIdentifier)
 {
-#if OS(WINCE)
-    return String();
-#else
     Vector<UChar> buffer(MAX_PATH);
     if (FAILED(SHGetFolderPathW(0, pathIdentifier | CSIDL_FLAG_CREATE, 0, 0, buffer.data())))
         return String();
     buffer.resize(wcslen(buffer.data()));
     String directory = String::adopt(buffer);
 
-    DEFINE_STATIC_LOCAL(String, companyNameDirectory, (ASCIILiteral("Apple Computer\\")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, companyNameDirectory, (ASCIILiteral("Apple Computer\\")));
     directory = pathByAppendingComponent(directory, companyNameDirectory + bundleName());
     if (!makeAllDirectories(directory))
         return String();
 
     return directory;
-#endif
 }
 
 static String cachedStorageDirectory(DWORD pathIdentifier)

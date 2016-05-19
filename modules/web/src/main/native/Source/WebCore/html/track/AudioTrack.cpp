@@ -43,37 +43,37 @@ namespace WebCore {
 
 const AtomicString& AudioTrack::alternativeKeyword()
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, alternative, ("alternative", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, alternative, ("alternative", AtomicString::ConstructFromLiteral));
     return alternative;
 }
 
 const AtomicString& AudioTrack::descriptionKeyword()
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, description, ("description", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, description, ("description", AtomicString::ConstructFromLiteral));
     return description;
 }
 
 const AtomicString& AudioTrack::mainKeyword()
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, main, ("main", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, main, ("main", AtomicString::ConstructFromLiteral));
     return main;
 }
 
 const AtomicString& AudioTrack::mainDescKeyword()
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, mainDesc, ("main-desc", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, mainDesc, ("main-desc", AtomicString::ConstructFromLiteral));
     return mainDesc;
 }
 
 const AtomicString& AudioTrack::translationKeyword()
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, translation, ("translation", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, translation, ("translation", AtomicString::ConstructFromLiteral));
     return translation;
 }
 
 const AtomicString& AudioTrack::commentaryKeyword()
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, commentary, ("commentary", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, commentary, ("commentary", AtomicString::ConstructFromLiteral));
     return commentary;
 }
 
@@ -84,38 +84,28 @@ AudioTrack::AudioTrack(AudioTrackClient* client, PassRefPtr<AudioTrackPrivate> t
     , m_private(trackPrivate)
 {
     m_private->setClient(this);
-
-    switch (m_private->kind()) {
-    case AudioTrackPrivate::Alternative:
-        setKind(AudioTrack::alternativeKeyword());
-        break;
-    case AudioTrackPrivate::Description:
-        setKind(AudioTrack::descriptionKeyword());
-        break;
-    case AudioTrackPrivate::Main:
-        setKind(AudioTrack::mainKeyword());
-        break;
-    case AudioTrackPrivate::MainDesc:
-        setKind(AudioTrack::mainDescKeyword());
-        break;
-    case AudioTrackPrivate::Translation:
-        setKind(AudioTrack::translationKeyword());
-        break;
-    case AudioTrackPrivate::Commentary:
-        setKind(AudioTrack::commentaryKeyword());
-        break;
-    case AudioTrackPrivate::None:
-        setKind(emptyString());
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
+    updateKindFromPrivate();
 }
 
 AudioTrack::~AudioTrack()
 {
     m_private->setClient(0);
+}
+
+void AudioTrack::setPrivate(PassRefPtr<AudioTrackPrivate> trackPrivate)
+{
+    ASSERT(m_private);
+    ASSERT(trackPrivate);
+
+    if (m_private == trackPrivate)
+        return;
+
+    m_private->setClient(0);
+    m_private = trackPrivate;
+    m_private->setClient(this);
+
+    m_private->setEnabled(m_enabled);
+    updateKindFromPrivate();
 }
 
 bool AudioTrack::isValidKind(const AtomicString& value) const
@@ -157,7 +147,10 @@ size_t AudioTrack::inbandTrackIndex()
 void AudioTrack::enabledChanged(AudioTrackPrivate* trackPrivate, bool enabled)
 {
     ASSERT_UNUSED(trackPrivate, trackPrivate == m_private);
-    setEnabled(enabled);
+    m_enabled = enabled;
+
+    if (m_client)
+        m_client->audioTrackEnabledChanged(this);
 }
 
 void AudioTrack::idChanged(TrackPrivateBase* trackPrivate, const AtomicString& id)
@@ -182,6 +175,36 @@ void AudioTrack::willRemove(TrackPrivateBase* trackPrivate)
 {
     ASSERT_UNUSED(trackPrivate, trackPrivate == m_private);
     mediaElement()->removeAudioTrack(this);
+}
+
+void AudioTrack::updateKindFromPrivate()
+{
+    switch (m_private->kind()) {
+    case AudioTrackPrivate::Alternative:
+        setKind(AudioTrack::alternativeKeyword());
+        break;
+    case AudioTrackPrivate::Description:
+        setKind(AudioTrack::descriptionKeyword());
+        break;
+    case AudioTrackPrivate::Main:
+        setKind(AudioTrack::mainKeyword());
+        break;
+    case AudioTrackPrivate::MainDesc:
+        setKind(AudioTrack::mainDescKeyword());
+        break;
+    case AudioTrackPrivate::Translation:
+        setKind(AudioTrack::translationKeyword());
+        break;
+    case AudioTrackPrivate::Commentary:
+        setKind(AudioTrack::commentaryKeyword());
+        break;
+    case AudioTrackPrivate::None:
+        setKind(emptyString());
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
 }
 
 } // namespace WebCore

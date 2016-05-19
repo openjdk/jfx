@@ -22,7 +22,7 @@
 #ifndef WidthIterator_h
 #define WidthIterator_h
 
-#include "Font.h"
+#include "FontCascade.h"
 #include "SVGGlyph.h"
 #include "TextRun.h"
 #include <wtf/HashSet.h>
@@ -30,16 +30,16 @@
 
 namespace WebCore {
 
-class Font;
+class FontCascade;
 class GlyphBuffer;
-class SimpleFontData;
+class Font;
 class TextRun;
 struct GlyphData;
 
 struct WidthIterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WidthIterator(const Font*, const TextRun&, HashSet<const SimpleFontData*>* fallbackFonts = 0, bool accountForGlyphBounds = false, bool forTextEmphasis = false);
+    WidthIterator(const FontCascade*, const TextRun&, HashSet<const Font*>* fallbackFonts = 0, bool accountForGlyphBounds = false, bool forTextEmphasis = false);
 
     unsigned advance(int to, GlyphBuffer*);
     bool advanceOneCharacter(float& width, GlyphBuffer&);
@@ -58,19 +58,16 @@ public:
     Vector<SVGGlyph::ArabicForm>& arabicForms() { return m_arabicForms; }
 #endif
 
-    static bool supportsTypesettingFeatures(const Font& font)
+    static bool supportsTypesettingFeatures(const FontCascade& font)
     {
-#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 1080)
-        if (!font.isPrinterFont())
-            return !font.typesettingFeatures();
-
+#if PLATFORM(COCOA)
         return !(font.typesettingFeatures() & ~(Kerning | Ligatures));
 #else
         return !font.typesettingFeatures();
 #endif
     }
 
-    const Font* m_font;
+    const FontCascade* m_font;
 
     const TextRun& m_run;
 
@@ -87,14 +84,15 @@ public:
 #endif
 
 private:
-    GlyphData glyphDataForCharacter(UChar32, bool mirror, int currentCharacter, unsigned& advanceLength);
+    GlyphData glyphDataForCharacter(UChar32, bool mirror, int currentCharacter, unsigned& advanceLength, String& normalizedSpacesStringCache);
     template <typename TextIterator>
     inline unsigned advanceInternal(TextIterator&, GlyphBuffer*);
 
-    bool shouldApplyFontTransforms() const { return m_run.length() > 1 && (m_typesettingFeatures & (Kerning | Ligatures)); }
+    enum class TransformsType { None, Forced, NotForced };
+    TransformsType shouldApplyFontTransforms(const GlyphBuffer*, int lastGlyphCount, UChar32 previousCharacter) const;
 
     TypesettingFeatures m_typesettingFeatures;
-    HashSet<const SimpleFontData*>* m_fallbackFonts;
+    HashSet<const Font*>* m_fallbackFonts;
     bool m_accountForGlyphBounds;
     float m_maxGlyphBoundingBoxY;
     float m_minGlyphBoundingBoxY;

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,18 +24,62 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+enum PageOverlayType {
+"view",
+"document"
+};
+
+// These map to ResourceRequestCachePolicy.
+enum CachePolicy {
+    "UseProtocolCachePolicy",
+    "ReloadIgnoringCacheData",
+    "ReturnCacheDataElseLoad",
+    "ReturnCacheDataDontLoad"
+};
+
+enum ResourceLoadPriority {
+    "ResourceLoadPriorityVeryLow",
+    "ResourceLoadPriorityLow",
+    "ResourceLoadPriorityMedium",
+    "ResourceLoadPriorityHigh",
+    "ResourceLoadPriorityVeryHigh"
+};
+
+enum MediaSessionInterruptingCategory {
+    "content",
+    "transient",
+    "transient-solo"
+};
+
 [
     NoInterfaceObject,
 ] interface Internals {
     DOMString address(Node node);
+    [RaisesException] boolean nodeNeedsStyleRecalc(Node node);
+    DOMString description(any value);
+
+    // Animated image pausing testing.
+    [RaisesException] boolean hasPausedImageAnimations(Element element);
 
     [RaisesException] DOMString elementRenderTreeAsText(Element element);
     boolean isPreloaded(DOMString url);
     boolean isLoadingFromMemoryCache(DOMString url);
+    DOMString xhrResponseSource(XMLHttpRequest xhr);
+    boolean isSharingStyleSheetContents(Element linkA, Element linkB);
+    boolean isStyleSheetLoadingSubresources(Element link);
+    void clearMemoryCache();
+    void pruneMemoryCacheToSize(long size);
+    long memoryCacheSize();
+    void setOverrideCachePolicy(CachePolicy policy);
+    void setOverrideResourceLoadPriority(ResourceLoadPriority priority);
+
+    void clearPageCache();
+    unsigned int pageCacheSize();
 
     [RaisesException] CSSStyleDeclaration computedStyleIncludingVisitedInfo(Node node);
 
     [RaisesException] Node ensureShadowRoot(Element host);
+    [RaisesException] Node ensureUserAgentShadowRoot(Element host);
     [RaisesException] Node createShadowRoot(Element host);
     [RaisesException] Node shadowRoot(Element host);
 
@@ -54,12 +98,12 @@
     [RaisesException] void suspendAnimations();
     [RaisesException] void resumeAnimations();
     [RaisesException] boolean animationsAreSuspended();
-    [RaisesException] boolean pauseAnimationAtTimeOnElement(DOMString animationName, double pauseTime, Element element);
-    [RaisesException] boolean pauseAnimationAtTimeOnPseudoElement(DOMString animationName, double pauseTime, Element element, DOMString pseudoId);
+    [RaisesException] boolean pauseAnimationAtTimeOnElement(DOMString animationName, unrestricted double pauseTime, Element element);
+    [RaisesException] boolean pauseAnimationAtTimeOnPseudoElement(DOMString animationName, unrestricted double pauseTime, Element element, DOMString pseudoId);
 
     // CSS Transition testing.
-    [RaisesException] boolean pauseTransitionAtTimeOnElement(DOMString propertyName, double pauseTime, Element element);
-    [RaisesException] boolean pauseTransitionAtTimeOnPseudoElement(DOMString property, double pauseTime, Element element, DOMString pseudoId);
+    [RaisesException] boolean pauseTransitionAtTimeOnElement(DOMString propertyName, unrestricted double pauseTime, Element element);
+    [RaisesException] boolean pauseTransitionAtTimeOnPseudoElement(DOMString property, unrestricted double pauseTime, Element element, DOMString pseudoId);
 
     [RaisesException] boolean attached(Node node);
 
@@ -81,12 +125,17 @@
     [RaisesException] Range markerRangeForNode(Node node, DOMString markerType, unsigned long index);
     [RaisesException] DOMString markerDescriptionForNode(Node node, DOMString markerType, unsigned long index);
     void addTextMatchMarker(Range range, boolean isActive);
+    [RaisesException] void setMarkedTextMatchesAreHighlighted(boolean flag);
+
+    void invalidateFontCache();
 
     [RaisesException] void setScrollViewPosition(long x, long y);
 
+    [RaisesException] void setViewBaseBackgroundColor(DOMString colorValue);
+
     [RaisesException] void setPagination(DOMString mode, long gap, optional long pageLength);
 
-    [RaisesException] DOMString configurationForViewport(float devicePixelRatio,
+    [RaisesException] DOMString configurationForViewport(unrestricted float devicePixelRatio,
                                        long deviceWidth,
                                        long deviceHeight,
                                        long availableWidth,
@@ -94,10 +143,10 @@
 
     [RaisesException] boolean wasLastChangeUserEdit(Element textField);
     [RaisesException] boolean elementShouldAutoComplete(Element inputElement);
-    [RaisesException] DOMString suggestedValue(Element inputElement);
-    [RaisesException] void setSuggestedValue(Element inputElement, DOMString value);
     [RaisesException] void setEditingValue(Element inputElement, DOMString value);
     [RaisesException] void setAutofilled(Element inputElement, boolean enabled);
+    [RaisesException] void setShowAutoFillButton(Element inputElement, boolean enabled);
+    [RaisesException] unsigned long countMatchesForText(DOMString text, unsigned long findOptions, DOMString markMatches);
 
     [RaisesException] void paintControlTints();
 
@@ -107,6 +156,8 @@
     [RaisesException] unsigned long locationFromRange(Element scope, Range range);
     [RaisesException] unsigned long lengthFromRange(Element scope, Range range);
     [RaisesException] DOMString rangeAsText(Range range);
+    [RaisesException] Range subrange(Range range, long rangeLocation, long rangeLength);
+    [RaisesException] Range rangeForDictionaryLookupAtLocation(long x, long y);
 
     [RaisesException] void setDelegatesScrolling(boolean enabled);
 
@@ -116,6 +167,9 @@
     sequence<DOMString> userPreferredLanguages();
     void setUserPreferredLanguages(sequence<DOMString> languages);
 
+    sequence<DOMString> userPreferredAudioCharacteristics();
+    void setUserPreferredAudioCharacteristic(DOMString characteristic);
+
     [RaisesException] unsigned long wheelEventHandlerCount();
     [RaisesException] unsigned long touchEventHandlerCount();
 
@@ -123,11 +177,10 @@
         unsigned long topPadding, unsigned long rightPadding, unsigned long bottomPadding, unsigned long leftPadding,
         boolean ignoreClipping, boolean allowShadowContent, boolean allowChildFrameContent);
 
-    void emitInspectorDidBeginFrame();
-    void emitInspectorDidCancelFrame();
-
     // Calling parserMetaData() with no arguments gets the metadata for the script of the current scope.
     DOMString parserMetaData(optional any func);
+
+    void updateEditorUINowIfScheduled();
 
     [RaisesException] boolean hasSpellingMarker(long from, long length);
     [RaisesException] boolean hasGrammarMarker(long from, long length);
@@ -171,37 +224,44 @@
     [RaisesException] void insertUserCSS(DOMString css);
 
 #if defined(ENABLE_BATTERY_STATUS) && ENABLE_BATTERY_STATUS
-    [RaisesException] void setBatteryStatus(DOMString eventType, boolean charging, double chargingTime, double dischargingTime, double level);
-#endif
-
-#if defined(ENABLE_NETWORK_INFO) && ENABLE_NETWORK_INFO
-    [RaisesException] void setNetworkInformation(DOMString eventType, double bandwidth, boolean metered);
+    [RaisesException] void setBatteryStatus(DOMString eventType, boolean charging, unrestricted double chargingTime, unrestricted double dischargingTime, unrestricted double level);
 #endif
 
 #if defined(ENABLE_PROXIMITY_EVENTS) && ENABLE_PROXIMITY_EVENTS
-    [RaisesException] void setDeviceProximity(DOMString eventType, double value, double min, double max);
+    [RaisesException] void setDeviceProximity(DOMString eventType, unrestricted double value, unrestricted double min, unrestricted double max);
 #endif
 
-    [Conditional=INSPECTOR] unsigned long numberOfLiveNodes();
-    [Conditional=INSPECTOR] unsigned long numberOfLiveDocuments();
-    [Conditional=INSPECTOR] sequence<DOMString> consoleMessageArgumentCounts();
-    [Conditional=INSPECTOR] DOMWindow openDummyInspectorFrontend(DOMString url);
-    [Conditional=INSPECTOR] void closeDummyInspectorFrontend();
-    [Conditional=INSPECTOR, RaisesException] void setInspectorResourcesDataSizeLimits(long maximumResourcesContentSize, long maximumSingleResourceContentSize);
-    [Conditional=INSPECTOR, RaisesException] void setJavaScriptProfilingEnabled(boolean creates);
+    // As per spec: http://www.w3.org/TR/WebIDL/#idl-sequence
+    // "Sequences must not be used as the type of an attribute, constant or exception field."
+    // FIXME: this will lead to BUG internals.consoleProfiles !== internals.consoleProfiles as profile will always returns new array.
+    readonly attribute ScriptProfile[] consoleProfiles;
+
+    unsigned long numberOfLiveNodes();
+    unsigned long numberOfLiveDocuments();
+    sequence<DOMString> consoleMessageArgumentCounts();
+    DOMWindow openDummyInspectorFrontend(DOMString url);
+    void closeDummyInspectorFrontend();
+    [RaisesException] void setJavaScriptProfilingEnabled(boolean creates);
+    [RaisesException] void setInspectorIsUnderTest(boolean isUnderTest);
 
     DOMString counterValue(Element element);
-    long pageNumber(Element element, optional float pageWidth, optional float pageHeight);
+    long pageNumber(Element element, optional unrestricted float pageWidth, optional unrestricted float pageHeight);
     DOMString[] shortcutIconURLs();
-    DOMString[] allIconURLs();
-    long numberOfPages(optional double pageWidthInPixels, optional double pageHeightInPixels);
+    long numberOfPages(optional unrestricted double pageWidthInPixels, optional unrestricted double pageHeightInPixels);
     [RaisesException] DOMString pageProperty(DOMString propertyName, long pageNumber);
     [RaisesException] DOMString pageSizeAndMarginsInPixels(long pageIndex, long width, long height, long marginTop, long marginRight, long marginBottom, long marginLeft);
 
-    [RaisesException] void setPageScaleFactor(float scaleFactor, long x, long y);
+    [RaisesException] void setPageScaleFactor(unrestricted float scaleFactor, long x, long y);
+    [RaisesException] void setPageZoomFactor(unrestricted float zoomFactor);
+    [RaisesException] void setTextZoomFactor(unrestricted float zoomFactor);
 
-    void setHeaderHeight(float height);
-    void setFooterHeight(float height);
+    [RaisesException] void setUseFixedLayout(boolean useFixedLayout);
+    [RaisesException] void setFixedLayoutSize(long width, long height);
+
+    void setHeaderHeight(unrestricted float height);
+    void setFooterHeight(unrestricted float height);
+
+    void setTopContentInset(unrestricted float contentInset);
 
 #if defined(ENABLE_FULLSCREEN_API) && ENABLE_FULLSCREEN_API
     void webkitWillEnterFullScreenForElement(Element element);
@@ -221,24 +281,51 @@
 
     DOMString[] getReferencedFilePaths();
 
-    // These functions both reset the tracked repaint rects. They are inteded to be used in the following order:
+    // These functions both reset the tracked repaint rects. They are intended to be used in the following order:
     //  startTrackingRepaints, repaintRectsAsText, stopTrackingRepaints.
     [RaisesException] void startTrackingRepaints();
     [RaisesException] void stopTrackingRepaints();
+
+    [RaisesException] void startTrackingLayerFlushes();
+    [RaisesException] unsigned long layerFlushCount();
+
+    // Query if a timer is currently throttled, to debug timer throttling.
+    [RaisesException] boolean isTimerThrottled(long timerHandle);
+
+    boolean isRequestAnimationFrameThrottled();
+    boolean areTimersThrottled();
+
+    [RaisesException] void startTrackingStyleRecalcs();
+    [RaisesException] unsigned long styleRecalcCount();
+
+    [RaisesException] void startTrackingCompositingUpdates();
+    [RaisesException] unsigned long compositingUpdateCount();
+
+    // |node| should be Document, HTMLIFrameElement, or unspecified.
+    // If |node| is an HTMLIFrameElement, it assumes node.contentDocument is
+    // specified without security checks. Unspecified means this document.
+    [RaisesException] void updateLayoutIgnorePendingStylesheetsAndRunPostLayoutTasks(optional Node node);
+
+    readonly attribute unsigned long layoutCount;
 
     // Returns a string with information about the mouse cursor used at the specified client location.
     [RaisesException] DOMString getCurrentCursorInfo();
 
     [RaisesException] DOMString markerTextForListItem(Element element);
 
+    [RaisesException] DOMString toolTipFromElement(Element element);
+
     SerializedScriptValue deserializeBuffer(ArrayBuffer buffer);
     ArrayBuffer serializeObject(SerializedScriptValue obj);
+
+    boolean isFromCurrentWorld(any obj);
 
     void setUsesOverlayScrollbars(boolean enabled);
 
     void forceReload(boolean endToEnd);
 
     [Conditional=VIDEO] void simulateAudioInterruption(Node node);
+    [Conditional=VIDEO, RaisesException] boolean mediaElementHasCharacteristic(Node node, DOMString characteristic);
 
     [Conditional=ENCRYPTED_MEDIA_V2] void initializeMockCDM();
 
@@ -253,7 +340,7 @@
 
     [Conditional=VIDEO] TimeRanges createTimeRanges(Float32Array startTimes, Float32Array
      endTimes);
-    [Conditional=VIDEO] double closestTimeToTimeRanges(double time, TimeRanges ranges);
+    [Conditional=VIDEO] unrestricted double closestTimeToTimeRanges(unrestricted double time, TimeRanges ranges);
 
     boolean isSelectPopupVisible(Node node);
 
@@ -262,14 +349,46 @@
 #endif
 
     [RaisesException] boolean isPluginUnavailabilityIndicatorObscured(Element element);
+    [RaisesException] boolean isPluginSnapshotted(Element element);
 
     [RaisesException] ClientRect selectionBounds();
-    
-    [Conditional=MEDIA_SOURCE] void initializeMockMediaSource();
 
-    void beginMediaSessionInterruption();
-    void endMediaSessionInterruption(DOMString flags);
-    void applicationWillEnterForeground();
-    void applicationWillEnterBackground();
-    [RaisesException] void setMediaSessionRestrictions(DOMString mediaType, DOMString restrictions);
+    [Conditional=MEDIA_SOURCE] void initializeMockMediaSource();
+    [Conditional=MEDIA_SOURCE] DOMString[] bufferedSamplesForTrackID(SourceBuffer buffer, DOMString trackID);
+    [Conditional=MEDIA_SOURCE] void setShouldGenerateTimestamps(SourceBuffer buffer, boolean flag);
+
+    [Conditional=VIDEO] void beginMediaSessionInterruption();
+    [Conditional=VIDEO] void endMediaSessionInterruption(DOMString flags);
+    [Conditional=MEDIA_SESSION] void sendMediaSessionStartOfInterruptionNotification(MediaSessionInterruptingCategory category);
+    [Conditional=MEDIA_SESSION] void sendMediaSessionEndOfInterruptionNotification(MediaSessionInterruptingCategory category);
+    [Conditional=MEDIA_SESSION] DOMString mediaSessionCurrentState(MediaSession session);
+    [Conditional=MEDIA_SESSION] double mediaElementPlayerVolume(HTMLMediaElement element);
+    [Conditional=VIDEO] void applicationWillEnterForeground();
+    [Conditional=VIDEO] void applicationWillEnterBackground();
+    [Conditional=VIDEO, RaisesException] void setMediaSessionRestrictions(DOMString mediaType, DOMString restrictions);
+    [Conditional=VIDEO, RaisesException] void setMediaElementRestrictions(HTMLMediaElement element, DOMString restrictions);
+    [Conditional=WEB_AUDIO, RaisesException] void setAudioContextRestrictions(AudioContext context, DOMString restrictions);
+    [Conditional=VIDEO, RaisesException] void postRemoteControlCommand(DOMString command);
+    
+    [Conditional=VIDEO] void simulateSystemSleep();
+    [Conditional=VIDEO] void simulateSystemWake();
+    [Conditional=VIDEO] boolean elementIsBlockingDisplaySleep(Element element);
+
+    [RaisesException] void installMockPageOverlay(PageOverlayType type);
+    [RaisesException] DOMString pageOverlayLayerTreeAsText();
+
+    void setPageMuted(boolean muted);
+    boolean isPagePlayingAudio();
+    
+    File createFile(DOMString url);
+    void queueMicroTask(long testNumber);
+    boolean testPreloaderSettingViewport();
+
+    [Conditional=CONTENT_FILTERING] readonly attribute MockContentFilterSettings mockContentFilterSettings;
+
+#if defined(ENABLE_CSS_SCROLL_SNAP) && ENABLE_CSS_SCROLL_SNAP
+    [RaisesException] DOMString scrollSnapOffsets(Element element);
+#endif
+
+    [RaisesException] DOMString pathStringWithShrinkWrappedRects(sequence<double> rectComponents, double radius);
 };

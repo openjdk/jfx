@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2009 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -93,6 +93,40 @@ JS_EXPORT void JSContextGroupSetExecutionTimeLimit(JSContextGroupRef, double lim
 @param group The JavaScript context group that the time limit is cleared on.
 */
 JS_EXPORT void JSContextGroupClearExecutionTimeLimit(JSContextGroupRef) CF_AVAILABLE(10_6, 7_0);
+
+/*!
+@function
+@abstract Gets a whether or not remote inspection is enabled on the context.
+@param ctx The JSGlobalContext whose setting you want to get.
+@result The value of the setting, true if remote inspection is enabled, otherwise false.
+@discussion Remote inspection is true by default.
+*/
+JS_EXPORT bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx) CF_AVAILABLE(10_10, 8_0);
+
+/*!
+@function
+@abstract Sets the remote inspection setting for a context.
+@param ctx The JSGlobalContext that you want to change.
+@param enabled The new remote inspection enabled setting for the context.
+*/
+JS_EXPORT void JSGlobalContextSetRemoteInspectionEnabled(JSGlobalContextRef ctx, bool enabled) CF_AVAILABLE(10_10, 8_0);
+
+/*!
+@function
+@abstract Gets the include native call stack when reporting exceptions setting for a context.
+@param ctx The JSGlobalContext whose setting you want to get.
+@result The value of the setting, true if remote inspection is enabled, otherwise false.
+@discussion This setting is true by default.
+*/
+JS_EXPORT bool JSGlobalContextGetIncludesNativeCallStackWhenReportingExceptions(JSGlobalContextRef ctx) CF_AVAILABLE(10_10, 8_0);
+
+/*!
+@function
+@abstract Sets the include native call stack when reporting exceptions setting for a context.
+@param ctx The JSGlobalContext that you want to change.
+@param includeNativeCallStack The new value of the setting for the context.
+*/
+JS_EXPORT void JSGlobalContextSetIncludesNativeCallStackWhenReportingExceptions(JSGlobalContextRef ctx, bool includesNativeCallStack) CF_AVAILABLE(10_10, 8_0);
 
 #ifdef __cplusplus
 }

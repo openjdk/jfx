@@ -77,18 +77,12 @@ using namespace WebCore;
 
 - (void)continueWillSendRequest:(NSURLRequest *)newRequest
 {
-    m_requestResult = [newRequest retain];
+    m_requestResult = newRequest;
     dispatch_semaphore_signal(m_semaphore);
 }
 
 - (void)continueDidReceiveResponse
 {
-    dispatch_semaphore_signal(m_semaphore);
-}
-
-- (void)continueShouldUseCredentialStorage:(BOOL)useCredentialStorage
-{
-    m_boolResult = useCredentialStorage;
     dispatch_semaphore_signal(m_semaphore);
 }
 
@@ -137,29 +131,7 @@ using namespace WebCore;
     });
 
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
-    return [m_requestResult.leakRef() autorelease];
-}
-
-- (BOOL)connectionShouldUseCredentialStorage:(NSURLConnection *)connection
-{
-    ASSERT(!isMainThread());
-    UNUSED_PARAM(connection);
-
-    LOG(Network, "Handle %p delegate connectionShouldUseCredentialStorage:%p", m_handle, connection);
-
-    RetainPtr<id> protector(self);
-
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (!m_handle) {
-            m_boolResult = NO;
-            dispatch_semaphore_signal(m_semaphore);
-            return;
-        }
-        m_handle->shouldUseCredentialStorage();
-    });
-
-    dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
-    return m_boolResult;
+    return m_requestResult.autorelease();
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
@@ -210,7 +182,7 @@ using namespace WebCore;
             dispatch_semaphore_signal(m_semaphore);
             return;
         }
-        m_handle->canAuthenticateAgainstProtectionSpace(core(protectionSpace));
+        m_handle->canAuthenticateAgainstProtectionSpace(ProtectionSpace(protectionSpace));
     });
 
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
@@ -221,7 +193,6 @@ using namespace WebCore;
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)r
 {
     ASSERT(!isMainThread());
-    UNUSED_PARAM(connection);
 
     LOG(Network, "Handle %p delegate connection:%p didReceiveResponse:%p (HTTP status %d, reported MIMEType '%s')", m_handle, connection, r, [r respondsToSelector:@selector(statusCode)] ? [(id)r statusCode] : 0, [[r MIMEType] UTF8String]);
 
@@ -241,7 +212,13 @@ using namespace WebCore;
         if ([m_handle->firstRequest().nsURLRequest(DoNotUpdateHTTPBody) _propertyForKey:@"ForceHTMLMIMEType"])
             [r _setMIMEType:@"text/html"];
 
-        m_handle->client()->didReceiveResponseAsync(m_handle, r);
+        ResourceResponse resourceResponse(r);
+#if ENABLE(WEB_TIMING)
+        ResourceHandle::getConnectionTimingData(connection, resourceResponse.resourceLoadTiming());
+#else
+        UNUSED_PARAM(connection);
+#endif
+        m_handle->client()->didReceiveResponseAsync(m_handle, resourceResponse);
     });
 
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
@@ -262,7 +239,7 @@ using namespace WebCore;
         if (!m_handle || !m_handle->client())
             return;
 
-        m_handle->handleDataArray(reinterpret_cast<CFArrayRef>(dataArray));
+        m_handle->client()->didReceiveBuffer(m_handle, SharedBuffer::wrapCFDataArray(reinterpret_cast<CFArrayRef>(dataArray)), -1);
         // The call to didReceiveData above can cancel a load, and if so, the delegate (self) could have been deallocated by this point.
     });
 }
@@ -356,7 +333,18 @@ using namespace WebCore;
     });
 
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
-    return [m_cachedResponseResult.leakRef() autorelease];
+    return m_cachedResponseResult.autorelease();
+}
+
+@end
+
+@implementation WebCoreResourceHandleWithCredentialStorageAsOperationQueueDelegate
+
+- (BOOL)connectionShouldUseCredentialStorage:(NSURLConnection *)connection
+{
+    ASSERT(!isMainThread());
+    UNUSED_PARAM(connection);
+    return NO;
 }
 
 @end

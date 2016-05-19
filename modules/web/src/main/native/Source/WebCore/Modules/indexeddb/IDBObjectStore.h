@@ -50,9 +50,9 @@ class IDBAny;
 
 class IDBObjectStore : public ScriptWrappable, public RefCounted<IDBObjectStore> {
 public:
-    static PassRefPtr<IDBObjectStore> create(const IDBObjectStoreMetadata& metadata, IDBTransaction* transaction)
+    static Ref<IDBObjectStore> create(const IDBObjectStoreMetadata& metadata, IDBTransaction* transaction)
     {
-        return adoptRef(new IDBObjectStore(metadata, transaction));
+        return adoptRef(*new IDBObjectStore(metadata, transaction));
     }
     ~IDBObjectStore() { }
 
@@ -90,7 +90,7 @@ public:
     PassRefPtr<IDBIndex> index(const String& name, ExceptionCode&);
     void deleteIndex(const String& name, ExceptionCode&);
 
-    PassRefPtr<IDBRequest> count(ScriptExecutionContext* context, ExceptionCode& ec) { return count(context, static_cast<IDBKeyRange*>(0), ec); }
+    PassRefPtr<IDBRequest> count(ScriptExecutionContext* context, ExceptionCode& ec) { return count(context, static_cast<IDBKeyRange*>(nullptr), ec); }
     PassRefPtr<IDBRequest> count(ScriptExecutionContext*, PassRefPtr<IDBKeyRange>, ExceptionCode&);
     PassRefPtr<IDBRequest> count(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCode&);
 

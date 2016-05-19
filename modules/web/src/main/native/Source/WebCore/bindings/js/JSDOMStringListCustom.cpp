@@ -19,11 +19,14 @@
 #include "config.h"
 #include "JSDOMStringList.h"
 
+#include "DOMWrapperWorld.h"
+#include <runtime/JSCJSValueInlines.h>
+
 using namespace JSC;
 
 namespace WebCore {
 
-PassRefPtr<DOMStringList> toDOMStringList(ExecState* exec, JSValue value)
+PassRefPtr<DOMStringList> JSDOMStringList::toWrapped(ExecState* exec, JSValue value)
 {
     if (value.inherits(JSDOMStringList::info()))
         return &jsCast<JSDOMStringList*>(asObject(value))->impl();

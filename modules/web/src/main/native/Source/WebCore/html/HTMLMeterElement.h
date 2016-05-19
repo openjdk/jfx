@@ -31,7 +31,7 @@ class RenderMeter;
 
 class HTMLMeterElement final : public LabelableElement {
 public:
-    static PassRefPtr<HTMLMeterElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLMeterElement> create(const QualifiedName&, Document&);
 
     enum GaugeRegion {
         GaugeRegionOptimum,
@@ -70,8 +70,7 @@ private:
 
     virtual bool supportLabels() const override { return true; }
 
-    virtual bool recalcWillValidate() const { return false; }
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
     virtual bool childShouldCreateRenderer(const Node&) const override;
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
@@ -80,8 +79,6 @@ private:
 
     RefPtr<MeterValueElement> m_value;
 };
-
-NODE_TYPE_CASTS(HTMLMeterElement)
 
 } // namespace
 

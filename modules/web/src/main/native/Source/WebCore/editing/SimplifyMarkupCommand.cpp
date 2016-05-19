@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2012 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -52,7 +52,7 @@ void SimplifyMarkupCommand::doApply()
     // without affecting the style. The goal is to produce leaner markup even when starting
     // from a verbose fragment.
     // We look at inline elements as well as non top level divs that don't have attributes.
-    for (Node* node = m_firstNode.get(); node && node != m_nodeAfterLast; node = NodeTraversal::next(node)) {
+    for (Node* node = m_firstNode.get(); node && node != m_nodeAfterLast; node = NodeTraversal::next(*node)) {
         if (node->firstChild() || (node->isTextNode() && node->nextSibling()))
             continue;
 
@@ -61,7 +61,7 @@ void SimplifyMarkupCommand::doApply()
         if (!startingStyle)
             continue;
         Node* currentNode = startingNode;
-        Node* topNodeWithStartingStyle = 0;
+        Node* topNodeWithStartingStyle = nullptr;
         while (currentNode != rootNode) {
             if (currentNode->parentNode() != rootNode && isRemovableBlock(currentNode))
                 nodesToRemove.append(currentNode);
@@ -70,16 +70,16 @@ void SimplifyMarkupCommand::doApply()
             if (!currentNode)
                 break;
 
-            if (!currentNode->renderer() || !currentNode->renderer()->isRenderInline() || toRenderInline(currentNode->renderer())->alwaysCreateLineBoxes())
+            if (!is<RenderInline>(currentNode->renderer()) || downcast<RenderInline>(*currentNode->renderer()).alwaysCreateLineBoxes())
                 continue;
 
             if (currentNode->firstChild() != currentNode->lastChild()) {
-                topNodeWithStartingStyle = 0;
+                topNodeWithStartingStyle = nullptr;
                 break;
             }
 
             unsigned context;
-            if (currentNode->renderStyle()->diff(startingStyle, context) == StyleDifferenceEqual)
+            if (currentNode->renderStyle()->diff(*startingStyle, context) == StyleDifferenceEqual)
                 topNodeWithStartingStyle = currentNode;
 
         }

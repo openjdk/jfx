@@ -25,9 +25,9 @@
 
 // This all-in-one cpp file cuts down on template bloat to allow us to build our Windows release build.
 
-
 #include "AutoTableLayout.cpp"
 #include "BidiRun.cpp"
+#include "BorderEdge.cpp"
 #include "CounterNode.cpp"
 #include "EllipsisBox.cpp"
 #include "FilterEffectRenderer.cpp"
@@ -39,10 +39,12 @@
 #include "InlineBox.cpp"
 #include "InlineElementBox.cpp"
 #include "InlineFlowBox.cpp"
+#include "InlineIterator.cpp"
 #include "InlineTextBox.cpp"
 #include "LayoutRepainter.cpp"
 #include "LayoutState.cpp"
 #include "PointerEventsHitRules.cpp"
+#include "RenderAttachment.cpp"
 #include "RenderBlock.cpp"
 #include "RenderBlockFlow.cpp"
 #include "RenderBlockLineLayout.cpp"
@@ -81,6 +83,7 @@
 #include "RenderMeter.cpp"
 #include "RenderMultiColumnFlowThread.cpp"
 #include "RenderMultiColumnSet.cpp"
+#include "RenderMultiColumnSpannerPlaceholder.cpp"
 #include "RenderObject.cpp"
 #include "RenderProgress.cpp"
 #include "RenderQuote.cpp"
@@ -94,6 +97,7 @@
 #include "RenderScrollbarPart.cpp"
 #include "RenderScrollbarTheme.cpp"
 #include "RenderSearchField.cpp"
+#include "RenderSelectionInfo.cpp"
 #include "RenderSlider.cpp"
 #include "RenderSnapshottedPlugIn.cpp"
 #include "RenderTable.cpp"

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2010, 2014 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2007 Samuel Weinig (sam@webkit.org)
  *
@@ -26,7 +26,6 @@
 #include "config.h"
 #include "HTMLTextAreaElement.h"
 
-#include "Attribute.h"
 #include "BeforeTextInsertedEvent.h"
 #include "CSSValueKeywords.h"
 #include "Document.h"
@@ -47,6 +46,7 @@
 #include "Text.h"
 #include "TextBreakIterator.h"
 #include "TextControlInnerElements.h"
+#include "TextIterator.h"
 #include "TextNodeTraversal.h"
 #include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
@@ -100,21 +100,22 @@ HTMLTextAreaElement::HTMLTextAreaElement(const QualifiedName& tagName, Document&
     setFormControlValueMatchesRenderer(true);
 }
 
-PassRefPtr<HTMLTextAreaElement> HTMLTextAreaElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
+Ref<HTMLTextAreaElement> HTMLTextAreaElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
-    RefPtr<HTMLTextAreaElement> textArea = adoptRef(new HTMLTextAreaElement(tagName, document, form));
+    Ref<HTMLTextAreaElement> textArea = adoptRef(*new HTMLTextAreaElement(tagName, document, form));
     textArea->ensureUserAgentShadowRoot();
-    return textArea.release();
+    return textArea;
 }
 
 void HTMLTextAreaElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 {
     root->appendChild(TextControlInnerTextElement::create(document()), ASSERT_NO_EXCEPTION);
+    updateInnerTextElementEditability();
 }
 
 const AtomicString& HTMLTextAreaElement::formControlType() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, textarea, ("textarea", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, textarea, ("textarea", AtomicString::ConstructFromLiteral));
     return textarea;
 }
 
@@ -203,14 +204,14 @@ void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const Atomic
     } else if (name == accesskeyAttr) {
         // ignore for the moment
     } else if (name == maxlengthAttr)
-        setNeedsValidityCheck();
+        updateValidity();
     else
         HTMLTextFormControlElement::parseAttribute(name, value);
 }
 
-RenderPtr<RenderElement> HTMLTextAreaElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> HTMLTextAreaElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderTextControlMultiLine>(*this, std::move(style));
+    return createRenderer<RenderTextControlMultiLine>(*this, WTF::move(style));
 }
 
 bool HTMLTextAreaElement::appendFormData(FormDataList& encoding, bool)
@@ -256,9 +257,9 @@ void HTMLTextAreaElement::updateFocusAppearance(bool restorePreviousSelection)
         // If this is the first focus, set a caret at the beginning of the text.
         // This matches some browsers' behavior; see bug 11746 Comment #15.
         // http://bugs.webkit.org/show_bug.cgi?id=11746#c15
-        setSelectionRange(0, 0);
+        setSelectionRange(0, 0, SelectionHasNoDirection, Element::defaultFocusTextStateChangeIntent());
     } else
-        restoreCachedSelection();
+        restoreCachedSelection(Element::defaultFocusTextStateChangeIntent());
 
     if (document().frame())
         document().frame()->selection().revealSelection();
@@ -268,8 +269,8 @@ void HTMLTextAreaElement::defaultEventHandler(Event* event)
 {
     if (renderer() && (event->isMouseEvent() || event->isDragEvent() || event->eventInterface() == WheelEventInterfaceType || event->type() == eventNames().blurEvent))
         forwardEvent(event);
-    else if (renderer() && event->isBeforeTextInsertedEvent())
-        handleBeforeTextInsertedEvent(toBeforeTextInsertedEvent(event));
+    else if (renderer() && is<BeforeTextInsertedEvent>(*event))
+        handleBeforeTextInsertedEvent(downcast<BeforeTextInsertedEvent>(event));
 
     HTMLTextFormControlElement::defaultEventHandler(event);
 }
@@ -278,7 +279,7 @@ void HTMLTextAreaElement::subtreeHasChanged()
 {
     setChangedSinceLastFormControlChangeEvent(true);
     setFormControlValueMatchesRenderer(false);
-    setNeedsValidityCheck();
+    updateValidity();
 
     if (!focused())
         return;
@@ -324,8 +325,7 @@ String HTMLTextAreaElement::sanitizeUserInputValue(const String& proposedValue, 
 
 TextControlInnerTextElement* HTMLTextAreaElement::innerTextElement() const
 {
-    Node* node = userAgentShadowRoot()->firstChild();
-    return toTextControlInnerTextElement(node);
+    return downcast<TextControlInnerTextElement>(userAgentShadowRoot()->firstChild());
 }
 
 void HTMLTextAreaElement::rendererWillBeDestroyed()
@@ -343,7 +343,7 @@ void HTMLTextAreaElement::updateValue() const
     const_cast<HTMLTextAreaElement*>(this)->setFormControlValueMatchesRenderer(true);
     m_isDirty = true;
     m_wasModifiedByUser = true;
-    const_cast<HTMLTextAreaElement*>(this)->updatePlaceholderVisibility(false);
+    const_cast<HTMLTextAreaElement*>(this)->updatePlaceholderVisibility();
 }
 
 String HTMLTextAreaElement::value() const
@@ -356,14 +356,14 @@ void HTMLTextAreaElement::setValue(const String& value)
 {
     setValueCommon(value);
     m_isDirty = true;
-    setNeedsValidityCheck();
+    updateValidity();
 }
 
 void HTMLTextAreaElement::setNonDirtyValue(const String& value)
 {
     setValueCommon(value);
     m_isDirty = false;
-    setNeedsValidityCheck();
+    updateValidity();
 }
 
 void HTMLTextAreaElement::setValueCommon(const String& newValue)
@@ -383,7 +383,7 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue)
     m_value = normalizedValue;
     setInnerTextValue(m_value);
     setLastChangeWasNotUserEdit();
-    updatePlaceholderVisibility(false);
+    updatePlaceholderVisibility();
     setNeedsStyleRecalc();
     setFormControlValueMatchesRenderer(true);
 
@@ -398,7 +398,7 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue)
 
 String HTMLTextAreaElement::defaultValue() const
 {
-    return TextNodeTraversal::contentsAsString(this);
+    return TextNodeTraversal::contentsAsString(*this);
 }
 
 void HTMLTextAreaElement::setDefaultValue(const String& defaultValue)
@@ -407,7 +407,7 @@ void HTMLTextAreaElement::setDefaultValue(const String& defaultValue)
 
     // To preserve comments, remove only the text nodes, then add a single text node.
     Vector<RefPtr<Text>> textNodes;
-    for (Text* textNode = TextNodeTraversal::firstChild(this); textNode; textNode = TextNodeTraversal::nextSibling(textNode))
+    for (Text* textNode = TextNodeTraversal::firstChild(*this); textNode; textNode = TextNodeTraversal::nextSibling(*textNode))
         textNodes.append(textNode);
 
     size_t size = textNodes.size();
@@ -428,7 +428,7 @@ void HTMLTextAreaElement::setDefaultValue(const String& defaultValue)
 int HTMLTextAreaElement::maxLength() const
 {
     bool ok;
-    int value = getAttribute(maxlengthAttr).string().toInt(&ok);
+    int value = fastGetAttribute(maxlengthAttr).string().toInt(&ok);
     return ok && value >= 0 ? value : -1;
 }
 
@@ -513,11 +513,6 @@ HTMLElement* HTMLTextAreaElement::placeholderElement() const
     return m_placeholder;
 }
 
-bool HTMLTextAreaElement::matchesReadOnlyPseudoClass() const
-{
-    return isReadOnly();
-}
-
 bool HTMLTextAreaElement::matchesReadWritePseudoClass() const
 {
     return !isDisabledOrReadOnly();
@@ -537,6 +532,7 @@ void HTMLTextAreaElement::updatePlaceholderText()
         RefPtr<HTMLDivElement> placeholder = HTMLDivElement::create(document());
         m_placeholder = placeholder.get();
         m_placeholder->setPseudo(AtomicString("-webkit-input-placeholder", AtomicString::ConstructFromLiteral));
+        m_placeholder->setInlineStyleProperty(CSSPropertyDisplay, isPlaceholderVisible() ? CSSValueBlock : CSSValueNone, true);
         userAgentShadowRoot()->insertBefore(m_placeholder, innerTextElement()->nextSibling());
     }
     m_placeholder->setInnerText(placeholderText, ASSERT_NO_EXCEPTION);

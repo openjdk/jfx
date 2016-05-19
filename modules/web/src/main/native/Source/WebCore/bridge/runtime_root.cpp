@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -34,6 +34,7 @@
 #include <runtime/JSGlobalObject.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
 
@@ -46,10 +47,10 @@ namespace JSC { namespace Bindings {
 
 typedef HashSet<RootObject*> RootObjectSet;
 
-static RootObjectSet* rootObjectSet()
+static RootObjectSet& rootObjectSet()
 {
-    DEFINE_STATIC_LOCAL(RootObjectSet, staticRootObjectSet, ());
-    return &staticRootObjectSet;
+    static NeverDestroyed<RootObjectSet> staticRootObjectSet;
+    return staticRootObjectSet;
 }
 
 // FIXME:  These two functions are a potential performance problem.  We could
@@ -57,8 +58,8 @@ static RootObjectSet* rootObjectSet()
 
 RootObject* findProtectingRootObject(JSObject* jsObject)
 {
-    RootObjectSet::const_iterator end = rootObjectSet()->end();
-    for (RootObjectSet::const_iterator it = rootObjectSet()->begin(); it != end; ++it) {
+    RootObjectSet::const_iterator end = rootObjectSet().end();
+    for (RootObjectSet::const_iterator it = rootObjectSet().begin(); it != end; ++it) {
         if ((*it)->gcIsProtected(jsObject))
             return *it;
     }
@@ -67,8 +68,8 @@ RootObject* findProtectingRootObject(JSObject* jsObject)
 
 RootObject* findRootObject(JSGlobalObject* globalObject)
 {
-    RootObjectSet::const_iterator end = rootObjectSet()->end();
-    for (RootObjectSet::const_iterator it = rootObjectSet()->begin(); it != end; ++it) {
+    RootObjectSet::const_iterator end = rootObjectSet().end();
+    for (RootObjectSet::const_iterator it = rootObjectSet().begin(); it != end; ++it) {
         if ((*it)->globalObject() == globalObject)
             return *it;
     }
@@ -90,7 +91,7 @@ RootObject::RootObject(const void* nativeHandle, JSGlobalObject* globalObject)
     , m_globalObject(globalObject->vm(), globalObject)
 {
     ASSERT(globalObject);
-    rootObjectSet()->add(this);
+    rootObjectSet().add(this);
 }
 
 RootObject::~RootObject()
@@ -105,13 +106,10 @@ void RootObject::invalidate()
         return;
 
     {
-        HashMap<RuntimeObject*, JSC::Weak<RuntimeObject>>::iterator end = m_runtimeObjects.end();
-        for (HashMap<RuntimeObject*, JSC::Weak<RuntimeObject>>::iterator it = m_runtimeObjects.begin(); it != end; ++it) {
-            RuntimeObject* runtimeObject = it->value.get();
-            if (!runtimeObject) // Skip zombies.
-                continue;
+        // Get the objects from the keys; the values might be nulled.
+        // Safe because finalized runtime objects are removed from m_runtimeObjects by RootObject::finalize.
+        for (RuntimeObject* runtimeObject : m_runtimeObjects.keys())
             runtimeObject->invalidate();
-        }
 
         m_runtimeObjects.clear();
     }
@@ -134,7 +132,7 @@ void RootObject::invalidate()
         JSC::gcUnprotect(it->key);
     m_protectCountSet.clear();
 
-    rootObjectSet()->remove(this);
+    rootObjectSet().remove(this);
 }
 
 void RootObject::gcProtect(JSObject* jsObject)
@@ -200,7 +198,7 @@ void RootObject::removeRuntimeObject(RuntimeObject* object)
 
 void RootObject::finalize(JSC::Handle<JSC::Unknown> handle, void*)
 {
-    RuntimeObject* object = static_cast<RuntimeObject*>(handle.get().asCell());
+    RuntimeObject* object = static_cast<RuntimeObject*>(handle.slot()->asCell());
 
     Ref<RootObject> protect(*this);
     object->invalidate();

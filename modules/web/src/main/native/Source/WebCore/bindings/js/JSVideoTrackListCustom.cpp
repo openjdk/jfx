@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,26 +26,18 @@
 #include "config.h"
 
 #if ENABLE(VIDEO_TRACK)
+
 #include "JSVideoTrackList.h"
 
-#include "Element.h"
 #include "JSNodeCustom.h"
 
 using namespace JSC;
 
 namespace WebCore {
 
-void JSVideoTrackList::visitChildren(JSCell* cell, SlotVisitor& visitor)
+void JSVideoTrackList::visitAdditionalChildren(SlotVisitor& visitor)
 {
-    JSVideoTrackList* jsVideoTrackList = jsCast<JSVideoTrackList*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(jsVideoTrackList, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(jsVideoTrackList->structure()->typeInfo().overridesVisitChildren());
-    Base::visitChildren(jsVideoTrackList, visitor);
-
-    VideoTrackList& videoTrackList = jsVideoTrackList->impl();
-    visitor.addOpaqueRoot(root(videoTrackList.element()));
-    videoTrackList.visitJSEventListeners(visitor);
+    visitor.addOpaqueRoot(root(impl().element()));
 }
 
 } // namespace WebCore

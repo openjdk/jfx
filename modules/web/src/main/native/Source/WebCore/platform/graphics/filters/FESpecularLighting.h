@@ -22,14 +22,13 @@
 #ifndef FESpecularLighting_h
 #define FESpecularLighting_h
 
-#if ENABLE(FILTERS)
 #include "FELighting.h"
 
 namespace WebCore {
 
 class FESpecularLighting : public FELighting {
 public:
-    static PassRefPtr<FESpecularLighting> create(Filter*, const Color&, float, float,
+    static Ref<FESpecularLighting> create(Filter&, const Color&, float, float,
         float, float, float, PassRefPtr<LightSource>);
     virtual ~FESpecularLighting();
 
@@ -59,11 +58,9 @@ public:
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;
 
 private:
-    FESpecularLighting(Filter*, const Color&, float, float, float, float, float, PassRefPtr<LightSource>);
+    FESpecularLighting(Filter&, const Color&, float, float, float, float, float, PassRefPtr<LightSource>);
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // FESpecularLighting_h

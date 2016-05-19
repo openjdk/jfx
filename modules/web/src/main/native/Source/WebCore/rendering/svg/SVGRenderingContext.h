@@ -50,9 +50,7 @@ public:
         , m_renderer(nullptr)
         , m_paintInfo(nullptr)
         , m_savedContext(nullptr)
-#if ENABLE(FILTERS)
         , m_filter(nullptr)
-#endif
     {
     }
 
@@ -61,9 +59,7 @@ public:
         , m_renderer(nullptr)
         , m_paintInfo(nullptr)
         , m_savedContext(nullptr)
-#if ENABLE(FILTERS)
         , m_filter(nullptr)
-#endif
     {
         prepareToRenderSVGContent(object, paintinfo, needsGraphicsContextSave);
     }
@@ -75,17 +71,14 @@ public:
     void prepareToRenderSVGContent(RenderElement&, PaintInfo&, NeedsGraphicsContextSave = DontSaveGraphicsContext);
     bool isRenderingPrepared() const { return m_renderingFlags & RenderingPrepared; }
 
-    static bool createImageBuffer(const FloatRect& paintRect, const AffineTransform& absoluteTransform, std::unique_ptr<ImageBuffer>&, ColorSpace, RenderingMode);
-    // Patterns need a different float-to-integer coordinate mapping.
-    static bool createImageBufferForPattern(const FloatRect& absoluteTargetRect, const FloatRect& clampedAbsoluteTargetRect, std::unique_ptr<ImageBuffer>&, ColorSpace, RenderingMode);
+    static std::unique_ptr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const AffineTransform& absoluteTransform, ColorSpace, RenderingMode);
+    static std::unique_ptr<ImageBuffer> createImageBuffer(const FloatRect& targetRect, const FloatRect& clampedRect, ColorSpace, RenderingMode);
 
     static void renderSubtreeToImageBuffer(ImageBuffer*, RenderElement&, const AffineTransform&);
     static void clipToImageBuffer(GraphicsContext*, const AffineTransform& absoluteTransform, const FloatRect& targetRect, std::unique_ptr<ImageBuffer>&, bool safeToClear);
 
     static float calculateScreenFontSizeScalingFactor(const RenderObject&);
-    static void calculateTransformationToOutermostCoordinateSystem(const RenderObject&, AffineTransform& absoluteTransform);
-    static IntSize clampedAbsoluteSize(const IntSize&);
-    static FloatRect clampedAbsoluteTargetRect(const FloatRect& absoluteTargetRect);
+    static AffineTransform calculateTransformationToOutermostCoordinateSystem(const RenderObject&);
     static void clear2DRotation(AffineTransform&);
 
     static IntRect calculateImageBufferRect(const FloatRect& targetRect, const AffineTransform& absoluteTransform)
@@ -115,9 +108,7 @@ private:
     PaintInfo* m_paintInfo;
     GraphicsContext* m_savedContext;
     LayoutRect m_savedPaintRect;
-#if ENABLE(FILTERS)
     RenderSVGResourceFilter* m_filter;
-#endif
 };
 
 } // namespace WebCore

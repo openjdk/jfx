@@ -5,7 +5,7 @@
 #define PlatformContextJava_h
 
 #include "GraphicsContext.h"
-#include "Noncopyable.h"
+#include "wtf/Noncopyable.h"
 #include "RenderingQueue.h"
 #include "Path.h"
 #include "com_sun_webkit_graphics_WCRenderQueue.h"

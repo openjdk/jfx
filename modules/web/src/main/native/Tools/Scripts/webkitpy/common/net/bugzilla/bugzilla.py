@@ -204,7 +204,6 @@ class BugzillaQueries(object):
             patch_id = int(digits.search(patch_tag["href"]).group(0))
             date_tag = row.find("td", text=date_format)
             if date_tag and datetime.strptime(date_format.search(date_tag).group(0), "%Y-%m-%d %H:%M") < since:
-                _log.info("Patch is old: %d (%s)" % (patch_id, date_tag))
                 continue
             patch_ids.append(patch_id)
         return patch_ids
@@ -469,12 +468,10 @@ class Bugzilla(object):
 
     def fetch_bug_dictionary(self, bug_id):
         try:
+            self.authenticate()
             return self._parse_bug_dictionary_from_xml(self._fetch_bug_page(bug_id))
         except KeyboardInterrupt:
             raise
-        except:
-            self.authenticate()
-            return self._parse_bug_dictionary_from_xml(self._fetch_bug_page(bug_id))
 
     # FIXME: A BugzillaCache object should provide all these fetch_ methods.
 
@@ -530,7 +527,7 @@ class Bugzilla(object):
         attempts = 0
         while not self.authenticated:
             attempts += 1
-            username, password = credentials.read_credentials()
+            username, password = credentials.read_credentials(use_stored_credentials=attempts == 1)
 
             _log.info("Logging in as %s..." % username)
             self.browser.open(config_urls.bug_server_url +
@@ -750,7 +747,7 @@ class Bugzilla(object):
 
         self.browser.open(self.attachment_url_for_id(attachment_id, 'edit'))
         self.browser.select_form(nr=1)
-        self.browser.set_value(comment_text, name='comment', nr=0)
+        self.browser.set_value(comment_text, name='comment', nr=1)
         self._find_select_element_for_flag('review').value = ("X",)
         self._find_select_element_for_flag('commit-queue').value = ("X",)
         self.browser.submit()
@@ -769,7 +766,7 @@ class Bugzilla(object):
         self.browser.select_form(nr=1)
 
         if comment_text:
-            self.browser.set_value(comment_text, name='comment', nr=0)
+            self.browser.set_value(comment_text, name='comment', nr=1)
 
         self._find_select_element_for_flag(flag_name).value = (flag_value,)
         self.browser.submit()
@@ -791,7 +788,7 @@ class Bugzilla(object):
             _log.info(comment_text)
             # Bugzilla has two textareas named 'comment', one is somehow
             # hidden.  We want the first.
-            self.browser.set_value(comment_text, name='comment', nr=0)
+            self.browser.set_value(comment_text, name='comment', nr=1)
         self.browser.submit()
 
     def add_cc_to_bug(self, bug_id, email_address_list):

@@ -25,25 +25,37 @@
 
 #import "WK1BrowserWindowController.h"
 
-#import <WebKit/WebKit.h>
-#import <WebKit/WebViewPrivate.h>
 #import "AppDelegate.h"
+#import "SettingsController.h"
+#import <WebKit/WebKit.h>
+#import <WebKit/WebPreferences.h>
+#import <WebKit/WebPreferencesPrivate.h>
+#import <WebKit/WebPreferenceKeysPrivate.h>
+#import <WebKit/WebViewPrivate.h>
 
-@interface WK1BrowserWindowController ()
+@interface WK1BrowserWindowController () <WebFrameLoadDelegate, WebPolicyDelegate, WebResourceLoadDelegate, WebUIDelegate>
 @end
 
 @implementation WK1BrowserWindowController
 
 - (void)awakeFromNib
 {
-    _webView = [[WebView alloc] initWithFrame:[containerView bounds]];
+    _webView = [[WebView alloc] initWithFrame:[containerView bounds] frameName:nil groupName:@"MiniBrowser"];
     [_webView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
 
-    // Set the WebView delegates
     [_webView setFrameLoadDelegate:self];
     [_webView setUIDelegate:self];
     [_webView setResourceLoadDelegate:self];
     [_webView setPolicyDelegate:self];
+
+    [[WebPreferences standardPreferences] setFullScreenEnabled:YES];
+    [[WebPreferences standardPreferences] setDeveloperExtrasEnabled:YES];
+    [[WebPreferences standardPreferences] setImageControlsEnabled:YES];
+    [[WebPreferences standardPreferences] setServiceControlsEnabled:YES];
+
+    [_webView _listenForLayoutMilestones:WebDidFirstLayout | WebDidFirstVisuallyNonEmptyLayout | WebDidHitRelevantRepaintedObjectsAreaThreshold];
+
+    [self didChangeSettings];
 
     [containerView addSubview:_webView];
 }
@@ -90,6 +102,11 @@
     }
 }
 
+- (IBAction)setScale:(id)sender
+{
+
+}
+
 - (IBAction)reload:(id)sender
 {
     [_webView reload:sender];
@@ -127,10 +144,6 @@
         [menuItem setTitle:[_webView window] ? @"Remove Web View" : @"Insert Web View"];
     else if (action == @selector(toggleZoomMode:))
         [menuItem setState:_zoomTextOnly ? NSOnState : NSOffState];
-    else if ([menuItem action] == @selector(togglePaginationMode:))
-        [menuItem setState:[self isPaginated] ? NSOnState : NSOffState];
-    else if ([menuItem action] == @selector(toggleTransparentWindow:))
-        [menuItem setState:[[self window] isOpaque] ? NSOffState : NSOnState];
 
     return YES;
 }
@@ -160,7 +173,7 @@
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-    [(BrowserAppDelegate *)[NSApp delegate] browserWindowWillClose:[self window]];
+    [(BrowserAppDelegate *)[[NSApplication sharedApplication] delegate] browserWindowWillClose:self.window];
     [self autorelease];
 }
 
@@ -218,36 +231,9 @@
     _zoomTextOnly = !_zoomTextOnly;
 }
 
-- (BOOL)isPaginated
+- (IBAction)toggleShrinkToFit:(id)sender
 {
-    return [_webView _paginationMode] != WebPaginationModeUnpaginated;
-}
 
-- (IBAction)togglePaginationMode:(id)sender
-{
-    if ([self isPaginated]) {
-        [_webView _setPaginationMode:WebPaginationModeUnpaginated];
-    } else {
-        [_webView _setPaginationMode:WebPaginationModeRightToLeft];
-        [_webView _setPageLength:_webView.bounds.size.width / 2];
-        [_webView _setGapBetweenPages:10];
-    }
-}
-
-- (IBAction)toggleTransparentWindow:(id)sender
-{
-    BOOL isTransparent = ![[self window] isOpaque];
-    isTransparent = !isTransparent;
-
-    [[self window] setOpaque:!isTransparent];
-    [[self window] setHasShadow:!isTransparent];
-
-    if (isTransparent)
-        [_webView setBackgroundColor:[NSColor clearColor]];
-    else
-        [_webView setBackgroundColor:[NSColor whiteColor]];
-
-    [[self window] display];
 }
 
 - (IBAction)find:(id)sender
@@ -258,16 +244,72 @@
 {
 }
 
+- (NSURL *)currentURL
+{
+    return _webView.mainFrame.dataSource.request.URL;
+}
+
+- (void)didChangeSettings
+{
+    SettingsController *settings = [SettingsController shared];
+
+    [[WebPreferences standardPreferences] setSubpixelCSSOMElementMetricsEnabled:settings.subPixelCSSOMMetricsEnabled];
+    [[WebPreferences standardPreferences] setShowDebugBorders:settings.layerBordersVisible];
+    [[WebPreferences standardPreferences] setSimpleLineLayoutDebugBordersEnabled:settings.simpleLineLayoutDebugBordersEnabled];
+    [[WebPreferences standardPreferences] setShowRepaintCounter:settings.layerBordersVisible];
+    [[WebPreferences standardPreferences] setSuppressesIncrementalRendering:settings.incrementalRenderingSuppressed];
+
+    BOOL useTransparentWindows = settings.useTransparentWindows;
+    if (useTransparentWindows != !self.window.isOpaque) {
+        [self.window setOpaque:!useTransparentWindows];
+        [self.window setHasShadow:!useTransparentWindows];
+
+        [_webView setBackgroundColor:useTransparentWindows ? [NSColor clearColor] : [NSColor whiteColor]];
+
+        [self.window display];
+    }
+
+    BOOL usePaginatedMode = settings.usePaginatedMode;
+    if (usePaginatedMode != (_webView._paginationMode != WebPaginationModeUnpaginated)) {
+        if (usePaginatedMode) {
+            [_webView _setPaginationMode:WebPaginationModeLeftToRight];
+            [_webView _setPageLength:_webView.bounds.size.width / 2];
+            [_webView _setGapBetweenPages:10];
+        } else
+            [_webView _setPaginationMode:WebPaginationModeUnpaginated];
+    }
+}
+
+- (void)webView:(WebView *)sender didLayout:(WebLayoutMilestones)milestones
+{
+    if (milestones & WebDidFirstLayout)
+        LOG(@"layout milestone: %@", @"first layout");
+
+    if (milestones & WebDidFirstVisuallyNonEmptyLayout)
+        LOG(@"layout milestone: %@", @"first non-empty layout");
+
+    if (milestones & WebDidHitRelevantRepaintedObjectsAreaThreshold)
+        LOG(@"layout milestone: %@", @"relevant repainted objects area threshold");
+}
+
 - (void)webView:(WebView *)webView decidePolicyForNavigationAction:(NSDictionary *)actionInformation request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id<WebPolicyDecisionListener>)listener
 {
-    NSLog(@"request %@ actionInformation %@", request, actionInformation);
-
     [listener use];
 }
 
 // WebFrameLoadDelegate Methods
 - (void)webView:(WebView *)sender didStartProvisionalLoadForFrame:(WebFrame *)frame
 {
+}
+
+- (void)updateTitle:(NSString *)title
+{
+    if (!title) {
+        NSURL *url = _webView.mainFrame.dataSource.request.URL;
+        title = url.lastPathComponent;
+    }
+
+    [self.window setTitle:[title stringByAppendingString:@" [WK1]"]];
 }
 
 - (void)webView:(WebView *)sender didCommitLoadForFrame:(WebFrame *)frame
@@ -277,6 +319,8 @@
 
     NSURL *committedURL = [[[frame dataSource] request] URL];
     [urlText setStringValue:[committedURL absoluteString]];
+
+    [self updateTitle:nil];
 }
 
 - (void)webView:(WebView *)sender didReceiveTitle:(NSString *)title forFrame:(WebFrame *)frame
@@ -284,7 +328,7 @@
     if (frame != [sender mainFrame])
         return;
 
-    [[self window] setTitle:[title stringByAppendingString:@" [WK1]"]];
+    [self updateTitle:title];
 }
 
 - (void)webView:(WebView *)sender runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WebFrame *)frame

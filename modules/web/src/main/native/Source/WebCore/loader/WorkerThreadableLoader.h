@@ -35,7 +35,6 @@
 #include "ThreadableLoaderClient.h"
 #include "ThreadableLoaderClientWrapper.h"
 
-#include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -55,9 +54,9 @@ namespace WebCore {
         WTF_MAKE_FAST_ALLOCATED;
     public:
         static void loadResourceSynchronously(WorkerGlobalScope*, const ResourceRequest&, ThreadableLoaderClient&, const ThreadableLoaderOptions&);
-        static PassRefPtr<WorkerThreadableLoader> create(WorkerGlobalScope* workerGlobalScope, ThreadableLoaderClient* client, const String& taskMode, const ResourceRequest& request, const ThreadableLoaderOptions& options)
+        static Ref<WorkerThreadableLoader> create(WorkerGlobalScope* workerGlobalScope, ThreadableLoaderClient* client, const String& taskMode, const ResourceRequest& request, const ThreadableLoaderOptions& options)
         {
-            return adoptRef(new WorkerThreadableLoader(workerGlobalScope, client, taskMode, request, options));
+            return adoptRef(*new WorkerThreadableLoader(workerGlobalScope, client, taskMode, request, options));
         }
 
         ~WorkerThreadableLoader();
@@ -90,9 +89,8 @@ namespace WebCore {
         // case 2. xhr gets aborted and the worker context continues running.
         //    The ThreadableLoaderClientWrapper has the underlying client cleared, so no more calls
         //    go through it.  All tasks posted from the worker object's thread to the worker context's
-        //    thread do "ThreadableLoaderClientWrapper::ref" (automatically inside of the cross thread copy
-        //    done in createCallbackTask), so the ThreadableLoaderClientWrapper instance is there until all
-        //    tasks are executed.
+        //    thread contain the RefPtr<ThreadableLoaderClientWrapper> object, so the
+        //    ThreadableLoaderClientWrapper instance is there until all tasks are executed.
         class MainThreadBridge : public ThreadableLoaderClient {
         public:
             // All executed on the worker context's thread.
@@ -105,11 +103,6 @@ namespace WebCore {
             void clearClientWrapper();
 
             // All executed on the main thread.
-            static void mainThreadDestroy(ScriptExecutionContext*, MainThreadBridge*);
-            ~MainThreadBridge();
-
-            static void mainThreadCreateLoader(ScriptExecutionContext*, MainThreadBridge*, PassOwnPtr<CrossThreadResourceRequestData>, ThreadableLoaderOptions, const String& outgoingReferrer);
-            static void mainThreadCancel(ScriptExecutionContext*, MainThreadBridge*);
             virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
             virtual void didReceiveResponse(unsigned long identifier, const ResourceResponse&) override;
             virtual void didReceiveData(const char*, int dataLength) override;

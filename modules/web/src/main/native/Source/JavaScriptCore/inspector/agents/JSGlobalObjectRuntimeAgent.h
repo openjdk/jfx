@@ -26,10 +26,7 @@
 #ifndef JSGlobalObjectRuntimeAgent_h
 #define JSGlobalObjectRuntimeAgent_h
 
-#if ENABLE(INSPECTOR)
-
 #include "InspectorRuntimeAgent.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace JSC {
 class JSGlobalObject;
@@ -41,24 +38,23 @@ class JSGlobalObjectRuntimeAgent final : public InspectorRuntimeAgent {
 public:
     JSGlobalObjectRuntimeAgent(InjectedScriptManager*, JSC::JSGlobalObject&);
 
-    virtual void didCreateFrontendAndBackend(InspectorFrontendChannel*, InspectorBackendDispatcher*) override;
-    virtual void willDestroyFrontendAndBackend(InspectorDisconnectReason) override;
+    virtual void didCreateFrontendAndBackend(FrontendChannel*, BackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(DisconnectReason) override;
 
-    virtual JSC::VM* globalVM() override;
-    virtual InjectedScript injectedScriptForEval(ErrorString*, const int* executionContextId) override;
+    virtual JSC::VM& globalVM() override;
+    virtual InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
 
-    // FIXME: JavaScript inspector does not yet have a console object to mute.
+    // NOTE: JavaScript inspector does not yet need to mute a console because no messages
+    // are sent to the console outside of the API boundary or console object.
     virtual void muteConsole() override { }
     virtual void unmuteConsole() override { }
 
 private:
-    std::unique_ptr<InspectorRuntimeFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<InspectorRuntimeBackendDispatcher> m_backendDispatcher;
+    std::unique_ptr<RuntimeFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<RuntimeBackendDispatcher> m_backendDispatcher;
     JSC::JSGlobalObject& m_globalObject;
 };
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(JSGlobalObjectRuntimeAgent_h)

@@ -27,11 +27,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import StringIO
 import errno
 import logging
 import multiprocessing
 import os
-import StringIO
 import signal
 import subprocess
 import sys
@@ -187,7 +187,7 @@ class Executive(object):
             # We only use taskkill.exe on windows (not cygwin) because subprocess.pid
             # is a CYGWIN pid and taskkill.exe expects a windows pid.
             # Thankfully os.kill on CYGWIN handles either pid type.
-            command = ["taskkill.exe", "/f", "/pid", pid]
+            command = ["taskkill.exe", "/f", "/t", "/pid", pid]
             # taskkill will exit 128 if the process is not found.  We should log.
             self.run_command(command, error_handler=self.ignore_error)
             return
@@ -199,6 +199,10 @@ class Executive(object):
         while retries_left > 0:
             try:
                 retries_left -= 1
+                # Give processes one change to clean up quickly before exiting.
+                # Following up with a kill should have no effect if the process
+                # already exited, and forcefully kill it if SIGTERM wasn't enough.
+                os.kill(pid, signal.SIGTERM)
                 os.kill(pid, signal.SIGKILL)
                 _ = os.waitpid(pid, os.WNOHANG)
             except OSError, e:

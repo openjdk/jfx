@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2011, 2013-2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,16 +30,13 @@
 #include "WebDataSource.h"
 
 #include "AccessibleDocument.h"
-
 #include <WebCore/AdjustViewSizeOrNot.h>
 #include <WebCore/FrameWin.h>
 #include <WebCore/GraphicsContext.h>
-#include <WebCore/URL.h>
 #include <WebCore/ResourceHandleClient.h>
-
-#include <WTF/RefPtr.h>
-#include <WTF/HashMap.h>
-#include <WTF/OwnPtr.h>
+#include <WebCore/URL.h>
+#include <wtf/HashMap.h>
+#include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -78,7 +75,7 @@ interface IWebHistoryItemPrivate;
 WebFrame* kit(WebCore::Frame*);
 WebCore::Frame* core(WebFrame*);
 
-class DECLSPEC_UUID("{A3676398-4485-4a9d-87DC-CB5A40E6351D}") WebFrame : public IWebFrame, IWebFramePrivate, IWebDocumentText
+class DECLSPEC_UUID("{A3676398-4485-4a9d-87DC-CB5A40E6351D}") WebFrame : public IWebFrame2, IWebFramePrivate, IWebDocumentText
 {
 public:
     static WebFrame* createInstance();
@@ -157,7 +154,7 @@ public:
     virtual /* [local] */ JSGlobalContextRef STDMETHODCALLTYPE globalContext();
 
     // IWebFramePrivate
-    virtual HRESULT STDMETHODCALLTYPE unused1(BSTR*) { return E_NOTIMPL; }
+    virtual HRESULT STDMETHODCALLTYPE unused1() { return E_NOTIMPL; }
     virtual HRESULT STDMETHODCALLTYPE renderTreeAsExternalRepresentation(BOOL forPrinting, BSTR *result);
 
     virtual HRESULT STDMETHODCALLTYPE pageNumberForElementById(
@@ -179,13 +176,12 @@ public:
     virtual HRESULT STDMETHODCALLTYPE firstLayoutDone(
         /* [retval][out] */ BOOL* result);
 
-    virtual HRESULT STDMETHODCALLTYPE loadType(
-        /* [retval][out] */ WebFrameLoadType* type);
+    virtual HRESULT STDMETHODCALLTYPE unused2() { return E_NOTIMPL; }
 
     virtual HRESULT STDMETHODCALLTYPE pendingFrameUnloadEventCount(
         /* [retval][out] */ UINT* result);
 
-    virtual HRESULT STDMETHODCALLTYPE unused2();
+    virtual HRESULT STDMETHODCALLTYPE unused3() { return E_NOTIMPL; }
 
     virtual HRESULT STDMETHODCALLTYPE setInPrintingMode(
         /* [in] */ BOOL value,
@@ -237,14 +233,9 @@ public:
 
     virtual HRESULT STDMETHODCALLTYPE reloadFromOrigin();
 
-    virtual HRESULT STDMETHODCALLTYPE paintDocumentRectToContext(
-        /* [in] */ RECT rect,
-        /* [in] */ OLE_HANDLE deviceContext);
+    virtual HRESULT STDMETHODCALLTYPE paintDocumentRectToContext(/* [in] */ RECT rect, /* [in] */ HDC deviceContext);
 
-    virtual HRESULT STDMETHODCALLTYPE paintScrollViewRectToContextAtPoint(
-        /* [in] */ RECT rect,
-        /* [in] */ POINT pt,
-        /* [in] */ OLE_HANDLE deviceContext);
+    virtual HRESULT STDMETHODCALLTYPE paintScrollViewRectToContextAtPoint(/* [in] */ RECT rect, /* [in] */ POINT pt, /* [in] */ HDC deviceContext);
 
     virtual HRESULT STDMETHODCALLTYPE elementDoesAutoComplete(
         /* [in] */ IDOMElement* element,
@@ -277,7 +268,7 @@ public:
 
     virtual HRESULT STDMETHODCALLTYPE setTextDirection(BSTR);
 
-    virtual HRESULT STDMETHODCALLTYPE unused3(BSTR, BSTR*) { return E_NOTIMPL; }
+    virtual HRESULT STDMETHODCALLTYPE unused4() { return E_NOTIMPL; }
 
     virtual HRESULT STDMETHODCALLTYPE resumeAnimations();
 
@@ -293,6 +284,8 @@ public:
     virtual HRESULT STDMETHODCALLTYPE selectAll();
 
     virtual HRESULT STDMETHODCALLTYPE deselectAll();
+
+    virtual HRESULT STDMETHODCALLTYPE isMainFrame(BOOL*);
 
     // FrameLoaderClient
     virtual void frameLoaderDestroyed();

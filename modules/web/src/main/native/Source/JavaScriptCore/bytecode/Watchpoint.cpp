@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,16 +26,32 @@
 #include "config.h"
 #include "Watchpoint.h"
 
-#include "LinkBuffer.h"
 #include <wtf/CompilationThread.h>
 #include <wtf/PassRefPtr.h>
 
 namespace JSC {
 
+void StringFireDetail::dump(PrintStream& out) const
+{
+    out.print(m_string);
+}
+
 Watchpoint::~Watchpoint()
 {
-    if (isOnList())
+    if (isOnList()) {
+        // This will happen if we get destroyed before the set fires. That's totally a valid
+        // possibility. For example:
+        //
+        // CodeBlock has a Watchpoint on transition from structure S1. The transition never
+        // happens, but the CodeBlock gets destroyed because of GC.
         remove();
+    }
+}
+
+void Watchpoint::fire(const FireDetail& detail)
+{
+    RELEASE_ASSERT(!isOnList());
+    fireInternal(detail);
 }
 
 WatchpointSet::WatchpointSet(WatchpointState state)
@@ -65,25 +81,58 @@ void WatchpointSet::add(Watchpoint* watchpoint)
     m_state = IsWatched;
 }
 
-void WatchpointSet::fireAllSlow()
+void WatchpointSet::fireAllSlow(const FireDetail& detail)
 {
     ASSERT(state() == IsWatched);
 
     WTF::storeStoreFence();
-    fireAllWatchpoints();
-    m_state = IsInvalidated;
+    m_state = IsInvalidated; // Do this first. Needed for adaptive watchpoints.
+    fireAllWatchpoints(detail);
     WTF::storeStoreFence();
 }
 
-void WatchpointSet::fireAllWatchpoints()
+void WatchpointSet::fireAllSlow(const char* reason)
 {
-    while (!m_set.isEmpty())
-        m_set.begin()->fire();
+    fireAllSlow(StringFireDetail(reason));
+}
+
+void WatchpointSet::fireAllWatchpoints(const FireDetail& detail)
+{
+    // In case there are any adaptive watchpoints, we need to make sure that they see that this
+    // watchpoint has been already invalidated.
+    RELEASE_ASSERT(hasBeenInvalidated());
+
+    while (!m_set.isEmpty()) {
+        Watchpoint* watchpoint = m_set.begin();
+        ASSERT(watchpoint->isOnList());
+
+        // Removing the Watchpoint before firing it makes it possible to implement watchpoints
+        // that add themselves to a different set when they fire. This kind of "adaptive"
+        // watchpoint can be used to track some semantic property that is more fine-graiend than
+        // what the set can convey. For example, we might care if a singleton object ever has a
+        // property called "foo". We can watch for this by checking if its Structure has "foo" and
+        // then watching its transitions. But then the watchpoint fires if any property is added.
+        // So, before the watchpoint decides to invalidate any code, it can check if it is
+        // possible to add itself to the transition watchpoint set of the singleton object's new
+        // Structure.
+        watchpoint->remove();
+        ASSERT(m_set.begin() != watchpoint);
+        ASSERT(!watchpoint->isOnList());
+
+        watchpoint->fire(detail);
+        // After we fire the watchpoint, the watchpoint pointer may be a dangling pointer. That's
+        // fine, because we have no use for the pointer anymore.
+    }
 }
 
 void InlineWatchpointSet::add(Watchpoint* watchpoint)
 {
     inflate()->add(watchpoint);
+}
+
+void InlineWatchpointSet::fireAll(const char* reason)
+{
+    fireAll(StringFireDetail(reason));
 }
 
 WatchpointSet* InlineWatchpointSet::inflateSlow()

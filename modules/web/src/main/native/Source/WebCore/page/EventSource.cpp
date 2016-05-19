@@ -41,6 +41,7 @@
 #include "EventException.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
+#include "HTTPHeaderNames.h"
 #include "MemoryCache.h"
 #include "MessageEvent.h"
 #include "ResourceError.h"
@@ -52,7 +53,6 @@
 #include "SerializedScriptValue.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoader.h"
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -64,7 +64,7 @@ inline EventSource::EventSource(ScriptExecutionContext& context, const URL& url,
     , m_withCredentials(false)
     , m_state(CONNECTING)
     , m_decoder(TextResourceDecoder::create("text/plain", "UTF-8"))
-    , m_connectTimer(this, &EventSource::connectTimerFired)
+    , m_connectTimer(*this, &EventSource::connectTimerFired)
     , m_discardTrailingNewline(false)
     , m_requestInFlight(false)
     , m_reconnectDelay(defaultReconnectDelay)
@@ -72,29 +72,29 @@ inline EventSource::EventSource(ScriptExecutionContext& context, const URL& url,
     eventSourceInit.get("withCredentials", m_withCredentials);
 }
 
-PassRefPtr<EventSource> EventSource::create(ScriptExecutionContext& context, const String& url, const Dictionary& eventSourceInit, ExceptionCode& ec)
+RefPtr<EventSource> EventSource::create(ScriptExecutionContext& context, const String& url, const Dictionary& eventSourceInit, ExceptionCode& ec)
 {
     if (url.isEmpty()) {
         ec = SYNTAX_ERR;
-        return 0;
+        return nullptr;
     }
 
     URL fullURL = context.completeURL(url);
     if (!fullURL.isValid()) {
         ec = SYNTAX_ERR;
-        return 0;
+        return nullptr;
     }
 
     // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
     bool shouldBypassMainWorldContentSecurityPolicy = false;
-    if (context.isDocument()) {
-        Document& document = toDocument(context);
+    if (is<Document>(context)) {
+        Document& document = downcast<Document>(context);
         shouldBypassMainWorldContentSecurityPolicy = document.frame()->script().shouldBypassMainWorldContentSecurityPolicy();
     }
-    if (!shouldBypassMainWorldContentSecurityPolicy && !context.contentSecurityPolicy()->allowConnectToSource(fullURL)) {
+    if (!context.contentSecurityPolicy()->allowConnectToSource(fullURL, shouldBypassMainWorldContentSecurityPolicy)) {
         // FIXME: Should this be throwing an exception?
         ec = SECURITY_ERR;
-        return 0;
+        return nullptr;
     }
 
     RefPtr<EventSource> source = adoptRef(new EventSource(context, fullURL, eventSourceInit));
@@ -119,20 +119,20 @@ void EventSource::connect()
 
     ResourceRequest request(m_url);
     request.setHTTPMethod("GET");
-    request.setHTTPHeaderField("Accept", "text/event-stream");
-    request.setHTTPHeaderField("Cache-Control", "no-cache");
+    request.setHTTPHeaderField(HTTPHeaderName::Accept, "text/event-stream");
+    request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "no-cache");
     if (!m_lastEventId.isEmpty())
-        request.setHTTPHeaderField("Last-Event-ID", m_lastEventId);
+        request.setHTTPHeaderField(HTTPHeaderName::LastEventID, m_lastEventId);
 
     SecurityOrigin* origin = scriptExecutionContext()->securityOrigin();
 
     ThreadableLoaderOptions options;
-    options.sendLoadCallbacks = SendCallbacks;
-    options.sniffContent = DoNotSniffContent;
-    options.allowCredentials = (origin->canRequest(m_url) || m_withCredentials) ? AllowStoredCredentials : DoNotAllowStoredCredentials;
+    options.setSendLoadCallbacks(SendCallbacks);
+    options.setSniffContent(DoNotSniffContent);
+    options.setAllowCredentials((origin->canRequest(m_url) || m_withCredentials) ? AllowStoredCredentials : DoNotAllowStoredCredentials);
     options.preflightPolicy = PreventPreflight;
     options.crossOriginRequestPolicy = UseAccessControl;
-    options.dataBufferingPolicy = DoNotBufferData;
+    options.setDataBufferingPolicy(DoNotBufferData);
     options.securityOrigin = origin;
 
     m_loader = ThreadableLoader::create(scriptExecutionContext(), this, request, options);
@@ -169,7 +169,7 @@ void EventSource::scheduleReconnect()
     dispatchEvent(Event::create(eventNames().errorEvent, false, false));
 }
 
-void EventSource::connectTimerFired(Timer<EventSource>&)
+void EventSource::connectTimerFired()
 {
     connect();
 }
@@ -222,22 +222,16 @@ void EventSource::didReceiveResponse(unsigned long, const ResourceResponse& resp
         // If we have a charset, the only allowed value is UTF-8 (case-insensitive).
         responseIsValid = charset.isEmpty() || equalIgnoringCase(charset, "UTF-8");
         if (!responseIsValid) {
-            StringBuilder message;
-            message.appendLiteral("EventSource's response has a charset (\"");
-            message.append(charset);
-            message.appendLiteral("\") that is not UTF-8. Aborting the connection.");
+            String message = makeString("EventSource's response has a charset (\"", charset, "\") that is not UTF-8. Aborting the connection.");
             // FIXME: We are missing the source line.
-            scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message.toString());
+            scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message);
         }
     } else {
         // To keep the signal-to-noise ratio low, we only log 200-response with an invalid MIME type.
         if (statusCode == 200 && !mimeTypeIsValid) {
-            StringBuilder message;
-            message.appendLiteral("EventSource's response has a MIME type (\"");
-            message.append(response.mimeType());
-            message.appendLiteral("\") that is not \"text/event-stream\". Aborting the connection.");
+            String message = makeString("EventSource's response has a MIME type (\"", response.mimeType(), "\") that is not \"text/event-stream\". Aborting the connection.");
             // FIXME: We are missing the source line.
-            scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message.toString());
+            scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message);
         }
     }
 
@@ -255,7 +249,8 @@ void EventSource::didReceiveData(const char* data, int length)
     ASSERT(m_state == OPEN);
     ASSERT(m_requestInFlight);
 
-    append(m_receiveBuf, m_decoder->decode(data, length));
+    // FIXME: Need to call flush at some point.
+    append(m_receiveBuf, StringView(m_decoder->decode(data, length)));
     parseEventStream();
 }
 
@@ -412,6 +407,17 @@ void EventSource::parseEventStreamLine(unsigned bufPos, int fieldLength, int lin
 void EventSource::stop()
 {
     close();
+}
+
+const char* EventSource::activeDOMObjectName() const
+{
+    return "EventSource";
+}
+
+bool EventSource::canSuspendForPageCache() const
+{
+    // FIXME: We should try and do better here.
+    return false;
 }
 
 PassRefPtr<MessageEvent> EventSource::createMessageEvent()

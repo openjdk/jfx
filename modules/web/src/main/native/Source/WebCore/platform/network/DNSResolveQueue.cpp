@@ -14,7 +14,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -50,7 +50,7 @@ static const int gMaxRequestsToQueue = 64;
 // If there were queued names that couldn't be sent simultaneously, check the state of resolvers after this delay.
 static const double gRetryResolvingInSeconds = 0.1;
 
-DNSResolveQueue& DNSResolveQueue::shared()
+DNSResolveQueue& DNSResolveQueue::singleton()
 {
     static NeverDestroyed<DNSResolveQueue> queue;
 
@@ -58,7 +58,7 @@ DNSResolveQueue& DNSResolveQueue::shared()
 }
 
 DNSResolveQueue::DNSResolveQueue()
-    : m_timer(this, &DNSResolveQueue::timerFired)
+    : m_timer(*this, &DNSResolveQueue::timerFired)
     , m_requestsInFlight(0)
     , m_cachedProxyEnabledStatus(false)
     , m_lastProxyEnabledStatusCheckTime(0)
@@ -98,7 +98,7 @@ void DNSResolveQueue::add(const String& hostname)
     }
 }
 
-void DNSResolveQueue::timerFired(Timer<DNSResolveQueue>&)
+void DNSResolveQueue::timerFired()
 {
     if (isUsingProxy()) {
         m_names.clear();

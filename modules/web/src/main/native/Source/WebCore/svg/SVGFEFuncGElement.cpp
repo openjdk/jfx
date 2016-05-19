@@ -19,9 +19,8 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SVGFEFuncGElement.h"
+
 #include "SVGNames.h"
 
 namespace WebCore {
@@ -32,11 +31,9 @@ inline SVGFEFuncGElement::SVGFEFuncGElement(const QualifiedName& tagName, Docume
     ASSERT(hasTagName(SVGNames::feFuncGTag));
 }
 
-PassRefPtr<SVGFEFuncGElement> SVGFEFuncGElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFEFuncGElement> SVGFEFuncGElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFEFuncGElement(tagName, document));
+    return adoptRef(*new SVGFEFuncGElement(tagName, document));
 }
 
 }
-
-#endif // ENABLE(FILTERS)

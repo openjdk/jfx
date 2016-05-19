@@ -33,8 +33,6 @@
 
 #include "WebConsoleAgent.h"
 
-#if ENABLE(INSPECTOR)
-
 namespace WebCore {
 
 class InspectorDOMAgent;
@@ -46,17 +44,14 @@ public:
     PageConsoleAgent(WebInjectedScriptManager*, InspectorDOMAgent*);
     virtual ~PageConsoleAgent() { }
 
-    virtual bool isWorkerAgent() const override { return false; }
-
 private:
-    virtual void clearMessages(ErrorString*) override;
-    virtual void addInspectedNode(ErrorString*, int nodeId) override;
+    virtual bool isWorkerAgent() const override { return false; }
+    virtual void clearMessages(ErrorString&) override;
+    virtual void addInspectedNode(ErrorString&, int nodeId) override;
 
     InspectorDOMAgent* m_inspectorDOMAgent;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(PageConsoleAgent_h)

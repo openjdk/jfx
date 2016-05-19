@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -137,6 +137,11 @@ BOOL hostIsUsedBySomeTestsToGenerateError(NSString *host)
     return NSOrderedSame == [host compare:@"255.255.255.255"];
 }
 
+BOOL isAllowedHost(NSString *host)
+{
+    return gTestRunner->allowedHosts().count(host.UTF8String);
+}
+
 -(NSURLRequest *)webView: (WebView *)wv resource:identifier willSendRequest: (NSURLRequest *)request redirectResponse:(NSURLResponse *)redirectResponse fromDataSource:(WebDataSource *)dataSource
 {
     if (!done && gTestRunner->dumpResourceLoadCallbacks()) {
@@ -160,12 +165,12 @@ BOOL hostIsUsedBySomeTestsToGenerateError(NSString *host)
     NSURL *url = [request URL];
     NSString *host = [url host];
     if (host && (NSOrderedSame == [[url scheme] caseInsensitiveCompare:@"http"] || NSOrderedSame == [[url scheme] caseInsensitiveCompare:@"https"])) {
-        NSString *testPathOrURL = [NSString stringWithUTF8String:gTestRunner->testPathOrURL().c_str()];
-        NSString *lowercaseTestPathOrURL = [testPathOrURL lowercaseString];
+        NSString *testURL = [NSString stringWithUTF8String:gTestRunner->testURL().c_str()];
+        NSString *lowercaseTestURL = [testURL lowercaseString];
         NSString *testHost = 0;
-        if ([lowercaseTestPathOrURL hasPrefix:@"http:"] || [lowercaseTestPathOrURL hasPrefix:@"https:"])
-            testHost = [[NSURL URLWithString:testPathOrURL] host];
-        if (!isLocalhost(host) && !hostIsUsedBySomeTestsToGenerateError(host) && (!testHost || isLocalhost(testHost))) {
+        if ([lowercaseTestURL hasPrefix:@"http:"] || [lowercaseTestURL hasPrefix:@"https:"])
+            testHost = [[NSURL URLWithString:testURL] host];
+        if (!isLocalhost(host) && !hostIsUsedBySomeTestsToGenerateError(host) && !isAllowedHost(host) && (!testHost || isLocalhost(testHost))) {
             printf("Blocked access to external URL %s\n", [[url absoluteString] cStringUsingEncoding:NSUTF8StringEncoding]);
             return nil;
         }

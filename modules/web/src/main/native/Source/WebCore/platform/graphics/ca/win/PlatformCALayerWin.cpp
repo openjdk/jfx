@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2014-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,9 +28,12 @@
 #include "PlatformCALayerWin.h"
 
 #include "AbstractCACFLayerTreeHost.h"
-#include "Font.h"
+#include "FontCascade.h"
 #include "GraphicsContext.h"
+#include "PlatformCAAnimationWin.h"
 #include "PlatformCALayerWinInternal.h"
+#include "TileController.h"
+#include "WebCoreHeaderDetection.h"
 #include <QuartzCore/CoreAnimationCF.h>
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #include <wtf/CurrentTime.h>
@@ -92,6 +95,24 @@ PlatformCALayer* PlatformCALayer::platformCALayer(void* platformLayer)
     return layerIntern ? layerIntern->owner() : 0;
 }
 
+PlatformCALayer::RepaintRectList PlatformCALayer::collectRectsToPaint(CGContextRef, PlatformCALayer*)
+{
+    // FIXME: We should actually collect rects to use instead of defaulting to Windows'
+    // normal drawing path.
+    PlatformCALayer::RepaintRectList dirtyRects;
+    return dirtyRects;
+}
+
+void PlatformCALayer::drawLayerContents(CGContextRef context, WebCore::PlatformCALayer* platformCALayer, RepaintRectList&)
+{
+    intern(platformCALayer)->displayCallback(platformCALayer->platformLayer(), context);
+}
+
+CGRect PlatformCALayer::frameForLayer(const PlatformLayer* tileLayer)
+{
+    return CACFLayerGetFrame(static_cast<CACFLayerRef>(const_cast<PlatformLayer*>(tileLayer)));
+}
+
 static void displayCallback(CACFLayerRef caLayer, CGContextRef context)
 {
     ASSERT_ARG(caLayer, CACFLayerGetUserData(caLayer));
@@ -114,8 +135,11 @@ PlatformCALayerWin::PlatformCALayerWin(LayerType layerType, PlatformLayer* layer
         return;
     }
 
-    ASSERT((layerType != LayerTypeTiledBackingLayer) && (layerType != LayerTypePageTiledBackingLayer));
     m_layer = adoptCF(CACFLayerCreate(toCACFLayerType(layerType)));
+
+#if HAVE(CACFLAYER_SETCONTENTSSCALE)
+    CACFLayerSetContentsScale(m_layer.get(), owner ? owner->platformCALayerDeviceScaleFactor() : 1.0f);
+#endif
 
     // Create the PlatformCALayerWinInternal object and point to it in the userdata.
     PlatformCALayerWinInternal* intern = new PlatformCALayerWinInternal(this);
@@ -124,6 +148,11 @@ PlatformCALayerWin::PlatformCALayerWin(LayerType layerType, PlatformLayer* layer
     // Set the display callback
     CACFLayerSetDisplayCallback(m_layer.get(), displayCallback);
     CACFLayerSetLayoutCallback(m_layer.get(), layoutSublayersProc);
+
+    if (usesTiledBackingLayer()) {
+        TileController* tileController = intern->createTileController(this);
+        m_customSublayers = std::make_unique<PlatformCALayerList>(tileController->containerLayers());
+    }
 }
 
 PlatformCALayerWin::~PlatformCALayerWin()
@@ -157,9 +186,7 @@ PassRefPtr<PlatformCALayer> PlatformCALayerWin::clone(PlatformCALayerClient* own
     newLayer->setOpaque(isOpaque());
     newLayer->setBackgroundColor(backgroundColor());
     newLayer->setContentsScale(contentsScale());
-#if ENABLE(CSS_FILTERS)
-    newLayer->copyFiltersFrom(this);
-#endif
+    newLayer->copyFiltersFrom(*this);
 
     return newLayer;
 }
@@ -167,10 +194,10 @@ PassRefPtr<PlatformCALayer> PlatformCALayerWin::clone(PlatformCALayerClient* own
 PlatformCALayer* PlatformCALayerWin::rootLayer() const
 {
     AbstractCACFLayerTreeHost* host = layerTreeHostForLayer(this);
-    return host ? host->rootLayer() : 0;
+    return host ? host->rootLayer() : nullptr;
 }
 
-void PlatformCALayerWin::animationStarted(CFTimeInterval beginTime)
+void PlatformCALayerWin::animationStarted(const String& animationKey, CFTimeInterval beginTime)
 {
     // Update start time for any animation not yet started
     CFTimeInterval cacfBeginTime = currentTimeToMediaTime(beginTime);
@@ -180,12 +207,23 @@ void PlatformCALayerWin::animationStarted(CFTimeInterval beginTime)
         it->value->setActualStartTimeIfNeeded(cacfBeginTime);
 
     if (m_owner)
-        m_owner->platformCALayerAnimationStarted(beginTime);
+        m_owner->platformCALayerAnimationStarted(animationKey, beginTime);
 }
 
-void PlatformCALayerWin::setNeedsDisplay(const FloatRect* dirtyRect)
+void PlatformCALayerWin::animationEnded(const String& animationKey)
 {
-    intern(this)->setNeedsDisplay(dirtyRect);
+    if (m_owner)
+        m_owner->platformCALayerAnimationEnded(animationKey);
+}
+
+void PlatformCALayerWin::setNeedsDisplayInRect(const FloatRect& dirtyRect)
+{
+    intern(this)->setNeedsDisplayInRect(dirtyRect);
+}
+
+void PlatformCALayerWin::setNeedsDisplay()
+{
+    intern(this)->setNeedsDisplay();
 }
 
 void PlatformCALayerWin::setNeedsCommit()
@@ -195,14 +233,14 @@ void PlatformCALayerWin::setNeedsCommit()
         host->layerTreeDidChange();
 }
 
-void PlatformCALayerWin::setContentsChanged()
+void PlatformCALayerWin::copyContentsFromLayer(PlatformCALayer* source)
 {
-    // FIXME: There is no equivalent of setContentsChanged in CACF. For now I will
-    // set contents to 0 and then back to its original value to see if that
-    // kicks CACF into redisplaying.
-    RetainPtr<CFTypeRef> contents = CACFLayerGetContents(m_layer.get());
-    CACFLayerSetContents(m_layer.get(), 0);
-    CACFLayerSetContents(m_layer.get(), contents.get());
+    if (source) {
+        RetainPtr<CFTypeRef> contents = CACFLayerGetContents(source->platformLayer());
+        CACFLayerSetContents(m_layer.get(), contents.get());
+    } else
+        CACFLayerSetContents(m_layer.get(), nullptr);
+
     setNeedsCommit();
 }
 
@@ -236,54 +274,51 @@ void PlatformCALayerWin::removeAllSublayers()
     intern(this)->removeAllSublayers();
 }
 
-void PlatformCALayerWin::appendSublayer(PlatformCALayer* layer)
+void PlatformCALayerWin::appendSublayer(PlatformCALayer& layer)
 {
     // This must be in terms of insertSublayer instead of a direct call so PlatformCALayerInternal can override.
     insertSublayer(layer, intern(this)->sublayerCount());
 }
 
-void PlatformCALayerWin::insertSublayer(PlatformCALayer* layer, size_t index)
+void PlatformCALayerWin::insertSublayer(PlatformCALayer& layer, size_t index)
 {
     intern(this)->insertSublayer(layer, index);
 }
 
-void PlatformCALayerWin::replaceSublayer(PlatformCALayer* reference, PlatformCALayer* newLayer)
+void PlatformCALayerWin::replaceSublayer(PlatformCALayer& reference, PlatformCALayer& newLayer)
 {
     // This must not use direct calls to allow PlatformCALayerInternal to override.
-    ASSERT_ARG(reference, reference);
-    ASSERT_ARG(reference, reference->superlayer() == this);
+    ASSERT_ARG(reference, reference.superlayer() == this);
 
-    if (reference == newLayer)
+    if (&reference == &newLayer)
         return;
 
-    int referenceIndex = intern(this)->indexOfSublayer(reference);
+    int referenceIndex = intern(this)->indexOfSublayer(&reference);
     ASSERT(referenceIndex != -1);
     if (referenceIndex == -1)
         return;
 
-    reference->removeFromSuperlayer();
+    reference.removeFromSuperlayer();
 
-    if (newLayer) {
-        newLayer->removeFromSuperlayer();
-        insertSublayer(newLayer, referenceIndex);
-    }
+    newLayer.removeFromSuperlayer();
+    insertSublayer(newLayer, referenceIndex);
 }
 
-void PlatformCALayerWin::adoptSublayers(PlatformCALayer* source)
+void PlatformCALayerWin::adoptSublayers(PlatformCALayer& source)
 {
     PlatformCALayerList sublayers;
-    intern(source)->getSublayers(sublayers);
+    intern(&source)->getSublayers(sublayers);
 
     // Use setSublayers() because it properly nulls out the superlayer pointers.
     setSublayers(sublayers);
 }
 
-void PlatformCALayerWin::addAnimationForKey(const String& key, PlatformCAAnimation* animation)
+void PlatformCALayerWin::addAnimationForKey(const String& key, PlatformCAAnimation& animation)
 {
     // Add it to the animation list
-    m_animations.add(key, animation);
+    m_animations.add(key, &animation);
 
-    CACFLayerAddAnimation(m_layer.get(), key.createCFString().get(), animation->platformAnimation());
+    CACFLayerAddAnimation(m_layer.get(), key.createCFString().get(), downcast<PlatformCAAnimationWin>(animation).platformAnimation());
     setNeedsCommit();
 
     // Tell the host about it so we can fire the start animation event
@@ -398,6 +433,15 @@ void PlatformCALayerWin::setHidden(bool value)
     setNeedsCommit();
 }
 
+void PlatformCALayerWin::setBackingStoreAttached(bool)
+{
+}
+
+bool PlatformCALayerWin::backingStoreAttached() const
+{
+    return true;
+}
+
 void PlatformCALayerWin::setGeometryFlipped(bool value)
 {
     CACFLayerSetGeometryFlipped(m_layer.get(), value);
@@ -509,17 +553,13 @@ void PlatformCALayerWin::setOpacity(float value)
     setNeedsCommit();
 }
 
-#if ENABLE(CSS_FILTERS)
-
 void PlatformCALayerWin::setFilters(const FilterOperations&)
 {
 }
 
-void PlatformCALayerWin::copyFiltersFrom(const PlatformCALayer*)
+void PlatformCALayerWin::copyFiltersFrom(const PlatformCALayer&)
 {
 }
-
-#endif // ENABLE(CSS_FILTERS)
 
 void PlatformCALayerWin::setName(const String& value)
 {
@@ -539,13 +579,69 @@ void PlatformCALayerWin::setTimeOffset(CFTimeInterval value)
     setNeedsCommit();
 }
 
-float PlatformCALayerWin::contentsScale() const
+void PlatformCALayerWin::setEdgeAntialiasingMask(unsigned mask)
 {
-    return 1;
+    CACFLayerSetEdgeAntialiasingMask(m_layer.get(), mask);
+    setNeedsCommit();
 }
 
-void PlatformCALayerWin::setContentsScale(float)
+float PlatformCALayerWin::contentsScale() const
 {
+#if HAVE(CACFLAYER_SETCONTENTSSCALE)
+    return CACFLayerGetContentsScale(m_layer.get());
+#else
+    return 1.0f;
+#endif
+}
+
+void PlatformCALayerWin::setContentsScale(float scaleFactor)
+{
+#if HAVE(CACFLAYER_SETCONTENTSSCALE)
+    CACFLayerSetContentsScale(m_layer.get(), scaleFactor);
+#endif
+}
+
+float PlatformCALayerWin::cornerRadius() const
+{
+    return 0; // FIXME: implement.
+}
+
+void PlatformCALayerWin::setCornerRadius(float value)
+{
+    // FIXME: implement.
+}
+
+FloatRoundedRect PlatformCALayerWin::shapeRoundedRect() const
+{
+    // FIXME: implement.
+    return FloatRoundedRect();
+}
+
+void PlatformCALayerWin::setShapeRoundedRect(const FloatRoundedRect&)
+{
+    // FIXME: implement.
+}
+
+WindRule PlatformCALayerWin::shapeWindRule() const
+{
+    // FIXME: implement.
+    return RULE_NONZERO;
+}
+
+void PlatformCALayerWin::setShapeWindRule(WindRule)
+{
+    // FIXME: implement.
+}
+
+Path PlatformCALayerWin::shapePath() const
+{
+    // FIXME: implement.
+    return Path();
+}
+
+void PlatformCALayerWin::setShapePath(const Path&)
+{
+    // FIXME: implement.
 }
 
 #ifndef NDEBUG
@@ -577,6 +673,7 @@ static void printLayer(const PlatformCALayer* layer, int indent)
     case PlatformCALayer::LayerTypeWebLayer: layerTypeName = "web-layer"; break;
     case PlatformCALayer::LayerTypeTransformLayer: layerTypeName = "transform-layer"; break;
     case PlatformCALayer::LayerTypeWebTiledLayer: layerTypeName = "web-tiled-layer"; break;
+    case PlatformCALayer::LayerTypeTiledBackingLayer: layerTypeName = "tiled-backing-layer"; break;
     case PlatformCALayer::LayerTypeRootLayer: layerTypeName = "root-layer"; break;
     case PlatformCALayer::LayerTypeCustom: layerTypeName = "custom-layer"; break;
     }
@@ -632,7 +729,7 @@ static void printLayer(const PlatformCALayer* layer, int indent)
         if (CFGetTypeID(layerContents) == CGImageGetTypeID()) {
             CGImageRef imageContents = static_cast<CGImageRef>(const_cast<void*>(layerContents));
             printIndent(indent + 1);
-            fprintf(stderr, "(contents (image [%d %d]))\n",
+            fprintf(stderr, "(contents (image [%Iu %Iu]))\n",
                 CGImageGetWidth(imageContents), CGImageGetHeight(imageContents));
         }
     }
@@ -672,4 +769,12 @@ void PlatformCALayerWin::printTree() const
 PassRefPtr<PlatformCALayer> PlatformCALayerWin::createCompatibleLayer(PlatformCALayer::LayerType layerType, PlatformCALayerClient* client) const
 {
     return PlatformCALayerWin::create(layerType, client);
+}
+
+TiledBacking* PlatformCALayerWin::tiledBacking()
+{
+    if (!usesTiledBackingLayer())
+        return nullptr;
+
+    return intern(this)->tiledBacking();
 }

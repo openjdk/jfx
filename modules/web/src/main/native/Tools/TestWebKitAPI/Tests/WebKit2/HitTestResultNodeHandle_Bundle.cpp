@@ -24,12 +24,15 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "InjectedBundleTest.h"
 #include "InjectedBundleController.h"
 #include "PlatformUtilities.h"
-#include <WebKit2/WKBundlePage.h>
-#include <WebKit2/WKBundleHitTestResult.h>
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKBundlePage.h>
+#include <WebKit/WKBundleHitTestResult.h>
+#include <WebKit/WKRetainPtr.h>
 
 namespace TestWebKitAPI {
 
@@ -46,7 +49,7 @@ public:
         if (!nodeHandle)
             return;
 
-        WKBundlePostMessage(InjectedBundleController::shared().bundle(), Util::toWK("HitTestResultNodeHandleTestDoneMessageName").get(), Util::toWK("HitTestResultNodeHandleTestDoneMessageBody").get());
+        WKBundlePostMessage(InjectedBundleController::singleton().bundle(), Util::toWK("HitTestResultNodeHandleTestDoneMessageName").get(), Util::toWK("HitTestResultNodeHandleTestDoneMessageBody").get());
     }
 
     virtual void didCreatePage(WKBundleRef bundle, WKBundlePageRef page)
@@ -64,3 +67,5 @@ public:
 static InjectedBundleTest::Register<HitTestResultNodeHandleTest> registrar("HitTestResultNodeHandleTest");
 
 } // namespace TestWebKitAPI
+
+#endif

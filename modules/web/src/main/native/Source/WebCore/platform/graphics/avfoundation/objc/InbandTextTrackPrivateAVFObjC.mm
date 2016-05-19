@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -40,9 +40,6 @@
 
 SOFT_LINK_FRAMEWORK_OPTIONAL(AVFoundation)
 
-#define AVPlayer getAVPlayerClass()
-#define AVPlayerItem getAVPlayerItemClass()
-
 SOFT_LINK_CLASS(AVFoundation, AVPlayer)
 SOFT_LINK_CLASS(AVFoundation, AVPlayerItem)
 SOFT_LINK_CLASS(AVFoundation, AVMetadataItem)
@@ -65,6 +62,8 @@ SOFT_LINK_POINTER(AVFoundation, AVMediaCharacteristicContainsOnlyForcedSubtitles
 SOFT_LINK_POINTER(AVFoundation, AVMediaCharacteristicIsMainProgramContent, NSString *)
 SOFT_LINK_POINTER(AVFoundation, AVMediaCharacteristicEasyToRead, NSString *)
 
+#define AVPlayer getAVPlayerClass()
+#define AVPlayerItem getAVPlayerItemClass()
 #define AVMetadataItem getAVMetadataItemClass()
 #define AVPlayerItemLegibleOutput getAVPlayerItemLegibleOutputClass()
 #define AVMediaCharacteristicLegible getAVMediaCharacteristicLegible()
@@ -76,8 +75,8 @@ SOFT_LINK_POINTER(AVFoundation, AVMediaCharacteristicEasyToRead, NSString *)
 
 namespace WebCore {
 
-InbandTextTrackPrivateAVFObjC::InbandTextTrackPrivateAVFObjC(AVFInbandTrackParent* player, AVMediaSelectionOption *selection)
-    : InbandTextTrackPrivateAVF(player)
+InbandTextTrackPrivateAVFObjC::InbandTextTrackPrivateAVFObjC(AVFInbandTrackParent* player, AVMediaSelectionOption *selection, InbandTextTrackPrivate::CueFormat format)
+    : InbandTextTrackPrivateAVF(player, format)
     , m_mediaSelectionOption(selection)
 {
 }

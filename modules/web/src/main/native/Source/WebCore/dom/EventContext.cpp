@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -76,12 +76,12 @@ MouseOrFocusEventContext::~MouseOrFocusEventContext()
 
 void MouseOrFocusEventContext::handleLocalEvents(Event& event) const
 {
-    ASSERT(event.isMouseEvent() || event.isFocusEvent());
+    ASSERT(is<MouseEvent>(event) || is<FocusEvent>(event));
     if (m_relatedTarget) {
-        if (event.isMouseEvent())
-            toMouseEvent(event).setRelatedTarget(m_relatedTarget.get());
-        else if (event.isFocusEvent())
-            toFocusEvent(event).setRelatedTarget(m_relatedTarget.get());
+        if (is<MouseEvent>(event))
+            downcast<MouseEvent>(event).setRelatedTarget(m_relatedTarget.get());
+        else if (is<FocusEvent>(event))
+            downcast<FocusEvent>(event).setRelatedTarget(m_relatedTarget.get());
     }
     EventContext::handleLocalEvents(event);
 }
@@ -111,8 +111,8 @@ void TouchEventContext::handleLocalEvents(Event& event) const
     checkReachability(m_targetTouches.get());
     checkReachability(m_changedTouches.get());
 #endif
-    ASSERT(event.isTouchEvent());
-    TouchEvent& touchEvent = toTouchEvent(event);
+    ASSERT(is<TouchEvent>(event));
+    TouchEvent& touchEvent = downcast<TouchEvent>(event);
     touchEvent.setTouches(m_touches);
     touchEvent.setTargetTouches(m_targetTouches);
     touchEvent.setChangedTouches(m_changedTouches);
@@ -127,7 +127,8 @@ bool TouchEventContext::isTouchEventContext() const
 #ifndef NDEBUG
 void TouchEventContext::checkReachability(TouchList* touchList) const
 {
-    for (size_t i = 0; i < touchList->length(); ++i)
+    size_t length = touchList->length();
+    for (size_t i = 0; i < length; ++i)
         ASSERT(isReachable(touchList->item(i)->target()->toNode()));
 }
 #endif

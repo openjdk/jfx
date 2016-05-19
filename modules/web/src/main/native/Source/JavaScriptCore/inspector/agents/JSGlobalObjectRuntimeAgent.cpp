@@ -26,8 +26,6 @@
 #include "config.h"
 #include "JSGlobalObjectRuntimeAgent.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
 #include "JSGlobalObject.h"
@@ -42,35 +40,35 @@ JSGlobalObjectRuntimeAgent::JSGlobalObjectRuntimeAgent(InjectedScriptManager* in
 {
 }
 
-void JSGlobalObjectRuntimeAgent::didCreateFrontendAndBackend(InspectorFrontendChannel* frontendChannel, InspectorBackendDispatcher* backendDispatcher)
+void JSGlobalObjectRuntimeAgent::didCreateFrontendAndBackend(FrontendChannel* frontendChannel, BackendDispatcher* backendDispatcher)
 {
-    m_frontendDispatcher = std::make_unique<InspectorRuntimeFrontendDispatcher>(frontendChannel);
-    m_backendDispatcher = InspectorRuntimeBackendDispatcher::create(backendDispatcher, this);
+    m_frontendDispatcher = std::make_unique<RuntimeFrontendDispatcher>(frontendChannel);
+    m_backendDispatcher = RuntimeBackendDispatcher::create(backendDispatcher, this);
 }
 
-void JSGlobalObjectRuntimeAgent::willDestroyFrontendAndBackend(InspectorDisconnectReason)
+void JSGlobalObjectRuntimeAgent::willDestroyFrontendAndBackend(DisconnectReason reason)
 {
     m_frontendDispatcher = nullptr;
-    m_backendDispatcher.clear();
+    m_backendDispatcher = nullptr;
+
+    InspectorRuntimeAgent::willDestroyFrontendAndBackend(reason);
 }
 
-VM* JSGlobalObjectRuntimeAgent::globalVM()
+VM& JSGlobalObjectRuntimeAgent::globalVM()
 {
-    return &m_globalObject.vm();
+    return m_globalObject.vm();
 }
 
-InjectedScript JSGlobalObjectRuntimeAgent::injectedScriptForEval(ErrorString* errorString, const int* executionContextId)
+InjectedScript JSGlobalObjectRuntimeAgent::injectedScriptForEval(ErrorString& errorString, const int* executionContextId)
 {
     ASSERT_UNUSED(executionContextId, !executionContextId);
 
     JSC::ExecState* scriptState = m_globalObject.globalExec();
     InjectedScript injectedScript = injectedScriptManager()->injectedScriptFor(scriptState);
     if (injectedScript.hasNoValue())
-        *errorString = ASCIILiteral("Internal error: main world execution context not found.");
+        errorString = ASCIILiteral("Internal error: main world execution context not found.");
 
     return injectedScript;
 }
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)

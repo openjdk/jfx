@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -43,7 +43,7 @@ namespace WebCore {
 
 History::History(Frame* frame)
     : DOMWindowProperty(frame)
-    , m_lastStateObjectRequested(0)
+    , m_lastStateObjectRequested(nullptr)
 {
 }
 
@@ -117,7 +117,7 @@ void History::go(ScriptExecutionContext* context, int distance)
         return;
 
     ASSERT(isMainThread());
-    Document* activeDocument = toDocument(context);
+    Document* activeDocument = downcast<Document>(context);
     if (!activeDocument)
         return;
 
@@ -147,18 +147,16 @@ void History::stateObjectAdded(PassRefPtr<SerializedScriptValue> data, const Str
         return;
     }
 
-    if (stateObjectType == StateObjectType::Push)
-        m_frame->loader().history().pushState(data, title, fullURL.string());
-    else if (stateObjectType == StateObjectType::Replace)
-        m_frame->loader().history().replaceState(data, title, fullURL.string());
-
     if (!urlString.isEmpty())
         m_frame->document()->updateURLForPushOrReplaceState(fullURL);
 
-    if (stateObjectType == StateObjectType::Push)
+    if (stateObjectType == StateObjectType::Push) {
+        m_frame->loader().history().pushState(data, title, fullURL.string());
         m_frame->loader().client().dispatchDidPushStateWithinPage();
-    else if (stateObjectType == StateObjectType::Replace)
+    } else if (stateObjectType == StateObjectType::Replace) {
+        m_frame->loader().history().replaceState(data, title, fullURL.string());
         m_frame->loader().client().dispatchDidReplaceStateWithinPage();
+    }
 }
 
 } // namespace WebCore

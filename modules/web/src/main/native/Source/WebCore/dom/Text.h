@@ -29,25 +29,23 @@
 namespace WebCore {
 
 class RenderText;
-class ScriptExecutionContext;
 
 class Text : public CharacterData {
 public:
     static const unsigned defaultLengthLimit = 1 << 16;
 
-    static PassRefPtr<Text> create(Document&, const String&);
-    static PassRefPtr<Text> create(ScriptExecutionContext&, const String&);
-    static PassRefPtr<Text> createWithLengthLimit(Document&, const String&, unsigned positionInString, unsigned lengthLimit = defaultLengthLimit);
-    static PassRefPtr<Text> createEditingText(Document&, const String&);
+    static Ref<Text> create(Document&, const String&);
+    static Ref<Text> createWithLengthLimit(Document&, const String&, unsigned positionInString, unsigned lengthLimit = defaultLengthLimit);
+    static Ref<Text> createEditingText(Document&, const String&);
 
     virtual ~Text();
 
-    PassRefPtr<Text> splitText(unsigned offset, ExceptionCode&);
+    RefPtr<Text> splitText(unsigned offset, ExceptionCode&);
 
     // DOM Level 3: http://www.w3.org/TR/DOM-Level-3-Core/core.html#ID-1312295772
 
     String wholeText() const;
-    PassRefPtr<Text> replaceWholeText(const String&, ExceptionCode&);
+    RefPtr<Text> replaceWholeText(const String&, ExceptionCode&);
 
     RenderPtr<RenderText> createTextRenderer(const RenderStyle&);
 
@@ -64,22 +62,20 @@ protected:
 private:
     virtual String nodeName() const override;
     virtual NodeType nodeType() const override;
-    virtual PassRefPtr<Node> cloneNode(bool deep) override;
+    virtual RefPtr<Node> cloneNodeInternal(Document&, CloningOperation) override;
     virtual bool childTypeAllowed(NodeType) const override;
 
-    virtual PassRefPtr<Text> virtualCreate(const String&);
+    virtual Ref<Text> virtualCreate(const String&);
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
     virtual void formatForDebugger(char* buffer, unsigned length) const override;
 #endif
 };
 
-inline bool isText(const Node& node) { return node.isTextNode(); }
-void isText(const Text&); // Catch unnecessary runtime check of type known at compile time.
-void isText(const ContainerNode&); // Catch unnecessary runtime check of type known at compile time.
-
-NODE_TYPE_CASTS(Text)
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Text)
+    static bool isType(const WebCore::Node& node) { return node.isTextNode(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // Text_h

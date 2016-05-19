@@ -52,12 +52,13 @@ class WorkerGlobalScope;
 typedef JSC::ExecState ScriptState;
 
 DOMWindow* domWindowFromExecState(JSC::ExecState*);
+Frame* frameFromExecState(JSC::ExecState*);
 ScriptExecutionContext* scriptExecutionContextFromExecState(JSC::ExecState*);
 
 JSC::ExecState* mainWorldExecState(Frame*);
 
 JSC::ExecState* execStateFromNode(DOMWrapperWorld&, Node*);
-JSC::ExecState* execStateFromPage(DOMWrapperWorld&, Page*);
+WEBCORE_EXPORT JSC::ExecState* execStateFromPage(DOMWrapperWorld&, Page*);
 JSC::ExecState* execStateFromWorkerGlobalScope(WorkerGlobalScope*);
 
 } // namespace WebCore

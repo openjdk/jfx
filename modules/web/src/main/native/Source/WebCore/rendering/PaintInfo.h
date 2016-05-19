@@ -41,7 +41,6 @@ class OverlapTestRequestClient;
 class RenderInline;
 class RenderLayerModelObject;
 class RenderObject;
-class RenderRegion;
 
 typedef HashMap<OverlapTestRequestClient*, IntRect> OverlapTestRequestMap;
 
@@ -51,17 +50,16 @@ typedef HashMap<OverlapTestRequestClient*, IntRect> OverlapTestRequestMap;
  */
 struct PaintInfo {
     PaintInfo(GraphicsContext* newContext, const LayoutRect& newRect, PaintPhase newPhase, PaintBehavior newPaintBehavior,
-        RenderObject* newSubtreePaintRoot = nullptr, RenderRegion* region = nullptr, ListHashSet<RenderInline*>* newOutlineObjects = nullptr,
+        RenderObject* newSubtreePaintRoot = nullptr, ListHashSet<RenderInline*>* newOutlineObjects = nullptr,
         OverlapTestRequestMap* overlapTestRequests = nullptr, const RenderLayerModelObject* newPaintContainer = nullptr)
-        : context(newContext)
-        , rect(newRect)
-        , phase(newPhase)
-        , paintBehavior(newPaintBehavior)
-        , subtreePaintRoot(newSubtreePaintRoot)
-        , renderRegion(region)
-        , outlineObjects(newOutlineObjects)
-        , overlapTestRequests(overlapTestRequests)
-        , paintContainer(newPaintContainer)
+            : context(newContext)
+            , rect(newRect)
+            , phase(newPhase)
+            , paintBehavior(newPaintBehavior)
+            , subtreePaintRoot(newSubtreePaintRoot)
+            , outlineObjects(newOutlineObjects)
+            , overlapTestRequests(overlapTestRequests)
+            , paintContainer(newPaintContainer)
     {
     }
 
@@ -82,7 +80,10 @@ struct PaintInfo {
         return !subtreePaintRoot || subtreePaintRoot == &renderer;
     }
 
+    bool forceTextColor() const { return forceBlackText() || forceWhiteText(); }
     bool forceBlackText() const { return paintBehavior & PaintBehaviorForceBlackText; }
+    bool forceWhiteText() const { return paintBehavior & PaintBehaviorForceWhiteText; }
+    Color forcedTextColor() const { return (forceBlackText()) ? Color::black : Color::white; }
 
     bool skipRootBackground() const { return paintBehavior & PaintBehaviorSkipRootBackground; }
     bool paintRootBackgroundOnly() const { return paintBehavior & PaintBehaviorRootBackgroundOnly; }
@@ -94,7 +95,7 @@ struct PaintInfo {
 
         context->concatCTM(localToAncestorTransform);
 
-        if (rect == LayoutRect::infiniteRect())
+        if (rect.isInfinite())
             return;
 
         FloatRect tranformedRect(localToAncestorTransform.inverse().mapRect(rect));
@@ -107,7 +108,6 @@ struct PaintInfo {
     PaintPhase phase;
     PaintBehavior paintBehavior;
     RenderObject* subtreePaintRoot; // used to draw just one element and its visual children
-    RenderRegion* renderRegion;
     ListHashSet<RenderInline*>* outlineObjects; // used to list outlines that should be painted by a block with inline children
     OverlapTestRequestMap* overlapTestRequests;
     const RenderLayerModelObject* paintContainer; // the layer object that originates the current painting

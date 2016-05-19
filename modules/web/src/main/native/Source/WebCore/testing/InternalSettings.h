@@ -34,6 +34,7 @@
 #include "FontGenericFamilies.h"
 #include "IntSize.h"
 #include "InternalSettingsGenerated.h"
+#include "SecurityOrigin.h"
 #include <wtf/PassRefPtr.h>
 
 namespace WebCore {
@@ -52,7 +53,6 @@ public:
         explicit Backup(Settings&);
         void restoreTo(Settings&);
 
-        bool m_originalCSSExclusionsEnabled;
         bool m_originalCSSShapesEnabled;
         EditingBehaviorType m_originalEditingBehavior;
 
@@ -83,11 +83,22 @@ public:
         bool m_shouldDisplayTextDescriptions;
 #endif
         String m_defaultVideoPosterURL;
+        bool m_forcePendingWebGLPolicy;
         bool m_originalTimeWithoutMouseMovementBeforeHidingControls;
         bool m_useLegacyBackgroundSizeShorthandBehavior;
         bool m_autoscrollForDragAndDropEnabled;
         bool m_pluginReplacementEnabled;
         bool m_shouldConvertPositionStyleOnCopy;
+        bool m_fontFallbackPrefersPictographs;
+        bool m_backgroundShouldExtendBeyondPage;
+        SecurityOrigin::StorageBlockingPolicy m_storageBlockingPolicy;
+        bool m_scrollingTreeIncludesFrames;
+#if ENABLE(TOUCH_EVENTS)
+        bool m_touchEventEmulationEnabled;
+#endif
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+        bool m_allowsAirPlayForMediaPlayback;
+#endif
     };
 
     static PassRefPtr<InternalSettings> create(Page* page)
@@ -100,9 +111,8 @@ public:
     virtual ~InternalSettings();
     void resetToConsistentState();
 
-    void setMockScrollbarsEnabled(bool enabled, ExceptionCode&);
-    void setUsesOverlayScrollbars(bool enabled, ExceptionCode&);
-    void setTouchEventEmulationEnabled(bool enabled, ExceptionCode&);
+    void setUsesOverlayScrollbars(bool, ExceptionCode&);
+    void setTouchEventEmulationEnabled(bool, ExceptionCode&);
     void setStandardFontFamily(const String& family, const String& script, ExceptionCode&);
     void setSerifFontFamily(const String& family, const String& script, ExceptionCode&);
     void setSansSerifFontFamily(const String& family, const String& script, ExceptionCode&);
@@ -114,25 +124,26 @@ public:
     void setTextAutosizingWindowSizeOverride(int width, int height, ExceptionCode&);
     void setTextAutosizingFontScaleFactor(float fontScaleFactor, ExceptionCode&);
     void setMediaTypeOverride(const String& mediaType, ExceptionCode&);
-    void setCSSExclusionsEnabled(bool enabled, ExceptionCode&);
-    void setCSSShapesEnabled(bool enabled, ExceptionCode&);
+    void setCSSShapesEnabled(bool, ExceptionCode&);
     void setCanStartMedia(bool, ExceptionCode&);
+    void setWirelessPlaybackDisabled(bool);
     void setEditingBehavior(const String&, ExceptionCode&);
     void setShouldDisplayTrackKind(const String& kind, bool enabled, ExceptionCode&);
     bool shouldDisplayTrackKind(const String& kind, ExceptionCode&);
     void setStorageBlockingPolicy(const String&, ExceptionCode&);
     void setLangAttributeAwareFormControlUIEnabled(bool);
-    void setImagesEnabled(bool enabled, ExceptionCode&);
+    void setImagesEnabled(bool, ExceptionCode&);
     void setMinimumTimerInterval(double intervalInSeconds, ExceptionCode&);
     void setDefaultVideoPosterURL(const String& url, ExceptionCode&);
+    void setForcePendingWebGLPolicy(bool, ExceptionCode&);
     void setTimeWithoutMouseMovementBeforeHidingControls(double time, ExceptionCode&);
-    void setUseLegacyBackgroundSizeShorthandBehavior(bool enabled, ExceptionCode&);
-    void setAutoscrollForDragAndDropEnabled(bool enabled, ExceptionCode&);
-    void setFontFallbackPrefersPictographs(bool preferPictographs, ExceptionCode&);
+    void setUseLegacyBackgroundSizeShorthandBehavior(bool, ExceptionCode&);
+    void setAutoscrollForDragAndDropEnabled(bool, ExceptionCode&);
+    void setFontFallbackPrefersPictographs(bool, ExceptionCode&);
     void setPluginReplacementEnabled(bool);
-    void setBackgroundShouldExtendBeyondPage(bool hasExtendedBackground, ExceptionCode&);
-    void setShouldConvertPositionStyleOnCopy(bool convert, ExceptionCode&);
-
+    void setBackgroundShouldExtendBeyondPage(bool, ExceptionCode&);
+    void setShouldConvertPositionStyleOnCopy(bool, ExceptionCode&);
+    void setScrollingTreeIncludesFrames(bool, ExceptionCode&);
 
 private:
     explicit InternalSettings(Page*);

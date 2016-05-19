@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY GOOGLE, INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,6 +27,7 @@
 #ifndef SecurityContext_h
 #define SecurityContext_h
 
+#include <memory>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
@@ -34,6 +35,7 @@
 namespace WebCore {
 
 class SecurityOrigin;
+class SecurityOriginPolicy;
 class ContentSecurityPolicy;
 class URL;
 
@@ -56,7 +58,6 @@ typedef int SandboxFlags;
 
 class SecurityContext {
 public:
-    SecurityOrigin* securityOrigin() const { return m_securityOrigin.get(); }
     SandboxFlags sandboxFlags() const { return m_sandboxFlags; }
     ContentSecurityPolicy* contentSecurityPolicy() { return m_contentSecurityPolicy.get(); }
 
@@ -65,10 +66,14 @@ public:
     void enforceSandboxFlags(SandboxFlags mask);
     bool isSandboxed(SandboxFlags mask) const { return m_sandboxFlags & mask; }
 
+    SecurityOriginPolicy* securityOriginPolicy() const { return m_securityOriginPolicy.get(); }
+
     // Explicitly override the security origin for this security context.
     // Note: It is dangerous to change the security origin of a script context
     //       that already contains content.
-    void setSecurityOrigin(PassRefPtr<SecurityOrigin>);
+    void setSecurityOriginPolicy(RefPtr<SecurityOriginPolicy>&&);
+
+    WEBCORE_EXPORT SecurityOrigin* securityOrigin() const;
 
     static SandboxFlags parseSandboxPolicy(const String& policy, String& invalidTokensErrorMessage);
 
@@ -76,7 +81,7 @@ protected:
     SecurityContext();
     virtual ~SecurityContext();
 
-    void setContentSecurityPolicy(PassOwnPtr<ContentSecurityPolicy>);
+    void setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy>);
 
     void didFailToInitializeSecurityOrigin() { m_haveInitializedSecurityOrigin = false; }
     bool haveInitializedSecurityOrigin() const { return m_haveInitializedSecurityOrigin; }
@@ -84,8 +89,8 @@ protected:
 private:
     bool m_haveInitializedSecurityOrigin;
     SandboxFlags m_sandboxFlags;
-    RefPtr<SecurityOrigin> m_securityOrigin;
-    OwnPtr<ContentSecurityPolicy> m_contentSecurityPolicy;
+    RefPtr<SecurityOriginPolicy> m_securityOriginPolicy;
+    std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
 };
 
 } // namespace WebCore

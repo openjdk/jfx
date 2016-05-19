@@ -31,7 +31,6 @@
 #include "JSString.h"
 #include "JSCInlines.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/text/StringImpl.h>
 
 namespace JSC {
@@ -58,7 +57,7 @@ SmallStringsStorage::SmallStringsStorage()
     RefPtr<StringImpl> baseString = StringImpl::createUninitialized(singleCharacterStringCount, characterBuffer);
     for (unsigned i = 0; i < singleCharacterStringCount; ++i) {
         characterBuffer[i] = i;
-        m_reps[i] = StringImpl::createSubstringSharingImpl(baseString, i, 1);
+        m_reps[i] = AtomicStringImpl::add(PassRefPtr<StringImpl>(StringImpl::createSubstringSharingImpl(baseString, i, 1)).get());
     }
 }
 
@@ -67,6 +66,9 @@ SmallStrings::SmallStrings()
 #define JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE(name) , m_##name(0)
     JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE)
 #undef JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE
+    , m_nullObjectString(nullptr)
+    , m_undefinedObjectString(nullptr)
+    , m_needsToBeVisited(true)
 {
     COMPILE_ASSERT(singleCharacterStringCount == sizeof(m_singleCharacterStrings) / sizeof(m_singleCharacterStrings[0]), IsNumCharactersConstInSyncWithClassUsage);
 
@@ -82,16 +84,21 @@ void SmallStrings::initializeCommonStrings(VM& vm)
 #define JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE(name) initialize(&vm, m_##name, #name);
     JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE)
 #undef JSC_COMMON_STRINGS_ATTRIBUTE_INITIALIZE
+    initialize(&vm, m_nullObjectString, "[object Null]");
+    initialize(&vm, m_undefinedObjectString, "[object Undefined]");
 }
 
 void SmallStrings::visitStrongReferences(SlotVisitor& visitor)
 {
+    m_needsToBeVisited = false;
     visitor.appendUnbarrieredPointer(&m_emptyString);
     for (unsigned i = 0; i <= maxSingleCharacterString; ++i)
         visitor.appendUnbarrieredPointer(m_singleCharacterStrings + i);
 #define JSC_COMMON_STRINGS_ATTRIBUTE_VISIT(name) visitor.appendUnbarrieredPointer(&m_##name);
     JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ATTRIBUTE_VISIT)
 #undef JSC_COMMON_STRINGS_ATTRIBUTE_VISIT
+    visitor.appendUnbarrieredPointer(&m_nullObjectString);
+    visitor.appendUnbarrieredPointer(&m_undefinedObjectString);
 }
 
 SmallStrings::~SmallStrings()
@@ -102,26 +109,29 @@ void SmallStrings::createEmptyString(VM* vm)
 {
     ASSERT(!m_emptyString);
     m_emptyString = JSString::createHasOtherOwner(*vm, StringImpl::empty());
+    m_needsToBeVisited = true;
 }
 
 void SmallStrings::createSingleCharacterString(VM* vm, unsigned char character)
 {
     if (!m_storage)
-        m_storage = adoptPtr(new SmallStringsStorage);
+        m_storage = std::make_unique<SmallStringsStorage>();
     ASSERT(!m_singleCharacterStrings[character]);
     m_singleCharacterStrings[character] = JSString::createHasOtherOwner(*vm, PassRefPtr<StringImpl>(m_storage->rep(character)));
+    m_needsToBeVisited = true;
 }
 
 StringImpl* SmallStrings::singleCharacterStringRep(unsigned char character)
 {
     if (!m_storage)
-        m_storage = adoptPtr(new SmallStringsStorage);
+        m_storage = std::make_unique<SmallStringsStorage>();
     return m_storage->rep(character);
 }
 
-void SmallStrings::initialize(VM* vm, JSString*& string, const char* value) const
+void SmallStrings::initialize(VM* vm, JSString*& string, const char* value)
 {
-    string = JSString::create(*vm, StringImpl::create(value));
+    string = JSString::create(*vm, Identifier::fromString(vm, value).impl());
+    m_needsToBeVisited = true;
 }
 
 } // namespace JSC

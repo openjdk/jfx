@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -35,8 +35,8 @@ namespace WebCore {
         FrameTree(Frame& thisFrame, Frame* parentFrame)
             : m_thisFrame(thisFrame)
             , m_parent(parentFrame)
-            , m_previousSibling(0)
-            , m_lastChild(0)
+            , m_previousSibling(nullptr)
+            , m_lastChild(nullptr)
             , m_scopedChildCount(invalidCount)
         {
         }
@@ -45,9 +45,9 @@ namespace WebCore {
 
         const AtomicString& name() const { return m_name; }
         const AtomicString& uniqueName() const { return m_uniqueName; }
-        void setName(const AtomicString&);
-        void clearName();
-        Frame* parent() const;
+        WEBCORE_EXPORT void setName(const AtomicString&);
+        WEBCORE_EXPORT void clearName();
+        WEBCORE_EXPORT Frame* parent() const;
         void setParent(Frame* parent) { m_parent = parent; }
 
         Frame* nextSibling() const { return m_nextSibling.get(); }
@@ -55,24 +55,30 @@ namespace WebCore {
         Frame* firstChild() const { return m_firstChild.get(); }
         Frame* lastChild() const { return m_lastChild; }
 
-        bool isDescendantOf(const Frame* ancestor) const;
-        Frame* traverseNext(const Frame* stayWithin = 0) const;
-        Frame* traverseNextWithWrap(bool) const;
-        Frame* traversePreviousWithWrap(bool) const;
+        Frame* firstRenderedChild() const;
+        Frame* nextRenderedSibling() const;
 
-        void appendChild(PassRefPtr<Frame>);
+        WEBCORE_EXPORT bool isDescendantOf(const Frame* ancestor) const;
+
+        WEBCORE_EXPORT Frame* traverseNext(const Frame* stayWithin = nullptr) const;
+        // Rendered means being the main frame or having an ownerRenderer. It may not have been parented in the Widget tree yet (see WidgetHierarchyUpdatesSuspensionScope).
+        WEBCORE_EXPORT Frame* traverseNextRendered(const Frame* stayWithin = nullptr) const;
+        WEBCORE_EXPORT Frame* traverseNextWithWrap(bool) const;
+        WEBCORE_EXPORT Frame* traversePreviousWithWrap(bool) const;
+
+        WEBCORE_EXPORT void appendChild(PassRefPtr<Frame>);
         bool transferChild(PassRefPtr<Frame>);
-        void detachFromParent() { m_parent = 0; }
+        void detachFromParent() { m_parent = nullptr; }
         void removeChild(Frame*);
 
         Frame* child(unsigned index) const;
         Frame* child(const AtomicString& name) const;
-        Frame* find(const AtomicString& name) const;
-        unsigned childCount() const;
+        WEBCORE_EXPORT Frame* find(const AtomicString& name) const;
+        WEBCORE_EXPORT unsigned childCount() const;
 
         AtomicString uniqueChildName(const AtomicString& requestedName) const;
 
-        Frame& top() const;
+        WEBCORE_EXPORT Frame& top() const;
 
         Frame* scopedChild(unsigned index) const;
         Frame* scopedChild(const AtomicString& name) const;
@@ -104,7 +110,7 @@ namespace WebCore {
 
 #ifndef NDEBUG
 // Outside the WebCore namespace for ease of invocation from gdb.
-void showFrameTree(const WebCore::Frame*);
+WEBCORE_EXPORT void showFrameTree(const WebCore::Frame*);
 #endif
 
 #endif // FrameTree_h

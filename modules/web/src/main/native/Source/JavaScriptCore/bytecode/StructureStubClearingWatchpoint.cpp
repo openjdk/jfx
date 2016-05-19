@@ -38,13 +38,13 @@ StructureStubClearingWatchpoint::~StructureStubClearingWatchpoint() { }
 
 StructureStubClearingWatchpoint* StructureStubClearingWatchpoint::push(
     WatchpointsOnStructureStubInfo& holder,
-    OwnPtr<StructureStubClearingWatchpoint>& head)
+    std::unique_ptr<StructureStubClearingWatchpoint>& head)
 {
-    head = adoptPtr(new StructureStubClearingWatchpoint(holder, head.release()));
+    head = std::make_unique<StructureStubClearingWatchpoint>(holder, WTF::move(head));
     return head.get();
 }
 
-void StructureStubClearingWatchpoint::fireInternal()
+void StructureStubClearingWatchpoint::fireInternal(const FireDetail&)
 {
     // This will implicitly cause my own demise: stub reset removes all watchpoints.
     // That works, because deleting a watchpoint removes it from the set's list, and

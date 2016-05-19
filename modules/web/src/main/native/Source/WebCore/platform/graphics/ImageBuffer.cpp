@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,16 +27,64 @@
 #include "config.h"
 #include "ImageBuffer.h"
 
+#include "GraphicsContext.h"
 #include "IntRect.h"
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
 
+static const float MaxClampedLength = 4096;
+static const float MaxClampedArea = MaxClampedLength * MaxClampedLength;
+
+bool ImageBuffer::sizeNeedsClamping(const FloatSize& size)
+{
+    if (size.isEmpty())
+        return false;
+
+    return floorf(size.height()) * floorf(size.width()) > MaxClampedArea;
+}
+
+bool ImageBuffer::sizeNeedsClamping(const FloatSize& size, FloatSize& scale)
+{
+    FloatSize scaledSize(size);
+    scaledSize.scale(scale.width(), scale.height());
+
+    if (!sizeNeedsClamping(scaledSize))
+        return false;
+
+    // The area of scaled size is bigger than the upper limit, adjust the scale to fit.
+    scale.scale(sqrtf(MaxClampedArea / (scaledSize.width() * scaledSize.height())));
+    ASSERT(!sizeNeedsClamping(size, scale));
+    return true;
+}
+
+FloatSize ImageBuffer::clampedSize(const FloatSize& size)
+{
+    return size.shrunkTo(FloatSize(MaxClampedLength, MaxClampedLength));
+}
+
+FloatSize ImageBuffer::clampedSize(const FloatSize& size, FloatSize& scale)
+{
+    if (size.isEmpty())
+        return size;
+
+    FloatSize clampedSize = ImageBuffer::clampedSize(size);
+    scale = FloatSize(clampedSize.width() / size.width(), clampedSize.height() / size.height());
+    ASSERT(!sizeNeedsClamping(clampedSize));
+    ASSERT(!sizeNeedsClamping(size, scale));
+    return clampedSize;
+}
+
+FloatRect ImageBuffer::clampedRect(const FloatRect& rect)
+{
+    return FloatRect(rect.location(), clampedSize(rect.size()));
+}
+
 #if !USE(CG)
 void ImageBuffer::transformColorSpace(ColorSpace srcColorSpace, ColorSpace dstColorSpace)
 {
-    DEFINE_STATIC_LOCAL(Vector<int>, deviceRgbLUT, ());
-    DEFINE_STATIC_LOCAL(Vector<int>, linearRgbLUT, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(Vector<int>, deviceRgbLUT, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(Vector<int>, linearRgbLUT, ());
 
     if (srcColorSpace == dstColorSpace)
         return;
@@ -110,7 +158,7 @@ bool ImageBuffer::copyToPlatformTexture(GraphicsContext3D&, Platform3DObject, GC
     return false;
 }
 
-std::unique_ptr<ImageBuffer> ImageBuffer::createCompatibleBuffer(const IntSize& size, float resolutionScale, ColorSpace colorSpace, const GraphicsContext* context, bool)
+std::unique_ptr<ImageBuffer> ImageBuffer::createCompatibleBuffer(const FloatSize& size, float resolutionScale, ColorSpace colorSpace, const GraphicsContext* context, bool)
 {
     return create(size, resolutionScale, colorSpace, context->isAcceleratedContext() ? Accelerated : Unaccelerated);
 }

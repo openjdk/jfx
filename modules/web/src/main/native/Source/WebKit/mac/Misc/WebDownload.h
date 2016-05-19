@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2003 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,10 +26,17 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if !TARGET_OS_IPHONE || (defined USE_APPLE_INTERNAL_SDK && USE_APPLE_INTERNAL_SDK)
 #import <Foundation/NSURLDownload.h>
+#else
+@interface NSURLDownload : NSObject
+@end
+
+@protocol NSURLDownloadDelegate;
+#endif
 
 #if TARGET_OS_IPHONE
-#import <WebKit/WAKAppKitStubs.h>
+#import <WebKitLegacy/WAKAppKitStubs.h>
 #endif
 
 @class WebDownloadInternal;
@@ -47,7 +54,7 @@
 
 @interface WebDownload : NSURLDownload
 {
-@private
+@package
     WebDownloadInternal *_webInternal;
 }
 
@@ -58,7 +65,9 @@
     @discussion The WebDownloadDelegate delegate has one extra method used to choose
     the right window when automatically prompting with a sheet.
 */
-@interface NSObject (WebDownloadDelegate)
+@protocol WebDownloadDelegate <NSURLDownloadDelegate>
+
+@optional
 
 /*!
     @method downloadWindowForAuthenticationSheet:

@@ -22,8 +22,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "FEMorphology.h"
 
 #include "Filter.h"
@@ -35,7 +33,7 @@
 
 namespace WebCore {
 
-FEMorphology::FEMorphology(Filter* filter, MorphologyOperatorType type, float radiusX, float radiusY)
+FEMorphology::FEMorphology(Filter& filter, MorphologyOperatorType type, float radiusX, float radiusY)
     : FilterEffect(filter)
     , m_type(type)
     , m_radiusX(radiusX)
@@ -43,14 +41,9 @@ FEMorphology::FEMorphology(Filter* filter, MorphologyOperatorType type, float ra
 {
 }
 
-PassRefPtr<FEMorphology> FEMorphology::create(Filter* filter, MorphologyOperatorType type, float radiusX, float radiusY)
+Ref<FEMorphology> FEMorphology::create(Filter& filter, MorphologyOperatorType type, float radiusX, float radiusY)
 {
-    return adoptRef(new FEMorphology(filter, type, radiusX, radiusY));
-}
-
-MorphologyOperatorType FEMorphology::morphologyOperator() const
-{
-    return m_type;
+    return adoptRef(*new FEMorphology(filter, type, radiusX, radiusY));
 }
 
 bool FEMorphology::setMorphologyOperator(MorphologyOperatorType type)
@@ -61,35 +54,12 @@ bool FEMorphology::setMorphologyOperator(MorphologyOperatorType type)
     return true;
 }
 
-float FEMorphology::radiusX() const
-{
-    return m_radiusX;
-}
-
 bool FEMorphology::setRadiusX(float radiusX)
 {
     if (m_radiusX == radiusX)
         return false;
     m_radiusX = radiusX;
     return true;
-}
-
-float FEMorphology::radiusY() const
-{
-    return m_radiusY;
-}
-
-void FEMorphology::determineAbsolutePaintRect()
-{
-    FloatRect paintRect = inputEffect(0)->absolutePaintRect();
-    Filter* filter = this->filter();
-    paintRect.inflateX(filter->applyHorizontalScale(m_radiusX));
-    paintRect.inflateY(filter->applyVerticalScale(m_radiusY));
-    if (clipsToBounds())
-        paintRect.intersect(maxEffectRect());
-    else
-        paintRect.unite(maxEffectRect());
-    setAbsolutePaintRect(enclosingIntRect(paintRect));
 }
 
 bool FEMorphology::setRadiusY(float radiusY)
@@ -100,58 +70,90 @@ bool FEMorphology::setRadiusY(float radiusY)
     return true;
 }
 
+void FEMorphology::determineAbsolutePaintRect()
+{
+    FloatRect paintRect = inputEffect(0)->absolutePaintRect();
+    Filter& filter = this->filter();
+    paintRect.inflateX(filter.applyHorizontalScale(m_radiusX));
+    paintRect.inflateY(filter.applyVerticalScale(m_radiusY));
+    if (clipsToBounds())
+        paintRect.intersect(maxEffectRect());
+    else
+        paintRect.unite(maxEffectRect());
+    setAbsolutePaintRect(enclosingIntRect(paintRect));
+}
+
+static inline bool shouldSupersedeExtremum(unsigned char newValue, unsigned char currentValue, MorphologyOperatorType type)
+{
+    return (type == FEMORPHOLOGY_OPERATOR_ERODE && newValue < currentValue)
+        || (type == FEMORPHOLOGY_OPERATOR_DILATE && newValue > currentValue);
+}
+
+static inline int pixelArrayIndex(int x, int y, int width, int colorChannel)
+{
+    return (y * width + x) * 4 + colorChannel;
+}
+
+static inline unsigned char columnExtremum(const Uint8ClampedArray* srcPixelArray, int x, int yStart, int yEnd, int width, unsigned colorChannel, MorphologyOperatorType type)
+{
+    unsigned char extremum = srcPixelArray->item(pixelArrayIndex(x, yStart, width, colorChannel));
+    for (int y = yStart + 1; y < yEnd; ++y) {
+        unsigned char pixel = srcPixelArray->item(pixelArrayIndex(x, y, width, colorChannel));
+        if (shouldSupersedeExtremum(pixel, extremum, type))
+            extremum = pixel;
+    }
+    return extremum;
+}
+
+static inline unsigned char kernelExtremum(const Vector<unsigned char>& kernel, MorphologyOperatorType type)
+{
+    Vector<unsigned char>::const_iterator iter = kernel.begin();
+    unsigned char extremum = *iter;
+    for (Vector<unsigned char>::const_iterator end = kernel.end(); ++iter != end; ) {
+        if (shouldSupersedeExtremum(*iter, extremum, type))
+            extremum = *iter;
+    }
+    return extremum;
+}
+
 void FEMorphology::platformApplyGeneric(PaintingData* paintingData, int yStart, int yEnd)
 {
     Uint8ClampedArray* srcPixelArray = paintingData->srcPixelArray;
     Uint8ClampedArray* dstPixelArray = paintingData->dstPixelArray;
-    const int width = paintingData->width;
-    const int height = paintingData->height;
-    const int effectWidth = width * 4;
     const int radiusX = paintingData->radiusX;
     const int radiusY = paintingData->radiusY;
+    const int width = paintingData->width;
+    const int height = paintingData->height;
+
+    ASSERT(radiusX <= width || radiusY <= height);
+    ASSERT(yStart >= 0 && yEnd <= height && yStart < yEnd);
 
     Vector<unsigned char> extrema;
     for (int y = yStart; y < yEnd; ++y) {
-        int extremaStartY = std::max(0, y - radiusY);
-        int extremaEndY = std::min(height - 1, y + radiusY);
-        for (unsigned int clrChannel = 0; clrChannel < 4; ++clrChannel) {
+        int yStartExtrema = std::max(0, y - radiusY);
+        int yEndExtrema = std::min(height - 1, y + radiusY);
+
+        for (unsigned colorChannel = 0; colorChannel < 4; ++colorChannel) {
             extrema.clear();
             // Compute extremas for each columns
-            for (int x = 0; x <= radiusX; ++x) {
-                unsigned char columnExtrema = srcPixelArray->item(extremaStartY * effectWidth + 4 * x + clrChannel);
-                for (int eY = extremaStartY + 1; eY < extremaEndY; ++eY) {
-                    unsigned char pixel = srcPixelArray->item(eY * effectWidth + 4 * x + clrChannel);
-                    if ((m_type == FEMORPHOLOGY_OPERATOR_ERODE && pixel <= columnExtrema)
-                        || (m_type == FEMORPHOLOGY_OPERATOR_DILATE && pixel >= columnExtrema)) {
-                        columnExtrema = pixel;
-                    }
-                }
-
-                extrema.append(columnExtrema);
-            }
+            for (int x = 0; x < radiusX; ++x)
+                extrema.append(columnExtremum(srcPixelArray, x, yStartExtrema, yEndExtrema, width, colorChannel, m_type));
 
             // Kernel is filled, get extrema of next column
             for (int x = 0; x < width; ++x) {
-                const int endX = std::min(x + radiusX, width - 1);
-                unsigned char columnExtrema = srcPixelArray->item(extremaStartY * effectWidth + endX * 4 + clrChannel);
-                for (int i = extremaStartY + 1; i <= extremaEndY; ++i) {
-                    unsigned char pixel = srcPixelArray->item(i * effectWidth + endX * 4 + clrChannel);
-                    if ((m_type == FEMORPHOLOGY_OPERATOR_ERODE && pixel <= columnExtrema)
-                        || (m_type == FEMORPHOLOGY_OPERATOR_DILATE && pixel >= columnExtrema))
-                        columnExtrema = pixel;
+                if (x < width - radiusX) {
+                    int xEnd = std::min(x + radiusX, width - 1);
+                    extrema.append(columnExtremum(srcPixelArray, xEnd, yStartExtrema, yEndExtrema + 1, width, colorChannel, m_type));
                 }
-                if (x - radiusX >= 0)
-                    extrema.remove(0);
-                if (x + radiusX <= width)
-                    extrema.append(columnExtrema);
 
-                unsigned char entireExtrema = extrema[0];
-                for (unsigned kernelIndex = 1; kernelIndex < extrema.size(); ++kernelIndex) {
-                    if ((m_type == FEMORPHOLOGY_OPERATOR_ERODE && extrema[kernelIndex] <= entireExtrema)
-                        || (m_type == FEMORPHOLOGY_OPERATOR_DILATE && extrema[kernelIndex] >= entireExtrema))
-                        entireExtrema = extrema[kernelIndex];
-                }
-                dstPixelArray->set(y * effectWidth + 4 * x + clrChannel, entireExtrema);
+                if (x > radiusX)
+                    extrema.remove(0);
+
+                // The extrema original size = radiusX.
+                // Number of new addition = width - radiusX.
+                // Number of removals = width - radiusX - 1.
+                ASSERT(extrema.size() >= static_cast<size_t>(radiusX + 1));
+                dstPixelArray->set(pixelArrayIndex(x, y, width, colorChannel), kernelExtremum(extrema, m_type));
             }
         }
     }
@@ -191,6 +193,23 @@ void FEMorphology::platformApply(PaintingData* paintingData)
     platformApplyGeneric(paintingData, 0, paintingData->height);
 }
 
+bool FEMorphology::platformApplyDegenerate(Uint8ClampedArray* dstPixelArray, const IntRect& imageRect, int radiusX, int radiusY)
+{
+    // Input radius is less than zero or an overflow happens when scaling it.
+    if (radiusX < 0 || radiusY < 0) {
+        dstPixelArray->zeroFill();
+        return true;
+    }
+
+    // Input radius is equal to zero or the scaled radius is less than one.
+    if (!m_radiusX || !m_radiusY) {
+        FilterEffect* in = inputEffect(0);
+        in->copyPremultipliedImage(dstPixelArray, imageRect);
+        return true;
+    }
+
+    return false;
+}
 
 void FEMorphology::platformApplySoftware()
 {
@@ -201,25 +220,28 @@ void FEMorphology::platformApplySoftware()
         return;
 
     setIsAlphaImage(in->isAlphaImage());
-    if (m_radiusX <= 0 || m_radiusY <= 0) {
-        dstPixelArray->zeroFill();
-        return;
-    }
-
-    Filter* filter = this->filter();
-    int radiusX = static_cast<int>(floorf(filter->applyHorizontalScale(m_radiusX)));
-    int radiusY = static_cast<int>(floorf(filter->applyVerticalScale(m_radiusY)));
 
     IntRect effectDrawingRect = requestedRegionOfInputImageData(in->absolutePaintRect());
+    if (platformApplyDegenerate(dstPixelArray, effectDrawingRect, m_radiusX, m_radiusY))
+        return;
+
+    Filter& filter = this->filter();
     RefPtr<Uint8ClampedArray> srcPixelArray = in->asPremultipliedImage(effectDrawingRect);
+    int radiusX = static_cast<int>(floorf(filter.applyHorizontalScale(m_radiusX)));
+    int radiusY = static_cast<int>(floorf(filter.applyVerticalScale(m_radiusY)));
+    radiusX = std::min(effectDrawingRect.width() - 1, radiusX);
+    radiusY = std::min(effectDrawingRect.height() - 1, radiusY);
+
+    if (platformApplyDegenerate(dstPixelArray, effectDrawingRect, radiusX, radiusY))
+        return;
 
     PaintingData paintingData;
     paintingData.srcPixelArray = srcPixelArray.get();
     paintingData.dstPixelArray = dstPixelArray;
     paintingData.width = effectDrawingRect.width();
     paintingData.height = effectDrawingRect.height();
-    paintingData.radiusX = std::min(effectDrawingRect.width() - 1, radiusX);
-    paintingData.radiusY = std::min(effectDrawingRect.height() - 1, radiusY);
+    paintingData.radiusX = radiusX;
+    paintingData.radiusY = radiusY;
 
     platformApply(&paintingData);
 }
@@ -256,5 +278,3 @@ TextStream& FEMorphology::externalRepresentation(TextStream& ts, int indent) con
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)

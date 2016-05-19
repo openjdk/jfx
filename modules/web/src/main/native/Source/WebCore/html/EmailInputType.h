@@ -35,12 +35,11 @@
 
 namespace WebCore {
 
-class EmailInputType : public BaseTextInputType {
+class EmailInputType final : public BaseTextInputType {
 public:
     explicit EmailInputType(HTMLInputElement& element) : BaseTextInputType(element) { }
 
 private:
-    virtual void attach() override;
     virtual const AtomicString& formControlType() const override;
     virtual bool typeMismatchFor(const String&) const override;
     virtual bool typeMismatch() const override;

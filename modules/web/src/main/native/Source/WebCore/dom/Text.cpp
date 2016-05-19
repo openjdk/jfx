@@ -22,35 +22,31 @@
 #include "config.h"
 #include "Text.h"
 
+#include "Event.h"
 #include "RenderCombineText.h"
 #include "RenderSVGInlineText.h"
 #include "RenderText.h"
+#include "SVGElement.h"
+#include "SVGNames.h"
 #include "ScopedEventQueue.h"
 #include "ShadowRoot.h"
-#include "SVGNames.h"
-#include "TextNodeTraversal.h"
-
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
+#include "TextNodeTraversal.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-PassRefPtr<Text> Text::create(Document& document, const String& data)
+Ref<Text> Text::create(Document& document, const String& data)
 {
-    return adoptRef(new Text(document, data, CreateText));
+    return adoptRef(*new Text(document, data, CreateText));
 }
 
-PassRefPtr<Text> Text::create(ScriptExecutionContext& context, const String& data)
+Ref<Text> Text::createEditingText(Document& document, const String& data)
 {
-    return adoptRef(new Text(toDocument(context), data, CreateText));
-}
-
-PassRefPtr<Text> Text::createEditingText(Document& document, const String& data)
-{
-    return adoptRef(new Text(document, data, CreateEditingText));
+    return adoptRef(*new Text(document, data, CreateEditingText));
 }
 
 Text::~Text()
@@ -58,7 +54,7 @@ Text::~Text()
     ASSERT(!renderer());
 }
 
-PassRefPtr<Text> Text::splitText(unsigned offset, ExceptionCode& ec)
+RefPtr<Text> Text::splitText(unsigned offset, ExceptionCode& ec)
 {
     ec = 0;
 
@@ -71,13 +67,13 @@ PassRefPtr<Text> Text::splitText(unsigned offset, ExceptionCode& ec)
 
     EventQueueScope scope;
     String oldStr = data();
-    RefPtr<Text> newText = virtualCreate(oldStr.substring(offset));
+    Ref<Text> newText = virtualCreate(oldStr.substring(offset));
     setDataWithoutUpdate(oldStr.substring(0, offset));
 
     dispatchModifiedEvent(oldStr);
 
     if (parentNode())
-        parentNode()->insertBefore(newText.get(), nextSibling(), ec);
+        parentNode()->insertBefore(newText.ptr(), nextSibling(), ec);
     if (ec)
         return 0;
 
@@ -85,18 +81,18 @@ PassRefPtr<Text> Text::splitText(unsigned offset, ExceptionCode& ec)
         document().textNodeSplit(this);
 
     if (renderer())
-        renderer()->setTextWithOffset(dataImpl(), 0, oldStr.length());
+        renderer()->setTextWithOffset(data(), 0, oldStr.length());
 
-    return newText.release();
+    return WTF::move(newText);
 }
 
 static const Text* earliestLogicallyAdjacentTextNode(const Text* text)
 {
     const Node* node = text;
     while ((node = node->previousSibling())) {
-        if (!node->isTextNode())
+        if (!is<Text>(*node))
             break;
-        text = toText(node);
+        text = downcast<Text>(node);
     }
     return text;
 }
@@ -105,9 +101,9 @@ static const Text* latestLogicallyAdjacentTextNode(const Text* text)
 {
     const Node* node = text;
     while ((node = node->nextSibling())) {
-        if (!node->isTextNode())
+        if (!is<Text>(*node))
             break;
-        text = toText(node);
+        text = downcast<Text>(node);
     }
     return text;
 }
@@ -116,15 +112,16 @@ String Text::wholeText() const
 {
     const Text* startText = earliestLogicallyAdjacentTextNode(this);
     const Text* endText = latestLogicallyAdjacentTextNode(this);
-    const Node* onePastEndText = TextNodeTraversal::nextSibling(endText);
+    ASSERT(endText);
+    const Node* onePastEndText = TextNodeTraversal::nextSibling(*endText);
 
     StringBuilder result;
-    for (const Text* text = startText; text != onePastEndText; text = TextNodeTraversal::nextSibling(text))
+    for (const Text* text = startText; text != onePastEndText; text = TextNodeTraversal::nextSibling(*text))
         result.append(text->data());
     return result.toString();
 }
 
-PassRefPtr<Text> Text::replaceWholeText(const String& newText, ExceptionCode&)
+RefPtr<Text> Text::replaceWholeText(const String& newText, ExceptionCode&)
 {
     // Remove all adjacent text nodes, and replace the contents of this one.
 
@@ -169,16 +166,16 @@ Node::NodeType Text::nodeType() const
     return TEXT_NODE;
 }
 
-PassRefPtr<Node> Text::cloneNode(bool /*deep*/)
+RefPtr<Node> Text::cloneNodeInternal(Document& targetDocument, CloningOperation)
 {
-    return create(document(), data());
+    return create(targetDocument, data());
 }
-
 
 static bool isSVGShadowText(Text* text)
 {
     Node* parentNode = text->parentNode();
-    return parentNode->isShadowRoot() && toShadowRoot(parentNode)->hostElement()->hasTagName(SVGNames::trefTag);
+    ASSERT(parentNode);
+    return is<ShadowRoot>(*parentNode) && downcast<ShadowRoot>(*parentNode).hostElement()->hasTagName(SVGNames::trefTag);
 }
 
 static bool isSVGText(Text* text)
@@ -190,12 +187,12 @@ static bool isSVGText(Text* text)
 RenderPtr<RenderText> Text::createTextRenderer(const RenderStyle& style)
 {
     if (isSVGText(this) || isSVGShadowText(this))
-        return createRenderer<RenderSVGInlineText>(*this, dataImpl());
+        return createRenderer<RenderSVGInlineText>(*this, data());
 
     if (style.hasTextCombine())
-        return createRenderer<RenderCombineText>(*this, dataImpl());
+        return createRenderer<RenderCombineText>(*this, data());
 
-    return createRenderer<RenderText>(*this, dataImpl());
+    return createRenderer<RenderText>(*this, data());
 }
 
 bool Text::childTypeAllowed(NodeType) const
@@ -203,25 +200,24 @@ bool Text::childTypeAllowed(NodeType) const
     return false;
 }
 
-PassRefPtr<Text> Text::virtualCreate(const String& data)
+Ref<Text> Text::virtualCreate(const String& data)
 {
     return create(document(), data);
 }
 
-PassRefPtr<Text> Text::createWithLengthLimit(Document& document, const String& data, unsigned start, unsigned lengthLimit)
+Ref<Text> Text::createWithLengthLimit(Document& document, const String& data, unsigned start, unsigned lengthLimit)
 {
     unsigned dataLength = data.length();
 
     if (!start && dataLength <= lengthLimit)
         return create(document, data);
 
-    RefPtr<Text> result = Text::create(document, String());
+    Ref<Text> result = Text::create(document, String());
     result->parserAppendData(data, start, lengthLimit);
-
     return result;
 }
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 void Text::formatForDebugger(char* buffer, unsigned length) const
 {
     StringBuilder result;
@@ -233,11 +229,15 @@ void Text::formatForDebugger(char* buffer, unsigned length) const
     if (s.length() > 0) {
         if (result.length())
             result.appendLiteral("; ");
-        result.appendLiteral("value=");
+        result.appendLiteral("length=");
+        result.appendNumber(s.length());
+        result.appendLiteral("; value=\"");
         result.append(s);
+        result.append('"');
     }
 
     strncpy(buffer, result.toString().utf8().data(), length - 1);
+    buffer[length - 1] = '\0';
 }
 #endif
 

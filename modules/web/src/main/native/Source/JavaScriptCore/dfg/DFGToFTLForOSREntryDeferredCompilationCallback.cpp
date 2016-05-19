@@ -45,11 +45,10 @@ ToFTLForOSREntryDeferredCompilationCallback::~ToFTLForOSREntryDeferredCompilatio
 {
 }
 
-PassRefPtr<ToFTLForOSREntryDeferredCompilationCallback>
-ToFTLForOSREntryDeferredCompilationCallback::create(
+Ref<ToFTLForOSREntryDeferredCompilationCallback>ToFTLForOSREntryDeferredCompilationCallback::create(
     PassRefPtr<CodeBlock> dfgCodeBlock)
 {
-    return adoptRef(new ToFTLForOSREntryDeferredCompilationCallback(dfgCodeBlock));
+    return adoptRef(*new ToFTLForOSREntryDeferredCompilationCallback(dfgCodeBlock));
 }
 
 void ToFTLForOSREntryDeferredCompilationCallback::compilationDidBecomeReadyAsynchronously(
@@ -79,19 +78,19 @@ void ToFTLForOSREntryDeferredCompilationCallback::compilationDidComplete(
     switch (result) {
     case CompilationSuccessful:
         jitCode->osrEntryBlock = codeBlock;
-        return;
+        break;
     case CompilationFailed:
         jitCode->osrEntryRetry = 0;
         jitCode->abandonOSREntry = true;
-        return;
+        break;
     case CompilationDeferred:
-        return;
+        RELEASE_ASSERT_NOT_REACHED();
     case CompilationInvalidated:
         jitCode->osrEntryRetry = 0;
-        return;
+        break;
     }
 
-    RELEASE_ASSERT_NOT_REACHED();
+    DeferredCompilationCallback::compilationDidComplete(codeBlock, result);
 }
 
 } } // JSC::DFG

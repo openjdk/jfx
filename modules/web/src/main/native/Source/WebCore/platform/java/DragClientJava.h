@@ -4,7 +4,7 @@
 #ifndef DragClientJava_h
 #define DragClientJava_h
 
-#include "Clipboard.h"
+#include "DataTransfer.h"
 #include "DragActions.h"
 #include "DragClient.h"
 #include "DragImage.h"
@@ -14,7 +14,7 @@
 
 namespace WebCore {
 
-    class Clipboard;
+    class DataTransfer;
     class DragData;
     class Frame;
     class Image;
@@ -26,12 +26,12 @@ namespace WebCore {
         virtual ~DragClientJava();
 
         virtual void willPerformDragDestinationAction(DragDestinationAction, DragData& data);
-        virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, Clipboard& clipboard);
+        virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer& clipboard);
         virtual DragDestinationAction actionMaskForDrag(DragData& data);
         //We work in window rather than view coordinates here
         virtual DragSourceAction dragSourceActionMaskForPoint(const IntPoint& windowPoint);
 
-        virtual void startDrag(DragImageRef dragImage, const IntPoint& dragImageOrigin, const IntPoint& eventPos, Clipboard& clipboard, Frame& frame, bool linkDrag = false);
+        virtual void startDrag(DragImageRef dragImage, const IntPoint& dragImageOrigin, const IntPoint& eventPos, DataTransfer& clipboard, Frame& frame, bool linkDrag = false);
         virtual DragImageRef createDragImageForLink(URL& url, const String& label, Frame* frame);
 
         virtual void dragControllerDestroyed();

@@ -89,7 +89,7 @@ public:
 protected:
     SVGGradientElement(const QualifiedName&, Document&);
 
-    bool isSupportedAttribute(const QualifiedName&);
+    static bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
@@ -102,15 +102,22 @@ private:
         DECLARE_ANIMATED_ENUMERATION(SpreadMethod, spreadMethod, SVGSpreadMethodType)
         DECLARE_ANIMATED_ENUMERATION(GradientUnits, gradientUnits, SVGUnitTypes::SVGUnitType)
         DECLARE_ANIMATED_TRANSFORM_LIST(GradientTransform, gradientTransform)
-        DECLARE_ANIMATED_STRING(Href, href)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
+        DECLARE_ANIMATED_STRING_OVERRIDE(Href, href)
+        DECLARE_ANIMATED_BOOLEAN_OVERRIDE(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 };
 
-void isSVGGradientElement(const SVGGradientElement&); // Catch unnecessary runtime check of type known at compile time.
-bool isSVGGradientElement(const Node&);
-NODE_TYPE_CASTS(SVGGradientElement)
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGGradientElement)
+static bool isType(const WebCore::SVGElement& element)
+{
+    return element.hasTagName(WebCore::SVGNames::radialGradientTag) || element.hasTagName(WebCore::SVGNames::linearGradientTag);
+}
+static bool isType(const WebCore::Node& node)
+{
+    return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node));
+}
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

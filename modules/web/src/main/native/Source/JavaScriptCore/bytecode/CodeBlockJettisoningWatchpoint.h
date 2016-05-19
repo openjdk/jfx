@@ -34,18 +34,13 @@ class CodeBlock;
 
 class CodeBlockJettisoningWatchpoint : public Watchpoint {
 public:
-    CodeBlockJettisoningWatchpoint()
-        : m_codeBlock(0)
-    {
-    }
-
     CodeBlockJettisoningWatchpoint(CodeBlock* codeBlock)
         : m_codeBlock(codeBlock)
     {
     }
 
 protected:
-    virtual void fireInternal() override;
+    virtual void fireInternal(const FireDetail&) override;
 
 private:
     CodeBlock* m_codeBlock;

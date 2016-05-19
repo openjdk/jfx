@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -45,6 +45,10 @@ WTF_EXPORT_PRIVATE void callOnMainThread(MainThreadFunction*, void* context);
 WTF_EXPORT_PRIVATE void cancelCallOnMainThread(MainThreadFunction*, void* context);
 
 WTF_EXPORT_PRIVATE void callOnMainThread(std::function<void ()>);
+
+#if PLATFORM(COCOA)
+WTF_EXPORT_PRIVATE void callOnWebThreadOrDispatchAsyncOnMainThread(void (^block)());
+#endif
 
 WTF_EXPORT_PRIVATE void setMainThreadCallbacksPaused(bool paused);
 
@@ -94,6 +98,9 @@ void initializeMainThreadToProcessMainThreadPlatform();
 
 using WTF::callOnMainThread;
 using WTF::cancelCallOnMainThread;
+#if PLATFORM(COCOA)
+using WTF::callOnWebThreadOrDispatchAsyncOnMainThread;
+#endif
 using WTF::setMainThreadCallbacksPaused;
 using WTF::isMainThread;
 using WTF::isMainThreadOrGCThread;

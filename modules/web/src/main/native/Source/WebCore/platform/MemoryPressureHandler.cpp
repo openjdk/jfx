@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011, 2014 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,41 +26,168 @@
 #include "config.h"
 #include "MemoryPressureHandler.h"
 
+#include "CSSValuePool.h"
+#include "Document.h"
+#include "FontCache.h"
+#include "FontCascade.h"
+#include "GCController.h"
+#include "HTMLMediaElement.h"
+#include "JSDOMWindow.h"
+#include "MemoryCache.h"
+#include "Page.h"
+#include "PageCache.h"
+#include "ScrollingThread.h"
+#include "StyledElement.h"
+#include "WorkerThread.h"
+#include <JavaScriptCore/IncrementalSweeper.h>
+#include <wtf/CurrentTime.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
-MemoryPressureHandler& memoryPressureHandler()
+WEBCORE_EXPORT bool MemoryPressureHandler::ReliefLogger::s_loggingEnabled = false;
+
+MemoryPressureHandler& MemoryPressureHandler::singleton()
 {
-    DEFINE_STATIC_LOCAL(MemoryPressureHandler, staticMemoryPressureHandler, ());
-    return staticMemoryPressureHandler;
+    static NeverDestroyed<MemoryPressureHandler> memoryPressureHandler;
+    return memoryPressureHandler;
 }
 
 MemoryPressureHandler::MemoryPressureHandler()
     : m_installed(false)
     , m_lastRespondTime(0)
-    , m_lowMemoryHandler(releaseMemory)
+    , m_lowMemoryHandler([this] (Critical critical, Synchronous synchronous) { releaseMemory(critical, synchronous); })
+    , m_underMemoryPressure(false)
 #if PLATFORM(IOS)
     // FIXME: Can we share more of this with OpenSource?
-    , m_receivedMemoryPressure(0)
     , m_memoryPressureReason(MemoryPressureReasonNone)
     , m_clearPressureOnMemoryRelease(true)
     , m_releaseMemoryBlock(0)
     , m_observer(0)
+#elif OS(LINUX) && !PLATFORM(JAVA) //XXX: recheck
+    , m_eventFD(0)
+    , m_pressureLevelFD(0)
+    , m_threadID(0)
+    , m_holdOffTimer(*this, &MemoryPressureHandler::holdOffTimerFired)
 #endif
 {
 }
 
-#if !PLATFORM(MAC)
+void MemoryPressureHandler::releaseNoncriticalMemory()
+{
+    {
+        ReliefLogger log("Purge inactive FontData");
+        FontCache::singleton().purgeInactiveFontData();
+    }
 
+    {
+        ReliefLogger log("Clear WidthCaches");
+        clearWidthCaches();
+    }
+
+    {
+        ReliefLogger log("Discard Selector Query Cache");
+        for (auto* document : Document::allDocuments())
+            document->clearSelectorQueryCache();
+    }
+
+    {
+        ReliefLogger log("Clearing JS string cache");
+        JSDOMWindow::commonVM().stringCache.clear();
+    }
+
+    {
+        ReliefLogger log("Prune MemoryCache dead resources");
+        MemoryCache::singleton().pruneDeadResourcesToSize(0);
+    }
+
+    {
+        ReliefLogger log("Prune presentation attribute cache");
+        StyledElement::clearPresentationAttributeCache();
+    }
+}
+
+void MemoryPressureHandler::releaseCriticalMemory(Synchronous synchronous)
+{
+    {
+        ReliefLogger log("Empty the PageCache");
+        // Right now, the only reason we call release critical memory while not under memory pressure is if the process is about to be suspended.
+        PruningReason pruningReason = isUnderMemoryPressure() ? PruningReason::MemoryPressure : PruningReason::ProcessSuspended;
+        PageCache::singleton().pruneToSizeNow(0, pruningReason);
+    }
+
+    {
+        ReliefLogger log("Prune MemoryCache live resources");
+        MemoryCache::singleton().pruneLiveResourcesToSize(0);
+    }
+
+    {
+        ReliefLogger log("Drain CSSValuePool");
+        cssValuePool().drain();
+    }
+
+    {
+        ReliefLogger log("Discard StyleResolvers");
+        for (auto* document : Document::allDocuments())
+            document->clearStyleResolver();
+    }
+
+    {
+        ReliefLogger log("Discard all JIT-compiled code");
+        GCController::singleton().discardAllCompiledCode();
+    }
+
+    {
+        ReliefLogger log("Invalidate font cache");
+        FontCache::singleton().invalidate();
+    }
+
+#if ENABLE(VIDEO)
+    {
+        ReliefLogger log("Dropping buffered data from paused media elements");
+        for (auto* mediaElement: HTMLMediaElement::allMediaElements()) {
+            if (mediaElement->paused())
+                mediaElement->purgeBufferedDataIfPossible();
+        }
+    }
+#endif
+
+    if (synchronous == Synchronous::Yes) {
+        ReliefLogger log("Collecting JavaScript garbage");
+        GCController::singleton().garbageCollectNow();
+    } else
+        GCController::singleton().garbageCollectNowIfNotDoneRecently();
+}
+
+void MemoryPressureHandler::releaseMemory(Critical critical, Synchronous synchronous)
+{
+    if (critical == Critical::Yes)
+        releaseCriticalMemory(synchronous);
+
+    releaseNoncriticalMemory();
+
+    platformReleaseMemory(critical);
+
+    {
+        ReliefLogger log("Release free FastMalloc memory");
+        // FastMalloc has lock-free thread specific caches that can only be cleared from the thread itself.
+        WorkerThread::releaseFastMallocFreeMemoryInAllThreads();
+#if ENABLE(ASYNC_SCROLLING) && !PLATFORM(IOS)
+        ScrollingThread::dispatch(WTF::releaseFastMallocFreeMemory);
+#endif
+        WTF::releaseFastMallocFreeMemory();
+    }
+}
+
+#if !PLATFORM(COCOA) && !OS(LINUX) && !PLATFORM(WIN)
 void MemoryPressureHandler::install() { }
 void MemoryPressureHandler::uninstall() { }
 void MemoryPressureHandler::holdOff(unsigned) { }
-void MemoryPressureHandler::respondToMemoryPressure() { }
-#if !PLATFORM(IOS)
-void MemoryPressureHandler::releaseMemory(bool) { }
-#endif // !PLATFORM(IOS)
-
+void MemoryPressureHandler::respondToMemoryPressure(Critical, Synchronous) { }
+void MemoryPressureHandler::platformReleaseMemory(Critical) { }
+void MemoryPressureHandler::ReliefLogger::platformLog() { }
+size_t MemoryPressureHandler::ReliefLogger::platformMemoryUsage() { return 0; }
 #endif
 
 } // namespace WebCore

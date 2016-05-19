@@ -47,7 +47,7 @@ namespace WebCore {
 
 namespace Style {
 
-PassRef<RenderStyle> resolveForDocument(const Document& document)
+Ref<RenderStyle> resolveForDocument(const Document& document)
 {
     ASSERT(document.hasLivingRenderTree());
 
@@ -69,12 +69,13 @@ PassRef<RenderStyle> resolveForDocument(const Document& document)
 #endif
 
     Element* docElement = document.documentElement();
-    RenderObject* docElementRenderer = docElement ? docElement->renderer() : 0;
+    RenderObject* docElementRenderer = docElement ? docElement->renderer() : nullptr;
     if (docElementRenderer) {
         // Use the direction and writing-mode of the body to set the
         // viewport's direction and writing-mode unless the property is set on the document element.
         // If there is no body, then use the document element.
-        RenderObject* bodyRenderer = document.body() ? document.body()->renderer() : 0;
+        auto* body = document.bodyOrFrameset();
+        RenderObject* bodyRenderer = body ? body->renderer() : nullptr;
         if (bodyRenderer && !document.writingModeSetOnDocumentElement())
             documentStyle.get().setWritingMode(bodyRenderer->style().writingMode());
         else
@@ -89,26 +90,22 @@ PassRef<RenderStyle> resolveForDocument(const Document& document)
     if (pagination.mode != Pagination::Unpaginated) {
         documentStyle.get().setColumnStylesFromPaginationMode(pagination.mode);
         documentStyle.get().setColumnGap(pagination.gap);
-        if (renderView.hasColumns() || renderView.multiColumnFlowThread())
-            renderView.updateColumnProgressionFromStyle(&documentStyle.get());
+        if (renderView.multiColumnFlowThread())
+            renderView.updateColumnProgressionFromStyle(documentStyle.get());
     }
 
     const Settings& settings = renderView.frame().settings();
 
     FontDescription fontDescription;
     fontDescription.setScript(localeToScriptCodeForFontSelection(documentStyle.get().locale()));
-    fontDescription.setUsePrinterFont(document.printing() || !settings.screenFontSubstitutionEnabled());
     fontDescription.setRenderingMode(settings.fontRenderingMode());
-    const AtomicString& standardFont = settings.standardFontFamily(fontDescription.script());
-    if (!standardFont.isEmpty()) {
-        fontDescription.setGenericFamily(FontDescription::StandardFamily);
-        fontDescription.setOneFamily(standardFont);
-    }
-    fontDescription.setKeywordSize(CSSValueMedium - CSSValueXxSmall + 1);
+    fontDescription.setOneFamily(standardFamily);
+
+    fontDescription.setKeywordSizeFromIdentifier(CSSValueMedium);
     int size = fontSizeForKeyword(CSSValueMedium, false, document);
     fontDescription.setSpecifiedSize(size);
     bool useSVGZoomRules = document.isSVGDocument();
-    fontDescription.setComputedSize(computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), useSVGZoomRules, &documentStyle.get(), document));
+    fontDescription.setComputedSize(computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), useSVGZoomRules, documentStyle.ptr(), document));
 
     FontOrientation fontOrientation;
     NonCJKGlyphOrientation glyphOrientation;
@@ -118,8 +115,7 @@ PassRef<RenderStyle> resolveForDocument(const Document& document)
 
     documentStyle.get().setFontDescription(fontDescription);
 
-    CSSFontSelector* fontSelector = document.styleResolverIfExists() ? document.styleResolverIfExists()->fontSelector() : 0;
-    documentStyle.get().font().update(fontSelector);
+    documentStyle.get().fontCascade().update(&const_cast<Document&>(document).fontSelector());
 
     return documentStyle;
 }

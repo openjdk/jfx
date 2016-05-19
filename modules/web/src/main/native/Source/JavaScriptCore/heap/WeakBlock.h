@@ -26,7 +26,7 @@
 #ifndef WeakBlock_h
 #define WeakBlock_h
 
-#include "HeapBlock.h"
+#include <wtf/DoublyLinkedList.h>
 #include "WeakHandleOwner.h"
 #include "WeakImpl.h"
 #include <wtf/DoublyLinkedList.h>
@@ -34,33 +34,35 @@
 
 namespace JSC {
 
-class DeadBlock;
 class HeapRootVisitor;
 class JSValue;
+class MarkedBlock;
 class WeakHandleOwner;
 
-class WeakBlock : public HeapBlock<WeakBlock> {
+class WeakBlock : public DoublyLinkedListNode<WeakBlock> {
 public:
     friend class WTF::DoublyLinkedListNode<WeakBlock>;
-    static const size_t blockSize = 4 * KB; // 5% of MarkedBlock size
+    static const size_t blockSize = 1 * KB; // 1/16 of MarkedBlock size
 
     struct FreeCell {
         FreeCell* next;
     };
 
     struct SweepResult {
-        SweepResult();
         bool isNull() const;
 
-        bool blockIsFree;
-        FreeCell* freeList;
+        bool blockIsFree { true };
+        bool blockIsLogicallyEmpty { true };
+        FreeCell* freeList { nullptr };
     };
 
-    static WeakBlock* create(DeadBlock*);
+    static WeakBlock* create(MarkedBlock&);
+    static void destroy(WeakBlock*);
 
     static WeakImpl* asWeakImpl(FreeCell*);
 
     bool isEmpty();
+    bool isLogicallyEmptyButNotFree() const;
 
     void sweep();
     SweepResult takeSweepResult();
@@ -69,26 +71,23 @@ public:
     void reap();
 
     void lastChanceToFinalize();
+    void disconnectMarkedBlock() { m_markedBlock = nullptr; }
 
 private:
     static FreeCell* asFreeCell(WeakImpl*);
 
-    WeakBlock(Region*);
+    explicit WeakBlock(MarkedBlock&);
     WeakImpl* firstWeakImpl();
     void finalize(WeakImpl*);
     WeakImpl* weakImpls();
     size_t weakImplCount();
     void addToFreeList(FreeCell**, WeakImpl*);
 
+    MarkedBlock* m_markedBlock;
+    WeakBlock* m_prev;
+    WeakBlock* m_next;
     SweepResult m_sweepResult;
 };
-
-inline WeakBlock::SweepResult::SweepResult()
-    : blockIsFree(true)
-    , freeList(0)
-{
-    ASSERT(isNull());
-}
 
 inline bool WeakBlock::SweepResult::isNull() const
 {
@@ -136,6 +135,11 @@ inline void WeakBlock::addToFreeList(FreeCell** freeList, WeakImpl* weakImpl)
 inline bool WeakBlock::isEmpty()
 {
     return !m_sweepResult.isNull() && m_sweepResult.blockIsFree;
+}
+
+inline bool WeakBlock::isLogicallyEmptyButNotFree() const
+{
+    return !m_sweepResult.isNull() && !m_sweepResult.blockIsFree && m_sweepResult.blockIsLogicallyEmpty;
 }
 
 } // namespace JSC

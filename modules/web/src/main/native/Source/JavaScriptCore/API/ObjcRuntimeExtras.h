@@ -23,6 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#import <objc/Protocol.h>
 #import <objc/runtime.h>
 #import <wtf/HashSet.h>
 #import <wtf/Vector.h>
@@ -163,7 +164,7 @@ typename DelegateType::ResultType parseObjCType(const char*& position)
     case 'l':
         return DelegateType::template typeInteger<long>();
     case 'q':
-        return DelegateType::template typeDouble<unsigned long long>();
+        return DelegateType::template typeDouble<long long>();
     case 'C':
         return DelegateType::template typeInteger<unsigned char>();
     case 'I':
@@ -193,8 +194,8 @@ typename DelegateType::ResultType parseObjCType(const char*& position)
 
         if (*position == '"') {
             const char* begin = position + 1;
-            const char* protocolPosition = index(begin, '<');
-            const char* endOfType = index(begin, '"');
+            const char* protocolPosition = strchr(begin, '<');
+            const char* endOfType = strchr(begin, '"');
             position = endOfType + 1;
 
             // There's no protocol involved in this type, so just handle the class name.

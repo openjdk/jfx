@@ -42,9 +42,9 @@ inline SVGSwitchElement::SVGSwitchElement(const QualifiedName& tagName, Document
     registerAnimatedPropertiesForSVGSwitchElement();
 }
 
-PassRefPtr<SVGSwitchElement> SVGSwitchElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGSwitchElement> SVGSwitchElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGSwitchElement(tagName, document));
+    return adoptRef(*new SVGSwitchElement(tagName, document));
 }
 
 bool SVGSwitchElement::childShouldCreateRenderer(const Node& child) const
@@ -60,9 +60,9 @@ bool SVGSwitchElement::childShouldCreateRenderer(const Node& child) const
     return false;
 }
 
-RenderPtr<RenderElement> SVGSwitchElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGSwitchElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGTransformableContainer>(*this, std::move(style));
+    return createRenderer<RenderSVGTransformableContainer>(*this, WTF::move(style));
 }
 
 }

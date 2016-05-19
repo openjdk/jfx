@@ -36,10 +36,13 @@
 #include "Frame.h"
 #include "GCController.h"
 #include "Page.h"
+#include "PageConsoleClient.h"
 #include "PageGroup.h"
-#include <heap/StrongInlines.h>
-#include <runtime/JSLock.h>
 #include "ScriptController.h"
+#include <heap/StrongInlines.h>
+#include <profiler/Profile.h>
+#include <runtime/JSLock.h>
+#include <runtime/WeakGCMapInlines.h>
 
 using namespace JSC;
 
@@ -50,15 +53,16 @@ ScriptCachedFrameData::ScriptCachedFrameData(Frame& frame)
     JSLockHolder lock(JSDOMWindowBase::commonVM());
 
     ScriptController& scriptController = frame.script();
-    ScriptController::ShellMap& windowShells = scriptController.m_windowShells;
+    Vector<JSC::Strong<JSDOMWindowShell>> windowShells = scriptController.windowShells();
 
-    ScriptController::ShellMap::iterator windowShellsEnd = windowShells.end();
-    for (ScriptController::ShellMap::iterator iter = windowShells.begin(); iter != windowShellsEnd; ++iter) {
-        JSDOMWindow* window = iter->value->window();
-        m_windows.add(iter->key.get(), Strong<JSDOMWindow>(window->vm(), window));
+    for (size_t i = 0; i < windowShells.size(); ++i) {
+        JSDOMWindowShell* windowShell = windowShells[i].get();
+        JSDOMWindow* window = windowShell->window();
+        m_windows.add(&windowShell->world(), Strong<JSDOMWindow>(window->vm(), window));
+        window->setConsoleClient(nullptr);
     }
 
-    scriptController.attachDebugger(0);
+    scriptController.attachDebugger(nullptr);
 }
 
 ScriptCachedFrameData::~ScriptCachedFrameData()
@@ -70,12 +74,13 @@ void ScriptCachedFrameData::restore(Frame& frame)
 {
     JSLockHolder lock(JSDOMWindowBase::commonVM());
 
+    Page* page = frame.page();
     ScriptController& scriptController = frame.script();
-    ScriptController::ShellMap& windowShells = scriptController.m_windowShells;
+    Vector<JSC::Strong<JSDOMWindowShell>> windowShells = scriptController.windowShells();
 
-    for (auto it = windowShells.begin(), end = windowShells.end(); it != end; ++it) {
-        DOMWrapperWorld* world = it->key.get();
-        JSDOMWindowShell* windowShell = it->value.get();
+    for (size_t i = 0; i < windowShells.size(); ++i) {
+        JSDOMWindowShell* windowShell = windowShells[i].get();
+        DOMWrapperWorld* world = &windowShell->world();
 
         if (JSDOMWindow* window = m_windows.get(world).get())
             windowShell->setWindow(window->vm(), window);
@@ -86,11 +91,14 @@ void ScriptCachedFrameData::restore(Frame& frame)
 
             windowShell->setWindow(domWindow);
 
-            if (Page* page = frame.page()) {
+            if (page) {
                 scriptController.attachDebugger(windowShell, page->debugger());
                 windowShell->window()->setProfileGroup(page->group().identifier());
             }
         }
+
+        if (page)
+            windowShell->window()->setConsoleClient(&page->console());
     }
 }
 
@@ -101,7 +109,7 @@ void ScriptCachedFrameData::clear()
 
     JSLockHolder lock(JSDOMWindowBase::commonVM());
     m_windows.clear();
-    gcController().garbageCollectSoon();
+    GCController::singleton().garbageCollectSoon();
 }
 
 } // namespace WebCore

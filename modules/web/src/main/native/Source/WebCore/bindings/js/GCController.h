@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,39 +26,34 @@
 #ifndef GCController_h
 #define GCController_h
 
-#if USE(CF)
-#include <wtf/FastMalloc.h>
+#include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
-#else
 #include "Timer.h"
-#endif
 
 namespace WebCore {
 
-    class GCController {
-        WTF_MAKE_NONCOPYABLE(GCController); WTF_MAKE_FAST_ALLOCATED;
-        friend GCController& gcController();
+class GCController {
+    WTF_MAKE_NONCOPYABLE(GCController);
+    friend class WTF::NeverDestroyed<GCController>;
+public:
+    WEBCORE_EXPORT static GCController& singleton();
 
-    public:
-        void garbageCollectSoon();
-        void garbageCollectNow(); // It's better to call garbageCollectSoon, unless you have a specific reason not to.
+    WEBCORE_EXPORT void garbageCollectSoon();
+    WEBCORE_EXPORT void garbageCollectNow(); // It's better to call garbageCollectSoon, unless you have a specific reason not to.
+    WEBCORE_EXPORT void garbageCollectNowIfNotDoneRecently();
+    void garbageCollectOnNextRunLoop();
 
-        void garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone); // Used for stress testing.
-        void releaseExecutableMemory();
-        void setJavaScriptGarbageCollectorTimerEnabled(bool);
-        void discardAllCompiledCode();
+    WEBCORE_EXPORT void garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone); // Used for stress testing.
+    WEBCORE_EXPORT void releaseExecutableMemory();
+    WEBCORE_EXPORT void setJavaScriptGarbageCollectorTimerEnabled(bool);
+    WEBCORE_EXPORT void discardAllCompiledCode();
 
-    private:
-        GCController(); // Use gcController() instead
+private:
+    GCController(); // Use singleton() instead.
 
-#if !USE(CF)
-        void gcTimerFired(Timer<GCController>*);
-        Timer<GCController> m_GCTimer;
-#endif
-    };
-
-    // Function to obtain the global GC controller.
-    GCController& gcController() PURE_FUNCTION;
+    void gcTimerFired();
+    Timer m_GCTimer;
+};
 
 } // namespace WebCore
 

@@ -1,20 +1,8 @@
 {
-    "GTK EWS": {
-        "port": "gtk",
-        "watchers": [
-            "xan.lopez@gmail.com"
-        ]
-    },
     "GTK WK2 EWS": {
         "port": "gtk-wk2",
         "watchers": [
             "xan.lopez@gmail.com"
-        ]
-    },
-    "EFL EWS": {
-        "port": "efl",
-        "watchers": [
-            "gyuyoung.kim@webkit.org"
         ]
     },
     "EFL WK2 EWS": {
@@ -24,7 +12,14 @@
         ]
     },
     "Win EWS": {
-        "port": "win"
+        "port": "win",
+        "watchers": [
+            "bfulgham@apple.com"
+        ]
+    },
+    "iOS EWS": {
+        "port": "ios",
+        "architecture": "armv7"
     },
     "Mac EWS": {
         "port": "mac",

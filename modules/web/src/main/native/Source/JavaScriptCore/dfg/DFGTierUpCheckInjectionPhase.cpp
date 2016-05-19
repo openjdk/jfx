@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,6 +61,13 @@ public:
         if (!Options::enableOSREntryToFTL())
             level = FTL::CanCompile;
 
+        // First we find all the loops that contain a LoopHint for which we cannot OSR enter.
+        // We use that information to decide if we need CheckTierUpAndOSREnter or CheckTierUpWithNestedTriggerAndOSREnter.
+        NaturalLoops& naturalLoops = m_graph.m_naturalLoops;
+        naturalLoops.computeIfNecessary(m_graph);
+
+        HashSet<const NaturalLoop*> loopsContainingLoopHintWithoutOSREnter = findLoopsContainingLoopHintWithoutOSREnter(naturalLoops, level);
+
         InsertionSet insertionSet(m_graph);
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
             BasicBlock* block = m_graph.block(blockIndex);
@@ -72,40 +79,22 @@ public:
                 if (node->op() != LoopHint)
                     continue;
 
-                // We only put OSR checks for the first LoopHint in the block. Note that
-                // more than one LoopHint could happen in cases where we did a lot of CFG
-                // simplification in the bytecode parser, but it should be very rare.
-
                 NodeOrigin origin = node->origin;
-
-                if (level != FTL::CanCompileAndOSREnter || origin.semantic.inlineCallFrame) {
-                    insertionSet.insertNode(
-                        nodeIndex + 1, SpecNone, CheckTierUpInLoop, origin);
-                    break;
-                }
-
-                bool isAtTop = true;
-                for (unsigned subNodeIndex = nodeIndex; subNodeIndex--;) {
-                    if (!block->at(subNodeIndex)->isSemanticallySkippable()) {
-                        isAtTop = false;
-                        break;
-                    }
-                }
-
-                if (!isAtTop) {
-                    insertionSet.insertNode(
-                        nodeIndex + 1, SpecNone, CheckTierUpInLoop, origin);
-                    break;
-                }
-
-                insertionSet.insertNode(
-                    nodeIndex + 1, SpecNone, CheckTierUpAndOSREnter, origin);
+                if (canOSREnterAtLoopHint(level, block, nodeIndex)) {
+                    const NaturalLoop* loop = naturalLoops.innerMostLoopOf(block);
+                    if (loop && loopsContainingLoopHintWithoutOSREnter.contains(loop))
+                        insertionSet.insertNode(nodeIndex + 1, SpecNone, CheckTierUpWithNestedTriggerAndOSREnter, origin);
+                    else
+                        insertionSet.insertNode(nodeIndex + 1, SpecNone, CheckTierUpAndOSREnter, origin);
+                } else
+                    insertionSet.insertNode(nodeIndex + 1, SpecNone, CheckTierUpInLoop, origin);
                 break;
             }
 
-            if (block->last()->op() == Return) {
+            NodeAndIndex terminal = block->findTerminal();
+            if (terminal.node->op() == Return) {
                 insertionSet.insertNode(
-                    block->size() - 1, SpecNone, CheckTierUpAtReturn, block->last()->origin);
+                    terminal.index, SpecNone, CheckTierUpAtReturn, terminal.node->origin);
             }
 
             insertionSet.execute(block);
@@ -118,6 +107,49 @@ public:
         return false;
 #endif // ENABLE(FTL_JIT)
     }
+
+private:
+#if ENABLE(FTL_JIT)
+    bool canOSREnterAtLoopHint(FTL::CapabilityLevel level, const BasicBlock* block, unsigned nodeIndex)
+    {
+        Node* node = block->at(nodeIndex);
+        ASSERT(node->op() == LoopHint);
+
+        NodeOrigin origin = node->origin;
+        if (level != FTL::CanCompileAndOSREnter || origin.semantic.inlineCallFrame)
+            return false;
+
+        // We only put OSR checks for the first LoopHint in the block. Note that
+        // more than one LoopHint could happen in cases where we did a lot of CFG
+        // simplification in the bytecode parser, but it should be very rare.
+        for (unsigned subNodeIndex = nodeIndex; subNodeIndex--;) {
+            if (!block->at(subNodeIndex)->isSemanticallySkippable())
+                return false;
+        }
+        return true;
+    }
+
+    HashSet<const NaturalLoop*> findLoopsContainingLoopHintWithoutOSREnter(const NaturalLoops& naturalLoops, FTL::CapabilityLevel level)
+    {
+        HashSet<const NaturalLoop*> loopsContainingLoopHintWithoutOSREnter;
+        for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
+            for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
+                Node* node = block->at(nodeIndex);
+                if (node->op() != LoopHint)
+                    continue;
+
+                if (!canOSREnterAtLoopHint(level, block, nodeIndex)) {
+                    const NaturalLoop* loop = naturalLoops.innerMostLoopOf(block);
+                    while (loop) {
+                        loopsContainingLoopHintWithoutOSREnter.add(loop);
+                        loop = naturalLoops.innerMostOuterLoop(*loop);
+                    }
+                }
+            }
+        }
+        return loopsContainingLoopHintWithoutOSREnter;
+    }
+#endif
 };
 
 bool performTierUpCheckInjection(Graph& graph)

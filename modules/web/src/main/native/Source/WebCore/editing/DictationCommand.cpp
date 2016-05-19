@@ -55,9 +55,9 @@ private:
 
 class DictationMarkerSupplier : public TextInsertionMarkerSupplier {
 public:
-    static PassRefPtr<DictationMarkerSupplier> create(const Vector<DictationAlternative>& alternatives)
+    static Ref<DictationMarkerSupplier> create(const Vector<DictationAlternative>& alternatives)
     {
-        return adoptRef(new DictationMarkerSupplier(alternatives));
+        return adoptRef(*new DictationMarkerSupplier(alternatives));
     }
 
     virtual void addMarkersToTextNode(Text* textNode, unsigned offsetOfInsertion, const String& textToBeInserted)
@@ -86,9 +86,9 @@ DictationCommand::DictationCommand(Document& document, const String& text, const
 {
 }
 
-void DictationCommand::insertText(Document* document, const String& text, const Vector<DictationAlternative>& alternatives, const VisibleSelection& selectionForInsertion)
+void DictationCommand::insertText(Document& document, const String& text, const Vector<DictationAlternative>& alternatives, const VisibleSelection& selectionForInsertion)
 {
-    RefPtr<Frame> frame = document->frame();
+    RefPtr<Frame> frame = document.frame();
     ASSERT(frame);
 
     VisibleSelection currentSelection = frame->selection().selection();
@@ -97,11 +97,11 @@ void DictationCommand::insertText(Document* document, const String& text, const 
 
     RefPtr<DictationCommand> cmd;
     if (newText == text)
-        cmd = DictationCommand::create(*document, newText, alternatives);
+        cmd = DictationCommand::create(document, newText, alternatives);
     else
         // If the text was modified before insertion, the location of dictation alternatives
         // will not be valid anymore. We will just drop the alternatives.
-        cmd = DictationCommand::create(*document, newText, Vector<DictationAlternative>());
+        cmd = DictationCommand::create(document, newText, Vector<DictationAlternative>());
     applyTextInsertionCommand(frame.get(), cmd, selectionForInsertion, currentSelection);
 }
 
@@ -115,7 +115,7 @@ void DictationCommand::insertTextRunWithoutNewlines(size_t lineStart, size_t lin
 {
     Vector<DictationAlternative> alternativesInLine;
     collectDictationAlternativesInRange(lineStart, lineLength, alternativesInLine);
-    RefPtr<InsertTextCommand> command = InsertTextCommand::createWithMarkerSupplier(document(), m_textToInsert.substring(lineStart, lineLength), DictationMarkerSupplier::create(alternativesInLine));
+    RefPtr<InsertTextCommand> command = InsertTextCommand::createWithMarkerSupplier(document(), m_textToInsert.substring(lineStart, lineLength), DictationMarkerSupplier::create(alternativesInLine), EditActionDictation);
     applyCommandToComposite(command, endingSelection());
 }
 
@@ -124,7 +124,7 @@ void DictationCommand::insertParagraphSeparator()
     if (!canAppendNewLineFeedToSelection(endingSelection()))
         return;
 
-    applyCommandToComposite(InsertParagraphSeparatorCommand::create(document()));
+    applyCommandToComposite(InsertParagraphSeparatorCommand::create(document(), false, false, EditActionDictation));
 }
 
 void DictationCommand::collectDictationAlternativesInRange(size_t rangeStart, size_t rangeLength, Vector<DictationAlternative>& alternatives)

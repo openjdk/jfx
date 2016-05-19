@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,9 +28,9 @@
 
 #import "TestController.h"
 #import "WebKitTestRunnerDraggingInfo.h"
-#import <WebKit2/WKImageCG.h>
-#import <WebKit2/WKPreferencesPrivate.h>
-#import <WebKit2/WKViewPrivate.h>
+#import <WebKit/WKImageCG.h>
+#import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKViewPrivate.h>
 #import <wtf/RetainPtr.h>
 
 using namespace WTR;
@@ -109,6 +109,11 @@ enum {
     NSRect currentFrame = [self frame];
     return NSMakeRect(_fakeOrigin.x, _fakeOrigin.y, currentFrame.size.width, currentFrame.size.height);
 }
+@end
+
+@interface NSWindow (Details)
+
+- (void)_setWindowResolution:(CGFloat)resolution displayIfChanged:(BOOL)displayIfChanged;
 
 @end
 
@@ -136,28 +141,35 @@ PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGro
     m_view = [[TestRunnerWKView alloc] initWithFrame:rect contextRef:contextRef pageGroupRef:pageGroupRef relatedToPage:relatedPage useThreadedScrolling:useThreadedScrolling];
     [m_view setWindowOcclusionDetectionEnabled:NO];
 
-    NSRect windowRect = NSOffsetRect(rect, -10000, [(NSScreen *)[[NSScreen screens] objectAtIndex:0] frame].size.height - rect.size.height + 10000);
+    WKRetainPtr<WKStringRef> shouldShowWebViewKey(AdoptWK, WKStringCreateWithUTF8CString("ShouldShowWebView"));
+    WKTypeRef shouldShowWebViewValue = options ? WKDictionaryGetItemForKey(options, shouldShowWebViewKey.get()) : NULL;
+    bool shouldShowWebView = shouldShowWebViewValue && WKBooleanGetValue(static_cast<WKBooleanRef>(shouldShowWebViewValue));
+
+    NSScreen *firstScreen = [[NSScreen screens] objectAtIndex:0];
+    NSRect windowRect = (shouldShowWebView) ? NSOffsetRect(rect, 100, 100) : NSOffsetRect(rect, -10000, [firstScreen frame].size.height - rect.size.height + 10000);
     m_window = [[WebKitTestRunnerWindow alloc] initWithContentRect:windowRect styleMask:NSBorderlessWindowMask backing:(NSBackingStoreType)_NSBackingStoreUnbuffered defer:YES];
     m_window.platformWebView = this;
-    [m_window setColorSpace:[[NSScreen mainScreen] colorSpace]];
+    [m_window setColorSpace:[firstScreen colorSpace]];
     [m_window setCollectionBehavior:NSWindowCollectionBehaviorStationary];
     [[m_window contentView] addSubview:m_view];
-    [m_window orderBack:nil];
+    if (shouldShowWebView)
+        [m_window orderFront:nil];
+    else
+        [m_window orderBack:nil];
     [m_window setReleasedWhenClosed:NO];
 }
 
 void PlatformWebView::resizeTo(unsigned width, unsigned height)
 {
-    NSRect windowFrame = [m_window frame];
-    windowFrame.size.width = width;
-    windowFrame.size.height = height;
-    [m_window setFrame:windowFrame display:YES];
-    [m_view setFrame:NSMakeRect(0, 0, width, height)];
+    WKRect frame = windowFrame();
+    frame.size.width = width;
+    frame.size.height = height;
+    setWindowFrame(frame);
 }
 
 PlatformWebView::~PlatformWebView()
 {
-    m_window.platformWebView = 0;
+    m_window.platformWebView = nullptr;
     [m_window close];
     [m_window release];
     [m_view release];
@@ -189,14 +201,13 @@ WKRect PlatformWebView::windowFrame()
 void PlatformWebView::setWindowFrame(WKRect frame)
 {
     [m_window setFrame:NSMakeRect(frame.origin.x, frame.origin.y, frame.size.width, frame.size.height) display:YES];
+    [m_view setFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
 }
 
 void PlatformWebView::didInitializeClients()
 {
     // Set a temporary 1x1 window frame to force a WindowAndViewFramesChanged notification. <rdar://problem/13380145>
-    WKRect wkFrame = windowFrame();
-    [m_window setFrame:NSMakeRect(0, 0, 1, 1) display:YES];
-    setWindowFrame(wkFrame);
+    forceWindowFramesChanged();
 }
 
 void PlatformWebView::addChromeInputField()
@@ -227,7 +238,12 @@ void PlatformWebView::makeWebViewFirstResponder()
 WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
 {
     [m_view display];
-    RetainPtr<CGImageRef> windowSnapshotImage = adoptCF(CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, [m_window windowNumber], kCGWindowImageBoundsIgnoreFraming | kCGWindowImageShouldBeOpaque));
+    CGWindowImageOption options = kCGWindowImageBoundsIgnoreFraming | kCGWindowImageShouldBeOpaque;
+
+    if ([m_window backingScaleFactor] == 1)
+        options |= kCGWindowImageNominalResolution;
+
+    RetainPtr<CGImageRef> windowSnapshotImage = adoptCF(CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, [m_window windowNumber], options));
 
     // windowSnapshotImage will be in GenericRGB, as we've set the main display's color space to GenericRGB.
     return adoptWK(WKImageCreateFromCGImage(windowSnapshotImage.get(), 0));
@@ -240,6 +256,27 @@ bool PlatformWebView::viewSupportsOptions(WKDictionaryRef options) const
     bool useThreadedScrolling = useThreadedScrollingValue && WKBooleanGetValue(static_cast<WKBooleanRef>(useThreadedScrollingValue));
 
     return useThreadedScrolling == [(TestRunnerWKView *)m_view useThreadedScrolling];
+}
+
+void PlatformWebView::changeWindowScaleIfNeeded(float newScale)
+{
+    CGFloat currentScale = [m_window backingScaleFactor];
+    if (currentScale == newScale)
+        return;
+    [m_window _setWindowResolution:newScale displayIfChanged:YES];
+    // Instead of re-constructing the current window, let's fake resize it to ensure that the scale change gets picked up.
+    forceWindowFramesChanged();
+    // Changing the scaling factor on the window does not trigger NSWindowDidChangeBackingPropertiesNotification. We need to send the notification manually.
+    RetainPtr<NSMutableDictionary> notificationUserInfo = adoptNS([[NSMutableDictionary alloc] initWithCapacity:1]);
+    [notificationUserInfo setObject:[NSNumber numberWithDouble:currentScale] forKey:NSBackingPropertyOldScaleFactorKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:NSWindowDidChangeBackingPropertiesNotification object:m_window userInfo:notificationUserInfo.get()];
+}
+
+void PlatformWebView::forceWindowFramesChanged()
+{
+    WKRect wkFrame = windowFrame();
+    [m_window setFrame:NSMakeRect(0, 0, 1, 1) display:YES];
+    setWindowFrame(wkFrame);
 }
 
 } // namespace WTR

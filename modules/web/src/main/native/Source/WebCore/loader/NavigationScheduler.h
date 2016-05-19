@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,21 +31,21 @@
 #ifndef NavigationScheduler_h
 #define NavigationScheduler_h
 
+#include "FrameLoaderTypes.h"
 #include "Timer.h"
 #include <wtf/Forward.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/PassRefPtr.h>
 
 namespace WebCore {
 
+class Document;
 class FormSubmission;
 class Frame;
 class ScheduledNavigation;
 class SecurityOrigin;
+class SubstituteData;
+class URL;
 
 class NavigationDisablerForBeforeUnload {
-    WTF_MAKE_NONCOPYABLE(NavigationDisablerForBeforeUnload);
-
 public:
     NavigationDisablerForBeforeUnload()
     {
@@ -63,8 +63,6 @@ private:
 };
 
 class NavigationScheduler {
-    WTF_MAKE_NONCOPYABLE(NavigationScheduler);
-
 public:
     explicit NavigationScheduler(Frame&);
     ~NavigationScheduler();
@@ -72,11 +70,12 @@ public:
     bool redirectScheduledDuringLoad();
     bool locationChangePending();
 
-    void scheduleRedirect(double delay, const String& url);
-    void scheduleLocationChange(SecurityOrigin*, const String& url, const String& referrer, bool lockHistory = true, bool lockBackForwardList = true);
+    void scheduleRedirect(Document* initiatingDocument, double delay, const URL&);
+    void scheduleLocationChange(Document* initiatingDocument, SecurityOrigin*, const URL&, const String& referrer, LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
     void scheduleFormSubmission(PassRefPtr<FormSubmission>);
-    void scheduleRefresh();
+    void scheduleRefresh(Document* initiatingDocument);
     void scheduleHistoryNavigation(int steps);
+    void scheduleSubstituteDataLoad(const URL& baseURL, const SubstituteData&);
 
     void startTimer();
 
@@ -85,15 +84,15 @@ public:
 
 private:
     bool shouldScheduleNavigation() const;
-    bool shouldScheduleNavigation(const String& url) const;
+    bool shouldScheduleNavigation(const URL&) const;
 
-    void timerFired(Timer<NavigationScheduler>&);
+    void timerFired();
     void schedule(std::unique_ptr<ScheduledNavigation>);
 
-    static bool mustLockBackForwardList(Frame& targetFrame);
+    static LockBackForwardList mustLockBackForwardList(Frame& targetFrame);
 
     Frame& m_frame;
-    Timer<NavigationScheduler> m_timer;
+    Timer m_timer;
     std::unique_ptr<ScheduledNavigation> m_redirect;
 };
 

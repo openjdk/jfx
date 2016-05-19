@@ -1,976 +1,462 @@
 /*
- * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2006, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2005, 2008, 2010, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2006 Alexey Proskuryakov
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
+ * 1.  Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ * 2.  Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
+ *     its contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
  *
- * You should have received a copy of the GNU Library General Public License
- * along with this library; see the file COPYING.LIB.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
- *
+ * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL APPLE OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
 #include "Font.h"
 
-#include "FloatRect.h"
+#if PLATFORM(COCOA)
+#include "CoreTextSPI.h"
+#endif
 #include "FontCache.h"
-#include "IntPoint.h"
-#include "GlyphBuffer.h"
-#include "TextRun.h"
-#include "WidthIterator.h"
-#include <wtf/MainThread.h>
+#include "FontCascade.h"
+#include "OpenTypeMathData.h"
 #include <wtf/MathExtras.h>
-#include <wtf/text/AtomicStringHash.h>
-#include <wtf/text/StringBuilder.h>
+#include <wtf/NeverDestroyed.h>
 
-using namespace WTF;
-using namespace Unicode;
-
-namespace WTF {
-
-// allow compilation of OwnPtr<TextLayout> in source files that don't have access to the TextLayout class definition
-template <> void deleteOwnedPtr<WebCore::TextLayout>(WebCore::TextLayout* ptr)
-{
-    WebCore::Font::deleteLayout(ptr);
-}
-
-}
+#if ENABLE(OPENTYPE_VERTICAL)
+#include "OpenTypeVerticalData.h"
+#endif
 
 namespace WebCore {
 
-static PassRef<FontGlyphs> retrieveOrAddCachedFontGlyphs(const FontDescription&, PassRefPtr<FontSelector>);
+unsigned GlyphPage::s_count = 0;
 
-const uint8_t Font::s_roundingHackCharacterTable[256] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 1 /*\t*/, 1 /*\n*/, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    1 /*space*/, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 /*-*/, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 /*?*/,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    1 /*no-break space*/, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
+const float smallCapsFontSizeMultiplier = 0.7f;
+const float emphasisMarkFontSizeMultiplier = 0.5f;
 
-static bool useBackslashAsYenSignForFamily(const AtomicString& family)
-{
-    if (family.isEmpty())
-        return false;
-    static HashSet<AtomicString>* set;
-    if (!set) {
-        set = new HashSet<AtomicString>;
-        set->add("MS PGothic");
-        UChar unicodeNameMSPGothic[] = {0xFF2D, 0xFF33, 0x0020, 0xFF30, 0x30B4, 0x30B7, 0x30C3, 0x30AF};
-        set->add(AtomicString(unicodeNameMSPGothic, WTF_ARRAY_LENGTH(unicodeNameMSPGothic)));
-
-        set->add("MS PMincho");
-        UChar unicodeNameMSPMincho[] = {0xFF2D, 0xFF33, 0x0020, 0xFF30, 0x660E, 0x671D};
-        set->add(AtomicString(unicodeNameMSPMincho, WTF_ARRAY_LENGTH(unicodeNameMSPMincho)));
-
-        set->add("MS Gothic");
-        UChar unicodeNameMSGothic[] = {0xFF2D, 0xFF33, 0x0020, 0x30B4, 0x30B7, 0x30C3, 0x30AF};
-        set->add(AtomicString(unicodeNameMSGothic, WTF_ARRAY_LENGTH(unicodeNameMSGothic)));
-
-        set->add("MS Mincho");
-        UChar unicodeNameMSMincho[] = {0xFF2D, 0xFF33, 0x0020, 0x660E, 0x671D};
-        set->add(AtomicString(unicodeNameMSMincho, WTF_ARRAY_LENGTH(unicodeNameMSMincho)));
-
-        set->add("Meiryo");
-        UChar unicodeNameMeiryo[] = {0x30E1, 0x30A4, 0x30EA, 0x30AA};
-        set->add(AtomicString(unicodeNameMeiryo, WTF_ARRAY_LENGTH(unicodeNameMeiryo)));
-    }
-    return set->contains(family);
-}
-
-Font::CodePath Font::s_codePath = Auto;
-
-TypesettingFeatures Font::s_defaultTypesettingFeatures = 0;
-
-// ============================================================================================
-// Font Implementation (Cross-Platform Portion)
-// ============================================================================================
-
-Font::Font()
-    : m_letterSpacing(0)
-    , m_wordSpacing(0)
-    , m_useBackslashAsYenSymbol(false)
-    , m_typesettingFeatures(0)
-{
-}
-
-Font::Font(const FontDescription& fd, float letterSpacing, float wordSpacing)
-    : m_fontDescription(fd)
-    , m_letterSpacing(letterSpacing)
-    , m_wordSpacing(wordSpacing)
-    , m_useBackslashAsYenSymbol(useBackslashAsYenSignForFamily(fd.firstFamily()))
-    , m_typesettingFeatures(computeTypesettingFeatures())
-{
-}
-
-// FIXME: We should make this constructor platform-independent.
-Font::Font(const FontPlatformData& fontData, bool isPrinterFont, FontSmoothingMode fontSmoothingMode)
-    : m_glyphs(FontGlyphs::createForPlatformFont(fontData))
-    , m_letterSpacing(0)
-    , m_wordSpacing(0)
-    , m_useBackslashAsYenSymbol(false)
-    , m_typesettingFeatures(computeTypesettingFeatures())
-{
-    m_fontDescription.setUsePrinterFont(isPrinterFont);
-    m_fontDescription.setFontSmoothing(fontSmoothingMode);
+Font::Font(const FontPlatformData& platformData, std::unique_ptr<SVGData>&& svgData, bool isCustomFont, bool isLoading, bool isTextOrientationFallback)
+    : m_maxCharWidth(-1)
+    , m_avgCharWidth(-1)
+    , m_platformData(platformData)
+    , m_svgData(WTF::move(svgData))
+    , m_mathData(nullptr)
+    , m_treatAsFixedPitch(false)
+    , m_isCustomFont(isCustomFont)
+    , m_isLoading(isLoading)
+    , m_isTextOrientationFallback(isTextOrientationFallback)
+    , m_isBrokenIdeographFallback(false)
+    , m_hasVerticalGlyphs(false)
+    , m_isUsedInSystemFallbackCache(false)
+#if PLATFORM(COCOA) || PLATFORM(WIN)
+    , m_isSystemFont(false)
+#endif
 #if PLATFORM(IOS)
-    m_fontDescription.setSpecifiedSize(CTFontGetSize(fontData.font()));
-    m_fontDescription.setComputedSize(CTFontGetSize(fontData.font()));
-    m_fontDescription.setItalic(CTFontGetSymbolicTraits(fontData.font()) & kCTFontTraitItalic);
-    m_fontDescription.setWeight((CTFontGetSymbolicTraits(fontData.font()) & kCTFontTraitBold) ? FontWeightBold : FontWeightNormal);
+    , m_shouldNotBeUsedForArabic(false)
+#endif
+{
+}
+
+Font::Font(const FontPlatformData& platformData, bool isCustomFont, bool isLoading, bool isTextOrientationFallback)
+    : Font(platformData, std::unique_ptr<SVGData>(), isCustomFont, isLoading, isTextOrientationFallback)
+{
+    platformInit();
+    platformGlyphInit();
+    platformCharWidthInit();
+#if ENABLE(OPENTYPE_VERTICAL)
+    if (platformData.orientation() == Vertical && !isTextOrientationFallback) {
+        m_verticalData = platformData.verticalData();
+        m_hasVerticalGlyphs = m_verticalData.get() && m_verticalData->hasVerticalMetrics();
+    }
 #endif
 }
 
-// FIXME: We should make this constructor platform-independent.
-#if PLATFORM(IOS)
-Font::Font(const FontPlatformData& fontData, PassRefPtr<FontSelector> fontSelector)
-    : m_glyphs(FontGlyphs::createForPlatformFont(fontData))
-    , m_letterSpacing(0)
-    , m_wordSpacing(0)
-    , m_typesettingFeatures(computeTypesettingFeatures())
+Font::Font(std::unique_ptr<SVGData> svgData, float fontSize, bool syntheticBold, bool syntheticItalic)
+    : Font(FontPlatformData(fontSize, syntheticBold, syntheticItalic), WTF::move(svgData), true, false, false)
 {
-    CTFontRef primaryFont = fontData.font();
-    m_fontDescription.setSpecifiedSize(CTFontGetSize(primaryFont));
-    m_fontDescription.setComputedSize(CTFontGetSize(primaryFont));
-    m_fontDescription.setItalic(CTFontGetSymbolicTraits(primaryFont) & kCTFontTraitItalic);
-    m_fontDescription.setWeight((CTFontGetSymbolicTraits(primaryFont) & kCTFontTraitBold) ? FontWeightBold : FontWeightNormal);
-    m_fontDescription.setUsePrinterFont(fontData.isPrinterFont());
-    m_glyphs = retrieveOrAddCachedFontGlyphs(m_fontDescription, fontSelector.get());
+    m_svgData->initializeFont(this, fontSize);
 }
+
+// Estimates of avgCharWidth and maxCharWidth for platforms that don't support accessing these values from the font.
+void Font::initCharWidths()
+{
+    auto* glyphPageZero = glyphPage(0);
+
+    // Treat the width of a '0' as the avgCharWidth.
+    if (m_avgCharWidth <= 0.f && glyphPageZero) {
+        static const UChar32 digitZeroChar = '0';
+        Glyph digitZeroGlyph = glyphPageZero->glyphDataForCharacter(digitZeroChar).glyph;
+        if (digitZeroGlyph)
+            m_avgCharWidth = widthForGlyph(digitZeroGlyph);
+    }
+
+    // If we can't retrieve the width of a '0', fall back to the x height.
+    if (m_avgCharWidth <= 0.f)
+        m_avgCharWidth = m_fontMetrics.xHeight();
+
+    if (m_maxCharWidth <= 0.f)
+        m_maxCharWidth = std::max(m_avgCharWidth, m_fontMetrics.floatAscent());
+}
+
+void Font::platformGlyphInit()
+{
+    auto* glyphPageZero = glyphPage(0);
+    if (!glyphPageZero) {
+        m_spaceGlyph = 0;
+        m_spaceWidth = 0;
+        m_zeroGlyph = 0;
+        m_adjustedSpaceWidth = 0;
+        determinePitch();
+        m_zeroWidthSpaceGlyph = 0;
+        return;
+    }
+
+    // Ask for the glyph for 0 to avoid paging in ZERO WIDTH SPACE. Control characters, including 0,
+    // are mapped to the ZERO WIDTH SPACE glyph.
+    m_zeroWidthSpaceGlyph = glyphPageZero->glyphDataForCharacter(0).glyph;
+
+    // Nasty hack to determine if we should round or ceil space widths.
+    // If the font is monospace or fake monospace we ceil to ensure that
+    // every character and the space are the same width. Otherwise we round.
+    m_spaceGlyph = glyphPageZero->glyphDataForCharacter(' ').glyph;
+    float width = widthForGlyph(m_spaceGlyph);
+    m_spaceWidth = width;
+    m_zeroGlyph = glyphPageZero->glyphDataForCharacter('0').glyph;
+    m_fontMetrics.setZeroWidth(widthForGlyph(m_zeroGlyph));
+    determinePitch();
+    m_adjustedSpaceWidth = m_treatAsFixedPitch ? ceilf(width) : roundf(width);
+
+    // Force the glyph for ZERO WIDTH SPACE to have zero width, unless it is shared with SPACE.
+    // Helvetica is an example of a non-zero width ZERO WIDTH SPACE glyph.
+    // See <http://bugs.webkit.org/show_bug.cgi?id=13178> and Font::isZeroWidthSpaceGlyph()
+    if (m_zeroWidthSpaceGlyph == m_spaceGlyph)
+        m_zeroWidthSpaceGlyph = 0;
+}
+
+Font::~Font()
+{
+    removeFromSystemFallbackCache();
+}
+
+static bool fillGlyphPage(GlyphPage& pageToFill, unsigned offset, unsigned length, UChar* buffer, unsigned bufferLength, const Font* font)
+{
+#if ENABLE(SVG_FONTS)
+    if (auto* svgData = font->svgData())
+        return svgData->fillSVGGlyphPage(&pageToFill, offset, length, buffer, bufferLength, font);
+#endif
+    bool hasGlyphs = pageToFill.fill(offset, length, buffer, bufferLength, font);
+#if ENABLE(OPENTYPE_VERTICAL)
+    if (hasGlyphs && font->verticalData())
+        font->verticalData()->substituteWithVerticalGlyphs(font, &pageToFill, offset, length);
+#endif
+    return hasGlyphs;
+}
+
+static RefPtr<GlyphPage> createAndFillGlyphPage(unsigned pageNumber, const Font* font)
+{
+#if PLATFORM(IOS)
+    // FIXME: Times New Roman contains Arabic glyphs, but Core Text doesn't know how to shape them. See <rdar://problem/9823975>.
+    // Once we have the fix for <rdar://problem/9823975> then remove this code together with Font::shouldNotBeUsedForArabic()
+    // in <rdar://problem/12096835>.
+    if (pageNumber == 6 && font->shouldNotBeUsedForArabic())
+        return nullptr;
 #endif
 
-Font::Font(const Font& other)
-    : m_fontDescription(other.m_fontDescription)
-    , m_glyphs(other.m_glyphs)
-    , m_letterSpacing(other.m_letterSpacing)
-    , m_wordSpacing(other.m_wordSpacing)
-    , m_useBackslashAsYenSymbol(other.m_useBackslashAsYenSymbol)
-    , m_typesettingFeatures(computeTypesettingFeatures())
-{
-}
+    unsigned start = pageNumber * GlyphPage::size;
+    UChar buffer[GlyphPage::size * 2 + 2];
+    unsigned bufferLength;
+    // Fill in a buffer with the entire "page" of characters that we want to look up glyphs for.
+    if (U_IS_BMP(start)) {
+        bufferLength = GlyphPage::size;
+        for (unsigned i = 0; i < GlyphPage::size; i++)
+            buffer[i] = start + i;
 
-Font& Font::operator=(const Font& other)
-{
-    m_fontDescription = other.m_fontDescription;
-    m_glyphs = other.m_glyphs;
-    m_letterSpacing = other.m_letterSpacing;
-    m_wordSpacing = other.m_wordSpacing;
-    m_useBackslashAsYenSymbol = other.m_useBackslashAsYenSymbol;
-    m_typesettingFeatures = other.m_typesettingFeatures;
-    return *this;
-}
+        if (!start) {
+            // Control characters must not render at all.
+            for (unsigned i = 0; i < 0x20; ++i)
+                buffer[i] = zeroWidthSpace;
+            for (unsigned i = 0x7F; i < 0xA0; i++)
+                buffer[i] = zeroWidthSpace;
+            buffer[softHyphen] = zeroWidthSpace;
 
-bool Font::operator==(const Font& other) const
-{
-    // Our FontData don't have to be checked, since checking the font description will be fine.
-    // FIXME: This does not work if the font was made with the FontPlatformData constructor.
-    if (loadingCustomFonts() || other.loadingCustomFonts())
-        return false;
-
-    if (m_fontDescription != other.m_fontDescription || m_letterSpacing != other.m_letterSpacing || m_wordSpacing != other.m_wordSpacing)
-        return false;
-    if (m_glyphs == other.m_glyphs)
-        return true;
-    if (!m_glyphs || !other.m_glyphs)
-        return false;
-    if (m_glyphs->fontSelector() != other.m_glyphs->fontSelector())
-        return false;
-    // Can these cases actually somehow occur? All fonts should get wiped out by full style recalc.
-    if (m_glyphs->fontSelectorVersion() != other.m_glyphs->fontSelectorVersion())
-        return false;
-    if (m_glyphs->generation() != other.m_glyphs->generation())
-        return false;
-    return true;
-}
-
-struct FontGlyphsCacheKey {
-    // This part of the key is shared with the lower level FontCache (caching FontData objects).
-    FontDescriptionFontDataCacheKey fontDescriptionCacheKey;
-    Vector<AtomicString, 3> families;
-    unsigned fontSelectorId;
-    unsigned fontSelectorVersion;
-    unsigned fontSelectorFlags;
-};
-
-struct FontGlyphsCacheEntry {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    FontGlyphsCacheEntry(FontGlyphsCacheKey&& k, PassRef<FontGlyphs> g) : key(k), glyphs(std::move(g)) { }
-    FontGlyphsCacheKey key;
-    Ref<FontGlyphs> glyphs;
-};
-
-typedef HashMap<unsigned, OwnPtr<FontGlyphsCacheEntry>, AlreadyHashed> FontGlyphsCache;
-
-static bool operator==(const FontGlyphsCacheKey& a, const FontGlyphsCacheKey& b)
-{
-    if (a.fontDescriptionCacheKey != b.fontDescriptionCacheKey)
-        return false;
-    if (a.fontSelectorId != b.fontSelectorId || a.fontSelectorVersion != b.fontSelectorVersion || a.fontSelectorFlags != b.fontSelectorFlags)
-        return false;
-    if (a.families.size() != b.families.size())
-        return false;
-    for (unsigned i = 0; i < a.families.size(); ++i) {
-        if (!equalIgnoringCase(a.families[i].impl(), b.families[i].impl()))
-            return false;
+            // \n, \t, and nonbreaking space must render as a space.
+            buffer[(int)'\n'] = ' ';
+            buffer[(int)'\t'] = ' ';
+            buffer[noBreakSpace] = ' ';
+        } else if (start == (leftToRightMark & ~(GlyphPage::size - 1))) {
+            // LRM, RLM, LRE, RLE, ZWNJ, ZWJ, and PDF must not render at all.
+            buffer[leftToRightMark - start] = zeroWidthSpace;
+            buffer[rightToLeftMark - start] = zeroWidthSpace;
+            buffer[leftToRightEmbed - start] = zeroWidthSpace;
+            buffer[rightToLeftEmbed - start] = zeroWidthSpace;
+            buffer[leftToRightOverride - start] = zeroWidthSpace;
+            buffer[rightToLeftOverride - start] = zeroWidthSpace;
+            buffer[zeroWidthNonJoiner - start] = zeroWidthSpace;
+            buffer[zeroWidthJoiner - start] = zeroWidthSpace;
+            buffer[popDirectionalFormatting - start] = zeroWidthSpace;
+        } else if (start == (objectReplacementCharacter & ~(GlyphPage::size - 1))) {
+            // Object replacement character must not render at all.
+            buffer[objectReplacementCharacter - start] = zeroWidthSpace;
+        } else if (start == (zeroWidthNoBreakSpace & ~(GlyphPage::size - 1))) {
+            // ZWNBS/BOM must not render at all.
+            buffer[zeroWidthNoBreakSpace - start] = zeroWidthSpace;
+        }
+    } else {
+        bufferLength = GlyphPage::size * 2;
+        for (unsigned i = 0; i < GlyphPage::size; i++) {
+            int c = i + start;
+            buffer[i * 2] = U16_LEAD(c);
+            buffer[i * 2 + 1] = U16_TRAIL(c);
+        }
     }
-    return true;
+
+    // Now that we have a buffer full of characters, we want to get back an array
+    // of glyph indices. This part involves calling into the platform-specific
+    // routine of our glyph map for actually filling in the page with the glyphs.
+    // Success is not guaranteed. For example, Times fails to fill page 260, giving glyph data
+    // for only 128 out of 256 characters.
+    RefPtr<GlyphPage> glyphPage;
+    if (GlyphPage::mayUseMixedFontsWhenFilling(buffer, bufferLength, font))
+        glyphPage = GlyphPage::createForMixedFonts();
+    else
+        glyphPage = GlyphPage::createForSingleFont(font);
+
+    bool haveGlyphs = fillGlyphPage(*glyphPage, 0, GlyphPage::size, buffer, bufferLength, font);
+    if (!haveGlyphs)
+        return nullptr;
+
+    glyphPage->setImmutable();
+    return glyphPage;
 }
 
-static FontGlyphsCache& fontGlyphsCache()
+const GlyphPage* Font::glyphPage(unsigned pageNumber) const
 {
-    DEFINE_STATIC_LOCAL(FontGlyphsCache, cache, ());
-    return cache;
-}
-
-void invalidateFontGlyphsCache()
-{
-    fontGlyphsCache().clear();
-}
-
-void clearWidthCaches()
-{
-    for (auto it = fontGlyphsCache().begin(), end = fontGlyphsCache().end(); it != end; ++it)
-        it->value->glyphs.get().widthCache().clear();
-}
-
-static unsigned makeFontSelectorFlags(const FontDescription& description)
-{
-    return static_cast<unsigned>(description.script()) << 1 | static_cast<unsigned>(description.smallCaps());
-}
-
-static void makeFontGlyphsCacheKey(FontGlyphsCacheKey& key, const FontDescription& description, FontSelector* fontSelector)
-{
-    key.fontDescriptionCacheKey = FontDescriptionFontDataCacheKey(description);
-    for (unsigned i = 0; i < description.familyCount(); ++i)
-        key.families.append(description.familyAt(i));
-    key.fontSelectorId = fontSelector ? fontSelector->uniqueId() : 0;
-    key.fontSelectorVersion = fontSelector ? fontSelector->version() : 0;
-    key.fontSelectorFlags = fontSelector && fontSelector->resolvesFamilyFor(description) ? makeFontSelectorFlags(description) : 0;
-}
-
-static unsigned computeFontGlyphsCacheHash(const FontGlyphsCacheKey& key)
-{
-    Vector<unsigned, 7> hashCodes;
-    hashCodes.reserveInitialCapacity(4 + key.families.size());
-
-    hashCodes.uncheckedAppend(key.fontDescriptionCacheKey.computeHash());
-    hashCodes.uncheckedAppend(key.fontSelectorId);
-    hashCodes.uncheckedAppend(key.fontSelectorVersion);
-    hashCodes.uncheckedAppend(key.fontSelectorFlags);
-    for (unsigned i = 0; i < key.families.size(); ++i)
-        hashCodes.uncheckedAppend(key.families[i].impl() ? CaseFoldingHash::hash(key.families[i]) : 0);
-
-    return StringHasher::hashMemory(hashCodes.data(), hashCodes.size() * sizeof(unsigned));
-}
-
-void pruneUnreferencedEntriesFromFontGlyphsCache()
-{
-    Vector<unsigned, 50> toRemove;
-    FontGlyphsCache::iterator end = fontGlyphsCache().end();
-    for (FontGlyphsCache::iterator it = fontGlyphsCache().begin(); it != end; ++it) {
-        if (it->value->glyphs.get().hasOneRef())
-            toRemove.append(it->key);
+    if (!pageNumber) {
+        if (!m_glyphPageZero)
+            m_glyphPageZero = createAndFillGlyphPage(0, this);
+        return m_glyphPageZero.get();
     }
-    for (unsigned i = 0; i < toRemove.size(); ++i)
-        fontGlyphsCache().remove(toRemove[i]);
+    auto addResult = m_glyphPages.add(pageNumber, nullptr);
+    if (addResult.isNewEntry)
+        addResult.iterator->value = createAndFillGlyphPage(pageNumber, this);
+
+    return addResult.iterator->value.get();
 }
 
-static PassRef<FontGlyphs> retrieveOrAddCachedFontGlyphs(const FontDescription& fontDescription, PassRefPtr<FontSelector> fontSelector)
+Glyph Font::glyphForCharacter(UChar32 character) const
 {
-    FontGlyphsCacheKey key;
-    makeFontGlyphsCacheKey(key, fontDescription, fontSelector.get());
-
-    unsigned hash = computeFontGlyphsCacheHash(key);
-    FontGlyphsCache::AddResult addResult = fontGlyphsCache().add(hash, PassOwnPtr<FontGlyphsCacheEntry>());
-    if (!addResult.isNewEntry && addResult.iterator->value->key == key)
-        return addResult.iterator->value->glyphs.get();
-
-    OwnPtr<FontGlyphsCacheEntry>& newEntry = addResult.iterator->value;
-    newEntry = adoptPtr(new FontGlyphsCacheEntry(std::move(key), FontGlyphs::create(fontSelector)));
-    PassRef<FontGlyphs> glyphs = newEntry->glyphs.get();
-
-    static const unsigned unreferencedPruneInterval = 50;
-    static const int maximumEntries = 400;
-    static unsigned pruneCounter;
-    // Referenced FontGlyphs would exist anyway so pruning them saves little memory.
-    if (!(++pruneCounter % unreferencedPruneInterval))
-        pruneUnreferencedEntriesFromFontGlyphsCache();
-    // Prevent pathological growth.
-    if (fontGlyphsCache().size() > maximumEntries)
-        fontGlyphsCache().remove(fontGlyphsCache().begin());
-    return glyphs;
-}
-
-void Font::update(PassRefPtr<FontSelector> fontSelector) const
-{
-    m_glyphs = retrieveOrAddCachedFontGlyphs(m_fontDescription, fontSelector.get());
-    m_useBackslashAsYenSymbol = useBackslashAsYenSignForFamily(firstFamily());
-    m_typesettingFeatures = computeTypesettingFeatures();
-}
-
-float Font::drawText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to, CustomFontNotReadyAction customFontNotReadyAction) const
-{
-    // Don't draw anything while we are using custom fonts that are in the process of loading,
-    // except if the 'force' argument is set to true (in which case it will use a fallback
-    // font).
-    if (loadingCustomFonts() && customFontNotReadyAction == DoNotPaintIfFontNotReady)
+    auto* page = glyphPage(character / GlyphPage::size);
+    if (!page)
         return 0;
-
-    to = (to == -1 ? run.length() : to);
-
-    CodePath codePathToUse = codePath(run);
-    // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
-    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()) && !run.renderingContext())
-        codePathToUse = Complex;
-
-    if (codePathToUse != Complex)
-        return drawSimpleText(context, run, point, from, to);
-
-    return drawComplexText(context, run, point, from, to);
+    return page->glyphAt(character % GlyphPage::size);
 }
 
-void Font::drawEmphasisMarks(GraphicsContext* context, const TextRun& run, const AtomicString& mark, const FloatPoint& point, int from, int to) const
+GlyphData Font::glyphDataForCharacter(UChar32 character) const
 {
-    if (loadingCustomFonts())
+    auto* page = glyphPage(character / GlyphPage::size);
+    if (!page)
+        return GlyphData();
+    return page->glyphDataForCharacter(character);
+}
+
+PassRefPtr<Font> Font::verticalRightOrientationFont() const
+{
+    if (!m_derivedFontData)
+        m_derivedFontData = std::make_unique<DerivedFontData>(isCustomFont());
+    if (!m_derivedFontData->verticalRightOrientation) {
+        FontPlatformData verticalRightPlatformData(m_platformData);
+        verticalRightPlatformData.setOrientation(Horizontal);
+        m_derivedFontData->verticalRightOrientation = create(verticalRightPlatformData, isCustomFont(), false, true);
+    }
+    ASSERT(m_derivedFontData->verticalRightOrientation != this);
+    return m_derivedFontData->verticalRightOrientation;
+}
+
+PassRefPtr<Font> Font::uprightOrientationFont() const
+{
+    if (!m_derivedFontData)
+        m_derivedFontData = std::make_unique<DerivedFontData>(isCustomFont());
+    if (!m_derivedFontData->uprightOrientation)
+        m_derivedFontData->uprightOrientation = create(m_platformData, isCustomFont(), false, true);
+    ASSERT(m_derivedFontData->uprightOrientation != this);
+    return m_derivedFontData->uprightOrientation;
+}
+
+PassRefPtr<Font> Font::smallCapsFont(const FontDescription& fontDescription) const
+{
+    if (!m_derivedFontData)
+        m_derivedFontData = std::make_unique<DerivedFontData>(isCustomFont());
+    if (!m_derivedFontData->smallCaps)
+        m_derivedFontData->smallCaps = createScaledFont(fontDescription, smallCapsFontSizeMultiplier);
+    ASSERT(m_derivedFontData->smallCaps != this);
+    return m_derivedFontData->smallCaps;
+}
+
+PassRefPtr<Font> Font::emphasisMarkFont(const FontDescription& fontDescription) const
+{
+    if (!m_derivedFontData)
+        m_derivedFontData = std::make_unique<DerivedFontData>(isCustomFont());
+    if (!m_derivedFontData->emphasisMark)
+        m_derivedFontData->emphasisMark = createScaledFont(fontDescription, emphasisMarkFontSizeMultiplier);
+    ASSERT(m_derivedFontData->emphasisMark != this);
+    return m_derivedFontData->emphasisMark;
+}
+
+PassRefPtr<Font> Font::brokenIdeographFont() const
+{
+    if (!m_derivedFontData)
+        m_derivedFontData = std::make_unique<DerivedFontData>(isCustomFont());
+    if (!m_derivedFontData->brokenIdeograph) {
+        m_derivedFontData->brokenIdeograph = create(m_platformData, isCustomFont(), false);
+        m_derivedFontData->brokenIdeograph->m_isBrokenIdeographFallback = true;
+    }
+    ASSERT(m_derivedFontData->brokenIdeograph != this);
+    return m_derivedFontData->brokenIdeograph;
+}
+
+PassRefPtr<Font> Font::nonSyntheticItalicFont() const
+{
+    if (!m_derivedFontData)
+        m_derivedFontData = std::make_unique<DerivedFontData>(isCustomFont());
+    if (!m_derivedFontData->nonSyntheticItalic) {
+        FontPlatformData nonSyntheticItalicFontPlatformData(m_platformData);
+#if PLATFORM(COCOA) || USE(CAIRO)
+        nonSyntheticItalicFontPlatformData.setSyntheticOblique(false);
+#endif
+        m_derivedFontData->nonSyntheticItalic = create(nonSyntheticItalicFontPlatformData, isCustomFont());
+    }
+    ASSERT(m_derivedFontData->nonSyntheticItalic != this);
+    return m_derivedFontData->nonSyntheticItalic;
+}
+
+#ifndef NDEBUG
+String Font::description() const
+{
+    if (isSVGFont())
+        return "[SVG font]";
+    if (isCustomFont())
+        return "[custom font]";
+
+    return platformData().description();
+}
+#endif
+
+const OpenTypeMathData* Font::mathData() const
+{
+    if (m_isLoading)
+        return nullptr;
+    if (!m_mathData) {
+        m_mathData = OpenTypeMathData::create(m_platformData);
+        if (!m_mathData->hasMathData())
+            m_mathData = nullptr;
+    }
+    return m_mathData.get();
+}
+
+Font::DerivedFontData::~DerivedFontData()
+{
+}
+
+PassRefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, float scaleFactor) const
+{
+    if (isSVGFont())
+        return nullptr;
+
+    return platformCreateScaledFont(fontDescription, scaleFactor);
+}
+
+bool Font::applyTransforms(GlyphBufferGlyph* glyphs, GlyphBufferAdvance* advances, size_t glyphCount, TypesettingFeatures typesettingFeatures) const
+{
+    // We need to handle transforms on SVG fonts internally, since they are rendered internally.
+    ASSERT(!isSVGFont());
+#if PLATFORM(COCOA)
+    CTFontTransformOptions options = (typesettingFeatures & Kerning ? kCTFontTransformApplyPositioning : 0) | (typesettingFeatures & Ligatures ? kCTFontTransformApplyShaping : 0);
+    return CTFontTransformGlyphs(m_platformData.ctFont(), glyphs, reinterpret_cast<CGSize*>(advances), glyphCount, options);
+#else
+    UNUSED_PARAM(glyphs);
+    UNUSED_PARAM(advances);
+    UNUSED_PARAM(glyphCount);
+    UNUSED_PARAM(typesettingFeatures);
+    return false;
+#endif
+}
+
+// Fonts are not ref'd to avoid cycles.
+typedef std::pair<UChar32, bool /* isForPlatformFont */> CharacterFallbackMapKey;
+typedef HashMap<CharacterFallbackMapKey, Font*> CharacterFallbackMap;
+typedef HashMap<const Font*, CharacterFallbackMap> SystemFallbackCache;
+
+static SystemFallbackCache& systemFallbackCache()
+{
+    static NeverDestroyed<SystemFallbackCache> map;
+    return map.get();
+}
+
+RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontDescription& description, bool isForPlatformFont) const
+{
+    auto fontAddResult = systemFallbackCache().add(this, CharacterFallbackMap());
+
+    if (!character) {
+        UChar codeUnit = 0;
+        return FontCache::singleton().systemFallbackForCharacters(description, this, isForPlatformFont, &codeUnit, 1);
+    }
+
+    auto key = std::make_pair(character, isForPlatformFont);
+    auto characterAddResult = fontAddResult.iterator->value.add(key, nullptr);
+
+    Font*& fallbackFont = characterAddResult.iterator->value;
+
+    if (!fallbackFont) {
+        UChar codeUnits[2];
+        unsigned codeUnitsLength;
+        if (U_IS_BMP(character)) {
+            codeUnits[0] = FontCascade::normalizeSpaces(character);
+            codeUnitsLength = 1;
+        } else {
+            codeUnits[0] = U16_LEAD(character);
+            codeUnits[1] = U16_TRAIL(character);
+            codeUnitsLength = 2;
+        }
+
+        fallbackFont = FontCache::singleton().systemFallbackForCharacters(description, this, isForPlatformFont, codeUnits, codeUnitsLength).get();
+        if (fallbackFont)
+            fallbackFont->m_isUsedInSystemFallbackCache = true;
+    }
+
+    return fallbackFont;
+}
+
+void Font::removeFromSystemFallbackCache()
+{
+    systemFallbackCache().remove(this);
+
+    if (!m_isUsedInSystemFallbackCache)
         return;
 
-    if (to < 0)
-        to = run.length();
-
-    CodePath codePathToUse = codePath(run);
-    // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
-    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()) && !run.renderingContext())
-        codePathToUse = Complex;
-
-    if (codePathToUse != Complex)
-        drawEmphasisMarksForSimpleText(context, run, mark, point, from, to);
-    else
-        drawEmphasisMarksForComplexText(context, run, mark, point, from, to);
-}
-
-float Font::width(const TextRun& run, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
-{
-    CodePath codePathToUse = codePath(run);
-    if (codePathToUse != Complex) {
-        // The complex path is more restrictive about returning fallback fonts than the simple path, so we need an explicit test to make their behaviors match.
-        if (!canReturnFallbackFontsForComplexText())
-            fallbackFonts = 0;
-        // The simple path can optimize the case where glyph overflow is not observable.
-        if (codePathToUse != SimpleWithGlyphOverflow && (glyphOverflow && !glyphOverflow->computeBounds))
-            glyphOverflow = 0;
+    for (auto& characterMap : systemFallbackCache().values()) {
+        Vector<CharacterFallbackMapKey, 512> toRemove;
+        for (auto& entry : characterMap) {
+            if (entry.value == this)
+                toRemove.append(entry.key);
+        }
+        for (auto& key : toRemove)
+            characterMap.remove(key);
     }
-
-    bool hasKerningOrLigatures = typesettingFeatures() & (Kerning | Ligatures);
-    bool hasWordSpacingOrLetterSpacing = wordSpacing() || letterSpacing();
-    float* cacheEntry = m_glyphs->widthCache().add(run, std::numeric_limits<float>::quiet_NaN(), hasKerningOrLigatures, hasWordSpacingOrLetterSpacing, glyphOverflow);
-    if (cacheEntry && !std::isnan(*cacheEntry))
-        return *cacheEntry;
-
-    HashSet<const SimpleFontData*> localFallbackFonts;
-    if (!fallbackFonts)
-        fallbackFonts = &localFallbackFonts;
-
-    float result;
-    if (codePathToUse == Complex)
-        result = floatWidthForComplexText(run, fallbackFonts, glyphOverflow);
-    else
-        result = floatWidthForSimpleText(run, fallbackFonts, glyphOverflow);
-
-    if (cacheEntry && fallbackFonts->isEmpty())
-        *cacheEntry = result;
-    return result;
 }
 
-float Font::width(const TextRun& run, int& charsConsumed, String& glyphName) const
-{
-#if ENABLE(SVG_FONTS)
-    if (TextRun::RenderingContext* renderingContext = run.renderingContext())
-        return renderingContext->floatWidthUsingSVGFont(*this, run, charsConsumed, glyphName);
-#endif
-
-    charsConsumed = run.length();
-    glyphName = "";
-    return width(run);
-}
-
-#if !PLATFORM(COCOA)
-PassOwnPtr<TextLayout> Font::createLayout(RenderText*, float, bool) const
-{
-    return nullptr;
-}
-
-void Font::deleteLayout(TextLayout*)
-{
-}
-
-float Font::width(TextLayout&, unsigned, unsigned, HashSet<const SimpleFontData*>*)
-{
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-#endif
-
-FloatRect Font::selectionRectForText(const TextRun& run, const FloatPoint& point, int h, int from, int to) const
-{
-    to = (to == -1 ? run.length() : to);
-
-    CodePath codePathToUse = codePath(run);
-    // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
-    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()) && !run.renderingContext())
-        codePathToUse = Complex;
-
-    if (codePathToUse != Complex)
-        return selectionRectForSimpleText(run, point, h, from, to);
-
-    return selectionRectForComplexText(run, point, h, from, to);
-}
-
-int Font::offsetForPosition(const TextRun& run, float x, bool includePartialGlyphs) const
-{
-    // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
-    if (codePath(run) != Complex && !typesettingFeatures())
-        return offsetForPositionForSimpleText(run, x, includePartialGlyphs);
-
-    return offsetForPositionForComplexText(run, x, includePartialGlyphs);
-}
-
-template <typename CharacterType>
-static inline String normalizeSpacesInternal(const CharacterType* characters, unsigned length)
-{
-    StringBuilder normalized;
-    normalized.reserveCapacity(length);
-
-    for (unsigned i = 0; i < length; ++i)
-        normalized.append(Font::normalizeSpaces(characters[i]));
-
-    return normalized.toString();
-}
-
-String Font::normalizeSpaces(const LChar* characters, unsigned length)
-{
-    return normalizeSpacesInternal(characters, length);
-}
-
-String Font::normalizeSpaces(const UChar* characters, unsigned length)
-{
-    return normalizeSpacesInternal(characters, length);
-}
-
-static bool shouldUseFontSmoothing = true;
-
-void Font::setShouldUseSmoothing(bool shouldUseSmoothing)
-{
-    ASSERT(isMainThread());
-    shouldUseFontSmoothing = shouldUseSmoothing;
-}
-
-bool Font::shouldUseSmoothing()
-{
-    return shouldUseFontSmoothing;
-}
-
-void Font::setCodePath(CodePath p)
-{
-    s_codePath = p;
-}
-
-Font::CodePath Font::codePath()
-{
-    return s_codePath;
-}
-
-void Font::setDefaultTypesettingFeatures(TypesettingFeatures typesettingFeatures)
-{
-    s_defaultTypesettingFeatures = typesettingFeatures;
-}
-
-TypesettingFeatures Font::defaultTypesettingFeatures()
-{
-    return s_defaultTypesettingFeatures;
-}
-
-Font::CodePath Font::codePath(const TextRun& run) const
-{
-    if (s_codePath != Auto)
-        return s_codePath;
-
-#if ENABLE(SVG_FONTS)
-    if (run.renderingContext())
-        return Simple;
-#endif
-
-    if (m_fontDescription.featureSettings() && m_fontDescription.featureSettings()->size() > 0)
-        return Complex;
-
-    if (run.length() > 1 && !WidthIterator::supportsTypesettingFeatures(*this))
-        return Complex;
-
-    if (!run.characterScanForCodePath())
-        return Simple;
-
-    if (run.is8Bit())
-        return Simple;
-
-    // Start from 0 since drawing and highlighting also measure the characters before run->from.
-    return characterRangeCodePath(run.characters16(), run.length());
-}
-
-Font::CodePath Font::characterRangeCodePath(const UChar* characters, unsigned len)
-{
-    // FIXME: Should use a UnicodeSet in ports where ICU is used. Note that we
-    // can't simply use UnicodeCharacter Property/class because some characters
-    // are not 'combining', but still need to go to the complex path.
-    // Alternatively, we may as well consider binary search over a sorted
-    // list of ranges.
-    CodePath result = Simple;
-    for (unsigned i = 0; i < len; i++) {
-        const UChar c = characters[i];
-        if (c < 0x2E5) // U+02E5 through U+02E9 (Modifier Letters : Tone letters)
-            continue;
-        if (c <= 0x2E9)
-            return Complex;
-
-        if (c < 0x300) // U+0300 through U+036F Combining diacritical marks
-            continue;
-        if (c <= 0x36F)
-            return Complex;
-
-        if (c < 0x0591 || c == 0x05BE) // U+0591 through U+05CF excluding U+05BE Hebrew combining marks, Hebrew punctuation Paseq, Sof Pasuq and Nun Hafukha
-            continue;
-        if (c <= 0x05CF)
-            return Complex;
-
-        // U+0600 through U+109F Arabic, Syriac, Thaana, NKo, Samaritan, Mandaic,
-        // Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada,
-        // Malayalam, Sinhala, Thai, Lao, Tibetan, Myanmar
-        if (c < 0x0600)
-            continue;
-        if (c <= 0x109F)
-            return Complex;
-
-        // U+1100 through U+11FF Hangul Jamo (only Ancient Korean should be left here if you precompose;
-        // Modern Korean will be precomposed as a result of step A)
-        if (c < 0x1100)
-            continue;
-        if (c <= 0x11FF)
-            return Complex;
-
-        if (c < 0x135D) // U+135D through U+135F Ethiopic combining marks
-            continue;
-        if (c <= 0x135F)
-            return Complex;
-
-        if (c < 0x1700) // U+1780 through U+18AF Tagalog, Hanunoo, Buhid, Taghanwa,Khmer, Mongolian
-            continue;
-        if (c <= 0x18AF)
-            return Complex;
-
-        if (c < 0x1900) // U+1900 through U+194F Limbu (Unicode 4.0)
-            continue;
-        if (c <= 0x194F)
-            return Complex;
-
-        if (c < 0x1980) // U+1980 through U+19DF New Tai Lue
-            continue;
-        if (c <= 0x19DF)
-            return Complex;
-
-        if (c < 0x1A00) // U+1A00 through U+1CFF Buginese, Tai Tham, Balinese, Batak, Lepcha, Vedic
-            continue;
-        if (c <= 0x1CFF)
-            return Complex;
-
-        if (c < 0x1DC0) // U+1DC0 through U+1DFF Comining diacritical mark supplement
-            continue;
-        if (c <= 0x1DFF)
-            return Complex;
-
-        // U+1E00 through U+2000 characters with diacritics and stacked diacritics
-        if (c <= 0x2000) {
-            result = SimpleWithGlyphOverflow;
-            continue;
-        }
-
-        if (c < 0x20D0) // U+20D0 through U+20FF Combining marks for symbols
-            continue;
-        if (c <= 0x20FF)
-            return Complex;
-
-        if (c < 0x2CEF) // U+2CEF through U+2CF1 Combining marks for Coptic
-            continue;
-        if (c <= 0x2CF1)
-            return Complex;
-
-        if (c < 0x302A) // U+302A through U+302F Ideographic and Hangul Tone marks
-            continue;
-        if (c <= 0x302F)
-            return Complex;
-
-        if (c < 0xA67C) // U+A67C through U+A67D Combining marks for old Cyrillic
-            continue;
-        if (c <= 0xA67D)
-            return Complex;
-
-        if (c < 0xA6F0) // U+A6F0 through U+A6F1 Combining mark for Bamum
-            continue;
-        if (c <= 0xA6F1)
-            return Complex;
-
-       // U+A800 through U+ABFF Nagri, Phags-pa, Saurashtra, Devanagari Extended,
-       // Hangul Jamo Ext. A, Javanese, Myanmar Extended A, Tai Viet, Meetei Mayek,
-        if (c < 0xA800)
-            continue;
-        if (c <= 0xABFF)
-            return Complex;
-
-        if (c < 0xD7B0) // U+D7B0 through U+D7FF Hangul Jamo Ext. B
-            continue;
-        if (c <= 0xD7FF)
-            return Complex;
-
-        if (c <= 0xDBFF) {
-            // High surrogate
-
-            if (i == len - 1)
-                continue;
-
-            UChar next = characters[++i];
-            if (!U16_IS_TRAIL(next))
-                continue;
-
-            UChar32 supplementaryCharacter = U16_GET_SUPPLEMENTARY(c, next);
-
-            if (supplementaryCharacter < 0x1F1E6) // U+1F1E6 through U+1F1FF Regional Indicator Symbols
-                continue;
-            if (supplementaryCharacter <= 0x1F1FF)
-                return Complex;
-
-            if (supplementaryCharacter < 0xE0100) // U+E0100 through U+E01EF Unicode variation selectors.
-                continue;
-            if (supplementaryCharacter <= 0xE01EF)
-                return Complex;
-
-            // FIXME: Check for Brahmi (U+11000 block), Kaithi (U+11080 block) and other complex scripts
-            // in plane 1 or higher.
-
-            continue;
-        }
-
-        if (c < 0xFE00) // U+FE00 through U+FE0F Unicode variation selectors
-            continue;
-        if (c <= 0xFE0F)
-            return Complex;
-
-        if (c < 0xFE20) // U+FE20 through U+FE2F Combining half marks
-            continue;
-        if (c <= 0xFE2F)
-            return Complex;
-    }
-    return result;
-}
-
-bool Font::isCJKIdeograph(UChar32 c)
-{
-    // The basic CJK Unified Ideographs block.
-    if (c >= 0x4E00 && c <= 0x9FFF)
-        return true;
-
-    // CJK Unified Ideographs Extension A.
-    if (c >= 0x3400 && c <= 0x4DBF)
-        return true;
-
-    // CJK Radicals Supplement.
-    if (c >= 0x2E80 && c <= 0x2EFF)
-        return true;
-
-    // Kangxi Radicals.
-    if (c >= 0x2F00 && c <= 0x2FDF)
-        return true;
-
-    // CJK Strokes.
-    if (c >= 0x31C0 && c <= 0x31EF)
-        return true;
-
-    // CJK Compatibility Ideographs.
-    if (c >= 0xF900 && c <= 0xFAFF)
-        return true;
-
-    // CJK Unified Ideographs Extension B.
-    if (c >= 0x20000 && c <= 0x2A6DF)
-        return true;
-
-    // CJK Unified Ideographs Extension C.
-    if (c >= 0x2A700 && c <= 0x2B73F)
-        return true;
-
-    // CJK Unified Ideographs Extension D.
-    if (c >= 0x2B740 && c <= 0x2B81F)
-        return true;
-
-    // CJK Compatibility Ideographs Supplement.
-    if (c >= 0x2F800 && c <= 0x2FA1F)
-        return true;
-
-    return false;
-}
-
-bool Font::isCJKIdeographOrSymbol(UChar32 c)
-{
-    // 0x2C7 Caron, Mandarin Chinese 3rd Tone
-    // 0x2CA Modifier Letter Acute Accent, Mandarin Chinese 2nd Tone
-    // 0x2CB Modifier Letter Grave Access, Mandarin Chinese 4th Tone
-    // 0x2D9 Dot Above, Mandarin Chinese 5th Tone
-    if ((c == 0x2C7) || (c == 0x2CA) || (c == 0x2CB) || (c == 0x2D9))
-        return true;
-
-    if ((c == 0x2020) || (c == 0x2021) || (c == 0x2030) || (c == 0x203B) || (c == 0x203C)
-        || (c == 0x2042) || (c == 0x2047) || (c == 0x2048) || (c == 0x2049) || (c == 0x2051)
-        || (c == 0x20DD) || (c == 0x20DE) || (c == 0x2100) || (c == 0x2103) || (c == 0x2105)
-        || (c == 0x2109) || (c == 0x210A) || (c == 0x2113) || (c == 0x2116) || (c == 0x2121)
-        || (c == 0x212B) || (c == 0x213B) || (c == 0x2150) || (c == 0x2151) || (c == 0x2152))
-        return true;
-
-    if (c >= 0x2156 && c <= 0x215A)
-        return true;
-
-    if (c >= 0x2160 && c <= 0x216B)
-        return true;
-
-    if (c >= 0x2170 && c <= 0x217B)
-        return true;
-
-    if ((c == 0x217F) || (c == 0x2189) || (c == 0x2307) || (c == 0x2312) || (c == 0x23BE) || (c == 0x23BF))
-        return true;
-
-    if (c >= 0x23C0 && c <= 0x23CC)
-        return true;
-
-    if ((c == 0x23CE) || (c == 0x2423))
-        return true;
-
-    if (c >= 0x2460 && c <= 0x2492)
-        return true;
-
-    if (c >= 0x249C && c <= 0x24FF)
-        return true;
-
-    if ((c == 0x25A0) || (c == 0x25A1) || (c == 0x25A2) || (c == 0x25AA) || (c == 0x25AB))
-        return true;
-
-    if ((c == 0x25B1) || (c == 0x25B2) || (c == 0x25B3) || (c == 0x25B6) || (c == 0x25B7) || (c == 0x25BC) || (c == 0x25BD))
-        return true;
-
-    if ((c == 0x25C0) || (c == 0x25C1) || (c == 0x25C6) || (c == 0x25C7) || (c == 0x25C9) || (c == 0x25CB) || (c == 0x25CC))
-        return true;
-
-    if (c >= 0x25CE && c <= 0x25D3)
-        return true;
-
-    if (c >= 0x25E2 && c <= 0x25E6)
-        return true;
-
-    if (c == 0x25EF)
-        return true;
-
-    if (c >= 0x2600 && c <= 0x2603)
-        return true;
-
-    if ((c == 0x2605) || (c == 0x2606) || (c == 0x260E) || (c == 0x2616) || (c == 0x2617) || (c == 0x2640) || (c == 0x2642))
-        return true;
-
-    if (c >= 0x2660 && c <= 0x266F)
-        return true;
-
-    if (c >= 0x2672 && c <= 0x267D)
-        return true;
-
-    if ((c == 0x26A0) || (c == 0x26BD) || (c == 0x26BE) || (c == 0x2713) || (c == 0x271A) || (c == 0x273F) || (c == 0x2740) || (c == 0x2756))
-        return true;
-
-    if (c >= 0x2776 && c <= 0x277F)
-        return true;
-
-    if (c == 0x2B1A)
-        return true;
-
-    // Ideographic Description Characters.
-    if (c >= 0x2FF0 && c <= 0x2FFF)
-        return true;
-
-    // CJK Symbols and Punctuation, excluding 0x3030.
-    if (c >= 0x3000 && c < 0x3030)
-        return true;
-
-    if (c > 0x3030 && c <= 0x303F)
-        return true;
-
-    // Hiragana
-    if (c >= 0x3040 && c <= 0x309F)
-        return true;
-
-    // Katakana
-    if (c >= 0x30A0 && c <= 0x30FF)
-        return true;
-
-    // Bopomofo
-    if (c >= 0x3100 && c <= 0x312F)
-        return true;
-
-    if (c >= 0x3190 && c <= 0x319F)
-        return true;
-
-    // Bopomofo Extended
-    if (c >= 0x31A0 && c <= 0x31BF)
-        return true;
-
-    // Enclosed CJK Letters and Months.
-    if (c >= 0x3200 && c <= 0x32FF)
-        return true;
-
-    // CJK Compatibility.
-    if (c >= 0x3300 && c <= 0x33FF)
-        return true;
-
-    if (c >= 0xF860 && c <= 0xF862)
-        return true;
-
-    // CJK Compatibility Forms.
-    if (c >= 0xFE30 && c <= 0xFE4F)
-        return true;
-
-    if ((c == 0xFE10) || (c == 0xFE11) || (c == 0xFE12) || (c == 0xFE19))
-        return true;
-
-    if ((c == 0xFF0D) || (c == 0xFF1B) || (c == 0xFF1C) || (c == 0xFF1E))
-        return false;
-
-    // Halfwidth and Fullwidth Forms
-    // Usually only used in CJK
-    if (c >= 0xFF00 && c <= 0xFFEF)
-        return true;
-
-    // Emoji.
-    if (c == 0x1F100)
-        return true;
-
-    if (c >= 0x1F110 && c <= 0x1F129)
-        return true;
-
-    if (c >= 0x1F130 && c <= 0x1F149)
-        return true;
-
-    if (c >= 0x1F150 && c <= 0x1F169)
-        return true;
-
-    if (c >= 0x1F170 && c <= 0x1F189)
-        return true;
-
-    if (c >= 0x1F200 && c <= 0x1F6C5)
-        return true;
-
-    return isCJKIdeograph(c);
-}
-
-unsigned Font::expansionOpportunityCount(const LChar* characters, size_t length, TextDirection direction, bool& isAfterExpansion)
-{
-    unsigned count = 0;
-    if (direction == LTR) {
-        for (size_t i = 0; i < length; ++i) {
-            if (treatAsSpace(characters[i])) {
-                count++;
-                isAfterExpansion = true;
-            } else
-                isAfterExpansion = false;
-        }
-    } else {
-        for (size_t i = length; i > 0; --i) {
-            if (treatAsSpace(characters[i - 1])) {
-                count++;
-                isAfterExpansion = true;
-            } else
-                isAfterExpansion = false;
-        }
-    }
-    return count;
-}
-
-unsigned Font::expansionOpportunityCount(const UChar* characters, size_t length, TextDirection direction, bool& isAfterExpansion)
-{
-    static bool expandAroundIdeographs = canExpandAroundIdeographsInComplexText();
-    unsigned count = 0;
-    if (direction == LTR) {
-        for (size_t i = 0; i < length; ++i) {
-            UChar32 character = characters[i];
-            if (treatAsSpace(character)) {
-                count++;
-                isAfterExpansion = true;
-                continue;
-            }
-            if (U16_IS_LEAD(character) && i + 1 < length && U16_IS_TRAIL(characters[i + 1])) {
-                character = U16_GET_SUPPLEMENTARY(character, characters[i + 1]);
-                i++;
-            }
-            if (expandAroundIdeographs && isCJKIdeographOrSymbol(character)) {
-                if (!isAfterExpansion)
-                    count++;
-                count++;
-                isAfterExpansion = true;
-                continue;
-            }
-            isAfterExpansion = false;
-        }
-    } else {
-        for (size_t i = length; i > 0; --i) {
-            UChar32 character = characters[i - 1];
-            if (treatAsSpace(character)) {
-                count++;
-                isAfterExpansion = true;
-                continue;
-            }
-            if (U16_IS_TRAIL(character) && i > 1 && U16_IS_LEAD(characters[i - 2])) {
-                character = U16_GET_SUPPLEMENTARY(characters[i - 2], character);
-                i--;
-            }
-            if (expandAroundIdeographs && isCJKIdeographOrSymbol(character)) {
-                if (!isAfterExpansion)
-                    count++;
-                count++;
-                isAfterExpansion = true;
-                continue;
-            }
-            isAfterExpansion = false;
-        }
-    }
-    return count;
-}
-
-bool Font::canReceiveTextEmphasis(UChar32 c)
-{
-    if (U_GET_GC_MASK(c) & (U_GC_Z_MASK | U_GC_CN_MASK | U_GC_CC_MASK | U_GC_CF_MASK))
-        return false;
-
-    // Additional word-separator characters listed in CSS Text Level 3 Editor's Draft 3 November 2010.
-    if (c == ethiopicWordspace || c == aegeanWordSeparatorLine || c == aegeanWordSeparatorDot
-        || c == ugariticWordDivider || c == tibetanMarkIntersyllabicTsheg || c == tibetanMarkDelimiterTshegBstar)
-        return false;
-
-    return true;
-}
-
-}
+} // namespace WebCore

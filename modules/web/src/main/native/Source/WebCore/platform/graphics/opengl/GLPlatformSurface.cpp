@@ -24,6 +24,8 @@
  */
 
 #include "config.h"
+
+#if ENABLE(GRAPHICS_CONTEXT_3D)
 #include "GLPlatformSurface.h"
 
 #if USE(GLX)
@@ -40,11 +42,11 @@ namespace WebCore {
 
 static GLPlatformSurface* m_currentDrawable = 0;
 
-PassOwnPtr<GLPlatformSurface> GLPlatformSurface::createOffScreenSurface(SurfaceAttributes attributes)
+std::unique_ptr<GLPlatformSurface> GLPlatformSurface::createOffScreenSurface(SurfaceAttributes attributes)
 {
-    OwnPtr<GLPlatformSurface> surface;
+    std::unique_ptr<GLPlatformSurface> surface;
 #if USE(GLX)
-    surface = adoptPtr(new GLXOffScreenSurface(attributes));
+    surface = std::make_unique<GLXOffScreenSurface>(attributes);
 #elif USE(EGL) && USE(GRAPHICS_SURFACE)
     surface = EGLOffScreenSurface::createOffScreenSurface(attributes);
 #else
@@ -53,14 +55,13 @@ PassOwnPtr<GLPlatformSurface> GLPlatformSurface::createOffScreenSurface(SurfaceA
 #endif
 
     if (surface && surface->drawable())
-        return surface.release();
+        return surface;
 
     return nullptr;
 }
 
 GLPlatformSurface::GLPlatformSurface(SurfaceAttributes)
-    : m_sharedDisplay(0)
-    , m_drawable(0)
+    : m_drawable(0)
     , m_bufferHandle(0)
 {
 }
@@ -84,11 +85,6 @@ PlatformDrawable GLPlatformSurface::drawable() const
 const IntRect& GLPlatformSurface::geometry() const
 {
     return m_rect;
-}
-
-PlatformDisplay GLPlatformSurface::sharedDisplay() const
-{
-    return m_sharedDisplay;
 }
 
 PlatformSurfaceConfig GLPlatformSurface::configuration()
@@ -131,3 +127,5 @@ GLPlatformSurface::SurfaceAttributes GLPlatformSurface::attributes() const
 }
 
 }
+
+#endif

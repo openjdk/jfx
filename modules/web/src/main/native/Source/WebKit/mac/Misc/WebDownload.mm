@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,16 +26,16 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WebDownload.h>
+#import <WebKitLegacy/WebDownload.h>
 
 #import <Foundation/NSURLAuthenticationChallenge.h>
-#import <Foundation/NSURLDownload.h>
 #import <WebCore/AuthenticationCF.h>
 #import <WebCore/AuthenticationMac.h>
 #import <WebCore/Credential.h>
 #import <WebCore/CredentialStorage.h>
+#import <WebCore/NSURLDownloadSPI.h>
 #import <WebCore/ProtectionSpace.h>
-#import <WebKit/WebPanelAuthenticationHandler.h>
+#import <WebKitLegacy/WebPanelAuthenticationHandler.h>
 #import <wtf/Assertions.h>
 
 #import "WebTypesInternal.h"
@@ -128,7 +128,7 @@ using namespace WebCore;
 #if !PLATFORM(IOS)
     // Try previously stored credential first.
     if (![challenge previousFailureCount]) {
-        NSURLCredential *credential = mac(CredentialStorage::get(core([challenge protectionSpace])));
+        NSURLCredential *credential = CredentialStorage::defaultCredentialStorage().get(ProtectionSpace([challenge protectionSpace])).nsCredential();
         if (credential) {
             [[challenge sender] useCredential:credential forAuthenticationChallenge:challenge];
             return;

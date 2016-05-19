@@ -37,6 +37,8 @@ interface AccessibilityUIElement {
     AccessibilityUIElement linkedUIElementAtIndex(unsigned long index);
     AccessibilityUIElement selectedChildAtIndex(unsigned long index);
     void setSelectedChild(AccessibilityUIElement element);
+    void setSelectedChildAtIndex(unsigned long index);
+    void removeSelectionAtIndex(unsigned long index);
     AccessibilityUIElement titleUIElement();
     AccessibilityUIElement parentElement();
     
@@ -60,6 +62,7 @@ interface AccessibilityUIElement {
     object uiElementArrayAttributeValue(DOMString attr);
     AccessibilityUIElement uiElementAttributeValue(DOMString attr);  
     boolean boolAttributeValue(DOMString attr);
+    void setBoolAttributeValue(DOMString attr, boolean value);
     boolean isAttributeSupported(DOMString attr);
     boolean isAttributeSettable(DOMString attr);
     boolean isPressActionSupported();
@@ -158,18 +161,26 @@ interface AccessibilityUIElement {
     boolean attributedStringRangeIsMisspelled(unsigned long location, unsigned long length);
     [PassContext] unsigned int uiElementCountForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
     [PassContext] AccessibilityUIElement uiElementForSearchPredicate(AccessibilityUIElement startElement, boolean isDirectionNext, object searchKey, DOMString searchText, boolean visibleOnly, boolean immediateDescendantsOnly);
-    [PassContext] DOMString selectTextWithCriteria(DOMString ambiguityResolution, object searchStrings, DOMString replacementString);
-    void setSelectedTextRange(unsigned long location, unsigned long length);
+    [PassContext] DOMString selectTextWithCriteria(DOMString ambiguityResolution, object searchStrings, DOMString replacementString, DOMString activity);
+    boolean setSelectedTextRange(unsigned long location, unsigned long length);
 
     // Scroll area attributes.
     readonly attribute AccessibilityUIElement horizontalScrollbar;
     readonly attribute AccessibilityUIElement verticalScrollbar;
 
     void scrollToMakeVisible();
+    void takeFocus();
+    boolean scrollPageDown();
+    boolean scrollPageUp();
+    boolean scrollPageLeft();
+    boolean scrollPageRight();
 
     // Text markers.
+    AccessibilityTextMarkerRange lineTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
     AccessibilityTextMarkerRange textMarkerRangeForElement(AccessibilityUIElement element);    
     AccessibilityTextMarkerRange textMarkerRangeForMarkers(AccessibilityTextMarker startMarker, AccessibilityTextMarker endMarker);
+    AccessibilityTextMarkerRange selectedTextMarkerRange();
+    void resetSelectedTextMarkerRange();
     AccessibilityTextMarker startTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange range);
     AccessibilityTextMarker endTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange range);
     AccessibilityTextMarker endTextMarkerForBounds(int x, int y, int width, int height);
@@ -186,6 +197,7 @@ interface AccessibilityUIElement {
     AccessibilityTextMarker textMarkerForIndex(int textIndex);
     readonly attribute AccessibilityTextMarker startTextMarker;
     readonly attribute AccessibilityTextMarker endTextMarker;
+    boolean setSelectedVisibleTextRange(AccessibilityTextMarkerRange range);
 
     // Returns an ordered list of supported actions for an element.
     readonly attribute DOMString supportedActions;
@@ -193,10 +205,23 @@ interface AccessibilityUIElement {
     readonly attribute DOMString mathPrescriptsDescription;
 
     readonly attribute DOMString pathDescription;
-    
+
+    // iOS specific accessibility methods.
+    readonly attribute DOMString identifier;
+    readonly attribute DOMString traits;
+    readonly attribute int elementTextPosition;
+    readonly attribute int elementTextLength;
+    readonly attribute DOMString stringForSelection;
+    object elementsForRange(unsigned long location, unsigned long length);
+    void increaseTextSelection();
+    void decreaseTextSelection();
+    AccessibilityUIElement linkedElement();
+    AccessibilityUIElement headerElementAtIndex(unsigned long index);
+    // This will simulate the accessibilityDidBecomeFocused API in UIKit.
+    void assistiveTechnologySimulatedFocus();
+
     // Notification support.
     boolean addNotificationListener(object callbackFunction);
     boolean removeNotificationListener();
-    
 };
 

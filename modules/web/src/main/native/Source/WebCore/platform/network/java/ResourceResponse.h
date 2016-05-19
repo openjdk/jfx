@@ -14,8 +14,9 @@ public:
     {
     }
 
-    ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName, const String& filename)
-        : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName, filename)
+
+    ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName) //XXX:, const String& filename)
+        : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName) //XXX: , filename)
     {
     }
 
@@ -25,9 +26,12 @@ private:
     void doUpdateResourceResponse()
     { }
 
-    PassOwnPtr<CrossThreadResourceResponseData> doPlatformCopyData(PassOwnPtr<CrossThreadResourceResponseData> data) const { return data; }
-    void doPlatformAdopt(PassOwnPtr<CrossThreadResourceResponseData>) { }
+    std::unique_ptr<CrossThreadResourceResponseData> doPlatformCopyData(std::unique_ptr<CrossThreadResourceResponseData> data) const { return data; }
+    void doPlatformAdopt(std::unique_ptr<CrossThreadResourceResponseData>) { }
+
+    String platformSuggestedFilename() const { return String(); } //XXX: check implementation
 };
+
 
 struct CrossThreadResourceResponseData : public CrossThreadResourceResponseDataBase {
 };

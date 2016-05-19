@@ -26,11 +26,14 @@
 #include "config.h"
 #include "TextPaintStyle.h"
 
+#include "FocusController.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
+#include "Page.h"
 #include "PaintInfo.h"
 #include "RenderStyle.h"
 #include "RenderText.h"
+#include "RenderTheme.h"
 #include "RenderView.h"
 #include "Settings.h"
 
@@ -71,7 +74,7 @@ static Color adjustColorForVisibilityOnBackground(Color textColor, Color backgro
     return textColor.light();
 }
 
-TextPaintStyle computeTextPaintStyle(const RenderText& renderer, const RenderStyle& lineStyle, const PaintInfo& paintInfo)
+TextPaintStyle computeTextPaintStyle(const Frame& frame, const RenderStyle& lineStyle, const PaintInfo& paintInfo)
 {
     TextPaintStyle paintStyle(lineStyle.colorSpace());
 
@@ -80,19 +83,28 @@ TextPaintStyle computeTextPaintStyle(const RenderText& renderer, const RenderSty
 #endif
     paintStyle.strokeWidth = lineStyle.textStrokeWidth();
 
-    if (paintInfo.forceBlackText()) {
-        paintStyle.fillColor = Color::black;
-        paintStyle.strokeColor = Color::black;
-        paintStyle.emphasisMarkColor = Color::black;
+    if (paintInfo.forceTextColor()) {
+        paintStyle.fillColor = paintInfo.forcedTextColor();
+        paintStyle.strokeColor = paintInfo.forcedTextColor();
+        paintStyle.emphasisMarkColor = paintInfo.forcedTextColor();
         return paintStyle;
     }
+
+    if (lineStyle.insideDefaultButton()) {
+        Page* page = frame.page();
+        if (page && page->focusController().isActive()) {
+            paintStyle.fillColor = page->theme().systemColor(CSSValueActivebuttontext);
+            return paintStyle;
+        }
+    }
+
     paintStyle.fillColor = lineStyle.visitedDependentColor(CSSPropertyWebkitTextFillColor);
 
     bool forceBackgroundToWhite = false;
-    if (renderer.document().printing()) {
+    if (frame.document() && frame.document()->printing()) {
         if (lineStyle.printColorAdjust() == PrintColorAdjustEconomy)
             forceBackgroundToWhite = true;
-        if (renderer.frame().settings().shouldPrintBackgrounds())
+        if (frame.settings().shouldPrintBackgrounds())
             forceBackgroundToWhite = false;
     }
 
@@ -119,19 +131,19 @@ TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintSty
 {
     paintSelectedTextOnly = (paintInfo.phase == PaintPhaseSelection);
     paintSelectedTextSeparately = false;
-    selectionShadow = paintInfo.forceBlackText() ? nullptr : lineStyle.textShadow();
+    selectionShadow = (paintInfo.forceTextColor()) ? nullptr : lineStyle.textShadow();
 
     TextPaintStyle selectionPaintStyle = textPaintStyle;
 
 #if ENABLE(TEXT_SELECTION)
-    Color foreground = paintInfo.forceBlackText() ? Color::black : renderer.selectionForegroundColor();
+    Color foreground = paintInfo.forceTextColor() ? paintInfo.forcedTextColor() : renderer.selectionForegroundColor();
     if (foreground.isValid() && foreground != selectionPaintStyle.fillColor) {
         if (!paintSelectedTextOnly)
             paintSelectedTextSeparately = true;
         selectionPaintStyle.fillColor = foreground;
     }
 
-    Color emphasisMarkForeground = paintInfo.forceBlackText() ? Color::black : renderer.selectionEmphasisMarkColor();
+    Color emphasisMarkForeground = paintInfo.forceTextColor() ? paintInfo.forcedTextColor() : renderer.selectionEmphasisMarkColor();
     if (emphasisMarkForeground.isValid() && emphasisMarkForeground != selectionPaintStyle.emphasisMarkColor) {
         if (!paintSelectedTextOnly)
             paintSelectedTextSeparately = true;
@@ -139,7 +151,7 @@ TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintSty
     }
 
     if (RenderStyle* pseudoStyle = renderer.getCachedPseudoStyle(SELECTION)) {
-        const ShadowData* shadow = paintInfo.forceBlackText() ? 0 : pseudoStyle->textShadow();
+        const ShadowData* shadow = paintInfo.forceTextColor() ? nullptr : pseudoStyle->textShadow();
         if (shadow != selectionShadow) {
             if (!paintSelectedTextOnly)
                 paintSelectedTextSeparately = true;
@@ -153,7 +165,7 @@ TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintSty
             selectionPaintStyle.strokeWidth = strokeWidth;
         }
 
-        Color stroke = paintInfo.forceBlackText() ? Color::black : pseudoStyle->visitedDependentColor(CSSPropertyWebkitTextStrokeColor);
+        Color stroke = paintInfo.forceTextColor() ? paintInfo.forcedTextColor() : pseudoStyle->visitedDependentColor(CSSPropertyWebkitTextStrokeColor);
         if (stroke != selectionPaintStyle.strokeColor) {
             if (!paintSelectedTextOnly)
                 paintSelectedTextSeparately = true;

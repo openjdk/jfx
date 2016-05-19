@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -63,7 +63,7 @@ static void findGrammaticalErrors(TextCheckerClient& client, StringView text, Ve
         badGrammar.type = TextCheckingTypeGrammar;
         badGrammar.location = checkLocation + badGrammarLocation;
         badGrammar.length = badGrammarLength;
-        badGrammar.details = std::move(badGrammarDetails);
+        badGrammar.details = WTF::move(badGrammarDetails);
         results.append(badGrammar);
 
         checkLocation += badGrammarLocation + badGrammarLength;
@@ -77,7 +77,7 @@ static void findMisspellings(TextCheckerClient& client, StringView text, Vector<
     TextBreakIterator* iterator = wordBreakIterator(text);
     if (!iterator)
         return;
-    for (int wordStart = textBreakCurrent(iterator); wordStart > 0; ) {
+    for (int wordStart = textBreakCurrent(iterator); wordStart >= 0; ) {
         int wordEnd = textBreakNext(iterator);
         if (wordEnd < 0)
             break;
@@ -146,7 +146,7 @@ void TextCheckingParagraph::expandRangeToNextEnd()
 void TextCheckingParagraph::invalidateParagraphRangeValues()
 {
     m_checkingStart = m_checkingEnd = -1;
-    m_offsetAsRange = 0;
+    m_offsetAsRange = nullptr;
     m_text = String();
 }
 
@@ -184,7 +184,7 @@ bool TextCheckingParagraph::isEmpty() const
 {
     // Both predicates should have same result, but we check both just for sure.
     // We need to investigate to remove this redundancy.
-    return isRangeEmpty() || isTextEmpty();
+    return checkingStart() >= checkingEnd() || text().isEmpty();
 }
 
 PassRefPtr<Range> TextCheckingParagraph::offsetAsRange() const
@@ -240,58 +240,53 @@ TextCheckingHelper::~TextCheckingHelper()
 {
 }
 
-#if !PLATFORM(IOS)
-
 String TextCheckingHelper::findFirstMisspelling(int& firstMisspellingOffset, bool markAll, RefPtr<Range>& firstMisspellingRange)
 {
-    WordAwareIterator it(m_range.get());
     firstMisspellingOffset = 0;
 
     String firstMisspelling;
     int currentChunkOffset = 0;
 
-    while (!it.atEnd()) {
+    for (WordAwareIterator it(*m_range); !it.atEnd(); currentChunkOffset += it.text().length(), it.advance()) {
         StringView text = it.text();
         int textLength = text.length();
 
-        // Skip some work for one-space-char hunks
-        if (textLength == 1 && text[0] == ' ') {
-            int misspellingLocation = -1;
-            int misspellingLength = 0;
-            m_client->textChecker()->checkSpellingOfString(text, &misspellingLocation, &misspellingLength);
+        // Skip some work for one-space-char hunks.
+        if (textLength == 1 && text[0] == ' ')
+            continue;
 
-            // 5490627 shows that there was some code path here where the String constructor below crashes.
-            // We don't know exactly what combination of bad input caused this, so we're making this much
-            // more robust against bad input on release builds.
-            ASSERT(misspellingLength >= 0);
-            ASSERT(misspellingLocation >= -1);
-            ASSERT(!misspellingLength || misspellingLocation >= 0);
-            ASSERT(misspellingLocation < textLength);
-            ASSERT(misspellingLength <= textLength);
-            ASSERT(misspellingLocation + misspellingLength <= textLength);
+        int misspellingLocation = -1;
+        int misspellingLength = 0;
+        m_client->textChecker()->checkSpellingOfString(text, &misspellingLocation, &misspellingLength);
 
-            if (misspellingLocation >= 0 && misspellingLength > 0 && misspellingLocation < textLength && misspellingLength <= textLength && misspellingLocation + misspellingLength <= textLength) {
-                // Compute range of misspelled word
-                RefPtr<Range> misspellingRange = TextIterator::subrange(m_range.get(), currentChunkOffset + misspellingLocation, misspellingLength);
+        // 5490627 shows that there was some code path here where the String constructor below crashes.
+        // We don't know exactly what combination of bad input caused this, so we're making this much
+        // more robust against bad input on release builds.
+        ASSERT(misspellingLength >= 0);
+        ASSERT(misspellingLocation >= -1);
+        ASSERT(!misspellingLength || misspellingLocation >= 0);
+        ASSERT(misspellingLocation < textLength);
+        ASSERT(misspellingLength <= textLength);
+        ASSERT(misspellingLocation + misspellingLength <= textLength);
 
-                // Remember first-encountered misspelling and its offset.
-                if (!firstMisspelling) {
-                    firstMisspellingOffset = currentChunkOffset + misspellingLocation;
-                    firstMisspelling = text.substring(misspellingLocation, misspellingLength).toString();
-                    firstMisspellingRange = misspellingRange;
-                }
+        if (misspellingLocation >= 0 && misspellingLength > 0 && misspellingLocation < textLength && misspellingLength <= textLength && misspellingLocation + misspellingLength <= textLength) {
+            // Compute range of misspelled word
+            RefPtr<Range> misspellingRange = TextIterator::subrange(m_range.get(), currentChunkOffset + misspellingLocation, misspellingLength);
 
-                // Store marker for misspelled word.
-                misspellingRange->startContainer()->document().markers().addMarker(misspellingRange.get(), DocumentMarker::Spelling);
-
-                // Bail out if we're marking only the first misspelling, and not all instances.
-                if (!markAll)
-                    break;
+            // Remember first-encountered misspelling and its offset.
+            if (!firstMisspelling) {
+                firstMisspellingOffset = currentChunkOffset + misspellingLocation;
+                firstMisspelling = text.substring(misspellingLocation, misspellingLength).toString();
+                firstMisspellingRange = misspellingRange;
             }
-        }
 
-        currentChunkOffset += textLength;
-        it.advance();
+            // Store marker for misspelled word.
+            misspellingRange->startContainer()->document().markers().addMarker(misspellingRange.get(), DocumentMarker::Spelling);
+
+            // Bail out if we're marking only the first misspelling, and not all instances.
+            if (!markAll)
+                break;
+        }
     }
 
     return firstMisspelling;
@@ -423,8 +418,6 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
     }
     return firstFoundItem;
 }
-
-#endif // !PLATFORM(IOS)
 
 #if USE(GRAMMAR_CHECKING)
 
@@ -625,8 +618,6 @@ Vector<String> TextCheckingHelper::guessesForMisspelledOrUngrammaticalRange(bool
     return guesses;
 }
 
-#if !PLATFORM(IOS)
-
 void TextCheckingHelper::markAllMisspellings(RefPtr<Range>& firstMisspellingRange)
 {
     // Use the "markAll" feature of findFirstMisspelling. Ignore the return value and the "out parameter";
@@ -645,8 +636,6 @@ void TextCheckingHelper::markAllBadGrammar()
     findFirstBadGrammar(ignoredGrammarDetail, ignoredOffset, true);
 }
 #endif
-
-#endif // !PLATFORM(IOS)
 
 bool TextCheckingHelper::unifiedTextCheckerEnabled() const
 {
@@ -672,11 +661,11 @@ void checkTextOfParagraph(TextCheckerClient& client, StringView text, TextChecki
         findGrammaticalErrors(client, text.substring(0, grammarCheckLength), grammaticalErrors);
     }
 
-    results = std::move(grammaticalErrors);
+    results = WTF::move(grammaticalErrors);
 #endif
 
     if (results.isEmpty())
-        results = std::move(mispellings);
+        results = WTF::move(mispellings);
     else
         results.appendVector(mispellings);
 #endif // USE(UNIFIED_TEXT_CHECKING)

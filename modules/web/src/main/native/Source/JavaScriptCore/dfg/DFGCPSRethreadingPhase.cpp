@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +44,8 @@ public:
 
     bool run()
     {
+        RELEASE_ASSERT(m_graph.m_refCountState == EverythingIsLive);
+
         if (m_graph.m_form == ThreadedCPS)
             return false;
 
@@ -51,8 +53,10 @@ public:
         freeUnnecessaryNodes();
         m_graph.clearReplacements();
         canonicalizeLocalsInBlocks();
+        specialCaseArguments();
         propagatePhis<LocalOperand>();
         propagatePhis<ArgumentOperand>();
+        computeIsFlushed();
 
         m_graph.m_form = ThreadedCPS;
         return true;
@@ -87,13 +91,15 @@ private:
                     node->children.setChild1(Edge());
                     break;
                 case Phantom:
-                    if (!node->child1())
+                    if (!node->child1()) {
+                        m_graph.m_allocator.free(node);
                         continue;
+                    }
                     switch (node->child1()->op()) {
                     case Phi:
                     case SetArgument:
                     case SetLocal:
-                        node->convertToPhantomLocal();
+                        node->convertPhantomToPhantomLocal();
                         break;
                     default:
                         ASSERT(node->child1()->hasResult());
@@ -114,15 +120,15 @@ private:
     }
 
     template<OperandKind operandKind>
-    void clearVariablesAtHeadAndTail()
+    void clearVariables()
     {
         ASSERT(
             m_block->variablesAtHead.sizeFor<operandKind>()
             == m_block->variablesAtTail.sizeFor<operandKind>());
 
         for (unsigned i = m_block->variablesAtHead.sizeFor<operandKind>(); i--;) {
-            m_block->variablesAtHead.atFor<operandKind>(i) = 0;
-            m_block->variablesAtTail.atFor<operandKind>(i) = 0;
+            m_block->variablesAtHead.atFor<operandKind>(i) = nullptr;
+            m_block->variablesAtTail.atFor<operandKind>(i) = nullptr;
         }
     }
 
@@ -181,29 +187,14 @@ private:
                 return;
             }
 
-            if (variable->isCaptured()) {
-                variable->setIsLoadedFrom(true);
-                if (otherNode->op() == GetLocal)
-                    otherNode = otherNode->child1().node();
-                else
-                    ASSERT(otherNode->op() == SetLocal || otherNode->op() == SetArgument);
-
-                ASSERT(otherNode->op() == Phi || otherNode->op() == SetLocal || otherNode->op() == SetArgument);
-
-                // Keep this GetLocal but link it to the prior ones.
-                node->children.setChild1(Edge(otherNode));
-                m_block->variablesAtTail.atFor<operandKind>(idx) = node;
-                return;
-            }
-
             if (otherNode->op() == GetLocal) {
                 // Replace all references to this GetLocal with otherNode.
-                node->misc.replacement = otherNode;
+                node->replaceWith(otherNode);
                 return;
             }
 
             ASSERT(otherNode->op() == SetLocal);
-            node->misc.replacement = otherNode->child1().node();
+            node->replaceWith(otherNode->child1().node());
             return;
         }
 
@@ -221,11 +212,6 @@ private:
             canonicalizeGetLocalFor<ArgumentOperand>(node, variable, variable->local().toArgument());
         else
             canonicalizeGetLocalFor<LocalOperand>(node, variable, variable->local().toLocal());
-    }
-
-    void canonicalizeSetLocal(Node* node)
-    {
-        m_block->variablesAtTail.setOperand(node->local(), node);
     }
 
     template<NodeType nodeType, OperandKind operandKind>
@@ -254,13 +240,9 @@ private:
                 // for the purpose of OSR. PhantomLocal(SetLocal) means: at this point I
                 // know that I would have read the value written by that SetLocal. This is
                 // redundant and inefficient, since really it just means that we want to
-                // be keeping the operand to the SetLocal alive. The SetLocal may die, and
-                // we'll be fine because OSR tracks dead SetLocals.
+                // keep the last MovHinted value of that local alive.
 
-                // So we turn this into a Phantom on the child of the SetLocal.
-
-                node->convertToPhantom();
-                node->children.setChild1(otherNode->child1());
+                node->remove();
                 return;
             }
 
@@ -291,13 +273,9 @@ private:
             canonicalizeFlushOrPhantomLocalFor<nodeType, LocalOperand>(node, variable, variable->local().toLocal());
     }
 
-    void canonicalizeSetArgument(Node* node)
+    void canonicalizeSet(Node* node)
     {
-        VirtualRegister local = node->local();
-        ASSERT(local.isArgument());
-        int argument = local.toArgument();
-        m_block->variablesAtHead.setArgumentFirstTime(argument, node);
-        m_block->variablesAtTail.setArgumentFirstTime(argument, node);
+        m_block->variablesAtTail.setOperand(node->local(), node);
     }
 
     void canonicalizeLocalsInBlock()
@@ -306,8 +284,8 @@ private:
             return;
         ASSERT(m_block->isReachable);
 
-        clearVariablesAtHeadAndTail<ArgumentOperand>();
-        clearVariablesAtHeadAndTail<LocalOperand>();
+        clearVariables<ArgumentOperand>();
+        clearVariables<LocalOperand>();
 
         // Assumes that all phi references have been removed. Assumes that things that
         // should be live have a non-zero ref count, but doesn't assume that the ref
@@ -336,10 +314,8 @@ private:
             // there ever was a SetLocal and it was followed by Flushes, then the tail
             // variable will be a SetLocal and not those subsequent Flushes.
             //
-            // Child of GetLocal: the operation that the GetLocal keeps alive. For
-            // uncaptured locals, it may be a Phi from the current block. For arguments,
-            // it may be a SetArgument. For captured locals and arguments it may also be
-            // a SetLocal.
+            // Child of GetLocal: the operation that the GetLocal keeps alive. It may be
+            // a Phi from the current block. For arguments, it may be a SetArgument.
             //
             // Child of SetLocal: must be a value producing node.
             //
@@ -362,7 +338,7 @@ private:
                 break;
 
             case SetLocal:
-                canonicalizeSetLocal(node);
+                canonicalizeSet(node);
                 break;
 
             case Flush:
@@ -374,7 +350,7 @@ private:
                 break;
 
             case SetArgument:
-                canonicalizeSetArgument(node);
+                canonicalizeSet(node);
                 break;
 
             default:
@@ -391,6 +367,16 @@ private:
             m_block = m_graph.block(blockIndex);
             canonicalizeLocalsInBlock();
         }
+    }
+
+    void specialCaseArguments()
+    {
+        // Normally, a SetArgument denotes the start of a live range for a local's value on the stack.
+        // But those SetArguments used for the actual arguments to the machine CodeBlock get
+        // special-cased. We could have instead used two different node types - one for the arguments
+        // at the prologue case, and another for the other uses. But this seemed like IR overkill.
+        for (unsigned i = m_graph.m_arguments.size(); i--;)
+            m_graph.block(0)->variablesAtHead.setArgumentFirstTime(i, m_graph.m_arguments[i]);
     }
 
     template<OperandKind operandKind>
@@ -480,9 +466,56 @@ private:
         return m_localPhiStack;
     }
 
+    void computeIsFlushed()
+    {
+        m_graph.clearFlagsOnAllNodes(NodeIsFlushed);
+
+        for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
+            BasicBlock* block = m_graph.block(blockIndex);
+            if (!block)
+                continue;
+            for (unsigned nodeIndex = block->size(); nodeIndex--;) {
+                Node* node = block->at(nodeIndex);
+                if (node->op() != Flush)
+                    continue;
+                addFlushedLocalOp(node);
+            }
+        }
+        while (!m_flushedLocalOpWorklist.isEmpty()) {
+            Node* node = m_flushedLocalOpWorklist.takeLast();
+            switch (node->op()) {
+            case SetLocal:
+            case SetArgument:
+                break;
+
+            case Flush:
+            case Phi:
+                ASSERT(node->flags() & NodeIsFlushed);
+                DFG_NODE_DO_TO_CHILDREN(m_graph, node, addFlushedLocalEdge);
+                break;
+
+            default:
+                DFG_CRASH(m_graph, node, "Invalid node in flush graph");
+                break;
+            }
+        }
+    }
+
+    void addFlushedLocalOp(Node* node)
+    {
+        if (node->mergeFlags(NodeIsFlushed))
+            m_flushedLocalOpWorklist.append(node);
+    }
+
+    void addFlushedLocalEdge(Node*, Edge edge)
+    {
+        addFlushedLocalOp(edge.node());
+    }
+
     BasicBlock* m_block;
     Vector<PhiStackEntry, 128> m_argumentPhiStack;
     Vector<PhiStackEntry, 128> m_localPhiStack;
+    Vector<Node*, 128> m_flushedLocalOpWorklist;
 };
 
 bool performCPSRethreading(Graph& graph)

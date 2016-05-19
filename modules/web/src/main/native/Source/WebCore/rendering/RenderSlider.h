@@ -33,7 +33,7 @@ class RenderSlider final : public RenderFlexibleBox {
 public:
     static const int defaultTrackLength;
 
-    RenderSlider(HTMLInputElement&, PassRef<RenderStyle>);
+    RenderSlider(HTMLInputElement&, Ref<RenderStyle>&&);
     virtual ~RenderSlider();
 
     HTMLInputElement& element() const;
@@ -51,8 +51,8 @@ private:
     virtual void layout() override;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSlider, isSlider())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSlider, isSlider())
 
 #endif // RenderSlider_h

@@ -26,7 +26,6 @@
 #ifndef LayoutState_h
 #define LayoutState_h
 
-#include "ColumnInfo.h"
 #include "LayoutRect.h"
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
@@ -42,7 +41,8 @@ class RenderObject;
 class ShapeInsideInfo;
 
 class LayoutState {
-    WTF_MAKE_NONCOPYABLE(LayoutState);
+    WTF_MAKE_NONCOPYABLE(LayoutState); WTF_MAKE_FAST_ALLOCATED;
+
 public:
     LayoutState()
         : m_clipped(false)
@@ -52,30 +52,18 @@ public:
         , m_layoutDeltaXSaturated(false)
         , m_layoutDeltaYSaturated(false)
 #endif
-        , m_columnInfo(nullptr)
-        , m_lineGrid(nullptr)
-#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
-        , m_shapeInsideInfo(nullptr)
-#endif
-        , m_pageLogicalHeight(0)
-#ifndef NDEBUG
-        , m_renderer(nullptr)
-#endif
     {
     }
 
-    LayoutState(std::unique_ptr<LayoutState> state, RenderBox*, const LayoutSize& offset, LayoutUnit pageHeight, bool pageHeightChanged, ColumnInfo*);
+    LayoutState(std::unique_ptr<LayoutState>, RenderBox*, const LayoutSize& offset, LayoutUnit pageHeight, bool pageHeightChanged);
     explicit LayoutState(RenderObject&);
 
     void clearPaginationInformation();
-    bool isPaginatingColumns() const { return m_columnInfo && m_columnInfo->paginationUnit() == ColumnInfo::Column; }
     bool isPaginated() const { return m_isPaginated; }
 
     // The page logical offset is the object's offset from the top of the page in the page progression
     // direction (so an x-offset in vertical text and a y-offset for horizontal text).
     LayoutUnit pageLogicalOffset(RenderBox*, LayoutUnit childLogicalOffset) const;
-
-    void addForcedColumnBreak(RenderBox*, LayoutUnit childLogicalOffset);
 
     LayoutUnit pageLogicalHeight() const { return m_pageLogicalHeight; }
     bool pageLogicalHeightChanged() const { return m_pageLogicalHeightChanged; }
@@ -91,17 +79,15 @@ public:
 
     bool needsBlockDirectionLocationSetBeforeLayout() const { return m_lineGrid || (m_isPaginated && m_pageLogicalHeight); }
 
-#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
-    ShapeInsideInfo* shapeInsideInfo() const { return m_shapeInsideInfo; }
-#endif
+    RenderFlowThread* currentRenderFlowThread() const { return m_currentRenderFlowThread; }
+    void setCurrentRenderFlowThread(RenderFlowThread* flowThread) { m_currentRenderFlowThread = flowThread; }
+
 private:
     void propagateLineGridInfo(RenderBox*);
     void establishLineGrid(RenderBlockFlow*);
 
-    void computeLineGridPaginationOrigin(RenderBox*);
-
 public:
-    // Do not add anything apart from bitfields until after m_columnInfo. See https://bugs.webkit.org/show_bug.cgi?id=100173
+    // Do not add anything apart from bitfields. See https://bugs.webkit.org/show_bug.cgi?id=100173
     bool m_clipped : 1;
     bool m_isPaginated : 1;
     // If our page height has changed, this will force all blocks to relayout.
@@ -111,14 +97,9 @@ public:
     bool m_layoutDeltaYSaturated : 1;
 #endif
 
-    // If the enclosing pagination model is a column model, then this will store column information for easy retrieval/manipulation.
-    ColumnInfo* m_columnInfo;
     // The current line grid that we're snapping to and the offset of the start of the grid.
-    RenderBlockFlow* m_lineGrid;
+    RenderBlockFlow* m_lineGrid { nullptr };
     std::unique_ptr<LayoutState> m_next;
-#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
-    ShapeInsideInfo* m_shapeInsideInfo;
-#endif
 
     // FIXME: Distinguish between the layout clip rect and the paint clip rect which may be larger,
     // e.g., because of composited scrolling.
@@ -140,8 +121,10 @@ public:
     LayoutSize m_lineGridOffset;
     LayoutSize m_lineGridPaginationOrigin;
 
+    RenderFlowThread* m_currentRenderFlowThread { nullptr };
+
 #ifndef NDEBUG
-    RenderObject* m_renderer;
+    RenderObject* m_renderer { nullptr };
 #endif
 };
 

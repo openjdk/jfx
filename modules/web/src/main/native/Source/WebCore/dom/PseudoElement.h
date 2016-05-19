@@ -36,16 +36,16 @@ namespace WebCore {
 
 class PseudoElement final : public Element {
 public:
-    static PassRefPtr<PseudoElement> create(Element& host, PseudoId pseudoId)
+    static Ref<PseudoElement> create(Element& host, PseudoId pseudoId)
     {
-        return adoptRef(new PseudoElement(host, pseudoId));
+        return adoptRef(*new PseudoElement(host, pseudoId));
     }
     virtual ~PseudoElement();
 
     Element* hostElement() const { return m_hostElement; }
     void clearHostElement() { m_hostElement = nullptr; }
 
-    virtual PassRefPtr<RenderStyle> customStyleForRenderer(RenderStyle& parentStyle) override;
+    virtual RefPtr<RenderStyle> customStyleForRenderer(RenderStyle& parentStyle) override;
     virtual void didAttachRenderers() override;
     virtual bool rendererIsNeeded(const RenderStyle&) override;
 
@@ -77,10 +77,10 @@ inline bool pseudoElementRendererIsNeeded(const RenderStyle* style)
     return style && style->display() != NONE && (style->contentData() || style->hasFlowFrom());
 }
 
-void isPseudoElement(const PseudoElement&); // Catch unnecessary runtime check of type known at compile time.
-inline bool isPseudoElement(const Node& node) { return node.isPseudoElement(); }
-NODE_TYPE_CASTS(PseudoElement)
+} // namespace WebCore
 
-} // namespace
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PseudoElement)
+    static bool isType(const WebCore::Node& node) { return node.isPseudoElement(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

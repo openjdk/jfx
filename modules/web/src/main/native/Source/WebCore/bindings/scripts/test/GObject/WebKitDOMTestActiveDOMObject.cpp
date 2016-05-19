@@ -25,6 +25,7 @@
 #include "DOMObjectCache.h"
 #include "Document.h"
 #include "ExceptionCode.h"
+#include "ExceptionCodeDescription.h"
 #include "JSMainThreadExecState.h"
 #include "WebKitDOMNodePrivate.h"
 #include "WebKitDOMPrivate.h"
@@ -33,7 +34,7 @@
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
 
-#define WEBKIT_DOM_TEST_ACTIVE_DOM_OBJECT_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_TYPE_DOM_TEST_ACTIVE_DOM_OBJECT, WebKitDOMTestActiveDOMObjectPrivate)
+#define WEBKIT_DOM_TEST_ACTIVE_DOM_OBJECT_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_DOM_TYPE_TEST_ACTIVE_DOM_OBJECT, WebKitDOMTestActiveDOMObjectPrivate)
 
 typedef struct _WebKitDOMTestActiveDOMObjectPrivate {
     RefPtr<WebCore::TestActiveDOMObject> coreObject;
@@ -60,12 +61,12 @@ WebCore::TestActiveDOMObject* core(WebKitDOMTestActiveDOMObject* request)
 WebKitDOMTestActiveDOMObject* wrapTestActiveDOMObject(WebCore::TestActiveDOMObject* coreObject)
 {
     ASSERT(coreObject);
-    return WEBKIT_DOM_TEST_ACTIVE_DOM_OBJECT(g_object_new(WEBKIT_TYPE_DOM_TEST_ACTIVE_DOM_OBJECT, "core-object", coreObject, NULL));
+    return WEBKIT_DOM_TEST_ACTIVE_DOM_OBJECT(g_object_new(WEBKIT_DOM_TYPE_TEST_ACTIVE_DOM_OBJECT, "core-object", coreObject, nullptr));
 }
 
 } // namespace WebKit
 
-G_DEFINE_TYPE(WebKitDOMTestActiveDOMObject, webkit_dom_test_active_dom_object, WEBKIT_TYPE_DOM_OBJECT)
+G_DEFINE_TYPE(WebKitDOMTestActiveDOMObject, webkit_dom_test_active_dom_object, WEBKIT_DOM_TYPE_OBJECT)
 
 enum {
     PROP_0,
@@ -84,16 +85,12 @@ static void webkit_dom_test_active_dom_object_finalize(GObject* object)
 
 static void webkit_dom_test_active_dom_object_get_property(GObject* object, guint propertyId, GValue* value, GParamSpec* pspec)
 {
-    WebCore::JSMainThreadNullState state;
-
     WebKitDOMTestActiveDOMObject* self = WEBKIT_DOM_TEST_ACTIVE_DOM_OBJECT(object);
-    WebCore::TestActiveDOMObject* coreSelf = WebKit::core(self);
 
     switch (propertyId) {
-    case PROP_EXCITING_ATTR: {
-        g_value_set_long(value, coreSelf->excitingAttr());
+    case PROP_EXCITING_ATTR:
+        g_value_set_long(value, webkit_dom_test_active_dom_object_get_exciting_attr(self));
         break;
-    }
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, propertyId, pspec);
         break;

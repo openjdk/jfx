@@ -23,16 +23,14 @@
 #include "config.h"
 #include "PasteboardHelper.h"
 
-#include "Chrome.h"
 #include "DataObjectGtk.h"
-#include "Frame.h"
 #include "GRefPtrGtk.h"
 #include "GtkVersioning.h"
-#include "Page.h"
 #include "Pasteboard.h"
 #include "TextResourceDecoder.h"
 #include <gtk/gtk.h>
-#include <wtf/gobject/GUniquePtr.h>
+#include <wtf/glib/GUniquePtr.h>
+#include <wtf/text/CString.h>
 
 namespace WebCore {
 
@@ -43,7 +41,7 @@ static GdkAtom uriListAtom;
 static GdkAtom smartPasteAtom;
 static GdkAtom unknownAtom;
 
-static String gMarkupPrefix;
+static const String gMarkupPrefix = ASCIILiteral("<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">");
 
 static void removeMarkupPrefix(String& markup)
 {
@@ -53,65 +51,33 @@ static void removeMarkupPrefix(String& markup)
         markup.remove(0, gMarkupPrefix.length());
 }
 
-static void initGdkAtoms()
+PasteboardHelper& PasteboardHelper::singleton()
 {
-    static gboolean initialized = FALSE;
-
-    if (initialized)
-        return;
-
-    initialized = TRUE;
-
-    textPlainAtom = gdk_atom_intern("text/plain;charset=utf-8", FALSE);
-    markupAtom = gdk_atom_intern("text/html", FALSE);
-    netscapeURLAtom = gdk_atom_intern("_NETSCAPE_URL", FALSE);
-    uriListAtom = gdk_atom_intern("text/uri-list", FALSE);
-    smartPasteAtom = gdk_atom_intern("application/vnd.webkitgtk.smartpaste", FALSE);
-    unknownAtom = gdk_atom_intern("application/vnd.webkitgtk.unknown", FALSE);
-    gMarkupPrefix = "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">";
-}
-
-PasteboardHelper* PasteboardHelper::defaultPasteboardHelper()
-{
-    DEFINE_STATIC_LOCAL(PasteboardHelper, defaultHelper, ());
-    return &defaultHelper;
+    static NeverDestroyed<PasteboardHelper> helper;
+    return helper;
 }
 
 PasteboardHelper::PasteboardHelper()
-    : m_targetList(gtk_target_list_new(0, 0))
+    : m_targetList(adoptGRef(gtk_target_list_new(nullptr, 0)))
 {
-    initGdkAtoms();
+    textPlainAtom = gdk_atom_intern_static_string("text/plain;charset=utf-8");
+    markupAtom = gdk_atom_intern_static_string("text/html");
+    netscapeURLAtom = gdk_atom_intern_static_string("_NETSCAPE_URL");
+    uriListAtom = gdk_atom_intern_static_string("text/uri-list");
+    smartPasteAtom = gdk_atom_intern_static_string("application/vnd.webkitgtk.smartpaste");
+    unknownAtom = gdk_atom_intern_static_string("application/vnd.webkitgtk.unknown");
 
-    gtk_target_list_add_text_targets(m_targetList, PasteboardHelper::TargetTypeText);
-    gtk_target_list_add(m_targetList, markupAtom, 0, PasteboardHelper::TargetTypeMarkup);
-    gtk_target_list_add_uri_targets(m_targetList, PasteboardHelper::TargetTypeURIList);
-    gtk_target_list_add(m_targetList, netscapeURLAtom, 0, PasteboardHelper::TargetTypeNetscapeURL);
-    gtk_target_list_add_image_targets(m_targetList, PasteboardHelper::TargetTypeImage, TRUE);
-    gtk_target_list_add(m_targetList, unknownAtom, 0, PasteboardHelper::TargetTypeUnknown);
-}
-
-PasteboardHelper::~PasteboardHelper()
-{
-    gtk_target_list_unref(m_targetList);
-}
-
-static inline GdkDisplay* displayFromFrame(Frame* frame)
-{
-    ASSERT(frame);
-    Page* page = frame->page();
-    ASSERT(page);
-    PlatformPageClient client = page->chrome().platformPageClient();
-    return client ? gtk_widget_get_display(client) : gdk_display_get_default();
-}
-
-GtkClipboard* PasteboardHelper::getPrimarySelectionClipboard(Frame* frame) const
-{
-    return gtk_clipboard_get_for_display(displayFromFrame(frame), GDK_SELECTION_PRIMARY);
+    gtk_target_list_add_text_targets(m_targetList.get(), PasteboardHelper::TargetTypeText);
+    gtk_target_list_add(m_targetList.get(), markupAtom, 0, PasteboardHelper::TargetTypeMarkup);
+    gtk_target_list_add_uri_targets(m_targetList.get(), PasteboardHelper::TargetTypeURIList);
+    gtk_target_list_add(m_targetList.get(), netscapeURLAtom, 0, PasteboardHelper::TargetTypeNetscapeURL);
+    gtk_target_list_add_image_targets(m_targetList.get(), PasteboardHelper::TargetTypeImage, TRUE);
+    gtk_target_list_add(m_targetList.get(), unknownAtom, 0, PasteboardHelper::TargetTypeUnknown);
 }
 
 GtkTargetList* PasteboardHelper::targetList() const
 {
-    return m_targetList;
+    return m_targetList.get();
 }
 
 static String selectionDataToUTF8String(GtkSelectionData* data)
@@ -205,7 +171,7 @@ void PasteboardHelper::fillSelectionData(GtkSelectionData* selectionData, guint 
 
 GtkTargetList* PasteboardHelper::targetListForDataObject(DataObjectGtk* dataObject, SmartPasteInclusion shouldInludeSmartPaste)
 {
-    GtkTargetList* list = gtk_target_list_new(0, 0);
+    GtkTargetList* list = gtk_target_list_new(nullptr, 0);
 
     if (dataObject->hasText())
         gtk_target_list_add_text_targets(list, TargetTypeText);
@@ -230,7 +196,7 @@ GtkTargetList* PasteboardHelper::targetListForDataObject(DataObjectGtk* dataObje
     return list;
 }
 
-void PasteboardHelper::fillDataObjectFromDropData(GtkSelectionData* data, guint info, DataObjectGtk* dataObject)
+void PasteboardHelper::fillDataObjectFromDropData(GtkSelectionData* data, guint /* info */, DataObjectGtk* dataObject)
 {
     if (!gtk_selection_data_get_data(data))
         return;
@@ -247,7 +213,7 @@ void PasteboardHelper::fillDataObjectFromDropData(GtkSelectionData* data, guint 
     } else if (target == netscapeURLAtom) {
         String urlWithLabel(selectionDataToUTF8String(data));
         Vector<String> pieces;
-        urlWithLabel.split("\n", pieces);
+        urlWithLabel.split('\n', pieces);
 
         // Give preference to text/uri-list here, as it can hold more
         // than one URI but still take  the label if there is one.
@@ -290,11 +256,11 @@ Vector<GdkAtom> PasteboardHelper::dropAtomsForContext(GtkWidget* widget, GdkDrag
 
 static DataObjectGtk* settingClipboardDataObject = 0;
 
-static void getClipboardContentsCallback(GtkClipboard* clipboard, GtkSelectionData *selectionData, guint info, gpointer data)
+static void getClipboardContentsCallback(GtkClipboard* clipboard, GtkSelectionData *selectionData, guint info, gpointer)
 {
     DataObjectGtk* dataObject = DataObjectGtk::forClipboard(clipboard);
     ASSERT(dataObject);
-    PasteboardHelper::defaultPasteboardHelper()->fillSelectionData(selectionData, info, dataObject);
+    PasteboardHelper::singleton().fillSelectionData(selectionData, info, dataObject);
 }
 
 static void clearClipboardContentsCallback(GtkClipboard* clipboard, gpointer data)
@@ -309,12 +275,11 @@ static void clearClipboardContentsCallback(GtkClipboard* clipboard, gpointer dat
     if (!data)
         return;
 
-    GClosure* callback = static_cast<GClosure*>(data);
+    GRefPtr<GClosure> callback = adoptGRef(static_cast<GClosure*>(data));
     GValue firstArgument = {0, {{0}}};
     g_value_init(&firstArgument, G_TYPE_POINTER);
     g_value_set_pointer(&firstArgument, clipboard);
-    g_closure_invoke(callback, 0, 1, &firstArgument, 0);
-    g_closure_unref(callback);
+    g_closure_invoke(callback.get(), nullptr, 1, &firstArgument, 0);
 }
 
 void PasteboardHelper::writeClipboardContents(GtkClipboard* clipboard, SmartPasteInclusion includeSmartPaste, GClosure* callback)
@@ -328,11 +293,15 @@ void PasteboardHelper::writeClipboardContents(GtkClipboard* clipboard, SmartPast
     if (numberOfTargets > 0 && table) {
         settingClipboardDataObject = dataObject;
 
-        gtk_clipboard_set_with_data(clipboard, table, numberOfTargets,
-            getClipboardContentsCallback, clearClipboardContentsCallback, callback);
-        gtk_clipboard_set_can_store(clipboard, 0, 0);
+        if (gtk_clipboard_set_with_data(clipboard, table, numberOfTargets, getClipboardContentsCallback, clearClipboardContentsCallback, callback ? g_closure_ref(callback) : nullptr))
+            gtk_clipboard_set_can_store(clipboard, nullptr, 0);
+        else {
+            // When gtk_clipboard_set_with_data fails the callbacks are ignored, so we need to release the reference we were passing to clearClipboardContentsCallback.
+            if (callback)
+                g_closure_unref(callback);
+        }
 
-        settingClipboardDataObject = 0;
+        settingClipboardDataObject = nullptr;
 
     } else
         gtk_clipboard_clear(clipboard);

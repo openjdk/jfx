@@ -28,8 +28,10 @@
 
 #include "DefaultAudioDestinationNode.h"
 
+#include "AudioContext.h"
 #include "ExceptionCode.h"
 #include "Logging.h"
+#include "ScriptExecutionContext.h"
 #include <wtf/MainThread.h>
 
 const unsigned EnabledInputChannels = 2;
@@ -104,6 +106,29 @@ void DefaultAudioDestinationNode::startRendering()
         m_destination->start();
 }
 
+void DefaultAudioDestinationNode::resume(std::function<void()> function)
+{
+    ASSERT(isInitialized());
+    if (isInitialized())
+        m_destination->start();
+    context()->scriptExecutionContext()->postTask(function);
+}
+
+void DefaultAudioDestinationNode::suspend(std::function<void()> function)
+{
+    ASSERT(isInitialized());
+    if (isInitialized())
+        m_destination->stop();
+    context()->scriptExecutionContext()->postTask(function);
+}
+
+void DefaultAudioDestinationNode::close(std::function<void()> function)
+{
+    ASSERT(isInitialized());
+    uninitialize();
+    context()->scriptExecutionContext()->postTask(function);
+}
+
 unsigned long DefaultAudioDestinationNode::maxChannelCount() const
 {
     return AudioDestination::maxChannelCount();
@@ -131,6 +156,11 @@ void DefaultAudioDestinationNode::setChannelCount(unsigned long channelCount, Ex
         createDestination();
         m_destination->start();
     }
+}
+
+bool DefaultAudioDestinationNode::isPlaying()
+{
+    return m_destination && m_destination->isPlaying();
 }
 
 } // namespace WebCore

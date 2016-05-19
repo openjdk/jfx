@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE, INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -24,9 +24,10 @@
  *
  */
 
+#import "config.h"
+
 #if PLATFORM(IOS)
 
-#import "config.h"
 #import "DOMUIKitExtensions.h"
 
 #import "CachedImage.h"
@@ -42,7 +43,7 @@
 #import "DOMNodeInternal.h"
 #import "DOMRangeInternal.h"
 #import "FloatPoint.h"
-#import "Font.h"
+#import "FontCascade.h"
 #import "FrameSelection.h"
 #import "HTMLAreaElement.h"
 #import "htmlediting.h"
@@ -61,7 +62,6 @@
 #import "RenderObject.h"
 #import "RenderStyleConstants.h"
 #import "RenderText.h"
-#import "ResourceBuffer.h"
 #import "SharedBuffer.h"
 #import "VisiblePosition.h"
 #import "VisibleUnits.h"
@@ -71,7 +71,7 @@
 using namespace WebCore;
 
 using WebCore::FloatPoint;
-using WebCore::Font;
+using WebCore::FontCascade;
 using WebCore::HTMLAreaElement;
 using WebCore::HTMLImageElement;
 using WebCore::HTMLSelectElement;
@@ -192,9 +192,8 @@ using WebCore::VisiblePosition;
 {
     RenderObject* renderer = core(self)->renderer();
 
-
-    if (renderer && renderer->isBox()) {
-        RoundedRect::Radii radii = toRenderBox(renderer)->borderRadii();
+    if (is<RenderBox>(renderer)) {
+        RoundedRect::Radii radii = downcast<RenderBox>(*renderer).borderRadii();
         return @[[NSValue valueWithSize:(FloatSize)radii.topLeft()],
                  [NSValue valueWithSize:(FloatSize)radii.topRight()],
                  [NSValue valueWithSize:(FloatSize)radii.bottomLeft()],
@@ -206,17 +205,17 @@ using WebCore::VisiblePosition;
 
 - (BOOL)containsOnlyInlineObjects
 {
-    RenderObject * renderer = core(self)->renderer();
-    return  (renderer &&
-             renderer->childrenInline() &&
-             (renderer->isRenderBlock() && toRenderBlock(renderer)->inlineElementContinuation() == nil) &&
-             !renderer->isTable());
+    RenderObject* renderer = core(self)->renderer();
+    return renderer
+        && renderer->childrenInline()
+        && (is<RenderBlock>(*renderer) && !downcast<RenderBlock>(*renderer).inlineElementContinuation())
+        && !renderer->isTable();
 }
 
 - (BOOL)isSelectableBlock
 {
-    RenderObject * renderer = core(self)->renderer();
-    return (renderer && (renderer->isRenderBlockFlow() || (renderer->isRenderBlock() && toRenderBlock(renderer)->inlineElementContinuation() != nil)));
+    RenderObject* renderer = core(self)->renderer();
+    return renderer && (is<RenderBlockFlow>(*renderer) || (is<RenderBlock>(*renderer) && downcast<RenderBlock>(*renderer).inlineElementContinuation() != nil));
 }
 
 - (DOMRange *)rangeOfContainingParagraph
@@ -241,11 +240,9 @@ using WebCore::VisiblePosition;
 
 - (CGFloat)textHeight
 {
-    RenderObject *o = core(self)->renderer();
-    if (o && o->isText()) {
-        RenderText *t = toRenderText(o);
-        return t->style().computedLineHeight();;
-    }
+    RenderObject* renderer = core(self)->renderer();
+    if (is<RenderText>(renderer))
+        return downcast<RenderText>(*renderer).style().computedLineHeight();
 
     return CGFLOAT_MAX;
 }
@@ -257,11 +254,11 @@ using WebCore::VisiblePosition;
     // a node returned from elementAtPoint.  We make the assumption that either the node or one
     // of its immediate children contains the root line boxes in question.
     // See <rdar://problem/6824650> for context.
-    RenderObject *renderer = core(self)->renderer();
-    if (!renderer || !renderer->isRenderBlockFlow())
+    RenderObject* renderer = core(self)->renderer();
+    if (!is<RenderBlockFlow>(renderer))
         return nil;
 
-    RenderBlock *block = static_cast<RenderBlock *>(renderer);
+    RenderBlock* block = downcast<RenderBlockFlow>(renderer);
 
     FloatPoint absPoint(point);
     FloatPoint localPoint = block->absoluteToLocal(absPoint);
@@ -278,7 +275,7 @@ using WebCore::VisiblePosition;
                 nextChild = nextChild->nextSiblingBox();
             if (!nextChild) {
                 if (localPoint.y() >= top) {
-                    block = static_cast<RenderBlock *>(child);
+                    block = downcast<RenderBlock>(child);
                     break;
                 }
                 continue;
@@ -286,8 +283,8 @@ using WebCore::VisiblePosition;
 
             float bottom = nextChild->y();
 
-            if (localPoint.y() >= top && localPoint.y() < bottom && child->isRenderBlock()) {
-                block = static_cast<RenderBlock *>(child);
+            if (localPoint.y() >= top && localPoint.y() < bottom && is<RenderBlock>(*child)) {
+                block = downcast<RenderBlock>(child);
                 break;
             }
         }
@@ -298,25 +295,24 @@ using WebCore::VisiblePosition;
         localPoint = block->absoluteToLocal(absPoint);
     }
 
-    RenderBlockFlow *blockFlow = toRenderBlockFlow(block);
+    RenderBlockFlow& blockFlow = downcast<RenderBlockFlow>(*block);
 
     // Only check the gaps between the root line boxes.  We deliberately ignore overflow because
     // experience has shown that hit tests on an exploded text node can fail when within the
     // overflow region.
-    for (RootInlineBox *cur = blockFlow->firstRootBox(); cur && cur != blockFlow->lastRootBox(); cur = cur->nextRootBox()) {
-        float currentBottom = cur->y() + cur->logicalHeight();
+    for (RootInlineBox* current = blockFlow.firstRootBox(); current && current != blockFlow.lastRootBox(); current = current->nextRootBox()) {
+        float currentBottom = current->y() + current->logicalHeight();
         if (localPoint.y() < currentBottom)
             return nil;
 
-        RootInlineBox *next = cur->nextRootBox();
+        RootInlineBox* next = current->nextRootBox();
         float nextTop = next->y();
         if (localPoint.y() < nextTop) {
-            InlineBox *inlineBox = cur->closestLeafChildForLogicalLeftPosition(localPoint.x());
-            if (inlineBox && inlineBox->behavesLikeText() && inlineBox->renderer().isText()) {
-                RenderText *t = toRenderText(&inlineBox->renderer());
-                if (t->textNode()) {
-                    return kit(t->textNode());
-                }
+            InlineBox* inlineBox = current->closestLeafChildForLogicalLeftPosition(localPoint.x());
+            if (inlineBox && inlineBox->behavesLikeText() && is<RenderText>(inlineBox->renderer())) {
+                RenderText& renderText = downcast<RenderText>(inlineBox->renderer());
+                if (renderText.textNode())
+                    return kit(renderText.textNode());
             }
         }
 
@@ -346,13 +342,13 @@ using WebCore::VisiblePosition;
             result = INT_MAX;
         } else if (renderer->isEmpty()) {
             result = 0;
-        } else if (renderer->isRenderBlockFlow() || (renderer->isRenderBlock() && toRenderBlock(renderer)->inlineElementContinuation() != 0)) {
+        } else if (is<RenderBlockFlow>(*renderer) || (is<RenderBlock>(*renderer) && downcast<RenderBlock>(*renderer).inlineElementContinuation())) {
             BOOL noCost = NO;
-            if (renderer->isBox()) {
-                RenderBox *asBox = renderer->enclosingBox();
-                RenderObject *parent = asBox->parent();
-                RenderBox *parentRenderBox = (parent && parent->isBox()) ? toRenderBox(parent) : 0;
-                if (parentRenderBox && asBox && asBox->width() == parentRenderBox->width()) {
+            if (is<RenderBox>(*renderer)) {
+                RenderBox& asBox = renderer->enclosingBox();
+                RenderObject* parent = asBox.parent();
+                RenderBox* parentRenderBox = is<RenderBox>(parent) ? downcast<RenderBox>(parent) : nullptr;
+                if (parentRenderBox && asBox.width() == parentRenderBox->width()) {
                     noCost = YES;
                 }
             }
@@ -413,7 +409,7 @@ using WebCore::VisiblePosition;
 - (CGRect)boundingBoxWithOwner:(DOMNode *)anOwner
 {
     // ignores transforms
-    return anOwner ? pixelSnappedIntRect(core(self)->computeRect(core(anOwner)->renderer())) : CGRectZero;
+    return anOwner ? snappedIntRect(core(self)->computeRect(core(anOwner)->renderer())) : CGRectZero;
 }
 
 - (WKQuad)absoluteQuadWithOwner:(DOMNode *)anOwner
@@ -421,7 +417,7 @@ using WebCore::VisiblePosition;
     if (anOwner) {
         // FIXME: ECLAIR
         //WebCore::FloatQuad theQuad = core(self)->getAbsoluteQuad(core(anOwner)->renderer());
-        WebCore::IntRect rect = pixelSnappedIntRect(core(self)->computeRect(core(anOwner)->renderer()));
+        WebCore::IntRect rect = snappedIntRect(core(self)->computeRect(core(anOwner)->renderer()));
         WKQuad quad;
         quad.p1 = CGPointMake(rect.x(), rect.y());
         quad.p2 = CGPointMake(rect.maxX(), rect.y());
@@ -467,24 +463,16 @@ using WebCore::VisiblePosition;
 
 - (NSData *)dataRepresentation:(BOOL)rawImageData
 {
-    WebCore::CachedImage *cachedImage = core(self)->cachedImage();
+    WebCore::CachedImage* cachedImage = core(self)->cachedImage();
     if (!cachedImage)
         return nil;
-    WebCore::Image *image = cachedImage->image();
+    WebCore::Image* image = cachedImage->image();
     if (!image)
         return nil;
-    WebCore::SharedBuffer *data = nil;
-    if (rawImageData) {
-        ResourceBuffer *resourceBuffer = cachedImage->resourceBuffer();
-        if (resourceBuffer)
-            data = resourceBuffer->sharedBuffer();
-    } else {
-        data = image->data();
-    }
+    WebCore::SharedBuffer* data = rawImageData ? cachedImage->resourceBuffer() : image->data();
     if (!data)
         return nil;
-
-    return [data->createNSData().leakRef() autorelease];
+    return data->createNSData().autorelease();
 }
 
 - (NSString *)mimeType

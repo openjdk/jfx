@@ -12,10 +12,10 @@
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
 #
-# THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+# THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
 # CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
 # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
 # PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -46,13 +46,16 @@ my $parseonly = 0;
 my $setBaseline = 0;
 my $showHelp = 0;
 my $testsPattern;
+my $output = "";
 my $noBuild = 0;
+my $jsShellArgs="";
 
 my $programName = basename($0);
 my $usage = <<EOF;
 Usage: $programName [options] [options to pass to build system]
   --help            Show this help message
   --set-baseline    Set baseline for future comparisons
+  --args            Arguments to pass to JavaScript shell
   --root            Path to root tools build
   --runs            Number of times to run tests (default: $testRuns)
   --tests           Only run tests matching provided pattern
@@ -61,18 +64,21 @@ Usage: $programName [options] [options to pass to build system]
   --ubench          Use microbenchmark suite instead of regular tests. Same as --suite=ubench
   --v8-suite        Use the V8 benchmark suite. Same as --suite=v8-v4
   --parse-only      Use the parse-only benchmark suite. Same as --suite=parse-only
+  --output          Override the default output path and filename
   --no-build        Do not try to build JSC before running the tests.
 EOF
 
 GetOptions('root=s' => sub { my ($x, $value) = @_; $root = $value; setConfigurationProductDir(Cwd::abs_path($root)); },
            'runs=i' => \$testRuns,
            'set-baseline' => \$setBaseline,
+           'args=s' => \$jsShellArgs,
            'instruments' => \$runInstruments,
            'suite=s' => \$suite,
            'ubench' => \$ubench,
            'v8-suite' => \$v8suite,
            'parse-only' => \$parseonly,
            'tests=s' => \$testsPattern,
+           'output=s' => \$output,
            'help' => \$showHelp,
            'no-build' => \$noBuild);
 
@@ -122,5 +128,7 @@ push @args, "--ubench" if $ubench;
 push @args, "--v8-suite" if $v8suite;
 push @args, "--parse-only" if $parseonly;
 push @args, "--tests", $testsPattern if $testsPattern;
+push @args, "--args", $jsShellArgs if $jsShellArgs;
+push @args, "--output", $output if $output;
 
 exec currentPerlPath(), "./sunspider", @args;

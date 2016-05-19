@@ -7,7 +7,7 @@
 #include "Range.h"
 
 #include "DataObjectJava.h"
-#include "Clipboard.h"
+#include "DataTransfer.h"
 #include "DocumentFragment.h"
 #include "URL.h"
 #include "markup.h"
@@ -17,14 +17,14 @@
 
 namespace WebCore {
 
-bool DragData::containsURL(Frame*, FilenameConversionPolicy filenamePolicy /*= ConvertFilenames*/) const
+bool DragData::containsURL(FilenameConversionPolicy filenamePolicy /*= ConvertFilenames*/) const
 {
     /* utaTODO: extent the functionality
     */
     return m_platformDragData->containsURL();
 }
 
-String DragData::asURL(Frame* frame, FilenameConversionPolicy filenamePolicy, String* title) const
+String DragData::asURL(FilenameConversionPolicy filenamePolicy, String* title) const
 {
     /* utaTODO: extent the functionality
     String url;
@@ -54,7 +54,7 @@ bool DragData::containsPlainText() const
     return m_platformDragData->containsPlainText();
 }
 
-String DragData::asPlainText(Frame*) const
+String DragData::asPlainText() const
 {
     return m_platformDragData->asPlainText();
 }
@@ -75,45 +75,47 @@ bool DragData::canSmartReplace() const
 bool DragData::containsCompatibleContent() const
 {
     return containsPlainText()
-        || containsURL(0)
+        || containsURL()
         || m_platformDragData->containsHTML()
         || containsColor();
 }
 
-PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range&, bool, bool&) const
-{
-    /*
-     * Order is richest format first. On OSX this is:
-     * * Web Archive
-     * * Filenames
-     * * HTML
-     * * RTF
-     * * TIFF
-     * * PICT
-     */
+//XXX: WebCore::DragController::createFragmentFromDragData): Move DragData::asFragment() implementation here.
+//XXX: WebCore::DragController::createFragmentFromDragData) moved to editor
+// PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range&, bool, bool&) const
+// {
+//     /*
+//      * Order is richest format first. On OSX this is:
+//      * * Web Archive
+//      * * Filenames
+//      * * HTML
+//      * * RTF
+//      * * TIFF
+//      * * PICT
+//      */
 
-    if (containsFiles()) {
-        // FIXME: Implement this.  Should be pretty simple to make some HTML
-        // and call createFragmentFromMarkup.
-        //if (RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(doc,
-        //    ?, KURL()))
-        //    return fragment;
-    }
+//     if (containsFiles()) {
+//         // FIXME: Implement this.  Should be pretty simple to make some HTML
+//         // and call createFragmentFromMarkup.
+//         //if (RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(doc,
+//         //    ?, KURL()))
+//         //    return fragment;
+//     }
 
-    if (m_platformDragData->containsHTML()) {
-        bool ignoredSuccess;
-        String sBase;
-        String sHtml = m_platformDragData->asHTML(&sBase);
-        RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(
-            *frame->document(),
-            sHtml,
-            sBase,
-            DisallowScriptingContent);
-        return fragment.release();
-    }
+//     if (m_platformDragData->containsHTML()) {
+//         bool ignoredSuccess;
+//         String sBase;
+//         String sHtml = m_platformDragData->asHTML(&sBase);
+//         RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(
+//             *frame->document(),
+//             sHtml,
+//             sBase,
+//             DisallowScriptingContent);
+//         return fragment.release();
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
 bool DragData::containsColor() const
 {
     notImplemented();

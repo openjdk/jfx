@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -61,14 +61,15 @@ private:
 #endif
 };
 
+// FIXME: This doesn't have to be a class template.
 template <typename TimerFiredClass> class RunLoopTimer : public RunLoopTimerBase {
 public:
-    typedef void (TimerFiredClass::*TimerFiredFunction)(RunLoopTimer*);
+    typedef void (TimerFiredClass::*TimerFiredFunction)();
 
-    RunLoopTimer(TimerFiredClass* o, TimerFiredFunction f)
-        : m_object(o), m_function(f) { }
+    RunLoopTimer(TimerFiredClass& o, TimerFiredFunction f)
+        : m_object(&o), m_function(f) { }
 
-    virtual void fired() { (m_object->*m_function)(this); }
+    virtual void fired() { (m_object->*m_function)(); }
 
 private:
     TimerFiredClass* m_object;

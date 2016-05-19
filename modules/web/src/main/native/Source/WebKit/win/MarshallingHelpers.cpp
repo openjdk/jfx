@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "MarshallingHelpers.h"
 
@@ -51,10 +50,7 @@ BSTR MarshallingHelpers::URLToBSTR(const URL& url)
 
 CFURLRef MarshallingHelpers::PathStringToFileCFURLRef(const String& string)
 {
-    CFStringRef cfPath = CFStringCreateWithCharactersNoCopy(0, (const UniChar*)string.deprecatedCharacters(), string.length(), kCFAllocatorNull);
-    CFURLRef pathURL = CFURLCreateWithFileSystemPath(0, cfPath, kCFURLWindowsPathStyle, false);
-    CFRelease(cfPath);
-    return pathURL;
+    return CFURLCreateWithFileSystemPath(0, string.createCFString().get(), kCFURLWindowsPathStyle, false);
 }
 
 String MarshallingHelpers::FileCFURLRefToPathString(CFURLRef fileURL)
@@ -240,9 +236,9 @@ CFArrayRef MarshallingHelpers::safeArrayToIntArray(SAFEARRAY* inArray)
     if (len > 0) {
         items = new CFNumberRef[len];
         for (; lBound <= uBound; lBound++) {
-            int num;
+            int num = 0;
             hr = ::SafeArrayGetElement(inArray, &lBound, &num);
-            items[lBound] = intToCFNumberRef(num);
+            items[lBound] = SUCCEEDED(hr) ? intToCFNumberRef(num) : kCFNumberNaN;
         }
     }
     CFArrayRef result = CFArrayCreate(0, (const void**) items, len, &kCFTypeArrayCallBacks);
@@ -258,9 +254,9 @@ CFArrayRef MarshallingHelpers::safeArrayToIUnknownArray(SAFEARRAY* inArray)
     if (SUCCEEDED(hr))
         hr = ::SafeArrayGetUBound(inArray, 1, &uBound);
     long len = (SUCCEEDED(hr)) ? (uBound-lBound+1) : 0;
-    void* items;
+    void* items = nullptr;
     hr = ::SafeArrayAccessData(inArray, &items);
-    CFArrayRef result = CFArrayCreate(0, (const void**) items, len, &kIUnknownArrayCallBacks);
+    CFArrayRef result = SUCCEEDED(hr) ? CFArrayCreate(0, (const void**) items, len, &kIUnknownArrayCallBacks) : nullptr;
     hr = ::SafeArrayUnaccessData(inArray);
     return result;
 }

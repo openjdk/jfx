@@ -23,8 +23,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "FETurbulence.h"
 
 #include "Filter.h"
@@ -50,7 +48,7 @@ static const int s_randAmplitude = 16807; // 7**5; primitive root of m
 static const int s_randQ = 127773; // m / a
 static const int s_randR = 2836; // m % a
 
-FETurbulence::FETurbulence(Filter* filter, TurbulenceType type, float baseFrequencyX, float baseFrequencyY, int numOctaves, float seed, bool stitchTiles)
+FETurbulence::FETurbulence(Filter& filter, TurbulenceType type, float baseFrequencyX, float baseFrequencyY, int numOctaves, float seed, bool stitchTiles)
     : FilterEffect(filter)
     , m_type(type)
     , m_baseFrequencyX(baseFrequencyX)
@@ -61,9 +59,9 @@ FETurbulence::FETurbulence(Filter* filter, TurbulenceType type, float baseFreque
 {
 }
 
-PassRefPtr<FETurbulence> FETurbulence::create(Filter* filter, TurbulenceType type, float baseFrequencyX, float baseFrequencyY, int numOctaves, float seed, bool stitchTiles)
+Ref<FETurbulence> FETurbulence::create(Filter& filter, TurbulenceType type, float baseFrequencyX, float baseFrequencyY, int numOctaves, float seed, bool stitchTiles)
 {
-    return adoptRef(new FETurbulence(filter, type, baseFrequencyX, baseFrequencyY, numOctaves, seed, stitchTiles));
+    return adoptRef(*new FETurbulence(filter, type, baseFrequencyX, baseFrequencyY, numOctaves, seed, stitchTiles));
 }
 
 TurbulenceType FETurbulence::type() const
@@ -182,8 +180,10 @@ inline void FETurbulence::initPaint(PaintingData& paintingData)
         for (int i = 0; i < s_blockSize; ++i) {
             paintingData.latticeSelector[i] = i;
             gradient = paintingData.gradient[channel][i];
-            gradient[0] = static_cast<float>((paintingData.random() % (2 * s_blockSize)) - s_blockSize) / s_blockSize;
-            gradient[1] = static_cast<float>((paintingData.random() % (2 * s_blockSize)) - s_blockSize) / s_blockSize;
+            do {
+                gradient[0] = static_cast<float>((paintingData.random() % (2 * s_blockSize)) - s_blockSize) / s_blockSize;
+                gradient[1] = static_cast<float>((paintingData.random() % (2 * s_blockSize)) - s_blockSize) / s_blockSize;
+            } while (!gradient[0] && !gradient[1]);
             normalizationFactor = sqrtf(gradient[0] * gradient[0] + gradient[1] * gradient[1]);
             gradient[0] /= normalizationFactor;
             gradient[1] /= normalizationFactor;
@@ -343,7 +343,7 @@ inline void FETurbulence::fillRegion(Uint8ClampedArray* pixelArray, PaintingData
         for (int x = 0; x < filterRegion.width(); ++x) {
             point.setX(point.x() + 1);
             for (channel = 0; channel < 4; ++channel, ++indexOfPixelChannel)
-                pixelArray->set(indexOfPixelChannel, calculateTurbulenceValueForPoint(channel, paintingData, stitchData, filter()->mapAbsolutePointToLocalPoint(point)));
+                pixelArray->set(indexOfPixelChannel, calculateTurbulenceValueForPoint(channel, paintingData, stitchData, filter().mapAbsolutePointToLocalPoint(point)));
         }
     }
 }
@@ -435,5 +435,3 @@ TextStream& FETurbulence::externalRepresentation(TextStream& ts, int indent) con
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)

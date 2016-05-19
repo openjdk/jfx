@@ -24,6 +24,9 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "JavaScriptTest.h"
 #include "PlatformUtilities.h"
 #include "PlatformWebView.h"
@@ -48,11 +51,7 @@ static void setPageLoaderClient(WKPageRef page)
     WKPageSetPageLoaderClient(page, &loaderClient.base);
 }
 
-#if PLATFORM(WIN)
-TEST(WebKit2, DISABLED_MouseMoveAfterCrash)
-#else
 TEST(WebKit2, MouseMoveAfterCrash)
-#endif
 {
     WKRetainPtr<WKContextRef> context = adoptWK(Util::createContextForInjectedBundleTest("MouseMoveAfterCrashTest"));
 
@@ -90,3 +89,5 @@ TEST(WebKit2, MouseMoveAfterCrash)
 }
 
 } // namespace TestWebKitAPI
+
+#endif

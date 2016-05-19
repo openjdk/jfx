@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -33,10 +33,6 @@
 #include <complex>
 #include <sys/types.h>
 
-#if USE(WEBAUDIO_IPP)
-#include <ipps.h>
-#endif // USE(WEBAUDIO_IPP)
-
 namespace WebCore {
 
 // A basic biquad (two-zero / two-pole digital filter)
@@ -44,10 +40,10 @@ namespace WebCore {
 // It can be configured to a number of common and very useful filters:
 //    lowpass, highpass, shelving, parameteric, notch, allpass, ...
 
-class Biquad {
+class Biquad final {
 public:
     Biquad();
-    virtual ~Biquad();
+    ~Biquad();
 
     void process(const float* sourceP, float* destP, size_t framesToProcess);
 
@@ -98,10 +94,6 @@ private:
 
     AudioDoubleArray m_inputBuffer;
     AudioDoubleArray m_outputBuffer;
-
-#elif USE(WEBAUDIO_IPP)
-    IppsIIRState64f_32f* m_biquadState;
-    Ipp8u* m_ippInternalBuffer;
 
 #else
     // Filter memory

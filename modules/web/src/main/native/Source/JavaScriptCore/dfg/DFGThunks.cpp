@@ -88,7 +88,7 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
 
     jit.jump(MacroAssembler::AbsoluteAddress(&vm->osrExitJumpDestination));
 
-    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(*vm, jit, GLOBAL_THUNK_ID);
 
     patchBuffer.link(functionCall, compileOSRExit);
 
@@ -127,11 +127,11 @@ MacroAssemblerCodeRef osrEntryThunkGenerator(VM* vm)
 
     jit.loadPtr(MacroAssembler::Address(GPRInfo::regT0, offsetOfTargetPC), GPRInfo::regT1);
     MacroAssembler::Jump ok = jit.branchPtr(MacroAssembler::Above, GPRInfo::regT1, MacroAssembler::TrustedImmPtr(bitwise_cast<void*>(static_cast<intptr_t>(1000))));
-    jit.breakpoint();
+    jit.abortWithReason(DFGUnreasonableOSREntryJumpDestination);
     ok.link(&jit);
     jit.jump(GPRInfo::regT1);
 
-    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(*vm, jit, GLOBAL_THUNK_ID);
     return FINALIZE_CODE(patchBuffer, ("DFG OSR entry thunk"));
 }
 

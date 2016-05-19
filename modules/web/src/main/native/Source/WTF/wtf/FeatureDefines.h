@@ -13,10 +13,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -52,12 +52,14 @@
 /* FIXME: Move out the PLATFORM specific rules into platform specific files. */
 
 /* --------- Apple IOS (but not MAC) port --------- */
-/* PLATFORM(IOS) is a specialization of PLATFORM(MAC). */
-/* PLATFORM(MAC) is always enabled when PLATFORM(IOS) is enabled. */
 #if PLATFORM(IOS)
 
 #if !defined(ENABLE_ASYNC_SCROLLING)
 #define ENABLE_ASYNC_SCROLLING 1
+#endif
+
+#if !defined(ENABLE_CONTENT_EXTENSIONS)
+#define ENABLE_CONTENT_EXTENSIONS 1
 #endif
 
 #if !defined(ENABLE_CONTEXT_MENUS)
@@ -72,10 +74,6 @@
 #define ENABLE_CURSOR_SUPPORT 0
 #endif
 
-#if !defined(ENABLE_DISK_IMAGE_CACHE)
-#define ENABLE_DISK_IMAGE_CACHE 1
-#endif
-
 #if !defined(ENABLE_DRAG_SUPPORT)
 #define ENABLE_DRAG_SUPPORT 0
 #endif
@@ -88,6 +86,10 @@
 #define ENABLE_ICONDATABASE 0
 #endif
 
+#if !defined(ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS)
+#define ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS 1
+#endif
+
 #if !defined(ENABLE_LETTERPRESS)
 #define ENABLE_LETTERPRESS 1
 #endif
@@ -96,7 +98,7 @@
 #define ENABLE_IOS_AUTOCORRECT_AND_AUTOCAPITALIZE 1
 #endif
 
-#if !defined(ENABLE_IOS_GESTURE_EVENTS)
+#if !defined(ENABLE_IOS_GESTURE_EVENTS) && USE(APPLE_INTERNAL_SDK)
 #define ENABLE_IOS_GESTURE_EVENTS 1
 #endif
 
@@ -104,7 +106,7 @@
 #define ENABLE_IOS_TEXT_AUTOSIZING 1
 #endif
 
-#if !defined(ENABLE_IOS_TOUCH_EVENTS)
+#if !defined(ENABLE_IOS_TOUCH_EVENTS) && USE(APPLE_INTERNAL_SDK)
 #define ENABLE_IOS_TOUCH_EVENTS 1
 #endif
 
@@ -140,7 +142,9 @@
 #define ENABLE_TEXT_SELECTION 0
 #endif
 
-#if !defined(ENABLE_TOUCH_EVENTS)
+/* FIXME: Remove the USE(APPLE_INTERNAL_SDK) conjunct once we support touch events when building against
+the public iOS SDK. We will also need to update the FeatureDefines.xcconfig files. */
+#if !defined(ENABLE_TOUCH_EVENTS) && USE(APPLE_INTERNAL_SDK)
 #define ENABLE_TOUCH_EVENTS 1
 #endif
 
@@ -152,14 +156,32 @@
 #define ENABLE_VIEW_MODE_CSS_MEDIA 0
 #endif
 
+#if !defined(ENABLE_WEBASSEMBLY)
+#define ENABLE_WEBASSEMBLY 0
+#endif
+
 #if !defined(ENABLE_WEBGL)
 #define ENABLE_WEBGL 1
+#endif
+
+/* FIXME: Remove this logic and always enable XSLT once we support XSLT when building against
+the public iOS SDK. We will also need to update the FeatureDefines.xcconfig files. */
+#if !defined(ENABLE_XSLT) && !USE(APPLE_INTERNAL_SDK)
+#define ENABLE_XSLT 0
+#endif
+
+#if !defined(ENABLE_PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
+#define ENABLE_PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC 1
 #endif
 
 #endif /* PLATFORM(IOS) */
 
 /* --------- Apple MAC port (not IOS) --------- */
 #if PLATFORM(MAC)
+
+#if !defined(ENABLE_CONTENT_EXTENSIONS)
+#define ENABLE_CONTENT_EXTENSIONS 1
+#endif
 
 #if !defined(ENABLE_CSS_IMAGE_SET)
 #define ENABLE_CSS_IMAGE_SET 1
@@ -169,29 +191,25 @@
 #define ENABLE_DASHBOARD_SUPPORT 1
 #endif
 
-#if !defined(ENABLE_DELETION_UI)
-#define ENABLE_DELETION_UI 1
-#endif
-
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 #if !defined(ENABLE_ENCRYPTED_MEDIA)
 #define ENABLE_ENCRYPTED_MEDIA 1
 #endif
 #if !defined(ENABLE_ENCRYPTED_MEDIA_V2)
 #define ENABLE_ENCRYPTED_MEDIA_V2 1
 #endif
-#endif
 
 #if !defined(ENABLE_FULLSCREEN_API)
 #define ENABLE_FULLSCREEN_API 1
 #endif
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 #if !defined(ENABLE_REMOTE_INSPECTOR)
 #define ENABLE_REMOTE_INSPECTOR 1
 #endif
 
-#if !defined(ENABLE_RUBBER_BANDING)
-#define ENABLE_RUBBER_BANDING 1
+#if !defined(ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS)
+#define ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS 1
+#endif
 #endif
 
 #if !defined(ENABLE_SMOOTH_SCROLLING)
@@ -232,14 +250,18 @@
 #define ENABLE_INPUT_TYPE_COLOR_POPOVER 1
 #endif
 
-#if !defined(ENABLE_MEDIA_SOURCE)
-#define ENABLE_MEDIA_SOURCE 1
+#if !defined(ENABLE_FILE_REPLACEMENT)
+#define ENABLE_FILE_REPLACEMENT 1
+#endif
+
+#if !defined(ENABLE_PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
+#define ENABLE_PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC 1
 #endif
 
 #endif /* PLATFORM(MAC) */
 
 /* --------- Apple Windows port --------- */
-#if PLATFORM(WIN) && !OS(WINCE) && !PLATFORM(WIN_CAIRO)
+#if PLATFORM(WIN) && !PLATFORM(WIN_CAIRO)
 
 #if !defined(ENABLE_FULLSCREEN_API)
 #define ENABLE_FULLSCREEN_API 1
@@ -249,26 +271,20 @@
 #define ENABLE_WEB_ARCHIVE 1
 #endif
 
-#endif /* PLATFORM(WIN) && !OS(WINCE) && !PLATFORM(WIN_CAIRO) */
-
-/* --------- WinCE port --------- */
-/* WinCE port is a specialization of PLATFORM(WIN). */
-/* PLATFORM(WIN) is always enabled when building for the WinCE port. */
-#if PLATFORM(WIN) && OS(WINCE)
-
-#if !defined(ENABLE_DRAG_SUPPORT)
-#define ENABLE_DRAG_SUPPORT 0
+#if !defined(ENABLE_WEBGL)
+// FIXME: Get WebGL working on Windows with CMake. https://bugs.webkit.org/show_bug.cgi?id=143311
+#if defined(BUILDING_WITH_CMAKE)
+#define ENABLE_WEBGL 0
+#else
+#define ENABLE_WEBGL 0
+#endif
 #endif
 
-#if !defined(ENABLE_FTPDIR)
-#define ENABLE_FTPDIR 0
+#if !defined(ENABLE_GEOLOCATION)
+#define ENABLE_GEOLOCATION 1
 #endif
 
-#if !defined(ENABLE_INSPECTOR)
-#define ENABLE_INSPECTOR 0
-#endif
-
-#endif /* PLATFORM(WIN) && OS(WINCE) */
+#endif /* PLATFORM(WIN) && !PLATFORM(WIN_CAIRO) */
 
 /* --------- Windows CAIRO port --------- */
 /* PLATFORM(WIN_CAIRO) is a specialization of PLATFORM(WIN). */
@@ -284,44 +300,33 @@
 #endif
 
 #if !defined(ENABLE_WEBGL)
+// FIXME: Get WebGL working on Windows with CMake. https://bugs.webkit.org/show_bug.cgi?id=143311
+#if defined(BUILDING_WITH_CMAKE)
+#define ENABLE_WEBGL 0
+#else
 #define ENABLE_WEBGL 1
+#endif
+#endif
+
+#if !defined(ENABLE_GEOLOCATION)
+#define ENABLE_GEOLOCATION 1
 #endif
 
 #endif /* PLATFORM(WIN_CAIRO) */
 
 /* --------- EFL port (Unix) --------- */
 #if PLATFORM(EFL)
-
-#if !defined(ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH)
-#define ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH 1
-#endif
-
-#if !defined(ENABLE_SUBPIXEL_LAYOUT)
-#define ENABLE_SUBPIXEL_LAYOUT 1
-#endif
-
 #endif /* PLATFORM(EFL) */
 
 /* --------- Gtk port (Unix, Windows, Mac) --------- */
 #if PLATFORM(GTK)
-
-#if OS(UNIX)
-#if !defined(ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH)
-#define ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH 1
-#endif
-#endif
-
-#if !defined(ENABLE_SUBPIXEL_LAYOUT)
-#define ENABLE_SUBPIXEL_LAYOUT 1
-#endif
-
 #endif /* PLATFORM(GTK) */
 
 /* ENABLE macro defaults for WebCore */
 /* Do not use PLATFORM() tests in this section ! */
 
-#if !defined(ENABLE_3D_RENDERING)
-#define ENABLE_3D_RENDERING 0
+#if !defined(ENABLE_3D_TRANSFORMS)
+#define ENABLE_3D_TRANSFORMS 0
 #endif
 
 #if !defined(ENABLE_ACCELERATED_2D_CANVAS)
@@ -332,12 +337,12 @@
 #define ENABLE_ACCELERATED_OVERFLOW_SCROLLING 0
 #endif
 
-#if !defined(ENABLE_BATTERY_STATUS)
-#define ENABLE_BATTERY_STATUS 0
+#if !defined(ENABLE_APNG)
+#define ENABLE_APNG 1
 #endif
 
-#if !defined(ENABLE_BLOB)
-#define ENABLE_BLOB 0
+#if !defined(ENABLE_BATTERY_STATUS)
+#define ENABLE_BATTERY_STATUS 0
 #endif
 
 #if !defined(ENABLE_CANVAS_PATH)
@@ -352,16 +357,28 @@
 #define ENABLE_CHANNEL_MESSAGING 1
 #endif
 
+#if !defined(ENABLE_ES6_ARROWFUNCTION_SYNTAX)
+#define ENABLE_ES6_ARROWFUNCTION_SYNTAX 1
+#endif
+
+#if !defined(ENABLE_ES6_CLASS_SYNTAX)
+#define ENABLE_ES6_CLASS_SYNTAX 1
+#endif
+
+#if !defined(ENABLE_ES6_TEMPLATE_LITERAL_SYNTAX)
+#define ENABLE_ES6_TEMPLATE_LITERAL_SYNTAX 1
+#endif
+
+#if !defined(ENABLE_CONTENT_EXTENSIONS)
+#define ENABLE_CONTENT_EXTENSIONS 0
+#endif
+
 #if !defined(ENABLE_CONTEXT_MENUS)
 #define ENABLE_CONTEXT_MENUS 1
 #endif
 
 #if !defined(ENABLE_CSP_NEXT)
 #define ENABLE_CSP_NEXT 0
-#endif
-
-#if !defined(ENABLE_CSS3_CONDITIONAL_RULES)
-#define ENABLE_CSS3_CONDITIONAL_RULES 0
 #endif
 
 #if !defined(ENABLE_CSS3_TEXT)
@@ -380,10 +397,6 @@
 #define ENABLE_CSS_COMPOSITING 0
 #endif
 
-#if !defined(ENABLE_CSS_FILTERS)
-#define ENABLE_CSS_FILTERS 0
-#endif
-
 #if !defined(ENABLE_CSS_IMAGE_ORIENTATION)
 #define ENABLE_CSS_IMAGE_ORIENTATION 0
 #endif
@@ -394,14 +407,6 @@
 
 #if !defined(ENABLE_CSS_IMAGE_SET)
 #define ENABLE_CSS_IMAGE_SET 0
-#endif
-
-#if !defined(ENABLE_CSS_STICKY_POSITION)
-#define ENABLE_CSS_STICKY_POSITION 0
-#endif
-
-#if !defined(ENABLE_CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED)
-#define ENABLE_CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED 0
 #endif
 
 #if !defined(ENABLE_CURSOR_SUPPORT)
@@ -422,10 +427,6 @@
 
 #if !defined(ENABLE_DATA_TRANSFER_ITEMS)
 #define ENABLE_DATA_TRANSFER_ITEMS 0
-#endif
-
-#if !defined(ENABLE_DELETION_UI)
-#define ENABLE_DELETION_UI 0
 #endif
 
 #if !defined(ENABLE_DETAILS_ELEMENT)
@@ -452,12 +453,8 @@
 #define ENABLE_ENCRYPTED_MEDIA_V2 0
 #endif
 
-#if !defined(ENABLE_FAST_MOBILE_SCROLLING)
-#define ENABLE_FAST_MOBILE_SCROLLING 0
-#endif
-
-#if !defined(ENABLE_FILTERS)
-#define ENABLE_FILTERS 0
+#if !defined(ENABLE_FILTERS_LEVEL_2)
+#define ENABLE_FILTERS_LEVEL_2 0
 #endif
 
 #if !defined(ENABLE_FONT_LOAD_EVENTS)
@@ -476,16 +473,16 @@
 #define ENABLE_GAMEPAD 0
 #endif
 
+#if !defined(ENABLE_GAMEPAD_DEPRECATED)
+#define ENABLE_GAMEPAD_DEPRECATED 0
+#endif
+
 #if !defined(ENABLE_GEOLOCATION)
 #define ENABLE_GEOLOCATION 0
 #endif
 
 #if !defined(ENABLE_HIDDEN_PAGE_DOM_TIMER_THROTTLING)
 #define ENABLE_HIDDEN_PAGE_DOM_TIMER_THROTTLING 0
-#endif
-
-#if !defined(ENABLE_HIGH_DPI_CANVAS)
-#define ENABLE_HIGH_DPI_CANVAS 0
 #endif
 
 #if !defined(ENABLE_ICONDATABASE)
@@ -500,8 +497,8 @@
 #define ENABLE_INDEXED_DATABASE 0
 #endif
 
-#if !defined(ENABLE_INPUT_SPEECH)
-#define ENABLE_INPUT_SPEECH 0
+#if !defined(ENABLE_INDEXED_DATABASE_IN_WORKERS)
+#define ENABLE_INDEXED_DATABASE_IN_WORKERS 0
 #endif
 
 #if !defined(ENABLE_INPUT_TYPE_COLOR)
@@ -544,6 +541,14 @@
 
 #if !defined(ENABLE_INSPECTOR)
 #define ENABLE_INSPECTOR 1
+#endif
+
+#if !defined(ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS)
+#define ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS 0
+#endif
+
+#if !defined(ENABLE_INTL)
+#define ENABLE_INTL 0
 #endif
 
 #if !defined(ENABLE_JAVASCRIPT_I18N_API)
@@ -606,8 +611,16 @@
 #define ENABLE_MOUSE_CURSOR_SCALE 0
 #endif
 
+#if !defined(ENABLE_MOUSE_FORCE_EVENTS)
+#define ENABLE_MOUSE_FORCE_EVENTS 1
+#endif
+
 #if !defined(ENABLE_NAVIGATOR_CONTENT_UTILS)
 #define ENABLE_NAVIGATOR_CONTENT_UTILS 0
+#endif
+
+#if !defined(ENABLE_NAVIGATOR_HWCONCURRENCY)
+#define ENABLE_NAVIGATOR_HWCONCURRENCY 1
 #endif
 
 #if !defined(ENABLE_NETSCAPE_PLUGIN_API)
@@ -618,16 +631,8 @@
 #define ENABLE_NETSCAPE_PLUGIN_METADATA_CACHE 0
 #endif
 
-#if !defined(ENABLE_NETWORK_INFO)
-#define ENABLE_NETWORK_INFO 0
-#endif
-
 #if !defined(ENABLE_NOTIFICATIONS)
 #define ENABLE_NOTIFICATIONS 0
-#endif
-
-#if !defined(ENABLE_OBJECT_MARK_LOGGING)
-#define ENABLE_OBJECT_MARK_LOGGING 0
 #endif
 
 #if !defined(ENABLE_OPENCL)
@@ -642,34 +647,14 @@
 #define ENABLE_ORIENTATION_EVENTS 0
 #endif
 
-#if !defined(ENABLE_PAGE_VISIBILITY_API)
-#define ENABLE_PAGE_VISIBILITY_API 0
-#endif
-
 #if OS(WINDOWS)
 #if !defined(ENABLE_PAN_SCROLLING)
 #define ENABLE_PAN_SCROLLING 1
 #endif
 #endif
 
-#if !defined(ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH)
-#define ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH 0
-#endif
-
-#if !defined(ENABLE_PLUGIN_PROXY_FOR_VIDEO)
-#define ENABLE_PLUGIN_PROXY_FOR_VIDEO 0
-#endif
-
 #if !defined(ENABLE_POINTER_LOCK)
 #define ENABLE_POINTER_LOCK 0
-#endif
-
-#if !defined(ENABLE_PROGRESS_ELEMENT)
-#define ENABLE_PROGRESS_ELEMENT 0
-#endif
-
-#if !defined(ENABLE_PROMISES)
-#define ENABLE_PROMISES 0
 #endif
 
 #if !defined(ENABLE_PROXIMITY_EVENTS)
@@ -688,20 +673,16 @@
 #define ENABLE_REQUEST_ANIMATION_FRAME 0
 #endif
 
+#if !defined(ENABLE_REQUEST_AUTOCOMPLETE)
+#define ENABLE_REQUEST_AUTOCOMPLETE 0
+#endif
+
 #if !defined(ENABLE_RUBBER_BANDING)
 #define ENABLE_RUBBER_BANDING 0
 #endif
 
 #if !defined(ENABLE_SATURATED_LAYOUT_ARITHMETIC)
-#define ENABLE_SATURATED_LAYOUT_ARITHMETIC 0
-#endif
-
-#if !defined(ENABLE_SCRIPTED_SPEECH)
-#define ENABLE_SCRIPTED_SPEECH 0
-#endif
-
-#if !defined(ENABLE_SHARED_WORKERS)
-#define ENABLE_SHARED_WORKERS 0
+#define ENABLE_SATURATED_LAYOUT_ARITHMETIC 1
 #endif
 
 #if !defined(ENABLE_SMOOTH_SCROLLING)
@@ -716,12 +697,8 @@
 #define ENABLE_SPELLCHECK 0
 #endif
 
-#if !defined(ENABLE_SQL_DATABASE)
-#define ENABLE_SQL_DATABASE 1
-#endif
-
-#if !defined(ENABLE_SUBPIXEL_LAYOUT)
-#define ENABLE_SUBPIXEL_LAYOUT 0
+#if !defined(ENABLE_STREAMS_API)
+#define ENABLE_STREAMS_API 1
 #endif
 
 #if !defined(ENABLE_SVG_FONTS)
@@ -768,6 +745,10 @@
 #define ENABLE_VIDEO_TRACK 0
 #endif
 
+#if !defined(ENABLE_DATACUE_VALUE)
+#define ENABLE_DATACUE_VALUE 0
+#endif
+
 #if !defined(ENABLE_VIEWPORT)
 #define ENABLE_VIEWPORT 0
 #endif
@@ -780,8 +761,12 @@
 #define ENABLE_WEBGL 0
 #endif
 
-#if !defined(ENABLE_WEB_ANIMATIONS)
-#define ENABLE_WEB_ANIMATIONS 0
+#if !defined(ENABLE_WEBGL2)
+#define ENABLE_WEBGL2 0
+#endif
+
+#if !defined(ENABLE_GRAPHICS_CONTEXT_3D)
+#define ENABLE_GRAPHICS_CONTEXT_3D ENABLE_WEBGL
 #endif
 
 #if !defined(ENABLE_WEB_ARCHIVE)
@@ -798,6 +783,10 @@
 
 #if !defined(ENABLE_WEB_SOCKETS)
 #define ENABLE_WEB_SOCKETS 1
+#endif
+
+#if !defined(ENABLE_PICTURE_SIZES)
+#define ENABLE_PICTURE_SIZES 0
 #endif
 
 #if !defined(ENABLE_WEB_TIMING)
@@ -818,20 +807,24 @@
 
 /* Asserts, invariants for macro definitions */
 
-#if ENABLE(SATURATED_LAYOUT_ARITHMETIC) && !ENABLE(SUBPIXEL_LAYOUT)
-#error "ENABLE(SATURATED_LAYOUT_ARITHMETIC) requires ENABLE(SUBPIXEL_LAYOUT)"
-#endif
-
 #if ENABLE(VIDEO_TRACK) && !ENABLE(VIDEO)
 #error "ENABLE(VIDEO_TRACK) requires ENABLE(VIDEO)"
 #endif
 
-#if ENABLE(REMOTE_INSPECTOR) && !ENABLE(INSPECTOR)
-#error "ENABLE(REMOTE_INSPECTOR) requires ENABLE(INSPECTOR)"
+#if ENABLE(MEDIA_CONTROLS_SCRIPT) && !ENABLE(VIDEO)
+#error "ENABLE(MEDIA_CONTROLS_SCRIPT) requires ENABLE(VIDEO)"
+#endif
+
+#if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS) && !ENABLE(REMOTE_INSPECTOR)
+#error "ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS) requires ENABLE(REMOTE_INSPECTOR)"
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS) && !ENABLE(TOUCH_EVENTS)
 #error "ENABLE(IOS_TOUCH_EVENTS) requires ENABLE(TOUCH_EVENTS)"
+#endif
+
+#if ENABLE(WEBGL) && !ENABLE(GRAPHICS_CONTEXT_3D)
+#error "ENABLE(WEBGL) requires ENABLE(GRAPHICS_CONTEXT_3D)"
 #endif
 
 #endif /* WTF_FeatureDefines_h */

@@ -50,8 +50,8 @@ public:
 
     bool setInlineStyleProperty(CSSPropertyID, CSSValueID identifier, bool important = false);
     bool setInlineStyleProperty(CSSPropertyID, CSSPropertyID identifier, bool important = false);
-    bool setInlineStyleProperty(CSSPropertyID, double value, CSSPrimitiveValue::UnitTypes, bool important = false);
-    bool setInlineStyleProperty(CSSPropertyID, const String& value, bool important = false);
+    WEBCORE_EXPORT bool setInlineStyleProperty(CSSPropertyID, double value, CSSPrimitiveValue::UnitTypes, bool important = false);
+    WEBCORE_EXPORT bool setInlineStyleProperty(CSSPropertyID, const String& value, bool important = false);
     bool removeInlineStyleProperty(CSSPropertyID);
     void removeAllInlineStyleProperties();
 
@@ -63,13 +63,15 @@ public:
     const StyleProperties* presentationAttributeStyle();
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) { }
 
+    static void clearPresentationAttributeCache();
+
 protected:
     StyledElement(const QualifiedName& name, Document& document, ConstructionType type)
         : Element(name, document, type)
     {
     }
 
-    virtual void attributeChanged(const QualifiedName&, const AtomicString&, AttributeModificationReason = ModifiedDirectly) override;
+    virtual void attributeChanged(const QualifiedName&, const AtomicString& oldValue, const AtomicString& newValue, AttributeModificationReason = ModifiedDirectly) override;
 
     virtual bool isPresentationAttribute(const QualifiedName&) const { return false; }
 
@@ -100,16 +102,16 @@ inline void StyledElement::invalidateStyleAttribute()
 inline const StyleProperties* StyledElement::presentationAttributeStyle()
 {
     if (!elementData())
-        return 0;
+        return nullptr;
     if (elementData()->presentationAttributeStyleIsDirty())
         rebuildPresentationAttributeStyle();
     return elementData()->presentationAttributeStyle();
 }
 
-inline bool isStyledElement(const Node& node) { return node.isStyledElement(); }
+} // namespace WebCore
 
-NODE_TYPE_CASTS(StyledElement)
-
-} //namespace
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyledElement)
+    static bool isType(const WebCore::Node& node) { return node.isStyledElement(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

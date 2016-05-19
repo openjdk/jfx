@@ -47,7 +47,7 @@ class ResourceLoadTiming;
 
 class PerformanceTiming : public RefCounted<PerformanceTiming>, public DOMWindowProperty {
 public:
-    static PassRefPtr<PerformanceTiming> create(Frame* frame) { return adoptRef(new PerformanceTiming(frame)); }
+    static Ref<PerformanceTiming> create(Frame* frame) { return adoptRef(*new PerformanceTiming(frame)); }
 
     unsigned long long navigationStart() const;
     unsigned long long unloadEventStart() const;
@@ -77,8 +77,7 @@ private:
     const DocumentTiming* documentTiming() const;
     DocumentLoader* documentLoader() const;
     DocumentLoadTiming* documentLoadTiming() const;
-    ResourceLoadTiming* resourceLoadTiming() const;
-    unsigned long long resourceLoadTimeRelativeToAbsolute(int) const;
+    unsigned long long resourceLoadTimeRelativeToFetchStart(int) const;
     unsigned long long monotonicTimeToIntegerMilliseconds(double) const;
 };
 

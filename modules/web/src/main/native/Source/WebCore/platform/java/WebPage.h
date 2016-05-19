@@ -4,9 +4,8 @@
 #ifndef WebPage_h
 #define WebPage_h
 
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #if USE(ACCELERATED_COMPOSITING)
+#include <UnicodeJava.h>
 #include "GraphicsLayerClient.h"
 #endif
 #include "IntRect.h"
@@ -15,7 +14,7 @@
 
 #include <jni.h> // todo tav remove when building w/ pch
 #include <JavaRef.h>
-#include <UnicodeJava.h>
+
 
 namespace WebCore {
 
@@ -35,7 +34,7 @@ class WebPage
 #endif
 {
 public:
-    WebPage(PassOwnPtr<Page> page);
+    WebPage(std::unique_ptr<Page> page);
     ~WebPage();
 
     inline Page* page()
@@ -117,12 +116,12 @@ private:
     Frame* focusedWebCoreFrame();
     Node* focusedWebCoreNode();
 
-    OwnPtr<Page> m_page;
-    OwnPtr<PrintContext> m_printContext;
+    std::unique_ptr<Page> m_page;
+    std::unique_ptr<PrintContext> m_printContext;
 
 #if USE(ACCELERATED_COMPOSITING)
-    OwnPtr<GraphicsLayer> m_rootLayer;
-    OwnPtr<TextureMapper> m_textureMapper;
+    std::unique_ptr<GraphicsLayer> m_rootLayer;
+    std::unique_ptr<TextureMapper> m_textureMapper;
     bool m_syncLayers;
 #endif
 

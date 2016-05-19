@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -39,11 +39,11 @@ class SVGFontFaceElement;
 
 class CSSFontFaceSrcValue : public CSSValue {
 public:
-    static PassRef<CSSFontFaceSrcValue> create(const String& resource)
+    static Ref<CSSFontFaceSrcValue> create(const String& resource)
     {
         return adoptRef(*new CSSFontFaceSrcValue(resource, false));
     }
-    static PassRef<CSSFontFaceSrcValue> createLocal(const String& resource)
+    static Ref<CSSFontFaceSrcValue> createLocal(const String& resource)
     {
         return adoptRef(*new CSSFontFaceSrcValue(resource, true));
     }
@@ -58,6 +58,7 @@ public:
 
 #if ENABLE(SVG_FONTS)
     bool isSVGFontFaceSrc() const;
+    bool isSVGFontTarget() const;
 
     SVGFontFaceElement* svgFontFaceElement() const { return m_svgFontFaceElement; }
     void setSVGFontFaceElement(SVGFontFaceElement* element) { m_svgFontFaceElement = element; }
@@ -67,9 +68,9 @@ public:
 
     void addSubresourceStyleURLs(ListHashSet<URL>&, const StyleSheetContents*) const;
 
-    bool hasFailedOrCanceledSubresources() const;
+    bool traverseSubresources(const std::function<bool (const CachedResource&)>& handler) const;
 
-    CachedFont* cachedFont(Document*);
+    CachedFont* cachedFont(Document*, bool isSVG, bool isInitiatingElementInUserAgentShadowTree);
 
     bool equals(const CSSFontFaceSrcValue&) const;
 
@@ -95,8 +96,8 @@ private:
 #endif
 };
 
-CSS_VALUE_TYPE_CASTS(CSSFontFaceSrcValue, isFontFaceSrcValue())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSFontFaceSrcValue, isFontFaceSrcValue())
 
 #endif

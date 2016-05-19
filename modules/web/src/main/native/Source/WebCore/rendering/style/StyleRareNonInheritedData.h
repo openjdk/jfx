@@ -34,7 +34,9 @@
 #include "LineClampValue.h"
 #include "NinePieceImage.h"
 #include "ShapeValue.h"
-#include <wtf/OwnPtr.h>
+#include "StyleContentAlignmentData.h"
+#include "StyleSelfAlignmentData.h"
+#include <memory>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
 
@@ -43,17 +45,20 @@ namespace WebCore {
 class AnimationList;
 class ShadowData;
 class StyleDeprecatedFlexibleBoxData;
-#if ENABLE(CSS_FILTERS)
 class StyleFilterData;
-#endif
 class StyleFlexibleBoxData;
+#if ENABLE(CSS_GRID_LAYOUT)
 class StyleGridData;
 class StyleGridItemData;
+#endif
 class StyleMarqueeData;
 class StyleMultiColData;
 class StyleReflection;
 class StyleResolver;
 class StyleTransformData;
+#if ENABLE(CSS_SCROLL_SNAP)
+class StyleScrollSnapPoints;
+#endif
 
 class ContentData;
 struct LengthSize;
@@ -77,8 +82,8 @@ enum PageSizeType {
 // actually uses one of these properties.
 class StyleRareNonInheritedData : public RefCounted<StyleRareNonInheritedData> {
 public:
-    static PassRef<StyleRareNonInheritedData> create() { return adoptRef(*new StyleRareNonInheritedData); }
-    PassRef<StyleRareNonInheritedData> copy() const;
+    static Ref<StyleRareNonInheritedData> create() { return adoptRef(*new StyleRareNonInheritedData); }
+    Ref<StyleRareNonInheritedData> copy() const;
     ~StyleRareNonInheritedData();
 
     bool operator==(const StyleRareNonInheritedData&) const;
@@ -91,7 +96,12 @@ public:
     bool animationDataEquivalent(const StyleRareNonInheritedData&) const;
     bool transitionDataEquivalent(const StyleRareNonInheritedData&) const;
     bool hasFilters() const;
+#if ENABLE(FILTERS_LEVEL_2)
+    bool hasBackdropFilters() const;
+#endif
     bool hasOpacity() const { return opacity < 1; }
+
+    bool hasAnimationsOrTransitions() const { return m_animations || m_transitions; }
 
     float opacity;
 
@@ -103,6 +113,9 @@ public:
     Length m_perspectiveOriginY;
 
     LineClampValue lineClamp; // An Apple extension.
+
+    IntSize m_initialLetter;
+
 #if ENABLE(DASHBOARD_SUPPORT)
     Vector<StyleDashboardRegion> m_dashboardRegions;
 #endif
@@ -112,37 +125,39 @@ public:
     DataRef<StyleMarqueeData> m_marquee; // Marquee properties
     DataRef<StyleMultiColData> m_multiCol; //  CSS3 multicol properties
     DataRef<StyleTransformData> m_transform; // Transform properties (rotate, scale, skew, etc.)
-
-#if ENABLE(CSS_FILTERS)
     DataRef<StyleFilterData> m_filter; // Filter operations (url, sepia, blur, etc.)
+#if ENABLE(FILTERS_LEVEL_2)
+    DataRef<StyleFilterData> m_backdropFilter; // Filter operations (url, sepia, blur, etc.)
 #endif
 
+#if ENABLE(CSS_GRID_LAYOUT)
     DataRef<StyleGridData> m_grid;
     DataRef<StyleGridItemData> m_gridItem;
+#endif
+
+#if ENABLE(CSS_SCROLL_SNAP)
+    DataRef<StyleScrollSnapPoints> m_scrollSnapPoints;
+#endif
 
     std::unique_ptr<ContentData> m_content;
-    OwnPtr<CounterDirectiveMap> m_counterDirectives;
+    std::unique_ptr<CounterDirectiveMap> m_counterDirectives;
     String m_altText;
 
     std::unique_ptr<ShadowData> m_boxShadow; // For box-shadow decorations.
 
     RefPtr<StyleReflection> m_boxReflect;
 
-    OwnPtr<AnimationList> m_animations;
-    OwnPtr<AnimationList> m_transitions;
+    std::unique_ptr<AnimationList> m_animations;
+    std::unique_ptr<AnimationList> m_transitions;
 
     FillLayer m_mask;
     NinePieceImage m_maskBoxImage;
 
     LengthSize m_pageSize;
 
-#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
-    RefPtr<ShapeValue> m_shapeInside;
-#endif
 #if ENABLE(CSS_SHAPES)
     RefPtr<ShapeValue> m_shapeOutside;
     Length m_shapeMargin;
-    Length m_shapePadding;
     float m_shapeImageThreshold;
 #endif
 
@@ -161,6 +176,18 @@ public:
 
     AtomicString m_flowThread;
     AtomicString m_regionThread;
+
+    StyleContentAlignmentData m_alignContent;
+    StyleSelfAlignmentData m_alignItems;
+    StyleSelfAlignmentData m_alignSelf;
+    StyleContentAlignmentData m_justifyContent;
+    StyleSelfAlignmentData m_justifyItems;
+    StyleSelfAlignmentData m_justifySelf;
+
+#if ENABLE(CSS_SCROLL_SNAP)
+    unsigned m_scrollSnapType : 2; // ScrollSnapType
+#endif
+
     unsigned m_regionFragment : 1; // RegionFragment
 
     unsigned m_regionBreakAfter : 2; // EPageBreak
@@ -171,10 +198,6 @@ public:
     unsigned m_transformStyle3D : 1; // ETransformStyle3D
     unsigned m_backfaceVisibility : 1; // EBackfaceVisibility
 
-    unsigned m_alignContent : 3; // EAlignContent
-    unsigned m_alignItems : 3; // EAlignItems
-    unsigned m_alignSelf : 3; // EAlignItems
-    unsigned m_justifyContent : 3; // EJustifyContent
 
     unsigned userDrag : 2; // EUserDrag
     unsigned textOverflow : 1; // Whether or not lines that spill out should be truncated with "..."
@@ -185,8 +208,6 @@ public:
     unsigned m_textCombine : 1; // CSS3 text-combine properties
 
     unsigned m_textDecorationStyle : 3; // TextDecorationStyle
-    unsigned m_wrapFlow: 3; // WrapFlow
-    unsigned m_wrapThrough: 1; // WrapThrough
 
     unsigned m_runningAcceleratedAnimation : 1;
 
@@ -194,6 +215,7 @@ public:
 
 #if ENABLE(CSS_COMPOSITING)
     unsigned m_effectiveBlendMode: 5; // EBlendMode
+    unsigned m_isolation : 1; // Isolation
 #endif
 
     unsigned m_objectFit : 3; // ObjectFit

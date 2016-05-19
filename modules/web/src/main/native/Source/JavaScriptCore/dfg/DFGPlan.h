@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,22 +26,20 @@
 #ifndef DFGPlan_h
 #define DFGPlan_h
 
-#include <wtf/Platform.h>
-
 #include "CompilationResult.h"
 #include "DFGCompilationKey.h"
 #include "DFGCompilationMode.h"
 #include "DFGDesiredIdentifiers.h"
-#include "DFGDesiredStructureChains.h"
 #include "DFGDesiredTransitions.h"
 #include "DFGDesiredWatchpoints.h"
 #include "DFGDesiredWeakReferences.h"
-#include "DFGDesiredWriteBarriers.h"
 #include "DFGFinalizer.h"
 #include "DeferredCompilationCallback.h"
 #include "Operands.h"
 #include "ProfilerCompilation.h"
+#include <wtf/HashMap.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/text/CString.h>
 
 namespace JSC {
 
@@ -68,11 +66,15 @@ struct Plan : public ThreadSafeRefCounted<Plan> {
     CompilationResult finalizeWithoutNotifyingCallback();
     void finalizeAndNotifyCallback();
 
+    void notifyCompiling();
+    void notifyCompiled();
     void notifyReady();
 
     CompilationKey key();
 
-    void visitChildren(SlotVisitor&, CodeBlockSet&);
+    void checkLivenessAndVisitChildren(SlotVisitor&, CodeBlockSet&);
+    bool isKnownToBeLiveDuringGC();
+    void cancel();
 
     VM& vm;
     RefPtr<CodeBlock> codeBlock;
@@ -85,37 +87,42 @@ struct Plan : public ThreadSafeRefCounted<Plan> {
 
     RefPtr<Profiler::Compilation> compilation;
 
-    OwnPtr<Finalizer> finalizer;
+    std::unique_ptr<Finalizer> finalizer;
 
+    RefPtr<InlineCallFrameSet> inlineCallFrames;
     DesiredWatchpoints watchpoints;
     DesiredIdentifiers identifiers;
-    DesiredStructureChains chains;
     DesiredWeakReferences weakReferences;
-    DesiredWriteBarriers writeBarriers;
     DesiredTransitions transitions;
 
     bool willTryToTierUp;
 
-    double beforeFTL;
-
-    bool isCompiled;
+    enum Stage { Preparing, Compiling, Compiled, Ready, Cancelled };
+    Stage stage;
 
     RefPtr<DeferredCompilationCallback> callback;
 
+    JS_EXPORT_PRIVATE static HashMap<CString, double> compileTimeStats();
+
 private:
+    bool computeCompileTimes() const;
     bool reportCompileTimes() const;
 
-    enum CompilationPath { FailPath, DFGPath, FTLPath };
+    enum CompilationPath { FailPath, DFGPath, FTLPath, CancelPath };
     CompilationPath compileInThreadImpl(LongLivedState&);
 
     bool isStillValid();
     void reallyAdd(CommonData*);
+
+    double m_timeBeforeFTL;
 };
 
 #else // ENABLE(DFG_JIT)
 
 class Plan : public RefCounted<Plan> {
     // Dummy class to allow !ENABLE(DFG_JIT) to build.
+public:
+    static HashMap<CString, double> compileTimeStats() { return HashMap<CString, double>(); }
 };
 
 #endif // ENABLE(DFG_JIT)

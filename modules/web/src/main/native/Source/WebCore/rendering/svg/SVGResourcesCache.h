@@ -21,8 +21,9 @@
 #define SVGResourcesCache_h
 
 #include "RenderStyleConstants.h"
+#include <memory>
 #include <wtf/HashMap.h>
-#include <wtf/OwnPtr.h>
+#include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
@@ -38,7 +39,7 @@ public:
     SVGResourcesCache();
     ~SVGResourcesCache();
 
-    static SVGResources* cachedResourcesForRenderObject(const RenderObject&);
+    static SVGResources* cachedResourcesForRenderer(const RenderElement&);
 
     // Called from all SVG renderers addChild() methods.
     static void clientWasAddedToTree(RenderObject&);
@@ -62,7 +63,7 @@ private:
     void addResourcesFromRenderer(RenderElement&, const RenderStyle&);
     void removeResourcesFromRenderer(RenderElement&);
 
-    typedef HashMap<const RenderObject*, OwnPtr<SVGResources>> CacheMap;
+    typedef HashMap<const RenderElement*, std::unique_ptr<SVGResources>> CacheMap;
     CacheMap m_cache;
 };
 

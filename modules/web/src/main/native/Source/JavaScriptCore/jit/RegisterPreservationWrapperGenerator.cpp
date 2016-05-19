@@ -124,7 +124,7 @@ MacroAssemblerCodeRef generateRegisterPreservationWrapper(VM& vm, ExecutableBase
     jit.restoreReturnAddressBeforeReturn(GPRInfo::nonArgGPR0);
     AssemblyHelpers::Jump jump = jit.jump();
 
-    LinkBuffer linkBuffer(vm, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer linkBuffer(vm, jit, GLOBAL_THUNK_ID);
     linkBuffer.link(jump, CodeLocationLabel(target));
 
     if (Options::verboseFTLToJSThunk())
@@ -211,7 +211,7 @@ static void generateRegisterRestoration(AssemblyHelpers& jit)
     if (!ASSERT_DISABLED) {
         AssemblyHelpers::Jump ok = jit.branchPtr(
             AssemblyHelpers::Above, GPRInfo::regT1, AssemblyHelpers::TrustedImmPtr(static_cast<size_t>(0x1000)));
-        jit.breakpoint();
+        jit.abortWithReason(RPWUnreasonableJumpTarget);
         ok.link(&jit);
     }
 
@@ -226,7 +226,7 @@ MacroAssemblerCodeRef registerRestorationThunkGenerator(VM* vm)
 {
     AssemblyHelpers jit(vm, 0);
     generateRegisterRestoration(jit);
-    LinkBuffer linkBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer linkBuffer(*vm, jit, GLOBAL_THUNK_ID);
     return FINALIZE_CODE(linkBuffer, ("Register restoration thunk"));
 }
 

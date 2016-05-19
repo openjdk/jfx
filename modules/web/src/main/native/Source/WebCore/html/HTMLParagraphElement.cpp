@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLParagraphElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "Document.h"
@@ -39,14 +38,14 @@ inline HTMLParagraphElement::HTMLParagraphElement(const QualifiedName& tagName, 
     ASSERT(hasTagName(pTag));
 }
 
-PassRefPtr<HTMLParagraphElement> HTMLParagraphElement::create(Document& document)
+Ref<HTMLParagraphElement> HTMLParagraphElement::create(Document& document)
 {
-    return adoptRef(new HTMLParagraphElement(pTag, document));
+    return adoptRef(*new HTMLParagraphElement(pTag, document));
 }
 
-PassRefPtr<HTMLParagraphElement> HTMLParagraphElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLParagraphElement> HTMLParagraphElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLParagraphElement(tagName, document));
+    return adoptRef(*new HTMLParagraphElement(tagName, document));
 }
 
 bool HTMLParagraphElement::isPresentationAttribute(const QualifiedName& name) const

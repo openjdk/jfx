@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-WebGLDepthTexture::WebGLDepthTexture(WebGLRenderingContext* context)
+WebGLDepthTexture::WebGLDepthTexture(WebGLRenderingContextBase* context)
     : WebGLExtension(context)
 {
 }
@@ -45,11 +45,6 @@ WebGLDepthTexture::~WebGLDepthTexture()
 WebGLExtension::ExtensionName WebGLDepthTexture::getName() const
 {
     return WebGLDepthTextureName;
-}
-
-OwnPtr<WebGLDepthTexture> WebGLDepthTexture::create(WebGLRenderingContext* context)
-{
-    return adoptPtr(new WebGLDepthTexture(context));
 }
 
 bool WebGLDepthTexture::supported(GraphicsContext3D* context)

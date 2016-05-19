@@ -27,19 +27,15 @@
 #define WebPlatformStrategies_h
 
 #include <WebCore/CookiesStrategy.h>
-#include <WebCore/DatabaseStrategy.h>
 #include <WebCore/LoaderStrategy.h>
 #include <WebCore/PasteboardStrategy.h>
 #include <WebCore/PlatformStrategies.h>
 #include <WebCore/PluginStrategy.h>
-#include <WebCore/SharedWorkerStrategy.h>
-#include <WebCore/StorageStrategy.h>
-#include <WebCore/VisitedLinkStrategy.h>
 
 struct PasteboardImage;
 struct PasteboardWebContent;
 
-class WebPlatformStrategies : public WebCore::PlatformStrategies, private WebCore::CookiesStrategy, private WebCore::DatabaseStrategy, private WebCore::LoaderStrategy, private WebCore::PasteboardStrategy, private WebCore::PluginStrategy, private WebCore::SharedWorkerStrategy, private WebCore::StorageStrategy, private WebCore::VisitedLinkStrategy {
+class WebPlatformStrategies : public WebCore::PlatformStrategies, private WebCore::CookiesStrategy, private WebCore::LoaderStrategy, private WebCore::PasteboardStrategy, private WebCore::PluginStrategy {
 public:
     static void initializeIfNecessary();
 
@@ -48,13 +44,9 @@ private:
 
     // WebCore::PlatformStrategies
     virtual WebCore::CookiesStrategy* createCookiesStrategy() override;
-    virtual WebCore::DatabaseStrategy* createDatabaseStrategy() override;
     virtual WebCore::LoaderStrategy* createLoaderStrategy() override;
     virtual WebCore::PasteboardStrategy* createPasteboardStrategy() override;
     virtual WebCore::PluginStrategy* createPluginStrategy() override;
-    virtual WebCore::SharedWorkerStrategy* createSharedWorkerStrategy() override;
-    virtual WebCore::StorageStrategy* createStorageStrategy() override;
-    virtual WebCore::VisitedLinkStrategy* createVisitedLinkStrategy() override;
 
     // WebCore::CookiesStrategy
     virtual String cookiesForDOM(const WebCore::NetworkStorageSession&, const WebCore::URL& firstParty, const WebCore::URL&) override;
@@ -64,22 +56,20 @@ private:
     virtual bool getRawCookies(const WebCore::NetworkStorageSession&, const WebCore::URL& firstParty, const WebCore::URL&, Vector<WebCore::Cookie>&) override;
     virtual void deleteCookie(const WebCore::NetworkStorageSession&, const WebCore::URL&, const String&) override;
 
-    // WebCore::DatabaseStrategy
-    // - Using default implementation.
-
     // WebCore::LoaderStrategy
     // - Using default implementation.
 
     // WebCore::PluginStrategy
     virtual void refreshPlugins() override;
     virtual void getPluginInfo(const WebCore::Page*, Vector<WebCore::PluginInfo>&) override;
+    virtual void getWebVisiblePluginInfo(const WebCore::Page*, Vector<WebCore::PluginInfo>&) override;
+#if PLATFORM(MAC)
+    virtual void setPluginLoadClientPolicy(WebCore::PluginLoadClientPolicy, const String&, const String&, const String&) override;
+    virtual void clearPluginClientPolicies() override;
+#endif
 
     // WebCore::LoaderStrategy
     // - Using default implementation.
-
-    // WebCore::VisitedLinkStrategy
-    virtual bool isLinkVisited(WebCore::Page*, WebCore::LinkHash, const WebCore::URL& baseURL, const WTF::AtomicString& attributeURL) override;
-    virtual void addVisitedLink(WebCore::Page*, WebCore::LinkHash) override;
 
     // WebCore::PasteboardStrategy
 #if PLATFORM(IOS)

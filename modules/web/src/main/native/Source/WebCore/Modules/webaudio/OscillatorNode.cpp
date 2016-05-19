@@ -41,14 +41,14 @@ namespace WebCore {
 
 using namespace VectorMath;
 
-PeriodicWave* OscillatorNode::s_periodicWaveSine = 0;
-PeriodicWave* OscillatorNode::s_periodicWaveSquare = 0;
-PeriodicWave* OscillatorNode::s_periodicWaveSawtooth = 0;
-PeriodicWave* OscillatorNode::s_periodicWaveTriangle = 0;
+PeriodicWave* OscillatorNode::s_periodicWaveSine = nullptr;
+PeriodicWave* OscillatorNode::s_periodicWaveSquare = nullptr;
+PeriodicWave* OscillatorNode::s_periodicWaveSawtooth = nullptr;
+PeriodicWave* OscillatorNode::s_periodicWaveTriangle = nullptr;
 
-PassRefPtr<OscillatorNode> OscillatorNode::create(AudioContext* context, float sampleRate)
+Ref<OscillatorNode> OscillatorNode::create(AudioContext* context, float sampleRate)
 {
-    return adoptRef(new OscillatorNode(context, sampleRate));
+    return adoptRef(*new OscillatorNode(context, sampleRate));
 }
 
 OscillatorNode::OscillatorNode(AudioContext* context, float sampleRate)
@@ -115,28 +115,28 @@ void OscillatorNode::setType(const String& type)
 
 bool OscillatorNode::setType(unsigned type)
 {
-    PeriodicWave* periodicWave = 0;
+    PeriodicWave* periodicWave = nullptr;
     float sampleRate = this->sampleRate();
 
     switch (type) {
     case SINE:
         if (!s_periodicWaveSine)
-            s_periodicWaveSine = PeriodicWave::createSine(sampleRate).leakRef();
+            s_periodicWaveSine = &PeriodicWave::createSine(sampleRate).leakRef();
         periodicWave = s_periodicWaveSine;
         break;
     case SQUARE:
         if (!s_periodicWaveSquare)
-            s_periodicWaveSquare = PeriodicWave::createSquare(sampleRate).leakRef();
+            s_periodicWaveSquare = &PeriodicWave::createSquare(sampleRate).leakRef();
         periodicWave = s_periodicWaveSquare;
         break;
     case SAWTOOTH:
         if (!s_periodicWaveSawtooth)
-            s_periodicWaveSawtooth = PeriodicWave::createSawtooth(sampleRate).leakRef();
+            s_periodicWaveSawtooth = &PeriodicWave::createSawtooth(sampleRate).leakRef();
         periodicWave = s_periodicWaveSawtooth;
         break;
     case TRIANGLE:
         if (!s_periodicWaveTriangle)
-            s_periodicWaveTriangle = PeriodicWave::createTriangle(sampleRate).leakRef();
+            s_periodicWaveTriangle = &PeriodicWave::createTriangle(sampleRate).leakRef();
         periodicWave = s_periodicWaveTriangle;
         break;
     case CUSTOM:
@@ -269,8 +269,8 @@ void OscillatorNode::process(size_t framesToProcess)
     bool hasSampleAccurateValues = calculateSampleAccuratePhaseIncrements(framesToProcess);
 
     float frequency = 0;
-    float* higherWaveData = 0;
-    float* lowerWaveData = 0;
+    float* higherWaveData = nullptr;
+    float* lowerWaveData = nullptr;
     float tableInterpolationFactor;
 
     if (!hasSampleAccurateValues) {

@@ -27,6 +27,7 @@
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TypeCasts.h>
 #include <wtf/text/AtomicStringHash.h>
 
 namespace WebCore {
@@ -48,9 +49,9 @@ typedef int ExceptionCode;
 
 class CSSStyleSheet final : public StyleSheet {
 public:
-    static PassRef<CSSStyleSheet> create(PassRef<StyleSheetContents>, CSSImportRule* ownerRule = 0);
-    static PassRef<CSSStyleSheet> create(PassRef<StyleSheetContents>, Node* ownerNode);
-    static PassRef<CSSStyleSheet> createInline(Node&, const URL&, const String& encoding = String());
+    static Ref<CSSStyleSheet> create(Ref<StyleSheetContents>&&, CSSImportRule* ownerRule = 0);
+    static Ref<CSSStyleSheet> create(Ref<StyleSheetContents>&&, Node* ownerNode);
+    static Ref<CSSStyleSheet> createInline(Node&, const URL&, const String& encoding = String());
 
     virtual ~CSSStyleSheet();
 
@@ -87,6 +88,9 @@ public:
     void setMediaQueries(PassRefPtr<MediaQuerySet>);
     void setTitle(const String& title) { m_title = title; }
 
+    bool hadRulesMutation() const { return m_mutatedRules; }
+    void clearHadRulesMutation() { m_mutatedRules = false; }
+
     enum RuleMutationType { OtherMutation, RuleInsertion };
     enum WhetherContentsWereClonedForMutation { ContentsWereNotClonedForMutation = 0, ContentsWereClonedForMutation };
 
@@ -112,13 +116,13 @@ public:
     void clearChildRuleCSSOMWrappers();
     void reattachChildRuleCSSOMWrappers();
 
-    StyleSheetContents& contents() { return m_contents.get(); }
+    StyleSheetContents& contents() { return m_contents; }
 
     void detachFromDocument() { m_ownerNode = nullptr; }
 
 private:
-    CSSStyleSheet(PassRef<StyleSheetContents>, CSSImportRule* ownerRule);
-    CSSStyleSheet(PassRef<StyleSheetContents>, Node* ownerNode, bool isInlineStylesheet);
+    CSSStyleSheet(Ref<StyleSheetContents>&&, CSSImportRule* ownerRule);
+    CSSStyleSheet(Ref<StyleSheetContents>&&, Node* ownerNode, bool isInlineStylesheet);
 
     virtual bool isCSSStyleSheet() const override { return true; }
     virtual String type() const override { return ASCIILiteral("text/css"); }
@@ -128,6 +132,7 @@ private:
     Ref<StyleSheetContents> m_contents;
     bool m_isInlineStylesheet;
     bool m_isDisabled;
+    bool m_mutatedRules;
     String m_title;
     RefPtr<MediaQuerySet> m_mediaQueries;
 
@@ -139,6 +144,10 @@ private:
     mutable std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
 };
 
-} // namespace
+} // namespace WebCore
 
-#endif
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSStyleSheet)
+    static bool isType(const WebCore::StyleSheet& styleSheet) { return styleSheet.isCSSStyleSheet(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // CSSStyleSheet_h

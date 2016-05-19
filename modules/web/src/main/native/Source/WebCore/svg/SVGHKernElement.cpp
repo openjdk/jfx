@@ -36,16 +36,16 @@ inline SVGHKernElement::SVGHKernElement(const QualifiedName& tagName, Document& 
     ASSERT(hasTagName(SVGNames::hkernTag));
 }
 
-PassRefPtr<SVGHKernElement> SVGHKernElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGHKernElement> SVGHKernElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGHKernElement(tagName, document));
+    return adoptRef(*new SVGHKernElement(tagName, document));
 }
 
 Node::InsertionNotificationRequest SVGHKernElement::insertedInto(ContainerNode& rootParent)
 {
     ContainerNode* fontNode = parentNode();
-    if (fontNode && isSVGFontElement(fontNode))
-        toSVGFontElement(fontNode)->invalidateGlyphCache();
+    if (is<SVGFontElement>(fontNode))
+        downcast<SVGFontElement>(*fontNode).invalidateGlyphCache();
 
     return SVGElement::insertedInto(rootParent);
 }
@@ -53,29 +53,30 @@ Node::InsertionNotificationRequest SVGHKernElement::insertedInto(ContainerNode& 
 void SVGHKernElement::removedFrom(ContainerNode& rootParent)
 {
     ContainerNode* fontNode = parentNode();
-    if (fontNode && isSVGFontElement(fontNode))
-        toSVGFontElement(fontNode)->invalidateGlyphCache();
+    if (is<SVGFontElement>(fontNode))
+        downcast<SVGFontElement>(*fontNode).invalidateGlyphCache();
 
     SVGElement::removedFrom(rootParent);
 }
 
-void SVGHKernElement::buildHorizontalKerningPair(SVGKerningMap& kerningMap)
+bool SVGHKernElement::buildHorizontalKerningPair(SVGKerningPair& kerningPair) const
 {
     String u1 = fastGetAttribute(SVGNames::u1Attr);
     String g1 = fastGetAttribute(SVGNames::g1Attr);
     String u2 = fastGetAttribute(SVGNames::u2Attr);
     String g2 = fastGetAttribute(SVGNames::g2Attr);
     if ((u1.isEmpty() && g1.isEmpty()) || (u2.isEmpty() && g2.isEmpty()))
-        return;
+        return false;
 
-    SVGKerningPair kerningPair;
     if (parseGlyphName(g1, kerningPair.glyphName1)
         && parseGlyphName(g2, kerningPair.glyphName2)
         && parseKerningUnicodeString(u1, kerningPair.unicodeRange1, kerningPair.unicodeName1)
         && parseKerningUnicodeString(u2, kerningPair.unicodeRange2, kerningPair.unicodeName2)) {
-        kerningPair.kerning = fastGetAttribute(SVGNames::kAttr).string().toFloat();
-        kerningMap.insert(kerningPair);
+        bool ok = false;
+        kerningPair.kerning = fastGetAttribute(SVGNames::kAttr).string().toFloat(&ok);
+        return ok;
     }
+    return false;
 }
 
 }

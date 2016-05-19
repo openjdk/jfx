@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -41,32 +41,35 @@
 #if PLATFORM(JAVA) && ENABLE(SUBTLE_CRYPTO) // todo tav
 #include "JSCryptoKey.h"
 #endif
+#include "JSDOMBinding.h"
 #include "JSDOMGlobalObject.h"
 #include "JSFile.h"
 #include "JSFileList.h"
 #include "JSImageData.h"
 #include "JSMessagePort.h"
 #include "JSNavigator.h"
-#include "NotImplemented.h"
 #include "ScriptExecutionContext.h"
 #include "SharedBuffer.h"
 #include "WebCoreJSClientData.h"
 #include <limits>
 #include <JavaScriptCore/APICast.h>
-#include <JavaScriptCore/APIShims.h>
 #include <runtime/ArrayBuffer.h>
 #include <runtime/BooleanObject.h>
 #include <runtime/DateInstance.h>
 #include <runtime/Error.h>
+#include <runtime/Exception.h>
 #include <runtime/ExceptionHelpers.h>
 #include <runtime/JSArrayBuffer.h>
 #include <runtime/JSArrayBufferView.h>
 #include <runtime/JSCInlines.h>
 #include <runtime/JSDataView.h>
 #include <runtime/JSMap.h>
+#include <runtime/JSMapIterator.h>
 #include <runtime/JSSet.h>
+#include <runtime/JSSetIterator.h>
 #include <runtime/JSTypedArrays.h>
 #include <runtime/MapData.h>
+#include <runtime/MapDataInlines.h>
 #include <runtime/ObjectConstructor.h>
 #include <runtime/PropertyNameArray.h>
 #include <runtime/RegExp.h>
@@ -90,7 +93,8 @@ static const unsigned maximumFilterRecursion = 40000;
 
 enum WalkerState { StateUnknown, ArrayStartState, ArrayStartVisitMember, ArrayEndVisitMember,
     ObjectStartState, ObjectStartVisitMember, ObjectEndVisitMember,
-    MapDataStartVisitEntry, MapDataEndVisitKey, MapDataEndVisitValue };
+    MapDataStartVisitEntry, MapDataEndVisitKey, MapDataEndVisitValue,
+    SetDataStartVisitEntry, SetDataEndVisitKey };
 
 // These can't be reordered, and any new types must be added to the end of the list
 enum SerializationTag {
@@ -125,8 +129,9 @@ enum SerializationTag {
     SetObjectTag = 29,
     MapObjectTag = 30,
     NonMapPropertiesTag = 31,
+    NonSetPropertiesTag = 32,
 #if ENABLE(SUBTLE_CRYPTO)
-    CryptoKeyTag = 32,
+    CryptoKeyTag = 33,
 #endif
     ErrorTag = 255
 };
@@ -269,9 +274,10 @@ static const unsigned NonIndexPropertiesTag = 0xFFFFFFFD;
  *
  * Map :- MapObjectTag MapData
  *
- * Set :- SetObjectTag MapData
+ * Set :- SetObjectTag SetData
  *
- * MapData :- (<key:Value><value:Value>) NonMapPropertiesTag (<name:StringData><value:Value>)* TerminatorTag
+ * MapData :- (<key:Value><value:Value>)* NonMapPropertiesTag (<name:StringData><value:Value>)* TerminatorTag
+ * SetData :- (<key:Value>)* NonSetPropertiesTag (<name:StringData><value:Value>)* TerminatorTag
  *
  * Terminal :-
  *      UndefinedTag
@@ -320,7 +326,7 @@ static const unsigned NonIndexPropertiesTag = 0xFFFFFFFD;
  *    FileTag FileData
  *
  * FileData :-
- *    <path:StringData> <url:StringData> <type:StringData>
+ *    <path:StringData> <url:StringData> <type:StringData> <name:StringData>
  *
  * FileList :-
  *    FileListTag <length:uint32_t>(<file:FileData>){length}
@@ -450,6 +456,19 @@ template <typename T> static bool writeLittleEndian(Vector<uint8_t>& buffer, con
     return true;
 }
 
+static bool writeLittleEndianUInt16(Vector<uint8_t>& buffer, const LChar* values, uint32_t length)
+{
+    if (length > std::numeric_limits<uint32_t>::max() / 2)
+        return false;
+
+    for (unsigned i = 0; i < length; ++i) {
+        buffer.append(values[i]);
+        buffer.append(0);
+    }
+
+    return true;
+}
+
 template <> bool writeLittleEndian<uint8_t>(Vector<uint8_t>& buffer, const uint8_t* values, uint32_t length)
 {
     buffer.append(values, length);
@@ -475,7 +494,9 @@ public:
         }
         writeLittleEndian<uint8_t>(out, StringTag);
         writeLittleEndian(out, s.length());
-        return writeLittleEndian(out, s.impl()->deprecatedCharacters(), s.length());
+        if (s.is8Bit())
+            return writeLittleEndianUInt16(out, s.characters8(), s.length());
+        return writeLittleEndian(out, s.characters16(), s.length());
     }
 
     static void serializeUndefined(Vector<uint8_t>& out)
@@ -509,7 +530,7 @@ private:
         : CloneBase(exec)
         , m_buffer(out)
         , m_blobURLs(blobURLs)
-        , m_emptyIdentifier(exec, emptyString())
+        , m_emptyIdentifier(Identifier::fromString(exec, emptyString()))
     {
         write(CurrentVersion);
         fillTransferMap(messagePorts, m_transferredMessagePorts);
@@ -563,7 +584,7 @@ private:
         // Handle duplicate references
         if (found != m_objectPool.end()) {
             write(ObjectReferenceTag);
-            ASSERT(static_cast<int32_t>(found->value) < m_objectPool.size());
+            ASSERT(found->value < m_objectPool.size());
             writeObjectIndex(found->value);
             return true;
         }
@@ -663,23 +684,23 @@ private:
         }
     }
 
-    void dumpString(String str)
+    void dumpString(const String& string)
     {
-        if (str.isEmpty())
+        if (string.isEmpty())
             write(EmptyStringTag);
         else {
             write(StringTag);
-            write(str);
+            write(string);
         }
     }
 
-    void dumpStringObject(String str)
+    void dumpStringObject(const String& string)
     {
-        if (str.isEmpty())
+        if (string.isEmpty())
             write(EmptyStringObjectTag);
         else {
             write(StringObjectTag);
-            write(str);
+            write(string);
         }
     }
 
@@ -772,12 +793,12 @@ private:
                 write(obj->internalValue().asNumber());
                 return true;
             }
-            if (File* file = toFile(obj)) {
+            if (File* file = JSFile::toWrapped(obj)) {
                 write(FileTag);
                 write(file);
                 return true;
             }
-            if (FileList* list = toFileList(obj)) {
+            if (FileList* list = JSFileList::toWrapped(obj)) {
                 write(FileListTag);
                 unsigned length = list->length();
                 write(length);
@@ -785,7 +806,7 @@ private:
                     write(list->item(i));
                 return true;
             }
-            if (Blob* blob = toBlob(obj)) {
+            if (Blob* blob = JSBlob::toWrapped(obj)) {
                 write(BlobTag);
                 m_blobURLs.append(blob->url());
                 write(blob->url());
@@ -793,7 +814,7 @@ private:
                 write(blob->size());
                 return true;
             }
-            if (ImageData* data = toImageData(obj)) {
+            if (ImageData* data = JSImageData::toWrapped(obj)) {
                 write(ImageDataTag);
                 write(data->width());
                 write(data->height());
@@ -853,7 +874,7 @@ private:
                 return success;
             }
 #if ENABLE(SUBTLE_CRYPTO)
-            if (CryptoKey* key = toCryptoKey(obj)) {
+            if (CryptoKey* key = JSCryptoKey::toWrapped(obj)) {
                 write(CryptoKeyTag);
                 Vector<uint8_t> serializedKey;
                 Vector<String> dummyBlobURLs;
@@ -953,7 +974,7 @@ private:
 
     template <class T> void writeConstantPoolIndex(const T& constantPool, unsigned i)
     {
-        ASSERT(static_cast<int32_t>(i) < constantPool.size());
+        ASSERT(i < constantPool.size());
         if (constantPool.size() <= 0xFF)
             write(static_cast<uint8_t>(i));
         else if (constantPool.size() <= 0xFFFF)
@@ -965,28 +986,35 @@ private:
     void write(const Identifier& ident)
     {
         const String& str = ident.string();
-        StringConstantPool::AddResult addResult = m_constantPool.add(str.impl(), m_constantPool.size());
+        StringConstantPool::AddResult addResult = m_constantPool.add(ident.impl(), m_constantPool.size());
         if (!addResult.isNewEntry) {
             write(StringPoolTag);
             writeStringIndex(addResult.iterator->value);
             return;
         }
 
+        unsigned length = str.length();
+
         // This condition is unlikely to happen as they would imply an ~8gb
         // string but we should guard against it anyway
-        if (str.length() >= StringPoolTag) {
+        if (length >= StringPoolTag) {
             fail();
             return;
         }
 
         // Guard against overflow
-        if (str.length() > (std::numeric_limits<uint32_t>::max() - sizeof(uint32_t)) / sizeof(UChar)) {
+        if (length > (std::numeric_limits<uint32_t>::max() - sizeof(uint32_t)) / sizeof(UChar)) {
             fail();
             return;
         }
 
-        writeLittleEndian<uint32_t>(m_buffer, str.length());
-        if (!writeLittleEndian<uint16_t>(m_buffer, reinterpret_cast<const uint16_t*>(str.deprecatedCharacters()), str.length()))
+        writeLittleEndian<uint32_t>(m_buffer, length);
+        if (!length || str.is8Bit()) {
+            if (!writeLittleEndianUInt16(m_buffer, str.characters8(), length))
+                fail();
+            return;
+        }
+        if (!writeLittleEndian(m_buffer, str.characters16(), length))
             fail();
     }
 
@@ -995,7 +1023,7 @@ private:
         if (str.isNull())
             write(m_emptyIdentifier);
         else
-            write(Identifier(m_exec, str));
+            write(Identifier::fromString(m_exec, str));
     }
 
     void write(const Vector<uint8_t>& vector)
@@ -1011,6 +1039,7 @@ private:
         write(file->path());
         write(file->url());
         write(file->type());
+        write(file->name());
     }
 
 #if ENABLE(SUBTLE_CRYPTO)
@@ -1153,23 +1182,23 @@ private:
         switch (key->keyClass()) {
         case CryptoKeyClass::HMAC:
             write(CryptoKeyClassSubtag::HMAC);
-            write(toCryptoKeyHMAC(key)->key());
-            write(toCryptoKeyHMAC(key)->hashAlgorithmIdentifier());
+            write(downcast<CryptoKeyHMAC>(*key).key());
+            write(downcast<CryptoKeyHMAC>(*key).hashAlgorithmIdentifier());
             break;
         case CryptoKeyClass::AES:
             write(CryptoKeyClassSubtag::AES);
             write(key->algorithmIdentifier());
-            write(toCryptoKeyAES(key)->key());
+            write(downcast<CryptoKeyAES>(*key).key());
             break;
         case CryptoKeyClass::RSA:
             write(CryptoKeyClassSubtag::RSA);
             write(key->algorithmIdentifier());
             CryptoAlgorithmIdentifier hash;
-            bool isRestrictedToHash = toCryptoKeyRSA(key)->isRestrictedToHash(hash);
+            bool isRestrictedToHash = downcast<CryptoKeyRSA>(*key).isRestrictedToHash(hash);
             write(isRestrictedToHash);
             if (isRestrictedToHash)
                 write(hash);
-            write(toCryptoKeyDataRSAComponents(*key->exportData()));
+            write(downcast<CryptoKeyDataRSAComponents>(*key->exportData()));
             break;
         }
     }
@@ -1185,7 +1214,7 @@ private:
     ObjectPool m_objectPool;
     ObjectPool m_transferredMessagePorts;
     ObjectPool m_transferredArrayBuffers;
-    typedef HashMap<RefPtr<StringImpl>, uint32_t, IdentifierRepHash> StringConstantPool;
+    typedef HashMap<RefPtr<UniquedStringImpl>, uint32_t, IdentifierRepHash> StringConstantPool;
     StringConstantPool m_constantPool;
     Identifier m_emptyIdentifier;
 };
@@ -1196,8 +1225,9 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
     Vector<uint32_t, 16> lengthStack;
     Vector<PropertyNameArray, 16> propertyStack;
     Vector<JSObject*, 32> inputObjectStack;
-    Vector<MapData*, 4> mapDataStack;
-    Vector<MapData::const_iterator, 4> iteratorStack;
+    Vector<JSMapIterator*, 4> mapIteratorStack;
+    Vector<JSSetIterator*, 4> setIteratorStack;
+    Vector<JSValue, 4> mapIteratorValueStack;
     Vector<WalkerState, 16> stateStack;
     WalkerState state = StateUnknown;
     JSValue inValue = in;
@@ -1226,8 +1256,8 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     indexStack.removeLast();
                     lengthStack.removeLast();
 
-                    propertyStack.append(PropertyNameArray(m_exec));
-                    array->methodTable()->getOwnNonIndexPropertyNames(array, m_exec, propertyStack.last(), ExcludeDontEnumProperties);
+                    propertyStack.append(PropertyNameArray(m_exec, PropertyNameMode::Strings));
+                    array->methodTable()->getOwnNonIndexPropertyNames(array, m_exec, propertyStack.last(), EnumerationMode());
                     if (propertyStack.last().size()) {
                         write(NonIndexPropertiesTag);
                         indexStack.append(0);
@@ -1276,8 +1306,8 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     return DataCloneError;
                 inputObjectStack.append(inObject);
                 indexStack.append(0);
-                propertyStack.append(PropertyNameArray(m_exec));
-                inObject->methodTable()->getOwnPropertyNames(inObject, m_exec, propertyStack.last(), ExcludeDontEnumProperties);
+                propertyStack.append(PropertyNameArray(m_exec, PropertyNameMode::Strings));
+                inObject->methodTable()->getOwnPropertyNames(inObject, m_exec, propertyStack.last(), EnumerationMode());
             }
             objectStartVisitMember:
             FALLTHROUGH;
@@ -1329,13 +1359,43 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 JSMap* inMap = jsCast<JSMap*>(inValue);
                 if (!startMap(inMap))
                     break;
-                MapData* mapData = inMap->mapData();
-                m_gcBuffer.append(mapData);
-                mapDataStack.append(mapData);
-                iteratorStack.append(mapData->begin());
+                JSMapIterator* iterator = JSMapIterator::create(m_exec->vm(), m_exec->lexicalGlobalObject()->mapIteratorStructure(), inMap, MapIterateKeyValue);
+                m_gcBuffer.append(inMap);
+                m_gcBuffer.append(iterator);
+                mapIteratorStack.append(iterator);
                 inputObjectStack.append(inMap);
                 goto mapDataStartVisitEntry;
             }
+            mapDataStartVisitEntry:
+            case MapDataStartVisitEntry: {
+                JSMapIterator* iterator = mapIteratorStack.last();
+                JSValue key, value;
+                if (!iterator->nextKeyValue(key, value)) {
+                    mapIteratorStack.removeLast();
+                    JSObject* object = inputObjectStack.last();
+                    ASSERT(jsDynamicCast<JSMap*>(object));
+                    propertyStack.append(PropertyNameArray(m_exec, PropertyNameMode::Strings));
+                    object->methodTable()->getOwnPropertyNames(object, m_exec, propertyStack.last(), EnumerationMode());
+                    write(NonMapPropertiesTag);
+                    indexStack.append(0);
+                    goto objectStartVisitMember;
+                }
+                inValue = key;
+                m_gcBuffer.append(value);
+                mapIteratorValueStack.append(value);
+                stateStack.append(MapDataEndVisitKey);
+                goto stateUnknown;
+            }
+            case MapDataEndVisitKey: {
+                inValue = mapIteratorValueStack.last();
+                mapIteratorValueStack.removeLast();
+                stateStack.append(MapDataEndVisitValue);
+                goto stateUnknown;
+            }
+            case MapDataEndVisitValue: {
+                goto mapDataStartVisitEntry;
+            }
+
             setStartState: {
                 ASSERT(inValue.isObject());
                 if (inputObjectStack.size() > maximumFilterRecursion)
@@ -1343,40 +1403,33 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 JSSet* inSet = jsCast<JSSet*>(inValue);
                 if (!startSet(inSet))
                     break;
-                MapData* mapData = inSet->mapData();
-                m_gcBuffer.append(mapData);
-                mapDataStack.append(mapData);
-                iteratorStack.append(mapData->begin());
+                JSSetIterator* iterator = JSSetIterator::create(m_exec->vm(), m_exec->lexicalGlobalObject()->setIteratorStructure(), inSet, SetIterateKey);
+                m_gcBuffer.append(inSet);
+                m_gcBuffer.append(iterator);
+                setIteratorStack.append(iterator);
                 inputObjectStack.append(inSet);
-                goto mapDataStartVisitEntry;
+                goto setDataStartVisitEntry;
             }
-            mapDataStartVisitEntry:
-            case MapDataStartVisitEntry: {
-                MapData::const_iterator& ptr = iteratorStack.last();
-                MapData* mapData = mapDataStack.last();
-                if (ptr == mapData->end()) {
-                    iteratorStack.removeLast();
-                    mapDataStack.removeLast();
+            setDataStartVisitEntry:
+            case SetDataStartVisitEntry: {
+                JSSetIterator* iterator = setIteratorStack.last();
+                JSValue key;
+                if (!iterator->next(m_exec, key)) {
+                    setIteratorStack.removeLast();
                     JSObject* object = inputObjectStack.last();
-                    ASSERT(jsDynamicCast<JSSet*>(object) || jsDynamicCast<JSMap*>(object));
-                    propertyStack.append(PropertyNameArray(m_exec));
-                    object->methodTable()->getOwnPropertyNames(object, m_exec, propertyStack.last(), ExcludeDontEnumProperties);
-                    write(NonMapPropertiesTag);
+                    ASSERT(jsDynamicCast<JSSet*>(object));
+                    propertyStack.append(PropertyNameArray(m_exec, PropertyNameMode::Strings));
+                    object->methodTable()->getOwnPropertyNames(object, m_exec, propertyStack.last(), EnumerationMode());
+                    write(NonSetPropertiesTag);
                     indexStack.append(0);
                     goto objectStartVisitMember;
                 }
-                inValue = ptr.key();
-                stateStack.append(MapDataEndVisitKey);
+                inValue = key;
+                stateStack.append(SetDataEndVisitKey);
                 goto stateUnknown;
             }
-            case MapDataEndVisitKey: {
-                inValue = iteratorStack.last().value();
-                stateStack.append(MapDataEndVisitValue);
-                goto stateUnknown;
-            }
-            case MapDataEndVisitValue: {
-                ++iteratorStack.last();
-                goto mapDataStartVisitEntry;
+            case SetDataEndVisitKey: {
+                goto setDataStartVisitEntry;
             }
 
             stateUnknown:
@@ -1415,6 +1468,8 @@ class CloneDeserializer : CloneBase {
 public:
     static String deserializeString(const Vector<uint8_t>& buffer)
     {
+        if (buffer.isEmpty())
+            return String();
         const uint8_t* ptr = buffer.begin();
         const uint8_t* end = buffer.end();
         uint32_t version;
@@ -1710,8 +1765,11 @@ private:
         CachedStringRef type;
         if (!readStringData(type))
             return 0;
+        CachedStringRef name;
+        if (!readStringData(name))
+            return 0;
         if (m_isDOMGlobalObject)
-            file = File::create(path->string(), URL(URL(), url->string()), type->string());
+            file = File::deserialize(path->string(), URL(URL(), url->string()), type->string(), name->string());
         return true;
     }
 
@@ -1966,7 +2024,7 @@ private:
             auto key = CryptoKeyRSA::create(algorithm, *keyData, extractable, usages);
             if (isRestrictedToHash)
                 key->restrictToHash(hash);
-            result = std::move(key);
+            result = WTF::move(key);
             return true;
         }
 
@@ -1983,7 +2041,7 @@ private:
             auto key = CryptoKeyRSA::create(algorithm, *keyData, extractable, usages);
             if (isRestrictedToHash)
                 key->restrictToHash(hash);
-            result = std::move(key);
+            result = WTF::move(key);
             return true;
         }
 
@@ -2017,7 +2075,7 @@ private:
         auto key = CryptoKeyRSA::create(algorithm, *keyData, extractable, usages);
         if (isRestrictedToHash)
             key->restrictToHash(hash);
-        result = std::move(key);
+        result = WTF::move(key);
         return true;
     }
 
@@ -2097,6 +2155,12 @@ private:
         return toJS(m_exec, jsCast<JSDOMGlobalObject*>(m_globalObject), nativeObj);
     }
 
+    template<class T>
+    JSValue getJSValue(T& nativeObj)
+    {
+        return getJSValue(&nativeObj);
+    }
+
     JSValue readTerminal()
     {
         SerializationTag tag = readTag();
@@ -2163,17 +2227,17 @@ private:
             unsigned length = 0;
             if (!read(length))
                 return JSValue();
-            RefPtr<FileList> result = FileList::create();
+            Vector<RefPtr<File>> files;
             for (unsigned i = 0; i < length; i++) {
                 RefPtr<File> file;
                 if (!readFile(file))
                     return JSValue();
                 if (m_isDOMGlobalObject)
-                    result->append(file.get());
+                    files.append(WTF::move(file));
             }
             if (!m_isDOMGlobalObject)
                 return jsNull();
-            return getJSValue(result.get());
+            return getJSValue(FileList::create(WTF::move(files)).get());
         }
         case ImageDataTag: {
             int32_t width;
@@ -2210,7 +2274,7 @@ private:
                 return JSValue();
             if (!m_isDOMGlobalObject)
                 return jsNull();
-            return getJSValue(Blob::create(URL(URL(), url->string()), type->string(), size).get());
+            return getJSValue(Blob::deserialize(URL(URL(), url->string()), type->string(), size).get());
         }
         case StringTag: {
             CachedStringRef cachedString;
@@ -2324,9 +2388,10 @@ private:
         }
     }
 
-    bool consumeMapDataTerminationIfPossible()
+    template<SerializationTag Tag>
+    bool consumeCollectionDataTerminationIfPossible()
     {
-        if (readTag() == NonMapPropertiesTag)
+        if (readTag() == Tag)
             return true;
         m_ptr--;
         return false;
@@ -2348,8 +2413,9 @@ DeserializationResult CloneDeserializer::deserialize()
     Vector<uint32_t, 16> indexStack;
     Vector<Identifier, 16> propertyNameStack;
     Vector<JSObject*, 32> outputObjectStack;
-    Vector<JSValue, 4> keyStack;
-    Vector<MapData*, 4> mapDataStack;
+    Vector<JSValue, 4> mapKeyStack;
+    Vector<JSMap*, 4> mapStack;
+    Vector<JSSet*, 4> setStack;
     Vector<WalkerState, 16> stateStack;
     WalkerState state = StateUnknown;
     JSValue outValue;
@@ -2424,11 +2490,11 @@ DeserializationResult CloneDeserializer::deserialize()
             }
 
             if (JSValue terminal = readTerminal()) {
-                putProperty(outputObjectStack.last(), Identifier(m_exec, cachedString->string()), terminal);
+                putProperty(outputObjectStack.last(), Identifier::fromString(m_exec, cachedString->string()), terminal);
                 goto objectStartVisitMember;
             }
             stateStack.append(ObjectEndVisitMember);
-            propertyNameStack.append(Identifier(m_exec, cachedString->string()));
+            propertyNameStack.append(Identifier::fromString(m_exec, cachedString->string()));
             goto stateUnknown;
         }
         case ObjectEndVisitMember: {
@@ -2442,41 +2508,53 @@ DeserializationResult CloneDeserializer::deserialize()
             JSMap* map = JSMap::create(m_exec->vm(), m_globalObject->mapStructure());
             m_gcBuffer.append(map);
             outputObjectStack.append(map);
-            MapData* mapData = map->mapData();
-            mapDataStack.append(mapData);
+            mapStack.append(map);
             goto mapDataStartVisitEntry;
         }
+        mapDataStartVisitEntry:
+        case MapDataStartVisitEntry: {
+            if (consumeCollectionDataTerminationIfPossible<NonMapPropertiesTag>()) {
+                mapStack.removeLast();
+                goto objectStartVisitMember;
+            }
+            stateStack.append(MapDataEndVisitKey);
+            goto stateUnknown;
+        }
+        case MapDataEndVisitKey: {
+            mapKeyStack.append(outValue);
+            stateStack.append(MapDataEndVisitValue);
+            goto stateUnknown;
+        }
+        case MapDataEndVisitValue: {
+            mapStack.last()->set(m_exec, mapKeyStack.last(), outValue);
+            mapKeyStack.removeLast();
+            goto mapDataStartVisitEntry;
+        }
+
         setObjectStartState: {
             if (outputObjectStack.size() > maximumFilterRecursion)
                 return std::make_pair(JSValue(), StackOverflowError);
             JSSet* set = JSSet::create(m_exec->vm(), m_globalObject->setStructure());
             m_gcBuffer.append(set);
             outputObjectStack.append(set);
-            MapData* mapData = set->mapData();
-            mapDataStack.append(mapData);
-            goto mapDataStartVisitEntry;
+            setStack.append(set);
+            goto setDataStartVisitEntry;
         }
-        mapDataStartVisitEntry:
-        case MapDataStartVisitEntry: {
-            if (consumeMapDataTerminationIfPossible()) {
-                mapDataStack.removeLast();
+        setDataStartVisitEntry:
+        case SetDataStartVisitEntry: {
+            if (consumeCollectionDataTerminationIfPossible<NonSetPropertiesTag>()) {
+                setStack.removeLast();
                 goto objectStartVisitMember;
             }
-            stateStack.append(MapDataEndVisitKey);
+            stateStack.append(SetDataEndVisitKey);
             goto stateUnknown;
         }
-
-        case MapDataEndVisitKey: {
-            keyStack.append(outValue);
-            stateStack.append(MapDataEndVisitValue);
-            goto stateUnknown;
+        case SetDataEndVisitKey: {
+            JSSet* set = setStack.last();
+            set->add(m_exec, outValue);
+            goto setDataStartVisitEntry;
         }
 
-        case MapDataEndVisitValue: {
-            mapDataStack.last()->set(m_exec, keyStack.last(), outValue);
-            keyStack.removeLast();
-            goto mapDataStartVisitEntry;
-        }
         stateUnknown:
         case StateUnknown:
             if (JSValue terminal = readTerminal()) {
@@ -2508,7 +2586,14 @@ error:
     return std::make_pair(JSValue(), ValidationError);
 }
 
-
+void SerializedScriptValue::addBlobURL(const String& string)
+{
+    m_blobURLs.append(Vector<uint16_t>());
+    m_blobURLs.last().reserveCapacity(string.length());
+    for (size_t i = 0; i < string.length(); i++)
+        m_blobURLs.last().append(string.characterAt(i));
+    m_blobURLs.last().resize(m_blobURLs.last().size());
+}
 
 SerializedScriptValue::~SerializedScriptValue()
 {
@@ -2527,17 +2612,19 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer)
 SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<String>& blobURLs)
 {
     m_data.swap(buffer);
-    m_blobURLs.swap(blobURLs);
+    for (auto& string : blobURLs)
+        addBlobURL(string);
 }
 
-SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<String>& blobURLs, PassOwnPtr<ArrayBufferContentsArray> arrayBufferContentsArray)
-    : m_arrayBufferContentsArray(arrayBufferContentsArray)
+SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<String>& blobURLs, std::unique_ptr<ArrayBufferContentsArray> arrayBufferContentsArray)
+    : m_arrayBufferContentsArray(WTF::move(arrayBufferContentsArray))
 {
     m_data.swap(buffer);
-    m_blobURLs.swap(blobURLs);
+    for (auto& string : blobURLs)
+        addBlobURL(string);
 }
 
-PassOwnPtr<SerializedScriptValue::ArrayBufferContentsArray> SerializedScriptValue::transferArrayBuffers(
+std::unique_ptr<SerializedScriptValue::ArrayBufferContentsArray> SerializedScriptValue::transferArrayBuffers(
     ExecState* exec, ArrayBufferArray& arrayBuffers, SerializationReturnCode& code)
 {
     for (size_t i = 0; i < arrayBuffers.size(); i++) {
@@ -2547,7 +2634,7 @@ PassOwnPtr<SerializedScriptValue::ArrayBufferContentsArray> SerializedScriptValu
         }
     }
 
-    OwnPtr<ArrayBufferContentsArray> contents = adoptPtr(new ArrayBufferContentsArray(arrayBuffers.size()));
+    auto contents = std::make_unique<ArrayBufferContentsArray>(arrayBuffers.size());
     Vector<Ref<DOMWrapperWorld>> worlds;
     static_cast<WebCoreJSClientData*>(exec->vm().clientData)->getAllWorlds(worlds);
 
@@ -2563,19 +2650,16 @@ PassOwnPtr<SerializedScriptValue::ArrayBufferContentsArray> SerializedScriptValu
             return nullptr;
         }
     }
-    return contents.release();
+    return contents;
 }
 
-
-PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState* exec, JSValue value,
-                                                                MessagePortArray* messagePorts, ArrayBufferArray* arrayBuffers,
-                                                                SerializationErrorMode throwExceptions)
+RefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState* exec, JSValue value, MessagePortArray* messagePorts, ArrayBufferArray* arrayBuffers, SerializationErrorMode throwExceptions)
 {
     Vector<uint8_t> buffer;
     Vector<String> blobURLs;
     SerializationReturnCode code = CloneSerializer::serialize(exec, value, messagePorts, arrayBuffers, blobURLs, buffer);
 
-    OwnPtr<ArrayBufferContentsArray> arrayBufferContentsArray;
+    std::unique_ptr<ArrayBufferContentsArray> arrayBufferContentsArray;
 
     if (arrayBuffers && serializationDidCompleteSuccessfully(code))
         arrayBufferContentsArray = transferArrayBuffers(exec, *arrayBuffers, code);
@@ -2584,44 +2668,44 @@ PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState* exec,
         maybeThrowExceptionIfSerializationFailed(exec, code);
 
     if (!serializationDidCompleteSuccessfully(code))
-        return 0;
+        return nullptr;
 
-    return adoptRef(new SerializedScriptValue(buffer, blobURLs, arrayBufferContentsArray.release()));
+    return adoptRef(*new SerializedScriptValue(buffer, blobURLs, WTF::move(arrayBufferContentsArray)));
 }
 
-PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(const String& string)
+RefPtr<SerializedScriptValue> SerializedScriptValue::create(const String& string)
 {
     Vector<uint8_t> buffer;
     if (!CloneSerializer::serialize(string, buffer))
-        return 0;
-    return adoptRef(new SerializedScriptValue(buffer));
+        return nullptr;
+    return adoptRef(*new SerializedScriptValue(buffer));
 }
 
 #if ENABLE(INDEXED_DATABASE)
-PassRefPtr<SerializedScriptValue> SerializedScriptValue::numberValue(double value)
+Ref<SerializedScriptValue> SerializedScriptValue::numberValue(double value)
 {
     Vector<uint8_t> buffer;
     CloneSerializer::serializeNumber(value, buffer);
-    return adoptRef(new SerializedScriptValue(buffer));
+    return adoptRef(*new SerializedScriptValue(buffer));
 }
 
-PassRefPtr<SerializedScriptValue> SerializedScriptValue::undefinedValue()
+Ref<SerializedScriptValue> SerializedScriptValue::undefinedValue()
 {
     Vector<uint8_t> buffer;
     CloneSerializer::serializeUndefined(buffer);
-    return adoptRef(new SerializedScriptValue(buffer));
+    return adoptRef(*new SerializedScriptValue(buffer));
 }
 #endif
 
 PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(JSContextRef originContext, JSValueRef apiValue, JSValueRef* exception)
 {
     ExecState* exec = toJS(originContext);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
     JSValue value = toJS(exec, apiValue);
     RefPtr<SerializedScriptValue> serializedValue = SerializedScriptValue::create(exec, value, nullptr, nullptr);
     if (exec->hadException()) {
         if (exception)
-            *exception = toRef(exec, exec->exception());
+            *exception = toRef(exec, exec->exception()->value());
         exec->clearException();
         return 0;
     }
@@ -2647,11 +2731,11 @@ JSValue SerializedScriptValue::deserialize(ExecState* exec, JSGlobalObject* glob
 JSValueRef SerializedScriptValue::deserialize(JSContextRef destinationContext, JSValueRef* exception)
 {
     ExecState* exec = toJS(destinationContext);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
     JSValue value = deserialize(exec, exec->lexicalGlobalObject(), nullptr);
     if (exec->hadException()) {
         if (exception)
-            *exception = toRef(exec, exec->exception());
+            *exception = toRef(exec, exec->exception()->value());
         exec->clearException();
         return nullptr;
     }
@@ -2659,10 +2743,10 @@ JSValueRef SerializedScriptValue::deserialize(JSContextRef destinationContext, J
     return toRef(exec, value);
 }
 
-PassRefPtr<SerializedScriptValue> SerializedScriptValue::nullValue()
+Ref<SerializedScriptValue> SerializedScriptValue::nullValue()
 {
     Vector<uint8_t> buffer;
-    return adoptRef(new SerializedScriptValue(buffer));
+    return adoptRef(*new SerializedScriptValue(buffer));
 }
 
 void SerializedScriptValue::maybeThrowExceptionIfSerializationFailed(ExecState* exec, SerializationReturnCode code)

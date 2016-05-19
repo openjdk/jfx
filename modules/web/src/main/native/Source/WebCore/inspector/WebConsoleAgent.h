@@ -26,8 +26,6 @@
 #ifndef WebConsoleAgent_h
 #define WebConsoleAgent_h
 
-#if ENABLE(INSPECTOR)
-
 #include <inspector/agents/InspectorConsoleAgent.h>
 
 namespace WebCore {
@@ -45,8 +43,7 @@ public:
     WebConsoleAgent(WebInjectedScriptManager*);
     virtual ~WebConsoleAgent() { }
 
-    virtual void setMonitoringXHREnabled(ErrorString*, bool enabled) override final;
-    virtual void addInspectedHeapObject(ErrorString*, int inspectedHeapObjectId) override final;
+    virtual void setMonitoringXHREnabled(ErrorString&, bool enabled) override final;
 
     void frameWindowDiscarded(DOMWindow*);
 
@@ -59,7 +56,5 @@ protected:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(WebConsoleAgent_h)

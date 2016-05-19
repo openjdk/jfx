@@ -26,17 +26,21 @@
 #ifndef TestsController_h
 #define TestsController_h
 
+#include <wtf/NeverDestroyed.h>
+
 namespace TestWebKitAPI {
 
 class TestsController {
 public:
-    static TestsController& shared();
+    static TestsController& singleton();
 
     bool run(int argc, char** argv);
 
 private:
     TestsController();
     ~TestsController();
+
+    friend class WTF::NeverDestroyed<TestsController>;
 };
 
 } // namespace TestWebKitAPI

@@ -54,7 +54,7 @@ static void setRegExpConstructorMultiline(ExecState*, JSObject*, EncodedJSValue,
 
 namespace JSC {
 
-const ClassInfo RegExpConstructor::s_info = { "Function", &InternalFunction::s_info, 0, ExecState::regExpConstructorTable, CREATE_METHOD_TABLE(RegExpConstructor) };
+const ClassInfo RegExpConstructor::s_info = { "Function", &InternalFunction::s_info, &regExpConstructorTable, CREATE_METHOD_TABLE(RegExpConstructor) };
 
 /* Source for RegExpConstructor.lut.h
 @begin regExpConstructorTable
@@ -91,7 +91,7 @@ RegExpConstructor::RegExpConstructor(VM& vm, Structure* structure, RegExpPrototy
 
 void RegExpConstructor::finishCreation(VM& vm, RegExpPrototype* regExpPrototype)
 {
-    Base::finishCreation(vm, Identifier(&vm, "RegExp").string());
+    Base::finishCreation(vm, regExpPrototype->classInfo()->className);
     ASSERT(inherits(info()));
 
     // ECMA 15.10.5.1 RegExp.prototype
@@ -110,16 +110,13 @@ void RegExpConstructor::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     RegExpConstructor* thisObject = jsCast<RegExpConstructor*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-
     Base::visitChildren(thisObject, visitor);
     thisObject->m_cachedResult.visitChildren(visitor);
 }
 
 JSValue RegExpConstructor::getBackref(ExecState* exec, unsigned i)
 {
-    RegExpMatchesArray* array = m_cachedResult.lastResult(exec, this);
+    JSArray* array = m_cachedResult.lastResult(exec, this);
 
     if (i < array->length()) {
         JSValue result = JSValue(array).get(exec, i);
@@ -132,7 +129,7 @@ JSValue RegExpConstructor::getBackref(ExecState* exec, unsigned i)
 
 JSValue RegExpConstructor::getLastParen(ExecState* exec)
 {
-    RegExpMatchesArray* array = m_cachedResult.lastResult(exec, this);
+    JSArray* array = m_cachedResult.lastResult(exec, this);
     unsigned length = array->length();
     if (length > 1) {
         JSValue result = JSValue(array).get(exec, length - 1);
@@ -145,17 +142,17 @@ JSValue RegExpConstructor::getLastParen(ExecState* exec)
 
 JSValue RegExpConstructor::getLeftContext(ExecState* exec)
 {
-    return m_cachedResult.lastResult(exec, this)->leftContext(exec);
+    return m_cachedResult.leftContext(exec, this);
 }
 
 JSValue RegExpConstructor::getRightContext(ExecState* exec)
 {
-    return m_cachedResult.lastResult(exec, this)->rightContext(exec);
+    return m_cachedResult.rightContext(exec, this);
 }
 
 bool RegExpConstructor::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    return getStaticValueSlot<RegExpConstructor, InternalFunction>(exec, ExecState::regExpConstructorTable(exec->vm()), jsCast<RegExpConstructor*>(object), propertyName, slot);
+    return getStaticValueSlot<RegExpConstructor, InternalFunction>(exec, regExpConstructorTable, jsCast<RegExpConstructor*>(object), propertyName, slot);
 }
 
 EncodedJSValue regExpConstructorDollar1(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)

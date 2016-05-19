@@ -88,6 +88,8 @@ namespace ${inputsNamespace} {
 ${inputClassDeclarations}
 } // namespace ${inputsNamespace}
 
+${inputTypeTraitDeclarations}
+
 ${forEachMacro}
 
 #endif // ${guardCondition}
@@ -98,26 +100,31 @@ ${forEachMacro}
     InputTraitsDeclaration = (
     """template<> ${structOrClass} InputTraits<${qualifiedInputName}> {
     static InputQueue queue() { return InputQueue::${queueType}; }
-    static const AtomicString& type();
+    static const String& type();
 
     static void encode(JSC::EncodedValue&, const ${qualifiedInputName}&);
     static bool decode(JSC::EncodedValue&, std::unique_ptr<${qualifiedInputName}>&);
 };""")
 
-    EnumTraitDeclaration = (
-    """template<> struct EncodingTraits<${enumName}> {
-    typedef ${enumName} DecodedType;
+    InputTypeTraitsDeclaration = (
+    """SPECIALIZE_TYPE_TRAITS_BEGIN(${qualifiedInputName})
+    static bool isType(const NondeterministicInputBase& input) { return input.type() == InputTraits<${qualifiedInputName}>::type(); }
+SPECIALIZE_TYPE_TRAITS_END()""")
 
-    static EncodedValue encodeValue(const ${enumName}& value);
-    static bool decodeValue(EncodedValue&, ${enumName}& value);
+    EnumTraitDeclaration = (
+    """template<> ${structOrClass} EncodingTraits<${encodingTypeArgument}> {
+    typedef ${enumType} DecodedType;
+
+    static EncodedValue encodeValue(const ${enumType}& value);
+    static bool decodeValue(EncodedValue&, ${enumType}& value);
 };""")
 
     EnumClassTraitDeclaration = (
-    """template<> struct EncodingTraits<${enumName}> {
-    typedef ${enumName} DecodedType;
+    """template<> ${structOrClass} EncodingTraits<${encodingTypeArgument}> {
+    typedef ${enumType} DecodedType;
 
-    static EncodedValue encodeValue(const ${enumName}& value);
-    static bool decodeValue(EncodedValue&, ${enumName}& value);
+    static EncodedValue encodeValue(const ${enumType}& value);
+    static bool decodeValue(EncodedValue&, ${enumType}& value);
 };""")
 
     InputClassDeclaration = (
@@ -152,9 +159,10 @@ ${enumTraitImplementations}
 """)
 
     InputTraitsImplementation = (
-    """const AtomicString& InputTraits<${qualifiedInputName}>::type()
+    """const String& InputTraits<${qualifiedInputName}>::type()
 {
-$inputTypeImplementation
+    static NeverDestroyed<const String> type(ASCIILiteral(${inputNameStringLiteral}));
+    return type;
 }
 
 void InputTraits<${qualifiedInputName}>::encode(EncodedValue& encodedValue, const ${qualifiedInputName}& input)
@@ -170,7 +178,7 @@ ${decodeSteps}
 }""")
 
     EnumClassTraitImplementation = (
-    """EncodedValue EncodingTraits<${enumName}>::encodeValue(const ${enumName}& enumValue)
+    """EncodedValue EncodingTraits<${encodingTypeArgument}>::encodeValue(const ${enumType}& enumValue)
 {
     switch (enumValue) {
 ${encodeCases}
@@ -178,7 +186,7 @@ ${encodeCases}
     }
 }
 
-bool EncodingTraits<${enumName}>::decodeValue(EncodedValue& encodedValue, ${enumName}& enumValue)
+bool EncodingTraits<${encodingTypeArgument}>::decodeValue(EncodedValue& encodedValue, ${enumType}& enumValue)
 {
     String enumString = encodedValue.convertTo<String>();
 ${decodeCases}
@@ -195,20 +203,20 @@ ${decodeCases}
     }""")
 
     EnumTraitImplementation = (
-    """EncodedValue EncodingTraits<${enumName}>::encodeValue(const ${enumName}& enumValue)
+    """EncodedValue EncodingTraits<${encodingTypeArgument}>::encodeValue(const ${enumType}& enumValue)
 {
     EncodedValue encodedValue = EncodedValue::createArray();
 ${encodeCases}
     return encodedValue;
 }
 
-bool EncodingTraits<${enumName}>::decodeValue(EncodedValue& encodedValue, ${enumName}& enumValue)
+bool EncodingTraits<${encodingTypeArgument}>::decodeValue(EncodedValue& encodedValue, ${enumType}& enumValue)
 {
     Vector<String> enumStrings;
     if (!EncodingTraits<Vector<String>>::decodeValue(encodedValue, enumStrings))
         return false;
 
-    for (String enumString : enumStrings) {
+    for (const String& enumString : enumStrings) {
 ${decodeCases}
     }
 
@@ -223,14 +231,8 @@ ${decodeCases}
     }""")
 
     EnumDecodeCase = (
-    """        if (enumString == "${enumStringValue}")
+    """        ${branchKeyword} (enumString == "${enumStringValue}")
             enumValue = static_cast<${qualifiedEnumName}>(enumValue | ${qualifiedEnumValue});""")
-
-    InputTypeFromStaticLocal = (
-    """    static NeverDestroyed<const AtomicString> type("${inputName}", AtomicString::ConstructFromLiteral);
-    return type;""")
-
-    InputTypeFromThreadLocal = "    return WebCore::inputTypes().${inputName};"
 
     InputClassImplementation = (
     """${inputName}::${inputName}(${constructorFormalsList})

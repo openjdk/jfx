@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -35,10 +35,6 @@
 #include <wtf/WindowsExtras.h>
 
 #include <mmsystem.h>
-
-#if PLATFORM(WIN)
-#include "PluginView.h"
-#endif
 
 // These aren't in winuser.h with the MSVS 2003 Platform SDK,
 // so use default values in that case.
@@ -63,7 +59,6 @@ static HANDLE timer;
 static HWND timerWindowHandle = 0;
 const LPCWSTR kTimerWindowClassName = L"TimerWindowClass";
 
-#if !OS(WINCE)
 static UINT timerFiredMessage = 0;
 static HANDLE timerQueue;
 static bool highResTimerActive;
@@ -73,7 +68,6 @@ static LONG pendingTimers;
 const int timerResolution = 1; // To improve timer resolution, we call timeBeginPeriod/timeEndPeriod with this value to increase timer resolution to 1ms.
 const int highResolutionThresholdMsec = 16; // Only activate high-res timer for sub-16ms timers (Windows can fire timers at 16ms intervals without changing the system resolution).
 const int stopHighResTimerInMsec = 300; // Stop high-res timer after 0.3 seconds to lessen power consumption (we don't use a smaller time since oscillating between high and low resolution breaks timer accuracy on XP).
-#endif
 
 enum {
     sharedTimerID = 1000,
@@ -82,23 +76,11 @@ enum {
 
 LRESULT CALLBACK TimerWindowWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-#if PLATFORM(WIN)
-    // Windows Media Player has a modal message loop that will deliver messages
-    // to us at inappropriate times and we will crash if we handle them when
-    // they are delivered. We repost all messages so that we will get to handle
-    // them once the modal loop exits.
-    if (PluginView::isCallingPlugin()) {
-        PostMessage(hWnd, message, wParam, lParam);
-        return 0;
-    }
-#endif
-
     if (message == WM_TIMER) {
         if (wParam == sharedTimerID) {
             KillTimer(timerWindowHandle, sharedTimerID);
             sharedTimerFiredFunction();
         }
-#if !OS(WINCE)
         else if (wParam == endHighResTimerID) {
             KillTimer(timerWindowHandle, endHighResTimerID);
             highResTimerActive = false;
@@ -109,7 +91,6 @@ LRESULT CALLBACK TimerWindowWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         processingCustomTimerMessage = true;
         sharedTimerFiredFunction();
         processingCustomTimerMessage = false;
-#endif
     } else
         return DefWindowProc(hWnd, message, wParam, lParam);
 
@@ -121,30 +102,19 @@ static void initializeOffScreenTimerWindow()
     if (timerWindowHandle)
         return;
 
-#if OS(WINCE)
-    WNDCLASS wcex;
-    memset(&wcex, 0, sizeof(WNDCLASS));
-#else
     WNDCLASSEX wcex;
     memset(&wcex, 0, sizeof(WNDCLASSEX));
     wcex.cbSize = sizeof(WNDCLASSEX);
-#endif
 
     wcex.lpfnWndProc    = TimerWindowWndProc;
     wcex.hInstance      = WebCore::instanceHandle();
     wcex.lpszClassName  = kTimerWindowClassName;
-#if OS(WINCE)
-    RegisterClass(&wcex);
-#else
     RegisterClassEx(&wcex);
-#endif
 
     timerWindowHandle = CreateWindow(kTimerWindowClassName, 0, 0,
        CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, HWND_MESSAGE, 0, WebCore::instanceHandle(), 0);
 
-#if !OS(WINCE)
     timerFiredMessage = RegisterWindowMessage(L"com.apple.WebKit.TimerFired");
-#endif
 }
 
 void setSharedTimerFiredFunction(void (*f)())
@@ -152,13 +122,11 @@ void setSharedTimerFiredFunction(void (*f)())
     sharedTimerFiredFunction = f;
 }
 
-#if !OS(WINCE)
 static void NTAPI queueTimerProc(PVOID, BOOLEAN)
 {
     if (InterlockedIncrement(&pendingTimers) == 1)
         PostMessage(timerWindowHandle, timerFiredMessage, 0, 0);
 }
-#endif
 
 void setSharedTimerFireInterval(double interval)
 {
@@ -174,7 +142,6 @@ void setSharedTimerFireInterval(double interval)
     initializeOffScreenTimerWindow();
     bool timerSet = false;
 
-#if !OS(WINCE)
     if (Settings::shouldUseHighResolutionTimers()) {
         if (interval < highResolutionThresholdMsec) {
             if (!highResTimerActive) {
@@ -206,7 +173,6 @@ void setSharedTimerFireInterval(double interval)
             }
         }
     }
-#endif // !OS(WINCE)
 
     if (timerSet) {
         if (timerID) {
@@ -221,17 +187,19 @@ void setSharedTimerFireInterval(double interval)
 
 void stopSharedTimer()
 {
-#if !OS(WINCE)
     if (timerQueue && timer) {
         DeleteTimerQueueTimer(timerQueue, timer, 0);
         timer = 0;
     }
-#endif
 
     if (timerID) {
         KillTimer(timerWindowHandle, timerID);
         timerID = 0;
     }
+}
+
+void invalidateSharedTimer()
+{
 }
 
 }

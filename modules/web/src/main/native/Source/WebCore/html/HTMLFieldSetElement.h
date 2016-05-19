@@ -25,6 +25,7 @@
 #define HTMLFieldSetElement_h
 
 #include "HTMLFormControlElement.h"
+#include <wtf/HashSet.h>
 
 namespace WebCore {
 
@@ -33,36 +34,41 @@ class HTMLCollection;
 
 class HTMLFieldSetElement final : public HTMLFormControlElement {
 public:
-    static PassRefPtr<HTMLFieldSetElement> create(const QualifiedName&, Document&, HTMLFormElement*);
+    static Ref<HTMLFieldSetElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
     HTMLLegendElement* legend() const;
-    PassRefPtr<HTMLCollection> elements();
+    Ref<HTMLCollection> elements();
 
     const Vector<FormAssociatedElement*>& associatedElements() const;
     unsigned length() const;
 
-protected:
-    virtual void disabledAttributeChanged() override;
+    void addInvalidDescendant(const HTMLFormControlElement&);
+    void removeInvalidDescendant(const HTMLFormControlElement&);
 
 private:
     HTMLFieldSetElement(const QualifiedName&, Document&, HTMLFormElement*);
+    ~HTMLFieldSetElement();
 
     virtual bool isEnumeratable() const override { return true; }
     virtual bool supportsFocus() const override;
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
     virtual const AtomicString& formControlType() const override;
-    virtual bool recalcWillValidate() const override { return false; }
+    virtual bool computeWillValidate() const override { return false; }
+    virtual void disabledAttributeChanged() override;
+    virtual void disabledStateChanged() override;
     virtual void childrenChanged(const ChildChange&) override;
+    virtual void didMoveToNewDocument(Document* oldDocument) override;
 
-    static void invalidateDisabledStateUnder(Element*);
+    virtual bool matchesValidPseudoClass() const override;
+    virtual bool matchesInvalidPseudoClass() const override;
+
     void refreshElementsIfNeeded() const;
 
     mutable Vector<FormAssociatedElement*> m_associatedElements;
     // When dom tree is modified, we have to refresh the m_associatedElements array.
     mutable uint64_t m_documentVersion;
+    HashSet<const HTMLFormControlElement*> m_invalidDescendants;
 };
-
-NODE_TYPE_CASTS(HTMLFieldSetElement)
 
 } // namespace
 

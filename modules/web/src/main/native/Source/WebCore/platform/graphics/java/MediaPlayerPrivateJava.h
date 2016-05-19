@@ -18,7 +18,7 @@ namespace WebCore {
         //typedef void (*MediaEngineSupportedTypes)(HashSet<String>& types);
         //typedef MediaPlayer::SupportsType (*MediaEngineSupportsType)(const String& type, const String& codecs);
         //typedef void (*MediaEngineRegistrar)(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType);
-        static PassOwnPtr<MediaPlayerPrivateInterface> CreateMediaEnginePlayer(MediaPlayer *player);
+        static std::unique_ptr<MediaPlayerPrivateInterface> CreateMediaEnginePlayer(MediaPlayer *player);
         static void MediaEngineSupportedTypes(HashSet<String>& types);
 
         static MediaPlayer::SupportsType MediaEngineSupportsType(const MediaEngineSupportParameters&);
@@ -48,7 +48,7 @@ namespace WebCore {
         //virtual bool supportsFullscreen() const { return false; }
         //virtual bool supportsSave() const { return false; }
 
-        virtual IntSize naturalSize() const;
+        virtual FloatSize naturalSize() const;
 
         virtual bool hasVideo() const;
         virtual bool hasAudio() const;
@@ -61,7 +61,7 @@ namespace WebCore {
         virtual void seek(float time);
         virtual bool seeking() const;
 
-        virtual float startTime() const;
+        virtual MediaTime startTime() const;
 
         virtual void setRate(float);
         virtual void setPreservesPitch(bool);
@@ -81,13 +81,13 @@ namespace WebCore {
 
         virtual float maxTimeSeekable() const;
         virtual bool didLoadingProgress() const;
-        virtual PassRefPtr<TimeRanges> buffered() const;
+        virtual std::unique_ptr<PlatformTimeRanges> buffered() const;
 
         virtual unsigned bytesLoaded() const;
 
         virtual void setSize(const IntSize&);
 
-        virtual void paint(GraphicsContext*, const IntRect&);
+        virtual void paint(GraphicsContext*, const FloatRect&);
 
         //virtual void paintCurrentFrameInContext(GraphicsContext* c, const IntRect& r) { paint(c, r); }
 
@@ -127,7 +127,7 @@ namespace WebCore {
         void notifyDurationChanged(float duration);
         void notifySizeChanged(int width, int height);
         void notifyNewFrame();
-        void notifyBufferChanged(PassRefPtr<TimeRanges> timeRanges, int bytesLoaded);
+        void notifyBufferChanged(std::unique_ptr<PlatformTimeRanges> timeRanges, int bytesLoaded);
 
     private:
         MediaPlayer* m_player;
@@ -138,13 +138,13 @@ namespace WebCore {
         bool m_isVisible;
         bool m_hasVideo;
         bool m_hasAudio;
-        IntSize m_naturalSize;
+        FloatSize m_naturalSize;
         bool m_paused;
         bool m_seeking;
         bool m_finished;
         float m_seekTime;   // valid only when m_seeking is true
         float m_duration;
-        RefPtr<TimeRanges> m_buffered;
+        std::unique_ptr<PlatformTimeRanges> m_buffered;
         unsigned m_bytesLoaded;
         mutable bool m_didLoadingProgress;  // mutable because didLoadingProgress() is declared const
 

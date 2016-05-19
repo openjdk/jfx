@@ -22,7 +22,6 @@
 #ifndef FEComponentTransfer_h
 #define FEComponentTransfer_h
 
-#if ENABLE(FILTERS)
 #include "FilterEffect.h"
 
 #include "Filter.h"
@@ -63,8 +62,8 @@ struct ComponentTransferFunction {
 
 class FEComponentTransfer : public FilterEffect {
 public:
-    static PassRefPtr<FEComponentTransfer> create(Filter*, const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc,
-                                                  const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc);
+    static Ref<FEComponentTransfer> create(Filter&, const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc,
+                                           const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc);
 
     ComponentTransferFunction redFunction() const;
     void setRedFunction(const ComponentTransferFunction&);
@@ -84,7 +83,7 @@ public:
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;
 
 private:
-    FEComponentTransfer(Filter*, const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc,
+    FEComponentTransfer(Filter&, const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc,
                         const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc);
 
     void getValues(unsigned char rValues[256], unsigned char gValues[256], unsigned char bValues[256], unsigned char aValues[256]);
@@ -96,7 +95,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // FEComponentTransfer_h

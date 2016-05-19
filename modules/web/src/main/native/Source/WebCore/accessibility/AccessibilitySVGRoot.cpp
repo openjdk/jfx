@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -35,7 +35,7 @@ namespace WebCore {
 
 AccessibilitySVGRoot::AccessibilitySVGRoot(RenderObject* renderer)
     : AccessibilityRenderObject(renderer)
-    , m_parent(0)
+    , m_parent(nullptr)
 {
 }
 
@@ -43,9 +43,9 @@ AccessibilitySVGRoot::~AccessibilitySVGRoot()
 {
 }
 
-PassRefPtr<AccessibilitySVGRoot> AccessibilitySVGRoot::create(RenderObject* renderer)
+Ref<AccessibilitySVGRoot> AccessibilitySVGRoot::create(RenderObject* renderer)
 {
-    return adoptRef(new AccessibilitySVGRoot(renderer));
+    return adoptRef(*new AccessibilitySVGRoot(renderer));
 }
 
 AccessibilityObject* AccessibilitySVGRoot::parentObject() const

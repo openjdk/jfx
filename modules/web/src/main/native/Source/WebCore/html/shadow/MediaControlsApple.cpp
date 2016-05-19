@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -588,10 +588,10 @@ void MediaControlsAppleEventListener::handleEvent(ScriptExecutionContext*, Event
 {
     if (event->type() == eventNames().clickEvent)
         m_mediaControls->handleClickEvent(event);
-    else if ((event->type() == eventNames().wheelEvent || event->type() == eventNames().mousewheelEvent) && event->eventInterface() == WheelEventInterfaceType) {
-        WheelEvent* wheelEvent = toWheelEvent(event);
-        if (m_mediaControls->shouldClosedCaptionsContainerPreventPageScrolling(wheelEvent->wheelDeltaY()))
-            event->preventDefault();
+    else if (eventNames().isWheelEventType(event->type()) && is<WheelEvent>(*event)) {
+        WheelEvent& wheelEvent = downcast<WheelEvent>(*event);
+        if (m_mediaControls->shouldClosedCaptionsContainerPreventPageScrolling(wheelEvent.wheelDeltaY()))
+            wheelEvent.preventDefault();
     }
 }
 

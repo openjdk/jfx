@@ -36,7 +36,6 @@
 #import <WebCore/ScriptExecutionContext.h>
 #import <WebCore/UserMediaRequest.h>
 #import <wtf/HashMap.h>
-#import <wtf/PassOwnPtr.h>
 #import <wtf/RefPtr.h>
 #import <wtf/RetainPtr.h>
 
@@ -56,7 +55,7 @@ typedef HashMap<RefPtr<UserMediaRequest>, RetainPtr<WebUserMediaPolicyListener>>
 
 static UserMediaRequestsMap& userMediaRequestsMap()
 {
-    DEFINE_STATIC_LOCAL(UserMediaRequestsMap, requests, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(UserMediaRequestsMap, requests, ());
     return requests;
 }
 
@@ -90,11 +89,11 @@ void WebUserMediaClient::pageDestroyed()
     delete this;
 }
 
-void WebUserMediaClient::requestPermission(PassRefPtr<UserMediaRequest> prpRequest)
+void WebUserMediaClient::requestPermission(Ref<UserMediaRequest>&& prpRequest)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
 
-    UserMediaRequest* request = prpRequest.get();
+    UserMediaRequest* request = &prpRequest.get();
     SEL selector = @selector(webView:decidePolicyForUserMediaRequestFromOrigin:listener:);
     if (![[m_webView UIDelegate] respondsToSelector:selector]) {
         request->userMediaAccessDenied();
@@ -113,9 +112,9 @@ void WebUserMediaClient::requestPermission(PassRefPtr<UserMediaRequest> prpReque
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
-void WebUserMediaClient::cancelRequest(UserMediaRequest* request)
+void WebUserMediaClient::cancelRequest(UserMediaRequest& request)
 {
-    UserMediaRequestsMap::iterator it = userMediaRequestsMap().find(request);
+    UserMediaRequestsMap::iterator it = userMediaRequestsMap().find(&request);
     if (it == userMediaRequestsMap().end())
         return;
 
@@ -143,7 +142,7 @@ void WebUserMediaClient::cancelRequest(UserMediaRequest* request)
     if (!_request)
         return;
 
-    _request = 0;
+    _request = nullptr;
 #endif
 
 }
@@ -169,6 +168,19 @@ void WebUserMediaClient::cancelRequest(UserMediaRequest* request)
     RemoveRequestFromMap(_request.get());
 #endif
 }
+
+#if PLATFORM(IOS)
+- (void)denyOnlyThisRequest
+{
+}
+
+- (BOOL)shouldClearCache
+{
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=146245
+    ASSERT_NOT_REACHED();
+    return true;
+}
+#endif
 
 @end
 #endif

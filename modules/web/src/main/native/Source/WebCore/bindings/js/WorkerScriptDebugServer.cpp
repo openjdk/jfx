@@ -32,8 +32,6 @@
 #include "config.h"
 #include "WorkerScriptDebugServer.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "JSDOMBinding.h"
 #include "Timer.h"
 #include "WorkerDebuggerAgent.h"
@@ -41,7 +39,6 @@
 #include "WorkerRunLoop.h"
 #include "WorkerThread.h"
 #include <runtime/VM.h>
-#include <wtf/PassOwnPtr.h>
 
 using namespace Inspector;
 
@@ -76,7 +73,8 @@ void WorkerScriptDebugServer::removeListener(ScriptDebugListener* listener, bool
     m_listeners.remove(listener);
 
     if (m_listeners.isEmpty()) {
-        m_workerGlobalScope->script()->detachDebugger(this);
+        if (m_workerGlobalScope->script())
+            m_workerGlobalScope->script()->detachDebugger(this);
         if (!skipRecompile)
             recompileAllJSFunctions();
     }
@@ -84,10 +82,10 @@ void WorkerScriptDebugServer::removeListener(ScriptDebugListener* listener, bool
 
 void WorkerScriptDebugServer::recompileAllJSFunctions()
 {
-    JSC::VM* vm = m_workerGlobalScope->script()->vm();
+    JSC::VM& vm = m_workerGlobalScope->script()->vm();
 
     JSC::JSLockHolder lock(vm);
-    JSC::Debugger::recompileAllJSFunctions(vm);
+    JSC::Debugger::recompileAllJSFunctions(&vm);
 }
 
 void WorkerScriptDebugServer::runEventLoopWhilePaused()
@@ -101,15 +99,13 @@ void WorkerScriptDebugServer::runEventLoopWhilePaused()
     } while (result != MessageQueueTerminated && !m_doneProcessingDebuggerEvents);
 }
 
-void WorkerScriptDebugServer::reportException(JSC::ExecState* exec, JSC::JSValue exception) const
+void WorkerScriptDebugServer::reportException(JSC::ExecState* exec, JSC::Exception* exception) const
 {
     WebCore::reportException(exec, exception);
 }
 
-void WorkerScriptDebugServer::interruptAndRunTask(PassOwnPtr<ScriptDebugServer::Task>)
+void WorkerScriptDebugServer::interruptAndRunTask(std::unique_ptr<ScriptDebugServer::Task>)
 {
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

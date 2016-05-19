@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -45,10 +45,6 @@ using namespace WebKit;
 
 using namespace WebCore;
 
-#define PluginNameOrDescriptionStringNumber     126
-#define MIMEDescriptionStringNumber             127
-#define MIMEListStringStringNumber              128
-
 @interface WebNetscapePluginPackage (Internal)
 - (void)_unloadWithShutdown:(BOOL)shutdown;
 @end
@@ -64,96 +60,6 @@ using namespace WebCore;
 {
     CFBundleCloseBundleResourceMap(cfBundle.get(), resRef);
 }
-
-#if COMPILER(CLANG)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-- (NSString *)stringForStringListID:(SInt16)stringListID andIndex:(SInt16)index
-{
-    // Get resource, and dereference the handle.
-    Handle stringHandle = Get1Resource('STR#', stringListID);
-    if (stringHandle == NULL) {
-        return nil;
-    }
-    unsigned char *p = (unsigned char *)*stringHandle;
-    if (!p)
-        return nil;
-
-    // Check the index against the length of the string list, then skip the length.
-    if (index < 1 || index > *(SInt16 *)p)
-        return nil;
-    p += sizeof(SInt16);
-
-    // Skip any strings that come before the one we are looking for.
-    while (--index)
-        p += 1 + *p;
-
-    // Convert the one we found into an NSString.
-    return [[[NSString alloc] initWithBytes:(p + 1) length:*p encoding:[NSString _web_encodingForResource:stringHandle]] autorelease];
-}
-
-- (BOOL)getPluginInfoFromResources
-{
-    SInt16 resRef = [self openResourceFile];
-    if (resRef == -1)
-        return NO;
-
-    UseResFile(resRef);
-    if (ResError() != noErr)
-        return NO;
-
-    NSString *MIME, *extensionsList, *description;
-    NSArray *extensions;
-    unsigned i;
-
-    for (i=1; 1; i+=2) {
-        MIME = [[self stringForStringListID:MIMEListStringStringNumber
-                                   andIndex:i] lowercaseString];
-        if (!MIME)
-            break;
-
-        MimeClassInfo mimeClassInfo;
-        mimeClassInfo.type = String(MIME).lower();
-
-        extensionsList = [[self stringForStringListID:MIMEListStringStringNumber andIndex:i+1] lowercaseString];
-        if (extensionsList) {
-            extensions = [extensionsList componentsSeparatedByString:@","];
-            for (NSUInteger j = 0; j < [extensions count]; ++j)
-                mimeClassInfo.extensions.append((NSString *)[extensions objectAtIndex:j]);
-        }
-
-        description = [self stringForStringListID:MIMEDescriptionStringNumber
-                                         andIndex:pluginInfo.mimes.size() + 1];
-        mimeClassInfo.desc = description;
-
-        pluginInfo.mimes.append(mimeClassInfo);
-    }
-
-    NSString *filename = [(NSString *)path lastPathComponent];
-    pluginInfo.file = filename;
-
-    description = [self stringForStringListID:PluginNameOrDescriptionStringNumber andIndex:1];
-    if (!description)
-        description = filename;
-    pluginInfo.desc = description;
-
-
-    NSString *theName = [self stringForStringListID:PluginNameOrDescriptionStringNumber andIndex:2];
-    if (!theName)
-        theName = filename;
-    pluginInfo.name = theName;
-
-    pluginInfo.isApplicationPlugin = false;
-
-    [self closeResourceFile:resRef];
-
-    return YES;
-}
-#if COMPILER(CLANG)
-#pragma clang diagnostic pop
-#endif
 
 - (BOOL)_initWithPath:(NSString *)pluginPath
 {
@@ -191,7 +97,7 @@ using namespace WebCore;
 
 #endif
 
-    if (![self getPluginInfoFromPLists] && ![self getPluginInfoFromResources])
+    if (![self getPluginInfoFromPLists])
         return NO;
 
     return YES;
@@ -221,7 +127,7 @@ using namespace WebCore;
 
 - (void)createPropertyListFile
 {
-    NetscapePluginHostManager::shared().createPropertyListFile(path, pluginHostArchitecture, [self bundleIdentifier]);
+    NetscapePluginHostManager::singleton().createPropertyListFile(path, pluginHostArchitecture, [self bundleIdentifier]);
 }
 
 #endif
@@ -352,11 +258,6 @@ using namespace WebCore;
 
     pluginSize = pluginFuncs.size;
     pluginVersion = pluginFuncs.version;
-
-    if (pluginFuncs.javaClass)
-        LOG(LiveConnect, "%@:  mach-o entry point for NPP_GetJavaClass = %p", (NSString *)[self pluginInfo].name, pluginFuncs.javaClass);
-    else
-        LOG(LiveConnect, "%@:  no entry point for NPP_GetJavaClass", (NSString *)[self pluginInfo].name);
 
 #if !LOG_DISABLED
     currentTime = CFAbsoluteTimeGetCurrent();

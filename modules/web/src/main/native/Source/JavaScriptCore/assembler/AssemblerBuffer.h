@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2012, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,24 +59,69 @@ namespace JSC {
         uint32_t m_offset;
     };
 
-    class AssemblerBuffer {
-        static const int inlineCapacity = 128;
+    class AssemblerData {
     public:
-        AssemblerBuffer()
-            : m_storage(inlineCapacity)
-            , m_buffer(m_storage.begin())
-            , m_capacity(inlineCapacity)
-            , m_index(0)
+        AssemblerData()
+            : m_buffer(nullptr)
+            , m_capacity(0)
         {
         }
 
-        ~AssemblerBuffer()
+        AssemblerData(unsigned initialCapacity)
+        {
+            m_capacity = initialCapacity;
+            m_buffer = static_cast<char*>(fastMalloc(m_capacity));
+        }
+
+        AssemblerData(AssemblerData&& other)
+        {
+            m_buffer = other.m_buffer;
+            other.m_buffer = nullptr;
+            m_capacity = other.m_capacity;
+            other.m_capacity = 0;
+        }
+
+        AssemblerData& operator=(AssemblerData&& other)
+        {
+            m_buffer = other.m_buffer;
+            other.m_buffer = nullptr;
+            m_capacity = other.m_capacity;
+            other.m_capacity = 0;
+            return *this;
+        }
+
+        ~AssemblerData()
+        {
+            fastFree(m_buffer);
+        }
+
+        char* buffer() const { return m_buffer; }
+
+        unsigned capacity() const { return m_capacity; }
+
+        void grow(unsigned extraCapacity = 0)
+        {
+            m_capacity = m_capacity + m_capacity / 2 + extraCapacity;
+            m_buffer = static_cast<char*>(fastRealloc(m_buffer, m_capacity));
+        }
+
+    private:
+        char* m_buffer;
+        unsigned m_capacity;
+    };
+
+    class AssemblerBuffer {
+        static const int initialCapacity = 128;
+    public:
+        AssemblerBuffer()
+            : m_storage(initialCapacity)
+            , m_index(0)
         {
         }
 
         bool isAvailable(int space)
         {
-            return m_index + space <= m_capacity;
+            return m_index + space <= m_storage.capacity();
         }
 
         void ensureSpace(int space)
@@ -90,21 +135,6 @@ namespace JSC {
             return !(m_index & (alignment - 1));
         }
 
-        template<typename IntegralType>
-        void putIntegral(IntegralType value)
-        {
-            ensureSpace(sizeof(IntegralType));
-            putIntegralUnchecked(value);
-        }
-
-        template<typename IntegralType>
-        void putIntegralUnchecked(IntegralType value)
-        {
-            ASSERT(isAvailable(sizeof(IntegralType)));
-            *reinterpret_cast_ptr<IntegralType*>(m_buffer + m_index) = value;
-            m_index += sizeof(IntegralType);
-        }
-
         void putByteUnchecked(int8_t value) { putIntegralUnchecked(value); }
         void putByte(int8_t value) { putIntegral(value); }
         void putShortUnchecked(int16_t value) { putIntegralUnchecked(value); }
@@ -116,7 +146,7 @@ namespace JSC {
 
         void* data() const
         {
-            return m_buffer;
+            return m_storage.buffer();
         }
 
         size_t codeSize() const
@@ -131,29 +161,45 @@ namespace JSC {
 
         unsigned debugOffset() { return m_index; }
 
+        AssemblerData releaseAssemblerData() { return WTF::move(m_storage); }
+
     protected:
+        template<typename IntegralType>
+        void putIntegral(IntegralType value)
+        {
+            unsigned nextIndex = m_index + sizeof(IntegralType);
+            if (UNLIKELY(nextIndex > m_storage.capacity()))
+                grow();
+            ASSERT(isAvailable(sizeof(IntegralType)));
+            *reinterpret_cast_ptr<IntegralType*>(m_storage.buffer() + m_index) = value;
+            m_index = nextIndex;
+        }
+
+        template<typename IntegralType>
+        void putIntegralUnchecked(IntegralType value)
+        {
+            ASSERT(isAvailable(sizeof(IntegralType)));
+            *reinterpret_cast_ptr<IntegralType*>(m_storage.buffer() + m_index) = value;
+            m_index += sizeof(IntegralType);
+        }
+
         void append(const char* data, int size)
         {
             if (!isAvailable(size))
                 grow(size);
 
-            memcpy(m_buffer + m_index, data, size);
+            memcpy(m_storage.buffer() + m_index, data, size);
             m_index += size;
         }
 
         void grow(int extraCapacity = 0)
         {
-            m_capacity += m_capacity / 2 + extraCapacity;
-
-            m_storage.grow(m_capacity);
-            m_buffer = m_storage.begin();
+            m_storage.grow(extraCapacity);
         }
 
     private:
-        Vector<char, inlineCapacity, UnsafeVectorOverflow> m_storage;
-        char* m_buffer;
-        int m_capacity;
-        int m_index;
+        AssemblerData m_storage;
+        unsigned m_index;
     };
 
 } // namespace JSC

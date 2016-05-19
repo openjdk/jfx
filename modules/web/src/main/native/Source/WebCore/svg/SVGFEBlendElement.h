@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
+ * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,7 +22,6 @@
 #ifndef SVGFEBlendElement_h
 #define SVGFEBlendElement_h
 
-#if ENABLE(FILTERS)
 #include "FEBlend.h"
 #include "SVGAnimatedEnumeration.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
@@ -29,67 +29,47 @@
 namespace WebCore {
 
 template<>
-struct SVGPropertyTraits<BlendModeType> {
-    static unsigned highestEnumValue() { return FEBLEND_MODE_LIGHTEN; }
+struct SVGPropertyTraits<BlendMode> {
+    static unsigned highestEnumValue() { return BlendModeLighten; }
 
-    static String toString(BlendModeType type)
+    static String toString(BlendMode type)
     {
         switch (type) {
-        case FEBLEND_MODE_UNKNOWN:
-            return emptyString();
-        case FEBLEND_MODE_NORMAL:
+        case BlendModeNormal:
             return "normal";
-        case FEBLEND_MODE_MULTIPLY:
+        case BlendModeMultiply:
             return "multiply";
-        case FEBLEND_MODE_SCREEN:
+        case BlendModeScreen:
             return "screen";
-        case FEBLEND_MODE_DARKEN:
+        case BlendModeDarken:
             return "darken";
-        case FEBLEND_MODE_LIGHTEN:
+        case BlendModeLighten:
             return "lighten";
+        default:
+            return emptyString();
         }
-
-        ASSERT_NOT_REACHED();
-        return emptyString();
-    }
-
-    static BlendModeType fromString(const String& value)
-    {
-        if (value == "normal")
-            return FEBLEND_MODE_NORMAL;
-        if (value == "multiply")
-            return FEBLEND_MODE_MULTIPLY;
-        if (value == "screen")
-            return FEBLEND_MODE_SCREEN;
-        if (value == "darken")
-            return FEBLEND_MODE_DARKEN;
-        if (value == "lighten")
-            return FEBLEND_MODE_LIGHTEN;
-        return FEBLEND_MODE_UNKNOWN;
     }
 };
 
 class SVGFEBlendElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFEBlendElement> create(const QualifiedName&, Document&);
+    static Ref<SVGFEBlendElement> create(const QualifiedName&, Document&);
 
 private:
     SVGFEBlendElement(const QualifiedName&, Document&);
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
+    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFEBlendElement)
         DECLARE_ANIMATED_STRING(In1, in1)
         DECLARE_ANIMATED_STRING(In2, in2)
-        DECLARE_ANIMATED_ENUMERATION(Mode, mode, BlendModeType)
+        DECLARE_ANIMATED_ENUMERATION(Mode, mode, BlendMode)
     END_DECLARE_ANIMATED_PROPERTIES
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
 #endif

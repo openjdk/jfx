@@ -24,10 +24,13 @@
  */
 
 #include "config.h"
+
+#if PLATFORM(MAC)
+
 #include "JavaScriptTest.h"
 
 #include <WebKit/WebView.h>
-#include <WebKit2/WKViewPrivate.h>
+#include <WebKit/WKViewPrivate.h>
 
 namespace TestWebKitAPI {
 
@@ -43,3 +46,5 @@ namespace TestWebKitAPI {
 }
 
 } // namespace TestWebKitAPI
+
+#endif

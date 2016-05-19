@@ -6,7 +6,7 @@
 
 #include <algorithm>
 #include "FontDescription.h"
-#include "FontOrientation.h"
+#include "TextFlags.h" //XXX: #include "FontOrientation.h"
 #include "JavaEnv.h"
 #include "RQRef.h"
 
@@ -36,8 +36,8 @@ public:
         , m_size(other.m_size)
         {};
 
-    static PassOwnPtr<FontPlatformData> create(const FontDescription& fontDescription, const AtomicString& family);
-    PassOwnPtr<FontPlatformData> derive(float scaleFactor) const;
+    static std::unique_ptr<FontPlatformData> create(const FontDescription& fontDescription, const AtomicString& family);
+    std::unique_ptr<FontPlatformData> derive(float scaleFactor) const;
 
     void swap(FontPlatformData& other) { std::swap(m_jFont, other.m_jFont); }
 
@@ -54,7 +54,7 @@ public:
     static jint getJavaFontID(const JLObject &font);
 
     FontOrientation orientation() const { return Horizontal; } // FIXME: Implement.
-    void setOrientation(FontOrientation orientation) { }
+    void setOrientation(FontOrientation orientation) {(void) orientation;}
 
 #ifndef NDEBUG
     String description() const;

@@ -42,18 +42,18 @@ enum class DominantScrollGestureDirection {
     Horizontal
 };
 
-class WheelEventDeltaTracker {
+class WheelEventDeltaTracker final {
 public:
-    WheelEventDeltaTracker();
-    virtual ~WheelEventDeltaTracker();
+    WEBCORE_EXPORT WheelEventDeltaTracker();
+    WEBCORE_EXPORT ~WheelEventDeltaTracker();
 
-    void beginTrackingDeltas();
-    void endTrackingDeltas();
+    WEBCORE_EXPORT void beginTrackingDeltas();
+    WEBCORE_EXPORT void endTrackingDeltas();
 
     bool isTrackingDeltas() const { return m_isTrackingDeltas; }
 
-    void recordWheelEventDelta(const PlatformWheelEvent&);
-    DominantScrollGestureDirection dominantScrollGestureDirection() const;
+    WEBCORE_EXPORT void recordWheelEventDelta(const PlatformWheelEvent&);
+    WEBCORE_EXPORT DominantScrollGestureDirection dominantScrollGestureDirection() const;
 
 private:
     Deque<FloatSize> m_recentWheelEventDeltas;

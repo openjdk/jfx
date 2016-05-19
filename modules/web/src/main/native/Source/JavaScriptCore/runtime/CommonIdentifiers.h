@@ -21,13 +21,13 @@
 #ifndef CommonIdentifiers_h
 #define CommonIdentifiers_h
 
+#include "BytecodeIntrinsicRegistry.h"
 #include "Identifier.h"
 #include <wtf/Noncopyable.h>
 
 // MarkedArgumentBuffer of property names, passed to a macro so we can do set them up various
 // ways without repeating the list.
 #define JSC_COMMON_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
-    macro(ArgumentsIterator) \
     macro(Array) \
     macro(ArrayBuffer) \
     macro(ArrayIterator) \
@@ -38,6 +38,7 @@
     macro(EvalError) \
     macro(Function) \
     macro(Infinity) \
+    macro(Intl) \
     macro(JSON) \
     macro(Map)\
     macro(MapIterator)\
@@ -48,24 +49,30 @@
     macro(Promise) \
     macro(RangeError) \
     macro(ReferenceError) \
+    macro(Reflect) \
     macro(RegExp) \
     macro(Set)\
     macro(SetIterator)\
     macro(String) \
+    macro(Symbol) \
     macro(SyntaxError) \
     macro(TypeError) \
     macro(URIError) \
     macro(UTC) \
     macro(WeakMap)\
+    macro(WeakSet)\
     macro(__defineGetter__) \
     macro(__defineSetter__) \
     macro(__lookupGetter__) \
     macro(__lookupSetter__) \
     macro(add) \
+    macro(additionalJettisonReason) \
     macro(anonymous) \
-    macro(apply) \
     macro(arguments) \
+    macro(assign) \
+    macro(back) \
     macro(bind) \
+    macro(blur) \
     macro(buffer) \
     macro(byteLength) \
     macro(byteOffset) \
@@ -73,11 +80,12 @@
     macro(bytecodeIndex) \
     macro(bytecodes) \
     macro(bytecodesID) \
-    macro(call) \
     macro(callee) \
     macro(caller) \
-    macro(cast) \
     macro(clear) \
+    macro(close) \
+    macro(closed) \
+    macro(column) \
     macro(compilationKind) \
     macro(compilations) \
     macro(compile) \
@@ -85,6 +93,7 @@
     macro(constructor) \
     macro(count) \
     macro(counters) \
+    macro(defineProperty) \
     macro(description) \
     macro(descriptions) \
     macro(displayName) \
@@ -96,17 +105,23 @@
     macro(exec) \
     macro(executionCount) \
     macro(exitKind) \
+    macro(flags) \
+    macro(focus) \
     macro(forEach) \
+    macro(forward) \
     macro(fromCharCode) \
     macro(get) \
     macro(global) \
+    macro(go) \
     macro(has) \
     macro(hasOwnProperty) \
     macro(hash) \
     macro(header) \
+    macro(href) \
     macro(id) \
     macro(ignoreCase) \
     macro(index) \
+    macro(indexedDB) \
     macro(inferredName) \
     macro(input) \
     macro(instructionCount) \
@@ -119,6 +134,7 @@
     macro(keys) \
     macro(lastIndex) \
     macro(length) \
+    macro(line) \
     macro(message) \
     macro(multiline) \
     macro(name) \
@@ -133,16 +149,25 @@
     macro(osrExitSites) \
     macro(osrExits) \
     macro(parse) \
+    macro(parseInt) \
+    macro(postMessage) \
     macro(profiledBytecodes) \
     macro(propertyIsEnumerable) \
     macro(prototype) \
+    macro(raw) \
+    macro(reload) \
+    macro(replace) \
+    macro(resolve) \
     macro(set) \
+    macro(showModalDialog) \
     macro(size) \
     macro(slice) \
     macro(source) \
+    macro(sourceURL) \
     macro(sourceCode) \
     macro(stack) \
     macro(subarray) \
+    macro(target) \
     macro(test) \
     macro(then) \
     macro(toExponential) \
@@ -153,8 +178,10 @@
     macro(toPrecision) \
     macro(toString) \
     macro(value) \
-    macro(values) \
     macro(valueOf) \
+    macro(values) \
+    macro(webkit) \
+    macro(webkitIndexedDB) \
     macro(window) \
     macro(writable)
 
@@ -206,13 +233,36 @@
     macro(with) \
     macro(yield)
 
-#define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
-    macro(apply) \
-    macro(call) \
+#define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL_NOT_IMPLEMENTED_YET(macro)\
+    macro(hasInstance) \
+    macro(isConcatSpreadable) \
+    macro(match) \
+    macro(replace) \
+    macro(search) \
+    macro(species) \
+    macro(split) \
+    macro(toPrimitive) \
+    macro(toStringTag)
+
+#define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(macro) \
     macro(iterator) \
-    macro(iteratorNext) \
-    macro(resolve) \
-    macro(reject) \
+    macro(unscopables)
+
+#define JSC_COMMON_BYTECODE_INTRINSICS_EACH_NAME(macro) \
+    macro(putByValDirect) \
+    macro(toString)
+
+#define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
+    JSC_COMMON_BYTECODE_INTRINSICS_EACH_NAME(macro) \
+    macro(iteratedObject) \
+    macro(arrayIteratorNextIndex) \
+    macro(arrayIterationKind) \
+    macro(arrayIterationKindKey) \
+    macro(arrayIterationKindValue) \
+    macro(arrayIterationKindKeyValue) \
+    macro(charCodeAt) \
+    macro(iteratedString) \
+    macro(stringIteratorNextIndex) \
     macro(promise) \
     macro(fulfillmentHandler) \
     macro(rejectionHandler) \
@@ -221,8 +271,32 @@
     macro(deferred) \
     macro(countdownHolder) \
     macro(Object) \
+    macro(ownEnumerablePropertyKeys) \
+    macro(Number) \
+    macro(Array) \
+    macro(String) \
+    macro(Promise) \
+    macro(abs) \
+    macro(floor) \
+    macro(isFinite) \
+    macro(getPrototypeOf) \
+    macro(getOwnPropertyNames) \
     macro(TypeError) \
-    macro(undefined)
+    macro(undefined) \
+    macro(BuiltinLog) \
+    macro(homeObject) \
+    macro(getTemplateObject) \
+    macro(enqueueJob) \
+    macro(handler) \
+    macro(promiseState) \
+    macro(promisePending) \
+    macro(promiseFulfilled) \
+    macro(promiseRejected) \
+    macro(promiseFulfillReactions) \
+    macro(promiseRejectReactions) \
+    macro(promiseResult) \
+    macro(capabilities) \
+
 
 namespace JSC {
 
@@ -259,8 +333,21 @@ namespace JSC {
         JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(JSC_IDENTIFIER_DECLARE_PRIVATE_PROPERTY_NAME_GLOBAL)
 #undef JSC_IDENTIFIER_DECLARE_PRIVATE_PROPERTY_NAME_GLOBAL
 
+#define JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL(name) const Identifier name##Symbol;
+        JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL)
+#undef JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL
+
+        bool isPrivateName(SymbolImpl& uid) const;
+        bool isPrivateName(UniquedStringImpl& uid) const;
+        bool isPrivateName(const Identifier&) const;
+
         const Identifier* getPrivateName(const Identifier&) const;
         Identifier getPublicName(const Identifier&) const;
+
+        const BytecodeIntrinsicRegistry& bytecodeIntrinsicRegistry() const { return m_bytecodeIntrinsicRegistry; }
+
+    private:
+        BytecodeIntrinsicRegistry m_bytecodeIntrinsicRegistry;
     };
 
 } // namespace JSC

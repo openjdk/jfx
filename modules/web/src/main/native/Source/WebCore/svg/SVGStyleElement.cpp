@@ -23,7 +23,6 @@
 #include "config.h"
 #include "SVGStyleElement.h"
 
-#include "Attribute.h"
 #include "CSSStyleSheet.h"
 #include "Document.h"
 #include "ExceptionCode.h"
@@ -35,7 +34,7 @@ namespace WebCore {
 inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : SVGElement(tagName, document)
     , m_styleSheetOwner(document, createdByParser)
-    , m_svgLoadEventTimer(this, &SVGElement::svgLoadEventTimerFired)
+    , m_svgLoadEventTimer(*this, &SVGElement::svgLoadEventTimerFired)
 {
     ASSERT(hasTagName(SVGNames::styleTag));
 }
@@ -45,9 +44,9 @@ SVGStyleElement::~SVGStyleElement()
     m_styleSheetOwner.clearDocumentData(document(), *this);
 }
 
-PassRefPtr<SVGStyleElement> SVGStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
+Ref<SVGStyleElement> SVGStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
 {
-    return adoptRef(new SVGStyleElement(tagName, document, createdByParser));
+    return adoptRef(*new SVGStyleElement(tagName, document, createdByParser));
 }
 
 bool SVGStyleElement::disabled() const
@@ -63,7 +62,7 @@ void SVGStyleElement::setDisabled(bool setDisabled)
 
 const AtomicString& SVGStyleElement::type() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, defaultValue, ("text/css", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, defaultValue, ("text/css", AtomicString::ConstructFromLiteral));
     const AtomicString& n = getAttribute(SVGNames::typeAttr);
     return n.isNull() ? defaultValue : n;
 }
@@ -75,7 +74,7 @@ void SVGStyleElement::setType(const AtomicString& type, ExceptionCode&)
 
 const AtomicString& SVGStyleElement::media() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, defaultValue, ("all", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, defaultValue, ("all", AtomicString::ConstructFromLiteral));
     const AtomicString& n = fastGetAttribute(SVGNames::mediaAttr);
     return n.isNull() ? defaultValue : n;
 }
@@ -95,24 +94,8 @@ void SVGStyleElement::setTitle(const AtomicString& title, ExceptionCode&)
     setAttribute(SVGNames::titleAttr, title);
 }
 
-bool SVGStyleElement::isSupportedAttribute(const QualifiedName& attrName)
-{
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty()) {
-        SVGLangSpace::addSupportedAttributes(supportedAttributes);
-        supportedAttributes.add(SVGNames::titleAttr);
-        supportedAttributes.add(SVGNames::mediaAttr);
-        supportedAttributes.add(SVGNames::typeAttr);
-    }
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
-}
-
 void SVGStyleElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(name)) {
-        SVGElement::parseAttribute(name, value);
-        return;
-    }
     if (name == SVGNames::titleAttr) {
         if (sheet())
             sheet()->setTitle(value);
@@ -126,10 +109,8 @@ void SVGStyleElement::parseAttribute(const QualifiedName& name, const AtomicStri
         m_styleSheetOwner.setMedia(value);
         return;
     }
-    if (SVGLangSpace::parseAttribute(name, value))
-        return;
 
-    ASSERT_NOT_REACHED();
+    SVGElement::parseAttribute(name, value);
 }
 
 void SVGStyleElement::finishParsingChildren()

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -85,8 +85,8 @@ namespace JSC {
             , m_index(0)
         {
         }
-        LabelScopePtr(LabelScopeStore* owner, size_t index)
-            : m_owner(owner)
+        LabelScopePtr(LabelScopeStore& owner, size_t index)
+            : m_owner(&owner)
             , m_index(index)
         {
             m_owner->at(index).ref();
@@ -117,10 +117,14 @@ namespace JSC {
                 m_owner->at(m_index).deref();
         }
 
+        bool operator!() const { return !m_owner; }
+
         LabelScope& operator*() { ASSERT(m_owner); return m_owner->at(m_index); }
         LabelScope* operator->() { ASSERT(m_owner); return &m_owner->at(m_index); }
         const LabelScope& operator*() const { ASSERT(m_owner); return m_owner->at(m_index); }
         const LabelScope* operator->() const { ASSERT(m_owner); return &m_owner->at(m_index); }
+
+        static LabelScopePtr null() { return LabelScopePtr(); }
 
     private:
         LabelScopeStore* m_owner;

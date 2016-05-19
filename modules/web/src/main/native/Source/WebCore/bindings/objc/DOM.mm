@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -37,7 +37,7 @@
 #import "DOMPrivate.h"
 #import "DOMRangeInternal.h"
 #import "DragImage.h"
-#import "Font.h"
+#import "FontCascade.h"
 #import "Frame.h"
 #import "HTMLElement.h"
 #import "HTMLNames.h"
@@ -46,9 +46,11 @@
 #import "Image.h"
 #import "JSNode.h"
 #import "NodeFilter.h"
+#import "Page.h"
 #import "Range.h"
 #import "RenderImage.h"
 #import "ScriptController.h"
+#import "TextIndicator.h"
 #import "WebScriptObjectPrivate.h"
 #import <JavaScriptCore/APICast.h>
 #import <wtf/HashMap.h>
@@ -300,8 +302,8 @@ Class kitClass(WebCore::Node* impl)
 {
     switch (impl->nodeType()) {
         case WebCore::Node::ELEMENT_NODE:
-            if (impl->isHTMLElement())
-                return WebCore::elementClass(toHTMLElement(impl)->tagQName(), [DOMHTMLElement class]);
+            if (is<HTMLElement>(*impl))
+                return WebCore::elementClass(downcast<HTMLElement>(*impl).tagQName(), [DOMHTMLElement class]);
             return [DOMElement class];
         case WebCore::Node::ATTRIBUTE_NODE:
             return [DOMAttr class];
@@ -325,8 +327,6 @@ Class kitClass(WebCore::Node* impl)
             return [DOMDocumentType class];
         case WebCore::Node::DOCUMENT_FRAGMENT_NODE:
             return [DOMDocumentFragment class];
-        case WebCore::Node::NOTATION_NODE:
-            return [DOMNotation class];
         case WebCore::Node::XPATH_NAMESPACE_NODE:
             // FIXME: Create an XPath objective C wrapper
             // See http://bugs.webkit.org/show_bug.cgi?id=8755
@@ -465,10 +465,9 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
 - (CGRect)hrefFrame
 {
     RenderObject *renderer = [self _linkElement]->renderer();
-
-    if(renderer) return renderer->absoluteBoundingBoxRect();
-
-    return NSZeroRect;
+    if (renderer)
+        return renderer->absoluteBoundingBoxRect();
+    return CGRectZero;
 }
 
 - (NSString *)hrefLabel
@@ -555,7 +554,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     WebCore::Frame* frame = node->document().frame();
     if (!frame)
         return nil;
-    return [createDragImageForNode(*frame, *node).leakRef() autorelease];
+    return createDragImageForNode(*frame, *node).autorelease();
 }
 #endif
 
@@ -584,6 +583,47 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     return kit(&node);
 }
 
+- (void)getPreviewSnapshotImage:(CGImageRef*)cgImage andRects:(NSArray **)rects
+{
+    if (!cgImage || !rects)
+        return;
+
+    *cgImage = nullptr;
+    *rects = nullptr;
+
+    Node* coreNode = core(self);
+
+    Ref<Range> range = rangeOfContents(*coreNode);
+
+    const float margin = 4;
+    RefPtr<TextIndicator> textIndicator = TextIndicator::createWithRange(range, TextIndicatorPresentationTransition::None, margin);
+
+    if (!textIndicator)
+        return;
+
+    if (Image* image = textIndicator->contentImage())
+        *cgImage = (CGImageRef)CFAutorelease(CGImageRetain(image->getCGImageRef()));
+
+    RetainPtr<NSMutableArray> rectArray = adoptNS([[NSMutableArray alloc] init]);
+
+    if (*cgImage) {
+        FloatPoint origin = textIndicator->textBoundingRectInRootViewCoordinates().location();
+        for (const FloatRect& rect : textIndicator->textRectsInBoundingRectCoordinates()) {
+            CGRect cgRect = rect;
+            cgRect.origin.x += origin.x();
+            cgRect.origin.y += origin.y();
+            cgRect = coreNode->document().frame()->view()->contentsToWindow(enclosingIntRect(cgRect));
+            [rectArray addObject:[NSValue value:&cgRect withObjCType:@encode(CGRect)]];
+        }
+    } else {
+        CGRect cgRect = CGRectInset(range->boundingRect(), -margin, -margin);
+        cgRect = coreNode->document().frame()->view()->contentsToWindow(enclosingIntRect(cgRect));
+        [rectArray addObject:[NSValue value:&cgRect withObjCType:@encode(CGRect)]];
+    }
+
+    *rects = rectArray.autorelease();
+}
+
 @end
 
 @implementation DOMRange (DOMRangeExtensions)
@@ -610,10 +650,17 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     if (!frame)
         return nil;
 
-#if PLATFORM(IOS)
-    return createDragImageForRange(*frame, *range, forceBlackText).leakRef();
+    // iOS uses CGImageRef for drag images, which doesn't support separate logical/physical sizes.
+#if PLATFORM(MAC)
+    RetainPtr<NSImage> renderedImage = createDragImageForRange(*frame, *range, forceBlackText);
+
+    IntSize size([renderedImage size]);
+    size.scale(1 / frame->page()->deviceScaleFactor());
+    [renderedImage setSize:size];
+
+    return renderedImage.autorelease();
 #else
-    return [createDragImageForRange(*frame, *range, forceBlackText).leakRef() autorelease];
+    return createDragImageForRange(*frame, *range, forceBlackText).autorelease();
 #endif
 }
 
@@ -644,12 +691,12 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
 {
     // FIXME: Could we move this function to WebCore::Node and autogenerate?
     WebCore::RenderObject* renderer = core(self)->renderer();
-    if (!renderer || !renderer->isRenderImage())
+    if (!is<RenderImage>(renderer))
         return nil;
-    WebCore::CachedImage* cachedImage = toRenderImage(renderer)->cachedImage();
+    WebCore::CachedImage* cachedImage = downcast<RenderImage>(*renderer).cachedImage();
     if (!cachedImage || cachedImage->errorOccurred())
         return nil;
-    return cachedImage->imageForRenderer(toRenderImage(renderer))->getNSImage();
+    return cachedImage->imageForRenderer(renderer)->getNSImage();
 }
 #endif
 
@@ -664,7 +711,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     auto renderer = core(self)->renderer();
     if (!renderer)
         return nil;
-    return renderer->style().font().primaryFont()->getNSFont();
+    return renderer->style().fontCascade().primaryFont().getNSFont();
 }
 #else
 - (CTFontRef)_font
@@ -672,7 +719,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     RenderObject* renderer = core(self)->renderer();
     if (!renderer)
         return nil;
-    return renderer->style().font().primaryFont()->getCTFont();
+    return renderer->style().fontCascade().primaryFont().getCTFont();
 }
 #endif
 
@@ -680,10 +727,10 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
 - (NSData *)_imageTIFFRepresentation
 {
     // FIXME: Could we move this function to WebCore::Element and autogenerate?
-    auto renderer = core(self)->renderer();
-    if (!renderer || !renderer->isRenderImage())
+    auto* renderer = core(self)->renderer();
+    if (!is<RenderImage>(renderer))
         return nil;
-    WebCore::CachedImage* cachedImage = toRenderImage(renderer)->cachedImage();
+    WebCore::CachedImage* cachedImage = downcast<RenderImage>(*renderer).cachedImage();
     if (!cachedImage || cachedImage->errorOccurred())
         return nil;
     return (NSData *)cachedImage->imageForRenderer(renderer)->getTIFFRepresentation();

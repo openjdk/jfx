@@ -21,29 +21,28 @@
 #ifndef JSTestNamedConstructor_h
 #define JSTestNamedConstructor_h
 
-#include "DOMConstructorWithDocument.h"
-#include "JSDOMBinding.h"
+#include "JSDOMWrapper.h"
 #include "TestNamedConstructor.h"
-#include <runtime/JSGlobalObject.h>
-#include <runtime/JSObject.h>
-#include <runtime/ObjectPrototype.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
 class JSTestNamedConstructor : public JSDOMWrapper {
 public:
     typedef JSDOMWrapper Base;
-    static JSTestNamedConstructor* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, PassRefPtr<TestNamedConstructor> impl)
+    static JSTestNamedConstructor* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<TestNamedConstructor>&& impl)
     {
-        JSTestNamedConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestNamedConstructor>(globalObject->vm().heap)) JSTestNamedConstructor(structure, globalObject, impl);
+        JSTestNamedConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestNamedConstructor>(globalObject->vm().heap)) JSTestNamedConstructor(structure, globalObject, WTF::move(impl));
         ptr->finishCreation(globalObject->vm());
         return ptr;
     }
 
     static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
+    static JSC::JSObject* getPrototype(JSC::VM&, JSC::JSGlobalObject*);
+    static TestNamedConstructor* toWrapped(JSC::JSValue);
     static void destroy(JSC::JSCell*);
     ~JSTestNamedConstructor();
+
     DECLARE_INFO;
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
@@ -54,22 +53,19 @@ public:
     static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
     static JSC::JSValue getNamedConstructor(JSC::VM&, JSC::JSGlobalObject*);
     TestNamedConstructor& impl() const { return *m_impl; }
-    void releaseImpl() { m_impl->deref(); m_impl = 0; }
-
-    void releaseImplIfNotNull()
-    {
-        if (m_impl) {
-            m_impl->deref();
-            m_impl = 0;
-        }
-    }
+    void releaseImpl() { std::exchange(m_impl, nullptr)->deref(); }
 
 private:
     TestNamedConstructor* m_impl;
 protected:
-    JSTestNamedConstructor(JSC::Structure*, JSDOMGlobalObject*, PassRefPtr<TestNamedConstructor>);
-    void finishCreation(JSC::VM&);
-    static const unsigned StructureFlags = JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertySlot | Base::StructureFlags;
+    JSTestNamedConstructor(JSC::Structure*, JSDOMGlobalObject*, Ref<TestNamedConstructor>&&);
+
+    void finishCreation(JSC::VM& vm)
+    {
+        Base::finishCreation(vm);
+        ASSERT(inherits(info()));
+    }
+
 };
 
 class JSTestNamedConstructorOwner : public JSC::WeakHandleOwner {
@@ -80,94 +76,13 @@ public:
 
 inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestNamedConstructor*)
 {
-    DEFINE_STATIC_LOCAL(JSTestNamedConstructorOwner, jsTestNamedConstructorOwner, ());
-    return &jsTestNamedConstructorOwner;
-}
-
-inline void* wrapperContext(DOMWrapperWorld& world, TestNamedConstructor*)
-{
-    return &world;
+    static NeverDestroyed<JSTestNamedConstructorOwner> owner;
+    return &owner.get();
 }
 
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestNamedConstructor*);
-TestNamedConstructor* toTestNamedConstructor(JSC::JSValue);
+inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TestNamedConstructor& impl) { return toJS(exec, globalObject, &impl); }
 
-class JSTestNamedConstructorPrototype : public JSC::JSNonFinalObject {
-public:
-    typedef JSC::JSNonFinalObject Base;
-    static JSC::JSObject* self(JSC::VM&, JSC::JSGlobalObject*);
-    static JSTestNamedConstructorPrototype* create(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::Structure* structure)
-    {
-        JSTestNamedConstructorPrototype* ptr = new (NotNull, JSC::allocateCell<JSTestNamedConstructorPrototype>(vm.heap)) JSTestNamedConstructorPrototype(vm, globalObject, structure);
-        ptr->finishCreation(vm);
-        return ptr;
-    }
-
-    DECLARE_INFO;
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
-    }
-
-private:
-    JSTestNamedConstructorPrototype(JSC::VM& vm, JSC::JSGlobalObject*, JSC::Structure* structure) : JSC::JSNonFinalObject(vm, structure) { }
-protected:
-    static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | Base::StructureFlags;
-};
-
-class JSTestNamedConstructorConstructor : public DOMConstructorObject {
-private:
-    JSTestNamedConstructorConstructor(JSC::Structure*, JSDOMGlobalObject*);
-    void finishCreation(JSC::VM&, JSDOMGlobalObject*);
-
-public:
-    typedef DOMConstructorObject Base;
-    static JSTestNamedConstructorConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
-    {
-        JSTestNamedConstructorConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestNamedConstructorConstructor>(vm.heap)) JSTestNamedConstructorConstructor(structure, globalObject);
-        ptr->finishCreation(vm, globalObject);
-        return ptr;
-    }
-
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    DECLARE_INFO;
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
-    }
-protected:
-    static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | JSC::ImplementsHasInstance | DOMConstructorObject::StructureFlags;
-};
-
-class JSTestNamedConstructorNamedConstructor : public DOMConstructorWithDocument {
-public:
-    typedef DOMConstructorWithDocument Base;
-
-    static JSTestNamedConstructorNamedConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
-    {
-        JSTestNamedConstructorNamedConstructor* constructor = new (NotNull, JSC::allocateCell<JSTestNamedConstructorNamedConstructor>(vm.heap)) JSTestNamedConstructorNamedConstructor(structure, globalObject);
-        constructor->finishCreation(vm, globalObject);
-        return constructor;
-    }
-
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
-    }
-
-    DECLARE_INFO;
-
-private:
-    JSTestNamedConstructorNamedConstructor(JSC::Structure*, JSDOMGlobalObject*);
-    static JSC::EncodedJSValue JSC_HOST_CALL constructJSTestNamedConstructor(JSC::ExecState*);
-    static JSC::ConstructType getConstructData(JSC::JSCell*, JSC::ConstructData&);
-    void finishCreation(JSC::VM&, JSDOMGlobalObject*);
-};
-
-// Attributes
-
-JSC::EncodedJSValue jsTestNamedConstructorConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
 
 } // namespace WebCore
 

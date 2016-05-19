@@ -39,8 +39,6 @@ public:
 
     virtual ~RenderTextFragment();
 
-    virtual bool isTextFragment() const override { return true; }
-
     virtual bool canBeSelectionLeaf() const override;
 
     unsigned start() const { return m_start; }
@@ -49,6 +47,9 @@ public:
     RenderBoxModelObject* firstLetter() const { return m_firstLetter; }
     void setFirstLetter(RenderBoxModelObject& firstLetter) { m_firstLetter = &firstLetter; }
 
+    RenderBlock* blockForAccompanyingFirstLetter();
+
+    void setContentString(const String& text);
     StringImpl* contentString() const { return m_contentString.impl(); }
 
     virtual void setText(const String&, bool force = false) override;
@@ -57,11 +58,11 @@ public:
     void setAltText(const String& altText) { m_altText = altText; }
 
 private:
+    virtual bool isTextFragment() const override { return true; }
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
     virtual void willBeDestroyed() override;
 
     virtual UChar previousCharacter() const override;
-    RenderBlock* blockForAccompanyingFirstLetter();
 
     unsigned m_start;
     unsigned m_end;
@@ -71,8 +72,11 @@ private:
     RenderBoxModelObject* m_firstLetter;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderTextFragment, isText() && toRenderText(renderer).isTextFragment())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RenderTextFragment)
+    static bool isType(const WebCore::RenderText& renderer) { return renderer.isTextFragment(); }
+    static bool isType(const WebCore::RenderObject& renderer) { return is<WebCore::RenderText>(renderer) && isType(downcast<WebCore::RenderText>(renderer)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // RenderTextFragment_h

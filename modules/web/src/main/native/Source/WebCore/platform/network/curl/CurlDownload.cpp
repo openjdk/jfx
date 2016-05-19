@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -24,19 +24,19 @@
  */
 
 #include "config.h"
+
+#if USE(CURL)
+
 #include "CurlDownload.h"
 
+#include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
-#include "MainThreadTask.h"
 #include "ResourceHandleManager.h"
 #include "ResourceRequest.h"
 #include <wtf/MainThread.h>
 #include <wtf/text/CString.h>
 
 using namespace WebCore;
-
-template<> struct CrossThreadCopierBase<false, false, CurlDownload*> : public CrossThreadCopierPassThrough<CurlDownload*> {
-};
 
 namespace WebCore {
 
@@ -209,11 +209,19 @@ void CurlDownloadManager::downloadThread(void* data)
         CURLcode err = curl_easy_getinfo(msg->easy_handle, CURLINFO_PRIVATE, &download);
 
         if (msg->msg == CURLMSG_DONE) {
-            if (msg->data.result == CURLE_OK)
-                callOnMainThread<CurlDownload*, CurlDownload*>(CurlDownload::downloadFinishedCallback, download);
-            else
-                callOnMainThread<CurlDownload*, CurlDownload*>(CurlDownload::downloadFailedCallback, download);
-
+            if (download) {
+                if (msg->data.result == CURLE_OK) {
+                    callOnMainThread([download] {
+                        download->didFinish();
+                        download->deref(); // This matches the ref() in CurlDownload::start().
+                    });
+                } else {
+                    callOnMainThread([download] {
+                        download->didFail();
+                        download->deref(); // This matches the ref() in CurlDownload::start().
+                    });
+                }
+            }
             downloadManager->removeFromCurl(msg->easy_handle);
         }
 
@@ -226,12 +234,12 @@ void CurlDownloadManager::downloadThread(void* data)
 CurlDownloadManager CurlDownload::m_downloadManager;
 
 CurlDownload::CurlDownload()
-: m_curlHandle(0)
-, m_customHeaders(0)
-, m_url(0)
-, m_tempHandle(invalidPlatformFileHandle)
-, m_deletesFileUponFailure(false)
-, m_listener(0)
+    : m_curlHandle(nullptr)
+    , m_customHeaders(nullptr)
+    , m_url(nullptr)
+    , m_tempHandle(invalidPlatformFileHandle)
+    , m_deletesFileUponFailure(false)
+    , m_listener(nullptr)
 {
 }
 
@@ -298,6 +306,7 @@ void CurlDownload::init(CurlDownloadListener* listener, ResourceHandle*, const R
 
 bool CurlDownload::start()
 {
+    ref(); // CurlDownloadManager::downloadThread will call deref when the download has finished.
     return m_downloadManager.add(m_curlHandle);
 }
 
@@ -391,18 +400,31 @@ void CurlDownload::didReceiveHeader(const String& header)
         if (httpCode >= 200 && httpCode < 300) {
             const char* url = 0;
             err = curl_easy_getinfo(m_curlHandle, CURLINFO_EFFECTIVE_URL, &url);
-            m_response.setURL(URL(ParsedURLString, url));
 
-            m_response.setMimeType(extractMIMETypeFromMediaType(m_response.httpHeaderField("Content-Type")));
-            m_response.setTextEncodingName(extractCharsetFromMediaType(m_response.httpHeaderField("Content-Type")));
-            m_response.setSuggestedFilename(filenameFromHTTPContentDisposition(m_response.httpHeaderField("Content-Disposition")));
+            String strUrl(url);
+            StringCapture capturedUrl(strUrl);
 
-            callOnMainThread<CurlDownload*, CurlDownload*>(receivedResponseCallback, this);
+            RefPtr<CurlDownload> protectedDownload(this);
+
+            callOnMainThread([this, capturedUrl, protectedDownload] {
+                m_response.setURL(URL(ParsedURLString, capturedUrl.string()));
+
+                m_response.setMimeType(extractMIMETypeFromMediaType(m_response.httpHeaderField(HTTPHeaderName::ContentType)));
+                m_response.setTextEncodingName(extractCharsetFromMediaType(m_response.httpHeaderField(HTTPHeaderName::ContentType)));
+
+                didReceiveResponse();
+            });
         }
     } else {
-        int splitPos = header.find(":");
-        if (splitPos != -1)
-            m_response.setHTTPHeaderField(header.left(splitPos), header.substring(splitPos+1).stripWhiteSpace());
+        StringCapture capturedHeader(header);
+
+        RefPtr<CurlDownload> protectedDownload(this);
+
+        callOnMainThread([this, capturedHeader, protectedDownload] {
+            int splitPos = capturedHeader.string().find(":");
+            if (splitPos != -1)
+                m_response.setHTTPHeaderField(capturedHeader.string().left(splitPos), capturedHeader.string().substring(splitPos + 1).stripWhiteSpace());
+        });
     }
 }
 
@@ -410,7 +432,11 @@ void CurlDownload::didReceiveData(void* data, int size)
 {
     MutexLocker locker(m_mutex);
 
-    callOnMainThread<CurlDownload*, CurlDownload*, int, int>(receivedDataCallback, this, size);
+    RefPtr<CurlDownload> protectedDownload(this);
+
+    callOnMainThread([this, size, protectedDownload] {
+        didReceiveDataOfLength(size);
+    });
 
     writeDataToFile(static_cast<const char*>(data), size);
 }
@@ -465,7 +491,7 @@ size_t CurlDownload::headerCallback(char* ptr, size_t size, size_t nmemb, void* 
     size_t totalSize = size * nmemb;
     CurlDownload* download = reinterpret_cast<CurlDownload*>(data);
 
-    String header = String::fromUTF8WithLatin1Fallback(static_cast<const char*>(ptr), totalSize);
+    String header(static_cast<const char*>(ptr), totalSize);
 
     if (download)
         download->didReceiveHeader(header);
@@ -498,3 +524,5 @@ void CurlDownload::receivedResponseCallback(CurlDownload* download)
 }
 
 }
+
+#endif

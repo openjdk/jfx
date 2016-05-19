@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,8 +26,9 @@
 #ifndef SubstituteData_h
 #define SubstituteData_h
 
-#include "URL.h"
+#include "ResourceResponse.h"
 #include "SharedBuffer.h"
+#include "URL.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 
@@ -35,41 +36,37 @@ namespace WebCore {
 
     class SubstituteData {
     public:
+        enum class SessionHistoryVisibility {
+            Visible,
+            Hidden,
+        };
+
         SubstituteData()
-            : m_shouldRevealToSessionHistory(false)
         {
         }
 
-        SubstituteData(PassRefPtr<SharedBuffer> content, const String& mimeType,
-                const String& textEncoding, const URL& failingURL,
-                const URL& responseURL = URL(), bool shouldRevealToSessionHistory = false)
+        SubstituteData(PassRefPtr<SharedBuffer> content, const URL& failingURL, const ResourceResponse& response, SessionHistoryVisibility shouldRevealToSessionHistory)
             : m_content(content)
-            , m_mimeType(mimeType)
-            , m_textEncoding(textEncoding)
             , m_failingURL(failingURL)
-            , m_responseURL(responseURL)
+            , m_response(response)
             , m_shouldRevealToSessionHistory(shouldRevealToSessionHistory)
         {
         }
 
-        static const bool ShouldRevealToSessionHistory = true;
-
         bool isValid() const { return m_content != 0; }
-        bool shouldRevealToSessionHistory() const { return m_shouldRevealToSessionHistory; }
+        bool shouldRevealToSessionHistory() const { return m_shouldRevealToSessionHistory == SessionHistoryVisibility::Visible; }
 
         const SharedBuffer* content() const { return m_content.get(); }
-        const String& mimeType() const { return m_mimeType; }
-        const String& textEncoding() const { return m_textEncoding; }
+        const String& mimeType() const { return m_response.mimeType(); }
+        const String& textEncoding() const { return m_response.textEncodingName(); }
         const URL& failingURL() const { return m_failingURL; }
-        const URL& responseURL() const { return m_responseURL; }
+        const ResourceResponse& response() const { return m_response; }
 
     private:
         RefPtr<SharedBuffer> m_content;
-        String m_mimeType;
-        String m_textEncoding;
         URL m_failingURL;
-        URL m_responseURL;
-        bool m_shouldRevealToSessionHistory;
+        ResourceResponse m_response;
+        SessionHistoryVisibility m_shouldRevealToSessionHistory { SessionHistoryVisibility::Hidden };
     };
 
 }

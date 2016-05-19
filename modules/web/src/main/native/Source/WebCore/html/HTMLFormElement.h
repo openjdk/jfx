@@ -28,7 +28,7 @@
 #include "FormState.h"
 #include "FormSubmission.h"
 #include "HTMLElement.h"
-#include <wtf/OwnPtr.h>
+#include <memory>
 
 #if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
 #include "Autocapitalize.h"
@@ -46,13 +46,13 @@ class TextEncoding;
 
 class HTMLFormElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLFormElement> create(Document&);
-    static PassRefPtr<HTMLFormElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLFormElement> create(Document&);
+    static Ref<HTMLFormElement> create(const QualifiedName&, Document&);
     virtual ~HTMLFormElement();
 
-    PassRefPtr<HTMLCollection> elements();
+    Ref<HTMLCollection> elements();
     bool hasNamedElement(const AtomicString&);
-    void getNamedElements(const AtomicString&, Vector<Ref<Element>>&);
+    Vector<Ref<Element>> namedElements(const AtomicString&);
 
     unsigned length() const;
     Node* item(unsigned index);
@@ -66,10 +66,10 @@ public:
     bool shouldAutocomplete() const;
 
 #if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
-    bool autocorrect() const;
+    WEBCORE_EXPORT bool autocorrect() const;
     void setAutocorrect(bool);
 
-    WebAutocapitalizeType autocapitalizeType() const;
+    WEBCORE_EXPORT WebAutocapitalizeType autocapitalizeType() const;
     const AtomicString& autocapitalize() const;
     void setAutocapitalize(const AtomicString&);
 #endif
@@ -78,10 +78,13 @@ public:
     void registerFormElement(FormAssociatedElement*);
     void removeFormElement(FormAssociatedElement*);
 
+    void registerInvalidAssociatedFormControl(const HTMLFormControlElement&);
+    void removeInvalidAssociatedFormControlIfNeeded(const HTMLFormControlElement&);
+
     void registerImgElement(HTMLImageElement*);
     void removeImgElement(HTMLImageElement*);
 
-    bool prepareForSubmission(Event*);
+    void prepareForSubmission(Event*); // FIXME: This function doesn't only prepare, it sometimes calls submit() itself.
     void submit();
     void submitFromJavaScript();
     void reset();
@@ -111,6 +114,18 @@ public:
     HTMLFormControlElement* defaultButton() const;
 
     bool checkValidity();
+
+#if ENABLE(REQUEST_AUTOCOMPLETE)
+    enum class AutocompleteResult {
+        Success,
+        ErrorDisabled,
+        ErrorCancel,
+        ErrorInvalid,
+    };
+
+    void requestAutocomplete();
+    void finishRequestAutocomplete(AutocompleteResult);
+#endif
 
     CheckedRadioButtons& checkedRadioButtons() { return m_checkedRadioButtons; }
 
@@ -158,10 +173,13 @@ private:
     void assertItemCanBeInPastNamesMap(FormNamedItem*) const;
     void removeFromPastNamesMap(FormNamedItem*);
 
+    virtual bool matchesValidPseudoClass() const override;
+    virtual bool matchesInvalidPseudoClass() const override;
+
     typedef HashMap<RefPtr<AtomicStringImpl>, FormNamedItem*> PastNamesMap;
 
     FormSubmission::Attributes m_attributes;
-    OwnPtr<PastNamesMap> m_pastNamesMap;
+    std::unique_ptr<PastNamesMap> m_pastNamesMap;
 
     CheckedRadioButtons m_checkedRadioButtons;
 
@@ -169,6 +187,7 @@ private:
     unsigned m_associatedElementsAfterIndex;
     Vector<FormAssociatedElement*> m_associatedElements;
     Vector<HTMLImageElement*> m_imageElements;
+    HashSet<const HTMLFormControlElement*> m_invalidAssociatedFormControls;
 
     bool m_wasUserSubmitted;
     bool m_isSubmittingOrPreparingForSubmission;
@@ -177,9 +196,14 @@ private:
     bool m_isInResetFunction;
 
     bool m_wasDemoted;
-};
 
-NODE_TYPE_CASTS(HTMLFormElement)
+#if ENABLE(REQUEST_AUTOCOMPLETE)
+    void requestAutocompleteTimerFired();
+
+    Vector<RefPtr<Event>> m_pendingAutocompleteEvents;
+    Timer m_requestAutocompleteTimer;
+#endif
+};
 
 } // namespace WebCore
 

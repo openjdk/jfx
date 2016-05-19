@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,12 +40,11 @@ class CachedResource;
 class CachedResourceLoader;
 class Document;
 class DocumentLoader;
-class PageActivityAssertionToken;
 class ResourceRequest;
 
-class SubresourceLoader : public ResourceLoader {
+class SubresourceLoader final : public ResourceLoader {
 public:
-    static PassRefPtr<SubresourceLoader> create(DocumentLoader*, CachedResource*, const ResourceRequest&, const ResourceLoaderOptions&);
+    WEBCORE_EXPORT static RefPtr<SubresourceLoader> create(DocumentLoader*, CachedResource*, const ResourceRequest&, const ResourceLoaderOptions&);
 
     virtual ~SubresourceLoader();
 
@@ -75,6 +74,13 @@ private:
     virtual void willCancel(const ResourceError&) override;
     virtual void didCancel(const ResourceError&) override;
 
+#if PLATFORM(COCOA) && !USE(CFNETWORK)
+    virtual NSCachedURLResponse *willCacheResponse(ResourceHandle*, NSCachedURLResponse*) override;
+#endif
+#if PLATFORM(COCOA) && USE(CFNETWORK)
+    virtual CFCachedURLResponseRef willCacheResponse(ResourceHandle*, CFCachedURLResponseRef) override;
+#endif
+
 #if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     virtual bool supportsDataArray() override { return true; }
     virtual void didReceiveDataArray(CFArrayRef) override;
@@ -102,10 +108,10 @@ private:
 
     class RequestCountTracker {
     public:
-        RequestCountTracker(CachedResourceLoader*, CachedResource*);
+        RequestCountTracker(CachedResourceLoader&, CachedResource*);
         ~RequestCountTracker();
     private:
-        CachedResourceLoader* m_cachedResourceLoader;
+        CachedResourceLoader& m_cachedResourceLoader;
         CachedResource* m_resource;
     };
 
@@ -115,7 +121,7 @@ private:
     CachedResource* m_resource;
     bool m_loadingMultipartContent;
     SubresourceLoaderState m_state;
-    OwnPtr<RequestCountTracker> m_requestCountTracker;
+    std::unique_ptr<RequestCountTracker> m_requestCountTracker;
 };
 
 }

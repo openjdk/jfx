@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -27,8 +27,6 @@
  */
 
 #import "WebDatabaseManagerPrivate.h"
-
-#if ENABLE(SQL_DATABASE)
 
 #import "WebDatabaseManagerClient.h"
 #import "WebPlatformStrategies.h"
@@ -76,7 +74,7 @@ static NSString *databasesDirectoryPath();
 
     WebPlatformStrategies::initializeIfNecessary();
 
-    DatabaseManager& dbManager = DatabaseManager::manager();
+    DatabaseManager& dbManager = DatabaseManager::singleton();
 
     // Set the database root path in WebCore
     dbManager.initialize(databasesDirectoryPath());
@@ -90,7 +88,7 @@ static NSString *databasesDirectoryPath();
 - (NSArray *)origins
 {
     Vector<RefPtr<SecurityOrigin>> coreOrigins;
-    DatabaseManager::manager().origins(coreOrigins);
+    DatabaseManager::singleton().origins(coreOrigins);
     NSMutableArray *webOrigins = [[NSMutableArray alloc] initWithCapacity:coreOrigins.size()];
 
     for (unsigned i = 0; i < coreOrigins.size(); ++i) {
@@ -105,7 +103,7 @@ static NSString *databasesDirectoryPath();
 - (NSArray *)databasesWithOrigin:(WebSecurityOrigin *)origin
 {
     Vector<String> nameVector;
-    if (!DatabaseManager::manager().databaseNamesForOrigin([origin _core], nameVector))
+    if (!DatabaseManager::singleton().databaseNamesForOrigin([origin _core], nameVector))
         return nil;
 
     NSMutableArray *names = [[NSMutableArray alloc] initWithCapacity:nameVector.size()];
@@ -120,7 +118,7 @@ static NSString *databasesDirectoryPath();
 {
     static id keys[3] = {WebDatabaseDisplayNameKey, WebDatabaseExpectedSizeKey, WebDatabaseUsageKey};
 
-    DatabaseDetails details = DatabaseManager::manager().detailsForNameAndOrigin(databaseIdentifier, [origin _core]);
+    DatabaseDetails details = DatabaseManager::singleton().detailsForNameAndOrigin(databaseIdentifier, [origin _core]);
     if (details.name().isNull())
         return nil;
 
@@ -134,7 +132,7 @@ static NSString *databasesDirectoryPath();
 
 - (void)deleteAllDatabases
 {
-    DatabaseManager::manager().deleteAllDatabases();
+    DatabaseManager::singleton().deleteAllDatabases();
 #if PLATFORM(IOS)
     // FIXME: This needs to be removed once DatabaseTrackers in multiple processes
     // are in sync: <rdar://problem/9567500> Remove Website Data pane is not kept in sync with Safari
@@ -144,12 +142,12 @@ static NSString *databasesDirectoryPath();
 
 - (BOOL)deleteOrigin:(WebSecurityOrigin *)origin
 {
-    return DatabaseManager::manager().deleteOrigin([origin _core]);
+    return DatabaseManager::singleton().deleteOrigin([origin _core]);
 }
 
 - (BOOL)deleteDatabase:(NSString *)databaseIdentifier withOrigin:(WebSecurityOrigin *)origin
 {
-    return DatabaseManager::manager().deleteDatabase([origin _core], databaseIdentifier);
+    return DatabaseManager::singleton().deleteDatabase([origin _core], databaseIdentifier);
 }
 
 #if PLATFORM(IOS)
@@ -230,7 +228,7 @@ static bool isFileHidden(NSString *file)
 
 static Mutex& transactionBackgroundTaskIdentifierLock()
 {
-    DEFINE_STATIC_LOCAL(Mutex, mutex, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(Mutex, mutex, ());
     return mutex;
 }
 
@@ -269,7 +267,10 @@ static WebBackgroundTaskIdentifier getTransactionBackgroundTaskIdentifier()
     if (getTransactionBackgroundTaskIdentifier() != invalidWebBackgroundTaskIdentifier())
         return;
 
-    setTransactionBackgroundTaskIdentifier(startBackgroundTask(^ { [WebDatabaseManager endBackgroundTask]; }));
+    setTransactionBackgroundTaskIdentifier(startBackgroundTask(^ {
+        DatabaseTracker::tracker().closeAllDatabases();
+        [WebDatabaseManager endBackgroundTask];
+    }));
 }
 
 + (void)endBackgroundTask
@@ -305,5 +306,3 @@ static NSString *databasesDirectoryPath()
 
     return [databasesDirectory stringByStandardizingPath];
 }
-
-#endif

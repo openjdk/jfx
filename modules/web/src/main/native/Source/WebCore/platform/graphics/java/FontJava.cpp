@@ -5,9 +5,10 @@
 
 #include "Font.h"
 #include "TextRun.h"
-#include "FontData.h"
+#include "LayoutRect.h"
+#include "FontRanges.h" //XXX: FontData.h -> FontRanges.h
 #include "GlyphBuffer.h"
-#include "SimpleFontData.h"
+#include "Font.h" //XXX: SimpleFontData.h -> Font.h
 #include "GraphicsContext.h"
 #include "GraphicsContextJava.h"
 #include "RenderingQueue.h"
@@ -27,14 +28,14 @@ static JLString getJavaString(const TextRun& run)
     String ret = run.is8Bit()
         ? String(allowTabs
                 ? String(run.characters8())
-                : Font::normalizeSpaces(run.characters8(), length))
+                : FontCascade::normalizeSpaces(run.characters8(), length))
         : String(allowTabs
                 ? String(run.characters16())
-                : Font::normalizeSpaces(run.characters16(), length));
+                : FontCascade::normalizeSpaces(run.characters16(), length));
     return ret.toJavaString(WebCore_GetJavaEnv());
 }
 
-float Font::drawComplexText(GraphicsContext* gc, const TextRun & run, const FloatPoint & point, int from, int to) const
+float FontCascade::drawComplexText(GraphicsContext* gc, const TextRun & run, const FloatPoint & point, int from, int to) const
 {
     if (!gc) {
         return 0;
@@ -57,7 +58,7 @@ float Font::drawComplexText(GraphicsContext* gc, const TextRun & run, const Floa
     CheckAndClearException(env);
 
     rq  << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWSTRING
-        << primaryFont()->platformData().nativeFontData()
+        << primaryFont().platformData().nativeFontData()
         << sid
         << (jint)(run.rtl() ? -1 : 0)
         << (jint)from
@@ -68,9 +69,9 @@ float Font::drawComplexText(GraphicsContext* gc, const TextRun & run, const Floa
     return 0; // tav todo
 }
 
-float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow* /* glyphOverflow */) const
+float FontCascade::floatWidthForComplexText(const TextRun& run, HashSet<const Font*>* fallbackFonts, GlyphOverflow* /* glyphOverflow */) const
 {
-    RefPtr<RQRef> jFont = primaryFont()->platformData().nativeFontData();
+    RefPtr<RQRef> jFont = primaryFont().platformData().nativeFontData();
     if (!jFont)
         return 0.0f;
 
@@ -90,16 +91,15 @@ float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFon
     return res;
 }
 
-FloatRect Font::selectionRectForComplexText(const TextRun& run,
-        const FloatPoint& point, int h, int from, int to) const
+void FontCascade::adjustSelectionRectForComplexText(const TextRun& run, LayoutRect& selectionRect, int from, int to) const
 {
-    RefPtr<RQRef> jFont = primaryFont()->platformData().nativeFontData();
+    RefPtr<RQRef> jFont = primaryFont().platformData().nativeFontData();
     if (!jFont)
-        return FloatRect();
+        return;
 
     // adjusting to/from bounds due to issue RT-46101
     if (from > run.length()) {
-        return FloatRect();
+        return;
     }
 
     if (to > run.length()) {
@@ -122,20 +122,20 @@ FloatRect Font::selectionRectForComplexText(const TextRun& run,
         jboolean(run.rtl()))));
 
     if (CheckAndClearException(env)) {
-        return FloatRect();
+        return;
     }
 
     jdouble* pBnds = (jdouble*)env->GetPrimitiveArrayCritical((jdoubleArray)bnds, NULL);
-    FloatRect r(pBnds[0] + point.x(), point.y(), pBnds[2], h);
+    FloatRect rect(pBnds[0] + selectionRect.x(), selectionRect.y(), pBnds[2], selectionRect.height()); //XXX recheck
+    selectionRect = LayoutRect(rect);
     env->ReleasePrimitiveArrayCritical(bnds, pBnds, JNI_ABORT);
-    return r;
 }
 
-int Font::offsetForPositionForComplexText(
+int FontCascade::offsetForPositionForComplexText(
     const TextRun& run, float xFloat,
     bool includePartialGlyphs) const
 {
-    RefPtr<RQRef> jFont = primaryFont()->platformData().nativeFontData();
+    RefPtr<RQRef> jFont = primaryFont().platformData().nativeFontData();
     if (!jFont)
         return 0;
 
@@ -156,8 +156,8 @@ int Font::offsetForPositionForComplexText(
     return res;
 }
 
-void Font::drawGlyphs(GraphicsContext* gc,
-                      const SimpleFontData* font,
+void FontCascade::drawGlyphs(GraphicsContext* gc,
+                      const Font* font,
                       const GlyphBuffer& glyphBuffer,
                       int from, int numGlyphs,
                       const FloatPoint& point) const
@@ -224,17 +224,17 @@ void Font::drawGlyphs(GraphicsContext* gc,
         << (jfloat)point.y();
 }
 
-bool Font::canReturnFallbackFontsForComplexText()
+bool FontCascade::canReturnFallbackFontsForComplexText()
 {
     return false;
 }
 
-bool Font::canExpandAroundIdeographsInComplexText()
+bool FontCascade::canExpandAroundIdeographsInComplexText()
 {
     return false;
 }
 
-void Font::drawEmphasisMarksForComplexText(
+void FontCascade::drawEmphasisMarksForComplexText(
     GraphicsContext* context,
     const TextRun& run,
     const AtomicString& mark,
@@ -242,7 +242,7 @@ void Font::drawEmphasisMarksForComplexText(
     int from,
     int to) const
 {
-    if (loadingCustomFonts())
+    if (isLoadingCustomFonts())
         return;
 
     if (to < 0)
@@ -250,7 +250,7 @@ void Font::drawEmphasisMarksForComplexText(
 
 #if ENABLE(SVG_FONTS)
     // FIXME: Implement for SVG fonts.
-    if (primaryFont()->isSVGFont())
+    if (primaryFont().isSVGFont())
         return;
 #endif
 

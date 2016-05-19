@@ -33,23 +33,11 @@
 
 #include "BlobURL.h"
 #include "File.h"
-#include "HistogramSupport.h"
 #include "ScriptExecutionContext.h"
 #include "ThreadableBlobRegistry.h"
 #include <wtf/text/CString.h>
 
 namespace WebCore {
-
-namespace {
-
-// Used in histograms to see when we can actually deprecate the prefixed slice.
-enum SliceHistogramEnum {
-    SliceWithoutPrefix,
-    SliceWithPrefix,
-    SliceHistogramEnumMax,
-};
-
-} // namespace
 
 class BlobURLRegistry final : public URLRegistry {
 public:
@@ -73,44 +61,71 @@ void BlobURLRegistry::unregisterURL(const URL& url)
 
 URLRegistry& BlobURLRegistry::registry()
 {
-    DEFINE_STATIC_LOCAL(BlobURLRegistry, instance, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(BlobURLRegistry, instance, ());
     return instance;
 }
 
 
+Blob::Blob(UninitializedContructor)
+{
+}
+
 Blob::Blob()
     : m_size(0)
 {
-    auto blobData = std::make_unique<BlobData>();
-
-    // Create a new internal URL and register it with the provided blob data.
     m_internalURL = BlobURL::createInternalURL();
-    ThreadableBlobRegistry::registerBlobURL(m_internalURL, std::move(blobData));
+    ThreadableBlobRegistry::registerBlobURL(m_internalURL, Vector<BlobPart>(), String());
 }
 
-Blob::Blob(std::unique_ptr<BlobData> blobData, long long size)
-    : m_type(blobData->contentType())
-    , m_size(size)
+Blob::Blob(Vector<char> data, const String& contentType)
+    : m_type(contentType)
+    , m_size(data.size())
 {
-    ASSERT(blobData);
-
-    // Create a new internal URL and register it with the provided blob data.
+    Vector<BlobPart> blobParts;
+    blobParts.append(BlobPart(WTF::move(data)));
     m_internalURL = BlobURL::createInternalURL();
-    ThreadableBlobRegistry::registerBlobURL(m_internalURL, std::move(blobData));
+    ThreadableBlobRegistry::registerBlobURL(m_internalURL, WTF::move(blobParts), contentType);
 }
 
-Blob::Blob(const URL& srcURL, const String& type, long long size)
+Blob::Blob(Vector<BlobPart> blobParts, const String& contentType)
+    : m_type(contentType)
+    , m_size(-1)
+{
+    m_internalURL = BlobURL::createInternalURL();
+    ThreadableBlobRegistry::registerBlobURL(m_internalURL, WTF::move(blobParts), contentType);
+}
+
+Blob::Blob(DeserializationContructor, const URL& srcURL, const String& type, long long size)
     : m_type(Blob::normalizedContentType(type))
     , m_size(size)
 {
-    // Create a new internal URL and register it with the same blob data as the source URL.
     m_internalURL = BlobURL::createInternalURL();
     ThreadableBlobRegistry::registerBlobURL(0, m_internalURL, srcURL);
+}
+
+Blob::Blob(const URL& srcURL, long long start, long long end, const String& type)
+    : m_type(Blob::normalizedContentType(type))
+    , m_size(-1) // size is not necessarily equal to end - start.
+{
+    m_internalURL = BlobURL::createInternalURL();
+    ThreadableBlobRegistry::registerBlobURLForSlice(m_internalURL, srcURL, start, end);
 }
 
 Blob::~Blob()
 {
     ThreadableBlobRegistry::unregisterBlobURL(m_internalURL);
+}
+
+unsigned long long Blob::size() const
+{
+    if (m_size < 0) {
+        // FIXME: JavaScript cannot represent sizes as large as unsigned long long, we need to
+        // come up with an exception to throw if file size is not representable.
+        unsigned long long actualSize = ThreadableBlobRegistry::blobSize(m_internalURL);
+        m_size = (WTF::isInBounds<long long>(actualSize)) ? static_cast<long long>(actualSize) : 0;
+    }
+
+    return static_cast<unsigned long long>(m_size);
 }
 
 bool Blob::isValidContentType(const String& contentType)
@@ -180,52 +195,6 @@ bool Blob::isNormalizedContentType(const CString& contentType)
     }
     return true;
 }
-
-#if ENABLE(BLOB)
-PassRefPtr<Blob> Blob::slice(long long start, long long end, const String& contentType) const
-{
-    // When we slice a file for the first time, we obtain a snapshot of the file by capturing its current size and modification time.
-    // The modification time will be used to verify if the file has been changed or not, when the underlying data are accessed.
-    long long size;
-    double modificationTime;
-    if (isFile()) {
-        // FIXME: This involves synchronous file operation. We need to figure out how to make it asynchronous.
-        toFile(this)->captureSnapshot(size, modificationTime);
-    } else {
-        ASSERT(m_size != -1);
-        size = m_size;
-    }
-
-    // Convert the negative value that is used to select from the end.
-    if (start < 0)
-        start = start + size;
-    if (end < 0)
-        end = end + size;
-
-    // Clamp the range if it exceeds the size limit.
-    if (start < 0)
-        start = 0;
-    if (end < 0)
-        end = 0;
-    if (start >= size) {
-        start = 0;
-        end = 0;
-    } else if (end < start)
-        end = start;
-    else if (end > size)
-        end = size;
-
-    long long length = end - start;
-    auto blobData = std::make_unique<BlobData>();
-    blobData->setContentType(Blob::normalizedContentType(contentType));
-    if (isFile())
-        blobData->appendFile(toFile(this)->path(), start, length, modificationTime);
-    else
-        blobData->appendBlob(m_internalURL, start, length);
-
-    return Blob::create(std::move(blobData), length);
-}
-#endif
 
 URLRegistry& Blob::registry() const
 {

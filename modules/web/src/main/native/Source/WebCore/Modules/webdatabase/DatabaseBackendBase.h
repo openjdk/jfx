@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,8 +30,6 @@
 #ifndef DatabaseBackendBase_h
 #define DatabaseBackendBase_h
 
-#if ENABLE(SQL_DATABASE)
-
 #include "DatabaseBasicTypes.h"
 #include "DatabaseDetails.h"
 #include "DatabaseError.h"
@@ -43,9 +41,9 @@
 
 namespace WebCore {
 
+class Database;
 class DatabaseAuthorizer;
-class DatabaseBackendContext;
-class DatabaseBase;
+class DatabaseContext;
 class SecurityOrigin;
 
 class DatabaseBackendBase : public ThreadSafeRefCounted<DatabaseBackendBase> {
@@ -56,7 +54,6 @@ public:
 
     bool opened() const { return m_opened; }
     bool isNew() const { return m_new; }
-    bool isSyncDatabase() const { return m_isSyncDatabase; }
 
     virtual SecurityOrigin* securityOrigin() const;
     virtual String stringIdentifier() const;
@@ -73,7 +70,6 @@ public:
 
     void disableAuthorizer();
     void enableAuthorizer();
-    void setAuthorizerReadOnly();
     void setAuthorizerPermissions(int permissions);
     bool lastActionChangedDatabase();
     bool lastActionWasInsert();
@@ -81,11 +77,8 @@ public:
     bool hadDeletes();
     void resetAuthorizer();
 
-    virtual void markAsDeletedAndClose() = 0;
-    virtual void closeImmediately() = 0;
-
-    DatabaseBackendContext* databaseContext() const { return m_databaseContext.get(); }
-    void setFrontend(DatabaseBase* frontend) { m_frontend = frontend; }
+    DatabaseContext* databaseContext() const { return m_databaseContext.get(); }
+    void setFrontend(Database* frontend) { m_frontend = frontend; }
 
 protected:
     friend class ChangeVersionWrapper;
@@ -94,12 +87,10 @@ protected:
     friend class SQLTransactionBackend;
     friend class SQLTransactionBackendSync;
 
-    DatabaseBackendBase(PassRefPtr<DatabaseBackendContext>, const String& name, const String& expectedVersion,
-        const String& displayName, unsigned long estimatedSize, DatabaseType);
+    DatabaseBackendBase(PassRefPtr<DatabaseContext>, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize);
 
     void closeDatabase();
 
-    virtual bool openAndVerifyVersion(bool setVersionInNewDatabase, DatabaseError&, String& errorMessage) = 0;
     virtual bool performOpenAndVerify(bool shouldSetVersionInNewDatabase, DatabaseError&, String& errorMessage);
 
     bool getVersionFromDatabase(String& version, bool shouldCacheVersion = true);
@@ -117,7 +108,7 @@ protected:
 #endif
 
     RefPtr<SecurityOrigin> m_contextThreadSecurityOrigin;
-    RefPtr<DatabaseBackendContext> m_databaseContext; // Associated with m_scriptExecutionContext.
+    RefPtr<DatabaseContext> m_databaseContext; // Associated with m_scriptExecutionContext.
 
     String m_name;
     String m_expectedVersion;
@@ -125,13 +116,12 @@ protected:
     unsigned long m_estimatedSize;
     String m_filename;
 
-    DatabaseBase* m_frontend;
+    Database* m_frontend;
 
 private:
     DatabaseGuid m_guid;
     bool m_opened;
     bool m_new;
-    const bool m_isSyncDatabase;
 
     SQLiteDatabase m_sqliteDatabase;
 
@@ -141,7 +131,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)
 
 #endif // DatabaseBackendBase_h

@@ -24,13 +24,16 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "InjectedBundleTest.h"
 #include "PlatformUtilities.h"
 #include "Test.h"
 
-#include <WebKit2/WKBundlePage.h>
-#include <WebKit2/WKBundleFrame.h>
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKBundlePage.h>
+#include <WebKit/WKBundleFrame.h>
+#include <WebKit/WKRetainPtr.h>
 
 #include <wtf/Assertions.h>
 
@@ -70,3 +73,5 @@ public:
 static InjectedBundleTest::Register<LoadCanceledNoServerRedirectCallbackTest> registrar("LoadCanceledNoServerRedirectCallbackTest");
 
 } // namespace TestWebKitAPI
+
+#endif

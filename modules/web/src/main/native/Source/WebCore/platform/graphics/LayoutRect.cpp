@@ -104,14 +104,15 @@ void LayoutRect::uniteIfNonZero(const LayoutRect& other)
     m_size = newMaxPoint - newLocation;
 }
 
-void LayoutRect::scale(float s)
+void LayoutRect::scale(float scaleValue)
 {
-    m_location.scale(s, s);
-    m_size.scale(s);
+    scale(scaleValue, scaleValue);
 }
 
 void LayoutRect::scale(float xScale, float yScale)
 {
+    if (isInfinite())
+        return;
     m_location.scale(xScale, yScale);
     m_size.scale(xScale, yScale);
 }
@@ -129,22 +130,27 @@ LayoutRect unionRect(const Vector<LayoutRect>& rects)
 
 IntRect enclosingIntRect(const LayoutRect& rect)
 {
+    // Empty rects with fractional x, y values turn into non-empty rects when converting to enclosing.
+    // We need to ensure that empty rects stay empty after the conversion, because the selection code expects them to be empty.
     IntPoint location = flooredIntPoint(rect.minXMinYCorner());
-    IntPoint maxPoint = ceiledIntPoint(rect.maxXMaxYCorner());
-
+    IntPoint maxPoint = IntPoint(rect.width() ? rect.maxX().ceil() : location.x(), rect.height() ? rect.maxY().ceil() : location.y());
     return IntRect(location, maxPoint - location);
 }
 
 LayoutRect enclosingLayoutRect(const FloatRect& rect)
 {
-#if ENABLE(SUBPIXEL_LAYOUT)
     LayoutPoint location = flooredLayoutPoint(rect.minXMinYCorner());
     LayoutPoint maxPoint = ceiledLayoutPoint(rect.maxXMaxYCorner());
 
     return LayoutRect(location, maxPoint - location);
-#else
-    return enclosingIntRect(rect);
-#endif
+}
+
+FloatRect encloseRectToDevicePixels(const LayoutRect& rect, float pixelSnappingFactor)
+{
+    FloatPoint location = floorPointToDevicePixels(rect.minXMinYCorner(), pixelSnappingFactor);
+    FloatPoint maxPoint = ceilPointToDevicePixels(rect.maxXMaxYCorner(), pixelSnappingFactor);
+
+    return FloatRect(location, maxPoint - location);
 }
 
 } // namespace WebCore

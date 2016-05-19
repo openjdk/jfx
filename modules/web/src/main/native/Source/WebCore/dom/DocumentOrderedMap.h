@@ -45,6 +45,7 @@ class HTMLMapElement;
 class TreeScope;
 
 class DocumentOrderedMap {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     void add(const AtomicStringImpl&, Element&, const TreeScope&);
     void remove(const AtomicStringImpl&, Element&);
@@ -67,7 +68,8 @@ public:
     const Vector<Element*>* getAllElementsById(const AtomicStringImpl&, const TreeScope&) const;
 
 private:
-    template<bool keyMatches(const AtomicStringImpl&, const Element&)> Element* get(const AtomicStringImpl&, const TreeScope&) const;
+    template <typename KeyMatchingFunction>
+    Element* get(const AtomicStringImpl&, const TreeScope&, const KeyMatchingFunction&) const;
 
     struct MapEntry {
         MapEntry()

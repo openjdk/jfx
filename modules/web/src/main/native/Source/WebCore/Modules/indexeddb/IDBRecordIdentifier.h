@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,14 +37,14 @@ namespace WebCore {
 
 class IDBRecordIdentifier : public RefCounted<IDBRecordIdentifier> {
 public:
-    static PassRefPtr<IDBRecordIdentifier> create(const Vector<char>& encodedPrimaryKey, int64_t version)
+    static Ref<IDBRecordIdentifier> create(const Vector<char>& encodedPrimaryKey, int64_t version)
     {
-        return adoptRef(new IDBRecordIdentifier(encodedPrimaryKey, version));
+        return adoptRef(*new IDBRecordIdentifier(encodedPrimaryKey, version));
     }
 
-    static PassRefPtr<IDBRecordIdentifier> create()
+    static Ref<IDBRecordIdentifier> create()
     {
-        return adoptRef(new IDBRecordIdentifier);
+        return adoptRef(*new IDBRecordIdentifier);
     }
 
     const Vector<char>& encodedPrimaryKey() const { return m_encodedPrimaryKey; }

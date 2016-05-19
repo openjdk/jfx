@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2005 Apple Computer, Inc.  All rights reserved.
+# Copyright (C) 2005 Apple Inc.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -11,7 +11,7 @@
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
 #     documentation and/or other materials provided with the distribution. 
-# 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+# 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
 #     from this software without specific prior written permission. 
 #
@@ -36,12 +36,16 @@ my $usage = <<EOF;
 Usage: $programName [options]
   --32-bit                Set the default architecture to 32-bit
   --64-bit                Set the default architecture to 64-bit
+  --[no-]asan             Enable or disable clang address sanitizer
   --debug                 Set the default configuration to debug
   --release               Set the default configuration to release
+  --reset                 Reset configurations
 EOF
 
 my $configuration = passedConfiguration();
 my $architecture = passedArchitecture();
+my $enableASAN = checkForArgumentAndRemoveFromARGV("--asan");
+my $disableASAN = checkForArgumentAndRemoveFromARGV("--no-asan");
 
 if (!$architecture) {
     # Handle --64-bit explicitly here, as we don't want our other scripts to accept it
@@ -54,13 +58,20 @@ if (!$architecture) {
     }
 }
 
-if (!$configuration && !$architecture) {
+my $baseProductDir = baseProductDir();
+system "mkdir", "-p", "$baseProductDir";
+
+if (checkForArgumentAndRemoveFromARGV("--reset")) {
+    unlink "$baseProductDir/Configuration";
+    unlink "$baseProductDir/Architecture";
+    unlink "$baseProductDir/ASan";
+    exit 0;
+}
+
+if (!$configuration && !$architecture && !$enableASAN && !$disableASAN || ($enableASAN && $disableASAN)) {
     print STDERR $usage;
     exit 1;
 }
-
-my $baseProductDir = baseProductDir();
-system "mkdir", "-p", "$baseProductDir";
 
 if ($configuration) {
     open CONFIGURATION, ">", "$baseProductDir/Configuration" or die;
@@ -76,4 +87,12 @@ if ($architecture) {
     } else {
         unlink "$baseProductDir/Architecture";
     }
+}
+
+if ($enableASAN) {
+    open ASAN, ">", "$baseProductDir/ASan" or die;
+    print ASAN "YES";
+    close ASAN;
+} elsif ($disableASAN) {
+    unlink "$baseProductDir/ASan";
 }

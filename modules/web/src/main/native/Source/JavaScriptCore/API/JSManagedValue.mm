@@ -30,7 +30,6 @@
 #if JSC_OBJC_API_ENABLED
 
 #import "APICast.h"
-#import "APIShims.h"
 #import "Heap.h"
 #import "JSContextInternal.h"
 #import "JSValueInternal.h"
@@ -38,6 +37,7 @@
 #import "WeakHandleOwner.h"
 #import "ObjcRuntimeExtras.h"
 #import "JSCInlines.h"
+#import <wtf/spi/cocoa/NSMapTableSPI.h>
 
 class JSManagedValueHandleOwner : public JSC::WeakHandleOwner {
 public:
@@ -47,7 +47,7 @@ public:
 
 static JSManagedValueHandleOwner* managedValueHandleOwner()
 {
-    DEFINE_STATIC_LOCAL(JSManagedValueHandleOwner, jsManagedValueHandleOwner, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(JSManagedValueHandleOwner, jsManagedValueHandleOwner, ());
     return &jsManagedValueHandleOwner;
 }
 
@@ -266,7 +266,7 @@ private:
     if (!m_lock->vm())
         return nil;
 
-    JSC::APIEntryShim shim(m_lock->vm());
+    JSC::JSLockHolder apiLocker(m_lock->vm());
     if (!m_globalObject)
         return nil;
     if (m_weakValue.isClear())

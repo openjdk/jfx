@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKit.h"
 #include "WebKitDLL.h"
 #include "WebPreferences.h"
@@ -31,25 +30,26 @@
 #include "WebNotificationCenter.h"
 #include "WebPreferenceKeysPrivate.h"
 
-#include <CoreFoundation/CoreFoundation.h>
-#include <WebCore/COMPtr.h>
-#include <WebCore/FileSystem.h>
-#include <WebCore/Font.h>
-#include <WebCore/LocalizedStrings.h>
-#include <limits>
-#include <shlobj.h>
-#include <wchar.h>
-#include <wtf/HashMap.h>
-#include <wtf/StdLibExtras.h>
-#include <wtf/text/CString.h>
-#include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
-
 #if USE(CG)
 #include <CoreGraphics/CoreGraphics.h>
 #include <WebCore/CACFLayerTreeHost.h>
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #endif
+
+#include <CoreFoundation/CoreFoundation.h>
+#include <WebCore/COMPtr.h>
+#include <WebCore/FileSystem.h>
+#include <WebCore/FontCascade.h>
+#include <WebCore/LocalizedStrings.h>
+#include <limits>
+#include <shlobj.h>
+#include <wchar.h>
+#include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/CString.h>
+#include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 using namespace WebCore;
 using std::numeric_limits;
@@ -101,7 +101,11 @@ static bool booleanValueForPreferencesValue(CFPropertyListRef value)
 
 static CFDictionaryRef defaultSettings;
 
-static HashMap<WTF::String, COMPtr<WebPreferences> > webPreferencesInstances;
+static HashMap<WTF::String, COMPtr<WebPreferences>>& webPreferencesInstances()
+{
+    static NeverDestroyed<HashMap<WTF::String, COMPtr<WebPreferences>>> webPreferencesInstances;
+    return webPreferencesInstances;
+}
 
 WebPreferences* WebPreferences::sharedStandardPreferences()
 {
@@ -122,13 +126,13 @@ WebPreferences::WebPreferences()
     , m_numWebViews(0)
 {
     gClassCount++;
-    gClassNameCount.add("WebPreferences");
+    gClassNameCount().add("WebPreferences");
 }
 
 WebPreferences::~WebPreferences()
 {
     gClassCount--;
-    gClassNameCount.remove("WebPreferences");
+    gClassNameCount().remove("WebPreferences");
 }
 
 WebPreferences* WebPreferences::createInstance()
@@ -154,7 +158,10 @@ WebPreferences* WebPreferences::getInstanceForIdentifier(BSTR identifier)
         return sharedStandardPreferences();
 
     WTF::String identifierString(identifier, SysStringLen(identifier));
-    return webPreferencesInstances.get(identifierString).get();
+    if (identifierString.isEmpty())
+        return sharedStandardPreferences();
+
+    return webPreferencesInstances().get(identifierString);
 }
 
 void WebPreferences::setInstance(WebPreferences* instance, BSTR identifier)
@@ -162,18 +169,22 @@ void WebPreferences::setInstance(WebPreferences* instance, BSTR identifier)
     if (!identifier || !instance)
         return;
     WTF::String identifierString(identifier, SysStringLen(identifier));
-    webPreferencesInstances.add(identifierString, instance);
+    if (identifierString.isEmpty())
+        return;
+    webPreferencesInstances().add(identifierString, instance);
 }
 
 void WebPreferences::removeReferenceForIdentifier(BSTR identifier)
 {
-    if (!identifier || webPreferencesInstances.isEmpty())
+    if (!identifier || webPreferencesInstances().isEmpty())
         return;
 
     WTF::String identifierString(identifier, SysStringLen(identifier));
-    WebPreferences* webPreference = webPreferencesInstances.get(identifierString).get();
+    if (identifierString.isEmpty())
+        return;
+    WebPreferences* webPreference = webPreferencesInstances().get(identifierString);
     if (webPreference && webPreference->m_refCount == 1)
-        webPreferencesInstances.remove(identifierString);
+        webPreferencesInstances().remove(identifierString);
 }
 
 void WebPreferences::initializeDefaultSettings()
@@ -189,7 +200,7 @@ void WebPreferences::initializeDefaultSettings()
     CFDictionaryAddValue(defaults, CFSTR(WebKitSansSerifFontPreferenceKey), CFSTR("Arial"));
     CFDictionaryAddValue(defaults, CFSTR(WebKitCursiveFontPreferenceKey), CFSTR("Comic Sans MS"));
     CFDictionaryAddValue(defaults, CFSTR(WebKitFantasyFontPreferenceKey), CFSTR("Comic Sans MS"));
-    CFDictionaryAddValue(defaults, CFSTR(WebKitPictographFontPreferenceKey), CFSTR("Times New Roman"));
+    CFDictionaryAddValue(defaults, CFSTR(WebKitPictographFontPreferenceKey), CFSTR("Segoe UI Symbol"));
     CFDictionaryAddValue(defaults, CFSTR(WebKitMinimumFontSizePreferenceKey), CFSTR("0"));
     CFDictionaryAddValue(defaults, CFSTR(WebKitMinimumLogicalFontSizePreferenceKey), CFSTR("9"));
     CFDictionaryAddValue(defaults, CFSTR(WebKitDefaultFontSizePreferenceKey), CFSTR("16"));
@@ -204,6 +215,7 @@ void WebPreferences::initializeDefaultSettings()
     CFDictionaryAddValue(defaults, CFSTR(WebKitTextAreasAreResizablePreferenceKey), kCFBooleanFalse);
     CFDictionaryAddValue(defaults, CFSTR(WebKitJavaEnabledPreferenceKey), kCFBooleanTrue);
     CFDictionaryAddValue(defaults, CFSTR(WebKitJavaScriptEnabledPreferenceKey), kCFBooleanTrue);
+    CFDictionaryAddValue(defaults, CFSTR(WebKitJavaScriptRuntimeFlagsPreferenceKey), CFSTR("0"));
     CFDictionaryAddValue(defaults, CFSTR(WebKitWebSecurityEnabledPreferenceKey), kCFBooleanTrue);
     CFDictionaryAddValue(defaults, CFSTR(WebKitAllowUniversalAccessFromFileURLsPreferenceKey), kCFBooleanFalse);
     CFDictionaryAddValue(defaults, CFSTR(WebKitAllowFileAccessFromFileURLsPreferenceKey), kCFBooleanTrue);
@@ -253,7 +265,6 @@ void WebPreferences::initializeDefaultSettings()
     CFDictionaryAddValue(defaults, CFSTR(WebKitCacheModelPreferenceKey), cacheModelRef.get());
 
     CFDictionaryAddValue(defaults, CFSTR(WebKitAuthorAndUserStylesEnabledPreferenceKey), kCFBooleanTrue);
-    CFDictionaryAddValue(defaults, CFSTR(WebKitApplicationChromeModePreferenceKey), kCFBooleanFalse);
 
     CFDictionaryAddValue(defaults, CFSTR(WebKitOfflineWebApplicationCacheEnabledPreferenceKey), kCFBooleanFalse);
 
@@ -279,6 +290,8 @@ void WebPreferences::initializeDefaultSettings()
     CFDictionaryAddValue(defaults, CFSTR(WebKitRequestAnimationFrameEnabledPreferenceKey), kCFBooleanTrue);
 
     CFDictionaryAddValue(defaults, CFSTR(WebKitFullScreenEnabledPreferenceKey), kCFBooleanFalse);
+
+    CFDictionaryAddValue(defaults, CFSTR(WebKitRequestAnimationFrameEnabledPreferenceKey), kCFBooleanFalse);
 
     defaultSettings = defaults;
 }
@@ -517,6 +530,8 @@ HRESULT STDMETHODCALLTYPE WebPreferences::QueryInterface(REFIID riid, void** ppv
         *ppvObject = static_cast<IWebPreferences*>(this);
     else if (IsEqualGUID(riid, IID_IWebPreferencesPrivate))
         *ppvObject = static_cast<IWebPreferencesPrivate*>(this);
+    else if (IsEqualGUID(riid, IID_IWebPreferencesPrivate2))
+        *ppvObject = static_cast<IWebPreferencesPrivate2*>(this);
     else if (IsEqualGUID(riid, CLSID_WebPreferences))
         *ppvObject = this;
     else
@@ -808,6 +823,20 @@ HRESULT STDMETHODCALLTYPE WebPreferences::setJavaScriptEnabled(
     /* [in] */ BOOL enabled)
 {
     setBoolValue(WebKitJavaScriptEnabledPreferenceKey, enabled);
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE WebPreferences::javaScriptRuntimeFlags(
+    /* [retval][out] */ unsigned* flags)
+{
+    *flags = static_cast<unsigned>(integerValueForKey(WebKitJavaScriptRuntimeFlagsPreferenceKey));
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE WebPreferences::setJavaScriptRuntimeFlags(
+    /* [in] */ unsigned flags)
+{
+    setIntegerValue(WebKitJavaScriptRuntimeFlagsPreferenceKey, static_cast<int>(flags));
     return S_OK;
 }
 
@@ -1266,15 +1295,15 @@ HRESULT WebPreferences::setMockScrollbarsEnabled(BOOL enabled)
     return S_OK;
 }
 
-HRESULT WebPreferences::screenFontSubstitutionEnabled(BOOL* enabled)
+// These two methods are no-ops, and only retained to keep
+// the Interface consistent. DO NOT USE THEM.
+HRESULT WebPreferences::screenFontSubstitutionEnabled(BOOL*)
 {
-    *enabled = boolValueForKey(WebKitScreenFontSubstitutionEnabledPreferenceKey);
     return S_OK;
 }
 
-HRESULT WebPreferences::setScreenFontSubstitutionEnabled(BOOL enabled)
+HRESULT WebPreferences::setScreenFontSubstitutionEnabled(BOOL)
 {
-    setBoolValue(WebKitScreenFontSubstitutionEnabledPreferenceKey, enabled);
     return S_OK;
 }
 
@@ -1397,15 +1426,15 @@ HRESULT WebPreferences::unused4()
     return E_FAIL;
 }
 
-HRESULT WebPreferences::shouldPaintNativeControls(BOOL* shouldPaint)
+// These two methods are no-ops, and only retained to keep
+// the Interface consistent. DO NOT USE THEM.
+HRESULT WebPreferences::shouldPaintNativeControls(BOOL*)
 {
-    *shouldPaint = boolValueForKey(WebKitPaintNativeControlsPreferenceKey);
     return S_OK;
 }
 
-HRESULT WebPreferences::setShouldPaintNativeControls(BOOL shouldPaint)
+HRESULT WebPreferences::setShouldPaintNativeControls(BOOL)
 {
-    setBoolValue(WebKitPaintNativeControlsPreferenceKey, shouldPaint);
     return S_OK;
 }
 
@@ -1459,15 +1488,15 @@ HRESULT STDMETHODCALLTYPE WebPreferences::authorAndUserStylesEnabled(BOOL* enabl
     return S_OK;
 }
 
-HRESULT WebPreferences::inApplicationChromeMode(BOOL* enabled)
+// These two methods are no-ops, and only retained to keep
+// the Interface consistent. DO NOT USE THEM.
+HRESULT WebPreferences::inApplicationChromeMode(BOOL*)
 {
-    *enabled = boolValueForKey(WebKitApplicationChromeModePreferenceKey);
     return S_OK;
 }
 
-HRESULT WebPreferences::setApplicationChromeMode(BOOL enabled)
+HRESULT WebPreferences::setApplicationChromeMode(BOOL)
 {
-    setBoolValue(WebKitApplicationChromeModePreferenceKey, enabled);
     return S_OK;
 }
 
@@ -1802,3 +1831,14 @@ HRESULT WebPreferences::requestAnimationFrameEnabled(BOOL* enabled)
     return S_OK;
 }
 
+HRESULT WebPreferences::isInheritURIQueryComponentEnabled(BOOL* enabled)
+{
+    *enabled = boolValueForKey(WebKitEnableInheritURIQueryComponentPreferenceKey);
+    return S_OK;
+}
+
+HRESULT WebPreferences::setEnableInheritURIQueryComponent(BOOL enabled)
+{
+    setBoolValue(WebKitEnableInheritURIQueryComponentPreferenceKey, enabled);
+    return S_OK;
+}

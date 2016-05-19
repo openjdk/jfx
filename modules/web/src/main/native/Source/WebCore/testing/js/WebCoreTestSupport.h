@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2011, 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #define WebCoreTestSupport_h
 
 typedef const struct OpaqueJSContext* JSContextRef;
+typedef struct OpaqueJSValue* JSObjectRef;
 
 #if PLATFORM(COCOA) || PLATFORM(JAVA)
 #define TEST_SUPPORT_EXPORT WTF_EXPORT_PRIVATE
@@ -34,10 +35,17 @@ typedef const struct OpaqueJSContext* JSContextRef;
 #define TEST_SUPPORT_EXPORT
 #endif
 
+namespace WebCore {
+class Frame;
+}
+
 namespace WebCoreTestSupport {
 
 TEST_SUPPORT_EXPORT void injectInternalsObject(JSContextRef);
 TEST_SUPPORT_EXPORT void resetInternalsObject(JSContextRef);
+TEST_SUPPORT_EXPORT void monitorWheelEvents(WebCore::Frame&);
+TEST_SUPPORT_EXPORT void setTestCallbackAndStartNotificationTimer(WebCore::Frame&, JSContextRef, JSObjectRef);
+TEST_SUPPORT_EXPORT void clearWheelEventTestTrigger(WebCore::Frame&);
 
 } // namespace WebCore
 

@@ -37,10 +37,13 @@ public:
 
     void setCurrentPath(Path* path) { m_path = path; }
 
+protected:
+    FloatPoint m_current;
+
 private:
     virtual void incrementPathSegmentCount() override { }
     virtual bool continueConsuming() override { return true; }
-    virtual void cleanup() override { m_path = 0; }
+    virtual void cleanup() override { m_path = nullptr; }
 
     // Used in UnalteredParsing/NormalizedParsing modes.
     virtual void moveTo(const FloatPoint&, bool closed, PathCoordinateMode) override;
@@ -57,7 +60,6 @@ private:
     virtual void arcTo(float, float, float, bool, bool, const FloatPoint&, PathCoordinateMode) override { ASSERT_NOT_REACHED(); }
 
     Path* m_path;
-    FloatPoint m_current;
 };
 
 } // namespace WebCore

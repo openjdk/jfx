@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,7 +28,7 @@
 
 // This header contains the WebFrame SPI.
 
-#import <WebKit/WebFrame.h>
+#import <WebKitLegacy/WebFrame.h>
 #import <JavaScriptCore/JSBase.h>
 
 #if !TARGET_OS_IPHONE
@@ -39,7 +39,7 @@
 
 #if TARGET_OS_IPHONE
 #include <CoreText/CoreText.h>
-#include <WebKit/WAKAppKitStubs.h>
+#include <WebKitLegacy/WAKAppKitStubs.h>
 #endif
 
 @class DOMDocumentFragment;
@@ -118,7 +118,11 @@ typedef enum {
 - (void)_setSelectionFromNone;
 - (void)_saveViewState;
 - (void)_restoreViewState;
+
+- (void)deviceOrientationChanged;
+// FIXME: deprecated, to be removed after the call sites are updated.
 - (void)sendOrientationChangeEvent:(int)newOrientation;
+
 - (void)setNeedsLayout;
 - (CGSize)renderedSizeOfNode:(DOMNode *)node constrainedToWidth:(float)width;
 - (DOMNode *)deepestNodeAtViewportLocation:(CGPoint)aViewportLocation;
@@ -261,6 +265,10 @@ typedef enum {
 
 // Sets the name presented to accessibility clients for the web area object.
 - (void)setAccessibleName:(NSString *)name;
+
+// Enhanced accessibility.
+- (BOOL)enhancedAccessibilityEnabled;
+- (void)setEnhancedAccessibility:(BOOL)enable;
 
 - (NSString*)_layerTreeAsText;
 

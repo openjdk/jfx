@@ -33,8 +33,6 @@
 
 #include "WebConsoleAgent.h"
 
-#if ENABLE(INSPECTOR)
-
 namespace WebCore {
 
 class WorkerConsoleAgent final : public WebConsoleAgent {
@@ -47,11 +45,9 @@ public:
     virtual bool isWorkerAgent() const override { return true; }
 
 private:
-    virtual void addInspectedNode(ErrorString*, int nodeId) override;
+    virtual void addInspectedNode(ErrorString&, int nodeId) override;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(WorkerConsoleAgent_h)

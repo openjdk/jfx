@@ -20,7 +20,6 @@
 #ifndef SVGFEDisplacementMapElement_h
 #define SVGFEDisplacementMapElement_h
 
-#if ENABLE(FILTERS)
 #include "FEDisplacementMap.h"
 #include "SVGAnimatedEnumeration.h"
 #include "SVGAnimatedNumber.h"
@@ -67,18 +66,17 @@ struct SVGPropertyTraits<ChannelSelectorType> {
 
 class SVGFEDisplacementMapElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFEDisplacementMapElement> create(const QualifiedName&, Document&);
+    static Ref<SVGFEDisplacementMapElement> create(const QualifiedName&, Document&);
 
     static ChannelSelectorType stringToChannel(const String&);
 
 private:
     SVGFEDisplacementMapElement(const QualifiedName& tagName, Document&);
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
+    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFEDisplacementMapElement)
         DECLARE_ANIMATED_STRING(In1, in1)
@@ -91,5 +89,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
 #endif // SVGFEDisplacementMapElement_h

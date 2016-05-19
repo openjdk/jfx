@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2014-2015 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,15 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebKitClassFactory.h"
 
 #include "CFDictionaryPropertyBag.h"
 #include "ForEachCoClass.h"
+#include "WebApplicationCache.h"
 #include "WebArchive.h"
 #include "WebCache.h"
-#include "WebCookieManager.h"
 #include "WebCoreStatistics.h"
 #include "WebDatabaseManager.h"
 #include "WebDownload.h"
@@ -43,6 +42,7 @@
 #include "WebIconDatabase.h"
 #include "WebJavaScriptCollector.h"
 #include "WebKit.h"
+#include "WebKitMessageLoop.h"
 #include "WebKitStatistics.h"
 #include "WebMutableURLRequest.h"
 #include "WebNotificationCenter.h"
@@ -61,45 +61,25 @@
 #include <wtf/MainThread.h>
 
 // WebKitClassFactory ---------------------------------------------------------
-#if USE(SAFARI_THEME)
-#ifdef DEBUG_ALL
-SOFT_LINK_DEBUG_LIBRARY(SafariTheme)
-#else
-SOFT_LINK_LIBRARY(SafariTheme)
-#endif
-
-SOFT_LINK(SafariTheme, STInitialize, void, APIENTRY, (), ())
-#endif
-
 WebKitClassFactory::WebKitClassFactory(CLSID targetClass)
 : m_targetClass(targetClass)
 , m_refCount(0)
 {
-#if USE(SAFARI_THEME)
-    static bool didInitializeSafariTheme;
-    if (!didInitializeSafariTheme) {
-        if (SafariThemeLibrary())
-            STInitialize();
-        didInitializeSafariTheme = true;
-    }
-#endif
-
     JSC::initializeThreading();
     WTF::initializeMainThread();
 
     gClassCount++;
-    gClassNameCount.add("WebKitClassFactory");
+    gClassNameCount().add("WebKitClassFactory");
 }
 
 WebKitClassFactory::~WebKitClassFactory()
 {
     gClassCount--;
-    gClassNameCount.remove("WebKitClassFactory");
+    gClassNameCount().remove("WebKitClassFactory");
 }
 
 // IUnknown -------------------------------------------------------------------
-
-HRESULT STDMETHODCALLTYPE WebKitClassFactory::QueryInterface(REFIID riid, void** ppvObject)
+HRESULT WebKitClassFactory::QueryInterface(REFIID riid, void** ppvObject)
 {
     *ppvObject = 0;
     if (IsEqualGUID(riid, IID_IUnknown))
@@ -113,12 +93,12 @@ HRESULT STDMETHODCALLTYPE WebKitClassFactory::QueryInterface(REFIID riid, void**
     return S_OK;
 }
 
-ULONG STDMETHODCALLTYPE WebKitClassFactory::AddRef(void)
+ULONG WebKitClassFactory::AddRef(void)
 {
     return ++m_refCount;
 }
 
-ULONG STDMETHODCALLTYPE WebKitClassFactory::Release(void)
+ULONG WebKitClassFactory::Release(void)
 {
     ULONG newRef = --m_refCount;
     if (!newRef && !gLockCount)
@@ -141,8 +121,7 @@ static T* leakRefFromCreateInstance(COMPtr<T> object)
 }
 
 // IClassFactory --------------------------------------------------------------
-
-HRESULT STDMETHODCALLTYPE WebKitClassFactory::CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** ppvObject)
+HRESULT WebKitClassFactory::CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** ppvObject)
 {
     IUnknown* unknown = 0;
     *ppvObject = 0;
@@ -182,7 +161,7 @@ HRESULT STDMETHODCALLTYPE WebKitClassFactory::CreateInstance(IUnknown* pUnkOuter
     return hr;
 }
 
-HRESULT STDMETHODCALLTYPE WebKitClassFactory::LockServer(BOOL fLock)
+HRESULT WebKitClassFactory::LockServer(BOOL fLock)
 {
     if (fLock)
         gLockCount++;

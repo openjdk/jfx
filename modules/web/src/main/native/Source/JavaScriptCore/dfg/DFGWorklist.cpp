@@ -37,8 +37,9 @@
 
 namespace JSC { namespace DFG {
 
-Worklist::Worklist()
-    : m_numberOfActiveThreads(0)
+Worklist::Worklist(CString worklistName)
+    : m_threadName(toCString(worklistName, " Worker Thread"))
+    , m_numberOfActiveThreads(0)
 {
 }
 
@@ -55,21 +56,34 @@ Worklist::~Worklist()
     ASSERT(!m_numberOfActiveThreads);
 }
 
-void Worklist::finishCreation(unsigned numberOfThreads)
+void Worklist::finishCreation(unsigned numberOfThreads, int relativePriority)
 {
     RELEASE_ASSERT(numberOfThreads);
     for (unsigned i = numberOfThreads; i--;) {
         std::unique_ptr<ThreadData> data = std::make_unique<ThreadData>(this);
-        data->m_identifier = createThread(threadFunction, data.get(), "JSC Compilation Thread");
-        m_threads.append(std::move(data));
+        data->m_identifier = createThread(threadFunction, data.get(), m_threadName.data());
+        if (relativePriority)
+            changeThreadPriority(data->m_identifier, relativePriority);
+        m_threads.append(WTF::move(data));
     }
 }
 
-PassRefPtr<Worklist> Worklist::create(unsigned numberOfThreads)
+Ref<Worklist> Worklist::create(CString worklistName, unsigned numberOfThreads, int relativePriority)
 {
-    RefPtr<Worklist> result = adoptRef(new Worklist());
-    result->finishCreation(numberOfThreads);
+    Ref<Worklist> result = adoptRef(*new Worklist(worklistName));
+    result->finishCreation(numberOfThreads, relativePriority);
     return result;
+}
+
+bool Worklist::isActiveForVM(VM& vm) const
+{
+    MutexLocker locker(m_lock);
+    PlanMap::const_iterator end = m_plans.end();
+    for (PlanMap::const_iterator iter = m_plans.begin(); iter != end; ++iter) {
+        if (&iter->value->vm == &vm)
+            return true;
+    }
+    return false;
 }
 
 void Worklist::enqueue(PassRefPtr<Plan> passedPlan)
@@ -92,7 +106,7 @@ Worklist::State Worklist::compilationState(CompilationKey key)
     PlanMap::iterator iter = m_plans.find(key);
     if (iter == m_plans.end())
         return NotKnown;
-    return iter->value->isCompiled ? Compiled : Compiling;
+    return iter->value->stage == Plan::Ready ? Compiled : Compiling;
 }
 
 void Worklist::waitUntilAllPlansForVMAreReady(VM& vm)
@@ -117,7 +131,7 @@ void Worklist::waitUntilAllPlansForVMAreReady(VM& vm)
         for (PlanMap::iterator iter = m_plans.begin(); iter != end; ++iter) {
             if (&iter->value->vm != &vm)
                 continue;
-            if (!iter->value->isCompiled) {
+            if (iter->value->stage != Plan::Ready) {
                 allAreCompiled = false;
                 break;
             }
@@ -138,7 +152,7 @@ void Worklist::removeAllReadyPlansForVM(VM& vm, Vector<RefPtr<Plan>, 8>& myReady
         RefPtr<Plan> plan = m_readyPlans[i];
         if (&plan->vm != &vm)
             continue;
-        if (!plan->isCompiled)
+        if (plan->stage != Plan::Ready)
             continue;
         myReadyPlans.append(plan);
         m_readyPlans[i--] = m_readyPlans.last();
@@ -169,7 +183,7 @@ Worklist::State Worklist::completeAllReadyPlansForVM(VM& vm, CompilationKey requ
         if (Options::verboseCompilationQueue())
             dataLog(*this, ": Completing ", currentKey, "\n");
 
-        RELEASE_ASSERT(plan->isCompiled);
+        RELEASE_ASSERT(plan->stage == Plan::Ready);
 
         plan->finalizeAndNotifyCallback();
 
@@ -195,6 +209,7 @@ void Worklist::completeAllPlansForVM(VM& vm)
 
 void Worklist::suspendAllThreads()
 {
+    m_suspensionLock.lock();
     for (unsigned i = m_threads.size(); i--;)
         m_threads[i]->m_rightToRun.lock();
 }
@@ -203,19 +218,78 @@ void Worklist::resumeAllThreads()
 {
     for (unsigned i = m_threads.size(); i--;)
         m_threads[i]->m_rightToRun.unlock();
+    m_suspensionLock.unlock();
 }
 
-void Worklist::visitChildren(SlotVisitor& visitor, CodeBlockSet& codeBlocks)
+void Worklist::visitWeakReferences(SlotVisitor& visitor, CodeBlockSet& codeBlocks)
 {
-    for (PlanMap::iterator iter = m_plans.begin(); iter != m_plans.end(); ++iter) {
-        iter->key.visitChildren(codeBlocks);
-        iter->value->visitChildren(visitor, codeBlocks);
+    VM* vm = visitor.heap()->vm();
+    {
+        MutexLocker locker(m_lock);
+        for (PlanMap::iterator iter = m_plans.begin(); iter != m_plans.end(); ++iter) {
+            Plan* plan = iter->value.get();
+            if (&plan->vm != vm)
+                continue;
+            iter->value->checkLivenessAndVisitChildren(visitor, codeBlocks);
+        }
     }
-
+    // This loop doesn't need locking because:
+    // (1) no new threads can be added to m_threads. Hence, it is immutable and needs no locks.
+    // (2) ThreadData::m_safepoint is protected by that thread's m_rightToRun which we must be
+    //     holding here because of a prior call to suspendAllThreads().
     for (unsigned i = m_threads.size(); i--;) {
         ThreadData* data = m_threads[i].get();
-        if (Safepoint* safepoint = data->m_safepoint)
-            safepoint->visitChildren(visitor);
+        Safepoint* safepoint = data->m_safepoint;
+        if (safepoint && &safepoint->vm() == vm)
+            safepoint->checkLivenessAndVisitChildren(visitor);
+    }
+}
+
+void Worklist::removeDeadPlans(VM& vm)
+{
+    {
+        MutexLocker locker(m_lock);
+        HashSet<CompilationKey> deadPlanKeys;
+        for (PlanMap::iterator iter = m_plans.begin(); iter != m_plans.end(); ++iter) {
+            Plan* plan = iter->value.get();
+            if (&plan->vm != &vm)
+                continue;
+            if (plan->isKnownToBeLiveDuringGC())
+                continue;
+            RELEASE_ASSERT(plan->stage != Plan::Cancelled); // Should not be cancelled, yet.
+            ASSERT(!deadPlanKeys.contains(plan->key()));
+            deadPlanKeys.add(plan->key());
+        }
+        if (!deadPlanKeys.isEmpty()) {
+            for (HashSet<CompilationKey>::iterator iter = deadPlanKeys.begin(); iter != deadPlanKeys.end(); ++iter)
+                m_plans.take(*iter)->cancel();
+            Deque<RefPtr<Plan>> newQueue;
+            while (!m_queue.isEmpty()) {
+                RefPtr<Plan> plan = m_queue.takeFirst();
+                if (plan->stage != Plan::Cancelled)
+                    newQueue.append(plan);
+            }
+            m_queue.swap(newQueue);
+            for (unsigned i = 0; i < m_readyPlans.size(); ++i) {
+                if (m_readyPlans[i]->stage != Plan::Cancelled)
+                    continue;
+                m_readyPlans[i] = m_readyPlans.last();
+                m_readyPlans.removeLast();
+            }
+        }
+    }
+
+    // No locking needed for this part, see comment in visitWeakReferences().
+    for (unsigned i = m_threads.size(); i--;) {
+        ThreadData* data = m_threads[i].get();
+        Safepoint* safepoint = data->m_safepoint;
+        if (!safepoint)
+            continue;
+        if (&safepoint->vm() != &vm)
+            continue;
+        if (safepoint->isKnownToBeLiveDuringGC())
+            continue;
+        safepoint->cancel();
     }
 }
 
@@ -268,15 +342,43 @@ void Worklist::runThread(ThreadData* data)
 
         {
             MutexLocker locker(data->m_rightToRun);
+            {
+                MutexLocker locker(m_lock);
+                if (plan->stage == Plan::Cancelled) {
+                    m_numberOfActiveThreads--;
+                    continue;
+                }
+                plan->notifyCompiling();
+            }
 
             if (Options::verboseCompilationQueue())
                 dataLog(*this, ": Compiling ", plan->key(), " asynchronously\n");
 
+            RELEASE_ASSERT(!plan->vm.heap.isCollecting());
             plan->compileInThread(longLivedState, data);
+            RELEASE_ASSERT(!plan->vm.heap.isCollecting());
+
+            {
+                MutexLocker locker(m_lock);
+                if (plan->stage == Plan::Cancelled) {
+                    m_numberOfActiveThreads--;
+                    continue;
+                }
+                plan->notifyCompiled();
+            }
+            RELEASE_ASSERT(!plan->vm.heap.isCollecting());
         }
 
         {
             MutexLocker locker(m_lock);
+
+            // We could have been cancelled between releasing rightToRun and acquiring m_lock.
+            // This would mean that we might be in the middle of GC right now.
+            if (plan->stage == Plan::Cancelled) {
+                m_numberOfActiveThreads--;
+                continue;
+            }
+
             plan->notifyReady();
 
             if (Options::verboseCompilationQueue()) {
@@ -304,7 +406,7 @@ Worklist* ensureGlobalDFGWorklist()
 {
     static std::once_flag initializeGlobalWorklistOnceFlag;
     std::call_once(initializeGlobalWorklistOnceFlag, [] {
-        theGlobalDFGWorklist = Worklist::create(Options::numberOfDFGCompilerThreads()).leakRef();
+        theGlobalDFGWorklist = &Worklist::create("DFG Worklist", Options::numberOfDFGCompilerThreads(), Options::priorityDeltaOfDFGCompilerThreads()).leakRef();
     });
     return theGlobalDFGWorklist;
 }
@@ -320,7 +422,7 @@ Worklist* ensureGlobalFTLWorklist()
 {
     static std::once_flag initializeGlobalWorklistOnceFlag;
     std::call_once(initializeGlobalWorklistOnceFlag, [] {
-        theGlobalFTLWorklist = Worklist::create(Options::numberOfFTLCompilerThreads()).leakRef();
+        theGlobalFTLWorklist = &Worklist::create("FTL Worklist", Options::numberOfFTLCompilerThreads(), Options::priorityDeltaOfFTLCompilerThreads()).leakRef();
     });
     return theGlobalFTLWorklist;
 }

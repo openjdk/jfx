@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,7 +26,7 @@
 #ifndef Touch_h
 #define Touch_h
 
-#if PLATFORM(IOS)
+#if ENABLE(IOS_TOUCH_EVENTS)
 #include <WebKitAdditions/TouchIOS.h>
 #elif ENABLE(TOUCH_EVENTS)
 
@@ -42,11 +42,11 @@ class Frame;
 
 class Touch : public RefCounted<Touch> {
 public:
-    static PassRefPtr<Touch> create(Frame* frame, EventTarget* target,
+    static Ref<Touch> create(Frame* frame, EventTarget* target,
             unsigned identifier, int screenX, int screenY, int pageX, int pageY,
             int radiusX, int radiusY, float rotationAngle, float force)
     {
-        return adoptRef(new Touch(frame, target, identifier, screenX,
+        return adoptRef(*new Touch(frame, target, identifier, screenX,
                 screenY, pageX, pageY, radiusX, radiusY, rotationAngle, force));
     }
 
@@ -63,7 +63,7 @@ public:
     float webkitRotationAngle() const { return m_rotationAngle; }
     float webkitForce() const { return m_force; }
     const LayoutPoint& absoluteLocation() const { return m_absoluteLocation; }
-    PassRefPtr<Touch> cloneWithNewTarget(EventTarget*) const;
+    Ref<Touch> cloneWithNewTarget(EventTarget*) const;
 
 private:
     Touch(Frame* frame, EventTarget* target, unsigned identifier,

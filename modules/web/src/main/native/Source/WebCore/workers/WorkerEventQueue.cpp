@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -46,66 +46,61 @@ WorkerEventQueue::~WorkerEventQueue()
     close();
 }
 
-class WorkerEventQueue::EventDispatcherTask final : public ScriptExecutionContext::Task {
+class WorkerEventQueue::EventDispatcher
+{
 public:
-    static PassOwnPtr<EventDispatcherTask> create(PassRefPtr<Event> event, WorkerEventQueue& eventQueue)
-    {
-        return adoptPtr(new EventDispatcherTask(event, eventQueue));
-    }
-
-    virtual ~EventDispatcherTask()
-    {
-        if (m_event)
-            m_eventQueue.m_eventTaskMap.remove(m_event.get());
-    }
-
-    void dispatchEvent(ScriptExecutionContext*, PassRefPtr<Event> event)
-    {
-        event->target()->dispatchEvent(event);
-    }
-
-    virtual void performTask(ScriptExecutionContext* context) override
-    {
-        if (m_isCancelled)
-            return;
-        m_eventQueue.m_eventTaskMap.remove(m_event.get());
-        dispatchEvent(context, m_event);
-        m_event.clear();
-    }
-
-    void cancel()
-    {
-        m_isCancelled = true;
-        m_event.clear();
-    }
-
-private:
-    EventDispatcherTask(PassRefPtr<Event> event, WorkerEventQueue& eventQueue)
+    EventDispatcher(PassRefPtr<Event> event, WorkerEventQueue& eventQueue)
         : m_event(event)
         , m_eventQueue(eventQueue)
         , m_isCancelled(false)
     {
     }
 
+    ~EventDispatcher()
+    {
+        if (m_event)
+            m_eventQueue.m_eventDispatcherMap.remove(m_event.get());
+    }
+
+    void dispatch()
+    {
+        if (m_isCancelled)
+            return;
+        m_eventQueue.m_eventDispatcherMap.remove(m_event.get());
+        m_event->target()->dispatchEvent(m_event);
+        m_event = nullptr;
+    }
+
+    void cancel()
+    {
+        m_isCancelled = true;
+        m_event = nullptr;
+    }
+
+private:
     RefPtr<Event> m_event;
     WorkerEventQueue& m_eventQueue;
     bool m_isCancelled;
 };
 
-bool WorkerEventQueue::enqueueEvent(PassRefPtr<Event> prpEvent)
+bool WorkerEventQueue::enqueueEvent(PassRefPtr<Event> event)
 {
     if (m_isClosed)
         return false;
-    RefPtr<Event> event = prpEvent;
-    OwnPtr<EventDispatcherTask> task = EventDispatcherTask::create(event, *this);
-    m_eventTaskMap.add(event.release(), task.get());
-    m_scriptExecutionContext.postTask(task.release());
+
+    EventDispatcher* eventDispatcherPtr = new EventDispatcher(event.get(), *this);
+    m_eventDispatcherMap.add(event, eventDispatcherPtr);
+    m_scriptExecutionContext.postTask([eventDispatcherPtr] (ScriptExecutionContext&) {
+        std::unique_ptr<EventDispatcher> eventDispatcher(eventDispatcherPtr);
+        eventDispatcher->dispatch();
+    });
+
     return true;
 }
 
 bool WorkerEventQueue::cancelEvent(Event& event)
 {
-    EventDispatcherTask* task = m_eventTaskMap.take(&event);
+    EventDispatcher* task = m_eventDispatcherMap.take(&event);
     if (!task)
         return false;
     task->cancel();
@@ -115,11 +110,9 @@ bool WorkerEventQueue::cancelEvent(Event& event)
 void WorkerEventQueue::close()
 {
     m_isClosed = true;
-    for (EventTaskMap::iterator it = m_eventTaskMap.begin(); it != m_eventTaskMap.end(); ++it) {
-        EventDispatcherTask* task = it->value;
-        task->cancel();
-    }
-    m_eventTaskMap.clear();
+    for (auto& dispatcher : m_eventDispatcherMap.values())
+        dispatcher->cancel();
+    m_eventDispatcherMap.clear();
 }
 
 }

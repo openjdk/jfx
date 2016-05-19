@@ -43,9 +43,9 @@ public:
         UserAgentShadowRoot = 0,
     };
 
-    static PassRefPtr<ShadowRoot> create(Document& document, ShadowRootType type)
+    static Ref<ShadowRoot> create(Document& document, ShadowRootType type)
     {
-        return adoptRef(new ShadowRoot(document, type));
+        return adoptRef(*new ShadowRoot(document, type));
     }
 
     virtual ~ShadowRoot();
@@ -76,8 +76,7 @@ private:
     virtual bool childTypeAllowed(NodeType) const override;
     virtual void childrenChanged(const ChildChange&) override;
 
-    // ShadowRoots should never be cloned.
-    virtual PassRefPtr<Node> cloneNode(bool) override { return 0; }
+    virtual RefPtr<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
     // FIXME: This shouldn't happen. https://bugs.webkit.org/show_bug.cgi?id=88834
     bool isOrphan() const { return !hostElement(); }
@@ -95,22 +94,18 @@ inline Element* ShadowRoot::activeElement() const
     return treeScope().focusedElement();
 }
 
-inline bool isShadowRoot(const Node& node) { return node.isShadowRoot(); }
-
-NODE_TYPE_CASTS(ShadowRoot)
-
 inline ShadowRoot* Node::shadowRoot() const
 {
-    if (!isElementNode())
-        return 0;
-    return toElement(this)->shadowRoot();
+    if (!is<Element>(*this))
+        return nullptr;
+    return downcast<Element>(*this).shadowRoot();
 }
 
 inline ContainerNode* Node::parentOrShadowHostNode() const
 {
     ASSERT(isMainThreadOrGCThread());
-    if (isShadowRoot())
-        return toShadowRoot(this)->hostElement();
+    if (is<ShadowRoot>(*this))
+        return downcast<ShadowRoot>(*this).hostElement();
     return parentNode();
 }
 
@@ -119,6 +114,10 @@ inline bool hasShadowRootParent(const Node& node)
     return node.parentNode() && node.parentNode()->isShadowRoot();
 }
 
-} // namespace
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ShadowRoot)
+    static bool isType(const WebCore::Node& node) { return node.isShadowRoot(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

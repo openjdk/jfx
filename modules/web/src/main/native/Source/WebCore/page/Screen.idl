@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution. 
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission. 
  *
@@ -30,13 +30,13 @@
 [
     GenerateIsReachable=ImplFrame,
 ] interface Screen {
-    readonly attribute unsigned long height;
-    readonly attribute unsigned long width;
-    readonly attribute unsigned long colorDepth;
-    readonly attribute unsigned long pixelDepth;
-    readonly attribute long availLeft;
-    readonly attribute long availTop;
-    readonly attribute unsigned long availHeight;
-    readonly attribute unsigned long availWidth;
+    [Nondeterministic] readonly attribute unsigned long height;
+    [Nondeterministic] readonly attribute unsigned long width;
+    [Nondeterministic] readonly attribute unsigned long colorDepth;
+    [Nondeterministic] readonly attribute unsigned long pixelDepth;
+    [Nondeterministic] readonly attribute long availLeft;
+    [Nondeterministic] readonly attribute long availTop;
+    [Nondeterministic] readonly attribute unsigned long availHeight;
+    [Nondeterministic] readonly attribute unsigned long availWidth;
 };
 

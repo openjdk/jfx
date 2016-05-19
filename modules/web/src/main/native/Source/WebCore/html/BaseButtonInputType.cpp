@@ -52,9 +52,9 @@ bool BaseButtonInputType::appendFormData(FormDataList&, bool) const
     return false;
 }
 
-RenderPtr<RenderElement> BaseButtonInputType::createInputRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> BaseButtonInputType::createInputRenderer(Ref<RenderStyle>&& style)
 {
-    return createRenderer<RenderButton>(element(), std::move(style));
+    return createRenderer<RenderButton>(element(), WTF::move(style));
 }
 
 bool BaseButtonInputType::storesValueSeparateFromAttribute()

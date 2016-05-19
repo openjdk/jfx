@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,7 +26,7 @@
 #include "config.h"
 #include "EventHandler.h"
 
-#include "Clipboard.h"
+#include "DataTransfer.h"
 #include "FloatPoint.h"
 #include "FocusController.h"
 #include "Frame.h"
@@ -46,7 +46,7 @@ namespace WebCore {
 const double EventHandler::TextDragDelay = 0.0;
 #endif
 
-bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
+bool EventHandler::tabsToAllFormControls(KeyboardEvent*) const
 {
     // We always allow tabs to all controls
     return true;
@@ -61,10 +61,10 @@ void EventHandler::focusDocumentView()
 bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestResults& event)
 {
     // Figure out which view to send the event to.
-    RenderObject* target = event.targetNode() ? event.targetNode()->renderer() : 0;
-    if (!target || !target->isWidget())
+    RenderObject* target = event.targetNode() ? event.targetNode()->renderer() : nullptr;
+    if (!is<RenderWidget>(target))
         return false;
-    return passMouseDownEventToWidget(toRenderWidget(target)->widget());
+    return passMouseDownEventToWidget(downcast<RenderWidget>(*target).widget());
 }
 
 bool EventHandler::passWidgetMouseDownEventToWidget(RenderWidget* renderWidget)
@@ -72,7 +72,7 @@ bool EventHandler::passWidgetMouseDownEventToWidget(RenderWidget* renderWidget)
     return passMouseDownEventToWidget(renderWidget->widget());
 }
 
-bool EventHandler::passMouseDownEventToWidget(Widget* widget)
+bool EventHandler::passMouseDownEventToWidget(Widget*)
 {
     notImplemented();
     return false;
@@ -87,19 +87,18 @@ bool EventHandler::eventActivatedView(const PlatformMouseEvent&) const
     return false;
 }
 
-bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widget* widget)
+bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& event, Widget& widget)
 {
-    ASSERT(widget);
-    if (!widget->isFrameView())
+    if (!is<FrameView>(widget))
         return false;
 
-    return toFrameView(widget)->frame().eventHandler().handleWheelEvent(event);
+    return downcast<FrameView>(widget).frame().eventHandler().handleWheelEvent(event);
 }
 
 #if ENABLE(DRAG_SUPPORT)
-PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
+PassRefPtr<DataTransfer> EventHandler::createDraggingDataTransfer() const
 {
-    return Clipboard::createForDragAndDrop();
+    return DataTransfer::createForDragAndDrop();
 }
 #endif
 

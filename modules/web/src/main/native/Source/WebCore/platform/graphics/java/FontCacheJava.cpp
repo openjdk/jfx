@@ -8,9 +8,9 @@
 #include "AtomicString.h"
 #include "Font.h"
 #include "FontCache.h"
-#include "FontData.h"
+#include "FontRanges.h" //XXX: FontData.h -> FontRanges.h
 #include "FontPlatformData.h"
-#include "SimpleFontData.h"
+#include "Font.h" //XXX: SimpleFontData.h -> Font.h
 
 namespace WebCore {
 
@@ -18,13 +18,13 @@ void FontCache::platformInit()
 {
 }
 
-PassRefPtr<SimpleFontData> FontCache::systemFallbackForCharacters(const FontDescription& fontDescription, const SimpleFontData*, bool, const UChar* characters, int length)
+RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& fontDescription, const Font*, bool, const UChar* characters, unsigned length)
 {
     return 0;
 }
 
 
-PassOwnPtr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
 {
     return FontPlatformData::create(fontDescription, family);
 }
@@ -34,19 +34,20 @@ void FontCache::getTraitsInFamily(AtomicString const&, WTF::Vector<unsigned int,
     notImplemented();
 }
 
-PassRefPtr<SimpleFontData> FontCache::getLastResortFallbackFont(const FontDescription& description, ShouldRetain shouldRetain)
+Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
 {
-    // FIXME: Would be even better to somehow get the user's default font here.
-    // For now we'll pick the default that the user would get without changing any prefs.
-    switch (description.genericFamily()) {
-        case FontDescription::SansSerifFamily:
-            return getCachedFontData(description, AtomicString("sans-serif"));
-        case FontDescription::MonospaceFamily:
-            return getCachedFontData(description, AtomicString("monospaced"));
-        case FontDescription::SerifFamily:
-        default:
-            return getCachedFontData(description, AtomicString("serif"));
-    }
+    // We want to return a fallback font here, otherwise the logic preventing FontConfig
+    // matches for non-fallback fonts might return 0. See isFallbackFontAllowed.
+    static AtomicString timesStr("serif");
+    return *fontForFamily(fontDescription, timesStr, false);
+}
+
+Vector<String> FontCache::systemFontFamilies()
+{
+    // FIXME: <https://webkit.org/b/147018> Web Inspector: [Freetype] Allow inspector to retrieve a list of system fonts
+    // FIXME: JDK-8146864
+    notImplemented();
+    return Vector<String>();
 }
 
 }

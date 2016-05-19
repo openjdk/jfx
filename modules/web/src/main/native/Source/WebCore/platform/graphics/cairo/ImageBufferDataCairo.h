@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -22,6 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef ImageBufferDataCairo_h
+#define ImageBufferDataCairo_h
+
+#if USE(CAIRO)
 
 #include "PlatformContextCairo.h"
 #include "RefPtrCairo.h"
@@ -45,6 +50,7 @@ public:
 
     RefPtr<cairo_surface_t> m_surface;
     PlatformContextCairo m_platformContext;
+    std::unique_ptr<GraphicsContext> m_context;
     IntSize m_size;
 
 #if ENABLE(ACCELERATED_2D_CANVAS)
@@ -54,3 +60,7 @@ public:
 };
 
 } // namespace WebCore
+
+#endif // USE(CAIRO)
+
+#endif // ImageBufferDataCairo_h

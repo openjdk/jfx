@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,8 +26,6 @@
 #ifndef StyleFilterData_h
 #define StyleFilterData_h
 
-#if ENABLE(CSS_FILTERS)
-
 #include "FilterOperations.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
@@ -36,8 +34,8 @@ namespace WebCore {
 
 class StyleFilterData : public RefCounted<StyleFilterData> {
 public:
-    static PassRef<StyleFilterData> create() { return adoptRef(*new StyleFilterData); }
-    PassRef<StyleFilterData> copy() const;
+    static Ref<StyleFilterData> create() { return adoptRef(*new StyleFilterData); }
+    Ref<StyleFilterData> copy() const;
 
     bool operator==(const StyleFilterData&) const;
     bool operator!=(const StyleFilterData& o) const
@@ -53,7 +51,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(CSS_FILTERS)
 
 #endif // StyleFilterData_h

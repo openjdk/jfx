@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,14 +36,14 @@ JSValue LazyJSValue::getValue(VM& vm) const
 {
     switch (m_kind) {
     case KnownValue:
-        return value();
+        return value()->value();
     case SingleCharacterString:
         return jsSingleCharacterString(&vm, u.character);
     case KnownStringImpl:
         return jsString(&vm, u.stringImpl);
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return value();
+    return JSValue();
 }
 
 static TriState equalToSingleCharacter(JSValue value, UChar character)
@@ -81,11 +81,11 @@ TriState LazyJSValue::strictEqual(const LazyJSValue& other) const
     case KnownValue:
         switch (other.m_kind) {
         case KnownValue:
-            return JSValue::pureStrictEqual(value(), other.value());
+            return JSValue::pureStrictEqual(value()->value(), other.value()->value());
         case SingleCharacterString:
-            return equalToSingleCharacter(value(), other.character());
+            return equalToSingleCharacter(value()->value(), other.character());
         case KnownStringImpl:
-            return equalToStringImpl(value(), other.stringImpl());
+            return equalToStringImpl(value()->value(), other.stringImpl());
         }
         break;
     case SingleCharacterString:
@@ -113,11 +113,41 @@ TriState LazyJSValue::strictEqual(const LazyJSValue& other) const
     return FalseTriState;
 }
 
+uintptr_t LazyJSValue::switchLookupValue(SwitchKind kind) const
+{
+    // NB. Not every kind of JSValue will be able to give you a switch lookup
+    // value, and this method will assert, or do bad things, if you use it
+    // for a kind of value that can't.
+    switch (m_kind) {
+    case KnownValue:
+        switch (kind) {
+        case SwitchImm:
+            return value()->value().asInt32();
+        case SwitchCell:
+            return bitwise_cast<uintptr_t>(value()->value().asCell());
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return 0;
+        }
+    case SingleCharacterString:
+        switch (kind) {
+        case SwitchChar:
+            return character();
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return 0;
+        }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return 0;
+    }
+}
+
 void LazyJSValue::dumpInContext(PrintStream& out, DumpContext* context) const
 {
     switch (m_kind) {
     case KnownValue:
-        value().dumpInContext(out, context);
+        value()->dumpInContext(out, context);
         return;
     case SingleCharacterString:
         out.print("Lazy:SingleCharacterString(");

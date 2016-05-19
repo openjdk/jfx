@@ -22,13 +22,13 @@
 #ifndef SVGAnimateColorElement_h
 #define SVGAnimateColorElement_h
 
-#include "SVGAnimateElement.h"
+#include "SVGAnimateElementBase.h"
 
 namespace WebCore {
 
-class SVGAnimateColorElement final : public SVGAnimateElement {
+class SVGAnimateColorElement final : public SVGAnimateElementBase {
 public:
-    static PassRefPtr<SVGAnimateColorElement> create(const QualifiedName&, Document&);
+    static Ref<SVGAnimateColorElement> create(const QualifiedName&, Document&);
 
 private:
     SVGAnimateColorElement(const QualifiedName&, Document&);

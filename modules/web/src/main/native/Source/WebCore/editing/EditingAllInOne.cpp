@@ -32,8 +32,6 @@
 #include <BreakBlockquoteCommand.cpp>
 #include <CompositeEditCommand.cpp>
 #include <CreateLinkCommand.cpp>
-#include <DeleteButton.cpp>
-#include <DeleteButtonController.cpp>
 #include <DeleteFromTextNodeCommand.cpp>
 #include <DeleteSelectionCommand.cpp>
 #include <DictationAlternative.cpp>
@@ -61,6 +59,8 @@
 #include <RemoveNodeCommand.cpp>
 #include <RemoveNodePreservingChildrenCommand.cpp>
 #include <RenderedPosition.cpp>
+#include <ReplaceDeleteFromTextNodeCommand.cpp>
+#include <ReplaceInsertIntoTextNodeCommand.cpp>
 #include <ReplaceNodeWithSpanCommand.cpp>
 #include <ReplaceSelectionCommand.cpp>
 #include <SetNodeAttributeCommand.cpp>

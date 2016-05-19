@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -57,7 +57,7 @@
 #import <WebCore/RenderWidget.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/WebCoreObjCExtras.h>
-#import <WebKit/DOMPrivate.h>
+#import <WebKitLegacy/DOMPrivate.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/Assertions.h>
 #import <wtf/MainThread.h>
@@ -130,7 +130,6 @@ using namespace WebCore;
 
 - (void)finalize
 {
-    ASSERT_MAIN_THREAD();
     ASSERT(!_isStarted);
 
     [super finalize];
@@ -290,11 +289,11 @@ using namespace WebCore;
 
 - (NSRect)_windowClipRect
 {
-    RenderObject* renderer = _element->renderer();
+    auto* renderer = _element->renderer();
     if (!renderer)
         return NSZeroRect;
 
-    return toRenderWidget(renderer)->windowClipRect();
+    return downcast<RenderWidget>(*renderer).windowClipRect();
 }
 
 - (NSRect)visibleRect
@@ -864,7 +863,7 @@ using namespace WebCore;
 
 - (void)invalidatePluginContentRect:(NSRect)rect
 {
-    if (RenderBoxModelObject *renderer = toRenderBoxModelObject(_element->renderer())) {
+    if (RenderBoxModelObject* renderer = downcast<RenderBoxModelObject>(_element->renderer())) {
         IntRect contentRect(rect);
         contentRect.move(renderer->borderLeft() + renderer->paddingLeft(), renderer->borderTop() + renderer->paddingTop());
 
@@ -874,13 +873,13 @@ using namespace WebCore;
 
 - (NSRect)actualVisibleRectInWindow
 {
-    RenderObject* renderer = _element->renderer();
+    auto* renderer = _element->renderer();
     if (!renderer)
         return NSZeroRect;
 
     IntRect widgetRect = renderer->pixelSnappedAbsoluteClippedOverflowRect();
     widgetRect = renderer->view().frameView().contentsToWindow(widgetRect);
-    return intersection(toRenderWidget(renderer)->windowClipRect(), widgetRect);
+    return intersection(downcast<RenderWidget>(*renderer).windowClipRect(), widgetRect);
 }
 
 - (CALayer *)pluginLayer
@@ -928,7 +927,7 @@ bool getAuthenticationInfo(const char* protocolStr, const char* hostStr, int32_t
 
     RetainPtr<NSURLProtectionSpace> protectionSpace = adoptNS([[NSURLProtectionSpace alloc] initWithHost:host port:port protocol:protocol realm:realm authenticationMethod:authenticationMethod]);
 
-    NSURLCredential *credential = mac(CredentialStorage::get(core(protectionSpace.get())));
+    NSURLCredential *credential = CredentialStorage::defaultCredentialStorage().get(ProtectionSpace(protectionSpace.get())).nsCredential();
     if (!credential)
         credential = [[NSURLCredentialStorage sharedCredentialStorage] defaultCredentialForProtectionSpace:protectionSpace.get()];
     if (!credential)

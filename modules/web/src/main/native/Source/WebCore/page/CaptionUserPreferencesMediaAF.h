@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
 namespace WebCore {
 
 class CaptionUserPreferencesMediaAF : public CaptionUserPreferences {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     CaptionUserPreferencesMediaAF(PageGroup&);
     virtual ~CaptionUserPreferencesMediaAF();
@@ -54,6 +55,9 @@ public:
     virtual void setPreferredLanguage(const String&) override;
     virtual Vector<String> preferredLanguages() const override;
 
+    virtual void setPreferredAudioCharacteristic(const String&) override;
+    virtual Vector<String> preferredAudioCharacteristics() const override;
+
     virtual void captionPreferencesChanged() override;
 
     bool shouldFilterTrackMenu() const { return true; }
@@ -63,11 +67,15 @@ public:
 
     virtual String captionsStyleSheetOverride() const override;
     virtual int textTrackSelectionScore(TextTrack*, HTMLMediaElement*) const override;
-    virtual Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*) override;
-    virtual String displayNameForTrack(TextTrack*) const override;
+    Vector<RefPtr<AudioTrack>> sortedTrackListForMenu(AudioTrackList*) override;
+    Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*) override;
+    String displayNameForTrack(AudioTrack*) const override;
+    String displayNameForTrack(TextTrack*) const override;
 
 private:
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
+    void updateTimerFired();
+
     String captionsWindowCSS() const;
     String captionsBackgroundCSS() const;
     String captionsTextColorCSS() const;
@@ -78,8 +86,10 @@ private:
     String captionsTextEdgeCSS() const;
     String cssPropertyWithTextEdgeColor(CSSPropertyID, const String&, const Color&, bool) const;
     String colorPropertyCSS(CSSPropertyID, const Color&, bool) const;
+    Timer m_updateStyleSheetTimer;
 
     bool m_listeningForPreferenceChanges;
+    bool m_registeringForNotification { false };
 #endif
 };
 

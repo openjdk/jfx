@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Samsung Electronics
+ * Copyright (C) 2012-2014 Samsung Electronics
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -18,6 +18,12 @@
 
 #include "config.h"
 #include "EflScreenUtilities.h"
+
+#include "Image.h"
+#include "IntPoint.h"
+#include "IntSize.h"
+#include "RefPtrCairo.h"
+#include <cairo.h>
 
 #ifdef HAVE_ECORE_X
 #include <Ecore_Evas.h>
@@ -97,15 +103,15 @@ CursorMap::CursorMap()
 
 int getEcoreCursor(const String& cursorString)
 {
-    DEFINE_STATIC_LOCAL(CursorMap, cursorStringMap, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(CursorMap, cursorStringMap, ());
 
     return cursorStringMap.cursor(cursorString);
 }
-#endif
 
-void applyFallbackCursor(Ecore_Evas* ecoreEvas, const char* cursorString)
+void applyCursorFromEcoreX(Ecore_X_Window window, const char* cursorString)
 {
-#ifdef HAVE_ECORE_X
+    ASSERT(window);
+
     int shape = getEcoreCursor(cursorString);
     if (shape < ECORE_X_CURSOR_X || shape > ECORE_X_CURSOR_XTERM) {
         LOG_ERROR("cannot map an equivalent X cursor for"
@@ -113,31 +119,33 @@ void applyFallbackCursor(Ecore_Evas* ecoreEvas, const char* cursorString)
         shape = ECORE_X_CURSOR_LEFT_PTR;
     }
 
-    Ecore_X_Window window;
-    window = ecore_evas_gl_x11_window_get(ecoreEvas);
-    // Fallback to software mode if necessary.
-    if (!window)
-        window = ecore_evas_software_x11_window_get(ecoreEvas);
-
     Ecore_X_Cursor cursor = ecore_x_cursor_shape_get(shape);
     ecore_x_window_cursor_set(window, cursor);
-#endif
 }
 
-bool isUsingEcoreX(const Evas* evas)
+Ecore_X_Cursor createCustomCursor(Ecore_X_Window window, Image* image, const IntSize& cursorSize, const IntPoint& hotSpot)
 {
-#ifdef HAVE_ECORE_X
-    Ecore_Evas* ecoreEvas = ecore_evas_ecore_evas_get(evas);
-    const char* engine = ecore_evas_engine_name_get(ecoreEvas);
-    return !strcmp(engine, "opengl_x11")
-        || !strcmp(engine, "software_x11")
-        || !strcmp(engine, "software_xcb")
-        || !strcmp(engine, "software_16_x11")
-        || !strncmp(engine, "xrender", sizeof("xrender") - 1);
-#else
-    UNUSED_PARAM(evas);
-    return false;
-#endif
+    RefPtr<cairo_surface_t> surface = image->nativeImageForCurrentFrame();
+    if (!surface)
+        return 0;
+
+    unsigned char* buffer = cairo_image_surface_get_data(surface.get());
+
+    return ecore_x_cursor_new(window, reinterpret_cast_ptr<int*>(buffer), cursorSize.width(), cursorSize.height(), hotSpot.x(), hotSpot.y());
 }
+
+Ecore_X_Window getEcoreXWindow(Ecore_Evas* ecoreEvas)
+{
+    const char* engine = ecore_evas_engine_name_get(ecoreEvas);
+
+    if (!strcmp(engine, "opengl_x11"))
+        return ecore_evas_gl_x11_window_get(ecoreEvas);
+
+    if (!strcmp(engine, "software_x11"))
+        return ecore_evas_software_x11_window_get(ecoreEvas);
+
+    return 0;
+}
+#endif
 
 } // namespace WebCore

@@ -49,15 +49,16 @@ class RenderStyle;
 
 class RenderNamedFlowFragment final : public RenderRegion {
 public:
-    RenderNamedFlowFragment(Document&, PassRef<RenderStyle>);
+    RenderNamedFlowFragment(Document&, Ref<RenderStyle>&&);
     virtual ~RenderNamedFlowFragment();
 
-    static PassRef<RenderStyle> createStyle(const RenderStyle& parentStyle);
+    static Ref<RenderStyle> createStyle(const RenderStyle& parentStyle);
 
-    virtual bool isRenderNamedFlowFragment() const override final { return true; }
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-    virtual LayoutUnit pageLogicalHeight() const;
+    void getRanges(Vector<RefPtr<Range>>&) const;
+
+    virtual LayoutUnit pageLogicalHeight() const override;
     LayoutUnit maxPageLogicalHeight() const;
 
     LayoutRect flowThreadPortionRectForClipping(bool isFirstRegionInRange, bool isLastRegionInRange) const;
@@ -65,16 +66,19 @@ public:
     RenderBlockFlow& fragmentContainer() const;
     RenderLayer& fragmentContainerLayer() const;
 
+    virtual bool shouldClipFlowThreadContent() const override;
+
+    virtual LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
+
     bool isPseudoElementRegion() const { return parent() && parent()->isPseudoElement(); }
 
     // When the content inside the region requires the region to have a layer, the layer will be created on the region's
     // parent renderer instead.
     // This method returns that renderer holding the layer.
     // The return value cannot be null because CSS Regions create Stacking Contexts (which means they create layers).
-    RenderLayerModelObject& layerOwner() const { return *toRenderLayerModelObject(parent()); }
+    RenderLayerModelObject& layerOwner() const { return downcast<RenderLayerModelObject>(*parent()); }
 
     bool hasCustomRegionStyle() const { return m_hasCustomRegionStyle; }
-    void setHasCustomRegionStyle(bool hasCustomRegionStyle) { m_hasCustomRegionStyle = hasCustomRegionStyle; }
     void clearObjectStyleInRegion(const RenderObject*);
 
     void setRegionObjectsRegionStyle();
@@ -102,21 +106,29 @@ public:
 
     bool hasComputedAutoHeight() const { return m_hasComputedAutoHeight; }
 
+    RegionOversetState regionOversetState() const;
+
     virtual void attachRegion() override;
     virtual void detachRegion() override;
 
     virtual void updateLogicalHeight() override;
 
-// FIXME: Temporarily public until we move all the CSSRegions functionality from RenderRegion to here.
-public:
-    void checkRegionStyle();
+    void updateRegionFlags();
+
+    virtual void absoluteQuadsForBoxInRegion(Vector<FloatQuad>&, bool*, const RenderBox*, float, float) override;
+
+    void invalidateRegionIfNeeded();
 
 private:
+    virtual bool isRenderNamedFlowFragment() const override { return true; }
     virtual const char* renderName() const override { return "RenderNamedFlowFragment"; }
 
-    PassRefPtr<RenderStyle> computeStyleInRegion(RenderElement&, RenderStyle& parentStyle);
+    PassRefPtr<RenderStyle> computeStyleInRegion(RenderElement&, RenderStyle& parentStyle) const;
     void computeChildrenStyleInRegion(RenderElement&);
     void setObjectStyleInRegion(RenderObject*, PassRefPtr<RenderStyle>, bool objectRegionStyleCached);
+
+    void checkRegionStyle();
+    void setHasCustomRegionStyle(bool hasCustomRegionStyle) { m_hasCustomRegionStyle = hasCustomRegionStyle; }
 
     void updateRegionHasAutoLogicalHeightFlag();
 
@@ -124,6 +136,9 @@ private:
     void decrementAutoLogicalHeightCount();
 
     bool shouldHaveAutoLogicalHeight() const;
+
+    void updateOversetState();
+    void setRegionOversetState(RegionOversetState);
 
     virtual void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0) override;
 
@@ -148,8 +163,8 @@ private:
     LayoutUnit m_computedAutoHeight;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderNamedFlowFragment, isRenderNamedFlowFragment())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderNamedFlowFragment, isRenderNamedFlowFragment())
 
 #endif // RenderNamedFlowFragment_h

@@ -21,56 +21,53 @@
 #include "Lookup.h"
 
 #include "Executable.h"
+#include "GetterSetter.h"
 #include "JSFunction.h"
 #include "JSCInlines.h"
 
 namespace JSC {
 
-void HashTable::createTable(VM& vm) const
+void HashTable::createTable() const
 {
-    ASSERT(!table);
-    int linkIndex = compactHashSizeMask + 1;
-    HashEntry* entries = new HashEntry[compactSize];
-    for (int i = 0; i < compactSize; ++i)
-        entries[i].setKey(0);
-    for (int i = 0; values[i].key; ++i) {
-        StringImpl& identifier = Identifier::add(&vm, values[i].key).leakRef();
-        int hashIndex = identifier.existingHash() & compactHashSizeMask;
-        HashEntry* entry = &entries[hashIndex];
+    ASSERT(!keys);
+    keys = static_cast<const char**>(fastMalloc(sizeof(char*) * numberOfValues));
 
-        if (entry->key()) {
-            while (entry->next()) {
-                entry = entry->next();
-            }
-            ASSERT(linkIndex < compactSize);
-            entry->setNext(&entries[linkIndex++]);
-            entry = entry->next();
-        }
-
-        entry->initialize(&identifier, values[i].attributes, values[i].value1, values[i].value2, values[i].intrinsic);
+    for (int i = 0; i < numberOfValues; ++i) {
+        if (values[i].m_key)
+            keys[i] = values[i].m_key;
+        else
+            keys[i] = 0;
     }
-    table = entries;
 }
 
 void HashTable::deleteTable() const
 {
-    if (table) {
-        int max = compactSize;
-        for (int i = 0; i != max; ++i) {
-            if (StringImpl* key = table[i].key())
-                key->deref();
-        }
-        delete [] table;
-        table = 0;
+    if (keys) {
+        fastFree(keys);
+        keys = nullptr;
     }
 }
 
-bool setUpStaticFunctionSlot(ExecState* exec, const HashEntry* entry, JSObject* thisObj, PropertyName propertyName, PropertySlot& slot)
+void reifyStaticAccessor(VM& vm, const HashTableValue& value, JSObject& thisObj, PropertyName propertyName)
+{
+    JSGlobalObject* globalObject = thisObj.globalObject();
+    GetterSetter* accessor = GetterSetter::create(vm, globalObject);
+    if (value.accessorGetter()) {
+        RefPtr<StringImpl> getterName = WTF::tryMakeString(ASCIILiteral("get "), String(*propertyName.publicName()));
+        if (!getterName)
+            return;
+        accessor->setGetter(vm, globalObject, JSFunction::create(vm, globalObject, 0, *getterName, value.accessorGetter()));
+    }
+    thisObj.putDirectNonIndexAccessor(vm, propertyName, accessor, value.attributes());
+}
+
+bool setUpStaticFunctionSlot(ExecState* exec, const HashTableValue* entry, JSObject* thisObj, PropertyName propertyName, PropertySlot& slot)
 {
     ASSERT(thisObj->globalObject());
-    ASSERT(entry->attributes() & BuiltinOrFunction);
+    ASSERT(entry->attributes() & BuiltinOrFunctionOrAccessor);
     VM& vm = exec->vm();
     unsigned attributes;
+    bool isAccessor = entry->attributes() & Accessor;
     PropertyOffset offset = thisObj->getDirectOffset(vm, propertyName, attributes);
 
     if (!isValidOffset(offset)) {
@@ -81,16 +78,23 @@ bool setUpStaticFunctionSlot(ExecState* exec, const HashEntry* entry, JSObject* 
 
         if (entry->attributes() & Builtin)
             thisObj->putDirectBuiltinFunction(vm, thisObj->globalObject(), propertyName, entry->builtinGenerator()(vm), entry->attributes());
-        else {
+        else if (entry->attributes() & Function) {
             thisObj->putDirectNativeFunction(
                 vm, thisObj->globalObject(), propertyName, entry->functionLength(),
                 entry->function(), entry->intrinsic(), entry->attributes());
+        } else {
+            ASSERT(isAccessor);
+            reifyStaticAccessor(vm, *entry, *thisObj, propertyName);
         }
+
         offset = thisObj->getDirectOffset(vm, propertyName, attributes);
         ASSERT(isValidOffset(offset));
     }
 
-    slot.setValue(thisObj, attributes, thisObj->getDirect(offset), offset);
+    if (isAccessor)
+        slot.setCacheableGetterSlot(thisObj, attributes, jsCast<GetterSetter*>(thisObj->getDirect(offset)), offset);
+    else
+        slot.setValue(thisObj, attributes, thisObj->getDirect(offset), offset);
     return true;
 }
 

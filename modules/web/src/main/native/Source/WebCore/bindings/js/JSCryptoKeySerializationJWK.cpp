@@ -52,7 +52,7 @@ namespace WebCore {
 
 static bool getJSArrayFromJSON(ExecState* exec, JSObject* json, const char* key, JSArray*& result)
 {
-    Identifier identifier(exec, key);
+    Identifier identifier = Identifier::fromString(exec, key);
     PropertySlot slot(json);
 
     if (!json->getPropertySlot(exec, identifier, slot))
@@ -72,7 +72,7 @@ static bool getJSArrayFromJSON(ExecState* exec, JSObject* json, const char* key,
 
 static bool getStringFromJSON(ExecState* exec, JSObject* json, const char* key, String& result)
 {
-    Identifier identifier(exec, key);
+    Identifier identifier = Identifier::fromString(exec, key);
     PropertySlot slot(json);
 
     if (!json->getPropertySlot(exec, identifier, slot))
@@ -93,7 +93,7 @@ static bool getStringFromJSON(ExecState* exec, JSObject* json, const char* key, 
 
 static bool getBooleanFromJSON(ExecState* exec, JSObject* json, const char* key, bool& result)
 {
-    Identifier identifier(exec, key);
+    Identifier identifier = Identifier::fromString(exec, key);
     PropertySlot slot(json);
 
     if (!json->getPropertySlot(exec, identifier, slot))
@@ -152,7 +152,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createHMACParameters(CryptoAlg
 {
     std::unique_ptr<CryptoAlgorithmHmacParams> hmacParameters = std::make_unique<CryptoAlgorithmHmacParams>();
     hmacParameters->hash = hashFunction;
-    return std::move(hmacParameters);
+    return WTF::move(hmacParameters);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createRSAKeyParametersWithHash(CryptoAlgorithmIdentifier hashFunction)
@@ -160,7 +160,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRSAKeyParametersWithHash
     std::unique_ptr<CryptoAlgorithmRsaKeyParamsWithHash> rsaKeyParameters = std::make_unique<CryptoAlgorithmRsaKeyParamsWithHash>();
     rsaKeyParameters->hasHash = true;
     rsaKeyParameters->hash = hashFunction;
-    return std::move(rsaKeyParameters);
+    return WTF::move(rsaKeyParameters);
 }
 
 bool JSCryptoKeySerializationJWK::reconcileAlgorithm(std::unique_ptr<CryptoAlgorithm>& suggestedAlgorithm, std::unique_ptr<CryptoAlgorithmParameters>& suggestedParameters) const
@@ -170,49 +170,50 @@ bool JSCryptoKeySerializationJWK::reconcileAlgorithm(std::unique_ptr<CryptoAlgor
         return true;
     }
 
+    auto& algorithmRegisty = CryptoAlgorithmRegistry::singleton();
     std::unique_ptr<CryptoAlgorithm> algorithm;
     std::unique_ptr<CryptoAlgorithmParameters> parameters;
     if (m_jwkAlgorithmName == "HS256") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::HMAC);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::HMAC);
         parameters = createHMACParameters(CryptoAlgorithmIdentifier::SHA_256);
     } else if (m_jwkAlgorithmName == "HS384") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::HMAC);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::HMAC);
         parameters = createHMACParameters(CryptoAlgorithmIdentifier::SHA_384);
     } else if (m_jwkAlgorithmName == "HS512") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::HMAC);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::HMAC);
         parameters = createHMACParameters(CryptoAlgorithmIdentifier::SHA_512);
     } else if (m_jwkAlgorithmName == "RS256") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5);
         parameters = createRSAKeyParametersWithHash(CryptoAlgorithmIdentifier::SHA_256);
     } else if (m_jwkAlgorithmName == "RS384") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5);
         parameters = createRSAKeyParametersWithHash(CryptoAlgorithmIdentifier::SHA_384);
     } else if (m_jwkAlgorithmName == "RS512") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5);
         parameters = createRSAKeyParametersWithHash(CryptoAlgorithmIdentifier::SHA_512);
     } else if (m_jwkAlgorithmName == "RSA1_5") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5);
         parameters = std::make_unique<CryptoAlgorithmParameters>();
     } else if (m_jwkAlgorithmName == "RSA-OAEP") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::RSA_OAEP);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::RSA_OAEP);
         parameters = createRSAKeyParametersWithHash(CryptoAlgorithmIdentifier::SHA_1);
     } else if (m_jwkAlgorithmName == "A128CBC") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::AES_CBC);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::AES_CBC);
         parameters = std::make_unique<CryptoAlgorithmParameters>();
     } else if (m_jwkAlgorithmName == "A192CBC") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::AES_CBC);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::AES_CBC);
         parameters = std::make_unique<CryptoAlgorithmParameters>();
     } else if (m_jwkAlgorithmName == "A256CBC") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::AES_CBC);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::AES_CBC);
         parameters = std::make_unique<CryptoAlgorithmParameters>();
     } else if (m_jwkAlgorithmName == "A128KW") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::AES_KW);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::AES_KW);
         parameters = std::make_unique<CryptoAlgorithmParameters>();
     } else if (m_jwkAlgorithmName == "A192KW") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::AES_KW);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::AES_KW);
         parameters = std::make_unique<CryptoAlgorithmParameters>();
     } else if (m_jwkAlgorithmName == "A256KW") {
-        algorithm = CryptoAlgorithmRegistry::shared().create(CryptoAlgorithmIdentifier::AES_KW);
+        algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::AES_KW);
         parameters = std::make_unique<CryptoAlgorithmParameters>();
     } else {
         throwTypeError(m_exec, "Unsupported JWK algorithm " + m_jwkAlgorithmName);
@@ -220,8 +221,8 @@ bool JSCryptoKeySerializationJWK::reconcileAlgorithm(std::unique_ptr<CryptoAlgor
     }
 
     if (!suggestedAlgorithm) {
-        suggestedAlgorithm = std::move(algorithm);
-        suggestedParameters =  std::move(parameters);
+        suggestedAlgorithm = WTF::move(algorithm);
+        suggestedParameters =  WTF::move(parameters);
         return true;
     }
 
@@ -232,11 +233,11 @@ bool JSCryptoKeySerializationJWK::reconcileAlgorithm(std::unique_ptr<CryptoAlgor
         return false;
 
     if (algorithm->identifier() == CryptoAlgorithmIdentifier::HMAC)
-        return toCryptoAlgorithmHmacParams(*parameters).hash == toCryptoAlgorithmHmacParams(*suggestedParameters).hash;
+        return downcast<CryptoAlgorithmHmacParams>(*parameters).hash == downcast<CryptoAlgorithmHmacParams>(*suggestedParameters).hash;
     if (algorithm->identifier() == CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5
         || algorithm->identifier() == CryptoAlgorithmIdentifier::RSA_OAEP) {
-        CryptoAlgorithmRsaKeyParamsWithHash& rsaKeyParameters = toCryptoAlgorithmRsaKeyParamsWithHash(*parameters);
-        CryptoAlgorithmRsaKeyParamsWithHash& suggestedRSAKeyParameters = toCryptoAlgorithmRsaKeyParamsWithHash(*suggestedParameters);
+        CryptoAlgorithmRsaKeyParamsWithHash& rsaKeyParameters = downcast<CryptoAlgorithmRsaKeyParamsWithHash>(*parameters);
+        CryptoAlgorithmRsaKeyParamsWithHash& suggestedRSAKeyParameters = downcast<CryptoAlgorithmRsaKeyParamsWithHash>(*suggestedParameters);
         ASSERT(rsaKeyParameters.hasHash);
         if (suggestedRSAKeyParameters.hasHash)
             return suggestedRSAKeyParameters.hash == rsaKeyParameters.hash;
@@ -282,9 +283,9 @@ void JSCryptoKeySerializationJWK::reconcileUsages(CryptoKeyUsage& suggestedUsage
                 return;
             if (!tryJWKKeyOpsValue(m_exec, jwkUsages, operation, ASCIILiteral("decrypt"), CryptoKeyUsageDecrypt))
                 return;
-            if (!tryJWKKeyOpsValue(m_exec, jwkUsages, operation, ASCIILiteral("wrap"), CryptoKeyUsageWrapKey))
+            if (!tryJWKKeyOpsValue(m_exec, jwkUsages, operation, ASCIILiteral("wrapKey"), CryptoKeyUsageWrapKey))
                 return;
-            if (!tryJWKKeyOpsValue(m_exec, jwkUsages, operation, ASCIILiteral("unwrap"), CryptoKeyUsageUnwrapKey))
+            if (!tryJWKKeyOpsValue(m_exec, jwkUsages, operation, ASCIILiteral("unwrapKey"), CryptoKeyUsageUnwrapKey))
                 return;
             if (!tryJWKKeyOpsValue(m_exec, jwkUsages, operation, ASCIILiteral("deriveKey"), CryptoKeyUsageDeriveKey))
                 return;
@@ -376,7 +377,7 @@ std::unique_ptr<CryptoKeyData> JSCryptoKeySerializationJWK::keyDataOctetSequence
         return nullptr;
     }
 
-    return CryptoKeyDataOctetSequence::create(octetSequence);
+    return std::make_unique<CryptoKeyDataOctetSequence>(octetSequence);
 }
 
 std::unique_ptr<CryptoKeyData> JSCryptoKeySerializationJWK::keyDataRSAComponents() const
@@ -500,7 +501,7 @@ std::unique_ptr<CryptoKeyData> JSCryptoKeySerializationJWK::keyData() const
 static void addToJSON(ExecState* exec, JSObject* json, const char* key, const String& value)
 {
     VM& vm = exec->vm();
-    Identifier identifier(&vm, key);
+    Identifier identifier = Identifier::fromString(&vm, key);
     json->putDirect(vm, identifier, jsString(exec, value));
 }
 
@@ -541,13 +542,13 @@ static void buildJSONForRSAComponents(JSC::ExecState* exec, const CryptoKeyDataR
         addToJSON(exec, jsPrimeInfo, "t", base64URLEncode(data.otherPrimeInfos()[i].factorCRTCoefficient));
         oth->putDirectIndex(exec, i, jsPrimeInfo);
     }
-    result->putDirect(exec->vm(), Identifier(exec, "oth"), oth);
+    result->putDirect(exec->vm(), Identifier::fromString(exec, "oth"), oth);
 }
 
 static void addBoolToJSON(ExecState* exec, JSObject* json, const char* key, bool value)
 {
     VM& vm = exec->vm();
-    Identifier identifier(&vm, key);
+    Identifier identifier = Identifier::fromString(&vm, key);
     json->putDirect(vm, identifier, jsBoolean(value));
 }
 
@@ -556,17 +557,17 @@ static void addJWKAlgorithmToJSON(ExecState* exec, JSObject* json, const CryptoK
     String jwkAlgorithm;
     switch (key.algorithmIdentifier()) {
     case CryptoAlgorithmIdentifier::HMAC:
-        switch (toCryptoKeyHMAC(key).hashAlgorithmIdentifier()) {
+        switch (downcast<CryptoKeyHMAC>(key).hashAlgorithmIdentifier()) {
         case CryptoAlgorithmIdentifier::SHA_256:
-            if (toCryptoKeyHMAC(key).key().size() * 8 >= 256)
+            if (downcast<CryptoKeyHMAC>(key).key().size() * 8 >= 256)
                 jwkAlgorithm = "HS256";
             break;
         case CryptoAlgorithmIdentifier::SHA_384:
-            if (toCryptoKeyHMAC(key).key().size() * 8 >= 384)
+            if (downcast<CryptoKeyHMAC>(key).key().size() * 8 >= 384)
                 jwkAlgorithm = "HS384";
             break;
         case CryptoAlgorithmIdentifier::SHA_512:
-            if (toCryptoKeyHMAC(key).key().size() * 8 >= 512)
+            if (downcast<CryptoKeyHMAC>(key).key().size() * 8 >= 512)
                 jwkAlgorithm = "HS512";
             break;
         default:
@@ -574,7 +575,7 @@ static void addJWKAlgorithmToJSON(ExecState* exec, JSObject* json, const CryptoK
         }
         break;
     case CryptoAlgorithmIdentifier::AES_CBC:
-        switch (toCryptoKeyAES(key).key().size() * 8) {
+        switch (downcast<CryptoKeyAES>(key).key().size() * 8) {
         case 128:
             jwkAlgorithm = "A128CBC";
             break;
@@ -587,7 +588,7 @@ static void addJWKAlgorithmToJSON(ExecState* exec, JSObject* json, const CryptoK
         }
         break;
     case CryptoAlgorithmIdentifier::AES_KW:
-        switch (toCryptoKeyAES(key).key().size() * 8) {
+        switch (downcast<CryptoKeyAES>(key).key().size() * 8) {
         case 128:
             jwkAlgorithm = "A128KW";
             break;
@@ -600,7 +601,7 @@ static void addJWKAlgorithmToJSON(ExecState* exec, JSObject* json, const CryptoK
         }
         break;
     case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5: {
-        const CryptoKeyRSA& rsaKey = toCryptoKeyRSA(key);
+        const CryptoKeyRSA& rsaKey = downcast<CryptoKeyRSA>(key);
         CryptoAlgorithmIdentifier hash;
         if (!rsaKey.isRestrictedToHash(hash))
             break;
@@ -622,14 +623,14 @@ static void addJWKAlgorithmToJSON(ExecState* exec, JSObject* json, const CryptoK
         break;
     }
     case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5: {
-        const CryptoKeyRSA& rsaKey = toCryptoKeyRSA(key);
+        const CryptoKeyRSA& rsaKey = downcast<CryptoKeyRSA>(key);
         if (rsaKey.keySizeInBits() < 2048)
             break;
         jwkAlgorithm = "RSA1_5";
         break;
     }
     case CryptoAlgorithmIdentifier::RSA_OAEP: {
-        const CryptoKeyRSA& rsaKey = toCryptoKeyRSA(key);
+        const CryptoKeyRSA& rsaKey = downcast<CryptoKeyRSA>(key);
         CryptoAlgorithmIdentifier hash;
         // WebCrypto RSA-OAEP keys are not tied to any particular hash, unless previously imported from JWK, which only supports SHA-1.
         if (rsaKey.isRestrictedToHash(hash) && hash != CryptoAlgorithmIdentifier::SHA_1)
@@ -658,23 +659,23 @@ static void addUsagesToJSON(ExecState* exec, JSObject* json, CryptoKeyUsage usag
 
     unsigned index = 0;
     if (usages & CryptoKeyUsageSign)
-        keyOps->putDirectIndex(exec, index++, jsString(exec, ASCIILiteral("sign")));
+        keyOps->putDirectIndex(exec, index++, jsNontrivialString(exec, ASCIILiteral("sign")));
     if (usages & CryptoKeyUsageVerify)
-        keyOps->putDirectIndex(exec, index++, jsString(exec, ASCIILiteral("verify")));
+        keyOps->putDirectIndex(exec, index++, jsNontrivialString(exec, ASCIILiteral("verify")));
     if (usages & CryptoKeyUsageEncrypt)
-        keyOps->putDirectIndex(exec, index++, jsString(exec, ASCIILiteral("encrypt")));
+        keyOps->putDirectIndex(exec, index++, jsNontrivialString(exec, ASCIILiteral("encrypt")));
     if (usages & CryptoKeyUsageDecrypt)
-        keyOps->putDirectIndex(exec, index++, jsString(exec, ASCIILiteral("decrypt")));
+        keyOps->putDirectIndex(exec, index++, jsNontrivialString(exec, ASCIILiteral("decrypt")));
     if (usages & CryptoKeyUsageWrapKey)
-        keyOps->putDirectIndex(exec, index++, jsString(exec, ASCIILiteral("wrap")));
+        keyOps->putDirectIndex(exec, index++, jsNontrivialString(exec, ASCIILiteral("wrapKey")));
     if (usages & CryptoKeyUsageUnwrapKey)
-        keyOps->putDirectIndex(exec, index++, jsString(exec, ASCIILiteral("unwrap")));
+        keyOps->putDirectIndex(exec, index++, jsNontrivialString(exec, ASCIILiteral("unwrapKey")));
     if (usages & CryptoKeyUsageDeriveKey)
-        keyOps->putDirectIndex(exec, index++, jsString(exec, ASCIILiteral("deriveKey")));
+        keyOps->putDirectIndex(exec, index++, jsNontrivialString(exec, ASCIILiteral("deriveKey")));
     if (usages & CryptoKeyUsageDeriveBits)
-        keyOps->putDirectIndex(exec, index++, jsString(exec, ASCIILiteral("deriveBits")));
+        keyOps->putDirectIndex(exec, index++, jsNontrivialString(exec, ASCIILiteral("deriveBits")));
 
-    json->putDirect(exec->vm(), Identifier(exec, "key_ops"), keyOps);
+    json->putDirect(exec->vm(), Identifier::fromString(exec, "key_ops"), keyOps);
 }
 
 String JSCryptoKeySerializationJWK::serialize(ExecState* exec, const CryptoKey& key)
@@ -698,10 +699,10 @@ String JSCryptoKeySerializationJWK::serialize(ExecState* exec, const CryptoKey& 
     if (exec->hadException())
         return String();
 
-    if (isCryptoKeyDataOctetSequence(*keyData))
-        buildJSONForOctetSequence(exec, toCryptoKeyDataOctetSequence(*keyData).octetSequence(), result);
-    else if (isCryptoKeyDataRSAComponents(*keyData))
-        buildJSONForRSAComponents(exec, toCryptoKeyDataRSAComponents(*keyData), result);
+    if (is<CryptoKeyDataOctetSequence>(*keyData))
+        buildJSONForOctetSequence(exec, downcast<CryptoKeyDataOctetSequence>(*keyData).octetSequence(), result);
+    else if (is<CryptoKeyDataRSAComponents>(*keyData))
+        buildJSONForRSAComponents(exec, downcast<CryptoKeyDataRSAComponents>(*keyData), result);
     else {
         throwTypeError(exec, "Key doesn't support exportKey");
         return String();
@@ -709,7 +710,7 @@ String JSCryptoKeySerializationJWK::serialize(ExecState* exec, const CryptoKey& 
     if (exec->hadException())
         return String();
 
-    return JSONStringify(exec, result, 4);
+    return JSONStringify(exec, result, 0);
 }
 
 } // namespace WebCore

@@ -30,7 +30,7 @@ namespace WTR {
 
 static Eina_Bool waitToDumpWatchdogTimerCallback(void*)
 {
-    InjectedBundle::shared().testRunner()->waitToDumpWatchdogTimerFired();
+    InjectedBundle::singleton().testRunner()->waitToDumpWatchdogTimerFired();
     return false;
 }
 
@@ -53,8 +53,7 @@ void TestRunner::initializeWaitToDumpWatchdogTimerIfNeeded()
     if (m_waitToDumpWatchdogTimer)
         return;
 
-    m_waitToDumpWatchdogTimer = ecore_timer_loop_add(waitToDumpWatchdogTimerInterval,
-                                                     waitToDumpWatchdogTimerCallback, 0);
+    m_waitToDumpWatchdogTimer = ecore_timer_loop_add(m_timeout / 1000.0, waitToDumpWatchdogTimerCallback, 0);
 }
 
 JSRetainPtr<JSStringRef> TestRunner::pathToLocalResource(JSStringRef url)

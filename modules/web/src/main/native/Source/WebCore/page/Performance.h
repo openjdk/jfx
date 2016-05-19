@@ -54,7 +54,7 @@ class UserTiming;
 
 class Performance final : public ScriptWrappable, public RefCounted<Performance>, public DOMWindowProperty, public EventTargetWithInlineData {
 public:
-    static PassRefPtr<Performance> create(Frame* frame) { return adoptRef(new Performance(frame)); }
+    static Ref<Performance> create(Frame* frame) { return adoptRef(*new Performance(frame)); }
     ~Performance();
 
     virtual EventTargetInterface eventTargetInterface() const override { return PerformanceEventTargetInterfaceType; }
@@ -73,8 +73,6 @@ public:
 #if ENABLE(RESOURCE_TIMING)
     void webkitClearResourceTimings();
     void webkitSetResourceTimingBufferSize(unsigned int);
-
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitresourcetimingbufferfull);
 
     void addResourceTiming(const String& initiatorName, Document*, const ResourceRequest&, const ResourceResponse&, double initiationTime, double finishTime);
 #endif
@@ -104,6 +102,8 @@ private:
     Vector<RefPtr<PerformanceEntry>> m_resourceTimingBuffer;
     unsigned m_resourceTimingBufferSize;
 #endif
+
+    double m_referenceTime;
 
 #if ENABLE(USER_TIMING)
     RefPtr<UserTiming> m_userTiming;

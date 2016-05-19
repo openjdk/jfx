@@ -32,9 +32,9 @@
 #include "JSAccessibilityController.h"
 
 #include <JavaScriptCore/JSRetainPtr.h>
-#include <WebKit2/WKBundle.h>
-#include <WebKit2/WKBundlePage.h>
-#include <WebKit2/WKBundlePagePrivate.h>
+#include <WebKit/WKBundle.h>
+#include <WebKit/WKBundlePage.h>
+#include <WebKit/WKBundlePagePrivate.h>
 
 namespace WTR {
 
@@ -61,10 +61,20 @@ JSClassRef AccessibilityController::wrapperClass()
     return JSAccessibilityController::accessibilityControllerClass();
 }
 
+void AccessibilityController::enableEnhancedAccessibility(bool enable)
+{
+    WKAccessibilityEnableEnhancedAccessibility(enable);
+}
+
+bool AccessibilityController::enhancedAccessibilityEnabled()
+{
+    return WKAccessibilityEnhancedAccessibilityEnabled();
+}
+
 #if !PLATFORM(GTK) && !PLATFORM(EFL)
 PassRefPtr<AccessibilityUIElement> AccessibilityController::rootElement()
 {
-    WKBundlePageRef page = InjectedBundle::shared().page()->page();
+    WKBundlePageRef page = InjectedBundle::singleton().page()->page();
     void* root = WKAccessibilityRootObject(page);
 
     return AccessibilityUIElement::create(static_cast<PlatformUIElement>(root));
@@ -72,7 +82,7 @@ PassRefPtr<AccessibilityUIElement> AccessibilityController::rootElement()
 
 PassRefPtr<AccessibilityUIElement> AccessibilityController::focusedElement()
 {
-    WKBundlePageRef page = InjectedBundle::shared().page()->page();
+    WKBundlePageRef page = InjectedBundle::singleton().page()->page();
     void* root = WKAccessibilityFocusedObject(page);
 
     return AccessibilityUIElement::create(static_cast<PlatformUIElement>(root));

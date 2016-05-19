@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2005, 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -89,6 +89,9 @@ const int cAnimationLoopOnce = 0;
 const int cAnimationLoopInfinite = -1;
 const int cAnimationNone = -2;
 
+// SubsamplingLevel. 0 is no subsampling, 1 is half dimensions on each axis etc.
+typedef short SubsamplingLevel;
+
 class ImageSource {
     WTF_MAKE_NONCOPYABLE(ImageSource);
 public:
@@ -101,13 +104,6 @@ public:
         GammaAndColorProfileApplied,
         GammaAndColorProfileIgnored
     };
-
-#if USE(CG)
-    enum ShouldSkipMetadata {
-        DoNotSkipMetadata,
-        SkipMetadata
-    };
-#endif
 
     ImageSource(AlphaOption alphaOption = AlphaPremultiplied, GammaAndColorProfileOption gammaAndColorProfileOption = GammaAndColorProfileApplied);
     ~ImageSource();
@@ -143,14 +139,14 @@ public:
     void setData(SharedBuffer* data, bool allDataReceived);
     String filenameExtension() const;
 
-    bool isSizeAvailable();
-    IntSize size(ImageOrientationDescription = ImageOrientationDescription()) const;
-    IntSize frameSizeAtIndex(size_t, ImageOrientationDescription = ImageOrientationDescription()) const;
+    SubsamplingLevel subsamplingLevelForScale(float) const;
+    bool allowSubsamplingOfFrameAtIndex(size_t) const;
 
-#if PLATFORM(IOS)
-    IntSize originalSize(RespectImageOrientationEnum = DoNotRespectImageOrientation) const;
-    bool isSubsampled() const { return m_baseSubsampling; }
-#endif
+    bool isSizeAvailable();
+    // Always original size, without subsampling.
+    IntSize size(ImageOrientationDescription = ImageOrientationDescription()) const;
+    // Size of optionally subsampled frame.
+    IntSize frameSizeAtIndex(size_t, SubsamplingLevel = 0, ImageOrientationDescription = ImageOrientationDescription()) const;
 
     bool getHotSpot(IntPoint&) const;
 
@@ -162,7 +158,7 @@ public:
 
     // Callers should not call this after calling clear() with a higher index;
     // see comments on clear() above.
-    PassNativeImagePtr createFrameAtIndex(size_t, float* scale = 0);
+    PassNativeImagePtr createFrameAtIndex(size_t, SubsamplingLevel = 0);
 
     float frameDurationAtIndex(size_t);
     bool frameHasAlphaAtIndex(size_t); // Whether or not the frame actually used any alpha.
@@ -171,16 +167,11 @@ public:
 
     // Return the number of bytes in the decoded frame. If the frame is not yet
     // decoded then return 0.
-    unsigned frameBytesAtIndex(size_t) const;
+    unsigned frameBytesAtIndex(size_t, SubsamplingLevel = 0) const;
 
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
     static unsigned maxPixelsPerDecodedImage() { return s_maxPixelsPerDecodedImage; }
     static void setMaxPixelsPerDecodedImage(unsigned maxPixels) { s_maxPixelsPerDecodedImage = maxPixels; }
-#endif
-
-#if PLATFORM(IOS)
-    static bool acceleratedImageDecodingEnabled() { return s_acceleratedImageDecoding; }
-    static void setAcceleratedImageDecodingEnabled(bool flag) { s_acceleratedImageDecoding = flag; }
 #endif
 
 private:
@@ -192,12 +183,6 @@ private:
 #endif
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
     static unsigned s_maxPixelsPerDecodedImage;
-#endif
-#if PLATFORM(IOS)
-    mutable int m_baseSubsampling;
-    mutable bool m_isProgressive;
-    CFDictionaryRef imageSourceOptions(ShouldSkipMetadata, int subsampling = 0) const;
-    static bool s_acceleratedImageDecoding;
 #endif
 #if PLATFORM(JAVA) && USE(IMAGEIO)
     friend class BitmapImage;
@@ -212,6 +197,7 @@ private:
         bool hasAlpha;
     };
     Vector<CachedFrameData> m_frameInfos;
+    bool isMetaDataExists(size_t) const;
 #endif
 };
 

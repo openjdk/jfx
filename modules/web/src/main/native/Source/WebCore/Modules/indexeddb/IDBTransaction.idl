@@ -28,9 +28,9 @@
     Conditional=INDEXED_DATABASE,
     ActiveDOMObject,
     EventTarget,
-    JSNoStaticTables,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    EnabledAtRuntime=IndexedDB,
 ] interface IDBTransaction : EventTarget {
     readonly attribute DOMString mode;
     readonly attribute IDBDatabase db;
@@ -39,7 +39,7 @@
     [RaisesException] IDBObjectStore objectStore (DOMString name);
     [RaisesException] void abort ();
 
-    attribute EventListener onabort;
-    attribute EventListener oncomplete;
-    attribute EventListener onerror;
+    attribute EventHandler onabort;
+    attribute EventHandler oncomplete;
+    attribute EventHandler onerror;
 };

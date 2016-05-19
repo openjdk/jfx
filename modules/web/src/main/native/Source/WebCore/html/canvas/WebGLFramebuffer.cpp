@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,10 +29,10 @@
 
 #include "WebGLFramebuffer.h"
 
-#include "EXTDrawBuffers.h"
 #include "Extensions3D.h"
 #include "WebGLContextGroup.h"
-#include "WebGLRenderingContext.h"
+#include "WebGLDrawBuffers.h"
+#include "WebGLRenderingContextBase.h"
 
 namespace WebCore {
 
@@ -45,7 +45,7 @@ namespace {
 
     class WebGLRenderbufferAttachment : public WebGLFramebuffer::WebGLAttachment {
     public:
-        static PassRefPtr<WebGLFramebuffer::WebGLAttachment> create(WebGLRenderbuffer*);
+        static Ref<WebGLFramebuffer::WebGLAttachment> create(WebGLRenderbuffer*);
 
     private:
         WebGLRenderbufferAttachment(WebGLRenderbuffer*);
@@ -66,9 +66,9 @@ namespace {
         RefPtr<WebGLRenderbuffer> m_renderbuffer;
     };
 
-    PassRefPtr<WebGLFramebuffer::WebGLAttachment> WebGLRenderbufferAttachment::create(WebGLRenderbuffer* renderbuffer)
+    Ref<WebGLFramebuffer::WebGLAttachment> WebGLRenderbufferAttachment::create(WebGLRenderbuffer* renderbuffer)
     {
-        return adoptRef(new WebGLRenderbufferAttachment(renderbuffer));
+        return adoptRef(*new WebGLRenderbufferAttachment(renderbuffer));
     }
 
     WebGLRenderbufferAttachment::WebGLRenderbufferAttachment(WebGLRenderbuffer* renderbuffer)
@@ -139,7 +139,7 @@ namespace {
 
     class WebGLTextureAttachment : public WebGLFramebuffer::WebGLAttachment {
     public:
-        static PassRefPtr<WebGLFramebuffer::WebGLAttachment> create(WebGLTexture*, GC3Denum target, GC3Dint level);
+        static Ref<WebGLFramebuffer::WebGLAttachment> create(WebGLTexture*, GC3Denum target, GC3Dint level);
 
     private:
         WebGLTextureAttachment(WebGLTexture*, GC3Denum target, GC3Dint level);
@@ -162,9 +162,9 @@ namespace {
         GC3Dint m_level;
     };
 
-    PassRefPtr<WebGLFramebuffer::WebGLAttachment> WebGLTextureAttachment::create(WebGLTexture* texture, GC3Denum target, GC3Dint level)
+    Ref<WebGLFramebuffer::WebGLAttachment> WebGLTextureAttachment::create(WebGLTexture* texture, GC3Denum target, GC3Dint level)
     {
-        return adoptRef(new WebGLTextureAttachment(texture, target, level));
+        return adoptRef(*new WebGLTextureAttachment(texture, target, level));
     }
 
     WebGLTextureAttachment::WebGLTextureAttachment(WebGLTexture* texture, GC3Denum target, GC3Dint level)
@@ -269,12 +269,12 @@ WebGLFramebuffer::WebGLAttachment::~WebGLAttachment()
 {
 }
 
-PassRefPtr<WebGLFramebuffer> WebGLFramebuffer::create(WebGLRenderingContext* ctx)
+Ref<WebGLFramebuffer> WebGLFramebuffer::create(WebGLRenderingContextBase* ctx)
 {
-    return adoptRef(new WebGLFramebuffer(ctx));
+    return adoptRef(*new WebGLFramebuffer(ctx));
 }
 
-WebGLFramebuffer::WebGLFramebuffer(WebGLRenderingContext* ctx)
+WebGLFramebuffer::WebGLFramebuffer(WebGLRenderingContextBase* ctx)
     : WebGLContextObject(ctx)
     , m_hasEverBeenBound(false)
 {
@@ -369,7 +369,7 @@ void WebGLFramebuffer::removeAttachmentFromBoundFramebuffer(WebGLSharedObject* a
         return;
 
     bool checkMore = true;
-    while (checkMore) {
+    do {
         checkMore = false;
         for (AttachmentMap::iterator it = m_attachments.begin(); it != m_attachments.end(); ++it) {
             WebGLAttachment* attachmentObject = it->value.get();
@@ -381,7 +381,7 @@ void WebGLFramebuffer::removeAttachmentFromBoundFramebuffer(WebGLSharedObject* a
                 break;
             }
         }
-    }
+    } while (checkMore);
 }
 
 GC3Dsizei WebGLFramebuffer::getColorBufferWidth() const
@@ -431,7 +431,13 @@ GC3Denum WebGLFramebuffer::checkStatus(const char** reason) const
             *reason = "attachment is not valid";
             return GraphicsContext3D::FRAMEBUFFER_UNSUPPORTED;
         }
-        if (!attachment->getFormat()) {
+        GC3Denum attachmentFormat = attachment->getFormat();
+
+        // Attaching an SRGB_EXT format attachment to a framebuffer is invalid.
+        if (attachmentFormat == Extensions3D::SRGB_EXT)
+            attachmentFormat = 0;
+
+        if (!attachmentFormat) {
             *reason = "attachment is an unsupported format";
             return GraphicsContext3D::FRAMEBUFFER_INCOMPLETE_ATTACHMENT;
         }
@@ -601,8 +607,10 @@ void WebGLFramebuffer::drawBuffers(const Vector<GC3Denum>& bufs)
 
 void WebGLFramebuffer::drawBuffersIfNecessary(bool force)
 {
-    if (!context()->m_extDrawBuffers)
+#if ENABLE(WEBGL2)
+    if (!context()->m_webglDrawBuffers && !context()->isWebGL2())
         return;
+#endif
     bool reset = force;
     // This filtering works around graphics driver bugs on Mac OS X.
     for (size_t i = 0; i < m_drawBuffers.size(); ++i) {

@@ -27,9 +27,9 @@
 #define APICallbackFunction_h
 
 #include "APICast.h"
-#include "APIShims.h"
 #include "Error.h"
 #include "JSCallbackConstructor.h"
+#include "JSLock.h"
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -46,7 +46,7 @@ EncodedJSValue JSC_HOST_CALL APICallbackFunction::call(ExecState* exec)
 {
     JSContextRef execRef = toRef(exec);
     JSObjectRef functionRef = toRef(exec->callee());
-    JSObjectRef thisObjRef = toRef(jsCast<JSObject*>(exec->hostThisValue().toThis(exec, NotStrictMode)));
+    JSObjectRef thisObjRef = toRef(jsCast<JSObject*>(exec->thisValue().toThis(exec, NotStrictMode)));
 
     int argumentCount = static_cast<int>(exec->argumentCount());
     Vector<JSValueRef, 16> arguments;
@@ -57,7 +57,7 @@ EncodedJSValue JSC_HOST_CALL APICallbackFunction::call(ExecState* exec)
     JSValueRef exception = 0;
     JSValueRef result;
     {
-        APICallbackShim callbackShim(exec);
+        JSLock::DropAllLocks dropAllLocks(exec);
         result = jsCast<T*>(toJS(functionRef))->functionCallback()(execRef, functionRef, thisObjRef, argumentCount, arguments.data(), &exception);
     }
     if (exception)
@@ -88,7 +88,7 @@ EncodedJSValue JSC_HOST_CALL APICallbackFunction::construct(ExecState* exec)
         JSValueRef exception = 0;
         JSObjectRef result;
         {
-            APICallbackShim callbackShim(exec);
+            JSLock::DropAllLocks dropAllLocks(exec);
             result = callback(ctx, constructorRef, argumentCount, arguments.data(), &exception);
         }
         if (exception) {

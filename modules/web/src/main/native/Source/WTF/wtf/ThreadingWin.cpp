@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -94,21 +94,16 @@
 
 #include "MainThread.h"
 #include "ThreadFunctionInvocation.h"
+#include <process.h>
 #include <windows.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/HashMap.h>
 #include <wtf/MathExtras.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RandomNumberSeed.h>
 #include <wtf/WTFThreadData.h>
 
 #if !USE(PTHREADS) && OS(WINDOWS)
 #include "ThreadSpecific.h"
-#endif
-
-#if !OS(WINCE)
-#include <process.h>
 #endif
 
 #if HAVE(ERRNO_H)
@@ -202,7 +197,7 @@ static void clearThreadHandleForIdentifier(ThreadIdentifier id)
 
 static unsigned __stdcall wtfThreadEntryPoint(void* param)
 {
-    OwnPtr<ThreadFunctionInvocation> invocation = adoptPtr(static_cast<ThreadFunctionInvocation*>(param));
+    std::unique_ptr<ThreadFunctionInvocation> invocation(static_cast<ThreadFunctionInvocation*>(param));
     invocation->function(invocation->data);
 
 #if !USE(PTHREADS) && OS(WINDOWS)
@@ -217,18 +212,10 @@ ThreadIdentifier createThreadInternal(ThreadFunction entryPoint, void* data, con
 {
     unsigned threadIdentifier = 0;
     ThreadIdentifier threadID = 0;
-    OwnPtr<ThreadFunctionInvocation> invocation = adoptPtr(new ThreadFunctionInvocation(entryPoint, data));
-#if OS(WINCE)
-    // This is safe on WINCE, since CRT is in the core and innately multithreaded.
-    // On desktop Windows, need to use _beginthreadex (not available on WinCE) if using any CRT functions
-    HANDLE threadHandle = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)wtfThreadEntryPoint, invocation.get(), 0, (LPDWORD)&threadIdentifier);
-#else
+    auto invocation = std::make_unique<ThreadFunctionInvocation>(entryPoint, data);
     HANDLE threadHandle = reinterpret_cast<HANDLE>(_beginthreadex(0, 0, wtfThreadEntryPoint, invocation.get(), 0, &threadIdentifier));
-#endif
     if (!threadHandle) {
-#if OS(WINCE)
-        LOG_ERROR("Failed to create thread at entry point %p with data %p: %ld", entryPoint, data, ::GetLastError());
-#elif !HAVE(ERRNO_H)
+#if !HAVE(ERRNO_H)
         LOG_ERROR("Failed to create thread at entry point %p with data %p.", entryPoint, data);
 #else
         LOG_ERROR("Failed to create thread at entry point %p with data %p: %ld", entryPoint, data, errno);
@@ -237,13 +224,24 @@ ThreadIdentifier createThreadInternal(ThreadFunction entryPoint, void* data, con
     }
 
     // The thread will take ownership of invocation.
-    ThreadFunctionInvocation* leakedInvocation = invocation.leakPtr();
+    ThreadFunctionInvocation* leakedInvocation = invocation.release();
     UNUSED_PARAM(leakedInvocation);
 
     threadID = static_cast<ThreadIdentifier>(threadIdentifier);
     storeThreadHandleByIdentifier(threadIdentifier, threadHandle);
 
     return threadID;
+}
+
+void changeThreadPriority(ThreadIdentifier threadID, int delta)
+{
+    ASSERT(threadID);
+
+    HANDLE threadHandle = threadHandleForIdentifier(threadID);
+    if (!threadHandle)
+        LOG_ERROR("ThreadIdentifier %u does not correspond to an active thread", threadID);
+
+    SetThreadPriority(threadHandle, THREAD_PRIORITY_NORMAL + delta);
 }
 
 int waitForThreadCompletion(ThreadIdentifier threadID)
@@ -296,6 +294,7 @@ void Mutex::lock()
     ++m_mutex.m_recursionCount;
 }
 
+#pragma warning(suppress: 26115)
 bool Mutex::tryLock()
 {
     // This method is modeled after the behavior of pthread_mutex_trylock,

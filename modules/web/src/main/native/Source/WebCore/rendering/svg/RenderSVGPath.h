@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2006 Apple Computer, Inc
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2009 Google, Inc.
  * Copyright (C) 2011 Renata Hodovan <reni@webkit.org>
  * Copyright (C) 2011 University of Szeged
@@ -32,12 +32,12 @@ namespace WebCore {
 
 class RenderSVGPath final : public RenderSVGShape {
 public:
-    RenderSVGPath(SVGGraphicsElement&, PassRef<RenderStyle>);
+    RenderSVGPath(SVGGraphicsElement&, Ref<RenderStyle>&&);
     virtual ~RenderSVGPath();
 
 private:
     virtual bool isSVGPath() const override { return true; }
-    virtual const char* renderName() const { return "RenderSVGPath"; }
+    virtual const char* renderName() const override { return "RenderSVGPath"; }
 
     virtual void updateShapeFromElement() override;
     FloatRect calculateUpdatedStrokeBoundingBox() const;
@@ -50,11 +50,13 @@ private:
     FloatRect zeroLengthSubpathRect(const FloatPoint&, float) const;
     void updateZeroLengthSubpaths();
 
+    virtual bool isRenderingDisabled() const override;
+
     Vector<FloatPoint> m_zeroLengthLinecapLocations;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSVGPath, isSVGPath())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGPath, isSVGPath())
 
-#endif
+#endif // RenderSVGPath_h

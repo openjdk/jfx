@@ -28,10 +28,9 @@ namespace WebCore {
 
 class SVGTRefTargetEventListener;
 
-class SVGTRefElement final : public SVGTextPositioningElement,
-                             public SVGURIReference {
+class SVGTRefElement final : public SVGTextPositioningElement, public SVGURIReference {
 public:
-    static PassRefPtr<SVGTRefElement> create(const QualifiedName&, Document&);
+    static Ref<SVGTRefElement> create(const QualifiedName&, Document&);
 
 private:
     friend class SVGTRefTargetEventListener;
@@ -39,16 +38,18 @@ private:
     SVGTRefElement(const QualifiedName&, Document&);
     virtual ~SVGTRefElement();
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
     virtual bool childShouldCreateRenderer(const Node&) const override;
     virtual bool rendererIsNeeded(const RenderStyle&) override;
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
     virtual void removedFrom(ContainerNode&) override;
+    virtual void finishedInsertingSubtree() override;
+
+    virtual void clearTarget() override;
 
     void updateReferencedText(Element*);
 
@@ -57,7 +58,7 @@ private:
     virtual void buildPendingResource() override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGTRefElement)
-        DECLARE_ANIMATED_STRING(Href, href)
+        DECLARE_ANIMATED_STRING_OVERRIDE(Href, href)
     END_DECLARE_ANIMATED_PROPERTIES
 
     Ref<SVGTRefTargetEventListener> m_targetListener;

@@ -24,7 +24,10 @@
  */
 
 #include "config.h"
-#include <WebKit2/WKStringPrivate.h>
+
+#if WK_HAVE_C_SPI
+
+#include <WebKit/WKStringPrivate.h>
 #include <JavaScriptCore/JSStringRef.h>
 
 namespace TestWebKitAPI {
@@ -48,3 +51,5 @@ TEST(WebKit2, WKStringJSString)
 }
 
 } // namespace TestWebKitAPI
+
+#endif

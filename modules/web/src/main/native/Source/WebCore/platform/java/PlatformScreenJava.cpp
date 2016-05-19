@@ -147,4 +147,9 @@ FloatRect screenAvailableRect(Widget* w)
     return getScreenRect(w, true);
 }
 
+bool screenHasInvertedColors() //XXX: recheck
+{
+    return false;
+}
+
 } // namespace WebCore

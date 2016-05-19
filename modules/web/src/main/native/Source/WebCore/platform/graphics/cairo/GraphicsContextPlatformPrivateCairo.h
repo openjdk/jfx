@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2008 Brent Fulgham <bfulgham@gmail.com>
  *
@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,17 +30,15 @@
 
 #include "GraphicsContext.h"
 
+#if USE(CAIRO)
+
 #include "PlatformContextCairo.h"
 #include "RefPtrCairo.h"
 #include <cairo.h>
 #include <math.h>
 #include <stdio.h>
-#include <wtf/MathExtras.h>
 
-#if PLATFORM(GTK)
-#include <pango/pango.h>
-typedef struct _GdkExposeEvent GdkExposeEvent;
-#elif PLATFORM(WIN)
+#if PLATFORM(WIN)
 #include <cairo-win32.h>
 #endif
 
@@ -50,9 +48,6 @@ class GraphicsContextPlatformPrivate {
 public:
     GraphicsContextPlatformPrivate(PlatformContextCairo* newPlatformContext)
         : platformContext(newPlatformContext)
-#if PLATFORM(GTK)
-        , expose(0)
-#endif
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS))
         // NOTE:  These may note be needed: review and remove once Cairo implementation is complete
         , m_hdc(0)
@@ -96,9 +91,6 @@ public:
     PlatformContextCairo* platformContext;
     Vector<float> layers;
 
-#if PLATFORM(GTK)
-    GdkEventExpose* expose;
-#endif
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS))
     HDC m_hdc;
     bool m_shouldIncludeChildWindows;
@@ -123,5 +115,7 @@ public:
 
 
 } // namespace WebCore
+
+#endif // USE(CAIRO)
 
 #endif // GraphicsContextPlatformPrivateCairo_h

@@ -19,13 +19,9 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SVGFETileElement.h"
 
-#include "Attribute.h"
 #include "FilterEffect.h"
-#include "SVGElementInstance.h"
 #include "SVGFilterBuilder.h"
 #include "SVGNames.h"
 #include "SVGRenderStyle.h"
@@ -47,63 +43,42 @@ inline SVGFETileElement::SVGFETileElement(const QualifiedName& tagName, Document
     registerAnimatedPropertiesForSVGFETileElement();
 }
 
-PassRefPtr<SVGFETileElement> SVGFETileElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFETileElement> SVGFETileElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFETileElement(tagName, document));
-}
-
-bool SVGFETileElement::isSupportedAttribute(const QualifiedName& attrName)
-{
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty())
-        supportedAttributes.add(SVGNames::inAttr);
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return adoptRef(*new SVGFETileElement(tagName, document));
 }
 
 void SVGFETileElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(name)) {
-        SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
-        return;
-    }
-
     if (name == SVGNames::inAttr) {
         setIn1BaseValue(value);
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
 }
 
 void SVGFETileElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (!isSupportedAttribute(attrName)) {
-        SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
-        return;
-    }
-
-    SVGElementInstance::InvalidationGuard invalidationGuard(this);
-
     if (attrName == SVGNames::inAttr) {
+        InstanceInvalidationGuard guard(*this);
         invalidate();
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-PassRefPtr<FilterEffect> SVGFETileElement::build(SVGFilterBuilder* filterBuilder, Filter* filter)
+RefPtr<FilterEffect> SVGFETileElement::build(SVGFilterBuilder* filterBuilder, Filter& filter)
 {
     FilterEffect* input1 = filterBuilder->getEffectById(in1());
 
     if (!input1)
-        return 0;
+        return nullptr;
 
     RefPtr<FilterEffect> effect = FETile::create(filter);
     effect->inputEffects().append(input1);
-    return effect.release();
+    return effect;
 }
 
 }
-
-#endif // ENABLE(FILTERS)

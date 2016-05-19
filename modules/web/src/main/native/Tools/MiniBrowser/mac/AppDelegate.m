@@ -25,14 +25,17 @@
 
 #import "AppDelegate.h"
 
+#import "ExtensionManagerWindowController.h"
+#import "SettingsController.h"
 #import "WK1BrowserWindowController.h"
 #import "WK2BrowserWindowController.h"
-
-#import <WebKit2/WebKit2.h>
-#import <WebKit2/WKStringCF.h>
-#import <WebKit2/WKURLCF.h>
-
-static NSString *defaultURL = @"http://www.webkit.org/";
+#import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKProcessPoolPrivate.h>
+#import <WebKit/WKUserContentControllerPrivate.h>
+#import <WebKit/WKWebViewConfigurationPrivate.h>
+#import <WebKit/WebKit.h>
+#import <WebKit/_WKProcessPoolConfiguration.h>
+#import <WebKit/_WKUserContentExtensionStore.h>
 
 enum {
     WebKit1NewWindowTag = 1,
@@ -45,63 +48,108 @@ enum {
 {
     self = [super init];
     if (self) {
+        _browserWindowControllers = [[NSMutableSet alloc] init];
 #if WK_API_ENABLED
-        NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] pathForAuxiliaryExecutable:@"MiniBrowser.wkbundle"]];
-        _processGroup = [[WKProcessGroup alloc] initWithInjectedBundleURL:url];
-        _browsingContextGroup = [[WKBrowsingContextGroup alloc] initWithIdentifier:@"MiniBrowser"];
+        _extensionManagerWindowController = [[ExtensionManagerWindowController alloc] init];
 #endif
-        _browserWindows = [[NSMutableSet alloc] init];
     }
 
     return self;
 }
 
+- (void)awakeFromNib
+{
+    NSMenuItem *item = [[NSMenuItem alloc] init];
+    [item setSubmenu:[[SettingsController shared] menu]];
+    [[NSApp mainMenu] insertItem:[item autorelease] atIndex:[[NSApp mainMenu] indexOfItemWithTitle:@"Debug"]];
+}
+
+#if WK_API_ENABLED
+static WKWebViewConfiguration *defaultConfiguration()
+{
+    static WKWebViewConfiguration *configuration;
+
+    if (!configuration) {
+        configuration = [[WKWebViewConfiguration alloc] init];
+        configuration.preferences._fullScreenEnabled = YES;
+        configuration.preferences._developerExtrasEnabled = YES;
+
+        if ([SettingsController shared].perWindowWebProcessesDisabled) {
+            _WKProcessPoolConfiguration *singleProcessConfiguration = [[_WKProcessPoolConfiguration alloc] init];
+            singleProcessConfiguration.maximumProcessCount = 1;
+            configuration.processPool = [[[WKProcessPool alloc] _initWithConfiguration:singleProcessConfiguration] autorelease];
+            [singleProcessConfiguration release];
+        }
+    }
+
+    configuration.suppressesIncrementalRendering = [SettingsController shared].incrementalRenderingSuppressed;
+    return configuration;
+}
+#endif
+
+
 - (IBAction)newWindow:(id)sender
 {
     BrowserWindowController *controller = nil;
 
-    if (![sender respondsToSelector:@selector(tag)] || [sender tag] == WebKit1NewWindowTag)
+    BOOL useWebKit2 = NO;
+
+    if (![sender respondsToSelector:@selector(tag)])
+        useWebKit2 = [SettingsController shared].useWebKit2ByDefault;
+    else
+        useWebKit2 = [sender tag] == WebKit2NewWindowTag;
+
+    if (!useWebKit2)
         controller = [[WK1BrowserWindowController alloc] initWithWindowNibName:@"BrowserWindow"];
 #if WK_API_ENABLED
-    else if ([sender tag] == WebKit2NewWindowTag)
-        controller = [[WK2BrowserWindowController alloc] initWithProcessGroup:_processGroup browsingContextGroup:_browsingContextGroup];
+    else
+        controller = [[WK2BrowserWindowController alloc] initWithConfiguration:defaultConfiguration()];
 #endif
-
     if (!controller)
         return;
 
     [[controller window] makeKeyAndOrderFront:sender];
-    [_browserWindows addObject:[controller window]];
+    [_browserWindowControllers addObject:controller];
 
-    [controller loadURLString:defaultURL];
+    [controller loadURLString:[SettingsController shared].defaultURL];
+}
+
+- (IBAction)newPrivateWindow:(id)sender
+{
+#if WK_API_ENABLED
+    WKWebViewConfiguration *privateConfiguraton = [defaultConfiguration() copy];
+    privateConfiguraton.websiteDataStore = [WKWebsiteDataStore nonPersistentDataStore];
+
+    BrowserWindowController *controller = [[WK2BrowserWindowController alloc] initWithConfiguration:privateConfiguraton];
+    [privateConfiguraton release];
+
+    [[controller window] makeKeyAndOrderFront:sender];
+    [_browserWindowControllers addObject:controller];
+
+    [controller loadURLString:[SettingsController shared].defaultURL];
+#endif
 }
 
 - (void)browserWindowWillClose:(NSWindow *)window
 {
-    [_browserWindows removeObject:window];
+    [_browserWindowControllers removeObject:window.windowController];
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
+    WebHistory *webHistory = [[WebHistory alloc] init];
+    [WebHistory setOptionalSharedHistory:webHistory];
+    [webHistory release];
+
+    [self _updateNewWindowKeyEquivalents];
+
     [self newWindow:self];
 }
 
 - (void)applicationWillTerminate:(NSNotification *)notification
 {
-    for (NSWindow* window in _browserWindows) {
-        id delegate = [window delegate];
-        assert([delegate isKindOfClass:[BrowserWindowController class]]);
-        BrowserWindowController *controller = (BrowserWindowController *)delegate;
+    for (BrowserWindowController* controller in _browserWindowControllers)
         [controller applicationTerminating];
-    }
-
-#if WK_API_ENABLED
-    [_processGroup release];
-    _processGroup = nil;
-
-    [_browsingContextGroup release];
-    _browsingContextGroup = nil;
-#endif
 }
 
 - (BrowserWindowController *)frontmostBrowserWindowController
@@ -113,11 +161,11 @@ enum {
             continue;
 
         BrowserWindowController *controller = (BrowserWindowController *)delegate;
-        assert([_browserWindows containsObject:[controller window]]);
+        assert([_browserWindowControllers containsObject:controller]);
         return controller;
     }
 
-    return 0;
+    return nil;
 }
 
 - (IBAction)openDocument:(id)sender
@@ -127,7 +175,7 @@ enum {
     if (browserWindowController) {
         NSOpenPanel *openPanel = [[NSOpenPanel openPanel] retain];
         [openPanel beginSheetModalForWindow:browserWindowController.window completionHandler:^(NSInteger result) {
-            if (result != NSOKButton)
+            if (result != NSFileHandlingPanelOKButton)
                 return;
 
             NSURL *url = [openPanel.URLs objectAtIndex:0];
@@ -136,20 +184,77 @@ enum {
         return;
     }
 
-#if WK_API_ENABLED
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
     [openPanel beginWithCompletionHandler:^(NSInteger result) {
-        if (result != NSOKButton)
+        if (result != NSFileHandlingPanelOKButton)
             return;
 
-        // FIXME: add a way to open in WK1 also.
-        BrowserWindowController *newBrowserWindowController = [[WK2BrowserWindowController alloc] initWithProcessGroup:_processGroup browsingContextGroup:_browsingContextGroup];
+        BrowserWindowController *newBrowserWindowController = [[WK1BrowserWindowController alloc] initWithWindowNibName:@"BrowserWindow"];
         [newBrowserWindowController.window makeKeyAndOrderFront:self];
 
         NSURL *url = [openPanel.URLs objectAtIndex:0];
         [newBrowserWindowController loadURLString:[url absoluteString]];
     }];
-#endif // WK_API_ENABLED
 }
+
+- (void)didChangeSettings
+{
+    [self _updateNewWindowKeyEquivalents];
+
+    // Let all of the BrowserWindowControllers know that a setting changed, so they can attempt to dynamically update.
+    for (BrowserWindowController *browserWindowController in _browserWindowControllers)
+        [browserWindowController didChangeSettings];
+}
+
+- (void)_updateNewWindowKeyEquivalents
+{
+    if ([[SettingsController shared] useWebKit2ByDefault]) {
+        [_newWebKit1WindowItem setKeyEquivalentModifierMask:NSCommandKeyMask | NSAlternateKeyMask];
+        [_newWebKit2WindowItem setKeyEquivalentModifierMask:NSCommandKeyMask];
+    } else {
+        [_newWebKit1WindowItem setKeyEquivalentModifierMask:NSCommandKeyMask];
+        [_newWebKit2WindowItem setKeyEquivalentModifierMask:NSCommandKeyMask | NSAlternateKeyMask];
+    }
+}
+
+- (IBAction)showExtensionsManager:(id)sender
+{
+#if WK_API_ENABLED
+    [_extensionManagerWindowController showWindow:sender];
+#endif
+}
+
+#if WK_API_ENABLED
+- (WKUserContentController *)userContentContoller
+{
+    return defaultConfiguration().userContentController;
+}
+
+- (IBAction)fetchDefaultStoreWebsiteData:(id)sender
+{
+    [[WKWebsiteDataStore defaultDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] completionHandler:^(NSArray *websiteDataRecords) {
+        NSLog(@"did fetch default store website data %@.", websiteDataRecords);
+    }];
+}
+
+- (IBAction)fetchAndClearDefaultStoreWebsiteData:(id)sender
+{
+    [[WKWebsiteDataStore defaultDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] completionHandler:^(NSArray *websiteDataRecords) {
+        [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] forDataRecords:websiteDataRecords completionHandler:^{
+            [[WKWebsiteDataStore defaultDataStore] fetchDataRecordsOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] completionHandler:^(NSArray *websiteDataRecords) {
+                NSLog(@"did clear default store website data, after clearing data is %@.", websiteDataRecords);
+            }];
+        }];
+    }];
+}
+
+- (IBAction)clearDefaultStoreWebsiteData:(id)sender
+{
+    [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:[WKWebsiteDataStore allWebsiteDataTypes] modifiedSince:[NSDate distantPast] completionHandler:^{
+        NSLog(@"Did clear default store website data.");
+    }];
+}
+
+#endif
 
 @end

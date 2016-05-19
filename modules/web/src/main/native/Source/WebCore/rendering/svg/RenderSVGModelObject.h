@@ -53,7 +53,7 @@ public:
     virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override final;
     virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
-    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const override final;
+    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override final;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override final;
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
@@ -64,10 +64,10 @@ public:
     bool hasSVGShadow() const { return m_hasSVGShadow; }
     void setHasSVGShadow(bool hasShadow) { m_hasSVGShadow = hasShadow; }
 
-    SVGElement& element() const { return toSVGElement(nodeForNonAnonymous()); }
+    SVGElement& element() const { return downcast<SVGElement>(nodeForNonAnonymous()); }
 
 protected:
-    RenderSVGModelObject(SVGElement&, PassRef<RenderStyle>);
+    RenderSVGModelObject(SVGElement&, Ref<RenderStyle>&&);
 
     virtual void willBeDestroyed() override;
 
@@ -80,8 +80,8 @@ private:
     bool m_hasSVGShadow;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSVGModelObject, isRenderSVGModelObject());
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGModelObject, isRenderSVGModelObject())
 
 #endif

@@ -26,9 +26,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest2 as unittest
-import sys
 import os
+import sys
+import unittest
 
 from webkitpy.common.system.executive_mock import MockExecutive
 from webkitpy.common.system.filesystem_mock import MockFileSystem
@@ -52,29 +52,19 @@ class GtkPortTest(port_testcase.PortTestCase):
 
     def test_default_baseline_search_path(self):
         port = self.make_port()
-        self.assertEqual(port.default_baseline_search_path(), ['/mock-checkout/LayoutTests/platform/gtk-wk1',
-            '/mock-checkout/LayoutTests/platform/gtk'])
-
-        port = self.make_port(options=MockOptions(webkit_test_runner=True))
-        self.assertEqual(port.default_baseline_search_path(), ['/mock-checkout/LayoutTests/platform/gtk-wk2',
-            '/mock-checkout/LayoutTests/platform/wk2', '/mock-checkout/LayoutTests/platform/gtk'])
+        self.assertEqual(port.default_baseline_search_path(), ['/mock-checkout/LayoutTests/platform/gtk',
+            '/mock-checkout/LayoutTests/platform/wk2'])
 
     def test_port_specific_expectations_files(self):
         port = self.make_port()
         self.assertEqual(port.expectations_files(), ['/mock-checkout/LayoutTests/TestExpectations',
-            '/mock-checkout/LayoutTests/platform/gtk/TestExpectations',
-            '/mock-checkout/LayoutTests/platform/gtk-wk1/TestExpectations'])
-
-        port = self.make_port(options=MockOptions(webkit_test_runner=True))
-        self.assertEqual(port.expectations_files(), ['/mock-checkout/LayoutTests/TestExpectations',
-            '/mock-checkout/LayoutTests/platform/gtk/TestExpectations',
             '/mock-checkout/LayoutTests/platform/wk2/TestExpectations',
-            '/mock-checkout/LayoutTests/platform/gtk-wk2/TestExpectations'])
+            '/mock-checkout/LayoutTests/platform/gtk/TestExpectations'])
 
     def test_show_results_html_file(self):
         port = self.make_port()
         port._executive = MockExecutive(should_log=True)
-        expected_logs = "MOCK run_command: ['Tools/Scripts/run-launcher', '--release', '--gtk', 'file://test.html'], cwd=/mock-checkout\n"
+        expected_logs = "MOCK run_command: ['Tools/Scripts/run-minibrowser', '--release', '--gtk', 'file://test.html'], cwd=/mock-checkout\n"
         OutputCapture().assert_outputs(self, port.show_results_html_file, ["test.html"], expected_logs=expected_logs)
 
     def test_default_timeout_ms(self):

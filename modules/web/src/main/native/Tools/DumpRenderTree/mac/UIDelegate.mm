@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -52,14 +52,22 @@ DumpRenderTreeDraggingInfo *draggingInfo = nil;
 
 @implementation UIDelegate
 
+- (void)resetWindowOrigin
+{
+    windowOrigin = NSZeroPoint;
+}
+
 - (void)webView:(WebView *)sender setFrame:(NSRect)frame
 {
-    m_frame = frame;
+    // FIXME: Do we need to resize an NSWindow too?
+    windowOrigin = frame.origin;
+    [sender setFrameSize:frame.size];
 }
 
 - (NSRect)webViewFrame:(WebView *)sender
 {
-    return m_frame;
+    NSSize size = [sender frame].size;
+    return NSMakeRect(windowOrigin.x, windowOrigin.y, size.width, size.height);
 }
 
 - (void)webView:(WebView *)sender addMessageToConsole:(NSDictionary *)dictionary withSource:(NSString *)source

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2013, 2014 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,7 +32,10 @@
 #ifndef GridTrackSize_h
 #define GridTrackSize_h
 
+#if ENABLE(CSS_GRID_LAYOUT)
+
 #include "GridLength.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -42,11 +46,20 @@ enum GridTrackSizeType {
 
 class GridTrackSize {
 public:
-    GridTrackSize(LengthType type = Undefined)
+    GridTrackSize(const GridLength& length)
         : m_type(LengthTrackSizing)
-        , m_minTrackBreadth(type)
-        , m_maxTrackBreadth(type)
+        , m_minTrackBreadth(length)
+        , m_maxTrackBreadth(length)
     {
+        cacheMinMaxTrackBreadthTypes();
+    }
+
+    GridTrackSize(const GridLength& minTrackBreadth, const GridLength& maxTrackBreadth)
+        : m_type(MinMaxTrackSizing)
+        , m_minTrackBreadth(minTrackBreadth)
+        , m_maxTrackBreadth(maxTrackBreadth)
+    {
+        cacheMinMaxTrackBreadthTypes();
     }
 
     const GridLength& length() const
@@ -54,22 +67,13 @@ public:
         ASSERT(m_type == LengthTrackSizing);
         ASSERT(m_minTrackBreadth == m_maxTrackBreadth);
         const GridLength& minTrackBreadth = m_minTrackBreadth;
-        ASSERT(!minTrackBreadth.isLength() || !minTrackBreadth.length().isUndefined());
         return minTrackBreadth;
-    }
-
-    void setLength(const GridLength& length)
-    {
-        m_type = LengthTrackSizing;
-        m_minTrackBreadth = length;
-        m_maxTrackBreadth = length;
     }
 
     const GridLength& minTrackBreadth() const
     {
-        ASSERT(!m_minTrackBreadth.isLength() || !m_minTrackBreadth.length().isUndefined());
         if (m_minTrackBreadth.isLength() && m_minTrackBreadth.length().isAuto()) {
-            DEFINE_STATIC_LOCAL(GridLength, minContent, (MinContent));
+            static NeverDestroyed<const GridLength> minContent{Length(MinContent)};
             return minContent;
         }
         return m_minTrackBreadth;
@@ -77,41 +81,53 @@ public:
 
     const GridLength& maxTrackBreadth() const
     {
-        ASSERT(!m_maxTrackBreadth.isLength() || !m_maxTrackBreadth.length().isUndefined());
         if (m_maxTrackBreadth.isLength() && m_maxTrackBreadth.length().isAuto()) {
-            DEFINE_STATIC_LOCAL(GridLength, maxContent, (MaxContent));
+            static NeverDestroyed<const GridLength> maxContent{Length(MaxContent)};
             return maxContent;
         }
         return m_maxTrackBreadth;
-    }
-
-    void setMinMax(const GridLength& minTrackBreadth, const GridLength& maxTrackBreadth)
-    {
-        m_type = MinMaxTrackSizing;
-        m_minTrackBreadth = minTrackBreadth;
-        m_maxTrackBreadth = maxTrackBreadth;
     }
 
     GridTrackSizeType type() const { return m_type; }
 
     bool isContentSized() const { return m_minTrackBreadth.isContentSized() || m_maxTrackBreadth.isContentSized(); }
 
+    bool isPercentage() const { return m_type == LengthTrackSizing && length().isLength() && length().length().isPercentOrCalculated(); }
+
     bool operator==(const GridTrackSize& other) const
     {
         return m_type == other.m_type && m_minTrackBreadth == other.m_minTrackBreadth && m_maxTrackBreadth == other.m_maxTrackBreadth;
     }
 
-    bool hasMinOrMaxContentMinTrackBreadth() const { return minTrackBreadth().isLength() && (minTrackBreadth().length().isMinContent() || minTrackBreadth().length().isMaxContent()); }
-    bool hasMaxContentMinTrackBreadth() const { return minTrackBreadth().isLength() && minTrackBreadth().length().isMaxContent(); }
-    bool hasMinOrMaxContentMaxTrackBreadth() const { return maxTrackBreadth().isLength() && (maxTrackBreadth().length().isMinContent() || maxTrackBreadth().length().isMaxContent()); }
-    bool hasMaxContentMaxTrackBreadth() const { return maxTrackBreadth().isLength() && maxTrackBreadth().length().isMaxContent(); }
+    void cacheMinMaxTrackBreadthTypes()
+    {
+        m_minTrackBreadthIsMinContent = minTrackBreadth().isLength() && minTrackBreadth().length().isMinContent();
+        m_minTrackBreadthIsMaxContent = minTrackBreadth().isLength() && minTrackBreadth().length().isMaxContent();
+        m_maxTrackBreadthIsMaxContent = maxTrackBreadth().isLength() && maxTrackBreadth().length().isMaxContent();
+        m_maxTrackBreadthIsMinContent = maxTrackBreadth().isLength() && maxTrackBreadth().length().isMinContent();
+    }
+
+    bool hasMinOrMaxContentMinTrackBreadth() const { return m_minTrackBreadthIsMaxContent || m_minTrackBreadthIsMinContent; }
+    bool hasMaxContentMaxTrackBreadth() const { return m_maxTrackBreadthIsMaxContent; }
+    bool hasMinContentMaxTrackBreadth() const { return m_maxTrackBreadthIsMinContent; }
+    bool hasMinOrMaxContentMaxTrackBreadth() const { return m_maxTrackBreadthIsMaxContent || m_maxTrackBreadthIsMinContent; }
+    bool hasMaxContentMinTrackBreadth() const { return m_minTrackBreadthIsMaxContent; }
+    bool hasMinContentMinTrackBreadth() const { return m_minTrackBreadthIsMinContent; }
+    bool hasMinContentMinTrackBreadthAndMinOrMaxContentMaxTrackBreadth() const { return m_minTrackBreadthIsMinContent && hasMinOrMaxContentMaxTrackBreadth(); }
+    bool hasMaxContentMinTrackBreadthAndMaxContentMaxTrackBreadth() const { return m_minTrackBreadthIsMaxContent && m_maxTrackBreadthIsMaxContent; }
 
 private:
     GridTrackSizeType m_type;
     GridLength m_minTrackBreadth;
     GridLength m_maxTrackBreadth;
+    bool m_minTrackBreadthIsMaxContent;
+    bool m_minTrackBreadthIsMinContent;
+    bool m_maxTrackBreadthIsMaxContent;
+    bool m_maxTrackBreadthIsMinContent;
 };
 
 } // namespace WebCore
+
+#endif /* ENABLE(CSS_GRID_LAYOUT) */
 
 #endif // GridTrackSize_h

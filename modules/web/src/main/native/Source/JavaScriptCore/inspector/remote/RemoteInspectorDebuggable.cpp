@@ -28,6 +28,7 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
+#include "EventLoop.h"
 #include "InspectorFrontendChannel.h"
 #include "RemoteInspector.h"
 
@@ -41,17 +42,17 @@ RemoteInspectorDebuggable::RemoteInspectorDebuggable()
 
 RemoteInspectorDebuggable::~RemoteInspectorDebuggable()
 {
-    RemoteInspector::shared().unregisterDebuggable(this);
+    RemoteInspector::singleton().unregisterDebuggable(this);
 }
 
 void RemoteInspectorDebuggable::init()
 {
-    RemoteInspector::shared().registerDebuggable(this);
+    RemoteInspector::singleton().registerDebuggable(this);
 }
 
 void RemoteInspectorDebuggable::update()
 {
-    RemoteInspector::shared().updateDebuggable(this);
+    RemoteInspector::singleton().updateDebuggable(this);
 }
 
 void RemoteInspectorDebuggable::setRemoteDebuggingAllowed(bool allowed)
@@ -61,7 +62,10 @@ void RemoteInspectorDebuggable::setRemoteDebuggingAllowed(bool allowed)
 
     m_allowed = allowed;
 
-    update();
+    if (m_allowed && automaticInspectionAllowed())
+        RemoteInspector::singleton().updateDebuggableAutomaticInspectCandidate(this);
+    else
+        RemoteInspector::singleton().updateDebuggable(this);
 }
 
 RemoteInspectorDebuggableInfo RemoteInspectorDebuggable::info() const
@@ -73,8 +77,23 @@ RemoteInspectorDebuggableInfo RemoteInspectorDebuggable::info() const
     info.url = url();
     info.hasLocalDebugger = hasLocalDebugger();
     info.remoteDebuggingAllowed = remoteDebuggingAllowed();
-    info.parentProcessIdentifier = parentProcessIdentifier();
     return info;
+}
+
+void RemoteInspectorDebuggable::pauseWaitingForAutomaticInspection()
+{
+    ASSERT(m_identifier);
+    ASSERT(m_allowed);
+    ASSERT(automaticInspectionAllowed());
+
+    EventLoop loop;
+    while (RemoteInspector::singleton().waitingForAutomaticInspection(identifier()) && !loop.ended())
+        loop.cycle();
+}
+
+void RemoteInspectorDebuggable::unpauseForInitializedInspector()
+{
+    RemoteInspector::singleton().setupCompleted(identifier());
 }
 
 } // namespace Inspector

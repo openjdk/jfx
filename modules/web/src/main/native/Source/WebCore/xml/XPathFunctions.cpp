@@ -291,7 +291,7 @@ void Function::setArguments(const String& name, Vector<std::unique_ptr<Expressio
     if (name != "lang" && !arguments.isEmpty())
         setIsContextNodeSensitive(false);
 
-    setSubexpressions(std::move(arguments));
+    setSubexpressions(WTF::move(arguments));
 }
 
 Value FunLast::evaluate() const
@@ -304,21 +304,27 @@ Value FunPosition::evaluate() const
     return Expression::evaluationContext().position;
 }
 
+static AtomicString atomicSubstring(StringBuilder& builder, unsigned start, unsigned length)
+{
+    ASSERT(start <= builder.length());
+    ASSERT(length <= builder.length() - start);
+    if (builder.is8Bit())
+        return AtomicString(builder.characters8() + start, length);
+    return AtomicString(builder.characters16() + start, length);
+}
+
 Value FunId::evaluate() const
 {
     Value a = argument(0).evaluate();
     StringBuilder idList; // A whitespace-separated list of IDs
 
-    if (a.isNodeSet()) {
-        const NodeSet& nodes = a.toNodeSet();
-        for (size_t i = 0; i < nodes.size(); ++i) {
-            String str = stringValue(nodes[i]);
-            idList.append(str);
+    if (!a.isNodeSet())
+        idList.append(a.toString());
+    else {
+        for (auto& node : a.toNodeSet()) {
+            idList.append(stringValue(node.get()));
             idList.append(' ');
         }
-    } else {
-        String str = a.toString();
-        idList.append(str);
     }
 
     TreeScope& contextScope = evaluationContext().node->treeScope();
@@ -340,7 +346,7 @@ Value FunId::evaluate() const
 
         // If there are several nodes with the same id, id() should return the first one.
         // In WebKit, getElementById behaves so, too, although its behavior in this case is formally undefined.
-        Node* node = contextScope.getElementById(String(idList.deprecatedCharacters() + startPos, endPos - startPos));
+        Node* node = contextScope.getElementById(atomicSubstring(idList, startPos, endPos - startPos));
         if (node && resultSet.add(node).isNewEntry)
             result.append(node);
 
@@ -349,15 +355,15 @@ Value FunId::evaluate() const
 
     result.markSorted(false);
 
-    return Value(std::move(result));
+    return Value(WTF::move(result));
 }
 
 static inline String expandedNameLocalPart(Node* node)
 {
     // The local part of an XPath expanded-name matches DOM local name for most node types, except for namespace nodes and processing instruction nodes.
     ASSERT(node->nodeType() != Node::XPATH_NAMESPACE_NODE); // Not supported yet.
-    if (node->nodeType() == Node::PROCESSING_INSTRUCTION_NODE)
-        return toProcessingInstruction(node)->target();
+    if (is<ProcessingInstruction>(*node))
+        return downcast<ProcessingInstruction>(*node).target();
     return node->localName().string();
 }
 
@@ -574,13 +580,13 @@ Value FunLang::evaluate() const
 {
     String lang = argument(0).evaluate().toString();
 
-    const Attribute* languageAttribute = 0;
+    const Attribute* languageAttribute = nullptr;
     Node* node = evaluationContext().node.get();
     while (node) {
-        if (node->isElementNode()) {
-            Element* element = toElement(node);
-            if (element->hasAttributes())
-                languageAttribute = element->findAttributeByName(XMLNames::langAttr);
+        if (is<Element>(*node)) {
+            Element& element = downcast<Element>(*node);
+            if (element.hasAttributes())
+                languageAttribute = element.findAttributeByName(XMLNames::langAttr);
         }
         if (languageAttribute)
             break;
@@ -628,8 +634,8 @@ Value FunSum::evaluate() const
     // To be really compliant, we should sort the node-set, as floating point addition is not associative.
     // However, this is unlikely to ever become a practical issue, and sorting is slow.
 
-    for (unsigned i = 0; i < nodes.size(); i++)
-        sum += Value(stringValue(nodes[i])).toNumber();
+    for (auto& node : nodes)
+        sum += Value(stringValue(node.get())).toNumber();
 
     return sum;
 }
@@ -702,8 +708,8 @@ static void populateFunctionMap(HashMap<String, FunctionMapValue>& functionMap)
         { "true", { createFunctionTrue, 0 } },
     };
 
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(functions); ++i)
-        functionMap.add(functions[i].name, functions[i].function);
+    for (auto& function : functions)
+        functionMap.add(function.name, function.function);
 }
 
 std::unique_ptr<Function> Function::create(const String& name, unsigned numArguments)
@@ -731,7 +737,7 @@ std::unique_ptr<Function> Function::create(const String& name, Vector<std::uniqu
 {
     std::unique_ptr<Function> function = create(name, arguments.size());
     if (function)
-        function->setArguments(name, std::move(arguments));
+        function->setArguments(name, WTF::move(arguments));
     return function;
 }
 

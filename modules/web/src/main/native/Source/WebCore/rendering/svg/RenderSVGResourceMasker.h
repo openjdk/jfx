@@ -37,10 +37,10 @@ struct MaskerData {
 
 class RenderSVGResourceMasker final : public RenderSVGResourceContainer {
 public:
-    RenderSVGResourceMasker(SVGMaskElement&, PassRef<RenderStyle>);
+    RenderSVGResourceMasker(SVGMaskElement&, Ref<RenderStyle>&&);
     virtual ~RenderSVGResourceMasker();
 
-    SVGMaskElement& maskElement() const { return toSVGMaskElement(RenderSVGResourceContainer::element()); }
+    SVGMaskElement& maskElement() const { return downcast<SVGMaskElement>(RenderSVGResourceContainer::element()); }
 
     virtual void removeAllClientsFromCache(bool markForInvalidation = true) override;
     virtual void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
@@ -50,8 +50,7 @@ public:
     SVGUnitTypes::SVGUnitType maskUnits() const { return maskElement().maskUnits(); }
     SVGUnitTypes::SVGUnitType maskContentUnits() const { return maskElement().maskContentUnits(); }
 
-    virtual RenderSVGResourceType resourceType() const { return s_resourceType; }
-    static RenderSVGResourceType s_resourceType;
+    virtual RenderSVGResourceType resourceType() const override { return MaskerResourceType; }
 
 private:
     void element() const = delete;
@@ -66,5 +65,7 @@ private:
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_RENDER_SVG_RESOURCE(RenderSVGResourceMasker, MaskerResourceType)
 
 #endif

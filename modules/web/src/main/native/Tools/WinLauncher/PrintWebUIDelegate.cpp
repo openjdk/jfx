@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2013 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009, 2013-2014 Apple Inc. All Rights Reserved.
  * Copyright (C) 2009 Brent Fulgham. All Rights Reserved.
  * Copyright (C) 2013 Alex Christensen. All Rights Reserved.
  *
@@ -12,7 +12,6 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
  * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
@@ -50,7 +49,7 @@ HRESULT STDMETHODCALLTYPE PrintWebUIDelegate::runJavaScriptConfirmPanelWithMessa
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE PrintWebUIDelegate::createWebViewWithRequest(IWebView*, IWebURLRequest* request, IWebView**)
+HRESULT PrintWebUIDelegate::createWebViewWithRequest(IWebView*, IWebURLRequest* request, IWebView**)
 {
     if (!request)
         return E_POINTER;
@@ -64,6 +63,9 @@ HRESULT STDMETHODCALLTYPE PrintWebUIDelegate::createWebViewWithRequest(IWebView*
     HRESULT hr = request->URL(&url.GetBSTR());
     if (FAILED(hr))
         return E_FAIL;
+
+    if (!url)
+        return S_OK;
 
     std::wstring command = std::wstring(L"\"") + executablePath + L"\" " + (const wchar_t*)url;
 
@@ -164,10 +166,7 @@ HRESULT PrintWebUIDelegate::webViewFooterHeight(IWebView* webView, float* height
     return S_OK;
 }
 
-HRESULT PrintWebUIDelegate::drawHeaderInRect(
-            /* [in] */ IWebView* webView,
-            /* [in] */ RECT* rect,
-            /* [in] */ OLE_HANDLE drawingContext)
+HRESULT PrintWebUIDelegate::drawHeaderInRect(IWebView* webView, RECT* rect, ULONG_PTR drawingContext)
 {
     if (!webView || !rect)
         return E_POINTER;
@@ -196,12 +195,7 @@ HRESULT PrintWebUIDelegate::drawHeaderInRect(
     return S_OK;
 }
 
-HRESULT PrintWebUIDelegate::drawFooterInRect(
-            /* [in] */ IWebView* webView,
-            /* [in] */ RECT* rect,
-            /* [in] */ OLE_HANDLE drawingContext,
-            /* [in] */ UINT pageIndex,
-            /* [in] */ UINT pageCount)
+HRESULT PrintWebUIDelegate::drawFooterInRect(IWebView* webView, RECT* rect, ULONG_PTR drawingContext, UINT pageIndex, UINT pageCount)
 {
     if (!webView || !rect)
         return E_POINTER;

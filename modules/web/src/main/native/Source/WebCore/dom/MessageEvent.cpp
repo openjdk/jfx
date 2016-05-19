@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -64,7 +64,7 @@ MessageEvent::MessageEvent(const Deprecated::ScriptValue& data, const String& or
     , m_origin(origin)
     , m_lastEventId(lastEventId)
     , m_source(source)
-    , m_ports(std::move(ports))
+    , m_ports(WTF::move(ports))
 {
     ASSERT(isValidSource(m_source.get()));
 }
@@ -76,7 +76,7 @@ MessageEvent::MessageEvent(PassRefPtr<SerializedScriptValue> data, const String&
     , m_origin(origin)
     , m_lastEventId(lastEventId)
     , m_source(source)
-    , m_ports(std::move(ports))
+    , m_ports(WTF::move(ports))
 {
     ASSERT(isValidSource(m_source.get()));
 }
@@ -118,10 +118,12 @@ void MessageEvent::initMessageEvent(const AtomicString& type, bool canBubble, bo
 
     m_dataType = DataTypeScriptValue;
     m_dataAsScriptValue = data;
+    m_dataAsSerializedScriptValue = nullptr;
+    m_triedToSerialize = false;
     m_origin = origin;
     m_lastEventId = lastEventId;
     m_source = source;
-    m_ports = std::move(ports);
+    m_ports = WTF::move(ports);
 }
 
 void MessageEvent::initMessageEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<SerializedScriptValue> data, const String& origin, const String& lastEventId, DOMWindow* source, std::unique_ptr<MessagePortArray> ports)
@@ -136,7 +138,19 @@ void MessageEvent::initMessageEvent(const AtomicString& type, bool canBubble, bo
     m_origin = origin;
     m_lastEventId = lastEventId;
     m_source = source;
-    m_ports = std::move(ports);
+    m_ports = WTF::move(ports);
+}
+
+RefPtr<SerializedScriptValue> MessageEvent::trySerializeData(JSC::ExecState* exec)
+{
+    ASSERT(!m_dataAsScriptValue.hasNoValue());
+
+    if (!m_dataAsSerializedScriptValue && !m_triedToSerialize) {
+        m_dataAsSerializedScriptValue = SerializedScriptValue::create(exec, m_dataAsScriptValue.jsValue(), nullptr, nullptr, NonThrowing);
+        m_triedToSerialize = true;
+    }
+
+    return m_dataAsSerializedScriptValue;
 }
 
 // FIXME: Remove this when we have custom ObjC binding support.
@@ -162,7 +176,7 @@ void MessageEvent::initMessageEvent(const AtomicString& type, bool canBubble, bo
         ports = std::make_unique<MessagePortArray>();
         ports->append(port);
     }
-    initMessageEvent(type, canBubble, cancelable, data, origin, lastEventId, source, std::move(ports));
+    initMessageEvent(type, canBubble, cancelable, data, origin, lastEventId, source, WTF::move(ports));
 }
 
 EventInterface MessageEvent::eventInterface() const

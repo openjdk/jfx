@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2011 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2011, 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebEditorClient.h"
 
@@ -32,6 +31,7 @@
 #include "WebNotificationCenter.h"
 #include "WebView.h"
 #include "DOMCoreClasses.h"
+#include <comutil.h>
 #include <WebCore/BString.h>
 #include <WebCore/Document.h>
 #include <WebCore/HTMLElement.h>
@@ -47,6 +47,7 @@
 #include <WebCore/UndoStep.h>
 #include <WebCore/UserTypingGestureIndicator.h>
 #include <WebCore/VisibleSelection.h>
+#include <wtf/text/StringView.h>
 
 using namespace WebCore;
 using namespace HTMLNames;
@@ -188,40 +189,69 @@ int WebEditorClient::spellCheckerDocumentTag()
     return 0;
 }
 
-bool WebEditorClient::shouldBeginEditing(Range*)
+bool WebEditorClient::shouldBeginEditing(WebCore::Range* range)
 {
-    notImplemented();
-    return true;
+    COMPtr<IWebEditingDelegate> ed;
+    if (FAILED(m_webView->editingDelegate(&ed)) || !ed.get())
+        return true;
+
+    COMPtr<IDOMRange> currentRange(AdoptCOM, DOMRange::createInstance(range));
+
+    BOOL shouldBegin = FALSE;
+    if (FAILED(ed->shouldBeginEditingInDOMRange(m_webView, currentRange.get(), &shouldBegin)))
+        return true;
+
+    return shouldBegin;
 }
 
-bool WebEditorClient::shouldEndEditing(Range*)
+bool WebEditorClient::shouldEndEditing(Range* range)
 {
-    notImplemented();
-    return true;
+    COMPtr<IWebEditingDelegate> ed;
+    if (FAILED(m_webView->editingDelegate(&ed)) || !ed.get())
+        return true;
+
+    COMPtr<IDOMRange> currentRange(AdoptCOM, DOMRange::createInstance(range));
+
+    BOOL shouldEnd = FALSE;
+    if (FAILED(ed->shouldEndEditingInDOMRange(m_webView, currentRange.get(), &shouldEnd)))
+        return true;
+
+    return shouldEnd;
 }
 
 void WebEditorClient::didBeginEditing()
 {
-    notImplemented();
+    static _bstr_t webViewDidBeginEditingNotificationName(WebViewDidBeginEditingNotification);
+    IWebNotificationCenter* notifyCenter = WebNotificationCenter::defaultCenterInternal();
+    notifyCenter->postNotificationName(webViewDidBeginEditingNotificationName.GetBSTR(), static_cast<IWebView*>(m_webView), nullptr);
 }
 
 void WebEditorClient::respondToChangedContents()
 {
-    notImplemented();
+    static _bstr_t webViewDidChangeNotificationName(WebViewDidChangeNotification);
+    IWebNotificationCenter* notifyCenter = WebNotificationCenter::defaultCenterInternal();
+    notifyCenter->postNotificationName(webViewDidChangeNotificationName.GetBSTR(), static_cast<IWebView*>(m_webView), 0);
 }
 
 void WebEditorClient::respondToChangedSelection(Frame*)
 {
     m_webView->selectionChanged();
 
-    static BSTR webViewDidChangeSelectionNotificationName = SysAllocString(WebViewDidChangeSelectionNotification);
+    static _bstr_t webViewDidChangeSelectionNotificationName(WebViewDidChangeSelectionNotification);
     IWebNotificationCenter* notifyCenter = WebNotificationCenter::defaultCenterInternal();
-    notifyCenter->postNotificationName(webViewDidChangeSelectionNotificationName, static_cast<IWebView*>(m_webView), 0);
+    notifyCenter->postNotificationName(webViewDidChangeSelectionNotificationName.GetBSTR(), static_cast<IWebView*>(m_webView), 0);
+}
+
+void WebEditorClient::discardedComposition(Frame*)
+{
+    notImplemented();
 }
 
 void WebEditorClient::didEndEditing()
 {
-    notImplemented();
+    static _bstr_t webViewDidEndEditingNotificationName(WebViewDidEndEditingNotification);
+    IWebNotificationCenter* notifyCenter = WebNotificationCenter::defaultCenterInternal();
+    notifyCenter->postNotificationName(webViewDidEndEditingNotificationName.GetBSTR(), static_cast<IWebView*>(m_webView), nullptr);
 }
 
 void WebEditorClient::didWriteSelectionToPasteboard()
@@ -239,64 +269,111 @@ void WebEditorClient::getClientPasteboardDataForRange(WebCore::Range*, Vector<St
     notImplemented();
 }
 
-bool WebEditorClient::shouldDeleteRange(Range* /*range*/)
+bool WebEditorClient::shouldDeleteRange(Range* range)
+{
+    COMPtr<IWebEditingDelegate> ed;
+    if (FAILED(m_webView->editingDelegate(&ed)) || !ed.get())
+        return true;
+
+    COMPtr<IDOMRange> currentRange(AdoptCOM, DOMRange::createInstance(range));
+
+    BOOL shouldDelete = FALSE;
+    if (FAILED(ed->shouldDeleteDOMRange(m_webView, currentRange.get(), &shouldDelete)))
+        return true;
+
+    return shouldDelete;
+}
+
+bool WebEditorClient::shouldInsertNode(Node* node, Range* insertingRange, EditorInsertAction givenAction)
+{
+    COMPtr<IWebEditingDelegate> editingDelegate;
+    if (FAILED(m_webView->editingDelegate(&editingDelegate)) || !editingDelegate.get())
+        return true;
+
+    COMPtr<IDOMRange> insertingDOMRange(AdoptCOM, DOMRange::createInstance(insertingRange));
+    if (!insertingDOMRange)
+        return true;
+
+    COMPtr<IDOMNode> insertDOMNode(AdoptCOM, DOMNode::createInstance(node));
+    if (!insertDOMNode)
+        return true;
+
+    BOOL shouldInsert = FALSE;
+    COMPtr<IWebEditingDelegate2> editingDelegate2(Query, editingDelegate);
+    if (editingDelegate2) {
+        if (FAILED(editingDelegate2->shouldInsertNode(m_webView, insertDOMNode.get(), insertingDOMRange.get(), static_cast<WebViewInsertAction>(givenAction), &shouldInsert)))
+            return true;
+    }
+
+    return shouldInsert;
+}
+
+bool WebEditorClient::shouldInsertText(const String& str, Range* insertingRange, EditorInsertAction givenAction)
+{
+    COMPtr<IWebEditingDelegate> editingDelegate;
+    if (FAILED(m_webView->editingDelegate(&editingDelegate)) || !editingDelegate.get())
+        return true;
+
+    COMPtr<IDOMRange> insertingDOMRange(AdoptCOM, DOMRange::createInstance(insertingRange));
+    if (!insertingDOMRange)
+        return true;
+
+    BString text(str);
+    BOOL shouldInsert = FALSE;
+    if (FAILED(editingDelegate->shouldInsertText(m_webView, text, insertingDOMRange.get(), static_cast<WebViewInsertAction>(givenAction), &shouldInsert)))
+        return true;
+
+    return shouldInsert;
+}
+
+bool WebEditorClient::shouldChangeSelectedRange(WebCore::Range* currentRange, WebCore::Range* proposedRange, WebCore::EAffinity selectionAffinity, bool flag)
+{
+    COMPtr<IWebEditingDelegate> ed;
+    if (FAILED(m_webView->editingDelegate(&ed)) || !ed.get())
+        return true;
+
+    COMPtr<IDOMRange> currentIDOMRange(AdoptCOM, DOMRange::createInstance(currentRange));
+    COMPtr<IDOMRange> proposedIDOMRange(AdoptCOM, DOMRange::createInstance(proposedRange));
+
+    BOOL shouldChange = FALSE;
+    if (FAILED(ed->shouldChangeSelectedDOMRange(m_webView, currentIDOMRange.get(), proposedIDOMRange.get(), static_cast<WebSelectionAffinity>(selectionAffinity), flag, &shouldChange)))
+        return true;
+
+    return shouldChange;
+}
+
+bool WebEditorClient::shouldApplyStyle(StyleProperties*, Range*)
 {
     notImplemented();
     return true;
-
-    // FIXME: calling m_webView->editingDelegate() will cause an assertion failure so we don't want to enable this code until that's implemented.
-    //BOOL result = false;
-    //IWebViewEditingDelegate* editingDelegate;
-    //// FIXME: DOMRange needs to be implemented before anything meaningful can be done here
-    //IDOMRange* domRange(0);
-    //if (SUCCEEDED(m_webView->editingDelegate(&editingDelegate))) {
-    //    editingDelegate->shouldDeleteDOMRange(m_webView, domRange, &result);
-    //    editingDelegate->Release();
-    //}
-    //return !!result;
 }
 
-bool WebEditorClient::shouldInsertNode(Node* /*node*/, Range* /*replacingRange*/, EditorInsertAction /*givenAction*/)
+void WebEditorClient::didApplyStyle()
+{
+    notImplemented();
+}
+
+bool WebEditorClient::shouldMoveRangeAfterDelete(Range*, Range*)
 {
     notImplemented();
     return true;
 }
 
-bool WebEditorClient::shouldInsertText(const String& /*str*/, Range* /* replacingRange */, EditorInsertAction /*givenAction*/)
+bool WebEditorClient::shouldChangeTypingStyle(StyleProperties*, StyleProperties*)
 {
     notImplemented();
-    return true;
-
-    // FIXME: calling m_webView->editingDelegate() will cause an assertion failure so we don't want to enable this code until that's implemented.
-    //BOOL result = false;
-    //IWebViewEditingDelegate* editingDelegate;
-    //// FIXME: DOMRange needs to be implemented before anything meaningful can be done here
-    //IDOMRange* domRange(0); // make a DOMRange from replacingRange
-    //BString text(str);
-    //if (SUCCEEDED(m_webView->editingDelegate(&editingDelegate))) {
-    //    editingDelegate->shouldInsertText(m_webView, text, domRange, (WebViewInsertAction) givenAction, &result);
-    //    editingDelegate->Release();
-    //}
-    //return !!result;
+    return false;
 }
-
-//bool WebEditorClient::shouldChangeSelectedRange(Range *currentRange, Range *toProposedRange, SelectionAffinity selectionAffinity, bool stillSelecting)
-//{ notImplemented(); return false; }
-
-bool WebEditorClient::shouldApplyStyle(StyleProperties* /*style*/, Range* /*toElementsInDOMRange*/)
-{ notImplemented(); return true; }
-
-bool WebEditorClient::shouldMoveRangeAfterDelete(Range* /*range*/, Range* /*rangeToBeReplaced*/)
-{ notImplemented(); return true; }
-
-bool WebEditorClient::shouldChangeTypingStyle(StyleProperties* /*currentStyle*/, StyleProperties* /*toProposedStyle*/)
-{ notImplemented(); return false; }
 
 void WebEditorClient::webViewDidChangeTypingStyle(WebNotification* /*notification*/)
-{  notImplemented(); }
+{
+    notImplemented();
+}
 
 void WebEditorClient::webViewDidChangeSelection(WebNotification* /*notification*/)
-{  notImplemented(); }
+{
+    notImplemented();
+}
 
 bool WebEditorClient::smartInsertDeleteEnabled(void)
 {
@@ -313,9 +390,6 @@ bool WebEditorClient::isSelectTrailingWhitespaceEnabled(void)
         return false;
     return page->settings().selectTrailingWhitespaceEnabled();
 }
-
-bool WebEditorClient::shouldChangeSelectedRange(WebCore::Range*, WebCore::Range*, WebCore::EAffinity, bool)
-{ notImplemented(); return true; }
 
 void WebEditorClient::textFieldDidBeginEditing(Element* e)
 {
@@ -667,7 +741,7 @@ void WebEditorClient::checkSpellingOfString(StringView text, int* misspellingLoc
         return;
 
     initViewSpecificSpelling(m_webView);
-    ed->checkSpellingOfString(m_webView, text.toStringWithoutCopying().deprecatedCharacters(), text.length(), misspellingLocation, misspellingLength);
+    ed->checkSpellingOfString(m_webView, text.upconvertedCharacters(), text.length(), misspellingLocation, misspellingLength);
 }
 
 String WebEditorClient::getAutoCorrectSuggestionForMisspelledWord(const String& inputWord)
@@ -689,7 +763,7 @@ void WebEditorClient::checkGrammarOfString(StringView text, Vector<GrammarDetail
 
     initViewSpecificSpelling(m_webView);
     COMPtr<IEnumWebGrammarDetails> enumDetailsObj;
-    if (FAILED(ed->checkGrammarOfString(m_webView, text.toStringWithoutCopying().deprecatedCharacters(), text.length(), &enumDetailsObj, badGrammarLocation, badGrammarLength)))
+    if (FAILED(ed->checkGrammarOfString(m_webView, text.upconvertedCharacters(), text.length(), &enumDetailsObj, badGrammarLocation, badGrammarLength)))
         return;
 
     while (true) {

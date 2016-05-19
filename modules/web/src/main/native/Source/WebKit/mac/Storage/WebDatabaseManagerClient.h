@@ -23,8 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if ENABLE(SQL_DATABASE)
-
 #import <WebCore/DatabaseManagerClient.h>
 
 class WebDatabaseManagerClient : public WebCore::DatabaseManagerClient {
@@ -32,8 +30,8 @@ public:
     static WebDatabaseManagerClient* sharedWebDatabaseManagerClient();
 
     virtual ~WebDatabaseManagerClient();
-    virtual void dispatchDidModifyOrigin(WebCore::SecurityOrigin*);
-    virtual void dispatchDidModifyDatabase(WebCore::SecurityOrigin*, const WTF::String& databaseIdentifier);
+    virtual void dispatchDidModifyOrigin(WebCore::SecurityOrigin*) override;
+    virtual void dispatchDidModifyDatabase(WebCore::SecurityOrigin*, const WTF::String& databaseIdentifier) override;
 #if PLATFORM(IOS)
     virtual void dispatchDidAddNewOrigin(WebCore::SecurityOrigin*) override;
     virtual void dispatchDidDeleteDatabase() override;
@@ -54,5 +52,3 @@ private:
     bool m_isHandlingDeleteDatabaseOriginNotification;
 #endif
 };
-
-#endif

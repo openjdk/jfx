@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,7 +37,6 @@
 #include "DOMStringList.h"
 #include "Event.h"
 #include "EventListener.h"
-#include "EventNames.h"
 #include "EventTarget.h"
 #include "IDBAny.h"
 #include "IDBCallbacks.h"
@@ -54,8 +53,8 @@ typedef int ExceptionCode;
 
 class IDBRequest : public ScriptWrappable, public IDBCallbacks, public EventTargetWithInlineData, public ActiveDOMObject {
 public:
-    static PassRefPtr<IDBRequest> create(ScriptExecutionContext*, PassRefPtr<IDBAny> source, IDBTransaction*);
-    static PassRefPtr<IDBRequest> create(ScriptExecutionContext*, PassRefPtr<IDBAny> source, IDBDatabaseBackend::TaskType, IDBTransaction*);
+    static Ref<IDBRequest> create(ScriptExecutionContext*, PassRefPtr<IDBAny> source, IDBTransaction*);
+    static Ref<IDBRequest> create(ScriptExecutionContext*, PassRefPtr<IDBAny> source, IDBDatabaseBackend::TaskType, IDBTransaction*);
     virtual ~IDBRequest();
 
     PassRefPtr<IDBAny> result(ExceptionCode&) const;
@@ -74,9 +73,6 @@ public:
 
     const String& readyState() const;
 
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(success);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
-
     void markEarlyDeath();
     void setCursorDetails(IndexedDB::CursorType, IndexedDB::CursorDirection);
     void setPendingCursor(PassRefPtr<IDBCursor>);
@@ -84,18 +80,15 @@ public:
     void abort();
 
     // IDBCallbacks
-    virtual void onError(PassRefPtr<IDBDatabaseError>);
-    virtual void onSuccess(PassRefPtr<DOMStringList>);
-    virtual void onSuccess(PassRefPtr<IDBCursorBackend>);
-    virtual void onSuccess(PassRefPtr<IDBKey>);
-    virtual void onSuccess(PassRefPtr<SharedBuffer>);
-    virtual void onSuccess(PassRefPtr<SharedBuffer>, PassRefPtr<IDBKey>, const IDBKeyPath&);
-    virtual void onSuccess(int64_t);
-    virtual void onSuccess();
-    virtual void onSuccess(PassRefPtr<IDBKey>, PassRefPtr<IDBKey> primaryKey, PassRefPtr<SharedBuffer>);
-
-    // ActiveDOMObject
-    virtual bool hasPendingActivity() const override;
+    virtual void onError(PassRefPtr<IDBDatabaseError>) override;
+    virtual void onSuccess(PassRefPtr<DOMStringList>) override;
+    virtual void onSuccess(PassRefPtr<IDBCursorBackend>) override;
+    virtual void onSuccess(PassRefPtr<IDBKey>) override;
+    virtual void onSuccess(PassRefPtr<SharedBuffer>) override;
+    virtual void onSuccess(PassRefPtr<SharedBuffer>, PassRefPtr<IDBKey>, const IDBKeyPath&) override;
+    virtual void onSuccess(int64_t) override;
+    virtual void onSuccess() override;
+    virtual void onSuccess(PassRefPtr<IDBKey>, PassRefPtr<IDBKey> primaryKey, PassRefPtr<SharedBuffer>) override;
 
     // EventTarget
     virtual EventTargetInterface eventTargetInterface() const override;
@@ -114,6 +107,9 @@ public:
 
     DOMRequestState* requestState() { return &m_requestState; }
 
+    // ActiveDOMObject API.
+    bool hasPendingActivity() const override;
+
 protected:
     IDBRequest(ScriptExecutionContext*, PassRefPtr<IDBAny> source, IDBDatabaseBackend::TaskType, IDBTransaction*);
     void enqueueEvent(PassRefPtr<Event>);
@@ -131,14 +127,16 @@ protected:
     bool m_requestAborted; // May be aborted by transaction then receive async onsuccess; ignore vs. assert.
 
 private:
-    // ActiveDOMObject
-    virtual void stop() override;
+    // ActiveDOMObject API.
+    void stop() override;
+    const char* activeDOMObjectName() const override;
+    bool canSuspendForPageCache() const override;
 
-    // EventTarget
+    // EventTarget API.
     virtual void refEventTarget() override final { ref(); }
     virtual void derefEventTarget() override final { deref(); }
 
-    PassRefPtr<IDBCursor> getResultCursor();
+    RefPtr<IDBCursor> getResultCursor();
     void setResultCursor(PassRefPtr<IDBCursor>, PassRefPtr<IDBKey>, PassRefPtr<IDBKey> primaryKey, const Deprecated::ScriptValue&);
 
     RefPtr<IDBAny> m_source;

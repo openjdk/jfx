@@ -31,14 +31,12 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INSPECTOR)
-
 #include "JSInspectorFrontendHost.h"
 
 #include "ContextMenuItem.h"
 #include "InspectorController.h"
 #include "InspectorFrontendHost.h"
+#include "JSDOMBinding.h"
 #include "JSEvent.h"
 #include "MouseEvent.h"
 #include <runtime/JSArray.h>
@@ -54,21 +52,21 @@ namespace WebCore {
 JSValue JSInspectorFrontendHost::platform(ExecState* execState)
 {
 #if PLATFORM(MAC) || PLATFORM(IOS)
-    DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("mac")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("mac")));
 #elif PLATFORM(JAVA)
-    DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("java")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("java")));
 #elif OS(WINDOWS)
-    DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("windows")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("windows")));
 #elif OS(LINUX)
-    DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("linux")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("linux")));
 #elif OS(FREEBSD)
-    DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("freebsd")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("freebsd")));
 #elif OS(OPENBSD)
-    DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("openbsd")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("openbsd")));
 #elif OS(SOLARIS)
-    DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("solaris")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("solaris")));
 #else
-    DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("unknown")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, platform, (ASCIILiteral("unknown")));
 #endif
     return jsStringWithCache(execState, platform);
 }
@@ -76,13 +74,13 @@ JSValue JSInspectorFrontendHost::platform(ExecState* execState)
 JSValue JSInspectorFrontendHost::port(ExecState* execState)
 {
 #if PLATFORM(GTK)
-    DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("gtk")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("gtk")));
 #elif PLATFORM(JAVA)
-    DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("java")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("java")));
 #elif PLATFORM(EFL)
-    DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("efl")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("efl")));
 #else
-    DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("unknown")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, port, (ASCIILiteral("unknown")));
 #endif
     return jsStringWithCache(execState, port);
 }
@@ -92,12 +90,12 @@ static void populateContextMenuItems(ExecState* exec, JSArray* array, ContextMen
 {
     for (size_t i = 0; i < array->length(); ++i) {
         JSObject* item = asObject(array->getIndex(exec, i));
-        JSValue label = item->get(exec, Identifier(exec, "label"));
-        JSValue type = item->get(exec, Identifier(exec, "type"));
-        JSValue id = item->get(exec, Identifier(exec, "id"));
-        JSValue enabled = item->get(exec, Identifier(exec, "enabled"));
-        JSValue checked = item->get(exec, Identifier(exec, "checked"));
-        JSValue subItems = item->get(exec, Identifier(exec, "subItems"));
+        JSValue label = item->get(exec, Identifier::fromString(exec, "label"));
+        JSValue type = item->get(exec, Identifier::fromString(exec, "type"));
+        JSValue id = item->get(exec, Identifier::fromString(exec, "id"));
+        JSValue enabled = item->get(exec, Identifier::fromString(exec, "enabled"));
+        JSValue checked = item->get(exec, Identifier::fromString(exec, "checked"));
+        JSValue subItems = item->get(exec, Identifier::fromString(exec, "subItems"));
         if (!type.isString())
             continue;
 
@@ -134,7 +132,7 @@ JSValue JSInspectorFrontendHost::showContextMenu(ExecState* exec)
 #if ENABLE(CONTEXT_MENUS)
     if (exec->argumentCount() < 2)
         return jsUndefined();
-    Event* event = toEvent(exec->argument(0));
+    Event* event = JSEvent::toWrapped(exec->argument(0));
 
     JSArray* array = asArray(exec->argument(1));
     ContextMenu menu;
@@ -152,21 +150,4 @@ JSValue JSInspectorFrontendHost::showContextMenu(ExecState* exec)
     return jsUndefined();
 }
 
-JSValue JSInspectorFrontendHost::recordActionTaken(ExecState*)
-{
-    return jsUndefined();
-}
-
-JSValue JSInspectorFrontendHost::recordPanelShown(ExecState*)
-{
-    return jsUndefined();
-}
-
-JSValue JSInspectorFrontendHost::recordSettingChanged(ExecState*)
-{
-    return jsUndefined();
-}
-
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

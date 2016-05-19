@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2013 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2009, 2013, 2015 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,13 +36,13 @@
 
 namespace WebCore {
 
-RefPtr<Scrollbar> RenderScrollbar::createCustomScrollbar(ScrollableArea* scrollableArea, ScrollbarOrientation orientation, Element* ownerElement, Frame* owningFrame)
+RefPtr<Scrollbar> RenderScrollbar::createCustomScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, Element* ownerElement, Frame* owningFrame)
 {
     return adoptRef(new RenderScrollbar(scrollableArea, orientation, ownerElement, owningFrame));
 }
 
-RenderScrollbar::RenderScrollbar(ScrollableArea* scrollableArea, ScrollbarOrientation orientation, Element* ownerElement, Frame* owningFrame)
-    : Scrollbar(scrollableArea, orientation, RegularScrollbar, RenderScrollbarTheme::renderScrollbarTheme())
+RenderScrollbar::RenderScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, Element* ownerElement, Frame* owningFrame)
+    : Scrollbar(scrollableArea, orientation, RegularScrollbar, RenderScrollbarTheme::renderScrollbarTheme(), true)
     , m_ownerElement(ownerElement)
     , m_owningFrame(owningFrame)
 {
@@ -77,7 +77,9 @@ RenderBox* RenderScrollbar::owningRenderer() const
         return currentRenderer;
     }
     ASSERT(m_ownerElement);
-    return m_ownerElement->renderer() ? m_ownerElement->renderer()->enclosingBox() : nullptr;
+    if (m_ownerElement->renderer())
+        return &m_ownerElement->renderer()->enclosingBox();
+    return nullptr;
 }
 
 void RenderScrollbar::setParent(ScrollView* parent)
@@ -267,27 +269,27 @@ IntRect RenderScrollbar::buttonRect(ScrollbarPart partType)
     partRenderer->layout();
 
     bool isHorizontal = orientation() == HorizontalScrollbar;
+    IntSize pixelSnappedIntSize = partRenderer->pixelSnappedSize();
     if (partType == BackButtonStartPart)
-        return IntRect(location(), IntSize(isHorizontal ? partRenderer->pixelSnappedWidth() : width(), isHorizontal ? height() : partRenderer->pixelSnappedHeight()));
+        return IntRect(location(), IntSize(isHorizontal ? pixelSnappedIntSize.width() : width(), isHorizontal ? height() : pixelSnappedIntSize.height()));
     if (partType == ForwardButtonEndPart)
-        return IntRect(isHorizontal ? x() + width() - partRenderer->pixelSnappedWidth() : x(),
-                       isHorizontal ? y() : y() + height() - partRenderer->pixelSnappedHeight(),
-                       isHorizontal ? partRenderer->pixelSnappedWidth() : width(),
-                       isHorizontal ? height() : partRenderer->pixelSnappedHeight());
+        return IntRect(isHorizontal ? x() + width() - pixelSnappedIntSize.width() : x(), isHorizontal ? y() : y() + height() - pixelSnappedIntSize.height(),
+                       isHorizontal ? pixelSnappedIntSize.width() : width(),
+                       isHorizontal ? height() : pixelSnappedIntSize.height());
 
     if (partType == ForwardButtonStartPart) {
         IntRect previousButton = buttonRect(BackButtonStartPart);
         return IntRect(isHorizontal ? x() + previousButton.width() : x(),
                        isHorizontal ? y() : y() + previousButton.height(),
-                       isHorizontal ? partRenderer->pixelSnappedWidth() : width(),
-                       isHorizontal ? height() : partRenderer->pixelSnappedHeight());
+                       isHorizontal ? pixelSnappedIntSize.width() : width(),
+                       isHorizontal ? height() : pixelSnappedIntSize.height());
     }
 
     IntRect followingButton = buttonRect(ForwardButtonEndPart);
-    return IntRect(isHorizontal ? x() + width() - followingButton.width() - partRenderer->pixelSnappedWidth() : x(),
-                   isHorizontal ? y() : y() + height() - followingButton.height() - partRenderer->pixelSnappedHeight(),
-                   isHorizontal ? partRenderer->pixelSnappedWidth() : width(),
-                   isHorizontal ? height() : partRenderer->pixelSnappedHeight());
+    return IntRect(isHorizontal ? x() + width() - followingButton.width() - pixelSnappedIntSize.width() : x(),
+                   isHorizontal ? y() : y() + height() - followingButton.height() - pixelSnappedIntSize.height(),
+                   isHorizontal ? pixelSnappedIntSize.width() : width(),
+                   isHorizontal ? height() : pixelSnappedIntSize.height());
 }
 
 IntRect RenderScrollbar::trackRect(int startLength, int endLength)
@@ -325,10 +327,10 @@ IntRect RenderScrollbar::trackPieceRectWithMargins(ScrollbarPart partType, const
     IntRect rect = oldRect;
     if (orientation() == HorizontalScrollbar) {
         rect.setX(rect.x() + partRenderer->marginLeft());
-        rect.setWidth(rect.width() - partRenderer->marginWidth());
+        rect.setWidth(rect.width() - partRenderer->horizontalMarginExtent());
     } else {
         rect.setY(rect.y() + partRenderer->marginTop());
-        rect.setHeight(rect.height() - partRenderer->marginHeight());
+        rect.setHeight(rect.height() - partRenderer->verticalMarginExtent());
     }
     return rect;
 }

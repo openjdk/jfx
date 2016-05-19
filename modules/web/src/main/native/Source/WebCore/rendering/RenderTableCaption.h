@@ -28,12 +28,12 @@ class RenderTable;
 
 class RenderTableCaption final : public RenderBlockFlow {
 public:
-    RenderTableCaption(Element&, PassRef<RenderStyle>);
+    RenderTableCaption(Element&, Ref<RenderStyle>&&);
     virtual ~RenderTableCaption();
 
-    Element& element() const { return toElement(nodeForNonAnonymous()); }
+    Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
-    virtual LayoutUnit containingBlockLogicalWidthForContent() const override;
+    virtual LayoutUnit containingBlockLogicalWidthForContent() const override { return containingBlock()->logicalWidth(); }
 
 private:
     virtual bool isTableCaption() const override { return true; }
@@ -44,8 +44,8 @@ private:
     RenderTable* table() const;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderTableCaption, isTableCaption())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableCaption, isTableCaption())
 
 #endif // RenderTableCaption_h

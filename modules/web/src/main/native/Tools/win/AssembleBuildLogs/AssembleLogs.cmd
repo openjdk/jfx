@@ -34,6 +34,8 @@ type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\libEGL\BuildLog.htm"    
 
 :SkipANGLEProjects
 
+if not exist "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\WTF\BuildLog.htm" GOTO SkipIndividualBuilds
+
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo COMPILING WTF...                                          >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
@@ -70,14 +72,29 @@ echo _________________________________________________________ >> "%CONFIGURATIO
 type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\jsc\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo COMPILING jscLauncher...                                  >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\jsclauncher\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo COMPILING testRegExp...                                   >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\testRegExp\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo COMPILING testRegExpLauncher...                           >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\testRegExpLauncher\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo COMPILING testapi...                                      >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\testapi\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo COMPILING testapiLauncher...                              >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\testapiLauncher\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 
 if not exist "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\WebKitQuartzCoreAdditions\BuildLog.htm" GOTO SkipInternalProjects
 
@@ -101,31 +118,12 @@ echo COMPILING WebKitQuartzCoreAdditions...                    >> "%CONFIGURATIO
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\WebKitQuartzCoreAdditions\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 
-echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-echo COMPILING CoreUI...                                       >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\CoreUI\BuildLog.htm"       >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-
-echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-echo COMPILING SafariTheme...                                  >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\SafariTheme\BuildLog.htm"  >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-
 :SkipInternalProjects
 
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo COMPILING WebCoreGenerated...                             >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\WebCoreGenerated\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-
-if not exist "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\QTMovieWin\BuildLog.htm" GOTO SkipQTMovieWin
-
-echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-echo COMPILING QTMovieWin...                                   >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\QTMovieWin\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-
-:SkipQTMovieWin
 
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo COMPILING WebCore...                                      >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
@@ -146,11 +144,6 @@ echo _________________________________________________________ >> "%CONFIGURATIO
 echo COMPILING WebKitGUID...                                   >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\WebKitGUID\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-
-echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-echo COMPILING WebKitExportGenerator...                        >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
-type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\WebKitExportGenerator\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo COMPILING WebKit...                                       >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
@@ -211,3 +204,21 @@ echo _________________________________________________________ >> "%CONFIGURATIO
 echo COMPILING TestWebKitAPI...                                >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
 type "%CONFIGURATIONBUILDDIR%\obj%PlatformArchitecture%\TestWebKitAPI\BuildLog.htm" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+
+:SkipIndividualBuilds
+
+if not exist "%CONFIGURATIONBUILDDIR%\webkit_warnings.log" GOTO SkipMSBuildFiles
+
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo Build ERRORS...                                           >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+type "%CONFIGURATIONBUILDDIR%\webkit_errors.log" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo Build WARNINGS...                                         >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+echo _________________________________________________________ >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+type "%CONFIGURATIONBUILDDIR%\webkit_warnings.log" >> "%CONFIGURATIONBUILDDIR%\BuildOutput.htm"
+
+:SkipMSBuildFiles
+
+echo "Completed."

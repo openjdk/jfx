@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2005, 2007, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Jon Shier (jshier@iastate.edu)
  *
  * This library is free software; you can redistribute it and/or
@@ -23,13 +23,36 @@
 #define EventNames_h
 
 #include "ThreadGlobalData.h"
+#include <array>
+#include <functional>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
 
 #define DOM_EVENT_NAMES_FOR_EACH(macro) \
-    \
+    macro(DOMActivate) \
+    macro(DOMCharacterDataModified) \
+    macro(DOMContentLoaded) \
+    macro(DOMFocusIn) \
+    macro(DOMFocusOut) \
+    macro(DOMNodeInserted) \
+    macro(DOMNodeInsertedIntoDocument) \
+    macro(DOMNodeRemoved) \
+    macro(DOMNodeRemovedFromDocument) \
+    macro(DOMSubtreeModified) \
     macro(abort) \
+    macro(active) \
+    macro(addsourcebuffer) \
+    macro(addstream) \
+    macro(addtrack) \
+    macro(animationend) \
+    macro(animationiteration) \
+    macro(animationstart) \
+    macro(audioend) \
+    macro(audioprocess) \
+    macro(audiostart) \
+    macro(autocomplete) \
+    macro(autocompleteerror) \
     macro(beforecopy) \
     macro(beforecut) \
     macro(beforeload) \
@@ -37,7 +60,10 @@ namespace WebCore {
     macro(beforeunload) \
     macro(blocked) \
     macro(blur) \
+    macro(boundary) \
     macro(cached) \
+    macro(canplay) \
+    macro(canplaythrough) \
     macro(change) \
     macro(chargingchange) \
     macro(chargingtimechange) \
@@ -49,14 +75,16 @@ namespace WebCore {
     macro(compositionstart) \
     macro(compositionupdate) \
     macro(connect) \
+    macro(connecting) \
     macro(contextmenu) \
     macro(copy) \
+    macro(cuechange) \
     macro(cut) \
+    macro(datachannel) \
     macro(dblclick) \
     macro(devicemotion) \
     macro(deviceorientation) \
     macro(dischargingtimechange) \
-    macro(display) \
     macro(downloading) \
     macro(drag) \
     macro(dragend) \
@@ -65,16 +93,30 @@ namespace WebCore {
     macro(dragover) \
     macro(dragstart) \
     macro(drop) \
+    macro(durationchange) \
+    macro(emptied) \
+    macro(end) \
+    macro(ended) \
+    macro(enter) \
     macro(error) \
+    macro(exit) \
     macro(focus) \
     macro(focusin) \
     macro(focusout) \
+    macro(gamepadconnected) \
+    macro(gamepaddisconnected) \
+    macro(gesturechange) \
+    macro(gestureend) \
+    macro(gesturescrollend) \
+    macro(gesturescrollstart) \
+    macro(gesturescrollupdate) \
+    macro(gesturestart) \
     macro(gesturetap) \
     macro(gesturetapdown) \
-    macro(gesturescrollstart) \
-    macro(gesturescrollend) \
-    macro(gesturescrollupdate) \
     macro(hashchange) \
+    macro(icecandidate) \
+    macro(iceconnectionstatechange) \
+    macro(inactive) \
     macro(input) \
     macro(invalid) \
     macro(keydown) \
@@ -82,9 +124,13 @@ namespace WebCore {
     macro(keyup) \
     macro(levelchange) \
     macro(load) \
+    macro(loadeddata) \
+    macro(loadedmetadata) \
+    macro(loadend) \
     macro(loading) \
     macro(loadingdone) \
     macro(loadstart) \
+    macro(mark) \
     macro(message) \
     macro(mousedown) \
     macro(mouseenter) \
@@ -94,237 +140,207 @@ namespace WebCore {
     macro(mouseover) \
     macro(mouseup) \
     macro(mousewheel) \
+    macro(mute) \
+    macro(negotiationneeded) \
+    macro(nexttrack) \
+    macro(nomatch) \
     macro(noupdate) \
     macro(obsolete) \
     macro(offline) \
     macro(online) \
     macro(open) \
+    macro(orientationchange) \
+    macro(overconstrained) \
     macro(overflowchanged) \
     macro(pagehide) \
     macro(pageshow) \
     macro(paste) \
+    macro(pause) \
+    macro(play) \
+    macro(playing) \
+    macro(pointerlockchange) \
+    macro(pointerlockerror) \
     macro(popstate) \
+    macro(previoustrack) \
+    macro(progress) \
+    macro(ratechange) \
     macro(readystatechange) \
+    macro(removesourcebuffer) \
+    macro(removestream) \
+    macro(removetrack) \
     macro(reset) \
     macro(resize) \
+    macro(result) \
+    macro(resume) \
     macro(scroll) \
     macro(search) \
+    macro(securitypolicyviolation) \
+    macro(seeked) \
+    macro(seeking) \
     macro(select) \
-    macro(selectstart) \
     macro(selectionchange) \
+    macro(selectstart) \
+    macro(show) \
+    macro(signalingstatechange) \
+    macro(soundend) \
+    macro(soundstart) \
+    macro(sourceclose) \
+    macro(sourceended) \
+    macro(sourceopen) \
+    macro(speechend) \
+    macro(speechstart) \
+    macro(stalled) \
+    macro(start) \
+    macro(started) \
+    macro(statechange) \
     macro(storage) \
     macro(submit) \
+    macro(success) \
+    macro(suspend) \
     macro(textInput) \
+    macro(timeout) \
+    macro(timeupdate) \
+    macro(tonechange) \
+    macro(touchcancel) \
+    macro(touchend) \
+    macro(touchmove) \
+    macro(touchstart) \
+    macro(transitionend) \
     macro(unload) \
+    macro(unmute) \
+    macro(update) \
+    macro(updateend) \
     macro(updateready) \
+    macro(updatestart) \
     macro(upgradeneeded) \
     macro(versionchange) \
     macro(visibilitychange) \
-    /* ENABLE(WILL_REVEAL_EDGE_EVENT) */ \
+    macro(volumechange) \
+    macro(waiting) \
+    macro(webglcontextcreationerror) \
+    macro(webglcontextlost) \
+    macro(webglcontextrestored) \
+    macro(webkitAnimationEnd) \
+    macro(webkitAnimationIteration) \
+    macro(webkitAnimationStart) \
+    macro(webkitBeforeTextInserted) \
+    macro(webkitEditableContentChanged) \
+    macro(webkitTransitionEnd) \
+    macro(webkitbeginfullscreen) \
+    macro(webkitcurrentplaybacktargetiswirelesschanged) \
+    macro(webkitdeviceproximity) \
+    macro(webkitendfullscreen) \
+    macro(webkitfullscreenchange) \
+    macro(webkitfullscreenerror) \
+    macro(webkitkeyadded) \
+    macro(webkitkeyerror) \
+    macro(webkitkeymessage) \
+    macro(webkitmouseforcechanged) \
+    macro(webkitmouseforcedown) \
+    macro(webkitmouseforcewillbegin) \
+    macro(webkitmouseforceup) \
+    macro(webkitneedkey) \
+    macro(webkitnetworkinfochange) \
+    macro(webkitplaybacktargetavailabilitychanged) \
+    macro(webkitpresentationmodechanged) \
+    macro(webkitregionoversetchange) \
+    macro(webkitremovesourcebuffer) \
+    macro(webkitresourcetimingbufferfull) \
+    macro(webkitsourceclose) \
+    macro(webkitsourceended) \
+    macro(webkitsourceopen) \
+    macro(webkitspeechchange) \
     macro(webkitwillrevealbottom) \
     macro(webkitwillrevealleft) \
     macro(webkitwillrevealright) \
     macro(webkitwillrevealtop) \
-    /* End of ENABLE(WILL_REVEAL_EDGE_EVENT) */ \
     macro(wheel) \
     macro(write) \
     macro(writeend) \
     macro(writestart) \
     macro(zoom) \
-    \
-    macro(DOMActivate) \
-    macro(DOMFocusIn) \
-    macro(DOMFocusOut) \
-    macro(DOMCharacterDataModified) \
-    macro(DOMNodeInserted) \
-    macro(DOMNodeInsertedIntoDocument) \
-    macro(DOMNodeRemoved) \
-    macro(DOMNodeRemovedFromDocument) \
-    macro(DOMSubtreeModified) \
-    macro(DOMContentLoaded) \
-    \
-    macro(webkitBeforeTextInserted) \
-    macro(webkitEditableContentChanged) \
-    \
-    macro(canplay) \
-    macro(canplaythrough) \
-    macro(durationchange) \
-    macro(emptied) \
-    macro(ended) \
-    macro(loadeddata) \
-    macro(loadedmetadata) \
-    macro(pause) \
-    macro(play) \
-    macro(playing) \
-    macro(ratechange) \
-    macro(seeked) \
-    macro(seeking) \
-    macro(timeupdate) \
-    macro(volumechange) \
-    macro(waiting) \
-    \
-    macro(addtrack) \
-    macro(cuechange) \
-    macro(enter) \
-    macro(exit) \
-    \
-    macro(webkitbeginfullscreen) \
-    macro(webkitendfullscreen) \
-    \
-    macro(addsourcebuffer) \
-    macro(removesourcebuffer) \
-    macro(sourceopen) \
-    macro(sourceended) \
-    macro(sourceclose) \
-    macro(update) \
-    macro(updateend) \
-    macro(updatestart) \
-    macro(webkitaddsourcebuffer) \
-    macro(webkitremovesourcebuffer) \
-    macro(webkitsourceopen) \
-    macro(webkitsourceended) \
-    macro(webkitsourceclose) \
-    \
-    macro(webkitkeyadded) \
-    macro(webkitkeyerror) \
-    macro(webkitkeymessage) \
-    macro(webkitneedkey) \
-    \
-    macro(progress) \
-    macro(stalled) \
-    macro(suspend) \
-    \
-    macro(webkitAnimationEnd) \
-    macro(webkitAnimationStart) \
-    macro(webkitAnimationIteration) \
-    \
-    macro(webkitTransitionEnd) \
-    macro(transitionend) \
-    \
-    macro(orientationchange) \
-    \
-    macro(timeout) \
-    \
-    macro(touchstart) \
-    macro(touchmove) \
-    macro(touchend) \
-    macro(touchcancel) \
-    \
-    macro(success) \
-    \
-    macro(loadend) \
-    \
-    macro(webkitfullscreenchange) \
-    macro(webkitfullscreenerror) \
-    \
-    macro(webkitspeechchange) \
-    \
-    macro(audiostart) \
-    macro(soundstart) \
-    macro(speechstart) \
-    macro(speechend) \
-    macro(soundend) \
-    macro(audioend) \
-    macro(result) \
-    macro(nomatch) \
-    macro(start) \
-    macro(end) \
-    macro(mark) \
-    macro(boundary) \
-    macro(resume) \
-    \
-    macro(webglcontextlost) \
-    macro(webglcontextrestored) \
-    macro(webglcontextcreationerror) \
-    \
-    macro(audioprocess) \
-    \
-    macro(connecting) \
-    macro(addstream) \
-    macro(removestream) \
-    macro(signalingstatechange) \
-    macro(removetrack) \
-    macro(overconstrained) \
-    macro(mute) \
-    macro(unmute) \
-    macro(started) \
-    macro(iceconnectionstatechange) \
-    macro(icecandidate) \
-    macro(negotiationneeded) \
-    macro(datachannel) \
-    macro(tonechange) \
-    \
-    macro(show) \
-    \
-    macro(webkitpointerlockchange) \
-    macro(webkitpointerlockerror) \
-    \
-    macro(webkitregionlayoutupdate) \
-    \
-    macro(webkitregionoversetchange) \
-    \
-    macro(webkitnetworkinfochange) \
-    \
-    macro(webkitresourcetimingbufferfull) \
-    \
-    macro(webkitdeviceproximity) \
-    \
-    macro(securitypolicyviolation) \
-    \
-    /* ENABLE(IOS_AIRPLAY) */ \
-    macro(webkitcurrentplaybacktargetiswirelesschanged) \
-    macro(webkitplaybacktargetavailabilitychanged) \
-    /* End of ENABLE(IOS_AIRPLAY) */ \
-    \
-    /* ENABLE(IOS_GESTURE_EVENTS) */ \
-    macro(gesturestart) \
-    macro(gesturechange) \
-    macro(gestureend) \
-    /* End of ENABLE(IOS_GESTURE_EVENTS) */ \
-
 // end of DOM_EVENT_NAMES_FOR_EACH
 
-class EventNames {
+struct EventNames {
     WTF_MAKE_NONCOPYABLE(EventNames); WTF_MAKE_FAST_ALLOCATED;
-    int dummy; // Needed to make initialization macro work.
-    // Private to prevent accidental call to EventNames() instead of eventNames()
-    EventNames();
-    friend class ThreadGlobalData;
 
 public:
-    #define DOM_EVENT_NAMES_DECLARE(name) AtomicString name##Event;
+#define DOM_EVENT_NAMES_DECLARE(name) const AtomicString name##Event;
     DOM_EVENT_NAMES_FOR_EACH(DOM_EVENT_NAMES_DECLARE)
-    #undef DOM_EVENT_NAMES_DECLARE
+#undef DOM_EVENT_NAMES_DECLARE
 
-    inline bool isGestureEventType(const AtomicString& eventType) const
+    // FIXME: The friend declaration to std::make_unique below does not work in windows port.
+    //
+    // template<class T, class... Args>
+    // friend typename std::_Unique_if<T>::_Single_object std::make_unique(Args&&...);
+    //
+    // This create function should be deleted later and is only for keeping EventNames as private.
+    // std::make_unique should be used instead.
+    //
+    template<class... Args>
+    static std::unique_ptr<EventNames> create(Args&&... args)
     {
-        return eventType == gesturestartEvent || eventType == gesturechangeEvent || eventType == gestureendEvent;
+        return std::unique_ptr<EventNames>(new EventNames(std::forward<Args>(args)...));
     }
 
-    inline bool isTouchEventType(const AtomicString& eventType) const
-    {
-        return eventType == touchstartEvent
-            || eventType == touchmoveEvent
-            || eventType == touchendEvent
-            || eventType == touchcancelEvent;
-    }
+    // FIXME: Inelegant to call these both event names and event types.
+    // We should choose one term and stick to it.
+    bool isWheelEventType(const AtomicString& eventType) const;
+    bool isGestureEventType(const AtomicString& eventType) const;
+    bool isTouchEventType(const AtomicString& eventType) const;
+#if ENABLE(GAMEPAD)
+    bool isGamepadEventType(const AtomicString& eventType) const;
+#endif
 
-    Vector<AtomicString> touchEventNames() const
-    {
-        Vector<AtomicString> names;
-        names.reserveCapacity(4);
-        names.append(touchstartEvent);
-        names.append(touchmoveEvent);
-        names.append(touchendEvent);
-        names.append(touchcancelEvent);
-        return names;
-    }
+    std::array<std::reference_wrapper<const AtomicString>, 4> touchEventNames() const;
+
+private:
+    EventNames(); // Private to prevent accidental call to EventNames() instead of eventNames().
+    friend class ThreadGlobalData; // Allow ThreadGlobalData to create the per-thread EventNames object.
+
+    int dummy; // Needed to make initialization macro work.
 };
 
-inline EventNames& eventNames()
+const EventNames& eventNames();
+
+inline const EventNames& eventNames()
 {
     return threadGlobalData().eventNames();
 }
+
+inline bool EventNames::isGestureEventType(const AtomicString& eventType) const
+{
+    return eventType == gesturestartEvent || eventType == gesturechangeEvent || eventType == gestureendEvent;
+}
+
+inline bool EventNames::isTouchEventType(const AtomicString& eventType) const
+{
+    return eventType == touchstartEvent
+        || eventType == touchmoveEvent
+        || eventType == touchendEvent
+        || eventType == touchcancelEvent;
+}
+
+inline bool EventNames::isWheelEventType(const AtomicString& eventType) const
+{
+    return eventType == wheelEvent
+        || eventType == mousewheelEvent;
+}
+
+inline std::array<std::reference_wrapper<const AtomicString>, 4> EventNames::touchEventNames() const
+{
+    return { { touchstartEvent, touchmoveEvent, touchendEvent, touchcancelEvent } };
+}
+
+#if ENABLE(GAMEPAD)
+
+inline bool EventNames::isGamepadEventType(const AtomicString& eventType) const
+{
+    return eventType == gamepadconnectedEvent
+        || eventType == gamepaddisconnectedEvent;
+}
+
+#endif
 
 }
 

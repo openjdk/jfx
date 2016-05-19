@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,7 +27,7 @@
 
 #include "config.h"
 
-#if USE(3D_GRAPHICS)
+#if ENABLE(GRAPHICS_CONTEXT_3D)
 
 #include "GraphicsContext3D.h"
 
@@ -159,10 +159,12 @@ bool GraphicsContext3D::computeFormatAndTypeParameters(GC3Denum format, GC3Denum
         *componentsPerPixel = 2;
         break;
     case GraphicsContext3D::RGB:
+    case Extensions3D::SRGB_EXT:
         *componentsPerPixel = 3;
         break;
     case GraphicsContext3D::RGBA:
     case Extensions3D::BGRA_EXT: // GL_EXT_texture_format_BGRA8888
+    case Extensions3D::SRGB_ALPHA_EXT:
         *componentsPerPixel = 4;
         break;
     default:
@@ -412,6 +414,9 @@ unsigned GraphicsContext3D::getClearBitsByFormat(GC3Denum format)
     case GraphicsContext3D::RGBA:
     case GraphicsContext3D::RGBA4:
     case GraphicsContext3D::RGB5_A1:
+    case Extensions3D::SRGB_EXT:
+    case Extensions3D::SRGB_ALPHA_EXT:
+    case Extensions3D::SRGB8_ALPHA8_EXT:
         return GraphicsContext3D::COLOR_BUFFER_BIT;
     case GraphicsContext3D::DEPTH_COMPONENT16:
     case GraphicsContext3D::DEPTH_COMPONENT:
@@ -436,10 +441,12 @@ unsigned GraphicsContext3D::getChannelBitsByFormat(GC3Denum format)
         return ChannelRGBA;
     case GraphicsContext3D::RGB:
     case GraphicsContext3D::RGB565:
+    case Extensions3D::SRGB_EXT:
         return ChannelRGB;
     case GraphicsContext3D::RGBA:
     case GraphicsContext3D::RGBA4:
     case GraphicsContext3D::RGB5_A1:
+    case Extensions3D::SRGB_ALPHA_EXT:
         return ChannelRGBA;
     case GraphicsContext3D::DEPTH_COMPONENT16:
     case GraphicsContext3D::DEPTH_COMPONENT:
@@ -455,4 +462,4 @@ unsigned GraphicsContext3D::getChannelBitsByFormat(GC3Denum format)
 
 } // namespace WebCore
 
-#endif // USE(3D_GRAPHICS)
+#endif // ENABLE(GRAPHICS_CONTEXT_3D)

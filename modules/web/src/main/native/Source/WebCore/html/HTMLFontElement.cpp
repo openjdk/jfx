@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLFontElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "CSSStyleSheet.h"
 #include "CSSValueKeywords.h"
@@ -46,9 +45,9 @@ HTMLFontElement::HTMLFontElement(const QualifiedName& tagName, Document& documen
     ASSERT(hasTagName(fontTag));
 }
 
-PassRefPtr<HTMLFontElement> HTMLFontElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLFontElement> HTMLFontElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLFontElement(tagName, document));
+    return adoptRef(*new HTMLFontElement(tagName, document));
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/rendering.html#fonts-and-colors

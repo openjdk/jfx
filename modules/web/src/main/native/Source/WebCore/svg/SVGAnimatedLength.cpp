@@ -20,8 +20,9 @@
 #include "config.h"
 #include "SVGAnimatedLength.h"
 
-#include "SVGAnimateElement.h"
+#include "SVGAnimateElementBase.h"
 #include "SVGAnimatedNumber.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -33,8 +34,8 @@ SVGAnimatedLengthAnimator::SVGAnimatedLengthAnimator(SVGAnimationElement* animat
 
 static inline SVGLength& sharedSVGLength(SVGLengthMode mode, const String& valueAsString)
 {
-    DEFINE_STATIC_LOCAL(SVGLength, sharedLength, ());
-    sharedLength.setValueAsString(valueAsString, mode, ASSERT_NO_EXCEPTION);
+    static NeverDestroyed<SVGLength> sharedLength;
+    sharedLength.get().setValueAsString(valueAsString, mode, ASSERT_NO_EXCEPTION);
     return sharedLength;
 }
 

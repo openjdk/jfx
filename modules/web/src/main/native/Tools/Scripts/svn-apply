@@ -13,7 +13,7 @@
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
 #     documentation and/or other materials provided with the distribution. 
-# 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+# 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
 #     from this software without specific prior written permission.
 #
@@ -123,6 +123,7 @@ my %checkedDirectories;
 my @diffHashRefs = parsePatch(*ARGV);
 
 print "Parsed " . @diffHashRefs . " diffs from patch file(s).\n";
+die "No diff found." unless @diffHashRefs;
 
 my $preparedPatchHash = prepareParsedPatch($force, @diffHashRefs);
 
@@ -353,10 +354,10 @@ sub patch($)
         } elsif ($deletion) {
             applyPatch($patch, $fullPath, ["--force"]) if $patch;
             scmRemove($fullPath);
-        } elsif ($addition) {
+        } elsif ($addition && $hasTextChunks) {
             # Addition
             rename($fullPath, "$fullPath.orig") if -e $fullPath;
-            applyPatch($patch, $fullPath) if $patch;
+            applyPatch($patch, $fullPath);
             unlink("$fullPath.orig") if -e "$fullPath.orig" && checksum($fullPath) eq checksum("$fullPath.orig");
             scmAdd($fullPath);
             my $escapedFullPath = escapeSubversionPath("$fullPath.orig");

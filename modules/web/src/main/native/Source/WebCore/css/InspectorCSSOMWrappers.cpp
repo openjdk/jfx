@@ -58,23 +58,21 @@ void InspectorCSSOMWrappers::collect(ListType* listType)
         CSSRule* cssRule = listType->item(i);
         switch (cssRule->type()) {
         case CSSRule::IMPORT_RULE:
-            collect(static_cast<CSSImportRule*>(cssRule)->styleSheet());
+            collect(downcast<CSSImportRule>(*cssRule).styleSheet());
             break;
         case CSSRule::MEDIA_RULE:
-            collect(static_cast<CSSMediaRule*>(cssRule));
+            collect(downcast<CSSMediaRule>(cssRule));
             break;
-#if ENABLE(CSS3_CONDITIONAL_RULES)
         case CSSRule::SUPPORTS_RULE:
-            collect(static_cast<CSSSupportsRule*>(cssRule));
+            collect(downcast<CSSSupportsRule>(cssRule));
             break;
-#endif
 #if ENABLE(CSS_REGIONS)
         case CSSRule::WEBKIT_REGION_RULE:
-            collect(static_cast<WebKitCSSRegionRule*>(cssRule));
+            collect(downcast<WebKitCSSRegionRule>(cssRule));
             break;
 #endif
         case CSSRule::STYLE_RULE:
-            m_styleRuleToCSSOMWrapperMap.add(static_cast<CSSStyleRule*>(cssRule)->styleRule(), static_cast<CSSStyleRule*>(cssRule));
+            m_styleRuleToCSSOMWrapperMap.add(&downcast<CSSStyleRule>(*cssRule).styleRule(), downcast<CSSStyleRule>(cssRule));
             break;
         default:
             break;

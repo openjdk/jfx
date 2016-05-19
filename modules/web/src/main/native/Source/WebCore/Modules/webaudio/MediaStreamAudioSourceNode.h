@@ -40,18 +40,18 @@ class AudioContext;
 
 class MediaStreamAudioSourceNode : public AudioNode, public AudioSourceProviderClient {
 public:
-    static PassRefPtr<MediaStreamAudioSourceNode> create(AudioContext*, MediaStream*, MediaStreamTrack*, AudioSourceProvider*);
+    static Ref<MediaStreamAudioSourceNode> create(AudioContext*, MediaStream*, MediaStreamTrack*, AudioSourceProvider*);
 
     virtual ~MediaStreamAudioSourceNode();
 
     MediaStream* mediaStream() { return m_mediaStream.get(); }
 
     // AudioNode
-    virtual void process(size_t framesToProcess);
-    virtual void reset();
+    virtual void process(size_t framesToProcess) override;
+    virtual void reset() override;
 
     // AudioSourceProviderClient
-    virtual void setFormat(size_t numberOfChannels, float sampleRate);
+    virtual void setFormat(size_t numberOfChannels, float sampleRate) override;
 
     AudioSourceProvider* audioSourceProvider() const { return m_audioSourceProvider; }
 

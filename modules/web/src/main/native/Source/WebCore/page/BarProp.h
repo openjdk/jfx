@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,7 +31,7 @@
 
 #include "DOMWindowProperty.h"
 #include "ScriptWrappable.h"
-#include <wtf/PassRefPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -42,7 +42,7 @@ class BarProp : public ScriptWrappable, public RefCounted<BarProp>, public DOMWi
 public:
     enum Type { Locationbar, Menubar, Personalbar, Scrollbars, Statusbar, Toolbar };
 
-    static PassRefPtr<BarProp> create(Frame* frame, Type type) { return adoptRef(new BarProp(frame, type)); }
+    static Ref<BarProp> create(Frame* frame, Type type) { return adoptRef(*new BarProp(frame, type)); }
 
     Type type() const;
     bool visible() const;

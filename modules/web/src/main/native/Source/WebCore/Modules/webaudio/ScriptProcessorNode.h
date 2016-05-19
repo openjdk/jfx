@@ -53,7 +53,7 @@ public:
     // This value controls how frequently the onaudioprocess event handler is called and how many sample-frames need to be processed each call.
     // Lower numbers for bufferSize will result in a lower (better) latency. Higher numbers will be necessary to avoid audio breakup and glitches.
     // The value chosen must carefully balance between latency and audio quality.
-    static PassRefPtr<ScriptProcessorNode> create(AudioContext*, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels);
+    static RefPtr<ScriptProcessorNode> create(AudioContext*, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels);
 
     virtual ~ScriptProcessorNode();
 
@@ -65,9 +65,6 @@ public:
 
     size_t bufferSize() const { return m_bufferSize; }
 
-    EventListener* onaudioprocess() { return getAttributeEventListener(eventNames().audioprocessEvent); }
-    void setOnaudioprocess(PassRefPtr<EventListener>);
-
 private:
     virtual double tailTime() const override;
     virtual double latencyTime() const override;
@@ -76,6 +73,10 @@ private:
 
     static void fireProcessEventDispatch(void* userData);
     void fireProcessEvent();
+
+    bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture) override;
+    bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture) override;
+    void removeAllEventListeners() override;
 
     // Double buffering
     unsigned doubleBufferIndex() const { return m_doubleBufferIndex; }

@@ -42,21 +42,21 @@ public:
     {
     }
 
-    RenderBoxModelObject& renderer() const { return toRenderBoxModelObject(InlineBox::renderer()); }
+    RenderBoxModelObject& renderer() const { return downcast<RenderBoxModelObject>(InlineBox::renderer()); }
 
-    virtual void deleteLine() override;
-    virtual void extractLine() override;
-    virtual void attachLine() override;
+    virtual void deleteLine() override final;
+    virtual void extractLine() override final;
+    virtual void attachLine() override final;
 
     virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) override;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
 
 private:
     virtual bool isInlineElementBox() const override final { return true; }
 };
 
-INLINE_BOX_OBJECT_TYPE_CASTS(InlineElementBox, isInlineElementBox())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_INLINE_BOX(InlineElementBox, isInlineElementBox())
 
 #endif // InlineElementBox_h

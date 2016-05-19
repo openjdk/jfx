@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -54,33 +54,23 @@ void InitWebCoreSystemInterface(void)
 #if !PLATFORM(IOS)
     INIT(CGContextDrawsWithCorrectShadowOffsets);
 #endif
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    INIT(CTFontTransformGlyphs);
-#endif
-    INIT(CopyCFLocalizationPreferredName);
     INIT(CopyCONNECTProxyResponse);
     INIT(CopyNSURLResponseStatusLine);
     INIT(CopyNSURLResponseCertificateChain);
-    INIT(CreateCustomCFReadStream);
 #if !PLATFORM(IOS)
     INIT(DrawCapsLockIndicator);
     INIT(DrawBezeledTextArea);
-    INIT(DrawBezeledTextFieldCell);
     INIT(DrawFocusRing);
+    INIT(DrawFocusRingAtTime);
+    INIT(DrawCellFocusRingWithFrameAtTime);
     INIT(DrawMediaUIPart);
     INIT(DrawMediaSliderTrack);
-    INIT(DrawTextFieldCellFocusRing);
-    INIT(GetExtensionsForMIMEType);
-    INIT(GetFontInLanguageForCharacter);
-    INIT(GetFontInLanguageForRange);
-    INIT(GetGlyphTransformedAdvances);
 #endif
     INIT(GetHTTPRequestPriority);
-    INIT(GetMIMETypeForExtension);
     INIT(GetNSURLResponseLastModifiedDate);
+    INIT(GetWebDefaultCFStringEncoding);
 #if !PLATFORM(IOS)
     INIT(SignedPublicKeyAndChallengeString);
-    INIT(GetPreferredExtensionForMIMEType);
     INIT(GetWheelEventDeltas);
     INIT(GetNSEventKeyChar);
     INIT(HitTestMediaUIPart);
@@ -92,7 +82,6 @@ void InitWebCoreSystemInterface(void)
     INIT(CreateMediaUIControl);
     INIT(WindowSetAlpha);
     INIT(WindowSetScaledFrame);
-    INIT(PopupMenu);
     INIT(SetCGFontRenderingMode);
 #endif
     INIT(SetBaseCTM);
@@ -110,13 +99,8 @@ void InitWebCoreSystemInterface(void)
     INIT(SetPatternPhaseInUserSpace);
     INIT(CGContextIsPDFContext);
     INIT(GetUserToBaseCTM);
-    INIT(SetUpFontCache);
-    INIT(SignalCFReadStreamEnd);
-    INIT(SignalCFReadStreamError);
-    INIT(SignalCFReadStreamHasBytes);
 #if ENABLE(VIDEO) && !PLATFORM(IOS)
     INIT(QTIncludeOnlyModernMediaFileTypes);
-    INIT(QTMovieDataRate);
     INIT(QTMovieDisableComponent);
     INIT(QTMovieMaxTimeLoaded);
     INIT(QTMovieMaxTimeLoadedChangeNotification);
@@ -132,32 +116,19 @@ void InitWebCoreSystemInterface(void)
     INIT(QTClearMediaDownloadCache);
 #endif
 
-#if !PLATFORM(IOS)
-    INIT(GetGlyphsForCharacters);
-#endif
-    INIT(GetVerticalGlyphsForCharacters);
 #if PLATFORM(IOS)
     INIT(ExecutableWasLinkedOnOrAfterIOSVersion);
     INIT(GetDeviceClass);
-    INIT(GetViewportScreenSize);
+    INIT(GetScreenSize);
+    INIT(GetAvailableScreenSize);
     INIT(GetScreenScaleFactor);
     INIT(IsGB18030ComplianceRequired);
+    INIT(IsOptimizedFullscreenSupported);
 #endif
 
-    INIT(CreateCTLineWithUniCharProvider);
-
-#if !PLATFORM(IOS_SIMULATOR)
-    INIT(IOSurfaceContextCreate);
-    INIT(IOSurfaceContextCreateImage);
-#endif
-    INIT(CreateCTTypesetterWithUniCharProviderAndOptions);
-    INIT(CTRunGetInitialAdvance);
 #if !PLATFORM(IOS)
-    INIT(RecommendedScrollerStyle);
     INIT(ExecutableWasLinkedOnOrBeforeSnowLeopard);
-    INIT(SetCrashReportApplicationSpecificInformation);
     INIT(CopyDefaultSearchProviderDisplayName);
-    INIT(AVAssetResolvedURL);
     INIT(Cursor);
 #endif
 
@@ -165,8 +136,6 @@ void InitWebCoreSystemInterface(void)
     INIT(GetDefaultHTTPCookieStorage);
     INIT(CopyCredentialFromCFPersistentStorage);
     INIT(SetCFURLRequestShouldContentSniff);
-    INIT(CFURLRequestCopyHTTPRequestBodyParts);
-    INIT(CFURLRequestSetHTTPRequestBodyParts);
     INIT(SetRequestStorageSession);
 #endif
 
@@ -204,20 +173,6 @@ void InitWebCoreSystemInterface(void)
     INIT(SetMetadataURL);
 #endif
 
-    INIT(DestroyRenderingResources);
-
-#if !PLATFORM(IOS)
-    INIT(CreateVMPressureDispatchOnMainQueue);
-
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    INIT(CreateMemoryStatusPressureCriticalDispatchOnMainQueue);
-#endif
-
-    INIT(ExecutableWasLinkedOnOrBeforeLion);
-#endif
-
-    INIT(CGPathAddRoundedRect);
-
     INIT(CFURLRequestAllowAllPostCaching);
 
 #if PLATFORM(IOS)
@@ -241,6 +196,11 @@ void InitWebCoreSystemInterface(void)
 #if ENABLE(CACHE_PARTITIONING)
     INIT(CachePartitionKey);
 #endif
+
+    INIT(ExernalDeviceTypeForPlayer);
+    INIT(ExernalDeviceDisplayNameForPlayer);
+
+    INIT(QueryDecoderAvailability);
 
     didInit = true;
 }

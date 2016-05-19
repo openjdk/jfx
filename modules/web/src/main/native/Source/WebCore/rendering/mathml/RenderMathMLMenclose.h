@@ -33,10 +33,10 @@ namespace WebCore {
 
 class RenderMathMLMenclose final: public RenderMathMLRow {
 public:
-    RenderMathMLMenclose(Element&, PassRef<RenderStyle>);
+    RenderMathMLMenclose(Element&, Ref<RenderStyle>&&);
 
 private:
-    virtual const char* renderName() const { return "RenderMathMLMenclose"; }
+    virtual const char* renderName() const override { return "RenderMathMLMenclose"; }
     virtual void paint(PaintInfo&, const LayoutPoint&) override;
     virtual void updateLogicalHeight() override;
     virtual void addChild(RenderObject* newChild, RenderObject* beforeChild = nullptr) override;

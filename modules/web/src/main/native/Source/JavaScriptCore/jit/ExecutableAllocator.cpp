@@ -34,9 +34,6 @@
 #include <wtf/MetaAllocator.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PageReservation.h>
-#if ENABLE(ASSEMBLER_WX_EXCLUSIVE)
-#include <wtf/PassOwnPtr.h>
-#endif
 #include <wtf/ThreadingPrimitives.h>
 #include <wtf/VMTags.h>
 #endif
@@ -137,7 +134,7 @@ private:
     Vector<PageReservation, 16> reservations;
     static HashSet<DemandExecutableAllocator*>& allocators()
     {
-        DEFINE_STATIC_LOCAL(HashSet<DemandExecutableAllocator*>, sAllocators, ());
+        DEPRECATED_DEFINE_STATIC_LOCAL(HashSet<DemandExecutableAllocator*>, sAllocators, ());
         return sAllocators;
     }
 
@@ -173,7 +170,7 @@ void ExecutableAllocator::initializeAllocator()
 
 ExecutableAllocator::ExecutableAllocator(VM&)
 #if ENABLE(ASSEMBLER_WX_EXCLUSIVE)
-    : m_allocator(adoptPtr(new  DemandExecutableAllocator()))
+    : m_allocator(std::make_unique<DemandExecutableAllocator>())
 #endif
 {
     ASSERT(allocator());
@@ -216,11 +213,11 @@ double ExecutableAllocator::memoryPressureMultiplier(size_t addedMemoryUsage)
 
 }
 
-PassRefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(VM&, size_t sizeInBytes, void* ownerUID, JITCompilationEffort effort)
+RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(VM&, size_t sizeInBytes, void* ownerUID, JITCompilationEffort effort)
 {
     RefPtr<ExecutableMemoryHandle> result = allocator()->allocate(sizeInBytes, ownerUID);
     RELEASE_ASSERT(result || effort != JITCompilationMustSucceed);
-    return result.release();
+    return result;
 }
 
 size_t ExecutableAllocator::committedByteCount()

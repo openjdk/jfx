@@ -24,13 +24,16 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "InjectedBundleTest.h"
 
 #include "PlatformUtilities.h"
-#include <WebKit2/WKArray.h>
-#include <WebKit2/WKBundlePage.h>
-#include <WebKit2/WKBundleBackForwardListItem.h>
-#include <WebKit2/WKWebArchive.h>
+#include <WebKit/WKArray.h>
+#include <WebKit/WKBundlePage.h>
+#include <WebKit/WKBundleBackForwardListItem.h>
+#include <WebKit/WKWebArchive.h>
 
 namespace TestWebKitAPI {
 
@@ -46,7 +49,7 @@ static InjectedBundleTest::Register<PasteboardNotificationsTest> registrar("Past
 static void willWriteToPasteboard(WKBundlePageRef page, WKBundleRangeHandleRef range,  const void*)
 {
     if (!range)
-        WKBundlePostMessage(InjectedBundleController::shared().bundle(), Util::toWK("PasteboardNotificationTestDoneMessageName").get(), Util::toWK("willWritetoPasteboardFail").get());
+        WKBundlePostMessage(InjectedBundleController::singleton().bundle(), Util::toWK("PasteboardNotificationTestDoneMessageName").get(), Util::toWK("willWritetoPasteboardFail").get());
 }
 
 static void getPasteboardDataForRange(WKBundlePageRef, WKBundleRangeHandleRef range, WKArrayRef* pasteboardTypes, WKArrayRef* pasteboardData, const void*)
@@ -59,7 +62,7 @@ static void getPasteboardDataForRange(WKBundlePageRef, WKBundleRangeHandleRef ra
 
 static void didWriteToPasteboard(WKBundlePageRef, const void*)
 {
-    WKBundlePostMessage(InjectedBundleController::shared().bundle(), Util::toWK("PasteboardNotificationTestDoneMessageName").get(), Util::toWK("didWriteToPasteboard").get());
+    WKBundlePostMessage(InjectedBundleController::singleton().bundle(), Util::toWK("PasteboardNotificationTestDoneMessageName").get(), Util::toWK("didWriteToPasteboard").get());
 }
 
 PasteboardNotificationsTest::PasteboardNotificationsTest(const std::string& identifier)
@@ -82,3 +85,5 @@ void PasteboardNotificationsTest::didCreatePage(WKBundleRef bundle, WKBundlePage
 }
 
 } // namespace TestWebKitAPI
+
+#endif

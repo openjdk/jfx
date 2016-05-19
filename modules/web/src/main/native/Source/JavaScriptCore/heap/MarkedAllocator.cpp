@@ -26,7 +26,6 @@
 #include "config.h"
 #include "MarkedAllocator.h"
 
-#include "DelayedReleaseScope.h"
 #include "GCActivityCallback.h"
 #include "Heap.h"
 #include "IncrementalSweeper.h"
@@ -62,46 +61,40 @@ bool MarkedAllocator::isPagedOut(double deadline)
 
 inline void* MarkedAllocator::tryAllocateHelper(size_t bytes)
 {
-    // We need a while loop to check the free list because the DelayedReleaseScope
-    // could cause arbitrary code to execute and exhaust the free list that we
-    // thought had elements in it.
-    while (!m_freeList.head) {
-        DelayedReleaseScope delayedReleaseScope(*m_markedSpace);
-        if (m_currentBlock) {
-            ASSERT(m_currentBlock == m_nextBlockToSweep);
-            m_currentBlock->didConsumeFreeList();
-            m_nextBlockToSweep = m_currentBlock->next();
+    if (m_currentBlock) {
+        ASSERT(m_currentBlock == m_nextBlockToSweep);
+        m_currentBlock->didConsumeFreeList();
+        m_nextBlockToSweep = m_currentBlock->next();
+    }
+
+    MarkedBlock* next;
+    for (MarkedBlock*& block = m_nextBlockToSweep; block; block = next) {
+        next = block->next();
+
+        MarkedBlock::FreeList freeList = block->sweep(MarkedBlock::SweepToFreeList);
+
+        double utilization = ((double)MarkedBlock::blockSize - (double)freeList.bytes) / (double)MarkedBlock::blockSize;
+        if (utilization >= Options::minMarkedBlockUtilization()) {
+            ASSERT(freeList.bytes || !freeList.head);
+            m_blockList.remove(block);
+            m_retiredBlocks.push(block);
+            block->didRetireBlock(freeList);
+            continue;
         }
 
-        MarkedBlock* next;
-        for (MarkedBlock*& block = m_nextBlockToSweep; block; block = next) {
-            next = block->next();
-
-            MarkedBlock::FreeList freeList = block->sweep(MarkedBlock::SweepToFreeList);
-
-            if (!freeList.head) {
-                block->didConsumeEmptyFreeList();
-                m_blockList.remove(block);
-                m_blockList.push(block);
-                if (!m_lastFullBlock)
-                    m_lastFullBlock = block;
-                continue;
-            }
-
-            if (bytes > block->cellSize()) {
-                block->stopAllocating(freeList);
-                continue;
-            }
-
-            m_currentBlock = block;
-            m_freeList = freeList;
-            break;
+        if (bytes > block->cellSize()) {
+            block->stopAllocating(freeList);
+            continue;
         }
 
-        if (!m_freeList.head) {
-            m_currentBlock = 0;
-            return 0;
-        }
+        m_currentBlock = block;
+        m_freeList = freeList;
+        break;
+    }
+
+    if (!m_freeList.head) {
+        m_currentBlock = 0;
+        return 0;
     }
 
     ASSERT(m_freeList.head);
@@ -128,30 +121,30 @@ inline void* MarkedAllocator::tryAllocate(size_t bytes)
     m_heap->m_operationInProgress = Allocation;
     void* result = tryAllocateHelper(bytes);
 
-    // Due to the DelayedReleaseScope in tryAllocateHelper, some other thread might have
-    // created a new block after we thought we didn't find any free cells.
-    while (!result && m_currentBlock) {
-        // A new block was added by another thread so try popping the free list.
-        result = tryPopFreeList(bytes);
-        if (result)
-            break;
-        // The free list was empty, so call tryAllocateHelper to do the normal sweeping stuff.
-        result = tryAllocateHelper(bytes);
-    }
-
     m_heap->m_operationInProgress = NoOperation;
     ASSERT(result || !m_currentBlock);
     return result;
 }
 
+ALWAYS_INLINE void MarkedAllocator::doTestCollectionsIfNeeded()
+{
+    if (!Options::slowPathAllocsBetweenGCs())
+        return;
+
+    static unsigned allocationCount = 0;
+    if (!allocationCount) {
+        if (!m_heap->isDeferred())
+            m_heap->collectAllGarbage();
+        ASSERT(m_heap->m_operationInProgress == NoOperation);
+    }
+    if (++allocationCount >= Options::slowPathAllocsBetweenGCs())
+        allocationCount = 0;
+}
+
 void* MarkedAllocator::allocateSlowCase(size_t bytes)
 {
     ASSERT(m_heap->vm()->currentThreadIsHoldingAPILock());
-#if COLLECT_ON_EVERY_ALLOCATION
-    if (!m_heap->isDeferred())
-        m_heap->collectAllGarbage();
-    ASSERT(m_heap->m_operationInProgress == NoOperation);
-#endif
+    doTestCollectionsIfNeeded();
 
     ASSERT(!m_markedSpace->isIterating());
     ASSERT(!m_freeList.head);
@@ -187,9 +180,7 @@ MarkedBlock* MarkedAllocator::allocateBlock(size_t bytes)
 
     size_t cellSize = m_cellSize ? m_cellSize : WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(bytes);
 
-    if (blockSize == MarkedBlock::blockSize)
-        return MarkedBlock::create(m_heap->blockAllocator().allocate<MarkedBlock>(), this, cellSize, m_destructorType);
-    return MarkedBlock::create(m_heap->blockAllocator().allocateCustomSize(blockSize, MarkedBlock::blockSize), this, cellSize, m_destructorType);
+    return MarkedBlock::create(this, blockSize, cellSize, m_needsDestruction);
 }
 
 void MarkedAllocator::addBlock(MarkedBlock* block)
@@ -211,9 +202,7 @@ void MarkedAllocator::removeBlock(MarkedBlock* block)
     if (m_nextBlockToSweep == block)
         m_nextBlockToSweep = m_nextBlockToSweep->next();
 
-    if (block == m_lastFullBlock)
-        m_lastFullBlock = m_lastFullBlock->prev();
-
+    block->willRemoveBlock();
     m_blockList.remove(block);
 }
 
@@ -223,12 +212,20 @@ void MarkedAllocator::reset()
     m_currentBlock = 0;
     m_freeList = MarkedBlock::FreeList();
     if (m_heap->operationInProgress() == FullCollection)
-        m_lastFullBlock = 0;
+        m_blockList.append(m_retiredBlocks);
 
-    if (m_lastFullBlock)
-        m_nextBlockToSweep = m_lastFullBlock->next() ? m_lastFullBlock->next() : m_lastFullBlock;
-    else
-        m_nextBlockToSweep = m_blockList.head();
+    m_nextBlockToSweep = m_blockList.head();
+}
+
+struct LastChanceToFinalize : MarkedBlock::VoidFunctor {
+    void operator()(MarkedBlock* block) { block->lastChanceToFinalize(); }
+};
+
+void MarkedAllocator::lastChanceToFinalize()
+{
+    m_blockList.append(m_retiredBlocks);
+    LastChanceToFinalize functor;
+    forEachBlock(functor);
 }
 
 } // namespace JSC

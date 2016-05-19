@@ -39,9 +39,9 @@ class FixedPositionViewportConstraints;
 
 class ScrollingStateFixedNode final : public ScrollingStateNode {
 public:
-    static PassOwnPtr<ScrollingStateFixedNode> create(ScrollingStateTree&, ScrollingNodeID);
+    static Ref<ScrollingStateFixedNode> create(ScrollingStateTree&, ScrollingNodeID);
 
-    virtual PassOwnPtr<ScrollingStateNode> clone(ScrollingStateTree&);
+    virtual Ref<ScrollingStateNode> clone(ScrollingStateTree&) override;
 
     virtual ~ScrollingStateFixedNode();
 
@@ -49,7 +49,7 @@ public:
         ViewportConstraints = NumStateNodeBits
     };
 
-    void updateConstraints(const FixedPositionViewportConstraints&);
+    WEBCORE_EXPORT void updateConstraints(const FixedPositionViewportConstraints&);
     const FixedPositionViewportConstraints& viewportConstraints() const { return m_constraints; }
 
 private:
@@ -63,9 +63,9 @@ private:
     FixedPositionViewportConstraints m_constraints;
 };
 
-SCROLLING_STATE_NODE_TYPE_CASTS(ScrollingStateFixedNode, nodeType() == FixedNode);
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_SCROLLING_STATE_NODE(ScrollingStateFixedNode, isFixedNode())
 
 #endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
 

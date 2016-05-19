@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,180 +29,110 @@
 
 #include "ExceptionCode.h"
 #include "ExceptionCodePlaceholder.h"
-#include <math.h>
 
 namespace WebCore {
 
+Ref<TimeRanges> TimeRanges::create()
+{
+    return adoptRef(*new TimeRanges);
+}
+
+Ref<TimeRanges> TimeRanges::create(double start, double end)
+{
+    return adoptRef(*new TimeRanges(start, end));
+}
+
+Ref<TimeRanges> TimeRanges::create(const PlatformTimeRanges& other)
+{
+    return adoptRef(*new TimeRanges(other));
+}
+
+TimeRanges::TimeRanges()
+{
+}
+
 TimeRanges::TimeRanges(double start, double end)
+    : m_ranges(PlatformTimeRanges(MediaTime::createWithDouble(start), MediaTime::createWithDouble(end)))
 {
-    add(start, end);
 }
 
-PassRefPtr<TimeRanges> TimeRanges::copy() const
+TimeRanges::TimeRanges(const PlatformTimeRanges& other)
+    : m_ranges(other)
 {
-    RefPtr<TimeRanges> newSession = TimeRanges::create();
-
-    unsigned size = m_ranges.size();
-    for (unsigned i = 0; i < size; i++)
-        newSession->add(m_ranges[i].m_start, m_ranges[i].m_end);
-
-    return newSession.release();
-}
-
-void TimeRanges::invert()
-{
-    RefPtr<TimeRanges> inverted = TimeRanges::create();
-    double posInf = std::numeric_limits<double>::infinity();
-    double negInf = -std::numeric_limits<double>::infinity();
-
-    if (!m_ranges.size())
-        inverted->add(negInf, posInf);
-    else {
-        double start = m_ranges.first().m_start;
-        if (start != negInf)
-            inverted->add(negInf, start);
-
-        for (size_t index = 0; index + 1 < m_ranges.size(); ++index)
-            inverted->add(m_ranges[index].m_end, m_ranges[index + 1].m_start);
-
-        double end = m_ranges.last().m_end;
-        if (end != posInf)
-            inverted->add(end, posInf);
-    }
-
-    m_ranges.swap(inverted->m_ranges);
-}
-
-void TimeRanges::intersectWith(const TimeRanges* other)
-{
-    ASSERT(other);
-
-    if (other == this)
-        return;
-
-    RefPtr<TimeRanges> invertedOther = other->copy();
-    invertedOther->invert();
-
-    invert();
-    unionWith(invertedOther.get());
-    invert();
-}
-
-void TimeRanges::unionWith(const TimeRanges* other)
-{
-    ASSERT(other);
-    RefPtr<TimeRanges> unioned = copy();
-    for (size_t index = 0; index < other->m_ranges.size(); ++index) {
-        const Range& range = other->m_ranges[index];
-        unioned->add(range.m_start, range.m_end);
-    }
-
-    m_ranges.swap(unioned->m_ranges);
 }
 
 double TimeRanges::start(unsigned index, ExceptionCode& ec) const
 {
-    if (index >= length()) {
+    bool valid;
+    MediaTime result = m_ranges.start(index, valid);
+
+    if (!valid) {
         ec = INDEX_SIZE_ERR;
         return 0;
     }
-    return m_ranges[index].m_start;
+    return result.toDouble();
 }
 
 double TimeRanges::end(unsigned index, ExceptionCode& ec) const
 {
-    if (index >= length()) {
+    bool valid;
+    MediaTime result = m_ranges.end(index, valid);
+
+    if (!valid) {
         ec = INDEX_SIZE_ERR;
         return 0;
     }
-    return m_ranges[index].m_end;
+    return result.toDouble();
+}
+
+void TimeRanges::invert()
+{
+    m_ranges.invert();
+}
+
+PassRefPtr<TimeRanges> TimeRanges::copy() const
+{
+    return TimeRanges::create(m_ranges);
+}
+
+void TimeRanges::intersectWith(const TimeRanges& other)
+{
+    m_ranges.intersectWith(other.ranges());
+}
+
+void TimeRanges::unionWith(const TimeRanges& other)
+{
+    m_ranges.unionWith(other.ranges());
+}
+
+unsigned TimeRanges::length() const
+{
+    return m_ranges.length();
 }
 
 void TimeRanges::add(double start, double end)
 {
-    ASSERT(start <= end);
-    unsigned int overlappingArcIndex;
-    Range addedRange(start, end);
-
-    // For each present range check if we need to:
-    // - merge with the added range, in case we are overlapping or contiguous
-    // - Need to insert in place, we we are completely, not overlapping and not contiguous
-    // in between two ranges.
-    //
-    // TODO: Given that we assume that ranges are correctly ordered, this could be optimized.
-
-    for (overlappingArcIndex = 0; overlappingArcIndex < m_ranges.size(); overlappingArcIndex++) {
-        if (addedRange.isOverlappingRange(m_ranges[overlappingArcIndex])
-         || addedRange.isContiguousWithRange(m_ranges[overlappingArcIndex])) {
-            // We need to merge the addedRange and that range.
-            addedRange = addedRange.unionWithOverlappingOrContiguousRange(m_ranges[overlappingArcIndex]);
-            m_ranges.remove(overlappingArcIndex);
-            overlappingArcIndex--;
-        } else {
-            // Check the case for which there is no more to do
-            if (!overlappingArcIndex) {
-                if (addedRange.isBeforeRange(m_ranges[0])) {
-                    // First index, and we are completely before that range (and not contiguous, nor overlapping).
-                    // We just need to be inserted here.
-                    break;
-                }
-            } else {
-                if (m_ranges[overlappingArcIndex - 1].isBeforeRange(addedRange)
-                 && addedRange.isBeforeRange(m_ranges[overlappingArcIndex])) {
-                    // We are exactly after the current previous range, and before the current range, while
-                    // not overlapping with none of them. Insert here.
-                    break;
-                }
-            }
-        }
-    }
-
-    // Now that we are sure we don't overlap with any range, just add it.
-    m_ranges.insert(overlappingArcIndex, addedRange);
+    m_ranges.add(MediaTime::createWithDouble(start), MediaTime::createWithDouble(end));
 }
 
 bool TimeRanges::contain(double time) const
 {
-    return find(time) != notFound;
+    return m_ranges.contain(MediaTime::createWithDouble(time));
 }
 
 size_t TimeRanges::find(double time) const
 {
-    for (unsigned n = 0; n < length(); n++) {
-        if (time >= start(n, IGNORE_EXCEPTION) && time <= end(n, IGNORE_EXCEPTION))
-            return n;
-    }
-    return notFound;
+    return m_ranges.find(MediaTime::createWithDouble(time));
 }
 
 double TimeRanges::nearest(double time) const
 {
-    double closestDelta = std::numeric_limits<double>::infinity();
-    double closestTime = 0;
-    unsigned count = length();
-    for (unsigned ndx = 0; ndx < count; ndx++) {
-        double startTime = start(ndx, IGNORE_EXCEPTION);
-        double endTime = end(ndx, IGNORE_EXCEPTION);
-        if (time >= startTime && time <= endTime)
-            return time;
-        if (fabs(startTime - time) < closestDelta) {
-            closestTime = startTime;
-            closestDelta = fabsf(startTime - time);
-        }
-        if (fabs(endTime - time) < closestDelta) {
-            closestTime = endTime;
-            closestDelta = fabsf(endTime - time);
-        }
-    }
-    return closestTime;
+    return m_ranges.nearest(MediaTime::createWithDouble(time)).toDouble();
 }
 
 double TimeRanges::totalDuration() const
 {
-    double total = 0;
-    for (unsigned n = 0; n < length(); n++)
-        total += fabs(end(n, IGNORE_EXCEPTION) - start(n, IGNORE_EXCEPTION));
-    return total;
+    return m_ranges.totalDuration().toDouble();
 }
 
 }

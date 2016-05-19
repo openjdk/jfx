@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,10 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebInspector.h"
-
-#if ENABLE(INSPECTOR)
 
 #include "WebInspectorClient.h"
 #include "WebKitDLL.h"
@@ -55,13 +52,13 @@ WebInspector::WebInspector(WebView* webView, WebInspectorClient* inspectorClient
     ASSERT_ARG(webView, webView);
 
     gClassCount++;
-    gClassNameCount.add("WebInspector");
+    gClassNameCount().add("WebInspector");
 }
 
 WebInspector::~WebInspector()
 {
     gClassCount--;
-    gClassNameCount.remove("WebInspector");
+    gClassNameCount().remove("WebInspector");
 }
 
 WebInspectorFrontendClient* WebInspector::frontendClient()
@@ -237,7 +234,7 @@ HRESULT STDMETHODCALLTYPE WebInspector::setJavaScriptProfilingEnabled(BOOL enabl
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE  WebInspector::evaluateInFrontend(ULONG callId, BSTR bScript)
+HRESULT STDMETHODCALLTYPE  WebInspector::evaluateInFrontend(BSTR bScript)
 {
     if (!m_webView)
         return S_OK;
@@ -247,7 +244,7 @@ HRESULT STDMETHODCALLTYPE  WebInspector::evaluateInFrontend(ULONG callId, BSTR b
         return S_OK;
 
     String script(bScript, SysStringLen(bScript));
-    page->inspectorController().evaluateForTestInFrontend(callId, script);
+    page->inspectorController().evaluateForTestInFrontend(script);
     return S_OK;
 }
 
@@ -275,5 +272,3 @@ HRESULT STDMETHODCALLTYPE WebInspector::setTimelineProfilingEnabled(BOOL enabled
     frontendClient()->setTimelineProfilingEnabled(enabled);
     return S_OK;
 }
-
-#endif // ENABLE(INSPECTOR)

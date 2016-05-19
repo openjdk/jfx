@@ -45,14 +45,14 @@ class TouchEvent;
 
 class SliderThumbElement final : public HTMLDivElement {
 public:
-    static PassRefPtr<SliderThumbElement> create(Document&);
+    static Ref<SliderThumbElement> create(Document&);
 
     void setPositionFromValue();
     void dragFrom(const LayoutPoint&);
     HTMLInputElement* hostInput() const;
     void setPositionFromPoint(const LayoutPoint&);
 
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS)
+#if ENABLE(IOS_TOUCH_EVENTS)
     void handleTouchEvent(TouchEvent*);
 
     void disabledAttributeChanged();
@@ -61,10 +61,9 @@ public:
 private:
     SliderThumbElement(Document&);
 
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
-    virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren() override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
+    virtual RefPtr<Element> cloneElementWithoutAttributesAndChildren(Document&) override;
     virtual bool isDisabledFormControl() const override;
-    virtual bool matchesReadOnlyPseudoClass() const override;
     virtual bool matchesReadWritePseudoClass() const override;
     virtual Element* focusDelegate() override;
 #if !PLATFORM(IOS)
@@ -73,7 +72,7 @@ private:
     virtual bool willRespondToMouseClickEvents() override;
 #endif
 
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS)
+#if ENABLE(IOS_TOUCH_EVENTS)
     virtual void didAttachRenderers() override;
 #endif
     virtual void willDetachRenderers() override;
@@ -83,7 +82,7 @@ private:
     void startDragging();
     void stopDragging();
 
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS)
+#if ENABLE(IOS_TOUCH_EVENTS)
     unsigned exclusiveTouchIdentifier() const;
     void setExclusiveTouchIdentifier(unsigned);
     void clearExclusiveTouchIdentifier();
@@ -99,25 +98,25 @@ private:
 
     bool m_inDragMode;
 
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS)
+#if ENABLE(IOS_TOUCH_EVENTS)
     // FIXME: Currently it is safe to use 0, but this may need to change
-    // if touch identifers change in the future and can be 0.
+    // if touch identifiers change in the future and can be 0.
     static const unsigned NoIdentifier = 0;
     unsigned m_exclusiveTouchIdentifier;
     bool m_isRegisteredAsTouchEventListener;
 #endif
 };
 
-inline PassRefPtr<SliderThumbElement> SliderThumbElement::create(Document& document)
+inline Ref<SliderThumbElement> SliderThumbElement::create(Document& document)
 {
-    return adoptRef(new SliderThumbElement(document));
+    return adoptRef(*new SliderThumbElement(document));
 }
 
 // --------------------------------
 
 class RenderSliderThumb final : public RenderBlockFlow {
 public:
-    RenderSliderThumb(SliderThumbElement&, PassRef<RenderStyle>);
+    RenderSliderThumb(SliderThumbElement&, Ref<RenderStyle>&&);
     void updateAppearance(RenderStyle* parentStyle);
 
 private:
@@ -128,11 +127,11 @@ private:
 
 class SliderContainerElement final : public HTMLDivElement {
 public:
-    static PassRefPtr<SliderContainerElement> create(Document&);
+    static Ref<SliderContainerElement> create(Document&);
 
 private:
     SliderContainerElement(Document&);
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
     virtual const AtomicString& shadowPseudoId() const override;
 };
 

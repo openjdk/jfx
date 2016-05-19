@@ -109,9 +109,9 @@ namespace WebCore {
         virtual void progressFinished(Frame& originatingProgressFrame);
         virtual void progressTrackerDestroyed();
 
-        virtual PassRefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
+        virtual RefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
                                    const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight);
-        virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually);
+        virtual RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually);
         virtual void recreatePlugin(Widget*) { }
         virtual void redirectDataToPlugin(Widget* pluginWidget);
         virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues);
@@ -180,8 +180,12 @@ namespace WebCore {
         virtual void didFinishLoad();
         virtual void prepareForDataSourceReplacement();
 
-        virtual PassRefPtr<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&);
+        virtual Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&);
         virtual void setTitle(const StringWithDirection& title, const URL&);
+
+        void willReplaceMultipartContent() override;
+        void didReplaceMultipartContent() override;
+        void updateCachedDocumentLoader(DocumentLoader&) override;
 
         virtual String userAgent(const URL&);
 
@@ -208,6 +212,8 @@ namespace WebCore {
         virtual void registerForIconNotification(bool listen = true);
 
         void setFrame(Frame* frame);
+
+        virtual bool isJavaFrameLoaderClient() override { return true; }
     private:
         Page* m_page;
         Frame* m_frame;

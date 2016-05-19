@@ -22,8 +22,6 @@
 
 #include "GraphicsContext.h"
 #include "IntRect.h"
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 

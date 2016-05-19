@@ -30,17 +30,16 @@
 #include "InspectorDOMAgent.h"
 #include "InspectorStyleSheet.h"
 #include "InspectorWebAgentBase.h"
-#include "InspectorWebBackendDispatchers.h"
 #include "SecurityContext.h"
+#include <inspector/InspectorBackendDispatchers.h>
 #include <inspector/InspectorValues.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
-class InspectorCSSFrontendDispatcher;
+class CSSFrontendDispatcher;
 }
 
 namespace WebCore {
@@ -60,17 +59,15 @@ class Node;
 class NodeList;
 class StyleResolver;
 class StyleRule;
-class UpdateRegionLayoutTask;
 class ChangeRegionOversetTask;
 
-#if ENABLE(INSPECTOR)
-
-class InspectorCSSAgent
+class InspectorCSSAgent final
     : public InspectorAgentBase
     , public InspectorDOMAgent::DOMListener
-    , public Inspector::InspectorCSSBackendDispatcherHandler
+    , public Inspector::CSSBackendDispatcherHandler
     , public InspectorStyleSheet::Listener {
     WTF_MAKE_NONCOPYABLE(InspectorCSSAgent);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     class InlineStyleOverrideScope {
     public:
@@ -90,49 +87,46 @@ public:
     };
 
     InspectorCSSAgent(InstrumentingAgents*, InspectorDOMAgent*);
-    ~InspectorCSSAgent();
+    virtual ~InspectorCSSAgent();
 
-    static CSSStyleRule* asCSSStyleRule(CSSRule*);
+    static CSSStyleRule* asCSSStyleRule(CSSRule&);
 
-    bool forcePseudoState(Element*, CSSSelector::PseudoType);
-    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
-    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
+    virtual void didCreateFrontendAndBackend(Inspector::FrontendChannel*, Inspector::BackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
     virtual void discardAgent() override;
-    virtual void enable(ErrorString*) override;
-    virtual void disable(ErrorString*) override;
-    void reset();
-    void mediaQueryResultChanged();
-    void didCreateNamedFlow(Document*, WebKitNamedFlow*);
-    void willRemoveNamedFlow(Document*, WebKitNamedFlow*);
-    void didUpdateRegionLayout(Document*, WebKitNamedFlow*);
-    void regionLayoutUpdated(WebKitNamedFlow*, int documentNodeId);
-    void didChangeRegionOverset(Document*, WebKitNamedFlow*);
+    virtual void enable(ErrorString&) override;
+    virtual void disable(ErrorString&) override;
     void regionOversetChanged(WebKitNamedFlow*, int documentNodeId);
-    void didRegisterNamedFlowContentElement(Document*, WebKitNamedFlow*, Node* contentElement, Node* nextContentElement = nullptr);
-    void didUnregisterNamedFlowContentElement(Document*, WebKitNamedFlow*, Node* contentElement);
+    void reset();
 
-    virtual void getComputedStyleForNode(ErrorString*, int nodeId, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSComputedStyleProperty>>&) override;
-    virtual void getInlineStylesForNode(ErrorString*, int nodeId, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& inlineStyle, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& attributes) override;
-    virtual void getMatchedStylesForNode(ErrorString*, int nodeId, const bool* includePseudo, const bool* includeInherited, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::RuleMatch>>& matchedCSSRules, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::PseudoIdMatches>>& pseudoIdMatches, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::InheritedStyleEntry>>& inheritedEntries) override;
-    virtual void getAllStyleSheets(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSStyleSheetHeader>>& styleSheetInfos) override;
-    virtual void getStyleSheet(ErrorString*, const String& styleSheetId, RefPtr<Inspector::TypeBuilder::CSS::CSSStyleSheetBody>& result) override;
-    virtual void getStyleSheetText(ErrorString*, const String& styleSheetId, String* result) override;
-    virtual void setStyleSheetText(ErrorString*, const String& styleSheetId, const String& text) override;
-    virtual void setStyleText(ErrorString*, const RefPtr<Inspector::InspectorObject>& styleId, const String& text, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& result) override;
-    virtual void setPropertyText(ErrorString*, const RefPtr<Inspector::InspectorObject>& styleId, int propertyIndex, const String& text, bool overwrite, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& result) override;
-    virtual void toggleProperty(ErrorString*, const RefPtr<Inspector::InspectorObject>& styleId, int propertyIndex, bool disable, RefPtr<Inspector::TypeBuilder::CSS::CSSStyle>& result) override;
-    virtual void setRuleSelector(ErrorString*, const RefPtr<Inspector::InspectorObject>& ruleId, const String& selector, RefPtr<Inspector::TypeBuilder::CSS::CSSRule>& result) override;
-    virtual void addRule(ErrorString*, int contextNodeId, const String& selector, RefPtr<Inspector::TypeBuilder::CSS::CSSRule>& result) override;
-    virtual void getSupportedCSSProperties(ErrorString*, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSPropertyInfo>>& result) override;
-    virtual void forcePseudoState(ErrorString*, int nodeId, const RefPtr<Inspector::InspectorArray>& forcedPseudoClasses) override;
-    virtual void getNamedFlowCollection(ErrorString*, int documentNodeId, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::NamedFlow>>& result) override;
+    // InspectorInstrumentation callbacks.
+    void mediaQueryResultChanged();
+    void didCreateNamedFlow(Document&, WebKitNamedFlow&);
+    void willRemoveNamedFlow(Document&, WebKitNamedFlow&);
+    void didChangeRegionOverset(Document&, WebKitNamedFlow&);
+    void didRegisterNamedFlowContentElement(Document&, WebKitNamedFlow&, Node& contentElement, Node* nextContentElement = nullptr);
+    void didUnregisterNamedFlowContentElement(Document&, WebKitNamedFlow&, Node& contentElement);
+    bool forcePseudoState(Element&, CSSSelector::PseudoClassType);
+
+    virtual void getComputedStyleForNode(ErrorString&, int nodeId, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSComputedStyleProperty>>&) override;
+    virtual void getInlineStylesForNode(ErrorString&, int nodeId, RefPtr<Inspector::Protocol::CSS::CSSStyle>& inlineStyle, RefPtr<Inspector::Protocol::CSS::CSSStyle>& attributes) override;
+    virtual void getMatchedStylesForNode(ErrorString&, int nodeId, const bool* includePseudo, const bool* includeInherited, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::RuleMatch>>& matchedCSSRules, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::PseudoIdMatches>>& pseudoIdMatches, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::InheritedStyleEntry>>& inheritedEntries) override;
+    virtual void getAllStyleSheets(ErrorString&, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSStyleSheetHeader>>& styleSheetInfos) override;
+    virtual void getStyleSheet(ErrorString&, const String& styleSheetId, RefPtr<Inspector::Protocol::CSS::CSSStyleSheetBody>& result) override;
+    virtual void getStyleSheetText(ErrorString&, const String& styleSheetId, String* result) override;
+    virtual void setStyleSheetText(ErrorString&, const String& styleSheetId, const String& text) override;
+    virtual void setStyleText(ErrorString&, const Inspector::InspectorObject& styleId, const String& text, RefPtr<Inspector::Protocol::CSS::CSSStyle>& result) override;
+    virtual void setRuleSelector(ErrorString&, const Inspector::InspectorObject& ruleId, const String& selector, RefPtr<Inspector::Protocol::CSS::CSSRule>& result) override;
+    virtual void addRule(ErrorString&, int contextNodeId, const String& selector, RefPtr<Inspector::Protocol::CSS::CSSRule>& result) override;
+    virtual void getSupportedCSSProperties(ErrorString&, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSPropertyInfo>>& result) override;
+    virtual void getSupportedSystemFontFamilyNames(ErrorString&, RefPtr<Inspector::Protocol::Array<String>>& result) override;
+    virtual void forcePseudoState(ErrorString&, int nodeId, const Inspector::InspectorArray& forcedPseudoClasses) override;
+    virtual void getNamedFlowCollection(ErrorString&, int documentNodeId, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::NamedFlow>>& result) override;
 
 private:
     class StyleSheetAction;
     class SetStyleSheetTextAction;
     class SetStyleTextAction;
-    class SetPropertyTextAction;
-    class TogglePropertyAction;
     class SetRuleSelectorAction;
     class AddRuleAction;
 
@@ -144,22 +138,21 @@ private:
 
     void resetNonPersistentData();
     InspectorStyleSheetForInlineStyle* asInspectorStyleSheet(Element* element);
-    Element* elementForId(ErrorString*, int nodeId);
+    Element* elementForId(ErrorString&, int nodeId);
     int documentNodeWithRequestedFlowsId(Document*);
-    void collectStyleSheets(CSSStyleSheet*, Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSStyleSheetHeader>*);
+    void collectStyleSheets(CSSStyleSheet*, Inspector::Protocol::Array<Inspector::Protocol::CSS::CSSStyleSheetHeader>*);
 
     InspectorStyleSheet* bindStyleSheet(CSSStyleSheet*);
     InspectorStyleSheet* viaInspectorStyleSheet(Document*, bool createIfAbsent);
-    InspectorStyleSheet* assertStyleSheetForId(ErrorString*, const String&);
-    Inspector::TypeBuilder::CSS::StyleSheetOrigin::Enum detectOrigin(CSSStyleSheet* pageStyleSheet, Document* ownerDocument);
+    InspectorStyleSheet* assertStyleSheetForId(ErrorString&, const String&);
+    Inspector::Protocol::CSS::StyleSheetOrigin detectOrigin(CSSStyleSheet* pageStyleSheet, Document* ownerDocument);
 
-    PassRefPtr<Inspector::TypeBuilder::CSS::CSSRule> buildObjectForRule(StyleRule*, StyleResolver&);
-    PassRefPtr<Inspector::TypeBuilder::CSS::CSSRule> buildObjectForRule(CSSStyleRule*);
-    PassRefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::CSSRule>> buildArrayForRuleList(CSSRuleList*);
-    PassRefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::RuleMatch>> buildArrayForMatchedRuleList(const Vector<RefPtr<StyleRuleBase>>&, StyleResolver&, Element*);
-    PassRefPtr<Inspector::TypeBuilder::CSS::CSSStyle> buildObjectForAttributesStyle(Element*);
-    PassRefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::CSS::Region>> buildArrayForRegions(ErrorString*, PassRefPtr<NodeList>, int documentNodeId);
-    PassRefPtr<Inspector::TypeBuilder::CSS::NamedFlow> buildObjectForNamedFlow(ErrorString*, WebKitNamedFlow*, int documentNodeId);
+    RefPtr<Inspector::Protocol::CSS::CSSRule> buildObjectForRule(StyleRule*, StyleResolver&, Element*);
+    RefPtr<Inspector::Protocol::CSS::CSSRule> buildObjectForRule(CSSStyleRule*);
+    RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::RuleMatch>> buildArrayForMatchedRuleList(const Vector<RefPtr<StyleRule>>&, StyleResolver&, Element*);
+    RefPtr<Inspector::Protocol::CSS::CSSStyle> buildObjectForAttributesStyle(Element*);
+    RefPtr<Inspector::Protocol::Array<Inspector::Protocol::CSS::Region>> buildArrayForRegions(ErrorString&, RefPtr<NodeList>&&, int documentNodeId);
+    RefPtr<Inspector::Protocol::CSS::NamedFlow> buildObjectForNamedFlow(ErrorString&, WebKitNamedFlow*, int documentNodeId);
 
     // InspectorDOMAgent::DOMListener implementation
     virtual void didRemoveDocument(Document*) override;
@@ -171,8 +164,8 @@ private:
 
     void resetPseudoStates();
 
-    std::unique_ptr<Inspector::InspectorCSSFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::InspectorCSSBackendDispatcher> m_backendDispatcher;
+    std::unique_ptr<Inspector::CSSFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<Inspector::CSSBackendDispatcher> m_backendDispatcher;
     InspectorDOMAgent* m_domAgent;
 
     IdToInspectorStyleSheet m_idToInspectorStyleSheet;
@@ -181,13 +174,10 @@ private:
     DocumentToViaInspectorStyleSheet m_documentToInspectorStyleSheet;
     NodeIdToForcedPseudoState m_nodeIdToForcedPseudoState;
     HashSet<int> m_namedFlowCollectionsRequested;
-    std::unique_ptr<UpdateRegionLayoutTask> m_updateRegionLayoutTask;
     std::unique_ptr<ChangeRegionOversetTask> m_changeRegionOversetTask;
 
     int m_lastStyleSheetId;
 };
-
-#endif
 
 } // namespace WebCore
 

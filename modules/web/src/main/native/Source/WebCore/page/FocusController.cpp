@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -45,6 +45,7 @@
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
+#include "HTMLPlugInElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HitTestResult.h"
 #include "KeyboardEvent.h"
@@ -60,6 +61,7 @@
 #include "Widget.h"
 #include "htmlediting.h" // For firstPositionInOrBeforeNode
 #include <limits>
+#include <wtf/CurrentTime.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
@@ -80,11 +82,11 @@ ContainerNode* FocusNavigationScope::rootNode() const
 Element* FocusNavigationScope::owner() const
 {
     ContainerNode* root = rootNode();
-    if (root->isShadowRoot())
-        return toShadowRoot(root)->hostElement();
+    if (is<ShadowRoot>(*root))
+        return downcast<ShadowRoot>(*root).hostElement();
     if (Frame* frame = root->document().frame())
         return frame->ownerElement();
-    return 0;
+    return nullptr;
 }
 
 FocusNavigationScope FocusNavigationScope::focusNavigationScopeOf(Node* node)
@@ -101,8 +103,8 @@ FocusNavigationScope FocusNavigationScope::focusNavigationScopeOf(Node* node)
 FocusNavigationScope FocusNavigationScope::focusNavigationScopeOwnedByShadowHost(Node* node)
 {
     ASSERT(node);
-    ASSERT(toElement(node)->shadowRoot());
-    return FocusNavigationScope(toElement(node)->shadowRoot());
+    ASSERT(downcast<Element>(*node).shadowRoot());
+    return FocusNavigationScope(downcast<Element>(*node).shadowRoot());
 }
 
 FocusNavigationScope FocusNavigationScope::focusNavigationScopeOwnedByIFrame(HTMLFrameOwnerElement* frame)
@@ -125,15 +127,15 @@ static inline void dispatchEventsOnWindowAndFocusedElement(Document* document, b
     }
 
     if (!focused && document->focusedElement())
-        document->focusedElement()->dispatchBlurEvent(0);
+        document->focusedElement()->dispatchBlurEvent(nullptr);
     document->dispatchWindowEvent(Event::create(focused ? eventNames().focusEvent : eventNames().blurEvent, false, false));
     if (focused && document->focusedElement())
-        document->focusedElement()->dispatchFocusEvent(0, FocusDirectionNone);
+        document->focusedElement()->dispatchFocusEvent(nullptr, FocusDirectionNone);
 }
 
 static inline bool hasCustomFocusLogic(Element& element)
 {
-    return element.isHTMLElement() && toHTMLElement(element).hasCustomFocusLogic();
+    return is<HTMLElement>(element) && downcast<HTMLElement>(element).hasCustomFocusLogic();
 }
 
 static inline bool isNonFocusableShadowHost(Element& element, KeyboardEvent& event)
@@ -143,14 +145,14 @@ static inline bool isNonFocusableShadowHost(Element& element, KeyboardEvent& eve
 
 static inline bool isFocusableShadowHost(Node& node, KeyboardEvent& event)
 {
-    return node.isElementNode() && toElement(node).isKeyboardFocusable(&event) && toElement(node).shadowRoot() && !hasCustomFocusLogic(toElement(node));
+    return is<Element>(node) && downcast<Element>(node).isKeyboardFocusable(&event) && downcast<Element>(node).shadowRoot() && !hasCustomFocusLogic(downcast<Element>(node));
 }
 
 static inline int adjustedTabIndex(Node& node, KeyboardEvent& event)
 {
-    if (!node.isElementNode())
+    if (!is<Element>(node))
         return 0;
-    return isNonFocusableShadowHost(toElement(node), event) ? 0 : toElement(node).tabIndex();
+    return isNonFocusableShadowHost(downcast<Element>(node), event) ? 0 : downcast<Element>(node).tabIndex();
 }
 
 static inline bool shouldVisit(Element& element, KeyboardEvent& event)
@@ -162,6 +164,7 @@ FocusController::FocusController(Page& page, ViewState::Flags viewState)
     : m_page(page)
     , m_isChangingFocusedFrame(false)
     , m_viewState(viewState)
+    , m_focusRepaintTimer(*this, &FocusController::focusRepaintTimerFired)
 {
 }
 
@@ -225,8 +228,8 @@ Element* FocusController::findFocusableElementDescendingDownIntoFrameDocument(Fo
     // The node we found might be a HTMLFrameOwnerElement, so descend down the tree until we find either:
     // 1) a focusable node, or
     // 2) the deepest-nested HTMLFrameOwnerElement.
-    while (element && element->isFrameOwnerElement()) {
-        HTMLFrameOwnerElement& owner = toHTMLFrameOwnerElement(*element);
+    while (is<HTMLFrameOwnerElement>(element)) {
+        HTMLFrameOwnerElement& owner = downcast<HTMLFrameOwnerElement>(*element);
         if (!owner.contentFrame())
             break;
         Element* foundElement = findFocusableElement(direction, FocusNavigationScope::focusNavigationScopeOwnedByIFrame(&owner), 0, event);
@@ -288,8 +291,8 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
     if (!element) {
         // We didn't find a node to focus, so we should try to pass focus to Chrome.
         if (!initialFocus && m_page.chrome().canTakeFocus(direction)) {
-            document->setFocusedElement(0);
-            setFocusedFrame(0);
+            document->setFocusedElement(nullptr);
+            setFocusedFrame(nullptr);
             m_page.chrome().takeFocus(direction);
             return true;
         }
@@ -309,10 +312,10 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
         return true;
     }
 
-    if (element->isFrameOwnerElement() && (!element->isPluginElement() || !element->isKeyboardFocusable(event))) {
+    if (is<HTMLFrameOwnerElement>(*element) && (!is<HTMLPlugInElement>(*element) || !element->isKeyboardFocusable(event))) {
         // We focus frames rather than frame owners.
         // FIXME: We should not focus frames that have no scrollbars, as focusing them isn't useful to the user.
-        HTMLFrameOwnerElement& owner = toHTMLFrameOwnerElement(*element);
+        HTMLFrameOwnerElement& owner = downcast<HTMLFrameOwnerElement>(*element);
         if (!owner.contentFrame())
             return false;
 
@@ -337,8 +340,10 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
     if (caretBrowsing) {
         Position position = firstPositionInOrBeforeNode(element.get());
         VisibleSelection newSelection(position, position, DOWNSTREAM);
-        if (frame.selection().shouldChangeSelection(newSelection))
-            frame.selection().setSelection(newSelection);
+        if (frame.selection().shouldChangeSelection(newSelection)) {
+            AXTextStateChangeIntent intent(AXTextStateChangeTypeSelectionMove, AXTextSelection { AXTextSelectionDirectionDiscontiguous, AXTextSelectionGranularityUnknown, true });
+            frame.selection().setSelection(newSelection, FrameSelection::defaultSetSelectionOptions(UserTriggered), intent);
+        }
     }
 
     element->focus(false, direction);
@@ -347,7 +352,7 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
 
 Element* FocusController::findFocusableElementAcrossFocusScope(FocusDirection direction, FocusNavigationScope scope, Node* currentNode, KeyboardEvent* event)
 {
-    ASSERT(!currentNode || !currentNode->isElementNode() || !isNonFocusableShadowHost(*toElement(currentNode), *event));
+    ASSERT(!is<Element>(currentNode) || !isNonFocusableShadowHost(*downcast<Element>(currentNode), *event));
     Element* found;
     if (currentNode && direction == FocusDirectionForward && isFocusableShadowHost(*currentNode, *event)) {
         Element* foundInInnerFocusScope = findFocusableElementRecursively(direction, FocusNavigationScope::focusNavigationScopeOwnedByShadowHost(currentNode), 0, event);
@@ -407,9 +412,9 @@ Element* FocusController::findElementWithExactTabIndex(Node* start, int tabIndex
     // Search is inclusive of start
     using namespace NodeRenderingTraversal;
     for (Node* node = start; node; node = direction == FocusDirectionForward ? nextInScope(node) : previousInScope(node)) {
-        if (!node->isElementNode())
+        if (!is<Element>(*node))
             continue;
-        Element& element = toElement(*node);
+        Element& element = downcast<Element>(*node);
         if (shouldVisit(element, *event) && adjustedTabIndex(element, *event) == tabIndex)
             return &element;
     }
@@ -422,9 +427,9 @@ static Element* nextElementWithGreaterTabIndex(Node* start, int tabIndex, Keyboa
     int winningTabIndex = std::numeric_limits<short>::max() + 1;
     Element* winner = nullptr;
     for (Node* node = start; node; node = NodeRenderingTraversal::nextInScope(node)) {
-        if (!node->isElementNode())
+        if (!is<Element>(*node))
             continue;
-        Element& element = toElement(*node);
+        Element& element = downcast<Element>(*node);
         if (shouldVisit(element, event) && element.tabIndex() > tabIndex && element.tabIndex() < winningTabIndex) {
             winner = &element;
             winningTabIndex = element.tabIndex();
@@ -440,9 +445,9 @@ static Element* previousElementWithLowerTabIndex(Node* start, int tabIndex, Keyb
     int winningTabIndex = 0;
     Element* winner = nullptr;
     for (Node* node = start; node; node = NodeRenderingTraversal::previousInScope(node)) {
-        if (!node->isElementNode())
+        if (!is<Element>(*node))
             continue;
-        Element& element = toElement(*node);
+        Element& element = downcast<Element>(*node);
         int currentTabIndex = adjustedTabIndex(element, event);
         if ((shouldVisit(element, event) || isNonFocusableShadowHost(element, event)) && currentTabIndex < tabIndex && currentTabIndex > winningTabIndex) {
             winner = &element;
@@ -461,9 +466,9 @@ Element* FocusController::nextFocusableElement(FocusNavigationScope scope, Node*
         // If a node is excluded from the normal tabbing cycle, the next focusable node is determined by tree order
         if (tabIndex < 0) {
             for (Node* node = nextInScope(start); node; node = nextInScope(node)) {
-                if (!node->isElementNode())
+                if (!is<Element>(*node))
                     continue;
-                Element& element = toElement(*node);
+                Element& element = downcast<Element>(*node);
                 if (shouldVisit(element, *event) && adjustedTabIndex(element, *event) >= 0)
                     return &element;
             }
@@ -513,9 +518,9 @@ Element* FocusController::previousFocusableElement(FocusNavigationScope scope, N
     // However, if a node is excluded from the normal tabbing cycle, the previous focusable node is determined by tree order
     if (startingTabIndex < 0) {
         for (Node* node = startingNode; node; node = previousInScope(node)) {
-            if (!node->isElementNode())
+            if (!is<Element>(*node))
                 continue;
-            Element& element = toElement(*node);
+            Element& element = downcast<Element>(*node);
             if (shouldVisit(element, *event) && adjustedTabIndex(element, *event) >= 0)
                 return &element;
         }
@@ -541,7 +546,7 @@ static bool relinquishesEditingFocus(Node *node)
     if (!frame || !root)
         return false;
 
-    return frame->editor().shouldEndEditing(rangeOfContents(*root).get());
+    return frame->editor().shouldEndEditing(rangeOfContents(*root).ptr());
 }
 
 static void clearSelectionIfNeeded(Frame* oldFocusedFrame, Frame* newFocusedFrame, Node* newFocusedNode)
@@ -572,7 +577,7 @@ static void clearSelectionIfNeeded(Frame* oldFocusedFrame, Frame* newFocusedFram
                 return;
 
             if (Node* shadowAncestorNode = root->deprecatedShadowAncestorNode()) {
-                if (!isHTMLInputElement(shadowAncestorNode) && !isHTMLTextAreaElement(shadowAncestorNode))
+                if (!is<HTMLInputElement>(*shadowAncestorNode) && !is<HTMLTextAreaElement>(*shadowAncestorNode))
                     return;
             }
         }
@@ -584,9 +589,9 @@ static void clearSelectionIfNeeded(Frame* oldFocusedFrame, Frame* newFocusedFram
 bool FocusController::setFocusedElement(Element* element, PassRefPtr<Frame> newFocusedFrame, FocusDirection direction)
 {
     RefPtr<Frame> oldFocusedFrame = focusedFrame();
-    RefPtr<Document> oldDocument = oldFocusedFrame ? oldFocusedFrame->document() : 0;
+    RefPtr<Document> oldDocument = oldFocusedFrame ? oldFocusedFrame->document() : nullptr;
 
-    Element* oldFocusedElement = oldDocument ? oldDocument->focusedElement() : 0;
+    Element* oldFocusedElement = oldDocument ? oldDocument->focusedElement() : nullptr;
     if (oldFocusedElement == element)
         return true;
 
@@ -594,29 +599,29 @@ bool FocusController::setFocusedElement(Element* element, PassRefPtr<Frame> newF
     if (oldFocusedElement && oldFocusedElement->isRootEditableElement() && !relinquishesEditingFocus(oldFocusedElement))
         return false;
 
-    m_page.editorClient()->willSetInputMethodState();
+    m_page.editorClient().willSetInputMethodState();
 
     clearSelectionIfNeeded(oldFocusedFrame.get(), newFocusedFrame.get(), element);
 
     if (!element) {
         if (oldDocument)
-            oldDocument->setFocusedElement(0);
-        m_page.editorClient()->setInputMethodState(false);
+            oldDocument->setFocusedElement(nullptr);
+        m_page.editorClient().setInputMethodState(false);
         return true;
     }
 
     Ref<Document> newDocument(element->document());
 
     if (newDocument->focusedElement() == element) {
-        m_page.editorClient()->setInputMethodState(element->shouldUseInputMethod());
+        m_page.editorClient().setInputMethodState(element->shouldUseInputMethod());
         return true;
     }
 
-    if (oldDocument && oldDocument != &newDocument.get())
-        oldDocument->setFocusedElement(0);
+    if (oldDocument && oldDocument != newDocument.ptr())
+        oldDocument->setFocusedElement(nullptr);
 
     if (newFocusedFrame && !newFocusedFrame->page()) {
-        setFocusedFrame(0);
+        setFocusedFrame(nullptr);
         return false;
     }
     setFocusedFrame(newFocusedFrame);
@@ -628,7 +633,10 @@ bool FocusController::setFocusedElement(Element* element, PassRefPtr<Frame> newF
         return false;
 
     if (newDocument->focusedElement() == element)
-        m_page.editorClient()->setInputMethodState(element->shouldUseInputMethod());
+        m_page.editorClient().setInputMethodState(element->shouldUseInputMethod());
+
+    m_focusSetTime = monotonicallyIncreasingTime();
+    m_focusRepaintTimer.stop();
 
     return true;
 }
@@ -640,10 +648,11 @@ void FocusController::setViewState(ViewState::Flags viewState)
 
     if (changed & ViewState::IsFocused)
         setFocusedInternal(viewState & ViewState::IsFocused);
-    if (changed & ViewState::WindowIsActive)
+    if (changed & ViewState::WindowIsActive) {
         setActiveInternal(viewState & ViewState::WindowIsActive);
-    if (changed & ViewState::IsVisible)
-        setIsVisibleInternal(viewState & ViewState::IsVisible);
+        if (changed & ViewState::IsVisible)
+            setIsVisibleAndActiveInternal(viewState & ViewState::WindowIsActive);
+    }
 }
 
 void FocusController::setActive(bool active)
@@ -674,7 +683,7 @@ static void contentAreaDidShowOrHide(ScrollableArea* scrollableArea, bool didSho
         scrollableArea->contentAreaDidHide();
 }
 
-void FocusController::setIsVisibleInternal(bool contentIsVisible)
+void FocusController::setIsVisibleAndActiveInternal(bool contentIsVisible)
 {
     FrameView* view = m_page.mainFrame().view();
     if (!view)
@@ -691,8 +700,7 @@ void FocusController::setIsVisibleInternal(bool contentIsVisible)
         if (!scrollableAreas)
             continue;
 
-        for (HashSet<ScrollableArea*>::const_iterator it = scrollableAreas->begin(), end = scrollableAreas->end(); it != end; ++it) {
-            ScrollableArea* scrollableArea = *it;
+        for (auto& scrollableArea : *scrollableAreas) {
             ASSERT(scrollableArea->scrollbarsCanBeActive() || m_page.shouldSuppressScrollbarAnimations());
 
             contentAreaDidShowOrHide(scrollableArea, contentIsVisible);
@@ -749,9 +757,8 @@ static void updateFocusCandidateIfNeeded(FocusDirection direction, const FocusCa
         closest = candidate;
 }
 
-void FocusController::findFocusCandidateInContainer(Node* container, const LayoutRect& startingRect, FocusDirection direction, KeyboardEvent* event, FocusCandidate& closest)
+void FocusController::findFocusCandidateInContainer(Node& container, const LayoutRect& startingRect, FocusDirection direction, KeyboardEvent* event, FocusCandidate& closest)
 {
-    ASSERT(container);
     Node* focusedNode = (focusedFrame() && focusedFrame()->document()) ? focusedFrame()->document()->focusedElement() : 0;
 
     Element* element = ElementTraversal::firstWithin(container);
@@ -762,8 +769,8 @@ void FocusController::findFocusCandidateInContainer(Node* container, const Layou
 
     unsigned candidateCount = 0;
     for (; element; element = (element->isFrameOwnerElement() || canScrollInDirection(element, direction))
-        ? ElementTraversal::nextSkippingChildren(element, container)
-        : ElementTraversal::next(element, container)) {
+        ? ElementTraversal::nextSkippingChildren(*element, &container)
+        : ElementTraversal::next(*element, &container)) {
         if (element == focusedNode)
             continue;
 
@@ -778,7 +785,7 @@ void FocusController::findFocusCandidateInContainer(Node* container, const Layou
             continue;
 
         candidateCount++;
-        candidate.enclosingScrollableBox = container;
+        candidate.enclosingScrollableBox = &container;
         updateFocusCandidateIfNeeded(direction, current, candidate, closest);
     }
 
@@ -802,7 +809,7 @@ bool FocusController::advanceFocusDirectionallyInContainer(Node* container, cons
 
     // Find the closest node within current container in the direction of the navigation.
     FocusCandidate focusCandidate;
-    findFocusCandidateInContainer(container, newStartingRect, direction, event, focusCandidate);
+    findFocusCandidateInContainer(*container, newStartingRect, direction, event, focusCandidate);
 
     if (focusCandidate.isNull()) {
         // Nothing to focus, scroll if possible.
@@ -853,7 +860,7 @@ bool FocusController::advanceFocusDirectionallyInContainer(Node* container, cons
     }
 
     // We found a new focus node, navigate to it.
-    Element* element = toElement(focusCandidate.focusableNode);
+    Element* element = downcast<Element>(focusCandidate.focusableNode);
     ASSERT(element);
 
     element->focus(false, direction);
@@ -869,8 +876,8 @@ bool FocusController::advanceFocusDirectionally(FocusDirection direction, Keyboa
     Element* focusedElement = focusedDocument->focusedElement();
     Node* container = focusedDocument;
 
-    if (container->isDocumentNode())
-        toDocument(container)->updateLayoutIgnorePendingStylesheets();
+    if (is<Document>(*container))
+        downcast<Document>(*container).updateLayoutIgnorePendingStylesheets();
 
     // Figure out the starting rect.
     LayoutRect startingRect;
@@ -878,10 +885,10 @@ bool FocusController::advanceFocusDirectionally(FocusDirection direction, Keyboa
         if (!hasOffscreenRect(focusedElement)) {
             container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, focusedElement);
             startingRect = nodeRectInAbsoluteCoordinates(focusedElement, true /* ignore border */);
-        } else if (isHTMLAreaElement(focusedElement)) {
-            HTMLAreaElement* area = toHTMLAreaElement(focusedElement);
-            container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, area->imageElement());
-            startingRect = virtualRectForAreaElementAndDirection(area, direction);
+        } else if (is<HTMLAreaElement>(*focusedElement)) {
+            HTMLAreaElement& area = downcast<HTMLAreaElement>(*focusedElement);
+            container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, area.imageElement());
+            startingRect = virtualRectForAreaElementAndDirection(&area, direction);
         }
     }
 
@@ -893,11 +900,35 @@ bool FocusController::advanceFocusDirectionally(FocusDirection direction, Keyboa
         consumed = advanceFocusDirectionallyInContainer(container, startingRect, direction, event);
         startingRect = nodeRectInAbsoluteCoordinates(container, true /* ignore border */);
         container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, container);
-        if (container && container->isDocumentNode())
-            toDocument(container)->updateLayoutIgnorePendingStylesheets();
+        if (is<Document>(container))
+            downcast<Document>(*container).updateLayoutIgnorePendingStylesheets();
     } while (!consumed && container);
 
     return consumed;
+}
+
+void FocusController::setFocusedElementNeedsRepaint()
+{
+    m_focusRepaintTimer.startOneShot(0.033);
+}
+
+void FocusController::focusRepaintTimerFired()
+{
+    Document* focusedDocument = focusedOrMainFrame().document();
+    if (!focusedDocument)
+        return;
+
+    Element* focusedElement = focusedDocument->focusedElement();
+    if (!focusedElement)
+        return;
+
+    if (focusedElement->renderer())
+        focusedElement->renderer()->repaint();
+}
+
+double FocusController::timeSinceFocusWasSet() const
+{
+    return monotonicallyIncreasingTime() - m_focusSetTime;
 }
 
 } // namespace WebCore

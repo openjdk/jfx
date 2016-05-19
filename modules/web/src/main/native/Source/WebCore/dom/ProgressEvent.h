@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -40,17 +40,17 @@ struct ProgressEventInit : public EventInit {
 
 class ProgressEvent : public Event {
 public:
-    static PassRefPtr<ProgressEvent> create()
+    static Ref<ProgressEvent> create()
     {
-        return adoptRef(new ProgressEvent);
+        return adoptRef(*new ProgressEvent);
     }
-    static PassRefPtr<ProgressEvent> create(const AtomicString& type, bool lengthComputable, unsigned long long loaded, unsigned long long total)
+    static Ref<ProgressEvent> create(const AtomicString& type, bool lengthComputable, unsigned long long loaded, unsigned long long total)
     {
-        return adoptRef(new ProgressEvent(type, lengthComputable, loaded, total));
+        return adoptRef(*new ProgressEvent(type, lengthComputable, loaded, total));
     }
-    static PassRefPtr<ProgressEvent> create(const AtomicString& type, const ProgressEventInit& initializer)
+    static Ref<ProgressEvent> create(const AtomicString& type, const ProgressEventInit& initializer)
     {
-        return adoptRef(new ProgressEvent(type, initializer));
+        return adoptRef(*new ProgressEvent(type, initializer));
     }
 
     bool lengthComputable() const { return m_lengthComputable; }

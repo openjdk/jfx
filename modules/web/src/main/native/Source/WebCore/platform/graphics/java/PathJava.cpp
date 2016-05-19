@@ -23,7 +23,7 @@ namespace WebCore
 
 static GraphicsContext* scratchContext()
 {
-    static OwnPtr<ImageBuffer> img = adoptPtr(ImageBuffer::create(IntSize(1, 1)).release());
+    static std::unique_ptr<ImageBuffer> img = ImageBuffer::create(FloatSize(1.f, 1.f)); //XXX recheck adoptPtr usage
     static GraphicsContext *context = img->context();
     return context;
 }
@@ -321,6 +321,16 @@ void Path::addRect(const FloatRect& r)
     env->CallVoidMethod(*m_path, mid, (jdouble)r.x(), (jdouble)r.y(),
                               (jdouble)r.width(), (jdouble)r.height());
     CheckAndClearException(env);
+}
+
+void Path::addEllipse(FloatPoint point, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, bool anticlockwise)
+{
+    notImplemented();
+}
+
+void Path::addPath(const Path& path, const AffineTransform& transform)
+{
+    notImplemented();
 }
 
 void Path::addEllipse(const FloatRect& r)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #ifndef FTLIntrinsicRepository_h
 #define FTLIntrinsicRepository_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(FTL_JIT)
 
 #include "DFGOperations.h"
@@ -37,12 +35,17 @@
 namespace JSC { namespace FTL {
 
 #define FOR_EACH_FTL_INTRINSIC(macro) \
+    macro(ceil64, "llvm.ceil.f64", functionType(doubleType, doubleType)) \
+    macro(ctlz32, "llvm.ctlz.i32", functionType(int32, int32, boolean)) \
     macro(addWithOverflow32, "llvm.sadd.with.overflow.i32", functionType(structType(m_context, int32, boolean), int32, int32)) \
     macro(addWithOverflow64, "llvm.sadd.with.overflow.i64", functionType(structType(m_context, int64, boolean), int64, int64)) \
     macro(doubleAbs, "llvm.fabs.f64", functionType(doubleType, doubleType)) \
     macro(doubleSin, "llvm.sin.f64", functionType(doubleType, doubleType)) \
     macro(doubleCos, "llvm.cos.f64", functionType(doubleType, doubleType)) \
+    macro(doublePow, "llvm.pow.f64", functionType(doubleType, doubleType, doubleType)) \
+    macro(doublePowi, "llvm.powi.f64", functionType(doubleType, doubleType, int32)) \
     macro(doubleSqrt, "llvm.sqrt.f64", functionType(doubleType, doubleType)) \
+    macro(doubleLog, "llvm.log.f64", functionType(doubleType, doubleType)) \
     macro(frameAddress, "llvm.frameaddress", functionType(pointerType(int8), int32)) \
     macro(mulWithOverflow32, "llvm.smul.with.overflow.i32", functionType(structType(m_context, int32, boolean), int32, int32)) \
     macro(mulWithOverflow64, "llvm.smul.with.overflow.i64", functionType(structType(m_context, int64, boolean), int64, int64)) \
@@ -56,18 +59,33 @@ namespace JSC { namespace FTL {
 
 #define FOR_EACH_FUNCTION_TYPE(macro) \
     macro(C_JITOperation_EC, functionType(intPtr, intPtr, intPtr)) \
+    macro(C_JITOperation_ECZ, functionType(intPtr, intPtr, intPtr, int32)) \
+    macro(C_JITOperation_ECZC, functionType(intPtr, intPtr, intPtr, int32, intPtr)) \
+    macro(C_JITOperation_EGC, functionType(intPtr, intPtr, intPtr, intPtr)) \
     macro(C_JITOperation_EJ, functionType(intPtr, intPtr, int64)) \
     macro(C_JITOperation_EJssJss, functionType(intPtr, intPtr, intPtr, intPtr)) \
     macro(C_JITOperation_EJssJssJss, functionType(intPtr, intPtr, intPtr, intPtr, intPtr)) \
     macro(C_JITOperation_ESt, functionType(intPtr, intPtr, intPtr)) \
-    macro(I_JITOperation_EJss, functionType(intPtr, intPtr, intPtr)) \
+    macro(C_JITOperation_EStJscSymtabJ, functionType(intPtr, intPtr, intPtr, intPtr, intPtr, intPtr)) \
+    macro(C_JITOperation_EStRZJsf, functionType(intPtr, intPtr, intPtr, intPtr, int32, intPtr)) \
+    macro(C_JITOperation_EStRZJsfL, functionType(intPtr, intPtr, intPtr, intPtr, int32, intPtr, intPtr)) \
+    macro(C_JITOperation_EStZ, functionType(intPtr, intPtr, intPtr, int32)) \
+    macro(C_JITOperation_EStZZ, functionType(intPtr, intPtr, intPtr, int32, int32)) \
+    macro(C_JITOperation_EZ, functionType(intPtr, intPtr, int32)) \
+    macro(D_JITOperation_D, functionType(doubleType, doubleType)) \
+    macro(T_JITOperation_EJss, functionType(intPtr, intPtr, intPtr)) \
     macro(J_JITOperation_E, functionType(int64, intPtr)) \
     macro(J_JITOperation_EA, functionType(int64, intPtr, intPtr)) \
     macro(J_JITOperation_EAZ, functionType(int64, intPtr, intPtr, int32)) \
+    macro(J_JITOperation_ECJ, functionType(int64, intPtr, intPtr, int64)) \
+    macro(J_JITOperation_ECZ, functionType(int64, intPtr, intPtr, int32)) \
     macro(J_JITOperation_EDA, functionType(int64, intPtr, doubleType, intPtr)) \
     macro(J_JITOperation_EJ, functionType(int64, intPtr, int64)) \
     macro(J_JITOperation_EJA, functionType(int64, intPtr, int64, intPtr)) \
+    macro(J_JITOperation_EJC, functionType(int64, intPtr, int64, intPtr)) \
+    macro(J_JITOperation_EJI, functionType(int64, intPtr, int64, intPtr)) \
     macro(J_JITOperation_EJJ, functionType(int64, intPtr, int64, int64)) \
+    macro(J_JITOperation_EJscC, functionType(intPtr, intPtr, intPtr, intPtr)) \
     macro(J_JITOperation_EJssZ, functionType(int64, intPtr, intPtr, int32)) \
     macro(J_JITOperation_ESsiJI, functionType(int64, intPtr, intPtr, int64, intPtr)) \
     macro(Jss_JITOperation_EZ, functionType(intPtr, intPtr, int32)) \
@@ -80,15 +98,27 @@ namespace JSC { namespace FTL {
     macro(P_JITOperation_EStPS, functionType(intPtr, intPtr, intPtr, intPtr, intPtr)) \
     macro(P_JITOperation_EStSS, functionType(intPtr, intPtr, intPtr, intPtr, intPtr)) \
     macro(P_JITOperation_EStZ, functionType(intPtr, intPtr, intPtr, int32)) \
+    macro(Q_JITOperation_D, functionType(int64, doubleType)) \
+    macro(Q_JITOperation_J, functionType(int64, int64)) \
+    macro(S_JITOperation_EGC, functionType(intPtr, intPtr, intPtr, intPtr)) \
     macro(S_JITOperation_EJ, functionType(intPtr, intPtr, int64)) \
     macro(S_JITOperation_EJJ, functionType(intPtr, intPtr, int64, int64)) \
+    macro(S_JITOperation_J, functionType(intPtr, int64)) \
+    macro(V_JITOperation, functionType(voidType)) \
     macro(V_JITOperation_EJJJ, functionType(voidType, intPtr, int64, int64, int64)) \
     macro(V_JITOperation_EOZD, functionType(voidType, intPtr, intPtr, int32, doubleType)) \
     macro(V_JITOperation_EOZJ, functionType(voidType, intPtr, intPtr, int32, int64)) \
     macro(V_JITOperation_EC, functionType(voidType, intPtr, intPtr)) \
     macro(V_JITOperation_ECb, functionType(voidType, intPtr, intPtr)) \
-    macro(V_JITOperation_EVws, functionType(voidType, intPtr, intPtr)) \
-    macro(Z_JITOperation_D, functionType(int32, doubleType))
+    macro(V_JITOperation_EWs, functionType(voidType, intPtr, intPtr)) \
+    macro(V_JITOperation_EZJZZZ, functionType(voidType, intPtr, int32, int64, int32, int32, int32)) \
+    macro(V_JITOperation_J, functionType(voidType, int64)) \
+    macro(V_JITOperation_Z, functionType(voidType, int32)) \
+    macro(Z_JITOperation_D, functionType(int32, doubleType)) \
+    macro(Z_JITOperation_EC, functionType(int32, intPtr, intPtr)) \
+    macro(Z_JITOperation_EGC, functionType(int32, intPtr, intPtr, intPtr)) \
+    macro(Z_JITOperation_EJZ, functionType(int32, intPtr, int64, int32)) \
+    macro(Z_JITOperation_ESJss, functionType(int32, intPtr, intPtr, int64)) \
 
 class IntrinsicRepository : public CommonValues {
 public:

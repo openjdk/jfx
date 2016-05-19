@@ -26,17 +26,17 @@
 #include "config.h"
 #include "StructureRareData.h"
 
-#include "JSPropertyNameIterator.h"
+#include "JSPropertyNameEnumerator.h"
 #include "JSString.h"
 #include "JSCInlines.h"
 
 namespace JSC {
 
-const ClassInfo StructureRareData::s_info = { "StructureRareData", 0, 0, 0, CREATE_METHOD_TABLE(StructureRareData) };
+const ClassInfo StructureRareData::s_info = { "StructureRareData", 0, 0, CREATE_METHOD_TABLE(StructureRareData) };
 
 Structure* StructureRareData::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, StructureFlags), info());
+    return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
 }
 
 StructureRareData* StructureRareData::create(VM& vm, Structure* previous)
@@ -46,11 +46,9 @@ StructureRareData* StructureRareData::create(VM& vm, Structure* previous)
     return rareData;
 }
 
-StructureRareData* StructureRareData::clone(VM& vm, const StructureRareData* other)
+void StructureRareData::destroy(JSCell* cell)
 {
-    StructureRareData* newRareData = new (NotNull, allocateCell<StructureRareData>(vm.heap)) StructureRareData(vm, other);
-    newRareData->finishCreation(vm);
-    return newRareData;
+    static_cast<StructureRareData*>(cell)->StructureRareData::~StructureRareData();
 }
 
 StructureRareData::StructureRareData(VM& vm, Structure* previous)
@@ -60,25 +58,26 @@ StructureRareData::StructureRareData(VM& vm, Structure* previous)
         m_previous.set(vm, this, previous);
 }
 
-StructureRareData::StructureRareData(VM& vm, const StructureRareData* other)
-    : JSCell(vm, other->structure())
-{
-    if (other->previousID())
-        m_previous.set(vm, this, other->previousID());
-    if (other->objectToStringValue())
-        m_objectToStringValue.set(vm, this, other->objectToStringValue());
-}
-
 void StructureRareData::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     StructureRareData* thisObject = jsCast<StructureRareData*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
 
     JSCell::visitChildren(thisObject, visitor);
     visitor.append(&thisObject->m_previous);
     visitor.append(&thisObject->m_objectToStringValue);
-    visitor.append(&thisObject->m_enumerationCache);
+    visitor.append(&thisObject->m_cachedPropertyNameEnumerator);
+    visitor.append(&thisObject->m_cachedGenericPropertyNameEnumerator);
+}
+
+JSPropertyNameEnumerator* StructureRareData::cachedPropertyNameEnumerator() const
+{
+    return m_cachedPropertyNameEnumerator.get();
+}
+
+void StructureRareData::setCachedPropertyNameEnumerator(VM& vm, JSPropertyNameEnumerator* enumerator)
+{
+    m_cachedPropertyNameEnumerator.set(vm, this, enumerator);
 }
 
 } // namespace JSC

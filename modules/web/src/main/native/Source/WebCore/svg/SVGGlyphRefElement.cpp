@@ -27,6 +27,7 @@
 #include "SVGParserUtilities.h"
 #include "XLinkNames.h"
 #include <wtf/text/AtomicString.h>
+#include <wtf/text/StringView.h>
 
 namespace WebCore {
 
@@ -49,24 +50,22 @@ inline SVGGlyphRefElement::SVGGlyphRefElement(const QualifiedName& tagName, Docu
     registerAnimatedPropertiesForSVGGlyphRefElement();
 }
 
-PassRefPtr<SVGGlyphRefElement> SVGGlyphRefElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGGlyphRefElement> SVGGlyphRefElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGGlyphRefElement(tagName, document));
+    return adoptRef(*new SVGGlyphRefElement(tagName, document));
 }
 
 bool SVGGlyphRefElement::hasValidGlyphElement(String& glyphName) const
 {
     // FIXME: We only support xlink:href so far.
     // https://bugs.webkit.org/show_bug.cgi?id=64787
-    Element* element = targetElementFromIRIString(getAttribute(XLinkNames::hrefAttr), document(), &glyphName);
-    if (!element || !element->hasTagName(SVGNames::glyphTag))
-        return false;
-    return true;
+    return is<SVGGlyphElement>(targetElementFromIRIString(getAttribute(XLinkNames::hrefAttr), document(), &glyphName));
 }
 
 void SVGGlyphRefElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    const UChar* startPtr = value.string().deprecatedCharacters();
+    auto upconvertedCharacters = StringView(value.string()).upconvertedCharacters();
+    const UChar* startPtr = upconvertedCharacters;
     const UChar* endPtr = startPtr + value.length();
 
     // FIXME: We need some error handling here.
@@ -79,8 +78,7 @@ void SVGGlyphRefElement::parseAttribute(const QualifiedName& name, const AtomicS
     else if (name == SVGNames::dyAttr)
         parseNumber(startPtr, endPtr, m_dy);
     else {
-        if (SVGURIReference::parseAttribute(name, value))
-            return;
+        SVGURIReference::parseAttribute(name, value);
         SVGElement::parseAttribute(name, value);
     }
 }

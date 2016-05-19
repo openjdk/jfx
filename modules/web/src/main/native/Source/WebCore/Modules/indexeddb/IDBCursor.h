@@ -58,7 +58,7 @@ public:
     static IndexedDB::CursorDirection stringToDirection(const String& modeString, ExceptionCode&);
     static const AtomicString& directionToString(IndexedDB::CursorDirection mode);
 
-    static PassRefPtr<IDBCursor> create(PassRefPtr<IDBCursorBackend>, IndexedDB::CursorDirection, IDBRequest*, IDBAny* source, IDBTransaction*);
+    static Ref<IDBCursor> create(PassRefPtr<IDBCursorBackend>, IndexedDB::CursorDirection, IDBRequest*, IDBAny* source, IDBTransaction*);
     virtual ~IDBCursor();
 
     // Implement the IDL
@@ -71,7 +71,7 @@ public:
     PassRefPtr<IDBRequest> update(JSC::ExecState*, Deprecated::ScriptValue&, ExceptionCode&);
     void advance(unsigned long, ExceptionCode&);
     // FIXME: Try to modify the code generator so this overload is unneeded.
-    void continueFunction(ScriptExecutionContext*, ExceptionCode& ec) { continueFunction(static_cast<IDBKey*>(0), ec); }
+    void continueFunction(ScriptExecutionContext*, ExceptionCode& ec) { continueFunction(static_cast<IDBKey*>(nullptr), ec); }
     void continueFunction(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCode&);
     PassRefPtr<IDBRequest> deleteFunction(ScriptExecutionContext*, ExceptionCode&);
 

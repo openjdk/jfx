@@ -26,6 +26,7 @@ import itertools
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
+from model.patchlog import PatchLog
 from model.queues import Queue
 from model.queuestatus import QueueStatus
 
@@ -57,17 +58,22 @@ class QueueStatusJSON(webapp.RequestHandler):
                 bug_id = statuses[0].active_bug_id
                 results_url = self.request.host_url + "/results/" + str(statuses[0].key().id()) if statuses[0].results_file else None
 
-            rows.append({
+            row = {
                 "attachment_id": item_id,
                 "bug_id": bug_id,
                 "active": active_items and active_items.time_for_item(item_id) != None,
                 "active_since": active_items and active_items.time_for_item(item_id),
                 "latest_message": message,
                 "latest_message_time": message_time,
-                "message_count": patchStatusQuery.count(),
                 "status_page": self.request.host_url + "/patch/" + str(item_id),
                 "latest_results": results_url,
-            })
+            }
+
+            patch_log = PatchLog.lookup_if_exists(item_id, queue.name())
+            if patch_log and patch_log.retry_count:
+                row["retry_count"] = patch_log.retry_count
+
+            rows.append(row)
         return rows
 
     def _bots(self, queue):
@@ -110,5 +116,5 @@ class QueueStatusJSON(webapp.RequestHandler):
             "queue": self._rows_for_work_items(queue),
             "bots": self._bots(queue),
         }
-        dthandler = lambda obj: obj.isoformat() if isinstance(obj, datetime.datetime) or isinstance(obj, datetime.date) else None
+        dthandler = lambda obj: obj.isoformat() + "Z" if isinstance(obj, datetime.datetime) or isinstance(obj, datetime.date) else None
         self.response.out.write(json.dumps(status, default=dthandler))

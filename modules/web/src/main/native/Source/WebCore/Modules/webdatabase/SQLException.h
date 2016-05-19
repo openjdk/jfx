@@ -31,17 +31,15 @@
 #ifndef SQLException_h
 #define SQLException_h
 
-#if ENABLE(SQL_DATABASE)
-
 #include "ExceptionBase.h"
 
 namespace WebCore {
 
 class SQLException : public ExceptionBase {
 public:
-    static PassRefPtr<SQLException> create(const ExceptionCodeDescription& description)
+    static Ref<SQLException> create(const ExceptionCodeDescription& description)
     {
-        return adoptRef(new SQLException(description));
+        return adoptRef(*new SQLException(description));
     }
 
     static const int SQLExceptionOffset = 1000;
@@ -68,7 +66,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)
 
 #endif // SQLException_h

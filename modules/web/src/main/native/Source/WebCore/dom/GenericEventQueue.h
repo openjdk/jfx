@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,34 +26,43 @@
 #ifndef GenericEventQueue_h
 #define GenericEventQueue_h
 
-#include "Timer.h"
+#include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Event;
 class EventTarget;
+class Timer;
 
 class GenericEventQueue {
 public:
     explicit GenericEventQueue(EventTarget&);
     ~GenericEventQueue();
 
-    bool enqueueEvent(PassRefPtr<Event>);
+    void enqueueEvent(PassRefPtr<Event>);
     void close();
 
     void cancelAllEvents();
     bool hasPendingEvents() const;
 
+    void suspend();
+    void resume();
+
 private:
-    void timerFired(Timer<GenericEventQueue>&);
+    static Timer& sharedTimer();
+    static void sharedTimerFired();
+    static Deque<WeakPtr<GenericEventQueue>>& pendingQueues();
+
+    void dispatchOneEvent();
 
     EventTarget& m_owner;
-    Vector<RefPtr<Event>> m_pendingEvents;
-    Timer<GenericEventQueue> m_timer;
+    Deque<RefPtr<Event>> m_pendingEvents;
+    WeakPtrFactory<GenericEventQueue> m_weakPtrFactory;
     bool m_isClosed;
+    bool m_isSuspended { false };
 };
 
 }

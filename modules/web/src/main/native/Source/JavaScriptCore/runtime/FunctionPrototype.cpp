@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2015 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,7 +21,9 @@
 #include "config.h"
 #include "FunctionPrototype.h"
 
-#include "Arguments.h"
+#include "BuiltinExecutables.h"
+#include "BuiltinNames.h"
+#include "Error.h"
 #include "JSArray.h"
 #include "JSBoundFunction.h"
 #include "JSFunction.h"
@@ -35,11 +37,9 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(FunctionPrototype);
 
-const ClassInfo FunctionPrototype::s_info = { "Function", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(FunctionPrototype) };
+const ClassInfo FunctionPrototype::s_info = { "Function", &Base::s_info, 0, CREATE_METHOD_TABLE(FunctionPrototype) };
 
 static EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState*);
-static EncodedJSValue JSC_HOST_CALL functionProtoFuncApply(ExecState*);
-static EncodedJSValue JSC_HOST_CALL functionProtoFuncCall(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionProtoFuncBind(ExecState*);
 
 FunctionPrototype::FunctionPrototype(VM& vm, Structure* structure)
@@ -60,11 +60,8 @@ void FunctionPrototype::addFunctionProperties(ExecState* exec, JSGlobalObject* g
     JSFunction* toStringFunction = JSFunction::create(vm, globalObject, 0, vm.propertyNames->toString.string(), functionProtoFuncToString);
     putDirectWithoutTransition(vm, vm.propertyNames->toString, toStringFunction, DontEnum);
 
-    *applyFunction = JSFunction::create(vm, globalObject, 2, vm.propertyNames->apply.string(), functionProtoFuncApply);
-    putDirectWithoutTransition(vm, vm.propertyNames->apply, *applyFunction, DontEnum);
-
-    *callFunction = JSFunction::create(vm, globalObject, 1, vm.propertyNames->call.string(), functionProtoFuncCall);
-    putDirectWithoutTransition(vm, vm.propertyNames->call, *callFunction, DontEnum);
+    *applyFunction = putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->builtinNames().applyPublicName(), functionPrototypeApplyCodeGenerator(vm), DontEnum);
+    *callFunction = putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->builtinNames().callPublicName(), functionPrototypeCallCodeGenerator(vm), DontEnum);
 
     JSFunction* bindFunction = JSFunction::create(vm, globalObject, 1, vm.propertyNames->bind.string(), functionProtoFuncBind);
     putDirectWithoutTransition(vm, vm.propertyNames->bind, bindFunction, DontEnum);
@@ -82,38 +79,19 @@ CallType FunctionPrototype::getCallData(JSCell*, CallData& callData)
     return CallTypeHost;
 }
 
-// Functions
-
-// Compatibility hack for the Optimost JavaScript library. (See <rdar://problem/6595040>.)
-static inline void insertSemicolonIfNeeded(String& functionBody, bool bodyIncludesBraces)
-{
-    if (!bodyIncludesBraces)
-        functionBody = makeString("{ ", functionBody, "}");
-
-    ASSERT(functionBody[0] == '{');
-    ASSERT(functionBody[functionBody.length() - 1] == '}');
-
-    for (size_t i = functionBody.length() - 2; i > 0; --i) {
-        UChar ch = functionBody[i];
-        if (!Lexer<UChar>::isWhiteSpace(ch) && !Lexer<UChar>::isLineTerminator(ch)) {
-            if (ch != ';' && ch != '}')
-                functionBody = makeString(functionBody.substringSharingImpl(0, i + 1), ";", functionBody.substringSharingImpl(i + 1, functionBody.length() - (i + 1)));
-            return;
-        }
-    }
-}
-
 EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     if (thisValue.inherits(JSFunction::info())) {
         JSFunction* function = jsCast<JSFunction*>(thisValue);
         if (function->isHostOrBuiltinFunction())
             return JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(exec), "() {\n    [native code]\n}"));
+
         FunctionExecutable* executable = function->jsExecutable();
-        String sourceString = executable->source().toString();
-        insertSemicolonIfNeeded(sourceString, executable->bodyIncludesBraces());
-        return JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(exec), "(", executable->paramString(), ") ", sourceString));
+        String source = executable->source().provider()->getRange(
+            executable->parametersStartOffset(),
+            executable->typeProfilingEndOffset() + 1); // Type profiling end offset is the character before the '}'.
+        return JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(exec), source));
     }
 
     if (thisValue.inherits(InternalFunction::info())) {
@@ -124,62 +102,13 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState* exec)
     return throwVMTypeError(exec);
 }
 
-EncodedJSValue JSC_HOST_CALL functionProtoFuncApply(ExecState* exec)
-{
-    JSValue thisValue = exec->hostThisValue();
-    CallData callData;
-    CallType callType = getCallData(thisValue, callData);
-    if (callType == CallTypeNone)
-        return throwVMTypeError(exec);
-
-    JSValue array = exec->argument(1);
-
-    MarkedArgumentBuffer applyArgs;
-    if (!array.isUndefinedOrNull()) {
-        if (!array.isObject())
-            return throwVMTypeError(exec);
-        if (asObject(array)->classInfo() == Arguments::info()) {
-            if (asArguments(array)->length(exec) > Arguments::MaxArguments)
-                return JSValue::encode(throwStackOverflowError(exec));
-            asArguments(array)->fillArgList(exec, applyArgs);
-        } else if (isJSArray(array)) {
-            if (asArray(array)->length() > Arguments::MaxArguments)
-                return JSValue::encode(throwStackOverflowError(exec));
-            asArray(array)->fillArgList(exec, applyArgs);
-        } else {
-            unsigned length = asObject(array)->get(exec, exec->propertyNames().length).toUInt32(exec);
-            if (length > Arguments::MaxArguments)
-                return JSValue::encode(throwStackOverflowError(exec));
-
-            for (unsigned i = 0; i < length; ++i)
-                applyArgs.append(asObject(array)->get(exec, i));
-        }
-    }
-
-    return JSValue::encode(call(exec, thisValue, callType, callData, exec->argument(0), applyArgs));
-}
-
-EncodedJSValue JSC_HOST_CALL functionProtoFuncCall(ExecState* exec)
-{
-    JSValue thisValue = exec->hostThisValue();
-    CallData callData;
-    CallType callType = getCallData(thisValue, callData);
-    if (callType == CallTypeNone)
-        return throwVMTypeError(exec);
-
-    ArgList args(exec);
-    ArgList callArgs;
-    args.getSlice(1, callArgs);
-    return JSValue::encode(call(exec, thisValue, callType, callData, exec->argument(0), callArgs));
-}
-
 // 15.3.4.5 Function.prototype.bind (thisArg [, arg1 [, arg2, ...]])
 EncodedJSValue JSC_HOST_CALL functionProtoFuncBind(ExecState* exec)
 {
     JSGlobalObject* globalObject = exec->callee()->globalObject();
 
     // Let Target be the this value.
-    JSValue target = exec->hostThisValue();
+    JSValue target = exec->thisValue();
 
     // If IsCallable(Target) is false, throw a TypeError exception.
     CallData callData;

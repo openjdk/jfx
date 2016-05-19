@@ -23,7 +23,6 @@
 #define WebCoreJSClientData_h
 
 #include "DOMWrapperWorld.h"
-#include "DOMObjectHashTableMap.h"
 #include "WebCoreTypedArrayController.h"
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
@@ -45,7 +44,7 @@ public:
         ASSERT(m_worldSet.contains(m_normalWorld.get()));
         ASSERT(m_worldSet.size() == 1);
         ASSERT(m_normalWorld->hasOneRef());
-        m_normalWorld.clear();
+        m_normalWorld = nullptr;
         ASSERT(m_worldSet.isEmpty());
     }
 
@@ -72,8 +71,6 @@ public:
         m_worldSet.remove(&world);
     }
 
-    DOMObjectHashTableMap hashTableMap;
-
 private:
     HashSet<DOMWrapperWorld*> m_worldSet;
     RefPtr<DOMWrapperWorld> m_normalWorld;
@@ -83,7 +80,7 @@ inline void initNormalWorldClientData(JSC::VM* vm)
 {
     WebCoreJSClientData* webCoreJSClientData = new WebCoreJSClientData;
     vm->clientData = webCoreJSClientData; // ~VM deletes this pointer.
-    webCoreJSClientData->m_normalWorld = DOMWrapperWorld::create(vm, true);
+    webCoreJSClientData->m_normalWorld = DOMWrapperWorld::create(*vm, true);
     vm->m_typedArrayController = adoptRef(new WebCoreTypedArrayController());
 }
 

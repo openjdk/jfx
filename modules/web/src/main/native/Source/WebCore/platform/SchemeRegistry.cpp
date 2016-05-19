@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE, INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,7 +32,7 @@ namespace WebCore {
 
 static URLSchemesMap& localURLSchemes()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, localSchemes, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, localSchemes, ());
 
     if (localSchemes.isEmpty()) {
         localSchemes.add("file");
@@ -49,18 +49,19 @@ static URLSchemesMap& localURLSchemes()
 
 static URLSchemesMap& displayIsolatedURLSchemes()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, displayIsolatedSchemes, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, displayIsolatedSchemes, ());
     return displayIsolatedSchemes;
 }
 
 static URLSchemesMap& secureSchemes()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, secureSchemes, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, secureSchemes, ());
 
     if (secureSchemes.isEmpty()) {
         secureSchemes.add("https");
         secureSchemes.add("about");
         secureSchemes.add("data");
+        secureSchemes.add("wss");
     }
 
     return secureSchemes;
@@ -68,7 +69,7 @@ static URLSchemesMap& secureSchemes()
 
 static URLSchemesMap& schemesWithUniqueOrigins()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, schemesWithUniqueOrigins, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, schemesWithUniqueOrigins, ());
 
     if (schemesWithUniqueOrigins.isEmpty()) {
         schemesWithUniqueOrigins.add("about");
@@ -83,7 +84,7 @@ static URLSchemesMap& schemesWithUniqueOrigins()
 
 static URLSchemesMap& emptyDocumentSchemes()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, emptyDocumentSchemes, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, emptyDocumentSchemes, ());
 
     if (emptyDocumentSchemes.isEmpty())
         emptyDocumentSchemes.add("about");
@@ -93,26 +94,24 @@ static URLSchemesMap& emptyDocumentSchemes()
 
 static HashSet<String>& schemesForbiddenFromDomainRelaxation()
 {
-    DEFINE_STATIC_LOCAL(HashSet<String>, schemes, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(HashSet<String>, schemes, ());
     return schemes;
 }
 
 static URLSchemesMap& canDisplayOnlyIfCanRequestSchemes()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, canDisplayOnlyIfCanRequestSchemes, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, canDisplayOnlyIfCanRequestSchemes, ());
 
-#if ENABLE(BLOB)
     if (canDisplayOnlyIfCanRequestSchemes.isEmpty()) {
         canDisplayOnlyIfCanRequestSchemes.add("blob");
     }
-#endif // ENABLE(BLOB)
 
     return canDisplayOnlyIfCanRequestSchemes;
 }
 
 static URLSchemesMap& notAllowingJavascriptURLsSchemes()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, notAllowingJavascriptURLsSchemes, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, notAllowingJavascriptURLsSchemes, ());
     return notAllowingJavascriptURLsSchemes;
 }
 
@@ -139,20 +138,20 @@ const URLSchemesMap& SchemeRegistry::localSchemes()
 
 static URLSchemesMap& schemesAllowingLocalStorageAccessInPrivateBrowsing()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, schemesAllowingLocalStorageAccessInPrivateBrowsing, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, schemesAllowingLocalStorageAccessInPrivateBrowsing, ());
     return schemesAllowingLocalStorageAccessInPrivateBrowsing;
 }
 
 static URLSchemesMap& schemesAllowingDatabaseAccessInPrivateBrowsing()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, schemesAllowingDatabaseAccessInPrivateBrowsing, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, schemesAllowingDatabaseAccessInPrivateBrowsing, ());
     return schemesAllowingDatabaseAccessInPrivateBrowsing;
 }
 
 static URLSchemesMap& CORSEnabledSchemes()
 {
     // FIXME: http://bugs.webkit.org/show_bug.cgi?id=77160
-    DEFINE_STATIC_LOCAL(URLSchemesMap, CORSEnabledSchemes, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, CORSEnabledSchemes, ());
 
     if (CORSEnabledSchemes.isEmpty()) {
         CORSEnabledSchemes.add("http");
@@ -164,7 +163,7 @@ static URLSchemesMap& CORSEnabledSchemes()
 
 static URLSchemesMap& ContentSecurityPolicyBypassingSchemes()
 {
-    DEFINE_STATIC_LOCAL(URLSchemesMap, schemes, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(URLSchemesMap, schemes, ());
     return schemes;
 }
 

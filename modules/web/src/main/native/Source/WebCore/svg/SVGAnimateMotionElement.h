@@ -29,7 +29,7 @@ class AffineTransform;
 
 class SVGAnimateMotionElement final : public SVGAnimationElement {
 public:
-    static PassRefPtr<SVGAnimateMotionElement> create(const QualifiedName&, Document&);
+    static Ref<SVGAnimateMotionElement> create(const QualifiedName&, Document&);
     void updateAnimationPath();
 
 private:
@@ -38,7 +38,6 @@ private:
     virtual bool hasValidAttributeType() override;
     virtual bool hasValidAttributeName() override;
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
     virtual void resetAnimatedType() override;
@@ -70,8 +69,6 @@ private:
     Path m_path;
     Path m_animationPath;
 };
-
-NODE_TYPE_CASTS(SVGAnimateMotionElement)
 
 } // namespace WebCore
 

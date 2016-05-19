@@ -1,0 +1,11 @@
+{
+global:
+  ewk_*;
+  WebProcessMainUnix;
+  NetworkProcessMainUnix;
+  PluginProcessMainUnix;
+  _ZN6WebKit19ExtensionManagerEfl9singletonEv;
+  _ZN6WebKit19ExtensionManagerEfl10initializeEPK14OpaqueWKBundlePKv;
+local:
+    *;
+};

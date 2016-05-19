@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -36,6 +36,7 @@
 #include "SecurityPolicy.h"
 #include "ThreadableBlobRegistry.h"
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -54,11 +55,9 @@ static bool schemeRequiresHost(const URL& url)
 
 bool SecurityOrigin::shouldUseInnerURL(const URL& url)
 {
-#if ENABLE(BLOB)
     // FIXME: Blob URLs don't have inner URLs. Their form is "blob:<inner-origin>/<UUID>", so treating the part after "blob:" as a URL is incorrect.
     if (url.protocolIs("blob"))
         return true;
-#endif
     UNUSED_PARAM(url);
     return false;
 }
@@ -75,15 +74,11 @@ URL SecurityOrigin::extractInnerURL(const URL& url)
     return URL(ParsedURLString, decodeURLEscapeSequences(url.path()));
 }
 
-static PassRefPtr<SecurityOrigin> getCachedOrigin(const URL& url)
+static RefPtr<SecurityOrigin> getCachedOrigin(const URL& url)
 {
-#if ENABLE(BLOB)
     if (url.protocolIs("blob"))
         return ThreadableBlobRegistry::getCachedOrigin(url);
-#else
-    UNUSED_PARAM(url);
-#endif
-    return 0;
+    return nullptr;
 }
 
 static bool shouldTreatAsUniqueOrigin(const URL& url)
@@ -168,14 +163,13 @@ SecurityOrigin::SecurityOrigin(const SecurityOrigin* other)
 {
 }
 
-PassRefPtr<SecurityOrigin> SecurityOrigin::create(const URL& url)
+Ref<SecurityOrigin> SecurityOrigin::create(const URL& url)
 {
-    RefPtr<SecurityOrigin> cachedOrigin = getCachedOrigin(url);
-    if (cachedOrigin.get())
-        return cachedOrigin;
+    if (RefPtr<SecurityOrigin> cachedOrigin = getCachedOrigin(url))
+        return cachedOrigin.releaseNonNull();
 
     if (shouldTreatAsUniqueOrigin(url)) {
-        RefPtr<SecurityOrigin> origin = adoptRef(new SecurityOrigin());
+        Ref<SecurityOrigin> origin(adoptRef(*new SecurityOrigin));
 
         if (url.protocolIs("file")) {
             // Unfortunately, we can't represent all unique origins exactly
@@ -185,25 +179,25 @@ PassRefPtr<SecurityOrigin> SecurityOrigin::create(const URL& url)
             origin->m_needsDatabaseIdentifierQuirkForFiles = true;
         }
 
-        return origin.release();
+        return origin;
     }
 
     if (shouldUseInnerURL(url))
-        return adoptRef(new SecurityOrigin(extractInnerURL(url)));
+        return adoptRef(*new SecurityOrigin(extractInnerURL(url)));
 
-    return adoptRef(new SecurityOrigin(url));
+    return adoptRef(*new SecurityOrigin(url));
 }
 
-PassRefPtr<SecurityOrigin> SecurityOrigin::createUnique()
+Ref<SecurityOrigin> SecurityOrigin::createUnique()
 {
-    RefPtr<SecurityOrigin> origin = adoptRef(new SecurityOrigin());
-    ASSERT(origin->isUnique());
-    return origin.release();
+    Ref<SecurityOrigin> origin(adoptRef(*new SecurityOrigin));
+    ASSERT(origin.get().isUnique());
+    return origin;
 }
 
-PassRefPtr<SecurityOrigin> SecurityOrigin::isolatedCopy() const
+Ref<SecurityOrigin> SecurityOrigin::isolatedCopy() const
 {
-    return adoptRef(new SecurityOrigin(this));
+    return adoptRef(*new SecurityOrigin(this));
 }
 
 void SecurityOrigin::setDomainFromDOM(const String& newDomain)
@@ -294,17 +288,17 @@ bool SecurityOrigin::canRequest(const URL& url) const
     if (isUnique())
         return false;
 
-    RefPtr<SecurityOrigin> targetOrigin = SecurityOrigin::create(url);
+    Ref<SecurityOrigin> targetOrigin(SecurityOrigin::create(url));
 
     if (targetOrigin->isUnique())
         return false;
 
     // We call isSameSchemeHostPort here instead of canAccess because we want
     // to ignore document.domain effects.
-    if (isSameSchemeHostPort(targetOrigin.get()))
+    if (isSameSchemeHostPort(&targetOrigin.get()))
         return true;
 
-    if (SecurityPolicy::isAccessWhiteListed(this, targetOrigin.get()))
+    if (SecurityPolicy::isAccessWhiteListed(this, &targetOrigin.get()))
         return true;
 
     return false;
@@ -439,7 +433,7 @@ void SecurityOrigin::grantUniversalAccess()
 }
 
 #if ENABLE(CACHE_PARTITIONING)
-String SecurityOrigin::cachePartition() const
+String SecurityOrigin::domainForCachePartition() const
 {
     if (m_storageBlockingPolicy != BlockThirdPartyStorage)
         return String();
@@ -482,7 +476,7 @@ String SecurityOrigin::toRawString() const
     StringBuilder result;
     result.reserveCapacity(m_protocol.length() + m_host.length() + 10);
     result.append(m_protocol);
-    result.append("://");
+    result.appendLiteral("://");
     result.append(m_host);
 
     if (m_port) {
@@ -493,39 +487,39 @@ String SecurityOrigin::toRawString() const
     return result.toString();
 }
 
-PassRefPtr<SecurityOrigin> SecurityOrigin::createFromString(const String& originString)
+Ref<SecurityOrigin> SecurityOrigin::createFromString(const String& originString)
 {
     return SecurityOrigin::create(URL(URL(), originString));
 }
 
 static const char separatorCharacter = '_';
 
-PassRefPtr<SecurityOrigin> SecurityOrigin::createFromDatabaseIdentifier(const String& databaseIdentifier)
+RefPtr<SecurityOrigin> SecurityOrigin::maybeCreateFromDatabaseIdentifier(const String& databaseIdentifier)
 {
     // Make sure there's a first separator
     size_t separator1 = databaseIdentifier.find(separatorCharacter);
     if (separator1 == notFound)
-        return create(URL());
+        return nullptr;
 
     // Make sure there's a second separator
     size_t separator2 = databaseIdentifier.reverseFind(separatorCharacter);
     if (separator2 == notFound)
-        return create(URL());
+        return nullptr;
 
     // Ensure there were at least 2 separator characters. Some hostnames on intranets have
     // underscores in them, so we'll assume that any additional underscores are part of the host.
     if (separator1 == separator2)
-        return create(URL());
+        return nullptr;
 
     // Make sure the port section is a valid port number or doesn't exist
     bool portOkay;
     int port = databaseIdentifier.right(databaseIdentifier.length() - separator2 - 1).toInt(&portOkay);
     bool portAbsent = (separator2 == databaseIdentifier.length() - 1);
     if (!(portOkay || portAbsent))
-        return create(URL());
+        return nullptr;
 
     if (port < 0 || port > MaxAllowedPort)
-        return create(URL());
+        return nullptr;
 
     // Split out the 3 sections of data
     String protocol = databaseIdentifier.substring(0, separator1);
@@ -535,7 +529,14 @@ PassRefPtr<SecurityOrigin> SecurityOrigin::createFromDatabaseIdentifier(const St
     return create(URL(URL(), protocol + "://" + host + ":" + String::number(port) + "/"));
 }
 
-PassRefPtr<SecurityOrigin> SecurityOrigin::create(const String& protocol, const String& host, int port)
+Ref<SecurityOrigin> SecurityOrigin::createFromDatabaseIdentifier(const String& databaseIdentifier)
+{
+    if (RefPtr<SecurityOrigin> origin = maybeCreateFromDatabaseIdentifier(databaseIdentifier))
+        return origin.releaseNonNull();
+    return create(URL());
+}
+
+Ref<SecurityOrigin> SecurityOrigin::create(const String& protocol, const String& host, int port)
 {
     if (port < 0 || port > MaxAllowedPort)
         return createUnique();
@@ -597,10 +598,10 @@ bool SecurityOrigin::isSameSchemeHostPort(const SecurityOrigin* other) const
     return true;
 }
 
-String SecurityOrigin::urlWithUniqueSecurityOrigin()
+URL SecurityOrigin::urlWithUniqueSecurityOrigin()
 {
     ASSERT(isMainThread());
-    DEFINE_STATIC_LOCAL(const String, uniqueSecurityOriginURL, (ASCIILiteral("data:,")));
+    static NeverDestroyed<URL> uniqueSecurityOriginURL(ParsedURLString, ASCIILiteral("data:,"));
     return uniqueSecurityOriginURL;
 }
 

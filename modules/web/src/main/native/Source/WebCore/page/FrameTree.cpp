@@ -38,7 +38,7 @@ namespace WebCore {
 FrameTree::~FrameTree()
 {
     for (Frame* child = firstChild(); child; child = child->tree().nextSibling())
-        child->setView(0);
+        child->setView(nullptr);
 }
 
 void FrameTree::setName(const AtomicString& name)
@@ -108,7 +108,7 @@ void FrameTree::actuallyAppendChild(PassRefPtr<Frame> child)
 
 void FrameTree::removeChild(Frame* child)
 {
-    child->tree().m_parent = 0;
+    child->tree().m_parent = nullptr;
 
     // Slightly tricky way to prevent deleting the child until we are done with it, w/o
     // extra refs. These swaps leave the child in a circular list by itself. Clearing its
@@ -120,8 +120,8 @@ void FrameTree::removeChild(Frame* child)
     // For some inexplicable reason, the following line does not compile without the explicit std:: namespace
     std::swap(newLocationForPrevious, child->tree().m_previousSibling);
 
-    child->tree().m_previousSibling = 0;
-    child->tree().m_nextSibling = 0;
+    child->tree().m_previousSibling = nullptr;
+    child->tree().m_nextSibling = nullptr;
 
     m_scopedChildCount = invalidCount;
 }
@@ -356,6 +356,68 @@ Frame* FrameTree::traverseNext(const Frame* stayWithin) const
     return nullptr;
 }
 
+Frame* FrameTree::firstRenderedChild() const
+{
+    Frame* child = firstChild();
+    if (!child)
+        return nullptr;
+
+    if (child->ownerRenderer())
+        return child;
+
+    while ((child = child->tree().nextSibling())) {
+        if (child->ownerRenderer())
+            return child;
+    }
+
+    return nullptr;
+}
+
+Frame* FrameTree::nextRenderedSibling() const
+{
+    Frame* sibling = &m_thisFrame;
+
+    while ((sibling = sibling->tree().nextSibling())) {
+        if (sibling->ownerRenderer())
+            return sibling;
+    }
+
+    return nullptr;
+}
+
+Frame* FrameTree::traverseNextRendered(const Frame* stayWithin) const
+{
+    Frame* child = firstRenderedChild();
+    if (child) {
+        ASSERT(!stayWithin || child->tree().isDescendantOf(stayWithin));
+        return child;
+    }
+
+    if (&m_thisFrame == stayWithin)
+        return nullptr;
+
+    Frame* sibling = nextRenderedSibling();
+    if (sibling) {
+        ASSERT(!stayWithin || sibling->tree().isDescendantOf(stayWithin));
+        return sibling;
+    }
+
+    Frame* frame = &m_thisFrame;
+    while (!sibling && (!stayWithin || frame->tree().parent() != stayWithin)) {
+        frame = frame->tree().parent();
+        if (!frame)
+            return nullptr;
+        sibling = frame->tree().nextRenderedSibling();
+    }
+
+    if (frame) {
+        ASSERT(!stayWithin || !sibling || sibling->tree().isDescendantOf(stayWithin));
+        return sibling;
+    }
+
+    return nullptr;
+}
+
 Frame* FrameTree::traverseNextWithWrap(bool wrap) const
 {
     if (Frame* result = traverseNext())
@@ -424,11 +486,15 @@ static void printFrames(const WebCore::Frame& frame, const WebCore::Frame* targe
     printIndent(indent);
     printf("  ownerElement=%p\n", frame.ownerElement());
     printIndent(indent);
-    printf("  frameView=%p\n", view);
+    printf("  frameView=%p (needs layout %d)\n", view, view ? view->needsLayout() : false);
     printIndent(indent);
-    printf("  document=%p\n", frame.document());
+    printf("  renderView=%p\n", view ? view->renderView() : nullptr);
     printIndent(indent);
-    printf("  uri=%s\n\n", frame.document()->documentURI().utf8().data());
+    printf("  ownerRenderer=%p\n", frame.ownerRenderer());
+    printIndent(indent);
+    printf("  document=%p (needs style recalc %d)\n", frame.document(), frame.document() ? frame.document()->childNeedsStyleRecalc() : false);
+    printIndent(indent);
+    printf("  uri=%s\n", frame.document()->documentURI().utf8().data());
 
     for (WebCore::Frame* child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
         printFrames(*child, targetFrame, indent + 1);

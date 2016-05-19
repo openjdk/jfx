@@ -37,22 +37,32 @@ using namespace Inspector;
 
 namespace JSC {
 
-PassRefPtr<InspectorObject> EncodedValue::asObject()
+RefPtr<InspectorObject> EncodedValue::asObject()
 {
     RefPtr<InspectorObject> result;
-    bool castSucceeded = m_value->asObject(&result);
+    bool castSucceeded = m_value->asObject(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
-    return result.release();
+    return result;
 }
 
-PassRefPtr<InspectorArray> EncodedValue::asArray()
+RefPtr<InspectorArray> EncodedValue::asArray()
 {
     RefPtr<InspectorArray> result;
-    bool castSucceeded = m_value->asArray(&result);
+    bool castSucceeded = m_value->asArray(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
-    return result.release();
+    return result;
+}
+
+EncodedValue EncodingTraits<Vector<char>>::encodeValue(const Vector<char>& buffer)
+{
+    return EncodedValue::createString(base64Encode(buffer));
+}
+
+bool EncodingTraits<Vector<char>>::decodeValue(EncodedValue& encodedBuffer, Vector<char>& decodedValue)
+{
+    return base64Decode(encodedBuffer.convertTo<String>(), decodedValue);
 }
 
 template<> EncodedValue ScalarEncodingTraits<bool>::encodeValue(const bool& value)
@@ -90,15 +100,10 @@ template<> EncodedValue ScalarEncodingTraits<uint64_t>::encodeValue(const uint64
     return EncodedValue(InspectorBasicValue::create((double)value));
 }
 
-template<> EncodedValue ScalarEncodingTraits<unsigned long>::encodeValue(const unsigned long& value)
-{
-    return EncodedValue(InspectorBasicValue::create((double)value));
-}
-
 template<> bool EncodedValue::convertTo<bool>()
 {
     bool result;
-    bool castSucceeded = m_value->asBoolean(&result);
+    bool castSucceeded = m_value->asBoolean(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
     return result;
@@ -107,7 +112,7 @@ template<> bool EncodedValue::convertTo<bool>()
 template<> double EncodedValue::convertTo<double>()
 {
     double result;
-    bool castSucceeded = m_value->asNumber(&result);
+    bool castSucceeded = m_value->asDouble(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
     return result;
@@ -116,7 +121,7 @@ template<> double EncodedValue::convertTo<double>()
 template<> float EncodedValue::convertTo<float>()
 {
     float result;
-    bool castSucceeded = m_value->asNumber(&result);
+    bool castSucceeded = m_value->asDouble(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
     return result;
@@ -125,7 +130,7 @@ template<> float EncodedValue::convertTo<float>()
 template<> int32_t EncodedValue::convertTo<int32_t>()
 {
     int32_t result;
-    bool castSucceeded = m_value->asNumber(&result);
+    bool castSucceeded = m_value->asInteger(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
     return result;
@@ -134,7 +139,7 @@ template<> int32_t EncodedValue::convertTo<int32_t>()
 template<> int64_t EncodedValue::convertTo<int64_t>()
 {
     int64_t result;
-    bool castSucceeded = m_value->asNumber(&result);
+    bool castSucceeded = m_value->asInteger(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
     return result;
@@ -143,7 +148,7 @@ template<> int64_t EncodedValue::convertTo<int64_t>()
 template<> uint32_t EncodedValue::convertTo<uint32_t>()
 {
     uint32_t result;
-    bool castSucceeded = m_value->asNumber(&result);
+    bool castSucceeded = m_value->asInteger(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
     return result;
@@ -152,7 +157,7 @@ template<> uint32_t EncodedValue::convertTo<uint32_t>()
 template<> uint64_t EncodedValue::convertTo<uint64_t>()
 {
     uint64_t result;
-    bool castSucceeded = m_value->asNumber(&result);
+    bool castSucceeded = m_value->asInteger(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
     return result;
@@ -161,7 +166,7 @@ template<> uint64_t EncodedValue::convertTo<uint64_t>()
 template<> String EncodedValue::convertTo<String>()
 {
     String result;
-    bool castSucceeded = m_value->asString(&result);
+    bool castSucceeded = m_value->asString(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
 
     return result;
@@ -170,23 +175,23 @@ template<> String EncodedValue::convertTo<String>()
 template<>
 void EncodedValue::put<EncodedValue>(const String& key, const typename EncodingTraits<EncodedValue>::DecodedType& value)
 {
-    asObject()->setValue(key, value.m_value);
+    asObject()->setValue(key, value.m_value.copyRef());
 }
 
 template<>
 void EncodedValue::append<EncodedValue>(const typename EncodingTraits<EncodedValue>::DecodedType& value)
 {
-    asArray()->pushValue(value.m_value);
+    asArray()->pushValue(value.m_value.copyRef());
 }
 
 template<>
 bool EncodedValue::get<EncodedValue>(const String& key, typename EncodingTraits<EncodedValue>::DecodedType& decodedValue)
 {
-    RefPtr<Inspector::InspectorValue> inspectorValue(asObject()->get(key));
-    if (!inspectorValue)
+    RefPtr<Inspector::InspectorValue> value;
+    if (!asObject()->getValue(key, value))
         return false;
 
-    decodedValue = EncodedValue(inspectorValue);
+    decodedValue = EncodedValue(WTF::move(value));
     return true;
 }
 

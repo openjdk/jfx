@@ -31,7 +31,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(NativeErrorConstructor);
 
-const ClassInfo NativeErrorConstructor::s_info = { "Function", &InternalFunction::s_info, 0, 0, CREATE_METHOD_TABLE(NativeErrorConstructor) };
+const ClassInfo NativeErrorConstructor::s_info = { "Function", &InternalFunction::s_info, 0, CREATE_METHOD_TABLE(NativeErrorConstructor) };
 
 NativeErrorConstructor::NativeErrorConstructor(VM& vm, Structure* structure)
     : InternalFunction(vm, structure)
@@ -56,10 +56,7 @@ void NativeErrorConstructor::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     NativeErrorConstructor* thisObject = jsCast<NativeErrorConstructor*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-
-    InternalFunction::visitChildren(thisObject, visitor);
+    Base::visitChildren(thisObject, visitor);
     visitor.append(&thisObject->m_errorStructure);
 }
 
@@ -68,10 +65,7 @@ EncodedJSValue JSC_HOST_CALL Interpreter::constructWithNativeErrorConstructor(Ex
     JSValue message = exec->argument(0);
     Structure* errorStructure = static_cast<NativeErrorConstructor*>(exec->callee())->errorStructure();
     ASSERT(errorStructure);
-    Vector<StackFrame> stackTrace;
-    exec->vm().interpreter->getStackTrace(stackTrace, std::numeric_limits<size_t>::max());
-    stackTrace.remove(0);
-    return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, stackTrace));
+    return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, nullptr, TypeNothing, false));
 }
 
 ConstructType NativeErrorConstructor::getConstructData(JSCell*, ConstructData& constructData)
@@ -84,10 +78,7 @@ EncodedJSValue JSC_HOST_CALL Interpreter::callNativeErrorConstructor(ExecState* 
 {
     JSValue message = exec->argument(0);
     Structure* errorStructure = static_cast<NativeErrorConstructor*>(exec->callee())->errorStructure();
-    Vector<StackFrame> stackTrace;
-    exec->vm().interpreter->getStackTrace(stackTrace, std::numeric_limits<size_t>::max());
-    stackTrace.remove(0);
-    return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, stackTrace));
+    return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, nullptr, TypeNothing, false));
 }
 
 CallType NativeErrorConstructor::getCallData(JSCell*, CallData& callData)

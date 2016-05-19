@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,7 +28,7 @@
 #define ClientRectList_h
 
 #include "FloatQuad.h"
-#include <wtf/PassRefPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -38,18 +38,18 @@ namespace WebCore {
 
     class ClientRectList : public RefCounted<ClientRectList> {
     public:
-        static PassRefPtr<ClientRectList> create() { return adoptRef(new ClientRectList); }
-        static PassRefPtr<ClientRectList> create(const Vector<FloatQuad>& quads) { return adoptRef(new ClientRectList(quads)); }
-        ~ClientRectList();
+        static Ref<ClientRectList> create() { return adoptRef(*new ClientRectList); }
+        static Ref<ClientRectList> create(const Vector<FloatQuad>& quads) { return adoptRef(*new ClientRectList(quads)); }
+        WEBCORE_EXPORT ~ClientRectList();
 
         unsigned length() const;
         ClientRect* item(unsigned index);
 
     private:
-        ClientRectList();
-        explicit ClientRectList(const Vector<FloatQuad>&);
+        WEBCORE_EXPORT ClientRectList();
+        WEBCORE_EXPORT explicit ClientRectList(const Vector<FloatQuad>&);
 
-        Vector<RefPtr<ClientRect>> m_list;
+        Vector<Ref<ClientRect>> m_list;
     };
 
 } // namespace WebCore

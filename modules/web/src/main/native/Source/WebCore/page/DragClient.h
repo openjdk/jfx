@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-class Clipboard;
+class DataTransfer;
 class DragData;
 class Element;
 class Frame;
@@ -44,17 +44,20 @@ public:
     virtual void dragControllerDestroyed() = 0;
 
     virtual void willPerformDragDestinationAction(DragDestinationAction, DragData&) = 0;
-    virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, Clipboard&) = 0;
+    virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&) = 0;
     virtual DragDestinationAction actionMaskForDrag(DragData&) = 0;
     virtual DragSourceAction dragSourceActionMaskForPoint(const IntPoint& rootViewPoint) = 0;
 
-    virtual void startDrag(DragImageRef, const IntPoint& dragImageOrigin, const IntPoint& eventPos, Clipboard&, Frame&, bool linkDrag = false) = 0;
+    virtual void startDrag(DragImageRef, const IntPoint& dragImageOrigin, const IntPoint& eventPos, DataTransfer&, Frame&, bool linkDrag = false) = 0;
     virtual void dragEnded() { }
 
 #if PLATFORM(COCOA)
     // Mac-specific helper function to allow access to web archives and NSPasteboard extras in WebKit.
     // This is not abstract as that would require another #if PLATFORM(COCOA) for the SVGImage client empty implentation.
     virtual void declareAndWriteDragImage(const String&, Element&, const URL&, const String&, Frame*) { }
+#if ENABLE(ATTACHMENT_ELEMENT)
+    virtual void declareAndWriteAttachment(const String&, Element&, const URL&, const String&, Frame*) { }
+#endif
 #endif
 
     virtual ~DragClient() { }

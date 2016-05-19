@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,18 +40,18 @@ class Range;
 
 class LegacyWebArchive : public Archive {
 public:
-    static PassRefPtr<LegacyWebArchive> create();
-    static PassRefPtr<LegacyWebArchive> create(SharedBuffer*);
-    static PassRefPtr<LegacyWebArchive> create(const URL&, SharedBuffer*);
-    static PassRefPtr<LegacyWebArchive> create(PassRefPtr<ArchiveResource> mainResource, Vector<PassRefPtr<ArchiveResource>>& subresources, Vector<PassRefPtr<LegacyWebArchive>>& subframeArchives);
-    static PassRefPtr<LegacyWebArchive> create(Node*, std::function<bool (Frame&)> frameFilter = nullptr);
-    static PassRefPtr<LegacyWebArchive> create(Frame*);
-    static PassRefPtr<LegacyWebArchive> createFromSelection(Frame*);
-    static PassRefPtr<LegacyWebArchive> create(Range*);
+    WEBCORE_EXPORT static PassRefPtr<LegacyWebArchive> create();
+    WEBCORE_EXPORT static PassRefPtr<LegacyWebArchive> create(SharedBuffer*);
+    WEBCORE_EXPORT static PassRefPtr<LegacyWebArchive> create(const URL&, SharedBuffer*);
+    WEBCORE_EXPORT static PassRefPtr<LegacyWebArchive> create(PassRefPtr<ArchiveResource> mainResource, Vector<RefPtr<ArchiveResource>> subresources, Vector<RefPtr<LegacyWebArchive>> subframeArchives);
+    WEBCORE_EXPORT static PassRefPtr<LegacyWebArchive> create(Node*, std::function<bool(Frame&)> frameFilter = nullptr);
+    WEBCORE_EXPORT static PassRefPtr<LegacyWebArchive> create(Frame*);
+    WEBCORE_EXPORT static PassRefPtr<LegacyWebArchive> createFromSelection(Frame*);
+    WEBCORE_EXPORT static PassRefPtr<LegacyWebArchive> create(Range*);
 
     virtual Type type() const override;
 
-    RetainPtr<CFDataRef> rawDataRepresentation();
+    WEBCORE_EXPORT RetainPtr<CFDataRef> rawDataRepresentation();
 
 private:
     LegacyWebArchive() { }

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -34,29 +34,34 @@
 
 namespace JSC {
 
-    class ArgList;
-    class ExecState;
-    class FunctionExecutable;
-    class JSObject;
-    class JSScope;
+class ArgList;
+class ExecState;
+class FunctionExecutable;
+class JSObject;
+class JSScope;
 
-    enum ConstructType {
-        ConstructTypeNone,
-        ConstructTypeHost,
-        ConstructTypeJS
-    };
+enum ConstructType {
+    ConstructTypeNone,
+    ConstructTypeHost,
+    ConstructTypeJS
+};
 
-    union ConstructData {
-        struct {
-            NativeFunction function;
-        } native;
-        struct {
-            FunctionExecutable* functionExecutable;
-            JSScope* scope;
-        } js;
-    };
+union ConstructData {
+    struct {
+        NativeFunction function;
+    } native;
+    struct {
+        FunctionExecutable* functionExecutable;
+        JSScope* scope;
+    } js;
+};
 
-    JS_EXPORT_PRIVATE JSObject* construct(ExecState*, JSValue constructor, ConstructType, const ConstructData&, const ArgList&);
+JS_EXPORT_PRIVATE JSObject* construct(ExecState*, JSValue constructor, ConstructType, const ConstructData&, const ArgList&, JSValue newTarget);
+
+ALWAYS_INLINE JSObject* construct(ExecState* exec, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args)
+{
+    return construct(exec, constructorObject, constructType, constructData, args, constructorObject);
+}
 
 } // namespace JSC
 

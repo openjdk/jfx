@@ -27,23 +27,19 @@
 #define WebGLCompressedTextureS3TC_h
 
 #include "WebGLExtension.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
 class WebGLTexture;
 
-class WebGLCompressedTextureS3TC : public WebGLExtension {
+class WebGLCompressedTextureS3TC final : public WebGLExtension {
 public:
-    static OwnPtr<WebGLCompressedTextureS3TC> create(WebGLRenderingContext*);
-
-    static bool supported(WebGLRenderingContext*);
-
+    explicit WebGLCompressedTextureS3TC(WebGLRenderingContextBase*);
     virtual ~WebGLCompressedTextureS3TC();
-    virtual ExtensionName getName() const override;
 
-private:
-    WebGLCompressedTextureS3TC(WebGLRenderingContext*);
+    static bool supported(WebGLRenderingContextBase*);
+
+    virtual ExtensionName getName() const override;
 };
 
 } // namespace WebCore

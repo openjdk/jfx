@@ -29,11 +29,12 @@
 
 #import "NetscapePluginHostProxy.h"
 #import "NetscapePluginInstanceProxy.h"
-#import "WebLocalizableStringsInternal.h"
 #import "WebKitSystemInterface.h"
+#import "WebLocalizableStringsInternal.h"
 #import "WebNetscapePluginPackage.h"
+#import <WebCore/ServersSPI.h>
+#import <WebCore/WebCoreNSStringExtras.h>
 #import <mach/mach_port.h>
-#import <servers/bootstrap.h>
 #import <spawn.h>
 #import <wtf/Assertions.h>
 #import <wtf/RetainPtr.h>
@@ -48,9 +49,9 @@ using namespace WebCore;
 
 namespace WebKit {
 
-NetscapePluginHostManager& NetscapePluginHostManager::shared()
+NetscapePluginHostManager& NetscapePluginHostManager::singleton()
 {
-    DEFINE_STATIC_LOCAL(NetscapePluginHostManager, pluginHostManager, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(NetscapePluginHostManager, pluginHostManager, ());
 
     return pluginHostManager;
 }
@@ -110,15 +111,13 @@ bool NetscapePluginHostManager::spawnPluginHost(const String& pluginPath, cpu_ty
     if (renderServerPort == MACH_PORT_NULL)
         return false;
 
-    NSString *pluginHostAppPath = [[NSBundle bundleWithIdentifier:@"com.apple.WebKit"] pathForAuxiliaryExecutable:pluginHostAppName];
+    NSString *pluginHostAppPath = [[NSBundle bundleForClass:[WebNetscapePluginPackage class]] pathForAuxiliaryExecutable:pluginHostAppName];
     NSString *pluginHostAppExecutablePath = [[NSBundle bundleWithPath:pluginHostAppPath] executablePath];
-
-    RetainPtr<CFStringRef> localization = adoptCF(WKCopyCFLocalizationPreferredName(NULL));
 
     NSDictionary *launchProperties = [[NSDictionary alloc] initWithObjectsAndKeys:
                                       pluginHostAppExecutablePath, @"pluginHostPath",
                                       [NSNumber numberWithInt:pluginArchitecture], @"cpuType",
-                                      (NSString *)localization.get(), @"localization",
+                                      preferredBundleLocalizationName(), @"localization",
                                       nil];
 
     NSData *data = [NSPropertyListSerialization dataWithPropertyList:launchProperties format:NSPropertyListBinaryFormat_v1_0 options:0 error:nullptr];

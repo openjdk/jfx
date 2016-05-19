@@ -257,21 +257,21 @@ void DateTimeFormat::quoteAndAppendLiteral(const String& literal, StringBuilder&
     }
 
     if (literal.find('\'') == notFound) {
-        buffer.append("'");
+        buffer.append('\'');
         buffer.append(literal);
-        buffer.append("'");
+        buffer.append('\'');
         return;
     }
 
     for (unsigned i = 0; i < literal.length(); ++i) {
         if (literal[i] == '\'')
-            buffer.append("''");
+            buffer.appendLiteral("''");
         else {
             String escaped = literal.substring(i);
-            escaped.replace(ASCIILiteral("'"), ASCIILiteral("''"));
-            buffer.append("'");
+            escaped.replace('\'', "''");
+            buffer.append('\'');
             buffer.append(escaped);
-            buffer.append("'");
+            buffer.append('\'');
             return;
         }
     }

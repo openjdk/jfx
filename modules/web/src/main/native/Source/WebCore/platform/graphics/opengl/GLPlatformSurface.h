@@ -46,7 +46,7 @@ public:
 
     typedef unsigned SurfaceAttributes;
     // Creates a GL surface used for offscreen rendering.
-    static PassOwnPtr<GLPlatformSurface> createOffScreenSurface(SurfaceAttributes = GLPlatformSurface::Default);
+    static std::unique_ptr<GLPlatformSurface> createOffScreenSurface(SurfaceAttributes = GLPlatformSurface::Default);
 
     virtual ~GLPlatformSurface();
 
@@ -58,8 +58,6 @@ public:
     PlatformBufferHandle handle() const;
 
     PlatformDrawable drawable() const;
-
-    PlatformDisplay sharedDisplay() const;
 
     virtual SurfaceAttributes attributes() const;
 
@@ -84,7 +82,6 @@ public:
 protected:
     GLPlatformSurface(SurfaceAttributes);
 
-    PlatformDisplay m_sharedDisplay;
     PlatformDrawable m_drawable;
     PlatformBufferHandle m_bufferHandle;
     IntRect m_rect;

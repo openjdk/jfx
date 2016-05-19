@@ -36,12 +36,11 @@
 
 namespace WebCore {
 
-class MonthInputType : public BaseChooserOnlyDateAndTimeInputType {
+class MonthInputType final : public BaseChooserOnlyDateAndTimeInputType {
 public:
     explicit MonthInputType(HTMLInputElement& element) : BaseChooserOnlyDateAndTimeInputType(element) { }
 
 private:
-    virtual void attach() override;
     virtual const AtomicString& formControlType() const override;
     virtual DateComponents::Type dateType() const override;
     virtual double valueAsDate() const override;

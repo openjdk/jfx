@@ -26,13 +26,15 @@
 #ifndef ProfileGenerator_h
 #define ProfileGenerator_h
 
-#include "Profile.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/Stopwatch.h>
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
 
+    class DebuggerCallFrame;
     class ExecState;
     class JSGlobalObject;
     class Profile;
@@ -41,7 +43,7 @@ namespace JSC {
 
     class ProfileGenerator : public RefCounted<ProfileGenerator>  {
     public:
-        static PassRefPtr<ProfileGenerator> create(ExecState*, const WTF::String& title, unsigned uid);
+        static Ref<ProfileGenerator> create(ExecState*, const WTF::String& title, unsigned uid, PassRefPtr<Stopwatch>);
 
         // Members
         const WTF::String& title() const;
@@ -49,30 +51,32 @@ namespace JSC {
         JSGlobalObject* origin() const { return m_origin; }
         unsigned profileGroup() const { return m_profileGroup; }
 
-        // Collecting
         void willExecute(ExecState* callerCallFrame, const CallIdentifier&);
         void didExecute(ExecState* callerCallFrame, const CallIdentifier&);
-
         void exceptionUnwind(ExecState* handlerCallFrame, const CallIdentifier&);
 
-        // Stopping Profiling
+        void setIsSuspended(bool suspended) { ASSERT(m_suspended != suspended); m_suspended = suspended; }
+
         void stopProfiling();
 
-        typedef void (ProfileGenerator::*ProfileFunction)(ExecState* callerOrHandlerCallFrame, const CallIdentifier& callIdentifier);
-
     private:
-        ProfileGenerator(ExecState*, const WTF::String& title, unsigned uid);
-        void addParentForConsoleStart(ExecState*);
+        ProfileGenerator(ExecState*, const WTF::String& title, unsigned uid, PassRefPtr<Stopwatch>);
+        void addParentForConsoleStart(ExecState*, double);
 
         void removeProfileStart();
         void removeProfileEnd();
 
+        void beginCallEntry(ProfileNode*, double startTime);
+        void endCallEntry(ProfileNode*);
+
         RefPtr<Profile> m_profile;
         JSGlobalObject* m_origin;
         unsigned m_profileGroup;
-        RefPtr<ProfileNode> m_head;
+        RefPtr<Stopwatch> m_stopwatch;
+        RefPtr<ProfileNode> m_rootNode;
         RefPtr<ProfileNode> m_currentNode;
         bool m_foundConsoleStartParent;
+        bool m_suspended;
     };
 
 } // namespace JSC

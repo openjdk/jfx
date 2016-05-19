@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,19 +29,13 @@
 #include "config.h"
 #include "ResourceLoader.h"
 
+#include "CFNetworkSPI.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
+#include "SharedBuffer.h"
 
 #if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
 #include "InspectorInstrumentation.h"
-#include "ResourceBuffer.h"
-#endif
-
-#if USE(CFNETWORK)
-@interface NSCachedURLResponse (Details)
--(id)_initWithCFCachedURLResponse:(CFCachedURLResponseRef)cachedResponse;
--(CFCachedURLResponseRef)_CFCachedURLResponse;
-@end
 #endif
 
 namespace WebCore {
@@ -50,7 +44,7 @@ namespace WebCore {
 
 CFCachedURLResponseRef ResourceLoader::willCacheResponse(ResourceHandle*, CFCachedURLResponseRef cachedResponse)
 {
-    if (m_options.sendLoadCallbacks == DoNotSendCallbacks)
+    if (m_options.sendLoadCallbacks() == DoNotSendCallbacks)
         return 0;
 
     RetainPtr<NSCachedURLResponse> nsCachedResponse = adoptNS([[NSCachedURLResponse alloc] _initWithCFCachedURLResponse:cachedResponse]);
@@ -61,7 +55,7 @@ CFCachedURLResponseRef ResourceLoader::willCacheResponse(ResourceHandle*, CFCach
 
 NSCachedURLResponse* ResourceLoader::willCacheResponse(ResourceHandle*, NSCachedURLResponse* response)
 {
-    if (m_options.sendLoadCallbacks == DoNotSendCallbacks)
+    if (m_options.sendLoadCallbacks() == DoNotSendCallbacks)
         return 0;
     return frameLoader()->client().willCacheResponse(documentLoader(), identifier(), response);
 }
@@ -81,16 +75,16 @@ void ResourceLoader::didReceiveDataArray(CFArrayRef dataArray)
         CFDataRef data = static_cast<CFDataRef>(CFArrayGetValueAtIndex(dataArray, i));
         unsigned dataLen = static_cast<unsigned>(CFDataGetLength(data));
 
-        if (m_options.dataBufferingPolicy == BufferData) {
+        if (m_options.dataBufferingPolicy() == BufferData) {
             if (!m_resourceData)
-                m_resourceData = ResourceBuffer::create();
+                m_resourceData = SharedBuffer::create();
             m_resourceData->append(data);
         }
 
         // FIXME: If we get a resource with more than 2B bytes, this code won't do the right thing.
         // However, with today's computers and networking speeds, this won't happen in practice.
         // Could be an issue with a giant local file.
-        if (m_options.sendLoadCallbacks == SendCallbacks && m_frame)
+        if (m_options.sendLoadCallbacks() == SendCallbacks && m_frame)
             frameLoader()->notifier().didReceiveData(this, reinterpret_cast<const char*>(CFDataGetBytePtr(data)), dataLen, dataLen);
     }
 }
@@ -104,11 +98,7 @@ void ResourceLoader::didReceiveDataArray(ResourceHandle*, CFArrayRef dataArray)
         dataLength += CFDataGetLength(data);
     }
 
-    // FIXME: didReceiveData() passes encoded data length to InspectorInstrumentation, but it is not available here.
-    // This probably results in incorrect size being displayed in Web Inspector.
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willReceiveResourceData(m_frame.get(), identifier(), dataLength);
     didReceiveDataArray(dataArray);
-    InspectorInstrumentation::didReceiveResourceData(cookie);
 }
 
 #endif

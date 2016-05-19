@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Computer Inc.
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2009 Google Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -28,8 +28,8 @@
 namespace WebCore {
 class RenderSVGTSpan final : public RenderSVGInline {
 public:
-    explicit RenderSVGTSpan(SVGTextPositioningElement& element, PassRef<RenderStyle> style)
-        : RenderSVGInline(element, std::move(style))
+    explicit RenderSVGTSpan(SVGTextPositioningElement& element, Ref<RenderStyle>&& style)
+        : RenderSVGInline(element, WTF::move(style))
     {
     }
 
@@ -37,7 +37,7 @@ public:
 
 private:
     void graphicsElement() const = delete;
-    virtual const char* renderName() const { return "RenderSVGTSpan"; }
+    virtual const char* renderName() const override { return "RenderSVGTSpan"; }
 };
 }
 

@@ -109,7 +109,10 @@ public:
         TEXTPATH_SPACINGTYPE_EXACT = SVGTextPathSpacingExact
     };
 
-    static PassRefPtr<SVGTextPathElement> create(const QualifiedName&, Document&);
+    static Ref<SVGTextPathElement> create(const QualifiedName&, Document&);
+
+protected:
+    virtual void finishedInsertingSubtree() override;
 
 private:
     SVGTextPathElement(const QualifiedName&, Document&);
@@ -122,11 +125,11 @@ private:
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
     virtual void removedFrom(ContainerNode&) override;
 
-    bool isSupportedAttribute(const QualifiedName&);
+    static bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
     virtual bool childShouldCreateRenderer(const Node&) const override;
     virtual bool rendererIsNeeded(const RenderStyle&) override;
 
@@ -136,11 +139,9 @@ private:
         DECLARE_ANIMATED_LENGTH(StartOffset, startOffset)
         DECLARE_ANIMATED_ENUMERATION(Method, method, SVGTextPathMethodType)
         DECLARE_ANIMATED_ENUMERATION(Spacing, spacing, SVGTextPathSpacingType)
-        DECLARE_ANIMATED_STRING(Href, href)
+        DECLARE_ANIMATED_STRING_OVERRIDE(Href, href)
     END_DECLARE_ANIMATED_PROPERTIES
 };
-
-NODE_TYPE_CASTS(SVGTextPathElement)
 
 } // namespace WebCore
 

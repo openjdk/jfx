@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-const ClassInfo JSBoundFunction::s_info = { "Function", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSBoundFunction) };
+const ClassInfo JSBoundFunction::s_info = { "Function", &Base::s_info, 0, CREATE_METHOD_TABLE(JSBoundFunction) };
 
 EncodedJSValue JSC_HOST_CALL boundFunctionCall(ExecState* exec)
 {
@@ -86,11 +86,6 @@ JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, J
     return function;
 }
 
-void JSBoundFunction::destroy(JSCell* cell)
-{
-    static_cast<JSBoundFunction*>(cell)->JSBoundFunction::~JSBoundFunction();
-}
-
 bool JSBoundFunction::customHasInstance(JSObject* object, ExecState* exec, JSValue value)
 {
     return jsCast<JSBoundFunction*>(object)->m_targetFunction->hasInstance(exec, value);
@@ -117,8 +112,6 @@ void JSBoundFunction::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSBoundFunction* thisObject = jsCast<JSBoundFunction*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
 
     visitor.append(&thisObject->m_targetFunction);

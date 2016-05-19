@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,10 +30,21 @@
 
 namespace WebCore {
 
-PassRefPtr<TransformOperation> Matrix3DTransformOperation::blend(const TransformOperation* from, double progress, bool blendToIdentity)
+bool Matrix3DTransformOperation::operator==(const TransformOperation& other) const
+{
+    return isSameType(other) && m_matrix == downcast<Matrix3DTransformOperation>(other).m_matrix;
+}
+
+static Ref<TransformOperation> createOperation(TransformationMatrix& to, TransformationMatrix& from, double progress)
+{
+    to.blend(from, progress);
+    return Matrix3DTransformOperation::create(to);
+}
+
+Ref<TransformOperation> Matrix3DTransformOperation::blend(const TransformOperation* from, double progress, bool blendToIdentity)
 {
     if (from && !from->isSameType(*this))
-        return this;
+        return *this;
 
     // Convert the TransformOperations into matrices
     FloatSize size;
@@ -45,10 +56,8 @@ PassRefPtr<TransformOperation> Matrix3DTransformOperation::blend(const Transform
     apply(toT, size);
 
     if (blendToIdentity)
-        std::swap(fromT, toT);
-
-    toT.blend(fromT, progress);
-    return Matrix3DTransformOperation::create(toT);
+        return createOperation(fromT, toT, progress);
+    return createOperation(toT, fromT, progress);
 }
 
 } // namespace WebCore

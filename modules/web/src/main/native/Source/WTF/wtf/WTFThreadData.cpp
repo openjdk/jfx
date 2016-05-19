@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -35,16 +35,15 @@
 
 namespace WTF {
 
+#if !USE(PTHREAD_GETSPECIFIC_DIRECT)
 ThreadSpecific<WTFThreadData>* WTFThreadData::staticData;
+#endif
 
 WTFThreadData::WTFThreadData()
     : m_apiData(0)
-    , m_atomicStringTable(0)
+    , m_currentAtomicStringTable(0)
+    , m_defaultAtomicStringTable(0)
     , m_atomicStringTableDestructor(0)
-#if !USE(WEB_THREAD)
-    , m_defaultIdentifierTable(new JSC::IdentifierTable())
-    , m_currentIdentifierTable(m_defaultIdentifierTable)
-#endif
     , m_stackBounds(StackBounds::currentThreadStackBounds())
 #if ENABLE(STACK_STATS)
     , m_stackStats()
@@ -52,41 +51,26 @@ WTFThreadData::WTFThreadData()
     , m_savedStackPointerAtVMEntry(0)
     , m_savedLastStackTop(stack().origin())
 {
-#if USE(WEB_THREAD)
-    static JSC::IdentifierTable* sharedIdentifierTable = new JSC::IdentifierTable();
-    if (pthread_main_np() || isWebThread())
-        m_defaultIdentifierTable = sharedIdentifierTable;
-    else
-        m_defaultIdentifierTable = new JSC::IdentifierTable();
-
-    m_currentIdentifierTable = m_defaultIdentifierTable;
-#endif
     AtomicStringTable::create(*this);
+    m_currentAtomicStringTable = m_defaultAtomicStringTable;
 }
 
 WTFThreadData::~WTFThreadData()
 {
     if (m_atomicStringTableDestructor)
-        m_atomicStringTableDestructor(m_atomicStringTable);
-    delete m_defaultIdentifierTable;
+        m_atomicStringTableDestructor(m_defaultAtomicStringTable);
 }
+
+#if USE(PTHREAD_GETSPECIFIC_DIRECT)
+WTFThreadData& WTFThreadData::createAndRegisterForGetspecificDirect()
+{
+    WTFThreadData* data = new WTFThreadData;
+    _pthread_setspecific_direct(directKey, data);
+    pthread_key_init_np(directKey, [](void* data){
+        delete static_cast<WTFThreadData*>(data);
+    });
+    return *data;
+}
+#endif
 
 } // namespace WTF
-
-namespace JSC {
-
-IdentifierTable::~IdentifierTable()
-{
-    HashSet<StringImpl*>::iterator end = m_table.end();
-    for (HashSet<StringImpl*>::iterator iter = m_table.begin(); iter != end; ++iter)
-        (*iter)->setIsIdentifier(false);
-}
-
-HashSet<StringImpl*>::AddResult IdentifierTable::add(StringImpl* value)
-{
-    HashSet<StringImpl*>::AddResult result = m_table.add(value);
-    (*result.iterator)->setIsIdentifier(true);
-    return result;
-}
-
-} // namespace JSC

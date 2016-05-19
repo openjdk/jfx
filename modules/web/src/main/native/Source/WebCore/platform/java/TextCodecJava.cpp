@@ -19,7 +19,7 @@ static jmethodID getEncodingsMID;
 static jmethodID encodeMID;
 static jmethodID decodeMID;
 
-static PassOwnPtr<TextCodec> newTextCodecJava(const TextEncoding& encoding, const void*)
+static std::unique_ptr<TextCodec> newTextCodecJava(const TextEncoding& encoding, const void*)
 {
     return adoptPtr(new TextCodecJava(encoding));
 }

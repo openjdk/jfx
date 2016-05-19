@@ -14,6 +14,7 @@ namespace WebCore {
         ChromeClientJava(const JLObject &webPage);
     virtual void chromeDestroyed() override;
 
+    virtual bool isJavaChromeClient() const override { return true; }
     virtual void setWindowRect(const FloatRect&) override;
     virtual FloatRect windowRect() override;
 
@@ -64,16 +65,13 @@ namespace WebCore {
     virtual bool runJavaScriptConfirm(Frame*, const String&) override;
     virtual bool runJavaScriptPrompt(Frame*, const String& message, const String& defaultValue, String& result) override;
     virtual void setStatusbarText(const String&) override;
-    virtual bool shouldInterruptJavaScript() override;
     virtual KeyboardUIMode keyboardUIMode() override;
-
-    virtual IntRect windowResizerRect() const override;
 
     // Methods used by HostWindow.
     //
-    virtual void invalidateRootView(const IntRect&, bool immediate) override;
-    virtual void invalidateContentsAndRootView(const IntRect&, bool immediate) override;
-    virtual void invalidateContentsForSlowScroll(const IntRect&, bool immediate) override;
+    virtual void invalidateRootView(const IntRect&) override;
+    virtual void invalidateContentsAndRootView(const IntRect&) override;
+    virtual void invalidateContentsForSlowScroll(const IntRect&) override;
     virtual void scroll(const IntSize&, const IntRect&, const IntRect&) override;
 #if USE(TILED_BACKING_STORE)
     virtual void delegatedScrollRequested(const IntPoint&) override;
@@ -93,9 +91,7 @@ namespace WebCore {
 
     virtual void print(Frame*) override;
 
-#if ENABLE(SQL_DATABASE)
     virtual void exceededDatabaseQuota(Frame*, const String& databaseName, DatabaseDetails) override;
-#endif
 
     // Callback invoked when the application cache fails to save a cache object
     // because storing it would grow the database file past its defined maximum
@@ -106,7 +102,7 @@ namespace WebCore {
 
     // Callback invoked when the application cache origin quota is reached. This
     // means that the resources attempting to be cached via the manifest are
-    // more than allowed on this origin. This callback allows the chrome client
+    // more than allowed on this origin. This callback allows the chrome clieMediaPlayerPrivateJava.cpp:314nt
     // to take action, such as prompting the user to ask to increase the quota
     // for this origin. The totalSpaceNeeded parameter is the total amount of
     // storage, in bytes, needed to store the new cache along with all of the
@@ -115,15 +111,7 @@ namespace WebCore {
     virtual void reachedApplicationCacheOriginQuota(SecurityOrigin*, int64_t totalSpaceNeeded) override;
 
 #if ENABLE(INPUT_TYPE_COLOR)
-    virtual PassOwnPtr<ColorChooser> createColorChooser(ColorChooserClient*, const Color&) override;
-#endif
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    // This function is used for:
-    //  - Mandatory date/time choosers if !ENABLE(INPUT_MULTIPLE_FIELDS_UI)
-    //  - <datalist> UI for date/time input types regardless of
-    //    ENABLE(INPUT_MULTIPLE_FIELDS_UI)
-    virtual PassRefPtr<DateTimeChooser> openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&) override;
+    virtual std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient*, const Color&) override;
 #endif
 
     virtual void runOpenPanel(Frame*, PassRefPtr<FileChooser>) override;
@@ -147,7 +135,12 @@ namespace WebCore {
     // Sets a flag to specify that the view needs to be updated, so we need
     // to do an eager layout before the drawing.
     virtual void scheduleCompositingLayerFlush() override;
+#else //XXX: implement?
+    virtual void attachRootGraphicsLayer(Frame*, GraphicsLayer*) override {}
+    virtual void setNeedsOneShotDrawingSynchronization() override {}
+    virtual void scheduleCompositingLayerFlush() override {}
 #endif
+    virtual void attachViewOverlayGraphicsLayer(Frame*, GraphicsLayer*) override;
 
 #if ENABLE(TOUCH_EVENTS)
     virtual void needTouchEvents(bool) override {};
@@ -157,10 +150,10 @@ namespace WebCore {
         virtual bool selectItemAlignmentFollowsMenuWritingDirection() override;
     // Checks if there is an opened popup, called by RenderMenuList::showPopup().
         virtual bool hasOpenedPopup() const override { return false; }
-    virtual PassRefPtr<PopupMenu> createPopupMenu(PopupMenuClient*) const override;
-    virtual PassRefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient*) const override;
+    virtual RefPtr<PopupMenu> createPopupMenu(PopupMenuClient*) const override;
+    virtual RefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient*) const override;
 
-    virtual void numWheelEventHandlersChanged(unsigned) override {};
+    virtual void wheelEventHandlersChanged(bool) override {};
 
         JLObject platformPage() { return m_webPage; } //utatodo:check usage
 

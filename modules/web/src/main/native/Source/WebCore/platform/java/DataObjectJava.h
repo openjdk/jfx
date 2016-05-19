@@ -214,6 +214,7 @@ namespace WebCore {
         }
 
         DataObjectJava(const DataObjectJava& data) :
+            RefCounted<WebCore::DataObjectJava>(),
             m_availMimeTypes(data.m_availMimeTypes),
             m_url(data.m_url),
             m_urlTitle(data.m_urlTitle),

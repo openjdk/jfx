@@ -29,11 +29,12 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
 #include <wtf/text/TextPosition.h>
 
 namespace JSC {
 
+class CodeBlock;
+class Exception;
 class ExecState;
 class JSGlobalObject;
 class SourceProvider;
@@ -60,12 +61,13 @@ public:
 
     bool needsExceptionCallbacks() const { return m_pauseOnExceptionsState != DontPauseOnExceptions; }
 
-    void attach(JSGlobalObject*);
     enum ReasonForDetach {
         TerminatingDebuggingSession,
         GlobalObjectIsDestructing
     };
-    virtual void detach(JSGlobalObject*, ReasonForDetach);
+    void attach(JSGlobalObject*);
+    void detach(JSGlobalObject*, ReasonForDetach);
+    bool isAttached(JSGlobalObject*);
 
     BreakpointID setBreakpoint(Breakpoint, unsigned& actualLine, unsigned& actualColumn);
     void removeBreakpoint(BreakpointID);
@@ -82,6 +84,20 @@ public:
     PauseOnExceptionsState pauseOnExceptionsState() const { return m_pauseOnExceptionsState; }
     void setPauseOnExceptionsState(PauseOnExceptionsState);
 
+    enum ReasonForPause {
+        NotPaused,
+        PausedForException,
+        PausedAtStatement,
+        PausedAfterCall,
+        PausedBeforeReturn,
+        PausedAtStartOfProgram,
+        PausedAtEndOfProgram,
+        PausedForBreakpoint,
+        PausedForDebuggerStatement,
+    };
+    ReasonForPause reasonForPause() const { return m_reasonForPause; }
+    BreakpointID pausingBreakpointID() const { return m_pausingBreakpointID; }
+
     void setPauseOnNextStatement(bool);
     void breakProgram();
     void continueProgram();
@@ -89,12 +105,12 @@ public:
     void stepOverStatement();
     void stepOutOfFunction();
 
-    bool isPaused() { return m_isPaused; }
+    bool isPaused() const { return m_isPaused; }
     bool isStepping() const { return m_steppingMode == SteppingModeEnabled; }
 
     virtual void sourceParsed(ExecState*, SourceProvider*, int errorLineNumber, const WTF::String& errorMessage) = 0;
 
-    void exception(CallFrame*, JSValue exceptionValue, bool hasHandler);
+    void exception(CallFrame*, JSValue exceptionValue, bool hasCatchHandler);
     void atStatement(CallFrame*);
     void callEvent(CallFrame*);
     void returnEvent(CallFrame*);
@@ -108,28 +124,15 @@ public:
 
 protected:
     virtual bool needPauseHandling(JSGlobalObject*) { return false; }
-    virtual void handleBreakpointHit(const Breakpoint&) { }
-    virtual void handleExceptionInBreakpointCondition(ExecState*, JSValue exception) const { UNUSED_PARAM(exception); }
-
-    enum ReasonForPause {
-        NotPaused,
-        PausedForException,
-        PausedAtStatement,
-        PausedAfterCall,
-        PausedBeforeReturn,
-        PausedAtStartOfProgram,
-        PausedAtEndOfProgram,
-        PausedForBreakpoint
-    };
-
-    virtual void handlePause(ReasonForPause, JSGlobalObject*) { }
+    virtual void handleBreakpointHit(JSGlobalObject*, const Breakpoint&) { }
+    virtual void handleExceptionInBreakpointCondition(ExecState*, Exception*) const { }
+    virtual void handlePause(JSGlobalObject*, ReasonForPause) { }
     virtual void notifyDoneProcessingDebuggerEvents() { }
 
 private:
     typedef HashMap<BreakpointID, Breakpoint*> BreakpointIDToBreakpointMap;
 
-    typedef Vector<Breakpoint> BreakpointsInLine;
-    typedef HashMap<unsigned, BreakpointsInLine, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int>> LineToBreakpointsMap;
+    typedef HashMap<unsigned, RefPtr<BreakpointsList>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int>> LineToBreakpointsMap;
     typedef HashMap<SourceID, LineToBreakpointsMap, WTF::IntHash<SourceID>, WTF::UnsignedWithZeroKeyHashTraits<SourceID>> SourceIDToBreakpointsMap;
 
     class ClearCodeBlockDebuggerRequestsFunctor;
@@ -182,6 +185,8 @@ private:
 
     void clearDebuggerRequests(JSGlobalObject*);
 
+    template<typename Functor> inline void forEachCodeBlock(Functor&);
+
     VM* m_vm;
     HashSet<JSGlobalObject*> m_globalObjects;
 
@@ -191,7 +196,7 @@ private:
     bool m_breakpointsActivated : 1;
     bool m_hasHandlerForExceptionCallback : 1;
     bool m_isInWorkerThread : 1;
-    SteppingMode m_steppingMode : 1;
+    unsigned m_steppingMode : 1; // SteppingMode
 
     ReasonForPause m_reasonForPause;
     JSValue m_currentException;
@@ -201,12 +206,13 @@ private:
     SourceID m_lastExecutedSourceID;
 
     BreakpointID m_topBreakpointID;
+    BreakpointID m_pausingBreakpointID;
     BreakpointIDToBreakpointMap m_breakpointIDToBreakpoint;
     SourceIDToBreakpointsMap m_sourceIDToBreakpoints;
 
     RefPtr<JSC::DebuggerCallFrame> m_currentDebuggerCallFrame;
 
-    friend class DebuggerCallFrameScope;
+    friend class DebuggerPausedScope;
     friend class TemporaryPausedState;
     friend class LLIntOffsetsExtractor;
 };

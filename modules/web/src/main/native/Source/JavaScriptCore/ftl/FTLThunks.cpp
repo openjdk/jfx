@@ -70,7 +70,9 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
     jit.storePtr(MacroAssembler::TrustedImmPtr(requiredScratchMemorySizeInBytes()), GPRInfo::nonArgGPR1);
 
     jit.loadPtr(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
-    jit.peek(GPRInfo::argumentGPR1, (stackMisalignment / sizeof(void*)) - 1);
+    jit.peek(
+        GPRInfo::argumentGPR1,
+        (stackMisalignment - MacroAssembler::pushToSaveByteOffset()) / sizeof(void*));
     MacroAssembler::Call functionCall = jit.call();
 
     // At this point we want to make a tail call to what was returned to us in the
@@ -99,9 +101,37 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
 
     jit.ret();
 
-    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(*vm, jit, GLOBAL_THUNK_ID);
     patchBuffer.link(functionCall, compileFTLOSRExit);
     return FINALIZE_CODE(patchBuffer, ("FTL OSR exit generation thunk"));
+}
+
+static void registerClobberCheck(AssemblyHelpers& jit, RegisterSet dontClobber)
+{
+    if (!Options::clobberAllRegsInFTLICSlowPath())
+        return;
+
+    RegisterSet clobber = RegisterSet::allRegisters();
+    clobber.exclude(RegisterSet::reservedHardwareRegisters());
+    clobber.exclude(RegisterSet::stackRegisters());
+    clobber.exclude(RegisterSet::calleeSaveRegisters());
+    clobber.exclude(dontClobber);
+
+    GPRReg someGPR;
+    for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
+        if (!clobber.get(reg) || !reg.isGPR())
+            continue;
+
+        jit.move(AssemblyHelpers::TrustedImm32(0x1337beef), reg.gpr());
+        someGPR = reg.gpr();
+    }
+
+    for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
+        if (!clobber.get(reg) || !reg.isFPR())
+            continue;
+
+        jit.move64ToDouble(someGPR, reg.fpr());
+    }
 }
 
 MacroAssemblerCodeRef slowPathCallThunkGenerator(VM& vm, const SlowPathCallKey& key)
@@ -132,13 +162,13 @@ MacroAssemblerCodeRef slowPathCallThunkGenerator(VM& vm, const SlowPathCallKey& 
         currentOffset += sizeof(double);
     }
 
-    // FIXME: CStack - Need to do soemething like jit.emitFunctionPrologue();
     jit.preserveReturnAddressAfterCall(GPRInfo::nonArgGPR0);
     jit.storePtr(GPRInfo::nonArgGPR0, AssemblyHelpers::Address(MacroAssembler::stackPointerRegister, key.offset()));
 
+    registerClobberCheck(jit, key.argumentRegisters());
+
     AssemblyHelpers::Call call = jit.call();
 
-    // FIXME: CStack - Need to do something like jit.emitFunctionEpilogue();
     jit.loadPtr(AssemblyHelpers::Address(MacroAssembler::stackPointerRegister, key.offset()), GPRInfo::nonPreservedNonReturnGPR);
     jit.restoreReturnAddressBeforeReturn(GPRInfo::nonPreservedNonReturnGPR);
 
@@ -162,7 +192,7 @@ MacroAssemblerCodeRef slowPathCallThunkGenerator(VM& vm, const SlowPathCallKey& 
 
     jit.ret();
 
-    LinkBuffer patchBuffer(vm, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(vm, jit, GLOBAL_THUNK_ID);
     patchBuffer.link(call, FunctionPtr(key.callTarget()));
     return FINALIZE_CODE(patchBuffer, ("FTL slow path call thunk for %s", toCString(key).data()));
 }

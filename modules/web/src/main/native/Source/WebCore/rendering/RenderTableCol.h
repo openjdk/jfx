@@ -35,33 +35,21 @@ class RenderTableCell;
 
 class RenderTableCol final : public RenderBox {
 public:
-    RenderTableCol(Element&, PassRef<RenderStyle>);
-    Element& element() const { return toElement(nodeForNonAnonymous()); }
+    RenderTableCol(Element&, Ref<RenderStyle>&&);
+    Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
     void clearPreferredLogicalWidthsDirtyBits();
 
     unsigned span() const { return m_span; }
     void setSpan(unsigned span) { m_span = span; }
 
-    bool isTableColumnGroupWithColumnChildren() { return firstChild(); }
+    bool isTableColumnGroupWithColumnChildren() const { return firstChild(); }
     bool isTableColumn() const { return style().display() == TABLE_COLUMN; }
     bool isTableColumnGroup() const { return style().display() == TABLE_COLUMN_GROUP; }
 
     RenderTableCol* enclosingColumnGroup() const;
-    RenderTableCol* enclosingColumnGroupIfAdjacentBefore() const
-    {
-        if (previousSibling())
-            return 0;
-        return enclosingColumnGroup();
-    }
-
-    RenderTableCol* enclosingColumnGroupIfAdjacentAfter() const
-    {
-        if (nextSibling())
-            return 0;
-        return enclosingColumnGroup();
-    }
-
+    RenderTableCol* enclosingColumnGroupIfAdjacentBefore() const;
+    RenderTableCol* enclosingColumnGroupIfAdjacentAfter() const;
 
     // Returns the next column or column-group.
     RenderTableCol* nextColumn() const;
@@ -71,10 +59,15 @@ public:
     const BorderValue& borderAdjoiningCellBefore(const RenderTableCell*) const;
     const BorderValue& borderAdjoiningCellAfter(const RenderTableCell*) const;
 
+    virtual LayoutUnit offsetLeft() const override;
+    virtual LayoutUnit offsetTop() const override;
+    virtual LayoutUnit offsetWidth() const override;
+    virtual LayoutUnit offsetHeight() const override;
+    virtual void updateFromElement() override;
+
 private:
     virtual const char* renderName() const override { return "RenderTableCol"; }
     virtual bool isRenderTableCol() const override { return true; }
-    virtual void updateFromElement() override;
     virtual void computePreferredLogicalWidths() override { ASSERT_NOT_REACHED(); }
 
     virtual void insertedIntoTree() override;
@@ -92,11 +85,25 @@ private:
 
     RenderTable* table() const;
 
-    unsigned m_span;
+    unsigned m_span { 1 };
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderTableCol, isRenderTableCol())
-
+inline RenderTableCol* RenderTableCol::enclosingColumnGroupIfAdjacentBefore() const
+{
+    if (previousSibling())
+        return nullptr;
+    return enclosingColumnGroup();
 }
 
-#endif
+inline RenderTableCol* RenderTableCol::enclosingColumnGroupIfAdjacentAfter() const
+{
+    if (nextSibling())
+        return nullptr;
+    return enclosingColumnGroup();
+}
+
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableCol, isRenderTableCol())
+
+#endif // RenderTableCol_h

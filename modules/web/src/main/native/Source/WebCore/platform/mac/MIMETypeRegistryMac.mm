@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,22 +27,22 @@
 #include "config.h"
 #include "MIMETypeRegistry.h"
 
-#include "WebCoreSystemInterface.h"
+#include "NSURLFileTypeMappingsSPI.h"
 #include <wtf/Assertions.h>
 #include <wtf/MainThread.h>
 
 namespace WebCore
 {
 
-String MIMETypeRegistry::getMIMETypeForExtension(const String &ext)
+String MIMETypeRegistry::getMIMETypeForExtension(const String& extension)
 {
     ASSERT(isMainThread());
-    return wkGetMIMETypeForExtension(ext);
+    return [[NSURLFileTypeMappings sharedMappings] MIMETypeForExtension:(NSString *)extension];
 }
 
 Vector<String> MIMETypeRegistry::getExtensionsForMIMEType(const String& type)
 {
-    NSArray *stringsArray = wkGetExtensionsForMIMEType(type);
+    NSArray *stringsArray = [[NSURLFileTypeMappings sharedMappings] extensionsForMIMEType:(NSString *)type];
     Vector<String> stringsVector = Vector<String>();
     unsigned count = [stringsArray count];
     if (count > 0) {
@@ -56,7 +56,7 @@ Vector<String> MIMETypeRegistry::getExtensionsForMIMEType(const String& type)
 
 String MIMETypeRegistry::getPreferredExtensionForMIMEType(const String& type)
 {
-    return wkGetPreferredExtensionForMIMEType(type);
+    return [[NSURLFileTypeMappings sharedMappings] preferredExtensionForMIMEType:(NSString *)type];
 }
 
 bool MIMETypeRegistry::isApplicationPluginMIMEType(const String& MIMEType)

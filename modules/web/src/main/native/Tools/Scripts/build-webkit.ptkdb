@@ -1,0 +1,4 @@
+$files = {};
+$expr_list = [];
+$eval_saved_text = undef;
+$main_win_geometry = '1855x1176+65+24';

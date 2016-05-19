@@ -36,7 +36,7 @@ ScrollingTreeNode::ScrollingTreeNode(ScrollingTree& scrollingTree, ScrollingNode
     : m_scrollingTree(scrollingTree)
     , m_nodeType(nodeType)
     , m_nodeID(nodeID)
-    , m_parent(0)
+    , m_parent(nullptr)
 {
 }
 
@@ -44,12 +44,12 @@ ScrollingTreeNode::~ScrollingTreeNode()
 {
 }
 
-void ScrollingTreeNode::appendChild(PassOwnPtr<ScrollingTreeNode> childNode)
+void ScrollingTreeNode::appendChild(PassRefPtr<ScrollingTreeNode> childNode)
 {
     childNode->setParent(this);
 
     if (!m_children)
-        m_children = adoptPtr(new Vector<OwnPtr<ScrollingTreeNode>>);
+        m_children = std::make_unique<ScrollingTreeChildrenVector>();
 
     m_children->append(childNode);
 }
@@ -68,9 +68,8 @@ void ScrollingTreeNode::removeChild(ScrollingTreeNode* node)
         return;
     }
 
-    size_t size = m_children->size();
-    for (size_t i = 0; i < size; ++i)
-        m_children->at(i)->removeChild(node);
+    for (auto& child : *m_children)
+        child->removeChild(node);
 }
 
 } // namespace WebCore

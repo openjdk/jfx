@@ -28,47 +28,103 @@
 #include "config.h"
 #include "EmptyClients.h"
 
-#include "DateTimeChooser.h"
+#include "ColorChooser.h"
+#include "DatabaseProvider.h"
 #include "DocumentLoader.h"
 #include "FileChooser.h"
 #include "FormState.h"
 #include "Frame.h"
 #include "FrameNetworkingContext.h"
 #include "HTMLFormElement.h"
+#include "IDBFactoryBackendInterface.h"
+#include "PageConfiguration.h"
+#include "StorageArea.h"
+#include "StorageNamespace.h"
+#include "StorageNamespaceProvider.h"
 #include <wtf/NeverDestroyed.h>
-
-#if ENABLE(INPUT_TYPE_COLOR)
-#include "ColorChooser.h"
-#endif
 
 namespace WebCore {
 
-void fillWithEmptyClients(Page::PageClients& pageClients)
+class EmptyDatabaseProvider final : public DatabaseProvider {
+#if ENABLE(INDEXED_DATABASE)
+    virtual RefPtr<IDBFactoryBackendInterface> createIDBFactoryBackend() { return nullptr; }
+#endif
+};
+
+class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
+    struct EmptyStorageArea : public StorageArea {
+        virtual unsigned length() override { return 0; }
+        virtual String key(unsigned) override { return String(); }
+        virtual String item(const String&) override { return String(); }
+        virtual void setItem(Frame*, const String&, const String&, bool&) override { }
+        virtual void removeItem(Frame*, const String&) override { }
+        virtual void clear(Frame*) override { }
+        virtual bool contains(const String&) override { return false; }
+        virtual bool canAccessStorage(Frame*) override { return false; }
+        virtual StorageType storageType() const override { return LocalStorage; }
+        virtual size_t memoryBytesUsedByCache() override { return 0; }
+        SecurityOrigin& securityOrigin() override { return SecurityOrigin::createUnique(); }
+    };
+
+    struct EmptyStorageNamespace final : public StorageNamespace {
+        virtual RefPtr<StorageArea> storageArea(PassRefPtr<SecurityOrigin>) override { return adoptRef(new EmptyStorageArea); }
+        virtual RefPtr<StorageNamespace> copy(Page*) override { return adoptRef(new EmptyStorageNamespace); }
+    };
+
+    virtual RefPtr<StorageNamespace> createSessionStorageNamespace(Page&, unsigned) override
+    {
+        return adoptRef(new EmptyStorageNamespace);
+    }
+
+    virtual RefPtr<StorageNamespace> createLocalStorageNamespace(unsigned) override
+    {
+        return adoptRef(new EmptyStorageNamespace);
+    }
+
+    virtual RefPtr<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned) override
+    {
+        return adoptRef(new EmptyStorageNamespace);
+    }
+};
+
+class EmptyVisitedLinkStore : public VisitedLinkStore {
+    virtual bool isLinkVisited(Page&, LinkHash, const URL&, const AtomicString&) override { return false; }
+    virtual void addVisitedLink(Page&, LinkHash) override { }
+};
+
+void fillWithEmptyClients(PageConfiguration& pageConfiguration)
 {
     static NeverDestroyed<EmptyChromeClient> dummyChromeClient;
-    pageClients.chromeClient = &dummyChromeClient.get();
+    pageConfiguration.chromeClient = &dummyChromeClient.get();
 
 #if ENABLE(CONTEXT_MENUS)
     static NeverDestroyed<EmptyContextMenuClient> dummyContextMenuClient;
-    pageClients.contextMenuClient = &dummyContextMenuClient.get();
+    pageConfiguration.contextMenuClient = &dummyContextMenuClient.get();
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
     static NeverDestroyed<EmptyDragClient> dummyDragClient;
-    pageClients.dragClient = &dummyDragClient.get();
+    pageConfiguration.dragClient = &dummyDragClient.get();
 #endif
 
     static NeverDestroyed<EmptyEditorClient> dummyEditorClient;
-    pageClients.editorClient = &dummyEditorClient.get();
+    pageConfiguration.editorClient = &dummyEditorClient.get();
 
     static NeverDestroyed<EmptyInspectorClient> dummyInspectorClient;
-    pageClients.inspectorClient = &dummyInspectorClient.get();
+    pageConfiguration.inspectorClient = &dummyInspectorClient.get();
 
     static NeverDestroyed<EmptyFrameLoaderClient> dummyFrameLoaderClient;
-    pageClients.loaderClientForMainFrame = &dummyFrameLoaderClient.get();
+    pageConfiguration.loaderClientForMainFrame = &dummyFrameLoaderClient.get();
 
     static NeverDestroyed<EmptyProgressTrackerClient> dummyProgressTrackerClient;
-    pageClients.progressTrackerClient = &dummyProgressTrackerClient.get();
+    pageConfiguration.progressTrackerClient = &dummyProgressTrackerClient.get();
+
+    static NeverDestroyed<EmptyDiagnosticLoggingClient> dummyDiagnosticLoggingClient;
+    pageConfiguration.diagnosticLoggingClient = &dummyDiagnosticLoggingClient.get();
+
+    pageConfiguration.databaseProvider = adoptRef(new EmptyDatabaseProvider);
+    pageConfiguration.storageNamespaceProvider = adoptRef(new EmptyStorageNamespaceProvider);
+    pageConfiguration.visitedLinkStore = adoptRef(new EmptyVisitedLinkStore);
 }
 
 class EmptyPopupMenu : public PopupMenu {
@@ -90,25 +146,18 @@ private:
     RefPtr<EmptyPopupMenu> m_popup;
 };
 
-PassRefPtr<PopupMenu> EmptyChromeClient::createPopupMenu(PopupMenuClient*) const
+RefPtr<PopupMenu> EmptyChromeClient::createPopupMenu(PopupMenuClient*) const
 {
     return adoptRef(new EmptyPopupMenu());
 }
 
-PassRefPtr<SearchPopupMenu> EmptyChromeClient::createSearchPopupMenu(PopupMenuClient*) const
+RefPtr<SearchPopupMenu> EmptyChromeClient::createSearchPopupMenu(PopupMenuClient*) const
 {
     return adoptRef(new EmptySearchPopupMenu());
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-PassOwnPtr<ColorChooser> EmptyChromeClient::createColorChooser(ColorChooserClient*, const Color&)
-{
-    return nullptr;
-}
-#endif
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES) && !PLATFORM(IOS)
-PassRefPtr<DateTimeChooser> EmptyChromeClient::openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&)
+std::unique_ptr<ColorChooser> EmptyChromeClient::createColorChooser(ColorChooserClient*, const Color&)
 {
     return nullptr;
 }
@@ -134,19 +183,19 @@ void EmptyFrameLoaderClient::dispatchWillSubmitForm(PassRefPtr<FormState>, Frame
 {
 }
 
-PassRefPtr<DocumentLoader> EmptyFrameLoaderClient::createDocumentLoader(const ResourceRequest& request, const SubstituteData& substituteData)
+Ref<DocumentLoader> EmptyFrameLoaderClient::createDocumentLoader(const ResourceRequest& request, const SubstituteData& substituteData)
 {
     return DocumentLoader::create(request, substituteData);
 }
 
-PassRefPtr<Frame> EmptyFrameLoaderClient::createFrame(const URL&, const String&, HTMLFrameOwnerElement*, const String&, bool, int, int)
+RefPtr<Frame> EmptyFrameLoaderClient::createFrame(const URL&, const String&, HTMLFrameOwnerElement*, const String&, bool, int, int)
 {
-    return 0;
+    return nullptr;
 }
 
-PassRefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool)
+RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool)
 {
-    return 0;
+    return nullptr;
 }
 
 void EmptyFrameLoaderClient::recreatePlugin(Widget*)
@@ -157,13 +206,6 @@ PassRefPtr<Widget> EmptyFrameLoaderClient::createJavaAppletWidget(const IntSize&
 {
     return 0;
 }
-
-#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-PassRefPtr<Widget> EmptyFrameLoaderClient::createMediaPlayerProxyPlugin(const IntSize&, HTMLMediaElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&)
-{
-    return 0;
-}
-#endif
 
 PassRefPtr<FrameNetworkingContext> EmptyFrameLoaderClient::createNetworkingContext()
 {
@@ -184,7 +226,7 @@ void EmptyEditorClient::registerRedoStep(PassRefPtr<UndoStep>)
 
 #if ENABLE(CONTEXT_MENUS)
 #if USE(CROSS_PLATFORM_CONTEXT_MENUS)
-PassOwnPtr<ContextMenu> EmptyContextMenuClient::customizeMenu(PassOwnPtr<ContextMenu>)
+std::unique_ptr<ContextMenu> EmptyContextMenuClient::customizeMenu(std::unique_ptr<ContextMenu>)
 {
     return nullptr;
 }

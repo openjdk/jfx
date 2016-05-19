@@ -13,10 +13,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,6 +33,7 @@
 #include "ContextMenuClient.h"
 #include "DeviceMotionClient.h"
 #include "DeviceOrientationClient.h"
+#include "DiagnosticLoggingClient.h"
 #include "DragClient.h"
 #include "EditorClient.h"
 #include "TextCheckerClient.h"
@@ -43,6 +44,7 @@
 #include "Page.h"
 #include "ProgressTrackerClient.h"
 #include "ResourceError.h"
+#include "VisitedLinkStore.h"
 #include <wtf/text/StringView.h>
 
 /*
@@ -112,25 +114,22 @@ public:
     virtual void runJavaScriptAlert(Frame*, const String&) override { }
     virtual bool runJavaScriptConfirm(Frame*, const String&) override { return false; }
     virtual bool runJavaScriptPrompt(Frame*, const String&, const String&, String&) override { return false; }
-    virtual bool shouldInterruptJavaScript() override { return false; }
 
     virtual bool selectItemWritingDirectionIsNatural() override { return false; }
     virtual bool selectItemAlignmentFollowsMenuWritingDirection() override { return false; }
     virtual bool hasOpenedPopup() const override { return false; }
-    virtual PassRefPtr<PopupMenu> createPopupMenu(PopupMenuClient*) const override;
-    virtual PassRefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient*) const override;
+    virtual RefPtr<PopupMenu> createPopupMenu(PopupMenuClient*) const override;
+    virtual RefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient*) const override;
 
     virtual void setStatusbarText(const String&) override { }
 
     virtual KeyboardUIMode keyboardUIMode() override { return KeyboardAccessDefault; }
 
-    virtual IntRect windowResizerRect() const override { return IntRect(); }
-
-    virtual void invalidateRootView(const IntRect&, bool) override { }
-    virtual void invalidateContentsAndRootView(const IntRect&, bool) override { }
-    virtual void invalidateContentsForSlowScroll(const IntRect&, bool) override { }
+    virtual void invalidateRootView(const IntRect&) override { }
+    virtual void invalidateContentsAndRootView(const IntRect&) override { }
+    virtual void invalidateContentsForSlowScroll(const IntRect&) override { }
     virtual void scroll(const IntSize&, const IntRect&, const IntRect&) override { }
-#if USE(TILED_BACKING_STORE)
+#if USE(COORDINATED_GRAPHICS)
     virtual void delegatedScrollRequested(const IntPoint&) { }
 #endif
 #if ENABLE(REQUEST_ANIMATION_FRAME) && !USE(REQUEST_ANIMATION_FRAME_TIMER)
@@ -139,6 +138,10 @@ public:
 
     virtual IntPoint screenToRootView(const IntPoint& p) const override { return p; }
     virtual IntRect rootViewToScreen(const IntRect& r) const override { return r; }
+#if PLATFORM(IOS)
+    virtual IntPoint accessibilityScreenToRootView(const IntPoint& p) const override { return p; };
+    virtual IntRect rootViewToAccessibilityScreen(const IntRect& r) const override { return r; };
+#endif
     virtual PlatformPageClient platformPageClient() const override { return 0; }
     virtual void contentsSizeChanged(Frame*, const IntSize&) const override { }
 
@@ -149,19 +152,13 @@ public:
 
     virtual void print(Frame*) override { }
 
-#if ENABLE(SQL_DATABASE)
     virtual void exceededDatabaseQuota(Frame*, const String&, DatabaseDetails) override { }
-#endif
 
     virtual void reachedMaxAppCacheSize(int64_t) override { }
     virtual void reachedApplicationCacheOriginQuota(SecurityOrigin*, int64_t) override { }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-    virtual PassOwnPtr<ColorChooser> createColorChooser(ColorChooserClient*, const Color&) override;
-#endif
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES) && !PLATFORM(IOS)
-    virtual PassRefPtr<DateTimeChooser> openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&) override;
+    virtual std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient*, const Color&) override;
 #endif
 
     virtual void runOpenPanel(Frame*, PassRefPtr<FileChooser>) override;
@@ -178,6 +175,7 @@ public:
     virtual void scrollRectIntoView(const IntRect&) const override { }
 
     virtual void attachRootGraphicsLayer(Frame*, GraphicsLayer*) override { }
+    virtual void attachViewOverlayGraphicsLayer(Frame*, GraphicsLayer*) override { }
     virtual void setNeedsOneShotDrawingSynchronization() override { }
     virtual void scheduleCompositingLayerFlush() override { }
 
@@ -188,7 +186,7 @@ public:
 #endif
 
 #if PLATFORM(IOS)
-#if ENABLE(TOUCH_EVENTS)
+#if ENABLE(IOS_TOUCH_EVENTS)
     virtual void didPreventDefaultForEvent() override { }
 #endif
     virtual void didReceiveMobileDocType(bool) override { }
@@ -207,7 +205,12 @@ public:
     virtual void removeScrollingLayer(Node*, PlatformLayer*, PlatformLayer*) override { }
 
     virtual void webAppOrientationsUpdated() override { };
+    virtual void showPlaybackTargetPicker(bool) override { };
 #endif // PLATFORM(IOS)
+
+#if ENABLE(ORIENTATION_EVENTS)
+    virtual int deviceOrientation() const override { return 0; }
+#endif
 
 #if PLATFORM(IOS)
     virtual bool isStopping() override { return false; }
@@ -217,7 +220,7 @@ public:
     virtual void needTouchEvents(bool) override { }
 #endif
 
-    virtual void numWheelEventHandlersChanged(unsigned) override { }
+    virtual void wheelEventHandlersChanged(bool) override { }
 
     virtual bool isEmptyChromeClient() const override { return true; }
 
@@ -237,9 +240,8 @@ public:
     virtual bool hasWebView() const override { return true; } // mainly for assertions
 
     virtual void makeRepresentation(DocumentLoader*) override { }
-    virtual void forceLayout() override { }
 #if PLATFORM(IOS)
-    virtual void forceLayoutWithoutRecalculatingStyles() override { }
+    virtual bool forceLayoutOnRestoreFromPageCache() override { return false; }
 #endif
     virtual void forceLayoutForNonHTML() override { }
 
@@ -312,6 +314,9 @@ public:
     virtual void willChangeTitle(DocumentLoader*) override { }
     virtual void didChangeTitle(DocumentLoader*) override { }
 
+    virtual void willReplaceMultipartContent() override { }
+    virtual void didReplaceMultipartContent() override { }
+
     virtual void committedLoad(DocumentLoader*, const char*, int) override { }
     virtual void finishedLoading(DocumentLoader*) override { }
 
@@ -338,7 +343,8 @@ public:
     virtual void didFinishLoad() override { }
     virtual void prepareForDataSourceReplacement() override { }
 
-    virtual PassRefPtr<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) override;
+    virtual Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) override;
+    virtual void updateCachedDocumentLoader(DocumentLoader&) override { }
     virtual void setTitle(const StringWithDirection&, const URL&) override { }
 
     virtual String userAgent(const URL&) override { return ""; }
@@ -364,15 +370,10 @@ public:
     virtual void didDisplayInsecureContent() override { }
     virtual void didRunInsecureContent(SecurityOrigin*, const URL&) override { }
     virtual void didDetectXSS(const URL&, bool) override { }
-    virtual PassRefPtr<Frame> createFrame(const URL&, const String&, HTMLFrameOwnerElement*, const String&, bool, int, int) override;
-    virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool) override;
+    virtual RefPtr<Frame> createFrame(const URL&, const String&, HTMLFrameOwnerElement*, const String&, bool, int, int) override;
+    virtual RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool) override;
     virtual void recreatePlugin(Widget*) override;
     virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL&, const Vector<String>&, const Vector<String>&) override;
-#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-    virtual PassRefPtr<Widget> createMediaPlayerProxyPlugin(const IntSize&, HTMLMediaElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&) override;
-    virtual void hideMediaPlayerProxyPlugin(Widget*) override { }
-    virtual void showMediaPlayerProxyPlugin(Widget*) override { }
-#endif
 
     virtual ObjectContentType objectContentType(const URL&, const String&, bool) override { return ObjectContentType(); }
     virtual String overrideMediaType() const override { return String(); }
@@ -392,6 +393,10 @@ public:
 #endif
 
     virtual PassRefPtr<FrameNetworkingContext> createNetworkingContext() override;
+
+#if ENABLE(REQUEST_AUTOCOMPLETE)
+    virtual void didRequestAutocomplete(PassRefPtr<FormState>) override { }
+#endif
 
     virtual bool isEmptyFrameLoaderClient() override { return true; }
 };
@@ -437,11 +442,14 @@ public:
     virtual bool shouldChangeSelectedRange(Range*, Range*, EAffinity, bool) override { return false; }
 
     virtual bool shouldApplyStyle(StyleProperties*, Range*) override { return false; }
+    virtual void didApplyStyle() override { }
     virtual bool shouldMoveRangeAfterDelete(Range*, Range*) override { return false; }
 
     virtual void didBeginEditing() override { }
     virtual void respondToChangedContents() override { }
     virtual void respondToChangedSelection(Frame*) override { }
+    virtual void didChangeSelectionAndUpdateLayout() override { }
+    virtual void discardedComposition(Frame*) override { }
     virtual void didEndEditing() override { }
     virtual void willWriteSelectionToPasteboard(Range*) override { }
     virtual void didWriteSelectionToPasteboard() override { }
@@ -468,6 +476,7 @@ public:
     virtual bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) override { return false; }
     virtual void textWillBeDeletedInTextField(Element*) override { }
     virtual void textDidChangeInTextArea(Element*) override { }
+    virtual void overflowScrollPositionChanged() override { }
 
 #if PLATFORM(IOS)
     virtual void startDelayingAndCoalescingContentChangeNotifications() override { }
@@ -512,10 +521,6 @@ public:
     virtual void toggleAutomaticSpellingCorrection() override { }
 #endif
 
-#if ENABLE(DELETION_UI)
-    virtual bool shouldShowDeleteInterface(HTMLElement*) override { return false; }
-#endif
-
 #if PLATFORM(GTK)
     virtual bool shouldShowUnicodeMenu() override { return false; }
 #endif
@@ -542,7 +547,7 @@ public:
     virtual void contextMenuDestroyed() override { }
 
 #if USE(CROSS_PLATFORM_CONTEXT_MENUS)
-    virtual PassOwnPtr<ContextMenu> customizeMenu(PassOwnPtr<ContextMenu>) override;
+    virtual std::unique_ptr<ContextMenu> customizeMenu(std::unique_ptr<ContextMenu>) override;
 #else
     virtual PlatformMenuDescription getCustomMenuFromDefaultItems(ContextMenu*) override { return 0; }
 #endif
@@ -554,6 +559,8 @@ public:
     virtual bool isSpeaking() override { return false; }
     virtual void speak(const String&) override { }
     virtual void stopSpeaking() override { }
+
+    virtual ContextMenuItem shareMenuItem(const HitTestResult&) override { return ContextMenuItem(); }
 
 #if PLATFORM(COCOA)
     virtual void searchWithSpotlight() override { }
@@ -572,10 +579,10 @@ public:
     EmptyDragClient() { }
     virtual ~EmptyDragClient() {}
     virtual void willPerformDragDestinationAction(DragDestinationAction, DragData&) override { }
-    virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, Clipboard&) override { }
+    virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&) override { }
     virtual DragDestinationAction actionMaskForDrag(DragData&) override { return DragDestinationActionNone; }
     virtual DragSourceAction dragSourceActionMaskForPoint(const IntPoint&) override { return DragSourceActionNone; }
-    virtual void startDrag(DragImageRef, const IntPoint&, const IntPoint&, Clipboard&, Frame&, bool) override { }
+    virtual void startDrag(DragImageRef, const IntPoint&, const IntPoint&, DataTransfer&, Frame&, bool) override { }
     virtual void dragControllerDestroyed() override { }
 };
 #endif // ENABLE(DRAG_SUPPORT)
@@ -588,7 +595,7 @@ public:
 
     virtual void inspectorDestroyed() override { }
 
-    virtual InspectorFrontendChannel* openInspectorFrontend(InspectorController*) override { return 0; }
+    virtual Inspector::FrontendChannel* openInspectorFrontend(InspectorController*) override { return 0; }
     virtual void closeInspectorFrontend() override { }
     virtual void bringFrontendToFront() override { }
 
@@ -625,7 +632,15 @@ class EmptyProgressTrackerClient : public ProgressTrackerClient {
     virtual void progressFinished(Frame&) override { }
 };
 
-void fillWithEmptyClients(Page::PageClients&);
+class EmptyDiagnosticLoggingClient final : public DiagnosticLoggingClient {
+    virtual void logDiagnosticMessage(const String&, const String&, ShouldSample) override { }
+    virtual void logDiagnosticMessageWithResult(const String&, const String&, DiagnosticLoggingResultType, ShouldSample) override { }
+    virtual void logDiagnosticMessageWithValue(const String&, const String&, const String&, ShouldSample) override { }
+
+    virtual void mainFrameDestroyed() override { }
+};
+
+void fillWithEmptyClients(PageConfiguration&);
 
 }
 

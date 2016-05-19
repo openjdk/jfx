@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,11 +43,9 @@ class AsyncScrollingCoordinator;
 // object on the main thread if they can't be handled on the scrolling thread for various reasons.
 class ThreadedScrollingTree : public ScrollingTree {
 public:
-    static RefPtr<ThreadedScrollingTree> create(AsyncScrollingCoordinator*);
-
     virtual ~ThreadedScrollingTree();
 
-    virtual void commitNewTreeState(PassOwnPtr<ScrollingStateTree>) override;
+    virtual void commitNewTreeState(std::unique_ptr<ScrollingStateTree>) override;
 
     virtual void handleWheelEvent(const PlatformWheelEvent&) override;
 
@@ -58,23 +56,27 @@ public:
 
     virtual void invalidate() override;
 
-private:
+protected:
     explicit ThreadedScrollingTree(AsyncScrollingCoordinator*);
-    virtual bool isThreadedScrollingTree() const override { return true; }
-
-    virtual PassOwnPtr<ScrollingTreeNode> createNode(ScrollingNodeType, ScrollingNodeID) override;
 
     virtual void scrollingTreeNodeDidScroll(ScrollingNodeID, const FloatPoint& scrollPosition, SetOrSyncScrollingLayerPosition = SyncScrollingLayerPosition) override;
+    void currentSnapPointIndicesDidChange(ScrollingNodeID, unsigned horizontal, unsigned vertical) override;
 #if PLATFORM(MAC)
-    virtual void handleWheelEventPhase(PlatformWheelEventPhase) override;
+    void handleWheelEventPhase(PlatformWheelEventPhase) override;
+    void setActiveScrollSnapIndices(ScrollingNodeID, unsigned horizontalIndex, unsigned verticalIndex) override;
+    void deferTestsForReason(WheelEventTestTrigger::ScrollableAreaIdentifier, WheelEventTestTrigger::DeferTestTriggerReason) override;
+    void removeTestDeferralForReason(WheelEventTestTrigger::ScrollableAreaIdentifier, WheelEventTestTrigger::DeferTestTriggerReason) override;
 #endif
+
+private:
+    virtual bool isThreadedScrollingTree() const override { return true; }
 
     RefPtr<AsyncScrollingCoordinator> m_scrollingCoordinator;
 };
 
-SCROLLING_TREE_TYPE_CASTS(ThreadedScrollingTree, isThreadedScrollingTree());
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_SCROLLING_TREE(WebCore::ThreadedScrollingTree, isThreadedScrollingTree())
 
 #endif // ENABLE(ASYNC_SCROLLING)
 

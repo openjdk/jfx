@@ -32,9 +32,9 @@ inline SVGTitleElement::SVGTitleElement(const QualifiedName& tagName, Document& 
     ASSERT(hasTagName(SVGNames::titleTag));
 }
 
-PassRefPtr<SVGTitleElement> SVGTitleElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGTitleElement> SVGTitleElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGTitleElement(tagName, document));
+    return adoptRef(*new SVGTitleElement(tagName, document));
 }
 
 Node::InsertionNotificationRequest SVGTitleElement::insertedInto(ContainerNode& rootParent)
@@ -42,26 +42,28 @@ Node::InsertionNotificationRequest SVGTitleElement::insertedInto(ContainerNode& 
     SVGElement::insertedInto(rootParent);
     if (!rootParent.inDocument())
         return InsertionDone;
-    // FIXME: It's possible to register SVGTitleElement to an HTMLDocument.
-    if (firstChild())
+
+    if (firstChild() && document().isSVGDocument()) {
         // FIXME: does SVG have a title text direction?
         document().setTitleElement(StringWithDirection(textContent(), LTR), this);
+    }
     return InsertionDone;
 }
 
 void SVGTitleElement::removedFrom(ContainerNode& rootParent)
 {
     SVGElement::removedFrom(rootParent);
-    if (rootParent.inDocument())
+    if (rootParent.inDocument() && document().isSVGDocument())
         document().removeTitle(this);
 }
 
 void SVGTitleElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
-    if (inDocument())
+    if (inDocument() && document().isSVGDocument()) {
         // FIXME: does SVG have title text direction?
         document().setTitleElement(StringWithDirection(textContent(), LTR), this);
+    }
 }
 
 }

@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE, INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,6 +28,7 @@
 #define PopStateEvent_h
 
 #include "Event.h"
+#include "SerializedScriptValue.h"
 #include <bindings/ScriptValue.h>
 
 namespace WebCore {
@@ -41,14 +42,17 @@ struct PopStateEventInit : public EventInit {
 class History;
 class SerializedScriptValue;
 
-class PopStateEvent : public Event {
+class PopStateEvent final : public Event {
 public:
     virtual ~PopStateEvent();
-    static PassRefPtr<PopStateEvent> create();
-    static PassRefPtr<PopStateEvent> create(PassRefPtr<SerializedScriptValue>, PassRefPtr<History>);
-    static PassRefPtr<PopStateEvent> create(const AtomicString&, const PopStateEventInit&);
+    static Ref<PopStateEvent> create();
+    static Ref<PopStateEvent> create(PassRefPtr<SerializedScriptValue>, PassRefPtr<History>);
+    static Ref<PopStateEvent> create(const AtomicString&, const PopStateEventInit&);
 
-    PassRefPtr<SerializedScriptValue> serializedState() const { return m_serializedState; }
+    PassRefPtr<SerializedScriptValue> serializedState() const { ASSERT(m_serializedState); return m_serializedState; }
+
+    RefPtr<SerializedScriptValue> trySerializeState(JSC::ExecState*);
+
     const Deprecated::ScriptValue& state() const { return m_state; }
     History* history() const { return m_history.get(); }
 
@@ -61,6 +65,7 @@ private:
 
     Deprecated::ScriptValue m_state;
     RefPtr<SerializedScriptValue> m_serializedState;
+    bool m_triedToSerialize { false };
     RefPtr<History> m_history;
 };
 

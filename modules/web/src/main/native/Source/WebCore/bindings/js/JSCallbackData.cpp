@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -60,7 +60,7 @@ JSValue JSCallbackData::invokeCallback(JSValue thisValue, MarkedArgumentBuffer& 
     CallData callData;
     CallType callType = callback()->methodTable()->getCallData(callback(), callData);
     if (callType == CallTypeNone) {
-        function = callback()->get(exec, Identifier(exec, "handleEvent"));
+        function = callback()->get(exec, Identifier::fromString(exec, "handleEvent"));
         callType = getCallData(function, callData);
         if (callType == CallTypeNone)
             return JSValue();
@@ -73,14 +73,15 @@ JSValue JSCallbackData::invokeCallback(JSValue thisValue, MarkedArgumentBuffer& 
 
     InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionCall(context, callType, callData);
 
+    NakedPtr<Exception> exception;
     JSValue result = context->isDocument()
-        ? JSMainThreadExecState::call(exec, function, callType, callData, thisValue, args)
-        : JSC::call(exec, function, callType, callData, thisValue, args);
+        ? JSMainThreadExecState::call(exec, function, callType, callData, thisValue, args, exception)
+        : JSC::call(exec, function, callType, callData, thisValue, args, exception);
 
     InspectorInstrumentation::didCallFunction(cookie, context);
 
-    if (exec->hadException()) {
-        reportCurrentException(exec);
+    if (exception) {
+        reportException(exec, exception);
         if (raisedException)
             *raisedException = true;
         return result;

@@ -36,12 +36,11 @@
 
 namespace WebCore {
 
-class TimeInputType : public BaseChooserOnlyDateAndTimeInputType {
+class TimeInputType final : public BaseChooserOnlyDateAndTimeInputType {
 public:
     explicit TimeInputType(HTMLInputElement&);
 
 private:
-    virtual void attach() override;
     virtual const AtomicString& formControlType() const override;
     virtual DateComponents::Type dateType() const override;
     virtual Decimal defaultValueForStepUp() const override;

@@ -23,16 +23,15 @@
 #ifndef DistantLightSource_h
 #define DistantLightSource_h
 
-#if ENABLE(FILTERS)
 #include "LightSource.h"
 
 namespace WebCore {
 
 class DistantLightSource : public LightSource {
 public:
-    static PassRefPtr<DistantLightSource> create(float azimuth, float elevation)
+    static Ref<DistantLightSource> create(float azimuth, float elevation)
     {
-        return adoptRef(new DistantLightSource(azimuth, elevation));
+        return adoptRef(*new DistantLightSource(azimuth, elevation));
     }
 
     float azimuth() const { return m_azimuth; }
@@ -41,10 +40,10 @@ public:
     virtual bool setAzimuth(float) override;
     virtual bool setElevation(float) override;
 
-    virtual void initPaintingData(PaintingData&);
-    virtual void updatePaintingData(PaintingData&, int x, int y, float z);
+    virtual void initPaintingData(PaintingData&) override;
+    virtual void updatePaintingData(PaintingData&, int x, int y, float z) override;
 
-    virtual TextStream& externalRepresentation(TextStream&) const;
+    virtual TextStream& externalRepresentation(TextStream&) const override;
 
 private:
     DistantLightSource(float azimuth, float elevation)
@@ -59,7 +58,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // DistantLightSource_h

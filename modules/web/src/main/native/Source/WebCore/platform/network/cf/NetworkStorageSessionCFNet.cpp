@@ -28,7 +28,7 @@
 
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/PassOwnPtr.h>
+#include <wtf/ProcessID.h>
 
 #if PLATFORM(COCOA)
 #include "WebCoreSystemInterface.h"
@@ -40,52 +40,31 @@ namespace WebCore {
 
 NetworkStorageSession::NetworkStorageSession(RetainPtr<CFURLStorageSessionRef> platformSession)
     : m_platformSession(platformSession)
-    , m_isPrivate(false)
 {
 }
 
-static OwnPtr<NetworkStorageSession>& defaultNetworkStorageSession()
+static std::unique_ptr<NetworkStorageSession>& defaultNetworkStorageSession()
 {
     ASSERT(isMainThread());
-    static NeverDestroyed<OwnPtr<NetworkStorageSession>> session;
+    static NeverDestroyed<std::unique_ptr<NetworkStorageSession>> session;
     return session;
 }
 
 void NetworkStorageSession::switchToNewTestingSession()
 {
-    // Set a private session for testing to avoid interfering with global cookies. This should be different from private browsing session.
-    // FIXME: It looks like creating a new session with the same identifier may be just creating a reference to the same storage. See <rdar://problem/11571450> and <rdar://problem/12384380>.
+    // Session name should be short enough for shared memory region name to be under the limit, otehrwise sandbox rules won't work (see <rdar://problem/13642852>).
+    String sessionName = String::format("WebKit Test-%u", static_cast<uint32_t>(getCurrentProcessID()));
 #if PLATFORM(COCOA)
-    defaultNetworkStorageSession() = adoptPtr(new NetworkStorageSession(adoptCF(wkCreatePrivateStorageSession(CFSTR("Private WebKit Session")))));
+    defaultNetworkStorageSession() = std::make_unique<NetworkStorageSession>(adoptCF(wkCreatePrivateStorageSession(sessionName.createCFString().get())));
 #else
-    defaultNetworkStorageSession() = adoptPtr(new NetworkStorageSession(adoptCF(wkCreatePrivateStorageSession(CFSTR("Private WebKit Session"), defaultNetworkStorageSession()->platformSession()))));
+    defaultNetworkStorageSession() = std::make_unique<NetworkStorageSession>(adoptCF(wkCreatePrivateStorageSession(sessionName.createCFString().get(), defaultNetworkStorageSession()->platformSession())));
 #endif
 }
-
-#if PLATFORM(WIN)
-static RetainPtr<CFHTTPCookieStorageRef>& cookieStorageOverride()
-{
-    static NeverDestroyed<RetainPtr<CFHTTPCookieStorageRef>> cookieStorage;
-    return cookieStorage;
-}
-
-void overrideCookieStorage(CFHTTPCookieStorageRef cookieStorage)
-{
-    ASSERT(isMainThread());
-    // FIXME: Why don't we retain it? The only caller is an API method that takes cookie storage as a raw argument.
-    cookieStorageOverride() = adoptCF(cookieStorage);
-}
-
-CFHTTPCookieStorageRef overridenCookieStorage()
-{
-    return cookieStorageOverride().get();
-}
-#endif
 
 NetworkStorageSession& NetworkStorageSession::defaultStorageSession()
 {
     if (!defaultNetworkStorageSession())
-        defaultNetworkStorageSession() = adoptPtr(new NetworkStorageSession(0));
+        defaultNetworkStorageSession() = std::make_unique<NetworkStorageSession>(nullptr);
     return *defaultNetworkStorageSession();
 }
 
@@ -98,18 +77,12 @@ std::unique_ptr<NetworkStorageSession> NetworkStorageSession::createPrivateBrows
 #else
     auto session = std::make_unique<NetworkStorageSession>(adoptCF(wkCreatePrivateStorageSession(cfIdentifier.get(), defaultNetworkStorageSession()->platformSession())));
 #endif
-    session->m_isPrivate = true;
 
     return session;
 }
 
 RetainPtr<CFHTTPCookieStorageRef> NetworkStorageSession::cookieStorage() const
 {
-#if PLATFORM(WIN)
-    if (RetainPtr<CFHTTPCookieStorageRef>& override = cookieStorageOverride())
-        return override;
-#endif
-
     if (m_platformSession)
         return adoptCF(wkCopyHTTPCookieStorage(m_platformSession.get()));
 

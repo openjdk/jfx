@@ -50,11 +50,7 @@
  from a different JSVirtualMachine will result in an Objective-C exception
  being raised.
 */
-#ifndef JSC_OBJC_API_AVAILABLE_MAC_OS_X_1080
 NS_CLASS_AVAILABLE(10_9, 7_0)
-#else
-OBJC_VISIBLE
-#endif
 @interface JSValue : NSObject
 
 /*!
@@ -380,19 +376,19 @@ OBJC_VISIBLE
 @method
 @abstract Check if a JSValue corresponds to the JavaScript value <code>undefined</code>.
 */
-- (BOOL)isUndefined;
+@property (readonly) BOOL isUndefined;
 
 /*!
 @method
 @abstract Check if a JSValue corresponds to the JavaScript value <code>null</code>.
 */
-- (BOOL)isNull;
+@property (readonly) BOOL isNull;
 
 /*!
 @method
 @abstract Check if a JSValue is a boolean.
 */
-- (BOOL)isBoolean;
+@property (readonly) BOOL isBoolean;
 
 /*!
 @method
@@ -401,19 +397,31 @@ OBJC_VISIBLE
  Semantically all numbers behave like doubles except in special cases like bit
  operations.
 */
-- (BOOL)isNumber;
+@property (readonly) BOOL isNumber;
 
 /*!
 @method
 @abstract Check if a JSValue is a string.
 */
-- (BOOL)isString;
+@property (readonly) BOOL isString;
 
 /*!
 @method
 @abstract Check if a JSValue is an object.
 */
-- (BOOL)isObject;
+@property (readonly) BOOL isObject;
+
+/*!
+@method
+@abstract Check if a JSValue is an array.
+*/
+@property (readonly) BOOL isArray NS_AVAILABLE(10_11, 9_0);
+
+/*!
+@method
+@abstract Check if a JSValue is a date.
+*/
+@property (readonly) BOOL isDate NS_AVAILABLE(10_11, 9_0);
 
 /*!
 @method

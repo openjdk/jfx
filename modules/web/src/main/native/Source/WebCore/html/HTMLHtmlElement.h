@@ -30,8 +30,8 @@ namespace WebCore {
 
 class HTMLHtmlElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLHtmlElement> create(Document&);
-    static PassRefPtr<HTMLHtmlElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLHtmlElement> create(Document&);
+    static Ref<HTMLHtmlElement> create(const QualifiedName&, Document&);
 
     void insertedByParser();
 
@@ -40,8 +40,6 @@ private:
 
     virtual bool isURLAttribute(const Attribute&) const override;
 };
-
-NODE_TYPE_CASTS(HTMLHtmlElement)
 
 } // namespace
 

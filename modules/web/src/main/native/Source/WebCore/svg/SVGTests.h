@@ -26,8 +26,6 @@
 
 namespace WebCore {
 
-class Attribute;
-class QualifiedName;
 class SVGElement;
 
 class SVGTests {
@@ -36,16 +34,17 @@ public:
     SVGStringList& requiredExtensions();
     SVGStringList& systemLanguage();
 
-    bool hasExtension(const String&) const;
+    static bool hasExtension(const String&);
     bool isValid() const;
 
-    bool parseAttribute(const QualifiedName&, const AtomicString&);
-    bool isKnownAttribute(const QualifiedName&);
+    void parseAttribute(const QualifiedName&, const AtomicString&);
 
-    void addSupportedAttributes(HashSet<QualifiedName>&);
-    bool handleAttributeChange(SVGElement*, const QualifiedName&);
+    static bool isKnownAttribute(const QualifiedName&);
+    static void addSupportedAttributes(HashSet<QualifiedName>&);
 
-    static SVGAttributeToPropertyMap& attributeToPropertyMap();
+    static bool handleAttributeChange(SVGElement*, const QualifiedName&);
+
+    static const SVGAttributeToPropertyMap& attributeToPropertyMap();
 
 protected:
     SVGTests();
@@ -55,16 +54,10 @@ protected:
     void synchronizeSystemLanguage(SVGElement* contextElement);
 
 private:
-    // Custom 'requiredFeatures' property
-    static const SVGPropertyInfo* requiredFeaturesPropertyInfo();
+    void synchronizeAttribute(SVGElement* contextElement, SVGSynchronizableAnimatedProperty<SVGStringList>&, const QualifiedName& attributeName);
+
     SVGSynchronizableAnimatedProperty<SVGStringList> m_requiredFeatures;
-
-    // Custom 'requiredExtensions' property
-    static const SVGPropertyInfo* requiredExtensionsPropertyInfo();
     SVGSynchronizableAnimatedProperty<SVGStringList> m_requiredExtensions;
-
-    // Custom 'systemLanguage' property
-    static const SVGPropertyInfo* systemLanguagePropertyInfo();
     SVGSynchronizableAnimatedProperty<SVGStringList> m_systemLanguage;
 };
 

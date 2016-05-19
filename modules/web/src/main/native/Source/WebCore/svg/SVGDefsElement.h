@@ -30,17 +30,18 @@ namespace WebCore {
 class SVGDefsElement final : public SVGGraphicsElement,
                              public SVGExternalResourcesRequired {
 public:
-    static PassRefPtr<SVGDefsElement> create(const QualifiedName&, Document&);
+    static Ref<SVGDefsElement> create(const QualifiedName&, Document&);
 
 private:
     SVGDefsElement(const QualifiedName&, Document&);
 
     virtual bool isValid() const override;
+    virtual bool supportsFocus() const override { return false; }
 
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGDefsElement)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
+        DECLARE_ANIMATED_BOOLEAN_OVERRIDE(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 };
 

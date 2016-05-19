@@ -22,9 +22,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PluginWidget_h
-#define PluginWidget_h
+#ifndef PluginViewBase_h
+#define PluginViewBase_h
 
+#include "AudioHardwareListener.h"
+#include "BridgeJSC.h"
 #include "PlatformLayer.h"
 #include "ScrollTypes.h"
 #include "Widget.h"
@@ -74,12 +76,18 @@ public:
     virtual bool isPluginViewBase() const { return true; }
     virtual bool shouldNotAddLayer() const { return false; }
 
+    virtual AudioHardwareActivityType audioHardwareActivity() const { return AudioHardwareActivityType::Unknown; }
+
+    virtual void setJavaScriptPaused(bool) { }
+
+    virtual PassRefPtr<JSC::Bindings::Instance> bindingInstance() { return nullptr; }
+
 protected:
     explicit PluginViewBase(PlatformWidget widget = 0) : Widget(widget) { }
 };
 
-WIDGET_TYPE_CASTS(PluginViewBase, isPluginViewBase());
-
 } // namespace WebCore
 
-#endif // PluginWidget_h
+SPECIALIZE_TYPE_TRAITS_WIDGET(PluginViewBase, isPluginViewBase())
+
+#endif // PluginViewBase_h

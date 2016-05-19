@@ -27,6 +27,8 @@
 #include "config.h"
 #include "NetworkStorageSession.h"
 
+#if USE(SOUP)
+
 #include "ResourceHandle.h"
 #include "SoupNetworkSession.h"
 #include <wtf/MainThread.h>
@@ -35,8 +37,7 @@
 namespace WebCore {
 
 NetworkStorageSession::NetworkStorageSession(std::unique_ptr<SoupNetworkSession> session)
-    : m_session(std::move(session))
-    , m_isPrivate(false)
+    : m_session(WTF::move(session))
 {
 }
 
@@ -61,7 +62,6 @@ NetworkStorageSession& NetworkStorageSession::defaultStorageSession()
 std::unique_ptr<NetworkStorageSession> NetworkStorageSession::createPrivateBrowsingSession(const String&)
 {
     auto session = std::make_unique<NetworkStorageSession>(SoupNetworkSession::createPrivateBrowsingSession());
-    session->m_isPrivate = true;
     return session;
 }
 
@@ -77,7 +77,9 @@ SoupNetworkSession& NetworkStorageSession::soupNetworkSession() const
 
 void NetworkStorageSession::setSoupNetworkSession(std::unique_ptr<SoupNetworkSession> session)
 {
-    m_session = std::move(session);
+    m_session = WTF::move(session);
 }
 
 }
+
+#endif

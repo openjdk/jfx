@@ -22,3 +22,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 
 PRODUCT_NAME = InjectedBundleTestWebKitAPI;
+
+FRAMEWORK_AND_LIBRARY_LDFLAGS[sdk=iphone*] = -lobjc -framework UIKit;
+FRAMEWORK_AND_LIBRARY_LDFLAGS[sdk=macosx*] = -framework JavaScriptCore -framework WebKit -framework CoreGraphics -framework Cocoa;
+
+OTHER_LDFLAGS = $(inherited) $(FRAMEWORK_AND_LIBRARY_LDFLAGS);

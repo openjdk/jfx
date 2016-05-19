@@ -22,248 +22,278 @@
 #define Identifier_h
 
 #include "VM.h"
+#include <wtf/Optional.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/WTFThreadData.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/UniquedStringImpl.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
 
-    class ExecState;
+class ExecState;
 
-    class Identifier {
-        friend class Structure;
-    public:
-        Identifier() { }
-        enum EmptyIdentifierFlag { EmptyIdentifier };
-        Identifier(EmptyIdentifierFlag) : m_string(StringImpl::empty()) { }
+ALWAYS_INLINE bool isIndex(uint32_t index)
+{
+    return index != 0xFFFFFFFFU;
+}
 
-        // Only to be used with string literals.
-        template<unsigned charactersCount>
-        Identifier(ExecState* exec, const char (&characters)[charactersCount]) : m_string(add(exec, characters)) { }
-        template<unsigned charactersCount>
-        Identifier(VM* vm, const char (&characters)[charactersCount]) : m_string(add(vm, characters)) { }
+template <typename CharType>
+ALWAYS_INLINE Optional<uint32_t> parseIndex(const CharType* characters, unsigned length)
+{
+    // An empty string is not a number.
+    if (!length)
+        return Nullopt;
 
-        Identifier(ExecState* exec, StringImpl* rep) : m_string(add(exec, rep)) { }
-        Identifier(ExecState* exec, const String& s) : m_string(add(exec, s.impl())) { }
+    // Get the first character, turning it into a digit.
+    uint32_t value = characters[0] - '0';
+    if (value > 9)
+        return Nullopt;
 
-        Identifier(VM* vm, const LChar* s, int length) : m_string(add(vm, s, length)) { }
-        Identifier(VM* vm, const UChar* s, int length) : m_string(add(vm, s, length)) { }
-        Identifier(VM* vm, StringImpl* rep) : m_string(add(vm, rep)) { }
-        Identifier(VM* vm, const String& s) : m_string(add(vm, s.impl())) { }
+    // Check for leading zeros. If the first characher is 0, then the
+    // length of the string must be one - e.g. "042" is not equal to "42".
+    if (!value && length > 1)
+        return Nullopt;
 
-        const String& string() const { return m_string; }
-        StringImpl* impl() const { return m_string.impl(); }
+    while (--length) {
+        // Multiply value by 10, checking for overflow out of 32 bits.
+        if (value > 0xFFFFFFFFU / 10)
+            return Nullopt;
+        value *= 10;
 
-        const UChar* deprecatedCharacters() const { return m_string.deprecatedCharacters(); }
-        int length() const { return m_string.length(); }
+        // Get the next character, turning it into a digit.
+        uint32_t newValue = *(++characters) - '0';
+        if (newValue > 9)
+            return Nullopt;
 
-        CString ascii() const { return m_string.ascii(); }
-        CString utf8() const { return m_string.utf8(); }
+        // Add in the old value, checking for overflow out of 32 bits.
+        newValue += value;
+        if (newValue < value)
+            return Nullopt;
+        value = newValue;
+    }
 
-        static Identifier from(const PrivateName& name)
-        {
-            Identifier result;
-            result.m_string = name.uid();
-            return result;
-        }
+    if (!isIndex(value))
+        return Nullopt;
+    return value;
+}
 
-        static Identifier createLCharFromUChar(VM* vm, const UChar* s, int length) { return Identifier(vm, add8(vm, s, length)); }
+ALWAYS_INLINE Optional<uint32_t> parseIndex(StringImpl& impl)
+{
+    if (impl.is8Bit())
+        return parseIndex(impl.characters8(), impl.length());
+    return parseIndex(impl.characters16(), impl.length());
+}
 
-        JS_EXPORT_PRIVATE static Identifier from(ExecState* exec, unsigned y);
-        JS_EXPORT_PRIVATE static Identifier from(ExecState* exec, int y);
-        static Identifier from(ExecState* exec, double y);
-        static Identifier from(VM*, unsigned y);
-        static Identifier from(VM*, int y);
-        static Identifier from(VM*, double y);
+class Identifier {
+    friend class Structure;
+public:
+    Identifier() { }
+    enum EmptyIdentifierFlag { EmptyIdentifier };
+    Identifier(EmptyIdentifierFlag) : m_string(StringImpl::empty()) { ASSERT(m_string.impl()->isAtomic()); }
 
-        bool isNull() const { return m_string.isNull(); }
-        bool isEmpty() const { return m_string.isEmpty(); }
+    const String& string() const { return m_string; }
+    UniquedStringImpl* impl() const { return static_cast<UniquedStringImpl*>(m_string.impl()); }
 
-        friend bool operator==(const Identifier&, const Identifier&);
-        friend bool operator!=(const Identifier&, const Identifier&);
+    int length() const { return m_string.length(); }
 
-        friend bool operator==(const Identifier&, const LChar*);
-        friend bool operator==(const Identifier&, const char*);
-        friend bool operator!=(const Identifier&, const LChar*);
-        friend bool operator!=(const Identifier&, const char*);
+    CString ascii() const { return m_string.ascii(); }
+    CString utf8() const { return m_string.utf8(); }
 
-        static bool equal(const StringImpl*, const LChar*);
-        static inline bool equal(const StringImpl*a, const char*b) { return Identifier::equal(a, reinterpret_cast<const LChar*>(b)); };
-        static bool equal(const StringImpl*, const LChar*, unsigned length);
-        static bool equal(const StringImpl*, const UChar*, unsigned length);
-        static bool equal(const StringImpl* a, const StringImpl* b) { return ::equal(a, b); }
+    // There's 2 functions to construct Identifier from string, (1) fromString and (2) fromUid.
+    // They have different meanings in keeping or discarding symbol-ness of strings.
+    // (1): fromString
+    // Just construct Identifier from string. String held by Identifier is always atomized.
+    // Symbol-ness of StringImpl*, which represents that the string is inteded to be used for ES6 Symbols, is discarded.
+    // So a constructed Identifier never represents a symbol.
+    // (2): fromUid
+    // `StringImpl* uid` represents ether String or Symbol property.
+    // fromUid keeps symbol-ness of provided StringImpl* while fromString discards it.
+    // Use fromUid when constructing Identifier from StringImpl* which may represent symbols.
 
-        // Only to be used with string literals.
-        JS_EXPORT_PRIVATE static PassRef<StringImpl> add(VM*, const char*);
-        JS_EXPORT_PRIVATE static PassRef<StringImpl> add(ExecState*, const char*);
+    // Only to be used with string literals.
+    template<unsigned charactersCount>
+    static Identifier fromString(VM*, const char (&characters)[charactersCount]);
+    template<unsigned charactersCount>
+    static Identifier fromString(ExecState*, const char (&characters)[charactersCount]);
+    static Identifier fromString(VM*, const LChar*, int length);
+    static Identifier fromString(VM*, const UChar*, int length);
+    static Identifier fromString(VM*, const String&);
+    static Identifier fromString(ExecState*, AtomicStringImpl*);
+    static Identifier fromString(ExecState*, const AtomicString&);
+    static Identifier fromString(ExecState*, const String&);
+    static Identifier fromString(ExecState*, const char*);
 
-    private:
-        String m_string;
+    static Identifier fromUid(VM*, UniquedStringImpl* uid);
+    static Identifier fromUid(ExecState*, UniquedStringImpl* uid);
+    static Identifier fromUid(const PrivateName&);
 
-        template <typename CharType>
-        ALWAYS_INLINE static uint32_t toUInt32FromCharacters(const CharType* characters, unsigned length, bool& ok);
+    static Identifier createLCharFromUChar(VM* vm, const UChar* s, int length) { return Identifier(vm, add8(vm, s, length)); }
 
-        static bool equal(const Identifier& a, const Identifier& b) { return a.m_string.impl() == b.m_string.impl(); }
-        static bool equal(const Identifier& a, const LChar* b) { return equal(a.m_string.impl(), b); }
+    JS_EXPORT_PRIVATE static Identifier from(ExecState*, unsigned y);
+    JS_EXPORT_PRIVATE static Identifier from(ExecState*, int y);
+    static Identifier from(ExecState*, double y);
+    static Identifier from(VM*, unsigned y);
+    static Identifier from(VM*, int y);
+    static Identifier from(VM*, double y);
 
-        template <typename T> static PassRef<StringImpl> add(VM*, const T*, int length);
-        static PassRef<StringImpl> add8(VM*, const UChar*, int length);
-        template <typename T> ALWAYS_INLINE static bool canUseSingleCharacterString(T);
+    bool isNull() const { return m_string.isNull(); }
+    bool isEmpty() const { return m_string.isEmpty(); }
+    bool isSymbol() const { return !isNull() && impl()->isSymbol(); }
 
-        static PassRef<StringImpl> add(ExecState* exec, StringImpl* r)
-        {
+    friend bool operator==(const Identifier&, const Identifier&);
+    friend bool operator!=(const Identifier&, const Identifier&);
+
+    friend bool operator==(const Identifier&, const LChar*);
+    friend bool operator==(const Identifier&, const char*);
+    friend bool operator!=(const Identifier&, const LChar*);
+    friend bool operator!=(const Identifier&, const char*);
+
+    static bool equal(const StringImpl*, const LChar*);
+    static inline bool equal(const StringImpl*a, const char*b) { return Identifier::equal(a, reinterpret_cast<const LChar*>(b)); };
+    static bool equal(const StringImpl*, const LChar*, unsigned length);
+    static bool equal(const StringImpl*, const UChar*, unsigned length);
+    static bool equal(const StringImpl* a, const StringImpl* b) { return ::equal(a, b); }
+
+    // Only to be used with string literals.
+    JS_EXPORT_PRIVATE static Ref<StringImpl> add(VM*, const char*);
+    JS_EXPORT_PRIVATE static Ref<StringImpl> add(ExecState*, const char*);
+
+    void dump(PrintStream&) const;
+
+private:
+    String m_string;
+
+    // Only to be used with string literals.
+    template<unsigned charactersCount>
+    Identifier(VM* vm, const char (&characters)[charactersCount]) : m_string(add(vm, characters)) { ASSERT(m_string.impl()->isAtomic()); }
+
+    Identifier(VM* vm, const LChar* s, int length) : m_string(add(vm, s, length)) { ASSERT(m_string.impl()->isAtomic()); }
+    Identifier(VM* vm, const UChar* s, int length) : m_string(add(vm, s, length)) { ASSERT(m_string.impl()->isAtomic()); }
+    Identifier(ExecState*, AtomicStringImpl*);
+    Identifier(ExecState*, const AtomicString&);
+    Identifier(VM* vm, const String& string) : m_string(add(vm, string.impl())) { ASSERT(m_string.impl()->isAtomic()); }
+    Identifier(VM* vm, StringImpl* rep) : m_string(add(vm, rep)) { ASSERT(m_string.impl()->isAtomic()); }
+
+    Identifier(SymbolImpl& uid)
+        : m_string(&uid)
+    {
+    }
+
+    template <typename CharType>
+    ALWAYS_INLINE static uint32_t toUInt32FromCharacters(const CharType* characters, unsigned length, bool& ok);
+
+    static bool equal(const Identifier& a, const Identifier& b) { return a.m_string.impl() == b.m_string.impl(); }
+    static bool equal(const Identifier& a, const LChar* b) { return equal(a.m_string.impl(), b); }
+
+    template <typename T> static Ref<StringImpl> add(VM*, const T*, int length);
+    static Ref<StringImpl> add8(VM*, const UChar*, int length);
+    template <typename T> ALWAYS_INLINE static bool canUseSingleCharacterString(T);
+
+    static Ref<StringImpl> add(ExecState*, StringImpl*);
+    static Ref<StringImpl> add(VM*, StringImpl*);
+
 #ifndef NDEBUG
-            checkCurrentIdentifierTable(exec);
+    JS_EXPORT_PRIVATE static void checkCurrentAtomicStringTable(ExecState*);
+    JS_EXPORT_PRIVATE static void checkCurrentAtomicStringTable(VM*);
+#else
+    JS_EXPORT_PRIVATE NO_RETURN_DUE_TO_CRASH static void checkCurrentAtomicStringTable(ExecState*);
+    JS_EXPORT_PRIVATE NO_RETURN_DUE_TO_CRASH static void checkCurrentAtomicStringTable(VM*);
 #endif
-            if (r->isIdentifier())
-                return *r;
-            return addSlowCase(exec, r);
-        }
-        static PassRef<StringImpl> add(VM* vm, StringImpl* r)
-        {
-#ifndef NDEBUG
-            checkCurrentIdentifierTable(vm);
-#endif
-            if (r->isIdentifier())
-                return *r;
-            return addSlowCase(vm, r);
-        }
+};
 
-        JS_EXPORT_PRIVATE static PassRef<StringImpl> addSlowCase(ExecState*, StringImpl* r);
-        JS_EXPORT_PRIVATE static PassRef<StringImpl> addSlowCase(VM*, StringImpl* r);
+template <> ALWAYS_INLINE bool Identifier::canUseSingleCharacterString(LChar)
+{
+    ASSERT(maxSingleCharacterString == 0xff);
+    return true;
+}
 
-        JS_EXPORT_PRIVATE static void checkCurrentIdentifierTable(ExecState*);
-        JS_EXPORT_PRIVATE static void checkCurrentIdentifierTable(VM*);
-    };
+template <> ALWAYS_INLINE bool Identifier::canUseSingleCharacterString(UChar c)
+{
+    return (c <= maxSingleCharacterString);
+}
 
-    template <> ALWAYS_INLINE bool Identifier::canUseSingleCharacterString(LChar)
-    {
-        ASSERT(maxSingleCharacterString == 0xff);
-        return true;
+template <typename T>
+Ref<StringImpl> Identifier::add(VM* vm, const T* s, int length)
+{
+    if (length == 1) {
+        T c = s[0];
+        if (canUseSingleCharacterString(c))
+            return *vm->smallStrings.singleCharacterStringRep(c);
     }
+    if (!length)
+        return *StringImpl::empty();
 
-    template <> ALWAYS_INLINE bool Identifier::canUseSingleCharacterString(UChar c)
-    {
-        return (c <= maxSingleCharacterString);
-    }
+    return *AtomicStringImpl::add(s, length);
+}
 
-    template <typename T>
-    struct CharBuffer {
-        const T* s;
-        unsigned int length;
-    };
+inline bool operator==(const Identifier& a, const Identifier& b)
+{
+    return Identifier::equal(a, b);
+}
 
-    template <typename T>
-    struct IdentifierCharBufferTranslator {
-        static unsigned hash(const CharBuffer<T>& buf)
-        {
-            return StringHasher::computeHashAndMaskTop8Bits(buf.s, buf.length);
-        }
+inline bool operator!=(const Identifier& a, const Identifier& b)
+{
+    return !Identifier::equal(a, b);
+}
 
-        static bool equal(StringImpl* str, const CharBuffer<T>& buf)
-        {
-            return Identifier::equal(str, buf.s, buf.length);
-        }
+inline bool operator==(const Identifier& a, const LChar* b)
+{
+    return Identifier::equal(a, b);
+}
 
-        static void translate(StringImpl*& location, const CharBuffer<T>& buf, unsigned hash)
-        {
-            T* d;
-            StringImpl& r = StringImpl::createUninitialized(buf.length, d).leakRef();
-            for (unsigned i = 0; i != buf.length; i++)
-                d[i] = buf.s[i];
-            r.setHash(hash);
-            location = &r;
-        }
-    };
+inline bool operator==(const Identifier& a, const char* b)
+{
+    return Identifier::equal(a, reinterpret_cast<const LChar*>(b));
+}
 
-    template <typename T>
-    PassRef<StringImpl> Identifier::add(VM* vm, const T* s, int length)
-    {
-        if (length == 1) {
-            T c = s[0];
-            if (canUseSingleCharacterString(c))
-                return add(vm, vm->smallStrings.singleCharacterStringRep(c));
-        }
+inline bool operator!=(const Identifier& a, const LChar* b)
+{
+    return !Identifier::equal(a, b);
+}
 
-        if (!length)
-            return *StringImpl::empty();
-        CharBuffer<T> buf = { s, static_cast<unsigned>(length) };
-        HashSet<StringImpl*>::AddResult addResult = vm->identifierTable->add<CharBuffer<T>, IdentifierCharBufferTranslator<T>>(buf);
+inline bool operator!=(const Identifier& a, const char* b)
+{
+    return !Identifier::equal(a, reinterpret_cast<const LChar*>(b));
+}
 
-        // If the string is newly-translated, then we need to adopt it.
-        // The boolean in the pair tells us if that is so.
-        return addResult.isNewEntry ? adoptRef(**addResult.iterator) : **addResult.iterator;
-    }
+inline bool Identifier::equal(const StringImpl* r, const LChar* s)
+{
+    return WTF::equal(r, s);
+}
 
-    inline bool operator==(const Identifier& a, const Identifier& b)
-    {
-        return Identifier::equal(a, b);
-    }
+inline bool Identifier::equal(const StringImpl* r, const LChar* s, unsigned length)
+{
+    return WTF::equal(r, s, length);
+}
 
-    inline bool operator!=(const Identifier& a, const Identifier& b)
-    {
-        return !Identifier::equal(a, b);
-    }
+inline bool Identifier::equal(const StringImpl* r, const UChar* s, unsigned length)
+{
+    return WTF::equal(r, s, length);
+}
 
-    inline bool operator==(const Identifier& a, const LChar* b)
-    {
-        return Identifier::equal(a, b);
-    }
+ALWAYS_INLINE Optional<uint32_t> parseIndex(const Identifier& identifier)
+{
+    auto uid = identifier.impl();
+    if (!uid)
+        return Nullopt;
+    if (uid->isSymbol())
+        return Nullopt;
+    return parseIndex(*uid);
+}
 
-    inline bool operator==(const Identifier& a, const char* b)
-    {
-        return Identifier::equal(a, reinterpret_cast<const LChar*>(b));
-    }
+struct IdentifierRepHash : PtrHash<RefPtr<UniquedStringImpl>> {
+    static unsigned hash(const RefPtr<UniquedStringImpl>& key) { return key->existingSymbolAwareHash(); }
+    static unsigned hash(UniquedStringImpl* key) { return key->existingSymbolAwareHash(); }
+};
 
-    inline bool operator!=(const Identifier& a, const LChar* b)
-    {
-        return !Identifier::equal(a, b);
-    }
+struct IdentifierMapIndexHashTraits : HashTraits<int> {
+    static int emptyValue() { return std::numeric_limits<int>::max(); }
+    static const bool emptyValueIsZero = false;
+};
 
-    inline bool operator!=(const Identifier& a, const char* b)
-    {
-        return !Identifier::equal(a, reinterpret_cast<const LChar*>(b));
-    }
-
-    inline bool Identifier::equal(const StringImpl* r, const LChar* s)
-    {
-        return WTF::equal(r, s);
-    }
-
-    inline bool Identifier::equal(const StringImpl* r, const LChar* s, unsigned length)
-    {
-        return WTF::equal(r, s, length);
-    }
-
-    inline bool Identifier::equal(const StringImpl* r, const UChar* s, unsigned length)
-    {
-        return WTF::equal(r, s, length);
-    }
-
-    IdentifierTable* createIdentifierTable();
-    void deleteIdentifierTable(IdentifierTable*);
-
-    struct IdentifierRepHash : PtrHash<RefPtr<StringImpl>> {
-        static unsigned hash(const RefPtr<StringImpl>& key) { return key->existingHash(); }
-        static unsigned hash(StringImpl* key) { return key->existingHash(); }
-    };
-
-    struct IdentifierMapIndexHashTraits : HashTraits<int> {
-        static int emptyValue() { return std::numeric_limits<int>::max(); }
-        static const bool emptyValueIsZero = false;
-    };
-
-    typedef HashMap<RefPtr<StringImpl>, int, IdentifierRepHash, HashTraits<RefPtr<StringImpl>>, IdentifierMapIndexHashTraits> IdentifierMap;
-    typedef HashMap<StringImpl*, int, IdentifierRepHash, HashTraits<StringImpl*>, IdentifierMapIndexHashTraits> BorrowedIdentifierMap;
-
-    template<typename U, typename V>
-    HashSet<StringImpl*>::AddResult IdentifierTable::add(U value)
-    {
-        HashSet<StringImpl*>::AddResult result = m_table.add<V>(value);
-        (*result.iterator)->setIsIdentifier(true);
-        return result;
-    }
+typedef HashMap<RefPtr<UniquedStringImpl>, int, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, IdentifierMapIndexHashTraits> IdentifierMap;
+typedef HashMap<UniquedStringImpl*, int, IdentifierRepHash, HashTraits<UniquedStringImpl*>, IdentifierMapIndexHashTraits> BorrowedIdentifierMap;
 
 } // namespace JSC
 

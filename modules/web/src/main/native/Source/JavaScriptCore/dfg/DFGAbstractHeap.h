@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #ifndef DFGAbstractHeap_h
 #define DFGAbstractHeap_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "VirtualRegister.h"
@@ -36,45 +34,45 @@
 
 namespace JSC { namespace DFG {
 
-// Implements a three-level type hierarchy:
+// Implements a four-level type hierarchy:
 // - World is the supertype of all of the things.
-// - Kind with TOP payload is the direct subtype of World.
-// - Kind with non-TOP payload is the direct subtype of its corresponding TOP Kind.
+// - Stack with a TOP payload is a direct subtype of World
+// - Stack with a non-TOP payload is a direct subtype of Stack with a TOP payload.
+// - Heap is a direct subtype of World.
+// - Any other kind with TOP payload is the direct subtype of Heap.
+// - Any other kind with non-TOP payload is the direct subtype of the same kind with a TOP payload.
 
 #define FOR_EACH_ABSTRACT_HEAP_KIND(macro) \
     macro(InvalidAbstractHeap) \
     macro(World) \
-    macro(Arguments_numArguments) \
-    macro(Arguments_overrideLength) \
-    macro(Arguments_registers) \
-    macro(Arguments_slowArguments) \
-    macro(ArrayBuffer_data) \
-    macro(Butterfly_arrayBuffer) \
+    macro(Stack) \
+    macro(Heap) \
     macro(Butterfly_publicLength) \
     macro(Butterfly_vectorLength) \
-    macro(JSArrayBufferView_length) \
-    macro(JSArrayBufferView_mode) \
-    macro(JSArrayBufferView_vector) \
-    macro(JSCell_structure) \
-    macro(JSFunction_executable) \
-    macro(JSFunction_scopeChain) \
+    macro(GetterSetter_getter) \
+    macro(GetterSetter_setter) \
+    macro(JSCell_structureID) \
+    macro(JSCell_indexingType) \
+    macro(JSCell_typeInfoFlags) \
+    macro(JSCell_typeInfoType) \
     macro(JSObject_butterfly) \
-    macro(JSVariableObject_registers) \
+    macro(JSPropertyNameEnumerator_cachedPropertyNames) \
     macro(NamedProperties) \
     macro(IndexedInt32Properties) \
     macro(IndexedDoubleProperties) \
     macro(IndexedContiguousProperties) \
+    macro(IndexedArrayStorageProperties) \
     macro(ArrayStorageProperties) \
-    macro(Variables) \
+    macro(DirectArgumentsProperties) \
+    macro(ScopeProperties) \
     macro(TypedArrayProperties) \
-    macro(GCState) \
-    macro(BarrierState) \
+    macro(HeapObjectCount) /* Used to reflect the fact that some allocations reveal object identity */\
     macro(RegExpState) \
     macro(InternalState) \
     macro(Absolute) \
     /* Use this for writes only, to indicate that this may fire watchpoints. Usually this is never directly written but instead we test to see if a node clobbers this; it just so happens that you have to write world to clobber it. */\
     macro(Watchpoint_fire) \
-    /* Use this for reads only, just to indicate that if the world got clobbered, then this operation will not work. */\
+    /* Use these for reads only, just to indicate that if the world got clobbered, then this operation will not work. */\
     macro(MiscFields) \
     /* Use this for writes only, just to indicate that hoisting the node is invalid. This works because we don't hoist anything that has any side effects at all. */\
     macro(SideState)
@@ -133,6 +131,11 @@ public:
             return m_value;
         }
 
+        int32_t value32() const
+        {
+            return static_cast<int32_t>(value());
+        }
+
         bool operator==(const Payload& other) const
         {
             return m_isTop == other.m_isTop
@@ -187,7 +190,7 @@ public:
 
     AbstractHeap(AbstractHeapKind kind, Payload payload)
     {
-        ASSERT(kind != InvalidAbstractHeap && kind != World);
+        ASSERT(kind != InvalidAbstractHeap && kind != World && kind != Heap && kind != SideState);
         m_value = encode(kind, payload);
     }
 
@@ -205,32 +208,49 @@ public:
         return payloadImpl();
     }
 
-    bool isDisjoint(const AbstractHeap& other)
-    {
-        ASSERT(kind() != InvalidAbstractHeap);
-        ASSERT(other.kind() != InvalidAbstractHeap);
-        if (kind() == World)
-            return false;
-        if (other.kind() == World)
-            return false;
-        if (kind() != other.kind())
-            return true;
-        return payload().isDisjoint(other.payload());
-    }
-
-    bool overlaps(const AbstractHeap& other)
-    {
-        return !isDisjoint(other);
-    }
-
     AbstractHeap supertype() const
     {
         ASSERT(kind() != InvalidAbstractHeap);
-        if (kind() == World)
+        switch (kind()) {
+        case World:
             return AbstractHeap();
-        if (payload().isTop())
+        case Heap:
+        case SideState:
             return World;
-        return AbstractHeap(kind());
+        default:
+            if (payload().isTop()) {
+                if (kind() == Stack)
+                    return World;
+                return Heap;
+            }
+            return AbstractHeap(kind());
+        }
+    }
+
+    bool isStrictSubtypeOf(const AbstractHeap& other) const
+    {
+        AbstractHeap current = *this;
+        while (current.kind() != World) {
+            current = current.supertype();
+            if (current == other)
+                return true;
+        }
+        return false;
+    }
+
+    bool isSubtypeOf(const AbstractHeap& other) const
+    {
+        return *this == other || isStrictSubtypeOf(other);
+    }
+
+    bool overlaps(const AbstractHeap& other) const
+    {
+        return *this == other || isStrictSubtypeOf(other) || other.isStrictSubtypeOf(*this);
+    }
+
+    bool isDisjoint(const AbstractHeap& other) const
+    {
+        return !overlaps(other);
     }
 
     unsigned hash() const

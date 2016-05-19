@@ -22,130 +22,14 @@ const regionNumberStrokeColor = "rgb(61, 127, 204)";
 const shapeHighlightColor = "rgba(96, 82, 127, 0.8)";
 const shapeMarginHighlightColor = "rgba(96, 82, 127, 0.6)";
 
+const paintRectFillColor = "rgba(255, 0, 0, 0.5)";
+
 function drawPausedInDebuggerMessage(message)
 {
     var pausedInDebugger = document.getElementById("paused-in-debugger");
     pausedInDebugger.textContent = message;
     pausedInDebugger.style.visibility = "visible";
     document.body.classList.add("dimmed");
-}
-
-function _drawGrid(highlight, rulerAtRight, rulerAtBottom)
-{
-    if (!highlight.showRulers)
-        return;
-    context.save();
-
-    var width = canvas.width;
-    var height = canvas.height;
-
-    const gridSubStep = 5;
-    const gridStep = 50;
-
-    {
-        // Draw X grid background
-        context.save();
-        context.fillStyle = gridBackgroundColor;
-        if (rulerAtBottom)
-            context.fillRect(0, height - 15, width, height);
-        else
-            context.fillRect(0, 0, width, 15);
-
-        // Clip out backgrounds intersection
-        context.globalCompositeOperation = "destination-out";
-        context.fillStyle = "red";
-        if (rulerAtRight)
-            context.fillRect(width - 15, 0, width, height);
-        else
-            context.fillRect(0, 0, 15, height);
-        context.restore();
-
-        // Draw Y grid background
-        context.fillStyle = gridBackgroundColor;
-        if (rulerAtRight)
-            context.fillRect(width - 15, 0, width, height);
-        else
-            context.fillRect(0, 0, 15, height);
-    }
-
-    context.lineWidth = 1;
-    context.strokeStyle = darkGridColor;
-    context.fillStyle = darkGridColor;
-    {
-        // Draw labels.
-        context.save();
-        context.translate(-highlight.scrollX, 0.5 - highlight.scrollY);
-        for (var y = 2 * gridStep; y < height + highlight.scrollY; y += 2 * gridStep) {
-            context.save();
-            context.translate(highlight.scrollX, y);
-            context.rotate(-Math.PI / 2);
-            context.fillText(y, 2, rulerAtRight ? width - 7 : 13);
-            context.restore();
-        }
-        context.translate(0.5, -0.5);
-        for (var x = 2 * gridStep; x < width + highlight.scrollX; x += 2 * gridStep) {
-            context.save();
-            context.fillText(x, x + 2, rulerAtBottom ? highlight.scrollY + height - 7 : highlight.scrollY + 13);
-            context.restore();
-        }
-        context.restore();
-    }
-
-    {
-        // Draw vertical grid
-        context.save();
-        if (rulerAtRight) {
-            context.translate(width, 0);
-            context.scale(-1, 1);
-        }
-        context.translate(-highlight.scrollX, 0.5 - highlight.scrollY);
-        for (var y = gridStep; y < height + highlight.scrollY; y += gridStep) {
-            context.beginPath();
-            context.moveTo(highlight.scrollX, y);
-            var markLength = (y % (gridStep * 2)) ? 5 : 8;
-            context.lineTo(highlight.scrollX + markLength, y);
-            context.stroke();
-        }
-        context.strokeStyle = lightGridColor;
-        for (var y = gridSubStep; y < highlight.scrollY + height; y += gridSubStep) {
-            if (!(y % gridStep))
-                continue;
-            context.beginPath();
-            context.moveTo(highlight.scrollX, y);
-            context.lineTo(highlight.scrollX + gridSubStep, y);
-            context.stroke();
-        }
-        context.restore();
-    }
-
-    {
-        // Draw horizontal grid
-        context.save();
-        if (rulerAtBottom) {
-            context.translate(0, height);
-            context.scale(1, -1);
-        }
-        context.translate(0.5 - highlight.scrollX, -highlight.scrollY);
-        for (var x = gridStep; x < width + highlight.scrollX; x += gridStep) {
-            context.beginPath();
-            context.moveTo(x, highlight.scrollY);
-            var markLength = (x % (gridStep * 2)) ? 5 : 8;
-            context.lineTo(x, highlight.scrollY + markLength);
-            context.stroke();
-        }
-        context.strokeStyle = lightGridColor;
-        for (var x = gridSubStep; x < highlight.scrollX + width; x += gridSubStep) {
-            if (!(x % gridStep))
-                continue;
-            context.beginPath();
-            context.moveTo(x, highlight.scrollY);
-            context.lineTo(x, highlight.scrollY + gridSubStep);
-            context.stroke();
-        }
-        context.restore();
-    }
-
-    context.restore();
 }
 
 function _drawRegionNumber(quad, number)
@@ -281,6 +165,24 @@ function drawGutter()
     }
 }
 
+var updatePaintRectsIntervalID;
+
+function updatePaintRects(paintRectList)
+{
+    var context = paintRectsCanvas.getContext("2d");
+    context.save();
+    context.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    context.clearRect(0, 0, paintRectsCanvas.width, paintRectsCanvas.height);
+
+    context.fillStyle = paintRectFillColor;
+
+    for (var rectObject of paintRectList)
+        context.fillRect(rectObject.x, rectObject.y, rectObject.width, rectObject.height);
+
+    context.restore();
+}
+
 function reset(resetData)
 {
     var deviceScaleFactor = resetData.deviceScaleFactor;
@@ -288,6 +190,8 @@ function reset(resetData)
     window.frameViewFullSize = resetData.frameViewFullSize;
 
     window.canvas = document.getElementById("canvas");
+    window.paintRectsCanvas = document.getElementById("paintrects-canvas");
+
     window.context = canvas.getContext("2d");
     window.rightGutter = document.getElementById("right-gutter");
     window.bottomGutter = document.getElementById("bottom-gutter");
@@ -297,6 +201,12 @@ function reset(resetData)
     canvas.style.width = viewportSize.width + "px";
     canvas.style.height = viewportSize.height + "px";
     context.scale(deviceScaleFactor, deviceScaleFactor);
+
+    // We avoid getting the the context for the paint rects canvas until we need to paint, to avoid backing store allocation.
+    paintRectsCanvas.width = deviceScaleFactor * viewportSize.width;
+    paintRectsCanvas.height = deviceScaleFactor * viewportSize.height;
+    paintRectsCanvas.style.width = viewportSize.width + "px";
+    paintRectsCanvas.style.height = viewportSize.height + "px";
 
     document.getElementById("paused-in-debugger").style.visibility = "hidden";
     document.getElementById("element-title-container").innerHTML = "";
@@ -351,35 +261,36 @@ function _truncateString(value, maxLength)
     return value && value.length > maxLength ? value.substring(0, 50) + "\u2026" : value;
 }
 
-function _createElementTitle(elementInfo)
+function _createElementTitle(elementData)
 {
     var builder = new DOMBuilder("div", "element-title");
     
-    builder.appendSpanIfNotNull("tag-name", elementInfo.tagName);
-    builder.appendSpanIfNotNull("node-id", elementInfo.idValue, "#");
-    builder.appendSpanIfNotNull("class-name", _truncateString(elementInfo.className, 50));
+    builder.appendSpanIfNotNull("tag-name", elementData.tagName);
+    builder.appendSpanIfNotNull("node-id", elementData.idValue, "#");
+    builder.appendSpanIfNotNull("class-name", _truncateString(elementData.className, 50));
 
     builder.appendTextNode(" ");
-    builder.appendSpan("node-width", elementInfo.nodeWidth);
+    builder.appendSpan("node-width", elementData.size.width);
     // \xd7 is the code for the &times; HTML entity.
     builder.appendSpan("px", "px \xd7 ");
-    builder.appendSpan("node-height", elementInfo.nodeHeight);
+    builder.appendSpan("node-height", elementData.size.height);
     builder.appendSpan("px", "px");
 
-    builder.appendPropertyIfNotNull("region-flow-name", "Region Flow", elementInfo.regionFlowInfo ? elementInfo.regionFlowInfo.name : null);
-    builder.appendPropertyIfNotNull("content-flow-name", "Content Flow", elementInfo.contentFlowInfo ? elementInfo.contentFlowInfo.name : null);
+    builder.appendPropertyIfNotNull("role-name", "Role", elementData.role);
+    builder.appendPropertyIfNotNull("region-flow-name", "Region Flow", elementData.regionFlowData ? elementData.regionFlowData.name : null);
+    builder.appendPropertyIfNotNull("content-flow-name", "Content Flow", elementData.contentFlowData ? elementData.contentFlowData.name : null);
 
     document.getElementById("element-title-container").appendChild(builder.element);
 
     return builder.element;
 }
 
-function _drawElementTitle(elementInfo, fragmentHighlight, scroll)
+function _drawElementTitle(elementData, fragmentHighlight, scroll)
 {
-    if (!elementInfo || !fragmentHighlight.quads.length)
+    if (!elementData || !fragmentHighlight.quads.length)
         return;
-    
-    var elementTitle = _createElementTitle(elementInfo);
+
+    var elementTitle = _createElementTitle(elementData);
 
     var marginQuad = fragmentHighlight.quads[0];
 
@@ -394,11 +305,10 @@ function _drawElementTitle(elementInfo, fragmentHighlight, scroll)
     var renderArrowDown = false;
 
     var boxX = marginQuad[0].x;
-    
-    var containingRegion = fragmentHighlight.region;
-    if (containingRegion) {
+
+    var clipQuad = fragmentHighlight.regionClippingArea;
+    if (clipQuad) {
         // Restrict the position of the title box to the area of the containing region.
-        var clipQuad = containingRegion.quad;
         anchorTop = Math.max(anchorTop, Math.min(clipQuad[0].y, clipQuad[1].y, clipQuad[2].y, clipQuad[3].y));
         anchorBottom = Math.min(anchorBottom, Math.max(clipQuad[0].y, clipQuad[1].y, clipQuad[2].y, clipQuad[3].y));
         boxX = Math.max(boxX, Math.min(clipQuad[0].x, clipQuad[1].x, clipQuad[2].x, clipQuad[3].x));
@@ -457,68 +367,6 @@ function _drawElementTitle(elementInfo, fragmentHighlight, scroll)
     elementTitle.style.left = (boxX + 3) + "px";
 }
 
-function _drawRulers(highlight, rulerAtRight, rulerAtBottom)
-{
-    if (!highlight.showRulers)
-        return;
-    context.save();
-    var width = canvas.width;
-    var height = canvas.height;
-    context.strokeStyle = "rgba(128, 128, 128, 0.3)";
-    context.lineWidth = 1;
-    context.translate(0.5, 0.5);
-    var leftmostXForY = {};
-    var rightmostXForY = {};
-    var topmostYForX = {};
-    var bottommostYForX = {};
-
-    for (var i = 0; i < highlight.quads.length; ++i) {
-        var quad = highlight.quads[i];
-        for (var j = 0; j < quad.length; ++j) {
-            var x = quad[j].x;
-            var y = quad[j].y;
-            leftmostXForY[Math.round(y)] = Math.min(leftmostXForY[y] || Number.MAX_VALUE, Math.round(quad[j].x));
-            rightmostXForY[Math.round(y)] = Math.max(rightmostXForY[y] || Number.MIN_VALUE, Math.round(quad[j].x));
-            topmostYForX[Math.round(x)] = Math.min(topmostYForX[x] || Number.MAX_VALUE, Math.round(quad[j].y));
-            bottommostYForX[Math.round(x)] = Math.max(bottommostYForX[x] || Number.MIN_VALUE, Math.round(quad[j].y));
-        }
-    }
-
-    if (rulerAtRight) {
-        for (var y in rightmostXForY) {
-            context.beginPath();
-            context.moveTo(width, y);
-            context.lineTo(rightmostXForY[y], y);
-            context.stroke();
-        }
-    } else {
-        for (var y in leftmostXForY) {
-            context.beginPath();
-            context.moveTo(0, y);
-            context.lineTo(leftmostXForY[y], y);
-            context.stroke();
-        }
-    }
-
-    if (rulerAtBottom) {
-        for (var x in bottommostYForX) {
-            context.beginPath();
-            context.moveTo(x, height);
-            context.lineTo(x, topmostYForX[x]);
-            context.stroke();
-        }
-    } else {
-        for (var x in topmostYForX) {
-            context.beginPath();
-            context.moveTo(x, 0);
-            context.lineTo(x, topmostYForX[x]);
-            context.stroke();
-        }
-    }
-
-    context.restore();
-}
-
 function _quadMidPoint(quad)
 {
     return {
@@ -562,7 +410,8 @@ function _drawRegionsHighlight(regions)
     }
 }
 
-function _drawShapeHighlight(shapeInfo) {
+function _drawShapeHighlight(shapeInfo)
+{
     if (shapeInfo.marginShape)
         drawPath(context, shapeInfo.marginShape, shapeMarginHighlightColor);
 
@@ -575,16 +424,14 @@ function _drawShapeHighlight(shapeInfo) {
 
 function _drawFragmentHighlight(highlight)
 {
-    if (!highlight.quads.length) {
-        _drawGrid(highlight, false, false);
+    if (!highlight.quads.length)
         return;
-    }
 
     context.save();
 
-    if (highlight.region) {
+    if (highlight.regionClippingArea) {
         // Clip to the containing region to avoid showing fragments that are not rendered by this region.
-        quadToPath(highlight.region.quad).clip();
+        quadToPath(highlight.regionClippingArea).clip();
     }
 
     var quads = highlight.quads.slice();
@@ -628,34 +475,44 @@ function _drawFragmentHighlight(highlight)
     }
 
     context.restore();
-
-    var rulerAtRight = minX < 20 && maxX + 20 < width;
-    var rulerAtBottom = minY < 20 && maxY + 20 < height;
-
-    _drawGrid(highlight, rulerAtRight, rulerAtBottom);
-    _drawRulers(highlight, rulerAtRight, rulerAtBottom);
 }
 
-function drawNodeHighlight(highlight)
+function showPageIndication()
 {
-    context.save();
-    context.translate(-highlight.scroll.x, -highlight.scroll.y);
+    document.body.classList.add("indicate");
+}
 
-    for (var i = 0; i < highlight.fragments.length; ++i)
-        _drawFragmentHighlight(highlight.fragments[i], highlight);
+function hidePageIndication()
+{
+    document.body.classList.remove("indicate");
+}
 
-    if (highlight.elementInfo && highlight.elementInfo.regionFlowInfo)
-        _drawRegionsHighlight(highlight.elementInfo.regionFlowInfo.regions, highlight);
-
-    if (highlight.elementInfo && highlight.elementInfo.shapeOutsideInfo)
-        _drawShapeHighlight(highlight.elementInfo.shapeOutsideInfo);
-
-    context.restore();
-
+function drawNodeHighlight(allHighlights)
+{
     var elementTitleContainer = document.getElementById("element-title-container");
-    elementTitleContainer.innerHTML = "";
-    for (var i = 0; i < highlight.fragments.length; ++i)
-        _drawElementTitle(highlight.elementInfo, highlight.fragments[i], highlight.scroll);
+    while (elementTitleContainer.hasChildNodes())
+        elementTitleContainer.removeChild(elementTitleContainer.lastChild);
+
+    for (var highlight of allHighlights) {
+        context.save();
+        context.translate(-highlight.scrollOffset.x, -highlight.scrollOffset.y);
+
+        for (var fragment of highlight.fragments)
+            _drawFragmentHighlight(fragment);
+
+        if (highlight.elementData && highlight.elementData.regionFlowData)
+            _drawRegionsHighlight(highlight.elementData.regionFlowData.regions);
+
+        if (highlight.elementData && highlight.elementData.shapeOutsideData)
+            _drawShapeHighlight(highlight.elementData.shapeOutsideData);
+
+        context.restore();
+
+        if (allHighlights.length === 1) {
+            for (var fragment of highlight.fragments)
+                _drawElementTitle(highlight.elementData, fragment, highlight.scrollOffset);
+        }
+    }
 }
 
 function drawQuadHighlight(highlight)

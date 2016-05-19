@@ -30,36 +30,33 @@
 
 namespace WebCore {
 
-PassRef<HTMLAllCollection> HTMLAllCollection::create(Document& document, CollectionType type)
+Ref<HTMLAllCollection> HTMLAllCollection::create(Document& document, CollectionType type)
 {
     return adoptRef(*new HTMLAllCollection(document, type));
 }
 
-HTMLAllCollection::HTMLAllCollection(Document& document, CollectionType type)
+inline HTMLAllCollection::HTMLAllCollection(Document& document, CollectionType type)
     : HTMLCollection(document, type)
 {
 }
 
-HTMLAllCollection::~HTMLAllCollection()
+Element* HTMLAllCollection::namedItemWithIndex(const AtomicString& name, unsigned index) const
 {
-}
+    updateNamedElementCache();
+    const CollectionNamedElementCache& cache = namedItemCaches();
 
-Node* HTMLAllCollection::namedItemWithIndex(const AtomicString& name, unsigned index) const
-{
-    updateNameCache();
-
-    if (Vector<Element*>* cache = idCache(name)) {
-        if (index < cache->size())
-            return cache->at(index);
-        index -= cache->size();
+    if (const Vector<Element*>* elements = cache.findElementsWithId(name)) {
+        if (index < elements->size())
+            return elements->at(index);
+        index -= elements->size();
     }
 
-    if (Vector<Element*>* cache = nameCache(name)) {
-        if (index < cache->size())
-            return cache->at(index);
+    if (const Vector<Element*>* elements = cache.findElementsWithName(name)) {
+        if (index < elements->size())
+            return elements->at(index);
     }
 
-    return 0;
+    return nullptr;
 }
 
 } // namespace WebCore

@@ -24,11 +24,10 @@
 #include <wtf/Assertions.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
 
 namespace WTF {
 
-#ifdef NDEBUG
+#if defined(NDEBUG) && !ENABLE(SECURITY_ASSERTIONS)
 #define CHECK_REF_COUNTED_LIFECYCLE 0
 #else
 #define CHECK_REF_COUNTED_LIFECYCLE 1
@@ -42,7 +41,7 @@ public:
     void ref()
     {
 #if CHECK_REF_COUNTED_LIFECYCLE
-        ASSERT(!m_deletionHasBegun);
+        ASSERT_WITH_SECURITY_IMPLICATION(!m_deletionHasBegun);
         ASSERT(!m_adoptionIsRequired);
 #endif
         ++m_refCount;
@@ -64,7 +63,7 @@ public:
     void relaxAdoptionRequirement()
     {
 #if CHECK_REF_COUNTED_LIFECYCLE
-        ASSERT(!m_deletionHasBegun);
+        ASSERT_WITH_SECURITY_IMPLICATION(!m_deletionHasBegun);
         ASSERT(m_adoptionIsRequired);
         m_adoptionIsRequired = false;
 #endif
@@ -92,7 +91,7 @@ protected:
     bool derefBase()
     {
 #if CHECK_REF_COUNTED_LIFECYCLE
-        ASSERT(!m_deletionHasBegun);
+        ASSERT_WITH_SECURITY_IMPLICATION(!m_deletionHasBegun);
         ASSERT(!m_adoptionIsRequired);
 #endif
 
@@ -133,7 +132,7 @@ inline void adopted(RefCountedBase* object)
 {
     if (!object)
         return;
-    ASSERT(!object->m_deletionHasBegun);
+    ASSERT_WITH_SECURITY_IMPLICATION(!object->m_deletionHasBegun);
     object->m_adoptionIsRequired = false;
 }
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,27 +32,11 @@
 #import <AppKit/AppKit.h>
 #endif
 
-#if !TARGET_OS_IPHONE
-#if !defined(ENABLE_PLUGIN_PROXY_FOR_VIDEO)
-#define ENABLE_PLUGIN_PROXY_FOR_VIDEO 0
-#endif
-#endif
-
-#if ENABLE_PLUGIN_PROXY_FOR_VIDEO
-@class WebMediaPlayerProxy;
-#endif
-
 @interface NSObject (WebPlugInContainerPrivate)
 
 - (id)_webPluginContainerCheckIfAllowedToLoadRequest:(NSURLRequest *)Request inFrame:(NSString *)target resultObject:(id)obj selector:(SEL)selector;
 
 - (void)_webPluginContainerCancelCheckIfAllowedToLoadRequest:(id)checkIdentifier;
-
-#if ENABLE_PLUGIN_PROXY_FOR_VIDEO
-- (void)_webPluginContainerSetMediaPlayerProxy:(WebMediaPlayerProxy *)proxy forElement:(DOMElement *)element;
-
-- (void)_webPluginContainerPostMediaPlayerNotification:(int)notification forElement:(DOMElement *)element;
-#endif
 
 #if TARGET_OS_IPHONE
 // Call when the plug-in shows/hides its full-screen UI.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,8 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "DFGAbstractHeap.h"
+#include "DFGClobberize.h"
 #include "DFGGraph.h"
 #include "DFGInsertionSet.h"
 #include "DFGPhase.h"
@@ -72,12 +74,9 @@ private:
         case BitOr:
             handleCommutativity();
 
-            if (m_node->child2()->isConstant()) {
-                JSValue op2 = m_graph.valueOfJSConstant(m_node->child2().node());
-                if (op2.isInt32() && !op2.asInt32()) {
-                    convertToIdentityOverChild1();
-                    break;
-                }
+            if (m_node->child2()->isInt32Constant() && !m_node->child2()->asInt32()) {
+                convertToIdentityOverChild1();
+                break;
             }
             break;
 
@@ -89,38 +88,29 @@ private:
         case BitLShift:
         case BitRShift:
         case BitURShift:
-            if (m_node->child2()->isConstant()) {
-                JSValue op2 = m_graph.valueOfJSConstant(m_node->child2().node());
-                if (op2.isInt32() && !(op2.asInt32() & 0x1f)) {
-                    convertToIdentityOverChild1();
-                    break;
-                }
+            if (m_node->child2()->isInt32Constant() && !(m_node->child2()->asInt32() & 0x1f)) {
+                convertToIdentityOverChild1();
+                break;
             }
             break;
 
         case UInt32ToNumber:
             if (m_node->child1()->op() == BitURShift
-                && m_node->child1()->child2()->isConstant()) {
-                JSValue shiftAmount = m_graph.valueOfJSConstant(
-                    m_node->child1()->child2().node());
-                if (shiftAmount.isInt32() && (shiftAmount.asInt32() & 0x1f)) {
-                    m_node->convertToIdentity();
-                    m_changed = true;
-                    break;
-                }
+                && m_node->child1()->child2()->isInt32Constant()
+                && (m_node->child1()->child2()->asInt32() & 0x1f)
+                && m_node->arithMode() != Arith::DoOverflow) {
+                m_node->convertToIdentity();
+                m_changed = true;
+                break;
             }
             break;
 
         case ArithAdd:
             handleCommutativity();
 
-            if (m_graph.isInt32Constant(m_node->child2().node())) {
-                int32_t value = m_graph.valueOfInt32Constant(
-                    m_node->child2().node());
-                if (!value) {
-                    convertToIdentityOverChild1();
-                    break;
-                }
+            if (m_node->child2()->isInt32Constant() && !m_node->child2()->asInt32()) {
+                convertToIdentityOverChild1();
+                break;
             }
             break;
 
@@ -129,9 +119,9 @@ private:
             break;
 
         case ArithSub:
-            if (m_graph.isInt32Constant(m_node->child2().node())
+            if (m_node->child2()->isInt32Constant()
                 && m_node->isBinaryUseKind(Int32Use)) {
-                int32_t value = m_graph.valueOfInt32Constant(m_node->child2().node());
+                int32_t value = m_node->child2()->asInt32();
                 if (-value != value) {
                     m_node->setOp(ArithAdd);
                     m_node->child2().setNode(
@@ -143,32 +133,102 @@ private:
             }
             break;
 
-        case GetArrayLength:
-            if (JSArrayBufferView* view = m_graph.tryGetFoldableViewForChild1(m_node))
-                foldTypedArrayPropertyToConstant(view, jsNumber(view->length()));
-            break;
-
-        case GetTypedArrayByteOffset:
-            if (JSArrayBufferView* view = m_graph.tryGetFoldableView(m_node->child1().node()))
-                foldTypedArrayPropertyToConstant(view, jsNumber(view->byteOffset()));
-            break;
-
-        case GetIndexedPropertyStorage:
-            if (JSArrayBufferView* view = m_graph.tryGetFoldableViewForChild1(m_node)) {
-                if (view->mode() != FastTypedArray) {
-                    prepareToFoldTypedArray(view);
-                    m_node->convertToConstantStoragePointer(view->vector());
+        case ArithPow:
+            if (m_node->child2()->isNumberConstant()) {
+                double yOperandValue = m_node->child2()->asNumber();
+                if (yOperandValue == 1) {
+                    convertToIdentityOverChild1();
+                } else if (yOperandValue == 0.5) {
+                    m_insertionSet.insertCheck(m_nodeIndex, m_node);
+                    m_node->convertToArithSqrt();
                     m_changed = true;
-                    break;
-                } else {
-                    // FIXME: It would be awesome to be able to fold the property storage for
-                    // these GC-allocated typed arrays. For now it doesn't matter because the
-                    // most common use-cases for constant typed arrays involve large arrays with
-                    // aliased buffer views.
-                    // https://bugs.webkit.org/show_bug.cgi?id=125425
                 }
             }
             break;
+
+        case ValueRep:
+        case Int52Rep:
+        case DoubleRep: {
+            // This short-circuits circuitous conversions, like ValueRep(DoubleRep(value)) or
+            // even more complicated things. Like, it can handle a beast like
+            // ValueRep(DoubleRep(Int52Rep(value))).
+
+            // The only speculation that we would do beyond validating that we have a type that
+            // can be represented a certain way is an Int32 check that would appear on Int52Rep
+            // nodes. For now, if we see this and the final type we want is an Int52, we use it
+            // as an excuse not to fold. The only thing we would need is a Int52RepInt32Use kind.
+            bool hadInt32Check = false;
+            if (m_node->op() == Int52Rep) {
+                if (m_node->child1().useKind() != Int32Use)
+                    break;
+                hadInt32Check = true;
+            }
+            for (Node* node = m_node->child1().node(); ; node = node->child1().node()) {
+                if (canonicalResultRepresentation(node->result()) ==
+                    canonicalResultRepresentation(m_node->result())) {
+                    m_insertionSet.insertCheck(m_nodeIndex, m_node);
+                    if (hadInt32Check) {
+                        // FIXME: Consider adding Int52RepInt32Use or even DoubleRepInt32Use,
+                        // which would be super weird. The latter would only arise in some
+                        // seriously circuitous conversions.
+                        if (canonicalResultRepresentation(node->result()) != NodeResultJS)
+                            break;
+
+                        m_insertionSet.insertCheck(
+                            m_nodeIndex, m_node->origin, Edge(node, Int32Use));
+                    }
+                    m_node->child1() = node->defaultEdge();
+                    m_node->convertToIdentity();
+                    m_changed = true;
+                    break;
+                }
+
+                switch (node->op()) {
+                case Int52Rep:
+                    if (node->child1().useKind() != Int32Use)
+                        break;
+                    hadInt32Check = true;
+                    continue;
+
+                case DoubleRep:
+                case ValueRep:
+                    continue;
+
+                default:
+                    break;
+                }
+                break;
+            }
+            break;
+        }
+
+        case Flush: {
+            ASSERT(m_graph.m_form != SSA);
+
+            Node* setLocal = nullptr;
+            VirtualRegister local = m_node->local();
+
+            for (unsigned i = m_nodeIndex; i--;) {
+                Node* node = m_block->at(i);
+                if (node->op() == SetLocal && node->local() == local) {
+                    setLocal = node;
+                    break;
+                }
+                if (accessesOverlap(m_graph, node, AbstractHeap(Stack, local)))
+                    break;
+            }
+
+            if (!setLocal)
+                break;
+
+            // The Flush should become a PhantomLocal at this point. This means that we want the
+            // local's value during OSR, but we don't care if the value is stored to the stack. CPS
+            // rethreading can canonicalize PhantomLocals for us.
+            m_node->convertFlushToPhantomLocal();
+            m_graph.dethread();
+            m_changed = true;
+            break;
+        }
 
         default:
             break;
@@ -177,8 +237,7 @@ private:
 
     void convertToIdentityOverChild(unsigned childIndex)
     {
-        m_insertionSet.insertNode(
-            m_nodeIndex, SpecNone, Phantom, m_node->origin, m_node->children);
+        m_insertionSet.insertCheck(m_nodeIndex, m_node);
         m_node->children.removeEdge(childIndex ^ 1);
         m_node->convertToIdentity();
         m_changed = true;
@@ -192,22 +251,6 @@ private:
     void convertToIdentityOverChild2()
     {
         convertToIdentityOverChild(1);
-    }
-
-    void foldTypedArrayPropertyToConstant(JSArrayBufferView* view, JSValue constant)
-    {
-        prepareToFoldTypedArray(view);
-        m_graph.convertToConstant(m_node, constant);
-        m_changed = true;
-    }
-
-    void prepareToFoldTypedArray(JSArrayBufferView* view)
-    {
-        m_insertionSet.insertNode(
-            m_nodeIndex, SpecNone, TypedArrayWatchpoint, m_node->origin,
-            OpInfo(view));
-        m_insertionSet.insertNode(
-            m_nodeIndex, SpecNone, Phantom, m_node->origin, m_node->children);
     }
 
     void handleCommutativity()

@@ -27,7 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import unittest2 as unittest
+import unittest
 
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.tool.bot.irc_command import *
@@ -52,8 +52,8 @@ class IRCCommandTest(unittest.TestCase):
                           whois.execute("tom", ["TonyG@Chromium.org"], None, None))
         self.assertEqual('tom: rniwa is "Ryosuke Niwa" <rniwa@webkit.org> (:rniwa) (r). Why do you ask?',
                           whois.execute("tom", ["rniwa"], None, None))
-        self.assertEqual('tom: lopez is "Xan Lopez" <xan.lopez@gmail.com> (:xan) (r). Why do you ask?',
-                          whois.execute("tom", ["lopez"], None, None))
+        self.assertEqual('tom: Xan Lopez is "Xan Lopez" <xan.lopez@gmail.com> (:xan) (r). Why do you ask?',
+                          whois.execute("tom", ["Xan", "Lopez"], None, None))
         self.assertEqual(u'tom: Osztrogon\u00e1c is "Csaba Osztrogon\u00e1c" <ossy@webkit.org> (:ossy) (r). Why do you ask?',
                           whois.execute("tom", [u'Osztrogon\u00e1c'], None, None))
         self.assertEqual('tom: "Vicki Murley" <vicki@apple.com> hasn\'t told me their nick. Boo hoo :-(',
@@ -117,7 +117,7 @@ class IRCCommandTest(unittest.TestCase):
         tool = MockTool()
         tool.filesystem.files["/mock-checkout/test/file/one"] = ""
         tool.filesystem.files["/mock-checkout/test/file/two"] = ""
-        self.assertEqual("Failed to apply reverse diff for file(s): test/file/one, test/file/two",
+        self.assertEqual("Failed to apply reverse diff for files: test/file/one, test/file/two",
                           rollout._check_diff_failure("""
 Preparing rollout for bug 123456.
 Updating working directory
@@ -130,6 +130,17 @@ test/file/two
 Updating OpenSource
 Current branch master is up to date.
         """, tool))
+
+        self.assertEqual("Failed to apply reverse diff for file: test/file/one",
+                          rollout._check_diff_failure("""
+Preparing rollout for bug 123456.
+Updating working directory
+Failed to apply reverse diff for revision 123456 because of the following conflicts:
+test/file/one
+Updating OpenSource
+Current branch master is up to date.
+        """, tool))
+
         self.assertEqual(None, rollout._check_diff_failure("""
 Preparing rollout for bug 123456.
 Updating working directory

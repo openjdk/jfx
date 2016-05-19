@@ -26,8 +26,7 @@
 #define NamedNodeMap_h
 
 #include "ScriptWrappable.h"
-#include <wtf/PassOwnPtr.h>
-#include <wtf/PassRefPtr.h>
+#include <wtf/RefPtr.h>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
@@ -41,9 +40,10 @@ class NamedNodeMap : public ScriptWrappable {
     WTF_MAKE_FAST_ALLOCATED;
     friend class Element;
 public:
-    static PassOwnPtr<NamedNodeMap> create(Element& element)
+    explicit NamedNodeMap(Element& element)
+        : m_element(element)
     {
-        return adoptPtr(new NamedNodeMap(element));
+        // Only supports NamedNodeMaps with Element associated, DocumentType.entities and DocumentType.notations are not supported yet.
     }
 
     void ref();
@@ -51,28 +51,21 @@ public:
 
     // Public DOM interface.
 
-    PassRefPtr<Node> getNamedItem(const AtomicString&) const;
-    PassRefPtr<Node> removeNamedItem(const AtomicString& name, ExceptionCode&);
+    RefPtr<Node> getNamedItem(const AtomicString&) const;
+    RefPtr<Node> removeNamedItem(const AtomicString& name, ExceptionCode&);
 
-    PassRefPtr<Node> getNamedItemNS(const AtomicString& namespaceURI, const AtomicString& localName) const;
-    PassRefPtr<Node> removeNamedItemNS(const AtomicString& namespaceURI, const AtomicString& localName, ExceptionCode&);
+    RefPtr<Node> getNamedItemNS(const AtomicString& namespaceURI, const AtomicString& localName) const;
+    RefPtr<Node> removeNamedItemNS(const AtomicString& namespaceURI, const AtomicString& localName, ExceptionCode&);
 
-    PassRefPtr<Node> setNamedItem(Node*, ExceptionCode&);
-    PassRefPtr<Node> setNamedItemNS(Node*, ExceptionCode&);
+    RefPtr<Node> setNamedItem(Node*, ExceptionCode&);
+    RefPtr<Node> setNamedItemNS(Node*, ExceptionCode&);
 
-    PassRefPtr<Node> item(unsigned index) const;
+    RefPtr<Node> item(unsigned index) const;
     unsigned length() const;
 
-    // FIXME: It's lame that the bindings generator chokes if we return Element& here.
-    Element* element() const { return &m_element; }
+    Element& element() const { return m_element; }
 
 private:
-    explicit NamedNodeMap(Element& element)
-        : m_element(element)
-    {
-        // Only supports NamedNodeMaps with Element associated, DocumentType.entities and DocumentType.notations are not supported yet.
-    }
-
     Element& m_element;
 };
 

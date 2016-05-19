@@ -5,8 +5,6 @@
 #define URLLoader_h
 
 #include <JavaRef.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -21,7 +19,7 @@ class ResourceResponse;
 
 class URLLoader {
 public:
-    static PassOwnPtr<URLLoader> loadAsynchronously(NetworkingContext* context,
+    static std::unique_ptr<URLLoader> loadAsynchronously(NetworkingContext* context,
                                                     ResourceHandle* handle);
     void cancel();
     static void loadSynchronously(NetworkingContext* context,
@@ -93,7 +91,7 @@ private:
     };
 
     JGObject m_ref;
-    OwnPtr<AsynchronousTarget> m_target;
+    std::unique_ptr<AsynchronousTarget> m_target;
 };
 
 } // namespace WebCore

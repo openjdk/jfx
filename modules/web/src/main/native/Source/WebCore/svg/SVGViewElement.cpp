@@ -21,11 +21,7 @@
 #include "config.h"
 #include "SVGViewElement.h"
 
-#include "Attribute.h"
-#include "SVGFitToViewBox.h"
 #include "SVGNames.h"
-#include "SVGStringList.h"
-#include "SVGZoomAndPan.h"
 
 namespace WebCore {
 
@@ -50,43 +46,20 @@ inline SVGViewElement::SVGViewElement(const QualifiedName& tagName, Document& do
     registerAnimatedPropertiesForSVGViewElement();
 }
 
-PassRefPtr<SVGViewElement> SVGViewElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGViewElement> SVGViewElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGViewElement(tagName, document));
-}
-
-bool SVGViewElement::isSupportedAttribute(const QualifiedName& attrName)
-{
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty()) {
-        SVGExternalResourcesRequired::addSupportedAttributes(supportedAttributes);
-        SVGFitToViewBox::addSupportedAttributes(supportedAttributes);
-        SVGZoomAndPan::addSupportedAttributes(supportedAttributes);
-        supportedAttributes.add(SVGNames::viewTargetAttr);
-    }
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return adoptRef(*new SVGViewElement(tagName, document));
 }
 
 void SVGViewElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(name)) {
-        SVGElement::parseAttribute(name, value);
-        return;
-    }
-
-    if (name == SVGNames::viewTargetAttr) {
+    if (name == SVGNames::viewTargetAttr)
         viewTarget().reset(value);
-        return;
-    }
 
-    if (SVGExternalResourcesRequired::parseAttribute(name, value))
-        return;
-    if (SVGFitToViewBox::parseAttribute(this, name, value))
-        return;
-    if (SVGZoomAndPan::parseAttribute(this, name, value))
-        return;
-
-    ASSERT_NOT_REACHED();
+    SVGExternalResourcesRequired::parseAttribute(name, value);
+    SVGFitToViewBox::parseAttribute(this, name, value);
+    SVGZoomAndPan::parseAttribute(*this, name, value);
+    SVGElement::parseAttribute(name, value);
 }
 
 }

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,15 +32,16 @@ namespace WebCore {
 
 class InsertNodeBeforeCommand : public SimpleEditCommand {
 public:
-    static PassRefPtr<InsertNodeBeforeCommand> create(PassRefPtr<Node> childToInsert, PassRefPtr<Node> childToInsertBefore,
-        ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable)
+    static Ref<InsertNodeBeforeCommand> create(RefPtr<Node>&& childToInsert, RefPtr<Node>&& childToInsertBefore,
+        ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable, EditAction editingAction = EditActionInsert)
     {
-        return adoptRef(new InsertNodeBeforeCommand(childToInsert, childToInsertBefore, shouldAssumeContentIsAlwaysEditable));
+        return adoptRef(*new InsertNodeBeforeCommand(WTF::move(childToInsert), WTF::move(childToInsertBefore), shouldAssumeContentIsAlwaysEditable, editingAction));
     }
 
-private:
-    InsertNodeBeforeCommand(PassRefPtr<Node> childToInsert, PassRefPtr<Node> childToInsertBefore, ShouldAssumeContentIsAlwaysEditable);
+protected:
+    InsertNodeBeforeCommand(RefPtr<Node>&& childToInsert, RefPtr<Node>&& childToInsertBefore, ShouldAssumeContentIsAlwaysEditable, EditAction);
 
+private:
     virtual void doApply() override;
     virtual void doUnapply() override;
 

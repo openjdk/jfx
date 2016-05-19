@@ -29,16 +29,13 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INSPECTOR)
-
 #include "InspectorWorkerAgent.h"
 
 #include "InspectorForwarding.h"
-#include "InspectorWebFrontendDispatchers.h"
 #include "InstrumentingAgents.h"
 #include "URL.h"
 #include "WorkerGlobalScopeProxy.h"
+#include <inspector/InspectorFrontendDispatchers.h>
 #include <inspector/InspectorValues.h>
 #include <wtf/RefPtr.h>
 
@@ -49,7 +46,7 @@ namespace WebCore {
 class InspectorWorkerAgent::WorkerFrontendChannel : public WorkerGlobalScopeProxy::PageInspector {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit WorkerFrontendChannel(InspectorWorkerFrontendDispatcher* frontendDispatcher, WorkerGlobalScopeProxy* proxy)
+    explicit WorkerFrontendChannel(Inspector::WorkerFrontendDispatcher* frontendDispatcher, WorkerGlobalScopeProxy* proxy)
         : m_frontendDispatcher(frontendDispatcher)
         , m_proxy(proxy)
         , m_id(s_nextId++)
@@ -82,18 +79,20 @@ public:
 
 private:
     // WorkerGlobalScopeProxy::PageInspector implementation
-    virtual void dispatchMessageFromWorker(const String& message) override
+    virtual void dispatchMessageFromWorker(const String& messageString) override
     {
-        RefPtr<InspectorValue> value = InspectorValue::parseJSON(message);
-        if (!value)
+        RefPtr<InspectorValue> parsedMessage;
+        if (!InspectorValue::parseJSON(messageString, parsedMessage))
             return;
-        RefPtr<InspectorObject> messageObject = value->asObject();
-        if (!messageObject)
+
+        RefPtr<InspectorObject> messageObject;
+        if (!parsedMessage->asObject(messageObject))
             return;
+
         m_frontendDispatcher->dispatchMessageFromWorker(m_id, messageObject);
     }
 
-    InspectorWorkerFrontendDispatcher* m_frontendDispatcher;
+    Inspector::WorkerFrontendDispatcher* m_frontendDispatcher;
     WorkerGlobalScopeProxy* m_proxy;
     int m_id;
     bool m_connected;
@@ -115,22 +114,23 @@ InspectorWorkerAgent::~InspectorWorkerAgent()
     m_instrumentingAgents->setInspectorWorkerAgent(nullptr);
 }
 
-void InspectorWorkerAgent::didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel* frontendChannel, InspectorBackendDispatcher* backendDispatcher)
+void InspectorWorkerAgent::didCreateFrontendAndBackend(Inspector::FrontendChannel* frontendChannel, Inspector::BackendDispatcher* backendDispatcher)
 {
-    m_frontendDispatcher = std::make_unique<InspectorWorkerFrontendDispatcher>(frontendChannel);
-    m_backendDispatcher = InspectorWorkerBackendDispatcher::create(backendDispatcher, this);
+    m_frontendDispatcher = std::make_unique<Inspector::WorkerFrontendDispatcher>(frontendChannel);
+    m_backendDispatcher = Inspector::WorkerBackendDispatcher::create(backendDispatcher, this);
 }
 
-void InspectorWorkerAgent::willDestroyFrontendAndBackend(InspectorDisconnectReason)
+void InspectorWorkerAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason)
 {
     m_shouldPauseDedicatedWorkerOnStart = false;
-    disable(nullptr);
+    ErrorString unused;
+    disable(unused);
 
     m_frontendDispatcher = nullptr;
-    m_backendDispatcher.clear();
+    m_backendDispatcher = nullptr;
 }
 
-void InspectorWorkerAgent::enable(ErrorString*)
+void InspectorWorkerAgent::enable(ErrorString&)
 {
     m_enabled = true;
     if (!m_frontendDispatcher)
@@ -139,7 +139,7 @@ void InspectorWorkerAgent::enable(ErrorString*)
     createWorkerFrontendChannelsForExistingWorkers();
 }
 
-void InspectorWorkerAgent::disable(ErrorString*)
+void InspectorWorkerAgent::disable(ErrorString&)
 {
     m_enabled = false;
     if (!m_frontendDispatcher)
@@ -148,39 +148,39 @@ void InspectorWorkerAgent::disable(ErrorString*)
     destroyWorkerFrontendChannels();
 }
 
-void InspectorWorkerAgent::canInspectWorkers(ErrorString*, bool* result)
+void InspectorWorkerAgent::canInspectWorkers(ErrorString&, bool* result)
 {
     *result = true;
 }
 
-void InspectorWorkerAgent::connectToWorker(ErrorString* error, int workerId)
+void InspectorWorkerAgent::connectToWorker(ErrorString& error, int workerId)
 {
     WorkerFrontendChannel* channel = m_idToChannel.get(workerId);
     if (channel)
         channel->connectToWorkerGlobalScope();
     else
-        *error = "Worker is gone";
+        error = ASCIILiteral("Worker is gone");
 }
 
-void InspectorWorkerAgent::disconnectFromWorker(ErrorString* error, int workerId)
+void InspectorWorkerAgent::disconnectFromWorker(ErrorString& error, int workerId)
 {
     WorkerFrontendChannel* channel = m_idToChannel.get(workerId);
     if (channel)
         channel->disconnectFromWorkerGlobalScope();
     else
-        *error = "Worker is gone";
+        error = ASCIILiteral("Worker is gone");
 }
 
-void InspectorWorkerAgent::sendMessageToWorker(ErrorString* error, int workerId, const RefPtr<InspectorObject>& message)
+void InspectorWorkerAgent::sendMessageToWorker(ErrorString& error, int workerId, const InspectorObject& message)
 {
     WorkerFrontendChannel* channel = m_idToChannel.get(workerId);
     if (channel)
-        channel->proxy()->sendMessageToInspector(message->toJSONString());
+        channel->proxy()->sendMessageToInspector(message.toJSONString());
     else
-        *error = "Worker is gone";
+        error = ASCIILiteral("Worker is gone");
 }
 
-void InspectorWorkerAgent::setAutoconnectToWorkers(ErrorString*, bool value)
+void InspectorWorkerAgent::setAutoconnectToWorkers(ErrorString&, bool value)
 {
     m_shouldPauseDedicatedWorkerOnStart = value;
 }
@@ -237,5 +237,3 @@ void InspectorWorkerAgent::createWorkerFrontendChannel(WorkerGlobalScopeProxy* w
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

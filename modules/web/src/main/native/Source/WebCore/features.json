@@ -1,0 +1,482 @@
+{
+    "specification": [
+    {
+        "name": "CSS Grid Layout Level 1",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/css-grid/",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=60731",
+        "keywords": ["css grid layout", "css grid", "grid"],
+        "category": "css",
+        "contact": {
+            "name": "Sergio Villar Senin",
+            "email": "svillar@igalia.com"
+        }
+    },
+    {
+        "name": "CSS Inline Layout Module Level 3",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/css-inline/",
+        "keywords": ["css inline layout", "css inline", "inline"],
+        "category": "css"
+    },
+    {
+        "name": "CSS Media Queries Level 4",
+        "url": "http://dev.w3.org/csswg/mediaqueries-4/",
+        "keywords": ["css media queries", "media queries"],
+        "category": "css"
+    },
+    {
+        "name": "CSS Positioned Layout Module Level 3",
+        "url": "http://dev.w3.org/csswg/css-position/",
+        "keywords": ["css positioning"],
+        "category": "css"
+    },
+    {
+        "name": "CSS Scroll Snap Points Module Level 1",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/css-snappoints/",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=134283",
+        "keywords": ["css scroll snap points", "scroll snap", "snap points"],
+        "category": "css",
+        "contact": {
+            "name": "Brent Fulgham",
+            "email": "bfulgham@apple.com"
+        }
+    },
+    {
+        "name": "CSS Selectors Level 4",
+        "url": "http://dev.w3.org/csswg/selectors-4/",
+        "keywords": ["css selectors", "selectors"],
+        "category": "css",
+        "contact": {
+            "name": "Benjamin Poulain",
+            "twitter": "@awfulben",
+            "email": "benjamin@webkit.org"
+        }
+    },
+    {
+        "name": "CSS Shapes Level 1",
+        "url": "http://www.w3.org/TR/css-shapes-1/",
+        "keywords": ["css shapes", "shapes"],
+        "category": "css"
+    },
+    {
+        "name": "DOM",
+        "url": "https://dom.spec.whatwg.org",
+        "keywords": ["dom", "dom4"],
+        "category": "html"
+    },
+    {
+        "name": "Filter Effects Module Level 2",
+        "url": "http://dev.w3.org/fxtf/filters-2/",
+        "keywords": ["css filters", "filter effects", "filters"],
+        "category": "css"
+    },
+    {
+        "name": "HTML5",
+        "url": "https://html.spec.whatwg.org",
+        "keywords": ["html", "html5", "html5.1"],
+        "category": "html"
+    },
+    {
+        "name": "Service Workers",
+        "status": {
+            "status": "No active development"
+        },
+        "url": "http://www.w3.org/TR/2015/WD-service-workers-20150625/",
+        "keywords": ["service workers"],
+        "category": "webapps",
+        "description": "A method for browsers to run JavaScript in the background to handle network requests and manage cached responses. Service Workers offers a replacement for Application Cache.",
+        "contact": {
+            "name": "Jon Davis",
+            "twitter": "@jonathandavis",
+            "email": "web-evangelist@apple.com"
+        }
+    },
+    {
+        "name": "Streams",
+        "url": "https://streams.spec.whatwg.org",
+        "keywords": ["streams api"],
+        "category": "webapps"
+    },
+    {
+        "name": "Web Components",
+        "status": {
+            "status": "No active development"
+        },
+        "url": "http://www.w3.org/wiki/WebComponents/",
+        "keywords": ["web components", "shadow dom", "html imports", "custom element", "template element"],
+        "category": "webapps",
+        "description": "A collection of technologies to improve modularization of DOM subtrees.",
+        "contact": {
+            "name": "Jon Davis",
+            "twitter": "@jonathandavis",
+            "email": "web-evangelist@apple.com"
+        }
+    },
+    {
+        "name": "WebGL",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": true
+        },
+        "url": "https://www.khronos.org/registry/webgl/specs/1.0/",
+        "keywords": ["webgl"],
+        "category": "html"
+    },
+    {
+        "name": "WebRTC",
+        "status": {
+            "status": "No active development"
+        },
+        "url": "http://www.w3.org/TR/webrtc/",
+        "keywords": ["webrtc"],
+        "category": "webapps",
+        "description": "An API to facilitate real-time communication for browser-to-browser applications.",
+        "contact": {
+            "name": "Jon Davis",
+            "twitter": "@jonathandavis",
+            "email": "web-evangelist@apple.com"
+        }
+    }
+    ],
+
+    "features": [
+    {
+        "name": "CSS Selector :any-link",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/selectors-4/#the-any-link-pseudo",
+        "specification": "CSS Selectors Level 4",
+        "description": "The pseudo class :any-link matches any element that would match :link or :visisted.",
+        "comment": "A prefix version :-webkit-any-link has been available for a while but it was not 100% compliant to the specification.",
+        "contact": {
+            "name": "Benjamin Poulain",
+            "twitter": "@awfulben",
+            "email": "benjamin@webkit.org"
+        }
+    },
+    {
+        "name": "CSS Selector :lang() level 4",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/selectors-4/#the-lang-pseudo",
+        "specification": "CSS Selectors Level 4",
+        "description": "The selector :lang() is extended in level 4 to support a list of language range, each range can contain a wildcard. For example: p:lang(\"*-be\", \"en\")."
+    },
+    {
+        "name": "CSS Selector :matches()",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/selectors-4/#matches",
+        "specification": "CSS Selectors Level 4",
+        "description": "The selector :matches() takes a selector list as argument and matches an element if any of them matches (e.g. :matches(article > section, #target)). When used for styling, the specificity of :matches() is the higest specificity of all selectors in the selector list.",
+        "comment": "The pseudo classes <em>:visited</em> and <em>:link</em> are not supported inside :matches().",
+        "contact": {
+            "name": "Benjamin Poulain",
+            "twitter": "@awfulben",
+            "email": "benjamin@webkit.org"
+        }
+    },
+    {
+        "name": "CSS Selector :not() level 4",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/selectors-4/#negation",
+        "specification": "CSS Selectors Level 4",
+        "description": "The selector :not() in level 4 supports full selector lists as argument. For example: :not(:any-link >> img, :any-link >> picture).",
+        "comment": "The pseudo classes <em>:visited</em> and <em>:link</em> are not supported inside :not().",
+        "contact": {
+            "name": "Benjamin Poulain",
+            "twitter": "@awfulben",
+            "email": "benjamin@webkit.org"
+        }
+    },
+    {
+        "name": "CSS Selector :nth-child(An+B of selector list) and :nth-last-child(An+B of selector list)",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/selectors-4/#the-nth-child-pseudo",
+        "specification": "CSS Selectors Level 4",
+        "description": "The pseudo classes :nth-child() and :nth-last-child() now supports a selector list that filters what to count. For example: \":nth-child(even of .visible)\".",
+        "comment": "The pseudo classes <em>:visited</em> and <em>:link</em> are not supported inside :nth-child() and :nth-last-child().",
+        "contact": {
+            "name": "Benjamin Poulain",
+            "twitter": "@awfulben",
+            "email": "benjamin@webkit.org"
+        }
+    },
+    {
+        "name": "CSS Selector :placeholder-shown",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/selectors-4/#placeholder",
+        "specification": "CSS Selectors Level 4",
+        "description": "The selector :placeholder-shown matches any input element that has a visible placeholder.",
+        "comment": "Styling the placeholder can be done through the WebKit pseudo-element \"::-webkit-input-placeholder\".",
+        "contact": {
+            "name": "Benjamin Poulain",
+            "twitter": "@awfulben",
+            "email": "benjamin@webkit.org"
+        }
+    },
+    {
+        "name": "Case-insensitive attribute selectors",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/selectors-4/#attribute-case",
+        "specification": "CSS Selectors Level 4",
+        "description": "Any attribute selector that test a value can take a flag \"i\" to use case insensitive checks. For example: input[type=number i] test the value \"number\" case-insensitively.",
+        "contact": {
+            "name": "Benjamin Poulain",
+            "twitter": "@awfulben",
+            "email": "benjamin@webkit.org"
+        }
+    },
+    {
+        "name": "Custom Elements",
+        "status": {
+            "status": "No active development"
+        },
+        "url": "http://w3c.github.io/webcomponents/spec/custom/",
+        "specification": "Web Components",
+        "description": "Define a custom HTML tag and associate it with an ES6 class.",
+        "contact": {
+            "name": "Jon Davis",
+            "twitter": "@jonathandavis",
+            "email": "web-evangelist@apple.com"
+        }
+    },
+    {
+        "name": "Element.closest()",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "https://dom.spec.whatwg.org/#dom-element-closest",
+        "documentation-url": "https://developer.mozilla.org/en-US/docs/Web/API/Element/closest",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=137418",
+        "specification": "DOM",
+        "description": "Find the closest ancestor matching the selector passed as argument. The element itself is returned if it matches the selector.",
+        "contact": {
+            "name": "Benjamin Poulain",
+            "twitter": "@awfulben",
+            "email": "benjamin@webkit.org"
+        }
+    },
+    {
+        "name": "Filter Effects backdrop-filter propery",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/fxtf/filters-2/#propdef-backdrop-filter",
+        "specification": "Filter Effects Module Level 2",
+        "description": "This property specifies styling for filters applied to the backdrop of an element."
+    },
+    {
+        "name": "Force Click Events",
+        "status": {
+            "status": "Prototyping",
+            "enabled-by-default": true
+        },
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=142836",
+        "description": "Provide the events necessary to handle force click events in the page, overriding the default behavior."
+    },
+    {
+        "name": "HTML imports",
+        "status": {
+            "status": "No active development"
+        },
+        "url": "http://w3c.github.io/webcomponents/spec/imports/",
+        "specification": "Web Components",
+        "description": "Includes resusable HTML documents in other HTML documents.",
+        "comment": "There are concerns about the disconnect between this specification and ES6 Modules. WebKit has no intent to support the current specification.",
+        "contact": {
+            "name": "Jon Davis",
+            "twitter": "@jonathandavis",
+            "email": "web-evangelist@apple.com"
+        }
+    },
+    {
+        "name": "Initial Letter",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/css-inline/#propdef-initial-letter",
+        "specification": "CSS Inline Layout Module Level 3",
+        "description": "This property specifies styling for dropped, raised, and sunken initial letters."
+    },
+    {
+        "name": "Interaction Media Features (pointer, hover, any-pointer, any-hover)",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/mediaqueries-4/#mf-interaction",
+        "specification": "CSS Media Queries Level 4",
+        "description": "The \"pointer\" media defines how percise the pointing device is. The \"hover\" media defines the ability of the poiting device to hover elements."
+    },
+    {
+        "name": "MicroData",
+        "status": {
+            "status": "Removed"
+        },
+        "url": "https://html.spec.whatwg.org/multipage/microdata.html",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=119480",
+        "specification": "HTML5",
+        "comment": "WebKit used to support MicroData. The feature never gained any traction and was eventually removed to clean up the codebase."
+    },
+    {
+        "name": "Navigator.hardwareConcurrency",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "https://wiki.whatwg.org/wiki/Navigator_HW_Concurrency",
+        "webkit-url": "http://trac.webkit.org/changeset/169017",
+        "description": "Navigator.hardwareConcurrency provides the total number of logical processors available to the user agent."
+    },
+    {
+        "name": "Picture element",
+        "status": {
+            "status": "In development",
+            "enabled-by-default": false
+        },
+        "url": "https://html.spec.whatwg.org/multipage/embedded-content.html#the-picture-element",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=116963",
+        "specification": "HTML5",
+        "description": "Enable handling the art-direction responsive images use-case by defining multiple image sources in markup",
+        "contact": {
+            "name": "Yoav Weiss",
+            "twitter": "@yoavweiss",
+            "email": "yoav@yoav.ws"
+        }
+    },
+    {
+        "name": "Position: sticky",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://dev.w3.org/csswg/css-position/#sticky-pos",
+        "specification": "CSS Positioned Layout Module Level 3",
+        "description": "Sticky positioning provides a way to position element out of the normal flow when scrolling. Unlike solutions based on JavaScript, the change of position is synchronized with scrolling.",
+        "comment": "The feature is prefixed with <em>-webkit-</em>. There are some remaining issues to resolve in the specification."
+    },
+    {
+        "name": "Readable Streams",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": true
+        },
+        "url": "https://streams.spec.whatwg.org/#rs",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=138967",
+        "specification": "Streams",
+        "comment": "The ReadableStream and ReadableStreamReader interfaces are available but not functional."
+    },
+    {
+        "name": "Shadow DOM",
+        "status": {
+            "status": "No active development"
+        },
+        "url": "http://w3c.github.io/webcomponents/spec/shadow/",
+        "specification": "Web Components",
+        "description": "Functional encapsulation of HTML, CSS and JavaScript for Web Components.",
+        "contact": {
+            "name": "Jon Davis",
+            "twitter": "@jonathandavis",
+            "email": "web-evangelist@apple.com"
+        }
+    },
+    {
+        "name": "Shape outside for floats",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": true
+        },
+        "url": "http://www.w3.org/TR/css-shapes-1/",
+        "specification": "CSS Shapes Level 1",
+        "description": "CSS Shapes describe geometric shapes for use in CSS. For Level 1, CSS Shapes can be applied to floats.",
+        "comment": "The implementation is feature complete and shipping, but is -webkit prefixed."
+    },
+    {
+        "name": "Shared Web Workers",
+        "status": {
+            "status": "Removed"
+        },
+        "url": "https://html.spec.whatwg.org/multipage/workers.html#shared-workers-introduction",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=140344",
+        "specification": "HTML5",
+        "comment": "The implementation of Shared Web Workers was imposing undesirable constraints on the engine. The feature never gained any adoption and was eventually removed from the engine."
+    },
+    {
+        "name": "Srcset w descriptor and related sizes attribute",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=133620",
+        "specification": "HTML5",
+        "description": "Enable handling the variable width responsive images use-case by defining multiple image resources in markup",
+        "contact": {
+            "name": "Yoav Weiss",
+            "twitter": "@yoavweiss",
+            "email": "yoav@yoav.ws"
+        }
+    },
+    {
+        "name": "Srcset x descriptor",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=110252",
+        "specification": "HTML5",
+        "description": "Enable handling the fixed width responsive images use-case by defining multiple image resources in markup",
+        "contact": {
+            "name": "Yoav Weiss",
+            "twitter": "@yoavweiss",
+            "email": "yoav@yoav.ws"
+        }
+    },
+    {
+        "name": "Template Element",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "http://www.w3.org/TR/html5/scripting-1.html#the-template-element",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=124637",
+        "documentation-url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template",
+        "specification": "Web Components",
+        "description": "Declares HTML fragments that can be cloned and inserted into the document by a script."
+    }
+    ]
+}

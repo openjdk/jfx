@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -48,12 +48,12 @@ protected:
     virtual ~NetscapePlugInStreamLoaderClient() { }
 };
 
-class NetscapePlugInStreamLoader : public ResourceLoader {
+class NetscapePlugInStreamLoader final : public ResourceLoader {
 public:
-    static PassRefPtr<NetscapePlugInStreamLoader> create(DocumentLoader*, NetscapePlugInStreamLoaderClient*, const ResourceRequest&);
+    WEBCORE_EXPORT static PassRefPtr<NetscapePlugInStreamLoader> create(DocumentLoader*, NetscapePlugInStreamLoaderClient*, const ResourceRequest&);
     virtual ~NetscapePlugInStreamLoader();
 
-    bool isDone() const;
+    WEBCORE_EXPORT bool isDone() const;
 
 private:
     virtual void didReceiveResponse(const ResourceResponse&) override;
@@ -63,6 +63,7 @@ private:
     virtual void didFail(const ResourceError&) override;
 
     virtual void releaseResources() override;
+    virtual bool isPlugInStreamLoader() override { return true; }
 
     NetscapePlugInStreamLoader(DocumentLoader*, NetscapePlugInStreamLoaderClient*);
 

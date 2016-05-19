@@ -9,14 +9,15 @@
 #include "Page.h"
 #include "PageGroup.h"
 #include "PlatformCookieJar.h"
-#include "PluginDatabase.h"
-#include "PluginPackage.h"
+#include "LinkHash.h"
+// #include "PluginDatabase.h" //XXX became Windows only
+// #include "PluginPackage.h"
 
 using namespace WebCore;
 
 void PlatformStrategiesJava::initialize()
 {
-    DEFINE_STATIC_LOCAL(PlatformStrategiesJava, platformStrategies, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(PlatformStrategiesJava, platformStrategies, ());
     setPlatformStrategies(&platformStrategies);
 }
 
@@ -29,10 +30,10 @@ CookiesStrategy* PlatformStrategiesJava::createCookiesStrategy()
     return this;
 }
 
-DatabaseStrategy* PlatformStrategiesJava::createDatabaseStrategy()
-{
-    return this;
-}
+// DatabaseStrategy* PlatformStrategiesJava::createDatabaseStrategy()
+// {
+//     return this;
+// }
 
 LoaderStrategy* PlatformStrategiesJava::createLoaderStrategy()
 {
@@ -51,20 +52,24 @@ PluginStrategy* PlatformStrategiesJava::createPluginStrategy()
     return this;
 }
 
-SharedWorkerStrategy* PlatformStrategiesJava::createSharedWorkerStrategy()
-{
-    return this;
+void PlatformStrategiesJava::getWebVisiblePluginInfo(const Page*, Vector<PluginInfo>&) {
+
 }
 
-StorageStrategy* PlatformStrategiesJava::createStorageStrategy()
-{
-    return this;
-}
+// SharedWorkerStrategy* PlatformStrategiesJava::createSharedWorkerStrategy()
+// {
+//     return this;
+// }
 
-VisitedLinkStrategy* PlatformStrategiesJava::createVisitedLinkStrategy()
-{
-    return this;
-}
+// StorageStrategy* PlatformStrategiesJava::createStorageStrategy()
+// {
+//     return this;
+// }
+
+// VisitedLinkStrategy* PlatformStrategiesJava::createVisitedLinkStrategy()
+// {
+//     return this;
+// }
 
 // CookiesStrategy
 String PlatformStrategiesJava::cookiesForDOM(const NetworkStorageSession& session, const URL& firstParty, const URL& url)
@@ -100,43 +105,44 @@ void PlatformStrategiesJava::deleteCookie(const NetworkStorageSession& session, 
 // PluginStrategy
 void PlatformStrategiesJava::refreshPlugins()
 {
-    PluginDatabase::installedPlugins()->refresh();
+    // PluginDatabase::installedPlugins()->refresh(); //XXX Windows only
 }
 
 void PlatformStrategiesJava::getPluginInfo(const Page* page, Vector<PluginInfo>& outPlugins)
 {
-    PluginDatabase* database = PluginDatabase::installedPlugins();
-    const Vector<PluginPackage*> &plugins = database->plugins();
+    //XXX make Windows only
+    // PluginDatabase* database = PluginDatabase::installedPlugins();
+    // const Vector<PluginPackage*> &plugins = database->plugins();
 
-    for (size_t i = 0; i < plugins.size(); ++i) {
-        PluginPackage* package = plugins[i];
+    // for (size_t i = 0; i < plugins.size(); ++i) {
+    //     PluginPackage* package = plugins[i];
 
-        PluginInfo pluginInfo;
-        pluginInfo.name = package->name();
-        pluginInfo.file = package->fileName();
-        pluginInfo.desc = package->description();
+    //     PluginInfo pluginInfo;
+    //     pluginInfo.name = package->name();
+    //     pluginInfo.file = package->fileName();
+    //     pluginInfo.desc = package->description();
 
-        const MIMEToDescriptionsMap& mimeToDescriptions = package->mimeToDescriptions();
-        MIMEToDescriptionsMap::const_iterator end = mimeToDescriptions.end();
-        for (MIMEToDescriptionsMap::const_iterator it = mimeToDescriptions.begin(); it != end; ++it) {
-            MimeClassInfo mime;
-            mime.type = it->key;
-            mime.desc = it->value;
-            mime.extensions = package->mimeToExtensions().get(mime.type);
-            pluginInfo.mimes.append(mime);
-        }
+    //     const MIMEToDescriptionsMap& mimeToDescriptions = package->mimeToDescriptions();
+    //     MIMEToDescriptionsMap::const_iterator end = mimeToDescriptions.end();
+    //     for (MIMEToDescriptionsMap::const_iterator it = mimeToDescriptions.begin(); it != end; ++it) {
+    //         MimeClassInfo mime;
+    //         mime.type = it->key;
+    //         mime.desc = it->value;
+    //         mime.extensions = package->mimeToExtensions().get(mime.type);
+    //         pluginInfo.mimes.append(mime);
+    //     }
 
-        outPlugins.append(pluginInfo);
-    }
+    //     outPlugins.append(pluginInfo);
+    // }
 }
 
-// VisitedLinkStrategy
-bool PlatformStrategiesJava::isLinkVisited(Page* page, LinkHash hash, const URL&, const AtomicString&)
-{
-    return page->group().isLinkVisited(hash);
-}
+// VisitedLinkStrategy //XXX recheck
+// bool PlatformStrategiesJava::isLinkVisited(Page* page, LinkHash hash, const URL&, const AtomicString&)
+// {
+//     return page->group().isLinkVisited(hash);
+// }
 
-void PlatformStrategiesJava::addVisitedLink(Page* page, LinkHash hash)
-{
-    page->group().addVisitedLinkHash(hash);
-}
+// void PlatformStrategiesJava::addVisitedLink(Page* page, LinkHash hash)
+// {
+//     page->group().addVisitedLinkHash(hash);
+// }

@@ -29,7 +29,7 @@ namespace WebCore {
 
 class HTMLTitleElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLTitleElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLTitleElement> create(const QualifiedName&, Document&);
 
     String text() const;
     void setText(const String&);
@@ -45,8 +45,6 @@ private:
 
     StringWithDirection m_title;
 };
-
-NODE_TYPE_CASTS(HTMLTitleElement)
 
 } //namespace
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006 Apple Inc.
  *
  * Portions are Copyright (C) 2001-6 mozilla.org
  *
@@ -39,14 +39,13 @@
 
 #include "config.h"
 #include "JPEGImageDecoder.h"
-#include <wtf/PassOwnPtr.h>
 
 extern "C" {
 #if USE(ICCJPEG)
-#include "iccjpeg.h"
+#include <iccjpeg.h>
 #endif
 #if USE(QCMSLIB)
-#include "qcms.h"
+#include <qcms.h>
 #endif
 #include <setjmp.h>
 }
@@ -333,7 +332,7 @@ public:
         switch (m_state) {
         case JPEG_HEADER:
             // Read file parameters with jpeg_read_header().
-            if (jpeg_read_header(&m_info, true) == JPEG_SUSPENDED)
+            if (jpeg_read_header(&m_info, TRUE) == JPEG_SUSPENDED)
                 return false; // I/O suspension.
 
             switch (m_info.jpeg_color_space) {
@@ -419,9 +418,9 @@ public:
             // of progressive JPEG.
             m_info.dct_method = dctMethod();
             m_info.dither_mode = ditherMode();
-            m_info.do_fancy_upsampling = doFancyUpsampling();
-            m_info.enable_2pass_quant = false;
-            m_info.do_block_smoothing = true;
+            m_info.do_fancy_upsampling = doFancyUpsampling() ? TRUE : FALSE;
+            m_info.enable_2pass_quant = FALSE;
+            m_info.do_block_smoothing = TRUE;
 
             // Start decompressor.
             if (!jpeg_start_decompress(&m_info))
@@ -467,7 +466,13 @@ public:
                     if (m_info.output_scanline == 0xffffff)
                         m_info.output_scanline = 0;
 
-                    if (!m_decoder->outputScanlines()) {
+                    // If outputScanlines() fails, it deletes |this|. Therefore,
+                    // copy the decoder pointer and use it to check for failure
+                    // to avoid member access in the failure case.
+                    JPEGImageDecoder* decoder = m_decoder;
+                    if (!decoder->outputScanlines()) {
+                        if (decoder->failed()) // Careful; |this| is deleted.
+                            return false;
                         if (!m_info.output_scanline)
                             // Didn't manage to read any lines - flag so we
                             // don't call jpeg_start_output() multiple times for
@@ -572,7 +577,7 @@ boolean fill_input_buffer(j_decompress_ptr)
     // Our decode step always sets things up properly, so if this method is ever
     // called, then we have hit the end of the buffer.  A return value of false
     // indicates that we have no data to supply yet.
-    return false;
+    return FALSE;
 }
 
 void term_source(j_decompress_ptr jd)
@@ -626,7 +631,7 @@ ImageFrame* JPEGImageDecoder::frameBufferAtIndex(size_t index)
 
 bool JPEGImageDecoder::setFailed()
 {
-    m_reader.clear();
+    m_reader = nullptr;
     return ImageDecoder::setFailed();
 }
 
@@ -765,7 +770,7 @@ void JPEGImageDecoder::decode(bool onlySize)
         return;
 
     if (!m_reader)
-        m_reader = adoptPtr(new JPEGImageReader(this));
+        m_reader = std::make_unique<JPEGImageReader>(this);
 
     // If we couldn't decode the image but we've received all the data, decoding
     // has failed.
@@ -774,7 +779,7 @@ void JPEGImageDecoder::decode(bool onlySize)
     // If we're done decoding the image, we don't need the JPEGImageReader
     // anymore.  (If we failed, |m_reader| has already been cleared.)
     else if (!m_frameBufferCache.isEmpty() && (m_frameBufferCache[0].status() == ImageFrame::FrameComplete))
-        m_reader.clear();
+        m_reader = nullptr;
 }
 
 }

@@ -30,6 +30,7 @@
 
 #include "GRefPtrGStreamer.h"
 #include <wtf/ThreadingPrimitives.h>
+#include <wtf/glib/GThreadSafeMainLoopSource.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -58,16 +59,19 @@ protected:
     TrackPrivateBaseGStreamer(TrackPrivateBase* owner, gint index, GRefPtr<GstPad>);
 
     gint m_index;
-    String m_label;
-    String m_language;
+    AtomicString m_label;
+    AtomicString m_language;
     GRefPtr<GstPad> m_pad;
 
 private:
-    bool getTag(GstTagList* tags, const gchar* tagName, String& value);
+    bool getLanguageCode(GstTagList* tags, AtomicString& value);
+
+    template<class StringType>
+    bool getTag(GstTagList* tags, const gchar* tagName, StringType& value);
 
     TrackPrivateBase* m_owner;
-    guint m_activeTimerHandler;
-    guint m_tagTimerHandler;
+    GThreadSafeMainLoopSource m_activeTimerHandler;
+    GThreadSafeMainLoopSource m_tagTimerHandler;
 
     Mutex m_tagMutex;
     GRefPtr<GstTagList> m_tags;

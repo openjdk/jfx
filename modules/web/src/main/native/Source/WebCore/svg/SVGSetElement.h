@@ -21,14 +21,14 @@
 #ifndef SVGSetElement_h
 #define SVGSetElement_h
 
-#include "SVGAnimateElement.h"
+#include "SVGAnimateElementBase.h"
 
 namespace WebCore {
 
 // SVGAnimateElement implements superset of the functionality.
-class SVGSetElement final : public SVGAnimateElement {
+class SVGSetElement final : public SVGAnimateElementBase {
 public:
-    static PassRefPtr<SVGSetElement> create(const QualifiedName&, Document&);
+    static Ref<SVGSetElement> create(const QualifiedName&, Document&);
 
 private:
     SVGSetElement(const QualifiedName&, Document&);

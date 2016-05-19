@@ -24,10 +24,8 @@
 #include "DOMPlugin.h"
 #include "DOMWindowProperty.h"
 #include "ScriptWrappable.h"
-#include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -36,7 +34,7 @@ class PluginData;
 
 class DOMPluginArray : public ScriptWrappable, public RefCounted<DOMPluginArray>, public DOMWindowProperty {
 public:
-    static PassRefPtr<DOMPluginArray> create(Frame* frame) { return adoptRef(new DOMPluginArray(frame)); }
+    static Ref<DOMPluginArray> create(Frame* frame) { return adoptRef(*new DOMPluginArray(frame)); }
     ~DOMPluginArray();
 
     unsigned length() const;
@@ -53,4 +51,4 @@ private:
 
 } // namespace WebCore
 
-#endif // PluginArray_h
+#endif // DOMPluginArray_h

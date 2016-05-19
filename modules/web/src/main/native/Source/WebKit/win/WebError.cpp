@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,12 +23,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebError.h"
 #include "WebKit.h"
 
 #include <WebCore/BString.h>
+
+#if USE(CG)
+#include <CoreGraphics/CoreGraphics.h>
+#endif
 
 #if USE(CFNETWORK)
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
@@ -44,13 +47,13 @@ WebError::WebError(const ResourceError& error, IPropertyBag* userInfo)
     , m_userInfo(userInfo)
 {
     gClassCount++;
-    gClassNameCount.add("WebError");
+    gClassNameCount().add("WebError");
 }
 
 WebError::~WebError()
 {
     gClassCount--;
-    gClassNameCount.remove("WebError");
+    gClassNameCount().remove("WebError");
 }
 
 WebError* WebError::createInstance(const ResourceError& error, IPropertyBag* userInfo)
@@ -208,8 +211,7 @@ HRESULT STDMETHODCALLTYPE WebError::isPolicyChangeError(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebError::sslPeerCertificate(
-    /* [retval][out] */ OLE_HANDLE* result)
+HRESULT WebError::sslPeerCertificate(/* [retval][out] */ ULONG_PTR* result)
 {
     if (!result)
         return E_POINTER;
@@ -228,7 +230,7 @@ HRESULT STDMETHODCALLTYPE WebError::sslPeerCertificate(
     void* data = wkGetSSLPeerCertificateDataBytePtr(m_cfErrorUserInfoDict.get());
     if (!data)
         return E_FAIL;
-    *result = (OLE_HANDLE)(ULONG64)data;
+    *result = reinterpret_cast<ULONG_PTR>(data);
 #endif
     return *result ? S_OK : E_FAIL;
 }

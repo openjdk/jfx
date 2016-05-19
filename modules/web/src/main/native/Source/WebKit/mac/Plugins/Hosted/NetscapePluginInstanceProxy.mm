@@ -217,7 +217,7 @@ DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, netscapePluginInstanceProxy
 NetscapePluginInstanceProxy::NetscapePluginInstanceProxy(NetscapePluginHostProxy* pluginHostProxy, WebHostedNetscapePluginView *pluginView, bool fullFramePlugin)
     : m_pluginHostProxy(pluginHostProxy)
     , m_pluginView(pluginView)
-    , m_requestTimer(this, &NetscapePluginInstanceProxy::requestTimerFired)
+    , m_requestTimer(*this, &NetscapePluginInstanceProxy::requestTimerFired)
     , m_currentURLRequestID(0)
     , m_renderContextID(0)
     , m_rendererType(UseSoftwareRenderer)
@@ -580,7 +580,7 @@ NPError NetscapePluginInstanceProxy::loadURL(const char* url, const char* target
                 path = [fileURL path];
             else
                 path = (NSString *)bufString.get();
-            httpBody = [NSData dataWithContentsOfFile:[path _webkit_fixedCarbonPOSIXPath]];
+            httpBody = [NSData dataWithContentsOfFile:path];
             if (!httpBody)
                 return NPERR_FILE_NOT_FOUND;
         } else
@@ -735,7 +735,7 @@ void NetscapePluginInstanceProxy::evaluateJavaScript(PluginRequest* pluginReques
     }
 }
 
-void NetscapePluginInstanceProxy::requestTimerFired(Timer<NetscapePluginInstanceProxy>*)
+void NetscapePluginInstanceProxy::requestTimerFired()
 {
     ASSERT(!m_pluginRequests.isEmpty());
     ASSERT(m_pluginView);
@@ -790,7 +790,7 @@ NPError NetscapePluginInstanceProxy::loadRequest(NSURLRequest *request, const ch
     requestID = ++m_currentURLRequestID;
 
     if (cTarget || JSString) {
-        // Make when targetting a frame or evaluating a JS string, perform the request after a delay because we don't
+        // Make when targeting a frame or evaluating a JS string, perform the request after a delay because we don't
         // want to potentially kill the plug-in inside of its URL request.
 
         if (JSString && target && [frame findFrameNamed:target] != frame) {
@@ -841,7 +841,7 @@ bool NetscapePluginInstanceProxy::getWindowNPObject(uint32_t& objectID)
     if (!frame->script().canExecuteScripts(NotAboutToExecuteScript))
         objectID = 0;
     else
-        objectID = m_localObjects.idForObject(*pluginWorld().vm(), frame->script().windowShell(pluginWorld())->window());
+        objectID = m_localObjects.idForObject(pluginWorld().vm(), frame->script().windowShell(pluginWorld())->window());
 
     return true;
 }
@@ -853,7 +853,7 @@ bool NetscapePluginInstanceProxy::getPluginElementNPObject(uint32_t& objectID)
         return false;
 
     if (JSObject* object = frame->script().jsObjectForPluginElement([m_pluginView element]))
-        objectID = m_localObjects.idForObject(*pluginWorld().vm(), object);
+        objectID = m_localObjects.idForObject(pluginWorld().vm(), object);
     else
         objectID = 0;
 
@@ -883,7 +883,7 @@ bool NetscapePluginInstanceProxy::evaluate(uint32_t objectID, const String& scri
         return false;
 
     JSLockHolder lock(pluginWorld().vm());
-    Strong<JSGlobalObject> globalObject(*pluginWorld().vm(), frame->script().globalObject(pluginWorld()));
+    Strong<JSGlobalObject> globalObject(pluginWorld().vm(), frame->script().globalObject(pluginWorld()));
     ExecState* exec = globalObject->globalExec();
 
     UserGestureIndicator gestureIndicator(allowPopups ? DefinitelyProcessingUserGesture : PossiblyProcessingUserGesture);
@@ -1230,8 +1230,8 @@ bool NetscapePluginInstanceProxy::enumerate(uint32_t objectID, data_t& resultDat
     ExecState* exec = frame->script().globalObject(pluginWorld())->globalExec();
     JSLockHolder lock(exec);
 
-    PropertyNameArray propertyNames(exec);
-    object->methodTable()->getPropertyNames(object, exec, propertyNames, ExcludeDontEnumProperties);
+    PropertyNameArray propertyNames(exec, PropertyNameMode::Strings);
+    object->methodTable()->getPropertyNames(object, exec, propertyNames, EnumerationMode());
 
     RetainPtr<NSMutableArray*> array = adoptNS([[NSMutableArray alloc] init]);
     for (unsigned i = 0; i < propertyNames.size(); i++) {
@@ -1663,7 +1663,7 @@ void NetscapePluginInstanceProxy::privateBrowsingModeDidChange(bool isPrivateBro
 
 static String& globalExceptionString()
 {
-    DEFINE_STATIC_LOCAL(String, exceptionString, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, exceptionString, ());
     return exceptionString;
 }
 

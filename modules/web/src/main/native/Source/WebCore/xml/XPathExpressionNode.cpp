@@ -1,6 +1,6 @@
 /*
  * Copyright 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006, 2013 Apple Computer, Inc.
+ * Copyright (C) 2006, 2013 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,11 +49,11 @@ Expression::Expression()
 void Expression::setSubexpressions(Vector<std::unique_ptr<Expression>> subexpressions)
 {
     ASSERT(m_subexpressions.isEmpty());
-    m_subexpressions = std::move(subexpressions);
-    for (unsigned i = 0; i < m_subexpressions.size(); ++i) {
-        m_isContextNodeSensitive |= m_subexpressions[i]->m_isContextNodeSensitive;
-        m_isContextPositionSensitive |= m_subexpressions[i]->m_isContextPositionSensitive;
-        m_isContextSizeSensitive |= m_subexpressions[i]->m_isContextSizeSensitive;
+    m_subexpressions = WTF::move(subexpressions);
+    for (auto& subexpression : m_subexpressions) {
+        m_isContextNodeSensitive |= subexpression->m_isContextNodeSensitive;
+        m_isContextPositionSensitive |= subexpression->m_isContextPositionSensitive;
+        m_isContextSizeSensitive |= subexpression->m_isContextSizeSensitive;
     }
 }
 

@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -25,9 +25,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SQL_DATABASE)
-
 #include "DOMWindowWebDatabase.h"
 
 #include "DOMWindow.h"
@@ -40,13 +37,13 @@
 
 namespace WebCore {
 
-PassRefPtr<Database> DOMWindowWebDatabase::openDatabase(DOMWindow* window, const String& name, const String& version, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback> creationCallback, ExceptionCode& ec)
+RefPtr<Database> DOMWindowWebDatabase::openDatabase(DOMWindow* window, const String& name, const String& version, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback> creationCallback, ExceptionCode& ec)
 {
     if (!window->isCurrentlyDisplayedInFrame())
-        return 0;
+        return nullptr;
 
-    RefPtr<Database> database = 0;
-    DatabaseManager& dbManager = DatabaseManager::manager();
+    RefPtr<Database> database = nullptr;
+    DatabaseManager& dbManager = DatabaseManager::singleton();
     DatabaseError error = DatabaseError::None;
     if (dbManager.isAvailable() && window->document()->securityOrigin()->canAccessDatabase(window->document()->topOrigin())) {
         database = dbManager.openDatabase(window->document(), name, version, displayName, estimatedSize, creationCallback, error);
@@ -59,5 +56,3 @@ PassRefPtr<Database> DOMWindowWebDatabase::openDatabase(DOMWindow* window, const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)

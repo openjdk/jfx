@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,7 +30,6 @@
 #include "AbstractWorker.h"
 #include "ActiveDOMObject.h"
 #include "EventListener.h"
-#include "EventNames.h"
 #include "EventTarget.h"
 #include "MessagePort.h"
 #include "WorkerScriptLoaderClient.h"
@@ -47,9 +46,9 @@ namespace WebCore {
 
     typedef int ExceptionCode;
 
-    class Worker final : public AbstractWorker, private WorkerScriptLoaderClient {
+    class Worker final : public AbstractWorker, public ActiveDOMObject, private WorkerScriptLoaderClient {
     public:
-        static PassRefPtr<Worker> create(ScriptExecutionContext&, const String& url, ExceptionCode&);
+        static RefPtr<Worker> create(ScriptExecutionContext&, const String& url, ExceptionCode&);
         virtual ~Worker();
 
         virtual EventTargetInterface eventTargetInterface() const override { return WorkerEventTargetInterfaceType; }
@@ -60,11 +59,11 @@ namespace WebCore {
 
         void terminate();
 
-        virtual bool canSuspend() const override;
-        virtual void stop() override;
-        virtual bool hasPendingActivity() const override;
+        // EventTarget API.
+        virtual ScriptExecutionContext* scriptExecutionContext() const override final { return ActiveDOMObject::scriptExecutionContext(); }
 
-        DEFINE_ATTRIBUTE_EVENT_LISTENER(message);
+        // ActiveDOMObject API.
+        bool hasPendingActivity() const override;
 
     private:
         explicit Worker(ScriptExecutionContext&);
@@ -74,6 +73,11 @@ namespace WebCore {
         // WorkerScriptLoaderClient callbacks
         virtual void didReceiveResponse(unsigned long identifier, const ResourceResponse&) override;
         virtual void notifyFinished() override;
+
+        // ActiveDOMObject API.
+        bool canSuspendForPageCache() const override;
+        void stop() override;
+        const char* activeDOMObjectName() const override;
 
         friend void networkStateChanged(bool isOnLine);
 

@@ -49,11 +49,11 @@ JSValue JSHTMLTemplateElement::content(ExecState* exec) const
 
     DocumentFragment* content = impl().content();
 
-    JSObject* wrapper = getCachedWrapper(currentWorld(exec), content);
+    JSObject* wrapper = getCachedWrapper(globalObject()->world(), content);
     if (wrapper)
         return wrapper;
 
-    wrapper = CREATE_DOM_WRAPPER(exec, globalObject(), DocumentFragment, content);
+    wrapper = CREATE_DOM_WRAPPER(globalObject(), DocumentFragment, content);
     PrivateName propertyName;
     const_cast<JSHTMLTemplateElement*>(this)->putDirect(globalObject()->vm(), propertyName, wrapper);
     return wrapper;

@@ -26,8 +26,6 @@
 #ifndef AbstractDatabaseServer_h
 #define AbstractDatabaseServer_h
 
-#if ENABLE(SQL_DATABASE)
-
 #include "DatabaseBasicTypes.h"
 #include "DatabaseDetails.h"
 #include "DatabaseError.h"
@@ -38,7 +36,7 @@
 namespace WebCore {
 
 class DatabaseBackendBase;
-class DatabaseBackendContext;
+class DatabaseContext;
 class DatabaseManagerClient;
 class SecurityOrigin;
 
@@ -57,9 +55,9 @@ public:
         RetryOpenDatabase
     };
 
-    virtual PassRefPtr<DatabaseBackendBase> openDatabase(RefPtr<DatabaseBackendContext>&, DatabaseType,
-        const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize,
-        bool setVersionInNewDatabase, DatabaseError&, String& errorMessage, OpenAttempt = FirstTryToOpenDatabase) = 0;
+    virtual RefPtr<DatabaseBackendBase> openDatabase(RefPtr<DatabaseContext>&, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError&, String& errorMessage, OpenAttempt = FirstTryToOpenDatabase) = 0;
+
+    virtual void closeAllDatabases() = 0;
 
     virtual bool hasEntryForOrigin(SecurityOrigin*) = 0;
     virtual void origins(Vector<RefPtr<SecurityOrigin>>& result) = 0;
@@ -75,7 +73,7 @@ public:
     virtual bool deleteOrigin(SecurityOrigin*) = 0;
     virtual bool deleteDatabase(SecurityOrigin*, const String& name) = 0;
 
-    virtual void interruptAllDatabasesForContext(const DatabaseBackendContext*) = 0;
+    virtual void interruptAllDatabasesForContext(const DatabaseContext*) = 0;
 
 protected:
     AbstractDatabaseServer() { }
@@ -83,7 +81,5 @@ protected:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)
 
 #endif // AbstractDatabaseServer_h

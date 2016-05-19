@@ -26,9 +26,9 @@
 #include "config.h"
 
 #import "APICast.h"
-#import "APIShims.h"
 #import "DateInstance.h"
 #import "Error.h"
+#import "Exception.h"
 #import "JavaScriptCore.h"
 #import "JSContextInternal.h"
 #import "JSVirtualMachineInternal.h"
@@ -42,10 +42,16 @@
 #import <wtf/HashMap.h>
 #import <wtf/HashSet.h>
 #import <wtf/ObjcRuntimeExtras.h>
+#import <wtf/SpinLock.h>
 #import <wtf/Vector.h>
-#import <wtf/TCSpinLock.h>
 #import <wtf/text/WTFString.h>
 #import <wtf/text/StringHash.h>
+
+#if ENABLE(REMOTE_INSPECTOR)
+#import "CallFrame.h"
+#import "JSGlobalObject.h"
+#import "JSGlobalObjectInspectorController.h"
+#endif
 
 #if JSC_OBJC_API_ENABLED
 
@@ -351,6 +357,16 @@ NSString * const JSPropertyDescriptorSetKey = @"set";
     return JSValueIsObject([_context JSGlobalContextRef], m_value);
 }
 
+- (BOOL)isArray
+{
+    return JSValueIsArray([_context JSGlobalContextRef], m_value);
+}
+
+- (BOOL)isDate
+{
+    return JSValueIsDate([_context JSGlobalContextRef], m_value);
+}
+
 - (BOOL)isEqualToObject:(id)value
 {
     return JSValueIsStrictEqual([_context JSGlobalContextRef], m_value, objectToValue(_context, value));
@@ -557,13 +573,13 @@ NSString * const JSPropertyDescriptorSetKey = @"set";
 
 inline bool isDate(JSObjectRef object, JSGlobalContextRef context)
 {
-    JSC::APIEntryShim entryShim(toJS(context));
+    JSC::JSLockHolder locker(toJS(context));
     return toJS(object)->inherits(JSC::DateInstance::info());
 }
 
 inline bool isArray(JSObjectRef object, JSGlobalContextRef context)
 {
-    JSC::APIEntryShim entryShim(toJS(context));
+    JSC::JSLockHolder locker(toJS(context));
     return toJS(object)->inherits(JSC::JSArray::info());
 }
 
@@ -629,6 +645,15 @@ JSContainerConvertor::Task JSContainerConvertor::take()
     return last;
 }
 
+#if ENABLE(REMOTE_INSPECTOR)
+static void reportExceptionToInspector(JSGlobalContextRef context, JSC::JSValue exceptionValue)
+{
+    JSC::ExecState* exec = toJS(context);
+    JSC::Exception* exception = JSC::Exception::create(exec->vm(), exceptionValue);
+    exec->vmEntryGlobalObject()->inspectorController().reportAPIException(exec, exception);
+}
+#endif
+
 static JSContainerConvertor::Task valueToObjectWithoutCopy(JSGlobalContextRef context, JSValueRef value)
 {
     if (!JSValueIsObject(context, value)) {
@@ -672,7 +697,7 @@ static JSContainerConvertor::Task valueToObjectWithoutCopy(JSGlobalContextRef co
 static id containerValueToObject(JSGlobalContextRef context, JSContainerConvertor::Task task)
 {
     ASSERT(task.type != ContainerNone);
-    JSC::APIEntryShim entryShim(toJS(context));
+    JSC::JSLockHolder locker(toJS(context));
     JSContainerConvertor convertor(context);
     convertor.add(task);
     ASSERT(!convertor.isWorkListEmpty());
@@ -697,6 +722,8 @@ static id containerValueToObject(JSGlobalContextRef context, JSContainerConverto
         } else {
             ASSERT([current.objc isKindOfClass:[NSMutableDictionary class]]);
             NSMutableDictionary *dictionary = (NSMutableDictionary *)current.objc;
+
+            JSC::JSLockHolder locker(toJS(context));
 
             JSPropertyNameArrayRef propertyNameArray = JSObjectCopyPropertyNames(context, js);
             size_t length = JSPropertyNameArrayGetCount(propertyNameArray);
@@ -752,9 +779,9 @@ id valueToString(JSGlobalContextRef context, JSValueRef value, JSValueRef* excep
         return nil;
     }
 
-    NSString *stringNS = CFBridgingRelease(JSStringCopyCFString(kCFAllocatorDefault, jsstring));
+    RetainPtr<CFStringRef> stringCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, jsstring));
     JSStringRelease(jsstring);
-    return stringNS;
+    return (NSString *)stringCF.autorelease();
 }
 
 id valueToDate(JSGlobalContextRef context, JSValueRef value, JSValueRef* exception)
@@ -780,9 +807,14 @@ id valueToArray(JSGlobalContextRef context, JSValueRef value, JSValueRef* except
     if (JSValueIsObject(context, value))
         return containerValueToObject(context, (JSContainerConvertor::Task){ value, [NSMutableArray array], ContainerArray});
 
-    JSC::APIEntryShim shim(toJS(context));
-    if (!(JSValueIsNull(context, value) || JSValueIsUndefined(context, value)))
-        *exception = toRef(JSC::createTypeError(toJS(context), ASCIILiteral("Cannot convert primitive to NSArray")));
+    JSC::JSLockHolder locker(toJS(context));
+    if (!(JSValueIsNull(context, value) || JSValueIsUndefined(context, value))) {
+        JSC::JSObject* exceptionObject = JSC::createTypeError(toJS(context), ASCIILiteral("Cannot convert primitive to NSArray"));
+        *exception = toRef(exceptionObject);
+#if ENABLE(REMOTE_INSPECTOR)
+        reportExceptionToInspector(context, exceptionObject);
+#endif
+    }
     return nil;
 }
 
@@ -797,9 +829,14 @@ id valueToDictionary(JSGlobalContextRef context, JSValueRef value, JSValueRef* e
     if (JSValueIsObject(context, value))
         return containerValueToObject(context, (JSContainerConvertor::Task){ value, [NSMutableDictionary dictionary], ContainerDictionary});
 
-    JSC::APIEntryShim shim(toJS(context));
-    if (!(JSValueIsNull(context, value) || JSValueIsUndefined(context, value)))
-        *exception = toRef(JSC::createTypeError(toJS(context), ASCIILiteral("Cannot convert primitive to NSDictionary")));
+    JSC::JSLockHolder locker(toJS(context));
+    if (!(JSValueIsNull(context, value) || JSValueIsUndefined(context, value))) {
+        JSC::JSObject* exceptionObject = JSC::createTypeError(toJS(context), ASCIILiteral("Cannot convert primitive to NSDictionary"));
+        *exception = toRef(exceptionObject);
+#if ENABLE(REMOTE_INSPECTOR)
+        reportExceptionToInspector(context, exceptionObject);
+#endif
+    }
     return nil;
 }
 
@@ -924,7 +961,7 @@ JSValueRef objectToValue(JSContext *context, id object)
     if (task.type == ContainerNone)
         return task.js;
 
-    JSC::APIEntryShim entryShim(toJS(contextRef));
+    JSC::JSLockHolder locker(toJS(contextRef));
     ObjcContainerConvertor convertor(context);
     convertor.add(task);
     ASSERT(!convertor.isWorkListEmpty());
@@ -1077,7 +1114,7 @@ static StructHandlers* createStructHandlerMap()
 
 static StructTagHandler* handerForStructTag(const char* encodedType)
 {
-    static SpinLock handerForStructTagLock = SPINLOCK_INITIALIZER;
+    static StaticSpinLock handerForStructTagLock;
     SpinLockHolder lockHolder(&handerForStructTagLock);
 
     static StructHandlers* structHandlers = createStructHandlerMap();

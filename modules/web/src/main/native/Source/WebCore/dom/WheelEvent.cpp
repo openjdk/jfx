@@ -24,13 +24,16 @@
 #include "config.h"
 #include "WheelEvent.h"
 
-#include "Clipboard.h"
+#include "DataTransfer.h"
 #include "EventNames.h"
-#include "PlatformWheelEvent.h"
-
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
+
+inline static unsigned determineDeltaMode(const PlatformWheelEvent& event)
+{
+    return event.granularity() == ScrollByPageWheelEvent ? WheelEvent::DOM_DELTA_PAGE : WheelEvent::DOM_DELTA_PIXEL;
+}
 
 WheelEventInit::WheelEventInit()
     : deltaX(0)
@@ -47,7 +50,7 @@ WheelEvent::WheelEvent()
     , m_deltaY(0)
     , m_deltaZ(0)
     , m_deltaMode(DOM_DELTA_PIXEL)
-    , m_directionInvertedFromDevice(false)
+    , m_initializedWithPlatformWheelEvent(false)
 {
 }
 
@@ -58,31 +61,27 @@ WheelEvent::WheelEvent(const AtomicString& type, const WheelEventInit& initializ
     , m_deltaY(initializer.deltaY ? initializer.deltaY : -initializer.wheelDeltaY)
     , m_deltaZ(initializer.deltaZ)
     , m_deltaMode(initializer.deltaMode)
+    , m_initializedWithPlatformWheelEvent(false)
 {
 }
 
-WheelEvent::WheelEvent(const FloatPoint& wheelTicks, const FloatPoint& rawDelta, unsigned deltaMode,
-    PassRefPtr<AbstractView> view, const IntPoint& screenLocation, const IntPoint& pageLocation,
-    bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool directionInvertedFromDevice, double timestamp)
-    : MouseEvent(eventNames().wheelEvent,
-                 true, true, timestamp, view, 0, screenLocation.x(), screenLocation.y(),
-                 pageLocation.x(), pageLocation.y(),
+WheelEvent::WheelEvent(const PlatformWheelEvent& event, PassRefPtr<AbstractView> view)
+    : MouseEvent(eventNames().wheelEvent, true, true, event.timestamp(), view, 0, event.globalPosition().x(), event.globalPosition().y(), event.position().x(), event.position().y()
 #if ENABLE(POINTER_LOCK)
-                 0, 0,
+                , 0, 0
 #endif
-                 ctrlKey, altKey, shiftKey, metaKey, 0, 0, 0, false)
-    , m_wheelDelta(wheelTicks.x() * TickMultiplier, wheelTicks.y() * TickMultiplier)
-    , m_deltaX(-rawDelta.x())
-    , m_deltaY(-rawDelta.y())
+                , event.ctrlKey(), event.altKey(), event.shiftKey(), event.metaKey(), 0, 0, 0, 0, false)
+    , m_wheelDelta(event.wheelTicksX() * TickMultiplier, event.wheelTicksY() * TickMultiplier)
+    , m_deltaX(-event.deltaX())
+    , m_deltaY(-event.deltaY())
     , m_deltaZ(0)
-    , m_deltaMode(deltaMode)
-    , m_directionInvertedFromDevice(directionInvertedFromDevice)
+    , m_deltaMode(determineDeltaMode(event))
+    , m_wheelEvent(event)
+    , m_initializedWithPlatformWheelEvent(true)
 {
 }
 
-void WheelEvent::initWheelEvent(int rawDeltaX, int rawDeltaY, PassRefPtr<AbstractView> view,
-                                int screenX, int screenY, int pageX, int pageY,
-                                bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
+void WheelEvent::initWheelEvent(int rawDeltaX, int rawDeltaY, PassRefPtr<AbstractView> view, int screenX, int screenY, int pageX, int pageY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
 {
     if (dispatched())
         return;
@@ -101,17 +100,13 @@ void WheelEvent::initWheelEvent(int rawDeltaX, int rawDeltaY, PassRefPtr<Abstrac
     m_deltaY = -rawDeltaY;
 
     m_deltaMode = DOM_DELTA_PIXEL;
-    m_directionInvertedFromDevice = false;
 
     initCoordinates(IntPoint(pageX, pageY));
 }
 
-void WheelEvent::initWebKitWheelEvent(int rawDeltaX, int rawDeltaY, PassRefPtr<AbstractView> view,
-                                      int screenX, int screenY, int pageX, int pageY,
-                                      bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
+void WheelEvent::initWebKitWheelEvent(int rawDeltaX, int rawDeltaY, PassRefPtr<AbstractView> view, int screenX, int screenY, int pageX, int pageY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
 {
-    initWheelEvent(rawDeltaX, rawDeltaY, view, screenX, screenY, pageX, pageY,
-                   ctrlKey, altKey, shiftKey, metaKey);
+    initWheelEvent(rawDeltaX, rawDeltaY, view, screenX, screenY, pageX, pageY, ctrlKey, altKey, shiftKey, metaKey);
 }
 
 EventInterface WheelEvent::eventInterface() const

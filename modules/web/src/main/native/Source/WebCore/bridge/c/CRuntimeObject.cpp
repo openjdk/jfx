@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -35,7 +35,7 @@
 namespace JSC {
 namespace Bindings {
 
-const ClassInfo CRuntimeObject::s_info = { "CRuntimeObject", &RuntimeObject::s_info, 0, 0, CREATE_METHOD_TABLE(CRuntimeObject) };
+const ClassInfo CRuntimeObject::s_info = { "CRuntimeObject", &RuntimeObject::s_info, 0, CREATE_METHOD_TABLE(CRuntimeObject) };
 
 CRuntimeObject::CRuntimeObject(VM& vm, Structure* structure, PassRefPtr<CInstance> instance)
     : RuntimeObject(vm, structure, instance)

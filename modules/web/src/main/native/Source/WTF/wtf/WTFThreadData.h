@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,27 +33,21 @@
 #include <wtf/StackBounds.h>
 #include <wtf/StackStats.h>
 #include <wtf/text/StringHash.h>
+
+#if OS(DARWIN)
+#if defined(__has_include) && __has_include(<System/pthread_machdep.h>)
+#include <System/pthread_machdep.h>
+#endif
+#endif
+
+#if defined(__PTK_FRAMEWORK_JAVASCRIPTCORE_KEY1)
+#define USE_PTHREAD_GETSPECIFIC_DIRECT 1
+#endif
+
+#if !USE(PTHREAD_GETSPECIFIC_DIRECT)
 #include <wtf/ThreadSpecific.h>
 #include <wtf/Threading.h>
-
-// FIXME: This is a temporary layering violation until we move more of the string code from JavaScriptCore to WTF.
-namespace JSC {
-
-class IdentifierTable {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    WTF_EXPORT_PRIVATE ~IdentifierTable();
-
-    WTF_EXPORT_PRIVATE HashSet<StringImpl*>::AddResult add(StringImpl*);
-    template<typename U, typename V> HashSet<StringImpl*>::AddResult add(U);
-
-    bool remove(StringImpl* identifier) { return m_table.remove(identifier); }
-
-private:
-    HashSet<StringImpl*> m_table;
-};
-
-}
+#endif
 
 namespace WTF {
 
@@ -69,24 +63,19 @@ public:
 
     AtomicStringTable* atomicStringTable()
     {
-        return m_atomicStringTable;
+        return m_currentAtomicStringTable;
     }
 
-    JSC::IdentifierTable* currentIdentifierTable()
+    AtomicStringTable* setCurrentAtomicStringTable(AtomicStringTable* atomicStringTable)
     {
-        return m_currentIdentifierTable;
+        AtomicStringTable* oldAtomicStringTable = m_currentAtomicStringTable;
+        m_currentAtomicStringTable = atomicStringTable;
+        return oldAtomicStringTable;
     }
 
-    JSC::IdentifierTable* setCurrentIdentifierTable(JSC::IdentifierTable* identifierTable)
+    void resetCurrentAtomicStringTable()
     {
-        JSC::IdentifierTable* oldIdentifierTable = m_currentIdentifierTable;
-        m_currentIdentifierTable = identifierTable;
-        return oldIdentifierTable;
-    }
-
-    void resetCurrentIdentifierTable()
-    {
-        m_currentIdentifierTable = m_defaultIdentifierTable;
+        m_currentAtomicStringTable = m_defaultAtomicStringTable;
     }
 
     const StackBounds& stack()
@@ -129,11 +118,10 @@ public:
     void* m_apiData;
 
 private:
-    AtomicStringTable* m_atomicStringTable;
+    AtomicStringTable* m_currentAtomicStringTable;
+    AtomicStringTable* m_defaultAtomicStringTable;
     AtomicStringTableDestructor m_atomicStringTableDestructor;
 
-    JSC::IdentifierTable* m_defaultIdentifierTable;
-    JSC::IdentifierTable* m_currentIdentifierTable;
     StackBounds m_stackBounds;
 #if ENABLE(STACK_STATS)
     StackStats::PerThreadStats m_stackStats;
@@ -141,7 +129,13 @@ private:
     void* m_savedStackPointerAtVMEntry;
     void* m_savedLastStackTop;
 
+#if USE(PTHREAD_GETSPECIFIC_DIRECT)
+    static const pthread_key_t directKey = __PTK_FRAMEWORK_JAVASCRIPTCORE_KEY1;
+    WTF_EXPORT_PRIVATE static WTFThreadData& createAndRegisterForGetspecificDirect();
+#else
     static WTF_EXPORTDATA ThreadSpecific<WTFThreadData>* staticData;
+#endif
+
     friend WTFThreadData& wtfThreadData();
     friend class AtomicStringTable;
 };
@@ -154,14 +148,21 @@ inline WTFThreadData& wtfThreadData()
     // WRT JavaScriptCore:
     //    wtfThreadData() is initially called from initializeThreading(), ensuring
     //    this is initially called in a pthread_once locked context.
+#if !USE(PTHREAD_GETSPECIFIC_DIRECT)
     if (!WTFThreadData::staticData)
         WTFThreadData::staticData = new ThreadSpecific<WTFThreadData>;
     return **WTFThreadData::staticData;
+#else
+    if (WTFThreadData* data = static_cast<WTFThreadData*>(_pthread_getspecific_direct(WTFThreadData::directKey)))
+        return *data;
+    return WTFThreadData::createAndRegisterForGetspecificDirect();
+#endif
 }
 
 } // namespace WTF
 
 using WTF::WTFThreadData;
 using WTF::wtfThreadData;
+using WTF::AtomicStringTable;
 
 #endif // WTFThreadData_h

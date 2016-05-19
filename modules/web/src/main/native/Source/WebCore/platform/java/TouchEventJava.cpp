@@ -20,7 +20,7 @@
  *
  */
 
-#include "Platform.h" // todo tav remove when building w/ pch
+#include <wtf/Platform.h> // todo tav remove when building w/ pch
 
 #if ENABLE(TOUCH_EVENTS)
 

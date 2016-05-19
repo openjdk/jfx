@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +26,10 @@
 #ifndef Repatch_h
 #define Repatch_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(JIT)
 
 #include "CCallHelpers.h"
+#include "CallVariant.h"
 #include "JITOperations.h"
 
 namespace JSC {
@@ -38,12 +37,14 @@ namespace JSC {
 void repatchGetByID(ExecState*, JSValue, const Identifier&, const PropertySlot&, StructureStubInfo&);
 void buildGetByIDList(ExecState*, JSValue, const Identifier&, const PropertySlot&, StructureStubInfo&);
 void buildGetByIDProtoList(ExecState*, JSValue, const Identifier&, const PropertySlot&, StructureStubInfo&);
-void repatchPutByID(ExecState*, JSValue, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
-void buildPutByIdList(ExecState*, JSValue, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
+void repatchPutByID(ExecState*, JSValue, Structure*, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
+void buildPutByIdList(ExecState*, JSValue, Structure*, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
 void repatchIn(ExecState*, JSCell*, const Identifier&, bool wasFound, const PropertySlot&, StructureStubInfo&);
 void linkFor(ExecState*, CallLinkInfo&, CodeBlock*, JSFunction* callee, MacroAssemblerCodePtr, CodeSpecializationKind, RegisterPreservationMode);
 void linkSlowFor(ExecState*, CallLinkInfo&, CodeSpecializationKind, RegisterPreservationMode);
-void linkClosureCall(ExecState*, CallLinkInfo&, CodeBlock*, Structure*, ExecutableBase*, MacroAssemblerCodePtr, RegisterPreservationMode);
+void unlinkFor(RepatchBuffer&, CallLinkInfo&, CodeSpecializationKind, RegisterPreservationMode);
+void linkVirtualFor(ExecState*, CallLinkInfo&, CodeSpecializationKind, RegisterPreservationMode);
+void linkPolymorphicCall(ExecState*, CallLinkInfo&, CallVariant, RegisterPreservationMode);
 void resetGetByID(RepatchBuffer&, StructureStubInfo&);
 void resetPutByID(RepatchBuffer&, StructureStubInfo&);
 void resetIn(RepatchBuffer&, StructureStubInfo&);

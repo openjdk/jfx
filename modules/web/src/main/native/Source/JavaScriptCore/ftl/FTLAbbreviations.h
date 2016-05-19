@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,12 +26,9 @@
 #ifndef FTLAbbreviations_h
 #define FTLAbbreviations_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(FTL_JIT)
 
 #include "FTLAbbreviatedTypes.h"
-#include "FTLSwitchCase.h"
 #include "FTLValueFromBlock.h"
 #include "LLVMAPI.h"
 #include <cstring>
@@ -80,6 +77,9 @@ static inline LType structType(LContext context, LType element1, LType element2,
     return structType(context, elements, 2, packing);
 }
 
+// FIXME: Make the Variadicity argument not be the last argument to functionType() so that this function
+// can use C++11 variadic templates
+// https://bugs.webkit.org/show_bug.cgi?id=141575
 enum Variadicity { NotVariadic, Variadic };
 static inline LType functionType(LType returnType, const LType* paramTypes, unsigned paramCount, Variadicity variadicity)
 {
@@ -113,13 +113,27 @@ static inline LType functionType(LType returnType, LType param1, LType param2, L
     LType paramTypes[] = { param1, param2, param3, param4 };
     return functionType(returnType, paramTypes, 4, variadicity);
 }
+static inline LType functionType(LType returnType, LType param1, LType param2, LType param3, LType param4, LType param5, Variadicity variadicity = NotVariadic)
+{
+    LType paramTypes[] = { param1, param2, param3, param4, param5 };
+    return functionType(returnType, paramTypes, 5, variadicity);
+}
+static inline LType functionType(LType returnType, LType param1, LType param2, LType param3, LType param4, LType param5, LType param6, Variadicity variadicity = NotVariadic)
+{
+    LType paramTypes[] = { param1, param2, param3, param4, param5, param6 };
+    return functionType(returnType, paramTypes, 6, variadicity);
+}
 
 static inline LType typeOf(LValue value) { return llvm->TypeOf(value); }
+
+static inline LType getElementType(LType value) { return llvm->GetElementType(value); }
 
 static inline unsigned mdKindID(LContext context, const char* string) { return llvm->GetMDKindIDInContext(context, string, std::strlen(string)); }
 static inline LValue mdString(LContext context, const char* string, unsigned length) { return llvm->MDStringInContext(context, string, length); }
 static inline LValue mdString(LContext context, const char* string) { return mdString(context, string, std::strlen(string)); }
 static inline LValue mdNode(LContext context, LValue* args, unsigned numArgs) { return llvm->MDNodeInContext(context, args, numArgs); }
+template<typename VectorType>
+static inline LValue mdNode(LContext context, const VectorType& vector) { return mdNode(context, const_cast<LValue*>(vector.begin()), vector.size()); }
 static inline LValue mdNode(LContext context) { return mdNode(context, 0, 0); }
 static inline LValue mdNode(LContext context, LValue arg1) { return mdNode(context, &arg1, 1); }
 static inline LValue mdNode(LContext context, LValue arg1, LValue arg2)
@@ -127,13 +141,39 @@ static inline LValue mdNode(LContext context, LValue arg1, LValue arg2)
     LValue args[] = { arg1, arg2 };
     return mdNode(context, args, 2);
 }
+static inline LValue mdNode(LContext context, LValue arg1, LValue arg2, LValue arg3)
+{
+    LValue args[] = { arg1, arg2, arg3 };
+    return mdNode(context, args, 3);
+}
 
 static inline void setMetadata(LValue instruction, unsigned kind, LValue metadata) { llvm->SetMetadata(instruction, kind, metadata); }
 
+static inline LValue getFirstInstruction(LBasicBlock block) { return llvm->GetFirstInstruction(block); }
+static inline LValue getNextInstruction(LValue instruction) { return llvm->GetNextInstruction(instruction); }
+
+
 static inline LValue addFunction(LModule module, const char* name, LType type) { return llvm->AddFunction(module, name, type); }
-static inline void setLinkage(LValue global, LLinkage linkage) { llvm->SetLinkage(global, linkage); }
+static inline LValue getNamedFunction(LModule module, const char* name) { return llvm->GetNamedFunction(module, name); }
+static inline LValue getFirstFunction(LModule module) { return llvm->GetFirstFunction(module); }
+static inline LValue getNextFunction(LValue function) { return llvm->GetNextFunction(function); }
+
 static inline void setFunctionCallingConv(LValue function, LCallConv convention) { llvm->SetFunctionCallConv(function, convention); }
 static inline void addTargetDependentFunctionAttr(LValue function, const char* key, const char* value) { llvm->AddTargetDependentFunctionAttr(function, key, value); }
+static inline void removeFunctionAttr(LValue function, LLVMAttribute pa) { llvm->RemoveFunctionAttr(function, pa); }
+
+static inline LLVMLinkage getLinkage(LValue global) { return llvm->GetLinkage(global); }
+static inline void setLinkage(LValue global, LLVMLinkage linkage) { llvm->SetLinkage(global, linkage); }
+static inline void setVisibility(LValue global, LLVMVisibility viz) { llvm->SetVisibility(global, viz); }
+static inline LLVMBool isDeclaration(LValue global) { return llvm->IsDeclaration(global); }
+
+static inline LLVMBool linkModules(LModule dest, LModule str, LLVMLinkerMode mode, char** outMessage) { return llvm->LinkModules(dest, str, mode, outMessage); }
+
+static inline const char * getValueName(LValue global) { return llvm->GetValueName(global); }
+
+static inline LValue getNamedGlobal(LModule module, const char* name) { return llvm->GetNamedGlobal(module, name); }
+static inline LValue getFirstGlobal(LModule module) { return llvm->GetFirstGlobal(module); }
+static inline LValue getNextGlobal(LValue global) { return llvm->GetNextGlobal(global); }
 
 static inline LValue addExternFunction(LModule module, const char* name, LType type)
 {
@@ -142,7 +182,29 @@ static inline LValue addExternFunction(LModule module, const char* name, LType t
     return result;
 }
 
+static inline LLVMBool createMemoryBufferWithContentsOfFile(const char* path, LLVMMemoryBufferRef* outMemBuf, char** outMessage)
+{
+    return llvm->CreateMemoryBufferWithContentsOfFile(path, outMemBuf, outMessage);
+}
+
+
+static inline LLVMBool parseBitcodeInContext(LLVMContextRef contextRef, LLVMMemoryBufferRef memBuf, LModule *outModule, char **outMessage)
+{
+    return llvm->ParseBitcodeInContext(contextRef, memBuf, outModule, outMessage);
+}
+
+
+static inline void disposeMemoryBuffer(LLVMMemoryBufferRef memBuf){ llvm->DisposeMemoryBuffer(memBuf); }
+
+
+static inline LModule moduleCreateWithNameInContext(const char* moduleID, LContext context){ return llvm->ModuleCreateWithNameInContext(moduleID, context); }
+static inline void disposeModule(LModule m){ llvm->DisposeModule(m); }
+
+static inline void disposeMessage(char* outMsg) { llvm->DisposeMessage(outMsg); }
+
 static inline LValue getParam(LValue function, unsigned index) { return llvm->GetParam(function, index); }
+
+static inline void getParamTypes(LType function, LType* dest) { return llvm->GetParamTypes(function, dest); }
 static inline LValue getUndef(LType type) { return llvm->GetUndef(type); }
 
 enum BitExtension { ZeroExtend, SignExtend };
@@ -151,6 +213,9 @@ static inline LValue constReal(LType type, double value) { return llvm->ConstRea
 static inline LValue constIntToPtr(LValue value, LType type) { return llvm->ConstIntToPtr(value, type); }
 static inline LValue constNull(LType type) { return llvm->ConstNull(type); }
 static inline LValue constBitCast(LValue value, LType type) { return llvm->ConstBitCast(value, type); }
+
+static inline LBasicBlock getFirstBasicBlock(LValue function) { return llvm->GetFirstBasicBlock(function); }
+static inline LBasicBlock getNextBasicBlock(LBasicBlock block) { return llvm->GetNextBasicBlock(block); }
 
 static inline LBasicBlock appendBasicBlock(LContext context, LValue function, const char* name = "") { return llvm->AppendBasicBlockInContext(context, function, name); }
 static inline LBasicBlock insertBasicBlock(LContext context, LBasicBlock beforeBasicBlock, const char* name = "") { return llvm->InsertBasicBlockInContext(context, beforeBasicBlock, name); }
@@ -246,41 +311,13 @@ static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1)
 {
     return buildCall(builder, function, &arg1, 1);
 }
-static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, LValue arg2)
+template<typename... Args>
+LValue buildCall(LBuilder builder, LValue function, LValue arg1, Args... args)
 {
-    LValue args[] = { arg1, arg2 };
-    return buildCall(builder, function, args, 2);
+    LValue argsArray[] = { arg1, args... };
+    return buildCall(builder, function, argsArray, sizeof(argsArray) / sizeof(LValue));
 }
-static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, LValue arg2, LValue arg3)
-{
-    LValue args[] = { arg1, arg2, arg3 };
-    return buildCall(builder, function, args, 3);
-}
-static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, LValue arg2, LValue arg3, LValue arg4)
-{
-    LValue args[] = { arg1, arg2, arg3, arg4 };
-    return buildCall(builder, function, args, 4);
-}
-static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, LValue arg2, LValue arg3, LValue arg4, LValue arg5)
-{
-    LValue args[] = { arg1, arg2, arg3, arg4, arg5 };
-    return buildCall(builder, function, args, 5);
-}
-static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, LValue arg2, LValue arg3, LValue arg4, LValue arg5, LValue arg6)
-{
-    LValue args[] = { arg1, arg2, arg3, arg4, arg5, arg6 };
-    return buildCall(builder, function, args, 6);
-}
-static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, LValue arg2, LValue arg3, LValue arg4, LValue arg5, LValue arg6, LValue arg7)
-{
-    LValue args[] = { arg1, arg2, arg3, arg4, arg5, arg6, arg7 };
-    return buildCall(builder, function, args, 7);
-}
-static inline LValue buildCall(LBuilder builder, LValue function, LValue arg1, LValue arg2, LValue arg3, LValue arg4, LValue arg5, LValue arg6, LValue arg7, LValue arg8)
-{
-    LValue args[] = { arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 };
-    return buildCall(builder, function, args, 8);
-}
+
 static inline void setInstructionCallingConvention(LValue instruction, LCallConv callingConvention) { llvm->SetInstructionCallConv(instruction, callingConvention); }
 static inline LValue buildExtractValue(LBuilder builder, LValue aggVal, unsigned index) { return llvm->BuildExtractValue(builder, aggVal, index, ""); }
 static inline LValue buildSelect(LBuilder builder, LValue condition, LValue taken, LValue notTaken) { return llvm->BuildSelect(builder, condition, taken, notTaken, ""); }

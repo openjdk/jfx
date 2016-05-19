@@ -15,10 +15,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -36,7 +36,7 @@
 #include <glib/gi18n-lib.h>
 #include <gtk/gtk.h>
 #include <wtf/MathExtras.h>
-#include <wtf/gobject/GUniquePtr.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
@@ -524,12 +524,6 @@ String insecurePluginVersionText()
     return String();
 }
 
-String inactivePluginText()
-{
-    notImplemented();
-    return String();
-}
-
 String multipleFileUploadText(unsigned numberOfFiles)
 {
     // FIXME: If this file gets localized, this should really be localized as one string with a wildcard for the number.
@@ -659,7 +653,7 @@ String localizedMediaTimeDescription(float time)
     if (!std::isfinite(time))
         return String::fromUTF8(_("indefinite time"));
 
-    int seconds = static_cast<int>(abs(time));
+    int seconds = abs(static_cast<int>(time));
     int days = seconds / (60 * 60 * 24);
     int hours = seconds / (60 * 60);
     int minutes = (seconds / 60) % 60;
@@ -786,11 +780,6 @@ String validationMessageBadInputForNumberText()
 }
 
 #if ENABLE(VIDEO_TRACK)
-String textTrackClosedCaptionsText()
-{
-    return String::fromUTF8(C_("Closed Captions", "Menu section heading for closed captions"));
-}
-
 String textTrackSubtitlesText()
 {
     return String::fromUTF8(C_("Menu section heading for subtitles", "Subtitles"));
@@ -809,6 +798,11 @@ String textTrackAutomaticMenuItemText()
 String textTrackNoLabelText()
 {
     return String::fromUTF8(C_("Menu item label for a closed captions track that has no other name", "No label"));
+}
+
+String audioTrackNoLabelText()
+{
+    return String::fromUTF8(C_("Menu item label for an audio track that has no other name", "No label"));
 }
 #endif
 

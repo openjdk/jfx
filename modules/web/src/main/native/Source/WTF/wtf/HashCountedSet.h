@@ -28,7 +28,7 @@
 namespace WTF {
 
     template<typename Value, typename HashFunctions = typename DefaultHash<Value>::Hash, typename Traits = HashTraits<Value>>
-    class HashCountedSet {
+    class HashCountedSet final {
         WTF_MAKE_FAST_ALLOCATED;
     private:
         typedef HashMap<Value, unsigned, HashFunctions, Traits> ImplType;
@@ -40,8 +40,8 @@ namespace WTF {
 
         void swap(HashCountedSet&);
 
-        int size() const;
-        int capacity() const;
+        unsigned size() const;
+        unsigned capacity() const;
         bool isEmpty() const;
 
         // Iterators iterate over pairs of values and counts.
@@ -84,13 +84,13 @@ namespace WTF {
     }
 
     template<typename Value, typename HashFunctions, typename Traits>
-    inline int HashCountedSet<Value, HashFunctions, Traits>::size() const
+    inline unsigned HashCountedSet<Value, HashFunctions, Traits>::size() const
     {
         return m_impl.size();
     }
 
     template<typename Value, typename HashFunctions, typename Traits>
-    inline int HashCountedSet<Value, HashFunctions, Traits>::capacity() const
+    inline unsigned HashCountedSet<Value, HashFunctions, Traits>::capacity() const
     {
         return m_impl.capacity();
     }

@@ -28,12 +28,12 @@
 #import <WebCore/Chrome.h>
 #import <WebCore/ChromeClient.h>
 #import <WebCore/EventHandler.h>
+#import <WebCore/Font.h>
 #import <WebCore/Frame.h>
 #import <WebCore/FrameView.h>
 #import <WebCore/Page.h>
 #import <WebCore/PopupMenuClient.h>
-#import <WebCore/SimpleFontData.h>
-#import <WebCore/WebCoreSystemInterface.h>
+#import <WebKitSystemInterface.h>
 
 using namespace WebCore;
 
@@ -62,9 +62,6 @@ void PopupMenuMac::populate()
         [m_popup setAutoenablesItems:NO];
     }
 
-    BOOL messagesEnabled = [[m_popup menu] menuChangedMessagesEnabled];
-    [[m_popup menu] setMenuChangedMessagesEnabled:NO];
-
     // For pullDown menus the first item is hidden.
     if (!m_client->shouldPopOver())
         [m_popup addItemWithTitle:@""];
@@ -83,10 +80,10 @@ void PopupMenuMac::populate()
 
         PopupMenuStyle style = m_client->itemStyle(i);
         RetainPtr<NSMutableDictionary> attributes = adoptNS([[NSMutableDictionary alloc] init]);
-        if (style.font() != Font()) {
-            NSFont *font = style.font().primaryFont()->getNSFont();
+        if (style.font() != FontCascade()) {
+            NSFont *font = style.font().primaryFont().getNSFont();
             if (!font) {
-                CGFloat size = style.font().primaryFont()->platformData().size();
+                CGFloat size = style.font().primaryFont().platformData().size();
                 font = style.font().weight() < FontWeightBold ? [NSFont systemFontOfSize:size] : [NSFont boldSystemFontOfSize:size];
             }
             [attributes setObject:font forKey:NSFontAttributeName];
@@ -97,7 +94,10 @@ void PopupMenuMac::populate()
         NSWritingDirection writingDirection = style.textDirection() == LTR ? NSWritingDirectionLeftToRight : NSWritingDirectionRightToLeft;
         [paragraphStyle setBaseWritingDirection:writingDirection];
         if (style.hasTextDirectionOverride()) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             RetainPtr<NSNumber> writingDirectionValue = adoptNS([[NSNumber alloc] initWithInteger:writingDirection + NSTextWritingDirectionOverride]);
+#pragma clang diagnostic pop
             RetainPtr<NSArray> writingDirectionArray = adoptNS([[NSArray alloc] initWithObjects:writingDirectionValue.get(), nil]);
             [attributes setObject:writingDirectionArray.get() forKey:NSWritingDirectionAttributeName];
         }
@@ -126,8 +126,6 @@ void PopupMenuMac::populate()
         }
 #pragma clang diagnostic pop
     }
-
-    [[m_popup menu] setMenuChangedMessagesEnabled:messagesEnabled];
 }
 
 void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
@@ -153,7 +151,7 @@ void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
     NSMenu* menu = [m_popup menu];
 
     NSPoint location;
-    NSFont* font = m_client->menuStyle().font().primaryFont()->getNSFont();
+    NSFont* font = m_client->menuStyle().font().primaryFont().getNSFont();
 
     // These values were borrowed from AppKit to match their placement of the menu.
     const int popOverHorizontalAdjust = -10;
@@ -191,7 +189,20 @@ void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
         END_BLOCK_OBJC_EXCEPTIONS;
     }
 
-    wkPopupMenu(menu, location, roundf(NSWidth(r)), dummyView.get(), index, font);
+    NSControlSize controlSize;
+    switch (m_client->menuStyle().menuSize()) {
+    case PopupMenuStyle::PopupMenuSizeNormal:
+        controlSize = NSRegularControlSize;
+        break;
+    case PopupMenuStyle::PopupMenuSizeSmall:
+        controlSize = NSSmallControlSize;
+        break;
+    case PopupMenuStyle::PopupMenuSizeMini:
+        controlSize = NSMiniControlSize;
+        break;
+    }
+
+    WKPopupMenu(menu, location, roundf(NSWidth(r)), dummyView.get(), index, font, controlSize, !m_client->menuStyle().hasDefaultAppearance());
 
     [m_popup dismissPopUp];
     [dummyView removeFromSuperview];

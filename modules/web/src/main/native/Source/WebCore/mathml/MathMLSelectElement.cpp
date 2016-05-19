@@ -29,8 +29,12 @@
 #if ENABLE(MATHML)
 
 #include "Event.h"
+#include "HTMLElement.h"
+#include "HTMLNames.h"
 #include "MathMLNames.h"
 #include "RenderMathMLRow.h"
+#include "SVGElement.h"
+#include "SVGNames.h"
 
 namespace WebCore {
 
@@ -42,14 +46,37 @@ MathMLSelectElement::MathMLSelectElement(const QualifiedName& tagName, Document&
 {
 }
 
-PassRefPtr<MathMLSelectElement> MathMLSelectElement::create(const QualifiedName& tagName, Document& document)
+Ref<MathMLSelectElement> MathMLSelectElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new MathMLSelectElement(tagName, document));
+    return adoptRef(*new MathMLSelectElement(tagName, document));
 }
 
-RenderPtr<RenderElement> MathMLSelectElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> MathMLSelectElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderMathMLRow>(*this, std::move(style));
+    return createRenderer<RenderMathMLRow>(*this, WTF::move(style));
+}
+
+//  We recognize the following values for the encoding attribute of the <semantics> element:
+//
+// - "MathML-Presentation", which is mentioned in the MathML 3 recommendation.
+// - "SVG1.1" which is mentioned in the W3C note.
+//   http://www.w3.org/Math/Documents/Notes/graphics.xml
+// - Other MIME Content-Types for MathML, SVG and HTML.
+//
+// We exclude "application/mathml+xml" which is ambiguous about whether it is Presentation or Content MathML. Authors must use a more explicit encoding value.
+bool MathMLSelectElement::isMathMLEncoding(const AtomicString& value)
+{
+    return value == "application/mathml-presentation+xml" || value == "MathML-Presentation";
+}
+
+bool MathMLSelectElement::isSVGEncoding(const AtomicString& value)
+{
+    return value == "image/svg+xml" || value == "SVG1.1";
+}
+
+bool MathMLSelectElement::isHTMLEncoding(const AtomicString& value)
+{
+    return value == "application/xhtml+xml" || value == "text/html";
 }
 
 bool MathMLSelectElement::childShouldCreateRenderer(const Node& child) const
@@ -69,17 +96,17 @@ void MathMLSelectElement::childrenChanged(const ChildChange& change)
     MathMLInlineContainerElement::childrenChanged(change);
 }
 
-void MathMLSelectElement::attributeChanged(const QualifiedName& name, const AtomicString& newValue, AttributeModificationReason reason)
+void MathMLSelectElement::attributeChanged(const QualifiedName& name, const AtomicString& oldValue, const AtomicString& newValue, AttributeModificationReason reason)
 {
-    if (hasLocalName(mactionTag) && (name == MathMLNames::actiontypeAttr || name == MathMLNames::selectionAttr))
+    if (hasTagName(mactionTag) && (name == MathMLNames::actiontypeAttr || name == MathMLNames::selectionAttr))
         updateSelectedChild();
 
-    MathMLInlineContainerElement::attributeChanged(name, newValue, reason);
+    MathMLInlineContainerElement::attributeChanged(name, oldValue, newValue, reason);
 }
 
 int MathMLSelectElement::getSelectedActionChildAndIndex(Element*& selectedChild)
 {
-    ASSERT(hasLocalName(mactionTag));
+    ASSERT(hasTagName(mactionTag));
 
     // We "round up or down to the closest allowable value" of the selection attribute, as suggested by the MathML specification.
     selectedChild = firstElementChild();
@@ -100,7 +127,7 @@ int MathMLSelectElement::getSelectedActionChildAndIndex(Element*& selectedChild)
 
 Element* MathMLSelectElement::getSelectedActionChild()
 {
-    ASSERT(hasLocalName(mactionTag));
+    ASSERT(hasTagName(mactionTag));
 
     Element* child = firstElementChild();
     if (!child)
@@ -124,26 +151,26 @@ Element* MathMLSelectElement::getSelectedActionChild()
 
 Element* MathMLSelectElement::getSelectedSemanticsChild()
 {
-    ASSERT(hasLocalName(semanticsTag));
+    ASSERT(hasTagName(semanticsTag));
 
     Element* child = firstElementChild();
     if (!child)
-        return child;
+        return nullptr;
 
-    if (!child->isMathMLElement() || !toMathMLElement(child)->isPresentationMathML()) {
+    if (!is<MathMLElement>(*child) || !downcast<MathMLElement>(*child).isPresentationMathML()) {
         // The first child is not a presentation MathML element. Hence we move to the second child and start searching an annotation child that could be displayed.
         child = child->nextElementSibling();
-    } else if (!toMathMLElement(child)->isSemanticAnnotation()) {
+    } else if (!downcast<MathMLElement>(*child).isSemanticAnnotation()) {
         // The first child is a presentation MathML but not an annotation, so we can just display it.
         return child;
     }
     // Otherwise, the first child is an <annotation> or <annotation-xml> element. This is invalid, but some people use this syntax so we take care of this case too and start the search from this first child.
 
     for ( ; child; child = child->nextElementSibling()) {
-        if (!child->isMathMLElement())
+        if (!is<MathMLElement>(*child))
             continue;
 
-        if (child->hasLocalName(MathMLNames::annotationTag)) {
+        if (child->hasTagName(MathMLNames::annotationTag)) {
             // If the <annotation> element has an src attribute then it is a reference to arbitrary binary data and it is not clear whether we can display it. Hence we just ignore the annotation.
             if (child->hasAttribute(MathMLNames::srcAttr))
                 continue;
@@ -151,20 +178,13 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
             return child;
         }
 
-        if (child->hasLocalName(MathMLNames::annotation_xmlTag)) {
+        if (child->hasTagName(MathMLNames::annotation_xmlTag)) {
             // If the <annotation-xml> element has an src attribute then it is a reference to arbitrary binary data and it is not clear whether we can display it. Hence we just ignore the annotation.
             if (child->hasAttribute(MathMLNames::srcAttr))
                 continue;
-            // If the <annotation-xml> element has an encoding attribute describing presentation MathML, SVG or HTML we assume the content can be displayed and we stop here. We recognize the following encoding values:
-            //
-            // - "MathML-Presentation", which is mentioned in the MathML 3 recommendation.
-            // - "SVG1.1" which is mentioned in the W3C note.
-            //   http://www.w3.org/Math/Documents/Notes/graphics.xml
-            // - Other MIME Content-Types for SVG and HTML.
-            //
-            // We exclude "application/mathml+xml" which is ambiguous about whether it is Presentation or Content MathML. Authors must use a more explicit encoding value.
+            // If the <annotation-xml> element has an encoding attribute describing presentation MathML, SVG or HTML we assume the content can be displayed and we stop here.
             const AtomicString& value = child->fastGetAttribute(MathMLNames::encodingAttr);
-            if (value == "application/mathml-presentation+xml" || value == "MathML-Presentation" || value == "image/svg+xml" || value == "SVG1.1" || value == "application/xhtml+xml" || value == "text/html")
+            if (isMathMLEncoding(value) || isSVGEncoding(value) || isHTMLEncoding(value))
                 return child;
         }
     }
@@ -175,7 +195,7 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
 
 void MathMLSelectElement::updateSelectedChild()
 {
-    Element* newSelectedChild = hasLocalName(mactionTag) ? getSelectedActionChild() : getSelectedSemanticsChild();
+    Element* newSelectedChild = hasTagName(mactionTag) ? getSelectedActionChild() : getSelectedSemanticsChild();
 
     if (m_selectedChild == newSelectedChild)
         return;

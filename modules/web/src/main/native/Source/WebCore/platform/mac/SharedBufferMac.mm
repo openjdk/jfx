@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,15 +32,14 @@
 #include <wtf/MainThread.h>
 #include <wtf/PassRefPtr.h>
 
-
 using namespace WebCore;
 
 @interface WebCoreSharedBufferData : NSData
 {
-    RefPtr<SharedBuffer> sharedBuffer;
+    RefPtr<SharedBuffer::DataBuffer> sharedBufferDataBuffer;
 }
 
-- (id)initWithSharedBuffer:(SharedBuffer*)buffer;
+- (id)initWithSharedBufferDataBuffer:(SharedBuffer::DataBuffer*)dataBuffer;
 @end
 
 @implementation WebCoreSharedBufferData
@@ -67,24 +66,24 @@ using namespace WebCore;
     [super finalize];
 }
 
-- (id)initWithSharedBuffer:(SharedBuffer*)buffer
+- (id)initWithSharedBufferDataBuffer:(SharedBuffer::DataBuffer*)dataBuffer
 {
     self = [super init];
 
     if (self)
-        sharedBuffer = buffer;
+        sharedBufferDataBuffer = dataBuffer;
 
     return self;
 }
 
 - (NSUInteger)length
 {
-    return sharedBuffer->size();
+    return sharedBufferDataBuffer->data.size();
 }
 
 - (const void *)bytes
 {
-    return reinterpret_cast<const void*>(sharedBuffer->data());
+    return sharedBufferDataBuffer->data.data();
 }
 
 @end
@@ -96,20 +95,34 @@ PassRefPtr<SharedBuffer> SharedBuffer::wrapNSData(NSData *nsData)
     return adoptRef(new SharedBuffer((CFDataRef)nsData));
 }
 
-SharedBuffer::NSDataRetainPtrWithoutImplicitConversionOperator SharedBuffer::createNSData()
+RetainPtr<NSData> SharedBuffer::createNSData()
 {
-    return adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBuffer:this]);
+    return adoptNS((NSData *)createCFData().leakRef());
+}
+
+CFDataRef SharedBuffer::existingCFData()
+{
+    if (m_cfData)
+        return m_cfData.get();
+
+#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
+    if (m_dataArray.size() == 1)
+        return m_dataArray.at(0).get();
+#endif
+
+    return nullptr;
 }
 
 RetainPtr<CFDataRef> SharedBuffer::createCFData()
 {
-    if (m_cfData)
-        return m_cfData;
+    if (CFDataRef cfData = existingCFData())
+        return cfData;
 
-    return adoptCF((CFDataRef)adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBuffer:this]).leakRef());
+    data(); // Force data into m_buffer from segments or data array.
+    return adoptCF((CFDataRef)adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBufferDataBuffer:m_buffer.get()]).leakRef());
 }
 
-PassRefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePath)
+RefPtr<SharedBuffer> SharedBuffer::createFromReadingFile(const String& filePath)
 {
     NSData *resourceData = [NSData dataWithContentsOfFile:filePath];
     if (resourceData)

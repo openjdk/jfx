@@ -37,7 +37,6 @@ namespace JSC {
 
 HandleSet::HandleSet(VM* vm)
     : m_vm(vm)
-    , m_nextToFinalize(0)
 {
     grow();
 }
@@ -45,12 +44,12 @@ HandleSet::HandleSet(VM* vm)
 HandleSet::~HandleSet()
 {
     while (!m_blockList.isEmpty())
-        m_vm->heap.blockAllocator().deallocate(HandleBlock::destroy(m_blockList.removeHead()));
+        HandleBlock::destroy(m_blockList.removeHead());
 }
 
 void HandleSet::grow()
 {
-    HandleBlock* newBlock = HandleBlock::create(m_vm->heap.blockAllocator().allocate<HandleBlock>(), this);
+    HandleBlock* newBlock = HandleBlock::create(this);
     m_blockList.append(newBlock);
 
     for (int i = newBlock->nodeCapacity() - 1; i >= 0; --i) {
@@ -73,10 +72,6 @@ void HandleSet::visitStrongHandles(HeapRootVisitor& heapRootVisitor)
 
 void HandleSet::writeBarrier(HandleSlot slot, const JSValue& value)
 {
-    // Forbid assignment to handles during the finalization phase, since it would violate many GC invariants.
-    // File a bug with stack trace if you hit this.
-    RELEASE_ASSERT(!m_nextToFinalize);
-
     if (!value == !*slot && slot->isCell() == value.isCell())
         return;
 

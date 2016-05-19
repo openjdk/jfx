@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE, INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -38,9 +38,9 @@ using namespace JSC;
 
 namespace WebCore {
 
-RefPtr<MediaTrackConstraints> MediaTrackConstraints::create(PassRefPtr<MediaConstraintsImpl> constraints)
+Ref<MediaTrackConstraints> MediaTrackConstraints::create(PassRefPtr<MediaConstraintsImpl> constraints)
 {
-    return adoptRef(new MediaTrackConstraints(constraints));
+    return adoptRef(*new MediaTrackConstraints(constraints));
 }
 
 MediaTrackConstraints::MediaTrackConstraints(PassRefPtr<MediaConstraintsImpl> constraints)

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2002-2003 Lars Knoll (knoll@kde.org)
- *  Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2015 Apple Inc. All rights reserved.
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *  Copyright (C) 2008 Eric Seidel <eric@webkit.org>
  *  Copyright (C) 2012 Intel Corporation. All rights reserved.
@@ -21,7 +21,7 @@
  *
  */
 
-%pure_parser
+%pure-parser
 
 %parse-param { CSSParser* parser }
 %lex-param { CSSParser* parser }
@@ -57,8 +57,16 @@ static inline bool isCSSTokenAString(int yytype)
     case ANYFUNCTION:
     case NOTFUNCTION:
     case CALCFUNCTION:
-    case MINFUNCTION:
+    case MATCHESFUNCTION:
     case MAXFUNCTION:
+    case MINFUNCTION:
+    case NTHCHILDFUNCTIONS:
+    case NTHCHILDSELECTORSEPARATOR:
+    case LANGFUNCTION:
+#if ENABLE_CSS_SELECTORS_LEVEL4
+    case DIRFUNCTION:
+    case ROLEFUNCTION:
+#endif
     case UNICODERANGE:
         return true;
     default:
@@ -68,9 +76,36 @@ static inline bool isCSSTokenAString(int yytype)
 
 #endif
 
+static inline CSSParserValue makeIdentValue(CSSParserString string)
+{
+    CSSParserValue v;
+    v.id = cssValueKeywordID(string);
+    v.unit = CSSPrimitiveValue::CSS_IDENT;
+    v.string = string;
+    return v;
+}
+
+static bool selectorListDoesNotMatchAnyPseudoElement(const Vector<std::unique_ptr<CSSParserSelector>>* selectorVector)
+{
+    if (!selectorVector)
+        return true;
+
+    for (unsigned i = 0; i < selectorVector->size(); ++i) {
+        for (const CSSParserSelector* selector = selectorVector->at(i).get(); selector; selector = selector->tagHistory()) {
+            if (selector->matchesPseudoElement())
+                return false;
+        }
+    }
+    return true;
+}
+
 %}
 
-%expect 29
+#if ENABLE_CSS_GRID_LAYOUT
+%expect 32
+#else
+%expect 31
+#endif
 
 %nonassoc LOWEST_PREC
 
@@ -88,6 +123,7 @@ static inline bool isCSSTokenAString(int yytype)
 %token <string> STRING
 %right <string> IDENT
 %token <string> NTH
+%token <string> NTHCHILDSELECTORSEPARATOR
 
 %nonassoc <string> HEX
 %nonassoc <string> IDSEL
@@ -103,13 +139,14 @@ static inline bool isCSSTokenAString(int yytype)
 %token MEDIA_SYM
 %token FONT_FACE_SYM
 %token CHARSET_SYM
+%token KEYFRAME_RULE_SYM
+%token KEYFRAMES_SYM
 %token NAMESPACE_SYM
 %token WEBKIT_RULE_SYM
 %token WEBKIT_DECLS_SYM
-%token WEBKIT_KEYFRAME_RULE_SYM
-%token WEBKIT_KEYFRAMES_SYM
 %token WEBKIT_VALUE_SYM
 %token WEBKIT_MEDIAQUERY_SYM
+%token WEBKIT_SIZESATTR_SYM
 %token WEBKIT_SELECTOR_SYM
 %token WEBKIT_REGION_RULE_SYM
 %token WEBKIT_VIEWPORT_RULE_SYM
@@ -175,12 +212,20 @@ static inline bool isCSSTokenAString(int yytype)
 %token <string> ANYFUNCTION
 %token <string> NOTFUNCTION
 %token <string> CALCFUNCTION
-%token <string> MINFUNCTION
+%token <string> MATCHESFUNCTION
 %token <string> MAXFUNCTION
+%token <string> MINFUNCTION
+%token <string> NTHCHILDFUNCTIONS
+%token <string> LANGFUNCTION
+
+#if ENABLE_CSS_SELECTORS_LEVEL4
+%token <string> DIRFUNCTION
+%token <string> ROLEFUNCTION
+#endif
 
 %token <string> UNICODERANGE
 
-%union { CSSSelector::Relation relation; }
+%union { CSSParserSelectorCombinator relation; }
 %type <relation> combinator
 
 %union { StyleRuleBase* rule; }
@@ -207,8 +252,18 @@ static inline bool isCSSTokenAString(int yytype)
 %type <mediaQueryRestrictor> maybe_media_restrictor
 
 %union { MediaQueryExp* mediaQueryExp; }
-%type <mediaQueryExp> media_query_exp
-%destructor { delete $$; } media_query_exp
+%type <mediaQueryExp> media_query_exp base_media_query_exp
+%destructor { delete $$; } media_query_exp base_media_query_exp
+
+%union { Vector<CSSParser::SourceSize>* sourceSizeList; }
+%type <sourceSizeList> source_size_list
+%destructor { delete $$; } source_size_list
+
+%type <mediaQueryExp> maybe_source_media_query_exp
+%destructor { delete $$; } maybe_source_media_query_exp
+
+%type <value> source_size_length
+%destructor { destroy($$); } source_size_length
 
 %union { Vector<std::unique_ptr<MediaQueryExp>>* mediaQueryExpList; }
 %type <mediaQueryExpList> media_query_exp_list maybe_and_media_query_exp_list
@@ -224,26 +279,27 @@ static inline bool isCSSTokenAString(int yytype)
 %type <keyframeRuleList> keyframes_rule
 %destructor { delete $$; } keyframes_rule
 
-// These two parser values never need to be destroyed because they are never functions.
-%type <value> key unary_term
+// These parser values never need to be destroyed because they are never functions or value lists.
+%type <value> calc_func_term key unary_term
 
 // These parser values need to be destroyed because they might be functions.
-%type <value> calc_func_term calc_function function min_or_max_function term
-%destructor { destroy($$); } calc_func_term calc_function function min_or_max_function term
+%type <value> calc_function function min_or_max_function term
+%destructor { destroy($$); } calc_function function min_or_max_function term
 
 %union { CSSPropertyID id; }
 %type <id> property
 
 %union { CSSParserSelector* selector; }
-%type <selector> attrib class page_selector pseudo pseudo_page selector selector_with_trailing_whitespace simple_selector specifier specifier_list
-%destructor { delete $$; } attrib class page_selector pseudo pseudo_page selector selector_with_trailing_whitespace simple_selector specifier specifier_list
+%type <selector> attrib class page_selector pseudo pseudo_page complex_selector complex_selector_with_trailing_whitespace compound_selector specifier specifier_list
+%destructor { delete $$; } attrib class page_selector pseudo pseudo_page complex_selector complex_selector_with_trailing_whitespace compound_selector specifier specifier_list
 
 %union { Vector<std::unique_ptr<CSSParserSelector>>* selectorList; }
-%type <selectorList> selector_list simple_selector_list
-%destructor { delete $$; } selector_list simple_selector_list
+%type <selectorList> selector_list nested_selector_list simple_selector_list nth_selector_ending
+%destructor { delete $$; } selector_list nested_selector_list simple_selector_list
+%destructor { delete $$; } nth_selector_ending
 
 %union { bool boolean; }
-%type <boolean> declaration declaration_list decl_list priority
+%type <boolean> attrib_flags declaration declaration_list decl_list priority
 
 %union { CSSSelector::Match match; }
 %type <match> match
@@ -258,6 +314,11 @@ static inline bool isCSSTokenAString(int yytype)
 %type <valueList> calc_func_expr calc_func_expr_list calc_func_paren_expr expr key_list maybe_media_value valid_calc_func_expr valid_expr
 %destructor { delete $$; } calc_func_expr calc_func_expr_list calc_func_paren_expr expr key_list maybe_media_value valid_calc_func_expr valid_expr
 
+%type <string> lang_range
+%union { Vector<CSSParserString>* stringList; }
+%type <stringList> comma_separated_lang_ranges
+%destructor { delete $$; } comma_separated_lang_ranges
+
 %type <string> min_or_max
 
 %type <string> element_name
@@ -265,7 +326,15 @@ static inline bool isCSSTokenAString(int yytype)
 %union { CSSParser::Location location; }
 %type <location> error_location
 
-#if ENABLE_CSS3_CONDITIONAL_RULES
+#if ENABLE_CSS_GRID_LAYOUT
+
+%type <valueList> ident_list
+%destructor { delete $$; } ident_list
+
+%type <value> track_names_list
+%destructor { destroy($$); } track_names_list
+
+#endif
 
 %token SUPPORTS_AND
 %token SUPPORTS_NOT
@@ -277,8 +346,6 @@ static inline bool isCSSTokenAString(int yytype)
 %destructor { if ($$) $$->deref(); } supports
 
 %type <boolean> supports_condition supports_condition_in_parens supports_conjunction supports_declaration_condition supports_disjunction supports_error supports_negation
-
-#endif
 
 #if ENABLE_CSS_DEVICE_ADAPTATION
 
@@ -301,16 +368,15 @@ stylesheet:
   | webkit_decls maybe_space
   | webkit_value maybe_space
   | webkit_mediaquery maybe_space
+  | webkit_source_size_list maybe_space
   | webkit_selector maybe_space
   | webkit_keyframe_rule maybe_space
-#if ENABLE_CSS3_CONDITIONAL_RULES
   | webkit_supports_condition maybe_space
-#endif
   ;
 
 webkit_rule: WEBKIT_RULE_SYM '{' maybe_space valid_rule maybe_space '}' { parser->m_rule = adoptRef($4); } ;
 
-webkit_keyframe_rule: WEBKIT_KEYFRAME_RULE_SYM '{' maybe_space keyframe_rule maybe_space '}' { parser->m_keyframe = adoptRef($4); } ;
+webkit_keyframe_rule: KEYFRAME_RULE_SYM '{' maybe_space keyframe_rule maybe_space '}' { parser->m_keyframe = adoptRef($4); } ;
 
 webkit_decls: WEBKIT_DECLS_SYM '{' maybe_space_before_declaration declaration_list '}' ;
 
@@ -326,7 +392,7 @@ webkit_value:
     }
 ;
 
-webkit_mediaquery: WEBKIT_MEDIAQUERY_SYM WHITESPACE maybe_space media_query '}' { parser->m_mediaQuery = std::move(std::unique_ptr<MediaQuery>($4)); } ;
+webkit_mediaquery: WEBKIT_MEDIAQUERY_SYM WHITESPACE maybe_space media_query '}' { parser->m_mediaQuery = std::unique_ptr<MediaQuery>($4); } ;
 
 webkit_selector:
     WEBKIT_SELECTOR_SYM '{' maybe_space selector_list '}' {
@@ -338,11 +404,7 @@ webkit_selector:
     }
 ;
 
-#if ENABLE_CSS3_CONDITIONAL_RULES
-
-webkit_supports_condition: WEBKIT_SUPPORTS_CONDITION_SYM '{' maybe_space supports_condition '}' { parser->m_supportsCondition = $4; } ;
-
-#endif
+webkit_supports_condition: WEBKIT_SUPPORTS_CONDITION_SYM WHITESPACE maybe_space supports_condition '}' { parser->m_supportsCondition = $4; } ;
 
 /* for expressions that require at least one whitespace to be present, like the + and - operators in calc expressions */
 space: WHITESPACE | space WHITESPACE ;
@@ -356,6 +418,8 @@ maybe_charset: /* empty */ | charset ;
 closing_brace: '}' | %prec LOWEST_PREC TOKEN_EOF ;
 
 closing_parenthesis: ')' | %prec LOWEST_PREC TOKEN_EOF ;
+
+closing_bracket: ']' | %prec LOWEST_PREC TOKEN_EOF;
 
 charset:
   CHARSET_SYM maybe_space STRING maybe_space ';' {
@@ -390,9 +454,7 @@ valid_rule:
   | namespace { $$ = nullptr; }
   | import
   | region
-#if ENABLE_CSS3_CONDITIONAL_RULES
   | supports
-#endif
 #if ENABLE_CSS_DEVICE_ADAPTATION
   | viewport
 #endif
@@ -438,9 +500,7 @@ block_valid_rule:
   | font_face
   | media
   | keyframes
-#if ENABLE_CSS3_CONDITIONAL_RULES
   | supports
-#endif
 #if ENABLE_CSS_DEVICE_ADAPTATION
   | viewport
 #endif
@@ -497,17 +557,47 @@ string_or_uri: STRING | URI ;
 
 maybe_media_value: /*empty*/ { $$ = nullptr; } | ':' maybe_space expr maybe_space { $$ = $3; } ;
 
+webkit_source_size_list:
+    WEBKIT_SIZESATTR_SYM WHITESPACE source_size_list maybe_space '}' {
+        parser->m_sourceSizeList = std::unique_ptr<Vector<CSSParser::SourceSize>>($3);
+    }
+    ;
+
+source_size_list:
+    maybe_source_media_query_exp source_size_length {
+        $$ = new Vector<CSSParser::SourceSize>;
+        $$->append(parser->sourceSize(std::unique_ptr<MediaQueryExp>($1), $2));
+    }
+    | source_size_list maybe_space ',' maybe_space maybe_source_media_query_exp source_size_length {
+        $$ = $1;
+        $$->append(parser->sourceSize(std::unique_ptr<MediaQueryExp>($5), $6));
+    }
+    ;
+
+maybe_source_media_query_exp:
+    /* empty */ {
+        $$ = new MediaQueryExp;
+    }
+    | base_media_query_exp maybe_space;
+
+source_size_length: unary_term | calc_function;
+
+base_media_query_exp: '(' maybe_space IDENT maybe_space maybe_media_value ')' {
+        std::unique_ptr<CSSParserValueList> mediaValue($5);
+        $3.lower();
+        $$ = new MediaQueryExp($3, mediaValue.get());
+    }
+    ;
+
 media_query_exp:
-    maybe_media_restrictor maybe_space '(' maybe_space IDENT maybe_space maybe_media_value ')' maybe_space {
-        // If restrictor is specified, media query expression is invalid.
-        // Create empty media query expression and continue parsing media query.
-        std::unique_ptr<CSSParserValueList> mediaValue($7);
-        if ($1 != MediaQuery::None)
-            $$ = new MediaQueryExp(emptyString(), nullptr);
-        else {
-            $5.lower();
-            $$ = new MediaQueryExp($5, mediaValue.get());
-        }
+    maybe_media_restrictor maybe_space base_media_query_exp maybe_space {
+        if ($1 != MediaQuery::None) {
+            // If restrictor is specified, media query expression is invalid.
+            // Create empty media query expression and continue parsing media query.
+            delete $3;
+            $$ = new MediaQueryExp;
+        } else
+            $$ = $3;
     }
     ;
 
@@ -554,11 +644,11 @@ media_query:
     }
     ;
 
-maybe_media_list: /* empty */ { $$ = MediaQuerySet::create().leakRef(); } | media_list ;
+maybe_media_list: /* empty */ { $$ = &MediaQuerySet::create().leakRef(); } | media_list ;
 
 media_list:
     media_query {
-        $$ = MediaQuerySet::create().leakRef();
+        $$ = &MediaQuerySet::create().leakRef();
         $$->addMediaQuery(std::unique_ptr<MediaQuery>($1));
         parser->updateLastMediaLine($$);
     }
@@ -566,7 +656,7 @@ media_list:
         $$ = $1;
         std::unique_ptr<MediaQuery> mediaQuery($4);
         if ($$) {
-            $$->addMediaQuery(std::move(mediaQuery));
+            $$->addMediaQuery(WTF::move(mediaQuery));
             parser->updateLastMediaLine($$);
         }
     }
@@ -608,8 +698,6 @@ media:
     }
     ;
 
-#if ENABLE_CSS3_CONDITIONAL_RULES
-
 supports:
     before_supports_rule SUPPORTS_SYM maybe_space supports_condition at_supports_rule_header_end '{' at_rule_body_start maybe_space block_rule_list save_block {
         $$ = parser->createSupportsRule($4, std::unique_ptr<Vector<RefPtr<StyleRuleBase>>>($9).get()).leakRef();
@@ -621,7 +709,14 @@ supports:
     }
     ;
 
-supports_error: error ';' | error invalid_block ;
+supports_error: 
+    error ';' {
+        $$ = false;
+    }
+    | error invalid_block {
+        $$ = false;
+    }
+    ;
 
 before_supports_rule:
     /* empty */ {
@@ -653,17 +748,17 @@ supports_disjunction:
 
 supports_condition_in_parens:
     '(' maybe_space supports_condition ')' maybe_space { $$ = $3; }
-    | supports_declaration_condition
-    | '(' error ')'
+    | supports_declaration_condition { $$ = $1; }
+    | '(' error ')' { $$ = false; }
     ;
 
 supports_declaration_condition:
     '(' maybe_space property ':' maybe_space expr priority ')' maybe_space {
         $$ = false;
         CSSParser* p = static_cast<CSSParser*>(parser);
-        std::unique_ptr<CSSParserExpression> propertyValue($6);
+        std::unique_ptr<CSSParserValueList> propertyValue($6);
         if ($3 && propertyValue) {
-            p->m_valueList = std::move(propertyValue);
+            p->m_valueList = WTF::move(propertyValue);
             int oldParsedProperties = p->m_parsedProperties.size();
             $$ = p->parseValue($3, $7);
             // We just need to know if the declaration is supported as it is written. Rollback any additions.
@@ -675,8 +770,6 @@ supports_declaration_condition:
     }
     ;
 
-#endif
-
 before_keyframes_rule:
     /* empty */ {
         parser->markRuleHeaderStart(CSSRuleSourceData::KEYFRAMES_RULE);
@@ -684,11 +777,11 @@ before_keyframes_rule:
     ;
 
 keyframes:
-    before_keyframes_rule WEBKIT_KEYFRAMES_SYM maybe_space keyframe_name at_rule_header_end_maybe_space '{' at_rule_body_start maybe_space keyframes_rule closing_brace {
+    before_keyframes_rule KEYFRAMES_SYM maybe_space keyframe_name at_rule_header_end_maybe_space '{' at_rule_body_start maybe_space keyframes_rule closing_brace {
         $$ = parser->createKeyframesRule($4, std::unique_ptr<Vector<RefPtr<StyleKeyframe>>>($9)).leakRef();
     }
     ;
-  
+
 keyframe_name: IDENT | STRING ;
 
 keyframes_rule:
@@ -915,9 +1008,12 @@ region:
 ;
 
 combinator:
-    '+' maybe_space { $$ = CSSSelector::DirectAdjacent; }
-  | '~' maybe_space { $$ = CSSSelector::IndirectAdjacent; }
-  | '>' maybe_space { $$ = CSSSelector::Child; }
+    '+' maybe_space { $$ = CSSParserSelectorCombinator::DirectAdjacent; }
+  | '~' maybe_space { $$ = CSSParserSelectorCombinator::IndirectAdjacent; }
+  | '>' maybe_space { $$ = CSSParserSelectorCombinator::Child; }
+#if ENABLE_CSS_SELECTORS_LEVEL4
+  | '>' '>' maybe_space { $$ = CSSParserSelectorCombinator::DescendantDoubleChild; }
+#endif
   ;
 
 maybe_unary_operator: unary_operator | { $$ = 1; } ;
@@ -947,7 +1043,7 @@ ruleset:
 before_selector_group_item: { parser->markSelectorStart(); } ;
 
 selector_list:
-    selector %prec UNIMPORTANT_TOK {
+    complex_selector %prec UNIMPORTANT_TOK {
         $$ = nullptr;
         if ($1) {
             $$ = parser->createSelectorVector().release();
@@ -955,13 +1051,13 @@ selector_list:
             parser->updateLastSelectorLineAndPosition();
         }
     }
-    | selector_list at_selector_end ',' maybe_space before_selector_group_item selector %prec UNIMPORTANT_TOK {
+    | selector_list at_selector_end ',' maybe_space before_selector_group_item complex_selector %prec UNIMPORTANT_TOK {
         std::unique_ptr<Vector<std::unique_ptr<CSSParserSelector>>> selectorList($1);
         std::unique_ptr<CSSParserSelector> selector($6);
         $$ = nullptr;
         if (selectorList && selector) {
             $$ = selectorList.release();
-            $$->append(std::move(selector));
+            $$->append(WTF::move(selector));
             parser->updateLastSelectorLineAndPosition();
         }
     }
@@ -971,31 +1067,58 @@ selector_list:
     }
    ;
 
-selector_with_trailing_whitespace:
-    selector WHITESPACE;
+before_nested_selector_list: { parser->startNestedSelectorList(); } ;
+after_nested_selector_list: { parser->endNestedSelectorList(); } ;
 
-selector:
-    simple_selector
-    | selector_with_trailing_whitespace
-    | selector_with_trailing_whitespace simple_selector {
+nested_selector_list:
+    before_nested_selector_list selector_list after_nested_selector_list {
+        $$ = $2;
+    }
+    ;
+
+lang_range: IDENT | STRING ;
+
+comma_separated_lang_ranges:
+    lang_range %prec UNIMPORTANT_TOK {
+        $$ = new Vector<CSSParserString>;
+        $$->append($1);
+    }
+    | comma_separated_lang_ranges maybe_space ',' maybe_space lang_range %prec UNIMPORTANT_TOK {
+        $$ = $1;
+        if ($$)
+            $1->append($5);
+    }
+    | comma_separated_lang_ranges error {
+        $$ = nullptr;
+        delete $1;
+    }
+    ;
+
+complex_selector_with_trailing_whitespace:
+    complex_selector WHITESPACE;
+
+complex_selector:
+    compound_selector
+    | complex_selector_with_trailing_whitespace
+    | complex_selector_with_trailing_whitespace compound_selector {
         std::unique_ptr<CSSParserSelector> left($1);
         std::unique_ptr<CSSParserSelector> right($2);
         $$ = nullptr;
         if (left && right) {
-            right->appendTagHistory(CSSSelector::Descendant, std::move(left));
+            right->appendTagHistory(CSSParserSelectorCombinator::DescendantSpace, WTF::move(left));
             $$ = right.release();
         }
     }
-    | selector combinator simple_selector {
+    | complex_selector combinator compound_selector {
         std::unique_ptr<CSSParserSelector> left($1);
         std::unique_ptr<CSSParserSelector> right($3);
         $$ = nullptr;
         if (left && right) {
-            right->appendTagHistory($2, std::move(left));
+            right->appendTagHistory($2, WTF::move(left));
             $$ = right.release();
         }
     }
-    | selector error {
+    | complex_selector error {
         $$ = nullptr;
         delete $1;
     }
@@ -1007,7 +1130,7 @@ namespace_selector:
     | IDENT '|'
 ;
 
-simple_selector:
+compound_selector:
     element_name {
         $$ = new CSSParserSelector(QualifiedName(nullAtom, $1, parser->m_defaultNamespace));
     }
@@ -1037,20 +1160,20 @@ simple_selector:
   ;
 
 simple_selector_list:
-    simple_selector %prec UNIMPORTANT_TOK {
+    compound_selector %prec UNIMPORTANT_TOK {
         $$ = nullptr;
         if ($1) {
             $$ = parser->createSelectorVector().release();
             $$->append(std::unique_ptr<CSSParserSelector>($1));
         }
     }
-    | simple_selector_list maybe_space ',' maybe_space simple_selector %prec UNIMPORTANT_TOK {
+    | simple_selector_list maybe_space ',' maybe_space compound_selector %prec UNIMPORTANT_TOK {
         std::unique_ptr<Vector<std::unique_ptr<CSSParserSelector>>> list($1);
         std::unique_ptr<CSSParserSelector> selector($5);
         $$ = nullptr;
         if (list && selector) {
             $$ = list.release();
-            $$->append(std::move(selector));
+            $$->append(WTF::move(selector));
         }
     }
     | simple_selector_list error {
@@ -1061,8 +1184,6 @@ simple_selector_list:
 
 element_name:
     IDENT {
-        if (parser->m_context.isHTMLDocument)
-            $1.lower();
         $$ = $1;
     }
     | '*' {
@@ -1078,7 +1199,7 @@ specifier_list:
         std::unique_ptr<CSSParserSelector> specifier($2);
         $$ = nullptr;
         if (list && specifier)
-            $$ = parser->rewriteSpecifiers(std::move(list), std::move(specifier)).release();
+            $$ = parser->rewriteSpecifiers(WTF::move(list), WTF::move(specifier)).release();
     }
     | specifier_list error {
         $$ = nullptr;
@@ -1126,24 +1247,37 @@ attrib:
         $$->setAttribute(QualifiedName(nullAtom, $3, nullAtom), parser->m_context.isHTMLDocument);
         $$->setMatch(CSSSelector::Set);
     }
-    | '[' maybe_space IDENT maybe_space match maybe_space ident_or_string maybe_space ']' {
+    | '[' maybe_space IDENT maybe_space match maybe_space ident_or_string maybe_space attrib_flags ']' {
         $$ = new CSSParserSelector;
         $$->setAttribute(QualifiedName(nullAtom, $3, nullAtom), parser->m_context.isHTMLDocument);
         $$->setMatch($5);
         $$->setValue($7);
+        $$->setAttributeValueMatchingIsCaseInsensitive($9);
     }
     | '[' maybe_space namespace_selector IDENT maybe_space ']' {
         $$ = new CSSParserSelector;
         $$->setAttribute(parser->determineNameInNamespace($3, $4), parser->m_context.isHTMLDocument);
         $$->setMatch(CSSSelector::Set);
     }
-    | '[' maybe_space namespace_selector IDENT maybe_space match maybe_space ident_or_string maybe_space ']' {
+    | '[' maybe_space namespace_selector IDENT maybe_space match maybe_space ident_or_string maybe_space attrib_flags ']' {
         $$ = new CSSParserSelector;
         $$->setAttribute(parser->determineNameInNamespace($3, $4), parser->m_context.isHTMLDocument);
         $$->setMatch($6);
         $$->setValue($8);
+        $$->setAttributeValueMatchingIsCaseInsensitive($10);
     }
   ;
+
+attrib_flags:
+    IDENT maybe_space {
+        if (UNLIKELY($1.length() != 1 || !isASCIIAlphaCaselessEqual($1[0], 'i')))
+            YYERROR;
+        $$ = true;
+    }
+    |
+    /* empty */ {
+        $$ = false;
+    }
 
 match:
     '=' {
@@ -1170,46 +1304,35 @@ ident_or_string: IDENT | STRING ;
 
 pseudo_page:
     ':' IDENT {
-        $$ = nullptr;
-        auto selector = std::make_unique<CSSParserSelector>();
-        selector->setMatch(CSSSelector::PagePseudoClass);
-        $2.lower();
-        selector->setValue($2);
-        if (selector->pseudoType() != CSSSelector::PseudoUnknown)
-            $$ = selector.release();
+        $$ = CSSParserSelector::parsePagePseudoSelector($2);
     }
+
+nth_selector_ending:
+    ')' {
+        $$ = nullptr;
+    }
+    | space ')' {
+        $$ = nullptr;
+    }
+    | space NTHCHILDSELECTORSEPARATOR space nested_selector_list maybe_space ')' {
+        if ($4)
+            $$ = $4;
+        else
+            YYERROR;
+    }
+    ;
 
 pseudo:
     ':' IDENT {
-        $$ = nullptr;
-        auto selector = std::make_unique<CSSParserSelector>();
-        selector->setMatch(CSSSelector::PseudoClass);
-        $2.lower();
-        selector->setValue($2);
-        if (selector->pseudoType() != CSSSelector::PseudoUnknown)
-            $$ = selector.release();
+        $$ = CSSParserSelector::parsePseudoClassAndCompatibilityElementSelector($2);
     }
     | ':' ':' IDENT {
-        $$ = nullptr;
-        auto selector = std::make_unique<CSSParserSelector>();
-        selector->setMatch(CSSSelector::PseudoElement);
-        $3.lower();
-        selector->setValue($3);
-        if (selector->pseudoType() != CSSSelector::PseudoUnknown)
-            $$ = selector.release();
+        $$ = CSSParserSelector::parsePseudoElementSelector($3);
     }
 #if ENABLE_VIDEO_TRACK
     // used by ::cue(:past/:future)
     | ':' ':' CUEFUNCTION maybe_space simple_selector_list maybe_space ')' {
-        $$ = nullptr;
-        if ($5) {
-            auto selector = std::make_unique<CSSParserSelector>();
-            selector->setMatch(CSSSelector::PseudoClass);
-            selector->adoptSelectorVector(*std::unique_ptr<Vector<std::unique_ptr<CSSParserSelector>>>($5));
-            selector->setValue($3);
-            if (selector->pseudoType() == CSSSelector::PseudoCue)
-                $$ = selector.release();
-        }
+        $$ = CSSParserSelector::parsePseudoElementCueFunctionSelector($3, $5);
     }
 #endif
     // use by :-webkit-any.
@@ -1223,20 +1346,111 @@ pseudo:
             auto selector = std::make_unique<CSSParserSelector>();
             selector->setMatch(CSSSelector::PseudoClass);
             selector->adoptSelectorVector(*std::unique_ptr<Vector<std::unique_ptr<CSSParserSelector>>>($4));
-            $2.lower();
-            selector->setValue($2);
-            if (selector->pseudoType() == CSSSelector::PseudoAny)
+            selector->setPseudoClassValue($2);
+            if (selector->pseudoClassType() == CSSSelector::PseudoClassAny)
                 $$ = selector.release();
         }
     }
+    | ':' MATCHESFUNCTION maybe_space nested_selector_list maybe_space ')' {
+        $$ = nullptr;
+        if ($4) {
+            auto selector = std::make_unique<CSSParserSelector>();
+            selector->setMatch(CSSSelector::PseudoClass);
+            selector->adoptSelectorVector(*std::unique_ptr<Vector<std::unique_ptr<CSSParserSelector>>>($4));
+            selector->setPseudoClassValue($2);
+            if (selector->pseudoClassType() == CSSSelector::PseudoClassMatches)
+                $$ = selector.release();
+        }
+    }
+    | ':' LANGFUNCTION maybe_space comma_separated_lang_ranges maybe_space ')' {
+        $$ = nullptr;
+        if ($4) {
+            auto selector = std::make_unique<CSSParserSelector>();
+            selector->setMatch(CSSSelector::PseudoClass);
+            selector->setLangArgumentList(*std::unique_ptr<Vector<CSSParserString>>($4));
+            selector->setPseudoClassValue($2);
+            if (selector->pseudoClassType() == CSSSelector::PseudoClassLang)
+                $$ = selector.release();
+        }
+    }
+
+#if ENABLE_CSS_SELECTORS_LEVEL4
+    | ':' DIRFUNCTION maybe_space IDENT maybe_space ')' {
+        $$ = nullptr;
+        auto selector = std::make_unique<CSSParserSelector>();
+        selector->setMatch(CSSSelector::PseudoClass);
+        selector->setArgument($4);
+        selector->setPseudoClassValue($2);
+        if (selector->pseudoClassType() == CSSSelector::PseudoClassDir)
+            $$ = selector.release();
+    }
+
+    | ':' ROLEFUNCTION maybe_space IDENT maybe_space ')' {
+        $$ = nullptr;
+        auto selector = std::make_unique<CSSParserSelector>();
+        selector->setMatch(CSSSelector::PseudoClass);
+        selector->setArgument($4);
+        selector->setPseudoClassValue($2);
+        if (selector->pseudoClassType() == CSSSelector::PseudoClassRole)
+            $$ = selector.release();
+    }
+#endif
+
+    // Definition of :nth-child().
+    | ':' NTHCHILDFUNCTIONS maybe_space NTH nth_selector_ending {
+        $$ = nullptr;
+        std::unique_ptr<Vector<std::unique_ptr<CSSParserSelector>>> ending($5);
+        if (selectorListDoesNotMatchAnyPseudoElement(ending.get())) {
+            auto selector = std::make_unique<CSSParserSelector>();
+            selector->setMatch(CSSSelector::PseudoClass);
+            selector->setArgument($4);
+            selector->setPseudoClassValue($2);
+            if (ending)
+                selector->adoptSelectorVector(*ending);
+            CSSSelector::PseudoClassType pseudoClassType = selector->pseudoClassType();
+            if (pseudoClassType == CSSSelector::PseudoClassNthChild || pseudoClassType == CSSSelector::PseudoClassNthLastChild)
+                $$ = selector.release();
+        }
+    }
+    | ':' NTHCHILDFUNCTIONS maybe_space maybe_unary_operator INTEGER nth_selector_ending {
+        $$ = nullptr;
+        std::unique_ptr<Vector<std::unique_ptr<CSSParserSelector>>> ending($6);
+        if (selectorListDoesNotMatchAnyPseudoElement(ending.get())) {
+            auto selector = std::make_unique<CSSParserSelector>();
+            selector->setMatch(CSSSelector::PseudoClass);
+            selector->setArgument(AtomicString::number($4 * $5));
+            selector->setPseudoClassValue($2);
+            if (ending)
+                selector->adoptSelectorVector(*ending);
+            CSSSelector::PseudoClassType pseudoClassType = selector->pseudoClassType();
+            if (pseudoClassType == CSSSelector::PseudoClassNthChild || pseudoClassType == CSSSelector::PseudoClassNthLastChild)
+                $$ = selector.release();
+        }
+    }
+    | ':' NTHCHILDFUNCTIONS maybe_space IDENT nth_selector_ending {
+        $$ = nullptr;
+        std::unique_ptr<Vector<std::unique_ptr<CSSParserSelector>>> ending($5);
+        if (isValidNthToken($4) && selectorListDoesNotMatchAnyPseudoElement(ending.get())) {
+            auto selector = std::make_unique<CSSParserSelector>();
+            selector->setMatch(CSSSelector::PseudoClass);
+            selector->setArgument($4);
+            selector->setPseudoClassValue($2);
+            if (ending)
+               selector->adoptSelectorVector(*ending);
+            CSSSelector::PseudoClassType pseudoClassType = selector->pseudoClassType();
+            if (pseudoClassType == CSSSelector::PseudoClassNthChild || pseudoClassType == CSSSelector::PseudoClassNthLastChild)
+                $$ = selector.release();
+        }
+    }
+
     // used by :nth-*(ax+b)
     | ':' FUNCTION maybe_space NTH maybe_space ')' {
         $$ = nullptr;
         auto selector = std::make_unique<CSSParserSelector>();
         selector->setMatch(CSSSelector::PseudoClass);
         selector->setArgument($4);
-        selector->setValue($2);
-        if (selector->pseudoType() != CSSSelector::PseudoUnknown)
+        selector->setPseudoClassValue($2);
+        if (selector->pseudoClassType() != CSSSelector::PseudoClassUnknown)
             $$ = selector.release();
     }
     // used by :nth-*
@@ -1245,8 +1459,8 @@ pseudo:
         auto selector = std::make_unique<CSSParserSelector>();
         selector->setMatch(CSSSelector::PseudoClass);
         selector->setArgument(AtomicString::number($4 * $5));
-        selector->setValue($2);
-        if (selector->pseudoType() != CSSSelector::PseudoUnknown)
+        selector->setPseudoClassValue($2);
+        if (selector->pseudoClassType() != CSSSelector::PseudoClassUnknown)
             $$ = selector.release();
     }
     // used by :nth-*(odd/even) and :lang
@@ -1254,34 +1468,32 @@ pseudo:
         auto selector = std::make_unique<CSSParserSelector>();
         selector->setMatch(CSSSelector::PseudoClass);
         selector->setArgument($4);
-        $2.lower();
-        selector->setValue($2);
-        CSSSelector::PseudoType type = selector->pseudoType();
-        if (type == CSSSelector::PseudoUnknown)
+        selector->setPseudoClassValue($2);
+        CSSSelector::PseudoClassType type = selector->pseudoClassType();
+        if (type == CSSSelector::PseudoClassUnknown)
             selector = nullptr;
-        else if (type == CSSSelector::PseudoNthChild ||
-                 type == CSSSelector::PseudoNthOfType ||
-                 type == CSSSelector::PseudoNthLastChild ||
-                 type == CSSSelector::PseudoNthLastOfType) {
+        else if (type == CSSSelector::PseudoClassNthChild ||
+                 type == CSSSelector::PseudoClassNthOfType ||
+                 type == CSSSelector::PseudoClassNthLastChild ||
+                 type == CSSSelector::PseudoClassNthLastOfType) {
             if (!isValidNthToken($4))
                 selector = nullptr;
         }
         $$ = selector.release();
     }
-    // used by :not
-    | ':' NOTFUNCTION maybe_space simple_selector maybe_space ')' {
-        std::unique_ptr<CSSParserSelector> selector($4);
+    // Definition of :not().
+    | ':' NOTFUNCTION maybe_space nested_selector_list maybe_space ')' {
         $$ = nullptr;
-        if (selector && selector->isSimple()) {
-            $$ = new CSSParserSelector;
-            $$->setMatch(CSSSelector::PseudoClass);
-
-            Vector<std::unique_ptr<CSSParserSelector>> selectorVector;
-            selectorVector.append(std::move(selector));
-            $$->adoptSelectorVector(selectorVector);
-
-            $2.lower();
-            $$->setValue($2);
+        if ($4) {
+            std::unique_ptr<Vector<std::unique_ptr<CSSParserSelector>>> list($4);
+            if (selectorListDoesNotMatchAnyPseudoElement(list.get())) {
+                auto selector = std::make_unique<CSSParserSelector>();
+                selector->setMatch(CSSSelector::PseudoClass);
+                selector->setPseudoClassValue($2);
+                selector->adoptSelectorVector(*list);
+                if (selector->pseudoClassType() == CSSSelector::PseudoClassNot)
+                    $$ = selector.release();
+            }
         }
     }
   ;
@@ -1328,7 +1540,7 @@ declaration:
         bool isPropertyParsed = false;
         std::unique_ptr<CSSParserValueList> propertyValue($4);
         if ($1 && propertyValue) {
-            parser->m_valueList = std::move(propertyValue);
+            parser->m_valueList = WTF::move(propertyValue);
             int oldParsedProperties = parser->m_parsedProperties.size();
             $$ = parser->parseValue($1, $5);
             if (!$$)
@@ -1363,6 +1575,35 @@ property: IDENT maybe_space { $$ = cssPropertyID($1); } ;
 
 priority: IMPORTANT_SYM maybe_space { $$ = true; } | /* empty */ { $$ = false; } ;
 
+#if ENABLE_CSS_GRID_LAYOUT
+
+ident_list:
+    IDENT maybe_space {
+        $$ = new CSSParserValueList;
+        $$->addValue(makeIdentValue($1));
+    }
+    | ident_list IDENT maybe_space {
+        $$ = $1;
+        $$->addValue(makeIdentValue($2));
+    }
+    ;
+
+track_names_list:
+    '[' maybe_space closing_bracket {
+        $$.setFromValueList(std::make_unique<CSSParserValueList>());
+    }
+    | '[' maybe_space ident_list closing_bracket {
+        $$.setFromValueList(std::unique_ptr<CSSParserValueList>($3));
+    }
+    | '[' maybe_space expr_recovery closing_bracket {
+        $$.id = CSSValueInvalid;
+        $$.unit = 0;
+        YYERROR;
+    }
+  ;
+
+#endif
+
 expr: valid_expr | valid_expr expr_recovery { $$ = nullptr; delete $1; } ;
 
 valid_expr:
@@ -1395,11 +1636,7 @@ term:
   unary_term maybe_space
   | unary_operator unary_term maybe_space { $$ = $2; $$.fValue *= $1; }
   | STRING maybe_space { $$.id = CSSValueInvalid; $$.string = $1; $$.unit = CSSPrimitiveValue::CSS_STRING; }
-  | IDENT maybe_space {
-      $$.id = cssValueKeywordID($1);
-      $$.unit = CSSPrimitiveValue::CSS_IDENT;
-      $$.string = $1;
-  }
+  | IDENT maybe_space { $$ = makeIdentValue($1); }
   /* We might need to actually parse the number from a dimension, but we can't just put something that uses $$.string into unary_term. */
   | DIMEN maybe_space { $$.id = CSSValueInvalid; $$.string = $1; $$.unit = CSSPrimitiveValue::CSS_DIMENSION; }
   | unary_operator DIMEN maybe_space { $$.id = CSSValueInvalid; $$.string = $2; $$.unit = CSSPrimitiveValue::CSS_DIMENSION; }
@@ -1414,6 +1651,9 @@ term:
   | '%' maybe_space { /* Handle width: %; */
       $$.id = CSSValueInvalid; $$.unit = 0;
   }
+#if ENABLE_CSS_GRID_LAYOUT
+  | track_names_list maybe_space
+#endif
   ;
 
 unary_term:
@@ -1442,7 +1682,7 @@ unary_term:
       $$.fValue = $1;
       $$.unit = CSSPrimitiveValue::CSS_REMS;
       if (parser->m_styleSheet)
-          parser->m_styleSheet->parserSetUsesRemUnits(true);
+          parser->m_styleSheet->parserSetUsesRemUnits();
   }
   | CHS { $$.id = CSSValueInvalid; $$.fValue = $1; $$.unit = CSSPrimitiveValue::CSS_CHS; }
   | VW { $$.id = CSSValueInvalid; $$.fValue = $1; $$.unit = CSSPrimitiveValue::CSS_VW; }
@@ -1610,7 +1850,7 @@ min_or_max_function:
         $$.id = CSSValueInvalid;
         $$.unit = CSSParserValue::Function;
         $$.function = f;
-    } 
+    }
     | min_or_max maybe_space expr_recovery closing_parenthesis {
         $$.id = CSSValueInvalid;
         $$.unit = 0;
@@ -1628,12 +1868,15 @@ invalid_rule: error invalid_block ;
 
 invalid_block: '{' error_recovery closing_brace { parser->invalidBlockHit(); } ;
 
-invalid_square_brackets_block: '[' error_recovery ']' | '[' error_recovery TOKEN_EOF ;
+invalid_square_brackets_block: '[' error_recovery closing_bracket ;
 
 invalid_parentheses_block: opening_parenthesis error_recovery closing_parenthesis;
 
 opening_parenthesis:
-    '(' | FUNCTION | CALCFUNCTION | MINFUNCTION | MAXFUNCTION | ANYFUNCTION | NOTFUNCTION
+    '(' | FUNCTION | CALCFUNCTION | MATCHESFUNCTION | MAXFUNCTION | MINFUNCTION | ANYFUNCTION | NOTFUNCTION | LANGFUNCTION
+#if ENABLE_CSS_SELECTORS_LEVEL4
+    | DIRFUNCTION | ROLEFUNCTION
+#endif
 #if ENABLE_VIDEO_TRACK
     | CUEFUNCTION
 #endif

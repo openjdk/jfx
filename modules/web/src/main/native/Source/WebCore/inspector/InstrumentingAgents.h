@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -46,16 +47,14 @@ namespace WebCore {
 
 class InspectorApplicationCacheAgent;
 class InspectorCSSAgent;
-class InspectorCanvasAgent;
 class InspectorDOMAgent;
 class InspectorDOMDebuggerAgent;
 class InspectorDOMStorageAgent;
 class InspectorDatabaseAgent;
-class InspectorHeapProfilerAgent;
 class InspectorLayerTreeAgent;
 class InspectorPageAgent;
-class InspectorProfilerAgent;
 class InspectorResourceAgent;
+class InspectorReplayAgent;
 class InspectorTimelineAgent;
 class InspectorWorkerAgent;
 class Page;
@@ -105,13 +104,19 @@ public:
     InspectorTimelineAgent* inspectorTimelineAgent() const { return m_inspectorTimelineAgent; }
     void setInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_inspectorTimelineAgent = agent; }
 
+    InspectorTimelineAgent* persistentInspectorTimelineAgent() const { return m_persistentInspectorTimelineAgent; }
+    void setPersistentInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_persistentInspectorTimelineAgent = agent; }
+
     InspectorDOMStorageAgent* inspectorDOMStorageAgent() const { return m_inspectorDOMStorageAgent; }
     void setInspectorDOMStorageAgent(InspectorDOMStorageAgent* agent) { m_inspectorDOMStorageAgent = agent; }
 
-#if ENABLE(SQL_DATABASE)
+#if ENABLE(WEB_REPLAY)
+    InspectorReplayAgent* inspectorReplayAgent() const { return m_inspectorReplayAgent; }
+    void setInspectorReplayAgent(InspectorReplayAgent* agent) { m_inspectorReplayAgent = agent; }
+#endif
+
     InspectorDatabaseAgent* inspectorDatabaseAgent() const { return m_inspectorDatabaseAgent; }
     void setInspectorDatabaseAgent(InspectorDatabaseAgent* agent) { m_inspectorDatabaseAgent = agent; }
-#endif
 
     InspectorApplicationCacheAgent* inspectorApplicationCacheAgent() const { return m_inspectorApplicationCacheAgent; }
     void setInspectorApplicationCacheAgent(InspectorApplicationCacheAgent* agent) { m_inspectorApplicationCacheAgent = agent; }
@@ -125,17 +130,8 @@ public:
     InspectorDOMDebuggerAgent* inspectorDOMDebuggerAgent() const { return m_inspectorDOMDebuggerAgent; }
     void setInspectorDOMDebuggerAgent(InspectorDOMDebuggerAgent* agent) { m_inspectorDOMDebuggerAgent = agent; }
 
-    InspectorProfilerAgent* inspectorProfilerAgent() const { return m_inspectorProfilerAgent; }
-    void setInspectorProfilerAgent(InspectorProfilerAgent* agent) { m_inspectorProfilerAgent = agent; }
-
-    InspectorHeapProfilerAgent* inspectorHeapProfilerAgent() const { return m_inspectorHeapProfilerAgent; }
-    void setInspectorHeapProfilerAgent(InspectorHeapProfilerAgent* agent) { m_inspectorHeapProfilerAgent = agent; }
-
     InspectorWorkerAgent* inspectorWorkerAgent() const { return m_inspectorWorkerAgent; }
     void setInspectorWorkerAgent(InspectorWorkerAgent* agent) { m_inspectorWorkerAgent = agent; }
-
-    InspectorCanvasAgent* inspectorCanvasAgent() const { return m_inspectorCanvasAgent; }
-    void setInspectorCanvasAgent(InspectorCanvasAgent* agent) { m_inspectorCanvasAgent = agent; }
 
     InspectorLayerTreeAgent* inspectorLayerTreeAgent() const { return m_inspectorLayerTreeAgent; }
     void setInspectorLayerTreeAgent(InspectorLayerTreeAgent* agent) { m_inspectorLayerTreeAgent = agent; }
@@ -155,22 +151,18 @@ private:
     PageRuntimeAgent* m_pageRuntimeAgent;
     WorkerRuntimeAgent* m_workerRuntimeAgent;
     InspectorTimelineAgent* m_inspectorTimelineAgent;
+    InspectorTimelineAgent* m_persistentInspectorTimelineAgent;
     InspectorDOMStorageAgent* m_inspectorDOMStorageAgent;
-#if ENABLE(SQL_DATABASE)
-    InspectorDatabaseAgent* m_inspectorDatabaseAgent;
+#if ENABLE(WEB_REPLAY)
+    InspectorReplayAgent* m_inspectorReplayAgent;
 #endif
+    InspectorDatabaseAgent* m_inspectorDatabaseAgent;
     InspectorApplicationCacheAgent* m_inspectorApplicationCacheAgent;
     Inspector::InspectorDebuggerAgent* m_inspectorDebuggerAgent;
     PageDebuggerAgent* m_pageDebuggerAgent;
     InspectorDOMDebuggerAgent* m_inspectorDOMDebuggerAgent;
-    InspectorProfilerAgent* m_inspectorProfilerAgent;
-    InspectorHeapProfilerAgent* m_inspectorHeapProfilerAgent;
     InspectorWorkerAgent* m_inspectorWorkerAgent;
-    InspectorCanvasAgent* m_inspectorCanvasAgent;
 };
-
-InstrumentingAgents* instrumentationForPage(Page*);
-InstrumentingAgents* instrumentationForWorkerGlobalScope(WorkerGlobalScope*);
 
 }
 

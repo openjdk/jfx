@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -36,41 +36,45 @@ namespace WebCore {
 class AccessibilityTable;
 
 class AccessibilityTableCell : public AccessibilityRenderObject {
-
-protected:
-    explicit AccessibilityTableCell(RenderObject*);
 public:
-    static PassRefPtr<AccessibilityTableCell> create(RenderObject*);
+    static Ref<AccessibilityTableCell> create(RenderObject*);
     virtual ~AccessibilityTableCell();
 
-    virtual bool isTableCell() const override;
+    virtual bool isTableCell() const override final;
     bool isTableHeaderCell() const;
+    bool isColumnHeaderCell() const;
+    bool isRowHeaderCell() const;
 
     // fills in the start location and row span of cell
-    virtual void rowIndexRange(std::pair<unsigned, unsigned>& rowRange);
+    virtual void rowIndexRange(std::pair<unsigned, unsigned>& rowRange) const;
     // fills in the start location and column span of cell
-    virtual void columnIndexRange(std::pair<unsigned, unsigned>& columnRange);
+    virtual void columnIndexRange(std::pair<unsigned, unsigned>& columnRange) const;
 
     void columnHeaders(AccessibilityChildrenVector&);
     void rowHeaders(AccessibilityChildrenVector&);
 
 protected:
+    explicit AccessibilityTableCell(RenderObject*);
+
     virtual AccessibilityTable* parentTable() const;
+    virtual AccessibilityRole determineAccessibilityRole() override final;
+
     int m_rowIndex;
-    virtual AccessibilityRole determineAccessibilityRole() override;
 
 private:
     // If a table cell is not exposed as a table cell, a TH element can serve as its title UI element.
-    virtual AccessibilityObject* titleUIElement() const override;
-    virtual bool exposesTitleUIElement() const override { return true; }
-    virtual bool computeAccessibilityIsIgnored() const override;
+    virtual AccessibilityObject* titleUIElement() const override final;
+    virtual bool exposesTitleUIElement() const override final { return true; }
+    virtual bool computeAccessibilityIsIgnored() const override final;
+    virtual String expandedTextValue() const override final;
+    virtual bool supportsExpandedTextValue() const override final;
 
     bool isTableCellInSameRowGroup(AccessibilityTableCell*);
     bool isTableCellInSameColGroup(AccessibilityTableCell*);
 };
 
-ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityTableCell, isTableCell())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityTableCell, isTableCell())
 
 #endif // AccessibilityTableCell_h

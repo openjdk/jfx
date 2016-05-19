@@ -31,8 +31,6 @@
 #include "config.h"
 #include "PageConsoleAgent.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "CommandLineAPIHost.h"
 #include "InspectorDOMAgent.h"
 #include "Node.h"
@@ -48,7 +46,7 @@ PageConsoleAgent::PageConsoleAgent(WebInjectedScriptManager* injectedScriptManag
 {
 }
 
-void PageConsoleAgent::clearMessages(ErrorString* errorString)
+void PageConsoleAgent::clearMessages(ErrorString& errorString)
 {
     m_inspectorDOMAgent->releaseDanglingNodes();
 
@@ -60,17 +58,17 @@ public:
     explicit InspectableNode(Node* node) : m_node(node) { }
     virtual Deprecated::ScriptValue get(JSC::ExecState* state) override
     {
-        return InspectorDOMAgent::nodeAsScriptValue(state, m_node);
+        return InspectorDOMAgent::nodeAsScriptValue(state, m_node.get());
     }
 private:
-    Node* m_node;
+    RefPtr<Node> m_node;
 };
 
-void PageConsoleAgent::addInspectedNode(ErrorString* errorString, int nodeId)
+void PageConsoleAgent::addInspectedNode(ErrorString& errorString, int nodeId)
 {
     Node* node = m_inspectorDOMAgent->nodeForId(nodeId);
     if (!node || node->isInShadowTree()) {
-        *errorString = ASCIILiteral("nodeId is not valid");
+        errorString = ASCIILiteral("nodeId is not valid");
         return;
     }
 
@@ -79,5 +77,3 @@ void PageConsoleAgent::addInspectedNode(ErrorString* errorString, int nodeId)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

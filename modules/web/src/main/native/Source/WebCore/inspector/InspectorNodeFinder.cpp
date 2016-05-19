@@ -13,7 +13,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -33,7 +33,6 @@
 #include "InspectorNodeFinder.h"
 
 #include "Attr.h"
-#include "Attribute.h"
 #include "Document.h"
 #include "Element.h"
 #include "HTMLFrameOwnerElement.h"
@@ -43,7 +42,7 @@
 
 namespace WebCore {
 
-static String stripCharacters(String string, const char startCharacter, const char endCharacter, bool& startCharFound, bool& endCharFound)
+static String stripCharacters(const String& string, const char startCharacter, const char endCharacter, bool& startCharFound, bool& endCharFound)
 {
     startCharFound = string.startsWith(startCharacter);
     endCharFound = string.endsWith(endCharacter);
@@ -53,7 +52,7 @@ static String stripCharacters(String string, const char startCharacter, const ch
     return string.substring(start, end - start);
 }
 
-InspectorNodeFinder::InspectorNodeFinder(String whitespaceTrimmedQuery)
+InspectorNodeFinder::InspectorNodeFinder(const String& whitespaceTrimmedQuery)
     : m_whitespaceTrimmedQuery(whitespaceTrimmedQuery)
 {
     m_tagNameQuery = stripCharacters(whitespaceTrimmedQuery, '<', '>', m_startTagFound, m_endTagFound);
@@ -75,7 +74,7 @@ void InspectorNodeFinder::performSearch(Node* parentNode)
 void InspectorNodeFinder::searchUsingDOMTreeTraversal(Node* parentNode)
 {
     // Manual plain text search.
-    for (auto node = parentNode; node; node = NodeTraversal::next(node, parentNode)) {
+    for (auto* node = parentNode; node; node = NodeTraversal::next(*node, parentNode)) {
         switch (node->nodeType()) {
         case Node::TEXT_NODE:
         case Node::COMMENT_NODE:
@@ -85,13 +84,13 @@ void InspectorNodeFinder::searchUsingDOMTreeTraversal(Node* parentNode)
             break;
         }
         case Node::ELEMENT_NODE: {
-            if (matchesElement(*toElement(node)))
+            if (matchesElement(downcast<Element>(*node)))
                 m_results.add(node);
 
             // Search inside frame elements.
-            if (node->isFrameOwnerElement()) {
-                HTMLFrameOwnerElement* frameOwner = toHTMLFrameOwnerElement(node);
-                if (Document* document = frameOwner->contentDocument())
+            if (is<HTMLFrameOwnerElement>(*node)) {
+                HTMLFrameOwnerElement& frameOwner = downcast<HTMLFrameOwnerElement>(*node);
+                if (Document* document = frameOwner.contentDocument())
                     performSearch(document);
             }
 
@@ -146,8 +145,8 @@ void InspectorNodeFinder::searchUsingXPath(Node* parentNode)
         if (ec)
             return;
 
-        if (node->isAttributeNode())
-            node = toAttr(node)->ownerElement();
+        if (is<Attr>(*node))
+            node = downcast<Attr>(*node).ownerElement();
 
         // XPath can get out of the context node that we pass as the starting point to evaluate, so we need to filter for just the nodes we care about.
         if (node == parentNode || node->isDescendantOf(parentNode))
@@ -157,11 +156,12 @@ void InspectorNodeFinder::searchUsingXPath(Node* parentNode)
 
 void InspectorNodeFinder::searchUsingCSSSelectors(Node* parentNode)
 {
-    if (!parentNode->isContainerNode())
+    ASSERT(parentNode);
+    if (!is<ContainerNode>(*parentNode))
         return;
 
     ExceptionCode ec = 0;
-    RefPtr<NodeList> nodeList = toContainerNode(parentNode)->querySelectorAll(m_whitespaceTrimmedQuery, ec);
+    RefPtr<NodeList> nodeList = downcast<ContainerNode>(*parentNode).querySelectorAll(m_whitespaceTrimmedQuery, ec);
     if (ec || !nodeList)
         return;
 

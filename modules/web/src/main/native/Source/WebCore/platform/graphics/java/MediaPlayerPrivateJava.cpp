@@ -45,8 +45,8 @@ namespace WebCore {
 #else
 
     #include <stdio.h>
-    #include "Threading.h"
-    #include "CurrentTime.h"
+    #include "wtf/CurrentTime.h"
+    #include "wtf/Threading.h"
 
     const char* networkStateStr(MediaPlayer::NetworkState networkState) {
         switch (networkState) {
@@ -155,12 +155,12 @@ void MediaPlayerPrivate::registerMediaEngine(MediaEngineRegistrar registrar)
     }
     //CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType,
     //MediaEngineGetSitesInMediaCache, MediaEngineClearMediaCache, MediaEngineClearMediaCacheForSite
-    registrar(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType, 0, 0, 0);
+    registrar(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType, 0, 0, 0, 0);
 }
 
-PassOwnPtr<MediaPlayerPrivateInterface> MediaPlayerPrivate::CreateMediaEnginePlayer(MediaPlayer *player)
+std::unique_ptr<MediaPlayerPrivateInterface> MediaPlayerPrivate::CreateMediaEnginePlayer(MediaPlayer *player)
 {
-    return adoptPtr(new MediaPlayerPrivate(player));
+    return std::unique_ptr<MediaPlayerPrivate>(new MediaPlayerPrivate(player));
 }
 
 void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String>& types)
@@ -245,7 +245,7 @@ MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer *player)
     ASSERT(obj);
     CheckAndClearException(env);
 
-    m_buffered = TimeRanges::create();
+    m_buffered = std::make_unique<PlatformTimeRanges>();
     m_jPlayer = RQRef::create(obj);
 }
 
@@ -267,13 +267,11 @@ void MediaPlayerPrivate::load(const String& url)
     }
 
     String userAgent;
-    MediaPlayerClient* mpClient = m_player->mediaPlayerClient();
-    if (mpClient != NULL) {
-        Document* doc = mpClient->mediaPlayerOwningDocument();
-        if (doc != NULL && doc->settings() != NULL) {
-            userAgent = doc->settings()->userAgent();
-        }
-    }
+    // MediaPlayerClient mpClient = m_player->client();
+    // Document* doc = mpClient.mediaPlayerOwningDocument(); //XXX: mediaPlayerOwningDocument removed
+    // if (doc != NULL && doc->settings() != NULL) {
+    //     userAgent = doc->settings()->userAgent();
+    // }
 
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID s_mID
@@ -355,7 +353,7 @@ void MediaPlayerPrivate::pause()
 //bool MediaPlayerPrivate::supportsFullscreen() const { return false; }
 //bool MediaPlayerPrivate::supportsSave() const { return false; }
 
-IntSize MediaPlayerPrivate::naturalSize() const
+FloatSize MediaPlayerPrivate::naturalSize() const
 {
 //    PLOG_TRACE2("MediaPlayerPrivate naturalSize - return %d x %d\n", m_naturalSize.width(), m_naturalSize.height());
     return m_naturalSize;
@@ -428,10 +426,10 @@ bool MediaPlayerPrivate::seeking() const
     return m_seeking;
 }
 
-float MediaPlayerPrivate::startTime() const
+MediaTime MediaPlayerPrivate::startTime() const
 {
     // always 0
-    return 0;
+    return MediaTime::zeroTime();
 }
 
 void MediaPlayerPrivate::setRate(float rate)
@@ -516,9 +514,9 @@ bool MediaPlayerPrivate::didLoadingProgress() const
     return didLoadingProgress;
 }
 
-PassRefPtr<TimeRanges> MediaPlayerPrivate::buffered() const
+std::unique_ptr<PlatformTimeRanges> MediaPlayerPrivate::buffered() const
 {
-    return m_buffered;
+    return std::make_unique<PlatformTimeRanges>(); //XXX recheck; USE m_buffered
 }
 
 unsigned MediaPlayerPrivate::bytesLoaded() const
@@ -537,7 +535,7 @@ void MediaPlayerPrivate::setSize(const IntSize& size)
     CheckAndClearException(env);
 }
 
-void MediaPlayerPrivate::paint(GraphicsContext* gc, const IntRect& r)
+void MediaPlayerPrivate::paint(GraphicsContext* gc, const FloatRect& r)
 {
 //    PLOG_TRACE4(">>MediaPlayerPrivate paint (%d, %d), [%d x %d]\n", r.x(), r.y(), r.width(), r.height());
     if (!gc || gc->paintingDisabled()) {
@@ -723,7 +721,7 @@ void MediaPlayerPrivate::notifyDurationChanged(float duration)
 void MediaPlayerPrivate::notifySizeChanged(int width, int height)
 {
     PLOG_TRACE2("MediaPlayerPrivate notifySizeChanged: %d x %d\n", width, height);
-    m_naturalSize = IntSize(width, height);
+    m_naturalSize = FloatSize(width, height); //XXX leave it as IntSize?
 }
 
 void MediaPlayerPrivate::notifyNewFrame()
@@ -733,10 +731,10 @@ void MediaPlayerPrivate::notifyNewFrame()
     //PLOG_TRACE0("<<MediaPlayerPrivate notifyNewFrame\n");
 }
 
-void MediaPlayerPrivate::notifyBufferChanged(PassRefPtr<TimeRanges> timeRanges, int bytesLoaded)
+void MediaPlayerPrivate::notifyBufferChanged(std::unique_ptr<PlatformTimeRanges> timeRanges, int bytesLoaded)
 {
     PLOG_TRACE0("MediaPlayerPrivate notifyBufferChanged\n");
-    m_buffered = timeRanges;
+    m_buffered = WTF::move(timeRanges);
     m_bytesLoaded = bytesLoaded;
     m_didLoadingProgress = true;
 }
@@ -823,15 +821,16 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyBufferCh
     jint len = env->GetArrayLength(ranges);
     jfloat* rangesElems = env->GetFloatArrayElements(ranges, &isCopy);
 
-    PassRefPtr<TimeRanges> timeRanges = TimeRanges::create();
+    PlatformTimeRanges* timeRanges = new PlatformTimeRanges();
     for (int i = 0; i < len; i+=2) {
-        timeRanges->add(rangesElems[i], rangesElems[i+1]);
+        timeRanges->add(MediaTime::createWithDouble(rangesElems[i]),
+                        MediaTime::createWithDouble(rangesElems[i+1]));
     }
     if (isCopy == JNI_TRUE) {
        env->ReleaseFloatArrayElements(ranges, rangesElems, JNI_ABORT);
     }
 
-    player->notifyBufferChanged(timeRanges, bytesLoaded);
+    player->notifyBufferChanged(std::unique_ptr<PlatformTimeRanges>(timeRanges), bytesLoaded);
 }
 
 } // extern "C"

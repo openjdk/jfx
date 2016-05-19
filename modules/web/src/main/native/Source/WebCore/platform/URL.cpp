@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2007, 2008, 2011, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2007, 2008, 2011, 2012, 2013, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,6 +30,7 @@
 #include "DecodeEscapeSequences.h"
 #include "MIMETypeRegistry.h"
 #include "TextEncoding.h"
+#include "UUID.h"
 #include <stdio.h>
 #include <unicode/uidna.h>
 #include <wtf/HashMap.h>
@@ -232,6 +233,108 @@ static const unsigned char characterClassTable[256] = {
     /* 252 */ BadChar, /* 253 */ BadChar, /* 254 */ BadChar, /* 255 */ BadChar
 };
 
+enum PercentEncodeCharacterClass {
+    // Class names match the URL Standard; each class is a superset of the previous one.
+    PercentEncodeSimple = 255,
+    PercentEncodeDefault = 127,
+    PercentEncodePassword = 63,
+    PercentEncodeUsername = 31,
+};
+
+static const unsigned char percentEncodeClassTable[256] = {
+    /* 0 nul */ PercentEncodeSimple,    /* 1 soh */ PercentEncodeSimple,    /* 2 stx */ PercentEncodeSimple,    /* 3 etx */ PercentEncodeSimple,
+    /* 4 eot */ PercentEncodeSimple,    /* 5 enq */ PercentEncodeSimple,    /* 6 ack */ PercentEncodeSimple,    /* 7 bel */ PercentEncodeSimple,
+    /* 8 bs */ PercentEncodeSimple,     /* 9 ht */ PercentEncodeSimple,     /* 10 nl */ PercentEncodeSimple,    /* 11 vt */ PercentEncodeSimple,
+    /* 12 np */ PercentEncodeSimple,    /* 13 cr */ PercentEncodeSimple,    /* 14 so */ PercentEncodeSimple,    /* 15 si */ PercentEncodeSimple,
+    /* 16 dle */ PercentEncodeSimple,   /* 17 dc1 */ PercentEncodeSimple,   /* 18 dc2 */ PercentEncodeSimple,   /* 19 dc3 */ PercentEncodeSimple,
+    /* 20 dc4 */ PercentEncodeSimple,   /* 21 nak */ PercentEncodeSimple,   /* 22 syn */ PercentEncodeSimple,   /* 23 etb */ PercentEncodeSimple,
+    /* 24 can */ PercentEncodeSimple,   /* 25 em */ PercentEncodeSimple,    /* 26 sub */ PercentEncodeSimple,   /* 27 esc */ PercentEncodeSimple,
+    /* 28 fs */ PercentEncodeSimple,    /* 29 gs */ PercentEncodeSimple,    /* 30 rs */ PercentEncodeSimple,    /* 31 us */ PercentEncodeSimple,
+    /* 32 sp */ PercentEncodeDefault,
+    /* 33  ! */ 0,
+    /* 34  " */ PercentEncodeDefault,
+    /* 35  # */ PercentEncodeDefault,
+    /* 36  $ */ 0,
+    /* 37  % */ 0,
+    /* 38  & */ 0,
+    /* 39  ' */ 0,
+    /* 40  ( */ 0,
+    /* 41  ) */ 0,
+    /* 42  * */ 0,
+    /* 43  + */ 0,
+    /* 44  , */ 0,
+    /* 45  - */ 0,
+    /* 46  . */ 0,
+    /* 47  / */ PercentEncodePassword,
+    /* 48  0 */ 0,    /* 49  1 */ 0,    /* 50  2 */ 0,    /* 51  3 */ 0,
+    /* 52  4 */ 0,    /* 53  5 */ 0,    /* 54  6 */ 0,    /* 55  7 */ 0,
+    /* 56  8 */ 0,    /* 57  9 */ 0,
+    /* 58  : */ PercentEncodeUsername,
+    /* 59  ; */ 0,
+    /* 60  < */ PercentEncodeDefault,
+    /* 61  = */ 0,
+    /* 62  > */ PercentEncodeDefault,
+    /* 63  ? */ PercentEncodeDefault,
+    /* 64  @ */ PercentEncodePassword,
+    /* 65  A */ 0,    /* 66  B */ 0,    /* 67  C */ 0,    /* 68  D */ 0,
+    /* 69  E */ 0,    /* 70  F */ 0,    /* 71  G */ 0,    /* 72  H */ 0,
+    /* 73  I */ 0,    /* 74  J */ 0,    /* 75  K */ 0,    /* 76  L */ 0,
+    /* 77  M */ 0,    /* 78  N */ 0,    /* 79  O */ 0,    /* 80  P */ 0,
+    /* 81  Q */ 0,    /* 82  R */ 0,    /* 83  S */ 0,    /* 84  T */ 0,
+    /* 85  U */ 0,    /* 86  V */ 0,    /* 87  W */ 0,    /* 88  X */ 0,
+    /* 89  Y */ 0,    /* 90  Z */ 0,
+    /* 91  [ */ 0,
+    /* 92  \ */ PercentEncodePassword,
+    /* 93  ] */ 0,
+    /* 94  ^ */ 0,
+    /* 95  _ */ 0,
+    /* 96  ` */ PercentEncodeDefault,
+    /* 97  a */ 0,    /* 98  b */ 0,    /* 99  c */ 0,    /* 100  d */ 0,
+    /* 101  e */ 0,    /* 102  f */ 0,    /* 103  g */ 0,    /* 104  h */ 0,
+    /* 105  i */ 0,    /* 106  j */ 0,    /* 107  k */ 0,    /* 108  l */ 0,
+    /* 109  m */ 0,    /* 110  n */ 0,    /* 111  o */ 0,    /* 112  p */ 0,
+    /* 113  q */ 0,    /* 114  r */ 0,    /* 115  s */ 0,    /* 116  t */ 0,
+    /* 117  u */ 0,    /* 118  v */ 0,    /* 119  w */ 0,    /* 120  x */ 0,
+    /* 121  y */ 0,    /* 122  z */ 0,
+    /* 123  { */ 0,
+    /* 124  | */ 0,
+    /* 125  } */ 0,
+    /* 126  ~ */ 0,
+    /* 127 del */ PercentEncodeSimple,
+    /* 128 */ PercentEncodeSimple, /* 129 */ PercentEncodeSimple, /* 130 */ PercentEncodeSimple, /* 131 */ PercentEncodeSimple,
+    /* 132 */ PercentEncodeSimple, /* 133 */ PercentEncodeSimple, /* 134 */ PercentEncodeSimple, /* 135 */ PercentEncodeSimple,
+    /* 136 */ PercentEncodeSimple, /* 137 */ PercentEncodeSimple, /* 138 */ PercentEncodeSimple, /* 139 */ PercentEncodeSimple,
+    /* 140 */ PercentEncodeSimple, /* 141 */ PercentEncodeSimple, /* 142 */ PercentEncodeSimple, /* 143 */ PercentEncodeSimple,
+    /* 144 */ PercentEncodeSimple, /* 145 */ PercentEncodeSimple, /* 146 */ PercentEncodeSimple, /* 147 */ PercentEncodeSimple,
+    /* 148 */ PercentEncodeSimple, /* 149 */ PercentEncodeSimple, /* 150 */ PercentEncodeSimple, /* 151 */ PercentEncodeSimple,
+    /* 152 */ PercentEncodeSimple, /* 153 */ PercentEncodeSimple, /* 154 */ PercentEncodeSimple, /* 155 */ PercentEncodeSimple,
+    /* 156 */ PercentEncodeSimple, /* 157 */ PercentEncodeSimple, /* 158 */ PercentEncodeSimple, /* 159 */ PercentEncodeSimple,
+    /* 160 */ PercentEncodeSimple, /* 161 */ PercentEncodeSimple, /* 162 */ PercentEncodeSimple, /* 163 */ PercentEncodeSimple,
+    /* 164 */ PercentEncodeSimple, /* 165 */ PercentEncodeSimple, /* 166 */ PercentEncodeSimple, /* 167 */ PercentEncodeSimple,
+    /* 168 */ PercentEncodeSimple, /* 169 */ PercentEncodeSimple, /* 170 */ PercentEncodeSimple, /* 171 */ PercentEncodeSimple,
+    /* 172 */ PercentEncodeSimple, /* 173 */ PercentEncodeSimple, /* 174 */ PercentEncodeSimple, /* 175 */ PercentEncodeSimple,
+    /* 176 */ PercentEncodeSimple, /* 177 */ PercentEncodeSimple, /* 178 */ PercentEncodeSimple, /* 179 */ PercentEncodeSimple,
+    /* 180 */ PercentEncodeSimple, /* 181 */ PercentEncodeSimple, /* 182 */ PercentEncodeSimple, /* 183 */ PercentEncodeSimple,
+    /* 184 */ PercentEncodeSimple, /* 185 */ PercentEncodeSimple, /* 186 */ PercentEncodeSimple, /* 187 */ PercentEncodeSimple,
+    /* 188 */ PercentEncodeSimple, /* 189 */ PercentEncodeSimple, /* 190 */ PercentEncodeSimple, /* 191 */ PercentEncodeSimple,
+    /* 192 */ PercentEncodeSimple, /* 193 */ PercentEncodeSimple, /* 194 */ PercentEncodeSimple, /* 195 */ PercentEncodeSimple,
+    /* 196 */ PercentEncodeSimple, /* 197 */ PercentEncodeSimple, /* 198 */ PercentEncodeSimple, /* 199 */ PercentEncodeSimple,
+    /* 200 */ PercentEncodeSimple, /* 201 */ PercentEncodeSimple, /* 202 */ PercentEncodeSimple, /* 203 */ PercentEncodeSimple,
+    /* 204 */ PercentEncodeSimple, /* 205 */ PercentEncodeSimple, /* 206 */ PercentEncodeSimple, /* 207 */ PercentEncodeSimple,
+    /* 208 */ PercentEncodeSimple, /* 209 */ PercentEncodeSimple, /* 210 */ PercentEncodeSimple, /* 211 */ PercentEncodeSimple,
+    /* 212 */ PercentEncodeSimple, /* 213 */ PercentEncodeSimple, /* 214 */ PercentEncodeSimple, /* 215 */ PercentEncodeSimple,
+    /* 216 */ PercentEncodeSimple, /* 217 */ PercentEncodeSimple, /* 218 */ PercentEncodeSimple, /* 219 */ PercentEncodeSimple,
+    /* 220 */ PercentEncodeSimple, /* 221 */ PercentEncodeSimple, /* 222 */ PercentEncodeSimple, /* 223 */ PercentEncodeSimple,
+    /* 224 */ PercentEncodeSimple, /* 225 */ PercentEncodeSimple, /* 226 */ PercentEncodeSimple, /* 227 */ PercentEncodeSimple,
+    /* 228 */ PercentEncodeSimple, /* 229 */ PercentEncodeSimple, /* 230 */ PercentEncodeSimple, /* 231 */ PercentEncodeSimple,
+    /* 232 */ PercentEncodeSimple, /* 233 */ PercentEncodeSimple, /* 234 */ PercentEncodeSimple, /* 235 */ PercentEncodeSimple,
+    /* 236 */ PercentEncodeSimple, /* 237 */ PercentEncodeSimple, /* 238 */ PercentEncodeSimple, /* 239 */ PercentEncodeSimple,
+    /* 240 */ PercentEncodeSimple, /* 241 */ PercentEncodeSimple, /* 242 */ PercentEncodeSimple, /* 243 */ PercentEncodeSimple,
+    /* 244 */ PercentEncodeSimple, /* 245 */ PercentEncodeSimple, /* 246 */ PercentEncodeSimple, /* 247 */ PercentEncodeSimple,
+    /* 248 */ PercentEncodeSimple, /* 249 */ PercentEncodeSimple, /* 250 */ PercentEncodeSimple, /* 251 */ PercentEncodeSimple,
+    /* 252 */ PercentEncodeSimple, /* 253 */ PercentEncodeSimple, /* 254 */ PercentEncodeSimple, /* 255 */ PercentEncodeSimple
+};
+
 static int copyPathRemovingDots(char* dst, const char* src, int srcStart, int srcEnd);
 static void encodeRelativeString(const String& rel, const TextEncoding&, CharBuffer& ouput);
 static String substituteBackslashes(const String&);
@@ -254,6 +357,8 @@ static inline bool isSchemeCharacterMatchIgnoringCase(char character, char schem
     ASSERT(isASCIILower(schemeCharacter) || (!isASCIIUpper(schemeCharacter) && isSchemeChar(schemeCharacter)));
     return (character | 0x20) == schemeCharacter;
 }
+
+String encodeWithURLEscapeSequences(const String& notEncodedString, PercentEncodeCharacterClass whatToEncode);
 
 // Copies the source to the destination, assuming all the source characters are
 // ASCII. The destination buffer must be large enough. Null characters are allowed
@@ -285,12 +390,12 @@ static void appendASCII(const String& base, const char* rel, size_t len, CharBuf
 // Returns the index of the first index in string |s| of any of the characters
 // in |toFind|. |toFind| should be a null-terminated string, all characters up
 // to the null will be searched. Returns int if not found.
-static int findFirstOf(const UChar* s, int sLen, int startPos, const char* toFind)
+static int findFirstOf(StringView string, unsigned startPosition, const char* target)
 {
-    for (int i = startPos; i < sLen; i++) {
-        const char* cur = toFind;
-        while (*cur) {
-            if (s[i] == *(cur++))
+    unsigned length = string.length();
+    for (unsigned i = startPosition; i < length; ++i) {
+        for (unsigned j = 0; target[j]; ++j) {
+            if (string[i] == target[j])
                 return i;
         }
     }
@@ -550,7 +655,7 @@ void URL::init(const URL& base, const String& relative, const TextEncoding& enco
     }
 }
 
-URL URL::copy() const
+URL URL::isolatedCopy() const
 {
     URL result = *this;
     result.m_string = result.m_string.isolatedCopy();
@@ -582,7 +687,7 @@ String URL::protocol() const
 String URL::host() const
 {
     int start = hostStart();
-    return decodeURLEscapeSequences(m_string.substring(start, m_hostEnd - start));
+    return m_string.substring(start, m_hostEnd - start);
 }
 
 unsigned short URL::port() const
@@ -594,10 +699,19 @@ unsigned short URL::port() const
         return 0;
 
     bool ok = false;
-    unsigned number = charactersToUIntStrict(m_string.deprecatedCharacters() + m_hostEnd + 1, m_portEnd - m_hostEnd - 1, &ok);
+    unsigned number;
+    if (m_string.is8Bit())
+        number = charactersToUIntStrict(m_string.characters8() + m_hostEnd + 1, m_portEnd - m_hostEnd - 1, &ok);
+    else
+        number = charactersToUIntStrict(m_string.characters16() + m_hostEnd + 1, m_portEnd - m_hostEnd - 1, &ok);
     if (!ok || number > maximumValidPortNumber)
         return invalidPortNumber;
     return number;
+}
+
+String URL::user() const
+{
+    return decodeURLEscapeSequences(m_string.substring(m_userStart, m_userEnd - m_userStart));
 }
 
 String URL::pass() const
@@ -608,9 +722,17 @@ String URL::pass() const
     return decodeURLEscapeSequences(m_string.substring(m_userEnd + 1, m_passwordEnd - m_userEnd - 1));
 }
 
-String URL::user() const
+String URL::encodedUser() const
 {
-    return decodeURLEscapeSequences(m_string.substring(m_userStart, m_userEnd - m_userStart));
+    return m_string.substring(m_userStart, m_userEnd - m_userStart);
+}
+
+String URL::encodedPass() const
+{
+    if (m_passwordEnd == m_userEnd)
+        return String();
+
+    return m_string.substring(m_userEnd + 1, m_passwordEnd - m_userEnd - 1);
 }
 
 String URL::fragmentIdentifier() const
@@ -764,7 +886,7 @@ void URL::setUser(const String& user)
 
     int end = m_userEnd;
     if (!user.isEmpty()) {
-        String u = user;
+        String u = encodeWithURLEscapeSequences(user, PercentEncodeUsername);
         if (m_userStart == m_schemeEnd + 1)
             u = "//" + u;
         // Add '@' if we didn't have one before.
@@ -786,12 +908,9 @@ void URL::setPass(const String& password)
     if (!m_isValid)
         return;
 
-    // FIXME: Non-ASCII characters must be encoded and escaped to match parse() expectations,
-    // and to avoid changing more than just the user password.
-
     int end = m_passwordEnd;
     if (!password.isEmpty()) {
-        String p = ":" + password + "@";
+        String p = ":" + encodeWithURLEscapeSequences(password, PercentEncodePassword) + "@";
         if (m_userEnd == m_schemeEnd + 1)
             p = "//" + p;
         // Eat the existing '@' since we are going to add our own.
@@ -852,56 +971,6 @@ void URL::setPath(const String& s)
 
     parse(m_string.left(m_portEnd) + encodeWithURLEscapeSequences(path) + m_string.substring(m_pathEnd));
 }
-
-#if PLATFORM(JAVA)
-String URL::deprecatedString() const
-{
-    if (!m_isValid)
-        return m_string;
-
-    StringBuilder result;
-
-    result.append(protocol());
-    result.append(':');
-
-    StringBuilder authority;
-
-    if (m_hostEnd != m_passwordEnd) {
-        if (m_userEnd != m_userStart) {
-            authority.append(user());
-            authority.append('@');
-        }
-        authority.append(host());
-        if (hasPort()) {
-            authority.append(':');
-            authority.append(String::number(port()));
-        }
-    }
-
-    if (!authority.isEmpty()) {
-        result.append('/');
-        result.append('/');
-        result.append(authority.deprecatedCharacters(), authority.length());
-    } else if (protocolIs("file")) {
-        result.append('/');
-        result.append('/');
-    }
-
-    result.append(path());
-
-    if (m_pathEnd != m_queryEnd) {
-        result.append('?');
-        result.append(query());
-    }
-
-    if (m_fragmentEnd != m_queryEnd) {
-        result.append('#');
-        result.append(fragmentIdentifier());
-    }
-
-    return result.toString();
-}
-#endif
 
 String decodeURLEscapeSequences(const String& string)
 {
@@ -1202,10 +1271,17 @@ void URL::parse(const char* url, const String* originalString)
         // Attempt to find an authority.
         // FIXME: Authority characters may be scanned twice, and it would be nice to be faster.
 
-        if (hierarchical)
+        if (hierarchical) {
             userStart++;
-        if (hasSecondSlash)
-            userStart++;
+            if (hasSecondSlash) {
+                userStart++;
+                if (isNonFileHierarchicalScheme(url, schemeEnd)) {
+                    while (url[userStart] == '/')
+                        userStart++;
+                }
+            }
+        }
+
         userEnd = userStart;
 
         int colonPos = 0;
@@ -1533,6 +1609,28 @@ bool protocolHostAndPortAreEqual(const URL& a, const URL& b)
     return true;
 }
 
+String encodeWithURLEscapeSequences(const String& notEncodedString, PercentEncodeCharacterClass whatToEncode)
+{
+    CString asUTF8 = notEncodedString.utf8();
+
+    CharBuffer buffer(asUTF8.length() * 3 + 1);
+    char* p = buffer.data();
+
+    const char* str = asUTF8.data();
+    const char* strEnd = str + asUTF8.length();
+    while (str < strEnd) {
+        unsigned char c = *str++;
+        if (percentEncodeClassTable[c] >= whatToEncode)
+            appendEscapedChar(p, c);
+        else
+            *p++ = c;
+    }
+
+    ASSERT(p - buffer.data() <= static_cast<int>(buffer.size()));
+
+    return String(buffer.data(), p - buffer.data());
+}
+
 String encodeWithURLEscapeSequences(const String& notEncodedString)
 {
     CString asUTF8 = notEncodedString.utf8();
@@ -1555,28 +1653,48 @@ String encodeWithURLEscapeSequences(const String& notEncodedString)
     return String(buffer.data(), p - buffer.data());
 }
 
+static bool containsOnlyASCII(StringView string)
+{
+    if (string.is8Bit())
+        return charactersAreAllASCII(string.characters8(), string.length());
+    return charactersAreAllASCII(string.characters16(), string.length());
+}
+
+static bool protocolIs(StringView stringURL, const char* protocol)
+{
+    assertProtocolIsGood(protocol);
+    unsigned length = stringURL.length();
+    for (unsigned i = 0; i < length; ++i) {
+        if (!protocol[i])
+            return stringURL[i] == ':';
+        if (!isLetterMatchIgnoringCase(stringURL[i], protocol[i]))
+            return false;
+    }
+    return false;
+}
+
 // Appends the punycoded hostname identified by the given string and length to
 // the output buffer. The result will not be null terminated.
-static void appendEncodedHostname(UCharBuffer& buffer, const UChar* str, unsigned strLen)
+static void appendEncodedHostname(UCharBuffer& buffer, StringView string)
 {
     // Needs to be big enough to hold an IDN-encoded name.
     // For host names bigger than this, we won't do IDN encoding, which is almost certainly OK.
     const unsigned hostnameBufferLength = 2048;
 
-    if (strLen > hostnameBufferLength || charactersAreAllASCII(str, strLen)) {
-        buffer.append(str, strLen);
+    if (string.length() > hostnameBufferLength || containsOnlyASCII(string)) {
+        append(buffer, string);
         return;
     }
 
     UChar hostnameBuffer[hostnameBufferLength];
     UErrorCode error = U_ZERO_ERROR;
-    int32_t numCharactersConverted = uidna_IDNToASCII(str, strLen, hostnameBuffer,
+    int32_t numCharactersConverted = uidna_IDNToASCII(string.upconvertedCharacters(), string.length(), hostnameBuffer,
         hostnameBufferLength, UIDNA_ALLOW_UNASSIGNED, 0, &error);
     if (error == U_ZERO_ERROR)
         buffer.append(hostnameBuffer, numCharactersConverted);
 }
 
-static void findHostnamesInMailToURL(const UChar* str, int strLen, Vector<std::pair<int, int>>& nameRanges)
+static void findHostnamesInMailToURL(StringView string, Vector<std::pair<int, int>>& nameRanges)
 {
     // In a mailto: URL, host names come after a '@' character and end with a '>' or ',' or '?' or end of string character.
     // Skip quoted strings so that characters in them don't confuse us.
@@ -1587,10 +1705,10 @@ static void findHostnamesInMailToURL(const UChar* str, int strLen, Vector<std::p
     int p = 0;
     while (1) {
         // Find start of host name or of quoted string.
-        int hostnameOrStringStart = findFirstOf(str, strLen, p, "\"@?");
+        int hostnameOrStringStart = findFirstOf(string, p, "\"@?");
         if (hostnameOrStringStart == -1)
             return;
-        UChar c = str[hostnameOrStringStart];
+        UChar c = string[hostnameOrStringStart];
         p = hostnameOrStringStart + 1;
 
         if (c == '?')
@@ -1599,10 +1717,10 @@ static void findHostnamesInMailToURL(const UChar* str, int strLen, Vector<std::p
         if (c == '@') {
             // Find end of host name.
             int hostnameStart = p;
-            int hostnameEnd = findFirstOf(str, strLen, p, ">,?");
+            int hostnameEnd = findFirstOf(string, p, ">,?");
             bool done;
             if (hostnameEnd == -1) {
-                hostnameEnd = strLen;
+                hostnameEnd = string.length();
                 done = true;
             } else {
                 p = hostnameEnd;
@@ -1617,11 +1735,11 @@ static void findHostnamesInMailToURL(const UChar* str, int strLen, Vector<std::p
             // Skip quoted string.
             ASSERT(c == '"');
             while (1) {
-                int escapedCharacterOrStringEnd = findFirstOf(str, strLen, p, "\"\\");
+                int escapedCharacterOrStringEnd = findFirstOf(string, p, "\"\\");
                 if (escapedCharacterOrStringEnd == -1)
                     return;
 
-                c = str[escapedCharacterOrStringEnd];
+                c = string[escapedCharacterOrStringEnd];
                 p = escapedCharacterOrStringEnd + 1;
 
                 // If we are the end of the string, then break from the string loop back to the host name loop.
@@ -1630,7 +1748,7 @@ static void findHostnamesInMailToURL(const UChar* str, int strLen, Vector<std::p
 
                 // Skip escaped character.
                 ASSERT(c == '\\');
-                if (p == strLen)
+                if (p == static_cast<int>(string.length()))
                     return;
 
                 ++p;
@@ -1639,23 +1757,22 @@ static void findHostnamesInMailToURL(const UChar* str, int strLen, Vector<std::p
     }
 }
 
-static bool findHostnameInHierarchicalURL(const UChar* str, int strLen, int& startOffset, int& endOffset)
+static bool findHostnameInHierarchicalURL(StringView string, int& startOffset, int& endOffset)
 {
     // Find the host name in a hierarchical URL.
     // It comes after a "://" sequence, with scheme characters preceding, and
     // this should be the first colon in the string.
     // It ends with the end of the string or a ":" or a path segment ending character.
     // If there is a "@" character, the host part is just the part after the "@".
-    int separator = findFirstOf(str, strLen, 0, ":");
-    if (separator == -1 || separator + 2 >= strLen ||
-        str[separator + 1] != '/' || str[separator + 2] != '/')
+    int separator = findFirstOf(string, 0, ":");
+    if (separator == -1 || separator + 2 >= static_cast<int>(string.length()) || string[separator + 1] != '/' || string[separator + 2] != '/')
         return false;
 
     // Check that all characters before the :// are valid scheme characters.
-    if (!isSchemeFirstChar(str[0]))
+    if (!isSchemeFirstChar(string[0]))
         return false;
     for (int i = 1; i < separator; ++i) {
-        if (!isSchemeChar(str[i]))
+        if (!isSchemeChar(string[i]))
             return false;
     }
 
@@ -1663,9 +1780,9 @@ static bool findHostnameInHierarchicalURL(const UChar* str, int strLen, int& sta
     int authorityStart = separator + 3;
 
     // Find terminating character.
-    int hostnameEnd = strLen;
-    for (int i = authorityStart; i < strLen; ++i) {
-        UChar c = str[i];
+    int hostnameEnd = string.length();
+    for (int i = authorityStart; i < hostnameEnd; ++i) {
+        UChar c = string[i];
         if (c == ':' || (isPathSegmentEndChar(c) && c != 0)) {
             hostnameEnd = i;
             break;
@@ -1673,7 +1790,7 @@ static bool findHostnameInHierarchicalURL(const UChar* str, int strLen, int& sta
     }
 
     // Find "@" for the start of the host name.
-    int userInfoTerminator = findFirstOf(str, strLen, authorityStart, "@");
+    int userInfoTerminator = findFirstOf(string, authorityStart, "@");
     int hostnameStart;
     if (userInfoTerminator == -1 || userInfoTerminator > hostnameEnd)
         hostnameStart = authorityStart;
@@ -1687,33 +1804,33 @@ static bool findHostnameInHierarchicalURL(const UChar* str, int strLen, int& sta
 
 // Converts all hostnames found in the given input to punycode, preserving the
 // rest of the URL unchanged. The output will NOT be null-terminated.
-static void encodeHostnames(const String& str, UCharBuffer& output)
+static void encodeHostnames(StringView string, UCharBuffer& buffer)
 {
-    output.clear();
+    buffer.clear();
 
-    if (protocolIs(str, "mailto")) {
+    if (protocolIs(string, "mailto")) {
         Vector<std::pair<int, int>> hostnameRanges;
-        findHostnamesInMailToURL(str.deprecatedCharacters(), str.length(), hostnameRanges);
+        findHostnamesInMailToURL(string, hostnameRanges);
         int n = hostnameRanges.size();
         int p = 0;
         for (int i = 0; i < n; ++i) {
             const std::pair<int, int>& r = hostnameRanges[i];
-            output.append(&str.deprecatedCharacters()[p], r.first - p);
-            appendEncodedHostname(output, &str.deprecatedCharacters()[r.first], r.second - r.first);
+            append(buffer, string.substring(p, r.first - p));
+            appendEncodedHostname(buffer, string.substring(r.first, r.second - r.first));
             p = r.second;
         }
         // This will copy either everything after the last hostname, or the
         // whole thing if there is no hostname.
-        output.append(&str.deprecatedCharacters()[p], str.length() - p);
+        append(buffer, string.substring(p));
     } else {
         int hostStart, hostEnd;
-        if (findHostnameInHierarchicalURL(str.deprecatedCharacters(), str.length(), hostStart, hostEnd)) {
-            output.append(str.deprecatedCharacters(), hostStart); // Before hostname.
-            appendEncodedHostname(output, &str.deprecatedCharacters()[hostStart], hostEnd - hostStart);
-            output.append(&str.deprecatedCharacters()[hostEnd], str.length() - hostEnd); // After hostname.
+        if (findHostnameInHierarchicalURL(string, hostStart, hostEnd)) {
+            append(buffer, string.substring(0, hostStart)); // Before hostname.
+            appendEncodedHostname(buffer, string.substring(hostStart, hostEnd - hostStart));
+            append(buffer, string.substring(hostEnd)); // After hostname.
         } else {
             // No hostname to encode, return the input.
-            output.append(str.deprecatedCharacters(), str.length());
+            append(buffer, string);
         }
     }
 }
@@ -1728,18 +1845,18 @@ static void encodeRelativeString(const String& rel, const TextEncoding& encoding
     int pathEnd = -1;
     if (encoding != pathEncoding && encoding.isValid() && !protocolIs(rel, "mailto") && !protocolIs(rel, "data") && !protocolIsJavaScript(rel)) {
         // Find the first instance of either # or ?, keep pathEnd at -1 otherwise.
-        pathEnd = findFirstOf(s.data(), s.size(), 0, "#?");
+        pathEnd = findFirstOf(StringView(s.data(), s.size()), 0, "#?");
     }
 
     if (pathEnd == -1) {
-        CString decoded = pathEncoding.encode(s.data(), s.size(), URLEncodedEntitiesForUnencodables);
+        CString decoded = pathEncoding.encode(StringView(s.data(), s.size()), URLEncodedEntitiesForUnencodables);
         output.resize(decoded.length());
         memcpy(output.data(), decoded.data(), decoded.length());
     } else {
-        CString pathDecoded = pathEncoding.encode(s.data(), pathEnd, URLEncodedEntitiesForUnencodables);
+        CString pathDecoded = pathEncoding.encode(StringView(s.data(), pathEnd), URLEncodedEntitiesForUnencodables);
         // Unencodable characters in URLs are represented by converting
         // them to XML entities and escaping non-alphanumeric characters.
-        CString otherDecoded = encoding.encode(s.data() + pathEnd, s.size() - pathEnd, URLEncodedEntitiesForUnencodables);
+        CString otherDecoded = encoding.encode(StringView(s.data() + pathEnd, s.size() - pathEnd), URLEncodedEntitiesForUnencodables);
 
         output.resize(pathDecoded.length() + otherDecoded.length());
         memcpy(output.data(), pathDecoded.data(), pathDecoded.length());
@@ -1849,7 +1966,7 @@ bool protocolIsInHTTPFamily(const String& url)
 
 const URL& blankURL()
 {
-    DEFINE_STATIC_LOCAL(URL, staticBlankURL, (ParsedURLString, "about:blank"));
+    DEPRECATED_DEFINE_STATIC_LOCAL(URL, staticBlankURL, (ParsedURLString, "about:blank"));
     return staticBlankURL;
 }
 
@@ -1864,7 +1981,7 @@ bool isDefaultPortForProtocol(unsigned short port, const String& protocol)
         return false;
 
     typedef HashMap<String, unsigned, CaseFoldingHash> DefaultPortsMap;
-    DEFINE_STATIC_LOCAL(DefaultPortsMap, defaultPorts, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(DefaultPortsMap, defaultPorts, ());
     if (defaultPorts.isEmpty()) {
         defaultPorts.set("http", 80);
         defaultPorts.set("https", 443);
@@ -2012,6 +2129,16 @@ String URL::stringCenterEllipsizedToLength(unsigned length) const
         return string();
 
     return string().left(length / 2 - 1) + "..." + string().right(length / 2 - 2);
+}
+
+URL URL::fakeURLWithRelativePart(const String& relativePart)
+{
+    return URL(URL(), "webkit-fake-url://" + createCanonicalUUIDString() + '/' + relativePart);
+}
+
+URL URL::fileURLWithFileSystemPath(const String& filePath)
+{
+    return URL(URL(), "file:///" + filePath);
 }
 
 }

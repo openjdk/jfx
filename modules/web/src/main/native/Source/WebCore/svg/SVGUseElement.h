@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,106 +28,74 @@
 #include "SVGAnimatedLength.h"
 #include "SVGExternalResourcesRequired.h"
 #include "SVGGraphicsElement.h"
-#include "SVGNames.h"
 #include "SVGURIReference.h"
 
 namespace WebCore {
 
 class CachedSVGDocument;
-class SVGElementInstance;
+class SVGGElement;
 
-class SVGUseElement final : public SVGGraphicsElement,
-                            public SVGExternalResourcesRequired,
-                            public SVGURIReference,
-                            public CachedSVGDocumentClient {
-public:
-    static PassRefPtr<SVGUseElement> create(const QualifiedName&, Document&, bool wasInsertedByParser);
-    virtual ~SVGUseElement();
-
-    SVGElementInstance* instanceRoot();
-    SVGElementInstance* animatedInstanceRoot() const;
-    SVGElementInstance* instanceForShadowTreeElement(Node*) const;
-    void invalidateShadowTree();
-    void invalidateDependentShadowTrees();
-
-    RenderElement* rendererClipChild() const;
-
-private:
-    SVGUseElement(const QualifiedName&, Document&, bool wasInsertedByParser);
-
-    virtual bool isValid() const override { return SVGTests::isValid(); }
-    virtual bool supportsFocus() const override { return true; }
-
-    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
-    virtual void removedFrom(ContainerNode&) override;
-    virtual void buildPendingResource() override;
-
-    bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
-    virtual void svgAttributeChanged(const QualifiedName&) override;
-
-    virtual void willAttachRenderers() override;
-
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
-    virtual void toClipPath(Path&) override;
-
-    void clearResourceReferences();
-    void buildShadowAndInstanceTree(SVGElement* target);
-    void detachInstance();
-
-    virtual bool haveLoadedRequiredResources() override { return SVGExternalResourcesRequired::haveLoadedRequiredResources(); }
-
-    virtual void finishParsingChildren() override;
-    virtual bool selfHasRelativeLengths() const override;
-
-    // Instance tree handling
-    void buildInstanceTree(SVGElement* target, SVGElementInstance* targetInstance, bool& foundCycle, bool foundUse);
-    bool hasCycleUseReferencing(SVGUseElement*, SVGElementInstance* targetInstance, SVGElement*& newTarget);
-
-    // Shadow tree handling
-    void buildShadowTree(SVGElement* target, SVGElementInstance* targetInstance);
-
-    void expandUseElementsInShadowTree(Node* element);
-    void expandSymbolElementsInShadowTree(Node* element);
-
-    // "Tree connector"
-    void associateInstancesWithShadowTreeElements(Node* target, SVGElementInstance* targetInstance);
-    SVGElementInstance* instanceForShadowTreeElement(Node* element, SVGElementInstance* instance) const;
-
-    void transferUseAttributesToReplacedElement(SVGElement* from, SVGElement* to) const;
-    void transferEventListenersToShadowTree(SVGElementInstance* target);
+class SVGUseElement final : public SVGGraphicsElement, public SVGExternalResourcesRequired, public SVGURIReference, private CachedSVGDocumentClient {
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGUseElement)
         DECLARE_ANIMATED_LENGTH(X, x)
         DECLARE_ANIMATED_LENGTH(Y, y)
         DECLARE_ANIMATED_LENGTH(Width, width)
         DECLARE_ANIMATED_LENGTH(Height, height)
-        DECLARE_ANIMATED_STRING(Href, href)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
+        DECLARE_ANIMATED_STRING_OVERRIDE(Href, href)
+        DECLARE_ANIMATED_BOOLEAN_OVERRIDE(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 
-    bool cachedDocumentIsStillLoading();
-    Document* externalDocument() const;
-    bool instanceTreeIsLoading(SVGElementInstance*);
+public:
+    static Ref<SVGUseElement> create(const QualifiedName&, Document&);
+    virtual ~SVGUseElement();
+
+    void invalidateShadowTree();
+
+    RenderElement* rendererClipChild() const;
+
+private:
+    SVGUseElement(const QualifiedName&, Document&);
+
+    virtual bool isValid() const override;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void removedFrom(ContainerNode&) override;
+    virtual void buildPendingResource() override;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
+    virtual void willAttachRenderers() override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
+    virtual void toClipPath(Path&) override;
+    virtual bool haveLoadedRequiredResources() override;
+    virtual void finishParsingChildren() override;
+    virtual bool selfHasRelativeLengths() const override;
+    virtual void setHaveFiredLoadEvent(bool) override;
+    virtual bool haveFiredLoadEvent() const override;
+    virtual Timer* svgLoadEventTimer() override;
     virtual void notifyFinished(CachedResource*) override;
-    Document* referencedDocument() const;
-    void setCachedDocument(CachedResourceHandle<CachedSVGDocument>);
 
-    // SVGExternalResourcesRequired
-    virtual void setHaveFiredLoadEvent(bool haveFiredLoadEvent) override { m_haveFiredLoadEvent = haveFiredLoadEvent; }
-    virtual bool isParserInserted() const override { return m_wasInsertedByParser; }
-    virtual bool haveFiredLoadEvent() const override { return m_haveFiredLoadEvent; }
-    virtual Timer<SVGElement>* svgLoadEventTimer() override { return &m_svgLoadEventTimer; }
+    Document* externalDocument() const;
+    void updateExternalDocument();
 
-    bool m_wasInsertedByParser;
-    bool m_haveFiredLoadEvent;
-    bool m_needsShadowTreeRecreation;
-    RefPtr<SVGElementInstance> m_targetElementInstance;
-    CachedResourceHandle<CachedSVGDocument> m_cachedDocument;
-    Timer<SVGElement> m_svgLoadEventTimer;
+    SVGElement* findTarget(String* targetID = nullptr) const;
+
+    void cloneTarget(ContainerNode&, SVGElement& target) const;
+    SVGElement* targetClone() const;
+
+    void updateShadowTree();
+    void expandUseElementsInShadowTree() const;
+    void expandSymbolElementsInShadowTree() const;
+    void transferEventListenersToShadowTree() const;
+    void transferSizeAttributesToTargetClone(SVGElement&) const;
+
+    void clearShadowTree();
+    void invalidateDependentShadowTrees();
+
+    bool m_haveFiredLoadEvent { false };
+    bool m_shadowTreeNeedsUpdate { true };
+    CachedResourceHandle<CachedSVGDocument> m_externalDocument;
+    Timer m_svgLoadEventTimer;
 };
-
-NODE_TYPE_CASTS(SVGUseElement)
 
 }
 

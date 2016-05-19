@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -60,7 +60,7 @@ namespace WebCore {
 #if PLATFORM(WIN)
     class SharedCursor : public RefCounted<SharedCursor> {
     public:
-        static PassRefPtr<SharedCursor> create(HCURSOR nativeCursor) { return adoptRef(new SharedCursor(nativeCursor)); }
+        static Ref<SharedCursor> create(HCURSOR nativeCursor) { return adoptRef(*new SharedCursor(nativeCursor)); }
         ~SharedCursor();
         HCURSOR nativeCursor() const { return m_nativeCursor; }
     private:
@@ -130,12 +130,15 @@ namespace WebCore {
             Custom
         };
 
-        static const Cursor& fromType(Cursor::Type);
+        WEBCORE_EXPORT static const Cursor& fromType(Cursor::Type);
 
         Cursor()
 #if !PLATFORM(IOS)
             // This is an invalid Cursor and should never actually get used.
             : m_type(static_cast<Type>(-1))
+#if ENABLE(MOUSE_CURSOR_SCALE)
+            , m_imageScaleFactor(1)
+#endif
             , m_platformCursor(0)
 #endif // !PLATFORM(IOS)
         {
@@ -147,16 +150,16 @@ namespace WebCore {
 #endif
 
 #if !PLATFORM(IOS)
-        Cursor(Image*, const IntPoint& hotSpot);
-        Cursor(const Cursor&);
+        WEBCORE_EXPORT Cursor(Image*, const IntPoint& hotSpot);
+        WEBCORE_EXPORT Cursor(const Cursor&);
 
 #if ENABLE(MOUSE_CURSOR_SCALE)
         // Hot spot is in image pixels.
-        Cursor(Image*, const IntPoint& hotSpot, float imageScaleFactor);
+        WEBCORE_EXPORT Cursor(Image*, const IntPoint& hotSpot, float imageScaleFactor);
 #endif
 
-        ~Cursor();
-        Cursor& operator=(const Cursor&);
+        WEBCORE_EXPORT ~Cursor();
+        WEBCORE_EXPORT Cursor& operator=(const Cursor&);
 
         explicit Cursor(Type);
         Type type() const
@@ -170,7 +173,7 @@ namespace WebCore {
         // Image scale in image pixels per logical (UI) pixel.
         float imageScaleFactor() const { return m_imageScaleFactor; }
 #endif
-        PlatformCursor platformCursor() const;
+        WEBCORE_EXPORT PlatformCursor platformCursor() const;
 
      private:
         void ensurePlatformCursor() const;
@@ -192,11 +195,11 @@ namespace WebCore {
 
     IntPoint determineHotSpot(Image*, const IntPoint& specifiedHotSpot);
 
-    const Cursor& pointerCursor();
+    WEBCORE_EXPORT const Cursor& pointerCursor();
     const Cursor& crossCursor();
-    const Cursor& handCursor();
+    WEBCORE_EXPORT const Cursor& handCursor();
     const Cursor& moveCursor();
-    const Cursor& iBeamCursor();
+    WEBCORE_EXPORT const Cursor& iBeamCursor();
     const Cursor& waitCursor();
     const Cursor& helpCursor();
     const Cursor& eastResizeCursor();

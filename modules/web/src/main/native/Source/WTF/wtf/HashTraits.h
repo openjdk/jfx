@@ -30,9 +30,6 @@ namespace WTF {
 
 class String;
 
-template<typename T> class OwnPtr;
-template<typename T> class PassOwnPtr;
-
 template<typename T> struct HashTraits;
 
 template<bool isInteger, typename T> struct GenericHashTraitsBase;
@@ -48,7 +45,7 @@ template<typename T> struct GenericHashTraitsBase<false, T> {
 
     // The starting table size. Can be overridden when we know beforehand that
     // a hash table will have at least N entries.
-    static const int minimumTableSize = 8;
+    static const unsigned minimumTableSize = 8;
 };
 
 // Default integer traits disallow both 0 and -1 as keys (max value instead of -1 for unsigned).
@@ -66,8 +63,7 @@ template<typename T> struct GenericHashTraits : GenericHashTraitsBase<std::is_in
 
     // Type for return value of functions that do not transfer ownership, such as get.
     typedef T PeekType;
-    static PeekType peek(const T& value) { return value; }
-    static T& peek(T& value) { return value; } // Overloaded to avoid copying of non-temporary values.
+    template<typename U> static U&& peek(U&& value) { return std::forward<U>(value); }
 };
 
 template<typename T> struct HashTraits : GenericHashTraits<T> { };
@@ -89,6 +85,15 @@ template<typename T> struct UnsignedWithZeroKeyHashTraits : GenericHashTraits<T>
     static bool isDeletedValue(T value) { return value == std::numeric_limits<T>::max() - 1; }
 };
 
+// Can be used with strong enums, allows zero as key.
+template<typename T> struct StrongEnumHashTraits : GenericHashTraits<T> {
+    using UnderlyingType = typename std::underlying_type<T>::type;
+    static const bool emptyValueIsZero = false;
+    static T emptyValue() { return static_cast<T>(std::numeric_limits<UnderlyingType>::max()); }
+    static void constructDeletedValue(T& slot) { slot = static_cast<T>(std::numeric_limits<UnderlyingType>::max() - 1); }
+    static bool isDeletedValue(T value) { return value == static_cast<T>(std::numeric_limits<UnderlyingType>::max() - 1); }
+};
+
 template<typename P> struct HashTraits<P*> : GenericHashTraits<P*> {
     static const bool emptyValueIsZero = true;
     static void constructDeletedValue(P*& slot) { slot = reinterpret_cast<P*>(-1); }
@@ -97,7 +102,7 @@ template<typename P> struct HashTraits<P*> : GenericHashTraits<P*> {
 
 template<typename T> struct SimpleClassHashTraits : GenericHashTraits<T> {
     static const bool emptyValueIsZero = true;
-    static void constructDeletedValue(T& slot) { new (NotNull, &slot) T(HashTableDeletedValue); }
+    static void constructDeletedValue(T& slot) { new (NotNull, std::addressof(slot)) T(HashTableDeletedValue); }
     static bool isDeletedValue(const T& value) { return value.isHashTableDeletedValue(); }
 };
 
@@ -105,22 +110,16 @@ template<typename T, typename Deleter> struct HashTraits<std::unique_ptr<T, Dele
     typedef std::nullptr_t EmptyValueType;
     static EmptyValueType emptyValue() { return nullptr; }
 
+    static void constructDeletedValue(std::unique_ptr<T, Deleter>& slot) { new (NotNull, std::addressof(slot)) std::unique_ptr<T, Deleter> { reinterpret_cast<T*>(-1) }; }
+    static bool isDeletedValue(const std::unique_ptr<T, Deleter>& value) { return value.get() == reinterpret_cast<T*>(-1); }
+
     typedef T* PeekType;
     static T* peek(const std::unique_ptr<T, Deleter>& value) { return value.get(); }
     static T* peek(std::nullptr_t) { return nullptr; }
 };
 
-template<typename T> struct HashTraits<OwnPtr<T>> : SimpleClassHashTraits<OwnPtr<T>> {
-    typedef std::nullptr_t EmptyValueType;
-    static EmptyValueType emptyValue() { return nullptr; }
-
-    typedef T* PeekType;
-    static T* peek(const OwnPtr<T>& value) { return value.get(); }
-    static T* peek(std::nullptr_t) { return nullptr; }
-};
-
 template<typename P> struct HashTraits<RefPtr<P>> : SimpleClassHashTraits<RefPtr<P>> {
-    static P* emptyValue() { return 0; }
+    static P* emptyValue() { return nullptr; }
 
     typedef P* PeekType;
     static PeekType peek(const RefPtr<P>& value) { return value.get(); }
@@ -156,7 +155,7 @@ struct PairHashTraits : GenericHashTraits<std::pair<typename FirstTraitsArg::Tra
     static const bool emptyValueIsZero = FirstTraits::emptyValueIsZero && SecondTraits::emptyValueIsZero;
     static EmptyValueType emptyValue() { return std::make_pair(FirstTraits::emptyValue(), SecondTraits::emptyValue()); }
 
-    static const int minimumTableSize = FirstTraits::minimumTableSize;
+    static const unsigned minimumTableSize = FirstTraits::minimumTableSize;
 
     static void constructDeletedValue(TraitType& slot) { FirstTraits::constructDeletedValue(slot.first); }
     static bool isDeletedValue(const TraitType& value) { return FirstTraits::isDeletedValue(value.first); }
@@ -201,7 +200,7 @@ struct KeyValuePairHashTraits : GenericHashTraits<KeyValuePair<typename KeyTrait
     static const bool emptyValueIsZero = KeyTraits::emptyValueIsZero && ValueTraits::emptyValueIsZero;
     static EmptyValueType emptyValue() { return KeyValuePair<typename KeyTraits::EmptyValueType, typename ValueTraits::EmptyValueType>(KeyTraits::emptyValue(), ValueTraits::emptyValue()); }
 
-    static const int minimumTableSize = KeyTraits::minimumTableSize;
+    static const unsigned minimumTableSize = KeyTraits::minimumTableSize;
 
     static void constructDeletedValue(TraitType& slot) { KeyTraits::constructDeletedValue(slot.key); }
     static bool isDeletedValue(const TraitType& value) { return KeyTraits::isDeletedValue(value.key); }
@@ -225,7 +224,7 @@ struct CustomHashTraits : public GenericHashTraits<T> {
 
     static void constructDeletedValue(T& slot)
     {
-        new (NotNull, &slot) T(T::DeletedValue);
+        new (NotNull, std::addressof(slot)) T(T::DeletedValue);
     }
 
     static bool isDeletedValue(const T& value)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,8 @@
 
 namespace JSC { namespace DFG {
 
+static const bool verbose = false;
+
 InPlaceAbstractState::InPlaceAbstractState(Graph& graph)
     : m_graph(graph)
     , m_variables(m_graph.m_codeBlock->numParameters(), graph.m_localVars)
@@ -58,36 +60,20 @@ void InPlaceAbstractState::beginBasicBlock(BasicBlock* basicBlock)
         forNode(basicBlock->at(i)).clear();
 
     m_variables = basicBlock->valuesAtHead;
-    m_haveStructures = false;
-    for (size_t i = 0; i < m_variables.numberOfArguments(); ++i) {
-        if (m_variables.argument(i).hasClobberableState()) {
-            m_haveStructures = true;
-            break;
-        }
-    }
-    for (size_t i = 0; i < m_variables.numberOfLocals(); ++i) {
-        if (m_variables.local(i).hasClobberableState()) {
-            m_haveStructures = true;
-            break;
-        }
-    }
 
     if (m_graph.m_form == SSA) {
         HashMap<Node*, AbstractValue>::iterator iter = basicBlock->ssa->valuesAtHead.begin();
         HashMap<Node*, AbstractValue>::iterator end = basicBlock->ssa->valuesAtHead.end();
-        for (; iter != end; ++iter) {
+        for (; iter != end; ++iter)
             forNode(iter->key) = iter->value;
-            if (iter->value.hasClobberableState())
-                m_haveStructures = true;
-        }
     }
-
     basicBlock->cfaShouldRevisit = false;
     basicBlock->cfaHasVisited = true;
     m_block = basicBlock;
     m_isValid = true;
     m_foundConstants = false;
     m_branchDirection = InvalidBranchDirection;
+    m_structureClobberState = basicBlock->cfaStructureClobberStateAtHead;
 }
 
 static void setLiveValues(HashMap<Node*, AbstractValue>& values, HashSet<Node*>& live)
@@ -106,37 +92,44 @@ void InPlaceAbstractState::initialize()
     root->cfaShouldRevisit = true;
     root->cfaHasVisited = false;
     root->cfaFoundConstants = false;
+    root->cfaStructureClobberStateAtHead = StructuresAreWatched;
+    root->cfaStructureClobberStateAtTail = StructuresAreWatched;
     for (size_t i = 0; i < root->valuesAtHead.numberOfArguments(); ++i) {
         root->valuesAtTail.argument(i).clear();
-        if (m_graph.m_form == SSA) {
-            root->valuesAtHead.argument(i).makeHeapTop();
-            continue;
+
+        FlushFormat format;
+        if (m_graph.m_form == SSA)
+            format = m_graph.m_argumentFormats[i];
+        else {
+            Node* node = m_graph.m_arguments[i];
+            if (!node)
+                format = FlushedJSValue;
+            else {
+                ASSERT(node->op() == SetArgument);
+                format = node->variableAccessData()->flushFormat();
+            }
         }
 
-        Node* node = root->variablesAtHead.argument(i);
-        ASSERT(node->op() == SetArgument);
-        if (!node->variableAccessData()->shouldUnboxIfPossible()) {
-            root->valuesAtHead.argument(i).makeHeapTop();
-            continue;
-        }
-
-        SpeculatedType prediction =
-            node->variableAccessData()->argumentAwarePrediction();
-        if (isInt32Speculation(prediction))
+        switch (format) {
+        case FlushedInt32:
             root->valuesAtHead.argument(i).setType(SpecInt32);
-        else if (isBooleanSpeculation(prediction))
+            break;
+        case FlushedBoolean:
             root->valuesAtHead.argument(i).setType(SpecBoolean);
-        else if (isCellSpeculation(prediction))
-            root->valuesAtHead.argument(i).setType(SpecCell);
-        else
+            break;
+        case FlushedCell:
+            root->valuesAtHead.argument(i).setType(m_graph, SpecCell);
+            break;
+        case FlushedJSValue:
             root->valuesAtHead.argument(i).makeHeapTop();
+            break;
+        default:
+            DFG_CRASH(m_graph, nullptr, "Bad flush format for argument");
+            break;
+        }
     }
     for (size_t i = 0; i < root->valuesAtHead.numberOfLocals(); ++i) {
-        Node* node = root->variablesAtHead.local(i);
-        if (node && node->variableAccessData()->isCaptured())
-            root->valuesAtHead.local(i).makeHeapTop();
-        else
-            root->valuesAtHead.local(i).clear();
+        root->valuesAtHead.local(i).clear();
         root->valuesAtTail.local(i).clear();
     }
     for (BlockIndex blockIndex = 1 ; blockIndex < m_graph.numBlocks(); ++blockIndex) {
@@ -147,6 +140,8 @@ void InPlaceAbstractState::initialize()
         block->cfaShouldRevisit = false;
         block->cfaHasVisited = false;
         block->cfaFoundConstants = false;
+        block->cfaStructureClobberStateAtHead = StructuresAreWatched;
+        block->cfaStructureClobberStateAtTail = StructuresAreWatched;
         for (size_t i = 0; i < block->valuesAtHead.numberOfArguments(); ++i) {
             block->valuesAtHead.argument(i).clear();
             block->valuesAtTail.argument(i).clear();
@@ -155,16 +150,6 @@ void InPlaceAbstractState::initialize()
             block->valuesAtHead.local(i).clear();
             block->valuesAtTail.local(i).clear();
         }
-        if (!block->isOSRTarget)
-            continue;
-        if (block->bytecodeBegin != m_graph.m_plan.osrEntryBytecodeIndex)
-            continue;
-        for (size_t i = 0; i < m_graph.m_mustHandleAbstractValues.size(); ++i) {
-            AbstractValue value = m_graph.m_mustHandleAbstractValues[i];
-            int operand = m_graph.m_mustHandleAbstractValues.operandForIndex(i);
-            block->valuesAtHead.operand(operand).merge(value);
-        }
-        block->cfaShouldRevisit = true;
     }
     if (m_graph.m_form == SSA) {
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
@@ -194,7 +179,9 @@ bool InPlaceAbstractState::endBasicBlock(MergeMode mergeMode)
 
     bool changed = false;
 
-    if (mergeMode != DontMerge || !ASSERT_DISABLED) {
+    if ((mergeMode != DontMerge) || !ASSERT_DISABLED) {
+        changed |= checkAndSet(block->cfaStructureClobberStateAtTail, m_structureClobberState);
+
         switch (m_graph.m_form) {
         case ThreadedCPS: {
             for (size_t argument = 0; argument < block->variablesAtTail.numberOfArguments(); ++argument) {
@@ -242,6 +229,7 @@ void InPlaceAbstractState::reset()
     m_block = 0;
     m_isValid = false;
     m_branchDirection = InvalidBranchDirection;
+    m_structureClobberState = StructuresAreWatched;
 }
 
 bool InPlaceAbstractState::mergeStateAtTail(AbstractValue& destination, AbstractValue& inVariable, Node* node)
@@ -251,46 +239,31 @@ bool InPlaceAbstractState::mergeStateAtTail(AbstractValue& destination, Abstract
 
     AbstractValue source;
 
-    if (node->variableAccessData()->isCaptured()) {
-        // If it's captured then we know that whatever value was stored into the variable last is the
-        // one we care about. This is true even if the variable at tail is dead, which might happen if
-        // the last thing we did to the variable was a GetLocal and then ended up now using the
-        // GetLocal's result.
-
+    switch (node->op()) {
+    case Phi:
+    case SetArgument:
+    case PhantomLocal:
+    case Flush:
+        // The block transfers the value from head to tail.
         source = inVariable;
-    } else {
-        switch (node->op()) {
-        case Phi:
-        case SetArgument:
-        case PhantomLocal:
-        case Flush:
-            // The block transfers the value from head to tail.
-            source = inVariable;
-            break;
+        break;
 
-        case GetLocal:
-            // The block refines the value with additional speculations.
-            source = forNode(node);
-            break;
+    case GetLocal:
+        // The block refines the value with additional speculations.
+        source = forNode(node);
+        break;
 
-        case SetLocal:
-            // The block sets the variable, and potentially refines it, both
-            // before and after setting it.
-            source = forNode(node->child1());
-            if (node->variableAccessData()->flushFormat() == FlushedDouble) {
-                ASSERT(!(source.m_type & ~SpecFullNumber));
-                ASSERT(!!(source.m_type & ~SpecDouble) == !!(source.m_type & SpecMachineInt));
-                if (!(source.m_type & ~SpecDouble)) {
-                    source.merge(SpecInt52AsDouble);
-                    source.filter(SpecDouble);
-                }
-            }
-            break;
+    case SetLocal:
+        // The block sets the variable, and potentially refines it, both
+        // before and after setting it.
+        source = forNode(node->child1());
+        if (node->variableAccessData()->flushFormat() == FlushedDouble)
+            RELEASE_ASSERT(!(source.m_type & ~SpecFullDouble));
+        break;
 
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-            break;
-        }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
     }
 
     if (destination == source) {
@@ -308,10 +281,16 @@ bool InPlaceAbstractState::mergeStateAtTail(AbstractValue& destination, Abstract
 
 bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
 {
+    if (verbose)
+        dataLog("   Merging from ", pointerDump(from), " to ", pointerDump(to), "\n");
     ASSERT(from->variablesAtTail.numberOfArguments() == to->variablesAtHead.numberOfArguments());
     ASSERT(from->variablesAtTail.numberOfLocals() == to->variablesAtHead.numberOfLocals());
 
     bool changed = false;
+
+    changed |= checkAndSet(
+        to->cfaStructureClobberStateAtHead,
+        DFG::merge(from->cfaStructureClobberStateAtTail, to->cfaStructureClobberStateAtHead));
 
     switch (m_graph.m_form) {
     case ThreadedCPS: {
@@ -335,8 +314,12 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
         HashSet<Node*>::iterator end = to->ssa->liveAtHead.end();
         for (; iter != end; ++iter) {
             Node* node = *iter;
+            if (verbose)
+                dataLog("      Merging for ", node, ": from ", from->ssa->valuesAtTail.find(node)->value, " to ", to->ssa->valuesAtHead.find(node)->value, "\n");
             changed |= to->ssa->valuesAtHead.find(node)->value.merge(
                 from->ssa->valuesAtTail.find(node)->value);
+            if (verbose)
+                dataLog("         Result: ", to->ssa->valuesAtHead.find(node)->value, "\n");
         }
         break;
     }
@@ -349,6 +332,8 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
     if (!to->cfaHasVisited)
         changed = true;
 
+    if (verbose)
+        dataLog("      Will revisit: ", changed, "\n");
     to->cfaShouldRevisit |= changed;
 
     return changed;
@@ -356,23 +341,23 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
 
 inline bool InPlaceAbstractState::mergeToSuccessors(BasicBlock* basicBlock)
 {
-    Node* terminal = basicBlock->last();
+    Node* terminal = basicBlock->terminal();
 
     ASSERT(terminal->isTerminal());
 
     switch (terminal->op()) {
     case Jump: {
         ASSERT(basicBlock->cfaBranchDirection == InvalidBranchDirection);
-        return merge(basicBlock, terminal->takenBlock());
+        return merge(basicBlock, terminal->targetBlock());
     }
 
     case Branch: {
         ASSERT(basicBlock->cfaBranchDirection != InvalidBranchDirection);
         bool changed = false;
         if (basicBlock->cfaBranchDirection != TakeFalse)
-            changed |= merge(basicBlock, terminal->takenBlock());
+            changed |= merge(basicBlock, terminal->branchData()->taken.block);
         if (basicBlock->cfaBranchDirection != TakeTrue)
-            changed |= merge(basicBlock, terminal->notTakenBlock());
+            changed |= merge(basicBlock, terminal->branchData()->notTaken.block);
         return changed;
     }
 
@@ -381,9 +366,9 @@ inline bool InPlaceAbstractState::mergeToSuccessors(BasicBlock* basicBlock)
         // we're not. However I somehow doubt that this will ever be a big deal.
         ASSERT(basicBlock->cfaBranchDirection == InvalidBranchDirection);
         SwitchData* data = terminal->switchData();
-        bool changed = merge(basicBlock, data->fallThrough);
+        bool changed = merge(basicBlock, data->fallThrough.block);
         for (unsigned i = data->cases.size(); i--;)
-            changed |= merge(basicBlock, data->cases[i].target);
+            changed |= merge(basicBlock, data->cases[i].target.block);
         return changed;
     }
 

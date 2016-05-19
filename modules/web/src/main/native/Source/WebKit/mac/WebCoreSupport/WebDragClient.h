@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,12 +33,15 @@ class WebDragClient : public WebCore::DragClient {
 public:
     WebDragClient(WebView*);
     virtual void willPerformDragDestinationAction(WebCore::DragDestinationAction, WebCore::DragData&) override;
-    virtual void willPerformDragSourceAction(WebCore::DragSourceAction, const WebCore::IntPoint&, WebCore::Clipboard&) override;
+    virtual void willPerformDragSourceAction(WebCore::DragSourceAction, const WebCore::IntPoint&, WebCore::DataTransfer&) override;
     virtual WebCore::DragDestinationAction actionMaskForDrag(WebCore::DragData&) override;
     virtual void dragControllerDestroyed() override;
     virtual WebCore::DragSourceAction dragSourceActionMaskForPoint(const WebCore::IntPoint& windowPoint) override;
-    virtual void startDrag(WebCore::DragImageRef, const WebCore::IntPoint& dragPos, const WebCore::IntPoint& eventPos, WebCore::Clipboard&, WebCore::Frame&, bool linkDrag) override;
+    virtual void startDrag(WebCore::DragImageRef, const WebCore::IntPoint& dragPos, const WebCore::IntPoint& eventPos, WebCore::DataTransfer&, WebCore::Frame&, bool linkDrag) override;
     virtual void declareAndWriteDragImage(const String& pasteboardName, WebCore::Element&, const WebCore::URL&, const String&, WebCore::Frame*) override;
+#if ENABLE(ATTACHMENT_ELEMENT)
+    virtual void declareAndWriteAttachment(const String& pasteboardName, WebCore::Element&, const WebCore::URL&, const String& path, WebCore::Frame*) override;
+#endif
 private:
     WebView* m_webView;
 };

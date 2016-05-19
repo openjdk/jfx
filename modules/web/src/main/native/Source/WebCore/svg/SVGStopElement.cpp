@@ -21,11 +21,9 @@
 #include "config.h"
 #include "SVGStopElement.h"
 
-#include "Attribute.h"
 #include "Document.h"
 #include "RenderSVGGradientStop.h"
 #include "RenderSVGResource.h"
-#include "SVGElementInstance.h"
 #include "SVGGradientElement.h"
 #include "SVGNames.h"
 
@@ -47,26 +45,13 @@ inline SVGStopElement::SVGStopElement(const QualifiedName& tagName, Document& do
     registerAnimatedPropertiesForSVGStopElement();
 }
 
-PassRefPtr<SVGStopElement> SVGStopElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGStopElement> SVGStopElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGStopElement(tagName, document));
-}
-
-bool SVGStopElement::isSupportedAttribute(const QualifiedName& attrName)
-{
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty())
-        supportedAttributes.add(SVGNames::offsetAttr);
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return adoptRef(*new SVGStopElement(tagName, document));
 }
 
 void SVGStopElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(name)) {
-        SVGElement::parseAttribute(name, value);
-        return;
-    }
-
     if (name == SVGNames::offsetAttr) {
         if (value.endsWith('%'))
             setOffsetBaseValue(value.string().left(value.length() - 1).toFloat() / 100.0f);
@@ -75,30 +60,25 @@ void SVGStopElement::parseAttribute(const QualifiedName& name, const AtomicStrin
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGElement::parseAttribute(name, value);
 }
 
 void SVGStopElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (!isSupportedAttribute(attrName)) {
-        SVGElement::svgAttributeChanged(attrName);
-        return;
-    }
-
-    SVGElementInstance::InvalidationGuard invalidationGuard(this);
-
     if (attrName == SVGNames::offsetAttr) {
-        if (auto renderer = this->renderer())
+        if (auto renderer = this->renderer()) {
+            InstanceInvalidationGuard guard(*this);
             RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+        }
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGElement::svgAttributeChanged(attrName);
 }
 
-RenderPtr<RenderElement> SVGStopElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGStopElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGGradientStop>(*this, std::move(style));
+    return createRenderer<RenderSVGGradientStop>(*this, WTF::move(style));
 }
 
 bool SVGStopElement::rendererIsNeeded(const RenderStyle&)

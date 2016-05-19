@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
  *                     2006, 2008 Rob Buis <buis@kde.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -74,7 +74,12 @@ static inline CGContextRef scratchContext()
 }
 
 Path::Path()
-    : m_path(0)
+    : m_path(nullptr)
+{
+}
+
+Path::Path(RetainPtr<CGMutablePathRef> p)
+    : m_path(p.leakRef())
 {
 }
 
@@ -177,12 +182,23 @@ bool Path::strokeContains(StrokeStyleApplier* applier, const FloatPoint& point) 
 
 void Path::translate(const FloatSize& size)
 {
-    CGAffineTransform translation = CGAffineTransformMake(1, 0, 0, 1, size.width(), size.height());
-    CGMutablePathRef newPath = CGPathCreateMutable();
-    // FIXME: This is potentially wasteful to allocate an empty path only to create a transformed copy.
-    CGPathAddPath(newPath, &translation, ensurePlatformPath());
+    transform(AffineTransform(1, 0, 0, 1, size.width(), size.height()));
+}
+
+void Path::transform(const AffineTransform& transform)
+{
+    if (transform.isIdentity() || isEmpty())
+        return;
+
+    CGAffineTransform transformCG = transform;
+#if PLATFORM(WIN)
+    CGMutablePathRef path = CGPathCreateMutable();
+    CGPathAddPath(path, &transformCG, m_path);
+#else
+    CGMutablePathRef path = CGPathCreateMutableCopyByTransformingPath(m_path, &transformCG);
+#endif
     CGPathRelease(m_path);
-    m_path = newPath;
+    m_path = path;
 }
 
 FloatRect Path::boundingRect() const
@@ -190,8 +206,7 @@ FloatRect Path::boundingRect() const
     if (isNull())
         return CGRectZero;
 
-    // CGPathGetBoundingBox includes the path's control points, CGPathGetPathBoundingBox
-    // does not, but only exists on 10.6 and above.
+    // CGPathGetBoundingBox includes the path's control points, CGPathGetPathBoundingBox does not.
 
     CGRect bound = CGPathGetPathBoundingBox(m_path);
     return CGRectIsNull(bound) ? CGRectZero : bound;
@@ -260,7 +275,17 @@ void Path::platformAddPathForRoundedRect(const FloatRect& rect, const FloatSize&
     bool equalHeights = (topLeftRadius.height() == bottomLeftRadius.height() && bottomLeftRadius.height() == topRightRadius.height() && topRightRadius.height() == bottomRightRadius.height());
 
     if (equalWidths && equalHeights) {
-        wkCGPathAddRoundedRect(ensurePlatformPath(), 0, rect, topLeftRadius.width(), topLeftRadius.height());
+        // Ensure that CG can render the rounded rect.
+        CGFloat radiusWidth = topLeftRadius.width();
+        CGFloat radiusHeight = topLeftRadius.height();
+        CGRect rectToDraw = rect;
+        CGFloat rectWidth = CGRectGetWidth(rectToDraw);
+        CGFloat rectHeight = CGRectGetHeight(rectToDraw);
+        if (rectWidth < 2 * radiusWidth)
+            radiusWidth = rectWidth / 2 - std::numeric_limits<CGFloat>::epsilon();
+        if (rectHeight < 2 * radiusHeight)
+            radiusHeight = rectHeight / 2 - std::numeric_limits<CGFloat>::epsilon();
+        CGPathAddRoundedRect(ensurePlatformPath(), nullptr, rectToDraw, radiusWidth, radiusHeight);
         return;
     }
 #endif
@@ -277,11 +302,11 @@ void Path::closeSubpath()
     CGPathCloseSubpath(m_path);
 }
 
-void Path::addArc(const FloatPoint& p, float r, float sa, float ea, bool clockwise)
+void Path::addArc(const FloatPoint& p, float radius, float startAngle, float endAngle, bool clockwise)
 {
     // Workaround for <rdar://problem/5189233> CGPathAddArc hangs or crashes when passed inf as start or end angle
-    if (std::isfinite(sa) && std::isfinite(ea))
-        CGPathAddArc(ensurePlatformPath(), 0, p.x(), p.y(), r, sa, ea, clockwise);
+    if (std::isfinite(startAngle) && std::isfinite(endAngle))
+        CGPathAddArc(ensurePlatformPath(), nullptr, p.x(), p.y(), radius, startAngle, endAngle, clockwise);
 }
 
 void Path::addRect(const FloatRect& r)
@@ -289,10 +314,40 @@ void Path::addRect(const FloatRect& r)
     CGPathAddRect(ensurePlatformPath(), 0, r);
 }
 
+void Path::addEllipse(FloatPoint p, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, bool anticlockwise)
+{
+    AffineTransform transform;
+    transform.translate(p.x(), p.y()).rotate(rad2deg(rotation)).scale(radiusX, radiusY);
+
+    CGAffineTransform cgTransform = transform;
+    CGPathAddArc(ensurePlatformPath(), &cgTransform, 0, 0, 1, startAngle, endAngle, anticlockwise);
+}
+
 void Path::addEllipse(const FloatRect& r)
 {
     CGPathAddEllipseInRect(ensurePlatformPath(), 0, r);
 }
+
+void Path::addPath(const Path& path, const AffineTransform& transform)
+{
+    if (!path.platformPath())
+        return;
+
+    if (!transform.isInvertible())
+        return;
+
+    CGAffineTransform transformCG = transform;
+    // CG doesn't allow adding a path to itself. Optimize for the common case
+    // and copy the path for the self referencing case.
+    if (ensurePlatformPath() != path.platformPath()) {
+        CGPathAddPath(ensurePlatformPath(), &transformCG, path.platformPath());
+        return;
+    }
+    CGPathRef pathCopy = CGPathCreateCopy(path.platformPath());
+    CGPathAddPath(ensurePlatformPath(), &transformCG, pathCopy);
+    CGPathRelease(pathCopy);
+}
+
 
 void Path::clear()
 {
@@ -362,18 +417,6 @@ void Path::apply(void* info, PathApplierFunction function) const
     pinfo.info = info;
     pinfo.function = function;
     CGPathApply(m_path, &pinfo, CGPathApplierToPathApplier);
-}
-
-void Path::transform(const AffineTransform& transform)
-{
-    if (transform.isIdentity() || isEmpty())
-        return;
-
-    CGMutablePathRef path = CGPathCreateMutable();
-    CGAffineTransform transformCG = transform;
-    CGPathAddPath(path, &transformCG, m_path);
-    CGPathRelease(m_path);
-    m_path = path;
 }
 
 }

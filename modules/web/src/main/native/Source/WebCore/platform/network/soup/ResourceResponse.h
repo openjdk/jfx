@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,7 +29,7 @@
 #include "ResourceResponseBase.h"
 
 #include <libsoup/soup.h>
-#include <wtf/gobject/GRefPtr.h>
+#include <wtf/glib/GRefPtr.h>
 
 namespace WebCore {
 
@@ -42,8 +42,8 @@ public:
     {
     }
 
-    ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName, const String& filename)
-        : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName, filename)
+    ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
+        : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName)
         , m_soupFlags(static_cast<SoupMessageFlags>(0))
         , m_tlsErrors(static_cast<GTlsCertificateFlags>(0))
     {
@@ -58,6 +58,7 @@ public:
     }
 
     SoupMessage* toSoupMessage() const;
+    void updateSoupMessageHeaders(SoupMessageHeaders*) const;
     void updateFromSoupMessage(SoupMessage*);
     void updateFromSoupMessageHeaders(const SoupMessageHeaders*);
 
@@ -75,6 +76,9 @@ public:
 
     bool platformResponseIsUpToDate() const { return false; }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static bool decode(Decoder&, ResourceResponse&);
+
 private:
     friend class ResourceResponseBase;
 
@@ -84,10 +88,29 @@ private:
     GTlsCertificateFlags m_tlsErrors;
 
     void doUpdateResourceResponse() { }
+    String platformSuggestedFilename() const;
+    CertificateInfo platformCertificateInfo() const;
 
-    PassOwnPtr<CrossThreadResourceResponseData> doPlatformCopyData(PassOwnPtr<CrossThreadResourceResponseData> data) const { return data; }
-    void doPlatformAdopt(PassOwnPtr<CrossThreadResourceResponseData>) { }
+    std::unique_ptr<CrossThreadResourceResponseData> doPlatformCopyData(std::unique_ptr<CrossThreadResourceResponseData> data) const { return data; }
+    void doPlatformAdopt(std::unique_ptr<CrossThreadResourceResponseData>) { }
 };
+
+template<class Encoder>
+void ResourceResponse::encode(Encoder& encoder) const
+{
+    ResourceResponseBase::encode(encoder);
+    encoder.encodeEnum(m_soupFlags);
+}
+
+template<class Decoder>
+bool ResourceResponse::decode(Decoder& decoder, ResourceResponse& response)
+{
+    if (!ResourceResponseBase::decode(decoder, response))
+        return false;
+    if (!decoder.decodeEnum(response.m_soupFlags))
+        return false;
+    return true;
+}
 
 struct CrossThreadResourceResponseData : public CrossThreadResourceResponseDataBase {
 };

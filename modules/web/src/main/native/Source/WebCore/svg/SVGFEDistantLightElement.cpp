@@ -18,12 +18,10 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SVGFEDistantLightElement.h"
-#include "SVGNames.h"
 
 #include "DistantLightSource.h"
+#include "SVGNames.h"
 
 namespace WebCore {
 
@@ -33,16 +31,14 @@ inline SVGFEDistantLightElement::SVGFEDistantLightElement(const QualifiedName& t
     ASSERT(hasTagName(SVGNames::feDistantLightTag));
 }
 
-PassRefPtr<SVGFEDistantLightElement> SVGFEDistantLightElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFEDistantLightElement> SVGFEDistantLightElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFEDistantLightElement(tagName, document));
+    return adoptRef(*new SVGFEDistantLightElement(tagName, document));
 }
 
-PassRefPtr<LightSource> SVGFEDistantLightElement::lightSource() const
+Ref<LightSource> SVGFEDistantLightElement::lightSource() const
 {
     return DistantLightSource::create(azimuth(), elevation());
 }
 
 }
-
-#endif

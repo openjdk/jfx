@@ -39,9 +39,10 @@ class DeviceClient;
 class Page;
 
 class DeviceController : public Supplement<Page> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit DeviceController(DeviceClient*);
-    ~DeviceController() { }
+    virtual ~DeviceController() { }
 
     void addDeviceEventListener(DOMWindow*);
     void removeDeviceEventListener(DOMWindow*);
@@ -55,12 +56,12 @@ public:
     virtual PassRefPtr<Event> getLastEvent() { return 0; }
 
 protected:
-    void fireDeviceEvent(Timer<DeviceController>&);
+    void fireDeviceEvent();
 
     HashCountedSet<RefPtr<DOMWindow>> m_listeners;
     HashCountedSet<RefPtr<DOMWindow>> m_lastEventListeners;
     DeviceClient* m_client;
-    Timer<DeviceController> m_timer;
+    Timer m_timer;
 };
 
 } // namespace WebCore

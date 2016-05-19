@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Ericsson AB. All rights reserved.
+ * Copyright (C) 2011, 2015 Ericsson AB. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
@@ -35,78 +35,58 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "MediaStreamSource.h"
 #include "MediaStreamTrack.h"
 #include "MediaStreamTrackPrivate.h"
+#include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class MediaStreamTrackPrivate;
 
-class MediaStreamPrivateClient : public MediaStreamTrack::Observer {
+class MediaStreamPrivateClient : public RefCounted<MediaStreamPrivateClient> {
 public:
     virtual ~MediaStreamPrivateClient() { }
 
-    virtual void streamDidEnd() = 0;
-    virtual void addRemoteSource(MediaStreamSource*) = 0;
-    virtual void removeRemoteSource(MediaStreamSource*) = 0;
-    virtual void addRemoteTrack(MediaStreamTrackPrivate*) = 0;
-    virtual void removeRemoteTrack(MediaStreamTrackPrivate*) = 0;
+    virtual void activeStatusChanged() = 0;
+    virtual void didAddTrackToPrivate(MediaStreamTrackPrivate&) = 0;
+    virtual void didRemoveTrackFromPrivate(MediaStreamTrackPrivate&) = 0;
 };
 
 class MediaStreamPrivate : public RefCounted<MediaStreamPrivate> {
 public:
-    static PassRefPtr<MediaStreamPrivate> create(const Vector<RefPtr<MediaStreamSource>>& audioSources, const Vector<RefPtr<MediaStreamSource>>& videoSources);
-    static PassRefPtr<MediaStreamPrivate> create(const Vector<RefPtr<MediaStreamTrackPrivate>>& audioPrivateTracks, const Vector<RefPtr<MediaStreamTrackPrivate>>& videoPrivateTracks);
+    static RefPtr<MediaStreamPrivate> create(const Vector<RefPtr<RealtimeMediaSource>>& audioSources, const Vector<RefPtr<RealtimeMediaSource>>& videoSources);
+    static RefPtr<MediaStreamPrivate> create(const Vector<RefPtr<MediaStreamTrackPrivate>>&);
+    static RefPtr<MediaStreamPrivate> create();
 
     virtual ~MediaStreamPrivate() { }
+
+    enum class NotifyClientOption { Notify, DontNotify };
 
     MediaStreamPrivateClient* client() const { return m_client; }
     void setClient(MediaStreamPrivateClient* client) { m_client = client; }
 
     String id() const { return m_id; }
 
-    unsigned numberOfAudioSources() const { return m_audioStreamSources.size(); }
-    MediaStreamSource* audioSources(unsigned index) const { return m_audioStreamSources[index].get(); }
+    Vector<RefPtr<MediaStreamTrackPrivate>> tracks() const;
 
-    unsigned numberOfVideoSources() const { return m_videoStreamSources.size(); }
-    MediaStreamSource* videoSources(unsigned index) const { return m_videoStreamSources[index].get(); }
+    bool active() const { return m_isActive; }
+    void updateActiveState(NotifyClientOption);
 
-    unsigned numberOfAudioTracks() const { return m_audioPrivateTracks.size(); }
-    MediaStreamTrackPrivate* audioTracks(unsigned index) const { return m_audioPrivateTracks[index].get(); }
-
-    unsigned numberOfVideoTracks() const { return m_videoPrivateTracks.size(); }
-    MediaStreamTrackPrivate* videoTracks(unsigned index) const { return m_videoPrivateTracks[index].get(); }
-
-    void addSource(PassRefPtr<MediaStreamSource>);
-    void removeSource(PassRefPtr<MediaStreamSource>);
-
-    void addRemoteSource(MediaStreamSource*);
-    void removeRemoteSource(MediaStreamSource*);
-
-    bool ended() const { return m_ended; }
-    void setEnded();
-
-    void addTrack(PassRefPtr<MediaStreamTrackPrivate>);
-    void removeTrack(PassRefPtr<MediaStreamTrackPrivate>);
-
-    void addRemoteTrack(MediaStreamTrackPrivate*);
-    void removeRemoteTrack(MediaStreamTrackPrivate*);
+    void addTrack(RefPtr<MediaStreamTrackPrivate>&&, NotifyClientOption);
+    void removeTrack(MediaStreamTrackPrivate&, NotifyClientOption);
 
 private:
-    MediaStreamPrivate(const String& id, const Vector<RefPtr<MediaStreamSource>>& audioSources, const Vector<RefPtr<MediaStreamSource>>& videoSources);
-    MediaStreamPrivate(const String& id, const Vector<RefPtr<MediaStreamTrackPrivate>>& audioPrivateTracks, const Vector<RefPtr<MediaStreamTrackPrivate>>& videoPrivateTracks);
+    MediaStreamPrivate() { }
+    MediaStreamPrivate(const String& id, const Vector<RefPtr<MediaStreamTrackPrivate>>&);
 
     MediaStreamPrivateClient* m_client;
     String m_id;
-    Vector<RefPtr<MediaStreamSource>> m_audioStreamSources;
-    Vector<RefPtr<MediaStreamSource>> m_videoStreamSources;
+    bool m_isActive;
 
-    Vector<RefPtr<MediaStreamTrackPrivate>> m_audioPrivateTracks;
-    Vector<RefPtr<MediaStreamTrackPrivate>> m_videoPrivateTracks;
-    bool m_ended;
+    HashMap<String, RefPtr<MediaStreamTrackPrivate>> m_trackSet;
 };
 
 typedef Vector<RefPtr<MediaStreamPrivate>> MediaStreamPrivateVector;

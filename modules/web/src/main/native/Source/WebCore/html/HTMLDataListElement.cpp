@@ -33,7 +33,6 @@
 #if ENABLE(DATALIST_ELEMENT)
 #include "HTMLDataListElement.h"
 
-#include "FeatureObserver.h"
 #include "HTMLNames.h"
 #include "IdTargetObserverRegistry.h"
 
@@ -44,13 +43,12 @@ inline HTMLDataListElement::HTMLDataListElement(const QualifiedName& tagName, Do
 {
 }
 
-PassRefPtr<HTMLDataListElement> HTMLDataListElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLDataListElement> HTMLDataListElement::create(const QualifiedName& tagName, Document& document)
 {
-    FeatureObserver::observe(&document, FeatureObserver::DataListElement);
-    return adoptRef(new HTMLDataListElement(tagName, document));
+    return adoptRef(*new HTMLDataListElement(tagName, document));
 }
 
-PassRefPtr<HTMLCollection> HTMLDataListElement::options()
+Ref<HTMLCollection> HTMLDataListElement::options()
 {
     return ensureCachedHTMLCollection(DataListOptions);
 }

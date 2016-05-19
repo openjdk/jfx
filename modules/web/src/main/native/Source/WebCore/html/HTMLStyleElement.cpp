@@ -24,7 +24,6 @@
 #include "config.h"
 #include "HTMLStyleElement.h"
 
-#include "Attribute.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventSender.h"
@@ -41,7 +40,7 @@ using namespace HTMLNames;
 
 static StyleEventSender& styleLoadEventSender()
 {
-    DEFINE_STATIC_LOCAL(StyleEventSender, sharedLoadEventSender, (eventNames().loadEvent));
+    DEPRECATED_DEFINE_STATIC_LOCAL(StyleEventSender, sharedLoadEventSender, (eventNames().loadEvent));
     return sharedLoadEventSender;
 }
 
@@ -60,12 +59,12 @@ HTMLStyleElement::~HTMLStyleElement()
     // Therefore we can't ASSERT(m_scopedStyleRegistrationState == NotRegistered).
     m_styleSheetOwner.clearDocumentData(document(), *this);
 
-    styleLoadEventSender().cancelEvent(this);
+    styleLoadEventSender().cancelEvent(*this);
 }
 
-PassRefPtr<HTMLStyleElement> HTMLStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
+Ref<HTMLStyleElement> HTMLStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
 {
-    return adoptRef(new HTMLStyleElement(tagName, document, createdByParser));
+    return adoptRef(*new HTMLStyleElement(tagName, document, createdByParser));
 }
 
 void HTMLStyleElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -133,7 +132,7 @@ void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOcc
     if (m_firedLoad)
         return;
     m_loadedSheet = !errorOccurred;
-    styleLoadEventSender().dispatchEventSoon(this);
+    styleLoadEventSender().dispatchEventSoon(*this);
     m_firedLoad = true;
 }
 

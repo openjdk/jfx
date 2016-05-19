@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -39,6 +39,8 @@ class ScriptValue;
 }
 
 namespace Inspector {
+
+struct ScriptBreakpointAction;
 
 class ScriptDebugListener {
 public:
@@ -73,7 +75,7 @@ public:
 
     virtual void breakpointActionLog(JSC::ExecState*, const String&) = 0;
     virtual void breakpointActionSound(int breakpointActionIdentifier) = 0;
-    virtual void breakpointActionProbe(JSC::ExecState*, const ScriptBreakpointAction&, int hitCount, const Deprecated::ScriptValue& result) = 0;
+    virtual void breakpointActionProbe(JSC::ExecState*, const ScriptBreakpointAction&, unsigned batchId, unsigned sampleId, const Deprecated::ScriptValue& result) = 0;
 };
 
 } // namespace Inspector

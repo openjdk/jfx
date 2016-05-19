@@ -51,31 +51,35 @@ private:
     typedef HashMap<RefPtr<Widget>, FrameView*> WidgetToParentMap;
     static WidgetToParentMap& widgetNewParentMap();
 
-    void moveWidgets();
+    WEBCORE_EXPORT void moveWidgets();
 
-    static unsigned s_widgetHierarchyUpdateSuspendCount;
+    WEBCORE_EXPORT static unsigned s_widgetHierarchyUpdateSuspendCount;
 };
 
 class RenderWidget : public RenderReplaced, private OverlapTestRequestClient {
 public:
     virtual ~RenderWidget();
 
-    HTMLFrameOwnerElement& frameOwnerElement() const { return toHTMLFrameOwnerElement(nodeForNonAnonymous()); }
+    HTMLFrameOwnerElement& frameOwnerElement() const { return downcast<HTMLFrameOwnerElement>(nodeForNonAnonymous()); }
 
     Widget* widget() const { return m_widget.get(); }
-    void setWidget(PassRefPtr<Widget>);
+    WEBCORE_EXPORT void setWidget(PassRefPtr<Widget>);
 
     static RenderWidget* find(const Widget*);
 
-    void updateWidgetPosition();
-    IntRect windowClipRect() const;
+    enum class ChildWidgetState { ChildWidgetIsValid, ChildWidgetIsDestroyed };
+    ChildWidgetState updateWidgetPosition() WARN_UNUSED_RETURN;
+    WEBCORE_EXPORT IntRect windowClipRect() const;
 
     bool requiresAcceleratedCompositing() const;
 
     WeakPtr<RenderWidget> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
 
+    void ref() { ++m_refCount; }
+    void deref();
+
 protected:
-    RenderWidget(HTMLFrameOwnerElement&, PassRef<RenderStyle>);
+    RenderWidget(HTMLFrameOwnerElement&, Ref<RenderStyle>&&);
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override final;
     virtual void layout() override;
@@ -102,10 +106,18 @@ private:
     WeakPtrFactory<RenderWidget> m_weakPtrFactory;
     RefPtr<Widget> m_widget;
     IntRect m_clipRect; // The rectangle needs to remain correct after scrolling, so it is stored in content view coordinates, and not clipped to window.
+    unsigned m_refCount { 1 };
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderWidget, isWidget())
+inline void RenderWidget::deref()
+{
+    ASSERT(m_refCount);
+    if (!--m_refCount)
+        delete this;
+}
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderWidget, isWidget())
 
 #endif // RenderWidget_h

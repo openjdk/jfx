@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -111,9 +111,6 @@ public:
     void compile();
     void compileFunction();
 
-    void link();
-    void linkFunction();
-
     // Accessors for properties.
     Graph& graph() { return m_graph; }
 
@@ -186,6 +183,7 @@ public:
     // Add a call out from JIT code, with a fast exception check that tests if the return value is zero.
     void fastExceptionCheck()
     {
+        callExceptionFuzz();
         m_exceptionChecks.append(branchTestPtr(Zero, GPRInfo::returnValueGPR));
     }
 
@@ -198,12 +196,7 @@ public:
     }
 
 #if USE(JSVALUE32_64)
-    void* addressOfDoubleConstant(Node* node)
-    {
-        ASSERT(m_graph.isNumberConstant(node));
-        unsigned constantIndex = node->constantNumber();
-        return &(codeBlock()->constantRegister(FirstConstantRegisterIndex + constantIndex));
-    }
+    void* addressOfDoubleConstant(Node*);
 #endif
 
     void addGetById(const JITGetByIdGenerator& gen, SlowPathGenerator* slowPath)
@@ -226,9 +219,9 @@ public:
         return m_jsCalls.size();
     }
 
-    void addJSCall(Call fastCall, Call slowCall, DataLabelPtr targetToCheck, CallLinkInfo::CallType callType, GPRReg callee, CodeOrigin codeOrigin)
+    void addJSCall(Call fastCall, Call slowCall, DataLabelPtr targetToCheck, CallLinkInfo* info)
     {
-        m_jsCalls.append(JSCallRecord(fastCall, slowCall, targetToCheck, callType, callee, codeOrigin));
+        m_jsCalls.append(JSCallRecord(fastCall, slowCall, targetToCheck, info));
     }
 
     void addWeakReference(JSCell* target)
@@ -250,55 +243,31 @@ public:
         return result;
     }
 
-    void noticeOSREntry(BasicBlock& basicBlock, JITCompiler::Label blockHead, LinkBuffer& linkBuffer)
+    template<typename T>
+    Jump branchWeakStructure(RelationalCondition cond, T left, Structure* weakStructure)
     {
-        // OSR entry is not allowed into blocks deemed unreachable by control flow analysis.
-        if (!basicBlock.cfaHasVisited)
-            return;
-
-        OSREntryData* entry = m_jitCode->appendOSREntryData(basicBlock.bytecodeBegin, linkBuffer.offsetOf(blockHead));
-
-        entry->m_expectedValues = basicBlock.valuesAtHead;
-
-        // Fix the expected values: in our protocol, a dead variable will have an expected
-        // value of (None, []). But the old JIT may stash some values there. So we really
-        // need (Top, TOP).
-        for (size_t argument = 0; argument < basicBlock.variablesAtHead.numberOfArguments(); ++argument) {
-            Node* node = basicBlock.variablesAtHead.argument(argument);
-            if (!node || !node->shouldGenerate())
-                entry->m_expectedValues.argument(argument).makeHeapTop();
-        }
-        for (size_t local = 0; local < basicBlock.variablesAtHead.numberOfLocals(); ++local) {
-            Node* node = basicBlock.variablesAtHead.local(local);
-            if (!node || !node->shouldGenerate())
-                entry->m_expectedValues.local(local).makeHeapTop();
-            else {
-                VariableAccessData* variable = node->variableAccessData();
-                entry->m_machineStackUsed.set(variable->machineLocal().toLocal());
-
-                switch (variable->flushFormat()) {
-                case FlushedDouble:
-                    entry->m_localsForcedDouble.set(local);
-                    break;
-                case FlushedInt52:
-                    entry->m_localsForcedMachineInt.set(local);
-                    break;
-                default:
-                    break;
-                }
-
-                if (variable->local() != variable->machineLocal()) {
-                    entry->m_reshufflings.append(
-                        OSREntryReshuffling(
-                            variable->local().offset(), variable->machineLocal().offset()));
-                }
-            }
-        }
-
-        entry->m_reshufflings.shrinkToFit();
+#if USE(JSVALUE64)
+        Jump result = branch32(cond, left, TrustedImm32(weakStructure->id()));
+        addWeakReference(weakStructure);
+        return result;
+#else
+        return branchWeakPtr(cond, left, weakStructure);
+#endif
     }
 
-    PassRefPtr<JITCode> jitCode() { return m_jitCode; }
+    template<typename T>
+    Jump branchStructurePtr(RelationalCondition cond, T left, Structure* structure)
+    {
+#if USE(JSVALUE64)
+        return branch32(cond, left, TrustedImm32(structure->id()));
+#else
+        return branchPtr(cond, left, TrustedImmPtr(structure));
+#endif
+    }
+
+    void noticeOSREntry(BasicBlock&, JITCompiler::Label blockHead, LinkBuffer&);
+
+    RefPtr<JITCode> jitCode() { return m_jitCode; }
 
     Vector<Label>& blockHeads() { return m_blockHeads; }
 
@@ -318,7 +287,7 @@ private:
     // The dataflow graph currently being generated.
     Graph& m_graph;
 
-    OwnPtr<Disassembler> m_disassembler;
+    std::unique_ptr<Disassembler> m_disassembler;
 
     RefPtr<JITCode> m_jitCode;
 
@@ -331,22 +300,18 @@ private:
     Vector<Label> m_blockHeads;
 
     struct JSCallRecord {
-        JSCallRecord(Call fastCall, Call slowCall, DataLabelPtr targetToCheck, CallLinkInfo::CallType callType, GPRReg callee, CodeOrigin codeOrigin)
+        JSCallRecord(Call fastCall, Call slowCall, DataLabelPtr targetToCheck, CallLinkInfo* info)
             : m_fastCall(fastCall)
             , m_slowCall(slowCall)
             , m_targetToCheck(targetToCheck)
-            , m_callType(callType)
-            , m_callee(callee)
-            , m_codeOrigin(codeOrigin)
+            , m_info(info)
         {
         }
 
         Call m_fastCall;
         Call m_slowCall;
         DataLabelPtr m_targetToCheck;
-        CallLinkInfo::CallType m_callType;
-        GPRReg m_callee;
-        CodeOrigin m_codeOrigin;
+        CallLinkInfo* m_info;
     };
 
     Vector<InlineCacheWrapper<JITGetByIdGenerator>, 4> m_getByIds;
@@ -358,7 +323,7 @@ private:
 
     Call m_callArityFixup;
     Label m_arityCheck;
-    OwnPtr<SpeculativeJIT> m_speculative;
+    std::unique_ptr<SpeculativeJIT> m_speculative;
 };
 
 } } // namespace JSC::DFG

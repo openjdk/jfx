@@ -29,6 +29,7 @@
 
 #include "JNIUtility.h"
 #include "JSDOMWindowBase.h"
+#include "DOMWindow.h"
 #include "JavaInstanceJSC.h"
 
 #include <runtime/JSLock.h>
@@ -60,14 +61,14 @@ public:
     ~JavaString()
     {
         //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
-        m_impl = 0;
+        m_impl = nullptr;
     }
 
     const char* utf8() const
     {
         if (!m_utf8String.data()) {
             //JSLockHolder lock(WebCore::JSDOMWindowBase::commonVM());
-            m_utf8String = String(m_impl).utf8();
+            m_utf8String = String((RefPtr<StringImpl>)m_impl).utf8();
         }
         return m_utf8String.data();
     }

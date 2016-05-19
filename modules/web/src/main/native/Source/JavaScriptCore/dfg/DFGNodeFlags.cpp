@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +47,9 @@ void dumpNodeFlags(PrintStream& actualOut, NodeFlags flags)
         case NodeResultNumber:
             out.print(comma, "Number");
             break;
+        case NodeResultDouble:
+            out.print(comma, "Double");
+            break;
         case NodeResultInt32:
             out.print(comma, "Int32");
             break;
@@ -71,12 +74,6 @@ void dumpNodeFlags(PrintStream& actualOut, NodeFlags flags)
     if (flags & NodeHasVarArgs)
         out.print(comma, "VarArgs");
 
-    if (flags & NodeClobbersWorld)
-        out.print(comma, "Clobbers");
-
-    if (flags & NodeMightClobber)
-        out.print(comma, "MightClobber");
-
     if (flags & NodeResultMask) {
         if (!(flags & NodeBytecodeUsesAsNumber) && !(flags & NodeBytecodeNeedsNegZero))
             out.print(comma, "PureInt");
@@ -88,17 +85,26 @@ void dumpNodeFlags(PrintStream& actualOut, NodeFlags flags)
             out.print(comma, "UseAsOther");
     }
 
-    if (flags & NodeMayOverflow)
-        out.print(comma, "MayOverflow");
+    if (flags & NodeMayOverflowInBaseline)
+        out.print(comma, "MayOverflowInBaseline");
 
-    if (flags & NodeMayNegZero)
-        out.print(comma, "MayNegZero");
+    if (flags & NodeMayOverflowInDFG)
+        out.print(comma, "MayOverflowInDFG");
+
+    if (flags & NodeMayNegZeroInBaseline)
+        out.print(comma, "MayNegZeroInBaseline");
+
+    if (flags & NodeMayNegZeroInDFG)
+        out.print(comma, "MayNegZeroInDFG");
 
     if (flags & NodeBytecodeUsesAsInt)
         out.print(comma, "UseAsInt");
 
-    if (!(flags & NodeDoesNotExit))
-        out.print(comma, "CanExit");
+    if (flags & NodeBytecodeUsesAsArrayIndex)
+        out.print(comma, "ReallyWantsInt");
+
+    if (flags & NodeIsFlushed)
+        out.print(comma, "IsFlushed");
 
     CString string = out.toCString();
     if (!string.length())

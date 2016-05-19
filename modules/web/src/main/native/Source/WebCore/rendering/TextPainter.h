@@ -26,6 +26,7 @@
 #include "AffineTransform.h"
 #include "DashArray.h"
 #include "RenderText.h"
+#include "TextFlags.h"
 
 namespace WebCore {
 
@@ -41,50 +42,64 @@ static inline AffineTransform rotation(const FloatRect& boxRect, RotationDirecti
         : AffineTransform(0, -1, 1, 0, boxRect.x() - boxRect.maxY(), boxRect.x() + boxRect.maxY());
 }
 
-struct SavedDrawingStateForMask {
-    SavedDrawingStateForMask(GraphicsContext* context, TextPaintStyle* textPaintStyle, TextPaintStyle* selectionPaintStyle,
-    const ShadowData* textShadow, const ShadowData* selectionShadow)
-        : m_context(context)
-        , m_textPaintStyle(textPaintStyle)
-        , m_selectionPaintStyle(selectionPaintStyle)
-        , m_textShadow(textShadow)
-        , m_selectionShadow(selectionShadow)
-    {
-    }
-    GraphicsContext* m_context;
-    TextPaintStyle* m_textPaintStyle;
-    TextPaintStyle* m_selectionPaintStyle;
-    const ShadowData* m_textShadow;
-    const ShadowData* m_selectionShadow;
-};
-
 class TextPainter {
 public:
-    TextPainter(GraphicsContext&, bool paintSelectedTextOnly, bool paintSelectedTextSeparately, const Font&,
+    TextPainter(GraphicsContext&, bool paintSelectedTextOnly, bool paintSelectedTextSeparately, const FontCascade&,
     int startPositionInTextRun, int endPositionInTextBoxString, int length, const AtomicString& emphasisMark, RenderCombineText*,
     TextRun&, FloatRect& boxRect, FloatPoint& textOrigin, int emphasisMarkOffset, const ShadowData* textShadow, const ShadowData* selectionShadow,
     bool textBoxIsHorizontal, TextPaintStyle& nonSelectionPaintStyle, TextPaintStyle& selectionPaintStyle);
 
     void paintText();
-    void paintTextInContext(GraphicsContext&, float amountToIncreaseStrokeWidthBy);
 
     DashArray dashesForIntersectionsWithRect(const FloatRect& lineExtents);
 
 private:
+    GraphicsContext& m_context;
+    TextPaintStyle& m_textPaintStyle;
+    TextPaintStyle& m_selectionPaintStyle;
+    const ShadowData* m_textShadow;
+    const ShadowData* m_selectionShadow;
     bool m_paintSelectedTextOnly;
     bool m_paintSelectedTextSeparately;
-    const Font& m_font;
+    const FontCascade& m_font;
     int m_startPositionInTextRun;
     int m_endPositionInTextRun;
     int m_length;
     const AtomicString& m_emphasisMark;
     RenderCombineText* m_combinedText;
     TextRun& m_textRun;
-    FloatRect& m_boxRect;
-    FloatPoint& m_textOrigin;
+    FloatRect m_boxRect;
+    FloatPoint m_textOrigin;
     int m_emphasisMarkOffset;
     bool m_textBoxIsHorizontal;
-    SavedDrawingStateForMask m_savedDrawingStateForMask;
+};
+
+class ShadowApplier {
+public:
+    ShadowApplier(GraphicsContext&, const ShadowData*, const FloatRect& textRect, bool lastShadowIterationShouldDrawText = true, bool opaque = false, FontOrientation = Horizontal);
+    FloatSize extraOffset() const { return m_extraOffset; }
+    bool nothingToDraw() const { return m_nothingToDraw; }
+    bool didSaveContext() const { return m_didSaveContext; }
+    ~ShadowApplier();
+
+private:
+    bool isLastShadowIteration()
+    {
+        return m_shadow && !m_shadow->next();
+    }
+
+    bool shadowIsCompletelyCoveredByText(bool textIsOpaque)
+    {
+        return textIsOpaque && m_shadow && m_shadow->location() == IntPoint() && !m_shadow->radius();
+    }
+
+    FloatSize m_extraOffset;
+    GraphicsContext& m_context;
+    const ShadowData* m_shadow;
+    bool m_onlyDrawsShadow : 1;
+    bool m_avoidDrawingShadow : 1;
+    bool m_nothingToDraw : 1;
+    bool m_didSaveContext : 1;
 };
 
 } // namespace WebCore

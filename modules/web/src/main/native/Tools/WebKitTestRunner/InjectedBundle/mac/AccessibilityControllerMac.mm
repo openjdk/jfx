@@ -41,9 +41,9 @@
 #import <JavaScriptCore/JSRetainPtr.h>
 #import <JavaScriptCore/JSStringRef.h>
 #import <JavaScriptCore/JSStringRefCF.h>
-#import <WebKit2/WKBundle.h>
-#import <WebKit2/WKBundlePage.h>
-#import <WebKit2/WKBundlePagePrivate.h>
+#import <WebKit/WKBundle.h>
+#import <WebKit/WKBundlePage.h>
+#import <WebKit/WKBundlePagePrivate.h>
 
 namespace WTR {
 
@@ -102,7 +102,7 @@ static id findAccessibleObjectById(id obj, NSString *idAttribute)
 
 PassRefPtr<AccessibilityUIElement> AccessibilityController::accessibleElementById(JSStringRef idAttribute)
 {
-    WKBundlePageRef page = InjectedBundle::shared().page()->page();
+    WKBundlePageRef page = InjectedBundle::singleton().page()->page();
     id root = static_cast<PlatformUIElement>(WKAccessibilityRootObject(page));
 
     id result = findAccessibleObjectById(root, [NSString stringWithJSStringRef:idAttribute]);

@@ -199,7 +199,7 @@ private:
 
 static PluginCache& pluginCache()
 {
-    DEFINE_STATIC_LOCAL(PluginCache, cache, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(PluginCache, cache, ());
     return cache;
 }
 

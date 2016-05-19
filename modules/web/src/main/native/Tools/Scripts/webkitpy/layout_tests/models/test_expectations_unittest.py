@@ -27,7 +27,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest2 as unittest
+import unittest
+
+from collections import OrderedDict
 
 from webkitpy.common.host_mock import MockHost
 from webkitpy.common.system.outputcapture import OutputCapture
@@ -35,12 +37,6 @@ from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.layout_tests.models.test_configuration import *
 from webkitpy.layout_tests.models.test_expectations import *
 from webkitpy.layout_tests.models.test_configuration import *
-
-try:
-    from collections import OrderedDict
-except ImportError:
-    # Needed for Python < 2.7
-    from webkitpy.thirdparty.ordered_dict import OrderedDict
 
 
 class Base(unittest.TestCase):

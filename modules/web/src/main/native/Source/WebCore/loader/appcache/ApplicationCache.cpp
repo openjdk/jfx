@@ -51,7 +51,7 @@ ApplicationCache::ApplicationCache()
 
 ApplicationCache::~ApplicationCache()
 {
-    if (m_group && !m_group->isCopy())
+    if (m_group)
         m_group->cacheDestroyed(this);
 }
 
@@ -61,9 +61,9 @@ void ApplicationCache::setGroup(ApplicationCacheGroup* group)
     m_group = group;
 }
 
-bool ApplicationCache::isComplete() const
+bool ApplicationCache::isComplete()
 {
-    return !m_group->cacheIsBeingUpdated(this);
+    return m_group && m_group->cacheIsComplete(this);
 }
 
 void ApplicationCache::setManifestResource(PassRefPtr<ApplicationCacheResource> manifest)
@@ -91,7 +91,7 @@ void ApplicationCache::addResource(PassRefPtr<ApplicationCacheResource> resource
 
         // Add the resource to the storage.
 #if !PLATFORM(JAVA)
-        cacheStorage().store(resource.get(), this);
+        ApplicationCacheStorage::singleton().store(resource.get(), this); //XXX check for other usages
 #endif
     }
 
@@ -191,47 +191,12 @@ void ApplicationCache::clearStorageID()
         resource->clearStorageID();
 }
 
-void ApplicationCache::deleteCacheForOrigin(SecurityOrigin* origin)
-{
-#if !PLATFORM(JAVA)
-    Vector<URL> urls;
-    if (!cacheStorage().manifestURLs(&urls)) {
-        LOG_ERROR("Failed to retrieve ApplicationCache manifest URLs");
-        return;
-    }
-
-    URL originURL(URL(), origin->toString());
-
-    size_t count = urls.size();
-    for (size_t i = 0; i < count; ++i) {
-        if (protocolHostAndPortAreEqual(urls[i], originURL)) {
-            ApplicationCacheGroup* group = cacheStorage().findInMemoryCacheGroup(urls[i]);
-            if (group)
-                group->makeObsolete();
-            else
-                cacheStorage().deleteCacheGroup(urls[i]);
-        }
-    }
-#endif
-}
-
-int64_t ApplicationCache::diskUsageForOrigin(SecurityOrigin* origin)
-{
-    int64_t usage = 0;
-#if !PLATFORM(JAVA)
-    cacheStorage().calculateUsageForOrigin(origin, usage);
-#endif
-    return usage;
-}
-
 #ifndef NDEBUG
 void ApplicationCache::dump()
 {
-    HashMap<String, RefPtr<ApplicationCacheResource>>::const_iterator end = m_resources.end();
-
-    for (HashMap<String, RefPtr<ApplicationCacheResource>>::const_iterator it = m_resources.begin(); it != end; ++it) {
-        printf("%s ", it->key.ascii().data());
-        ApplicationCacheResource::dumpType(it->value->type());
+    for (const auto& urlAndResource : m_resources) {
+        printf("%s ", urlAndResource.key.utf8().data());
+        ApplicationCacheResource::dumpType(urlAndResource.value->type());
     }
 }
 #endif

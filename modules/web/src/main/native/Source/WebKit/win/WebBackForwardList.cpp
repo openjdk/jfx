@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebBackForwardList.h"
 
@@ -56,7 +55,7 @@ WebBackForwardList::WebBackForwardList(PassRefPtr<BackForwardList> backForwardLi
     backForwardListWrappers().set(m_backForwardList.get(), this);
 
     gClassCount++;
-    gClassNameCount.add("WebBackForwardList");
+    gClassNameCount().add("WebBackForwardList");
 }
 
 WebBackForwardList::~WebBackForwardList()
@@ -67,7 +66,7 @@ WebBackForwardList::~WebBackForwardList()
     backForwardListWrappers().remove(m_backForwardList.get());
 
     gClassCount--;
-    gClassNameCount.remove("WebBackForwardList");
+    gClassNameCount().remove("WebBackForwardList");
 }
 
 WebBackForwardList* WebBackForwardList::createInstance(PassRefPtr<BackForwardList> backForwardList)
@@ -125,7 +124,7 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::addItem(
     if (!item || FAILED(item->QueryInterface(&webHistoryItem)))
         return E_FAIL;
 
-    m_backForwardList->addItem(webHistoryItem->historyItem());
+    m_backForwardList->addItem(*webHistoryItem->historyItem());
     return S_OK;
 }
 
@@ -210,7 +209,7 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::backListWithLimit(
 
     if (list)
         for (unsigned i = 0; i < historyItemVector.size(); i++)
-            list[i] = WebHistoryItem::createInstance(historyItemVector[i].get());
+            list[i] = WebHistoryItem::createInstance(historyItemVector[i].ptr());
 
     return S_OK;
 }
@@ -227,7 +226,7 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::forwardListWithLimit(
 
     if (list)
         for (unsigned i = 0; i < historyItemVector.size(); i++)
-            list[i] = WebHistoryItem::createInstance(historyItemVector[i].get());
+            list[i] = WebHistoryItem::createInstance(historyItemVector[i].ptr());
 
     return S_OK;
 }

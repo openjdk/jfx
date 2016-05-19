@@ -26,8 +26,6 @@
 #ifndef DFGFlushedAt_h
 #define DFGFlushedAt_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "DFGFlushFormat.h"
@@ -54,8 +52,6 @@ public:
     {
         if (format == DeadFlush)
             ASSERT(!virtualRegister.isValid());
-        else
-            ASSERT(virtualRegister.isValid());
     }
 
     bool operator!() const { return m_format == DeadFlush; }

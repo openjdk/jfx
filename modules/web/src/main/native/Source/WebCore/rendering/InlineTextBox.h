@@ -1,7 +1,7 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
  * (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2009, 2010, 2011, 2014 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,28 +26,22 @@
 #include "InlineBox.h"
 #include "RenderText.h"
 #include "TextRun.h"
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 struct CompositionUnderline;
-class DocumentMarker;
+class RenderedDocumentMarker;
 class TextPainter;
 
 const unsigned short cNoTruncation = USHRT_MAX;
 const unsigned short cFullTruncation = USHRT_MAX - 1;
 
-class BufferForAppendingHyphen : public StringBuilder {
-public:
-    BufferForAppendingHyphen() { reserveCapacity(256); }
-};
-
 class InlineTextBox : public InlineBox {
 public:
     explicit InlineTextBox(RenderText& renderer)
         : InlineBox(renderer)
-        , m_prevTextBox(0)
-        , m_nextTextBox(0)
+        , m_prevTextBox(nullptr)
+        , m_nextTextBox(nullptr)
         , m_start(0)
         , m_len(0)
         , m_truncation(cNoTruncation)
@@ -57,7 +51,7 @@ public:
 
     virtual ~InlineTextBox();
 
-    RenderText& renderer() const { return toRenderText(InlineBox::renderer()); }
+    RenderText& renderer() const { return downcast<RenderText>(InlineBox::renderer()); }
     const RenderStyle& lineStyle() const { return isFirstLine() ? renderer().firstLineStyle() : renderer().style(); }
 
     InlineTextBox* prevTextBox() const { return m_prevTextBox; }
@@ -83,6 +77,12 @@ public:
     using InlineBox::setHasHyphen;
     using InlineBox::canHaveLeadingExpansion;
     using InlineBox::setCanHaveLeadingExpansion;
+    using InlineBox::canHaveTrailingExpansion;
+    using InlineBox::setCanHaveTrailingExpansion;
+    using InlineBox::forceTrailingExpansion;
+    using InlineBox::setForceTrailingExpansion;
+    using InlineBox::forceLeadingExpansion;
+    using InlineBox::setForceLeadingExpansion;
 
     static inline bool compareByStart(const InlineTextBox* first, const InlineTextBox* second) { return first->start() < second->start(); }
 
@@ -98,9 +98,11 @@ public:
     LayoutUnit logicalLeftVisualOverflow() const { return logicalOverflowRect().x(); }
     LayoutUnit logicalRightVisualOverflow() const { return logicalOverflowRect().maxX(); }
 
-#ifndef NDEBUG
-    virtual void showBox(int = 0) const;
-    virtual const char* boxName() const;
+    virtual void dirtyOwnLineBoxes() { dirtyLineBoxes(); }
+
+#if ENABLE(TREE_DEBUGGING)
+    virtual void showLineBox(bool mark, int depth) const override final;
+    virtual const char* boxName() const override final;
 #endif
 
 private:
@@ -108,19 +110,19 @@ private:
     LayoutUnit selectionBottom() const;
     LayoutUnit selectionHeight() const;
 
-    TextRun constructTextRun(const RenderStyle&, const Font&, BufferForAppendingHyphen* = 0) const;
-    TextRun constructTextRun(const RenderStyle&, const Font&, String, int maximumLength, BufferForAppendingHyphen* = 0) const;
+    TextRun constructTextRun(const RenderStyle&, const FontCascade&, String* hyphenatedStringBuffer = nullptr) const;
+    TextRun constructTextRun(const RenderStyle&, const FontCascade&, String, unsigned maximumLength, String* hyphenatedStringBuffer = nullptr) const;
 
 public:
-    virtual FloatRect calculateBoundaries() const { return FloatRect(x(), y(), width(), height()); }
+    virtual FloatRect calculateBoundaries() const override { return FloatRect(x(), y(), width(), height()); }
 
     virtual LayoutRect localSelectionRect(int startPos, int endPos) const;
     bool isSelected(int startPos, int endPos) const;
     void selectionStartEnd(int& sPos, int& ePos);
 
 protected:
-    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom);
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) override;
+    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
 
 private:
     virtual void deleteLine() override final;
@@ -137,13 +139,6 @@ private:
 public:
     virtual bool isLineBreak() const override final;
 
-    void setExpansion(int newExpansion)
-    {
-        m_logicalWidth -= expansion();
-        InlineBox::setExpansion(newExpansion);
-        m_logicalWidth += newExpansion;
-    }
-
 private:
     virtual bool isInlineTextBox() const override final { return true; }
 
@@ -158,26 +153,20 @@ public:
     virtual int offsetForPosition(float x, bool includePartialGlyphs = true) const;
     virtual float positionForOffset(int offset) const;
 
-    // Needs to be public, so the static paintTextWithShadows() function can use it.
-    static FloatSize applyShadowToGraphicsContext(GraphicsContext*, const ShadowData*, const FloatRect& textRect, bool stroked, bool opaque, bool horizontal);
-
 protected:
-    void paintCompositionBackground(GraphicsContext*, const FloatPoint& boxOrigin, const RenderStyle&, const Font&, int startPos, int endPos);
-    void paintDocumentMarkers(GraphicsContext*, const FloatPoint& boxOrigin, const RenderStyle&, const Font&, bool background);
-    void paintCompositionUnderline(GraphicsContext*, const FloatPoint& boxOrigin, const CompositionUnderline&);
+    void paintCompositionBackground(GraphicsContext&, const FloatPoint& boxOrigin, const RenderStyle&, const FontCascade&, int startPos, int endPos);
+    void paintDocumentMarkers(GraphicsContext&, const FloatPoint& boxOrigin, const RenderStyle&, const FontCascade&, bool background);
+    void paintCompositionUnderline(GraphicsContext&, const FloatPoint& boxOrigin, const CompositionUnderline&);
 
 private:
-    void paintDecoration(GraphicsContext&, const FloatPoint& boxOrigin, TextDecoration, TextDecorationStyle, const ShadowData*, TextPainter&);
-    void paintSelection(GraphicsContext*, const FloatPoint& boxOrigin, const RenderStyle&, const Font&, Color textColor);
-    void paintDocumentMarker(GraphicsContext*, const FloatPoint& boxOrigin, DocumentMarker*, const RenderStyle&, const Font&, bool grammar);
-    void paintTextMatchMarker(GraphicsContext*, const FloatPoint& boxOrigin, DocumentMarker*, const RenderStyle&, const Font&);
-    void computeRectForReplacementMarker(DocumentMarker*, const RenderStyle&, const Font&);
+    void paintDecoration(GraphicsContext&, const FloatPoint& boxOrigin, TextDecoration, const ShadowData*, TextPainter&);
+    void paintSelection(GraphicsContext&, const FloatPoint& boxOrigin, const RenderStyle&, const FontCascade&, Color textColor);
+    void paintDocumentMarker(GraphicsContext&, const FloatPoint& boxOrigin, RenderedDocumentMarker&, const RenderStyle&, const FontCascade&, bool grammar);
+    void paintTextMatchMarker(GraphicsContext&, const FloatPoint& boxOrigin, RenderedDocumentMarker&, const RenderStyle&, const FontCascade&);
 
-    TextRun::ExpansionBehavior expansionBehavior() const
-    {
-        return (canHaveLeadingExpansion() ? TextRun::AllowLeadingExpansion : TextRun::ForbidLeadingExpansion)
-            | (expansion() && nextLeafChild() && !nextLeafChild()->isLineBreak() ? TextRun::AllowTrailingExpansion : TextRun::ForbidTrailingExpansion);
-    }
+    void computeRectForReplacementMarker(RenderedDocumentMarker&, const RenderStyle&, const FontCascade&);
+
+    ExpansionBehavior expansionBehavior() const;
 
     void behavesLikeText() const = delete;
 
@@ -192,10 +181,8 @@ private:
     unsigned short m_truncation;
 };
 
-INLINE_BOX_OBJECT_TYPE_CASTS(InlineTextBox, isInlineTextBox())
-
-void alignSelectionRectToDevicePixels(FloatRect&);
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INLINE_BOX(InlineTextBox, isInlineTextBox())
 
 #endif // InlineTextBox_h

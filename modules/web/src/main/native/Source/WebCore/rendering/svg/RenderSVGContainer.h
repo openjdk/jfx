@@ -40,9 +40,8 @@ public:
     bool isObjectBoundingBoxValid() const { return m_objectBoundingBoxValid; }
 
 protected:
-    RenderSVGContainer(SVGElement&, PassRef<RenderStyle>);
+    RenderSVGContainer(SVGElement&, Ref<RenderStyle>&&);
 
-    virtual bool isSVGContainer() const override final { return true; }
     virtual const char* renderName() const override { return "RenderSVGContainer"; }
 
     virtual bool canHaveChildren() const override final { return true; }
@@ -73,6 +72,8 @@ protected:
     void updateCachedBoundaries();
 
 private:
+    virtual bool isSVGContainer() const override final { return true; }
+
     FloatRect m_objectBoundingBox;
     bool m_objectBoundingBoxValid;
     FloatRect m_strokeBoundingBox;
@@ -80,8 +81,8 @@ private:
     bool m_needsBoundariesUpdate : 1;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSVGContainer, isSVGContainer())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGContainer, isSVGContainer())
 
 #endif // RenderSVGContainer_h

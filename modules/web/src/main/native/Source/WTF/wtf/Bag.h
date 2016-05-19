@@ -34,28 +34,41 @@ private:
     class Node {
         WTF_MAKE_FAST_ALLOCATED;
     public:
+        template<typename... Args>
+        Node(Args... args)
+            : m_item(args...)
+        {
+        }
+
         T m_item;
         Node* m_next;
     };
 
 public:
     Bag()
-        : m_head(0)
+        : m_head(nullptr)
     {
     }
 
     ~Bag()
+    {
+        clear();
+    }
+
+    void clear()
     {
         while (m_head) {
             Node* current = m_head;
             m_head = current->m_next;
             delete current;
         }
+        m_head = nullptr;
     }
 
-    T* add()
+    template<typename... Args>
+    T* add(Args... args)
     {
-        Node* newNode = new Node;
+        Node* newNode = new Node(args...);
         newNode->m_next = m_head;
         m_head = newNode;
         return &newNode->m_item;
@@ -83,6 +96,12 @@ public:
         {
             return m_node == other.m_node;
         }
+
+        bool operator!=(const iterator& other) const
+        {
+            return !(*this == other);
+        }
+
     private:
         template<typename U> friend class WTF::Bag;
         Node* m_node;

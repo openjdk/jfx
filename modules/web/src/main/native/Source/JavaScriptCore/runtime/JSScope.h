@@ -27,11 +27,12 @@
 #define JSScope_h
 
 #include "JSObject.h"
+#include "VariableEnvironment.h"
 
 namespace JSC {
 
 class ScopeChainIterator;
-class VariableWatchpointSet;
+class WatchpointSet;
 
 enum ResolveMode {
     ThrowIfNotFound,
@@ -43,6 +44,7 @@ enum ResolveType {
     GlobalProperty,
     GlobalVar,
     ClosureVar,
+    LocalClosureVar,
 
     // Ditto, but at least one intervening scope used non-strict eval, which
     // can inject an intercepting var delcaration at runtime.
@@ -68,6 +70,7 @@ inline ResolveType makeType(ResolveType type, bool needsVarInjectionChecks)
     case GlobalVar:
         return GlobalVarWithVarInjectionChecks;
     case ClosureVar:
+    case LocalClosureVar:
         return ClosureVarWithVarInjectionChecks;
     case GlobalPropertyWithVarInjectionChecks:
     case GlobalVarWithVarInjectionChecks:
@@ -86,6 +89,7 @@ inline bool needsVarInjectionChecks(ResolveType type)
     case GlobalProperty:
     case GlobalVar:
     case ClosureVar:
+    case LocalClosureVar:
         return false;
     case GlobalPropertyWithVarInjectionChecks:
     case GlobalVarWithVarInjectionChecks:
@@ -99,11 +103,11 @@ inline bool needsVarInjectionChecks(ResolveType type)
 }
 
 struct ResolveOp {
-    ResolveOp(ResolveType type, size_t depth, Structure* structure, JSActivation* activation, VariableWatchpointSet* watchpointSet, uintptr_t operand)
+    ResolveOp(ResolveType type, size_t depth, Structure* structure, JSLexicalEnvironment* lexicalEnvironment, WatchpointSet* watchpointSet, uintptr_t operand)
         : type(type)
         , depth(depth)
         , structure(structure)
-        , activation(activation)
+        , lexicalEnvironment(lexicalEnvironment)
         , watchpointSet(watchpointSet)
         , operand(operand)
     {
@@ -112,8 +116,8 @@ struct ResolveOp {
     ResolveType type;
     size_t depth;
     Structure* structure;
-    JSActivation* activation;
-    VariableWatchpointSet* watchpointSet;
+    JSLexicalEnvironment* lexicalEnvironment;
+    WatchpointSet* watchpointSet;
     uintptr_t operand;
 };
 
@@ -146,16 +150,21 @@ enum GetOrPut { Get, Put };
 class JSScope : public JSNonFinalObject {
 public:
     typedef JSNonFinalObject Base;
+    static const unsigned StructureFlags = Base::StructureFlags;
 
     friend class LLIntOffsetsExtractor;
     static size_t offsetOfNext();
 
-    JS_EXPORT_PRIVATE static JSObject* objectAtScope(JSScope*);
+    static JSObject* objectAtScope(JSScope*);
 
     static JSValue resolve(ExecState*, JSScope*, const Identifier&);
-    static ResolveOp abstractResolve(ExecState*, JSScope*, const Identifier&, GetOrPut, ResolveType);
+    static ResolveOp abstractResolve(ExecState*, size_t depthOffset, JSScope*, const Identifier&, GetOrPut, ResolveType);
+
+    static void collectVariablesUnderTDZ(JSScope*, VariableEnvironment& result);
 
     static void visitChildren(JSCell*, SlotVisitor&);
+
+    bool isLexicalScope();
 
     ScopeChainIterator begin();
     ScopeChainIterator end();
@@ -168,7 +177,6 @@ public:
 
 protected:
     JSScope(VM&, Structure*, JSScope* next);
-    static const unsigned StructureFlags = OverridesVisitChildren | Base::StructureFlags;
 
 private:
     WriteBarrier<JSScope> m_next;
@@ -189,6 +197,7 @@ public:
 
     JSObject* get() const { return JSScope::objectAtScope(m_node); }
     JSObject* operator->() const { return JSScope::objectAtScope(m_node); }
+    JSScope* scope() const { return m_node; }
 
     ScopeChainIterator& operator++() { m_node = m_node->next(); return *this; }
 
@@ -237,20 +246,9 @@ inline JSScope* Register::scope() const
     return jsCast<JSScope*>(jsValue());
 }
 
-inline VM& ExecState::vm() const
-{
-    ASSERT(scope()->vm());
-    return *scope()->vm();
-}
-
 inline JSGlobalObject* ExecState::lexicalGlobalObject() const
 {
-    return scope()->globalObject();
-}
-
-inline JSObject* ExecState::globalThisValue() const
-{
-    return scope()->globalThis();
+    return callee()->globalObject();
 }
 
 inline size_t JSScope::offsetOfNext()

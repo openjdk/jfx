@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -63,11 +63,12 @@
     readonly attribute boolean seeking;
 
     // playback state
-    [SetterRaisesException] attribute double currentTime;
-    readonly attribute double duration;
+    [SetterRaisesException] attribute unrestricted double currentTime;
+    readonly attribute unrestricted double duration;
+    [TreatReturnedNaNDateAs=NaN] Date getStartDate();
     readonly attribute boolean paused;
-    attribute double defaultPlaybackRate;
-    attribute double playbackRate;
+    attribute unrestricted double defaultPlaybackRate;
+    attribute unrestricted double playbackRate;
     readonly attribute TimeRanges played;
     readonly attribute TimeRanges seekable;
     readonly attribute boolean ended;
@@ -75,28 +76,13 @@
     [Reflect] attribute boolean loop;
     void play();
     void pause();
-    void fastSeek(double time);
+    void fastSeek(unrestricted double time);
 
     // controls
     attribute boolean controls;
-    [SetterRaisesException] attribute double volume;
+    [SetterRaisesException] attribute unrestricted double volume;
     attribute boolean muted;
     [Reflect=muted] attribute boolean defaultMuted;
-
-    attribute EventListener onemptied;
-    attribute EventListener onloadedmetadata;
-    attribute EventListener onloadeddata;
-    attribute EventListener oncanplay;
-    attribute EventListener oncanplaythrough;
-    attribute EventListener onplaying;
-    attribute EventListener onended;
-    attribute EventListener onwaiting;
-    attribute EventListener ondurationchange;
-    attribute EventListener ontimeupdate;
-    attribute EventListener onplay;
-    attribute EventListener onpause;
-    attribute EventListener onratechange;
-    attribute EventListener onvolumechange;
 
     // WebKit extensions
     attribute boolean webkitPreservesPitch;
@@ -108,26 +94,18 @@
     [Conditional=MEDIA_STATISTICS] readonly attribute unsigned long webkitAudioDecodedByteCount;
     [Conditional=MEDIA_STATISTICS] readonly attribute unsigned long webkitVideoDecodedByteCount;
 
-#if defined(ENABLE_ENCRYPTED_MEDIA) && ENABLE_ENCRYPTED_MEDIA
-    [RaisesException] void webkitGenerateKeyRequest([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString keySystem, optional Uint8Array initData);
-    [RaisesException] void webkitAddKey([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString keySystem, Uint8Array key, optional Uint8Array initData, [Default=NullString] optional DOMString sessionId);
-    [RaisesException] void webkitCancelKeyRequest([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString keySystem, [Default=NullString] optional DOMString sessionId);
+#if !defined(LANGUAGE_GOBJECT) || !LANGUAGE_GOBJECT // Work around shortcomings in the gobject binding generator handling of conditional features by turning these off for gobject.
+    [Conditional=ENCRYPTED_MEDIA, RaisesException] void webkitGenerateKeyRequest([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString keySystem, optional Uint8Array initData);
+    [Conditional=ENCRYPTED_MEDIA, RaisesException] void webkitAddKey([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString keySystem, Uint8Array key, optional Uint8Array initData, [Default=NullString] optional DOMString sessionId);
+    [Conditional=ENCRYPTED_MEDIA, RaisesException] void webkitCancelKeyRequest([TreatNullAs=NullString, TreatUndefinedAs=NullString] DOMString keySystem, [Default=NullString] optional DOMString sessionId);
 
-    attribute EventListener onwebkitkeyadded;
-    attribute EventListener onwebkitkeyerror;
-    attribute EventListener onwebkitkeymessage;
-#endif
-    [Conditional=ENCRYPTED_MEDIA|ENCRYPTED_MEDIA_V2] attribute EventListener onwebkitneedkey;
-#if defined(ENABLE_ENCRYPTED_MEDIA_V2) && ENABLE_ENCRYPTED_MEDIA_V2
-    [ImplementedAs=keys] readonly attribute MediaKeys webkitKeys;
-    [ImplementedAs=setMediaKeys] void webkitSetMediaKeys(MediaKeys mediaKeys);
-#endif
+    [Conditional=ENCRYPTED_MEDIA_V2, ImplementedAs=keys] readonly attribute MediaKeys webkitKeys;
+    [Conditional=ENCRYPTED_MEDIA_V2, ImplementedAs=setMediaKeys] void webkitSetMediaKeys(MediaKeys mediaKeys);
 
-#if defined(ENABLE_VIDEO_TRACK) && ENABLE_VIDEO_TRACK
-    [RaisesException] TextTrack addTextTrack(DOMString kind, optional DOMString label, optional DOMString language);
-    readonly attribute AudioTrackList audioTracks;
-    readonly attribute TextTrackList textTracks;
-    readonly attribute VideoTrackList videoTracks;
+    [Conditional=VIDEO_TRACK, RaisesException] TextTrack addTextTrack(DOMString kind, optional DOMString label, optional DOMString language);
+    [Conditional=VIDEO_TRACK] readonly attribute AudioTrackList audioTracks;
+    [Conditional=VIDEO_TRACK] readonly attribute TextTrackList textTracks;
+    [Conditional=VIDEO_TRACK] readonly attribute VideoTrackList videoTracks;
 #endif
 
     [Reflect, TreatNullAs=NullString] attribute DOMString mediaGroup;
@@ -137,8 +115,6 @@
     [Conditional=MEDIA_SOURCE] VideoPlaybackQuality getVideoPlaybackQuality();
 #endif
 
-    [Conditional=IOS_AIRPLAY] void webkitShowPlaybackTargetPicker();
-    [Conditional=IOS_AIRPLAY] readonly attribute boolean webkitCurrentPlaybackTargetIsWireless;
-    [Conditional=IOS_AIRPLAY] attribute EventListener onwebkitcurrentplaybacktargetiswirelesschanged;
-    [Conditional=IOS_AIRPLAY] attribute EventListener onwebkitplaybacktargetavailabilitychanged;
+    [Conditional=WIRELESS_PLAYBACK_TARGET] void webkitShowPlaybackTargetPicker();
+    [Conditional=WIRELESS_PLAYBACK_TARGET] readonly attribute boolean webkitCurrentPlaybackTargetIsWireless;
 };

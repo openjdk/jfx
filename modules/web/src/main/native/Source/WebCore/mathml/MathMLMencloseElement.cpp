@@ -45,14 +45,14 @@ MathMLMencloseElement::MathMLMencloseElement(const QualifiedName& tagName, Docum
 {
 }
 
-PassRefPtr<MathMLMencloseElement> MathMLMencloseElement::create(const QualifiedName& tagName, Document& document)
+Ref<MathMLMencloseElement> MathMLMencloseElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new MathMLMencloseElement(tagName, document));
+    return adoptRef(*new MathMLMencloseElement(tagName, document));
 }
 
-RenderPtr<RenderElement> MathMLMencloseElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> MathMLMencloseElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderMathMLMenclose>(*this, std::move(style));
+    return createRenderer<RenderMathMLMenclose>(*this, WTF::move(style));
 }
 
 bool MathMLMencloseElement::isPresentationAttribute(const QualifiedName& name) const
@@ -78,7 +78,7 @@ void MathMLMencloseElement::collectStyleForPresentationAttribute(const Qualified
     if (val.isEmpty())
         return;
     if (name == MathMLNames::notationAttr) {
-        val.split(" ", m_notationValues);
+        val.split(' ', m_notationValues);
         size_t notationValueSize = m_notationValues.size();
         for (size_t i = 0; i < notationValueSize; i++) {
             if (m_notationValues[i] == "top" || m_notationValues[i] == "longdiv") {
@@ -129,15 +129,13 @@ void MathMLMencloseElement::collectStyleForPresentationAttribute(const Qualified
 String MathMLMencloseElement::longDivLeftPadding() const
 {
     StringBuilder padding;
-    float fontSize = 0;
-    String closingBrace = ")";
-    TextRun run(closingBrace.impl(), closingBrace.length());
+    String closingBrace(")", String::ConstructFromLiteral);
+    TextRun run(closingBrace);
     Node* node = parentNode();
     if (node && node->renderer()) {
-        const Font& font = node->renderer()->style().font();
-        fontSize = font.width(run);
-        padding.append(String::number(fontSize));
-        padding.append("px");
+        const FontCascade& font = node->renderer()->style().fontCascade();
+        padding.appendNumber(font.width(run));
+        padding.appendLiteral("px");
     }
     return padding.toString();
 }

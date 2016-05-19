@@ -21,7 +21,7 @@ ALWAYS_INLINE JNIEnv* JNICALL WebCore_GetJavaEnv()
     JNIEnv* _env_var = WebCore_GetJavaEnv(); \
     if (!_env_var) return __VA_ARGS__;
 
-bool CheckAndClearException(JNIEnv* env);
+extern bool CheckAndClearException(JNIEnv* env);
 
 namespace WebCore {
 

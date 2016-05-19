@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,9 +37,8 @@ namespace JSC {
 
     class CodeBlock;
     class ExecState;
-    class JSActivation;
+    class JSLexicalEnvironment;
     class JSObject;
-    class JSPropertyNameIterator;
     class JSScope;
 
     typedef ExecState CallFrame;
@@ -57,13 +56,13 @@ namespace JSC {
         Register& operator=(CallFrame*);
         Register& operator=(CodeBlock*);
         Register& operator=(JSScope*);
+        Register& operator=(JSObject*);
 
         int32_t i() const;
-        JSActivation* activation() const;
+        JSLexicalEnvironment* lexicalEnvironment() const;
         CallFrame* callFrame() const;
         CodeBlock* codeBlock() const;
-        JSObject* function() const;
-        JSPropertyNameIterator* propertyNameIterator() const;
+        JSObject* object() const;
         JSScope* scope() const;
         int32_t unboxedInt32() const;
         int64_t unboxedInt52() const;
@@ -81,8 +80,6 @@ namespace JSC {
             Register r = jsNumber(i);
             return r;
         }
-
-        static Register withCallee(JSObject* callee);
 
     private:
         union {

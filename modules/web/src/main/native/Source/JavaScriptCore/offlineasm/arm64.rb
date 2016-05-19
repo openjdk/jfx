@@ -1,4 +1,5 @@
-# Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
+# Copyright (C) 2011, 2012, 2014 Apple Inc. All rights reserved.
+# Copyright (C) 2014 University of Szeged. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -40,14 +41,14 @@ require "risc"
 #  x1  => t1, a1, r1
 #  x2  => t2, a2
 #  x3  => a3
-#  x5  => t5
+#  x5  => t4
 #  x6  => t6
 #  x9  => (nonArgGPR1 in baseline)
 # x13  => scratch (unused in baseline)
 # x16  => scratch
 # x17  => scratch
 # x23  => t3
-# x24  => t4
+# x24  => t5
 # x27  => csr1 (tagTypeNumber)
 # x28  => csr2 (tagMask)
 # x29  => cfr
@@ -113,11 +114,13 @@ class RegisterID
         when 't3'
             arm64GPRName('x23', kind)
         when 't4'
-            arm64GPRName('x24', kind)
-        when 't5'
             arm64GPRName('x5', kind)
+        when 't5'
+            arm64GPRName('x24', kind)
         when 't6'
             arm64GPRName('x6', kind)
+        when 't7'
+            arm64GPRName('x7', kind)
         when 'cfr'
             arm64GPRName('x29', kind)
         when 'csr1'
@@ -127,7 +130,7 @@ class RegisterID
         when 'sp'
             'sp'
         when 'lr'
-            'lr'
+            'x30'
         else
             raise "Bad register name #{@name} at #{codeOriginString}"
         end
@@ -195,6 +198,64 @@ end
 # Actual lowering code follows.
 #
 
+def arm64LowerMalformedLoadStoreAddresses(list)
+    newList = []
+
+    def isAddressMalformed(operand)
+        operand.is_a? Address and not (-255..4095).include? operand.offset.value
+    end
+
+    list.each {
+        | node |
+        if node.is_a? Instruction
+            if node.opcode =~ /^store/ and isAddressMalformed(node.operands[1])
+                address = node.operands[1]
+                tmp = Tmp.new(codeOrigin, :gpr)
+                newList << Instruction.new(node.codeOrigin, "move", [address.offset, tmp])
+                newList << Instruction.new(node.codeOrigin, node.opcode, [node.operands[0], BaseIndex.new(node.codeOrigin, address.base, tmp, 1, Immediate.new(codeOrigin, 0))], node.annotation)
+            elsif node.opcode =~ /^load/ and isAddressMalformed(node.operands[0])
+                address = node.operands[0]
+                tmp = Tmp.new(codeOrigin, :gpr)
+                newList << Instruction.new(node.codeOrigin, "move", [address.offset, tmp])
+                newList << Instruction.new(node.codeOrigin, node.opcode, [BaseIndex.new(node.codeOrigin, address.base, tmp, 1, Immediate.new(codeOrigin, 0)), node.operands[1]], node.annotation)
+            else
+                newList << node
+            end
+        else
+            newList << node
+        end
+    }
+    newList
+end
+
+# Workaround for Cortex-A53 erratum (835769)
+def arm64CortexA53Fix835769(list)
+    newList = []
+    lastOpcodeUnsafe = false
+
+    list.each {
+        | node |
+        if node.is_a? Instruction
+            case node.opcode
+            when /^store/, /^load/
+                # List all macro instructions that can be lowered to a load, store or prefetch ARM64 assembly instruction
+                lastOpcodeUnsafe = true
+            when  "muli", "mulp", "mulq", "smulli"
+                # List all macro instructions that can be lowered to a 64-bit multiply-accumulate ARM64 assembly instruction
+                # (defined as one of MADD, MSUB, SMADDL, SMSUBL, UMADDL or UMSUBL).
+                if lastOpcodeUnsafe
+                    newList << Instruction.new(node.codeOrigin, "nopCortexA53Fix835769", [])
+                end
+                lastOpcodeUnsafe = false
+            else
+                lastOpcodeUnsafe = false
+            end
+        end
+        newList << node
+    }
+    newList
+end
+
 class Sequence
     def getModifiedListARM64
         result = @list
@@ -202,6 +263,7 @@ class Sequence
         result = riscLowerSimpleBranchOps(result)
         result = riscLowerHardBranchOps64(result)
         result = riscLowerShiftOps(result)
+        result = arm64LowerMalformedLoadStoreAddresses(result)
         result = riscLowerMalformedAddresses(result) {
             | node, address |
             case node.opcode
@@ -250,6 +312,7 @@ class Sequence
         result = riscLowerTest(result)
         result = assignRegistersToTemporaries(result, :gpr, ARM64_EXTRA_GPRS)
         result = assignRegistersToTemporaries(result, :fpr, ARM64_EXTRA_FPRS)
+        result = arm64CortexA53Fix835769(result)
         return result
     end
 end
@@ -367,7 +430,7 @@ def emitARM64MoveImmediate(value, target)
     [48, 32, 16, 0].each {
         | shift |
         currentValue = (value >> shift) & 0xffff
-        next if currentValue == (isNegative ? 0xffff : 0) and shift != 0
+        next if currentValue == (isNegative ? 0xffff : 0) and (shift != 0 or !first)
         if first
             if isNegative
                 $asm.puts "movn #{target.arm64Operand(:ptr)}, \##{(~currentValue) & 0xffff}, lsl \##{shift}"
@@ -584,22 +647,6 @@ class Instruction
                 | ops |
                 $asm.puts "stp #{ops[0].arm64Operand(:ptr)}, #{ops[1].arm64Operand(:ptr)}, [sp, #-16]!"
             }
-        when "popLRAndFP"
-            $asm.puts "ldp fp, lr, [sp], #16"
-        when "pushLRAndFP"
-            $asm.puts "stp fp, lr, [sp, #-16]!"
-        when "popCalleeSaves"
-            $asm.puts "ldp x28, x27, [sp], #16"
-            $asm.puts "ldp x26, x25, [sp], #16"
-            $asm.puts "ldp x24, x23, [sp], #16"
-            $asm.puts "ldp x22, x21, [sp], #16"
-            $asm.puts "ldp x20, x19, [sp], #16"
-        when "pushCalleeSaves"
-            $asm.puts "stp x20, x19, [sp, #-16]!"
-            $asm.puts "stp x22, x21, [sp, #-16]!"
-            $asm.puts "stp x24, x23, [sp, #-16]!"
-            $asm.puts "stp x26, x25, [sp, #-16]!"
-            $asm.puts "stp x28, x27, [sp, #-16]!"
         when "move"
             if operands[0].immediate?
                 emitARM64MoveImmediate(operands[0].value, operands[1])
@@ -607,13 +654,13 @@ class Instruction
                 emitARM64("mov", operands, :ptr)
             end
         when "sxi2p"
-            emitARM64("sxtw", operands, :ptr)
+            emitARM64("sxtw", operands, [:int, :ptr])
         when "sxi2q"
-            emitARM64("sxtw", operands, :ptr)
+            emitARM64("sxtw", operands, [:int, :ptr])
         when "zxi2p"
-            emitARM64("uxtw", operands, :ptr)
+            emitARM64("uxtw", operands, [:int, :ptr])
         when "zxi2q"
-            emitARM64("uxtw", operands, :ptr)
+            emitARM64("uxtw", operands, [:int, :ptr])
         when "nop"
             $asm.puts "nop"
         when "bieq", "bbeq"
@@ -818,6 +865,12 @@ class Instruction
             $asm.puts "smaddl #{operands[2].arm64Operand(:ptr)}, #{operands[0].arm64Operand(:int)}, #{operands[1].arm64Operand(:int)}, xzr"
         when "memfence"
             $asm.puts "dmb sy"
+        when "pcrtoaddr"
+            $asm.puts "adr #{operands[1].arm64Operand(:ptr)}, #{operands[0].value}"
+        when "nopCortexA53Fix835769"
+            $asm.putStr("#if CPU(ARM64_CORTEXA53)")
+            $asm.puts "nop"
+            $asm.putStr("#endif")
         else
             lowerDefault
         end

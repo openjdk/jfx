@@ -100,8 +100,7 @@ int TextAutoSizingValue::numNodes() const
 void TextAutoSizingValue::addNode(Node* node, float size)
 {
     ASSERT(node);
-    RenderText* renderText = toRenderText(node->renderer());
-    renderText->setCandidateComputedTextSize(size);
+    downcast<RenderText>(*node->renderer()).setCandidateComputedTextSize(size);
     m_autoSizedNodes.add(node);
 }
 
@@ -165,7 +164,7 @@ bool TextAutoSizingValue::adjustNodeSizes()
             FontDescription fontDescription = style->fontDescription();
             fontDescription.setComputedSize(averageSize);
             style->setFontDescription(fontDescription);
-            style->font().update(autoSizingNode->document().ensureStyleResolver().fontSelector());
+            style->fontCascade().update(&autoSizingNode->document().fontSelector());
             text->parent()->setStyle(style.releaseNonNull());
 
             RenderElement* parentRenderer = text->parent();
@@ -177,8 +176,8 @@ bool TextAutoSizingValue::adjustNodeSizes()
             if (listMarkerRenderer->isListMarker()) {
                 RefPtr<RenderStyle> style = cloneRenderStyleWithState(listMarkerRenderer->style());
                 style->setFontDescription(fontDescription);
-                style->font().update(autoSizingNode->document().ensureStyleResolver().fontSelector());
-                toRenderListMarker(*listMarkerRenderer).setStyle(style.releaseNonNull());
+                style->fontCascade().update(&autoSizingNode->document().fontSelector());
+                downcast<RenderListMarker>(*listMarkerRenderer).setStyle(style.releaseNonNull());
             }
 
             // Resize the line height of the parent.
@@ -197,7 +196,7 @@ bool TextAutoSizingValue::adjustNodeSizes()
                 newParentStyle->setLineHeight(Length(lineHeight, Fixed));
                 newParentStyle->setSpecifiedLineHeight(lineHeightLength);
                 newParentStyle->setFontDescription(fontDescription);
-                newParentStyle->font().update(autoSizingNode->document().ensureStyleResolver().fontSelector());
+                newParentStyle->fontCascade().update(&autoSizingNode->document().fontSelector());
                 parentRenderer->setStyle(newParentStyle.releaseNonNull());
             }
         }
@@ -221,7 +220,7 @@ void TextAutoSizingValue::reset()
             fontDescription.setComputedSize(originalSize);
             RefPtr<RenderStyle> style = cloneRenderStyleWithState(text->style());
             style->setFontDescription(fontDescription);
-            style->font().update(autoSizingNode->document().ensureStyleResolver().fontSelector());
+            style->fontCascade().update(&autoSizingNode->document().fontSelector());
             text->parent()->setStyle(style.releaseNonNull());
         }
         // Reset the line height of the parent.
@@ -238,7 +237,7 @@ void TextAutoSizingValue::reset()
             RefPtr<RenderStyle> newParentStyle = cloneRenderStyleWithState(parentStyle);
             newParentStyle->setLineHeight(originalLineHeight);
             newParentStyle->setFontDescription(fontDescription);
-            newParentStyle->font().update(autoSizingNode->document().ensureStyleResolver().fontSelector());
+            newParentStyle->fontCascade().update(&autoSizingNode->document().fontSelector());
             parentRenderer->setStyle(newParentStyle.releaseNonNull());
         }
     }

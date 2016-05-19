@@ -22,7 +22,9 @@
 #define InlineBox_h
 
 #include "RenderBoxModelObject.h"
-#include "TextDirection.h"
+#include "RenderText.h"
+#include "TextFlags.h"
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
@@ -37,13 +39,15 @@ class InlineBox {
 public:
     virtual ~InlineBox();
 
+    void assertNotDeleted() const;
+
     virtual void deleteLine() = 0;
     virtual void extractLine() = 0;
     virtual void attachLine() = 0;
 
     virtual bool isLineBreak() const { return renderer().isLineBreak(); }
 
-    virtual void adjustPosition(float dx, float dy);
+    WEBCORE_EXPORT virtual void adjustPosition(float dx, float dy);
     void adjustLogicalPosition(float deltaLogicalLeft, float deltaLogicalTop)
     {
         if (isHorizontal())
@@ -67,15 +71,14 @@ public:
     }
 
     virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) = 0;
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) = 0;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) = 0;
 
-public:
-#ifndef NDEBUG
-    void showTreeForThis() const;
+#if ENABLE(TREE_DEBUGGING)
+    void showNodeTreeForThis() const;
     void showLineTreeForThis() const;
 
-    virtual void showBox(int = 0) const;
-    virtual void showLineTreeAndMark(const InlineBox* = 0, const char* = 0, const InlineBox* = 0, const char* = 0, const RenderObject* = 0, int = 0) const;
+    virtual void showLineTreeAndMark(const InlineBox* markedBox, int depth) const;
+    virtual void showLineBox(bool mark, int depth) const;
     virtual const char* boxName() const;
 #endif
 
@@ -148,6 +151,7 @@ public:
 
     InlineFlowBox* parent() const
     {
+        assertNotDeleted();
         ASSERT_WITH_SECURITY_IMPLICATION(!m_hasBadParent);
         return m_parent;
     }
@@ -208,12 +212,13 @@ public:
     float logicalHeight() const;
 
     FloatRect logicalFrameRect() const { return isHorizontal() ? FloatRect(m_topLeft.x(), m_topLeft.y(), m_logicalWidth, logicalHeight()) : FloatRect(m_topLeft.y(), m_topLeft.x(), m_logicalWidth, logicalHeight()); }
+    FloatRect frameRect() const { return FloatRect(topLeft(), size()); }
 
-    virtual int baselinePosition(FontBaseline baselineType) const;
-    virtual LayoutUnit lineHeight() const;
+    WEBCORE_EXPORT virtual int baselinePosition(FontBaseline baselineType) const;
+    WEBCORE_EXPORT virtual LayoutUnit lineHeight() const;
 
-    virtual int caretMinOffset() const;
-    virtual int caretMaxOffset() const;
+    WEBCORE_EXPORT virtual int caretMinOffset() const;
+    WEBCORE_EXPORT virtual int caretMaxOffset() const;
 
     unsigned char bidiLevel() const { return m_bitfields.bidiEmbeddingLevel(); }
     void setBidiLevel(unsigned char level) { m_bitfields.setBidiEmbeddingLevel(level); }
@@ -227,19 +232,18 @@ public:
     bool isDirty() const { return m_bitfields.dirty(); }
     virtual void markDirty(bool dirty = true) { m_bitfields.setDirty(dirty); }
 
-    virtual void dirtyLineBoxes();
+    WEBCORE_EXPORT virtual void dirtyLineBoxes();
 
-    virtual RenderObject::SelectionState selectionState();
+    WEBCORE_EXPORT virtual RenderObject::SelectionState selectionState();
 
-    virtual bool canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidth) const;
+    WEBCORE_EXPORT virtual bool canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidth) const;
     // visibleLeftEdge, visibleRightEdge are in the parent's coordinate system.
-    virtual float placeEllipsisBox(bool ltr, float visibleLeftEdge, float visibleRightEdge, float ellipsisWidth, float &truncatedWidth, bool&);
+    WEBCORE_EXPORT virtual float placeEllipsisBox(bool ltr, float visibleLeftEdge, float visibleRightEdge, float ellipsisWidth, float &truncatedWidth, bool&);
 
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
     void setHasBadParent();
+    void invalidateParentChildList();
 #endif
-
-    int expansion() const { return m_bitfields.expansion(); }
 
     bool visibleToHitTesting() const { return renderer().style().visibility() == VISIBLE && renderer().style().pointerEvents() != PE_NONE; }
 
@@ -250,9 +254,9 @@ public:
     // Use with caution! The type is not checked!
     RenderBoxModelObject* boxModelObject() const
     {
-        if (!m_renderer.isText())
-            return &toRenderBoxModelObject(m_renderer);
-        return 0;
+        if (!is<RenderText>(m_renderer))
+            return &downcast<RenderBoxModelObject>(m_renderer);
+        return nullptr;
     }
 
     FloatPoint locationIncludingFlipping();
@@ -266,6 +270,19 @@ public:
 
     bool dirOverride() const { return m_bitfields.dirOverride(); }
     void setDirOverride(bool dirOverride) { m_bitfields.setDirOverride(dirOverride); }
+
+    void setExpansion(float newExpansion)
+    {
+        m_logicalWidth -= m_expansion;
+        m_expansion = newExpansion;
+        m_logicalWidth += m_expansion;
+    }
+    void setExpansionWithoutGrowing(float newExpansion)
+    {
+        ASSERT(!m_expansion);
+        m_expansion = newExpansion;
+    }
+    float expansion() const { return m_expansion; }
 
 private:
     InlineBox* m_next; // The next element on the same line as us.
@@ -298,13 +315,15 @@ public:
             , m_isHorizontal(isHorizontal)
             , m_endsWithBreak(false)
             , m_hasSelectedChildrenOrCanHaveLeadingExpansion(false)
+            , m_canHaveTrailingExpansion(false)
             , m_knownToHaveNoOverflow(true)
             , m_hasEllipsisBoxOrHyphen(false)
             , m_dirOverride(false)
             , m_behavesLikeText(false)
+            , m_forceTrailingExpansion(false)
+            , m_forceLeadingExpansion(false)
             , m_determinedIfNextOnLineExists(false)
             , m_nextOnLineExists(false)
-            , m_expansion(0)
         {
         }
 
@@ -328,11 +347,14 @@ public:
         ADD_BOOLEAN_BITFIELD(endsWithBreak, EndsWithBreak); // Whether the line ends with a <br>.
         // shared between RootInlineBox and InlineTextBox
         ADD_BOOLEAN_BITFIELD(hasSelectedChildrenOrCanHaveLeadingExpansion, HasSelectedChildrenOrCanHaveLeadingExpansion);
+        ADD_BOOLEAN_BITFIELD(canHaveTrailingExpansion, CanHaveTrailingExpansion);
         ADD_BOOLEAN_BITFIELD(knownToHaveNoOverflow, KnownToHaveNoOverflow);
         ADD_BOOLEAN_BITFIELD(hasEllipsisBoxOrHyphen, HasEllipsisBoxOrHyphen);
         // for InlineTextBox
         ADD_BOOLEAN_BITFIELD(dirOverride, DirOverride);
         ADD_BOOLEAN_BITFIELD(behavesLikeText, BehavesLikeText); // Whether or not this object represents text with a non-zero height. Includes non-image list markers, text boxes, br.
+        ADD_BOOLEAN_BITFIELD(forceTrailingExpansion, ForceTrailingExpansion);
+        ADD_BOOLEAN_BITFIELD(forceLeadingExpansion, ForceLeadingExpansion);
 
     private:
         mutable unsigned m_determinedIfNextOnLineExists : 1;
@@ -347,17 +369,11 @@ public:
     public:
         bool nextOnLineExists() const { return m_nextOnLineExists; }
         void setNextOnLineExists(bool nextOnLineExists) const { m_nextOnLineExists = nextOnLineExists; }
-
-    private:
-        signed m_expansion : 12; // for justified text
-
-    public:
-        signed expansion() const { return m_expansion; }
-        void setExpansion(signed expansion) { m_expansion = expansion; }
     };
 #undef ADD_BOOLEAN_BITFIELD
 
 private:
+    float m_expansion;
     InlineBoxBitfields m_bitfields;
 
 protected:
@@ -367,22 +383,25 @@ protected:
         , m_parent(nullptr)
         , m_renderer(renderer)
         , m_logicalWidth(0)
+        , m_expansion(0)
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+        , m_deletionSentinel(deletionSentinelNotDeletedValue)
         , m_hasBadParent(false)
 #endif
     {
     }
 
-    InlineBox(RenderObject& renderer, FloatPoint topLeft, float logicalWidth, bool firstLine, bool constructed,
-              bool dirty, bool extracted, bool isHorizontal, InlineBox* next, InlineBox* prev, InlineFlowBox* parent)
+    InlineBox(RenderObject& renderer, FloatPoint topLeft, float logicalWidth, bool firstLine, bool constructed, bool dirty, bool extracted, bool isHorizontal, InlineBox* next, InlineBox* prev, InlineFlowBox* parent)
         : m_next(next)
         , m_prev(prev)
         , m_parent(parent)
         , m_renderer(renderer)
         , m_topLeft(topLeft)
         , m_logicalWidth(logicalWidth)
+        , m_expansion(0)
         , m_bitfields(firstLine, constructed, dirty, extracted, isHorizontal)
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+        , m_deletionSentinel(deletionSentinelNotDeletedValue)
         , m_hasBadParent(false)
 #endif
     {
@@ -401,39 +420,47 @@ protected:
     void setHasHyphen(bool hasHyphen) { m_bitfields.setHasEllipsisBoxOrHyphen(hasHyphen); }
     bool canHaveLeadingExpansion() const { return m_bitfields.hasSelectedChildrenOrCanHaveLeadingExpansion(); }
     void setCanHaveLeadingExpansion(bool canHaveLeadingExpansion) { m_bitfields.setHasSelectedChildrenOrCanHaveLeadingExpansion(canHaveLeadingExpansion); }
-    signed expansion() { return m_bitfields.expansion(); }
-    void setExpansion(signed expansion) { m_bitfields.setExpansion(expansion); }
+    bool canHaveTrailingExpansion() const { return m_bitfields.canHaveTrailingExpansion(); }
+    void setCanHaveTrailingExpansion(bool canHaveTrailingExpansion) { m_bitfields.setCanHaveTrailingExpansion(canHaveTrailingExpansion); }
+    void setForceTrailingExpansion() { m_bitfields.setForceTrailingExpansion(true); }
+    bool forceTrailingExpansion() const { return m_bitfields.forceTrailingExpansion(); }
+    void setForceLeadingExpansion() { m_bitfields.setForceLeadingExpansion(true); }
+    bool forceLeadingExpansion() const { return m_bitfields.forceLeadingExpansion(); }
 
     // For InlineFlowBox and InlineTextBox
     bool extracted() const { return m_bitfields.extracted(); }
 
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
 private:
+    static const unsigned deletionSentinelNotDeletedValue = 0xF0F0F0F0U;
+    static const unsigned deletionSentinelDeletedValue = 0xF0DEADF0U;
+    unsigned m_deletionSentinel;
     bool m_hasBadParent;
 #endif
 };
 
-#define INLINE_BOX_OBJECT_TYPE_CASTS(ToValueTypeName, predicate) \
-    TYPE_CASTS_BASE(ToValueTypeName, InlineBox, object, object->predicate, object.predicate)
-
 #if ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+
 inline InlineBox::~InlineBox()
 {
 }
-#endif
 
-#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
-inline void InlineBox::setHasBadParent()
+inline void InlineBox::assertNotDeleted() const
 {
-    m_hasBadParent = true;
 }
+
 #endif
 
 } // namespace WebCore
 
-#ifndef NDEBUG
+#define SPECIALIZE_TYPE_TRAITS_INLINE_BOX(ToValueTypeName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::InlineBox& box) { return box.predicate; } \
+SPECIALIZE_TYPE_TRAITS_END()
+
+#if ENABLE(TREE_DEBUGGING)
 // Outside the WebCore namespace for ease of invocation from gdb.
-void showTree(const WebCore::InlineBox*);
+void showNodeTree(const WebCore::InlineBox*);
 void showLineTree(const WebCore::InlineBox*);
 #endif
 

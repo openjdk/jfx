@@ -52,8 +52,9 @@ public:
         , m_numArgs(numArgs)
         , m_returnRegister(returnRegister)
     {
-        // We don't care that you're using callee-save or stack registers.
+        // We don't care that you're using callee-save, stack, or hardware registers.
         m_usedRegisters.exclude(RegisterSet::stackRegisters());
+        m_usedRegisters.exclude(RegisterSet::reservedHardwareRegisters());
         m_usedRegisters.exclude(RegisterSet::calleeSaveRegisters());
 
         // The return register doesn't need to be saved.
@@ -66,7 +67,8 @@ public:
             (std::max(m_numArgs, NUMBER_OF_ARGUMENT_REGISTERS) - NUMBER_OF_ARGUMENT_REGISTERS) * wordSize;
 
         for (unsigned i = std::min(NUMBER_OF_ARGUMENT_REGISTERS, numArgs); i--;)
-            m_callingConventionRegisters.set(GPRInfo::toArgumentRegister(i));
+            m_argumentRegisters.set(GPRInfo::toArgumentRegister(i));
+        m_callingConventionRegisters.merge(m_argumentRegisters);
         if (returnRegister != InvalidGPRReg)
             m_callingConventionRegisters.set(GPRInfo::returnValueGPR);
         m_callingConventionRegisters.filter(m_usedRegisters);
@@ -83,9 +85,7 @@ public:
             stackBytesNeededForReturnAddress +
             (m_usedRegisters.numberOfSetRegisters() - numberOfCallingConventionRegisters) * wordSize;
 
-        size_t stackAlignment = 16;
-
-        m_stackBytesNeeded = (m_stackBytesNeeded + stackAlignment - 1) & ~(stackAlignment - 1);
+        m_stackBytesNeeded = (m_stackBytesNeeded + stackAlignmentBytes() - 1) & ~(stackAlignmentBytes() - 1);
 
         m_jit.subPtr(CCallHelpers::TrustedImm32(m_stackBytesNeeded), CCallHelpers::stackPointerRegister);
 
@@ -132,7 +132,7 @@ public:
 
     SlowPathCallKey keyWithTarget(void* callTarget) const
     {
-        return SlowPathCallKey(usedRegisters(), callTarget, offset());
+        return SlowPathCallKey(usedRegisters(), callTarget, m_argumentRegisters, offset());
     }
 
     MacroAssembler::Call makeCall(void* callTarget, MacroAssembler::JumpList* exceptionTarget)
@@ -148,6 +148,7 @@ public:
 private:
     State& m_state;
     RegisterSet m_usedRegisters;
+    RegisterSet m_argumentRegisters;
     RegisterSet m_callingConventionRegisters;
     CCallHelpers& m_jit;
     unsigned m_numArgs;
@@ -175,8 +176,21 @@ void storeCodeOrigin(State& state, CCallHelpers& jit, CodeOrigin codeOrigin)
 MacroAssembler::Call callOperation(
     State& state, const RegisterSet& usedRegisters, CCallHelpers& jit,
     CodeOrigin codeOrigin, MacroAssembler::JumpList* exceptionTarget,
+    J_JITOperation_ESsiCI operation, GPRReg result, StructureStubInfo* stubInfo,
+    GPRReg object, const UniquedStringImpl* uid)
+{
+    storeCodeOrigin(state, jit, codeOrigin);
+    CallContext context(state, usedRegisters, jit, 4, result);
+    jit.setupArgumentsWithExecState(
+        CCallHelpers::TrustedImmPtr(stubInfo), object, CCallHelpers::TrustedImmPtr(uid));
+    return context.makeCall(bitwise_cast<void*>(operation), exceptionTarget);
+}
+
+MacroAssembler::Call callOperation(
+    State& state, const RegisterSet& usedRegisters, CCallHelpers& jit,
+    CodeOrigin codeOrigin, MacroAssembler::JumpList* exceptionTarget,
     J_JITOperation_ESsiJI operation, GPRReg result, StructureStubInfo* stubInfo,
-    GPRReg object, StringImpl* uid)
+    GPRReg object, UniquedStringImpl* uid)
 {
     storeCodeOrigin(state, jit, codeOrigin);
     CallContext context(state, usedRegisters, jit, 4, result);
@@ -190,7 +204,7 @@ MacroAssembler::Call callOperation(
     State& state, const RegisterSet& usedRegisters, CCallHelpers& jit,
     CodeOrigin codeOrigin, MacroAssembler::JumpList* exceptionTarget,
     V_JITOperation_ESsiJJI operation, StructureStubInfo* stubInfo, GPRReg value,
-    GPRReg object, StringImpl* uid)
+    GPRReg object, UniquedStringImpl* uid)
 {
     storeCodeOrigin(state, jit, codeOrigin);
     CallContext context(state, usedRegisters, jit, 5, InvalidGPRReg);

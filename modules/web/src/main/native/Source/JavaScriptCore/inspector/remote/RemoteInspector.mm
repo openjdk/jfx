@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013, 2014 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,29 +33,41 @@
 #import "RemoteInspectorDebuggable.h"
 #import "RemoteInspectorDebuggableConnection.h"
 #import <Foundation/Foundation.h>
+#import <dispatch/dispatch.h>
 #import <notify.h>
-#import <wtf/NeverDestroyed.h>
 #import <wtf/Assertions.h>
 #import <wtf/MainThread.h>
+#import <wtf/NeverDestroyed.h>
+#import <wtf/spi/darwin/XPCSPI.h>
 #import <wtf/text/WTFString.h>
-#import <xpc/xpc.h>
 
-#if PLATFORM(IOS)
-#import <wtf/ios/WebCoreThread.h>
+#if __has_include(<sandbox/private.h>)
+#import <sandbox/private.h>
+#else
+enum sandbox_filter_type {
+    SANDBOX_FILTER_GLOBAL_NAME = 2,
+};
 #endif
+
+extern "C" int sandbox_check(pid_t, const char *operation, enum sandbox_filter_type, ...);
+extern "C" const enum sandbox_filter_type SANDBOX_CHECK_NO_REPORT;
 
 namespace Inspector {
 
-static void dispatchAsyncOnQueueSafeForAnyDebuggable(void (^block)())
+static bool canAccessWebInspectorMachPort()
 {
-#if PLATFORM(IOS)
-    if (WebCoreWebThreadIsEnabled && WebCoreWebThreadIsEnabled()) {
-        WebCoreWebThreadRun(block);
-        return;
-    }
-#endif
+    return sandbox_check(getpid(), "mach-lookup", static_cast<enum sandbox_filter_type>(SANDBOX_FILTER_GLOBAL_NAME | SANDBOX_CHECK_NO_REPORT), WIRXPCMachPortName) == 0;
+}
 
-    dispatch_async(dispatch_get_main_queue(), block);
+static bool globalAutomaticInspectionState()
+{
+    int token = 0;
+    if (notify_register_check(WIRAutomaticInspectionEnabledState, &token) != NOTIFY_STATUS_OK)
+        return false;
+
+    uint64_t automaticInspectionEnabled = 0;
+    notify_get_state(token, &automaticInspectionEnabled);
+    return automaticInspectionEnabled == 1;
 }
 
 bool RemoteInspector::startEnabled = true;
@@ -65,16 +77,29 @@ void RemoteInspector::startDisabled()
     RemoteInspector::startEnabled = false;
 }
 
-RemoteInspector& RemoteInspector::shared()
+RemoteInspector& RemoteInspector::singleton()
 {
     static NeverDestroyed<RemoteInspector> shared;
 
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        JSC::initializeThreading();
-        WTF::initializeMainThread();
-        if (RemoteInspector::startEnabled)
-            shared.get().start();
+        if (canAccessWebInspectorMachPort()) {
+            dispatch_block_t initialize = ^{
+                WTF::initializeMainThread();
+                JSC::initializeThreading();
+                if (RemoteInspector::startEnabled)
+                    shared.get().start();
+            };
+
+            if ([NSThread isMainThread])
+                initialize();
+            else {
+                // FIXME: This means that we may miss an auto-attach to a JSContext created on a non-main thread.
+                // The main thread initialization is required for certain WTF values that need to be initialized
+                // on the "real" main thread. We should investigate a better way to handle this.
+                dispatch_async(dispatch_get_main_queue(), initialize);
+            }
+        }
     });
 
     return shared;
@@ -87,6 +112,11 @@ RemoteInspector::RemoteInspector()
     , m_enabled(false)
     , m_hasActiveDebugSession(false)
     , m_pushScheduled(false)
+    , m_parentProcessIdentifier(0)
+    , m_shouldSendParentProcessInformation(false)
+    , m_automaticInspectionEnabled(false)
+    , m_automaticInspectionPaused(false)
+    , m_automaticInspectionCandidateIdentifier(0)
 {
 }
 
@@ -145,6 +175,74 @@ void RemoteInspector::updateDebuggable(RemoteInspectorDebuggable* debuggable)
     pushListingSoon();
 }
 
+void RemoteInspector::updateDebuggableAutomaticInspectCandidate(RemoteInspectorDebuggable* debuggable)
+{
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        unsigned identifier = debuggable->identifier();
+        if (!identifier)
+            return;
+
+        auto result = m_debuggableMap.set(identifier, std::make_pair(debuggable, debuggable->info()));
+        ASSERT_UNUSED(result, !result.isNewEntry);
+
+        // Don't allow automatic inspection unless it is allowed or we are stopped.
+        if (!m_automaticInspectionEnabled || !m_enabled) {
+            pushListingSoon();
+            return;
+        }
+
+        // FIXME: We should handle multiple debuggables trying to pause at the same time on different threads.
+        // To make this work we will need to change m_automaticInspectionCandidateIdentifier to be a per-thread value.
+        // Multiple attempts on the same thread should not be possible because our nested run loop is in a special RWI mode.
+        if (m_automaticInspectionPaused) {
+            LOG_ERROR("Skipping Automatic Inspection Candidate with pageId(%u) because we are already paused waiting for pageId(%u)", identifier, m_automaticInspectionCandidateIdentifier);
+            pushListingSoon();
+            return;
+        }
+
+        m_automaticInspectionPaused = true;
+        m_automaticInspectionCandidateIdentifier = identifier;
+
+        // If we are pausing before we have connected to webinspectord the candidate message will be sent as soon as the connection is established.
+        if (m_xpcConnection) {
+            pushListingNow();
+            sendAutomaticInspectionCandidateMessage();
+        }
+
+        // In case debuggers fail to respond, or we cannot connect to webinspectord, automatically continue after a short period of time.
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.8 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            std::lock_guard<std::mutex> lock(m_mutex);
+            if (m_automaticInspectionCandidateIdentifier == identifier) {
+                LOG_ERROR("Skipping Automatic Inspection Candidate with pageId(%u) because we failed to receive a response in time.", m_automaticInspectionCandidateIdentifier);
+                m_automaticInspectionPaused = false;
+            }
+        });
+    }
+
+    debuggable->pauseWaitingForAutomaticInspection();
+
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        ASSERT(m_automaticInspectionCandidateIdentifier);
+        m_automaticInspectionCandidateIdentifier = 0;
+    }
+}
+
+void RemoteInspector::sendAutomaticInspectionCandidateMessage()
+{
+    ASSERT(m_enabled);
+    ASSERT(m_automaticInspectionEnabled);
+    ASSERT(m_automaticInspectionPaused);
+    ASSERT(m_automaticInspectionCandidateIdentifier);
+    ASSERT(m_xpcConnection);
+
+    NSDictionary *details = @{WIRPageIdentifierKey: @(m_automaticInspectionCandidateIdentifier)};
+    m_xpcConnection->sendMessage(WIRAutomaticInspectionCandidateMessage, details);
+}
+
 void RemoteInspector::sendMessageToRemoteFrontend(unsigned identifier, const String& message)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -165,6 +263,34 @@ void RemoteInspector::sendMessageToRemoteFrontend(unsigned identifier, const Str
     m_xpcConnection->sendMessage(WIRRawDataMessage, userInfo);
 }
 
+void RemoteInspector::setupFailed(unsigned identifier)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    m_connectionMap.remove(identifier);
+
+    updateHasActiveDebugSession();
+
+    if (identifier == m_automaticInspectionCandidateIdentifier)
+        m_automaticInspectionPaused = false;
+
+    pushListingSoon();
+}
+
+void RemoteInspector::setupCompleted(unsigned identifier)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    if (identifier == m_automaticInspectionCandidateIdentifier)
+        m_automaticInspectionPaused = false;
+}
+
+bool RemoteInspector::waitingForAutomaticInspection(unsigned)
+{
+    // We don't take the lock to check this because we assume it will be checked repeatedly.
+    return m_automaticInspectionPaused;
+}
+
 void RemoteInspector::start()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -174,8 +300,14 @@ void RemoteInspector::start()
 
     m_enabled = true;
 
+    // Load the initial automatic inspection state when first started, so we know it before we have even connected to webinspectord.
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        m_automaticInspectionEnabled = globalAutomaticInspectionState();
+    });
+
     notify_register_dispatch(WIRServiceAvailableNotification, &m_notifyToken, m_xpcQueue, ^(int) {
-        RemoteInspector::shared().setupXPCConnectionIfNeeded();
+        RemoteInspector::singleton().setupXPCConnectionIfNeeded();
     });
 
     notify_post(WIRServiceAvailabilityCheckNotification);
@@ -185,6 +317,11 @@ void RemoteInspector::stop()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
+    stopInternal(StopSource::API);
+}
+
+void RemoteInspector::stopInternal(StopSource source)
+{
     if (!m_enabled)
         return;
 
@@ -198,8 +335,18 @@ void RemoteInspector::stop()
 
     updateHasActiveDebugSession();
 
+    m_automaticInspectionPaused = false;
+
     if (m_xpcConnection) {
-        m_xpcConnection->close();
+        switch (source) {
+        case StopSource::API:
+            m_xpcConnection->close();
+            break;
+        case StopSource::XPCMessage:
+            m_xpcConnection->closeFromMessage();
+            break;
+        }
+
         m_xpcConnection = nullptr;
     }
 
@@ -221,7 +368,28 @@ void RemoteInspector::setupXPCConnectionIfNeeded()
     m_xpcConnection->sendMessage(@"syn", nil); // Send a simple message to initialize the XPC connection.
     xpc_release(connection);
 
-    pushListingSoon();
+    if (m_automaticInspectionCandidateIdentifier) {
+        // We already have a debuggable waiting to be automatically inspected.
+        pushListingNow();
+        sendAutomaticInspectionCandidateMessage();
+    } else
+        pushListingSoon();
+}
+
+#pragma mark - Proxy Application Information
+
+void RemoteInspector::setParentProcessInformation(pid_t pid, RetainPtr<CFDataRef> auditData)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    if (m_parentProcessIdentifier || m_parentProcessAuditData)
+        return;
+
+    m_parentProcessIdentifier = pid;
+    m_parentProcessAuditData = auditData;
+
+    if (m_shouldSendParentProcessInformation)
+        receivedProxyApplicationSetupMessage(nil);
 }
 
 #pragma mark - RemoteInspectorXPCConnection::Client
@@ -231,7 +399,7 @@ void RemoteInspector::xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if ([messageName isEqualToString:WIRPermissionDenied]) {
-        stop();
+        stopInternal(StopSource::XPCMessage);
         return;
     }
 
@@ -245,8 +413,14 @@ void RemoteInspector::xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*
         receivedGetListingMessage(userInfo);
     else if ([messageName isEqualToString:WIRIndicateMessage])
         receivedIndicateMessage(userInfo);
+    else if ([messageName isEqualToString:WIRProxyApplicationSetupMessage])
+        receivedProxyApplicationSetupMessage(userInfo);
     else if ([messageName isEqualToString:WIRConnectionDiedMessage])
         receivedConnectionDiedMessage(userInfo);
+    else if ([messageName isEqualToString:WIRAutomaticInspectionConfigurationMessage])
+        receivedAutomaticInspectionConfigurationMessage(userInfo);
+    else if ([messageName isEqualToString:WIRAutomaticInspectionRejectMessage])
+        receivedAutomaticInspectionRejectMessage(userInfo);
     else
         NSLog(@"Unrecognized RemoteInspector XPC Message: %@", messageName);
 }
@@ -254,6 +428,8 @@ void RemoteInspector::xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*
 void RemoteInspector::xpcConnectionFailed(RemoteInspectorXPCConnection* connection)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
+
+    ASSERT(connection == m_xpcConnection);
     if (connection != m_xpcConnection)
         return;
 
@@ -265,10 +441,10 @@ void RemoteInspector::xpcConnectionFailed(RemoteInspectorXPCConnection* connecti
 
     updateHasActiveDebugSession();
 
-    if (m_xpcConnection) {
-        m_xpcConnection->close();
-        m_xpcConnection = nullptr;
-    }
+    m_automaticInspectionPaused = false;
+
+    // The connection will close itself.
+    m_xpcConnection = nullptr;
 }
 
 void RemoteInspector::xpcConnectionUnhandledMessage(RemoteInspectorXPCConnection*, xpc_object_t)
@@ -310,11 +486,6 @@ NSDictionary *RemoteInspector::listingForDebuggable(const RemoteInspectorDebugga
     if (debuggableInfo.hasLocalDebugger)
         [debuggableDetails setObject:@YES forKey:WIRHasLocalDebuggerKey];
 
-    if (debuggableInfo.hasParentProcess()) {
-        NSString *parentApplicationIdentifier = [NSString stringWithFormat:@"PID:%lu", (unsigned long)debuggableInfo.parentProcessIdentifier];
-        [debuggableDetails setObject:parentApplicationIdentifier forKey:WIRHostApplicationIdentifierKey];
-    }
-
     return debuggableDetails;
 }
 
@@ -350,7 +521,7 @@ void RemoteInspector::pushListingSoon()
         return;
 
     m_pushScheduled = true;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.02 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.2 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_pushScheduled)
             pushListingNow();
@@ -370,6 +541,7 @@ void RemoteInspector::updateHasActiveDebugSession()
     // FIXME: Expose some way to access this state in an embedder.
     // Legacy iOS WebKit 1 had a notification. This will need to be smarter with WebKit2.
 }
+
 
 #pragma mark - Received XPC Messages
 
@@ -399,7 +571,14 @@ void RemoteInspector::receivedSetupMessage(NSDictionary *userInfo)
     RemoteInspectorDebuggable* debuggable = it->value.first;
     RemoteInspectorDebuggableInfo debuggableInfo = it->value.second;
     RefPtr<RemoteInspectorDebuggableConnection> connection = adoptRef(new RemoteInspectorDebuggableConnection(debuggable, connectionIdentifier, sender, debuggableInfo.type));
-    if (!connection->setup()) {
+    bool isAutomaticInspection = m_automaticInspectionCandidateIdentifier == debuggable->identifier();
+
+    bool automaticallyPause = false;
+    NSNumber *automaticallyPauseObject = [userInfo objectForKey:WIRAutomaticallyPause];
+    if ([automaticallyPauseObject isKindOfClass:[NSNumber class]])
+        automaticallyPause = [automaticallyPauseObject boolValue];
+
+    if (!connection->setup(isAutomaticInspection, automaticallyPause)) {
         connection->close();
         return;
     }
@@ -467,15 +646,44 @@ void RemoteInspector::receivedIndicateMessage(NSDictionary *userInfo)
     unsigned identifier = [pageId unsignedIntValue];
     BOOL indicateEnabled = [[userInfo objectForKey:WIRIndicateEnabledKey] boolValue];
 
-    dispatchAsyncOnQueueSafeForAnyDebuggable(^{
-        std::lock_guard<std::mutex> lock(m_mutex);
+    callOnWebThreadOrDispatchAsyncOnMainThread(^{
+        RemoteInspectorDebuggable* debuggable = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
 
-        auto it = m_debuggableMap.find(identifier);
-        if (it == m_debuggableMap.end())
-            return;
+            auto it = m_debuggableMap.find(identifier);
+            if (it == m_debuggableMap.end())
+                return;
 
-        RemoteInspectorDebuggable* debuggable = it->value.first;
+            debuggable = it->value.first;
+        }
         debuggable->setIndicating(indicateEnabled);
+    });
+}
+
+void RemoteInspector::receivedProxyApplicationSetupMessage(NSDictionary *)
+{
+    ASSERT(m_xpcConnection);
+    if (!m_xpcConnection)
+        return;
+
+    if (!m_parentProcessIdentifier || !m_parentProcessAuditData) {
+        // We are a proxy application without parent process information.
+        // Wait a bit for the information, but give up after a second.
+        m_shouldSendParentProcessInformation = true;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            std::lock_guard<std::mutex> lock(m_mutex);
+            if (m_shouldSendParentProcessInformation)
+                stopInternal(StopSource::XPCMessage);
+        });
+        return;
+    }
+
+    m_shouldSendParentProcessInformation = false;
+
+    m_xpcConnection->sendMessage(WIRProxyApplicationSetupResponseMessage, @{
+        WIRProxyApplicationParentPIDKey: @(m_parentProcessIdentifier),
+        WIRProxyApplicationParentAuditDataKey: (NSData *)m_parentProcessAuditData.get(),
     });
 }
 
@@ -500,6 +708,23 @@ void RemoteInspector::receivedConnectionDiedMessage(NSDictionary *userInfo)
     m_connectionMap.remove(it);
 
     updateHasActiveDebugSession();
+}
+
+void RemoteInspector::receivedAutomaticInspectionConfigurationMessage(NSDictionary *userInfo)
+{
+    m_automaticInspectionEnabled = [[userInfo objectForKey:WIRAutomaticInspectionEnabledKey] boolValue];
+
+    if (!m_automaticInspectionEnabled && m_automaticInspectionPaused)
+        m_automaticInspectionPaused = false;
+}
+
+void RemoteInspector::receivedAutomaticInspectionRejectMessage(NSDictionary *userInfo)
+{
+    unsigned rejectionIdentifier = [[userInfo objectForKey:WIRPageIdentifierKey] unsignedIntValue];
+
+    ASSERT(rejectionIdentifier == m_automaticInspectionCandidateIdentifier);
+    if (rejectionIdentifier == m_automaticInspectionCandidateIdentifier)
+        m_automaticInspectionPaused = false;
 }
 
 } // namespace Inspector

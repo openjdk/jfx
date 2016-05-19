@@ -25,7 +25,6 @@
 #include "config.h"
 #include "HTMLElement.h"
 
-#include "Attribute.h"
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
@@ -40,6 +39,7 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
+#include "HTMLBDIElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLCollection.h"
 #include "HTMLDocument.h"
@@ -47,10 +47,9 @@
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "HTMLTemplateElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "NodeTraversal.h"
-#include "RenderLineBreak.h"
+#include "RenderElement.h"
 #include "ScriptController.h"
 #include "Settings.h"
 #include "StyleProperties.h"
@@ -67,9 +66,9 @@ namespace WebCore {
 using namespace HTMLNames;
 using namespace WTF;
 
-PassRefPtr<HTMLElement> HTMLElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLElement> HTMLElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLElement(tagName, document));
+    return adoptRef(*new HTMLElement(tagName, document));
 }
 
 String HTMLElement::nodeName() const
@@ -91,28 +90,28 @@ bool HTMLElement::ieForbidsInsertHTML() const
     // This is also called from editing and assumed to be the list of tags
     // for which no end tag should be serialized. It's unclear if the list for
     // IE compat and the list for serialization sanity are the same.
-    if (hasLocalName(areaTag)
-        || hasLocalName(baseTag)
-        || hasLocalName(basefontTag)
-        || hasLocalName(brTag)
-        || hasLocalName(colTag)
-        || hasLocalName(embedTag)
-        || hasLocalName(frameTag)
-        || hasLocalName(hrTag)
-        || hasLocalName(imageTag)
-        || hasLocalName(imgTag)
-        || hasLocalName(inputTag)
-        || hasLocalName(isindexTag)
-        || hasLocalName(linkTag)
-        || hasLocalName(metaTag)
-        || hasLocalName(paramTag)
-        || hasLocalName(sourceTag)
-        || hasLocalName(wbrTag))
+    if (hasTagName(areaTag)
+        || hasTagName(baseTag)
+        || hasTagName(basefontTag)
+        || hasTagName(brTag)
+        || hasTagName(colTag)
+        || hasTagName(embedTag)
+        || hasTagName(frameTag)
+        || hasTagName(hrTag)
+        || hasTagName(imageTag)
+        || hasTagName(imgTag)
+        || hasTagName(inputTag)
+        || hasTagName(isindexTag)
+        || hasTagName(linkTag)
+        || hasTagName(metaTag)
+        || hasTagName(paramTag)
+        || hasTagName(sourceTag)
+        || hasTagName(wbrTag))
         return true;
     // FIXME: I'm not sure why dashboard mode would want to change the
     // serialization of <canvas>, that seems like a bad idea.
 #if ENABLE(DASHBOARD_SUPPORT)
-    if (hasLocalName(canvasTag)) {
+    if (hasTagName(canvasTag)) {
         Settings* settings = document().settings();
         if (settings && settings->usesDashboardBackwardCompatibilityMode())
             return true;
@@ -123,7 +122,7 @@ bool HTMLElement::ieForbidsInsertHTML() const
 
 static inline CSSValueID unicodeBidiAttributeForDirAuto(HTMLElement& element)
 {
-    if (element.hasLocalName(preTag) || element.hasLocalName(textareaTag))
+    if (element.hasTagName(preTag) || element.hasTagName(textareaTag))
         return CSSValueWebkitPlaintext;
     // FIXME: For bdo element, dir="auto" should result in "bidi-override isolate" but we don't support having multiple values in unicode-bidi yet.
     // See https://bugs.webkit.org/show_bug.cgi?id=73164.
@@ -134,7 +133,7 @@ unsigned HTMLElement::parseBorderWidthAttribute(const AtomicString& value) const
 {
     unsigned borderWidth = 0;
     if (value.isEmpty() || !parseHTMLNonNegativeInteger(value, borderWidth))
-        return hasLocalName(tableTag) ? 1 : borderWidth;
+        return hasTagName(tableTag) ? 1 : borderWidth;
     return borderWidth;
 }
 
@@ -167,6 +166,32 @@ static bool isLTROrRTLIgnoringCase(const AtomicString& dirAttributeValue)
     return equalIgnoringCase(dirAttributeValue, "rtl") || equalIgnoringCase(dirAttributeValue, "ltr");
 }
 
+enum class ContentEditableType {
+    Inherit,
+    True,
+    False,
+    PlaintextOnly
+};
+
+static inline ContentEditableType contentEditableType(const AtomicString& value)
+{
+    if (value.isNull())
+        return ContentEditableType::Inherit;
+    if (value.isEmpty() || equalIgnoringCase(value, "true"))
+        return ContentEditableType::True;
+    if (equalIgnoringCase(value, "false"))
+        return ContentEditableType::False;
+    if (equalIgnoringCase(value, "plaintext-only"))
+        return ContentEditableType::PlaintextOnly;
+
+    return ContentEditableType::Inherit;
+}
+
+static ContentEditableType contentEditableType(const HTMLElement& element)
+{
+    return contentEditableType(element.fastGetAttribute(contenteditableAttr));
+}
+
 void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == alignAttr) {
@@ -175,24 +200,26 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
         else
             addPropertyToPresentationAttributeStyle(style, CSSPropertyTextAlign, value);
     } else if (name == contenteditableAttr) {
-        if (value.isEmpty() || equalIgnoringCase(value, "true")) {
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserModify, CSSValueReadWrite);
+        CSSValueID userModifyValue = CSSValueReadWrite;
+        switch (contentEditableType(value)) {
+        case ContentEditableType::Inherit:
+            return;
+        case ContentEditableType::False:
+            userModifyValue = CSSValueReadOnly;
+            break;
+        case ContentEditableType::PlaintextOnly:
+            userModifyValue = CSSValueReadWritePlaintextOnly;
+            FALLTHROUGH;
+        case ContentEditableType::True:
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitNbspMode, CSSValueSpace);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitLineBreak, CSSValueAfterWhiteSpace);
 #if PLATFORM(IOS)
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitTextSizeAdjust, CSSValueNone);
 #endif
-        } else if (equalIgnoringCase(value, "plaintext-only")) {
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserModify, CSSValueReadWritePlaintextOnly);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitNbspMode, CSSValueSpace);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitLineBreak, CSSValueAfterWhiteSpace);
-#if PLATFORM(IOS)
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitTextSizeAdjust, CSSValueNone);
-#endif
-        } else if (equalIgnoringCase(value, "false"))
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserModify, CSSValueReadOnly);
+            break;
+        }
+        addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserModify, userModifyValue);
     } else if (name == hiddenAttr) {
         addPropertyToPresentationAttributeStyle(style, CSSPropertyDisplay, CSSValueNone);
     } else if (name == draggableAttr) {
@@ -220,12 +247,20 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
         StyledElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
-static NEVER_INLINE void populateEventNameForAttributeLocalNameMap(HashMap<AtomicStringImpl*, AtomicString>& map)
+HTMLElement::EventHandlerNameMap HTMLElement::createEventHandlerNameMap()
 {
-    static const QualifiedName* const simpleTable[] = {
+    EventHandlerNameMap map;
+
+    static const QualifiedName* const table[] = {
         &onabortAttr,
+        &onanimationendAttr,
+        &onanimationiterationAttr,
+        &onanimationstartAttr,
+        &onautocompleteAttr,
+        &onautocompleteerrorAttr,
         &onbeforecopyAttr,
         &onbeforecutAttr,
+        &onbeforeloadAttr,
         &onbeforepasteAttr,
         &onblurAttr,
         &oncanplayAttr,
@@ -250,6 +285,9 @@ static NEVER_INLINE void populateEventNameForAttributeLocalNameMap(HashMap<Atomi
         &onfocusAttr,
         &onfocusinAttr,
         &onfocusoutAttr,
+        &ongesturechangeAttr,
+        &ongestureendAttr,
+        &ongesturestartAttr,
         &oninputAttr,
         &oninvalidAttr,
         &onkeydownAttr,
@@ -275,6 +313,7 @@ static NEVER_INLINE void populateEventNameForAttributeLocalNameMap(HashMap<Atomi
         &onratechangeAttr,
         &onresetAttr,
         &onscrollAttr,
+        &onsearchAttr,
         &onseekedAttr,
         &onseekingAttr,
         &onselectAttr,
@@ -287,149 +326,154 @@ static NEVER_INLINE void populateEventNameForAttributeLocalNameMap(HashMap<Atomi
         &ontouchendAttr,
         &ontouchmoveAttr,
         &ontouchstartAttr,
+        &ontransitionendAttr,
         &onvolumechangeAttr,
         &onwaitingAttr,
-#if ENABLE(WILL_REVEAL_EDGE_EVENTS)
+        &onwebkitbeginfullscreenAttr,
+        &onwebkitcurrentplaybacktargetiswirelesschangedAttr,
+        &onwebkitendfullscreenAttr,
+        &onwebkitfullscreenchangeAttr,
+        &onwebkitfullscreenerrorAttr,
+        &onwebkitkeyaddedAttr,
+        &onwebkitkeyerrorAttr,
+        &onwebkitkeymessageAttr,
+        &onwebkitmouseforcechangedAttr,
+        &onwebkitmouseforcedownAttr,
+        &onwebkitmouseforcewillbeginAttr,
+        &onwebkitmouseforceupAttr,
+        &onwebkitneedkeyAttr,
+        &onwebkitplaybacktargetavailabilitychangedAttr,
+        &onwebkitpresentationmodechangedAttr,
         &onwebkitwillrevealbottomAttr,
         &onwebkitwillrevealleftAttr,
         &onwebkitwillrevealrightAttr,
         &onwebkitwillrevealtopAttr,
-#endif
         &onwheelAttr,
-#if ENABLE(IOS_GESTURE_EVENTS)
-        &ongesturechangeAttr,
-        &ongestureendAttr,
-        &ongesturestartAttr,
-#endif
-#if ENABLE(FULLSCREEN_API)
-        &onwebkitfullscreenchangeAttr,
-        &onwebkitfullscreenerrorAttr,
-#endif
     };
 
-    for (unsigned i = 0, size = WTF_ARRAY_LENGTH(simpleTable); i < size; ++i) {
-        // FIXME: Would be nice to check these against the actual event names in eventNames().
-        // Not obvious how to do that simply, though.
-        const AtomicString& attributeName = simpleTable[i]->localName();
+    populateEventHandlerNameMap(map, table);
 
-        // Remove the "on" prefix. Requires some memory allocation and computing a hash, but
-        // by not using pointers from eventNames(), simpleTable can be initialized at compile time.
-        AtomicString eventName = attributeName.string().substring(2);
-
-        map.add(attributeName.impl(), eventName);
-    }
-
-    struct CustomMapping {
+    struct UnusualMapping {
         const QualifiedName& attributeName;
         const AtomicString& eventName;
     };
 
-    const CustomMapping customTable[] = {
-        { ontransitionendAttr, eventNames().webkitTransitionEndEvent },
+    const UnusualMapping unusualPairsTable[] = {
         { onwebkitanimationendAttr, eventNames().webkitAnimationEndEvent },
         { onwebkitanimationiterationAttr, eventNames().webkitAnimationIterationEvent },
         { onwebkitanimationstartAttr, eventNames().webkitAnimationStartEvent },
         { onwebkittransitionendAttr, eventNames().webkitTransitionEndEvent },
     };
 
-    for (unsigned i = 0, size = WTF_ARRAY_LENGTH(customTable); i < size; ++i)
-        map.add(customTable[i].attributeName.localName().impl(), customTable[i].eventName);
+    for (auto& entry : unusualPairsTable)
+        map.add(entry.attributeName.localName().impl(), entry.eventName);
+
+    return map;
+}
+
+void HTMLElement::populateEventHandlerNameMap(EventHandlerNameMap& map, const QualifiedName* const table[], size_t tableSize)
+{
+    for (size_t i = 0; i < tableSize; ++i) {
+        auto* entry = table[i];
+
+        // FIXME: Would be nice to check these against the actual event names in eventNames().
+        // Not obvious how to do that simply, though.
+        auto& attributeName = entry->localName();
+
+        // Remove the "on" prefix. Requires some memory allocation and computing a hash, but by not
+        // using pointers from eventNames(), the passed-in table can be initialized at compile time.
+        AtomicString eventName = attributeName.string().substring(2);
+
+        map.add(attributeName.impl(), WTF::move(eventName));
+    }
+}
+
+const AtomicString& HTMLElement::eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap& map)
+{
+    ASSERT(!attributeName.localName().isNull());
+
+    // Event handler attributes have no namespace.
+    if (!attributeName.namespaceURI().isNull())
+        return nullAtom;
+
+    // Fast early return for names that don't start with "on".
+    AtomicStringImpl& localName = *attributeName.localName().impl();
+    if (localName.length() < 3 || localName[0] != 'o' || localName[1] != 'n')
+        return nullAtom;
+
+    auto it = map.find(&localName);
+    return it == map.end() ? nullAtom : it->value;
+}
+
+const AtomicString& HTMLElement::eventNameForEventHandlerAttribute(const QualifiedName& attributeName)
+{
+    static NeverDestroyed<EventHandlerNameMap> map = createEventHandlerNameMap();
+    return eventNameForEventHandlerAttribute(attributeName, map.get());
+}
+
+Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& node)
+{
+    if (auto* startElement = is<Element>(node) ? &downcast<Element>(node) : node.parentElement()) {
+        for (auto& element : lineageOfType<HTMLElement>(*startElement)) {
+            switch (contentEditableType(element)) {
+            case ContentEditableType::True:
+                return Editability::CanEditRichly;
+            case ContentEditableType::PlaintextOnly:
+                return Editability::CanEditPlainText;
+            case ContentEditableType::False:
+                return Editability::ReadOnly;
+            case ContentEditableType::Inherit:
+                break;
+            }
+        }
+    }
+
+    auto& document = node.document();
+    if (is<HTMLDocument>(document))
+        return downcast<HTMLDocument>(document).inDesignMode() ? Editability::CanEditRichly : Editability::ReadOnly;
+
+    return Editability::ReadOnly;
+}
+
+bool HTMLElement::matchesReadWritePseudoClass() const
+{
+    return editabilityFromContentEditableAttr(*this) != Editability::ReadOnly;
 }
 
 void HTMLElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (isIdAttributeName(name) || name == classAttr || name == styleAttr)
-        return StyledElement::parseAttribute(name, value);
-
-    if (name == dirAttr)
+    if (name == dirAttr) {
         dirAttributeChanged(value);
-    else if (name == tabindexAttr) {
-        int tabindex = 0;
+        return;
+    }
+
+    if (name == tabindexAttr) {
+        int tabIndex = 0;
         if (value.isEmpty())
             clearTabIndexExplicitlyIfNeeded();
-        else if (parseHTMLInteger(value, tabindex)) {
-            // Clamp tabindex to the range of 'short' to match Firefox's behavior.
-            setTabIndexExplicitly(std::max(static_cast<int>(std::numeric_limits<short>::min()), std::min(tabindex, static_cast<int>(std::numeric_limits<short>::max()))));
+        else if (parseHTMLInteger(value, tabIndex)) {
+            // Clamp tab index to a 16-bit value to match Firefox's behavior.
+            setTabIndexExplicitly(std::max(-0x8000, std::min(tabIndex, 0x7FFF)));
         }
-    } else if (name.namespaceURI().isNull()) {
-        // FIXME: Can we do this even faster by checking the local name "on" prefix before we do anything with the map?
-        static NeverDestroyed<HashMap<AtomicStringImpl*, AtomicString>> eventNamesGlobal;
-        auto& eventNames = eventNamesGlobal.get();
-        if (eventNames.isEmpty())
-            populateEventNameForAttributeLocalNameMap(eventNames);
-        const AtomicString& eventName = eventNames.get(name.localName().impl());
-        if (!eventName.isNull())
-            setAttributeEventListener(eventName, name, value);
-    }
-}
-
-String HTMLElement::innerHTML() const
-{
-    return createMarkup(*this, ChildrenOnly);
-}
-
-String HTMLElement::outerHTML() const
-{
-    return createMarkup(*this);
-}
-
-void HTMLElement::setInnerHTML(const String& html, ExceptionCode& ec)
-{
-    if (RefPtr<DocumentFragment> fragment = createFragmentForInnerOuterHTML(html, this, AllowScriptingContent, ec)) {
-        ContainerNode* container = this;
-#if ENABLE(TEMPLATE_ELEMENT)
-        if (hasLocalName(templateTag))
-            container = toHTMLTemplateElement(this)->content();
-#endif
-        replaceChildrenWithFragment(*container, fragment.release(), ec);
-    }
-}
-
-static void mergeWithNextTextNode(Text& node, ExceptionCode& ec)
-{
-    Node* next = node.nextSibling();
-    if (!next || !next->isTextNode())
-        return;
-
-    Ref<Text> textNode(node);
-    Ref<Text> textNext(toText(*next));
-    textNode->appendData(textNext->data(), ec);
-    if (ec)
-        return;
-    textNext->remove(ec);
-}
-
-void HTMLElement::setOuterHTML(const String& html, ExceptionCode& ec)
-{
-    Element* p = parentElement();
-    if (!p || !p->isHTMLElement()) {
-        ec = NO_MODIFICATION_ALLOWED_ERR;
         return;
     }
-    RefPtr<HTMLElement> parent = toHTMLElement(p);
-    RefPtr<Node> prev = previousSibling();
-    RefPtr<Node> next = nextSibling();
 
-    RefPtr<DocumentFragment> fragment = createFragmentForInnerOuterHTML(html, parent.get(), AllowScriptingContent, ec);
-    if (ec)
-        return;
-
-    parent->replaceChild(fragment.release(), this, ec);
-    RefPtr<Node> node = next ? next->previousSibling() : nullptr;
-    if (!ec && node && node->isTextNode())
-        mergeWithNextTextNode(toText(*node), ec);
-    if (!ec && prev && prev->isTextNode())
-        mergeWithNextTextNode(toText(*prev), ec);
+    auto& eventName = eventNameForEventHandlerAttribute(name);
+    if (!eventName.isNull())
+        setAttributeEventListener(eventName, name, value);
 }
 
-PassRefPtr<DocumentFragment> HTMLElement::textToFragment(const String& text, ExceptionCode& ec)
+Ref<DocumentFragment> HTMLElement::textToFragment(const String& text, ExceptionCode& ec)
 {
-    RefPtr<DocumentFragment> fragment = DocumentFragment::create(document());
-    unsigned int i, length = text.length();
-    UChar c = 0;
-    for (unsigned int start = 0; start < length; ) {
+    ec = 0;
+
+    auto fragment = DocumentFragment::create(document());
+
+    for (unsigned start = 0, length = text.length(); start < length; ) {
 
         // Find next line break.
+        UChar c;
+        unsigned i;
         for (i = start; i < length; i++) {
             c = text[i];
             if (c == '\r' || c == '\n')
@@ -438,21 +482,66 @@ PassRefPtr<DocumentFragment> HTMLElement::textToFragment(const String& text, Exc
 
         fragment->appendChild(Text::create(document(), text.substring(start, i - start)), ec);
         if (ec)
-            return nullptr;
+            break;
 
-        if (c == '\r' || c == '\n') {
-            fragment->appendChild(HTMLBRElement::create(document()), ec);
-            if (ec)
-                return nullptr;
-            // Make sure \r\n doesn't result in two line breaks.
-            if (c == '\r' && i + 1 < length && text[i + 1] == '\n')
-                i++;
-        }
+        if (i == length)
+            break;
+
+        fragment->appendChild(HTMLBRElement::create(document()), ec);
+        if (ec)
+            break;
+
+        // Make sure \r\n doesn't result in two line breaks.
+        if (c == '\r' && i + 1 < length && text[i + 1] == '\n')
+            ++i;
 
         start = i + 1; // Character after line break.
     }
 
     return fragment;
+}
+
+static inline bool shouldProhibitSetInnerOuterText(const HTMLElement& element)
+{
+    return element.hasTagName(colTag)
+        || element.hasTagName(colgroupTag)
+        || element.hasTagName(framesetTag)
+        || element.hasTagName(headTag)
+        || element.hasTagName(htmlTag)
+        || element.hasTagName(tableTag)
+        || element.hasTagName(tbodyTag)
+        || element.hasTagName(tfootTag)
+        || element.hasTagName(theadTag)
+        || element.hasTagName(trTag);
+}
+
+// Returns the conforming 'dir' value associated with the state the attribute is in (in its canonical case), if any,
+// or the empty string if the attribute is in a state that has no associated keyword value or if the attribute is
+// not in a defined state (e.g. the attribute is missing and there is no missing value default).
+// http://www.whatwg.org/specs/web-apps/current-work/multipage/common-dom-interfaces.html#limited-to-only-known-values
+static inline const AtomicString& toValidDirValue(const AtomicString& value)
+{
+    static NeverDestroyed<AtomicString> ltrValue("ltr", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<AtomicString> rtlValue("rtl", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<AtomicString> autoValue("auto", AtomicString::ConstructFromLiteral);
+
+    if (equalIgnoringCase(value, ltrValue))
+        return ltrValue;
+    if (equalIgnoringCase(value, rtlValue))
+        return rtlValue;
+    if (equalIgnoringCase(value, autoValue))
+        return autoValue;
+    return nullAtom;
+}
+
+const AtomicString& HTMLElement::dir() const
+{
+    return toValidDirValue(fastGetAttribute(dirAttr));
+}
+
+void HTMLElement::setDir(const AtomicString& value)
+{
+    setAttribute(dirAttr, value);
 }
 
 void HTMLElement::setInnerText(const String& text, ExceptionCode& ec)
@@ -461,10 +550,7 @@ void HTMLElement::setInnerText(const String& text, ExceptionCode& ec)
         ec = NO_MODIFICATION_ALLOWED_ERR;
         return;
     }
-    if (hasLocalName(colTag) || hasLocalName(colgroupTag) || hasLocalName(framesetTag) ||
-        hasLocalName(headTag) || hasLocalName(htmlTag) || hasLocalName(tableTag) ||
-        hasLocalName(tbodyTag) || hasLocalName(tfootTag) || hasLocalName(theadTag) ||
-        hasLocalName(trTag)) {
+    if (shouldProhibitSetInnerOuterText(*this)) {
         ec = NO_MODIFICATION_ALLOWED_ERR;
         return;
     }
@@ -509,10 +595,7 @@ void HTMLElement::setOuterText(const String& text, ExceptionCode& ec)
         ec = NO_MODIFICATION_ALLOWED_ERR;
         return;
     }
-    if (hasLocalName(colTag) || hasLocalName(colgroupTag) || hasLocalName(framesetTag) ||
-        hasLocalName(headTag) || hasLocalName(htmlTag) || hasLocalName(tableTag) ||
-        hasLocalName(tbodyTag) || hasLocalName(tfootTag) || hasLocalName(theadTag) ||
-        hasLocalName(trTag)) {
+    if (shouldProhibitSetInnerOuterText(*this)) {
         ec = NO_MODIFICATION_ALLOWED_ERR;
         return;
     }
@@ -534,17 +617,17 @@ void HTMLElement::setOuterText(const String& text, ExceptionCode& ec)
     else
         newChild = Text::create(document(), text);
 
-    if (!this || !parentNode())
+    if (!parentNode())
         ec = HIERARCHY_REQUEST_ERR;
     if (ec)
         return;
     parent->replaceChild(newChild.release(), this, ec);
 
     RefPtr<Node> node = next ? next->previousSibling() : nullptr;
-    if (!ec && node && node->isTextNode())
-        mergeWithNextTextNode(toText(*node), ec);
-    if (!ec && prev && prev->isTextNode())
-        mergeWithNextTextNode(toText(*prev), ec);
+    if (!ec && is<Text>(node.get()))
+        mergeWithNextTextNode(downcast<Text>(*node), ec);
+    if (!ec && is<Text>(prev.get()))
+        mergeWithNextTextNode(downcast<Text>(*prev), ec);
 }
 
 Node* HTMLElement::insertAdjacent(const String& where, Node* newChild, ExceptionCode& ec)
@@ -586,8 +669,8 @@ Element* HTMLElement::insertAdjacentElement(const String& where, Element* newChi
     }
 
     Node* returnValue = insertAdjacent(where, newChild, ec);
-    ASSERT_WITH_SECURITY_IMPLICATION(!returnValue || returnValue->isElementNode());
-    return toElement(returnValue);
+    ASSERT_WITH_SECURITY_IMPLICATION(!returnValue || is<Element>(*returnValue));
+    return downcast<Element>(returnValue);
 }
 
 // Step 3 of http://www.whatwg.org/specs/web-apps/current-work/multipage/apis-in-html-documents.html#insertadjacenthtml()
@@ -595,12 +678,12 @@ static Element* contextElementForInsertion(const String& where, Element* element
 {
     if (equalIgnoringCase(where, "beforeBegin") || equalIgnoringCase(where, "afterEnd")) {
         ContainerNode* parent = element->parentNode();
-        if (parent && !parent->isElementNode()) {
+        if (parent && !is<Element>(*parent)) {
             ec = NO_MODIFICATION_ALLOWED_ERR;
             return nullptr;
         }
-        ASSERT_WITH_SECURITY_IMPLICATION(!parent || parent->isElementNode());
-        return toElement(parent);
+        ASSERT_WITH_SECURITY_IMPLICATION(!parent || is<Element>(*parent));
+        return downcast<Element>(parent);
     }
     if (equalIgnoringCase(where, "afterBegin") || equalIgnoringCase(where, "beforeEnd"))
         return element;
@@ -672,17 +755,16 @@ bool HTMLElement::supportsFocus() const
 
 String HTMLElement::contentEditable() const
 {
-    const AtomicString& value = fastGetAttribute(contenteditableAttr);
-
-    if (value.isNull())
+    switch (contentEditableType(*this)) {
+    case ContentEditableType::Inherit:
         return ASCIILiteral("inherit");
-    if (value.isEmpty() || equalIgnoringCase(value, "true"))
+    case ContentEditableType::True:
         return ASCIILiteral("true");
-    if (equalIgnoringCase(value, "false"))
+    case ContentEditableType::False:
         return ASCIILiteral("false");
-    if (equalIgnoringCase(value, "plaintext-only"))
+    case ContentEditableType::PlaintextOnly:
         return ASCIILiteral("plaintext-only");
-
+    }
     return ASCIILiteral("inherit");
 }
 
@@ -746,11 +828,6 @@ short HTMLElement::tabIndex() const
     return -1;
 }
 
-void HTMLElement::setTabIndex(int value)
-{
-    setIntegralAttribute(tabindexAttr, value);
-}
-
 TranslateAttributeMode HTMLElement::translateAttributeMode() const
 {
     const AtomicString& value = fastGetAttribute(translateAttr);
@@ -784,18 +861,13 @@ void HTMLElement::setTranslate(bool enable)
     setAttribute(translateAttr, enable ? "yes" : "no");
 }
 
-PassRefPtr<HTMLCollection> HTMLElement::children()
-{
-    return ensureCachedHTMLCollection(NodeChildren);
-}
-
 bool HTMLElement::rendererIsNeeded(const RenderStyle& style)
 {
-    if (hasLocalName(noscriptTag)) {
+    if (hasTagName(noscriptTag)) {
         Frame* frame = document().frame();
         if (frame && frame->script().canExecuteScripts(NotAboutToExecuteScript))
             return false;
-    } else if (hasLocalName(noembedTag)) {
+    } else if (hasTagName(noembedTag)) {
         Frame* frame = document().frame();
         if (frame && frame->loader().subframeLoader().allowPlugins(NotAboutToInstantiatePlugin))
             return false;
@@ -803,11 +875,9 @@ bool HTMLElement::rendererIsNeeded(const RenderStyle& style)
     return StyledElement::rendererIsNeeded(style);
 }
 
-RenderPtr<RenderElement> HTMLElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> HTMLElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    if (hasLocalName(wbrTag))
-        return createRenderer<RenderLineBreak>(*this, std::move(style));
-    return RenderElement::createFor(*this, std::move(style));
+    return RenderElement::createFor(*this, WTF::move(style));
 }
 
 HTMLFormElement* HTMLElement::virtualForm() const
@@ -817,7 +887,10 @@ HTMLFormElement* HTMLElement::virtualForm() const
 
 static inline bool elementAffectsDirectionality(const Node& node)
 {
-    return node.isHTMLElement() && (node.hasTagName(bdiTag) || toHTMLElement(node).hasAttribute(dirAttr));
+    if (!is<HTMLElement>(node))
+        return false;
+    const HTMLElement& element = downcast<HTMLElement>(node);
+    return is<HTMLBDIElement>(element) || element.fastHasAttribute(dirAttr);
 }
 
 static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastNode = nullptr)
@@ -833,13 +906,13 @@ static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastN
         if (elementAffectsDirectionality(*node)) {
             if (node == lastNode)
                 return;
-            node = NodeTraversal::nextSkippingChildren(node, firstNode);
+            node = NodeTraversal::nextSkippingChildren(*node, firstNode);
             continue;
         }
         node->setSelfOrAncestorHasDirAutoAttribute(flag);
         if (node == lastNode)
             return;
-        node = NodeTraversal::next(node, firstNode);
+        node = NodeTraversal::next(*node, firstNode);
     }
 }
 
@@ -868,12 +941,12 @@ TextDirection HTMLElement::directionalityIfhasDirAutoAttribute(bool& isAuto) con
 
 TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) const
 {
-    if (isHTMLTextFormControlElement(*this)) {
-        HTMLTextFormControlElement* textElement = toHTMLTextFormControlElement(const_cast<HTMLElement*>(this));
+    if (is<HTMLTextFormControlElement>(*this)) {
+        HTMLTextFormControlElement& textElement = downcast<HTMLTextFormControlElement>(const_cast<HTMLElement&>(*this));
         bool hasStrongDirectionality;
-        UCharDirection textDirection = textElement->value().defaultWritingDirection(&hasStrongDirectionality);
+        UCharDirection textDirection = textElement.value().defaultWritingDirection(&hasStrongDirectionality);
         if (strongDirectionalityTextNode)
-            *strongDirectionalityTextNode = hasStrongDirectionality ? textElement : nullptr;
+            *strongDirectionalityTextNode = hasStrongDirectionality ? &textElement : nullptr;
         return (textDirection == U_LEFT_TO_RIGHT) ? LTR : RTL;
     }
 
@@ -881,16 +954,16 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
     while (node) {
         // Skip bdi, script, style and text form controls.
         if (equalIgnoringCase(node->nodeName(), "bdi") || node->hasTagName(scriptTag) || node->hasTagName(styleTag)
-            || (node->isElementNode() && toElement(node)->isTextFormControl())) {
-            node = NodeTraversal::nextSkippingChildren(node, this);
+            || (is<Element>(*node) && downcast<Element>(*node).isTextFormControl())) {
+            node = NodeTraversal::nextSkippingChildren(*node, this);
             continue;
         }
 
         // Skip elements with valid dir attribute
-        if (node->isElementNode()) {
-            AtomicString dirAttributeValue = toElement(node)->fastGetAttribute(dirAttr);
+        if (is<Element>(*node)) {
+            AtomicString dirAttributeValue = downcast<Element>(*node).fastGetAttribute(dirAttr);
             if (isLTROrRTLIgnoringCase(dirAttributeValue) || equalIgnoringCase(dirAttributeValue, "auto")) {
-                node = NodeTraversal::nextSkippingChildren(node, this);
+                node = NodeTraversal::nextSkippingChildren(*node, this);
                 continue;
             }
         }
@@ -904,7 +977,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
                 return (textDirection == U_LEFT_TO_RIGHT) ? LTR : RTL;
             }
         }
-        node = NodeTraversal::next(node, this);
+        node = NodeTraversal::next(*node, this);
     }
     if (strongDirectionalityTextNode)
         *strongDirectionalityTextNode = nullptr;
@@ -915,8 +988,8 @@ void HTMLElement::dirAttributeChanged(const AtomicString& value)
 {
     Element* parent = parentElement();
 
-    if (parent && parent->isHTMLElement() && parent->selfOrAncestorHasDirAutoAttribute())
-        toHTMLElement(parent)->adjustDirectionalityIfNeededAfterChildAttributeChanged(this);
+    if (is<HTMLElement>(parent) && parent->selfOrAncestorHasDirAutoAttribute())
+        downcast<HTMLElement>(*parent).adjustDirectionalityIfNeededAfterChildAttributeChanged(this);
 
     if (equalIgnoringCase(value, "auto"))
         calculateAndAdjustDirectionality();
@@ -950,22 +1023,13 @@ void HTMLElement::calculateAndAdjustDirectionality()
 void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChangeType changeType)
 {
     // FIXME: This function looks suspicious.
-    if (document().renderView() && (changeType == ElementRemoved || changeType == TextRemoved)) {
-        Node* node = beforeChange ? beforeChange->nextSibling() : nullptr;
-        for (; node; node = node->nextSibling()) {
-            if (elementAffectsDirectionality(*node))
-                continue;
-
-            setHasDirAutoFlagRecursively(node, false);
-        }
-    }
 
     if (!selfOrAncestorHasDirAutoAttribute())
         return;
 
     Node* oldMarkedNode = nullptr;
     if (beforeChange)
-        oldMarkedNode = changeType == ElementInserted ? ElementTraversal::nextSibling(beforeChange) : beforeChange->nextSibling();
+        oldMarkedNode = changeType == ElementInserted ? ElementTraversal::nextSibling(*beforeChange) : beforeChange->nextSibling();
 
     while (oldMarkedNode && elementAffectsDirectionality(*oldMarkedNode))
         oldMarkedNode = oldMarkedNode->nextSibling();
@@ -978,11 +1042,6 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
             return;
         }
     }
-}
-
-bool HTMLElement::isURLAttribute(const Attribute& attribute) const
-{
-    return StyledElement::isURLAttribute(attribute);
 }
 
 void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, const String& value)

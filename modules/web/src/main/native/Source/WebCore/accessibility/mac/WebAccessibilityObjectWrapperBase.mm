@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -47,6 +47,7 @@
 #import "ColorMac.h"
 #import "ContextMenuController.h"
 #import "Font.h"
+#import "FontCascade.h"
 #import "Frame.h"
 #import "FrameLoaderClient.h"
 #import "FrameSelection.h"
@@ -63,10 +64,8 @@
 #import "RenderView.h"
 #import "RenderWidget.h"
 #import "ScrollView.h"
-#import "SimpleFontData.h"
 #import "TextCheckerClient.h"
 #import "TextCheckingHelper.h"
-#import "TextIterator.h"
 #import "VisibleUnits.h"
 #import "WebCoreFrameView.h"
 #import "WebCoreObjCExtras.h"
@@ -103,7 +102,7 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
 
 - (void)detach
 {
-    m_object = 0;
+    m_object = nullptr;
 }
 
 - (BOOL)updateObjectBackingStore
@@ -148,7 +147,7 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
 
 // This should be the "visible" text that's actually on the screen if possible.
 // If there's alternative text, that can override the title.
-- (NSString *)accessibilityTitle
+- (NSString *)baseAccessibilityTitle
 {
     // Static text objects should not have a title. Its content is communicated in its AXValue.
     if (m_object->roleValue() == StaticTextRole)
@@ -181,7 +180,7 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
     return [NSString string];
 }
 
-- (NSString *)accessibilityDescription
+- (NSString *)baseAccessibilityDescription
 {
     // Static text objects should not have a description. Its content is communicated in its AXValue.
     // One exception is the media control labels that have a value and a description. Those are set programatically.
@@ -213,7 +212,7 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
     return [NSString string];
 }
 
-- (NSString *)accessibilityHelpText
+- (NSString *)baseAccessibilityHelpText
 {
     Vector<AccessibilityText> textOrder;
     m_object->accessibilityText(textOrder);
@@ -384,13 +383,66 @@ static BOOL accessibilityShouldRepostNotifications;
 + (void)accessibilitySetShouldRepostNotifications:(BOOL)repost
 {
     accessibilityShouldRepostNotifications = repost;
+#if PLATFORM(MAC)
+    AXObjectCache::setShouldRepostNotificationsForTests(repost);
+#endif
 }
 
 - (void)accessibilityPostedNotification:(NSString *)notificationName
 {
+    if (accessibilityShouldRepostNotifications)
+        [self accessibilityPostedNotification:notificationName userInfo:nil];
+}
+
+static bool isValueTypeSupported(id value)
+{
+    return [value isKindOfClass:[NSString class]] || [value isKindOfClass:[NSNumber class]] || [value isKindOfClass:[WebAccessibilityObjectWrapperBase class]];
+}
+
+static NSArray *arrayRemovingNonSupportedTypes(NSArray *array)
+{
+    ASSERT([array isKindOfClass:[NSArray class]]);
+    NSMutableArray *mutableArray = [array mutableCopy];
+    for (NSUInteger i = 0; i < [mutableArray count];) {
+        id value = [mutableArray objectAtIndex:i];
+        if ([value isKindOfClass:[NSDictionary class]])
+            [mutableArray replaceObjectAtIndex:i withObject:dictionaryRemovingNonSupportedTypes(value)];
+        else if ([value isKindOfClass:[NSArray class]])
+            [mutableArray replaceObjectAtIndex:i withObject:arrayRemovingNonSupportedTypes(value)];
+        else if (!isValueTypeSupported(value)) {
+            [mutableArray removeObjectAtIndex:i];
+            continue;
+        }
+        i++;
+    }
+    return [mutableArray autorelease];
+}
+
+static NSDictionary *dictionaryRemovingNonSupportedTypes(NSDictionary *dictionary)
+{
+    if (!dictionary)
+        return nil;
+    ASSERT([dictionary isKindOfClass:[NSDictionary class]]);
+    NSMutableDictionary *mutableDictionary = [dictionary mutableCopy];
+    for (NSString *key in dictionary) {
+        id value = [dictionary objectForKey:key];
+        if ([value isKindOfClass:[NSDictionary class]])
+            [mutableDictionary setObject:dictionaryRemovingNonSupportedTypes(value) forKey:key];
+        else if ([value isKindOfClass:[NSArray class]])
+            [mutableDictionary setObject:arrayRemovingNonSupportedTypes(value) forKey:key];
+        else if (!isValueTypeSupported(value))
+            [mutableDictionary removeObjectForKey:key];
+    }
+    return [mutableDictionary autorelease];
+}
+
+- (void)accessibilityPostedNotification:(NSString *)notificationName userInfo:(NSDictionary *)userInfo
+{
     if (accessibilityShouldRepostNotifications) {
-        NSDictionary* userInfo = [NSDictionary dictionaryWithObjectsAndKeys:notificationName, @"notificationName", nil];
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"AXDRTNotification" object:self userInfo:userInfo];
+        ASSERT(notificationName);
+        userInfo = dictionaryRemovingNonSupportedTypes(userInfo);
+        NSDictionary *info = [NSDictionary dictionaryWithObjectsAndKeys:notificationName, @"notificationName", userInfo, @"userInfo", nil];
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"AXDRTNotification" object:self userInfo:info];
     }
 }
 

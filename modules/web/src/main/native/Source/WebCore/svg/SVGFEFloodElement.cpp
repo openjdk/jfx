@@ -19,11 +19,8 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SVGFEFloodElement.h"
 
-#include "Attribute.h"
 #include "RenderStyle.h"
 #include "SVGNames.h"
 #include "SVGRenderStyle.h"
@@ -36,11 +33,10 @@ inline SVGFEFloodElement::SVGFEFloodElement(const QualifiedName& tagName, Docume
     ASSERT(hasTagName(SVGNames::feFloodTag));
 }
 
-PassRefPtr<SVGFEFloodElement> SVGFEFloodElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFEFloodElement> SVGFEFloodElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFEFloodElement(tagName, document));
+    return adoptRef(*new SVGFEFloodElement(tagName, document));
 }
-
 
 bool SVGFEFloodElement::setFilterEffectAttribute(FilterEffect* effect, const QualifiedName& attrName)
 {
@@ -58,11 +54,11 @@ bool SVGFEFloodElement::setFilterEffectAttribute(FilterEffect* effect, const Qua
     return false;
 }
 
-PassRefPtr<FilterEffect> SVGFEFloodElement::build(SVGFilterBuilder*, Filter* filter)
+RefPtr<FilterEffect> SVGFEFloodElement::build(SVGFilterBuilder*, Filter& filter)
 {
     RenderObject* renderer = this->renderer();
     if (!renderer)
-        return 0;
+        return nullptr;
 
     const SVGRenderStyle& svgStyle = renderer->style().svgStyle();
 
@@ -73,5 +69,3 @@ PassRefPtr<FilterEffect> SVGFEFloodElement::build(SVGFilterBuilder*, Filter* fil
 }
 
 }
-
-#endif // ENABLE(FILTERS)

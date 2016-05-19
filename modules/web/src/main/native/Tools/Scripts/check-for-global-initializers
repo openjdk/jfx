@@ -11,7 +11,7 @@
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
 #     documentation and/or other materials provided with the distribution. 
-# 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+# 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
 #     from this software without specific prior written permission. 
 #
@@ -45,9 +45,6 @@ my $target = $ENV{'TARGET_NAME'};
 my $variant = $ENV{'CURRENT_VARIANT'};
 my $coverageBuild = $ENV{'WEBKIT_COVERAGE_BUILD'};
 my $debugRoot = $ENV{'WEBKIT_DEBUG_ROOT'};
-
-$arch = $ENV{'NATIVE_ARCH'} if !$arch; # for Xcode 2.1, which does not have CURRENT_ARCH
-$variant = "normal" if !$variant; # for Xcode 2.1, which does not have CURRENT_VARIANT
 
 my $executablePath = "$ENV{'TARGET_BUILD_DIR'}/$ENV{'EXECUTABLE_PATH'}";
 
@@ -116,7 +113,6 @@ for my $file (sort @files) {
                 next if $shortName eq "Page.o";
                 next if $shortName eq "Range.o";
                 next if $shortName eq "RenderObject.o";
-                next if $shortName eq "SVGElementInstance.o";
                 next if $shortName eq "SubresourceLoader.o";
                 next if $shortName eq "XMLHttpRequest.o";
             }

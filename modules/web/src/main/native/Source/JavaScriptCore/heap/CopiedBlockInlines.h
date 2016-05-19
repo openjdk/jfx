@@ -40,8 +40,7 @@ inline bool CopiedBlock::shouldReportLiveBytes(SpinLockHolder&, JSCell* owner)
     // If we always added live bytes we would double count for elements in the remembered
     // set across collections.
     // If we didn't always add live bytes to new blocks, we'd get too few.
-    bool ownerIsRemembered = MarkedBlock::blockFor(owner)->isRemembered(owner);
-    return !ownerIsRemembered || !m_isOld;
+    return !Heap::isRemembered(owner) || !m_isOld;
 }
 
 inline void CopiedBlock::reportLiveBytes(SpinLockHolder&, JSCell* owner, CopyToken token, unsigned bytes)
@@ -52,7 +51,7 @@ inline void CopiedBlock::reportLiveBytes(SpinLockHolder&, JSCell* owner, CopyTok
 #endif
     m_liveBytes += bytes;
     checkConsistency();
-    ASSERT(m_liveBytes <= CopiedBlock::blockSize);
+    ASSERT(m_liveBytes <= m_capacity);
 
     if (isPinned())
         return;
@@ -63,7 +62,7 @@ inline void CopiedBlock::reportLiveBytes(SpinLockHolder&, JSCell* owner, CopyTok
     }
 
     if (!m_workList)
-        m_workList = adoptPtr(new CopyWorkList(Heap::heap(owner)->blockAllocator()));
+        m_workList = std::make_unique<CopyWorkList>();
 
     m_workList->append(CopyWorklistItem(owner, token));
 }

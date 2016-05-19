@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,8 +27,8 @@
 #define CSSFontSelector_h
 
 #include "CachedResourceHandle.h"
+#include "Font.h"
 #include "FontSelector.h"
-#include "SimpleFontData.h"
 #include "Timer.h"
 #include <memory>
 #include <wtf/Forward.h>
@@ -49,25 +49,25 @@ class StyleRuleFontFace;
 
 class CSSFontSelector final : public FontSelector {
 public:
-    static PassRefPtr<CSSFontSelector> create(Document* document)
+    static Ref<CSSFontSelector> create(Document& document)
     {
-        return adoptRef(new CSSFontSelector(document));
+        return adoptRef(*new CSSFontSelector(document));
     }
     virtual ~CSSFontSelector();
 
     virtual unsigned version() const override { return m_version; }
     virtual unsigned uniqueId() const override { return m_uniqueId; }
 
-    virtual PassRefPtr<FontData> getFontData(const FontDescription&, const AtomicString&) override;
-    virtual size_t fallbackFontDataCount() override;
-    virtual PassRefPtr<FontData> getFallbackFontData(const FontDescription&, size_t) override;
+    virtual FontRanges fontRangesForFamily(const FontDescription&, const AtomicString&) override;
+    virtual size_t fallbackFontCount() override;
+    virtual PassRefPtr<Font> fallbackFontAt(const FontDescription&, size_t) override;
     CSSSegmentedFontFace* getFontFace(const FontDescription&, const AtomicString& family);
 
     virtual bool resolvesFamilyFor(const FontDescription&) const override;
 
     void clearDocument();
 
-    void addFontFaceRule(const StyleRuleFontFace*);
+    void addFontFaceRule(const StyleRuleFontFace*, bool isInitiatingElementInUserAgentShadowTree);
 
     void fontLoaded();
     virtual void fontCacheInvalidated() override;
@@ -82,11 +82,11 @@ public:
     void beginLoadingFontSoon(CachedFont*);
 
 private:
-    CSSFontSelector(Document*);
+    explicit CSSFontSelector(Document&);
 
     void dispatchInvalidationCallbacks();
 
-    void beginLoadTimerFired(Timer<CSSFontSelector>&);
+    void beginLoadTimerFired();
 
     Document* m_document;
     HashMap<String, std::unique_ptr<Vector<RefPtr<CSSFontFace>>>, CaseFoldingHash> m_fontFaces;
@@ -95,7 +95,7 @@ private:
     HashSet<FontSelectorClient*> m_clients;
 
     Vector<CachedResourceHandle<CachedFont>> m_fontsToBeginLoading;
-    Timer<CSSFontSelector> m_beginLoadingTimer;
+    Timer m_beginLoadingTimer;
 
     unsigned m_uniqueId;
     unsigned m_version;

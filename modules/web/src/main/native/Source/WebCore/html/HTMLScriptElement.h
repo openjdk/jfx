@@ -31,7 +31,7 @@ namespace WebCore {
 
 class HTMLScriptElement final : public HTMLElement, public ScriptElement {
 public:
-    static PassRefPtr<HTMLScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted = false);
+    static Ref<HTMLScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted = false);
 
     String text() const { return scriptContent(); }
     void setText(const String&);
@@ -46,6 +46,7 @@ private:
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void finishedInsertingSubtree() override;
     virtual void childrenChanged(const ChildChange&) override;
 
     virtual bool isURLAttribute(const Attribute&) const override;
@@ -64,10 +65,8 @@ private:
 
     virtual void dispatchLoadEvent() override;
 
-    virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren() override;
+    virtual RefPtr<Element> cloneElementWithoutAttributesAndChildren(Document&) override;
 };
-
-NODE_TYPE_CASTS(HTMLScriptElement)
 
 } //namespace
 

@@ -43,21 +43,19 @@ namespace WebCore {
 
 using namespace MathMLNames;
 
-RenderMathMLBlock::RenderMathMLBlock(Element& container, PassRef<RenderStyle> style)
-    : RenderFlexibleBox(container, std::move(style))
-    , m_ignoreInAccessibilityTree(false)
+RenderMathMLBlock::RenderMathMLBlock(Element& container, Ref<RenderStyle>&& style)
+    : RenderFlexibleBox(container, WTF::move(style))
 {
 }
 
-RenderMathMLBlock::RenderMathMLBlock(Document& document, PassRef<RenderStyle> style)
-    : RenderFlexibleBox(document, std::move(style))
-    , m_ignoreInAccessibilityTree(false)
+RenderMathMLBlock::RenderMathMLBlock(Document& document, Ref<RenderStyle>&& style)
+    : RenderFlexibleBox(document, WTF::move(style))
 {
 }
 
 bool RenderMathMLBlock::isChildAllowed(const RenderObject& child, const RenderStyle&) const
 {
-    return child.node() && isElement(*child.node());
+    return is<Element>(child.node());
 }
 
 RenderPtr<RenderMathMLBlock> RenderMathMLBlock::createAnonymousMathMLBlock()
@@ -74,11 +72,10 @@ int RenderMathMLBlock::baselinePosition(FontBaseline baselineType, bool firstLin
     if (linePositionMode == PositionOfInteriorLineBoxes)
         return 0;
 
-    LayoutUnit baseline = firstLineBaseline(); // FIXME: This may be unnecessary after flex baselines are implemented (https://bugs.webkit.org/show_bug.cgi?id=96188).
-    if (baseline != -1)
-        return baseline;
-
-    return RenderFlexibleBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
+    // FIXME: This may be unnecessary after flex baselines are implemented (https://bugs.webkit.org/show_bug.cgi?id=96188).
+    return firstLineBaseline().valueOrCompute([&] {
+        return RenderFlexibleBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
+    });
 }
 
 const char* RenderMathMLBlock::renderName() const
@@ -224,7 +221,7 @@ bool parseMathMLLength(const String& string, LayoutUnit& lengthValue, const Rend
         return true;
     }
     if (unit == "em") {
-        lengthValue = floatValue * style->font().size();
+        lengthValue = floatValue * style->fontCascade().size();
         return true;
     }
     if (unit == "ex") {
@@ -295,13 +292,13 @@ bool parseMathMLNamedSpace(const String& string, LayoutUnit& lengthValue, const 
             length = -7;
     }
     if (length) {
-        lengthValue = length * style->font().size() / 18;
+        lengthValue = length * style->fontCascade().size() / 18;
         return true;
     }
     return false;
 }
 
-int RenderMathMLTable::firstLineBaseline() const
+Optional<int> RenderMathMLTable::firstLineBaseline() const
 {
     // In legal MathML, we'll have a MathML parent. That RenderFlexibleBox parent will use our firstLineBaseline() for baseline alignment, per
     // http://dev.w3.org/csswg/css3-flexbox/#flex-baselines. We want to vertically center an <mtable>, such as a matrix. Essentially the whole <mtable> element fits on a

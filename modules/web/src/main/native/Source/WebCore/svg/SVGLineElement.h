@@ -31,15 +31,14 @@ namespace WebCore {
 class SVGLineElement final : public SVGGraphicsElement,
                              public SVGExternalResourcesRequired {
 public:
-    static PassRefPtr<SVGLineElement> create(const QualifiedName&, Document&);
+    static Ref<SVGLineElement> create(const QualifiedName&, Document&);
 
 private:
     SVGLineElement(const QualifiedName&, Document&);
 
     virtual bool isValid() const override { return SVGTests::isValid(); }
-    virtual bool supportsFocus() const override { return true; }
 
-    bool isSupportedAttribute(const QualifiedName&);
+    static bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
@@ -52,11 +51,9 @@ private:
         DECLARE_ANIMATED_LENGTH(Y1, y1)
         DECLARE_ANIMATED_LENGTH(X2, x2)
         DECLARE_ANIMATED_LENGTH(Y2, y2)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
+        DECLARE_ANIMATED_BOOLEAN_OVERRIDE(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 };
-
-NODE_TYPE_CASTS(SVGLineElement)
 
 } // namespace WebCore
 

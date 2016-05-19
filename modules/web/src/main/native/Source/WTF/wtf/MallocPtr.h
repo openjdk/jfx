@@ -61,9 +61,7 @@ public:
 
     T *leakPtr() WARN_UNUSED_RETURN
     {
-        T* ptr = m_ptr;
-        m_ptr = nullptr;
-        return ptr;
+        return std::exchange(m_ptr, nullptr);
     }
 
     bool operator!() const
@@ -73,7 +71,7 @@ public:
 
     MallocPtr& operator=(MallocPtr&& other)
     {
-        MallocPtr ptr = std::move(other);
+        MallocPtr ptr = WTF::move(other);
         swap(ptr);
 
         return *this;
@@ -85,6 +83,19 @@ public:
     }
 
     template<typename U> friend MallocPtr<U> adoptMallocPtr(U*);
+
+    static MallocPtr malloc(size_t size)
+    {
+        MallocPtr mallocPtr;
+        mallocPtr.m_ptr = static_cast<T*>(fastMalloc(size));
+
+        return mallocPtr;
+    }
+
+    void realloc(size_t newSize)
+    {
+        m_ptr = static_cast<T*>(fastRealloc(m_ptr, newSize));
+    }
 
 private:
     explicit MallocPtr(T* ptr)

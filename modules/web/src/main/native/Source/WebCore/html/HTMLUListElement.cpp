@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLUListElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "HTMLNames.h"
 
@@ -37,14 +36,14 @@ HTMLUListElement::HTMLUListElement(const QualifiedName& tagName, Document& docum
     ASSERT(hasTagName(ulTag));
 }
 
-PassRefPtr<HTMLUListElement> HTMLUListElement::create(Document& document)
+Ref<HTMLUListElement> HTMLUListElement::create(Document& document)
 {
-    return adoptRef(new HTMLUListElement(ulTag, document));
+    return adoptRef(*new HTMLUListElement(ulTag, document));
 }
 
-PassRefPtr<HTMLUListElement> HTMLUListElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLUListElement> HTMLUListElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLUListElement(tagName, document));
+    return adoptRef(*new HTMLUListElement(tagName, document));
 }
 
 bool HTMLUListElement::isPresentationAttribute(const QualifiedName& name) const

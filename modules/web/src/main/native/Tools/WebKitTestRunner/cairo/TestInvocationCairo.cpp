@@ -32,7 +32,7 @@
 #include "PixelDumpSupport.h"
 #include "PlatformWebView.h"
 #include "TestController.h"
-#include <WebKit2/WKImageCairo.h>
+#include <WebKit/WKImageCairo.h>
 #include <cairo/cairo.h>
 #include <cstdio>
 #include <wtf/Assertions.h>
@@ -106,14 +106,9 @@ static void paintRepaintRectOverlay(cairo_surface_t* surface, WKArrayRef repaint
     cairo_destroy(context);
 }
 
-void TestInvocation::dumpPixelsAndCompareWithExpected(WKImageRef wkImage, WKArrayRef repaintRects)
+void TestInvocation::dumpPixelsAndCompareWithExpected(WKImageRef, WKArrayRef repaintRects)
 {
-#if PLATFORM(EFL)
-    UNUSED_PARAM(wkImage);
-    cairo_surface_t* surface = WKImageCreateCairoSurface(TestController::shared().mainWebView()->windowSnapshotImage().get());
-#else
-    cairo_surface_t* surface = WKImageCreateCairoSurface(wkImage);
-#endif
+    cairo_surface_t* surface = WKImageCreateCairoSurface(TestController::singleton().mainWebView()->windowSnapshotImage().get());
 
     if (repaintRects)
         paintRepaintRectOverlay(surface, repaintRects);

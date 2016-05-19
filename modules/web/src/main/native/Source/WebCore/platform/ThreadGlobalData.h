@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,7 +30,6 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/text/StringHash.h>
 
 #include <wtf/ThreadSpecific.h>
@@ -39,28 +38,23 @@ using WTF::ThreadSpecific;
 
 namespace WebCore {
 
-    class EventNames;
-    class ReplayInputTypes;
-    class ThreadLocalInspectorCounters;
     class ThreadTimers;
 
     struct CachedResourceRequestInitiators;
+    struct EventNames;
     struct ICUConverterWrapper;
     struct TECConverterWrapper;
 
     class ThreadGlobalData {
         WTF_MAKE_NONCOPYABLE(ThreadGlobalData);
     public:
-        ThreadGlobalData();
-        ~ThreadGlobalData();
+        WEBCORE_EXPORT ThreadGlobalData();
+        WEBCORE_EXPORT ~ThreadGlobalData();
         void destroy(); // called on workers to clean up the ThreadGlobalData before the thread exits.
 
         const CachedResourceRequestInitiators& cachedResourceRequestInitiators() { return *m_cachedResourceRequestInitiators; }
         EventNames& eventNames() { return *m_eventNames; }
         ThreadTimers& threadTimers() { return *m_threadTimers; }
-#if ENABLE(WEB_REPLAY)
-        ReplayInputTypes& inputTypes() { return *m_inputTypes; }
-#endif
 
         ICUConverterWrapper& cachedConverterICU() { return *m_cachedConverterICU; }
 
@@ -68,48 +62,36 @@ namespace WebCore {
         TECConverterWrapper& cachedConverterTEC() { return *m_cachedConverterTEC; }
 #endif
 
-#if ENABLE(WORKERS) && USE(WEB_THREAD)
+#if USE(WEB_THREAD)
         void setWebCoreThreadData();
 #endif
 
-#if ENABLE(INSPECTOR)
-        ThreadLocalInspectorCounters& inspectorCounters() { return *m_inspectorCounters; }
-#endif
-
     private:
-        OwnPtr<CachedResourceRequestInitiators> m_cachedResourceRequestInitiators;
-        OwnPtr<EventNames> m_eventNames;
-        OwnPtr<ThreadTimers> m_threadTimers;
-
-#if ENABLE(WEB_REPLAY)
-        std::unique_ptr<ReplayInputTypes> m_inputTypes;
-#endif
+        std::unique_ptr<CachedResourceRequestInitiators> m_cachedResourceRequestInitiators;
+        std::unique_ptr<EventNames> m_eventNames;
+        std::unique_ptr<ThreadTimers> m_threadTimers;
 
 #ifndef NDEBUG
         bool m_isMainThread;
 #endif
 
-        OwnPtr<ICUConverterWrapper> m_cachedConverterICU;
+        std::unique_ptr<ICUConverterWrapper> m_cachedConverterICU;
 
 #if PLATFORM(MAC)
-        OwnPtr<TECConverterWrapper> m_cachedConverterTEC;
+        std::unique_ptr<TECConverterWrapper> m_cachedConverterTEC;
 #endif
 
-#if ENABLE(INSPECTOR)
-        OwnPtr<ThreadLocalInspectorCounters> m_inspectorCounters;
-#endif
-
-        static ThreadSpecific<ThreadGlobalData>* staticData;
+        WEBCORE_EXPORT static ThreadSpecific<ThreadGlobalData>* staticData;
 #if USE(WEB_THREAD)
-        static ThreadGlobalData* sharedMainThreadStaticData;
+        WEBCORE_EXPORT static ThreadGlobalData* sharedMainThreadStaticData;
 #endif
-        friend ThreadGlobalData& threadGlobalData();
+        WEBCORE_EXPORT friend ThreadGlobalData& threadGlobalData();
     };
 
 #if USE(WEB_THREAD)
-ThreadGlobalData& threadGlobalData();
+WEBCORE_EXPORT ThreadGlobalData& threadGlobalData();
 #else
-ThreadGlobalData& threadGlobalData() PURE_FUNCTION;
+WEBCORE_EXPORT ThreadGlobalData& threadGlobalData() PURE_FUNCTION;
 #endif
 
 } // namespace WebCore

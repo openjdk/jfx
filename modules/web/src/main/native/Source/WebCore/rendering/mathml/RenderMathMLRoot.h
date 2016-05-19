@@ -29,25 +29,28 @@
 #if ENABLE(MATHML)
 
 #include "RenderMathMLBlock.h"
+#include "RenderMathMLRow.h"
 
 namespace WebCore {
 
+class RenderMathMLRadicalOperator;
+class RenderMathMLRootWrapper;
+
 // Render base^(1/index), or sqrt(base) via the derived class RenderMathMLSquareRoot, using radical notation.
 class RenderMathMLRoot : public RenderMathMLBlock {
-public:
-    RenderMathMLRoot(Element&, PassRef<RenderStyle>);
-    RenderMathMLRoot(Document&, PassRef<RenderStyle>);
 
-    virtual LayoutUnit paddingTop() const override;
-    virtual LayoutUnit paddingBottom() const override;
-    virtual LayoutUnit paddingLeft() const override;
-    virtual LayoutUnit paddingRight() const override;
-    virtual LayoutUnit paddingBefore() const override;
-    virtual LayoutUnit paddingAfter() const override;
-    virtual LayoutUnit paddingStart() const override;
-    virtual LayoutUnit paddingEnd() const override;
+friend class RenderMathMLRootWrapper;
+
+public:
+    RenderMathMLRoot(Element&, Ref<RenderStyle>&&);
+    RenderMathMLRoot(Document&, Ref<RenderStyle>&&);
 
     virtual void addChild(RenderObject* newChild, RenderObject* beforeChild = 0) override;
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    virtual void updateFromElement() override;
+
+    RenderMathMLRootWrapper* baseWrapper() const;
+    RenderMathMLRootWrapper* indexWrapper() const;
 
 protected:
     virtual void layout() override;
@@ -57,19 +60,40 @@ protected:
 private:
     virtual bool isRenderMathMLRoot() const override final { return true; }
     virtual const char* renderName() const override { return "RenderMathMLRoot"; }
+    virtual Optional<int> firstLineBaseline() const override;
+    void updateStyle();
+    void restructureWrappers();
 
-    // This may return 0 for a non-MathML index (which won't occur in valid MathML).
-    RenderBox* index() const;
+    RenderMathMLBlock* radicalWrapper() const;
+    RenderMathMLRadicalOperator* radicalOperator() const;
 
-    int m_intrinsicPaddingBefore;
-    int m_intrinsicPaddingAfter;
-    int m_intrinsicPaddingStart;
-    int m_intrinsicPaddingEnd;
-    int m_overbarLeftPointShift;
-    int m_indexTop;
+    LayoutUnit m_verticalGap;
+    LayoutUnit m_ruleThickness;
+    LayoutUnit m_extraAscender;
+    float m_degreeBottomRaisePercent;
 };
 
-}
+// These are specific wrappers for the index and base, that ask the parent to restructure the renderers after child removal.
+class RenderMathMLRootWrapper final : public RenderMathMLRow {
+
+friend class RenderMathMLRoot;
+
+public:
+    RenderMathMLRootWrapper(Document& document, Ref<RenderStyle>&& style)
+        : RenderMathMLRow(document, WTF::move(style)) { }
+
+private:
+    void removeChildWithoutRestructuring(RenderObject&);
+    virtual void removeChild(RenderObject&) override;
+    static RenderPtr<RenderMathMLRootWrapper> createAnonymousWrapper(RenderMathMLRoot* renderObject);
+    virtual bool isRenderMathMLRootWrapper() const override { return true; }
+    virtual const char* renderName() const override { return "RenderMathMLRootWrapper"; }
+};
+
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMathMLRoot, isRenderMathMLRoot())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMathMLRootWrapper, isRenderMathMLRootWrapper())
 
 #endif // ENABLE(MATHML)
 

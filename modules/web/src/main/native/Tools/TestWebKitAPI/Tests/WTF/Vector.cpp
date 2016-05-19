@@ -27,6 +27,7 @@
 
 #include "MoveOnly.h"
 #include <wtf/Vector.h>
+#include <wtf/text/CString.h>
 
 namespace TestWebKitAPI {
 
@@ -34,8 +35,8 @@ TEST(WTF_Vector, Basic)
 {
     Vector<int> intVector;
     EXPECT_TRUE(intVector.isEmpty());
-    EXPECT_EQ(0ul, intVector.size());
-    EXPECT_EQ(0ul, intVector.capacity());
+    EXPECT_EQ(0U, intVector.size());
+    EXPECT_EQ(0U, intVector.capacity());
 }
 
 TEST(WTF_Vector, Iterator)
@@ -94,6 +95,103 @@ TEST(WTF_Vector, InitializerList)
     EXPECT_EQ(4, vector[3]);
 }
 
+TEST(WTF_Vector, InitializeFromOtherInitialCapacity)
+{
+    Vector<int, 3> vector = { 1, 3, 2, 4 };
+    Vector<int, 5> vectorCopy(vector);
+    EXPECT_EQ(4U, vector.size());
+    EXPECT_EQ(4U, vectorCopy.size());
+    EXPECT_EQ(5U, vectorCopy.capacity());
+
+    EXPECT_EQ(1, vectorCopy[0]);
+    EXPECT_EQ(3, vectorCopy[1]);
+    EXPECT_EQ(2, vectorCopy[2]);
+    EXPECT_EQ(4, vectorCopy[3]);
+}
+
+TEST(WTF_Vector, CopyFromOtherInitialCapacity)
+{
+    Vector<int, 3> vector = { 1, 3, 2, 4 };
+    Vector<int, 5> vectorCopy { 0 };
+    EXPECT_EQ(4U, vector.size());
+    EXPECT_EQ(1U, vectorCopy.size());
+
+    vectorCopy = vector;
+
+    EXPECT_EQ(4U, vector.size());
+    EXPECT_EQ(4U, vectorCopy.size());
+    EXPECT_EQ(5U, vectorCopy.capacity());
+
+    EXPECT_EQ(1, vectorCopy[0]);
+    EXPECT_EQ(3, vectorCopy[1]);
+    EXPECT_EQ(2, vectorCopy[2]);
+    EXPECT_EQ(4, vectorCopy[3]);
+}
+
+TEST(WTF_Vector, InitializeFromOtherOverflowBehavior)
+{
+    Vector<int, 7, WTF::CrashOnOverflow> vector = { 4, 3, 2, 1 };
+    Vector<int, 7, UnsafeVectorOverflow> vectorCopy(vector);
+    EXPECT_EQ(4U, vector.size());
+    EXPECT_EQ(4U, vectorCopy.size());
+
+    EXPECT_EQ(4, vectorCopy[0]);
+    EXPECT_EQ(3, vectorCopy[1]);
+    EXPECT_EQ(2, vectorCopy[2]);
+    EXPECT_EQ(1, vectorCopy[3]);
+}
+
+TEST(WTF_Vector, CopyFromOtherOverflowBehavior)
+{
+    Vector<int, 7, WTF::CrashOnOverflow> vector = { 4, 3, 2, 1 };
+    Vector<int, 7, UnsafeVectorOverflow> vectorCopy = { 0, 0, 0 };
+
+    EXPECT_EQ(4U, vector.size());
+    EXPECT_EQ(3U, vectorCopy.size());
+
+    vectorCopy = vector;
+
+    EXPECT_EQ(4U, vector.size());
+    EXPECT_EQ(4U, vectorCopy.size());
+
+    EXPECT_EQ(4, vectorCopy[0]);
+    EXPECT_EQ(3, vectorCopy[1]);
+    EXPECT_EQ(2, vectorCopy[2]);
+    EXPECT_EQ(1, vectorCopy[3]);
+}
+
+TEST(WTF_Vector, InitializeFromOtherMinCapacity)
+{
+    Vector<int, 7, WTF::CrashOnOverflow, 1> vector = { 3, 4, 2, 1 };
+    Vector<int, 7, WTF::CrashOnOverflow, 50> vectorCopy(vector);
+    EXPECT_EQ(4U, vector.size());
+    EXPECT_EQ(4U, vectorCopy.size());
+
+    EXPECT_EQ(3, vectorCopy[0]);
+    EXPECT_EQ(4, vectorCopy[1]);
+    EXPECT_EQ(2, vectorCopy[2]);
+    EXPECT_EQ(1, vectorCopy[3]);
+}
+
+TEST(WTF_Vector, CopyFromOtherMinCapacity)
+{
+    Vector<int, 7, WTF::CrashOnOverflow, 1> vector = { 3, 4, 2, 1 };
+    Vector<int, 7, WTF::CrashOnOverflow, 50> vectorCopy;
+
+    EXPECT_EQ(4U, vector.size());
+    EXPECT_EQ(0U, vectorCopy.size());
+
+    vectorCopy = vector;
+
+    EXPECT_EQ(4U, vector.size());
+    EXPECT_EQ(4U, vectorCopy.size());
+
+    EXPECT_EQ(3, vectorCopy[0]);
+    EXPECT_EQ(4, vectorCopy[1]);
+    EXPECT_EQ(2, vectorCopy[2]);
+    EXPECT_EQ(1, vectorCopy[3]);
+}
+
 TEST(WTF_Vector, Reverse)
 {
     Vector<int> intVector;
@@ -149,12 +247,12 @@ TEST(WTF_Vector, MoveOnly_UncheckedAppend)
     vector.reserveInitialCapacity(100);
     for (size_t i = 0; i < 100; ++i) {
         MoveOnly moveOnly(i);
-        vector.uncheckedAppend(std::move(moveOnly));
-        EXPECT_EQ(moveOnly.value(), 0U);
+        vector.uncheckedAppend(WTF::move(moveOnly));
+        EXPECT_EQ(0U, moveOnly.value());
     }
 
     for (size_t i = 0; i < 100; ++i)
-        EXPECT_EQ(vector[i].value(), i);
+        EXPECT_EQ(i, vector[i].value());
 }
 
 TEST(WTF_Vector, MoveOnly_Append)
@@ -163,12 +261,12 @@ TEST(WTF_Vector, MoveOnly_Append)
 
     for (size_t i = 0; i < 100; ++i) {
         MoveOnly moveOnly(i);
-        vector.append(std::move(moveOnly));
-        EXPECT_EQ(moveOnly.value(), 0U);
+        vector.append(WTF::move(moveOnly));
+        EXPECT_EQ(0U, moveOnly.value());
     }
 
     for (size_t i = 0; i < 100; ++i)
-        EXPECT_EQ(vector[i].value(), i);
+        EXPECT_EQ(i, vector[i].value());
 
     for (size_t i = 0; i < 16; ++i) {
         Vector<MoveOnly> vector;
@@ -177,13 +275,13 @@ TEST(WTF_Vector, MoveOnly_Append)
 
         for (size_t j = 0; j < i; ++j)
             vector.append(j);
-        vector.append(std::move(vector[0]));
+        vector.append(WTF::move(vector[0]));
 
-        EXPECT_EQ(vector[0].value(), 0U);
+        EXPECT_EQ(0U, vector[0].value());
 
         for (size_t j = 0; j < i; ++j)
-            EXPECT_EQ(vector[j + 1].value(), j);
-        EXPECT_EQ(vector.last().value(), i);
+            EXPECT_EQ(j, vector[j + 1].value());
+        EXPECT_EQ(i, vector.last().value());
     }
 }
 
@@ -193,7 +291,7 @@ TEST(WTF_Vector, MoveOnly_Insert)
 
     for (size_t i = 0; i < 100; ++i) {
         MoveOnly moveOnly(i);
-        vector.insert(0, std::move(moveOnly));
+        vector.insert(0, WTF::move(moveOnly));
         EXPECT_EQ(0U, moveOnly.value());
     }
 
@@ -203,11 +301,11 @@ TEST(WTF_Vector, MoveOnly_Insert)
 
     for (size_t i = 0; i < 200; i += 2) {
         MoveOnly moveOnly(1000 + i);
-        vector.insert(i, std::move(moveOnly));
+        vector.insert(i, WTF::move(moveOnly));
         EXPECT_EQ(0U, moveOnly.value());
     }
 
-    EXPECT_EQ(vector.size(), 200U);
+    EXPECT_EQ(200U, vector.size());
     for (size_t i = 0; i < 200; ++i) {
         if (i % 2)
             EXPECT_EQ(99 - i / 2, vector[i].value());
@@ -216,94 +314,304 @@ TEST(WTF_Vector, MoveOnly_Insert)
     }
 }
 
+TEST(WTF_Vector, MoveOnly_TakeLast)
+{
+    Vector<MoveOnly> vector;
+
+    for (size_t i = 0; i < 100; ++i) {
+        MoveOnly moveOnly(i);
+        vector.append(WTF::move(moveOnly));
+        EXPECT_EQ(0U, moveOnly.value());
+    }
+
+    EXPECT_EQ(100U, vector.size());
+    for (size_t i = 0; i < 100; ++i)
+        EXPECT_EQ(99 - i, vector.takeLast().value());
+
+    EXPECT_EQ(0U, vector.size());
+}
+
 TEST(WTF_Vector, VectorOfVectorsOfVectorsInlineCapacitySwap)
 {
     Vector<Vector<Vector<int, 1>, 1>, 1> a;
     Vector<Vector<Vector<int, 1>, 1>, 1> b;
     Vector<Vector<Vector<int, 1>, 1>, 1> c;
 
-    EXPECT_EQ(a.size(), 0U);
-    EXPECT_EQ(b.size(), 0U);
-    EXPECT_EQ(c.size(), 0U);
+    EXPECT_EQ(0U, a.size());
+    EXPECT_EQ(0U, b.size());
+    EXPECT_EQ(0U, c.size());
 
     Vector<int, 1> x;
     x.append(42);
 
-    EXPECT_EQ(x.size(), 1U);
-    EXPECT_EQ(x[0], 42);
+    EXPECT_EQ(1U, x.size());
+    EXPECT_EQ(42, x[0]);
 
     Vector<Vector<int, 1>, 1> y;
     y.append(x);
 
-    EXPECT_EQ(x.size(), 1U);
-    EXPECT_EQ(x[0], 42);
-    EXPECT_EQ(y.size(), 1U);
-    EXPECT_EQ(y[0].size(), 1U);
-    EXPECT_EQ(y[0][0], 42);
+    EXPECT_EQ(1U, x.size());
+    EXPECT_EQ(42, x[0]);
+    EXPECT_EQ(1U, y.size());
+    EXPECT_EQ(1U, y[0].size());
+    EXPECT_EQ(42, y[0][0]);
 
     a.append(y);
 
-    EXPECT_EQ(x.size(), 1U);
-    EXPECT_EQ(x[0], 42);
-    EXPECT_EQ(y.size(), 1U);
-    EXPECT_EQ(y[0].size(), 1U);
-    EXPECT_EQ(y[0][0], 42);
-    EXPECT_EQ(a.size(), 1U);
-    EXPECT_EQ(a[0].size(), 1U);
-    EXPECT_EQ(a[0][0].size(), 1U);
-    EXPECT_EQ(a[0][0][0], 42);
+    EXPECT_EQ(1U, x.size());
+    EXPECT_EQ(42, x[0]);
+    EXPECT_EQ(1U, y.size());
+    EXPECT_EQ(1U, y[0].size());
+    EXPECT_EQ(42, y[0][0]);
+    EXPECT_EQ(1U, a.size());
+    EXPECT_EQ(1U, a[0].size());
+    EXPECT_EQ(1U, a[0][0].size());
+    EXPECT_EQ(42, a[0][0][0]);
 
     a.swap(b);
 
-    EXPECT_EQ(a.size(), 0U);
-    EXPECT_EQ(x.size(), 1U);
-    EXPECT_EQ(x[0], 42);
-    EXPECT_EQ(y.size(), 1U);
-    EXPECT_EQ(y[0].size(), 1U);
-    EXPECT_EQ(y[0][0], 42);
-    EXPECT_EQ(b.size(), 1U);
-    EXPECT_EQ(b[0].size(), 1U);
-    EXPECT_EQ(b[0][0].size(), 1U);
-    EXPECT_EQ(b[0][0][0], 42);
+    EXPECT_EQ(0U, a.size());
+    EXPECT_EQ(1U, x.size());
+    EXPECT_EQ(42, x[0]);
+    EXPECT_EQ(1U, y.size());
+    EXPECT_EQ(1U, y[0].size());
+    EXPECT_EQ(42, y[0][0]);
+    EXPECT_EQ(1U, b.size());
+    EXPECT_EQ(1U, b[0].size());
+    EXPECT_EQ(1U, b[0][0].size());
+    EXPECT_EQ(42, b[0][0][0]);
 
     b.swap(c);
 
-    EXPECT_EQ(a.size(), 0U);
-    EXPECT_EQ(b.size(), 0U);
-    EXPECT_EQ(x.size(), 1U);
-    EXPECT_EQ(x[0], 42);
-    EXPECT_EQ(y.size(), 1U);
-    EXPECT_EQ(y[0].size(), 1U);
-    EXPECT_EQ(y[0][0], 42);
-    EXPECT_EQ(c.size(), 1U);
-    EXPECT_EQ(c[0].size(), 1U);
-    EXPECT_EQ(c[0][0].size(), 1U);
-    EXPECT_EQ(c[0][0][0], 42);
+    EXPECT_EQ(0U, a.size());
+    EXPECT_EQ(0U, b.size());
+    EXPECT_EQ(1U, x.size());
+    EXPECT_EQ(42, x[0]);
+    EXPECT_EQ(1U, y.size());
+    EXPECT_EQ(1U, y[0].size());
+    EXPECT_EQ(42, y[0][0]);
+    EXPECT_EQ(1U, c.size());
+    EXPECT_EQ(1U, c[0].size());
+    EXPECT_EQ(1U, c[0][0].size());
+    EXPECT_EQ(42, c[0][0][0]);
 
     y[0][0] = 24;
 
-    EXPECT_EQ(x.size(), 1U);
-    EXPECT_EQ(x[0], 42);
-    EXPECT_EQ(y.size(), 1U);
-    EXPECT_EQ(y[0].size(), 1U);
-    EXPECT_EQ(y[0][0], 24);
+    EXPECT_EQ(1U, x.size());
+    EXPECT_EQ(42, x[0]);
+    EXPECT_EQ(1U, y.size());
+    EXPECT_EQ(1U, y[0].size());
+    EXPECT_EQ(24, y[0][0]);
 
     a.append(y);
 
-    EXPECT_EQ(x.size(), 1U);
-    EXPECT_EQ(x[0], 42);
-    EXPECT_EQ(y.size(), 1U);
-    EXPECT_EQ(y[0].size(), 1U);
-    EXPECT_EQ(y[0][0], 24);
-    EXPECT_EQ(a.size(), 1U);
-    EXPECT_EQ(a[0].size(), 1U);
-    EXPECT_EQ(a[0][0].size(), 1U);
-    EXPECT_EQ(a[0][0][0], 24);
-    EXPECT_EQ(c.size(), 1U);
-    EXPECT_EQ(c[0].size(), 1U);
-    EXPECT_EQ(c[0][0].size(), 1U);
-    EXPECT_EQ(c[0][0][0], 42);
-    EXPECT_EQ(b.size(), 0U);
+    EXPECT_EQ(1U, x.size());
+    EXPECT_EQ(42, x[0]);
+    EXPECT_EQ(1U, y.size());
+    EXPECT_EQ(1U, y[0].size());
+    EXPECT_EQ(24, y[0][0]);
+    EXPECT_EQ(1U, a.size());
+    EXPECT_EQ(1U, a[0].size());
+    EXPECT_EQ(1U, a[0][0].size());
+    EXPECT_EQ(24, a[0][0][0]);
+    EXPECT_EQ(1U, c.size());
+    EXPECT_EQ(1U, c[0].size());
+    EXPECT_EQ(1U, c[0][0].size());
+    EXPECT_EQ(42, c[0][0][0]);
+    EXPECT_EQ(0U, b.size());
+}
+
+TEST(WTF_Vector, RemoveFirst)
+{
+    Vector<int> v;
+    EXPECT_TRUE(v.isEmpty());
+    EXPECT_FALSE(v.removeFirst(1));
+    EXPECT_FALSE(v.removeFirst(-1));
+    EXPECT_TRUE(v.isEmpty());
+
+    v.fill(2, 10);
+    EXPECT_EQ(10U, v.size());
+    EXPECT_FALSE(v.removeFirst(1));
+    EXPECT_EQ(10U, v.size());
+    v.clear();
+
+    v.fill(1, 10);
+    EXPECT_EQ(10U, v.size());
+    EXPECT_TRUE(v.removeFirst(1));
+    EXPECT_TRUE(v == Vector<int>({1, 1, 1, 1, 1, 1, 1, 1, 1}));
+    EXPECT_EQ(9U, v.size());
+    EXPECT_FALSE(v.removeFirst(2));
+    EXPECT_EQ(9U, v.size());
+    EXPECT_TRUE(v == Vector<int>({1, 1, 1, 1, 1, 1, 1, 1, 1}));
+
+    unsigned removed = 0;
+    while (v.removeFirst(1))
+        ++removed;
+    EXPECT_EQ(9U, removed);
+    EXPECT_TRUE(v.isEmpty());
+
+    v.resize(1);
+    EXPECT_EQ(1U, v.size());
+    EXPECT_TRUE(v.removeFirst(1));
+    EXPECT_EQ(0U, v.size());
+    EXPECT_TRUE(v.isEmpty());
+}
+
+TEST(WTF_Vector, RemoveAll)
+{
+    // Using a memcpy-able type.
+    static_assert(VectorTraits<int>::canMoveWithMemcpy, "Should use a memcpy-able type");
+    Vector<int> v;
+    EXPECT_TRUE(v.isEmpty());
+    EXPECT_FALSE(v.removeAll(1));
+    EXPECT_FALSE(v.removeAll(-1));
+    EXPECT_TRUE(v.isEmpty());
+
+    v.fill(1, 10);
+    EXPECT_EQ(10U, v.size());
+    EXPECT_EQ(10U, v.removeAll(1));
+    EXPECT_TRUE(v.isEmpty());
+
+    v.fill(2, 10);
+    EXPECT_EQ(10U, v.size());
+    EXPECT_EQ(0U, v.removeAll(1));
+    EXPECT_EQ(10U, v.size());
+
+    v = {1, 2, 1, 2, 1, 2, 2, 1, 1, 1};
+    EXPECT_EQ(10U, v.size());
+    EXPECT_EQ(6U, v.removeAll(1));
+    EXPECT_EQ(4U, v.size());
+    EXPECT_TRUE(v == Vector<int>({2, 2, 2, 2}));
+    EXPECT_TRUE(v.find(1) == notFound);
+    EXPECT_EQ(4U, v.removeAll(2));
+    EXPECT_TRUE(v.isEmpty());
+
+    v = {3, 1, 2, 1, 2, 1, 2, 2, 1, 1, 1, 3};
+    EXPECT_EQ(12U, v.size());
+    EXPECT_EQ(6U, v.removeAll(1));
+    EXPECT_EQ(6U, v.size());
+    EXPECT_TRUE(v.find(1) == notFound);
+    EXPECT_TRUE(v == Vector<int>({3, 2, 2, 2, 2, 3}));
+
+    EXPECT_EQ(4U, v.removeAll(2));
+    EXPECT_EQ(2U, v.size());
+    EXPECT_TRUE(v.find(2) == notFound);
+    EXPECT_TRUE(v == Vector<int>({3, 3}));
+
+    EXPECT_EQ(2U, v.removeAll(3));
+    EXPECT_TRUE(v.isEmpty());
+
+    v = {1, 1, 1, 3, 2, 4, 2, 2, 2, 4, 4, 3};
+    EXPECT_EQ(12U, v.size());
+    EXPECT_EQ(3U, v.removeAll(1));
+    EXPECT_EQ(9U, v.size());
+    EXPECT_TRUE(v.find(1) == notFound);
+    EXPECT_TRUE(v == Vector<int>({3, 2, 4, 2, 2, 2, 4, 4, 3}));
+
+    // Using a non memcpy-able type.
+    static_assert(!VectorTraits<CString>::canMoveWithMemcpy, "Should use a non memcpy-able type");
+    Vector<CString> vExpected;
+    Vector<CString> v2;
+    EXPECT_TRUE(v2.isEmpty());
+    EXPECT_FALSE(v2.removeAll("1"));
+    EXPECT_TRUE(v2.isEmpty());
+
+    v2.fill("1", 10);
+    EXPECT_EQ(10U, v2.size());
+    EXPECT_EQ(10U, v2.removeAll("1"));
+    EXPECT_TRUE(v2.isEmpty());
+
+    v2.fill("2", 10);
+    EXPECT_EQ(10U, v2.size());
+    EXPECT_EQ(0U, v2.removeAll("1"));
+    EXPECT_EQ(10U, v2.size());
+
+    v2 = {"1", "2", "1", "2", "1", "2", "2", "1", "1", "1"};
+    EXPECT_EQ(10U, v2.size());
+    EXPECT_EQ(6U, v2.removeAll("1"));
+    EXPECT_EQ(4U, v2.size());
+    EXPECT_TRUE(v2.find("1") == notFound);
+    EXPECT_EQ(4U, v2.removeAll("2"));
+    EXPECT_TRUE(v2.isEmpty());
+
+    v2 = {"3", "1", "2", "1", "2", "1", "2", "2", "1", "1", "1", "3"};
+    EXPECT_EQ(12U, v2.size());
+    EXPECT_EQ(6U, v2.removeAll("1"));
+    EXPECT_EQ(6U, v2.size());
+    EXPECT_TRUE(v2.find("1") == notFound);
+    vExpected = {"3", "2", "2", "2", "2", "3"};
+    EXPECT_TRUE(v2 == vExpected);
+
+    EXPECT_EQ(4U, v2.removeAll("2"));
+    EXPECT_EQ(2U, v2.size());
+    EXPECT_TRUE(v2.find("2") == notFound);
+    vExpected = {"3", "3"};
+    EXPECT_TRUE(v2 == vExpected);
+
+    EXPECT_EQ(2U, v2.removeAll("3"));
+    EXPECT_TRUE(v2.isEmpty());
+
+    v2 = {"1", "1", "1", "3", "2", "4", "2", "2", "2", "4", "4", "3"};
+    EXPECT_EQ(12U, v2.size());
+    EXPECT_EQ(3U, v2.removeAll("1"));
+    EXPECT_EQ(9U, v2.size());
+    EXPECT_TRUE(v2.find("1") == notFound);
+    vExpected = {"3", "2", "4", "2", "2", "2", "4", "4", "3"};
+    EXPECT_TRUE(v2 == vExpected);
+}
+
+TEST(WTF_Vector, RemoveFirstMatching)
+{
+    Vector<int> v;
+    EXPECT_TRUE(v.isEmpty());
+    EXPECT_FALSE(v.removeFirstMatching([] (int value) { return value > 0; }));
+    EXPECT_FALSE(v.removeFirstMatching([] (int) { return true; }));
+    EXPECT_FALSE(v.removeFirstMatching([] (int) { return false; }));
+
+    v = {3, 1, 2, 1, 2, 1, 2, 2, 1, 1, 1, 3};
+    EXPECT_EQ(12U, v.size());
+    EXPECT_FALSE(v.removeFirstMatching([] (int) { return false; }));
+    EXPECT_EQ(12U, v.size());
+    EXPECT_FALSE(v.removeFirstMatching([] (int value) { return value < 0; }));
+    EXPECT_EQ(12U, v.size());
+    EXPECT_TRUE(v.removeFirstMatching([] (int value) { return value < 3; }));
+    EXPECT_EQ(11U, v.size());
+    EXPECT_TRUE(v == Vector<int>({3, 2, 1, 2, 1, 2, 2, 1, 1, 1, 3}));
+    EXPECT_TRUE(v.removeFirstMatching([] (int value) { return value > 2; }));
+    EXPECT_EQ(10U, v.size());
+    EXPECT_TRUE(v == Vector<int>({2, 1, 2, 1, 2, 2, 1, 1, 1, 3}));
+    EXPECT_TRUE(v.removeFirstMatching([] (int value) { return value > 2; }));
+    EXPECT_EQ(9U, v.size());
+    EXPECT_TRUE(v == Vector<int>({2, 1, 2, 1, 2, 2, 1, 1, 1}));
+}
+
+TEST(WTF_Vector, RemoveAllMatching)
+{
+    Vector<int> v;
+    EXPECT_TRUE(v.isEmpty());
+    EXPECT_FALSE(v.removeAllMatching([] (int value) { return value > 0; }));
+    EXPECT_FALSE(v.removeAllMatching([] (int) { return true; }));
+    EXPECT_FALSE(v.removeAllMatching([] (int) { return false; }));
+
+    v = {3, 1, 2, 1, 2, 1, 2, 2, 1, 1, 1, 3};
+    EXPECT_EQ(12U, v.size());
+    EXPECT_EQ(0U, v.removeAllMatching([] (int) { return false; }));
+    EXPECT_EQ(12U, v.size());
+    EXPECT_EQ(0U, v.removeAllMatching([] (int value) { return value < 0; }));
+    EXPECT_EQ(12U, v.size());
+    EXPECT_EQ(12U, v.removeAllMatching([] (int value) { return value > 0; }));
+    EXPECT_TRUE(v.isEmpty());
+
+    v = {3, 1, 2, 1, 2, 1, 3, 2, 2, 1, 1, 1, 3};
+    EXPECT_EQ(13U, v.size());
+    EXPECT_EQ(3U, v.removeAllMatching([] (int value) { return value > 2; }));
+    EXPECT_EQ(10U, v.size());
+    EXPECT_TRUE(v == Vector<int>({1, 2, 1, 2, 1, 2, 2, 1, 1, 1}));
+    EXPECT_EQ(6U, v.removeAllMatching([] (int value) { return value != 2; }));
+    EXPECT_EQ(4U, v.size());
+    EXPECT_TRUE(v == Vector<int>({2, 2, 2, 2}));
+    EXPECT_EQ(4U, v.removeAllMatching([] (int value) { return value == 2; }));
+    EXPECT_TRUE(v.isEmpty());
 }
 
 } // namespace TestWebKitAPI

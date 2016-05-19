@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005, 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -36,11 +36,12 @@
 #import "WebPDFDocumentExtras.h"
 #import "WebPDFView.h"
 #import "WebTypesInternal.h"
-#import <wtf/Assertions.h>
-#import <wtf/ObjcRuntimeExtras.h>
 #import <JavaScriptCore/JSContextRef.h>
 #import <JavaScriptCore/JSStringRef.h>
 #import <JavaScriptCore/JSStringRefCF.h>
+#import <wtf/Assertions.h>
+#import <wtf/ObjcRuntimeExtras.h>
+#import <wtf/RetainPtr.h>
 
 @implementation WebPDFRepresentation
 
@@ -90,26 +91,22 @@
     // http://developer.apple.com/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/dq_ps_convert/chapter_16_section_1.html
 
     CGPSConverterCallbacks callbacks = { 0, 0, 0, 0, 0, 0, 0, 0 };
-    CGPSConverterRef converter = CGPSConverterCreate(0, &callbacks, 0);
-    ASSERT(converter);
+    RetainPtr<CGPSConverterRef> converter = adoptCF(CGPSConverterCreate(0, &callbacks, 0));
+    ASSERT(converter.get());
 
-    CGDataProviderRef provider = CGDataProviderCreateWithCFData((CFDataRef)data);
-    ASSERT(provider);
+    RetainPtr<CGDataProviderRef> provider = adoptCF(CGDataProviderCreateWithCFData((CFDataRef)data));
+    ASSERT(provider.get());
 
-    CFMutableDataRef result = CFDataCreateMutable(kCFAllocatorDefault, 0);
-    ASSERT(result);
+    RetainPtr<CFMutableDataRef> result = adoptCF(CFDataCreateMutable(kCFAllocatorDefault, 0));
+    ASSERT(result.get());
 
-    CGDataConsumerRef consumer = CGDataConsumerCreateWithCFData(result);
-    ASSERT(consumer);
+    RetainPtr<CGDataConsumerRef> consumer = adoptCF(CGDataConsumerCreateWithCFData(result.get()));
+    ASSERT(consumer.get());
 
     // Error handled by detecting zero-length 'result' in caller
-    CGPSConverterConvert(converter, provider, consumer, 0);
+    CGPSConverterConvert(converter.get(), provider.get(), consumer.get(), 0);
 
-    CFRelease(converter);
-    CFRelease(provider);
-    CFRelease(consumer);
-
-    return CFBridgingRelease(result);
+    return (NSData *)result.autorelease();
 }
 
 - (void)finishedLoadingWithDataSource:(WebDataSource *)dataSource

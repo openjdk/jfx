@@ -46,14 +46,14 @@ inline HTMLOutputElement::HTMLOutputElement(const QualifiedName& tagName, Docume
 {
 }
 
-PassRefPtr<HTMLOutputElement> HTMLOutputElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
+Ref<HTMLOutputElement> HTMLOutputElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
-    return adoptRef(new HTMLOutputElement(tagName, document, form));
+    return adoptRef(*new HTMLOutputElement(tagName, document, form));
 }
 
 const AtomicString& HTMLOutputElement::formControlType() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, output, ("output", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, output, ("output", AtomicString::ConstructFromLiteral));
     return output;
 }
 
@@ -68,11 +68,6 @@ void HTMLOutputElement::parseAttribute(const QualifiedName& name, const AtomicSt
         setFor(value);
     else
         HTMLFormControlElement::parseAttribute(name, value);
-}
-
-DOMSettableTokenList* HTMLOutputElement::htmlFor() const
-{
-    return m_tokens.get();
 }
 
 void HTMLOutputElement::setFor(const String& value)

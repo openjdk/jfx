@@ -27,6 +27,7 @@
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
 #include "Chrome.h"
+#include "Font.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameView.h"
@@ -40,7 +41,6 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "Settings.h"
-#include "SimpleFontData.h"
 #include "StyleResolver.h"
 #include "TextControlInnerElements.h"
 #include <wtf/StackStats.h>
@@ -53,9 +53,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderTextControlSingleLine::RenderTextControlSingleLine(HTMLInputElement& element, PassRef<RenderStyle> style)
-    : RenderTextControl(element, std::move(style))
-    , m_shouldDrawCapsLockIndicator(false)
+RenderTextControlSingleLine::RenderTextControlSingleLine(HTMLInputElement& element, Ref<RenderStyle>&& style)
+    : RenderTextControl(element, WTF::move(style))
     , m_desiredInnerTextLogicalHeight(-1)
 {
 }
@@ -67,25 +66,6 @@ RenderTextControlSingleLine::~RenderTextControlSingleLine()
 inline HTMLElement* RenderTextControlSingleLine::innerSpinButtonElement() const
 {
     return inputElement().innerSpinButtonElement();
-}
-
-void RenderTextControlSingleLine::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
-{
-    RenderTextControl::paint(paintInfo, paintOffset);
-
-    if (paintInfo.phase == PaintPhaseBlockBackground && m_shouldDrawCapsLockIndicator) {
-        LayoutRect contentsRect = contentBoxRect();
-
-        // Center in the block progression direction.
-        if (isHorizontalWritingMode())
-            contentsRect.setY((height() - contentsRect.height()) / 2);
-        else
-            contentsRect.setX((width() - contentsRect.width()) / 2);
-
-        // Convert the rect into the coords used for painting the content
-        contentsRect.moveBy(paintOffset + location());
-        theme().paintCapsLockIndicator(this, paintInfo, pixelSnappedIntRect(contentsRect));
-    }
 }
 
 LayoutUnit RenderTextControlSingleLine::computeLogicalHeightLimit() const
@@ -197,8 +177,8 @@ void RenderTextControlSingleLine::layout()
         LayoutSize innerTextSize;
         if (innerTextRenderer)
             innerTextSize = innerTextRenderer->size();
-        placeholderBox->style().setWidth(Length(innerTextSize.width() - placeholderBox->borderAndPaddingWidth(), Fixed));
-        placeholderBox->style().setHeight(Length(innerTextSize.height() - placeholderBox->borderAndPaddingHeight(), Fixed));
+        placeholderBox->style().setWidth(Length(innerTextSize.width() - placeholderBox->horizontalBorderAndPaddingExtent(), Fixed));
+        placeholderBox->style().setHeight(Length(innerTextSize.height() - placeholderBox->verticalBorderAndPaddingExtent(), Fixed));
         bool neededLayout = placeholderBox->needsLayout();
         bool placeholderBoxHadLayout = placeholderBox->everHadLayout();
         placeholderBox->layoutIfNeeded();
@@ -225,7 +205,7 @@ void RenderTextControlSingleLine::layout()
 #if PLATFORM(IOS)
     // FIXME: We should not be adjusting styles during layout. <rdar://problem/7675493>
     if (inputElement().isSearchField())
-        RenderThemeIOS::adjustRoundBorderRadius(style(), this);
+        RenderThemeIOS::adjustRoundBorderRadius(style(), *this);
 #endif
 }
 
@@ -277,25 +257,6 @@ void RenderTextControlSingleLine::styleDidChange(StyleDifference diff, const Ren
     setHasOverflowClip(false);
 }
 
-void RenderTextControlSingleLine::capsLockStateMayHaveChanged()
-{
-    // Only draw the caps lock indicator if these things are true:
-    // 1) The field is a password field
-    // 2) The frame is active
-    // 3) The element is focused
-    // 4) The caps lock is on
-    bool shouldDrawCapsLockIndicator =
-        inputElement().isPasswordField()
-        && frame().selection().isFocusedAndActive()
-        && document().focusedElement() == &inputElement()
-        && PlatformKeyboardEvent::currentCapsLockState();
-
-    if (shouldDrawCapsLockIndicator != m_shouldDrawCapsLockIndicator) {
-        m_shouldDrawCapsLockIndicator = shouldDrawCapsLockIndicator;
-        repaint();
-    }
-}
-
 bool RenderTextControlSingleLine::hasControlClip() const
 {
     // Apply control clip for text fields with decorations.
@@ -312,18 +273,18 @@ LayoutRect RenderTextControlSingleLine::controlClipRect(const LayoutPoint& addit
     return clipRect;
 }
 
-float RenderTextControlSingleLine::getAvgCharWidth(AtomicString family)
+float RenderTextControlSingleLine::getAverageCharWidth()
 {
 #if !PLATFORM(IOS)
     // Since Lucida Grande is the default font, we want this to match the width
     // of MS Shell Dlg, the default font for textareas in Firefox, Safari Win and
     // IE for some encodings (in IE, the default font is encoding specific).
     // 901 is the avgCharWidth value in the OS/2 table for MS Shell Dlg.
-    if (family == "Lucida Grande")
+    if (style().fontCascade().firstFamily() == "Lucida Grande")
         return scaleEmToUnits(901);
 #endif
 
-    return RenderTextControl::getAvgCharWidth(family);
+    return RenderTextControl::getAverageCharWidth();
 }
 
 LayoutUnit RenderTextControlSingleLine::preferredContentLogicalWidth(float charWidth) const
@@ -333,20 +294,20 @@ LayoutUnit RenderTextControlSingleLine::preferredContentLogicalWidth(float charW
     if (factor <= 0)
         factor = 20;
 
-    LayoutUnit result = static_cast<LayoutUnit>(ceiledLayoutUnit(charWidth * factor));
+    LayoutUnit result = LayoutUnit::fromFloatCeil(charWidth * factor);
 
     float maxCharWidth = 0.f;
 
 #if !PLATFORM(IOS)
-    const AtomicString& family = style().font().firstFamily();
+    const AtomicString& family = style().fontCascade().firstFamily();
     // Since Lucida Grande is the default font, we want this to match the width
     // of MS Shell Dlg, the default font for textareas in Firefox, Safari Win and
     // IE for some encodings (in IE, the default font is encoding specific).
     // 4027 is the (xMax - xMin) value in the "head" font table for MS Shell Dlg.
     if (family == "Lucida Grande")
         maxCharWidth = scaleEmToUnits(4027);
-    else if (hasValidAvgCharWidth(family))
-        maxCharWidth = roundf(style().font().primaryFont()->maxCharWidth());
+    else if (style().fontCascade().hasValidAverageCharWidth())
+        maxCharWidth = roundf(style().fontCascade().primaryFont().maxCharWidth());
 #endif
 
     // For text inputs, IE adds some extra width.
@@ -364,11 +325,11 @@ LayoutUnit RenderTextControlSingleLine::computeControlLogicalHeight(LayoutUnit l
     return lineHeight + nonContentHeight;
 }
 
-PassRef<RenderStyle> RenderTextControlSingleLine::createInnerTextStyle(const RenderStyle* startStyle) const
+Ref<RenderStyle> RenderTextControlSingleLine::createInnerTextStyle(const RenderStyle* startStyle) const
 {
     auto textBlockStyle = RenderStyle::create();
     textBlockStyle.get().inheritFrom(startStyle);
-    adjustInnerTextStyle(startStyle, &textBlockStyle.get());
+    adjustInnerTextStyle(startStyle, textBlockStyle.get());
 
     textBlockStyle.get().setWhiteSpace(PRE);
     textBlockStyle.get().setOverflowWrap(NormalOverflowWrap);
@@ -387,7 +348,7 @@ PassRef<RenderStyle> RenderTextControlSingleLine::createInnerTextStyle(const Ren
     return textBlockStyle;
 }
 
-PassRef<RenderStyle> RenderTextControlSingleLine::createInnerBlockStyle(const RenderStyle* startStyle) const
+Ref<RenderStyle> RenderTextControlSingleLine::createInnerBlockStyle(const RenderStyle* startStyle) const
 {
     auto innerBlockStyle = RenderStyle::create();
     innerBlockStyle.get().inheritFrom(startStyle);
@@ -481,7 +442,7 @@ bool RenderTextControlSingleLine::logicalScroll(ScrollLogicalDirection direction
 
 HTMLInputElement& RenderTextControlSingleLine::inputElement() const
 {
-    return toHTMLInputElement(RenderTextControl::textFormControlElement());
+    return downcast<HTMLInputElement>(RenderTextControl::textFormControlElement());
 }
 
 }

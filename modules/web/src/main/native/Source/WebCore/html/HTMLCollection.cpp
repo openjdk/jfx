@@ -65,7 +65,7 @@ static bool shouldOnlyIncludeDirectChildren(CollectionType type)
     return false;
 }
 
-static NodeListRootType rootTypeFromCollectionType(CollectionType type)
+inline auto HTMLCollection::rootTypeFromCollectionType(CollectionType type) -> RootType
 {
     switch (type) {
     case DocImages:
@@ -79,7 +79,7 @@ static NodeListRootType rootTypeFromCollectionType(CollectionType type)
     case WindowNamedItems:
     case DocumentNamedItems:
     case FormControls:
-        return NodeListIsRootedAtDocument;
+        return HTMLCollection::IsRootedAtDocument;
     case NodeChildren:
     case TableTBodies:
     case TSectionRows:
@@ -89,10 +89,10 @@ static NodeListRootType rootTypeFromCollectionType(CollectionType type)
     case SelectedOptions:
     case DataListOptions:
     case MapAreas:
-        return NodeListIsRootedAtNode;
+        return HTMLCollection::IsRootedAtNode;
     }
     ASSERT_NOT_REACHED();
-    return NodeListIsRootedAtNode;
+    return HTMLCollection::IsRootedAtNode;
 }
 
 static NodeListInvalidationType invalidationTypeExcludingIdAndNameAttributes(CollectionType type)
@@ -133,29 +133,29 @@ static NodeListInvalidationType invalidationTypeExcludingIdAndNameAttributes(Col
 
 HTMLCollection::HTMLCollection(ContainerNode& ownerNode, CollectionType type, ElementTraversalType traversalType)
     : m_ownerNode(ownerNode)
-    , m_rootType(rootTypeFromCollectionType(type))
-    , m_invalidationType(invalidationTypeExcludingIdAndNameAttributes(type))
-    , m_shouldOnlyIncludeDirectChildren(shouldOnlyIncludeDirectChildren(type))
-    , m_isNameCacheValid(false)
+    , m_indexCache(*this)
     , m_collectionType(type)
+    , m_invalidationType(invalidationTypeExcludingIdAndNameAttributes(type))
+    , m_rootType(rootTypeFromCollectionType(type))
+    , m_shouldOnlyIncludeDirectChildren(shouldOnlyIncludeDirectChildren(type))
     , m_usesCustomForwardOnlyTraversal(traversalType == CustomForwardOnlyTraversal)
-    , m_isItemRefElementsCacheValid(false)
 {
     ASSERT(m_rootType == static_cast<unsigned>(rootTypeFromCollectionType(type)));
     ASSERT(m_invalidationType == static_cast<unsigned>(invalidationTypeExcludingIdAndNameAttributes(type)));
     ASSERT(m_collectionType == static_cast<unsigned>(type));
-
-    document().registerCollection(*this);
 }
 
-PassRefPtr<HTMLCollection> HTMLCollection::create(ContainerNode& base, CollectionType type)
+Ref<HTMLCollection> HTMLCollection::create(ContainerNode& base, CollectionType type)
 {
-    return adoptRef(new HTMLCollection(base, type));
+    return adoptRef(*new HTMLCollection(base, type));
 }
 
 HTMLCollection::~HTMLCollection()
 {
-    document().unregisterCollection(*this);
+    if (m_indexCache.hasValidCache(*this))
+        document().unregisterCollection(*this);
+    if (hasNamedElementCache())
+        document().collectionWillClearIdNameMap(*this);
     // HTMLNameCollection removes cache by itself.
     if (type() != WindowNamedItems && type() != DocumentNamedItems)
         ownerNode().nodeLists()->removeCachedCollection(this);
@@ -169,53 +169,47 @@ ContainerNode& HTMLCollection::rootNode() const
     return ownerNode();
 }
 
-inline bool isMatchingElement(const HTMLCollection& htmlCollection, Element& element)
+static inline bool isMatchingHTMLElement(const HTMLCollection& collection, HTMLElement& element)
 {
-    CollectionType type = htmlCollection.type();
-    if (!element.isHTMLElement() && !(type == DocAll || type == NodeChildren || type == WindowNamedItems))
-        return false;
-
-    switch (type) {
+    switch (collection.type()) {
     case DocImages:
-        return element.hasLocalName(imgTag);
+        return element.hasTagName(imgTag);
     case DocScripts:
-        return element.hasLocalName(scriptTag);
+        return element.hasTagName(scriptTag);
     case DocForms:
-        return element.hasLocalName(formTag);
+        return element.hasTagName(formTag);
     case TableTBodies:
-        return element.hasLocalName(tbodyTag);
+        return element.hasTagName(tbodyTag);
     case TRCells:
-        return element.hasLocalName(tdTag) || element.hasLocalName(thTag);
+        return element.hasTagName(tdTag) || element.hasTagName(thTag);
     case TSectionRows:
-        return element.hasLocalName(trTag);
+        return element.hasTagName(trTag);
     case SelectOptions:
-        return element.hasLocalName(optionTag);
+        return element.hasTagName(optionTag);
     case SelectedOptions:
-        return element.hasLocalName(optionTag) && toHTMLOptionElement(element).selected();
+        return is<HTMLOptionElement>(element) && downcast<HTMLOptionElement>(element).selected();
     case DataListOptions:
-        if (element.hasLocalName(optionTag)) {
-            HTMLOptionElement& option = toHTMLOptionElement(element);
+        if (is<HTMLOptionElement>(element)) {
+            HTMLOptionElement& option = downcast<HTMLOptionElement>(element);
             if (!option.isDisabledFormControl() && !option.value().isEmpty())
                 return true;
         }
         return false;
     case MapAreas:
-        return element.hasLocalName(areaTag);
+        return element.hasTagName(areaTag);
     case DocApplets:
-        return element.hasLocalName(appletTag) || (element.hasLocalName(objectTag) && toHTMLObjectElement(element).containsJavaApplet());
+        return is<HTMLAppletElement>(element) || (is<HTMLObjectElement>(element) && downcast<HTMLObjectElement>(element).containsJavaApplet());
     case DocEmbeds:
-        return element.hasLocalName(embedTag);
+        return element.hasTagName(embedTag);
     case DocLinks:
-        return (element.hasLocalName(aTag) || element.hasLocalName(areaTag)) && element.fastHasAttribute(hrefAttr);
+        return (element.hasTagName(aTag) || element.hasTagName(areaTag)) && element.fastHasAttribute(hrefAttr);
     case DocAnchors:
-        return element.hasLocalName(aTag) && element.fastHasAttribute(nameAttr);
+        return element.hasTagName(aTag) && element.fastHasAttribute(nameAttr);
+    case DocumentNamedItems:
+        return downcast<DocumentNameCollection>(collection).elementMatches(element);
     case DocAll:
     case NodeChildren:
-        return true;
-    case DocumentNamedItems:
-        return static_cast<const DocumentNameCollection&>(htmlCollection).nodeMatches(&element);
     case WindowNamedItems:
-        return static_cast<const WindowNameCollection&>(htmlCollection).nodeMatches(&element);
     case FormControls:
     case TableRows:
         break;
@@ -224,36 +218,52 @@ inline bool isMatchingElement(const HTMLCollection& htmlCollection, Element& ele
     return false;
 }
 
-static Element* previousElement(ContainerNode& base, Element* previous, bool onlyIncludeDirectChildren)
+static inline bool isMatchingElement(const HTMLCollection& collection, Element& element)
 {
-    return onlyIncludeDirectChildren ? ElementTraversal::previousSibling(previous) : ElementTraversal::previous(previous, &base);
+    // Collection types that deal with any type of Elements, not just HTMLElements.
+    switch (collection.type()) {
+    case DocAll:
+    case NodeChildren:
+        return true;
+    case WindowNamedItems:
+        return downcast<WindowNameCollection>(collection).elementMatches(element);
+    default:
+        // Collection types that only deal with HTMLElements.
+        return is<HTMLElement>(element) && isMatchingHTMLElement(collection, downcast<HTMLElement>(element));
+    }
 }
 
-ALWAYS_INLINE Element* HTMLCollection::iterateForPreviousElement(Element* current) const
+static inline Element* previousElement(ContainerNode& base, Element& element, bool onlyIncludeDirectChildren)
+{
+    return onlyIncludeDirectChildren ? ElementTraversal::previousSibling(element) : ElementTraversal::previous(element, &base);
+}
+
+ALWAYS_INLINE Element* HTMLCollection::iterateForPreviousElement(Element* element) const
 {
     bool onlyIncludeDirectChildren = m_shouldOnlyIncludeDirectChildren;
     ContainerNode& rootNode = this->rootNode();
-    for (; current; current = previousElement(rootNode, current, onlyIncludeDirectChildren)) {
-        if (isMatchingElement(*this, *current))
-            return current;
+    for (; element; element = previousElement(rootNode, *element, onlyIncludeDirectChildren)) {
+        if (isMatchingElement(*this, *element))
+            return element;
     }
     return nullptr;
 }
 
-inline Element* firstMatchingElement(const HTMLCollection& collection, ContainerNode& root)
+static inline Element* firstMatchingElement(const HTMLCollection& collection, ContainerNode& root)
 {
-    Element* element = ElementTraversal::firstWithin(&root);
+    Element* element = ElementTraversal::firstWithin(root);
     while (element && !isMatchingElement(collection, *element))
-        element = ElementTraversal::next(element, &root);
+        element = ElementTraversal::next(*element, &root);
     return element;
 }
 
-inline Element* nextMatchingElement(const HTMLCollection& collection, Element* current, ContainerNode& root)
+static inline Element* nextMatchingElement(const HTMLCollection& collection, Element& element, ContainerNode& root)
 {
+    Element* next = &element;
     do {
-        current = ElementTraversal::next(current, &root);
-    } while (current && !isMatchingElement(collection, *current));
-    return current;
+        next = ElementTraversal::next(*next, &root);
+    } while (next && !isMatchingElement(collection, *next));
+    return next;
 }
 
 unsigned HTMLCollection::length() const
@@ -261,7 +271,7 @@ unsigned HTMLCollection::length() const
     return m_indexCache.nodeCount(*this);
 }
 
-Node* HTMLCollection::item(unsigned offset) const
+Element* HTMLCollection::item(unsigned offset) const
 {
     return m_indexCache.nodeAt(*this, offset);
 }
@@ -270,29 +280,40 @@ static inline bool nameShouldBeVisibleInDocumentAll(HTMLElement& element)
 {
     // The document.all collection returns only certain types of elements by name,
     // although it returns any type of element by id.
-    return element.hasLocalName(appletTag)
-        || element.hasLocalName(embedTag)
-        || element.hasLocalName(formTag)
-        || element.hasLocalName(imgTag)
-        || element.hasLocalName(inputTag)
-        || element.hasLocalName(objectTag)
-        || element.hasLocalName(selectTag);
+    return element.hasTagName(appletTag)
+        || element.hasTagName(embedTag)
+        || element.hasTagName(formTag)
+        || element.hasTagName(imgTag)
+        || element.hasTagName(inputTag)
+        || element.hasTagName(objectTag)
+        || element.hasTagName(selectTag);
 }
 
-inline Element* firstMatchingChildElement(const HTMLCollection& nodeList, ContainerNode& root)
+static inline bool nameShouldBeVisibleInDocumentAll(Element& element)
 {
-    Element* element = ElementTraversal::firstWithin(&root);
+    return is<HTMLElement>(element) && nameShouldBeVisibleInDocumentAll(downcast<HTMLElement>(element));
+}
+
+static inline Element* firstMatchingChildElement(const HTMLCollection& nodeList, ContainerNode& root)
+{
+    Element* element = ElementTraversal::firstWithin(root);
     while (element && !isMatchingElement(nodeList, *element))
-        element = ElementTraversal::nextSibling(element);
+        element = ElementTraversal::nextSibling(*element);
     return element;
 }
 
-inline Element* nextMatchingSiblingElement(const HTMLCollection& nodeList, Element* current)
+static inline Element* nextMatchingSiblingElement(const HTMLCollection& nodeList, Element& element)
 {
+    Element* next = &element;
     do {
-        current = ElementTraversal::nextSibling(current);
-    } while (current && !isMatchingElement(nodeList, *current));
-    return current;
+        next = ElementTraversal::nextSibling(*next);
+    } while (next && !isMatchingElement(nodeList, *next));
+    return next;
+}
+
+inline bool HTMLCollection::usesCustomForwardOnlyTraversal() const
+{
+    return m_usesCustomForwardOnlyTraversal;
 }
 
 inline Element* HTMLCollection::firstElement(ContainerNode& root) const
@@ -313,25 +334,23 @@ inline Element* HTMLCollection::traverseForward(Element& current, unsigned count
             if (!element)
                 return nullptr;
         }
-        return element;
-    }
-    if (m_shouldOnlyIncludeDirectChildren) {
+    } else if (m_shouldOnlyIncludeDirectChildren) {
         for (traversedCount = 0; traversedCount < count; ++traversedCount) {
-            element = nextMatchingSiblingElement(*this, element);
+            element = nextMatchingSiblingElement(*this, *element);
             if (!element)
                 return nullptr;
         }
-        return element;
-    }
-    for (traversedCount = 0; traversedCount < count; ++traversedCount) {
-        element = nextMatchingElement(*this, element, root);
-        if (!element)
-            return nullptr;
+    } else {
+        for (traversedCount = 0; traversedCount < count; ++traversedCount) {
+            element = nextMatchingElement(*this, *element, root);
+            if (!element)
+                return nullptr;
+        }
     }
     return element;
 }
 
-Element* HTMLCollection::collectionFirst() const
+Element* HTMLCollection::collectionBegin() const
 {
     return firstElement(rootNode());
 }
@@ -340,46 +359,46 @@ Element* HTMLCollection::collectionLast() const
 {
     // FIXME: This should be optimized similarly to the forward case.
     auto& root = rootNode();
-    Element* last = m_shouldOnlyIncludeDirectChildren ? ElementTraversal::lastChild(&root) : ElementTraversal::lastWithin(&root);
+    Element* last = m_shouldOnlyIncludeDirectChildren ? ElementTraversal::lastChild(root) : ElementTraversal::lastWithin(root);
     return iterateForPreviousElement(last);
 }
 
-Element* HTMLCollection::collectionTraverseForward(Element& current, unsigned count, unsigned& traversedCount) const
+void HTMLCollection::collectionTraverseForward(Element*& current, unsigned count, unsigned& traversedCount) const
 {
-    return traverseForward(current, count, traversedCount, rootNode());
+    current = traverseForward(*current, count, traversedCount, rootNode());
 }
 
-Element* HTMLCollection::collectionTraverseBackward(Element& current, unsigned count) const
+void HTMLCollection::collectionTraverseBackward(Element*& current, unsigned count) const
 {
     // FIXME: This should be optimized similarly to the forward case.
-    auto& root = rootNode();
-    Element* element = &current;
     if (m_shouldOnlyIncludeDirectChildren) {
-        for (; count && element ; --count)
-            element = iterateForPreviousElement(ElementTraversal::previousSibling(element));
-        return element;
+        for (; count && current; --count)
+            current = iterateForPreviousElement(ElementTraversal::previousSibling(*current));
+        return;
     }
-    for (; count && element ; --count)
-        element = iterateForPreviousElement(ElementTraversal::previous(element, &root));
-    return element;
+    auto& root = rootNode();
+    for (; count && current; --count)
+        current = iterateForPreviousElement(ElementTraversal::previous(*current, &root));
 }
 
-void HTMLCollection::invalidateCache() const
+void HTMLCollection::invalidateCache(Document& document) const
 {
-    m_indexCache.invalidate();
-    m_isNameCacheValid = false;
-    m_isItemRefElementsCacheValid = false;
-    m_idCache.clear();
-    m_nameCache.clear();
+    if (m_indexCache.hasValidCache(*this)) {
+        document.unregisterCollection(const_cast<HTMLCollection&>(*this));
+        m_indexCache.invalidate(*this);
+    }
+    if (hasNamedElementCache())
+        invalidateNamedElementCache(document);
 }
 
-void HTMLCollection::invalidateIdNameCacheMaps() const
+void HTMLCollection::invalidateNamedElementCache(Document& document) const
 {
-    m_idCache.clear();
-    m_nameCache.clear();
+    ASSERT(hasNamedElementCache());
+    document.collectionWillClearIdNameMap(*this);
+    m_namedElementCache = nullptr;
 }
 
-Node* HTMLCollection::namedItem(const AtomicString& name) const
+Element* HTMLCollection::namedItem(const AtomicString& name) const
 {
     // http://msdn.microsoft.com/workshop/author/dhtml/reference/methods/nameditem.asp
     // This method first searches for an object with a matching id
@@ -388,65 +407,69 @@ Node* HTMLCollection::namedItem(const AtomicString& name) const
     // that are allowed a name attribute.
 
     if (name.isEmpty())
-        return 0;
+        return nullptr;
 
     ContainerNode& root = rootNode();
     if (!usesCustomForwardOnlyTraversal() && root.isInTreeScope()) {
+        Element* candidate = nullptr;
+
         TreeScope& treeScope = root.treeScope();
-        Element* candidate = 0;
         if (treeScope.hasElementWithId(*name.impl())) {
             if (!treeScope.containsMultipleElementsWithId(name))
                 candidate = treeScope.getElementById(name);
         } else if (treeScope.hasElementWithName(*name.impl())) {
             if (!treeScope.containsMultipleElementsWithName(name)) {
                 candidate = treeScope.getElementByName(name);
-                if (candidate && type() == DocAll && (!candidate->isHTMLElement() || !nameShouldBeVisibleInDocumentAll(toHTMLElement(*candidate))))
-                    candidate = 0;
+                if (candidate && type() == DocAll && !nameShouldBeVisibleInDocumentAll(*candidate))
+                    candidate = nullptr;
             }
         } else
-            return 0;
+            return nullptr;
 
-        if (candidate && isMatchingElement(*this, *candidate)
-            && (m_shouldOnlyIncludeDirectChildren ? candidate->parentNode() == &root : candidate->isDescendantOf(&root)))
-            return candidate;
+        if (candidate && isMatchingElement(*this, *candidate)) {
+            if (m_shouldOnlyIncludeDirectChildren ? candidate->parentNode() == &root : candidate->isDescendantOf(&root))
+                return candidate;
+        }
     }
 
     // The pathological case. We need to walk the entire subtree.
-    updateNameCache();
+    updateNamedElementCache();
+    ASSERT(m_namedElementCache);
 
-    if (Vector<Element*>* idResults = idCache(name)) {
+    if (const Vector<Element*>* idResults = m_namedElementCache->findElementsWithId(name)) {
         if (idResults->size())
             return idResults->at(0);
     }
 
-    if (Vector<Element*>* nameResults = nameCache(name)) {
+    if (const Vector<Element*>* nameResults = m_namedElementCache->findElementsWithName(name)) {
         if (nameResults->size())
             return nameResults->at(0);
     }
 
-    return 0;
+    return nullptr;
 }
 
-void HTMLCollection::updateNameCache() const
+void HTMLCollection::updateNamedElementCache() const
 {
-    if (hasNameCache())
+    if (hasNamedElementCache())
         return;
 
-    ContainerNode& root = rootNode();
+    auto cache = std::make_unique<CollectionNamedElementCache>();
 
-    unsigned count;
-    for (Element* element = firstElement(root); element; element = traverseForward(*element, 1, count, root)) {
-        const AtomicString& idAttrVal = element->getIdAttribute();
-        if (!idAttrVal.isEmpty())
-            appendIdCache(idAttrVal, element);
-        if (!element->isHTMLElement())
+    unsigned size = m_indexCache.nodeCount(*this);
+    for (unsigned i = 0; i < size; ++i) {
+        Element& element = *m_indexCache.nodeAt(*this, i);
+        const AtomicString& id = element.getIdAttribute();
+        if (!id.isEmpty())
+            cache->appendToIdCache(id, element);
+        if (!is<HTMLElement>(element))
             continue;
-        const AtomicString& nameAttrVal = element->getNameAttribute();
-        if (!nameAttrVal.isEmpty() && idAttrVal != nameAttrVal && (type() != DocAll || nameShouldBeVisibleInDocumentAll(toHTMLElement(*element))))
-            appendNameCache(nameAttrVal, element);
+        const AtomicString& name = element.getNameAttribute();
+        if (!name.isEmpty() && id != name && (type() != DocAll || nameShouldBeVisibleInDocumentAll(downcast<HTMLElement>(element))))
+            cache->appendToNameCache(name, element);
     }
 
-    setHasNameCache();
+    setNamedItemCache(WTF::move(cache));
 }
 
 bool HTMLCollection::hasNamedItem(const AtomicString& name) const
@@ -455,22 +478,34 @@ bool HTMLCollection::hasNamedItem(const AtomicString& name) const
     return namedItem(name);
 }
 
-void HTMLCollection::namedItems(const AtomicString& name, Vector<Ref<Element>>& result) const
+Vector<Ref<Element>> HTMLCollection::namedItems(const AtomicString& name) const
 {
-    ASSERT(result.isEmpty());
+    // FIXME: This non-virtual function can't possibly be doing the correct thing for
+    // any derived class that overrides the virtual namedItem function.
+
+    Vector<Ref<Element>> elements;
+
     if (name.isEmpty())
-        return;
+        return elements;
 
-    updateNameCache();
+    updateNamedElementCache();
+    ASSERT(m_namedElementCache);
 
-    Vector<Element*>* idResults = idCache(name);
-    Vector<Element*>* nameResults = nameCache(name);
+    auto* elementsWithId = m_namedElementCache->findElementsWithId(name);
+    auto* elementsWithName = m_namedElementCache->findElementsWithName(name);
 
-    for (unsigned i = 0; idResults && i < idResults->size(); ++i)
-        result.append(*idResults->at(i));
+    elements.reserveInitialCapacity((elementsWithId ? elementsWithId->size() : 0) + (elementsWithName ? elementsWithName->size() : 0));
 
-    for (unsigned i = 0; nameResults && i < nameResults->size(); ++i)
-        result.append(*nameResults->at(i));
+    if (elementsWithId) {
+        for (auto& element : *elementsWithId)
+            elements.uncheckedAppend(*element);
+    }
+    if (elementsWithName) {
+        for (auto& element : *elementsWithName)
+            elements.uncheckedAppend(*element);
+    }
+
+    return elements;
 }
 
 PassRefPtr<NodeList> HTMLCollection::tags(const String& name)
@@ -478,12 +513,10 @@ PassRefPtr<NodeList> HTMLCollection::tags(const String& name)
     return ownerNode().getElementsByTagName(name);
 }
 
-void HTMLCollection::append(NodeCacheMap& map, const AtomicString& key, Element* element)
+Element* HTMLCollection::customElementAfter(Element*) const
 {
-    OwnPtr<Vector<Element*>>& vector = map.add(key.impl(), nullptr).iterator->value;
-    if (!vector)
-        vector = adoptPtr(new Vector<Element*>);
-    vector->append(element);
+    ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 } // namespace WebCore

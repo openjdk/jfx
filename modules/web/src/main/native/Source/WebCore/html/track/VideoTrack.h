@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,7 +32,6 @@
 #include "ExceptionCode.h"
 #include "TrackBase.h"
 #include "VideoTrackPrivate.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -47,11 +46,11 @@ public:
     virtual void videoTrackSelectedChanged(VideoTrack*) = 0;
 };
 
-class VideoTrack : public TrackBase, public VideoTrackPrivateClient {
+class VideoTrack final : public TrackBase, public VideoTrackPrivateClient {
 public:
-    static PassRefPtr<VideoTrack> create(VideoTrackClient* client, PassRefPtr<VideoTrackPrivate> trackPrivate)
+    static Ref<VideoTrack> create(VideoTrackClient* client, PassRefPtr<VideoTrackPrivate> trackPrivate)
     {
-        return adoptRef(new VideoTrack(client, trackPrivate));
+        return adoptRef(*new VideoTrack(client, trackPrivate));
     }
     virtual ~VideoTrack();
 
@@ -78,6 +77,8 @@ public:
 
     const MediaDescription& description() const;
 
+    void setPrivate(PassRefPtr<VideoTrackPrivate>);
+
 protected:
     VideoTrack(VideoTrackClient*, PassRefPtr<VideoTrackPrivate> privateTrack);
 
@@ -91,6 +92,8 @@ private:
     virtual void willRemove(TrackPrivateBase*) override;
 
     virtual bool enabled() const override { return selected(); }
+
+    void updateKindFromPrivate();
 
     bool m_selected;
     VideoTrackClient* m_client;

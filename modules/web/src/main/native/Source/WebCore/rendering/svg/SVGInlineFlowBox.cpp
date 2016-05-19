@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Computer Inc.
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
@@ -38,14 +38,14 @@ void SVGInlineFlowBox::paintSelectionBackground(PaintInfo& paintInfo)
 
     PaintInfo childPaintInfo(paintInfo);
     for (InlineBox* child = firstChild(); child; child = child->nextOnLine()) {
-        if (child->isSVGInlineTextBox())
-            toSVGInlineTextBox(child)->paintSelectionBackground(childPaintInfo);
-        else if (child->isSVGInlineFlowBox())
-            toSVGInlineFlowBox(child)->paintSelectionBackground(childPaintInfo);
+        if (is<SVGInlineTextBox>(*child))
+            downcast<SVGInlineTextBox>(*child).paintSelectionBackground(childPaintInfo);
+        else if (is<SVGInlineFlowBox>(*child))
+            downcast<SVGInlineFlowBox>(*child).paintSelectionBackground(childPaintInfo);
     }
 }
 
-void SVGInlineFlowBox::paint(PaintInfo& paintInfo, const LayoutPoint&, LayoutUnit, LayoutUnit)
+void SVGInlineFlowBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit, LayoutUnit)
 {
     ASSERT(paintInfo.phase == PaintPhaseForeground || paintInfo.phase == PaintPhaseSelection);
     ASSERT(!paintInfo.context->paintingDisabled());
@@ -53,10 +53,10 @@ void SVGInlineFlowBox::paint(PaintInfo& paintInfo, const LayoutPoint&, LayoutUni
     SVGRenderingContext renderingContext(renderer(), paintInfo, SVGRenderingContext::SaveGraphicsContext);
     if (renderingContext.isRenderingPrepared()) {
         for (InlineBox* child = firstChild(); child; child = child->nextOnLine()) {
-            if (child->isSVGInlineTextBox())
-                computeTextMatchMarkerRectForRenderer(&(toSVGInlineTextBox(child)->renderer()));
+            if (is<SVGInlineTextBox>(*child))
+                computeTextMatchMarkerRectForRenderer(&downcast<SVGInlineTextBox>(*child).renderer());
 
-            child->paint(paintInfo, LayoutPoint(), 0, 0);
+            child->paint(paintInfo, paintOffset, 0, 0);
         }
     }
 }
@@ -83,25 +83,21 @@ void SVGInlineFlowBox::computeTextMatchMarkerRectForRenderer(RenderSVGInlineText
     RenderStyle& style = textRenderer->style();
 
     AffineTransform fragmentTransform;
-    Vector<DocumentMarker*> markers = textRenderer->document().markers().markersFor(&textNode);
-
-    Vector<DocumentMarker*>::iterator markerEnd = markers.end();
-    for (Vector<DocumentMarker*>::iterator markerIt = markers.begin(); markerIt != markerEnd; ++markerIt) {
-        DocumentMarker* marker = *markerIt;
-
+    Vector<RenderedDocumentMarker*> markers = textRenderer->document().markers().markersFor(&textNode);
+    for (auto* marker : markers) {
         // SVG is only interessted in the TextMatch marker, for now.
         if (marker->type() != DocumentMarker::TextMatch)
             continue;
 
         FloatRect markerRect;
         for (InlineTextBox* box = textRenderer->firstTextBox(); box; box = box->nextTextBox()) {
-            if (!box->isSVGInlineTextBox())
+            if (!is<SVGInlineTextBox>(*box))
                 continue;
 
-            SVGInlineTextBox* textBox = toSVGInlineTextBox(box);
+            auto& textBox = downcast<SVGInlineTextBox>(*box);
 
-            int markerStartPosition = std::max<int>(marker->startOffset() - textBox->start(), 0);
-            int markerEndPosition = std::min<int>(marker->endOffset() - textBox->start(), textBox->len());
+            int markerStartPosition = std::max<int>(marker->startOffset() - textBox.start(), 0);
+            int markerEndPosition = std::min<int>(marker->endOffset() - textBox.start(), textBox.len());
 
             if (markerStartPosition >= markerEndPosition)
                 continue;
@@ -109,17 +105,17 @@ void SVGInlineFlowBox::computeTextMatchMarkerRectForRenderer(RenderSVGInlineText
             int fragmentStartPosition = 0;
             int fragmentEndPosition = 0;
 
-            const Vector<SVGTextFragment>& fragments = textBox->textFragments();
+            const Vector<SVGTextFragment>& fragments = textBox.textFragments();
             unsigned textFragmentsSize = fragments.size();
             for (unsigned i = 0; i < textFragmentsSize; ++i) {
                 const SVGTextFragment& fragment = fragments.at(i);
 
                 fragmentStartPosition = markerStartPosition;
                 fragmentEndPosition = markerEndPosition;
-                if (!textBox->mapStartEndPositionsIntoFragmentCoordinates(fragment, fragmentStartPosition, fragmentEndPosition))
+                if (!textBox.mapStartEndPositionsIntoFragmentCoordinates(fragment, fragmentStartPosition, fragmentEndPosition))
                     continue;
 
-                FloatRect fragmentRect = textBox->selectionRectForTextFragment(fragment, fragmentStartPosition, fragmentEndPosition, &style);
+                FloatRect fragmentRect = textBox.selectionRectForTextFragment(fragment, fragmentStartPosition, fragmentEndPosition, &style);
                 fragment.buildFragmentTransform(fragmentTransform);
                 if (!fragmentTransform.isIdentity())
                     fragmentRect = fragmentTransform.mapRect(fragmentRect);
@@ -128,7 +124,7 @@ void SVGInlineFlowBox::computeTextMatchMarkerRectForRenderer(RenderSVGInlineText
             }
         }
 
-        toRenderedDocumentMarker(marker)->setRenderedRect(textRenderer->localToAbsoluteQuad(markerRect).enclosingBoundingBox());
+        marker->setRenderedRect(textRenderer->localToAbsoluteQuad(markerRect).enclosingBoundingBox());
     }
 }
 

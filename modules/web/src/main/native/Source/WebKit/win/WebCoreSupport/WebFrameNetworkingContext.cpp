@@ -23,7 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebFrameNetworkingContext.h"
 
 #include "WebView.h"
@@ -104,17 +103,12 @@ ResourceError WebFrameNetworkingContext::blockedError(const ResourceRequest& req
     return frame()->loader().client().blockedError(request);
 }
 
-String WebFrameNetworkingContext::referrer() const
-{
-    return frame()->loader().referrer();
-}
-
 #if USE(CFNETWORK)
 NetworkStorageSession& WebFrameNetworkingContext::storageSession() const
 {
     ASSERT(isMainThread());
 
-    if (frame() && frame()->settings().privateBrowsingEnabled())
+    if (frame() && frame()->page()->usesEphemeralSession())
         return *privateSession();
 
     return NetworkStorageSession::defaultStorageSession();

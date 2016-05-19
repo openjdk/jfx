@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -25,48 +25,67 @@
  */
 
 #include "config.h"
-#include "Font.h"
+#include "FontCascade.h"
 
+#if USE(CAIRO)
+
+#include "Font.h"
 #include "GraphicsContext.h"
 #include "HarfBuzzShaper.h"
+#include "LayoutRect.h"
 #include "Logging.h"
 #include "NotImplemented.h"
 #include "PlatformContextCairo.h"
-#include "SimpleFontData.h"
 #include <cairo.h>
 
 namespace WebCore {
 
-float Font::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int, int) const
+float FontCascade::getGlyphsAndAdvancesForComplexText(const TextRun& run, int, int, GlyphBuffer& glyphBuffer, ForTextEmphasisOrNot /* forTextEmphasis */) const
 {
-    GlyphBuffer glyphBuffer;
     HarfBuzzShaper shaper(this, run);
-    if (shaper.shape(&glyphBuffer)) {
-        FloatPoint startPoint = point;
-        float startX = startPoint.x();
-        drawGlyphBuffer(context, run, glyphBuffer, startPoint);
-        return startPoint.x() - startX;
+    if (!shaper.shape(&glyphBuffer)) {
+        LOG_ERROR("Shaper couldn't shape glyphBuffer.");
+        return 0;
     }
-    LOG_ERROR("Shaper couldn't shape glyphBuffer.");
+
+    // FIXME: Mac returns an initial advance here.
     return 0;
 }
 
-void Font::drawEmphasisMarksForComplexText(GraphicsContext* /* context */, const TextRun& /* run */, const AtomicString& /* mark */, const FloatPoint& /* point */, int /* from */, int /* to */) const
+float FontCascade::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to) const
+{
+    // This glyph buffer holds our glyphs + advances + font data for each glyph.
+    GlyphBuffer glyphBuffer;
+
+    float startX = point.x() + getGlyphsAndAdvancesForComplexText(run, from, to, glyphBuffer);
+
+    // We couldn't generate any glyphs for the run. Give up.
+    if (glyphBuffer.isEmpty())
+        return 0;
+
+    // Draw the glyph buffer now at the starting point returned in startX.
+    FloatPoint startPoint(startX, point.y());
+    drawGlyphBuffer(context, run, glyphBuffer, startPoint);
+
+    return startPoint.x() - startX;
+}
+
+void FontCascade::drawEmphasisMarksForComplexText(GraphicsContext* /* context */, const TextRun& /* run */, const AtomicString& /* mark */, const FloatPoint& /* point */, int /* from */, int /* to */) const
 {
     notImplemented();
 }
 
-bool Font::canReturnFallbackFontsForComplexText()
+bool FontCascade::canReturnFallbackFontsForComplexText()
 {
     return false;
 }
 
-bool Font::canExpandAroundIdeographsInComplexText()
+bool FontCascade::canExpandAroundIdeographsInComplexText()
 {
     return false;
 }
 
-float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFontData*>*, GlyphOverflow*) const
+float FontCascade::floatWidthForComplexText(const TextRun& run, HashSet<const Font*>*, GlyphOverflow*) const
 {
     HarfBuzzShaper shaper(this, run);
     if (shaper.shape())
@@ -75,7 +94,7 @@ float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFon
     return 0;
 }
 
-int Font::offsetForPositionForComplexText(const TextRun& run, float x, bool) const
+int FontCascade::offsetForPositionForComplexText(const TextRun& run, float x, bool) const
 {
     HarfBuzzShaper shaper(this, run);
     if (shaper.shape())
@@ -84,13 +103,18 @@ int Font::offsetForPositionForComplexText(const TextRun& run, float x, bool) con
     return 0;
 }
 
-FloatRect Font::selectionRectForComplexText(const TextRun& run, const FloatPoint& point, int h, int from, int to) const
+void FontCascade::adjustSelectionRectForComplexText(const TextRun& run, LayoutRect& selectionRect, int from, int to) const
 {
     HarfBuzzShaper shaper(this, run);
-    if (shaper.shape())
-        return shaper.selectionRect(point, h, from, to);
+    if (shaper.shape()) {
+        // FIXME: This should mimic Mac port.
+        FloatRect rect = shaper.selectionRect(FloatPoint(selectionRect.location()), selectionRect.height().toInt(), from, to);
+        selectionRect = LayoutRect(rect);
+        return;
+    }
     LOG_ERROR("Shaper couldn't shape text run.");
-    return FloatRect();
 }
 
-}
+} // namespace WebCore
+
+#endif // USE(CAIRO)

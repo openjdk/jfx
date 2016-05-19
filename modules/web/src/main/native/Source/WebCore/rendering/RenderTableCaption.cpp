@@ -24,8 +24,8 @@
 
 namespace WebCore {
 
-RenderTableCaption::RenderTableCaption(Element& element, PassRef<RenderStyle> style)
-    : RenderBlockFlow(element, std::move(style))
+RenderTableCaption::RenderTableCaption(Element& element, Ref<RenderStyle>&& style)
+    : RenderBlockFlow(element, WTF::move(style))
 {
 }
 
@@ -33,29 +33,21 @@ RenderTableCaption::~RenderTableCaption()
 {
 }
 
-LayoutUnit RenderTableCaption::containingBlockLogicalWidthForContent() const
-{
-    RenderBlock* cb = containingBlock();
-    return cb->logicalWidth();
-}
-
 void RenderTableCaption::insertedIntoTree()
 {
     RenderBlockFlow::insertedIntoTree();
-
     table()->addCaption(this);
 }
 
 void RenderTableCaption::willBeRemovedFromTree()
 {
     RenderBlockFlow::willBeRemovedFromTree();
-
     table()->removeCaption(this);
 }
 
 RenderTable* RenderTableCaption::table() const
 {
-    return toRenderTable(parent());
+    return downcast<RenderTable>(parent());
 }
 
 }

@@ -26,15 +26,16 @@
 #include "config.h"
 
 #import "APICast.h"
-#import "APIShims.h"
+#import "JSCInlines.h"
 #import "JSContextInternal.h"
+#import "JSContextPrivate.h"
+#import "JSContextRefInternal.h"
 #import "JSGlobalObject.h"
 #import "JSValueInternal.h"
 #import "JSVirtualMachineInternal.h"
 #import "JSWrapperMap.h"
 #import "JavaScriptCore.h"
 #import "ObjcRuntimeExtras.h"
-#import "JSCInlines.h"
 #import "StrongInlines.h"
 #import <wtf/HashSet.h>
 
@@ -80,6 +81,7 @@
 
 - (void)dealloc
 {
+    m_exception.clear();
     [m_wrapperMap release];
     JSGlobalContextRelease(m_context);
     [m_virtualMachine release];
@@ -89,9 +91,17 @@
 
 - (JSValue *)evaluateScript:(NSString *)script
 {
-    JSValueRef exceptionValue = 0;
+    return [self evaluateScript:script withSourceURL:nil];
+}
+
+- (JSValue *)evaluateScript:(NSString *)script withSourceURL:(NSURL *)sourceURL
+{
+    JSValueRef exceptionValue = nullptr;
     JSStringRef scriptJS = JSStringCreateWithCFString((CFStringRef)script);
-    JSValueRef result = JSEvaluateScript(m_context, scriptJS, 0, 0, 0, &exceptionValue);
+    JSStringRef sourceURLJS = sourceURL ? JSStringCreateWithCFString((CFStringRef)[sourceURL absoluteString]) : nullptr;
+    JSValueRef result = JSEvaluateScript(m_context, scriptJS, nullptr, sourceURLJS, 0, &exceptionValue);
+    if (sourceURLJS)
+        JSStringRelease(sourceURLJS);
     JSStringRelease(scriptJS);
 
     if (exceptionValue)
@@ -102,6 +112,7 @@
 
 - (void)setException:(JSValue *)value
 {
+    JSC::JSLockHolder locker(toJS(m_context));
     if (value)
         m_exception.set(toJS(m_context)->vm(), toJS(JSValueToObject(m_context, valueInternalValue(value), 0)));
     else
@@ -181,14 +192,45 @@
     if (!name)
         return nil;
 
-    return [(NSString *)JSStringCopyCFString(kCFAllocatorDefault, name) autorelease];
+    return (NSString *)adoptCF(JSStringCopyCFString(kCFAllocatorDefault, name)).autorelease();
 }
 
 - (void)setName:(NSString *)name
 {
-    JSStringRef nameJS = JSStringCreateWithCFString((CFStringRef)[name copy]);
+    JSStringRef nameJS = name ? JSStringCreateWithCFString((CFStringRef)[[name copy] autorelease]) : nullptr;
     JSGlobalContextSetName(m_context, nameJS);
-    JSStringRelease(nameJS);
+    if (nameJS)
+        JSStringRelease(nameJS);
+}
+
+- (BOOL)_remoteInspectionEnabled
+{
+    return JSGlobalContextGetRemoteInspectionEnabled(m_context);
+}
+
+- (void)_setRemoteInspectionEnabled:(BOOL)enabled
+{
+    JSGlobalContextSetRemoteInspectionEnabled(m_context, enabled);
+}
+
+- (BOOL)_includesNativeCallStackWhenReportingExceptions
+{
+    return JSGlobalContextGetIncludesNativeCallStackWhenReportingExceptions(m_context);
+}
+
+- (void)_setIncludesNativeCallStackWhenReportingExceptions:(BOOL)includeNativeCallStack
+{
+    JSGlobalContextSetIncludesNativeCallStackWhenReportingExceptions(m_context, includeNativeCallStack);
+}
+
+- (CFRunLoopRef)_debuggerRunLoop
+{
+    return JSGlobalContextGetDebuggerRunLoop(m_context);
+}
+
+- (void)_setDebuggerRunLoop:(CFRunLoopRef)runLoop
+{
+    JSGlobalContextSetDebuggerRunLoop(m_context, runLoop);
 }
 
 @end
@@ -269,14 +311,13 @@
 
 - (JSValue *)wrapperForObjCObject:(id)object
 {
-    // Lock access to m_wrapperMap
-    JSC::JSLockHolder lock(toJS(m_context));
+    JSC::JSLockHolder locker(toJS(m_context));
     return [m_wrapperMap jsWrapperForObject:object];
 }
 
 - (JSValue *)wrapperForJSObject:(JSValueRef)value
 {
-    JSC::JSLockHolder lock(toJS(m_context));
+    JSC::JSLockHolder locker(toJS(m_context));
     return [m_wrapperMap objcWrapperForJSValueRef:value];
 }
 

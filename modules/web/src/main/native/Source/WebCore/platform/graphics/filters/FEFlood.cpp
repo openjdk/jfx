@@ -21,8 +21,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "FEFlood.h"
 
 #include "Filter.h"
@@ -31,16 +29,16 @@
 
 namespace WebCore {
 
-FEFlood::FEFlood(Filter* filter, const Color& floodColor, float floodOpacity)
+FEFlood::FEFlood(Filter& filter, const Color& floodColor, float floodOpacity)
     : FilterEffect(filter)
     , m_floodColor(floodColor)
     , m_floodOpacity(floodOpacity)
 {
 }
 
-PassRefPtr<FEFlood> FEFlood::create(Filter* filter, const Color& floodColor, float floodOpacity)
+Ref<FEFlood> FEFlood::create(Filter& filter, const Color& floodColor, float floodOpacity)
 {
-    return adoptRef(new FEFlood(filter, floodColor, floodOpacity));
+    return adoptRef(*new FEFlood(filter, floodColor, floodOpacity));
 }
 
 Color FEFlood::floodColor() const
@@ -94,5 +92,3 @@ TextStream& FEFlood::externalRepresentation(TextStream& ts, int indent) const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)

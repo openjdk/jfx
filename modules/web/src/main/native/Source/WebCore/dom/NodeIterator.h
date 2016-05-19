@@ -37,9 +37,9 @@ namespace WebCore {
 
     class NodeIterator : public ScriptWrappable, public RefCounted<NodeIterator>, public NodeIteratorBase {
     public:
-        static PassRefPtr<NodeIterator> create(PassRefPtr<Node> rootNode, unsigned whatToShow, PassRefPtr<NodeFilter> filter, bool expandEntityReferences)
+        static Ref<NodeIterator> create(PassRefPtr<Node> rootNode, unsigned whatToShow, PassRefPtr<NodeFilter> filter, bool expandEntityReferences)
         {
-            return adoptRef(new NodeIterator(rootNode, whatToShow, filter, expandEntityReferences));
+            return adoptRef(*new NodeIterator(rootNode, whatToShow, filter, expandEntityReferences));
         }
         ~NodeIterator();
 
@@ -51,7 +51,7 @@ namespace WebCore {
         bool pointerBeforeReferenceNode() const { return m_referenceNode.isPointerBeforeNode; }
 
         // This function is called before any node is removed from the document tree.
-        void nodeWillBeRemoved(Node*);
+        void nodeWillBeRemoved(Node&);
 
         // Do not call these functions. They are just scaffolding to support the Objective-C bindings.
         // They operate in the main thread normal world, and they swallow JS exceptions.
@@ -71,7 +71,7 @@ namespace WebCore {
             bool moveToPrevious(Node* root);
         };
 
-        void updateForNodeRemoval(Node* nodeToBeRemoved, NodePointer&) const;
+        void updateForNodeRemoval(Node& nodeToBeRemoved, NodePointer&) const;
 
         NodePointer m_referenceNode;
         NodePointer m_candidateNode;

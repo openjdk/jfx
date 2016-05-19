@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -48,7 +48,7 @@ static BuiltinResourceHandleConstructorMap& builtinResourceHandleConstructorMap(
 #else
     ASSERT(isMainThread());
 #endif
-    DEFINE_STATIC_LOCAL(BuiltinResourceHandleConstructorMap, map, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(BuiltinResourceHandleConstructorMap, map, ());
     return map;
 }
 
@@ -61,7 +61,7 @@ typedef HashMap<AtomicString, ResourceHandle::BuiltinSynchronousLoader> BuiltinR
 static BuiltinResourceHandleSynchronousLoaderMap& builtinResourceHandleSynchronousLoaderMap()
 {
     ASSERT(isMainThread());
-    DEFINE_STATIC_LOCAL(BuiltinResourceHandleSynchronousLoaderMap, map, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(BuiltinResourceHandleSynchronousLoaderMap, map, ());
     return map;
 }
 
@@ -71,7 +71,7 @@ void ResourceHandle::registerBuiltinSynchronousLoader(const AtomicString& protoc
 }
 
 ResourceHandle::ResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff)
-    : d(adoptPtr(new ResourceHandleInternal(this, context, request, client, defersLoading, shouldContentSniff && shouldContentSniffURL(request.url()))))
+    : d(std::make_unique<ResourceHandleInternal>(this, context, request, client, defersLoading, shouldContentSniff && shouldContentSniffURL(request.url())))
 {
     if (!request.url().isValid()) {
         scheduleFailure(InvalidURLFailure);
@@ -108,7 +108,7 @@ void ResourceHandle::scheduleFailure(FailureType type)
     d->m_failureTimer.startOneShot(0);
 }
 
-void ResourceHandle::failureTimerFired(Timer<ResourceHandle>&)
+void ResourceHandle::failureTimerFired()
 {
     if (!client())
         return;
@@ -160,11 +160,6 @@ void ResourceHandle::continueWillSendRequest(const ResourceRequest&)
 }
 
 void ResourceHandle::continueDidReceiveResponse()
-{
-    notImplemented();
-}
-
-void ResourceHandle::continueShouldUseCredentialStorage(bool)
 {
     notImplemented();
 }
@@ -242,11 +237,6 @@ void ResourceHandle::setDefersLoading(bool defers)
     }
 
     platformSetDefersLoading(defers);
-}
-
-void ResourceHandle::didChangePriority(ResourceLoadPriority)
-{
-    // Optionally implemented by platform.
 }
 
 } // namespace WebCore

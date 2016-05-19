@@ -41,7 +41,6 @@ public:
     double monotonicTimeToPseudoWallTime(double) const;
 
     void markNavigationStart();
-    void setNavigationStart(double);
     void addRedirect(const URL& redirectingUrl, const URL& redirectedUrl);
 
     void markUnloadEventStart() { m_unloadEventStart = monotonicallyIncreasingTime(); }
@@ -67,6 +66,8 @@ public:
     double loadEventEnd() const { return m_loadEventEnd; }
     bool hasCrossOriginRedirect() const { return m_hasCrossOriginRedirect; }
     bool hasSameOriginAsPreviousDocument() const { return m_hasSameOriginAsPreviousDocument; }
+
+    double referenceMonotonicTime() const { return m_referenceMonotonicTime; }
 
 private:
     double m_referenceMonotonicTime;

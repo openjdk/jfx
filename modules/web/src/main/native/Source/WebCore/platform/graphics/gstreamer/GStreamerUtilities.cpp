@@ -24,9 +24,17 @@
 
 #include "IntSize.h"
 
-#include <gst/audio/audio.h>
+#include <gst/audio/audio-info.h>
 #include <gst/gst.h>
-#include <wtf/gobject/GUniquePtr.h>
+#include <gst/video/video-info.h>
+#include <wtf/MathExtras.h>
+#include <wtf/glib/GUniquePtr.h>
+
+#if ENABLE(VIDEO_TRACK) && USE(GSTREAMER_MPEGTS)
+#define GST_USE_UNSTABLE_API
+#include <gst/mpegts/mpegts.h>
+#undef GST_USE_UNSTABLE_API
+#endif
 
 namespace WebCore {
 
@@ -52,7 +60,8 @@ bool getVideoSizeAndFormatFromCaps(GstCaps* caps, WebCore::IntSize& size, GstVid
 {
     GstVideoInfo info;
 
-    if (!gst_caps_is_fixed(caps) || !gst_video_info_from_caps(&info, caps))
+    gst_video_info_init(&info);
+    if (!gst_video_info_from_caps(&info, caps))
         return false;
 
     format = GST_VIDEO_INFO_FORMAT(&info);
@@ -96,9 +105,9 @@ char* getGstBufferDataPointer(GstBuffer* buffer)
 
 void mapGstBuffer(GstBuffer* buffer)
 {
-    GstMapInfo* mapInfo = g_slice_new(GstMapInfo);
+    GstMapInfo* mapInfo = static_cast<GstMapInfo*>(fastMalloc(sizeof(GstMapInfo)));
     if (!gst_buffer_map(buffer, mapInfo, GST_MAP_WRITE)) {
-        g_slice_free(GstMapInfo, mapInfo);
+        fastFree(mapInfo);
         gst_buffer_unref(buffer);
         return;
     }
@@ -116,24 +125,28 @@ void unmapGstBuffer(GstBuffer* buffer)
         return;
 
     gst_buffer_unmap(buffer, mapInfo);
-    g_slice_free(GstMapInfo, mapInfo);
+    fastFree(mapInfo);
 }
 
 bool initializeGStreamer()
 {
-#if GST_CHECK_VERSION(0, 10, 31)
     if (gst_is_initialized())
         return true;
-#endif
 
     GUniqueOutPtr<GError> error;
     // FIXME: We should probably pass the arguments from the command line.
     bool gstInitialized = gst_init_check(0, 0, &error.outPtr());
     ASSERT_WITH_MESSAGE(gstInitialized, "GStreamer initialization failed: %s", error ? error->message : "unknown error occurred");
+
+#if ENABLE(VIDEO_TRACK) && USE(GSTREAMER_MPEGTS)
+    if (gstInitialized)
+        gst_mpegts_initialize();
+#endif
+
     return gstInitialized;
 }
 
-unsigned getGstPlaysFlag(const char* nick)
+unsigned getGstPlayFlag(const char* nick)
 {
     static GFlagsClass* flagsClass = static_cast<GFlagsClass*>(g_type_class_ref(g_type_from_name("GstPlayFlags")));
     ASSERT(flagsClass);
@@ -143,6 +156,18 @@ unsigned getGstPlaysFlag(const char* nick)
         return 0;
 
     return flag->value;
+}
+
+GstClockTime toGstClockTime(float time)
+{
+    // Extract the integer part of the time (seconds) and the fractional part (microseconds). Attempt to
+    // round the microseconds so no floating point precision is lost and we can perform an accurate seek.
+    float seconds;
+    float microSeconds = modff(time, &seconds) * 1000000;
+    GTimeVal timeValue;
+    timeValue.tv_sec = static_cast<glong>(seconds);
+    timeValue.tv_usec = static_cast<glong>(roundf(microSeconds / 10000) * 10000);
+    return GST_TIMEVAL_TO_TIME(timeValue);
 }
 
 }

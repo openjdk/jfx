@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2008, 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) 2008 Nuanti Ltd.
@@ -17,10 +17,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -40,27 +40,24 @@
 #include "DrawErrorUnderline.h"
 #include "FloatConversion.h"
 #include "FloatRect.h"
+#include "FloatRoundedRect.h"
 #include "Font.h"
 #include "GraphicsContextPlatformPrivateCairo.h"
 #include "IntRect.h"
 #include "NotImplemented.h"
-#include "OwnPtrCairo.h"
 #include "Path.h"
 #include "Pattern.h"
 #include "PlatformContextCairo.h"
 #include "PlatformPathCairo.h"
 #include "RefPtrCairo.h"
 #include "ShadowBlur.h"
-#include "SimpleFontData.h"
 #include "TransformationMatrix.h"
 #include <cairo.h>
 #include <math.h>
 #include <stdio.h>
 #include <wtf/MathExtras.h>
 
-#if PLATFORM(GTK)
-#include <gdk/gdk.h>
-#elif PLATFORM(WIN)
+#if PLATFORM(WIN)
 #include <cairo-win32.h>
 #endif
 
@@ -100,7 +97,9 @@ static inline void drawPathShadow(GraphicsContext* context, PathDrawingStyle dra
 
     // Calculate the extents of the rendered solid paths.
     cairo_t* cairoContext = context->platformContext()->cr();
-    OwnPtr<cairo_path_t> path = adoptPtr(cairo_copy_path(cairoContext));
+    std::unique_ptr<cairo_path_t, void(*)(cairo_path_t*)> path(cairo_copy_path(cairoContext), [](cairo_path_t* path) {
+        cairo_path_destroy(path);
+    });
 
     FloatRect solidFigureExtents;
     double x0 = 0;
@@ -177,12 +176,11 @@ static inline void shadowAndStrokeCurrentCairoPath(GraphicsContext* context)
 GraphicsContext::GraphicsContext(cairo_t* cr)
     : m_updatingControlTints(false)
     , m_transparencyCount(0)
-    , m_pixelSnappingFactor(1)
 {
     m_data = new GraphicsContextPlatformPrivateToplevel(new PlatformContextCairo(cr));
 }
 
-void GraphicsContext::platformInit(PlatformContextCairo* platformContext, bool)
+void GraphicsContext::platformInit(PlatformContextCairo* platformContext)
 {
     m_data = new GraphicsContextPlatformPrivate(platformContext);
     if (platformContext)
@@ -231,7 +229,7 @@ void GraphicsContext::restorePlatformState()
 }
 
 // Draws a filled rectangle with a stroked border.
-void GraphicsContext::drawRect(const FloatRect& rect)
+void GraphicsContext::drawRect(const FloatRect& rect, float)
 {
     if (paintingDisabled())
         return;
@@ -345,7 +343,7 @@ void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point
 }
 
 // This method is only used to draw the little circles used in lists.
-void GraphicsContext::drawEllipse(const IntRect& rect)
+void GraphicsContext::drawEllipse(const FloatRect& rect)
 {
     if (paintingDisabled())
         return;
@@ -461,7 +459,7 @@ void GraphicsContext::fillRect(const FloatRect& rect, const Color& color, ColorS
         return;
 
     if (hasShadow())
-        platformContext()->shadowBlur().drawRectShadow(this, rect, RoundedRect::Radii());
+        platformContext()->shadowBlur().drawRectShadow(this, FloatRoundedRect(rect));
 
     fillRectWithColor(platformContext()->cr(), rect, color);
 }
@@ -512,6 +510,8 @@ static inline void adjustFocusRingColor(Color& color)
 #if !PLATFORM(GTK)
     // Force the alpha to 50%.  This matches what the Mac does with outline rings.
     color.setRGB(makeRGBA(color.red(), color.green(), color.blue(), 127));
+#else
+    UNUSED_PARAM(color);
 #endif
 }
 
@@ -556,36 +556,16 @@ void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int
     if (paintingDisabled())
         return;
 
-    unsigned rectCount = rects.size();
-
     cairo_t* cr = platformContext()->cr();
     cairo_save(cr);
     cairo_push_group(cr);
     cairo_new_path(cr);
 
 #if PLATFORM(GTK)
-#ifdef GTK_API_VERSION_2
-    GdkRegion* reg = gdk_region_new();
+    for (const auto& rect : rects)
+        cairo_rectangle(cr, rect.x(), rect.y(), rect.width(), rect.height());
 #else
-    cairo_region_t* reg = cairo_region_create();
-#endif
-
-    for (unsigned i = 0; i < rectCount; i++) {
-#ifdef GTK_API_VERSION_2
-        GdkRectangle rect = rects[i];
-        gdk_region_union_with_rect(reg, &rect);
-#else
-        cairo_rectangle_int_t rect = rects[i];
-        cairo_region_union_rectangle(reg, &rect);
-#endif
-    }
-    gdk_cairo_region(cr, reg);
-#ifdef GTK_API_VERSION_2
-    gdk_region_destroy(reg);
-#else
-    cairo_region_destroy(reg);
-#endif
-#else
+    unsigned rectCount = rects.size();
     int radius = (width - 1) / 2;
     Path path;
     for (unsigned i = 0; i < rectCount; ++i) {
@@ -615,37 +595,53 @@ void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int
     cairo_restore(cr);
 }
 
-FloatRect GraphicsContext::computeLineBoundsForText(const FloatPoint& origin, float width, bool)
+FloatRect GraphicsContext::computeLineBoundsForText(const FloatPoint& origin, float width, bool printing)
 {
-    return FloatRect(origin, FloatSize(width, strokeThickness()));
+    bool dummyBool;
+    Color dummyColor;
+    return computeLineBoundsAndAntialiasingModeForText(origin, width, printing, dummyBool, dummyColor);
 }
 
-void GraphicsContext::drawLineForText(const FloatPoint& origin, float width, bool printing)
+void GraphicsContext::drawLineForText(const FloatPoint& origin, float width, bool printing, bool doubleUnderlines)
+{
+    DashArray widths;
+    widths.append(width);
+    widths.append(0);
+    drawLinesForText(origin, widths, printing, doubleUnderlines);
+}
+
+void GraphicsContext::drawLinesForText(const FloatPoint& point, const DashArray& widths, bool printing, bool doubleUnderlines)
 {
     if (paintingDisabled())
         return;
 
-    cairo_t* cairoContext = platformContext()->cr();
-    cairo_save(cairoContext);
+    if (widths.size() <= 0)
+        return;
 
-    // This bumping of <1 stroke thicknesses matches the one in drawLineOnCairoContext.
-    FloatPoint endPoint(origin + IntSize(width, 0));
-    FloatRect lineExtents = computeLineBoundsForText(origin, width, printing);
+    Color localStrokeColor(strokeColor());
 
-    ShadowBlur& shadow = platformContext()->shadowBlur();
-    if (GraphicsContext* shadowContext = shadow.beginShadowLayer(this, lineExtents)) {
-        drawLineOnCairoContext(this, shadowContext->platformContext()->cr(), origin, endPoint);
-        shadow.endShadowLayer(this);
+    bool shouldAntialiasLine;
+    FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(point, widths.last(), printing, shouldAntialiasLine, localStrokeColor);
+
+    Vector<FloatRect, 4> dashBounds;
+    ASSERT(!(widths.size() % 2));
+    dashBounds.reserveInitialCapacity(dashBounds.size() / 2);
+    for (size_t i = 0; i < widths.size(); i += 2)
+        dashBounds.append(FloatRect(FloatPoint(bounds.x() + widths[i], bounds.y()), FloatSize(widths[i+1] - widths[i], bounds.height())));
+
+    if (doubleUnderlines) {
+        // The space between double underlines is equal to the height of the underline
+        for (size_t i = 0; i < widths.size(); i += 2)
+            dashBounds.append(FloatRect(FloatPoint(bounds.x() + widths[i], bounds.y() + 2 * bounds.height()), FloatSize(widths[i+1] - widths[i], bounds.height())));
     }
 
-    drawLineOnCairoContext(this, cairoContext, origin, endPoint);
-    cairo_restore(cairoContext);
-}
+    cairo_t* cr = platformContext()->cr();
+    cairo_save(cr);
 
-void GraphicsContext::drawLinesForText(const FloatPoint& point, const DashArray& widths, bool printing)
-{
-    for (size_t i = 0; i < widths.size(); i += 2)
-        drawLineForText(FloatPoint(point.x() + widths[i], point.y()), widths[i+1] - widths[i], printing);
+    for (auto& dash : dashBounds)
+        fillRectWithColor(cr, dash, localStrokeColor);
+
+    cairo_restore(cr);
 }
 
 void GraphicsContext::updateDocumentMarkerResources()
@@ -747,8 +743,8 @@ void GraphicsContext::setPlatformStrokeThickness(float strokeThickness)
 
 void GraphicsContext::setPlatformStrokeStyle(StrokeStyle strokeStyle)
 {
-    static double dashPattern[] = {5.0, 5.0};
-    static double dotPattern[] = {1.0, 1.0};
+    static const double dashPattern[] = { 5.0, 5.0 };
+    static const double dotPattern[] = { 1.0, 1.0 };
 
     if (paintingDisabled())
         return;
@@ -900,9 +896,21 @@ void GraphicsContext::setLineCap(LineCap lineCap)
     cairo_set_line_cap(platformContext()->cr(), cairoCap);
 }
 
+static inline bool isDashArrayAllZero(const DashArray& dashes)
+{
+    for (auto& dash : dashes) {
+        if (dash)
+            return false;
+    }
+    return true;
+}
+
 void GraphicsContext::setLineDash(const DashArray& dashes, float dashOffset)
 {
-    cairo_set_dash(platformContext()->cr(), dashes.data(), dashes.size(), dashOffset);
+    if (isDashArrayAllZero(dashes))
+        cairo_set_dash(platformContext()->cr(), 0, 0, 0);
+    else
+        cairo_set_dash(platformContext()->cr(), dashes.data(), dashes.size(), dashOffset);
 }
 
 void GraphicsContext::setLineJoin(LineJoin lineJoin)
@@ -933,7 +941,7 @@ void GraphicsContext::setMiterLimit(float miter)
     cairo_set_miter_limit(platformContext()->cr(), miter);
 }
 
-void GraphicsContext::setAlpha(float alpha)
+void GraphicsContext::setPlatformAlpha(float alpha)
 {
     platformContext()->setGlobalAlpha(alpha);
 }
@@ -958,10 +966,10 @@ void GraphicsContext::clip(const Path& path, WindRule windRule)
         return;
 
     cairo_t* cr = platformContext()->cr();
-    OwnPtr<cairo_path_t> pathCopy;
     if (!path.isNull()) {
-        pathCopy = adoptPtr(cairo_copy_path(path.platformPath()->context()));
-        cairo_append_path(cr, pathCopy.get());
+        cairo_path_t* pathCopy = cairo_copy_path(path.platformPath()->context());
+        cairo_append_path(cr, pathCopy);
+        cairo_path_destroy(pathCopy);
     }
     cairo_fill_rule_t savedFillRule = cairo_get_fill_rule(cr);
     if (windRule == RULE_NONZERO)
@@ -1029,31 +1037,31 @@ void GraphicsContext::clipOut(const FloatRect& r)
     cairo_set_fill_rule(cr, savedFillRule);
 }
 
-void GraphicsContext::fillRoundedRect(const FloatRect& r, const FloatSize& topLeft, const FloatSize& topRight, const FloatSize& bottomLeft, const FloatSize& bottomRight, const Color& color, ColorSpace)
+void GraphicsContext::platformFillRoundedRect(const FloatRoundedRect& rect, const Color& color, ColorSpace)
 {
     if (paintingDisabled())
         return;
 
     if (hasShadow())
-        platformContext()->shadowBlur().drawRectShadow(this, r, FloatRoundedRect::Radii(topLeft, topRight, bottomLeft, bottomRight));
+        platformContext()->shadowBlur().drawRectShadow(this, rect);
 
     cairo_t* cr = platformContext()->cr();
     cairo_save(cr);
     Path path;
-    path.addRoundedRect(r, topLeft, topRight, bottomLeft, bottomRight);
+    path.addRoundedRect(rect);
     appendWebCorePathToCairoContext(cr, path);
     setSourceRGBAFromColor(cr, color);
     cairo_fill(cr);
     cairo_restore(cr);
 }
 
-void GraphicsContext::fillRectWithRoundedHole(const FloatRect& rect, const RoundedRect& roundedHoleRect, const Color& color, ColorSpace)
+void GraphicsContext::fillRectWithRoundedHole(const FloatRect& rect, const FloatRoundedRect& roundedHoleRect, const Color& color, ColorSpace)
 {
     if (paintingDisabled() || !color.isValid())
         return;
 
     if (this->mustUseShadowBlur())
-        platformContext()->shadowBlur().drawInsetShadow(this, rect, roundedHoleRect.rect(), roundedHoleRect.radii());
+        platformContext()->shadowBlur().drawInsetShadow(this, rect, roundedHoleRect);
 
     Path path;
     path.addRect(rect);
@@ -1068,26 +1076,6 @@ void GraphicsContext::fillRectWithRoundedHole(const FloatRect& rect, const Round
     fillCurrentCairoPath(this);
     cairo_restore(cr);
 }
-
-#if PLATFORM(GTK)
-void GraphicsContext::setGdkExposeEvent(GdkEventExpose* expose)
-{
-    m_data->expose = expose;
-}
-
-GdkEventExpose* GraphicsContext::gdkExposeEvent() const
-{
-    return m_data->expose;
-}
-
-GdkWindow* GraphicsContext::gdkWindow() const
-{
-    if (!m_data->expose)
-        return 0;
-
-    return m_data->expose->window;
-}
-#endif
 
 void GraphicsContext::setPlatformShouldAntialias(bool enable)
 {
@@ -1115,7 +1103,7 @@ bool GraphicsContext::isAcceleratedContext() const
     return cairo_surface_get_type(cairo_get_target(platformContext()->cr())) == CAIRO_SURFACE_TYPE_GL;
 }
 
-#if ENABLE(3D_RENDERING) && USE(TEXTURE_MAPPER)
+#if ENABLE(3D_TRANSFORMS) && USE(TEXTURE_MAPPER)
 TransformationMatrix GraphicsContext::get3DTransform() const
 {
     // FIXME: Can we approximate the transformation better than this?
@@ -1131,7 +1119,7 @@ void GraphicsContext::set3DTransform(const TransformationMatrix& transform)
 {
     setCTM(transform.toAffineTransform());
 }
-#endif
+#endif // ENABLE(3D_TRANSFORMS) && USE(TEXTURE_MAPPER)
 
 } // namespace WebCore
 

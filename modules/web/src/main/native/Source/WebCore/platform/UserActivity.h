@@ -26,7 +26,10 @@
 #ifndef UserActivity_h
 #define UserActivity_h
 
+#include "HysteresisActivity.h"
+
 #if HAVE(NS_ACTIVITY)
+#include <objc/objc.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/RunLoop.h>
 OBJC_CLASS NSString;
@@ -37,26 +40,28 @@ namespace WebCore {
 // The UserActivity type is used to indicate to the operating system that
 // a user initiated or visible action is taking place, and as such that
 // resources should be allocated to the process accordingly.
-class UserActivity {
+class UserActivity : public HysteresisActivity {
 public:
-    UserActivity(const char* description);
+    class Impl {
+    public:
+        explicit Impl(const char* description);
 
-    void beginActivity();
-    void endActivity();
-
-    bool isActive() const { return m_count; }
-
-private:
-    size_t m_count;
+        void beginActivity();
+        void endActivity();
 
 #if HAVE(NS_ACTIVITY)
-    void hysteresisTimerFired();
-    bool isValid();
-
-    RetainPtr<NSString> m_description;
-    RunLoop::Timer<UserActivity> m_timer;
-    RetainPtr<id> m_activity;
+    private:
+        RetainPtr<id> m_activity;
+        RetainPtr<NSString> m_description;
 #endif
+    };
+
+    WEBCORE_EXPORT explicit UserActivity(const char* description);
+
+private:
+    void hysteresisUpdated(HysteresisState);
+
+    Impl m_impl;
 };
 
 } // namespace WebCore

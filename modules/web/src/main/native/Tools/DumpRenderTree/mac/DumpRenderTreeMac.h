@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -62,7 +62,6 @@ extern WebFrame* topLoadingFrame;
 extern DumpRenderTreeDraggingInfo *draggingInfo;
 extern NavigationController* gNavigationController;
 extern PolicyDelegate* policyDelegate;
-extern StorageTrackerDelegate* storageDelegate;
 extern DefaultPolicyDelegate *defaultPolicyDelegate;
 
 void setWaitToDumpWatchdog(CFRunLoopTimerRef);
@@ -77,6 +76,7 @@ unsigned worldIDForWorld(WebScriptWorld *);
 #if PLATFORM(IOS) && defined(__OBJC__)
 @interface DumpRenderTree : UIApplication {
     BOOL _hasFlushedWebThreadRunQueue;
+    UIBackgroundTaskIdentifier backgroundTaskIdentifier;
 }
 
 - (void)_waitForWebThread;

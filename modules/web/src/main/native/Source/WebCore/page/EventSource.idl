@@ -36,7 +36,6 @@
     ConstructorCallWith=ScriptExecutionContext,
     ConstructorRaisesException,
     EventTarget,
-    JSNoStaticTables,
 ] interface EventSource {
 
     readonly attribute DOMString URL; // Lowercased .url is the one in the spec, but leaving .URL for compatibility reasons.
@@ -50,18 +49,14 @@
     readonly attribute unsigned short readyState;
 
     // networking
-    attribute EventListener onopen;
-    attribute EventListener onmessage;
-    attribute EventListener onerror;
+    attribute EventHandler onopen;
+    attribute EventHandler onmessage;
+    attribute EventHandler onerror;
     void close();
 
     // EventTarget interface
-    void addEventListener(DOMString type,
-                          EventListener listener,
-                          optional boolean useCapture);
-    void removeEventListener(DOMString type,
-                             EventListener listener,
-                             optional boolean useCapture);
-    [RaisesException] boolean dispatchEvent(Event evt);
+    void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    [RaisesException] boolean dispatchEvent(Event event);
 
 };

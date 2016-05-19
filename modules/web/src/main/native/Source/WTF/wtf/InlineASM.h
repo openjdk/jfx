@@ -26,8 +26,6 @@
 #ifndef InlineASM_h
 #define InlineASM_h
 
-#include <wtf/Platform.h>
-
 /* asm directive helpers */
 
 #if OS(DARWIN) || (OS(WINDOWS) && CPU(X86))
@@ -46,6 +44,8 @@
 #define GLOBAL_REFERENCE(name) #name "@plt"
 #elif CPU(X86) && COMPILER(MINGW)
 #define GLOBAL_REFERENCE(name) "@" #name "@4"
+#elif OS(LINUX) && CPU(X86) && defined(__PIC__)
+#define GLOBAL_REFERENCE(name) SYMBOL_STRING(name) "@plt"
 #else
 #define GLOBAL_REFERENCE(name) SYMBOL_STRING(name)
 #endif
@@ -82,6 +82,7 @@
 #elif   OS(LINUX)               \
      || OS(FREEBSD)             \
      || OS(OPENBSD)             \
+     || OS(HURD)                \
      || OS(NETBSD)
     // GNU as-compatible syntax.
 #define LOCAL_LABEL_STRING(name) ".L" #name

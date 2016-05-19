@@ -25,7 +25,27 @@
 
 #import <Cocoa/Cocoa.h>
 
-@protocol BrowserController
+@interface BrowserWindowController : NSWindowController {
+    IBOutlet NSProgressIndicator *progressIndicator;
+    IBOutlet NSButton *reloadButton;
+    IBOutlet NSButton *backButton;
+    IBOutlet NSButton *forwardButton;
+    IBOutlet NSToolbar *toolbar;
+    IBOutlet NSTextField *urlText;
+    IBOutlet NSView *containerView;
+    IBOutlet NSButton *toggleUseShrinkToFitButton;
+
+    IBOutlet NSWindow *findPanelWindow;
+
+    BOOL _zoomTextOnly;
+}
+
+- (void)loadURLString:(NSString *)urlString;
+- (NSString *)addProtocolIfNecessary:(NSString *)address;
+
+- (void)applicationTerminating;
+
+- (IBAction)openLocation:(id)sender;
 
 - (IBAction)fetch:(id)sender;
 - (IBAction)reload:(id)sender;
@@ -44,37 +64,17 @@
 - (BOOL)canResetZoom;
 
 - (IBAction)toggleZoomMode:(id)sender;
-- (IBAction)togglePaginationMode:(id)sender;
-- (IBAction)toggleTransparentWindow:(id)sender;
+
+- (IBAction)setScale:(id)sender;
+
+- (IBAction)toggleShrinkToFit:(id)sender;
 
 - (IBAction)dumpSourceToConsole:(id)sender;
 - (IBAction)find:(id)sender;
 
-@optional
-- (IBAction)toggleUISideCompositing:(id)sender;
+- (void)didChangeSettings;
 
-@end
-
-@interface BrowserWindowController : NSWindowController {
-    IBOutlet NSProgressIndicator *progressIndicator;
-    IBOutlet NSButton *reloadButton;
-    IBOutlet NSButton *backButton;
-    IBOutlet NSButton *forwardButton;
-    IBOutlet NSToolbar *toolbar;
-    IBOutlet NSTextField *urlText;
-    IBOutlet NSView *containerView;
-
-    IBOutlet NSWindow *findPanelWindow;
-
-    BOOL _zoomTextOnly;
-}
-
-- (void)loadURLString:(NSString *)urlString;
-- (NSString *)addProtocolIfNecessary:(NSString *)address;
-
-- (void)applicationTerminating;
-
-- (IBAction)openLocation:(id)sender;
+- (NSURL *)currentURL;
 
 @end
 

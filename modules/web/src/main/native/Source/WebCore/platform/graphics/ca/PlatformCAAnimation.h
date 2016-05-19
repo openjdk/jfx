@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,119 +31,92 @@
 #include "FloatPoint3D.h"
 #include "TransformationMatrix.h"
 #include <wtf/RefCounted.h>
-#include <wtf/RetainPtr.h>
+#include <wtf/TypeCasts.h>
 #include <wtf/Vector.h>
-
-#if PLATFORM(COCOA)
-OBJC_CLASS CAPropertyAnimation;
-typedef CAPropertyAnimation* PlatformAnimationRef;
-#elif PLATFORM(WIN)
-typedef struct _CACFAnimation* CACFAnimationRef;
-typedef CACFAnimationRef PlatformAnimationRef;
-#endif
 
 namespace WebCore {
 
 class FloatRect;
-class PlatformCAAnimation;
 class TimingFunction;
 
 class PlatformCAAnimation : public RefCounted<PlatformCAAnimation> {
 public:
-    friend class PlatformCALayer;
-#if PLATFORM(COCOA)
-    friend class PlatformCALayerMac;
-#elif PLATFORM(WIN)
-    friend class PlatformCALayerWin;
-#endif
-
     enum AnimationType { Basic, Keyframe };
     enum FillModeType { NoFillMode, Forwards, Backwards, Both };
     enum ValueFunctionType { NoValueFunction, RotateX, RotateY, RotateZ, ScaleX, ScaleY, ScaleZ, Scale, TranslateX, TranslateY, TranslateZ, Translate };
 
-    static PassRefPtr<PlatformCAAnimation> create(AnimationType, const String& keyPath);
-    static PassRefPtr<PlatformCAAnimation> create(PlatformAnimationRef);
+    virtual ~PlatformCAAnimation() { }
 
-    ~PlatformCAAnimation();
+    virtual bool isPlatformCAAnimationCocoa() const { return false; }
+    virtual bool isPlatformCAAnimationWin() const { return false; }
+    virtual bool isPlatformCAAnimationRemote() const { return false; }
 
-    PassRefPtr<PlatformCAAnimation> copy() const;
-
-    PlatformAnimationRef platformAnimation() const;
+    virtual PassRefPtr<PlatformCAAnimation> copy() const = 0;
 
     AnimationType animationType() const { return m_type; }
-    String keyPath() const;
+    virtual String keyPath() const = 0;
 
-    CFTimeInterval beginTime() const;
-    void setBeginTime(CFTimeInterval);
+    virtual CFTimeInterval beginTime() const = 0;
+    virtual void setBeginTime(CFTimeInterval) = 0;
 
-    CFTimeInterval duration() const;
-    void setDuration(CFTimeInterval);
+    virtual CFTimeInterval duration() const = 0;
+    virtual void setDuration(CFTimeInterval) = 0;
 
-    float speed() const;
-    void setSpeed(float);
+    virtual float speed() const = 0;
+    virtual void setSpeed(float) = 0;
 
-    CFTimeInterval timeOffset() const;
-    void setTimeOffset(CFTimeInterval);
+    virtual CFTimeInterval timeOffset() const = 0;
+    virtual void setTimeOffset(CFTimeInterval) = 0;
 
-    float repeatCount() const;
-    void setRepeatCount(float);
+    virtual float repeatCount() const = 0;
+    virtual void setRepeatCount(float) = 0;
 
-    bool autoreverses() const;
-    void setAutoreverses(bool);
+    virtual bool autoreverses() const = 0;
+    virtual void setAutoreverses(bool) = 0;
 
-    FillModeType fillMode() const;
-    void setFillMode(FillModeType);
+    virtual FillModeType fillMode() const = 0;
+    virtual void setFillMode(FillModeType) = 0;
 
-    void setTimingFunction(const TimingFunction*, bool reverse = false);
-    void copyTimingFunctionFrom(const PlatformCAAnimation*);
+    virtual void setTimingFunction(const TimingFunction*, bool reverse = false) = 0;
+    virtual void copyTimingFunctionFrom(const PlatformCAAnimation&) = 0;
 
-    bool isRemovedOnCompletion() const;
-    void setRemovedOnCompletion(bool);
+    virtual bool isRemovedOnCompletion() const = 0;
+    virtual void setRemovedOnCompletion(bool) = 0;
 
-    bool isAdditive() const;
-    void setAdditive(bool);
+    virtual bool isAdditive() const = 0;
+    virtual void setAdditive(bool) = 0;
 
-    ValueFunctionType valueFunction() const;
-    void setValueFunction(ValueFunctionType);
+    virtual ValueFunctionType valueFunction() const = 0;
+    virtual void setValueFunction(ValueFunctionType) = 0;
 
     // Basic-animation properties.
-    void setFromValue(float);
-    void setFromValue(const WebCore::TransformationMatrix&);
-    void setFromValue(const FloatPoint3D&);
-    void setFromValue(const WebCore::Color&);
-#if ENABLE(CSS_FILTERS)
-    void setFromValue(const FilterOperation*, int internalFilterPropertyIndex);
-#endif
-    void copyFromValueFrom(const PlatformCAAnimation*);
+    virtual void setFromValue(float) = 0;
+    virtual void setFromValue(const WebCore::TransformationMatrix&) = 0;
+    virtual void setFromValue(const FloatPoint3D&) = 0;
+    virtual void setFromValue(const WebCore::Color&) = 0;
+    virtual void setFromValue(const FilterOperation*, int internalFilterPropertyIndex) = 0;
+    virtual void copyFromValueFrom(const PlatformCAAnimation&) = 0;
 
-    void setToValue(float);
-    void setToValue(const WebCore::TransformationMatrix&);
-    void setToValue(const FloatPoint3D&);
-    void setToValue(const WebCore::Color&);
-#if ENABLE(CSS_FILTERS)
-    void setToValue(const FilterOperation*, int internalFilterPropertyIndex);
-#endif
-    void copyToValueFrom(const PlatformCAAnimation*);
+    virtual void setToValue(float) = 0;
+    virtual void setToValue(const WebCore::TransformationMatrix&) = 0;
+    virtual void setToValue(const FloatPoint3D&) = 0;
+    virtual void setToValue(const WebCore::Color&) = 0;
+    virtual void setToValue(const FilterOperation*, int internalFilterPropertyIndex) = 0;
+    virtual void copyToValueFrom(const PlatformCAAnimation&) = 0;
 
     // Keyframe-animation properties.
-    void setValues(const Vector<float>&);
-    void setValues(const Vector<WebCore::TransformationMatrix>&);
-    void setValues(const Vector<FloatPoint3D>&);
-    void setValues(const Vector<WebCore::Color>&);
-#if ENABLE(CSS_FILTERS)
-    void setValues(const Vector<RefPtr<FilterOperation>>&, int internalFilterPropertyIndex);
-#endif
-    void copyValuesFrom(const PlatformCAAnimation*);
+    virtual void setValues(const Vector<float>&) = 0;
+    virtual void setValues(const Vector<WebCore::TransformationMatrix>&) = 0;
+    virtual void setValues(const Vector<FloatPoint3D>&) = 0;
+    virtual void setValues(const Vector<WebCore::Color>&) = 0;
+    virtual void setValues(const Vector<RefPtr<FilterOperation>>&, int internalFilterPropertyIndex) = 0;
+    virtual void copyValuesFrom(const PlatformCAAnimation&) = 0;
 
-    void setKeyTimes(const Vector<float>&);
-    void copyKeyTimesFrom(const PlatformCAAnimation*);
+    virtual void setKeyTimes(const Vector<float>&) = 0;
+    virtual void copyKeyTimesFrom(const PlatformCAAnimation&) = 0;
 
-    void setTimingFunctions(const Vector<const TimingFunction*>&, bool reverse = false);
-    void copyTimingFunctionsFrom(const PlatformCAAnimation*);
-
-protected:
-    PlatformCAAnimation(AnimationType, const String& keyPath);
-    PlatformCAAnimation(PlatformAnimationRef);
+    virtual void setTimingFunctions(const Vector<const TimingFunction*>&, bool reverse = false) = 0;
+    virtual void copyTimingFunctionsFrom(const PlatformCAAnimation&) = 0;
 
     void setActualStartTimeIfNeeded(CFTimeInterval t)
     {
@@ -151,16 +124,23 @@ protected:
             setBeginTime(t);
     }
 
+protected:
+    PlatformCAAnimation(AnimationType type = Basic)
+        : m_type(type)
+    {
+    }
+
+    void setType(AnimationType type) { m_type = type; }
+
 private:
     AnimationType m_type;
-
-#if PLATFORM(COCOA)
-    RetainPtr<CAPropertyAnimation> m_animation;
-#elif PLATFORM(WIN)
-    RetainPtr<CACFAnimationRef> m_animation;
-#endif
 };
 
-}
+} // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_CAANIMATION(ToValueTypeName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(ToValueTypeName) \
+    static bool isType(const WebCore::PlatformCAAnimation& animation) { return animation.predicate; } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // PlatformCAAnimation_h

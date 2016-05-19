@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) Research In Motion Limited 2010-2012. All rights reserved.
  *
@@ -34,17 +34,17 @@ class RenderSVGInlineText;
 
 class RenderSVGText final : public RenderSVGBlock {
 public:
-    RenderSVGText(SVGTextElement&, PassRef<RenderStyle>);
+    RenderSVGText(SVGTextElement&, Ref<RenderStyle>&&);
     virtual ~RenderSVGText();
 
     SVGTextElement& textElement() const;
 
-    virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const;
+    virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
 
     void setNeedsPositioningValuesUpdate() { m_needsPositioningValuesUpdate = true; }
-    virtual void setNeedsTransformUpdate() { m_needsTransformUpdate = true; }
+    virtual void setNeedsTransformUpdate() override { m_needsTransformUpdate = true; }
     void setNeedsTextMetricsUpdate() { m_needsTextMetricsUpdate = true; }
-    virtual FloatRect repaintRectInLocalCoordinates() const;
+    virtual FloatRect repaintRectInLocalCoordinates() const override;
 
     static RenderSVGText* locateRenderSVGTextAncestor(RenderObject&);
     static const RenderSVGText* locateRenderSVGTextAncestor(const RenderObject&);
@@ -64,35 +64,35 @@ public:
 private:
     void graphicsElement() const = delete;
 
-    virtual const char* renderName() const { return "RenderSVGText"; }
-    virtual bool isSVGText() const { return true; }
+    virtual const char* renderName() const override { return "RenderSVGText"; }
+    virtual bool isSVGText() const override { return true; }
 
-    virtual void paint(PaintInfo&, const LayoutPoint&);
+    virtual void paint(PaintInfo&, const LayoutPoint&) override;
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
-    virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
-    virtual VisiblePosition positionForPoint(const LayoutPoint&);
+    virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override;
+    virtual VisiblePosition positionForPoint(const LayoutPoint&, const RenderRegion*) override;
 
-    virtual bool requiresLayer() const { return false; }
-    virtual void layout();
+    virtual bool requiresLayer() const override { return false; }
+    virtual void layout() override;
 
-    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const;
+    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
     virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const override;
     virtual void computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed = false) const override;
 
-    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const override;
+    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
-    virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0);
+    virtual void addChild(RenderObject* child, RenderObject* beforeChild = nullptr) override;
     virtual void removeChild(RenderObject&) override;
     virtual void willBeDestroyed() override;
 
-    virtual const AffineTransform& localToParentTransform() const { return m_localTransform; }
-    virtual AffineTransform localTransform() const { return m_localTransform; }
+    virtual const AffineTransform& localToParentTransform() const override { return m_localTransform; }
+    virtual AffineTransform localTransform() const override { return m_localTransform; }
     virtual std::unique_ptr<RootInlineBox> createRootInlineBox() override;
 
-    virtual RenderBlock* firstLineBlock() const;
-    virtual void updateFirstLetter();
+    virtual RenderBlock* firstLineBlock() const override;
+    virtual void updateFirstLetter() override;
 
     bool shouldHandleSubtreeMutations() const;
 
@@ -105,8 +105,8 @@ private:
     Vector<SVGTextLayoutAttributes*> m_layoutAttributes;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSVGText, isSVGText())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGText, isSVGText())
 
-#endif
+#endif // RenderSVGText_h

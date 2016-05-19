@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,8 +26,6 @@
 #include "config.h"
 #include "TransformState.h"
 
-#include <wtf/PassOwnPtr.h>
-
 namespace WebCore {
 
 TransformState& TransformState::operator=(const TransformState& other)
@@ -37,15 +35,20 @@ TransformState& TransformState::operator=(const TransformState& other)
     m_mapQuad = other.m_mapQuad;
     if (m_mapPoint)
         m_lastPlanarPoint = other.m_lastPlanarPoint;
-    if (m_mapQuad)
+    if (m_mapQuad) {
         m_lastPlanarQuad = other.m_lastPlanarQuad;
+        if (other.m_lastPlanarSecondaryQuad)
+            m_lastPlanarSecondaryQuad = std::make_unique<FloatQuad>(*other.m_lastPlanarSecondaryQuad);
+        else
+            m_lastPlanarSecondaryQuad = nullptr;
+    }
     m_accumulatingTransform = other.m_accumulatingTransform;
     m_direction = other.m_direction;
 
-    m_accumulatedTransform.clear();
+    m_accumulatedTransform = nullptr;
 
     if (other.m_accumulatedTransform)
-        m_accumulatedTransform = adoptPtr(new TransformationMatrix(*other.m_accumulatedTransform));
+        m_accumulatedTransform = std::make_unique<TransformationMatrix>(*other.m_accumulatedTransform);
 
     return *this;
 }
@@ -63,8 +66,11 @@ void TransformState::translateMappedCoordinates(const LayoutSize& offset)
     LayoutSize adjustedOffset = (m_direction == ApplyTransformDirection) ? offset : -offset;
     if (m_mapPoint)
         m_lastPlanarPoint.move(adjustedOffset);
-    if (m_mapQuad)
+    if (m_mapQuad) {
         m_lastPlanarQuad.move(adjustedOffset);
+        if (m_lastPlanarSecondaryQuad)
+            m_lastPlanarSecondaryQuad->move(adjustedOffset);
+    }
 }
 
 void TransformState::move(const LayoutSize& offset, TransformAccumulation accumulate)
@@ -121,12 +127,12 @@ void TransformState::applyTransform(const TransformationMatrix& transformFromCon
     // If we have an accumulated transform from last time, multiply in this transform
     if (m_accumulatedTransform) {
         if (m_direction == ApplyTransformDirection)
-            m_accumulatedTransform = adoptPtr(new TransformationMatrix(transformFromContainer * *m_accumulatedTransform));
+            m_accumulatedTransform = std::make_unique<TransformationMatrix>(transformFromContainer * *m_accumulatedTransform);
         else
             m_accumulatedTransform->multiply(transformFromContainer);
     } else if (accumulate == AccumulateTransform) {
         // Make one if we started to accumulate
-        m_accumulatedTransform = adoptPtr(new TransformationMatrix(transformFromContainer));
+        m_accumulatedTransform = std::make_unique<TransformationMatrix>(transformFromContainer);
     }
 
     if (accumulate == FlattenTransform) {
@@ -173,14 +179,46 @@ FloatQuad TransformState::mappedQuad(bool* wasClamped) const
         *wasClamped = false;
 
     FloatQuad quad = m_lastPlanarQuad;
-    quad.move((m_direction == ApplyTransformDirection) ? m_accumulatedOffset : -m_accumulatedOffset);
+    mapQuad(quad, m_direction, wasClamped);
+    return quad;
+}
+
+std::unique_ptr<FloatQuad> TransformState::mappedSecondaryQuad(bool* wasClamped) const
+{
+    if (wasClamped)
+        *wasClamped = false;
+
+    if (!m_lastPlanarSecondaryQuad)
+        return nullptr;
+
+    FloatQuad quad = *m_lastPlanarSecondaryQuad;
+    mapQuad(quad, m_direction, wasClamped);
+    return std::make_unique<FloatQuad>(quad);
+}
+
+void TransformState::setLastPlanarSecondaryQuad(const FloatQuad* quad)
+{
+    if (!quad) {
+        m_lastPlanarSecondaryQuad = nullptr;
+        return;
+    }
+
+    // Map the quad back through any transform or offset back into the last flattening coordinate space.
+    FloatQuad backMappedQuad(*quad);
+    mapQuad(backMappedQuad, inverseDirection());
+    m_lastPlanarSecondaryQuad = std::make_unique<FloatQuad>(backMappedQuad);
+}
+
+void TransformState::mapQuad(FloatQuad& quad, TransformDirection direction, bool* wasClamped) const
+{
+    quad.move((direction == ApplyTransformDirection) ? m_accumulatedOffset : -m_accumulatedOffset);
     if (!m_accumulatedTransform)
-        return quad;
+        return;
 
-    if (m_direction == ApplyTransformDirection)
-        return m_accumulatedTransform->mapQuad(quad);
+    if (direction == ApplyTransformDirection)
+        quad = m_accumulatedTransform->mapQuad(quad);
 
-    return m_accumulatedTransform->inverse().projectQuad(quad, wasClamped);
+    quad = m_accumulatedTransform->inverse().projectQuad(quad, wasClamped);
 }
 
 void TransformState::flattenWithTransform(const TransformationMatrix& t, bool* wasClamped)
@@ -188,14 +226,21 @@ void TransformState::flattenWithTransform(const TransformationMatrix& t, bool* w
     if (m_direction == ApplyTransformDirection) {
         if (m_mapPoint)
             m_lastPlanarPoint = t.mapPoint(m_lastPlanarPoint);
-        if (m_mapQuad)
+        if (m_mapQuad) {
             m_lastPlanarQuad = t.mapQuad(m_lastPlanarQuad);
+            if (m_lastPlanarSecondaryQuad)
+                *m_lastPlanarSecondaryQuad = t.mapQuad(*m_lastPlanarSecondaryQuad);
+        }
+
     } else {
         TransformationMatrix inverseTransform = t.inverse();
         if (m_mapPoint)
             m_lastPlanarPoint = inverseTransform.projectPoint(m_lastPlanarPoint);
-        if (m_mapQuad)
+        if (m_mapQuad) {
             m_lastPlanarQuad = inverseTransform.projectQuad(m_lastPlanarQuad, wasClamped);
+            if (m_lastPlanarSecondaryQuad)
+                *m_lastPlanarSecondaryQuad = inverseTransform.projectQuad(*m_lastPlanarSecondaryQuad, wasClamped);
+        }
     }
 
     // We could throw away m_accumulatedTransform if we wanted to here, but that

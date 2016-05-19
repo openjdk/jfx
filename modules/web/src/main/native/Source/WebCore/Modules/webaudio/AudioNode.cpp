@@ -67,6 +67,7 @@ AudioNode::AudioNode(AudioContext* context, float sampleRate)
 
 AudioNode::~AudioNode()
 {
+    ASSERT(isMainThread());
 #if DEBUG_AUDIONODE_REFERENCES
     --s_nodeCount[nodeType()];
     fprintf(stderr, "%p: %d: AudioNode::~AudioNode() %d %d\n", this, nodeType(), m_normalRefCount.load(), m_connectionRefCount);
@@ -100,12 +101,12 @@ void AudioNode::lazyInitialize()
 
 void AudioNode::addInput(std::unique_ptr<AudioNodeInput> input)
 {
-    m_inputs.append(std::move(input));
+    m_inputs.append(WTF::move(input));
 }
 
 void AudioNode::addOutput(std::unique_ptr<AudioNodeOutput> output)
 {
-    m_outputs.append(std::move(output));
+    m_outputs.append(WTF::move(output));
 }
 
 AudioNodeInput* AudioNode::input(unsigned i)
@@ -276,8 +277,8 @@ void AudioNode::setChannelInterpretation(const String& interpretation, Exception
 
 void AudioNode::updateChannelsForInputs()
 {
-    for (unsigned i = 0; i < m_inputs.size(); ++i)
-        input(i)->changedOutputs();
+    for (auto& input : m_inputs)
+        input->changedOutputs();
 }
 
 EventTargetInterface AudioNode::eventTargetInterface() const
@@ -324,7 +325,7 @@ void AudioNode::checkNumberOfChannelsForInput(AudioNodeInput* input)
 {
     ASSERT(context()->isAudioThread() && context()->isGraphOwner());
 
-    for (const std::unique_ptr<AudioNodeInput>& savedInput : m_inputs) {
+    for (auto& savedInput : m_inputs) {
         if (input == savedInput.get()) {
             input->updateInternalBus();
             return;
@@ -344,14 +345,14 @@ void AudioNode::pullInputs(size_t framesToProcess)
     ASSERT(context()->isAudioThread());
 
     // Process all of the AudioNodes connected to our inputs.
-    for (unsigned i = 0; i < m_inputs.size(); ++i)
-        input(i)->pull(0, framesToProcess);
+    for (auto& input : m_inputs)
+        input->pull(0, framesToProcess);
 }
 
 bool AudioNode::inputsAreSilent()
 {
-    for (unsigned i = 0; i < m_inputs.size(); ++i) {
-        if (!input(i)->bus()->isSilent())
+    for (auto& input : m_inputs) {
+        if (!input->bus()->isSilent())
             return false;
     }
     return true;
@@ -359,14 +360,14 @@ bool AudioNode::inputsAreSilent()
 
 void AudioNode::silenceOutputs()
 {
-    for (unsigned i = 0; i < m_outputs.size(); ++i)
-        output(i)->bus()->zero();
+    for (auto& output : m_outputs)
+        output->bus()->zero();
 }
 
 void AudioNode::unsilenceOutputs()
 {
-    for (unsigned i = 0; i < m_outputs.size(); ++i)
-        output(i)->bus()->clearSilentFlag();
+    for (auto& output : m_outputs)
+        output->bus()->clearSilentFlag();
 }
 
 void AudioNode::enableOutputsIfNecessary()
@@ -376,8 +377,8 @@ void AudioNode::enableOutputsIfNecessary()
         AudioContext::AutoLocker locker(*context());
 
         m_isDisabled = false;
-        for (unsigned i = 0; i < m_outputs.size(); ++i)
-            output(i)->enable();
+        for (auto& output : m_outputs)
+            output->enable();
     }
 }
 
@@ -401,8 +402,8 @@ void AudioNode::disableOutputsIfNecessary()
         // longer any active connections.
         if (nodeType() != NodeTypeConvolver && nodeType() != NodeTypeDelay) {
             m_isDisabled = true;
-            for (unsigned i = 0; i < m_outputs.size(); ++i)
-                output(i)->disable();
+            for (auto& output : m_outputs)
+                output->disable();
         }
     }
 }
@@ -491,8 +492,8 @@ void AudioNode::finishDeref(RefType refType)
         if (!m_normalRefCount) {
             if (!m_isMarkedForDeletion) {
                 // All references are gone - we need to go away.
-                for (unsigned i = 0; i < m_outputs.size(); ++i)
-                    output(i)->disconnectAll(); // This will deref() nodes we're connected to.
+                for (auto& output : m_outputs)
+                    output->disconnectAll(); // This will deref() nodes we're connected to.
 
                 // Mark for deletion at end of each render quantum or when context shuts down.
                 context()->markForDeletion(this);

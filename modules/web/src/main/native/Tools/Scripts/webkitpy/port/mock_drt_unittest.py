@@ -29,7 +29,7 @@
 """Unit tests for MockDRT."""
 
 import sys
-import unittest2 as unittest
+import unittest
 
 from webkitpy.common import newstringio
 from webkitpy.common.system.systemhost_mock import MockSystemHost
@@ -63,9 +63,6 @@ class MockDRTPortTest(port_testcase.PortTestCase):
         pass
 
     def test_uses_apache(self):
-        pass
-
-    def integration_test_http_lock(self):
         pass
 
     def integration_test_start_helper(self):

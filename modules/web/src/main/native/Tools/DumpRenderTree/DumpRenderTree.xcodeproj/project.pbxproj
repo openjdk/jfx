@@ -13,7 +13,6 @@
 			buildPhases = (
 			);
 			dependencies = (
-				A1158D6818927B240088C17B /* PBXTargetDependency */,
 				2D403F211508736C005358D2 /* PBXTargetDependency */,
 				A134E52D188FC09200901D06 /* PBXTargetDependency */,
 				A84F608F08B1370E00E9745F /* PBXTargetDependency */,
@@ -54,12 +53,12 @@
 		1AD8683F163B2FD000A28583 /* NPRuntimeCallsWithNullNPP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AD8683D163B2FD000A28583 /* NPRuntimeCallsWithNullNPP.cpp */; };
 		1AD9D2FE12028409001A70D1 /* PluginScriptableNPObjectInvokeDefault.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AD9D2FD12028409001A70D1 /* PluginScriptableNPObjectInvokeDefault.cpp */; };
 		1AFF66BC137DEFD200791696 /* GetURLNotifyWithURLThatFailsToLoad.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AFF66BB137DEA8300791696 /* GetURLNotifyWithURLThatFailsToLoad.cpp */; };
+		1CB67420195BAE7B000F35B5 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1CB6741F195BAE7B000F35B5 /* CoreText.framework */; };
 		29CFBA11122736E600BC30C0 /* AccessibilityTextMarker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 29CFBA0F122736E600BC30C0 /* AccessibilityTextMarker.cpp */; };
 		29CFBA2E12273A1000BC30C0 /* AccessibilityTextMarkerMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 29CFBA2D12273A1000BC30C0 /* AccessibilityTextMarkerMac.mm */; };
 		2CE88FA217124D8C00734FC0 /* JavaScriptThreading.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2CE88FA117124CEE00734FC0 /* JavaScriptThreading.cpp */; };
 		2D403F1B15087209005358D2 /* LayoutTestHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 2D403EA215087142005358D2 /* LayoutTestHelper.m */; };
 		31117B3D15D9A56A00163BC8 /* MockWebNotificationProvider.mm in Sources */ = {isa = PBXBuildFile; fileRef = 31117B3B15D9A56A00163BC8 /* MockWebNotificationProvider.mm */; };
-		3A5626CB131CA02A002BE6D9 /* StorageTrackerDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3A5626C1131C8B17002BE6D9 /* StorageTrackerDelegate.mm */; };
 		440590711268453800CFD48D /* WebArchiveDumpSupportMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 440590701268453800CFD48D /* WebArchiveDumpSupportMac.mm */; };
 		4437730E125CBC3600AAE02C /* WebArchiveDumpSupport.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 44A997830FCDE86400580F10 /* WebArchiveDumpSupport.cpp */; };
 		4AD6A11413C8124000EA9737 /* FormValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4AD6A11313C8124000EA9737 /* FormValue.cpp */; };
@@ -70,6 +69,7 @@
 		515F429C15C07872007C8F90 /* PluginScriptableObjectOverridesAllProperties.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 515F429B15C07872007C8F90 /* PluginScriptableObjectOverridesAllProperties.cpp */; };
 		5185F6B210714E07007AA393 /* HistoryDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5185F69F10714A57007AA393 /* HistoryDelegate.mm */; };
 		51CACBD815D96FD000EB53A2 /* EvaluateJSWithinNPP_New.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51CACBD715D96FD000EB53A2 /* EvaluateJSWithinNPP_New.cpp */; };
+		520206CF1A0ADA5900AD5154 /* SetMuted.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 520206CE1A0ADA5900AD5154 /* SetMuted.cpp */; };
 		53CBB832134E42F3001CE6A4 /* CyclicRedundancyCheck.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 53CBB830134E42F3001CE6A4 /* CyclicRedundancyCheck.cpp */; };
 		5DB9AC970F722C3600684641 /* AHEM____.TTF in Copy Font Files */ = {isa = PBXBuildFile; fileRef = AA7F10C20CB3C1030003BDC9 /* AHEM____.TTF */; };
 		5DB9AC980F722C3600684641 /* WebKitWeightWatcher100.ttf in Copy Font Files */ = {isa = PBXBuildFile; fileRef = 375F09710DAC3CB600C8B4E5 /* WebKitWeightWatcher100.ttf */; };
@@ -145,13 +145,6 @@
 			remoteGlobalIDString = 2D403EB2150871F9005358D2;
 			remoteInfo = LayoutTestHelper;
 		};
-		A1158D6718927B240088C17B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A1158D6218927AF00088C17B;
-			remoteInfo = "Perl Support";
-		};
 		A1321CD7188FABE000125434 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
@@ -165,13 +158,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 9340994A08540CAE007F3BC8;
 			remoteInfo = DumpRenderTree;
-		};
-		A19317FE18928835001C52B1 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A1158D7E18927E7A0088C17B;
-			remoteInfo = DumpRenderTree.app;
 		};
 		A193180118928C10001C52B1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -232,7 +218,7 @@
 		1A4CCD4E171375A300981040 /* ToStringAndValueOfObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ToStringAndValueOfObject.cpp; sourceTree = "<group>"; };
 		1A5CC1F3137DD2EC00A5D7E7 /* GetURLWithJavaScriptURL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GetURLWithJavaScriptURL.cpp; sourceTree = "<group>"; };
 		1A66C34F14576A920099A115 /* ContentsScaleFactor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ContentsScaleFactor.cpp; sourceTree = "<group>"; };
-		1A7961061803454C00FE42CD /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = ../../../../../../../System/Library/Frameworks/IOKit.framework; sourceTree = "<group>"; };
+		1A7961061803454C00FE42CD /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = /System/Library/Frameworks/IOKit.framework; sourceTree = "<group>"; };
 		1A8F024C0BB9B056008CFA34 /* TestObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestObject.h; sourceTree = "<group>"; };
 		1AC6C77F0D07589B00CD3161 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		1AC6C7800D07589B00CD3161 /* PluginObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginObject.cpp; sourceTree = "<group>"; };
@@ -243,6 +229,7 @@
 		1AD8683D163B2FD000A28583 /* NPRuntimeCallsWithNullNPP.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NPRuntimeCallsWithNullNPP.cpp; sourceTree = "<group>"; };
 		1AD9D2FD12028409001A70D1 /* PluginScriptableNPObjectInvokeDefault.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginScriptableNPObjectInvokeDefault.cpp; sourceTree = "<group>"; };
 		1AFF66BB137DEA8300791696 /* GetURLNotifyWithURLThatFailsToLoad.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GetURLNotifyWithURLThatFailsToLoad.cpp; sourceTree = "<group>"; };
+		1CB6741F195BAE7B000F35B5 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
 		23BCB88F0EA57623003C6289 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
 		29CFBA0E122736E600BC30C0 /* AccessibilityTextMarker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AccessibilityTextMarker.h; sourceTree = "<group>"; };
 		29CFBA0F122736E600BC30C0 /* AccessibilityTextMarker.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AccessibilityTextMarker.cpp; sourceTree = "<group>"; };
@@ -262,8 +249,6 @@
 		375F09770DAC3CB600C8B4E5 /* WebKitWeightWatcher700.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = WebKitWeightWatcher700.ttf; path = fonts/WebKitWeightWatcher700.ttf; sourceTree = "<group>"; };
 		375F09780DAC3CB600C8B4E5 /* WebKitWeightWatcher800.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = WebKitWeightWatcher800.ttf; path = fonts/WebKitWeightWatcher800.ttf; sourceTree = "<group>"; };
 		375F09790DAC3CB600C8B4E5 /* WebKitWeightWatcher900.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = WebKitWeightWatcher900.ttf; path = fonts/WebKitWeightWatcher900.ttf; sourceTree = "<group>"; };
-		3A5626C0131C8B17002BE6D9 /* StorageTrackerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StorageTrackerDelegate.h; sourceTree = "<group>"; };
-		3A5626C1131C8B17002BE6D9 /* StorageTrackerDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StorageTrackerDelegate.mm; sourceTree = "<group>"; };
 		417DAA1C137B3E24007C57FB /* WebCoreTestSupport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WebCoreTestSupport.h; path = WebCoreTestSupport/WebCoreTestSupport.h; sourceTree = BUILT_PRODUCTS_DIR; };
 		440590701268453800CFD48D /* WebArchiveDumpSupportMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = WebArchiveDumpSupportMac.mm; path = mac/WebArchiveDumpSupportMac.mm; sourceTree = "<group>"; };
 		44A997820FCDE86400580F10 /* WebArchiveDumpSupport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WebArchiveDumpSupport.h; path = cf/WebArchiveDumpSupport.h; sourceTree = "<group>"; };
@@ -277,6 +262,7 @@
 		5185F69E10714A57007AA393 /* HistoryDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HistoryDelegate.h; path = mac/HistoryDelegate.h; sourceTree = "<group>"; };
 		5185F69F10714A57007AA393 /* HistoryDelegate.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = HistoryDelegate.mm; path = mac/HistoryDelegate.mm; sourceTree = "<group>"; };
 		51CACBD715D96FD000EB53A2 /* EvaluateJSWithinNPP_New.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = EvaluateJSWithinNPP_New.cpp; path = TestNetscapePlugIn/Tests/EvaluateJSWithinNPP_New.cpp; sourceTree = SOURCE_ROOT; };
+		520206CE1A0ADA5900AD5154 /* SetMuted.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SetMuted.cpp; sourceTree = "<group>"; };
 		53CBB830134E42F3001CE6A4 /* CyclicRedundancyCheck.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CyclicRedundancyCheck.cpp; sourceTree = "<group>"; };
 		53CBB831134E42F3001CE6A4 /* CyclicRedundancyCheck.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CyclicRedundancyCheck.h; sourceTree = "<group>"; };
 		5DE8AE4313A2C15800D6A37D /* libWebCoreTestSupport.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libWebCoreTestSupport.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -291,18 +277,6 @@
 		A1158D55189273EB0088C17B /* DumpRenderTreeBrowserView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DumpRenderTreeBrowserView.h; path = ios/DumpRenderTreeBrowserView.h; sourceTree = "<group>"; };
 		A1158D56189273EB0088C17B /* DumpRenderTreeBrowserView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = DumpRenderTreeBrowserView.mm; path = ios/DumpRenderTreeBrowserView.mm; sourceTree = "<group>"; };
 		A1158D57189273EB0088C17B /* PixelDumpSupportIOS.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = PixelDumpSupportIOS.mm; path = ios/PixelDumpSupportIOS.mm; sourceTree = "<group>"; };
-		A1158D6C18927CF10088C17B /* DumpRenderTreeSupport.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = DumpRenderTreeSupport.c; sourceTree = "<group>"; };
-		A1158D6D18927CF10088C17B /* DumpRenderTreeSupport_wrapPregenerated.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = DumpRenderTreeSupport_wrapPregenerated.c; sourceTree = "<group>"; };
-		A1158D6E18927CF10088C17B /* DumpRenderTreeSupportPregenerated.pm */ = {isa = PBXFileReference; lastKnownFileType = text.script.perl; path = DumpRenderTreeSupportPregenerated.pm; sourceTree = "<group>"; };
-		A1158D7018927CF10088C17B /* Changes */ = {isa = PBXFileReference; lastKnownFileType = text; path = Changes; sourceTree = "<group>"; };
-		A1158D7118927CF10088C17B /* IPhoneSimulatorNotification.xs */ = {isa = PBXFileReference; lastKnownFileType = text; path = IPhoneSimulatorNotification.xs; sourceTree = "<group>"; };
-		A1158D7318927CF20088C17B /* IPhoneSimulatorNotification.pm */ = {isa = PBXFileReference; lastKnownFileType = text.script.perl; path = IPhoneSimulatorNotification.pm; sourceTree = "<group>"; };
-		A1158D7418927CF20088C17B /* Makefile.PL */ = {isa = PBXFileReference; lastKnownFileType = text.script.perl; path = Makefile.PL; sourceTree = "<group>"; };
-		A1158D7518927CF20088C17B /* MANIFEST */ = {isa = PBXFileReference; lastKnownFileType = text; path = MANIFEST; sourceTree = "<group>"; };
-		A1158D7618927CF20088C17B /* ppport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ppport.h; sourceTree = "<group>"; };
-		A1158D7718927CF20088C17B /* README */ = {isa = PBXFileReference; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
-		A1158D7918927CF20088C17B /* IPhoneSimulatorNotification.t */ = {isa = PBXFileReference; lastKnownFileType = text; path = IPhoneSimulatorNotification.t; sourceTree = "<group>"; };
-		A1158D7A18927CF20088C17B /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		A1158D7F18927E7A0088C17B /* DumpRenderTree.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DumpRenderTree.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1321C9E188F9A3600125434 /* libDumpRenderTree.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libDumpRenderTree.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		A134E52F188FC27000901D06 /* DumpRenderTreeMain.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = DumpRenderTreeMain.mm; path = mac/DumpRenderTreeMain.mm; sourceTree = "<group>"; };
@@ -424,6 +398,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1CB67420195BAE7B000F35B5 /* CoreText.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -553,8 +528,6 @@
 				BCA18B5C0C9B08C200114369 /* PolicyDelegate.mm */,
 				BCA18B5D0C9B08C200114369 /* ResourceLoadDelegate.h */,
 				BCA18B5E0C9B08C200114369 /* ResourceLoadDelegate.mm */,
-				3A5626C0131C8B17002BE6D9 /* StorageTrackerDelegate.h */,
-				3A5626C1131C8B17002BE6D9 /* StorageTrackerDelegate.mm */,
 				BCA18B5F0C9B08C200114369 /* UIDelegate.h */,
 				BCA18B600C9B08C200114369 /* UIDelegate.mm */,
 			);
@@ -597,6 +570,7 @@
 			children = (
 				1A66C34F14576A920099A115 /* ContentsScaleFactor.cpp */,
 				1A31EB3713466AC100017372 /* ConvertPoint.cpp */,
+				520206CE1A0ADA5900AD5154 /* SetMuted.cpp */,
 				1A14C8A31406DE0400B254F7 /* SupportsCarbonEventModel.cpp */,
 			);
 			path = mac;
@@ -655,58 +629,14 @@
 				A1158D55189273EB0088C17B /* DumpRenderTreeBrowserView.h */,
 				A1158D56189273EB0088C17B /* DumpRenderTreeBrowserView.mm */,
 				A19317FC1892855F001C52B1 /* Info.plist */,
-				A1158D6B18927CF10088C17B /* PerlSupport */,
 			);
 			name = ios;
-			sourceTree = "<group>";
-		};
-		A1158D6B18927CF10088C17B /* PerlSupport */ = {
-			isa = PBXGroup;
-			children = (
-				A1158D6C18927CF10088C17B /* DumpRenderTreeSupport.c */,
-				A1158D6D18927CF10088C17B /* DumpRenderTreeSupport_wrapPregenerated.c */,
-				A1158D6E18927CF10088C17B /* DumpRenderTreeSupportPregenerated.pm */,
-				A1158D6F18927CF10088C17B /* IPhoneSimulatorNotification */,
-				A1158D7A18927CF20088C17B /* Makefile */,
-			);
-			name = PerlSupport;
-			path = ios/PerlSupport;
-			sourceTree = "<group>";
-		};
-		A1158D6F18927CF10088C17B /* IPhoneSimulatorNotification */ = {
-			isa = PBXGroup;
-			children = (
-				A1158D7018927CF10088C17B /* Changes */,
-				A1158D7118927CF10088C17B /* IPhoneSimulatorNotification.xs */,
-				A1158D7218927CF20088C17B /* lib */,
-				A1158D7418927CF20088C17B /* Makefile.PL */,
-				A1158D7518927CF20088C17B /* MANIFEST */,
-				A1158D7618927CF20088C17B /* ppport.h */,
-				A1158D7718927CF20088C17B /* README */,
-				A1158D7818927CF20088C17B /* t */,
-			);
-			path = IPhoneSimulatorNotification;
-			sourceTree = "<group>";
-		};
-		A1158D7218927CF20088C17B /* lib */ = {
-			isa = PBXGroup;
-			children = (
-				A1158D7318927CF20088C17B /* IPhoneSimulatorNotification.pm */,
-			);
-			path = lib;
-			sourceTree = "<group>";
-		};
-		A1158D7818927CF20088C17B /* t */ = {
-			isa = PBXGroup;
-			children = (
-				A1158D7918927CF20088C17B /* IPhoneSimulatorNotification.t */,
-			);
-			path = t;
 			sourceTree = "<group>";
 		};
 		A803FF6409CAACC1009B2A37 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1CB6741F195BAE7B000F35B5 /* CoreText.framework */,
 				1A7961061803454C00FE42CD /* IOKit.framework */,
 				BCB284B20CFA82CB007E533E /* ApplicationServices.framework */,
 				AE8257EF08D22389000507AB /* Carbon.framework */,
@@ -796,24 +726,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXHeadersBuildPhase section */
-
-/* Begin PBXLegacyTarget section */
-		A1158D6218927AF00088C17B /* Perl Support */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "$(ACTION) PLATFORM_NAME=$(PLATFORM_NAME)";
-			buildConfigurationList = A1158D6318927AF00088C17B /* Build configuration list for PBXLegacyTarget "Perl Support" */;
-			buildPhases = (
-			);
-			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = "$(SRCROOT)/ios/PerlSupport";
-			dependencies = (
-				A19317FF18928835001C52B1 /* PBXTargetDependency */,
-			);
-			name = "Perl Support";
-			passBuildSettingsInEnvironment = 1;
-			productName = "Perl Support";
-		};
-/* End PBXLegacyTarget section */
 
 /* Begin PBXNativeTarget section */
 		141BF21E096A441D00E0753C /* TestNetscapePlugIn */ = {
@@ -927,6 +839,8 @@
 		08FB7793FE84155DC02AAC07 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 0700;
+				LastUpgradeCheck = 0700;
 			};
 			buildConfigurationList = 149C29C308902C6D008A9EFC /* Build configuration list for PBXProject "DumpRenderTree" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -952,7 +866,6 @@
 				B5A7525A08AF4A4A00138E45 /* ImageDiff */,
 				141BF21E096A441D00E0753C /* TestNetscapePlugIn */,
 				2D403EB2150871F9005358D2 /* LayoutTestHelper */,
-				A1158D6218927AF00088C17B /* Perl Support */,
 			);
 		};
 /* End PBXProject section */
@@ -987,6 +900,7 @@
 				51CACBD815D96FD000EB53A2 /* EvaluateJSWithinNPP_New.cpp in Sources */,
 				4AD6A11413C8124000EA9737 /* FormValue.cpp in Sources */,
 				1AFF66BC137DEFD200791696 /* GetURLNotifyWithURLThatFailsToLoad.cpp in Sources */,
+				520206CF1A0ADA5900AD5154 /* SetMuted.cpp in Sources */,
 				1A5CC1F5137DD2EC00A5D7E7 /* GetURLWithJavaScriptURL.cpp in Sources */,
 				1A3E28AA1311D73B00501349 /* GetURLWithJavaScriptURLDestroyingPlugin.cpp in Sources */,
 				1AD4CB2212A6D1350027A7AF /* GetUserAgentWithNullNPPFromNPPNew.cpp in Sources */,
@@ -1065,7 +979,6 @@
 				BCB284D60CFA83D1007E533E /* PixelDumpSupportMac.mm in Sources */,
 				BCA18B660C9B08C200114369 /* PolicyDelegate.mm in Sources */,
 				BCA18B680C9B08C200114369 /* ResourceLoadDelegate.mm in Sources */,
-				3A5626CB131CA02A002BE6D9 /* StorageTrackerDelegate.mm in Sources */,
 				BC0131DA0C9772010087317D /* TestRunner.cpp in Sources */,
 				BCA18B240C9B014B00114369 /* TestRunnerMac.mm in Sources */,
 				BCA18B490C9B02C400114369 /* TextInputController.m in Sources */,
@@ -1114,11 +1027,6 @@
 			target = 2D403EB2150871F9005358D2 /* LayoutTestHelper */;
 			targetProxy = 2D403F201508736C005358D2 /* PBXContainerItemProxy */;
 		};
-		A1158D6818927B240088C17B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = A1158D6218927AF00088C17B /* Perl Support */;
-			targetProxy = A1158D6718927B240088C17B /* PBXContainerItemProxy */;
-		};
 		A1321CD8188FABE000125434 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = A1321C9D188F9A3600125434 /* DumpRenderTree (Library) */;
@@ -1128,11 +1036,6 @@
 			isa = PBXTargetDependency;
 			target = 9340994A08540CAE007F3BC8 /* DumpRenderTree */;
 			targetProxy = A134E52C188FC09200901D06 /* PBXContainerItemProxy */;
-		};
-		A19317FF18928835001C52B1 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = A1158D7E18927E7A0088C17B /* DumpRenderTree.app */;
-			targetProxy = A19317FE18928835001C52B1 /* PBXContainerItemProxy */;
 		};
 		A193180218928C10001C52B1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1232,6 +1135,7 @@
 			buildSettings = {
 				INSTALL_PATH = "$(SYSTEM_LIBRARY_DIR)/Frameworks/$(WEBKIT_FRAMEWORK_RESOURCES_PATH)";
 				PRODUCT_NAME = All;
+				USE_EXPORT_MACROS = 0;
 			};
 			name = Production;
 		};
@@ -1260,24 +1164,6 @@
 				INFOPLIST_FILE = TestNetscapePlugIn/mac/Info.plist;
 				INSTALL_PATH = "$(SYSTEM_LIBRARY_DIR)/Frameworks/$(WEBKIT_FRAMEWORK_RESOURCES_PATH)";
 				SKIP_INSTALL = NO;
-			};
-			name = Production;
-		};
-		A1158D6418927AF00088C17B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-			};
-			name = Debug;
-		};
-		A1158D6518927AF00088C17B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-			};
-			name = Release;
-		};
-		A1158D6618927AF00088C17B /* Production */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
 			};
 			name = Production;
 		};
@@ -1332,10 +1218,10 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
 				OTHER_REZFLAGS = "";
 				PRODUCT_NAME = All;
 				SECTORDER_FLAGS = "";
+				USE_EXPORT_MACROS = 0;
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1350,10 +1236,10 @@
 				COPY_PHASE_STRIP = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
 				OTHER_REZFLAGS = "";
 				PRODUCT_NAME = All;
 				SECTORDER_FLAGS = "";
+				USE_EXPORT_MACROS = 0;
 				WARNING_CFLAGS = (
 					"-Wmost",
 					"-Wno-four-char-constants",
@@ -1415,16 +1301,6 @@
 				2D403F16150871F9005358D2 /* Debug */,
 				2D403F17150871F9005358D2 /* Release */,
 				2D403F18150871F9005358D2 /* Production */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Production;
-		};
-		A1158D6318927AF00088C17B /* Build configuration list for PBXLegacyTarget "Perl Support" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A1158D6418927AF00088C17B /* Debug */,
-				A1158D6518927AF00088C17B /* Release */,
-				A1158D6618927AF00088C17B /* Production */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Production;

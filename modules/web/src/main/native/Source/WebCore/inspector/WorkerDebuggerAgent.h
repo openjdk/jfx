@@ -31,8 +31,6 @@
 #ifndef WorkerDebuggerAgent_h
 #define WorkerDebuggerAgent_h
 
-#if ENABLE(INSPECTOR)
-
 #include "WebDebuggerAgent.h"
 #include "WorkerScriptDebugServer.h"
 
@@ -54,7 +52,7 @@ public:
     virtual void startListeningScriptDebugServer() override;
     virtual void stopListeningScriptDebugServer(bool isBeingDestroyed) override;
     virtual WorkerScriptDebugServer& scriptDebugServer() override;
-    virtual Inspector::InjectedScript injectedScriptForEval(ErrorString*, const int* executionContextId) override;
+    virtual Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
     virtual void muteConsole() override;
     virtual void unmuteConsole() override;
 
@@ -66,7 +64,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(WorkerDebuggerAgent_h)

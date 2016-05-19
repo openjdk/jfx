@@ -54,7 +54,7 @@
 namespace WebCore {
 
 Notification::Notification()
-    : ActiveDOMObject(0)
+    : ActiveDOMObject(nullptr)
 {
 }
 
@@ -84,9 +84,9 @@ Notification::Notification(ScriptExecutionContext& context, const String& title)
     : ActiveDOMObject(&context)
     , m_title(title)
     , m_state(Idle)
-    , m_taskTimer(adoptPtr(new Timer<Notification>(this, &Notification::taskTimerFired)))
+    , m_taskTimer(std::make_unique<Timer>(*this, &Notification::taskTimerFired))
 {
-    m_notificationCenter = DOMWindowNotifications::webkitNotifications(toDocument(context).domWindow());
+    m_notificationCenter = DOMWindowNotifications::webkitNotifications(downcast<Document>(context).domWindow());
 
     ASSERT(m_notificationCenter->client());
     m_taskTimer->startOneShot(0);
@@ -98,35 +98,35 @@ Notification::~Notification()
 }
 
 #if ENABLE(LEGACY_NOTIFICATIONS)
-PassRefPtr<Notification> Notification::create(const String& title, const String& body, const String& iconURI, ScriptExecutionContext* context, ExceptionCode& ec, PassRefPtr<NotificationCenter> provider)
+Ref<Notification> Notification::create(const String& title, const String& body, const String& iconURI, ScriptExecutionContext* context, ExceptionCode& ec, PassRefPtr<NotificationCenter> provider)
 {
-    RefPtr<Notification> notification(adoptRef(new Notification(title, body, iconURI, context, ec, provider)));
-    notification->suspendIfNeeded();
-    return notification.release();
+    auto notification = adoptRef(*new Notification(title, body, iconURI, context, ec, provider));
+    notification.get().suspendIfNeeded();
+    return notification;
 }
 #endif
 
 #if ENABLE(NOTIFICATIONS)
-PassRefPtr<Notification> Notification::create(ScriptExecutionContext& context, const String& title, const Dictionary& options)
+Ref<Notification> Notification::create(Document& context, const String& title, const Dictionary& options)
 {
-    RefPtr<Notification> notification(adoptRef(new Notification(context, title)));
+    auto notification = adoptRef(*new Notification(context, title));
     String argument;
     if (options.get("body", argument))
-        notification->setBody(argument);
+        notification.get().setBody(argument);
     if (options.get("tag", argument))
-        notification->setTag(argument);
+        notification.get().setTag(argument);
     if (options.get("lang", argument))
-        notification->setLang(argument);
+        notification.get().setLang(argument);
     if (options.get("dir", argument))
-        notification->setDir(argument);
+        notification.get().setDir(argument);
     if (options.get("icon", argument)) {
         URL iconURI = argument.isEmpty() ? URL() : context.completeURL(argument);
         if (!iconURI.isEmpty() && iconURI.isValid())
-            notification->setIconURL(iconURI);
+            notification.get().setIconURL(iconURI);
     }
 
-    notification->suspendIfNeeded();
-    return notification.release();
+    notification.get().suspendIfNeeded();
+    return notification;
 }
 #endif
 
@@ -135,9 +135,9 @@ void Notification::show()
     // prevent double-showing
     if (m_state == Idle && m_notificationCenter->client()) {
 #if ENABLE(NOTIFICATIONS)
-        if (!toDocument(scriptExecutionContext())->page())
+        if (!downcast<Document>(*scriptExecutionContext()).page())
             return;
-        if (NotificationController::from(toDocument(scriptExecutionContext())->page())->client()->checkPermission(scriptExecutionContext()) != NotificationClient::PermissionAllowed) {
+        if (NotificationController::from(downcast<Document>(*scriptExecutionContext()).page())->client()->checkPermission(scriptExecutionContext()) != NotificationClient::PermissionAllowed) {
             dispatchErrorEvent();
             return;
         }
@@ -168,6 +168,17 @@ void Notification::contextDestroyed()
     ActiveDOMObject::contextDestroyed();
     if (m_notificationCenter->client())
         m_notificationCenter->client()->notificationObjectDestroyed(this);
+}
+
+const char* Notification::activeDOMObjectName() const
+{
+    return "Notification";
+}
+
+bool Notification::canSuspendForPageCache() const
+{
+    // We can suspend if the Notification is not shown yet or after it is closed.
+    return m_state == Idle || m_state == Closed;
 }
 
 void Notification::finalize()
@@ -201,10 +212,9 @@ void Notification::dispatchErrorEvent()
 }
 
 #if ENABLE(NOTIFICATIONS)
-void Notification::taskTimerFired(Timer<Notification>& timer)
+void Notification::taskTimerFired()
 {
     ASSERT(scriptExecutionContext()->isDocument());
-    ASSERT_UNUSED(timer, &timer == m_taskTimer.get());
     show();
 }
 #endif
@@ -213,8 +223,8 @@ void Notification::taskTimerFired(Timer<Notification>& timer)
 #if ENABLE(NOTIFICATIONS)
 const String Notification::permission(ScriptExecutionContext* context)
 {
-    ASSERT(toDocument(context)->page());
-    return permissionString(NotificationController::from(toDocument(context)->page())->client()->checkPermission(context));
+    ASSERT(downcast<Document>(*context).page());
+    return permissionString(NotificationController::from(downcast<Document>(*context).page())->client()->checkPermission(context));
 }
 
 const String Notification::permissionString(NotificationClient::Permission permission)
@@ -234,8 +244,8 @@ const String Notification::permissionString(NotificationClient::Permission permi
 
 void Notification::requestPermission(ScriptExecutionContext* context, PassRefPtr<NotificationPermissionCallback> callback)
 {
-    ASSERT(toDocument(context)->page());
-    NotificationController::from(toDocument(context)->page())->client()->requestPermission(context, callback);
+    ASSERT(downcast<Document>(*context).page());
+    NotificationController::from(downcast<Document>(*context).page())->client()->requestPermission(context, callback);
 }
 #endif
 

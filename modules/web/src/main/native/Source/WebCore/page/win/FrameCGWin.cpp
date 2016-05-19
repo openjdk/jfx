@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -55,13 +55,16 @@ GDIObject<HBITMAP> imageFromRect(const Frame* frame, IntRect& ir)
     PaintBehavior oldPaintBehavior = frame->view()->paintBehavior();
     frame->view()->setPaintBehavior(oldPaintBehavior | PaintBehaviorFlattenCompositingLayers);
 
-    void* bits;
+    void* bits = nullptr;
     auto hdc = adoptGDIObject(::CreateCompatibleDC(0));
     int w = ir.width();
     int h = ir.height();
     BitmapInfo bmp = BitmapInfo::create(IntSize(w, h));
 
     GDIObject<HBITMAP> hbmp = adoptGDIObject(::CreateDIBSection(0, &bmp, DIB_RGB_COLORS, static_cast<void**>(&bits), 0, 0));
+    if (!hbmp)
+        return hbmp;
+
     HGDIOBJ hbmpOld = SelectObject(hdc.get(), hbmp.get());
     CGContextRef context = CGBitmapContextCreate(static_cast<void*>(bits), w, h,
         8, w * sizeof(RGBQUAD), deviceRGBColorSpaceRef(), kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);

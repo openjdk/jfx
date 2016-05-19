@@ -20,8 +20,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "FEMerge.h"
 
 #include "Filter.h"
@@ -30,14 +28,14 @@
 
 namespace WebCore {
 
-FEMerge::FEMerge(Filter* filter)
+FEMerge::FEMerge(Filter& filter)
     : FilterEffect(filter)
 {
 }
 
-PassRefPtr<FEMerge> FEMerge::create(Filter* filter)
+Ref<FEMerge> FEMerge::create(Filter& filter)
 {
-    return adoptRef(new FEMerge(filter));
+    return adoptRef(*new FEMerge(filter));
 }
 
 void FEMerge::platformApplySoftware()
@@ -74,5 +72,3 @@ TextStream& FEMerge::externalRepresentation(TextStream& ts, int indent) const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)

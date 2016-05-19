@@ -37,12 +37,35 @@ namespace JSC {
 class CodeBlock;
 class LLIntOffsetsExtractor;
 
-// This is a bitfield where each bit represents an IndexingType that we have seen.
-// There are 32 indexing types, so an unsigned is enough.
+// This is a bitfield where each bit represents an type of array access that we have seen.
+// There are 16 indexing types that use the lower bits.
+// There are 9 typed array types taking the bits 16 to 25.
 typedef unsigned ArrayModes;
+
+const ArrayModes Int8ArrayMode = 1 << 16;
+const ArrayModes Int16ArrayMode = 1 << 17;
+const ArrayModes Int32ArrayMode = 1 << 18;
+const ArrayModes Uint8ArrayMode = 1 << 19;
+const ArrayModes Uint8ClampedArrayMode = 1 << 20;
+const ArrayModes Uint16ArrayMode = 1 << 21;
+const ArrayModes Uint32ArrayMode = 1 << 22;
+const ArrayModes Float32ArrayMode = 1 << 23;
+const ArrayModes Float64ArrayMode = 1 << 24;
 
 #define asArrayModes(type) \
     (static_cast<unsigned>(1) << static_cast<unsigned>(type))
+
+#define ALL_TYPED_ARRAY_MODES \
+    (Int8ArrayMode            \
+    | Int16ArrayMode          \
+    | Int32ArrayMode          \
+    | Uint8ArrayMode          \
+    | Uint8ClampedArrayMode   \
+    | Uint16ArrayMode         \
+    | Uint32ArrayMode         \
+    | Float32ArrayMode        \
+    | Float64ArrayMode        \
+    )
 
 #define ALL_NON_ARRAY_ARRAY_MODES                       \
     (asArrayModes(NonArray)                             \
@@ -50,7 +73,8 @@ typedef unsigned ArrayModes;
     | asArrayModes(NonArrayWithDouble)                  \
     | asArrayModes(NonArrayWithContiguous)              \
     | asArrayModes(NonArrayWithArrayStorage)            \
-    | asArrayModes(NonArrayWithSlowPutArrayStorage))
+    | asArrayModes(NonArrayWithSlowPutArrayStorage)     \
+    | ALL_TYPED_ARRAY_MODES)
 
 #define ALL_ARRAY_ARRAY_MODES                           \
     (asArrayModes(ArrayClass)                           \
@@ -65,6 +89,29 @@ typedef unsigned ArrayModes;
 
 inline ArrayModes arrayModeFromStructure(Structure* structure)
 {
+    switch (structure->classInfo()->typedArrayStorageType) {
+    case TypeInt8:
+        return Int8ArrayMode;
+    case TypeUint8:
+        return Uint8ArrayMode;
+    case TypeUint8Clamped:
+        return Uint8ClampedArrayMode;
+    case TypeInt16:
+        return Int16ArrayMode;
+    case TypeUint16:
+        return Uint16ArrayMode;
+    case TypeInt32:
+        return Int32ArrayMode;
+    case TypeUint32:
+        return Uint32ArrayMode;
+    case TypeFloat32:
+        return Float32ArrayMode;
+    case TypeFloat64:
+        return Float64ArrayMode;
+    case TypeDataView:
+    case NotTypedArray:
+        break;
+    }
     return asArrayModes(structure->indexingType());
 }
 
@@ -135,7 +182,7 @@ class ArrayProfile {
 public:
     ArrayProfile()
         : m_bytecodeOffset(std::numeric_limits<unsigned>::max())
-        , m_lastSeenStructure(0)
+        , m_lastSeenStructureID(0)
         , m_mayStoreToHole(false)
         , m_outOfBounds(false)
         , m_mayInterceptIndexedAccesses(false)
@@ -147,7 +194,7 @@ public:
 
     ArrayProfile(unsigned bytecodeOffset)
         : m_bytecodeOffset(bytecodeOffset)
-        , m_lastSeenStructure(0)
+        , m_lastSeenStructureID(0)
         , m_mayStoreToHole(false)
         , m_outOfBounds(false)
         , m_mayInterceptIndexedAccesses(false)
@@ -159,17 +206,20 @@ public:
 
     unsigned bytecodeOffset() const { return m_bytecodeOffset; }
 
-    Structure** addressOfLastSeenStructure() { return &m_lastSeenStructure; }
+    StructureID* addressOfLastSeenStructureID() { return &m_lastSeenStructureID; }
     ArrayModes* addressOfArrayModes() { return &m_observedArrayModes; }
     bool* addressOfMayStoreToHole() { return &m_mayStoreToHole; }
+
+    void setOutOfBounds() { m_outOfBounds = true; }
     bool* addressOfOutOfBounds() { return &m_outOfBounds; }
 
     void observeStructure(Structure* structure)
     {
-        m_lastSeenStructure = structure;
+        m_lastSeenStructureID = structure->id();
     }
 
     void computeUpdatedPrediction(const ConcurrentJITLocker&, CodeBlock*);
+    void computeUpdatedPrediction(const ConcurrentJITLocker&, CodeBlock*, Structure* lastSeenStructure);
 
     ArrayModes observedArrayModes(const ConcurrentJITLocker&) const { return m_observedArrayModes; }
     bool mayInterceptIndexedAccesses(const ConcurrentJITLocker&) const { return m_mayInterceptIndexedAccesses; }
@@ -188,7 +238,7 @@ private:
     static Structure* polymorphicStructure() { return static_cast<Structure*>(reinterpret_cast<void*>(1)); }
 
     unsigned m_bytecodeOffset;
-    Structure* m_lastSeenStructure;
+    StructureID m_lastSeenStructureID;
     bool m_mayStoreToHole; // This flag may become overloaded to indicate other special cases that were encountered during array access, as it depends on indexing type. Since we currently have basically just one indexing type (two variants of ArrayStorage), this flag for now just means exactly what its name implies.
     bool m_outOfBounds;
     bool m_mayInterceptIndexedAccesses : 1;
@@ -197,7 +247,7 @@ private:
     ArrayModes m_observedArrayModes;
 };
 
-typedef SegmentedVector<ArrayProfile, 4, 0> ArrayProfileVector;
+typedef SegmentedVector<ArrayProfile, 4> ArrayProfileVector;
 
 } // namespace JSC
 

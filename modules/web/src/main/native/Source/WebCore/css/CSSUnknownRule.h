@@ -26,14 +26,20 @@
 
 namespace WebCore {
 
-class CSSUnknownRule : public CSSRule {
+class CSSUnknownRule final : public CSSRule {
 public:
-    CSSUnknownRule() : CSSRule(0) { }
+    CSSUnknownRule()
+        : CSSRule(nullptr)
+    {
+    }
+
     virtual ~CSSUnknownRule() { }
 
-    virtual CSSRule::Type type() const override { return UNKNOWN_RULE; }
     virtual String cssText() const override { return String(); }
-    virtual void reattach(StyleRuleBase*) override { }
+    virtual void reattach(StyleRuleBase&) override { }
+
+private:
+    virtual CSSRule::Type type() const override { return UNKNOWN_RULE; }
 };
 
 } // namespace WebCore

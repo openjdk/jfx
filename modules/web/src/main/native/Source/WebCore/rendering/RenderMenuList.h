@@ -2,7 +2,7 @@
  * This file is part of the select element renderer in WebCore.
  *
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
- * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2015 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -43,7 +43,7 @@ class RenderText;
 class RenderMenuList final : public RenderFlexibleBox, private PopupMenuClient {
 
 public:
-    RenderMenuList(HTMLSelectElement&, PassRef<RenderStyle>);
+    RenderMenuList(HTMLSelectElement&, Ref<RenderStyle>&&);
     virtual ~RenderMenuList();
 
     HTMLSelectElement& selectElement() const;
@@ -113,7 +113,7 @@ private:
     virtual bool multiple() const override;
     virtual FontSelector* fontSelector() const override;
     virtual HostWindow* hostWindow() const override;
-    virtual PassRefPtr<Scrollbar> createScrollbar(ScrollableArea*, ScrollbarOrientation, ScrollbarControlSize) override;
+    virtual PassRefPtr<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarControlSize) override;
 
     virtual bool hasLineIfEmpty() const override { return true; }
 
@@ -123,8 +123,8 @@ private:
     {
         return RenderBlock::baselinePosition(baseline, firstLine, direction, position);
     }
-    virtual int firstLineBaseline() const override { return RenderBlock::firstLineBaseline(); }
-    virtual int inlineBlockBaseline(LineDirectionMode direction) const override { return RenderBlock::inlineBlockBaseline(direction); }
+    virtual Optional<int> firstLineBaseline() const override { return RenderBlock::firstLineBaseline(); }
+    virtual Optional<int> inlineBlockBaseline(LineDirectionMode direction) const override { return RenderBlock::inlineBlockBaseline(direction); }
 
     void getItemBackgroundColor(unsigned listIndex, Color&, bool& itemHasCustomBackgroundColor) const;
 
@@ -152,8 +152,8 @@ private:
 #endif
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderMenuList, isMenuList())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMenuList, isMenuList())
 
 #endif

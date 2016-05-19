@@ -88,8 +88,8 @@ void XMLDocumentParser::clearCurrentNodeStack()
 {
     if (m_currentNode && m_currentNode != document())
         m_currentNode->deref();
-    m_currentNode = 0;
-    m_leafTextNode = 0;
+    m_currentNode = nullptr;
+    m_leafTextNode = nullptr;
 
     if (m_currentNodeStack.size()) { // Aborted parsing.
         for (size_t i = m_currentNodeStack.size() - 1; i != 0; --i)
@@ -121,7 +121,7 @@ void XMLDocumentParser::append(PassRefPtr<StringImpl> inputSource)
 
     doWrite(source.toString());
 
-    // After parsing, go ahead and dispatch image beforeload events.
+    // After parsing, dispatch image beforeload events.
     ImageLoader::dispatchPendingBeforeLoadEvents();
 }
 
@@ -162,7 +162,7 @@ void XMLDocumentParser::exitText()
     Vector<xmlChar> empty;
     m_bufferedText.swap(empty);
 
-    m_leafTextNode = 0;
+    m_leafTextNode = nullptr;
 }
 
 void XMLDocumentParser::detach()
@@ -230,10 +230,10 @@ void XMLDocumentParser::notifyFinished(CachedResource* unusedResource)
     bool wasCanceled = m_pendingScript->wasCanceled();
 
     m_pendingScript->removeClient(this);
-    m_pendingScript = 0;
+    m_pendingScript = nullptr;
 
     RefPtr<Element> e = m_scriptElement;
-    m_scriptElement = 0;
+    m_scriptElement = nullptr;
 
     ScriptElement* scriptElement = toScriptElementIfPossible(e.get());
     ASSERT(scriptElement);
@@ -248,7 +248,7 @@ void XMLDocumentParser::notifyFinished(CachedResource* unusedResource)
         scriptElement->dispatchLoadEvent();
     }
 
-    m_scriptElement = 0;
+    m_scriptElement = nullptr;
 
     if (!isDetached() && !m_requestingScript)
         resumeParsing();
@@ -261,6 +261,8 @@ bool XMLDocumentParser::isWaitingForScripts() const
 
 void XMLDocumentParser::pauseParsing()
 {
+    ASSERT(!m_parserPaused);
+
     if (m_parsingFragment)
         return;
 
@@ -275,17 +277,16 @@ bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragm
     // FIXME: We need to implement the HTML5 XML Fragment parsing algorithm:
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#xml-fragment-parsing-algorithm
     // For now we have a hack for script/style innerHTML support:
-    if (contextElement && (contextElement->hasLocalName(HTMLNames::scriptTag) || contextElement->hasLocalName(HTMLNames::styleTag))) {
+    if (contextElement && (contextElement->hasLocalName(HTMLNames::scriptTag.localName()) || contextElement->hasLocalName(HTMLNames::styleTag.localName()))) {
         fragment.parserAppendChild(fragment.document().createTextNode(chunk));
         return true;
     }
 
     RefPtr<XMLDocumentParser> parser = XMLDocumentParser::create(fragment, contextElement, parserContentPolicy);
     bool wellFormed = parser->appendFragmentSource(chunk);
-    // Do not call finish().  Current finish() and doEnd() implementations touch the main Document/loader
-    // and can cause crashes in the fragment case.
+    // Do not call finish(). The finish() and doEnd() implementations touch the main document and loader and can cause crashes in the fragment case.
     parser->detach(); // Allows ~DocumentParser to assert it was detached before destruction.
-    return wellFormed; // appendFragmentSource()'s wellFormed is more permissive than wellFormed().
+    return wellFormed; // appendFragmentSource()'s wellFormed is more permissive than Document::wellFormed().
 }
 
 } // namespace WebCore

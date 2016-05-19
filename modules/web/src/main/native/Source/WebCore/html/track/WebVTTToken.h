@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Google Inc.  All rights reserved.
+ * Copyright (C) 2011, 2013 Google Inc.  All rights reserved.
+ * Copyright (C) 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -43,167 +44,54 @@ public:
         StartTag,
         EndTag,
         TimestampTag,
-        EndOfFile,
     };
 };
 
 class WebVTTToken {
-    WTF_MAKE_NONCOPYABLE(WebVTTToken);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     typedef WebVTTTokenTypes Type;
-    typedef WTF::Vector<UChar, 1024> DataVector; // FIXME: Is this too large for WebVTT?
 
-    WebVTTToken() { clear(); }
+    WebVTTToken()
+        : m_type(Type::Uninitialized) { }
 
-    void appendToName(UChar character)
+    static WebVTTToken StringToken(const String& characterData)
     {
-        ASSERT(m_type == WebVTTTokenTypes::StartTag || m_type == WebVTTTokenTypes::EndTag);
-        ASSERT(character);
-        m_data.append(character);
+        return WebVTTToken(Type::Character, characterData);
+    }
+
+    static WebVTTToken StartTag(const String& tagName, const AtomicString& classes = emptyAtom, const AtomicString& annotation = emptyAtom)
+    {
+        WebVTTToken token(Type::StartTag, tagName);
+        token.m_classes = classes;
+        token.m_annotation = annotation;
+        return token;
+    }
+
+    static WebVTTToken EndTag(const String& tagName)
+    {
+        return WebVTTToken(Type::EndTag, tagName);
+    }
+
+    static WebVTTToken TimestampTag(const String& timestampData)
+    {
+        return WebVTTToken(Type::TimestampTag, timestampData);
     }
 
     Type::Type type() const { return m_type; }
-
-    const DataVector& name() const
-    {
-        return m_data;
-    }
-
-    const DataVector& characters() const
-    {
-        ASSERT(m_type == Type::Character || m_type == Type::TimestampTag);
-        return m_data;
-    }
-
-    // Starting a character token works slightly differently than starting
-    // other types of tokens because we want to save a per-character branch.
-    void ensureIsCharacterToken()
-    {
-        ASSERT(m_type == Type::Uninitialized || m_type == Type::Character);
-        m_type = Type::Character;
-    }
-
-    void appendToCharacter(char character)
-    {
-        ASSERT(m_type == Type::Character);
-        m_data.append(character);
-    }
-
-    void appendToCharacter(UChar character)
-    {
-        ASSERT(m_type == Type::Character);
-        m_data.append(character);
-    }
-
-    void appendToCharacter(const Vector<LChar, 32>& characters)
-    {
-        ASSERT(m_type == Type::Character);
-        m_data.appendVector(characters);
-    }
-
-    void beginEmptyStartTag()
-    {
-        ASSERT(m_type == Type::Uninitialized);
-        m_type = Type::StartTag;
-        m_data.clear();
-    }
-
-    void beginStartTag(UChar character)
-    {
-        ASSERT(character);
-        ASSERT(m_type == Type::Uninitialized);
-        m_type = Type::StartTag;
-        m_data.append(character);
-    }
-
-    void beginEndTag(LChar character)
-    {
-        ASSERT(m_type == Type::Uninitialized);
-        m_type = Type::EndTag;
-        m_data.append(character);
-    }
-
-    void beginTimestampTag(UChar character)
-    {
-        ASSERT(character);
-        ASSERT(m_type == Type::Uninitialized);
-        m_type = Type::TimestampTag;
-        m_data.append(character);
-    }
-
-    void appendToTimestamp(UChar character)
-    {
-        ASSERT(character);
-        ASSERT(m_type == Type::TimestampTag);
-        m_data.append(character);
-    }
-
-    void appendToClass(UChar character)
-    {
-        appendToStartType(character);
-    }
-
-    void addNewClass()
-    {
-        ASSERT(m_type == Type::StartTag);
-        if (!m_classes.isEmpty())
-            m_classes.append(' ');
-        m_classes.appendVector(m_currentBuffer);
-        m_currentBuffer.clear();
-    }
-
-    const DataVector& classes() const
-    {
-        return m_classes;
-    }
-
-    void appendToAnnotation(UChar character)
-    {
-        appendToStartType(character);
-    }
-
-    void addNewAnnotation()
-    {
-        ASSERT(m_type == Type::StartTag);
-        m_annotation.clear();
-        m_annotation.appendVector(m_currentBuffer);
-        m_currentBuffer.clear();
-    }
-
-    const DataVector& annotation() const
-    {
-        return m_annotation;
-    }
-
-    void makeEndOfFile()
-    {
-        ASSERT(m_type == Type::Uninitialized);
-        m_type = Type::EndOfFile;
-    }
-
-    void clear()
-    {
-        m_type = Type::Uninitialized;
-        m_data.clear();
-        m_annotation.clear();
-        m_classes.clear();
-        m_currentBuffer.clear();
-    }
+    const String& name() const { return m_data; }
+    const String& characters() const { return m_data; }
+    const AtomicString& classes() const { return m_classes; }
+    const AtomicString& annotation() const { return m_annotation; }
 
 private:
-    void appendToStartType(UChar character)
-    {
-        ASSERT(character);
-        ASSERT(m_type == Type::StartTag);
-        m_currentBuffer.append(character);
-    }
+    WebVTTToken(Type::Type type, const String& data)
+        : m_type(type)
+        , m_data(data) { }
 
     Type::Type m_type;
-    DataVector m_data;
-    DataVector m_annotation;
-    DataVector m_classes;
-    DataVector m_currentBuffer;
+    String m_data;
+    AtomicString m_annotation;
+    AtomicString m_classes;
 };
 
 }

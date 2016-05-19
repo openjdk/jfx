@@ -43,20 +43,22 @@ namespace SimpleLineLayout {
 bool canUseFor(const RenderBlockFlow&);
 
 struct Run {
+#if COMPILER(MSVC)
     Run() { }
-    Run(unsigned start, float left)
+#endif
+    Run(unsigned start, unsigned end, float logicalLeft, float logicalRight, bool isEndOfLine)
         : start(start)
-        , end(start)
-        , isEndOfLine(false)
-        , left(left)
-        , right(left)
+        , end(end)
+        , isEndOfLine(isEndOfLine)
+        , logicalLeft(logicalLeft)
+        , logicalRight(logicalRight)
     { }
 
     unsigned start;
     unsigned end : 31;
     unsigned isEndOfLine : 1;
-    float left;
-    float right;
+    float logicalLeft;
+    float logicalRight;
 };
 
 class Layout {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,18 +38,14 @@ const char* exitKindToString(ExitKind kind)
         return "Unset";
     case BadType:
         return "BadType";
-    case BadFunction:
-        return "BadFunction";
+    case BadCell:
+        return "BadCell";
     case BadExecutable:
         return "BadExecutable";
     case BadCache:
         return "BadCache";
-    case BadCacheWatchpoint:
-        return "BadCacheWatchpoint";
-    case BadWeakConstantCache:
-        return "BadWeakConstantCache";
-    case BadWeakConstantCacheWatchpoint:
-        return "BadWeakConstantCacheWatchpoint";
+    case BadConstantCache:
+        return "BadConstantCache";
     case BadIndexingType:
         return "BadIndexingType";
     case Overflow:
@@ -68,12 +64,16 @@ const char* exitKindToString(ExitKind kind)
         return "InadequateCoverage";
     case ArgumentsEscaped:
         return "ArgumentsEscaped";
+    case ExoticObjectMode:
+        return "ExoticObjectMode";
     case NotStringObject:
         return "NotStringObject";
+    case VarargsOverflow:
+        return "VarargsOverflow";
+    case TDZFailure:
+        return "TDZFailure";
     case Uncountable:
         return "Uncountable";
-    case UncountableWatchpoint:
-        return "UncountableWatchpoint";
     case UncountableInvalidation:
         return "UncountableInvalidation";
     case WatchdogTimerFired:
@@ -92,7 +92,6 @@ bool exitKindIsCountable(ExitKind kind)
         RELEASE_ASSERT_NOT_REACHED();
     case BadType:
     case Uncountable:
-    case UncountableWatchpoint:
     case LoadFromHole: // Already counted directly by the baseline JIT.
     case StoreToHole: // Already counted directly by the baseline JIT.
     case OutOfBounds: // Already counted directly by the baseline JIT.

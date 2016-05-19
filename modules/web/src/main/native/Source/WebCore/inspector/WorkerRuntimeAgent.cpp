@@ -31,8 +31,7 @@
 #include "config.h"
 #include "WorkerRuntimeAgent.h"
 
-#if ENABLE(INSPECTOR)
-
+#include "DOMWindow.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMWindowBase.h"
 #include "ScriptState.h"
@@ -54,20 +53,22 @@ WorkerRuntimeAgent::WorkerRuntimeAgent(InjectedScriptManager* injectedScriptMana
 {
 }
 
-void WorkerRuntimeAgent::didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, InspectorBackendDispatcher* backendDispatcher)
+void WorkerRuntimeAgent::didCreateFrontendAndBackend(Inspector::FrontendChannel*, Inspector::BackendDispatcher* backendDispatcher)
 {
-    m_backendDispatcher = InspectorRuntimeBackendDispatcher::create(backendDispatcher, this);
+    m_backendDispatcher = Inspector::RuntimeBackendDispatcher::create(backendDispatcher, this);
 }
 
-void WorkerRuntimeAgent::willDestroyFrontendAndBackend(InspectorDisconnectReason)
+void WorkerRuntimeAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason reason)
 {
-    m_backendDispatcher.clear();
+    m_backendDispatcher = nullptr;
+
+    InspectorRuntimeAgent::willDestroyFrontendAndBackend(reason);
 }
 
-InjectedScript WorkerRuntimeAgent::injectedScriptForEval(ErrorString* error, const int* executionContextId)
+InjectedScript WorkerRuntimeAgent::injectedScriptForEval(ErrorString& error, const int* executionContextId)
 {
     if (executionContextId) {
-        *error = ASCIILiteral("Execution context id is not supported for workers as there is only one execution context.");
+        error = ASCIILiteral("Execution context id is not supported for workers as there is only one execution context.");
         return InjectedScript();
     }
 
@@ -85,12 +86,12 @@ void WorkerRuntimeAgent::unmuteConsole()
     // We don't need to mute console for workers.
 }
 
-void WorkerRuntimeAgent::run(ErrorString*)
+void WorkerRuntimeAgent::run(ErrorString&)
 {
     m_paused = false;
 }
 
-JSC::VM* WorkerRuntimeAgent::globalVM()
+JSC::VM& WorkerRuntimeAgent::globalVM()
 {
     return JSDOMWindowBase::commonVM();
 }
@@ -106,5 +107,3 @@ void WorkerRuntimeAgent::pauseWorkerGlobalScope(WorkerGlobalScope* context)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

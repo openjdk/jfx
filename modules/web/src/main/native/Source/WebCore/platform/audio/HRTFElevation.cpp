@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -68,7 +68,7 @@ const float ResponseSampleRate = 44100;
 static AudioBus* getConcatenatedImpulseResponsesForSubject(const String& subjectName)
 {
     typedef HashMap<String, AudioBus*> AudioBusMap;
-    DEFINE_STATIC_LOCAL(AudioBusMap, audioBusMap, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(AudioBusMap, audioBusMap, ());
 
     AudioBus* bus;
     AudioBusMap::iterator iterator = audioBusMap.find(subjectName);
@@ -207,7 +207,7 @@ bool HRTFElevation::calculateKernelsForAzimuthElevation(int azimuth, int elevati
 // The range of elevations for the IRCAM impulse responses varies depending on azimuth, but the minimum elevation appears to always be -45.
 //
 // Here's how it goes:
-static int maxElevations[] = {
+static const int maxElevations[] = {
         //  Azimuth
         //
     90, // 0
@@ -273,7 +273,7 @@ std::unique_ptr<HRTFElevation> HRTFElevation::createForSubject(const String& sub
         }
     }
 
-    return std::make_unique<HRTFElevation>(std::move(kernelListL), std::move(kernelListR), elevation, sampleRate);
+    return std::make_unique<HRTFElevation>(WTF::move(kernelListL), WTF::move(kernelListR), elevation, sampleRate);
 }
 
 std::unique_ptr<HRTFElevation> HRTFElevation::createByInterpolatingSlices(HRTFElevation* hrtfElevation1, HRTFElevation* hrtfElevation2, float x, float sampleRate)
@@ -301,7 +301,7 @@ std::unique_ptr<HRTFElevation> HRTFElevation::createByInterpolatingSlices(HRTFEl
     // Interpolate elevation angle.
     double angle = (1.0 - x) * hrtfElevation1->elevationAngle() + x * hrtfElevation2->elevationAngle();
 
-    return std::make_unique<HRTFElevation>(std::move(kernelListL), std::move(kernelListR), static_cast<int>(angle), sampleRate);
+    return std::make_unique<HRTFElevation>(WTF::move(kernelListL), WTF::move(kernelListR), static_cast<int>(angle), sampleRate);
 }
 
 void HRTFElevation::getKernelsFromAzimuth(double azimuthBlend, unsigned azimuthIndex, HRTFKernel* &kernelL, HRTFKernel* &kernelR, double& frameDelayL, double& frameDelayR)

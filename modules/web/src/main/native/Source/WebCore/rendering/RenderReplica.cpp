@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -34,8 +34,8 @@
 
 namespace WebCore {
 
-RenderReplica::RenderReplica(Document& document, PassRef<RenderStyle> style)
-    : RenderBox(document, std::move(style), 0)
+RenderReplica::RenderReplica(Document& document, Ref<RenderStyle>&& style)
+    : RenderBox(document, WTF::move(style), 0)
 {
     // This is a hack. Replicas are synthetic, and don't pick up the attributes of the
     // renderers being replicated, so they always report that they are inline, non-replaced.
@@ -74,7 +74,7 @@ void RenderReplica::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         // Turn around and paint the parent layer. Use temporary clipRects, so that the layer doesn't end up caching clip rects
         // computing using the wrong rootLayer
         RenderLayer* rootPaintingLayer = layer()->transform() ? layer()->parent() : layer()->enclosingTransformedAncestor();
-        RenderLayer::LayerPaintingInfo paintingInfo(rootPaintingLayer, paintInfo.rect, PaintBehaviorNormal, LayoutSize(), 0, paintInfo.renderRegion);
+        RenderLayer::LayerPaintingInfo paintingInfo(rootPaintingLayer, paintInfo.rect, PaintBehaviorNormal, LayoutSize(), 0);
         RenderLayer::PaintLayerFlags flags = RenderLayer::PaintLayerHaveTransparency | RenderLayer::PaintLayerAppliedTransform | RenderLayer::PaintLayerTemporaryClipRects | RenderLayer::PaintLayerPaintingReflection;
         layer()->parent()->paintLayer(paintInfo.context, paintingInfo, flags);
     } else if (paintInfo.phase == PaintPhaseMask)

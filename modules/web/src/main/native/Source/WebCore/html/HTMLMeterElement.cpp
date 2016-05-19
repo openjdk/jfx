@@ -50,19 +50,19 @@ HTMLMeterElement::~HTMLMeterElement()
 {
 }
 
-PassRefPtr<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Document& document)
 {
-    RefPtr<HTMLMeterElement> meter = adoptRef(new HTMLMeterElement(tagName, document));
+    Ref<HTMLMeterElement> meter = adoptRef(*new HTMLMeterElement(tagName, document));
     meter->ensureUserAgentShadowRoot();
     return meter;
 }
 
-RenderPtr<RenderElement> HTMLMeterElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> HTMLMeterElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
     if (!document().page()->theme().supportsMeter(style.get().appearance()))
-        return RenderElement::createFor(*this, std::move(style));
+        return RenderElement::createFor(*this, WTF::move(style));
 
-    return createRenderer<RenderMeter>(*this, std::move(style));
+    return createRenderer<RenderMeter>(*this, WTF::move(style));
 }
 
 bool HTMLMeterElement::childShouldCreateRenderer(const Node& child) const
@@ -220,9 +220,9 @@ void HTMLMeterElement::didElementStateChange()
 
 RenderMeter* HTMLMeterElement::renderMeter() const
 {
-    if (renderer() && renderer()->isMeter())
-        return toRenderMeter(renderer());
-    return toRenderMeter(descendantsOfType<Element>(*userAgentShadowRoot()).first()->renderer());
+    if (is<RenderMeter>(renderer()))
+        return downcast<RenderMeter>(renderer());
+    return downcast<RenderMeter>(descendantsOfType<Element>(*userAgentShadowRoot()).first()->renderer());
 }
 
 void HTMLMeterElement::didAddUserAgentShadowRoot(ShadowRoot* root)

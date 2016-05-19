@@ -2,7 +2,7 @@
  * The default style sheet used to render HTML.
  *
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2011, 2014 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,27 +28,7 @@ html {
 }
 
 /* children of the <head> element all have display:none */
-head {
-    display: none
-}
-
-meta {
-    display: none
-}
-
-title {
-    display: none
-}
-
-link {
-    display: none
-}
-
-style {
-    display: none
-}
-
-script {
+head, link, meta, script, style, title {
     display: none
 }
 
@@ -67,25 +47,13 @@ p {
     -webkit-margin-end: 0;
 }
 
-div {
-    display: block
-}
-
-layer {
-    display: block
-}
-
-article, aside, footer, header, hgroup, main, nav, section {
+address, article, aside, div, footer, header, hgroup, layer, main, nav, section {
     display: block
 }
 
 marquee {
     display: inline-block;
     overflow: -webkit-marquee
-}
-
-address {
-    display: block
 }
 
 blockquote {
@@ -112,11 +80,11 @@ q {
     display: inline
 }
 
-q:before {
+q::before {
     content: open-quote;
 }
 
-q:after {
+q::after {
     content: close-quote;
 }
 
@@ -136,12 +104,11 @@ hr {
     border-width: 1px
 }
 
-map {
-    display: inline
-}
-
 video {
     object-fit: contain;
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+    -webkit-tap-highlight-color: transparent;
+#endif
 }
 
 /* heading elements */
@@ -156,31 +123,31 @@ h1 {
     font-weight: bold
 }
 
-:-webkit-any(article,aside,nav,section) h1 {
+:matches(article, aside, nav, section) h1 {
     font-size: 1.5em;
     -webkit-margin-before: 0.83__qem;
     -webkit-margin-after: 0.83em;
 }
 
-:-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) h1 {
+:matches(article, aside, nav, section) :matches(article, aside, nav, section) h1 {
     font-size: 1.17em;
     -webkit-margin-before: 1__qem;
     -webkit-margin-after: 1em;
 }
 
-:-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) h1 {
+:matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) h1 {
     font-size: 1.00em;
     -webkit-margin-before: 1.33__qem;
     -webkit-margin-after: 1.33em;
 }
 
-:-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) h1 {
+:matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) h1 {
     font-size: .83em;
     -webkit-margin-before: 1.67__qem;
     -webkit-margin-after: 1.67em;
 }
 
-:-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) :-webkit-any(article,aside,nav,section) h1 {
+:matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) :matches(article, aside, nav, section) h1 {
     font-size: .67em;
     -webkit-margin-before: 2.33__qem;
     -webkit-margin-after: 2.33em;
@@ -412,8 +379,7 @@ input[type="hidden"] {
 }
 
 input,
-input[type="password"],
-input[type="search"],
+input:matches([type="password"], [type="search"]),
 #if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
 textarea,
 input[type="range"],
@@ -443,7 +409,6 @@ input[type="search"] {
 input::-webkit-textfield-decoration-container {
     display: -webkit-flex;
     -webkit-align-items: center;
-    -webkit-user-modify: read-only !important;
     content: none !important;
 }
 
@@ -455,7 +420,6 @@ input::-webkit-clear-button {
     -webkit-appearance: searchfield-cancel-button;
     display: inline-block;
     -webkit-flex: none;
-    -webkit-user-modify: read-only !important;
     margin-left: 2px;
 }
 
@@ -463,7 +427,6 @@ input[type="search"]::-webkit-search-cancel-button {
     -webkit-appearance: searchfield-cancel-button;
     display: block;
     -webkit-flex: none;
-    -webkit-user-modify: read-only !important;
     -webkit-align-self: flex-start;
     margin: auto 0;
 }
@@ -472,7 +435,6 @@ input[type="search"]::-webkit-search-decoration {
     -webkit-appearance: searchfield-decoration;
     display: block;
     -webkit-flex: none;
-    -webkit-user-modify: read-only !important;
     -webkit-align-self: flex-start;
     margin: auto 0;
 }
@@ -481,7 +443,6 @@ input[type="search"]::-webkit-search-results-decoration {
     -webkit-appearance: searchfield-results-decoration;
     display: block;
     -webkit-flex: none;
-    -webkit-user-modify: read-only !important;
     -webkit-align-self: flex-start;
     margin: auto 0;
 }
@@ -490,7 +451,6 @@ input[type="search"]::-webkit-search-results-button {
     -webkit-appearance: searchfield-results-button;
     display: block;
     -webkit-flex: none;
-    -webkit-user-modify: read-only !important;
 }
 
 #if defined(ENABLE_DATALIST_ELEMENT) && ENABLE_DATALIST_ELEMENT
@@ -585,20 +545,35 @@ input::-webkit-inner-spin-button {
     vertical-align: top;
     -webkit-flex: none;
     -webkit-user-select: none;
-    -webkit-user-modify: read-only !important;
 }
 
-#if defined(ENABLE_INPUT_SPEECH) && ENABLE_INPUT_SPEECH
-input::-webkit-input-speech-button {
-    -webkit-appearance: -webkit-input-speech-button;
-    display: block;
-    vertical-align: top;
+input::-webkit-auto-fill-button {
+    -webkit-mask-image: -webkit-image-set(url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAMCAYAAAC9QufkAAAAAXNSR0IB2cksfwAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsTAAALEwEAmpwYAAADyWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS40LjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgICAgICAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyI+CiAgICAgICAgIDx4bXA6TW9kaWZ5RGF0ZT4yMDE1LTA0LTAzVDE2OjA2OjI1PC94bXA6TW9kaWZ5RGF0ZT4KICAgICAgICAgPHhtcDpDcmVhdG9yVG9vbD5BZG9iZSBQaG90b3Nob3AgQ0MgMjAxNCAoTWFjaW50b3NoKTwveG1wOkNyZWF0b3JUb29sPgogICAgICAgICA8eG1wOkNyZWF0ZURhdGU+MjAxNS0wNC0wM1QxNjowMzoxNjwveG1wOkNyZWF0ZURhdGU+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjcyPC90aWZmOllSZXNvbHV0aW9uPgogICAgICAgICA8dGlmZjpSZXNvbHV0aW9uVW5pdD4yPC90aWZmOlJlc29sdXRpb25Vbml0PgogICAgICAgICA8dGlmZjpYUmVzb2x1dGlvbj43MjwvdGlmZjpYUmVzb2x1dGlvbj4KICAgICAgICAgPGV4aWY6Q29sb3JTcGFjZT4xPC9leGlmOkNvbG9yU3BhY2U+CiAgICAgICAgIDxleGlmOlBpeGVsWERpbWVuc2lvbj4xNTwvZXhpZjpQaXhlbFhEaW1lbnNpb24+CiAgICAgICAgIDxleGlmOlBpeGVsWURpbWVuc2lvbj4xMjwvZXhpZjpQaXhlbFlEaW1lbnNpb24+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgoz37ZdAAAA5ElEQVQoFY2RsQ5BQRBFd9EgEYXv8QlaEqVGpfUPao3oKXyEQiJI1ERESaGmwnPu2k2QJ2uS82Z2du7s7jyTJInBWnCABeygoXwM6kwN1GELFo7wgOo/4gmFEovzWzyMiTMUlyFYJQT4wlucGko8T90xZv0j/5EusVpCuLr8FPK6NraHPmT8Oks8gI2bKEEOZhAauEJf3PX5Eb4ImpEG2gni0NWJvwdFYRvuoIHeoOUa++56+wpSxb6myf4J6qG5VWCt1ckPvHsksf531HSiDJ1VV9n15eJfJ+YkvWcMF+jFZa+KJ554xIc+jempAAAAAElFTkSuQmCC") 1x, url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAYCAYAAADtaU2/AAAAAXNSR0IB2cksfwAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsTAAALEwEAmpwYAAADyWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS40LjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iCiAgICAgICAgICAgIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIgogICAgICAgICAgICB4bWxuczpleGlmPSJodHRwOi8vbnMuYWRvYmUuY29tL2V4aWYvMS4wLyI+CiAgICAgICAgIDx4bXA6TW9kaWZ5RGF0ZT4yMDE1LTA0LTAzVDE2OjA2OjIxPC94bXA6TW9kaWZ5RGF0ZT4KICAgICAgICAgPHhtcDpDcmVhdG9yVG9vbD5BZG9iZSBQaG90b3Nob3AgQ0MgMjAxNCAoTWFjaW50b3NoKTwveG1wOkNyZWF0b3JUb29sPgogICAgICAgICA8eG1wOkNyZWF0ZURhdGU+MjAxNS0wNC0wM1QxNjowMzoyNTwveG1wOkNyZWF0ZURhdGU+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgICAgIDx0aWZmOllSZXNvbHV0aW9uPjcyPC90aWZmOllSZXNvbHV0aW9uPgogICAgICAgICA8dGlmZjpSZXNvbHV0aW9uVW5pdD4yPC90aWZmOlJlc29sdXRpb25Vbml0PgogICAgICAgICA8dGlmZjpYUmVzb2x1dGlvbj43MjwvdGlmZjpYUmVzb2x1dGlvbj4KICAgICAgICAgPGV4aWY6Q29sb3JTcGFjZT4xPC9leGlmOkNvbG9yU3BhY2U+CiAgICAgICAgIDxleGlmOlBpeGVsWERpbWVuc2lvbj4zMDwvZXhpZjpQaXhlbFhEaW1lbnNpb24+CiAgICAgICAgIDxleGlmOlBpeGVsWURpbWVuc2lvbj4yNDwvZXhpZjpQaXhlbFlEaW1lbnNpb24+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgpGMDB3AAAB8UlEQVRIDbVWO07DQBS0QSJUNJQcAloOQMEZ6InSUMEBkFJEQihQkQKJklQUlFBQQoH4SHAKJDokAgIz4+wLs5u15RjypOF9dvaN197dkCS/NodwC7gG3hxuXI1jUcuyLKkDa7aE4B7IHM7hCcs5Rs6Y1RHlHBpXo6JXeXX45xLOxB8QN2QsD+sKz2B2E1iRhqnEsxIvI96U/M8hv6mtyjxXehGpk+tZ3RVzdQOgcPN4KkPuvNbse2mtSsxXPYl9TkIu41L4rowQjD0Fee2UwqcTzA65/TRNB0CzSg/ygHegT34D4FGxjVXkHx0XbmQfiIzfKtto4LWEy3m58XLQs2zNzPPByAltGwXj0EfFUecbUd4O8pFxZ98CSrC4bNfvypxvxBu6cubAl3DaRSfBxNRjXtxckw5GjU+RXJweUNGOPRTqnrWRWQP1HkkTaRSK98CLioYr5vV4BqigxarlxSbsmu0XzO8qLxRmw/WCiRyLmjYEgTfhEWAPTM88VV4ozDP9HEyyBijHLdKQ4l2AR+YAGBMNhcFJVgETU8+xqIXCVXNtxm9cdJyU58VVhUKe/khwB+55XaeYqDC/zdoUtbzWFDPj7fQCLFjB+Vf4xaA2SvkK65iumLvwJNLkOFL79xJXfQhwlQTjsnu61r+2fEs/b4ZbzrEPMzEAAAAASUVORK5CYII=") 2x);
+    -webkit-mask-size: 15px 12px;
+    width: 15px;
+    height: 12px;
+    margin-left: 3px;
+    margin-right: 2px;
+    background-color: black;
     -webkit-flex: none;
-    -webkit-user-modify: read-only !important;
-    -webkit-align-self: flex-start;
-    margin: auto 0;
+    -webkit-user-select: none;
 }
-#endif
+
+input::-webkit-auto-fill-button:hover {
+    background-color: rgb(0, 122, 255);
+}
+
+input::-webkit-auto-fill-button:active {
+    background-color: rgb(0, 60, 219);
+}
+
+input::-webkit-caps-lock-indicator {
+    -webkit-appearance: caps-lock-indicator;
+    content: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"><path fill="black" fill-opacity="0.4" d="M12.5 0.5A 4 4 0 0 1 16.5 4.5L 16.5 12.5A 4 4 0 0 1 12.5 16.5L 4.5 16.5A 4 4 0 0 1 0.5 12.5L 0.5 4.5A 4 4 0 0 1 4.5 0.5L 12.5 0.5M 8.5 2L 4 7L 6.25 7L 6.25 10.25L 10.75 10.25L 10.75 7L 13 7L 8.5 2M 10.75 12L 6.25 12L 6.25 14.25L 10.75 14.25L 10.75 12"/></svg>');
+    align-self:stretch;
+    -webkit-flex: none;
+    -webkit-user-select: none;
+}
 
 keygen, select {
     border-radius: 5px;
@@ -630,7 +605,6 @@ textarea {
 ::-webkit-input-placeholder {
     -webkit-text-security: none;
     color: darkGray;
-    display: block !important;
     pointer-events: none !important;
 }
 
@@ -638,14 +612,13 @@ input::-webkit-input-placeholder, isindex::-webkit-input-placeholder {
     white-space: pre;
     word-wrap: normal;
     overflow: hidden;
-    -webkit-user-modify: read-only !important;
 }
 
 input[type="password"] {
     -webkit-text-security: disc !important;
 }
 
-input[type="hidden"], input[type="image"], input[type="file"] {
+input:matches([type="hidden"], [type="image"], [type="file"]) {
     -webkit-appearance: initial;
     padding: initial;
     background-color: initial;
@@ -668,7 +641,7 @@ input:-webkit-autofill {
     color: #000000 !important;
 }
 
-input[type="radio"], input[type="checkbox"] {
+input:matches([type="radio"], [type="checkbox"]) {
     margin: 3px 2px;
 #if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
     border: 1px solid #4c4c4c;
@@ -680,20 +653,19 @@ input[type="radio"], input[type="checkbox"] {
 #endif
 }
 
-input[type="button"], input[type="submit"], input[type="reset"] {
+input:matches([type="button"], [type="submit"], [type="reset"]) {
     -webkit-appearance: push-button;
     white-space: pre
 }
 
 input[type="file"]::-webkit-file-upload-button {
     -webkit-appearance: push-button;
-    -webkit-user-modify: read-only !important;
     white-space: nowrap;
     margin: 0;
     font-size: inherit;
 }
 
-input[type="button"], input[type="submit"], input[type="reset"], input[type="file"]::-webkit-file-upload-button, button {
+input:matches([type="button"], [type="submit"], [type="reset"]), input[type="file"]::-webkit-file-upload-button, button {
     -webkit-align-items: flex-start;
     text-align: center;
     cursor: default;
@@ -712,6 +684,10 @@ input[type="button"], input[type="submit"], input[type="reset"], input[type="fil
     box-sizing: border-box
 }
 
+input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]::-webkit-file-upload-button:active, button:active {
+    color: ActiveButtonText;
+}
+
 input[type="range"] {
     -webkit-appearance: slider-horizontal;
     padding: initial;
@@ -723,7 +699,6 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-container, input[type="range"]::-webkit-media-slider-container {
     -webkit-flex: 1;
     box-sizing: border-box;
-    -webkit-user-modify: read-only !important;
     display: -webkit-flex;
     -webkit-align-contents: center;
 }
@@ -733,14 +708,12 @@ input[type="range"]::-webkit-slider-runnable-track {
     -webkit-align-self: center;
 
     box-sizing: border-box;
-    -webkit-user-modify: read-only !important;
     display: block;
 }
 
 input[type="range"]::-webkit-slider-thumb, input[type="range"]::-webkit-media-slider-thumb {
     -webkit-appearance: sliderthumb-horizontal;
     box-sizing: border-box;
-    -webkit-user-modify: read-only !important;
     display: block;
 #if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
     background-color: white;
@@ -767,7 +740,7 @@ textarea::-webkit-input-placeholder {
 }
 #endif
 
-input[type="button"]:disabled, input[type="submit"]:disabled, input[type="reset"]:disabled,
+input:matches([type="button"], [type="submit"], [type="reset"]):disabled,
 input[type="file"]:disabled::-webkit-file-upload-button, button:disabled,
 select:disabled, keygen:disabled, optgroup:disabled, option:disabled,
 select[disabled]>option {
@@ -775,11 +748,12 @@ select[disabled]>option {
 }
 
 #if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
-input[type="button"]:active, input[type="submit"]:active, input[type="reset"]:active, input[type="file"]:active::-webkit-file-upload-button, button:active {
+input:matches([type="button"], [type="submit"], [type="reset"]):active, input[type="file"]:active::-webkit-file-upload-button, button:active {
     border-style: inset
 }
 
-input[type="button"]:active:disabled, input[type="submit"]:active:disabled, input[type="reset"]:active:disabled, input[type="file"]:active:disabled::-webkit-file-upload-button, button:active:disabled {
+input:matches([type="button"], [type="submit"], [type="reset"]):active:disabled,
+input[type="file"]:active:disabled::-webkit-file-upload-button, button:active:disabled {
     border-style: outset
 }
 #endif
@@ -813,12 +787,12 @@ input[type="radio"] {
     background-color: rgba(255, 255, 255, 0.01);
 }
 
-input[type="checkbox"]:checked, input[type="radio"]:checked {
+input:matches([type="checkbox"], [type="radio"]):checked {
     background:rgba(0, 0, 0, 0.8);
     border-color:rgba(255, 255, 255, 0.0);
 }
 
-input[type="checkbox"]:checked:disabled, input[type="radio"]:checked:disabled {
+input:matches([type="checkbox"], [type="radio"]):checked:disabled {
     opacity:0.4;
     background:rgba(0, 0, 0, 0.8);
 }
@@ -849,7 +823,6 @@ input[type="color"]::-webkit-color-swatch-wrapper {
     display:-webkit-flex;
     padding: 4px 2px;
     box-sizing: border-box;
-    -webkit-user-modify: read-only !important;
     width: 100%;
     height: 100%
 }
@@ -858,7 +831,6 @@ input[type="color"]::-webkit-color-swatch {
     background-color: #000000;
     border: 1px solid #777777;
     -webkit-flex: 1;
-    -webkit-user-modify: read-only !important;
 }
 
 #if defined(ENABLE_DATALIST_ELEMENT) && ENABLE_DATALIST_ELEMENT
@@ -893,7 +865,7 @@ select {
     /* We want to be as close to background:transparent as possible without actually being transparent */
     background-color: rgba(255, 255, 255, 0.01);
     font: 11px Helvetica;
-    padding: 0 0.5em 0 0.5em;
+    padding: 0 0.4em 0 0.4em;
 #else
     -webkit-appearance: menulist;
     border: 1px solid;
@@ -907,9 +879,7 @@ select {
 }
 
 #if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
-select[size],
-select[multiple],
-select[size][multiple] {
+select:matches([size], [multiple], [size][multiple]) {
     -webkit-appearance: listbox;
     -webkit-align-items: flex-start;
     border: 1px inset gray;
@@ -917,8 +887,7 @@ select[size][multiple] {
     white-space: initial;
 }
 
-select[size="0"],
-select[size="1"] {
+select:matches([size="0"], [size="1"]) {
     -webkit-appearance: menulist;
     -webkit-align-items: center;
     border: 1px solid;
@@ -950,7 +919,6 @@ output {
     margin: 0;
     -webkit-text-security: none;
     -webkit-transition: opacity 05.5s ease;
-    -webkit-user-modify: read-only !important;
 }
 
 ::-webkit-validation-bubble-message {
@@ -968,7 +936,6 @@ output {
     -webkit-box-shadow: 4px 4px 4px rgba(100,100,100,0.6),
         inset -2px -2px 1px #d0c4c4,
         inset 2px 2px 1px white;
-    -webkit-user-modify: read-only !important;
     line-height: normal;
     white-space: normal;
     z-index: 2147483644;
@@ -976,12 +943,10 @@ output {
 
 ::-webkit-validation-bubble-text-block {
     -webkit-flex: 1;
-    -webkit-user-modify: read-only !important;
 }
 
 ::-webkit-validation-bubble-heading {
     font-weight: bold;
-    -webkit-user-modify: read-only !important;
 }
 
 ::-webkit-validation-bubble-arrow {
@@ -997,7 +962,6 @@ output {
     box-shadow: inset 2px 2px 1px white;
     -webkit-transform-origin: 0 0;
     -webkit-transform: rotate(45deg);
-    -webkit-user-modify: read-only !important;
     z-index: 2147483645;
 }
 
@@ -1005,7 +969,6 @@ output {
     display: block;
     overflow: hidden;
     height: 16px;
-    -webkit-user-modify: read-only !important;
 }
 
 #if defined(ENABLE_METER_ELEMENT) && ENABLE_METER_ELEMENT
@@ -1023,7 +986,6 @@ meter {
 meter::-webkit-meter-inner-element {
     -webkit-appearance: inherit;
     box-sizing: inherit;
-    -webkit-user-modify: read-only !important;
     height: 100%;
     width: 100%;
 }
@@ -1032,33 +994,28 @@ meter::-webkit-meter-bar {
     background: -webkit-gradient(linear, left top, left bottom, from(#ddd), to(#ddd), color-stop(0.20, #eee), color-stop(0.45, #ccc), color-stop(0.55, #ccc));
     height: 100%;
     width: 100%;
-    -webkit-user-modify: read-only !important;
     box-sizing: border-box;
 }
 
 meter::-webkit-meter-optimum-value {
     background: -webkit-gradient(linear, left top, left bottom, from(#ad7), to(#ad7), color-stop(0.20, #cea), color-stop(0.45, #7a3), color-stop(0.55, #7a3));
     height: 100%;
-    -webkit-user-modify: read-only !important;
     box-sizing: border-box;
 }
 
 meter::-webkit-meter-suboptimum-value {
     background: -webkit-gradient(linear, left top, left bottom, from(#fe7), to(#fe7), color-stop(0.20, #ffc), color-stop(0.45, #db3), color-stop(0.55, #db3));
     height: 100%;
-    -webkit-user-modify: read-only !important;
     box-sizing: border-box;
 }
 
 meter::-webkit-meter-even-less-good-value {
     background: -webkit-gradient(linear, left top, left bottom, from(#f77), to(#f77), color-stop(0.20, #fcc), color-stop(0.45, #d44), color-stop(0.55, #d44));
     height: 100%;
-    -webkit-user-modify: read-only !important;
     box-sizing: border-box;
 }
 #endif
 
-#if defined(ENABLE_PROGRESS_ELEMENT) && ENABLE_PROGRESS_ELEMENT
 /* progress */
 
 progress {
@@ -1073,7 +1030,6 @@ progress {
 progress::-webkit-progress-inner-element {
     -webkit-appearance: inherit;
     box-sizing: inherit;
-    -webkit-user-modify: read-only;
     height: 100%;
     width: 100%;
 }
@@ -1082,7 +1038,6 @@ progress::-webkit-progress-bar {
     background-color: gray;
     height: 100%;
     width: 100%;
-    -webkit-user-modify: read-only !important;
     box-sizing: border-box;
 }
 
@@ -1090,10 +1045,8 @@ progress::-webkit-progress-value {
     background-color: green;
     height: 100%;
     width: 50%; /* should be removed later */
-    -webkit-user-modify: read-only !important;
     box-sizing: border-box;
 }
-#endif
 
 /* inline elements */
 
@@ -1170,26 +1123,18 @@ input:focus, textarea:focus, isindex:focus, keygen:focus, select:focus {
     outline-offset: -2px
 }
 
-input[type="button"]:focus,
-input[type="checkbox"]:focus,
-input[type="file"]:focus,
-input[type="hidden"]:focus,
-input[type="image"]:focus,
-input[type="radio"]:focus,
-input[type="reset"]:focus,
-input[type="search"]:focus,
-input[type="submit"]:focus,
+input:matches([type="button"], [type="checkbox"], [type="file"], [type="hidden"], [type="image"], [type="radio"], [type="reset"], [type="search"], [type="submit"]):focus,
 input[type="file"]:focus::-webkit-file-upload-button {
     outline-offset: 0
 }
 
-a:-webkit-any-link {
+a:any-link {
     color: -webkit-link;
     text-decoration: underline;
     cursor: auto;
 }
 
-a:-webkit-any-link:active {
+a:any-link:active {
     color: -webkit-activelink
 }
 
@@ -1206,7 +1151,7 @@ rt {
 
 ruby > rt {
     display: block;
-    font-size: 50%;
+    font-size: -webkit-ruby-text;
     text-align: start;
 }
 
@@ -1260,6 +1205,21 @@ bdi, output {
 bdo {
     unicode-bidi: bidi-override;
 }
+
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+applet, embed, object, img {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+:any-link img {
+    -webkit-tap-highlight-color: inherit;
+}
+#endif
+
+#if defined(ENABLE_ATTACHMENT_ELEMENT) && ENABLE_ATTACHMENT_ELEMENT
+attachment {
+    -webkit-appearance: attachment;
+}
+#endif
 
 /* page */
 

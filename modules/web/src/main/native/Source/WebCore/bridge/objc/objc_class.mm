@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,6 +28,7 @@
 
 #include "objc_instance.h"
 #include "WebScriptObject.h"
+#include "WebScriptObjectProtocol.h"
 
 namespace JSC {
 namespace Bindings {
@@ -99,7 +100,7 @@ Method* ObjcClass::methodNamed(PropertyName propertyName, Instance*) const
 {
     String name(propertyName.publicName());
     if (name.isNull())
-        return 0;
+        return nullptr;
 
     if (Method* method = m_methodCache.get(name.impl()))
         return method;
@@ -133,9 +134,9 @@ Method* ObjcClass::methodNamed(PropertyName propertyName, Instance*) const
                 mappedName = [thisClass webScriptNameForSelector:objcMethodSelector];
 
             if ((mappedName && [mappedName isEqual:(NSString*)methodName.get()]) || strcmp(objcMethodSelectorName, buffer.data()) == 0) {
-                OwnPtr<Method> method = adoptPtr(new ObjcMethod(thisClass, objcMethodSelector));
+                auto method = std::make_unique<ObjcMethod>(thisClass, objcMethodSelector);
                 methodPtr = method.get();
-                m_methodCache.add(name.impl(), method.release());
+                m_methodCache.add(name.impl(), WTF::move(method));
                 break;
             }
         }
@@ -150,7 +151,7 @@ Field* ObjcClass::fieldNamed(PropertyName propertyName, Instance* instance) cons
 {
     String name(propertyName.publicName());
     if (name.isNull())
-        return 0;
+        return nullptr;
 
     Field* field = m_fieldCache.get(name.impl());
     if (field)
@@ -162,7 +163,10 @@ Field* ObjcClass::fieldNamed(PropertyName propertyName, Instance* instance) cons
     RetainPtr<CFStringRef> fieldName = adoptCF(CFStringCreateWithCString(NULL, jsName.data(), kCFStringEncodingASCII));
     id targetObject = (static_cast<ObjcInstance*>(instance))->getObject();
 #if PLATFORM(IOS)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
     id attributes = [targetObject respondsToSelector:@selector(attributeKeys)] ? [targetObject performSelector:@selector(attributeKeys)] : nil;
+#pragma clang diagnostic pop
 #else
     id attributes = [targetObject attributeKeys];
 #endif
@@ -186,9 +190,9 @@ Field* ObjcClass::fieldNamed(PropertyName propertyName, Instance* instance) cons
                 mappedName = [thisClass webScriptNameForKey:UTF8KeyName];
 
             if ((mappedName && [mappedName isEqual:(NSString*)fieldName.get()]) || [keyName isEqual:(NSString*)fieldName.get()]) {
-                OwnPtr<Field> newField = adoptPtr(new ObjcField((CFStringRef)keyName));
+                auto newField = std::make_unique<ObjcField>((CFStringRef)keyName);
                 field = newField.get();
-                m_fieldCache.add(name.impl(), newField.release());
+                m_fieldCache.add(name.impl(), WTF::move(newField));
                 break;
             }
         }
@@ -217,9 +221,9 @@ Field* ObjcClass::fieldNamed(PropertyName propertyName, Instance* instance) cons
                     mappedName = [thisClass webScriptNameForKey:objcIvarName];
 
                 if ((mappedName && [mappedName isEqual:(NSString*)fieldName.get()]) || strcmp(objcIvarName, jsName.data()) == 0) {
-                    OwnPtr<Field> newField = adoptPtr(new ObjcField(objcIVar));
+                    auto newField = std::make_unique<ObjcField>(objcIVar);
                     field = newField.get();
-                    m_fieldCache.add(name.impl(), newField.release());
+                    m_fieldCache.add(name.impl(), WTF::move(newField));
                     break;
                 }
             }
@@ -239,6 +243,10 @@ JSValue ObjcClass::fallbackObject(ExecState* exec, Instance* instance, PropertyN
 
     if (![targetObject respondsToSelector:@selector(invokeUndefinedMethodFromWebScript:withArguments:)])
         return jsUndefined();
+
+    if (!propertyName.publicName())
+        return jsUndefined();
+
     return ObjcFallbackObjectImp::create(exec, exec->lexicalGlobalObject(), objcInstance, propertyName.publicName());
 }
 

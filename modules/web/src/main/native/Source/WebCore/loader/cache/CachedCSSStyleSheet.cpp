@@ -3,7 +3,7 @@
     Copyright (C) 2001 Dirk Mueller (mueller@kde.org)
     Copyright (C) 2002 Waldo Bastian (bastian@kde.org)
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.
+    Copyright (C) 2004, 2005, 2006 Apple Inc.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -30,9 +30,10 @@
 #include "CSSStyleSheet.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedStyleSheetClient.h"
+#include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
 #include "MemoryCache.h"
-#include "ResourceBuffer.h"
+#include "SharedBuffer.h"
 #include "StyleSheetContents.h"
 #include "TextResourceDecoder.h"
 #include <wtf/CurrentTime.h>
@@ -40,8 +41,8 @@
 
 namespace WebCore {
 
-CachedCSSStyleSheet::CachedCSSStyleSheet(const ResourceRequest& resourceRequest, const String& charset)
-    : CachedResource(resourceRequest, CSSStyleSheet)
+CachedCSSStyleSheet::CachedCSSStyleSheet(const ResourceRequest& resourceRequest, const String& charset, SessionID sessionID)
+    : CachedResource(resourceRequest, CSSStyleSheet, sessionID)
     , m_decoder(TextResourceDecoder::create("text/css", charset))
 {
     // Prefer text/css but accept any type (dell.com serves a stylesheet
@@ -77,31 +78,25 @@ String CachedCSSStyleSheet::encoding() const
     return m_decoder->encoding().name();
 }
 
-const String CachedCSSStyleSheet::sheetText(bool enforceMIMEType, bool* hasValidMIMEType) const
+const String CachedCSSStyleSheet::sheetText(bool* hasValidMIMEType) const
 {
-    ASSERT(!isPurgeable());
-
-    if (!m_data || m_data->isEmpty() || !canUseSheet(enforceMIMEType, hasValidMIMEType))
+    if (!m_data || m_data->isEmpty() || !canUseSheet(hasValidMIMEType))
         return String();
 
     if (!m_decodedSheetText.isNull())
         return m_decodedSheetText;
 
     // Don't cache the decoded text, regenerating is cheap and it can use quite a bit of memory
-    String sheetText = m_decoder->decode(m_data->data(), m_data->size());
-    sheetText.append(m_decoder->flush());
-    return sheetText;
+    return m_decoder->decodeAndFlush(m_data->data(), m_data->size());
 }
 
-void CachedCSSStyleSheet::finishLoading(ResourceBuffer* data)
+void CachedCSSStyleSheet::finishLoading(SharedBuffer* data)
 {
     m_data = data;
-    setEncodedSize(m_data.get() ? m_data->size() : 0);
+    setEncodedSize(data ? data->size() : 0);
     // Decode the data to find out the encoding and keep the sheet text around during checkNotify()
-    if (m_data) {
-        m_decodedSheetText = m_decoder->decode(m_data->data(), m_data->size());
-        m_decodedSheetText.append(m_decoder->flush());
-    }
+    if (data)
+        m_decodedSheetText = m_decoder->decodeAndFlush(data->data(), data->size());
     setLoading(false);
     checkNotify();
     // Clear the decoded text as it is unlikely to be needed immediately again and is cheap to regenerate.
@@ -118,13 +113,10 @@ void CachedCSSStyleSheet::checkNotify()
         c->setCSSStyleSheet(m_resourceRequest.url(), m_response.url(), m_decoder->encoding().name(), this);
 }
 
-bool CachedCSSStyleSheet::canUseSheet(bool enforceMIMEType, bool* hasValidMIMEType) const
+bool CachedCSSStyleSheet::canUseSheet(bool* hasValidMIMEType) const
 {
     if (errorOccurred())
         return false;
-
-    if (!enforceMIMEType && !hasValidMIMEType)
-        return true;
 
     // This check exactly matches Firefox.  Note that we grab the Content-Type
     // header directly because we want to see what the value is BEFORE content
@@ -133,12 +125,10 @@ bool CachedCSSStyleSheet::canUseSheet(bool enforceMIMEType, bool* hasValidMIMETy
     //
     // This code defaults to allowing the stylesheet for non-HTTP protocols so
     // folks can use standards mode for local HTML documents.
-    String mimeType = extractMIMETypeFromMediaType(response().httpHeaderField("Content-Type"));
+    String mimeType = extractMIMETypeFromMediaType(response().httpHeaderField(HTTPHeaderName::ContentType));
     bool typeOK = mimeType.isEmpty() || equalIgnoringCase(mimeType, "text/css") || equalIgnoringCase(mimeType, "application/x-unknown-content-type");
     if (hasValidMIMEType)
         *hasValidMIMEType = typeOK;
-    if (!enforceMIMEType)
-        return true;
     return typeOK;
 }
 
@@ -148,22 +138,19 @@ void CachedCSSStyleSheet::destroyDecodedData()
         return;
 
     m_parsedStyleSheetCache->removedFromMemoryCache();
-    m_parsedStyleSheetCache.clear();
+    m_parsedStyleSheetCache = nullptr;
 
     setDecodedSize(0);
-
-    if (!MemoryCache::shouldMakeResourcePurgeableOnEviction() && isSafeToMakePurgeable())
-        makePurgeable(true);
 }
 
-PassRefPtr<StyleSheetContents> CachedCSSStyleSheet::restoreParsedStyleSheet(const CSSParserContext& context)
+PassRefPtr<StyleSheetContents> CachedCSSStyleSheet::restoreParsedStyleSheet(const CSSParserContext& context, CachePolicy cachePolicy)
 {
     if (!m_parsedStyleSheetCache)
-        return 0;
-    if (m_parsedStyleSheetCache->hasFailedOrCanceledSubresources()) {
+        return nullptr;
+    if (!m_parsedStyleSheetCache->subresourcesAllowReuse(cachePolicy)) {
         m_parsedStyleSheetCache->removedFromMemoryCache();
-        m_parsedStyleSheetCache.clear();
-        return 0;
+        m_parsedStyleSheetCache = nullptr;
+        return nullptr;
     }
 
     ASSERT(m_parsedStyleSheetCache->isCacheable());
@@ -171,20 +158,20 @@ PassRefPtr<StyleSheetContents> CachedCSSStyleSheet::restoreParsedStyleSheet(cons
 
     // Contexts must be identical so we know we would get the same exact result if we parsed again.
     if (m_parsedStyleSheetCache->parserContext() != context)
-        return 0;
+        return nullptr;
 
     didAccessDecodedData(monotonicallyIncreasingTime());
 
     return m_parsedStyleSheetCache;
 }
 
-void CachedCSSStyleSheet::saveParsedStyleSheet(PassRef<StyleSheetContents> sheet)
+void CachedCSSStyleSheet::saveParsedStyleSheet(Ref<StyleSheetContents>&& sheet)
 {
     ASSERT(sheet.get().isCacheable());
 
     if (m_parsedStyleSheetCache)
         m_parsedStyleSheetCache->removedFromMemoryCache();
-    m_parsedStyleSheetCache = std::move(sheet);
+    m_parsedStyleSheetCache = WTF::move(sheet);
     m_parsedStyleSheetCache->addedToMemoryCache();
 
     setDecodedSize(m_parsedStyleSheetCache->estimatedSizeInBytes());

@@ -26,18 +26,20 @@
 #ifndef JITDisassembler_h
 #define JITDisassembler_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(JIT)
 
-#include "LinkBuffer.h"
 #include "MacroAssembler.h"
-#include "ProfilerDatabase.h"
 #include <wtf/Vector.h>
+#include <wtf/text/CString.h>
 
 namespace JSC {
 
 class CodeBlock;
+class LinkBuffer;
+
+namespace Profiler {
+class Compilation;
+}
 
 class JITDisassembler {
     WTF_MAKE_FAST_ALLOCATED;

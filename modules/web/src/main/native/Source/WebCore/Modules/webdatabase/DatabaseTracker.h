@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,8 +29,6 @@
 #ifndef DatabaseTracker_h
 #define DatabaseTracker_h
 
-#if ENABLE(SQL_DATABASE)
-
 #include "DatabaseDetails.h"
 #include "DatabaseError.h"
 #include "SQLiteDatabase.h"
@@ -42,8 +40,8 @@
 
 namespace WebCore {
 
-class DatabaseBackendBase;
-class DatabaseBackendContext;
+class Database;
+class DatabaseContext;
 class DatabaseManagerClient;
 class OriginLock;
 class SecurityOrigin;
@@ -51,9 +49,12 @@ class SecurityOrigin;
 class DatabaseTracker {
     WTF_MAKE_NONCOPYABLE(DatabaseTracker); WTF_MAKE_FAST_ALLOCATED;
 public:
+    // FIXME: This is a hack so we can easily delete databases from the UI process in WebKit2.
+    WEBCORE_EXPORT static std::unique_ptr<DatabaseTracker> trackerWithDatabasePath(const String& databasePath);
+
     static void initializeTracker(const String& databasePath);
 
-    static DatabaseTracker& tracker();
+    WEBCORE_EXPORT static DatabaseTracker& tracker();
     // This singleton will potentially be used from multiple worker threads and the page's context thread simultaneously.  To keep this safe, it's
     // currently using 4 locks.  In order to avoid deadlock when taking multiple locks, you must take them in the correct order:
     // m_databaseGuard before quotaManager if both locks are needed.
@@ -61,19 +62,21 @@ public:
     // m_databaseGuard and m_openDatabaseMapGuard currently don't overlap.
     // notificationMutex() is currently independent of the other locks.
 
-    bool canEstablishDatabase(DatabaseBackendContext*, const String& name, unsigned long estimatedSize, DatabaseError&);
-    bool retryCanEstablishDatabase(DatabaseBackendContext*, const String& name, unsigned long estimatedSize, DatabaseError&);
+    bool canEstablishDatabase(DatabaseContext*, const String& name, unsigned long estimatedSize, DatabaseError&);
+    bool retryCanEstablishDatabase(DatabaseContext*, const String& name, unsigned long estimatedSize, DatabaseError&);
 
     void setDatabaseDetails(SecurityOrigin*, const String& name, const String& displayName, unsigned long estimatedSize);
     String fullPathForDatabase(SecurityOrigin*, const String& name, bool createIfDoesNotExist = true);
 
-    void addOpenDatabase(DatabaseBackendBase*);
-    void removeOpenDatabase(DatabaseBackendBase*);
-    void getOpenDatabases(SecurityOrigin*, const String& name, HashSet<RefPtr<DatabaseBackendBase>>* databases);
+    void addOpenDatabase(Database*);
+    void removeOpenDatabase(Database*);
+    void getOpenDatabases(SecurityOrigin*, const String& name, HashSet<RefPtr<Database>>* databases);
 
-    unsigned long long getMaxSizeForDatabase(const DatabaseBackendBase*);
+    unsigned long long getMaxSizeForDatabase(const Database*);
 
-    void interruptAllDatabasesForContext(const DatabaseBackendContext*);
+    WEBCORE_EXPORT void closeAllDatabases();
+
+    void interruptAllDatabasesForContext(const DatabaseContext*);
 
 private:
     explicit DatabaseTracker(const String& databasePath);
@@ -84,7 +87,7 @@ public:
     void setDatabaseDirectoryPath(const String&);
     String databaseDirectoryPath() const;
 
-    void origins(Vector<RefPtr<SecurityOrigin>>& result);
+    WEBCORE_EXPORT void origins(Vector<RefPtr<SecurityOrigin>>& result);
     bool databaseNamesForOrigin(SecurityOrigin*, Vector<String>& result);
 
     DatabaseDetails detailsForNameAndOrigin(const String&, SecurityOrigin*);
@@ -92,25 +95,26 @@ public:
     unsigned long long usageForOrigin(SecurityOrigin*);
     unsigned long long quotaForOrigin(SecurityOrigin*);
     void setQuota(SecurityOrigin*, unsigned long long);
-    PassRefPtr<OriginLock> originLockFor(SecurityOrigin*);
+    RefPtr<OriginLock> originLockFor(SecurityOrigin*);
 
     void deleteAllDatabases();
-    bool deleteOrigin(SecurityOrigin*);
+    WEBCORE_EXPORT void deleteDatabasesModifiedSince(std::chrono::system_clock::time_point);
+    WEBCORE_EXPORT bool deleteOrigin(SecurityOrigin*);
     bool deleteDatabase(SecurityOrigin*, const String& name);
 
 #if PLATFORM(IOS)
-    void removeDeletedOpenedDatabases();
-    static bool deleteDatabaseFileIfEmpty(const String&);
+    WEBCORE_EXPORT void removeDeletedOpenedDatabases();
+    WEBCORE_EXPORT static bool deleteDatabaseFileIfEmpty(const String&);
 
     // MobileSafari will grab this mutex on the main thread before dispatching the task to
     // clean up zero byte database files.  Any operations to open new database will have to
     // wait for that task to finish by waiting on this mutex.
     static Mutex& openDatabaseMutex();
 
-    static void emptyDatabaseFilesRemovalTaskWillBeScheduled();
-    static void emptyDatabaseFilesRemovalTaskDidFinish();
+    WEBCORE_EXPORT static void emptyDatabaseFilesRemovalTaskWillBeScheduled();
+    WEBCORE_EXPORT static void emptyDatabaseFilesRemovalTaskDidFinish();
 
-    void setDatabasesPaused(bool);
+    WEBCORE_EXPORT void setDatabasesPaused(bool);
 #endif
 
     void setClient(DatabaseManagerClient*);
@@ -120,7 +124,7 @@ public:
 
     bool hasEntryForOrigin(SecurityOrigin*);
 
-    void doneCreatingDatabase(DatabaseBackendBase*);
+    void doneCreatingDatabase(Database*);
 
 private:
     bool hasEntryForOriginNoLock(SecurityOrigin* origin);
@@ -146,7 +150,7 @@ private:
 
     void deleteOriginLockFor(SecurityOrigin*);
 
-    typedef HashSet<DatabaseBackendBase*> DatabaseSet;
+    typedef HashSet<Database*> DatabaseSet;
     typedef HashMap<String, DatabaseSet*> DatabaseNameMap;
     typedef HashMap<RefPtr<SecurityOrigin>, DatabaseNameMap*> DatabaseOriginMap;
 
@@ -188,7 +192,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)
 
 #endif // DatabaseTracker_h

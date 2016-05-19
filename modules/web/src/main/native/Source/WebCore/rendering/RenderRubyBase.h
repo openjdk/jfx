@@ -39,29 +39,46 @@ class RenderRubyRun;
 
 class RenderRubyBase final : public RenderBlockFlow {
 public:
-    RenderRubyBase(Document&, PassRef<RenderStyle>);
+    RenderRubyBase(Document&, Ref<RenderStyle>&&);
     virtual ~RenderRubyBase();
 
-    virtual const char* renderName() const { return "RenderRubyBase (anonymous)"; }
+    virtual const char* renderName() const override { return "RenderRubyBase (anonymous)"; }
 
-    virtual bool isRubyBase() const { return true; }
+    RenderRubyRun* rubyRun() const;
+
+    void setIsAfterExpansion(bool isAfterExpansion) { m_isAfterExpansion = isAfterExpansion; }
+    bool isAfterExpansion() { return m_isAfterExpansion; }
+
+    void setInitialOffset(float initialOffset) { m_initialOffset = initialOffset; }
+
+    void reset()
+    {
+        m_initialOffset = 0;
+        m_isAfterExpansion = true;
+    }
+
+    virtual void cachePriorCharactersIfNeeded(const LazyLineBreakIterator&) override;
 
 private:
-    virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const;
-    virtual ETextAlign textAlignmentForLine(bool endsWithSoftBreak) const;
-    virtual void adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const;
+    virtual bool isRubyBase() const override { return true; }
+    virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
+    virtual ETextAlign textAlignmentForLine(bool endsWithSoftBreak) const override;
+    virtual void adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const override;
     void mergeChildrenWithBase(RenderRubyBase* toBlock);
 
     void moveChildren(RenderRubyBase* toBase, RenderObject* beforeChild = 0);
     void moveInlineChildren(RenderRubyBase* toBase, RenderObject* beforeChild = 0);
     void moveBlockChildren(RenderRubyBase* toBase, RenderObject* beforeChild = 0);
 
-    RenderRubyRun* rubyRun() const;
-
     // Allow RenderRubyRun to manipulate the children within ruby bases.
     friend class RenderRubyRun;
+
+    float m_initialOffset;
+    unsigned m_isAfterExpansion : 1;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderRubyBase, isRubyBase())
 
 #endif // RenderRubyBase_h

@@ -44,7 +44,7 @@ typedef struct objc_object* PlatformUIElement;
 #elif HAVE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(EFL))
 #include "AccessibilityNotificationHandlerAtk.h"
 #include <atk/atk.h>
-#include <wtf/gobject/GRefPtr.h>
+#include <wtf/glib/GRefPtr.h>
 typedef GRefPtr<AtkObject> PlatformUIElement;
 #else
 typedef void* PlatformUIElement;
@@ -105,6 +105,7 @@ public:
     JSValueRef uiElementArrayAttributeValue(JSStringRef attribute) const;
     PassRefPtr<AccessibilityUIElement> uiElementAttributeValue(JSStringRef attribute) const;
     bool boolAttributeValue(JSStringRef attribute);
+    void setBoolAttributeValue(JSStringRef attribute, bool value);
     bool isAttributeSupported(JSStringRef attribute);
     bool isAttributeSettable(JSStringRef attribute);
     bool isPressActionSupported();
@@ -141,6 +142,8 @@ public:
     bool isSelectable() const;
     bool isMultiSelectable() const;
     void setSelectedChild(AccessibilityUIElement*) const;
+    void setSelectedChildAtIndex(unsigned) const;
+    void removeSelectionAtIndex(unsigned) const;
     unsigned selectedChildrenCount() const;
     PassRefPtr<AccessibilityUIElement> selectedChildAtIndex(unsigned) const;
 
@@ -200,13 +203,13 @@ public:
     JSRetainPtr<JSStringRef> rangeForLine(int);
     JSRetainPtr<JSStringRef> rangeForPosition(int x, int y);
     JSRetainPtr<JSStringRef> boundsForRange(unsigned location, unsigned length);
-    void setSelectedTextRange(unsigned location, unsigned length);
+    bool setSelectedTextRange(unsigned location, unsigned length);
     JSRetainPtr<JSStringRef> stringForRange(unsigned location, unsigned length);
     JSRetainPtr<JSStringRef> attributedStringForRange(unsigned location, unsigned length);
     bool attributedStringRangeIsMisspelled(unsigned location, unsigned length);
     unsigned uiElementCountForSearchPredicate(JSContextRef, AccessibilityUIElement* startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly, bool immediateDescendantsOnly);
     PassRefPtr<AccessibilityUIElement> uiElementForSearchPredicate(JSContextRef, AccessibilityUIElement* startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText, bool visibleOnly, bool immediateDescendantsOnly);
-    JSRetainPtr<JSStringRef> selectTextWithCriteria(JSContextRef, JSStringRef ambiguityResolution, JSValueRef searchStrings, JSStringRef replacementString);
+    JSRetainPtr<JSStringRef> selectTextWithCriteria(JSContextRef, JSStringRef ambiguityResolution, JSValueRef searchStrings, JSStringRef replacementString, JSStringRef activity);
 
     // Text-specific
     JSRetainPtr<JSStringRef> characterAtOffset(int offset);
@@ -224,8 +227,11 @@ public:
     void scrollToMakeVisible();
 
     // Text markers.
+    PassRefPtr<AccessibilityTextMarkerRange> lineTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
     PassRefPtr<AccessibilityTextMarkerRange> textMarkerRangeForElement(AccessibilityUIElement*);
     PassRefPtr<AccessibilityTextMarkerRange> textMarkerRangeForMarkers(AccessibilityTextMarker* startMarker, AccessibilityTextMarker* endMarker);
+    PassRefPtr<AccessibilityTextMarkerRange> selectedTextMarkerRange();
+    void resetSelectedTextMarkerRange();
     PassRefPtr<AccessibilityTextMarker> startTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange*);
     PassRefPtr<AccessibilityTextMarker> endTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange*);
     PassRefPtr<AccessibilityTextMarker> endTextMarkerForBounds(int x, int y, int width, int height);
@@ -242,6 +248,7 @@ public:
     PassRefPtr<AccessibilityTextMarker> textMarkerForIndex(int);
     PassRefPtr<AccessibilityTextMarker> startTextMarker();
     PassRefPtr<AccessibilityTextMarker> endTextMarker();
+    bool setSelectedVisibleTextRange(AccessibilityTextMarkerRange*);
 
     // Returns an ordered list of supported actions for an element.
     JSRetainPtr<JSStringRef> supportedActions() const;
@@ -255,6 +262,23 @@ public:
     bool addNotificationListener(JSValueRef functionCallback);
     // Make sure you call remove, because you can't rely on objects being deallocated in a timely fashion.
     bool removeNotificationListener();
+
+    JSRetainPtr<JSStringRef> identifier();
+    JSRetainPtr<JSStringRef> traits();
+    int elementTextPosition();
+    int elementTextLength();
+    JSRetainPtr<JSStringRef> stringForSelection();
+    JSValueRef elementsForRange(unsigned location, unsigned length);
+    void increaseTextSelection();
+    void decreaseTextSelection();
+    PassRefPtr<AccessibilityUIElement> linkedElement();
+    PassRefPtr<AccessibilityUIElement> headerElementAtIndex(unsigned index);
+    void assistiveTechnologySimulatedFocus();
+
+    bool scrollPageUp();
+    bool scrollPageDown();
+    bool scrollPageLeft();
+    bool scrollPageRight();
 
 private:
     AccessibilityUIElement(PlatformUIElement);

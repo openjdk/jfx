@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SVGTextMetricsBuilder.h"
 
+#include "RenderSVGInline.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGText.h"
 #include "SVGTextRunRenderingContext.h"
@@ -28,7 +29,7 @@ namespace WebCore {
 
 SVGTextMetricsBuilder::SVGTextMetricsBuilder()
     : m_text(0)
-    , m_run(static_cast<const UChar*>(0), 0)
+    , m_run(StringView())
     , m_textPosition(0)
     , m_isComplexText(false)
     , m_totalWidth(0)
@@ -37,13 +38,13 @@ SVGTextMetricsBuilder::SVGTextMetricsBuilder()
 
 inline bool SVGTextMetricsBuilder::currentCharacterStartsSurrogatePair() const
 {
-    return U16_IS_LEAD(m_run[m_textPosition]) && int(m_textPosition + 1) < m_run.charactersLength() && U16_IS_TRAIL(m_run[m_textPosition + 1]);
+    return U16_IS_LEAD(m_run[m_textPosition]) && (m_textPosition + 1) < m_run.charactersLength() && U16_IS_TRAIL(m_run[m_textPosition + 1]);
 }
 
 bool SVGTextMetricsBuilder::advance()
 {
     m_textPosition += m_currentMetrics.length();
-    if (int(m_textPosition) >= m_run.charactersLength())
+    if (m_textPosition >= m_run.charactersLength())
         return false;
 
     if (m_isComplexText)
@@ -67,17 +68,17 @@ void SVGTextMetricsBuilder::advanceSimpleText()
     m_totalWidth = m_simpleWidthIterator->runWidthSoFar();
 
 #if ENABLE(SVG_FONTS)
-    m_currentMetrics = SVGTextMetrics(m_text, m_textPosition, metricsLength, currentWidth, m_simpleWidthIterator->lastGlyphName());
+    m_currentMetrics = SVGTextMetrics(*m_text, m_textPosition, metricsLength, currentWidth, m_simpleWidthIterator->lastGlyphName());
 #else
-    m_currentMetrics = SVGTextMetrics(m_text, m_textPosition, metricsLength, currentWidth, emptyString());
+    m_currentMetrics = SVGTextMetrics(*m_text, m_textPosition, metricsLength, currentWidth, emptyString());
 #endif
 }
 
 void SVGTextMetricsBuilder::advanceComplexText()
 {
     unsigned metricsLength = currentCharacterStartsSurrogatePair() ? 2 : 1;
-    m_currentMetrics = SVGTextMetrics::measureCharacterRange(m_text, m_textPosition, metricsLength);
-    m_complexStartToCurrentMetrics = SVGTextMetrics::measureCharacterRange(m_text, 0, m_textPosition + metricsLength);
+    m_currentMetrics = SVGTextMetrics::measureCharacterRange(*m_text, m_textPosition, metricsLength);
+    m_complexStartToCurrentMetrics = SVGTextMetrics::measureCharacterRange(*m_text, 0, m_textPosition + metricsLength);
     ASSERT(m_currentMetrics.length() == metricsLength);
 
     // Frequent case for Arabic text: when measuring a single character the arabic isolated form is taken
@@ -91,22 +92,22 @@ void SVGTextMetricsBuilder::advanceComplexText()
     m_totalWidth = m_complexStartToCurrentMetrics.width();
 }
 
-void SVGTextMetricsBuilder::initializeMeasurementWithTextRenderer(RenderSVGInlineText* text)
+void SVGTextMetricsBuilder::initializeMeasurementWithTextRenderer(RenderSVGInlineText& text)
 {
-    m_text = text;
+    m_text = &text;
     m_textPosition = 0;
     m_currentMetrics = SVGTextMetrics();
     m_complexStartToCurrentMetrics = SVGTextMetrics();
     m_totalWidth = 0;
 
-    const Font& scaledFont = text->scaledFont();
-    m_run = SVGTextMetrics::constructTextRun(text, text->deprecatedCharacters(), 0, text->textLength());
-    m_isComplexText = scaledFont.codePath(m_run) == Font::Complex;
+    const FontCascade& scaledFont = text.scaledFont();
+    m_run = SVGTextMetrics::constructTextRun(text);
+    m_isComplexText = scaledFont.codePath(m_run) == FontCascade::Complex;
 
     if (m_isComplexText)
-        m_simpleWidthIterator.clear();
+        m_simpleWidthIterator = nullptr;
     else
-        m_simpleWidthIterator = adoptPtr(new WidthIterator(&scaledFont, m_run));
+        m_simpleWidthIterator = std::make_unique<WidthIterator>(&scaledFont, m_run);
 }
 
 struct MeasureTextData {
@@ -120,17 +121,15 @@ struct MeasureTextData {
     }
 
     SVGCharacterDataMap* allCharactersMap;
-    const UChar* lastCharacter;
+    UChar lastCharacter;
     bool processRenderer;
     unsigned valueListPosition;
     unsigned skippedCharacters;
 };
 
-void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGInlineText* text, MeasureTextData* data)
+void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGInlineText& text, MeasureTextData* data)
 {
-    ASSERT(text);
-
-    SVGTextLayoutAttributes* attributes = text->layoutAttributes();
+    SVGTextLayoutAttributes* attributes = text.layoutAttributes();
     Vector<SVGTextMetrics>* textMetricsValues = &attributes->textMetricsValues();
     if (data->processRenderer) {
         if (data->allCharactersMap)
@@ -140,12 +139,12 @@ void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGInlineText* text, Measu
     }
 
     initializeMeasurementWithTextRenderer(text);
-    bool preserveWhiteSpace = text->style().whiteSpace() == PRE;
+    bool preserveWhiteSpace = text.style().whiteSpace() == PRE;
     int surrogatePairCharacters = 0;
 
     while (advance()) {
-        const UChar* currentCharacter = m_run.data16(m_textPosition);
-        if (*currentCharacter == ' ' && !preserveWhiteSpace && (!data->lastCharacter || *data->lastCharacter == ' ')) {
+        UChar currentCharacter = m_run[m_textPosition];
+        if (currentCharacter == ' ' && !preserveWhiteSpace && (!data->lastCharacter || data->lastCharacter == ' ')) {
             if (data->processRenderer)
                 textMetricsValues->append(SVGTextMetrics(SVGTextMetrics::SkippedSpaceMetrics));
             if (data->allCharactersMap)
@@ -178,9 +177,9 @@ void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGInlineText* text, Measu
 void SVGTextMetricsBuilder::walkTree(RenderElement& start, RenderSVGInlineText* stopAtLeaf, MeasureTextData* data)
 {
     for (auto child = start.firstChild(); child; child = child->nextSibling()) {
-        if (child->isSVGInlineText()) {
-            RenderSVGInlineText* text = toRenderSVGInlineText(child);
-            if (stopAtLeaf && stopAtLeaf != text) {
+        if (is<RenderSVGInlineText>(*child)) {
+            RenderSVGInlineText& text = downcast<RenderSVGInlineText>(*child);
+            if (stopAtLeaf && stopAtLeaf != &text) {
                 data->processRenderer = false;
                 measureTextRenderer(text, data);
                 continue;
@@ -194,30 +193,27 @@ void SVGTextMetricsBuilder::walkTree(RenderElement& start, RenderSVGInlineText* 
             continue;
         }
 
-        if (!child->isSVGInline())
+        if (!is<RenderSVGInline>(*child))
             continue;
 
-        walkTree(toRenderElement(*child), stopAtLeaf, data);
+        walkTree(downcast<RenderSVGInline>(*child), stopAtLeaf, data);
     }
 }
 
-void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGInlineText* text)
+void SVGTextMetricsBuilder::measureTextRenderer(RenderSVGInlineText& text)
 {
-    ASSERT(text);
-
-    auto* textRoot = RenderSVGText::locateRenderSVGTextAncestor(*text);
+    auto* textRoot = RenderSVGText::locateRenderSVGTextAncestor(text);
     if (!textRoot)
         return;
 
-    MeasureTextData data(0);
-    walkTree(*textRoot, text, &data);
+    MeasureTextData data(nullptr);
+    walkTree(*textRoot, &text, &data);
 }
 
-void SVGTextMetricsBuilder::buildMetricsAndLayoutAttributes(RenderSVGText* textRoot, RenderSVGInlineText* stopAtLeaf, SVGCharacterDataMap& allCharactersMap)
+void SVGTextMetricsBuilder::buildMetricsAndLayoutAttributes(RenderSVGText& textRoot, RenderSVGInlineText* stopAtLeaf, SVGCharacterDataMap& allCharactersMap)
 {
-    ASSERT(textRoot);
     MeasureTextData data(&allCharactersMap);
-    walkTree(*textRoot, stopAtLeaf, &data);
+    walkTree(textRoot, stopAtLeaf, &data);
 }
 
 }

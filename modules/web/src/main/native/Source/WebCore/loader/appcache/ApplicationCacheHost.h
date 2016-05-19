@@ -31,9 +31,9 @@
 #ifndef ApplicationCacheHost_h
 #define ApplicationCacheHost_h
 
+#include "PlatformExportMacros.h"
 #include "URL.h"
 #include <wtf/Deque.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -42,10 +42,11 @@ namespace WebCore {
     class DOMApplicationCache;
     class DocumentLoader;
     class Frame;
-    class ResourceLoader;
     class ResourceError;
+    class ResourceLoader;
     class ResourceRequest;
     class ResourceResponse;
+    class SharedBuffer;
     class SubstituteData;
     class ApplicationCache;
     class ApplicationCacheGroup;
@@ -76,7 +77,6 @@ namespace WebCore {
             OBSOLETE_EVENT  // Must remain the last value, this is used to size arrays.
         };
 
-#if ENABLE(INSPECTOR)
         struct CacheInfo {
             CacheInfo(const URL& manifest, double creationTime, double updateTime, long long size)
                 : m_manifest(manifest)
@@ -108,10 +108,11 @@ namespace WebCore {
         };
 
         typedef Vector<ResourceInfo> ResourceInfoList;
-#endif
 
-        ApplicationCacheHost(DocumentLoader*);
+        explicit ApplicationCacheHost(DocumentLoader&);
         ~ApplicationCacheHost();
+
+        static URL createFileURL(const String&);
 
         void selectCacheWithoutManifest();
         void selectCacheWithManifest(const URL& manifestURL);
@@ -123,13 +124,13 @@ namespace WebCore {
         void finishedLoadingMainResource();
         void failedLoadingMainResource();
 
-        bool maybeLoadResource(ResourceLoader*, ResourceRequest&, const URL& originalURL);
-        bool maybeLoadFallbackForRedirect(ResourceLoader*, ResourceRequest&, const ResourceResponse&);
-        bool maybeLoadFallbackForResponse(ResourceLoader*, const ResourceResponse&);
-        bool maybeLoadFallbackForError(ResourceLoader*, const ResourceError&);
+        WEBCORE_EXPORT bool maybeLoadResource(ResourceLoader*, const ResourceRequest&, const URL& originalURL);
+        WEBCORE_EXPORT bool maybeLoadFallbackForRedirect(ResourceLoader*, ResourceRequest&, const ResourceResponse&);
+        WEBCORE_EXPORT bool maybeLoadFallbackForResponse(ResourceLoader*, const ResourceResponse&);
+        WEBCORE_EXPORT bool maybeLoadFallbackForError(ResourceLoader*, const ResourceError&);
 
-        bool maybeLoadSynchronously(ResourceRequest&, ResourceError&, ResourceResponse&, Vector<char>& data);
-        void maybeLoadFallbackSynchronously(const ResourceRequest&, ResourceError&, ResourceResponse&, Vector<char>& data);
+        bool maybeLoadSynchronously(ResourceRequest&, ResourceError&, ResourceResponse&, RefPtr<SharedBuffer>&);
+        void maybeLoadFallbackSynchronously(const ResourceRequest&, ResourceError&, ResourceResponse&, RefPtr<SharedBuffer>&);
 
         bool canCacheInPageCache();
 
@@ -145,10 +146,8 @@ namespace WebCore {
 
         void stopDeferringEvents(); // Also raises the events that have been queued up.
 
-#if ENABLE(INSPECTOR)
         void fillResourceList(ResourceInfoList*);
         CacheInfo applicationCacheInfo();
-#endif
 
         bool shouldLoadResourceFromApplicationCache(const ResourceRequest&, ApplicationCacheResource*&);
         bool getApplicationCacheFallbackResource(const ResourceRequest&, ApplicationCacheResource*&, ApplicationCache* = 0);
@@ -156,7 +155,6 @@ namespace WebCore {
     private:
         bool isApplicationCacheEnabled();
         bool isApplicationCacheBlockedForRequest(const ResourceRequest&);
-        DocumentLoader* documentLoader() const { return m_documentLoader; }
 
         struct DeferredEvent {
             EventID eventID;
@@ -166,7 +164,7 @@ namespace WebCore {
         };
 
         DOMApplicationCache* m_domApplicationCache;
-        DocumentLoader* m_documentLoader;
+        DocumentLoader& m_documentLoader;
         bool m_defersEvents; // Events are deferred until after document onload.
         Vector<DeferredEvent> m_deferredEvents;
 
@@ -182,7 +180,6 @@ namespace WebCore {
         ApplicationCache* applicationCache() const { return m_applicationCache.get(); }
         ApplicationCache* mainResourceApplicationCache() const { return m_mainResourceApplicationCache.get(); }
         bool maybeLoadFallbackForMainError(const ResourceRequest&, const ResourceError&);
-
 
         // The application cache that the document loader is associated with (if any).
         RefPtr<ApplicationCache> m_applicationCache;

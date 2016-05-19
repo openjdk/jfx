@@ -37,6 +37,7 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SerializedScriptValue.h"
+#include "SessionID.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/WTFString.h>
 
@@ -51,7 +52,7 @@ namespace WebCore {
 
 CrossThreadCopierBase<false, false, URL>::Type CrossThreadCopierBase<false, false, URL>::copy(const URL& url)
 {
-    return url.copy();
+    return url.isolatedCopy();
 }
 
 CrossThreadCopierBase<false, false, String>::Type CrossThreadCopierBase<false, false, String>::copy(const String& str)
@@ -72,6 +73,11 @@ CrossThreadCopierBase<false, false, ResourceRequest>::Type CrossThreadCopierBase
 CrossThreadCopierBase<false, false, ResourceResponse>::Type CrossThreadCopierBase<false, false, ResourceResponse>::copy(const ResourceResponse& response)
 {
     return response.copyData();
+}
+
+CrossThreadCopierBase<false, false, SessionID>::Type CrossThreadCopierBase<false, false, SessionID>::copy(const SessionID& sessionID)
+{
+    return sessionID;
 }
 
 #if ENABLE(INDEXED_DATABASE)
@@ -172,19 +178,5 @@ COMPILE_ASSERT((std::is_same<
                   CrossThreadCopier<CopierRefCountedTest*>::Type
                   >::value),
                RawPointerRefCountedTest);
-
-// Verify that PassOwnPtr gets passed through.
-COMPILE_ASSERT((std::is_same<
-                  PassOwnPtr<float>,
-                  CrossThreadCopier<PassOwnPtr<float>>::Type
-                  >::value),
-               PassOwnPtrTest);
-
-// Verify that PassOwnPtr does not get passed through.
-COMPILE_ASSERT((std::is_same<
-                  int,
-                  CrossThreadCopier<OwnPtr<float>>::Type
-                  >::value),
-               OwnPtrTest);
 
 } // namespace WebCore

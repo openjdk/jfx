@@ -30,7 +30,7 @@ namespace WebCore {
 
 class HTMLIFrameElement final : public HTMLFrameElementBase {
 public:
-    static PassRefPtr<HTMLIFrameElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLIFrameElement> create(const QualifiedName&, Document&);
 
 private:
     HTMLIFrameElement(const QualifiedName&, Document&);
@@ -44,10 +44,8 @@ private:
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 
     virtual bool rendererIsNeeded(const RenderStyle&) override;
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
 };
-
-NODE_TYPE_CASTS(HTMLIFrameElement)
 
 } // namespace WebCore
 

@@ -31,8 +31,8 @@
 #define FlowThreadController_h
 
 #include "RenderView.h"
+#include <memory>
 #include <wtf/ListHashSet.h>
-#include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
@@ -45,11 +45,8 @@ typedef ListHashSet<RenderNamedFlowThread*> RenderNamedFlowThreadList;
 class FlowThreadController {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<FlowThreadController> create(RenderView*);
+    explicit FlowThreadController(RenderView*);
     ~FlowThreadController();
-
-    RenderFlowThread* currentRenderFlowThread() const { return m_currentRenderFlowThread; }
-    void setCurrentRenderFlowThread(RenderFlowThread* flowThread) { m_currentRenderFlowThread = flowThread; }
 
     bool isRenderNamedFlowThreadOrderDirty() const { return m_isRenderNamedFlowThreadOrderDirty; }
     void setIsRenderNamedFlowThreadOrderDirty(bool dirty)
@@ -67,7 +64,6 @@ public:
 
     void registerNamedFlowContentElement(Element&, RenderNamedFlowThread&);
     void unregisterNamedFlowContentElement(Element&);
-    bool isContentElementRegisteredWithAnyNamedFlow(const Element&) const;
 
     bool hasFlowThreadsWithAutoLogicalHeightRegions() const { return m_flowThreadsWithAutoLogicalHeightRegions; }
     void incrementFlowThreadsWithAutoLogicalHeightRegions() { ++m_flowThreadsWithAutoLogicalHeightRegions; }
@@ -85,23 +81,21 @@ public:
     // These layers are painted and hit-tested by RenderView
     void collectFixedPositionedLayers(Vector<RenderLayer*>& fixedPosLayers) const;
 
-    void updateRenderFlowThreadLayersIfNeeded();
+    void updateFlowThreadsLayerToRegionMappingsIfNeeded();
 
 #ifndef NDEBUG
     bool isAutoLogicalHeightRegionsCountConsistent() const;
 #endif
 
 protected:
-    explicit FlowThreadController(RenderView*);
     void updateFlowThreadsChainIfNecessary();
     void resetFlowThreadsWithAutoHeightRegions();
 
 private:
     RenderView* m_view;
-    RenderFlowThread* m_currentRenderFlowThread;
     bool m_isRenderNamedFlowThreadOrderDirty;
     unsigned m_flowThreadsWithAutoLogicalHeightRegions;
-    OwnPtr<RenderNamedFlowThreadList> m_renderNamedFlowThreadList;
+    std::unique_ptr<RenderNamedFlowThreadList> m_renderNamedFlowThreadList;
     HashMap<const Element*, RenderNamedFlowThread*> m_mapNamedFlowContentElement;
 };
 

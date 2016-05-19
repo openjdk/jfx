@@ -26,30 +26,44 @@
 #include "config.h"
 #include "ArrayIteratorPrototype.h"
 
+namespace JSC {
+
+}
+
+#include "ArrayIteratorPrototype.lut.h"
+
+#include "IteratorOperations.h"
 #include "JSArrayIterator.h"
+#include "JSCInlines.h"
 #include "JSCJSValueInlines.h"
 #include "JSCellInlines.h"
 #include "JSGlobalObject.h"
 #include "ObjectConstructor.h"
+#include "StructureInlines.h"
 
 namespace JSC {
 
-const ClassInfo ArrayIteratorPrototype::s_info = { "Array Iterator", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(ArrayIteratorPrototype) };
 
-static EncodedJSValue JSC_HOST_CALL arrayIteratorPrototypeIterate(ExecState*);
+const ClassInfo ArrayIteratorPrototype::s_info = { "Array Iterator", &Base::s_info, &arrayIteratorPrototypeTable, CREATE_METHOD_TABLE(ArrayIteratorPrototype) };
 
-void ArrayIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
+/* Source for ArrayIteratorPrototype.lut.h
+@begin arrayIteratorPrototypeTable
+  next      arrayIteratorProtoFuncNext  DontEnum|Function 0
+@end
+*/
+
+void ArrayIteratorPrototype::finishCreation(VM& vm, JSGlobalObject*)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
     vm.prototypeMap.addPrototype(this);
-
-    JSC_NATIVE_FUNCTION(vm.propertyNames->iteratorPrivateName, arrayIteratorPrototypeIterate, DontEnum, 0);
 }
 
-EncodedJSValue JSC_HOST_CALL arrayIteratorPrototypeIterate(CallFrame* callFrame)
+bool ArrayIteratorPrototype::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    return JSValue::encode(callFrame->thisValue());
+    return getStaticFunctionSlot<Base>(exec, arrayIteratorPrototypeTable, jsCast<ArrayIteratorPrototype*>(object), propertyName, slot);
 }
 
-}
+// ------------------------------ Array Functions ----------------------------
+
+} // namespace JSC

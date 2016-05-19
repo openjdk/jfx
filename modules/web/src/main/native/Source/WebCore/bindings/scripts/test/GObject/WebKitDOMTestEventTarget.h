@@ -18,25 +18,23 @@
  *  Boston, MA 02110-1301, USA.
  */
 
-#if !defined(__WEBKITDOM_H_INSIDE__) && !defined(BUILDING_WEBKIT)
-#error "Only <webkitdom/webkitdom.h> can be included directly."
-#endif
-
 #ifndef WebKitDOMTestEventTarget_h
 #define WebKitDOMTestEventTarget_h
 
+#ifdef WEBKIT_DOM_USE_UNSTABLE_API
+
 #include <glib-object.h>
 #include <webkitdom/WebKitDOMObject.h>
-#include <webkitdom/webkitdomdefines.h>
+#include <webkitdom/webkitdomdefines-unstable.h>
 
 G_BEGIN_DECLS
 
-#define WEBKIT_TYPE_DOM_TEST_EVENT_TARGET            (webkit_dom_test_event_target_get_type())
-#define WEBKIT_DOM_TEST_EVENT_TARGET(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), WEBKIT_TYPE_DOM_TEST_EVENT_TARGET, WebKitDOMTestEventTarget))
-#define WEBKIT_DOM_TEST_EVENT_TARGET_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_TYPE_DOM_TEST_EVENT_TARGET, WebKitDOMTestEventTargetClass)
-#define WEBKIT_DOM_IS_TEST_EVENT_TARGET(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), WEBKIT_TYPE_DOM_TEST_EVENT_TARGET))
-#define WEBKIT_DOM_IS_TEST_EVENT_TARGET_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  WEBKIT_TYPE_DOM_TEST_EVENT_TARGET))
-#define WEBKIT_DOM_TEST_EVENT_TARGET_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  WEBKIT_TYPE_DOM_TEST_EVENT_TARGET, WebKitDOMTestEventTargetClass))
+#define WEBKIT_DOM_TYPE_TEST_EVENT_TARGET            (webkit_dom_test_event_target_get_type())
+#define WEBKIT_DOM_TEST_EVENT_TARGET(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), WEBKIT_DOM_TYPE_TEST_EVENT_TARGET, WebKitDOMTestEventTarget))
+#define WEBKIT_DOM_TEST_EVENT_TARGET_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),  WEBKIT_DOM_TYPE_TEST_EVENT_TARGET, WebKitDOMTestEventTargetClass)
+#define WEBKIT_DOM_IS_TEST_EVENT_TARGET(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), WEBKIT_DOM_TYPE_TEST_EVENT_TARGET))
+#define WEBKIT_DOM_IS_TEST_EVENT_TARGET_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),  WEBKIT_DOM_TYPE_TEST_EVENT_TARGET))
+#define WEBKIT_DOM_TEST_EVENT_TARGET_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),  WEBKIT_DOM_TYPE_TEST_EVENT_TARGET, WebKitDOMTestEventTargetClass))
 
 struct _WebKitDOMTestEventTarget {
     WebKitDOMObject parent_instance;
@@ -47,7 +45,7 @@ struct _WebKitDOMTestEventTargetClass {
 };
 
 WEBKIT_API GType
-webkit_dom_test_event_target_get_type (void);
+webkit_dom_test_event_target_get_type(void);
 
 /**
  * webkit_dom_test_event_target_item:
@@ -55,25 +53,13 @@ webkit_dom_test_event_target_get_type (void);
  * @index: A #gulong
  *
  * Returns: (transfer none): A #WebKitDOMNode
+ *
+ * Stability: Unstable
 **/
 WEBKIT_API WebKitDOMNode*
 webkit_dom_test_event_target_item(WebKitDOMTestEventTarget* self, gulong index);
 
-#if !defined(WEBKIT_DISABLE_DEPRECATED)
-/**
- * webkit_dom_test_event_target_dispatch_event:
- * @self: A #WebKitDOMTestEventTarget
- * @evt: A #WebKitDOMEvent
- * @error: #GError
- *
- * Returns: A #gboolean
- *
- * Deprecated: 2.4: Use webkit_dom_event_target_dispatch_event() instead.
-**/
-WEBKIT_DEPRECATED_FOR(webkit_dom_event_target_dispatch_event) gboolean
-webkit_dom_test_event_target_dispatch_event(WebKitDOMTestEventTarget* self, WebKitDOMEvent* evt, GError** error);
-#endif /* WEBKIT_DISABLE_DEPRECATED */
-
 G_END_DECLS
 
+#endif /* WEBKIT_DOM_USE_UNSTABLE_API */
 #endif /* WebKitDOMTestEventTarget_h */

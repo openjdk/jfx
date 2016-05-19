@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -35,12 +35,9 @@
 
 namespace WebCore {
 
-class AccessibilityTableHeaderContainer : public AccessibilityMockObject {
-
-private:
-    AccessibilityTableHeaderContainer();
+class AccessibilityTableHeaderContainer final : public AccessibilityMockObject {
 public:
-    static PassRefPtr<AccessibilityTableHeaderContainer> create();
+    static Ref<AccessibilityTableHeaderContainer> create();
     virtual ~AccessibilityTableHeaderContainer();
 
     virtual AccessibilityRole roleValue() const override { return TableHeaderContainerRole; }
@@ -50,9 +47,11 @@ public:
     virtual LayoutRect elementRect() const override;
 
 private:
-    LayoutRect m_headerRect;
+    AccessibilityTableHeaderContainer();
 
     virtual bool computeAccessibilityIsIgnored() const override;
+
+    LayoutRect m_headerRect;
 };
 
 } // namespace WebCore

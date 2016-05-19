@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann (hausmann@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2006-2010, 2015 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,7 +24,6 @@
 #include "config.h"
 #include "HTMLBodyElement.h"
 
-#include "Attribute.h"
 #include "CSSImageValue.h"
 #include "CSSParser.h"
 #include "CSSValueKeywords.h"
@@ -36,6 +35,7 @@
 #include "HTMLParserIdioms.h"
 #include "Page.h"
 #include "StyleProperties.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -47,14 +47,21 @@ HTMLBodyElement::HTMLBodyElement(const QualifiedName& tagName, Document& documen
     ASSERT(hasTagName(bodyTag));
 }
 
-PassRefPtr<HTMLBodyElement> HTMLBodyElement::create(Document& document)
+bool HTMLBodyElement::isFirstBodyElementOfDocument() const
 {
-    return adoptRef(new HTMLBodyElement(bodyTag, document));
+    // By spec http://dev.w3.org/csswg/cssom-view/#the-html-body-element
+    // "The HTML body element is the first body HTML element child of the root HTML element html."
+    return document().body() == this;
 }
 
-PassRefPtr<HTMLBodyElement> HTMLBodyElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLBodyElement> HTMLBodyElement::create(Document& document)
 {
-    return adoptRef(new HTMLBodyElement(tagName, document));
+    return adoptRef(*new HTMLBodyElement(bodyTag, document));
+}
+
+Ref<HTMLBodyElement> HTMLBodyElement::create(const QualifiedName& tagName, Document& document)
+{
+    return adoptRef(*new HTMLBodyElement(tagName, document));
 }
 
 HTMLBodyElement::~HTMLBodyElement()
@@ -75,7 +82,7 @@ void HTMLBodyElement::collectStyleForPresentationAttribute(const QualifiedName& 
         if (!url.isEmpty()) {
             auto imageValue = CSSImageValue::create(document().completeURL(url).string());
             imageValue.get().setInitiator(localName());
-            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, std::move(imageValue)));
+            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, WTF::move(imageValue)));
         }
     } else if (name == marginwidthAttr || name == leftmarginAttr) {
         addHTMLLengthToStyle(style, CSSPropertyMarginRight, value);
@@ -92,6 +99,49 @@ void HTMLBodyElement::collectStyleForPresentationAttribute(const QualifiedName& 
            addPropertyToPresentationAttributeStyle(style, CSSPropertyBackgroundAttachment, CSSValueFixed);
     } else
         HTMLElement::collectStyleForPresentationAttribute(name, value, style);
+}
+
+HTMLElement::EventHandlerNameMap HTMLBodyElement::createWindowEventHandlerNameMap()
+{
+    static const QualifiedName* const table[] = {
+        &onbeforeunloadAttr,
+        &onblurAttr,
+        &onerrorAttr,
+        &onfocusAttr,
+        &onfocusinAttr,
+        &onfocusoutAttr,
+        &onhashchangeAttr,
+        &onloadAttr,
+        &onmessageAttr,
+        &onofflineAttr,
+        &ononlineAttr,
+        &onorientationchangeAttr,
+        &onpagehideAttr,
+        &onpageshowAttr,
+        &onpopstateAttr,
+        &onresizeAttr,
+        &onscrollAttr,
+        &onstorageAttr,
+        &onunloadAttr,
+        &onwebkitmouseforcechangedAttr,
+        &onwebkitmouseforcedownAttr,
+        &onwebkitmouseforceupAttr,
+        &onwebkitmouseforcewillbeginAttr,
+        &onwebkitwillrevealbottomAttr,
+        &onwebkitwillrevealleftAttr,
+        &onwebkitwillrevealrightAttr,
+        &onwebkitwillrevealtopAttr,
+    };
+
+    EventHandlerNameMap map;
+    populateEventHandlerNameMap(map, table);
+    return map;
+}
+
+const AtomicString& HTMLBodyElement::eventNameForWindowEventHandlerAttribute(const QualifiedName& attributeName)
+{
+    static NeverDestroyed<EventHandlerNameMap> map = createWindowEventHandlerNameMap();
+    return eventNameForEventHandlerAttribute(attributeName, map.get());
 }
 
 void HTMLBodyElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -117,52 +167,21 @@ void HTMLBodyElement::parseAttribute(const QualifiedName& name, const AtomicStri
         }
 
         setNeedsStyleRecalc();
-    } else if (name == onloadAttr)
-        document().setWindowAttributeEventListener(eventNames().loadEvent, name, value);
-    else if (name == onbeforeunloadAttr)
-        document().setWindowAttributeEventListener(eventNames().beforeunloadEvent, name, value);
-    else if (name == onunloadAttr)
-        document().setWindowAttributeEventListener(eventNames().unloadEvent, name, value);
-    else if (name == onpagehideAttr)
-        document().setWindowAttributeEventListener(eventNames().pagehideEvent, name, value);
-    else if (name == onpageshowAttr)
-        document().setWindowAttributeEventListener(eventNames().pageshowEvent, name, value);
-    else if (name == onpopstateAttr)
-        document().setWindowAttributeEventListener(eventNames().popstateEvent, name, value);
-    else if (name == onblurAttr)
-        document().setWindowAttributeEventListener(eventNames().blurEvent, name, value);
-    else if (name == onfocusAttr)
-        document().setWindowAttributeEventListener(eventNames().focusEvent, name, value);
-#if ENABLE(ORIENTATION_EVENTS)
-    else if (name == onorientationchangeAttr)
-        document().setWindowAttributeEventListener(eventNames().orientationchangeEvent, name, value);
-#endif
-    else if (name == onhashchangeAttr)
-        document().setWindowAttributeEventListener(eventNames().hashchangeEvent, name, value);
-    else if (name == onresizeAttr)
-        document().setWindowAttributeEventListener(eventNames().resizeEvent, name, value);
-    else if (name == onscrollAttr)
-        document().setWindowAttributeEventListener(eventNames().scrollEvent, name, value);
-    else if (name == onselectionchangeAttr)
+        return;
+    }
+
+    if (name == onselectionchangeAttr) {
         document().setAttributeEventListener(eventNames().selectionchangeEvent, name, value);
-    else if (name == onstorageAttr)
-        document().setWindowAttributeEventListener(eventNames().storageEvent, name, value);
-    else if (name == ononlineAttr)
-        document().setWindowAttributeEventListener(eventNames().onlineEvent, name, value);
-    else if (name == onofflineAttr)
-        document().setWindowAttributeEventListener(eventNames().offlineEvent, name, value);
-#if ENABLE(WILL_REVEAL_EDGE_EVENTS)
-    else if (name == onwebkitwillrevealbottomAttr)
-        document().setWindowAttributeEventListener(eventNames().webkitwillrevealbottomEvent, name, value);
-    else if (name == onwebkitwillrevealleftAttr)
-        document().setWindowAttributeEventListener(eventNames().webkitwillrevealleftEvent, name, value);
-    else if (name == onwebkitwillrevealrightAttr)
-        document().setWindowAttributeEventListener(eventNames().webkitwillrevealrightEvent, name, value);
-    else if (name == onwebkitwillrevealtopAttr)
-        document().setWindowAttributeEventListener(eventNames().webkitwillrevealtopEvent, name, value);
-#endif
-    else
-        HTMLElement::parseAttribute(name, value);
+        return;
+    }
+
+    auto& eventName = eventNameForWindowEventHandlerAttribute(name);
+    if (!eventName.isNull()) {
+        document().setWindowAttributeEventListener(eventName, name, value);
+        return;
+    }
+
+    HTMLElement::parseAttribute(name, value);
 }
 
 Node::InsertionNotificationRequest HTMLBodyElement::insertedInto(ContainerNode& insertionPoint)
@@ -174,9 +193,9 @@ Node::InsertionNotificationRequest HTMLBodyElement::insertedInto(ContainerNode& 
     // FIXME: It's surprising this is web compatible since it means a marginwidth and marginheight attribute can
     // magically appear on the <body> of all documents embedded through <iframe> or <frame>.
     // FIXME: Perhaps this code should be in attach() instead of here.
-    Element* ownerElement = document().ownerElement();
-    if (ownerElement && isHTMLFrameElementBase(*ownerElement)) {
-        HTMLFrameElementBase& ownerFrameElement = toHTMLFrameElementBase(*ownerElement);
+    HTMLFrameOwnerElement* ownerElement = document().ownerElement();
+    if (is<HTMLFrameElementBase>(ownerElement)) {
+        HTMLFrameElementBase& ownerFrameElement = downcast<HTMLFrameElementBase>(*ownerElement);
         int marginWidth = ownerFrameElement.marginWidth();
         if (marginWidth != -1)
             setIntegralAttribute(marginwidthAttr, marginWidth);
@@ -198,9 +217,9 @@ bool HTMLBodyElement::supportsFocus() const
     return hasEditableStyle() || HTMLElement::supportsFocus();
 }
 
-static int adjustForZoom(int value, Frame& frame)
+static int adjustForZoom(int value, const Frame& frame)
 {
-    float zoomFactor = frame.pageZoomFactor() * frame.frameScaleFactor();
+    double zoomFactor = frame.pageZoomFactor() * frame.frameScaleFactor();
     if (zoomFactor == 1)
         return value;
     // Needed because of truncation (rather than rounding) when scaling up.
@@ -211,91 +230,101 @@ static int adjustForZoom(int value, Frame& frame)
 
 int HTMLBodyElement::scrollLeft()
 {
-    document().updateLayoutIgnorePendingStylesheets();
-    Frame* frame = document().frame();
-    if (!frame)
-        return 0;
-    FrameView* view = frame->view();
-    if (!view)
-        return 0;
-#if PLATFORM(IOS)
-    return adjustForZoom(view->actualScrollX(), *frame);
-#else
-    return adjustForZoom(view->scrollX(), *frame);
-#endif
+    if (isFirstBodyElementOfDocument()) {
+        document().updateLayoutIgnorePendingStylesheets();
+        Frame* frame = document().frame();
+        if (!frame)
+            return 0;
+        FrameView* view = frame->view();
+        if (!view)
+            return 0;
+        return adjustForZoom(view->contentsScrollPosition().x(), *frame);
+    }
+    return HTMLElement::scrollLeft();
 }
 
 void HTMLBodyElement::setScrollLeft(int scrollLeft)
 {
-    document().updateLayoutIgnorePendingStylesheets();
-    Frame* frame = document().frame();
-    if (!frame)
-        return;
-    FrameView* view = frame->view();
-    if (!view)
-        return;
-    view->setScrollPosition(IntPoint(static_cast<int>(scrollLeft * frame->pageZoomFactor() * frame->frameScaleFactor()), view->scrollY()));
+    if (isFirstBodyElementOfDocument()) {
+        document().updateLayoutIgnorePendingStylesheets();
+        Frame* frame = document().frame();
+        if (!frame)
+            return;
+        FrameView* view = frame->view();
+        if (!view)
+            return;
+        view->setScrollPosition(IntPoint(static_cast<int>(scrollLeft * frame->pageZoomFactor() * frame->frameScaleFactor()), view->scrollY()));
+    }
+    HTMLElement::setScrollLeft(scrollLeft);
 }
 
 int HTMLBodyElement::scrollTop()
 {
-    document().updateLayoutIgnorePendingStylesheets();
-    Frame* frame = document().frame();
-    if (!frame)
-        return 0;
-    FrameView* view = frame->view();
-    if (!view)
-        return 0;
-#if PLATFORM(IOS)
-    return adjustForZoom(view->actualScrollY(), *frame);
-#else
-    return adjustForZoom(view->scrollY(), *frame);
-#endif
+    if (isFirstBodyElementOfDocument()) {
+        document().updateLayoutIgnorePendingStylesheets();
+        Frame* frame = document().frame();
+        if (!frame)
+            return 0;
+        FrameView* view = frame->view();
+        if (!view)
+            return 0;
+        return adjustForZoom(view->contentsScrollPosition().y(), *frame);
+    }
+    return HTMLElement::scrollTop();
 }
 
 void HTMLBodyElement::setScrollTop(int scrollTop)
 {
-    document().updateLayoutIgnorePendingStylesheets();
-    Frame* frame = document().frame();
-    if (!frame)
-        return;
-    FrameView* view = frame->view();
-    if (!view)
-        return;
-    view->setScrollPosition(IntPoint(view->scrollX(), static_cast<int>(scrollTop * frame->pageZoomFactor() * frame->frameScaleFactor())));
+    if (isFirstBodyElementOfDocument()) {
+        document().updateLayoutIgnorePendingStylesheets();
+        Frame* frame = document().frame();
+        if (!frame)
+            return;
+        FrameView* view = frame->view();
+        if (!view)
+            return;
+        view->setScrollPosition(IntPoint(view->scrollX(), static_cast<int>(scrollTop * frame->pageZoomFactor() * frame->frameScaleFactor())));
+    }
+    return HTMLElement::setScrollTop(scrollTop);
 }
 
 int HTMLBodyElement::scrollHeight()
 {
-    // Update the document's layout.
-    document().updateLayoutIgnorePendingStylesheets();
-    Frame* frame = document().frame();
-    if (!frame)
-        return 0;
-    FrameView* view = frame->view();
-    if (!view)
-        return 0;
-    return adjustForZoom(view->contentsHeight(), *frame);
+    if (isFirstBodyElementOfDocument()) {
+        // Update the document's layout.
+        document().updateLayoutIgnorePendingStylesheets();
+        Frame* frame = document().frame();
+        if (!frame)
+            return 0;
+        FrameView* view = frame->view();
+        if (!view)
+            return 0;
+        return adjustForZoom(view->contentsHeight(), *frame);
+    }
+    return HTMLElement::scrollHeight();
 }
 
 int HTMLBodyElement::scrollWidth()
 {
-    // Update the document's layout.
-    document().updateLayoutIgnorePendingStylesheets();
-    Frame* frame = document().frame();
-    if (!frame)
-        return 0;
-    FrameView* view = frame->view();
-    if (!view)
-        return 0;
-    return adjustForZoom(view->contentsWidth(), *frame);
+    if (isFirstBodyElementOfDocument()) {
+        // Update the document's layout.
+        document().updateLayoutIgnorePendingStylesheets();
+        Frame* frame = document().frame();
+        if (!frame)
+            return 0;
+        FrameView* view = frame->view();
+        if (!view)
+            return 0;
+        return adjustForZoom(view->contentsWidth(), *frame);
+    }
+    return HTMLElement::scrollWidth();
 }
 
 void HTMLBodyElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     HTMLElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(getAttribute(backgroundAttr)));
+    addSubresourceURL(urls, document().completeURL(fastGetAttribute(backgroundAttr)));
 }
 
 } // namespace WebCore

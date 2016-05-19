@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,11 +27,13 @@
 #include "config.h"
 #include "CrossOriginAccessControl.h"
 
+#include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
 #include <mutex>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -42,24 +44,25 @@ bool isOnAccessControlSimpleRequestMethodWhitelist(const String& method)
     return method == "GET" || method == "HEAD" || method == "POST";
 }
 
-bool isOnAccessControlSimpleRequestHeaderWhitelist(const String& name, const String& value)
+bool isOnAccessControlSimpleRequestHeaderWhitelist(HTTPHeaderName name, const String& value)
 {
-    if (equalIgnoringCase(name, "accept")
-        || equalIgnoringCase(name, "accept-language")
-        || equalIgnoringCase(name, "content-language")
-        || equalIgnoringCase(name, "origin")
-        || equalIgnoringCase(name, "referer"))
+    switch (name) {
+    case HTTPHeaderName::Accept:
+    case HTTPHeaderName::AcceptLanguage:
+    case HTTPHeaderName::ContentLanguage:
+    case HTTPHeaderName::Origin:
+    case HTTPHeaderName::Referer:
         return true;
-
-    // Preflight is required for MIME types that can not be sent via form submission.
-    if (equalIgnoringCase(name, "content-type")) {
+    case HTTPHeaderName::ContentType: {
+        // Preflight is required for MIME types that can not be sent via form submission.
         String mimeType = extractMIMETypeFromMediaType(value);
         return equalIgnoringCase(mimeType, "application/x-www-form-urlencoded")
             || equalIgnoringCase(mimeType, "multipart/form-data")
             || equalIgnoringCase(mimeType, "text/plain");
     }
-
-    return false;
+    default:
+        return false;
+    }
 }
 
 bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap& headerMap)
@@ -68,7 +71,7 @@ bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap&
         return false;
 
     for (const auto& header : headerMap) {
-        if (!isOnAccessControlSimpleRequestHeaderWhitelist(header.key, header.value))
+        if (!header.keyAsHTTPHeaderName || !isOnAccessControlSimpleRequestHeaderWhitelist(header.keyAsHTTPHeaderName.value(), header.value))
             return false;
     }
 
@@ -78,20 +81,20 @@ bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap&
 bool isOnAccessControlResponseHeaderWhitelist(const String& name)
 {
     static std::once_flag onceFlag;
-    static HTTPHeaderSet* allowedCrossOriginResponseHeaders;
+    static LazyNeverDestroyed<HTTPHeaderSet> allowedCrossOriginResponseHeaders;
 
     std::call_once(onceFlag, []{
-        allowedCrossOriginResponseHeaders = std::make_unique<HTTPHeaderSet, std::initializer_list<String>>({
+        allowedCrossOriginResponseHeaders.construct<std::initializer_list<String>>({
             "cache-control",
             "content-language",
             "content-type",
             "expires",
             "last-modified",
             "pragma"
-        }).release();
+        });
     });
 
-    return allowedCrossOriginResponseHeaders->contains(name);
+    return allowedCrossOriginResponseHeaders.get().contains(name);
 }
 
 void updateRequestForAccessControl(ResourceRequest& request, SecurityOrigin* securityOrigin, StoredCredentials allowCredentials)
@@ -106,7 +109,7 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
     ResourceRequest preflightRequest(request.url());
     updateRequestForAccessControl(preflightRequest, securityOrigin, DoNotAllowStoredCredentials);
     preflightRequest.setHTTPMethod("OPTIONS");
-    preflightRequest.setHTTPHeaderField("Access-Control-Request-Method", request.httpMethod());
+    preflightRequest.setHTTPHeaderField(HTTPHeaderName::AccessControlRequestMethod, request.httpMethod());
     preflightRequest.setPriority(request.priority());
 
     const HTTPHeaderMap& requestHeaderFields = request.httpHeaderFields();
@@ -115,16 +118,16 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
         StringBuilder headerBuffer;
 
         bool appendComma = false;
-        for (const auto& headerName : requestHeaderFields.keys()) {
+        for (const auto& headerField : requestHeaderFields) {
             if (appendComma)
                 headerBuffer.appendLiteral(", ");
             else
                 appendComma = true;
 
-            headerBuffer.append(headerName);
+            headerBuffer.append(headerField.key);
         }
 
-        preflightRequest.setHTTPHeaderField("Access-Control-Request-Headers", headerBuffer.toString().lower());
+        preflightRequest.setHTTPHeaderField(HTTPHeaderName::AccessControlRequestHeaders, headerBuffer.toString().lower());
     }
 
     return preflightRequest;
@@ -134,7 +137,7 @@ bool passesAccessControlCheck(const ResourceResponse& response, StoredCredential
 {
     // A wildcard Access-Control-Allow-Origin can not be used if credentials are to be sent,
     // even with Access-Control-Allow-Credentials set to true.
-    const String& accessControlOriginString = response.httpHeaderField("access-control-allow-origin");
+    const String& accessControlOriginString = response.httpHeaderField(HTTPHeaderName::AccessControlAllowOrigin);
     if (accessControlOriginString == "*" && includeCredentials == DoNotAllowStoredCredentials)
         return true;
 
@@ -153,7 +156,7 @@ bool passesAccessControlCheck(const ResourceResponse& response, StoredCredential
     }
 
     if (includeCredentials == AllowStoredCredentials) {
-        const String& accessControlCredentialsString = response.httpHeaderField("access-control-allow-credentials");
+        const String& accessControlCredentialsString = response.httpHeaderField(HTTPHeaderName::AccessControlAllowCredentials);
         if (accessControlCredentialsString != "true") {
             errorDescription = "Credentials flag is true, but Access-Control-Allow-Credentials is not \"true\".";
             return false;

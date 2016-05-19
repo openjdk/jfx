@@ -51,6 +51,8 @@ from webkitpy.layout_tests.models import test_expectations
 from webkitpy.layout_tests.models import test_failures
 from webkitpy.layout_tests.models import test_run_results
 from webkitpy.layout_tests.models.test_input import TestInput
+from webkitpy.layout_tests.models.test_run_results import INTERRUPTED_EXIT_STATUS
+from webkitpy.tool.grammar import pluralize
 
 _log = logging.getLogger(__name__)
 
@@ -77,8 +79,8 @@ class Manager(object):
         self._expectations = None
 
         self.HTTP_SUBDIR = 'http' + port.TEST_PATH_SEPARATOR
-        self.PERF_SUBDIR = 'perf'
         self.WEBSOCKET_SUBDIR = 'websocket' + port.TEST_PATH_SEPARATOR
+        self.web_platform_test_subdir = self._port.web_platform_test_server_doc_root()
         self.LAYOUT_TESTS_DIRECTORY = 'LayoutTests'
 
         # disable wss server. need to install pyOpenSSL on buildbots.
@@ -93,16 +95,16 @@ class Manager(object):
         return self._finder.find_tests(self._options, args)
 
     def _is_http_test(self, test):
-        return self.HTTP_SUBDIR in test or self._is_websocket_test(test)
+        return self.HTTP_SUBDIR in test or self._is_websocket_test(test) or self._is_web_platform_test(test)
 
     def _is_websocket_test(self, test):
         return self.WEBSOCKET_SUBDIR in test
 
+    def _is_web_platform_test(self, test):
+        return self.web_platform_test_subdir in test
+
     def _http_tests(self, test_names):
         return set(test for test in test_names if self._is_http_test(test))
-
-    def _is_perf_test(self, test):
-        return self.PERF_SUBDIR == test or (self.PERF_SUBDIR + self._port.TEST_PATH_SEPARATOR) in test
 
     def _prepare_lists(self, paths, test_names):
         tests_to_skip = self._finder.skip_tests(paths, test_names, self._expectations, self._http_tests(test_names))
@@ -124,20 +126,13 @@ class Manager(object):
     def _test_input_for_file(self, test_file):
         return TestInput(test_file,
             self._options.slow_time_out_ms if self._test_is_slow(test_file) else self._options.time_out_ms,
-            self._test_requires_lock(test_file))
-
-    def _test_requires_lock(self, test_file):
-        """Return True if the test needs to be locked when
-        running multiple copies of NRWTs. Perf tests are locked
-        because heavy load caused by running other tests in parallel
-        might cause some of them to timeout."""
-        return self._is_http_test(test_file) or self._is_perf_test(test_file)
+            self._is_http_test(test_file))
 
     def _test_is_slow(self, test_file):
         return self._expectations.model().has_modifier(test_file, test_expectations.SLOW)
 
     def needs_servers(self, test_names):
-        return any(self._test_requires_lock(test_name) for test_name in test_names) and self._options.http
+        return any(self._is_http_test(test_name) for test_name in test_names) and self._options.http
 
     def _set_up_run(self, test_names):
         self._printer.write_update("Checking build ...")
@@ -148,7 +143,8 @@ class Manager(object):
         # This must be started before we check the system dependencies,
         # since the helper may do things to make the setup correct.
         self._printer.write_update("Starting helper ...")
-        self._port.start_helper(self._options.pixel_tests)
+        if not self._port.start_helper(self._options.pixel_tests):
+            return False
 
         self._port.reset_preferences()
 
@@ -199,11 +195,13 @@ class Manager(object):
                 int(self._options.child_processes), retrying=False)
 
             tests_to_retry = self._tests_to_retry(initial_results, include_crashes=self._port.should_retry_crashes())
-            if self._options.retry_failures and tests_to_retry and not initial_results.interrupted:
+            # Don't retry failures when interrupted by user or failures limit exception.
+            retry_failures = self._options.retry_failures and not (initial_results.interrupted or initial_results.keyboard_interrupted)
+            if retry_failures and tests_to_retry:
                 enabled_pixel_tests_in_retry = self._force_pixel_tests_if_needed()
 
                 _log.info('')
-                _log.info("Retrying %d unexpected failure(s) ..." % len(tests_to_retry))
+                _log.info("Retrying %s ..." % pluralize(len(tests_to_retry), "unexpected failure"))
                 _log.info('')
                 retry_results = self._run_tests(tests_to_retry, tests_to_skip=set(), repeat_each=1, iterations=1,
                     num_workers=1, retrying=True)
@@ -231,21 +229,25 @@ class Manager(object):
             results_including_passes = test_run_results.summarize_results(self._port, self._expectations, initial_results, retry_results, enabled_pixel_tests_in_retry, include_passes=True, include_time_and_modifiers=True)
         self._printer.print_results(end_time - start_time, initial_results, summarized_results)
 
+        exit_code = -1
         if not self._options.dry_run:
             self._port.print_leaks_summary()
             self._upload_json_files(summarized_results, initial_results, results_including_passes, start_time, end_time)
 
             results_path = self._filesystem.join(self._results_directory, "results.html")
             self._copy_results_html_file(results_path)
-            if self._options.show_results and (initial_results.unexpected_results_by_name or
-                                               (self._options.full_results_html and initial_results.total_failures)):
-                self._port.show_results_html_file(results_path)
-
-        return test_run_results.RunDetails(self._port.exit_code_from_summarized_results(summarized_results),
-                                           summarized_results, initial_results, retry_results, enabled_pixel_tests_in_retry)
+            if initial_results.keyboard_interrupted:
+                exit_code = INTERRUPTED_EXIT_STATUS
+            else:
+                if self._options.show_results and (initial_results.unexpected_results_by_name or
+                    (self._options.full_results_html and initial_results.total_failures)):
+                    self._port.show_results_html_file(results_path)
+                exit_code = self._port.exit_code_from_summarized_results(summarized_results)
+        return test_run_results.RunDetails(exit_code, summarized_results, initial_results, retry_results, enabled_pixel_tests_in_retry)
 
     def _run_tests(self, tests_to_run, tests_to_skip, repeat_each, iterations, num_workers, retrying):
-        needs_http = any(self._is_http_test(test) for test in tests_to_run)
+        needs_http = any((self._is_http_test(test) and not self._is_web_platform_test(test)) for test in tests_to_run)
+        needs_web_platform_test_server = any(self._is_web_platform_test(test) for test in tests_to_run)
         needs_websockets = any(self._is_websocket_test(test) for test in tests_to_run)
 
         test_inputs = []
@@ -253,7 +255,7 @@ class Manager(object):
             for test in tests_to_run:
                 for _ in xrange(repeat_each):
                     test_inputs.append(self._test_input_for_file(test))
-        return self._runner.run_tests(self._expectations, test_inputs, tests_to_skip, num_workers, needs_http, needs_websockets, retrying)
+        return self._runner.run_tests(self._expectations, test_inputs, tests_to_skip, num_workers, needs_http, needs_websockets, needs_web_platform_test_server, retrying)
 
     def _clean_up_run(self):
         _log.debug("Flushing stdout")
@@ -272,9 +274,7 @@ class Manager(object):
         _log.debug("Restarting helper")
         self._port.stop_helper()
         self._options.pixel_tests = True
-        self._port.start_helper()
-
-        return True
+        return self._port.start_helper()
 
     def _look_for_new_crash_logs(self, run_results, start_time):
         """Since crash logs can take a long time to be written out if the system is

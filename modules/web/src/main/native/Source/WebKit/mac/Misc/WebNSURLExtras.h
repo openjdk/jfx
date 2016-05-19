@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2009, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -42,13 +42,10 @@
 + (NSURL *)_web_URLWithData:(NSData *)data;
 + (NSURL *)_web_URLWithData:(NSData *)data relativeToURL:(NSURL *)baseURL;
 
-- (NSURL *)_web_URLWithLowercasedScheme;
-
 - (NSData *)_web_originalData;
 - (NSString *)_web_originalDataAsString;
 - (const char *)_web_URLCString;
 
-- (NSData *)_web_hostData;
 - (NSString *)_web_hostString;
 
 - (NSString *)_web_userVisibleString;
@@ -57,46 +54,34 @@
 
 - (NSURL *)_webkit_canonicalize;
 - (NSURL *)_webkit_URLByRemovingFragment;
-- (NSURL *)_webkit_URLByRemovingResourceSpecifier;
 - (NSURL *)_web_URLByRemovingUserInfo;
 
 - (BOOL)_webkit_isJavaScriptURL;
 - (BOOL)_webkit_isFileURL;
 - (NSString *)_webkit_scriptIfJavaScriptURL;
-- (BOOL)_webkit_isFTPDirectoryURL;
-
-- (BOOL)_webkit_shouldLoadAsEmptyDocument;
 
 - (NSString *)_webkit_suggestedFilenameWithMIMEType:(NSString *)MIMEType;
 
 - (NSURL *)_webkit_URLFromURLOrSchemelessFileURL;
 
 #if TARGET_OS_IPHONE
-- (NSURL *)_webkit_youTubeURL;
-
+// FIXME: This method name needs a prefix.
 + (NSURL *)uniqueURLWithRelativePart:(NSString *)relativePart;
 #endif
+
 @end
 
 @interface NSString (WebNSURLExtras)
 
 - (BOOL)_web_isUserVisibleURL;
 
-- (BOOL)_web_hostNameNeedsDecodingWithRange:(NSRange)range; // returns NO if decodeHostNameWithRange: would return nil, but more efficient
-- (BOOL)_web_hostNameNeedsEncodingWithRange:(NSRange)range; // returns NO if encodeHostNameWithRange: would return nil, but more efficient
-
-- (NSString *)_web_decodeHostNameWithRange:(NSRange)range; // turns funny-looking ASCII form into Unicode, returns nil if no decoding needed
-- (NSString *)_web_encodeHostNameWithRange:(NSRange)range; // turns Unicode into funny-looking ASCII form, returns nil if no decoding needed
-
 - (NSString *)_web_decodeHostName; // turns funny-looking ASCII form into Unicode, returns self if no decoding needed, convenient cover
 - (NSString *)_web_encodeHostName; // turns Unicode into funny-looking ASCII form, returns self if no decoding needed, convenient cover
 
 - (BOOL)_webkit_isJavaScriptURL;
-- (BOOL)_webkit_isFTPDirectoryURL;
 - (BOOL)_webkit_isFileURL;
 - (BOOL)_webkit_looksLikeAbsoluteURL;
 - (NSRange)_webkit_rangeOfURLScheme;
-- (NSString *)_webkit_URLFragment;
 - (NSString *)_webkit_scriptIfJavaScriptURL;
 
 #if TARGET_OS_IPHONE

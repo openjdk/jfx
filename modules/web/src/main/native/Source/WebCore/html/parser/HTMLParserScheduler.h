@@ -29,7 +29,6 @@
 #include "NestingLevelIncrementer.h"
 #include "Timer.h"
 #include <wtf/CurrentTime.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
 
 #if PLATFORM(IOS)
@@ -98,13 +97,13 @@ public:
     void resume();
 
 private:
-    void continueNextChunkTimerFired(Timer<HTMLParserScheduler>&);
+    void continueNextChunkTimerFired();
 
     HTMLDocumentParser& m_parser;
 
     double m_parserTimeLimit;
     int m_parserChunkSize;
-    Timer<HTMLParserScheduler> m_continueNextChunkTimer;
+    Timer m_continueNextChunkTimer;
     bool m_isSuspendedWithActiveTimer;
 #if !ASSERT_DISABLED
     bool m_suspended;

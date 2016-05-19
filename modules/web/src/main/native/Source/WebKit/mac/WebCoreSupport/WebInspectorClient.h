@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -73,8 +73,14 @@ public:
     virtual void highlight() override;
     virtual void hideHighlight() override;
 
-    virtual void indicate() override;
-    virtual void hideIndication() override;
+#if PLATFORM(IOS)
+    virtual void showInspectorIndication() override;
+    virtual void hideInspectorIndication() override;
+
+    virtual bool overridesShowPaintRects() const override { return true; }
+    virtual void setShowPaintRects(bool) override;
+    virtual void showPaintRect(const WebCore::FloatRect&) override;
+#endif
 
     virtual void didSetSearchingForNode(bool) override;
 
@@ -86,6 +92,10 @@ public:
     bool inspectorAttachDisabled();
     void setInspectorAttachDisabled(bool);
 
+    void windowFullScreenDidChange();
+
+    bool canAttach();
+
     void releaseFrontend();
 
 private:
@@ -94,7 +104,7 @@ private:
     WebView *m_webView;
     RetainPtr<WebNodeHighlighter> m_highlighter;
     WebCore::Page* m_frontendPage;
-    WebInspectorFrontendClient* m_frontendClient;
+    std::unique_ptr<WebInspectorFrontendClient> m_frontendClient;
 };
 
 
@@ -103,23 +113,26 @@ public:
     WebInspectorFrontendClient(WebView*, WebInspectorWindowController*, WebCore::InspectorController*, WebCore::Page*, std::unique_ptr<Settings>);
 
     void attachAvailabilityChanged(bool);
+    bool canAttach();
 
-    virtual void frontendLoaded();
+    virtual void frontendLoaded() override;
 
-    virtual String localizedStringsURL();
+    virtual void startWindowDrag() override;
 
-    virtual void bringToFront();
-    virtual void closeWindow();
+    virtual String localizedStringsURL() override;
+
+    virtual void bringToFront() override;
+    virtual void closeWindow() override;
     virtual void disconnectFromBackend();
 
-    virtual void attachWindow(DockSide);
-    virtual void detachWindow();
+    virtual void attachWindow(DockSide) override;
+    virtual void detachWindow() override;
 
-    virtual void setAttachedWindowHeight(unsigned height);
-    virtual void setAttachedWindowWidth(unsigned height);
+    virtual void setAttachedWindowHeight(unsigned height) override;
+    virtual void setAttachedWindowWidth(unsigned height) override;
     virtual void setToolbarHeight(unsigned) override;
 
-    virtual void inspectedURLChanged(const String& newURL);
+    virtual void inspectedURLChanged(const String& newURL) override;
 
 private:
     void updateWindowTitle() const;

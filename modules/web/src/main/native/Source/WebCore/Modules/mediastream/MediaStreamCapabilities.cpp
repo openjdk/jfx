@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,11 +33,11 @@
 #include "AllVideoCapabilities.h"
 #include "CapabilityRange.h"
 #include "MediaSourceStates.h"
-#include "MediaStreamSourceCapabilities.h"
+#include "RealtimeMediaSourceCapabilities.h"
 
 namespace WebCore {
 
-RefPtr<MediaStreamCapabilities> MediaStreamCapabilities::create(PassRefPtr<MediaStreamSourceCapabilities> capabilities)
+RefPtr<MediaStreamCapabilities> MediaStreamCapabilities::create(PassRefPtr<RealtimeMediaSourceCapabilities> capabilities)
 {
     if (capabilities->hasVideoSource())
         return AllVideoCapabilities::create(capabilities);
@@ -45,7 +45,7 @@ RefPtr<MediaStreamCapabilities> MediaStreamCapabilities::create(PassRefPtr<Media
     return AllAudioCapabilities::create(capabilities);
 }
 
-MediaStreamCapabilities::MediaStreamCapabilities(PassRefPtr<MediaStreamSourceCapabilities> capabilities)
+MediaStreamCapabilities::MediaStreamCapabilities(PassRefPtr<RealtimeMediaSourceCapabilities> capabilities)
     : m_SourceCapabilities(capabilities)
 {
 }
@@ -58,12 +58,11 @@ Vector<String> MediaStreamCapabilities::sourceType() const
     if (!count)
         return Vector<String>();
 
-    const Vector<MediaStreamSourceStates::SourceType>& sourceTypes = m_SourceCapabilities->sourceTypes();
     Vector<String> capabilities;
     capabilities.reserveCapacity(count);
 
-    for (size_t i = 0; i < count; ++i)
-        capabilities.append(MediaStreamSourceStates::sourceType(sourceTypes[i]));
+    for (auto& type : m_SourceCapabilities->sourceTypes())
+        capabilities.append(RealtimeMediaSourceStates::sourceType(type));
 
     return capabilities;
 }
@@ -74,12 +73,11 @@ Vector<String> MediaStreamCapabilities::sourceId() const
     if (!count)
         return Vector<String>();
 
-    const Vector<AtomicString>& sourceIds = m_SourceCapabilities->sourceId();
     Vector<String> capabilities;
     capabilities.reserveCapacity(count);
 
-    for (size_t i = 0; i < count; ++i)
-        capabilities.append(sourceIds[i]);
+    for (auto& id : m_SourceCapabilities->sourceId())
+        capabilities.append(id);
 
     return capabilities;
 }
@@ -92,12 +90,11 @@ Vector<String> MediaStreamCapabilities::facingMode() const
     if (!count)
         return Vector<String>();
 
-    const Vector<MediaStreamSourceStates::VideoFacingMode>& facingModes = m_SourceCapabilities->facingModes();
     Vector<String> capabilities;
     capabilities.reserveCapacity(count);
 
-    for (size_t i = 0; i < count; ++i)
-        capabilities.append(MediaStreamSourceStates::facingMode(facingModes[i]));
+    for (auto& mode : m_SourceCapabilities->facingModes())
+        capabilities.append(RealtimeMediaSourceStates::facingMode(mode));
 
     return capabilities;
 }

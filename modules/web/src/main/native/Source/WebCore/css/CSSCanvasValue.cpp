@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,7 +28,6 @@
 
 #include "ImageBuffer.h"
 #include "RenderElement.h"
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -40,11 +39,7 @@ CSSCanvasValue::~CSSCanvasValue()
 
 String CSSCanvasValue::customCSSText() const
 {
-    StringBuilder result;
-    result.appendLiteral("-webkit-canvas(");
-    result.append(m_name);
-    result.append(')');
-    return result.toString();
+    return makeString("-webkit-canvas(", m_name, ')');
 }
 
 void CSSCanvasValue::canvasChanged(HTMLCanvasElement&, const FloatRect& changedRect)
@@ -66,11 +61,11 @@ void CSSCanvasValue::canvasDestroyed(HTMLCanvasElement& element)
     m_element = nullptr;
 }
 
-IntSize CSSCanvasValue::fixedSize(const RenderElement* renderer)
+FloatSize CSSCanvasValue::fixedSize(const RenderElement* renderer)
 {
     if (HTMLCanvasElement* elt = element(renderer->document()))
-        return IntSize(elt->width(), elt->height());
-    return IntSize();
+        return FloatSize(elt->width(), elt->height());
+    return FloatSize();
 }
 
 HTMLCanvasElement* CSSCanvasValue::element(Document& document)
@@ -84,7 +79,7 @@ HTMLCanvasElement* CSSCanvasValue::element(Document& document)
     return m_element;
 }
 
-PassRefPtr<Image> CSSCanvasValue::image(RenderElement* renderer, const IntSize& /*size*/)
+PassRefPtr<Image> CSSCanvasValue::image(RenderElement* renderer, const FloatSize& /*size*/)
 {
     ASSERT(clients().contains(renderer));
     HTMLCanvasElement* element = this->element(renderer->document());

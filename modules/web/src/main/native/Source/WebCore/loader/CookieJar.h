@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -40,13 +40,13 @@ struct Cookie;
 // Functions in this file take a Document pointer to determine which cookie storage to use. We should merge that into call sites, and use PlatformCookieJar directly.
 
 // These two functions implement document.cookie API, with special rules for HttpOnly cookies.
-String cookies(const Document*, const URL&);
-void setCookies(Document*, const URL&, const String& cookieString);
+WEBCORE_EXPORT String cookies(const Document*, const URL&);
+WEBCORE_EXPORT void setCookies(Document*, const URL&, const String& cookieString);
 
-bool cookiesEnabled(const Document*);
-String cookieRequestHeaderFieldValue(const Document*, const URL&);
-bool getRawCookies(const Document*, const URL&, Vector<Cookie>&);
-void deleteCookie(const Document*, const URL&, const String& cookieName);
+WEBCORE_EXPORT bool cookiesEnabled(const Document*);
+WEBCORE_EXPORT String cookieRequestHeaderFieldValue(const Document*, const URL&);
+WEBCORE_EXPORT bool getRawCookies(const Document*, const URL&, Vector<Cookie>&);
+WEBCORE_EXPORT void deleteCookie(const Document*, const URL&, const String& cookieName);
 
 }
 

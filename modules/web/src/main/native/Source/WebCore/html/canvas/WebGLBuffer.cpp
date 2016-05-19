@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,16 +30,16 @@
 #include "WebGLBuffer.h"
 
 #include "WebGLContextGroup.h"
-#include "WebGLRenderingContext.h"
+#include "WebGLRenderingContextBase.h"
 
 namespace WebCore {
 
-PassRefPtr<WebGLBuffer> WebGLBuffer::create(WebGLRenderingContext* ctx)
+Ref<WebGLBuffer> WebGLBuffer::create(WebGLRenderingContextBase* ctx)
 {
-    return adoptRef(new WebGLBuffer(ctx));
+    return adoptRef(*new WebGLBuffer(ctx));
 }
 
-WebGLBuffer::WebGLBuffer(WebGLRenderingContext* ctx)
+WebGLBuffer::WebGLBuffer(WebGLRenderingContextBase* ctx)
     : WebGLSharedObject(ctx)
     , m_target(0)
     , m_byteLength(0)
@@ -81,7 +81,7 @@ bool WebGLBuffer::associateBufferDataImpl(const void* data, GC3Dsizeiptr byteLen
                 memcpy(m_elementArrayBuffer->data(), data, byteLength);
             }
         } else
-            m_elementArrayBuffer = 0;
+            m_elementArrayBuffer = nullptr;
         return true;
     case GraphicsContext3D::ARRAY_BUFFER:
         m_byteLength = byteLength;
@@ -151,6 +151,12 @@ bool WebGLBuffer::associateBufferSubData(GC3Dintptr offset, ArrayBufferView* arr
     if (!array)
         return false;
     return associateBufferSubDataImpl(offset, array->baseAddress(), array->byteLength());
+}
+
+void WebGLBuffer::disassociateBufferData()
+{
+    m_byteLength = 0;
+    clearCachedMaxIndices();
 }
 
 GC3Dsizeiptr WebGLBuffer::byteLength() const

@@ -55,6 +55,6 @@ public:
     virtual bool isXSLStyleSheet() const { return false; }
 };
 
-} // namespace
+} // namespace WebCore
 
-#endif
+#endif // StyleSheet_h

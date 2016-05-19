@@ -26,106 +26,45 @@
 #ifndef PageGroup_h
 #define PageGroup_h
 
-#include "LinkHash.h"
-#include "SecurityOriginHash.h"
 #include "Supplementable.h"
-#include "UserScript.h"
-#include "UserStyleSheet.h"
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-    class URL;
-    class GroupSettings;
-    class IDBFactoryBackendInterface;
     class Page;
-    class SecurityOrigin;
-    class StorageNamespace;
-    class VisitedLinkProvider;
-    class UserContentController;
-
 #if ENABLE(VIDEO_TRACK)
-    class CaptionPreferencesChangedListener;
     class CaptionUserPreferences;
 #endif
 
-    class PageGroup : public Supplementable<PageGroup> {
+    class PageGroup {
         WTF_MAKE_NONCOPYABLE(PageGroup); WTF_MAKE_FAST_ALLOCATED;
     public:
-        explicit PageGroup(const String& name);
+        WEBCORE_EXPORT explicit PageGroup(const String& name);
         explicit PageGroup(Page&);
         ~PageGroup();
 
-        static PageGroup* pageGroup(const String& groupName);
-
-        static void closeLocalStorage();
-
-        static void clearLocalStorageForAllOrigins();
-        static void clearLocalStorageForOrigin(SecurityOrigin*);
-        static void closeIdleLocalStorageDatabases();
-        // DumpRenderTree helper that triggers a StorageArea sync.
-        static void syncLocalStorage();
+        WEBCORE_EXPORT static PageGroup* pageGroup(const String& groupName);
 
         const HashSet<Page*>& pages() const { return m_pages; }
 
         void addPage(Page&);
         void removePage(Page&);
 
-        VisitedLinkProvider& visitedLinkProvider() { return *m_visitedLinkProvider; }
-
-        bool isLinkVisited(LinkHash);
-
-        void addVisitedLink(const URL&);
-        void addVisitedLink(const UChar*, size_t);
-        void addVisitedLinkHash(LinkHash);
-        void removeVisitedLink(const URL&);
-        void removeVisitedLinks();
-
-        static void setShouldTrackVisitedLinks(bool);
-        static void removeAllVisitedLinks();
-
         const String& name() { return m_name; }
         unsigned identifier() { return m_identifier; }
 
-        StorageNamespace* localStorage();
-        bool hasLocalStorage() { return m_localStorage; }
-
-        StorageNamespace* transientLocalStorage(SecurityOrigin* topOrigin);
-
-        void addUserScriptToWorld(DOMWrapperWorld&, const String& source, const URL&, const Vector<String>& whitelist, const Vector<String>& blacklist, UserScriptInjectionTime, UserContentInjectedFrames);
-        void addUserStyleSheetToWorld(DOMWrapperWorld&, const String& source, const URL&, const Vector<String>& whitelist, const Vector<String>& blacklist, UserContentInjectedFrames, UserStyleLevel = UserStyleUserLevel, UserStyleInjectionTime = InjectInExistingDocuments);
-        void removeUserStyleSheetFromWorld(DOMWrapperWorld&, const URL&);
-        void removeUserScriptFromWorld(DOMWrapperWorld&, const URL&);
-        void removeUserScriptsFromWorld(DOMWrapperWorld&);
-        void removeUserStyleSheetsFromWorld(DOMWrapperWorld&);
-        void removeAllUserContent();
-
-        GroupSettings& groupSettings() const { return *m_groupSettings; }
-
 #if ENABLE(VIDEO_TRACK)
-        void captionPreferencesChanged();
-        CaptionUserPreferences* captionPreferences();
+        WEBCORE_EXPORT void captionPreferencesChanged();
+        WEBCORE_EXPORT CaptionUserPreferences* captionPreferences();
 #endif
 
     private:
-        void addVisitedLink(LinkHash);
-
         String m_name;
         HashSet<Page*> m_pages;
 
-        RefPtr<VisitedLinkProvider> m_visitedLinkProvider;
-
-        HashSet<LinkHash, LinkHashHash> m_visitedLinkHashes;
-        bool m_visitedLinksPopulated;
-
         unsigned m_identifier;
-        RefPtr<StorageNamespace> m_localStorage;
-        HashMap<RefPtr<SecurityOrigin>, RefPtr<StorageNamespace>> m_transientLocalStorageMap;
-
-        RefPtr<UserContentController> m_userContentController;
-
-        const std::unique_ptr<GroupSettings> m_groupSettings;
 
 #if ENABLE(VIDEO_TRACK)
         std::unique_ptr<CaptionUserPreferences> m_captionPreferences;

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -36,10 +36,12 @@
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
+#ifndef WEBKIT_API
 #ifdef WEBKIT_EXPORTS
 #define WEBKIT_API __declspec(dllexport)
 #else
 #define WEBKIT_API __declspec(dllimport)
+#endif
 #endif
 
 #ifdef __cplusplus
@@ -48,9 +50,11 @@ extern "C" {
 
 extern ULONG gLockCount;
 extern ULONG gClassCount;
-extern HashCountedSet<WTF::String> gClassNameCount;
+extern HashCountedSet<WTF::String>& gClassNameCount();
 extern HINSTANCE gInstance;
 extern CLSID gRegCLSIDs[];
+
+WEBKIT_API void shutDownWebKit();
 
 #ifdef __cplusplus
 }

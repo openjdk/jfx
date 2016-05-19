@@ -31,6 +31,7 @@
 #include "CodeBlockWithJITType.h"
 #include "DFGPlan.h"
 #include "FTLThunks.h"
+#include "ProfilerDatabase.h"
 
 namespace JSC { namespace FTL {
 
@@ -127,9 +128,12 @@ bool JITFinalizer::finalizeFunction()
             .executableMemory());
     }
 
-    MacroAssemblerCodePtr withArityCheck;
-    if (arityCheck.isSet())
-        withArityCheck = entrypointLinkBuffer->locationOf(arityCheck);
+    for (unsigned i = 0; i < outOfLineCodeInfos.size(); ++i) {
+        jitCode->addHandle(FINALIZE_DFG_CODE(
+            *outOfLineCodeInfos[i].m_linkBuffer,
+            ("FTL out of line code for %s", outOfLineCodeInfos[i].m_codeDescription)).executableMemory());
+    }
+
     jitCode->initializeArityCheckEntrypoint(
         FINALIZE_DFG_CODE(
             *entrypointLinkBuffer,

@@ -31,7 +31,6 @@
 #include "URL.h"
 #include "SuffixTree.h"
 #include "TextEncoding.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
@@ -62,7 +61,6 @@ public:
     void initForFragment();
 
     std::unique_ptr<XSSInfo> filterToken(const FilterTokenRequest&);
-    bool isSafeToSendToAnotherThread() const;
 
 private:
     static const size_t kMaximumFragmentLengthTarget = 100;
@@ -86,7 +84,7 @@ private:
     bool filterParamToken(const FilterTokenRequest&);
     bool filterEmbedToken(const FilterTokenRequest&);
     bool filterAppletToken(const FilterTokenRequest&);
-    bool filterIframeToken(const FilterTokenRequest&);
+    bool filterFrameToken(const FilterTokenRequest&);
     bool filterMetaToken(const FilterTokenRequest&);
     bool filterBaseToken(const FilterTokenRequest&);
     bool filterFormToken(const FilterTokenRequest&);

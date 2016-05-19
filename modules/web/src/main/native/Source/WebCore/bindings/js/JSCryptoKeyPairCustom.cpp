@@ -26,22 +26,16 @@
 #include "config.h"
 #include "JSCryptoKeyPair.h"
 
-#if ENABLE(SUBTLE_CRYPTO)
+#include <heap/SlotVisitorInlines.h>
 
-using namespace JSC;
+#if ENABLE(SUBTLE_CRYPTO)
 
 namespace WebCore {
 
-void JSCryptoKeyPair::visitChildren(JSCell* cell, SlotVisitor& visitor)
+void JSCryptoKeyPair::visitAdditionalChildren(JSC::SlotVisitor& visitor)
 {
-    JSCryptoKeyPair* thisObject = jsCast<JSCryptoKeyPair*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-    Base::visitChildren(thisObject, visitor);
-
-    visitor.addOpaqueRoot(thisObject->m_impl->publicKey());
-    visitor.addOpaqueRoot(thisObject->m_impl->privateKey());
+    visitor.addOpaqueRoot(impl().publicKey());
+    visitor.addOpaqueRoot(impl().privateKey());
 }
 
 } // namespace WebCore

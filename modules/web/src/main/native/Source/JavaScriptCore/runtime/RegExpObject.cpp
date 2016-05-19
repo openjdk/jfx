@@ -28,40 +28,18 @@
 #include "JSArray.h"
 #include "JSGlobalObject.h"
 #include "JSString.h"
-#include "Lexer.h"
 #include "Lookup.h"
 #include "JSCInlines.h"
 #include "RegExpConstructor.h"
 #include "RegExpMatchesArray.h"
 #include "RegExpPrototype.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/text/StringBuilder.h>
-
-namespace JSC {
-
-static EncodedJSValue regExpObjectGlobal(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpObjectIgnoreCase(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpObjectMultiline(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpObjectSource(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-
-} // namespace JSC
-
-#include "RegExpObject.lut.h"
 
 namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(RegExpObject);
 
-const ClassInfo RegExpObject::s_info = { "RegExp", &Base::s_info, 0, ExecState::regExpTable, CREATE_METHOD_TABLE(RegExpObject) };
-
-/* Source for RegExpObject.lut.h
-@begin regExpTable
-    global        regExpObjectGlobal       DontDelete|ReadOnly|DontEnum
-    ignoreCase    regExpObjectIgnoreCase   DontDelete|ReadOnly|DontEnum
-    multiline     regExpObjectMultiline    DontDelete|ReadOnly|DontEnum
-    source        regExpObjectSource       DontDelete|ReadOnly|DontEnum
-@end
-*/
+const ClassInfo RegExpObject::s_info = { "RegExp", &Base::s_info, nullptr, CREATE_METHOD_TABLE(RegExpObject) };
 
 RegExpObject::RegExpObject(VM& vm, Structure* structure, RegExp* regExp)
     : JSNonFinalObject(vm, structure)
@@ -81,9 +59,6 @@ void RegExpObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     RegExpObject* thisObject = jsCast<RegExpObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-
     Base::visitChildren(thisObject, visitor);
     visitor.append(&thisObject->m_regExp);
     visitor.append(&thisObject->m_lastIndex);
@@ -97,7 +72,7 @@ bool RegExpObject::getOwnPropertySlot(JSObject* object, ExecState* exec, Propert
         slot.setValue(regExp, attributes, regExp->getLastIndex());
         return true;
     }
-    return getStaticValueSlot<RegExpObject, JSObject>(exec, ExecState::regExpTable(exec->vm()), jsCast<RegExpObject*>(object), propertyName, slot);
+    return Base::getOwnPropertySlot(object, exec, propertyName, slot);
 }
 
 bool RegExpObject::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
@@ -109,16 +84,23 @@ bool RegExpObject::deleteProperty(JSCell* cell, ExecState* exec, PropertyName pr
 
 void RegExpObject::getOwnNonIndexPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
-    if (mode == IncludeDontEnumProperties)
+    if (mode.includeDontEnumProperties())
         propertyNames.add(exec->propertyNames().lastIndex);
     Base::getOwnNonIndexPropertyNames(object, exec, propertyNames, mode);
 }
 
 void RegExpObject::getPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
-    if (mode == IncludeDontEnumProperties)
+    if (mode.includeDontEnumProperties())
         propertyNames.add(exec->propertyNames().lastIndex);
     Base::getPropertyNames(object, exec, propertyNames, mode);
+}
+
+void RegExpObject::getGenericPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
+{
+    if (mode.includeDontEnumProperties())
+        propertyNames.add(exec->propertyNames().lastIndex);
+    Base::getGenericPropertyNames(object, exec, propertyNames, mode);
 }
 
 static bool reject(ExecState* exec, bool throwException, const char* message)
@@ -155,141 +137,23 @@ bool RegExpObject::defineOwnProperty(JSObject* object, ExecState* exec, Property
     return Base::defineOwnProperty(object, exec, propertyName, descriptor, shouldThrow);
 }
 
-EncodedJSValue regExpObjectGlobal(ExecState*, JSObject* slotBase, EncodedJSValue, PropertyName)
+static void regExpObjectSetLastIndexStrict(ExecState* exec, JSObject* slotBase, EncodedJSValue, EncodedJSValue value)
 {
-    return JSValue::encode(jsBoolean(asRegExpObject(slotBase)->regExp()->global()));
+    asRegExpObject(slotBase)->setLastIndex(exec, JSValue::decode(value), true);
 }
 
-EncodedJSValue regExpObjectIgnoreCase(ExecState*, JSObject* slotBase, EncodedJSValue, PropertyName)
+static void regExpObjectSetLastIndexNonStrict(ExecState* exec, JSObject* slotBase, EncodedJSValue, EncodedJSValue value)
 {
-    return JSValue::encode(jsBoolean(asRegExpObject(slotBase)->regExp()->ignoreCase()));
-}
-
-EncodedJSValue regExpObjectMultiline(ExecState*, JSObject* slotBase, EncodedJSValue, PropertyName)
-{
-    return JSValue::encode(jsBoolean(asRegExpObject(slotBase)->regExp()->multiline()));
-}
-
-template <typename CharacterType>
-static inline void appendLineTerminatorEscape(StringBuilder&, CharacterType);
-
-template <>
-inline void appendLineTerminatorEscape<LChar>(StringBuilder& builder, LChar lineTerminator)
-{
-    if (lineTerminator == '\n')
-        builder.append('n');
-    else
-        builder.append('r');
-}
-
-template <>
-inline void appendLineTerminatorEscape<UChar>(StringBuilder& builder, UChar lineTerminator)
-{
-    if (lineTerminator == '\n')
-        builder.append('n');
-    else if (lineTerminator == '\r')
-        builder.append('r');
-    else if (lineTerminator == 0x2028)
-        builder.appendLiteral("u2028");
-    else
-        builder.appendLiteral("u2029");
-}
-
-template <typename CharacterType>
-static inline JSValue regExpObjectSourceInternal(ExecState* exec, String pattern, const CharacterType* characters, unsigned length)
-{
-    bool previousCharacterWasBackslash = false;
-    bool inBrackets = false;
-    bool shouldEscape = false;
-
-    // 15.10.6.4 specifies that RegExp.prototype.toString must return '/' + source + '/',
-    // and also states that the result must be a valid RegularExpressionLiteral. '//' is
-    // not a valid RegularExpressionLiteral (since it is a single line comment), and hence
-    // source cannot ever validly be "". If the source is empty, return a different Pattern
-    // that would match the same thing.
-    if (!length)
-        return jsNontrivialString(exec, ASCIILiteral("(?:)"));
-
-    // early return for strings that don't contain a forwards slash and LineTerminator
-    for (unsigned i = 0; i < length; ++i) {
-        CharacterType ch = characters[i];
-        if (!previousCharacterWasBackslash) {
-            if (inBrackets) {
-                if (ch == ']')
-                    inBrackets = false;
-            } else {
-                if (ch == '/') {
-                    shouldEscape = true;
-                    break;
-                }
-                if (ch == '[')
-                    inBrackets = true;
-            }
-        }
-
-        if (Lexer<CharacterType>::isLineTerminator(ch)) {
-            shouldEscape = true;
-            break;
-        }
-
-        if (previousCharacterWasBackslash)
-            previousCharacterWasBackslash = false;
-        else
-            previousCharacterWasBackslash = ch == '\\';
-    }
-
-    if (!shouldEscape)
-        return jsString(exec, pattern);
-
-    previousCharacterWasBackslash = false;
-    inBrackets = false;
-    StringBuilder result;
-    for (unsigned i = 0; i < length; ++i) {
-        CharacterType ch = characters[i];
-        if (!previousCharacterWasBackslash) {
-            if (inBrackets) {
-                if (ch == ']')
-                    inBrackets = false;
-            } else {
-                if (ch == '/')
-                    result.append('\\');
-                else if (ch == '[')
-                    inBrackets = true;
-            }
-        }
-
-        // escape LineTerminator
-        if (Lexer<CharacterType>::isLineTerminator(ch)) {
-            if (!previousCharacterWasBackslash)
-                result.append('\\');
-
-            appendLineTerminatorEscape<CharacterType>(result, ch);
-        } else
-            result.append(ch);
-
-        if (previousCharacterWasBackslash)
-            previousCharacterWasBackslash = false;
-        else
-            previousCharacterWasBackslash = ch == '\\';
-    }
-
-    return jsString(exec, result.toString());
-}
-
-
-
-EncodedJSValue regExpObjectSource(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
-{
-    String pattern = asRegExpObject(slotBase)->regExp()->pattern();
-    if (pattern.is8Bit())
-        return JSValue::encode(regExpObjectSourceInternal(exec, pattern, pattern.characters8(), pattern.length()));
-    return JSValue::encode(regExpObjectSourceInternal(exec, pattern, pattern.characters16(), pattern.length()));
+    asRegExpObject(slotBase)->setLastIndex(exec, JSValue::decode(value), false);
 }
 
 void RegExpObject::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
     if (propertyName == exec->propertyNames().lastIndex) {
         asRegExpObject(cell)->setLastIndex(exec, value, slot.isStrictMode());
+        slot.setCustomProperty(asRegExpObject(cell), slot.isStrictMode()
+            ? regExpObjectSetLastIndexStrict
+            : regExpObjectSetLastIndexNonStrict);
         return;
     }
     Base::put(cell, exec, propertyName, value, slot);
@@ -298,7 +162,7 @@ void RegExpObject::put(JSCell* cell, ExecState* exec, PropertyName propertyName,
 JSValue RegExpObject::exec(ExecState* exec, JSString* string)
 {
     if (MatchResult result = match(exec, string))
-        return RegExpMatchesArray::create(exec, string, regExp(), result);
+        return createRegExpMatchesArray(exec, string, regExp(), result);
     return jsNull();
 }
 

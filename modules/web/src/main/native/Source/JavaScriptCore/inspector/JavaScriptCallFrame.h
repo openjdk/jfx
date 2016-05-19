@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2013 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2013-2014 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #ifndef JavaScriptCallFrame_h
 #define JavaScriptCallFrame_h
 
-#if ENABLE(INSPECTOR)
-
 #include "JSCJSValueInlines.h"
 #include "debugger/DebuggerCallFrame.h"
 #include "interpreter/CallFrame.h"
@@ -40,9 +38,9 @@ namespace Inspector {
 
 class JavaScriptCallFrame : public RefCounted<JavaScriptCallFrame> {
 public:
-    static PassRefPtr<JavaScriptCallFrame> create(PassRefPtr<JSC::DebuggerCallFrame> debuggerCallFrame)
+    static Ref<JavaScriptCallFrame> create(PassRefPtr<JSC::DebuggerCallFrame> debuggerCallFrame)
     {
-        return adoptRef(new JavaScriptCallFrame(debuggerCallFrame));
+        return adoptRef(*new JavaScriptCallFrame(debuggerCallFrame));
     }
 
     JavaScriptCallFrame* caller();
@@ -53,11 +51,11 @@ public:
 
     String functionName() const { return m_debuggerCallFrame->functionName(); }
     JSC::DebuggerCallFrame::Type type() const { return m_debuggerCallFrame->type(); }
-    JSC::JSScope* scopeChain() const { return m_debuggerCallFrame->scope(); }
+    JSC::DebuggerScope* scopeChain() const { return m_debuggerCallFrame->scope(); }
     JSC::JSGlobalObject* vmEntryGlobalObject() const { return m_debuggerCallFrame->vmEntryGlobalObject(); }
 
     JSC::JSValue thisValue() const { return m_debuggerCallFrame->thisValue(); }
-    JSC::JSValue evaluate(const String& script, JSC::JSValue& exception) const  { return m_debuggerCallFrame->evaluate(script, exception); }
+    JSC::JSValue evaluate(const String& script, NakedPtr<JSC::Exception>& exception) const  { return m_debuggerCallFrame->evaluate(script, exception); }
 
 private:
     JavaScriptCallFrame(PassRefPtr<JSC::DebuggerCallFrame>);
@@ -67,7 +65,5 @@ private:
 };
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // JavaScriptCallFrame_h

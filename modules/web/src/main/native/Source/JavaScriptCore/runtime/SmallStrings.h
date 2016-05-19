@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2009, 2015 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,9 @@
 #ifndef SmallStrings_h
 #define SmallStrings_h
 
+#include "TypeofType.h"
 #include "WriteBarrier.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
 
 #define JSC_COMMON_STRINGS_EACH_NAME(macro) \
     macro(boolean) \
@@ -39,6 +39,7 @@
     macro(object) \
     macro(undefined) \
     macro(string) \
+    macro(symbol) \
     macro(true)
 
 namespace WTF {
@@ -47,60 +48,96 @@ class StringImpl;
 
 namespace JSC {
 
-    class HeapRootVisitor;
-    class VM;
-    class JSString;
-    class SmallStringsStorage;
-    class SlotVisitor;
+class HeapRootVisitor;
+class VM;
+class JSString;
+class SmallStringsStorage;
+class SlotVisitor;
 
-    static const unsigned maxSingleCharacterString = 0xFF;
+static const unsigned maxSingleCharacterString = 0xFF;
 
-    class SmallStrings {
-        WTF_MAKE_NONCOPYABLE(SmallStrings);
-    public:
-        SmallStrings();
-        ~SmallStrings();
+class SmallStrings {
+    WTF_MAKE_NONCOPYABLE(SmallStrings);
+public:
+    SmallStrings();
+    ~SmallStrings();
 
-        JSString* emptyString()
-        {
-            return m_emptyString;
-        }
+    JSString* emptyString()
+    {
+        return m_emptyString;
+    }
 
-        JSString* singleCharacterString(unsigned char character)
-        {
-            return m_singleCharacterStrings[character];
-        }
+    JSString* singleCharacterString(unsigned char character)
+    {
+        return m_singleCharacterStrings[character];
+    }
 
-        JS_EXPORT_PRIVATE WTF::StringImpl* singleCharacterStringRep(unsigned char character);
+    JS_EXPORT_PRIVATE WTF::StringImpl* singleCharacterStringRep(unsigned char character);
 
-        JSString** singleCharacterStrings() { return &m_singleCharacterStrings[0]; }
+    JSString** singleCharacterStrings() { return &m_singleCharacterStrings[0]; }
 
-        void initializeCommonStrings(VM&);
-        void visitStrongReferences(SlotVisitor&);
+    void initializeCommonStrings(VM&);
+    void visitStrongReferences(SlotVisitor&);
 
 #define JSC_COMMON_STRINGS_ACCESSOR_DEFINITION(name) \
-        JSString* name##String() const \
-        { \
-            return m_##name; \
-        }
-        JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ACCESSOR_DEFINITION)
+    JSString* name##String() const                   \
+    {                                                \
+        return m_##name;                             \
+    }
+    JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ACCESSOR_DEFINITION)
 #undef JSC_COMMON_STRINGS_ACCESSOR_DEFINITION
 
-    private:
-        static const unsigned singleCharacterStringCount = maxSingleCharacterString + 1;
+    JSString* typeString(TypeofType type) const
+    {
+        switch (type) {
+        case TypeofType::Undefined:
+            return undefinedString();
+        case TypeofType::Boolean:
+            return booleanString();
+        case TypeofType::Number:
+            return numberString();
+        case TypeofType::String:
+            return stringString();
+        case TypeofType::Symbol:
+            return symbolString();
+        case TypeofType::Object:
+            return objectString();
+        case TypeofType::Function:
+            return functionString();
+        }
 
-        JS_EXPORT_PRIVATE void createEmptyString(VM*);
-        JS_EXPORT_PRIVATE void createSingleCharacterString(VM*, unsigned char);
+        RELEASE_ASSERT_NOT_REACHED();
+        return nullptr;
+    }
 
-        void initialize(VM* vm, JSString*& string, const char* value) const;
+    JSString* nullObjectString() const { return m_nullObjectString; }
+    JSString* undefinedObjectString() const { return m_undefinedObjectString; }
 
-        JSString* m_emptyString;
+    bool needsToBeVisited(HeapOperation collectionType) const
+    {
+        if (collectionType == FullCollection)
+            return true;
+        return m_needsToBeVisited;
+    }
+
+private:
+    static const unsigned singleCharacterStringCount = maxSingleCharacterString + 1;
+
+    JS_EXPORT_PRIVATE void createEmptyString(VM*);
+    JS_EXPORT_PRIVATE void createSingleCharacterString(VM*, unsigned char);
+
+    void initialize(VM*, JSString*&, const char* value);
+
+    JSString* m_emptyString;
 #define JSC_COMMON_STRINGS_ATTRIBUTE_DECLARATION(name) JSString* m_##name;
-        JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ATTRIBUTE_DECLARATION)
+    JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ATTRIBUTE_DECLARATION)
 #undef JSC_COMMON_STRINGS_ATTRIBUTE_DECLARATION
-        JSString* m_singleCharacterStrings[singleCharacterStringCount];
-        OwnPtr<SmallStringsStorage> m_storage;
-    };
+    JSString* m_nullObjectString;
+    JSString* m_undefinedObjectString;
+    JSString* m_singleCharacterStrings[singleCharacterStringCount];
+    std::unique_ptr<SmallStringsStorage> m_storage;
+    bool m_needsToBeVisited;
+};
 
 } // namespace JSC
 

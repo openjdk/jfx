@@ -17,9 +17,13 @@
  */
 
 #include "config.h"
+
+#if ENABLE(GRAPHICS_CONTEXT_3D)
+
 #include "GLContext.h"
 
-#if USE(OPENGL)
+#include "PlatformDisplay.h"
+#include <wtf/ThreadSpecific.h>
 
 #if USE(EGL)
 #include "GLContextEGL.h"
@@ -27,19 +31,6 @@
 
 #if USE(GLX)
 #include "GLContextGLX.h"
-#endif
-
-#include <wtf/ThreadSpecific.h>
-
-#if PLATFORM(X11)
-#include <X11/Xlib.h>
-#endif
-
-#if PLATFORM(GTK)
-#include <gdk/gdk.h>
-#if PLATFORM(WAYLAND) && !defined(GTK_API_VERSION_2) && defined(GDK_WINDOWING_WAYLAND)
-#include <gdk/gdkwayland.h>
-#endif
 #endif
 
 using WTF::ThreadSpecific;
@@ -68,30 +59,11 @@ inline ThreadGlobalGLContext* currentContext()
 
 GLContext* GLContext::sharingContext()
 {
-    DEFINE_STATIC_LOCAL(OwnPtr<GLContext>, sharing, (createOffscreenContext()));
+    DEPRECATED_DEFINE_STATIC_LOCAL(std::unique_ptr<GLContext>, sharing, (createOffscreenContext()));
     return sharing.get();
 }
 
 #if PLATFORM(X11)
-// We do not want to call glXMakeContextCurrent using different Display pointers,
-// because it might lead to crashes in some drivers (fglrx). We use a shared display
-// pointer here.
-static Display* gSharedX11Display = 0;
-Display* GLContext::sharedX11Display()
-{
-    if (!gSharedX11Display)
-        gSharedX11Display = XOpenDisplay(0);
-    return gSharedX11Display;
-}
-
-void GLContext::cleanupSharedX11Display()
-{
-    if (!gSharedX11Display)
-        return;
-    XCloseDisplay(gSharedX11Display);
-    gSharedX11Display = 0;
-}
-
 // Because of driver bugs, exiting the program when there are active pbuffers
 // can crash the X server (this has been observed with the official Nvidia drivers).
 // We need to ensure that we clean everything up on exit. There are several reasons
@@ -100,7 +72,7 @@ void GLContext::cleanupSharedX11Display()
 typedef Vector<GLContext*> ActiveContextList;
 static ActiveContextList& activeContextList()
 {
-    DEFINE_STATIC_LOCAL(ActiveContextList, activeContexts, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(ActiveContextList, activeContexts, ());
     return activeContexts;
 }
 
@@ -136,31 +108,32 @@ void GLContext::cleanupActiveContextsAtExit()
     ActiveContextList& contextList = activeContextList();
     for (size_t i = 0; i < contextList.size(); ++i)
         delete contextList[i];
-
-    cleanupSharedX11Display();
 }
 #endif // PLATFORM(X11)
 
 
-PassOwnPtr<GLContext> GLContext::createContextForWindow(GLNativeWindowType windowHandle, GLContext* sharingContext)
+std::unique_ptr<GLContext> GLContext::createContextForWindow(GLNativeWindowType windowHandle, GLContext* sharingContext)
 {
-#if PLATFORM(GTK) && PLATFORM(WAYLAND) && !defined(GTK_API_VERSION_2) && defined(GDK_WINDOWING_WAYLAND) && USE(EGL)
-    GdkDisplay* display = gdk_display_manager_get_default_display(gdk_display_manager_get());
-
-    if (GDK_IS_WAYLAND_DISPLAY(display)) {
-        if (OwnPtr<GLContext> eglContext = GLContextEGL::createContext(windowHandle, sharingContext))
-            return eglContext.release();
+#if PLATFORM(WAYLAND) && USE(EGL)
+    if (PlatformDisplay::sharedDisplay().type() == PlatformDisplay::Type::Wayland) {
+        if (auto eglContext = GLContextEGL::createContext(windowHandle, sharingContext))
+            return WTF::move(eglContext);
         return nullptr;
     }
 #endif
 
 #if USE(GLX)
-    if (OwnPtr<GLContext> glxContext = GLContextGLX::createContext(windowHandle, sharingContext))
-        return glxContext.release();
+#if PLATFORM(WAYLAND) // Building both X11 and Wayland targets
+    XID GLXWindowHandle = reinterpret_cast<XID>(windowHandle);
+#else
+    XID GLXWindowHandle = static_cast<XID>(windowHandle);
+#endif
+    if (auto glxContext = GLContextGLX::createContext(GLXWindowHandle, sharingContext))
+        return WTF::move(glxContext);
 #endif
 #if USE(EGL)
-    if (OwnPtr<GLContext> eglContext = GLContextEGL::createContext(windowHandle, sharingContext))
-        return eglContext.release();
+    if (auto eglContext = GLContextEGL::createContext(windowHandle, sharingContext))
+        return WTF::move(eglContext);
 #endif
     return nullptr;
 }
@@ -172,7 +145,7 @@ GLContext::GLContext()
 #endif
 }
 
-PassOwnPtr<GLContext> GLContext::createOffscreenContext(GLContext* sharingContext)
+std::unique_ptr<GLContext> GLContext::createOffscreenContext(GLContext* sharingContext)
 {
     return createContextForWindow(0, sharingContext);
 }
@@ -199,5 +172,4 @@ GLContext* GLContext::getCurrent()
 
 } // namespace WebCore
 
-#endif // USE(OPENGL)
-
+#endif

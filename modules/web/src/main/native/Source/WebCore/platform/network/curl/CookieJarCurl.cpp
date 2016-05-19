@@ -17,6 +17,8 @@
 #include "config.h"
 #include "PlatformCookieJar.h"
 
+#if USE(CURL)
+
 #include "Cookie.h"
 #include "URL.h"
 #include "ResourceHandleManager.h"
@@ -33,12 +35,35 @@ static void readCurlCookieToken(const char*& cookie, String& token)
 {
     // Read the next token from a cookie with the Netscape cookie format.
     // Curl separates each token in line with tab character.
-    while (cookie && cookie[0] && cookie[0] != '\t') {
-        token.append(cookie[0]);
+    const char* cookieStart = cookie;
+    while (cookie && cookie[0] && cookie[0] != '\t')
         cookie++;
-    }
+    token = String(cookieStart, cookie - cookieStart);
     if (cookie[0] == '\t')
         cookie++;
+}
+
+static bool domainMatch(const String& cookieDomain, const String& host)
+{
+    size_t index = host.find(cookieDomain);
+
+    bool tailMatch = (index != WTF::notFound && index + cookieDomain.length() == host.length());
+
+    // Check if host equals cookie domain.
+    if (tailMatch && !index)
+        return true;
+
+    // Check if host is a subdomain of the domain in the cookie.
+    // Curl uses a '.' in front of domains to indicate it's valid on subdomains.
+    if (tailMatch && index > 0 && host[index] == '.')
+        return true;
+
+    // Check the special case where host equals the cookie domain, except for a leading '.' in the cookie domain.
+    // E.g. cookie domain is .apple.com and host is apple.com.
+    if (cookieDomain[0] == '.' && cookieDomain.find(host) == 1)
+        return true;
+
+    return false;
 }
 
 static void addMatchingCurlCookie(const char* cookie, const String& domain, const String& path, StringBuilder& cookies, bool httponly)
@@ -78,18 +103,7 @@ static void addMatchingCurlCookie(const char* cookie, const String& domain, cons
             return;
     }
 
-
-    if (cookieDomain[0] == '.') {
-        // Check if domain is a subdomain of the domain in the cookie.
-        // Curl uses a '.' in front of domains to indicate its valid on subdomains.
-        cookieDomain.remove(0);
-        int lenDiff = domain.length() - cookieDomain.length();
-        int index = domain.find(cookieDomain);
-        if (index == lenDiff)
-            subDomain = true;
-    }
-
-    if (!subDomain && cookieDomain != domain)
+    if (!domainMatch(cookieDomain, domain))
         return;
 
     String strBoolean;
@@ -326,9 +340,11 @@ void deleteAllCookies(const NetworkStorageSession&)
     // FIXME: Not yet implemented
 }
 
-void deleteAllCookiesModifiedAfterDate(const NetworkStorageSession&, double)
+void deleteAllCookiesModifiedSince(const NetworkStorageSession&, std::chrono::system_clock::time_point)
 {
     // FIXME: Not yet implemented
 }
 
 }
+
+#endif

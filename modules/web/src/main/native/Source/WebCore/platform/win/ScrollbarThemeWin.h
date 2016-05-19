@@ -35,27 +35,27 @@ public:
     ScrollbarThemeWin();
     virtual ~ScrollbarThemeWin();
 
-    virtual int scrollbarThickness(ScrollbarControlSize = RegularScrollbar);
+    int scrollbarThickness(ScrollbarControlSize = RegularScrollbar) override;
 
-    virtual void themeChanged();
+    void themeChanged() override;
 
-    virtual bool invalidateOnMouseEnterExit();
+    bool invalidateOnMouseEnterExit() override;
+
+    IntRect backButtonRect(Scrollbar&, ScrollbarPart, bool painting = false) override;
+    IntRect forwardButtonRect(Scrollbar&, ScrollbarPart, bool painting = false) override;
+    IntRect trackRect(Scrollbar&, bool painting = false) override;
 
 protected:
-    virtual bool hasButtons(ScrollbarThemeClient*) { return true; }
-    virtual bool hasThumb(ScrollbarThemeClient*);
+    bool hasButtons(Scrollbar&) override { return true; }
+    bool hasThumb(Scrollbar&) override;
 
-    virtual IntRect backButtonRect(ScrollbarThemeClient*, ScrollbarPart, bool painting = false);
-    virtual IntRect forwardButtonRect(ScrollbarThemeClient*, ScrollbarPart, bool painting = false);
-    virtual IntRect trackRect(ScrollbarThemeClient*, bool painting = false);
+    bool shouldCenterOnThumb(Scrollbar&, const PlatformMouseEvent&) override;
+    bool shouldSnapBackToDragOrigin(Scrollbar&, const PlatformMouseEvent&) override;
 
-    virtual bool shouldCenterOnThumb(ScrollbarThemeClient*, const PlatformMouseEvent&);
-    virtual bool shouldSnapBackToDragOrigin(ScrollbarThemeClient*, const PlatformMouseEvent&);
-
-    virtual void paintTrackBackground(GraphicsContext*, ScrollbarThemeClient*, const IntRect&);
-    virtual void paintTrackPiece(GraphicsContext*, ScrollbarThemeClient*, const IntRect&, ScrollbarPart);
-    virtual void paintButton(GraphicsContext*, ScrollbarThemeClient*, const IntRect&, ScrollbarPart);
-    virtual void paintThumb(GraphicsContext*, ScrollbarThemeClient*, const IntRect&);
+    void paintTrackBackground(GraphicsContext&, Scrollbar&, const IntRect&) override;
+    void paintTrackPiece(GraphicsContext&, Scrollbar&, const IntRect&, ScrollbarPart) override;
+    void paintButton(GraphicsContext&, Scrollbar&, const IntRect&, ScrollbarPart) override;
+    void paintThumb(GraphicsContext&, Scrollbar&, const IntRect&) override;
 };
 
 }

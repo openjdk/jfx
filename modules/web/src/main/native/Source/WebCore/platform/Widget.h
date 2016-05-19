@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2005, 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2008 Collabora Ltd.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -37,6 +37,7 @@
 #include "PlatformScreen.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TypeCasts.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
@@ -66,11 +67,6 @@ typedef JGObject PlatformWidget;
 #endif
 
 #if PLATFORM(EFL)
-#if USE(EO)
-typedef struct _Eo_Opaque Evas_Object;
-#else
-typedef struct _Evas_Object Evas_Object;
-#endif
 typedef Evas_Object* PlatformWidget;
 #endif
 
@@ -80,7 +76,8 @@ namespace WebCore {
 
 class Cursor;
 class Event;
-class Font;
+class FontCascade;
+class FrameView;
 class GraphicsContext;
 class PlatformMouseEvent;
 class ScrollView;
@@ -105,11 +102,11 @@ enum WidgetNotification { WillPaintFlattened, DidPaintFlattened };
 //
 class Widget : public RefCounted<Widget> {
 public:
-    explicit Widget(PlatformWidget = 0);
-    virtual ~Widget();
+    WEBCORE_EXPORT explicit Widget(PlatformWidget = nullptr);
+    WEBCORE_EXPORT virtual ~Widget();
 
-    PlatformWidget platformWidget() const;
-    void setPlatformWidget(PlatformWidget);
+    WEBCORE_EXPORT PlatformWidget platformWidget() const;
+    WEBCORE_EXPORT void setPlatformWidget(PlatformWidget);
 
     int x() const { return frameRect().x(); }
     int y() const { return frameRect().y(); }
@@ -118,8 +115,8 @@ public:
     IntSize size() const { return frameRect().size(); }
     IntPoint location() const { return frameRect().location(); }
 
-    virtual void setFrameRect(const IntRect&);
-    IntRect frameRect() const;
+    WEBCORE_EXPORT virtual void setFrameRect(const IntRect&);
+    WEBCORE_EXPORT IntRect frameRect() const;
     IntRect boundsRect() const { return IntRect(0, 0, width(),  height()); }
 
     void resize(int w, int h) { setFrameRect(IntRect(x(), y(), w, h)); }
@@ -127,16 +124,16 @@ public:
     void move(int x, int y) { setFrameRect(IntRect(x, y, width(), height())); }
     void move(const IntPoint& p) { setFrameRect(IntRect(p, size())); }
 
-    virtual void paint(GraphicsContext*, const IntRect&);
+    WEBCORE_EXPORT virtual void paint(GraphicsContext*, const IntRect&);
     void invalidate() { invalidateRect(boundsRect()); }
     virtual void invalidateRect(const IntRect&) = 0;
 
-    virtual void setFocus(bool);
+    WEBCORE_EXPORT virtual void setFocus(bool);
 
     void setCursor(const Cursor&);
 
-    virtual void show();
-    virtual void hide();
+    WEBCORE_EXPORT virtual void show();
+    WEBCORE_EXPORT virtual void hide();
     bool isSelfVisible() const { return m_selfVisible; } // Whether or not we have been explicitly marked as visible or not.
     bool isParentVisible() const { return m_parentVisible; } // Whether or not our parent is visible.
     bool isVisible() const { return m_selfVisible && m_parentVisible; } // Whether or not we are actually visible.
@@ -152,10 +149,10 @@ public:
     virtual bool isScrollbar() const { return false; }
     virtual bool isScrollView() const { return false; }
 
-    void removeFromParent();
-    virtual void setParent(ScrollView* view);
+    WEBCORE_EXPORT void removeFromParent();
+    WEBCORE_EXPORT virtual void setParent(ScrollView* view);
     ScrollView* parent() const { return m_parent; }
-    ScrollView* root() const;
+    FrameView* root() const;
 
     virtual void handleEvent(Event*) { }
 
@@ -171,10 +168,10 @@ public:
     // that tries to convert the location of a rect using the point-based convertFromContainingWindow will end
     // up with an inaccurate rect.  Always make sure to use the rect-based convertFromContainingWindow method
     // when converting window rects.
-    IntRect convertToContainingWindow(const IntRect&) const;
+    WEBCORE_EXPORT IntRect convertToContainingWindow(const IntRect&) const;
     IntRect convertFromContainingWindow(const IntRect&) const;
 
-    IntPoint convertToContainingWindow(const IntPoint&) const;
+    WEBCORE_EXPORT IntPoint convertToContainingWindow(const IntPoint&) const;
     IntPoint convertFromContainingWindow(const IntPoint&) const;
 
     virtual void frameRectsChanged() { }
@@ -195,16 +192,11 @@ public:
     void addToSuperview(NSView*);
 #endif
 
-#if PLATFORM(EFL)
-    void setEvasObject(Evas_Object*);
-    Evas_Object* evasObject() { return m_evasObject; }
-#endif
-
     // Virtual methods to convert points to/from the containing ScrollView
-    virtual IntRect convertToContainingView(const IntRect&) const;
-    virtual IntRect convertFromContainingView(const IntRect&) const;
-    virtual IntPoint convertToContainingView(const IntPoint&) const;
-    virtual IntPoint convertFromContainingView(const IntPoint&) const;
+    WEBCORE_EXPORT virtual IntRect convertToContainingView(const IntRect&) const;
+    WEBCORE_EXPORT virtual IntRect convertFromContainingView(const IntRect&) const;
+    WEBCORE_EXPORT virtual IntPoint convertToContainingView(const IntPoint&) const;
+    WEBCORE_EXPORT virtual IntPoint convertFromContainingView(const IntPoint&) const;
 
 private:
     void init(PlatformWidget); // Must be called by all Widget constructors to initialize cross-platform data.
@@ -231,18 +223,10 @@ private:
     bool m_parentVisible;
 
     IntRect m_frame; // Not used when a native widget exists.
-
 #if PLATFORM(JAVA)
     WidgetPrivate* m_data;
 #endif
-
-#if PLATFORM(EFL)
-    Evas_Object* m_evasObject;
-#endif
 };
-
-#define WIDGET_TYPE_CASTS(ToValueTypeName, predicate) \
-    TYPE_CASTS_BASE(ToValueTypeName, Widget, object, object->predicate, object.predicate)
 
 #if !PLATFORM(COCOA)
 
@@ -275,5 +259,10 @@ inline void Widget::retainPlatformWidget()
 #endif
 
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_WIDGET(ToValueTypeName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::Widget& widget) { return widget.predicate; } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // Widget_h

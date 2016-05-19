@@ -42,7 +42,7 @@ namespace WebCore {
 MediaSourceRegistry& MediaSourceRegistry::registry()
 {
     ASSERT(isMainThread());
-    DEFINE_STATIC_LOCAL(MediaSourceRegistry, instance, ());
+    static NeverDestroyed<MediaSourceRegistry> instance;
     return instance;
 }
 

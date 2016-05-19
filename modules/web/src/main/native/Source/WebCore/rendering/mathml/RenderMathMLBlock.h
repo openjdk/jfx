@@ -41,8 +41,8 @@ class RenderMathMLOperator;
 
 class RenderMathMLBlock : public RenderFlexibleBox {
 public:
-    RenderMathMLBlock(Element&, PassRef<RenderStyle>);
-    RenderMathMLBlock(Document&, PassRef<RenderStyle>);
+    RenderMathMLBlock(Element&, Ref<RenderStyle>&&);
+    RenderMathMLBlock(Document&, Ref<RenderStyle>&&);
 
     virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
 
@@ -64,35 +64,33 @@ public:
     // Create a new RenderMathMLBlock, with a new style inheriting from this->style().
     RenderPtr<RenderMathMLBlock> createAnonymousMathMLBlock();
 
-    void setIgnoreInAccessibilityTree(bool flag) { m_ignoreInAccessibilityTree = flag; }
-    bool ignoreInAccessibilityTree() const { return m_ignoreInAccessibilityTree; }
-
 private:
     virtual bool isRenderMathMLBlock() const override final { return true; }
     virtual const char* renderName() const override;
-
-    bool m_ignoreInAccessibilityTree;
 };
-
-RENDER_OBJECT_TYPE_CASTS(RenderMathMLBlock, isRenderMathMLBlock())
 
 class RenderMathMLTable final : public RenderTable {
 public:
-    explicit RenderMathMLTable(Element& element, PassRef<RenderStyle> style)
-        : RenderTable(element, std::move(style))
+    explicit RenderMathMLTable(Element& element, Ref<RenderStyle>&& style)
+        : RenderTable(element, WTF::move(style))
     {
     }
 
-    virtual int firstLineBaseline() const override;
+    virtual Optional<int> firstLineBaseline() const override;
 
 private:
+    virtual bool isRenderMathMLTable() const override { return true; }
     virtual const char* renderName() const override { return "RenderMathMLTable"; }
 };
 
 // Parsing functions for MathML Length values
 bool parseMathMLLength(const String&, LayoutUnit&, const RenderStyle*, bool allowNegative = true);
 bool parseMathMLNamedSpace(const String&, LayoutUnit&, const RenderStyle*, bool allowNegative = true);
-}
+
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMathMLBlock, isRenderMathMLBlock())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMathMLTable, isRenderMathMLTable())
 
 #endif // ENABLE(MATHML)
 #endif // RenderMathMLBlock_h

@@ -32,7 +32,7 @@
 #include <JavaScriptCore/VM.h>
 #include <JavaScriptCore/Strong.h>
 #include <WebCore/Timer.h>
-#include <WebKit/npapi.h>
+#include <WebKitLegacy/npapi.h>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -251,7 +251,7 @@ public:
     void setCurrentReply(uint32_t requestID, std::unique_ptr<Reply> reply)
     {
         ASSERT(!m_replies.contains(requestID));
-        m_replies.add(requestID, std::move(reply));
+        m_replies.add(requestID, WTF::move(reply));
     }
 
     template <typename T>
@@ -295,8 +295,8 @@ private:
     NetscapePluginHostProxy* m_pluginHostProxy;
     WebHostedNetscapePluginView *m_pluginView;
 
-    void requestTimerFired(WebCore::Timer<NetscapePluginInstanceProxy>*);
-    WebCore::Timer<NetscapePluginInstanceProxy> m_requestTimer;
+    void requestTimerFired();
+    WebCore::Timer m_requestTimer;
     Deque<RefPtr<PluginRequest>> m_pluginRequests;
 
     HashMap<uint32_t, RefPtr<HostedNetscapePluginStream>> m_streams;

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -62,12 +62,12 @@ namespace WebCore {
     };
 
     struct CookieHash {
-        static unsigned hash(Cookie key)
+        static unsigned hash(const Cookie& key)
         {
             return StringHash::hash(key.name) + StringHash::hash(key.domain) + StringHash::hash(key.path) + key.secure;
         }
 
-        static bool equal(Cookie a, Cookie b)
+        static bool equal(const Cookie& a, const Cookie& b)
         {
             return a.name == b.name && a.domain == b.domain && a.path == b.path && a.secure == b.secure;
         }

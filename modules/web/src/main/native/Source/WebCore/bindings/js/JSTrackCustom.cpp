@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -45,19 +45,20 @@ TrackBase* toTrack(JSValue value)
     JSObject* object = asObject(value);
     if (object->inherits(JSTextTrack::info()))
         return &jsCast<JSTextTrack*>(object)->impl();
-
-    // FIXME: Fill in additional tests and casts here for VideoTrack and AudioTrack when
-    // they have been added to WebCore.
+    if (object->inherits(JSAudioTrack::info()))
+        return &jsCast<JSAudioTrack*>(object)->impl();
+    if (object->inherits(JSVideoTrack::info()))
+        return &jsCast<JSVideoTrack*>(object)->impl();
 
     return 0;
 }
 
-JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TrackBase* track)
+JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject* globalObject, TrackBase* track)
 {
     if (!track)
         return jsNull();
 
-    JSObject* wrapper = getCachedWrapper(currentWorld(exec), track);
+    JSObject* wrapper = getCachedWrapper(globalObject->world(), track);
     if (wrapper)
         return wrapper;
 
@@ -68,16 +69,13 @@ JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TrackBa
         break;
 
     case TrackBase::AudioTrack:
-        return CREATE_DOM_WRAPPER(exec, globalObject, AudioTrack, track);
-        break;
+        return CREATE_DOM_WRAPPER(globalObject, AudioTrack, track);
 
     case TrackBase::VideoTrack:
-        return CREATE_DOM_WRAPPER(exec, globalObject, VideoTrack, track);
-        break;
+        return CREATE_DOM_WRAPPER(globalObject, VideoTrack, track);
 
     case TrackBase::TextTrack:
-        return CREATE_DOM_WRAPPER(exec, globalObject, TextTrack, track);
-        break;
+        return CREATE_DOM_WRAPPER(globalObject, TextTrack, track);
     }
 
     return jsNull();

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -58,7 +58,7 @@ PassRefPtr<BitmapContext> createBitmapContextFromWebView(bool onscreen, bool inc
 {
     RECT frame;
     if (!GetWindowRect(webViewWindow, &frame))
-        return 0;
+        return nullptr;
 
     BITMAPINFO bmp = {0};
     bmp.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -69,7 +69,9 @@ PassRefPtr<BitmapContext> createBitmapContextFromWebView(bool onscreen, bool inc
     bmp.bmiHeader.biCompression = BI_RGB;
 
     void* bits = 0;
-    HBITMAP bitmap = CreateDIBSection(0, &bmp, DIB_RGB_COLORS, &bits, 0, 0);
+    HBITMAP bitmap = ::CreateDIBSection(0, &bmp, DIB_RGB_COLORS, &bits, 0, 0);
+    if (!bitmap)
+        return nullptr;
 
     auto memoryDC = adoptGDIObject(::CreateCompatibleDC(0));
     ::SelectObject(memoryDC.get(), bitmap);

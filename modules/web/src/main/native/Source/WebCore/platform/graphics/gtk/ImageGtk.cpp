@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,49 +26,31 @@
 #include "config.h"
 
 #include "BitmapImage.h"
-#include "FileSystem.h"
 #include "GUniquePtrGtk.h"
 #include "GdkCairoUtilities.h"
 #include "SharedBuffer.h"
-#include <wtf/gobject/GUniquePtr.h>
-#include <wtf/text/CString.h>
 #include <cairo.h>
 #include <gtk/gtk.h>
+#include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/GUniquePtr.h>
 
 namespace WebCore {
 
-static char* getPathToImageResource(char* resource)
+static PassRefPtr<Image> loadImageFromGResource(const char* iconName)
 {
-    if (g_getenv("WEBKIT_TOP_LEVEL"))
-        return g_build_filename(g_getenv("WEBKIT_TOP_LEVEL"), "Source", "WebCore", "Resources", resource, NULL);
-
-    return g_build_filename(sharedResourcesPath().data(), "images", resource, NULL);
+    RefPtr<BitmapImage> icon = BitmapImage::create();
+    GUniquePtr<char> path(g_strdup_printf("/org/webkitgtk/resources/images/%s", iconName));
+    GRefPtr<GBytes> data = adoptGRef(g_resources_lookup_data(path.get(), G_RESOURCE_LOOKUP_FLAGS_NONE, nullptr));
+    ASSERT(data);
+    icon->setData(SharedBuffer::create(static_cast<const unsigned char*>(g_bytes_get_data(data.get(), nullptr)), g_bytes_get_size(data.get())), true);
+    return icon.release();
 }
 
-static CString getThemeIconFileName(const char* name, int size)
-{
-    GtkIconInfo* iconInfo = gtk_icon_theme_lookup_icon(gtk_icon_theme_get_default(),
-                                                       name, size, GTK_ICON_LOOKUP_NO_SVG);
-    // Try to fallback on MISSING_IMAGE.
-    if (!iconInfo)
-        iconInfo = gtk_icon_theme_lookup_icon(gtk_icon_theme_get_default(),
-                                              GTK_STOCK_MISSING_IMAGE, size,
-                                              GTK_ICON_LOOKUP_NO_SVG);
-    if (iconInfo) {
-        GUniquePtr<GtkIconInfo> info(iconInfo);
-        return CString(gtk_icon_info_get_filename(info.get()));
-    }
-
-    // No icon was found, this can happen if not GTK theme is set. In
-    // that case an empty Image will be created.
-    return CString();
-}
-
-static PassRefPtr<SharedBuffer> loadResourceSharedBuffer(CString name)
+static PassRefPtr<SharedBuffer> loadResourceSharedBuffer(const char* filename)
 {
     GUniqueOutPtr<gchar> content;
     gsize length;
-    if (!g_file_get_contents(name.data(), &content.outPtr(), &length, 0))
+    if (!g_file_get_contents(filename, &content.outPtr(), &length, nullptr))
         return SharedBuffer::create();
 
     return SharedBuffer::create(content.get(), length);
@@ -78,33 +60,23 @@ void BitmapImage::invalidatePlatformData()
 {
 }
 
-PassRefPtr<Image> loadImageFromFile(CString fileName)
+static PassRefPtr<Image> loadMissingImageIconFromTheme(const char* name)
 {
-    RefPtr<BitmapImage> img = BitmapImage::create();
-    if (!fileName.isNull()) {
-        RefPtr<SharedBuffer> buffer = loadResourceSharedBuffer(fileName);
-        img->setData(buffer.release(), true);
+    int iconSize = g_str_has_suffix(name, "@2x") ? 32 : 16;
+    RefPtr<BitmapImage> icon = BitmapImage::create();
+    GUniquePtr<GtkIconInfo> iconInfo(gtk_icon_theme_lookup_icon(gtk_icon_theme_get_default(), GTK_STOCK_MISSING_IMAGE, iconSize, GTK_ICON_LOOKUP_NO_SVG));
+    if (iconInfo) {
+        RefPtr<SharedBuffer> buffer = loadResourceSharedBuffer(gtk_icon_info_get_filename(iconInfo.get()));
+        icon->setData(buffer.release(), true);
+        return icon.release();
     }
-    return img.release();
+
+    return loadImageFromGResource(name);
 }
 
 PassRefPtr<Image> Image::loadPlatformResource(const char* name)
 {
-    CString fileName;
-    if (!strcmp("missingImage", name))
-        fileName = getThemeIconFileName(GTK_STOCK_MISSING_IMAGE, 16);
-    if (fileName.isNull()) {
-        GUniquePtr<gchar> imageName(g_strdup_printf("%s.png", name));
-        GUniquePtr<gchar> glibFileName(getPathToImageResource(imageName.get()));
-        fileName = glibFileName.get();
-    }
-
-    return loadImageFromFile(fileName);
-}
-
-PassRefPtr<Image> Image::loadPlatformThemeIcon(const char* name, int size)
-{
-    return loadImageFromFile(getThemeIconFileName(name, size));
+    return g_str_has_prefix(name, "missingImage") ? loadMissingImageIconFromTheme(name) : loadImageFromGResource(name);
 }
 
 GdkPixbuf* BitmapImage::getGdkPixbuf()

@@ -94,6 +94,11 @@ void ImageSource::setData(SharedBuffer *data, bool allDataReceived)
     }
 }
 
+SubsamplingLevel ImageSource::subsamplingLevelForScale(float) const
+{
+    return 0;
+}
+
 bool ImageSource::isSizeAvailable()
 {
     ASSERT(m_decoder);
@@ -139,7 +144,7 @@ size_t ImageSource::frameCount() const
         : count;
 }
 
-PassNativeImagePtr ImageSource::createFrameAtIndex(size_t idx, float*/* scale = 0*/)
+PassNativeImagePtr ImageSource::createFrameAtIndex(size_t idx, SubsamplingLevel /* = 0*/)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(m_decoder);
@@ -175,8 +180,16 @@ PassNativeImagePtr ImageSource::createFrameAtIndex(size_t idx, float*/* scale = 
     return RQRef::create(frame);
 }
 
+bool ImageSource::isMetaDataExists(size_t idx) const
+{
+    return m_frameInfos.size() > idx;
+}
+
 float ImageSource::frameDurationAtIndex(size_t idx)
 {
+    if (!isMetaDataExists(idx))
+        return 0;
+
     ASSERT(idx < m_frameInfos.size());
     return m_frameInfos[idx].duration;
 }
@@ -192,8 +205,12 @@ IntSize ImageSource::size(ImageOrientationDescription d) const
 
 IntSize ImageSource::frameSizeAtIndex(
     size_t idx,
+    SubsamplingLevel, //XXX: check for usage
     ImageOrientationDescription d) const
 {
+    if (!isMetaDataExists(idx))
+        return size();
+
     // The JPEG and TIFF decoders need to be taught how to read EXIF, XMP, or IPTC data.
     if (d.respectImageOrientation() == RespectImageOrientation)
         notImplemented();
@@ -204,18 +221,27 @@ IntSize ImageSource::frameSizeAtIndex(
 
 bool ImageSource::frameHasAlphaAtIndex(size_t idx)
 {
+    if (!isMetaDataExists(idx))
+        return true;
+
     ASSERT(idx < m_frameInfos.size());
     return m_frameInfos[idx].hasAlpha;
 }
 
 bool ImageSource::frameIsCompleteAtIndex(size_t idx)
 {
+    if (!isMetaDataExists(idx))
+        return false;
+
     ASSERT(idx < m_frameInfos.size());
     return m_frameInfos[idx].complete;
 }
 
-unsigned ImageSource::frameBytesAtIndex(size_t idx) const
+unsigned ImageSource::frameBytesAtIndex(size_t idx, SubsamplingLevel) const
 {
+    if (!isMetaDataExists(idx))
+        return 0;
+
     //utatodo: need support for variable frame size.
     ASSERT(idx < m_frameInfos.size());
     return m_frameInfos[idx].size.width() * m_frameInfos[idx].size.height() * 4;
@@ -290,7 +316,7 @@ size_t ImageSource::bytesDecodedToDetermineProperties() const
     return 0;
 }
 
-ImageOrientation ImageSource::orientationAtIndex(size_t index) const
+ImageOrientation ImageSource::orientationAtIndex(size_t idx) const
 {
     // The JPEG and TIFF decoders need to be taught how to read EXIF, XMP, or IPTC data.
     notImplemented();

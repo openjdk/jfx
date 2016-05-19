@@ -31,53 +31,40 @@
 #ifndef RenderLayerFilterInfo_h
 #define RenderLayerFilterInfo_h
 
-#if ENABLE(CSS_FILTERS)
-
 #include "CachedResourceHandle.h"
 #include "CachedSVGDocumentClient.h"
 #include "RenderLayer.h"
 
 namespace WebCore {
 
+class CachedSVGDocument;
 class Element;
 
-class RenderLayer::FilterInfo final : public CachedSVGDocumentClient
-{
+class RenderLayer::FilterInfo final : private CachedSVGDocumentClient {
 public:
     static FilterInfo& get(RenderLayer&);
     static FilterInfo* getIfExists(const RenderLayer&);
     static void remove(RenderLayer&);
+
+    explicit FilterInfo(RenderLayer&);
+    virtual ~FilterInfo();
 
     const LayoutRect& dirtySourceRect() const { return m_dirtySourceRect; }
     void expandDirtySourceRect(const LayoutRect& rect) { m_dirtySourceRect.unite(rect); }
     void resetDirtySourceRect() { m_dirtySourceRect = LayoutRect(); }
 
     FilterEffectRenderer* renderer() const { return m_renderer.get(); }
-    void setRenderer(PassRefPtr<FilterEffectRenderer>);
+    void setRenderer(RefPtr<FilterEffectRenderer>&&);
 
     void updateReferenceFilterClients(const FilterOperations&);
     void removeReferenceFilterClients();
 
 private:
-    explicit FilterInfo(RenderLayer&);
-    ~FilterInfo();
-
-    friend void WTF::deleteOwnedPtr<FilterInfo>(FilterInfo*);
-
     virtual void notifyFinished(CachedResource*) override;
 
-    static HashMap<const RenderLayer*, OwnPtr<FilterInfo>>& map();
+    static HashMap<const RenderLayer*, std::unique_ptr<FilterInfo>>& map();
 
-#if PLATFORM(IOS)
-#pragma clang diagnostic push
-#if defined(__has_warning) && __has_warning("-Wunused-private-field")
-#pragma clang diagnostic ignored "-Wunused-private-field"
-#endif
-#endif
     RenderLayer& m_layer;
-#if PLATFORM(IOS)
-#pragma clang diagnostic pop
-#endif
 
     RefPtr<FilterEffectRenderer> m_renderer;
     LayoutRect m_dirtySourceRect;
@@ -87,7 +74,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(CSS_FILTERS)
 
 #endif // RenderLayerFilterInfo_h

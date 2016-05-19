@@ -50,20 +50,19 @@ public:
     virtual bool shouldClearReferrerOnHTTPSToHTTPRedirect() const = 0;
 
 #if PLATFORM(COCOA)
-    virtual bool needsSiteSpecificQuirks() const = 0;
     virtual bool localFileContentSniffingEnabled() const = 0; // FIXME: Reconcile with ResourceHandle::forceContentSniffing().
     virtual SchedulePairHashSet* scheduledRunLoopPairs() const { return 0; }
     virtual RetainPtr<CFDataRef> sourceApplicationAuditData() const = 0;
     virtual ResourceError blockedError(const ResourceRequest&) const = 0;
 #endif
 
+    virtual String sourceApplicationIdentifier() const { return emptyString(); }
+
 #if PLATFORM(COCOA) || USE(CFNETWORK) || USE(SOUP)
     virtual NetworkStorageSession& storageSession() const = 0;
 #endif
 
 #if PLATFORM(WIN)
-    virtual String userAgent() const = 0;
-    virtual String referrer() const = 0;
     virtual ResourceError blockedError(const ResourceRequest&) const = 0;
 #endif
 

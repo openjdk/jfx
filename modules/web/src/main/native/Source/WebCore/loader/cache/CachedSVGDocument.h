@@ -32,24 +32,23 @@ namespace WebCore {
 
 class CachedSVGDocument final : public CachedResource {
 public:
-    explicit CachedSVGDocument(const ResourceRequest&);
+    explicit CachedSVGDocument(const ResourceRequest&, SessionID);
     virtual ~CachedSVGDocument();
 
     SVGDocument* document() const { return m_document.get(); }
-
-protected:
-    RefPtr<SVGDocument> m_document;
-    RefPtr<TextResourceDecoder> m_decoder;
 
 private:
     virtual bool mayTryReplaceEncodedData() const override { return true; }
     virtual void setEncoding(const String&) override;
     virtual String encoding() const override;
-    virtual void finishLoading(ResourceBuffer*) override;
+    virtual void finishLoading(SharedBuffer*) override;
+
+    RefPtr<SVGDocument> m_document;
+    RefPtr<TextResourceDecoder> m_decoder;
 };
 
-CACHED_RESOURCE_TYPE_CASTS(CachedSVGDocument, CachedResource, CachedResource::SVGDocumentResource)
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE(CachedSVGDocument, CachedResource::SVGDocumentResource)
 
 #endif // CachedSVGDocument_h

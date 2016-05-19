@@ -26,7 +26,7 @@
 #ifndef GCSegmentedArray_h
 #define GCSegmentedArray_h
 
-#include "HeapBlock.h"
+#include <wtf/DoublyLinkedList.h>
 #include <wtf/Vector.h>
 
 #if PLATFORM(JAVA) // tav todo temp
@@ -35,21 +35,20 @@
 
 namespace JSC {
 
-class BlockAllocator;
-class DeadBlock;
-
 template <typename T>
-class GCArraySegment : public HeapBlock<GCArraySegment<T>> {
+class GCArraySegment : public DoublyLinkedListNode<GCArraySegment<T>> {
+    friend class WTF::DoublyLinkedListNode<GCArraySegment<T>>;
 public:
-    GCArraySegment(Region* region)
-        : HeapBlock<GCArraySegment>(region)
+    GCArraySegment()
+        : DoublyLinkedListNode<GCArraySegment<T>>()
 #if !ASSERT_DISABLED
         , m_top(0)
 #endif
     {
     }
 
-    static GCArraySegment* create(DeadBlock*);
+    static GCArraySegment* create();
+    static void destroy(GCArraySegment*);
 
     T* data()
     {
@@ -58,6 +57,8 @@ public:
 
     static const size_t blockSize = 4 * KB;
 
+    GCArraySegment* m_prev;
+    GCArraySegment* m_next;
 #if !ASSERT_DISABLED
     size_t m_top;
 #endif
@@ -68,8 +69,9 @@ template <typename T> class GCSegmentedArrayIterator;
 template <typename T>
 class GCSegmentedArray {
     friend class GCSegmentedArrayIterator<T>;
+    friend class GCSegmentedArrayIterator<const T>;
 public:
-    GCSegmentedArray(BlockAllocator&);
+    GCSegmentedArray();
     ~GCSegmentedArray();
 
     void append(T);
@@ -85,8 +87,8 @@ public:
     void clear();
 
     typedef GCSegmentedArrayIterator<T> iterator;
-    iterator begin() { return GCSegmentedArrayIterator<T>(m_segments.head(), m_top); }
-    iterator end() { return GCSegmentedArrayIterator<T>(); }
+    iterator begin() const { return GCSegmentedArrayIterator<T>(m_segments.head(), m_top); }
+    iterator end() const { return GCSegmentedArrayIterator<T>(); }
 
 protected:
     template <size_t size> struct CapacityFromSize {
@@ -104,7 +106,6 @@ protected:
     void validatePrevious();
 
     DoublyLinkedList<GCArraySegment<T>> m_segments;
-    BlockAllocator& m_blockAllocator;
 
     JS_EXPORT_PRIVATE static const size_t s_segmentCapacity = CapacityFromSize<GCArraySegment<T>::blockSize>::value;
     size_t m_top;

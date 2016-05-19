@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -46,7 +46,7 @@ namespace WebCore {
 
     class FormState : public RefCounted<FormState> {
     public:
-        static PassRefPtr<FormState> create(PassRefPtr<HTMLFormElement>, StringPairVector& textFieldValuesToAdopt, PassRefPtr<Document>, FormSubmissionTrigger);
+        static Ref<FormState> create(PassRefPtr<HTMLFormElement>, StringPairVector& textFieldValuesToAdopt, PassRefPtr<Document>, FormSubmissionTrigger);
 
         HTMLFormElement* form() const { return m_form.get(); }
         const StringPairVector& textFieldValues() const { return m_textFieldValues; }

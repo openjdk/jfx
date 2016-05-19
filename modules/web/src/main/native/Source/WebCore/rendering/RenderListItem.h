@@ -33,8 +33,9 @@ class RenderListMarker;
 
 class RenderListItem final : public RenderBlockFlow {
 public:
-    RenderListItem(Element&, PassRef<RenderStyle>);
-    Element& element() const { return toElement(nodeForNonAnonymous()); }
+    RenderListItem(Element&, Ref<RenderStyle>&&);
+    virtual ~RenderListItem();
+    Element& element() const { return downcast<Element>(nodeForNonAnonymous()); }
 
     int value() const { if (!m_isValueUpToDate) updateValueNow(); return m_value; }
     void updateValue();
@@ -47,20 +48,20 @@ public:
     void setNotInList(bool notInList) { m_notInList = notInList; }
     bool notInList() const { return m_notInList; }
 
-    const String& markerText() const;
+    WEBCORE_EXPORT const String& markerText() const;
     String markerTextWithSuffix() const;
 
     void updateListMarkerNumbers();
 
-    static void updateItemValuesForOrderedList(const HTMLOListElement*);
-    static unsigned itemCountForOrderedList(const HTMLOListElement*);
+    static void updateItemValuesForOrderedList(const HTMLOListElement&);
+    static unsigned itemCountForOrderedList(const HTMLOListElement&);
+
+    void didDestroyListMarker() { m_marker = nullptr; }
 
 private:
     virtual const char* renderName() const override { return "RenderListItem"; }
 
     virtual bool isListItem() const override { return true; }
-
-    virtual void willBeDestroyed() override;
 
     virtual void insertedIntoTree() override;
     virtual void willBeRemovedFromTree() override;
@@ -85,7 +86,7 @@ private:
     void explicitValueChanged();
 
     int m_explicitValue;
-    RenderPtr<RenderListMarker> m_marker;
+    RenderListMarker* m_marker;
     mutable int m_value;
 
     bool m_hasExplicitValue : 1;
@@ -93,8 +94,8 @@ private:
     bool m_notInList : 1;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderListItem, isListItem())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderListItem, isListItem())
 
 #endif // RenderListItem_h

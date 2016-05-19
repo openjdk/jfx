@@ -37,7 +37,7 @@ namespace WebCore {
 
 static inline bool comparePageRules(const StyleRulePage* r1, const StyleRulePage* r2)
 {
-    return r1->selector()->specificity() < r2->selector()->specificity();
+    return r1->selector()->specificityForPage() < r2->selector()->specificityForPage();
 }
 
 bool PageRuleCollector::isLeftPage(int pageIndex) const
@@ -92,18 +92,18 @@ void PageRuleCollector::matchPageRules(RuleSet* rules, bool isLeftPage, bool isF
 static bool checkPageSelectorComponents(const CSSSelector* selector, bool isLeftPage, bool isFirstPage, const String& pageName)
 {
     for (const CSSSelector* component = selector; component; component = component->tagHistory()) {
-        if (component->m_match == CSSSelector::Tag) {
+        if (component->match() == CSSSelector::Tag) {
             const AtomicString& localName = component->tagQName().localName();
             if (localName != starAtom && localName != pageName)
                 return false;
-        }
-
-        CSSSelector::PseudoType pseudoType = component->pseudoType();
-        if ((pseudoType == CSSSelector::PseudoLeftPage && !isLeftPage)
-            || (pseudoType == CSSSelector::PseudoRightPage && isLeftPage)
-            || (pseudoType == CSSSelector::PseudoFirstPage && !isFirstPage))
-        {
-            return false;
+        } else if (component->match() == CSSSelector::PagePseudoClass) {
+            CSSSelector::PagePseudoClassType pseudoType = component->pagePseudoClassType();
+            if ((pseudoType == CSSSelector::PagePseudoClassLeft && !isLeftPage)
+                || (pseudoType == CSSSelector::PagePseudoClassRight && isLeftPage)
+                || (pseudoType == CSSSelector::PagePseudoClassFirst && !isFirstPage))
+            {
+                return false;
+            }
         }
     }
     return true;

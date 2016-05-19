@@ -62,5 +62,9 @@ void ContextMenuClientJava::stopSpeaking()
     notImplemented();
 }
 
+ContextMenuItem ContextMenuClientJava::shareMenuItem(const HitTestResult&) {
+    return ContextMenuItem(); //XXX: check implementation
+}
+
 }
 

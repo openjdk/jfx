@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -107,10 +107,10 @@ ReverbConvolver::ReverbConvolver(AudioChannel* impulseResponse, size_t renderSli
         bool isBackgroundStage = false;
 
         if (this->useBackgroundThreads() && stageOffset > RealtimeFrameLimit) {
-            m_backgroundStages.append(std::move(stage));
+            m_backgroundStages.append(WTF::move(stage));
             isBackgroundStage = true;
         } else
-            m_stages.append(std::move(stage));
+            m_stages.append(WTF::move(stage));
 
         stageOffset += stageSize;
         ++i;

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,8 +33,8 @@
     readonly attribute TimeRanges buffered;
     readonly attribute TimeRanges seekable;
 
-    readonly attribute double duration;
-    attribute double currentTime;
+    readonly attribute unrestricted double duration;
+    attribute unrestricted double currentTime;
 
     readonly attribute boolean paused;
     readonly attribute TimeRanges played;
@@ -43,18 +43,14 @@
     void pause();
     void unpause();
 
-    attribute double defaultPlaybackRate;
-    attribute double playbackRate;
+    attribute unrestricted double defaultPlaybackRate;
+    attribute unrestricted double playbackRate;
 
-    [SetterRaisesException] attribute double volume;
+    [SetterRaisesException] attribute unrestricted double volume;
     attribute boolean muted;
 
     // EventTarget interface
-    void addEventListener(DOMString type, 
-                          EventListener listener, 
-                          optional boolean useCapture);
-    void removeEventListener(DOMString type, 
-                             EventListener listener, 
-                             optional boolean useCapture);
-    [RaisesException] boolean dispatchEvent(Event evt);
+    void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    [RaisesException] boolean dispatchEvent(Event event);
 };

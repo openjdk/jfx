@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -79,7 +79,7 @@ static String truncatedStringForLookupMenuItem(const String& original)
 
     // Truncate the string if it's too long. This is in consistency with AppKit.
     unsigned maxNumberOfGraphemeClustersInLookupMenuItem = 24;
-    DEFINE_STATIC_LOCAL(String, ellipsis, (&horizontalEllipsis, 1));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, ellipsis, (&horizontalEllipsis, 1));
 
     String trimmed = original.stripWhiteSpace();
     unsigned numberOfCharacters = numCharactersInGraphemeClusters(trimmed, maxNumberOfGraphemeClustersInLookupMenuItem);
@@ -700,6 +700,12 @@ String AXARIAContentGroupText(const String& ariaType)
         return WEB_UI_STRING("math", "An ARIA accessibility group that contains mathematical symbols.");
     return String();
 }
+
+String AXHorizontalRuleDescriptionText()
+{
+    return WEB_UI_STRING("separator", "accessibility role description for a horizontal rule [<hr>]");
+}
+
 #endif // PLATFORM(COCOA)
 
 String missingPluginText()
@@ -1050,7 +1056,7 @@ String validationMessageBadInputForNumberText()
 
 String clickToExitFullScreenText()
 {
-    return WEB_UI_STRING("Click to exit full screen mode", "Message to display in browser window when in webkit full screen mode.");
+    return WEB_UI_STRING("Click to Exit Full Screen", "Message to display in browser window when in webkit full screen mode.");
 }
 
 #if ENABLE(VIDEO_TRACK)
@@ -1072,6 +1078,11 @@ String textTrackAutomaticMenuItemText()
 String textTrackNoLabelText()
 {
     return WEB_UI_STRING_KEY("Unknown", "Unknown (text track)", "Menu item label for a text track that has no other name");
+}
+
+String audioTrackNoLabelText()
+{
+    return WEB_UI_STRING_KEY("Unknown", "Unknown (audio track)", "Menu item label for an audio track that has no other name");
 }
 
 #if PLATFORM(COCOA) || PLATFORM(WIN)

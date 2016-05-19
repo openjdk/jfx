@@ -47,8 +47,8 @@ class StyleImage;
 // actually uses one of these properties.
 class StyleRareInheritedData : public RefCounted<StyleRareInheritedData> {
 public:
-    static PassRef<StyleRareInheritedData> create() { return adoptRef(*new StyleRareInheritedData); }
-    PassRef<StyleRareInheritedData> copy() const;
+    static Ref<StyleRareInheritedData> create() { return adoptRef(*new StyleRareInheritedData); }
+    Ref<StyleRareInheritedData> copy() const;
     ~StyleRareInheritedData();
 
     bool operator==(const StyleRareInheritedData& o) const;
@@ -119,14 +119,19 @@ public:
 #endif
 #if ENABLE(CSS3_TEXT)
     unsigned m_textAlignLast : 3; // TextAlignLast
-    unsigned m_textJustify : 3; // TextJustify
+    unsigned m_textJustify : 2; // TextJustify
 #endif // CSS3_TEXT
     unsigned m_textDecorationSkip : 5; // TextDecorationSkip
     unsigned m_textUnderlinePosition : 3; // TextUnderlinePosition
-    unsigned m_rubyPosition : 1; // RubyPosition
+    unsigned m_rubyPosition : 2; // RubyPosition
+    unsigned m_textZoom: 1; // TextZoom
 
 #if PLATFORM(IOS)
     unsigned touchCalloutEnabled : 1;
+#endif
+
+#if ENABLE(CSS_TRAILING_WORD)
+    unsigned trailingWord : 1;
 #endif
 
     AtomicString hyphenationString;
@@ -142,9 +147,6 @@ public:
     AtomicString m_lineGrid;
     unsigned m_tabSize;
 
-#if PLATFORM(IOS)
-    Color compositionFillColor;
-#endif
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     TextSizeAdjustment textSizeAdjust;
 #endif

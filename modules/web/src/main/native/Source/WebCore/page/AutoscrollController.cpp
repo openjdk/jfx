@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -42,7 +42,7 @@
 namespace WebCore {
 
 // Delay time in second for start autoscroll if pointer is in border edge of scrollable element.
-static double autoscrollDelay = 0.2;
+static const double autoscrollDelay = 0.2;
 
 // When the autoscroll or the panScroll is triggered when do the scroll every 0.05s to make it smooth
 static const double autoscrollInterval = 0.05;
@@ -56,8 +56,8 @@ static Frame* getMainFrame(Frame* frame)
 #endif
 
 AutoscrollController::AutoscrollController()
-    : m_autoscrollTimer(this, &AutoscrollController::autoscrollTimerFired)
-    , m_autoscrollRenderer(0)
+    : m_autoscrollTimer(*this, &AutoscrollController::autoscrollTimerFired)
+    , m_autoscrollRenderer(nullptr)
     , m_autoscrollType(NoAutoscroll)
     , m_dragAndDropAutoscrollStartTime(0)
 {
@@ -90,7 +90,7 @@ void AutoscrollController::stopAutoscrollTimer(bool rendererIsBeingDestroyed)
 {
     RenderBox* scrollable = m_autoscrollRenderer;
     m_autoscrollTimer.stop();
-    m_autoscrollRenderer = 0;
+    m_autoscrollRenderer = nullptr;
 
     if (!scrollable)
         return;
@@ -135,9 +135,9 @@ void AutoscrollController::updateAutoscrollRenderer()
         renderer = nodeAtPoint->renderer();
 #endif
 
-    while (renderer && !(renderer->isBox() && toRenderBox(renderer)->canAutoscroll()))
+    while (renderer && !(is<RenderBox>(*renderer) && downcast<RenderBox>(*renderer).canAutoscroll()))
         renderer = renderer->parent();
-    m_autoscrollRenderer = renderer && renderer->isBox() ? toRenderBox(renderer) : 0;
+    m_autoscrollRenderer = is<RenderBox>(renderer) ? downcast<RenderBox>(renderer) : nullptr;
 }
 
 void AutoscrollController::updateDragAndDrop(Node* dropTargetNode, const IntPoint& eventPosition, double eventTime)
@@ -231,7 +231,7 @@ bool AutoscrollController::panScrollInProgress() const
 }
 #endif
 
-void AutoscrollController::autoscrollTimerFired(Timer<AutoscrollController>&)
+void AutoscrollController::autoscrollTimerFired()
 {
     if (!m_autoscrollRenderer) {
         stopAutoscrollTimer();

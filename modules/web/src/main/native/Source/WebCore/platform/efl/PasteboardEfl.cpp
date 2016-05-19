@@ -24,7 +24,6 @@
 #include "Pasteboard.h"
 
 #include "NotImplemented.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
@@ -48,25 +47,25 @@ bool Pasteboard::canSmartReplace()
     return false;
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
+std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
 {
-    return adoptPtr(new Pasteboard);
+    return std::make_unique<Pasteboard>();
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createPrivate()
+std::unique_ptr<Pasteboard> Pasteboard::createPrivate()
 {
-    return createForCopyAndPaste();
+    return std::make_unique<Pasteboard>();
 }
 
 #if ENABLE(DRAG_SUPPORT)
-PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop()
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop()
 {
-    return createForCopyAndPaste();
+    return std::make_unique<Pasteboard>();
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData&)
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData&)
 {
-    return createForCopyAndPaste();
+    return std::make_unique<Pasteboard>();
 }
 #endif
 
@@ -97,10 +96,9 @@ void Pasteboard::write(const PasteboardURL&)
     notImplemented();
 }
 
-bool Pasteboard::writeString(const String&, const String&)
+void Pasteboard::writeString(const String&, const String&)
 {
     notImplemented();
-    return false;
 }
 
 Vector<String> Pasteboard::types()

@@ -35,9 +35,9 @@ inline SVGAltGlyphDefElement::SVGAltGlyphDefElement(const QualifiedName& tagName
     ASSERT(hasTagName(SVGNames::altGlyphDefTag));
 }
 
-PassRefPtr<SVGAltGlyphDefElement> SVGAltGlyphDefElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGAltGlyphDefElement> SVGAltGlyphDefElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGAltGlyphDefElement(tagName, document));
+    return adoptRef(*new SVGAltGlyphDefElement(tagName, document));
 }
 
 bool SVGAltGlyphDefElement::hasValidGlyphElements(Vector<String>& glyphNames) const
@@ -90,11 +90,11 @@ bool SVGAltGlyphDefElement::hasValidGlyphElements(Vector<String>& glyphNames) co
     bool foundFirstAltGlyphItem = false;
 
     for (auto& child : childrenOfType<SVGElement>(*this)) {
-        if (!foundFirstAltGlyphItem && isSVGGlyphRefElement(child)) {
+        if (!foundFirstAltGlyphItem && is<SVGGlyphRefElement>(child)) {
             fountFirstGlyphRef = true;
             String referredGlyphName;
 
-            if (toSVGGlyphRefElement(child).hasValidGlyphElement(referredGlyphName))
+            if (downcast<SVGGlyphRefElement>(child).hasValidGlyphElement(referredGlyphName))
                 glyphNames.append(referredGlyphName);
             else {
                 // As the spec says "If any of the referenced glyphs are unavailable,
@@ -104,12 +104,12 @@ bool SVGAltGlyphDefElement::hasValidGlyphElements(Vector<String>& glyphNames) co
                 glyphNames.clear();
                 return false;
             }
-        } else if (!fountFirstGlyphRef && isSVGAltGlyphItemElement(child)) {
+        } else if (!fountFirstGlyphRef && is<SVGAltGlyphItemElement>(child)) {
             foundFirstAltGlyphItem = true;
 
             // As the spec says "The first 'altGlyphItem' in which all referenced glyphs
             // are available is chosen."
-            if (toSVGAltGlyphItemElement(child).hasValidGlyphElements(glyphNames) && !glyphNames.isEmpty())
+            if (downcast<SVGAltGlyphItemElement>(child).hasValidGlyphElements(glyphNames) && !glyphNames.isEmpty())
                 return true;
         }
     }

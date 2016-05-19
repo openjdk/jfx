@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -49,7 +49,7 @@ URL::operator NSURL *() const
 {
     // Creating a toll-free bridged CFURL, because a real NSURL would not preserve the original string.
     // We'll need fidelity when round-tripping via CFURLGetBytes().
-    return CFBridgingRelease(createCFURL().leakRef());
+    return (NSURL *)createCFURL().autorelease();
 }
 
 RetainPtr<CFURLRef> URL::createCFURL() const
@@ -62,6 +62,11 @@ RetainPtr<CFURLRef> URL::createCFURL() const
         return reinterpret_cast<CFURLRef>(adoptNS([[NSURL alloc] initWithString:@""]).get());
     }
 
+    // Fast path if the input data is 8-bit to avoid copying into a temporary buffer.
+    if (LIKELY(m_string.is8Bit()))
+        return createCFURLFromBuffer(reinterpret_cast<const char*>(m_string.characters8()), m_string.length());
+
+    // Slower path.
     URLCharBuffer buffer;
     copyToBuffer(buffer);
     return createCFURLFromBuffer(buffer.data(), buffer.size());

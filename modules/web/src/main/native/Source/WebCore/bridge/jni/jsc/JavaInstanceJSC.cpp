@@ -231,7 +231,7 @@ private:
     }
 };
 
-const ClassInfo JavaRuntimeMethod::s_info = { "JavaRuntimeMethod", &RuntimeMethod::s_info, 0, 0, CREATE_METHOD_TABLE(JavaRuntimeMethod) };
+const ClassInfo JavaRuntimeMethod::s_info = { "JavaRuntimeMethod", &RuntimeMethod::s_info, 0, CREATE_METHOD_TABLE(JavaRuntimeMethod) };
 
 JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
 {
@@ -318,7 +318,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     if (!rootObject)
         return jsUndefined();
 
-    bool handled = false;
+    // bool handled = false;
     if (rootObject->nativeHandle()) {
         jobject obj = m_instance->instance();
         // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
@@ -329,7 +329,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
             return jsUndefined();
         }
 
-        const char *callingURL = 0; // FIXME, need to propagate calling URL to Java
+        // const char *callingURL = 0; // FIXME, need to propagate calling URL to Java
         jmethodID methodId = getMethodID(obj, jMethod->name().utf8().data(), jMethod->signature());
 
         jthrowable ex = dispatchJNICall(exec->argumentCount(), rootObject,

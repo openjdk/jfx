@@ -40,22 +40,22 @@ inline SVGFontFaceSrcElement::SVGFontFaceSrcElement(const QualifiedName& tagName
     ASSERT(hasTagName(font_face_srcTag));
 }
 
-PassRefPtr<SVGFontFaceSrcElement> SVGFontFaceSrcElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFontFaceSrcElement> SVGFontFaceSrcElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFontFaceSrcElement(tagName, document));
+    return adoptRef(*new SVGFontFaceSrcElement(tagName, document));
 }
 
-PassRefPtr<CSSValueList> SVGFontFaceSrcElement::srcValue() const
+Ref<CSSValueList> SVGFontFaceSrcElement::srcValue() const
 {
-    RefPtr<CSSValueList> list = CSSValueList::createCommaSeparated();
+    Ref<CSSValueList> list = CSSValueList::createCommaSeparated();
     for (auto& child : childrenOfType<SVGElement>(*this)) {
         RefPtr<CSSFontFaceSrcValue> srcValue;
-        if (isSVGFontFaceUriElement(child))
-            srcValue = toSVGFontFaceUriElement(child).srcValue();
-        else if (isSVGFontFaceNameElement(child))
-            srcValue = toSVGFontFaceNameElement(child).srcValue();
+        if (is<SVGFontFaceUriElement>(child))
+            srcValue = downcast<SVGFontFaceUriElement>(child).srcValue();
+        else if (is<SVGFontFaceNameElement>(child))
+            srcValue = downcast<SVGFontFaceNameElement>(child).srcValue();
         if (srcValue && srcValue->resource().length())
-            list->append(srcValue.release());
+            list->append(srcValue.releaseNonNull());
     }
     return list;
 }
@@ -63,8 +63,8 @@ PassRefPtr<CSSValueList> SVGFontFaceSrcElement::srcValue() const
 void SVGFontFaceSrcElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
-    if (parentNode() && parentNode()->hasTagName(font_faceTag))
-        toSVGFontFaceElement(parentNode())->rebuildFontFace();
+    if (is<SVGFontFaceElement>(parentNode()))
+        downcast<SVGFontFaceElement>(*parentNode()).rebuildFontFace();
 }
 
 }

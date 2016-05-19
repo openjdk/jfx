@@ -24,6 +24,7 @@
 #include "FontPlatformData.h"
 #include "SharedBuffer.h"
 #include <CoreGraphics/CoreGraphics.h>
+#include <CoreText/CoreText.h>
 
 namespace WebCore {
 
@@ -33,21 +34,34 @@ FontCustomPlatformData::~FontCustomPlatformData()
 
 FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, bool italic, FontOrientation orientation, FontWidthVariant widthVariant, FontRenderingMode)
 {
+#if CORETEXT_WEB_FONTS
+    return FontPlatformData(adoptCF(CTFontCreateWithFontDescriptor(m_fontDescriptor.get(), size, nullptr)).get(), size, bold, italic, orientation, widthVariant);
+#else
     return FontPlatformData(m_cgFont.get(), size, bold, italic, orientation, widthVariant);
+#endif
 }
 
 std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer)
 {
-    ATSFontContainerRef containerRef = 0;
-
     RetainPtr<CFDataRef> bufferData = buffer.createCFData();
+
+#if CORETEXT_WEB_FONTS
+    RetainPtr<CTFontDescriptorRef> fontDescriptor = adoptCF(CTFontManagerCreateFontDescriptorFromData(bufferData.get()));
+    if (!fontDescriptor)
+        return nullptr;
+
+    return std::make_unique<FontCustomPlatformData>(fontDescriptor.get());
+
+#else
+
     RetainPtr<CGDataProviderRef> dataProvider = adoptCF(CGDataProviderCreateWithCFData(bufferData.get()));
 
     RetainPtr<CGFontRef> cgFontRef = adoptCF(CGFontCreateWithDataProvider(dataProvider.get()));
     if (!cgFontRef)
         return nullptr;
 
-    return std::make_unique<FontCustomPlatformData>(containerRef, cgFontRef.get());
+    return std::make_unique<FontCustomPlatformData>(cgFontRef.get());
+#endif
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)

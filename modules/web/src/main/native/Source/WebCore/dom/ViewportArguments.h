@@ -51,6 +51,7 @@ struct ViewportAttributes {
 
     float userScalable;
     float orientation;
+    float shrinkToFit;
 };
 
 struct ViewportArguments {
@@ -76,49 +77,29 @@ struct ViewportArguments {
 
     explicit ViewportArguments(Type type = Implicit)
         : type(type)
-        , width(ValueAuto)
-        , minWidth(ValueAuto)
-        , maxWidth(ValueAuto)
-        , height(ValueAuto)
-        , minHeight(ValueAuto)
-        , maxHeight(ValueAuto)
-        , zoom(ValueAuto)
-        , minZoom(ValueAuto)
-        , maxZoom(ValueAuto)
-        , userZoom(ValueAuto)
-        , orientation(ValueAuto)
-#if PLATFORM(IOS)
-        , minimalUI(false)
-#endif
     {
     }
 
     // All arguments are in CSS units.
     ViewportAttributes resolve(const FloatSize& initialViewportSize, const FloatSize& deviceSize, int defaultWidth) const;
 
-    float width;
-    float minWidth;
-    float maxWidth;
-    float height;
-    float minHeight;
-    float maxHeight;
-    float zoom;
-    float minZoom;
-    float maxZoom;
-    float userZoom;
-    float orientation;
-#if PLATFORM(IOS)
-    bool minimalUI;
-#endif
+    float width { ValueAuto };
+    float minWidth { ValueAuto };
+    float maxWidth { ValueAuto };
+    float height { ValueAuto };
+    float minHeight { ValueAuto };
+    float maxHeight { ValueAuto };
+    float zoom { ValueAuto };
+    float minZoom { ValueAuto };
+    float maxZoom { ValueAuto };
+    float userZoom { ValueAuto };
+    float orientation { ValueAuto };
+    float shrinkToFit { ValueAuto };
 
     bool operator==(const ViewportArguments& other) const
     {
         // Used for figuring out whether to reset the viewport or not,
         // thus we are not taking type into account.
-#if PLATFORM(IOS)
-        // We ignore minimalUI for the same reason -- it is a higher-level
-        // property that doesn't affect the actual viewport.
-#endif
         return width == other.width
             && minWidth == other.minWidth
             && maxWidth == other.maxWidth
@@ -129,7 +110,8 @@ struct ViewportArguments {
             && minZoom == other.minZoom
             && maxZoom == other.maxZoom
             && userZoom == other.userZoom
-            && orientation == other.orientation;
+            && orientation == other.orientation
+            && shrinkToFit == other.shrinkToFit;
     }
 
     bool operator!=(const ViewportArguments& other) const
@@ -144,18 +126,14 @@ struct ViewportArguments {
 #endif
 };
 
-ViewportAttributes computeViewportAttributes(ViewportArguments args, int desktopWidth, int deviceWidth, int deviceHeight, float devicePixelRatio, IntSize visibleViewport);
+WEBCORE_EXPORT ViewportAttributes computeViewportAttributes(ViewportArguments args, int desktopWidth, int deviceWidth, int deviceHeight, float devicePixelRatio, IntSize visibleViewport);
 
-void restrictMinimumScaleFactorToViewportSize(ViewportAttributes& result, IntSize visibleViewport, float devicePixelRatio);
-void restrictScaleFactorToInitialScaleIfNotUserScalable(ViewportAttributes& result);
+WEBCORE_EXPORT void restrictMinimumScaleFactorToViewportSize(ViewportAttributes& result, IntSize visibleViewport, float devicePixelRatio);
+WEBCORE_EXPORT void restrictScaleFactorToInitialScaleIfNotUserScalable(ViewportAttributes& result);
 float computeMinimumScaleFactorForContentContained(const ViewportAttributes& result, const IntSize& viewportSize, const IntSize& contentSize);
 
 void setViewportFeature(const String& keyString, const String& valueString, Document*, void* data);
 void reportViewportWarning(Document*, ViewportErrorCode, const String& replacement1, const String& replacement2);
-
-#if PLATFORM(IOS)
-void finalizeViewportArguments(ViewportArguments&);
-#endif
 
 } // namespace WebCore
 

@@ -37,11 +37,11 @@
 
 namespace WebCore {
 
-PassRefPtr<IDBOpenDBRequest> IDBOpenDBRequest::create(ScriptExecutionContext* context, PassRefPtr<IDBDatabaseCallbacks> callbacks, int64_t transactionId, uint64_t version, IndexedDB::VersionNullness versionNullness)
+Ref<IDBOpenDBRequest> IDBOpenDBRequest::create(ScriptExecutionContext* context, PassRefPtr<IDBDatabaseCallbacks> callbacks, int64_t transactionId, uint64_t version, IndexedDB::VersionNullness versionNullness)
 {
-    RefPtr<IDBOpenDBRequest> request(adoptRef(new IDBOpenDBRequest(context, callbacks, transactionId, version, versionNullness)));
+    Ref<IDBOpenDBRequest> request(adoptRef(*new IDBOpenDBRequest(context, callbacks, transactionId, version, versionNullness)));
     request->suspendIfNeeded();
-    return request.release();
+    return request;
 }
 
 IDBOpenDBRequest::IDBOpenDBRequest(ScriptExecutionContext* context, PassRefPtr<IDBDatabaseCallbacks> callbacks, int64_t transactionId, uint64_t version, IndexedDB::VersionNullness versionNullness)
@@ -69,7 +69,7 @@ void IDBOpenDBRequest::onBlocked(uint64_t oldVersion)
     if (!shouldEnqueueEvent())
         return;
 
-    enqueueEvent(IDBVersionChangeEvent::create(oldVersion, m_version, m_versionNullness, eventNames().blockedEvent));
+    enqueueEvent(IDBVersionChangeEvent::create(oldVersion, m_version, eventNames().blockedEvent));
 }
 
 void IDBOpenDBRequest::onUpgradeNeeded(uint64_t oldVersion, PassRefPtr<IDBDatabaseBackend> prpDatabaseBackend, const IDBDatabaseMetadata& metadata)
@@ -91,7 +91,7 @@ void IDBOpenDBRequest::onUpgradeNeeded(uint64_t oldVersion, PassRefPtr<IDBDataba
     RefPtr<IDBDatabase> idbDatabase = IDBDatabase::create(scriptExecutionContext(), databaseBackend, m_databaseCallbacks);
     idbDatabase->setMetadata(metadata);
     m_databaseCallbacks->connect(idbDatabase.get());
-    m_databaseCallbacks = 0;
+    m_databaseCallbacks = nullptr;
 
     IDBDatabaseMetadata oldMetadata(metadata);
     oldMetadata.version = oldVersion;
@@ -101,7 +101,7 @@ void IDBOpenDBRequest::onUpgradeNeeded(uint64_t oldVersion, PassRefPtr<IDBDataba
 
     if (m_versionNullness == IndexedDB::VersionNullness::Null)
         m_version = 1;
-    enqueueEvent(IDBVersionChangeEvent::create(oldVersion, m_version, m_versionNullness, eventNames().upgradeneededEvent));
+    enqueueEvent(IDBVersionChangeEvent::create(oldVersion, m_version, eventNames().upgradeneededEvent));
 }
 
 void IDBOpenDBRequest::onSuccess(PassRefPtr<IDBDatabaseBackend> prpBackend, const IDBDatabaseMetadata& metadata)
@@ -120,7 +120,7 @@ void IDBOpenDBRequest::onSuccess(PassRefPtr<IDBDatabaseBackend> prpBackend, cons
         ASSERT(m_databaseCallbacks);
         idbDatabase = IDBDatabase::create(scriptExecutionContext(), backend.release(), m_databaseCallbacks);
         m_databaseCallbacks->connect(idbDatabase.get());
-        m_databaseCallbacks = 0;
+        m_databaseCallbacks = nullptr;
         m_result = IDBAny::create(idbDatabase.get());
     }
     idbDatabase->setMetadata(metadata);
@@ -142,7 +142,7 @@ bool IDBOpenDBRequest::dispatchEvent(PassRefPtr<Event> event)
     // If the connection closed between onUpgradeNeeded and the delivery of the "success" event,
     // an "error" event should be fired instead.
     if (event->type() == eventNames().successEvent && m_result->type() == IDBAny::IDBDatabaseType && m_result->idbDatabase()->isClosePending()) {
-        m_result.clear();
+        m_result = nullptr;
         onError(IDBDatabaseError::create(IDBDatabaseException::AbortError, "The connection was closed."));
         return false;
     }

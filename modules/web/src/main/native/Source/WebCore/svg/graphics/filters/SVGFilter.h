@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,28 +21,24 @@
 #ifndef SVGFilter_h
 #define SVGFilter_h
 
-#if ENABLE(FILTERS)
 #include "AffineTransform.h"
 #include "Filter.h"
 #include "FilterEffect.h"
 #include "FloatRect.h"
 #include "FloatSize.h"
 
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
 class SVGFilter : public Filter {
 public:
-    static PassRefPtr<SVGFilter> create(const AffineTransform&, const FloatRect&, const FloatRect&, const FloatRect&, bool);
+    static Ref<SVGFilter> create(const AffineTransform&, const FloatRect&, const FloatRect&, const FloatRect&, bool);
 
     FloatRect filterRegionInUserSpace() const { return m_filterRegion; }
     virtual FloatRect filterRegion() const override { return m_absoluteFilterRegion; }
-
-    virtual FloatPoint mapAbsolutePointToLocalPoint(const FloatPoint& point) const override { return m_absoluteTransform.inverse().mapPoint(point); }
-    const AffineTransform& absoluteTransform() const { return m_absoluteTransform; }
 
     virtual float applyHorizontalScale(float value) const override;
     virtual float applyVerticalScale(float value) const override;
@@ -54,7 +51,6 @@ public:
 private:
     SVGFilter(const AffineTransform& absoluteTransform, const FloatRect& absoluteSourceDrawingRegion, const FloatRect& targetBoundingBox, const FloatRect& filterRegion, bool effectBBoxMode);
 
-    AffineTransform m_absoluteTransform;
     FloatRect m_absoluteSourceDrawingRegion;
     FloatRect m_targetBoundingBox;
     FloatRect m_absoluteFilterRegion;
@@ -62,10 +58,10 @@ private:
     bool m_effectBBoxMode;
 };
 
-FILTER_TYPE_CASTS(SVGFilter, isSVGFilter())
-
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGFilter)
+    static bool isType(const WebCore::Filter& filter) { return filter.isSVGFilter(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // SVGFilter_h

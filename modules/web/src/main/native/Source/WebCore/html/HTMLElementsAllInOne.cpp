@@ -37,6 +37,7 @@
 #include "HTMLAnchorElement.cpp"
 #include "HTMLAppletElement.cpp"
 #include "HTMLAreaElement.cpp"
+#include "HTMLAttachmentElement.cpp"
 #include "HTMLAudioElement.cpp"
 #include "HTMLBRElement.cpp"
 #include "HTMLBaseElement.cpp"
@@ -109,4 +110,5 @@
 #include "HTMLTrackElement.cpp"
 #include "HTMLUListElement.cpp"
 #include "HTMLVideoElement.cpp"
+#include "HTMLWBRElement.cpp"
 

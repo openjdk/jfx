@@ -62,10 +62,12 @@ public:
     virtual bool isNVIDIA() { return m_isNVIDIA; }
     virtual bool isAMD() { return m_isAMD; }
     virtual bool isIntel() { return m_isIntel; }
+    virtual bool isImagination() { return m_isImagination; }
     virtual String vendor() { return m_vendor; }
 
     virtual bool maySupportMultisampling() { return m_maySupportMultisampling; }
     virtual bool requiresBuiltInFunctionEmulation() { return m_requiresBuiltInFunctionEmulation; }
+    virtual bool requiresRestrictedMaximumTextureSize() { return m_requiresRestrictedMaximumTextureSize; }
 
 protected:
     friend class Extensions3DOpenGLES;
@@ -84,10 +86,13 @@ protected:
     bool m_isNVIDIA;
     bool m_isAMD;
     bool m_isIntel;
+    bool m_isImagination;
     bool m_maySupportMultisampling;
     bool m_requiresBuiltInFunctionEmulation;
+    bool m_requiresRestrictedMaximumTextureSize;
 
     String m_vendor;
+    String m_renderer;
 };
 
 } // namespace WebCore

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,7 +40,6 @@
 // are used from wx headers. On GTK+ for Mac many GTK+ files include <libintl.h>
 // or <glib/gi18n-lib.h>, which in turn include <xlocale/_ctype.h> which uses
 // isacii().
-#include <wtf/Platform.h>
 #if !(OS(DARWIN) && PLATFORM(GTK)) && !PLATFORM(EFL) && !defined(_LIBCPP_VERSION)
 
 #include <ctype.h>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Justin Haygood (jhaygood@reaktix.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,109 +28,96 @@
 #define IconDatabase_h
 
 #include "IconDatabaseBase.h"
-#include "Timer.h"
-#include <wtf/HashCountedSet.h>
-#include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
-#include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
-#include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(ICONDATABASE)
 #include "SQLiteDatabase.h"
-#include <wtf/Threading.h>
-#endif // ENABLE(ICONDATABASE)
+#include "Timer.h"
+#include <wtf/HashCountedSet.h>
+#include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
+#endif
 
 namespace WebCore {
 
-class DocumentLoader;
-class Image;
-class IntSize;
-class IconDatabaseClient;
-class IconRecord;
-class IconSnapshot;
-class URL;
-class PageURLRecord;
-class PageURLSnapshot;
-class SharedBuffer;
-class SuddenTerminationDisabler;
-
-#if ENABLE(ICONDATABASE)
-class SQLTransaction;
-#endif
-
 #if !ENABLE(ICONDATABASE)
-// For builds with IconDatabase disabled, they'll just use a default derivation of IconDatabaseBase. Which does nothing.
-class IconDatabase : public IconDatabaseBase {
+
+// Dummy version of IconDatabase that does nothing.
+class IconDatabase final : public IconDatabaseBase {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<IconDatabase> create() { return adoptPtr(new IconDatabase); }
     static void delayDatabaseCleanup() { }
     static void allowDatabaseCleanup() { }
     static void checkIntegrityBeforeOpening() { }
-    static String defaultDatabaseFilename() { return "WebpageIcons.db"; }
+
+    // FIXME: Is it really helpful to return a filename here rather than just the null string?
+    static String defaultDatabaseFilename() { return ASCIILiteral("WebpageIcons.db"); }
 };
+
 #else
 
-class IconDatabase : public IconDatabaseBase {
+class IconRecord;
+class IconSnapshot;
+class PageURLRecord;
+class PageURLSnapshot;
+class SuddenTerminationDisabler;
+
+class IconDatabase final : public IconDatabaseBase {
     WTF_MAKE_FAST_ALLOCATED;
 
 // *** Main Thread Only ***
 public:
-    static PassOwnPtr<IconDatabase> create() { return adoptPtr(new IconDatabase); }
+    WEBCORE_EXPORT IconDatabase();
     ~IconDatabase();
 
-    virtual void setClient(IconDatabaseClient*);
+    WEBCORE_EXPORT virtual void setClient(IconDatabaseClient*) override;
 
-    virtual bool open(const String& directory, const String& filename);
-    virtual void close();
+    WEBCORE_EXPORT virtual bool open(const String& directory, const String& filename) override;
+    WEBCORE_EXPORT virtual void close() override;
 
-    virtual void removeAllIcons();
+    WEBCORE_EXPORT virtual void removeAllIcons() override;
 
     void readIconForPageURLFromDisk(const String&);
 
-    virtual Image* defaultIcon(const IntSize&);
+    WEBCORE_EXPORT virtual Image* defaultIcon(const IntSize&) override;
 
-    virtual void retainIconForPageURL(const String&);
-    virtual void releaseIconForPageURL(const String&);
-    virtual void setIconDataForIconURL(PassRefPtr<SharedBuffer> data, const String&);
-    virtual void setIconURLForPageURL(const String& iconURL, const String& pageURL);
+    WEBCORE_EXPORT virtual void retainIconForPageURL(const String&) override;
+    WEBCORE_EXPORT virtual void releaseIconForPageURL(const String&) override;
+    WEBCORE_EXPORT virtual void setIconDataForIconURL(PassRefPtr<SharedBuffer> data, const String&) override;
+    WEBCORE_EXPORT virtual void setIconURLForPageURL(const String& iconURL, const String& pageURL) override;
 
-    virtual Image* synchronousIconForPageURL(const String&, const IntSize&);
-    virtual PassNativeImagePtr synchronousNativeIconForPageURL(const String& pageURLOriginal, const IntSize&);
-    virtual String synchronousIconURLForPageURL(const String&);
-    virtual bool synchronousIconDataKnownForIconURL(const String&);
-    virtual IconLoadDecision synchronousLoadDecisionForIconURL(const String&, DocumentLoader*);
+    WEBCORE_EXPORT virtual Image* synchronousIconForPageURL(const String&, const IntSize&) override;
+    virtual PassNativeImagePtr synchronousNativeIconForPageURL(const String& pageURLOriginal, const IntSize&) override;
+    WEBCORE_EXPORT virtual String synchronousIconURLForPageURL(const String&) override;
+    virtual bool synchronousIconDataKnownForIconURL(const String&) override;
+    WEBCORE_EXPORT virtual IconLoadDecision synchronousLoadDecisionForIconURL(const String&, DocumentLoader*) override;
 
-    virtual void setEnabled(bool);
-    virtual bool isEnabled() const;
+    WEBCORE_EXPORT virtual void setEnabled(bool) override;
+    WEBCORE_EXPORT virtual bool isEnabled() const override;
 
-    virtual void setPrivateBrowsingEnabled(bool flag);
+    WEBCORE_EXPORT virtual void setPrivateBrowsingEnabled(bool flag) override;
     bool isPrivateBrowsingEnabled() const;
 
-    static void delayDatabaseCleanup();
-    static void allowDatabaseCleanup();
-    static void checkIntegrityBeforeOpening();
+    WEBCORE_EXPORT static void delayDatabaseCleanup();
+    WEBCORE_EXPORT static void allowDatabaseCleanup();
+    WEBCORE_EXPORT static void checkIntegrityBeforeOpening();
 
     // Support for WebCoreStatistics in WebKit
-    virtual size_t pageURLMappingCount();
-    virtual size_t retainedPageURLCount();
-    virtual size_t iconRecordCount();
-    virtual size_t iconRecordCountWithData();
+    WEBCORE_EXPORT virtual size_t pageURLMappingCount() override;
+    WEBCORE_EXPORT virtual size_t retainedPageURLCount() override;
+    WEBCORE_EXPORT virtual size_t iconRecordCount() override;
+    WEBCORE_EXPORT virtual size_t iconRecordCountWithData() override;
 
 private:
-    IconDatabase();
     friend IconDatabaseBase& iconDatabase();
 
-    static void notifyPendingLoadDecisionsOnMainThread(void*);
     void notifyPendingLoadDecisions();
 
     void wakeSyncThread();
     void scheduleOrDeferSyncTimer();
-    void syncTimerFired(Timer<IconDatabase>&);
+    void syncTimerFired();
 
-    Timer<IconDatabase> m_syncTimer;
+    Timer m_syncTimer;
     ThreadIdentifier m_syncThread;
     bool m_syncThreadRunning;
 
@@ -138,17 +125,14 @@ private:
 
     RefPtr<IconRecord> m_defaultIconRecord;
 
-    static void performScheduleOrDeferSyncTimerOnMainThread(void*);
-    void performScheduleOrDeferSyncTimer();
-
     bool m_scheduleOrDeferSyncTimerRequested;
     std::unique_ptr<SuddenTerminationDisabler> m_disableSuddenTerminationWhileSyncTimerScheduled;
 
 // *** Any Thread ***
 public:
-    virtual bool isOpen() const;
-    virtual String databasePath() const;
-    static String defaultDatabaseFilename();
+    WEBCORE_EXPORT virtual bool isOpen() const override;
+    WEBCORE_EXPORT virtual String databasePath() const override;
+    WEBCORE_EXPORT static String defaultDatabaseFilename();
 
 private:
     PassRefPtr<IconRecord> getOrCreateIconRecord(const String& iconURL);
@@ -194,7 +178,7 @@ private:
 
 // *** Sync Thread Only ***
 public:
-    virtual bool shouldStopThreadActivity() const;
+    WEBCORE_EXPORT virtual bool shouldStopThreadActivity() const override;
 
 private:
     static void iconDatabaseSyncThreadStart(void *);
@@ -219,6 +203,9 @@ private:
     bool wasExcludedFromBackup();
     void setWasExcludedFromBackup();
 
+    bool isOpenBesidesMainThreadCallbacks() const;
+    void checkClosedAfterMainThreadCallback();
+
     bool m_initialPruningComplete;
 
     void setIconURLForPageURLInSQLDatabase(const String&, const String&);
@@ -237,26 +224,27 @@ private:
     void dispatchDidImportIconDataForPageURLOnMainThread(const String&);
     void dispatchDidRemoveAllIconsOnMainThread();
     void dispatchDidFinishURLImportOnMainThread();
+    std::atomic<uint32_t> m_mainThreadCallbackCount;
 
     // The client is set by the main thread before the thread starts, and from then on is only used by the sync thread
     IconDatabaseClient* m_client;
 
     SQLiteDatabase m_syncDB;
 
-    OwnPtr<SQLiteStatement> m_setIconIDForPageURLStatement;
-    OwnPtr<SQLiteStatement> m_removePageURLStatement;
-    OwnPtr<SQLiteStatement> m_getIconIDForIconURLStatement;
-    OwnPtr<SQLiteStatement> m_getImageDataForIconURLStatement;
-    OwnPtr<SQLiteStatement> m_addIconToIconInfoStatement;
-    OwnPtr<SQLiteStatement> m_addIconToIconDataStatement;
-    OwnPtr<SQLiteStatement> m_getImageDataStatement;
-    OwnPtr<SQLiteStatement> m_deletePageURLsForIconURLStatement;
-    OwnPtr<SQLiteStatement> m_deleteIconFromIconInfoStatement;
-    OwnPtr<SQLiteStatement> m_deleteIconFromIconDataStatement;
-    OwnPtr<SQLiteStatement> m_updateIconInfoStatement;
-    OwnPtr<SQLiteStatement> m_updateIconDataStatement;
-    OwnPtr<SQLiteStatement> m_setIconInfoStatement;
-    OwnPtr<SQLiteStatement> m_setIconDataStatement;
+    std::unique_ptr<SQLiteStatement> m_setIconIDForPageURLStatement;
+    std::unique_ptr<SQLiteStatement> m_removePageURLStatement;
+    std::unique_ptr<SQLiteStatement> m_getIconIDForIconURLStatement;
+    std::unique_ptr<SQLiteStatement> m_getImageDataForIconURLStatement;
+    std::unique_ptr<SQLiteStatement> m_addIconToIconInfoStatement;
+    std::unique_ptr<SQLiteStatement> m_addIconToIconDataStatement;
+    std::unique_ptr<SQLiteStatement> m_getImageDataStatement;
+    std::unique_ptr<SQLiteStatement> m_deletePageURLsForIconURLStatement;
+    std::unique_ptr<SQLiteStatement> m_deleteIconFromIconInfoStatement;
+    std::unique_ptr<SQLiteStatement> m_deleteIconFromIconDataStatement;
+    std::unique_ptr<SQLiteStatement> m_updateIconInfoStatement;
+    std::unique_ptr<SQLiteStatement> m_updateIconDataStatement;
+    std::unique_ptr<SQLiteStatement> m_setIconInfoStatement;
+    std::unique_ptr<SQLiteStatement> m_setIconDataStatement;
 };
 
 #endif // !ENABLE(ICONDATABASE)

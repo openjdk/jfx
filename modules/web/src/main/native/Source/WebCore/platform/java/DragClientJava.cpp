@@ -20,7 +20,7 @@ namespace WebCore {
 // ---- DragImage.h ---- //
 IntSize dragImageSize(DragImageRef pr)
 {
-    return pr ? pr->size() : IntSize();
+    return pr ? roundedIntSize(pr->size()) : IntSize();
 }
 
 DragImageRef scaleDragImage(DragImageRef pr, FloatSize scale)
@@ -86,7 +86,7 @@ void DragClientJava::willPerformDragDestinationAction(
 void DragClientJava::willPerformDragSourceAction(
     DragSourceAction,
     const IntPoint&,
-    Clipboard& clipboard)
+    DataTransfer& DataTransfer)
 {
     notImplemented();
 }
@@ -110,7 +110,7 @@ void DragClientJava::startDrag(
     DragImageRef dragImage,
     const IntPoint& dragImageOrigin,
     const IntPoint& eventPos,
-    Clipboard& clipboard,
+    DataTransfer& DataTransfer,
     Frame& frame,
     bool linkDrag)
 {
@@ -129,17 +129,17 @@ void DragClientJava::startDrag(
     static JGClass clsString(env->FindClass("java/lang/String"));
     static JGClass clsObject(env->FindClass("java/lang/Object"));
 
-    Vector<String> mimeTypes(clipboard.typesPrivate());
+    Vector<String> mimeTypes(DataTransfer.typesPrivate());
     JLObjectArray jmimeTypes(env->NewObjectArray(mimeTypes.size(), clsString, NULL));
     JLObjectArray jvalues(env->NewObjectArray(mimeTypes.size(), clsObject, NULL));
     CheckAndClearException(env); // OOME
 
     {
-        //we are temporary changing Clipboard security context
+        //we are temporary changing DataTransfer security context
         //for transfer-to-Java purposes.
 
-        ClipboardAccessPolicy actualJSPolicy = clipboard.policy();
-        clipboard.setAccessPolicy(ClipboardReadable);
+        DataTransferAccessPolicy actualJSPolicy = DataTransfer.policy();
+        DataTransfer.setAccessPolicy(DataTransferAccessPolicy::Readable); //XXX DataTransferReadable);
 
         int index = 0;
         Vector<String>::const_iterator end = mimeTypes.end();
@@ -147,7 +147,7 @@ void DragClientJava::startDrag(
             end!=i;
             ++i, ++index)
         {
-            String value( clipboard.getData(*i) );
+            String value( DataTransfer.getData(*i) );
 
             env->SetObjectArrayElement(
                 jmimeTypes,
@@ -160,7 +160,7 @@ void DragClientJava::startDrag(
                 (jstring)value.toJavaString(env));
         }
 
-        clipboard.setAccessPolicy(actualJSPolicy);
+        DataTransfer.setAccessPolicy(actualJSPolicy);
     }
 
     // Attention! [jimage] can be the instance of WCImage or WCImageFrame class.

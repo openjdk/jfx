@@ -27,9 +27,10 @@
 #define BuiltinExecutables_h
 
 #include "JSCBuiltins.h"
+#include "ParserModes.h"
 #include "SourceCode.h"
 #include "Weak.h"
-#include <wtf/PassOwnPtr.h>
+#include "WeakHandleOwner.h"
 
 namespace JSC {
 
@@ -37,12 +38,10 @@ class UnlinkedFunctionExecutable;
 class Identifier;
 class VM;
 
-class BuiltinExecutables {
+class BuiltinExecutables final: private WeakHandleOwner {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<BuiltinExecutables> create(VM& vm)
-    {
-        return adoptPtr(new BuiltinExecutables(vm));
-    }
+    explicit BuiltinExecutables(VM&);
 
 #define EXPOSE_BUILTIN_EXECUTABLES(name, functionName, length) \
 UnlinkedFunctionExecutable* name##Executable(); \
@@ -51,10 +50,19 @@ const SourceCode& name##Source() { return m_##name##Source; }
     JSC_FOREACH_BUILTIN(EXPOSE_BUILTIN_EXECUTABLES)
 #undef EXPOSE_BUILTIN_SOURCES
 
+    UnlinkedFunctionExecutable* createDefaultConstructor(ConstructorKind, const Identifier& name);
+
 private:
-    BuiltinExecutables(VM&);
+    void finalize(Handle<Unknown>, void* context) override;
+
     VM& m_vm;
-    UnlinkedFunctionExecutable* createBuiltinExecutable(const SourceCode&, const Identifier&);
+
+    UnlinkedFunctionExecutable* createBuiltinExecutable(const SourceCode& code, const Identifier& name, ConstructAbility constructAbility)
+    {
+        return createExecutableInternal(code, name, ConstructorKind::None, constructAbility);
+    }
+    UnlinkedFunctionExecutable* createExecutableInternal(const SourceCode&, const Identifier&, ConstructorKind, ConstructAbility);
+
 #define DECLARE_BUILTIN_SOURCE_MEMBERS(name, functionName, length)\
     SourceCode m_##name##Source; \
     Weak<UnlinkedFunctionExecutable> m_##name##Executable;

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -34,63 +34,35 @@
 
 namespace WebCore {
 
-RenderMedia::RenderMedia(HTMLMediaElement& element, PassRef<RenderStyle> style)
-    : RenderImage(element, std::move(style))
+RenderMedia::RenderMedia(HTMLMediaElement& element, Ref<RenderStyle>&& style)
+    : RenderImage(element, WTF::move(style))
 {
+    setHasShadowControls(true);
 }
 
-RenderMedia::RenderMedia(HTMLMediaElement& element, PassRef<RenderStyle> style, const IntSize& intrinsicSize)
-    : RenderImage(element, std::move(style))
+RenderMedia::RenderMedia(HTMLMediaElement& element, Ref<RenderStyle>&& style, const IntSize& intrinsicSize)
+    : RenderImage(element, WTF::move(style))
 {
     setIntrinsicSize(intrinsicSize);
+    setHasShadowControls(true);
 }
 
 RenderMedia::~RenderMedia()
 {
 }
 
-void RenderMedia::layout()
-{
-    StackStats::LayoutCheckPoint layoutCheckPoint;
-    LayoutSize oldSize = contentBoxRect().size();
-
-    RenderImage::layout();
-
-    RenderBox* controlsRenderer = toRenderBox(firstChild());
-    if (!controlsRenderer)
-        return;
-
-    bool controlsNeedLayout = controlsRenderer->needsLayout();
-    // If the region chain has changed we also need to relayout the controls to update the region box info.
-    // FIXME: We can do better once we compute region box info for RenderReplaced, not only for RenderBlock.
-    const RenderFlowThread* flowThread = flowThreadContainingBlock();
-    if (flowThread && !controlsNeedLayout) {
-        if (flowThread->pageLogicalSizeChanged())
-            controlsNeedLayout = true;
-    }
-
-    LayoutSize newSize = contentBoxRect().size();
-    if (newSize == oldSize && !controlsNeedLayout)
-        return;
-
-    // When calling layout() on a child node, a parent must either push a LayoutStateMaintainter, or
-    // instantiate LayoutStateDisabler. Since using a LayoutStateMaintainer is slightly more efficient,
-    // and this method will be called many times per second during playback, use a LayoutStateMaintainer:
-    LayoutStateMaintainer statePusher(view(), *this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
-
-    controlsRenderer->setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
-    controlsRenderer->style().setHeight(Length(newSize.height(), Fixed));
-    controlsRenderer->style().setWidth(Length(newSize.width(), Fixed));
-    controlsRenderer->setNeedsLayout(MarkOnlyThis);
-    controlsRenderer->layout();
-    clearChildNeedsLayout();
-
-    statePusher.pop();
-}
-
 void RenderMedia::paintReplaced(PaintInfo&, const LayoutPoint&)
 {
 }
+
+void RenderMedia::layout()
+{
+    LayoutSize oldSize = size();
+    RenderImage::layout();
+    if (oldSize != size())
+        mediaElement().layoutSizeChanged();
+}
+
 
 } // namespace WebCore
 

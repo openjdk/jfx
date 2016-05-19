@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,6 +28,7 @@
 
 #import "GraphicsContextCG.h"
 #import "GraphicsContextPlatformPrivateCG.h"
+#import "IntRect.h"
 #if USE(APPKIT)
 #import <AppKit/AppKit.h>
 #endif
@@ -55,51 +56,69 @@ namespace WebCore {
 // exceptions for those.
 
 #if !PLATFORM(IOS)
-static void drawFocusRingToContext(CGContextRef context, CGPathRef focusRingPath, CGColorRef color, int radius)
+static void drawFocusRingToContext(CGContextRef context, CGPathRef focusRingPath)
 {
     CGContextBeginPath(context);
     CGContextAddPath(context, focusRingPath);
-    wkDrawFocusRing(context, color, radius);
+    wkDrawFocusRing(context, nullptr, 0);
 }
 
-void GraphicsContext::drawFocusRing(const Path& path, int width, int /*offset*/, const Color& color)
+static bool drawFocusRingToContextAtTime(CGContextRef context, CGPathRef focusRingPath, double timeOffset)
 {
-    // FIXME: Use 'offset' for something? http://webkit.org/b/49909
-
-    if (paintingDisabled() || path.isNull())
-        return;
-
-    int radius = (width - 1) / 2;
-    CGColorRef colorRef = color.isValid() ? cachedCGColor(color, ColorSpaceDeviceRGB) : 0;
-
-    drawFocusRingToContext(platformContext(), path.platformPath(), colorRef, radius);
+    UNUSED_PARAM(timeOffset);
+    CGContextBeginPath(context);
+    CGContextAddPath(context, focusRingPath);
+    return wkDrawFocusRingAtTime(context, std::numeric_limits<double>::max());
 }
 #endif // !PLATFORM(IOS)
 
-void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int offset, const Color& color)
+void GraphicsContext::drawFocusRing(const Path& path, int /* width */, int /* offset */, const Color&)
+{
+#if PLATFORM(MAC)
+    if (paintingDisabled() || path.isNull())
+        return;
+
+    drawFocusRingToContext(platformContext(), path.platformPath());
+#else
+    UNUSED_PARAM(path);
+#endif
+}
+
+#if PLATFORM(MAC)
+void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int offset, double timeOffset, bool& needsRedraw)
+{
+    if (paintingDisabled())
+        return;
+
+    offset += (width - 1) / 2;
+
+    RetainPtr<CGMutablePathRef> focusRingPath = adoptCF(CGPathCreateMutable());
+    for (auto& rect : rects)
+        CGPathAddRect(focusRingPath.get(), 0, CGRectInset(rect, -offset, -offset));
+
+    needsRedraw = drawFocusRingToContextAtTime(platformContext(), focusRingPath.get(), timeOffset);
+}
+#endif
+
+void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int offset, const Color&)
 {
 #if !PLATFORM(IOS)
     if (paintingDisabled())
         return;
 
-    int radius = (width - 1) / 2;
-    offset += radius;
-    CGColorRef colorRef = color.isValid() ? cachedCGColor(color, ColorSpaceDeviceRGB) : 0;
+    offset += (width - 1) / 2;
 
     RetainPtr<CGMutablePathRef> focusRingPath = adoptCF(CGPathCreateMutable());
-    unsigned rectCount = rects.size();
-    for (unsigned i = 0; i < rectCount; i++)
-        CGPathAddRect(focusRingPath.get(), 0, CGRectInset(rects[i], -offset, -offset));
+    for (auto& rect : rects)
+        CGPathAddRect(focusRingPath.get(), 0, CGRectInset(rect, -offset, -offset));
 
-    drawFocusRingToContext(platformContext(), focusRingPath.get(), colorRef, radius);
+    drawFocusRingToContext(platformContext(), focusRingPath.get());
 #else
     UNUSED_PARAM(rects);
     UNUSED_PARAM(width);
     UNUSED_PARAM(offset);
-    UNUSED_PARAM(color);
 #endif
 }
-
 
 #if !PLATFORM(IOS)
 static NSColor* makePatternColor(NSString* firstChoiceName, NSString* secondChoiceName, NSColor* defaultColor, bool& usingDot)
@@ -133,8 +152,11 @@ static NSColor *correctionPatternColor = nullptr;
 
 void GraphicsContext::updateDocumentMarkerResources()
 {
+    [spellingPatternColor release];
     spellingPatternColor = nullptr;
+    [grammarPatternColor release];
     grammarPatternColor = nullptr;
+    [correctionPatternColor release];
     correctionPatternColor = nullptr;
 }
 

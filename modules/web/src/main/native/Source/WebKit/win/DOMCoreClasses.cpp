@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2009 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2009, 2014-2015 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "DOMCoreClasses.h"
 
@@ -39,6 +38,7 @@
 #include <WebCore/DragImage.h>
 #include <WebCore/Element.h>
 #include <WebCore/Font.h>
+#include <WebCore/FontCascade.h>
 #include <WebCore/Frame.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLInputElement.h>
@@ -47,9 +47,9 @@
 #include <WebCore/HTMLSelectElement.h>
 #include <WebCore/HTMLTextAreaElement.h>
 #include <WebCore/NodeList.h>
+#include <WebCore/Range.h>
 #include <WebCore/RenderElement.h>
 #include <WebCore/RenderTreeAsText.h>
-#include <WebCore/SimpleFontData.h>
 
 #include <initguid.h>
 // {3B0C0EFF-478B-4b0b-8290-D2321E08E23E}
@@ -122,7 +122,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::nodeValue(
     if (!m_node)
         return E_FAIL;
     WTF::String nodeValueStr = m_node->nodeValue();
-    *result = SysAllocStringLen(nodeValueStr.deprecatedCharacters(), nodeValueStr.length());
+    *result = BString(nodeValueStr).release();
     if (nodeValueStr.length() && !*result)
         return E_OUTOFMEMORY;
     return S_OK;
@@ -1033,7 +1033,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::getAttribute(
         return E_FAIL;
     WTF::String nameString(name, SysStringLen(name));
     WTF::String& attrValueString = (WTF::String&) m_element->getAttribute(nameString);
-    *result = SysAllocStringLen(attrValueString.deprecatedCharacters(), attrValueString.length());
+    *result = BString(attrValueString).release();
     if (attrValueString.length() && !*result)
         return E_OUTOFMEMORY;
     return S_OK;
@@ -1255,9 +1255,14 @@ HRESULT STDMETHODCALLTYPE DOMElement::font(WebFontDescription* webFontDescriptio
     if (!renderer)
         return E_FAIL;
 
-    FontDescription fontDescription = renderer->style().font().fontDescription();
+    FontDescription fontDescription = renderer->style().fontCascade().fontDescription();
     AtomicString family = fontDescription.firstFamily();
-    webFontDescription->family = family.string().deprecatedCharacters();
+
+    // FIXME: This leaks. Delete this whole function to get rid of the leak.
+    UChar* familyCharactersBuffer = new UChar[family.length()];
+    StringView(family.string()).getCharactersWithUpconvert(familyCharactersBuffer);
+
+    webFontDescription->family = familyCharactersBuffer;
     webFontDescription->familyLength = family.length();
     webFontDescription->size = fontDescription.computedSize();
     webFontDescription->bold = fontDescription.weight() >= WebCore::FontWeight600;
@@ -1490,27 +1495,27 @@ DOMElement::~DOMElement()
 IDOMElement* DOMElement::createInstance(WebCore::Element* e)
 {
     if (!e)
-        return 0;
+        return nullptr;
 
     HRESULT hr;
     IDOMElement* domElement = 0;
 
-    if (isHTMLFormElement(e)) {
+    if (is<WebCore::HTMLFormElement>(*e)) {
         DOMHTMLFormElement* newElement = new DOMHTMLFormElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
     } else if (e->hasTagName(iframeTag)) {
         DOMHTMLIFrameElement* newElement = new DOMHTMLIFrameElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
-    } else if (isHTMLInputElement(e)) {
+    } else if (is<WebCore::HTMLInputElement>(*e)) {
         DOMHTMLInputElement* newElement = new DOMHTMLInputElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
-    } else if (isHTMLOptionElement(e)) {
+    } else if (is<WebCore::HTMLOptionElement>(*e)) {
         DOMHTMLOptionElement* newElement = new DOMHTMLOptionElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
     } else if (e->hasTagName(selectTag)) {
         DOMHTMLSelectElement* newElement = new DOMHTMLSelectElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
-    } else if (isHTMLTextAreaElement(e)) {
+    } else if (is<WebCore::HTMLTextAreaElement>(*e)) {
         DOMHTMLTextAreaElement* newElement = new DOMHTMLTextAreaElement(e);
         hr = newElement->QueryInterface(IID_IDOMElement, (void**)&domElement);
     } else if (e->isHTMLElement()) {
@@ -1525,4 +1530,213 @@ IDOMElement* DOMElement::createInstance(WebCore::Element* e)
         return 0;
 
     return domElement;
+}
+
+// DOMRange - IUnknown -----------------------------------------------------
+
+HRESULT DOMRange::QueryInterface(REFIID riid, void** ppvObject)
+{
+    *ppvObject = nullptr;
+    if (IsEqualGUID(riid, IID_IDOMRange))
+        *ppvObject = static_cast<IDOMRange*>(this);
+    else
+        return DOMObject::QueryInterface(riid, ppvObject);
+
+    AddRef();
+    return S_OK;
+}
+
+// DOMRange -----------------------------------------------------------------
+
+DOMRange::DOMRange(WebCore::Range* e)
+    : m_range(e)
+{
+}
+
+DOMRange::~DOMRange()
+{
+}
+
+IDOMRange* DOMRange::createInstance(WebCore::Range* range)
+{
+    if (!range)
+        return nullptr;
+
+    DOMRange* newRange = new DOMRange(range);
+
+    IDOMRange* domRange = nullptr;
+    if (FAILED(newRange->QueryInterface(IID_IDOMRange, reinterpret_cast<void**>(&domRange))))
+        return nullptr;
+
+    return newRange;
+}
+
+HRESULT DOMRange::startContainer(IDOMNode** node)
+{
+    if (!node)
+        return E_POINTER;
+
+    if (!m_range)
+        return E_UNEXPECTED;
+
+    *node = DOMNode::createInstance(m_range->startContainer());
+
+    return S_OK;
+}
+
+HRESULT DOMRange::startOffset(int* offset)
+{
+    if (!offset)
+        return E_POINTER;
+
+    if (!m_range)
+        return E_UNEXPECTED;
+
+    *offset = m_range->startOffset();
+
+    return S_OK;
+}
+
+HRESULT DOMRange::endContainer(IDOMNode** node)
+{
+    if (!node)
+        return E_POINTER;
+
+    if (!m_range)
+        return E_UNEXPECTED;
+
+    *node = DOMNode::createInstance(m_range->endContainer());
+
+    return S_OK;
+}
+
+HRESULT DOMRange::endOffset(int* offset)
+{
+    if (!offset)
+        return E_POINTER;
+
+    if (!m_range)
+        return E_UNEXPECTED;
+
+    *offset = m_range->endOffset();
+
+    return S_OK;
+}
+
+HRESULT DOMRange::collapsed(BOOL* result)
+{
+    if (!result)
+        return E_POINTER;
+
+    if (!m_range)
+        return E_UNEXPECTED;
+
+    WebCore::ExceptionCode ec = 0;
+    *result = m_range->collapsed(ec);
+
+    return S_OK;
+}
+
+HRESULT DOMRange::commonAncestorContainer(IDOMNode** container)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::setStart(IDOMNode* refNode, int offset)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::setEnd(IDOMNode* refNode, int offset)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::setStartBefore(IDOMNode* refNode)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::setStartAfter(IDOMNode* refNode)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::setEndBefore(IDOMNode* refNode)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::setEndAfter(IDOMNode* refNode)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::collapse(BOOL toStart)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::selectNode(IDOMNode* refNode)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::selectNodeContents(IDOMNode* refNode)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::compareBoundaryPoints(unsigned short how, IDOMRange* sourceRange)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::deleteContents()
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::extractContents(IDOMDocumentFragment** fragment)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::cloneContents(IDOMDocumentFragment** fragment)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::insertNode(IDOMNode* newNode)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::surroundContents(IDOMNode* newParent)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::cloneRange(IDOMRange** range)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT DOMRange::toString(BSTR* str)
+{
+    if (!str)
+        return E_POINTER;
+
+    if (!m_range)
+        return E_UNEXPECTED;
+
+    WebCore::ExceptionCode ec = 0;
+    *str = BString(m_range->toString(ec)).release();
+
+    return S_OK;
+}
+
+HRESULT DOMRange::detach()
+{
+    return E_NOTIMPL;
 }

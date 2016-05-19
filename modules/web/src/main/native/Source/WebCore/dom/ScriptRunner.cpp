@@ -28,6 +28,7 @@
 
 #include "CachedScript.h"
 #include "Element.h"
+#include "MicroTask.h"
 #include "PendingScript.h"
 #include "ScriptElement.h"
 
@@ -35,7 +36,7 @@ namespace WebCore {
 
 ScriptRunner::ScriptRunner(Document& document)
     : m_document(document)
-    , m_timer(this, &ScriptRunner::timerFired)
+    , m_timer(*this, &ScriptRunner::timerFired)
 {
 }
 
@@ -45,7 +46,7 @@ ScriptRunner::~ScriptRunner()
         m_document.decrementLoadEventDelayCount();
     for (size_t i = 0; i < m_scriptsToExecuteInOrder.size(); ++i)
         m_document.decrementLoadEventDelayCount();
-    for (int i = 0; i < m_pendingAsyncScripts.size(); ++i)
+    for (unsigned i = 0; i < m_pendingAsyncScripts.size(); ++i)
         m_document.decrementLoadEventDelayCount();
 }
 
@@ -54,19 +55,18 @@ void ScriptRunner::queueScriptForExecution(ScriptElement* scriptElement, CachedR
     ASSERT(scriptElement);
     ASSERT(cachedScript.get());
 
-    Element* element = scriptElement->element();
-    ASSERT(element);
-    ASSERT(element->inDocument());
+    Element& element = scriptElement->element();
+    ASSERT(element.inDocument());
 
     m_document.incrementLoadEventDelayCount();
 
     switch (executionType) {
     case ASYNC_EXECUTION:
-        m_pendingAsyncScripts.add(scriptElement, PendingScript(element, cachedScript.get()));
+        m_pendingAsyncScripts.add(scriptElement, PendingScript(&element, cachedScript.get()));
         break;
 
     case IN_ORDER_EXECUTION:
-        m_scriptsToExecuteInOrder.append(PendingScript(element, cachedScript.get()));
+        m_scriptsToExecuteInOrder.append(PendingScript(&element, cachedScript.get()));
         break;
     }
 }
@@ -97,10 +97,8 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
     m_timer.startOneShot(0);
 }
 
-void ScriptRunner::timerFired(Timer<ScriptRunner>& timer)
+void ScriptRunner::timerFired()
 {
-    ASSERT_UNUSED(timer, &timer == &m_timer);
-
     Ref<Document> protect(m_document);
 
     Vector<PendingScript> scripts;
@@ -116,9 +114,14 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>& timer)
     for (size_t i = 0; i < size; ++i) {
         CachedScript* cachedScript = scripts[i].cachedScript();
         RefPtr<Element> element = scripts[i].releaseElementAndClear();
+        ASSERT(element);
+        // Paper over https://bugs.webkit.org/show_bug.cgi?id=144050
+        if (!element)
+            continue;
         toScriptElementIfPossible(element.get())->execute(cachedScript);
         m_document.decrementLoadEventDelayCount();
     }
+    MicroTaskQueue::singleton().runMicroTasks();
 }
 
 }

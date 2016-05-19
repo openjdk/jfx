@@ -26,47 +26,49 @@
 #include "config.h"
 #include "JSDOMPromise.h"
 
+#include "ExceptionCode.h"
+#include <runtime/Exception.h>
+
 using namespace JSC;
 
 namespace WebCore {
 
-DeferredWrapper::DeferredWrapper(ExecState* exec, JSDOMGlobalObject* globalObject)
+DeferredWrapper::DeferredWrapper(ExecState* exec, JSDOMGlobalObject* globalObject, JSPromiseDeferred* promiseDeferred)
     : m_globalObject(exec->vm(), globalObject)
-    , m_deferred(exec->vm(), JSPromiseDeferred::create(exec, globalObject))
+    , m_deferred(exec->vm(), promiseDeferred)
 {
 }
 
-JSObject* DeferredWrapper::promise() const
+JSDOMGlobalObject& DeferredWrapper::globalObject() const
 {
-    return m_deferred->promise();
+    ASSERT(m_globalObject);
+    return *m_globalObject.get();
 }
 
-void DeferredWrapper::resolve(ExecState* exec, JSValue resolution)
+void DeferredWrapper::callFunction(ExecState& exec, JSValue function, JSValue resolution)
 {
-    JSValue deferredResolve = m_deferred->resolve();
-
-    CallData resolveCallData;
-    CallType resolveCallType = getCallData(deferredResolve, resolveCallData);
-    ASSERT(resolveCallType != CallTypeNone);
+    CallData callData;
+    CallType callType = getCallData(function, callData);
+    ASSERT(callType != CallTypeNone);
 
     MarkedArgumentBuffer arguments;
     arguments.append(resolution);
 
-    call(exec, deferredResolve, resolveCallType, resolveCallData, jsUndefined(), arguments);
+    call(&exec, function, callType, callData, jsUndefined(), arguments);
+
+    m_globalObject.clear();
+    m_deferred.clear();
 }
 
-void DeferredWrapper::reject(ExecState* exec, JSValue reason)
+void rejectPromiseWithExceptionIfAny(JSC::ExecState& state, JSDOMGlobalObject& globalObject, JSPromiseDeferred& promiseDeferred)
 {
-    JSValue deferredReject = m_deferred->reject();
+    if (!state.hadException())
+        return;
 
-    CallData rejectCallData;
-    CallType rejectCallType = getCallData(deferredReject, rejectCallData);
-    ASSERT(rejectCallType != CallTypeNone);
+    JSValue error = state.exception()->value();
+    state.clearException();
 
-    MarkedArgumentBuffer arguments;
-    arguments.append(reason);
-
-    call(exec, deferredReject, rejectCallType, rejectCallData, jsUndefined(), arguments);
+    DeferredWrapper(&state, &globalObject, &promiseDeferred).reject(error);
 }
 
 }

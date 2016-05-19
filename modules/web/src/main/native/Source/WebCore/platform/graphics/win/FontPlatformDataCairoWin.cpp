@@ -57,7 +57,7 @@ void FontPlatformData::platformDataInit(HFONT font, float size, HDC hdc, WCHAR* 
 }
 
 FontPlatformData::FontPlatformData(GDIObject<HFONT> font, cairo_font_face_t* fontFace, float size, bool bold, bool oblique)
-    : m_font(SharedGDIObject<HFONT>::create(std::move(font)))
+    : m_font(SharedGDIObject<HFONT>::create(WTF::move(font)))
     , m_size(size)
     , m_orientation(Horizontal)
     , m_widthVariant(RegularWidth)
@@ -77,7 +77,7 @@ FontPlatformData::FontPlatformData(GDIObject<HFONT> font, cairo_font_face_t* fon
    // We force antialiasing and disable hinting to provide consistent
    // typographic qualities for custom fonts on all platforms.
    cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_NONE);
-   cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_GRAY);
+   cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_BEST);
 
     if (syntheticOblique()) {
         static const float syntheticObliqueSkew = -tanf(14 * acosf(0) / 90);
@@ -91,7 +91,7 @@ FontPlatformData::FontPlatformData(GDIObject<HFONT> font, cairo_font_face_t* fon
 
 FontPlatformData::~FontPlatformData()
 {
-    if (m_scaledFont && m_scaledFont != hashTableDeletedFontValue())
+    if (m_scaledFont)
         cairo_scaled_font_destroy(m_scaledFont);
 }
 
@@ -110,7 +110,7 @@ const FontPlatformData& FontPlatformData::platformDataAssign(const FontPlatformD
     m_font = other.m_font;
     m_useGDI = other.m_useGDI;
 
-    if (m_scaledFont && m_scaledFont != hashTableDeletedFontValue())
+    if (m_scaledFont)
         cairo_scaled_font_destroy(m_scaledFont);
 
     m_scaledFont = cairo_scaled_font_reference(other.m_scaledFont);

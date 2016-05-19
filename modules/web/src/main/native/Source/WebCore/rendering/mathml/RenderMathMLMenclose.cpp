@@ -39,14 +39,14 @@ namespace WebCore {
 
 using namespace MathMLNames;
 
-RenderMathMLMenclose::RenderMathMLMenclose(Element& element, PassRef<RenderStyle> style)
-    : RenderMathMLRow(element, std::move(style))
+RenderMathMLMenclose::RenderMathMLMenclose(Element& element, Ref<RenderStyle>&& style)
+    : RenderMathMLRow(element, WTF::move(style))
 {
 }
 
 void RenderMathMLMenclose::addChild(RenderObject* newChild, RenderObject* beforeChild)
 {
-    MathMLMencloseElement* menclose = toMathMLMencloseElement(element());
+    MathMLMencloseElement* menclose = downcast<MathMLMencloseElement>(element());
     // Allow an anonymous RenderMathMLSquareRoot to handle drawing the radical
     // notation, rather than duplicating the code needed to paint a root.
     if (!firstChild() && menclose->isRadical())
@@ -54,7 +54,7 @@ void RenderMathMLMenclose::addChild(RenderObject* newChild, RenderObject* before
 
     if (newChild) {
         if (firstChild() && menclose->isRadical())
-            toRenderElement(firstChild())->addChild(newChild, beforeChild && beforeChild->parent() == firstChild() ? beforeChild : nullptr);
+            downcast<RenderElement>(*firstChild()).addChild(newChild, beforeChild && beforeChild->parent() == firstChild() ? beforeChild : nullptr);
         else
             RenderMathMLBlock::addChild(newChild, beforeChild);
     }
@@ -67,13 +67,13 @@ void RenderMathMLMenclose::computePreferredLogicalWidths()
     RenderMathMLBlock::computePreferredLogicalWidths();
     const int paddingTop = 6;
 
-    MathMLMencloseElement* menclose = toMathMLMencloseElement(element());
+    MathMLMencloseElement* menclose = downcast<MathMLMencloseElement>(element());
     const Vector<String>& notationValues = menclose->notationValues();
     size_t notationalValueSize = notationValues.size();
     for (size_t i = 0; i < notationalValueSize; i++) {
         if (notationValues[i] == "circle") {
-            m_minPreferredLogicalWidth = minPreferredLogicalWidth() * float(M_SQRT2);
-            m_maxPreferredLogicalWidth = maxPreferredLogicalWidth() * float(M_SQRT2);
+            m_minPreferredLogicalWidth = minPreferredLogicalWidth() * sqrtOfTwoFloat;
+            m_maxPreferredLogicalWidth = maxPreferredLogicalWidth() * sqrtOfTwoFloat;
         }
     }
 
@@ -86,12 +86,12 @@ void RenderMathMLMenclose::computePreferredLogicalWidths()
 
 void RenderMathMLMenclose::updateLogicalHeight()
 {
-    MathMLMencloseElement* menclose = toMathMLMencloseElement(element());
+    MathMLMencloseElement* menclose = downcast<MathMLMencloseElement>(element());
     const Vector<String>& notationValues = menclose->notationValues();
     size_t notationalValueSize = notationValues.size();
     for (size_t i = 0; i < notationalValueSize; i++)
         if (notationValues[i] == "circle")
-            setLogicalHeight(logicalHeight() * float(M_SQRT2));
+            setLogicalHeight(logicalHeight() * sqrtOfTwoFloat);
 }
 
 void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset)
@@ -101,7 +101,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
     if (info.context->paintingDisabled() || info.phase != PaintPhaseForeground || style().visibility() != VISIBLE)
         return;
 
-    MathMLMencloseElement* menclose = toMathMLMencloseElement(element());
+    MathMLMencloseElement* menclose = downcast<MathMLMencloseElement>(element());
     const Vector<String>& notationValues = menclose->notationValues();
     size_t notationalValueSize = notationValues.size();
     bool isDefaultLongDiv = menclose->isDefaultLongDiv();

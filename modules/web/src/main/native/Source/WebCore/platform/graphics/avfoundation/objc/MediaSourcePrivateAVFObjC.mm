@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,11 +28,12 @@
 
 #if ENABLE(MEDIA_SOURCE) && USE(AVFOUNDATION)
 
+#import "CDMSessionMediaSourceAVFObjC.h"
 #import "ContentType.h"
 #import "ExceptionCodePlaceholder.h"
 #import "MediaPlayerPrivateMediaSourceAVFObjC.h"
+#import "MediaSourcePrivateClient.h"
 #import "SourceBufferPrivateAVFObjC.h"
-#import "NotImplemented.h"
 #import "SoftLinking.h"
 #import <objc/runtime.h>
 #import <wtf/text/AtomicString.h>
@@ -43,14 +44,16 @@ namespace WebCore {
 #pragma mark -
 #pragma mark MediaSourcePrivateAVFObjC
 
-RefPtr<MediaSourcePrivateAVFObjC> MediaSourcePrivateAVFObjC::create(MediaPlayerPrivateMediaSourceAVFObjC* parent)
+RefPtr<MediaSourcePrivateAVFObjC> MediaSourcePrivateAVFObjC::create(MediaPlayerPrivateMediaSourceAVFObjC* parent, MediaSourcePrivateClient* client)
 {
-    return adoptRef(new MediaSourcePrivateAVFObjC(parent));
+    RefPtr<MediaSourcePrivateAVFObjC> mediaSourcePrivate = adoptRef(new MediaSourcePrivateAVFObjC(parent, client));
+    client->setPrivateAndOpen(*mediaSourcePrivate);
+    return mediaSourcePrivate;
 }
 
-MediaSourcePrivateAVFObjC::MediaSourcePrivateAVFObjC(MediaPlayerPrivateMediaSourceAVFObjC* parent)
+MediaSourcePrivateAVFObjC::MediaSourcePrivateAVFObjC(MediaPlayerPrivateMediaSourceAVFObjC* parent, MediaSourcePrivateClient* client)
     : m_player(parent)
-    , m_duration(std::numeric_limits<double>::quiet_NaN())
+    , m_client(client)
     , m_isEnded(false)
 {
 }
@@ -85,20 +88,22 @@ void MediaSourcePrivateAVFObjC::removeSourceBuffer(SourceBufferPrivate* buffer)
         m_activeSourceBuffers.remove(pos);
 
     pos = m_sourceBuffers.find(buffer);
+    m_sourceBuffers[pos]->clearMediaSource();
     m_sourceBuffers.remove(pos);
 }
 
-double MediaSourcePrivateAVFObjC::duration()
+MediaTime MediaSourcePrivateAVFObjC::duration()
 {
-    return m_duration;
+    return m_client->duration();
 }
 
-void MediaSourcePrivateAVFObjC::setDuration(double duration)
+std::unique_ptr<PlatformTimeRanges> MediaSourcePrivateAVFObjC::buffered()
 {
-    if (duration == m_duration)
-        return;
+    return m_client->buffered();
+}
 
-    m_duration = duration;
+void MediaSourcePrivateAVFObjC::durationChanged()
+{
     m_player->durationChanged();
 }
 
@@ -125,6 +130,16 @@ void MediaSourcePrivateAVFObjC::setReadyState(MediaPlayer::ReadyState readyState
     m_player->setReadyState(readyState);
 }
 
+void MediaSourcePrivateAVFObjC::waitForSeekCompleted()
+{
+    m_player->waitForSeekCompleted();
+}
+
+void MediaSourcePrivateAVFObjC::seekCompleted()
+{
+    m_player->seekCompleted();
+}
+
 void MediaSourcePrivateAVFObjC::sourceBufferPrivateDidChangeActiveState(SourceBufferPrivateAVFObjC* buffer, bool active)
 {
     if (active && !m_activeSourceBuffers.contains(buffer))
@@ -137,9 +152,16 @@ void MediaSourcePrivateAVFObjC::sourceBufferPrivateDidChangeActiveState(SourceBu
     }
 }
 
-static bool MediaSourcePrivateAVFObjCHasAudio(PassRefPtr<SourceBufferPrivateAVFObjC> prpSourceBuffer)
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+void MediaSourcePrivateAVFObjC::sourceBufferKeyNeeded(SourceBufferPrivateAVFObjC* buffer, Uint8Array* initData)
 {
-    RefPtr<SourceBufferPrivateAVFObjC> sourceBuffer = prpSourceBuffer;
+    m_sourceBuffersNeedingSessions.append(buffer);
+    player()->keyNeeded(initData);
+}
+#endif
+
+static bool MediaSourcePrivateAVFObjCHasAudio(SourceBufferPrivateAVFObjC* sourceBuffer)
+{
     return sourceBuffer->hasAudio();
 }
 
@@ -148,9 +170,8 @@ bool MediaSourcePrivateAVFObjC::hasAudio() const
     return std::any_of(m_activeSourceBuffers.begin(), m_activeSourceBuffers.end(), MediaSourcePrivateAVFObjCHasAudio);
 }
 
-static bool MediaSourcePrivateAVFObjCHasVideo(PassRefPtr<SourceBufferPrivateAVFObjC> prpSourceBuffer)
+static bool MediaSourcePrivateAVFObjCHasVideo(SourceBufferPrivateAVFObjC* sourceBuffer)
 {
-    RefPtr<SourceBufferPrivateAVFObjC> sourceBuffer = prpSourceBuffer;
     return sourceBuffer->hasVideo();
 }
 
@@ -159,24 +180,27 @@ bool MediaSourcePrivateAVFObjC::hasVideo() const
     return std::any_of(m_activeSourceBuffers.begin(), m_activeSourceBuffers.end(), MediaSourcePrivateAVFObjCHasVideo);
 }
 
-MediaTime MediaSourcePrivateAVFObjC::seekToTime(MediaTime targetTime, MediaTime negativeThreshold, MediaTime positiveThreshold)
+void MediaSourcePrivateAVFObjC::seekToTime(const MediaTime& time)
+{
+    m_client->seekToTime(time);
+}
+
+MediaTime MediaSourcePrivateAVFObjC::fastSeekTimeForMediaTime(const MediaTime& targetTime, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold)
 {
     MediaTime seekTime = targetTime;
+
     for (auto it = m_activeSourceBuffers.begin(), end = m_activeSourceBuffers.end(); it != end; ++it) {
         MediaTime sourceSeekTime = (*it)->fastSeekTimeForMediaTime(targetTime, negativeThreshold, positiveThreshold);
         if (abs(targetTime - sourceSeekTime) > abs(targetTime - seekTime))
             seekTime = sourceSeekTime;
     }
 
-    for (auto it = m_activeSourceBuffers.begin(), end = m_activeSourceBuffers.end(); it != end; ++it)
-        (*it)->seekToTime(seekTime);
-
     return seekTime;
 }
 
-IntSize MediaSourcePrivateAVFObjC::naturalSize() const
+FloatSize MediaSourcePrivateAVFObjC::naturalSize() const
 {
-    IntSize result;
+    FloatSize result;
 
     for (auto* sourceBuffer : m_activeSourceBuffers)
         result = result.expandedTo(sourceBuffer->naturalSize());

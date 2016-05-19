@@ -26,7 +26,7 @@
 #include "ImageBuffer.h"
 #include "RenderSVGResourceContainer.h"
 #include "SVGGradientElement.h"
-
+#include <memory>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -52,7 +52,7 @@ public:
     virtual FloatRect resourceBoundingBox(const RenderObject&) override final { return FloatRect(); }
 
 protected:
-    RenderSVGResourceGradient(SVGGradientElement&, PassRef<RenderStyle>);
+    RenderSVGResourceGradient(SVGGradientElement&, Ref<RenderStyle>&&);
 
     void element() const = delete;
 
@@ -67,7 +67,7 @@ protected:
 
 private:
     bool m_shouldCollectGradientAttributes : 1;
-    HashMap<RenderObject*, OwnPtr<GradientData>> m_gradientMap;
+    HashMap<RenderObject*, std::unique_ptr<GradientData>> m_gradientMap;
 
 #if USE(CG)
     GraphicsContext* m_savedContext;

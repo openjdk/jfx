@@ -26,6 +26,7 @@
 #ifndef CachedResourceHandle_h
 #define CachedResourceHandle_h
 
+#include "PlatformExportMacros.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -49,7 +50,7 @@ protected:
     CachedResourceHandleBase(CachedResource*);
     CachedResourceHandleBase(const CachedResourceHandleBase&);
 
-    void setResource(CachedResource*);
+    WEBCORE_EXPORT void setResource(CachedResource*);
 
 private:
     CachedResourceHandleBase& operator=(const CachedResourceHandleBase&) { return *this; }
@@ -68,6 +69,7 @@ public:
 
     R* get() const { return reinterpret_cast<R*>(CachedResourceHandleBase::get()); }
     R* operator->() const { return get(); }
+    R& operator*() const { ASSERT(get()); return *get(); }
 
     CachedResourceHandle& operator=(R* res) { setResource(res); return *this; }
     CachedResourceHandle& operator=(const CachedResourceHandle& o) { setResource(o.get()); return *this; }

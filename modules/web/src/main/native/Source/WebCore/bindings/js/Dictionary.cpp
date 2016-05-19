@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -62,8 +62,8 @@ bool Dictionary::getOwnPropertiesAsStringHashMap(HashMap<String, String>& map) c
     JSObject* object =  m_dictionary.initializerObject();
     ExecState* exec = m_dictionary.execState();
 
-    PropertyNameArray propertyNames(exec);
-    JSObject::getOwnPropertyNames(object, exec, propertyNames, ExcludeDontEnumProperties);
+    PropertyNameArray propertyNames(exec, PropertyNameMode::Strings);
+    JSObject::getOwnPropertyNames(object, exec, propertyNames, EnumerationMode());
     for (PropertyNameArray::const_iterator it = propertyNames.begin(); it != propertyNames.end(); ++it) {
         String stringKey = it->string();
         if (stringKey.isEmpty())
@@ -87,8 +87,8 @@ bool Dictionary::getOwnPropertyNames(Vector<String>& names) const
     JSObject* object =  m_dictionary.initializerObject();
     ExecState* exec = m_dictionary.execState();
 
-    PropertyNameArray propertyNames(exec);
-    JSObject::getOwnPropertyNames(object, exec, propertyNames, ExcludeDontEnumProperties);
+    PropertyNameArray propertyNames(exec, PropertyNameMode::Strings);
+    JSObject::getOwnPropertyNames(object, exec, propertyNames, EnumerationMode());
     for (PropertyNameArray::const_iterator it = propertyNames.begin(); it != propertyNames.end(); ++it) {
         String stringKey = it->string();
         if (!stringKey.isEmpty())
@@ -98,7 +98,7 @@ bool Dictionary::getOwnPropertyNames(Vector<String>& names) const
     return true;
 }
 
-bool Dictionary::getWithUndefinedOrNullCheck(const String& propertyName, String& value) const
+bool Dictionary::getWithUndefinedOrNullCheck(const char* propertyName, String& value) const
 {
     return m_dictionary.getWithUndefinedOrNullCheck(propertyName, value);
 }

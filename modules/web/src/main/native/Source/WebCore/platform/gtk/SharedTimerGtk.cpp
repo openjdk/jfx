@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2006 Michael Emmel mike.emmel@gmail.com
  * All rights reserved.
  *
@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,47 +28,37 @@
 #include "config.h"
 #include "SharedTimer.h"
 
-#include <wtf/Assertions.h>
-#include <wtf/CurrentTime.h>
-#include <gdk/gdk.h>
-#include <glib.h>
+#include <wtf/glib/GMainLoopSource.h>
 
 namespace WebCore {
 
-static guint sharedTimer;
+static GMainLoopSource gSharedTimer;
 static void (*sharedTimerFiredFunction)();
 
 void setSharedTimerFiredFunction(void (*f)())
 {
     sharedTimerFiredFunction = f;
-}
-
-static gboolean sharedTimerTimeoutCallback(gpointer)
-{
-    if (sharedTimerFiredFunction)
-        sharedTimerFiredFunction();
-    return FALSE;
+    if (!sharedTimerFiredFunction)
+        gSharedTimer.cancel();
 }
 
 void setSharedTimerFireInterval(double interval)
 {
     ASSERT(sharedTimerFiredFunction);
 
-    guint intervalInMS = static_cast<guint>(interval * 1000);
-
-    stopSharedTimer();
-    sharedTimer = g_timeout_add_full(GDK_PRIORITY_REDRAW, intervalInMS, sharedTimerTimeoutCallback, 0, 0);
-    g_source_set_name_by_id(sharedTimer, "[WebKit] sharedTimerTimeoutCallback");
+    // This is GDK_PRIORITY_REDRAW, but we don't want to depend on GDK here just to use a constant.
+    static const int priority = G_PRIORITY_HIGH_IDLE + 20;
+    gSharedTimer.scheduleAfterDelay("[WebKit] sharedTimerTimeoutCallback", std::function<void()>(sharedTimerFiredFunction),
+        std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(interval)), priority);
 }
 
 void stopSharedTimer()
 {
-    if (sharedTimer == 0)
-        return;
+    gSharedTimer.cancel();
+}
 
-    gboolean removedSource = g_source_remove(sharedTimer);
-    ASSERT_UNUSED(removedSource, removedSource);
-    sharedTimer = 0;
+void invalidateSharedTimer()
+{
 }
 
 }

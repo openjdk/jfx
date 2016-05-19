@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -39,13 +39,13 @@ namespace WebCore {
 static bool shouldDirtyAllStyle(const Vector<RefPtr<StyleRuleBase>>& rules)
 {
     for (auto& rule : rules) {
-        if (rule->isMediaRule()) {
-            if (shouldDirtyAllStyle(static_cast<StyleRuleMedia&>(*rule).childRules()))
+        if (is<StyleRuleMedia>(*rule)) {
+            if (shouldDirtyAllStyle(downcast<StyleRuleMedia>(*rule).childRules()))
                 return true;
             continue;
         }
         // FIXME: At least font faces don't need full recalc in all cases.
-        if (!rule->isStyleRule())
+        if (!is<StyleRule>(*rule))
             return true;
     }
     return false;
@@ -88,26 +88,64 @@ StyleInvalidationAnalysis::StyleInvalidationAnalysis(const Vector<StyleSheetCont
         m_dirtiesAllStyle = true;
 }
 
-static void invalidateStyleRecursively(Element& element, SelectorFilter& filter, const DocumentRuleSets& ruleSets)
+enum class CheckDescendants { Yes, No };
+static CheckDescendants invalidateIfNeeded(Element& element, SelectorFilter& filter, const DocumentRuleSets& ruleSets)
 {
-    if (element.styleChangeType() > InlineStyleChange)
-        return;
-    if (element.styleChangeType() == NoStyleChange) {
+    switch (element.styleChangeType()) {
+    case NoStyleChange: {
         ElementRuleCollector ruleCollector(element, nullptr, ruleSets, filter);
-        ruleCollector.setMode(SelectorChecker::StyleInvalidation);
+        ruleCollector.setMode(SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements);
         ruleCollector.matchAuthorRules(false);
 
         if (ruleCollector.hasMatchedRules())
             element.setNeedsStyleRecalc(InlineStyleChange);
+        return CheckDescendants::Yes;
+    }
+    case InlineStyleChange:
+        return CheckDescendants::Yes;
+    case FullStyleChange:
+    case SyntheticStyleChange:
+    case ReconstructRenderTree:
+        return CheckDescendants::No;
+    }
+    ASSERT_NOT_REACHED();
+    return CheckDescendants::Yes;
+}
+
+static void invalidateStyleForTree(Element& root, SelectorFilter& filter, const DocumentRuleSets& ruleSets)
+{
+    if (invalidateIfNeeded(root, filter, ruleSets) == CheckDescendants::No)
+        return;
+
+    Vector<Element*, 20> parentStack;
+    Element* previousElement = &root;
+    auto descendants = descendantsOfType<Element>(root);
+    for (auto it = descendants.begin(), end = descendants.end(); it != end;) {
+        auto& descendant = *it;
+        auto* parent = descendant.parentElement();
+        if (parentStack.isEmpty() || parentStack.last() != parent) {
+            if (parent == previousElement) {
+                parentStack.append(parent);
+                filter.pushParent(parent);
+            } else {
+                while (parentStack.last() != parent) {
+                    parentStack.removeLast();
+                    filter.popParent();
+                }
+            }
+        }
+        previousElement = &descendant;
+
+        if (invalidateIfNeeded(descendant, filter, ruleSets) == CheckDescendants::Yes)
+            it.traverseNext();
+        else
+            it.traverseNextSkippingChildren();
     }
 
-    auto children = childrenOfType<Element>(element);
-    if (!children.first())
-        return;
-    filter.pushParent(&element);
-    for (auto& child : children)
-        invalidateStyleRecursively(child, filter, ruleSets);
-    filter.popParent();
+    while (!parentStack.isEmpty()) {
+        parentStack.removeLast();
+        filter.popParent();
+    }
 }
 
 void StyleInvalidationAnalysis::invalidateStyle(Document& document)
@@ -122,7 +160,7 @@ void StyleInvalidationAnalysis::invalidateStyle(Document& document)
 
     SelectorFilter filter;
     filter.setupParentStack(documentElement);
-    invalidateStyleRecursively(*documentElement, filter, m_ruleSets);
+    invalidateStyleForTree(*documentElement, filter, m_ruleSets);
 }
 
 }

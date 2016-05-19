@@ -37,13 +37,7 @@ import re
 from webkitpy.common.checkout.scm import Git
 from webkitpy.common.system.executive import Executive, ScriptError
 from webkitpy.common.system.user import User
-
-try:
-    # Use keyring, a cross platform keyring interface, as a fallback:
-    # http://pypi.python.org/pypi/keyring
-    import keyring
-except ImportError:
-    keyring = None
+from webkitpy.thirdparty.autoinstalled import keyring
 
 _log = logging.getLogger(__name__)
 
@@ -89,10 +83,10 @@ class Credentials(object):
                                                    security_output)
         return [username, password]
 
-    def _run_security_tool(self, username=None):
+    def _run_security_tool(self, command, username=None):
         security_command = [
             "/usr/bin/security",
-            "find-internet-password",
+            command,
             "-g",
             "-s",
             self.host,
@@ -115,11 +109,15 @@ class Credentials(object):
         if not self._is_mac_os_x():
             return [username, None]
 
-        security_output = self._run_security_tool(username)
+        security_output = self._run_security_tool("find-internet-password", username)
+        if security_output:
+            parsed_output = self._parse_security_tool_output(security_output)
+            if any(parsed_output):
+                return parsed_output
+        security_output = self._run_security_tool("find-generic-password", username)
         if security_output:
             return self._parse_security_tool_output(security_output)
-        else:
-            return [None, None]
+        return [None, None]
 
     def _read_environ(self, key):
         environ_key = self._environ_prefix + key
@@ -138,19 +136,21 @@ class Credentials(object):
         except:
             pass
 
-    def read_credentials(self, user=User):
-        username, password = self._credentials_from_environment()
-        # FIXME: We don't currently support pulling the username from one
-        # source and the password from a separate source.
-        if not username or not password:
-            username, password = self._credentials_from_git()
-        if not username or not password:
-            username, password = self._credentials_from_keychain(username)
+    def read_credentials(self, user=User, use_stored_credentials=True):
+        username, password = None, None
+        if use_stored_credentials:
+            username, password = self._credentials_from_environment()
+            # FIXME: We don't currently support pulling the username from one
+            # source and the password from a separate source.
+            if not username or not password:
+                username, password = self._credentials_from_git()
+            if not username or not password:
+                username, password = self._credentials_from_keychain(username)
 
         if not username:
             username = user.prompt("%s login: " % self.host)
 
-        if username and not password and self._keyring:
+        if username and not password and self._keyring and use_stored_credentials:
             try:
                 password = self._keyring.get_password(self.host, username)
             except:

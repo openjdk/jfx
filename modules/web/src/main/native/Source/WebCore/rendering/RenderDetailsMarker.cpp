@@ -24,6 +24,7 @@
 
 #include "Element.h"
 #include "GraphicsContext.h"
+#include "HTMLDetailsElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "PaintInfo.h"
@@ -32,8 +33,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderDetailsMarker::RenderDetailsMarker(DetailsMarkerControl& element, PassRef<RenderStyle> style)
-    : RenderBlockFlow(element, std::move(style))
+RenderDetailsMarker::RenderDetailsMarker(DetailsMarkerControl& element, Ref<RenderStyle>&& style)
+    : RenderBlockFlow(element, WTF::move(style))
 {
 }
 
@@ -125,7 +126,7 @@ void RenderDetailsMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOf
     overflowRect.moveBy(boxOrigin);
     overflowRect.inflate(maximalOutlineSize(paintInfo.phase));
 
-    if (!paintInfo.rect.intersects(pixelSnappedIntRect(overflowRect)))
+    if (!paintInfo.rect.intersects(snappedIntRect(overflowRect)))
         return;
 
     const Color color(style().visitedDependentColor(CSSPropertyColor));
@@ -143,9 +144,9 @@ bool RenderDetailsMarker::isOpen() const
     for (RenderObject* renderer = parent(); renderer; renderer = renderer->parent()) {
         if (!renderer->node())
             continue;
-        if (renderer->node()->hasTagName(detailsTag))
-            return !toElement(renderer->node())->getAttribute(openAttr).isNull();
-        if (isHTMLInputElement(renderer->node()))
+        if (is<HTMLDetailsElement>(*renderer->node()))
+            return !downcast<HTMLDetailsElement>(*renderer->node()).getAttribute(openAttr).isNull();
+        if (is<HTMLInputElement>(*renderer->node()))
             return true;
     }
 

@@ -24,9 +24,12 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "PlatformUtilities.h"
 #include "PlatformWebView.h"
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKRetainPtr.h>
 
 namespace TestWebKitAPI {
 
@@ -77,3 +80,5 @@ TEST(WebKit2, InjectedBundleBasic)
 }
 
 } // namespace TestWebKitAPI
+
+#endif

@@ -24,11 +24,14 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "PlatformUtilities.h"
 #include "PlatformWebView.h"
 #include "Test.h"
 
-#include <WebKit2/WKString.h>
+#include <WebKit/WKString.h>
 
 namespace TestWebKitAPI {
 
@@ -75,3 +78,5 @@ TEST(WebKit2, PasteboardNotifications)
 }
 
 } // namespace TestWebKitAPI
+
+#endif

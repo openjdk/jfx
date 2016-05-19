@@ -33,15 +33,26 @@
 #import <JavaScriptCore/JSRetainPtr.h>
 #import <JavaScriptCore/JSStringRef.h>
 #import <JavaScriptCore/JSStringRefCF.h>
-#import <WebKit2/WKBundle.h>
-#import <WebKit2/WKBundlePage.h>
-#import <WebKit2/WKBundlePagePrivate.h>
+#import <WebKit/WKBundle.h>
+#import <WebKit/WKBundlePage.h>
+#import <WebKit/WKBundlePagePrivate.h>
 
 namespace WTR {
 
 bool AccessibilityController::addNotificationListener(JSValueRef functionCallback)
 {
-    return false;
+    if (!functionCallback)
+        return false;
+
+    // Mac programmers should not be adding more than one global notification listener.
+    // Other platforms may be different.
+    if (m_globalNotificationHandler)
+        return false;
+    m_globalNotificationHandler = [[AccessibilityNotificationHandler alloc] init];
+    [m_globalNotificationHandler.get() setCallback:functionCallback];
+    [m_globalNotificationHandler.get() startObserving];
+
+    return true;
 }
 
 bool AccessibilityController::removeNotificationListener()
@@ -68,12 +79,23 @@ void AccessibilityController::resetToConsistentState()
 
 static id findAccessibleObjectById(id obj, NSString *idAttribute)
 {
-    return 0;
+    id objIdAttribute = [obj accessibilityIdentifier];
+    if ([objIdAttribute isKindOfClass:[NSString class]] && [objIdAttribute isEqualToString:idAttribute])
+        return obj;
+
+    NSUInteger childrenCount = [obj accessibilityElementCount];
+    for (NSUInteger i = 0; i < childrenCount; ++i) {
+        id result = findAccessibleObjectById([obj accessibilityElementAtIndex:i], idAttribute);
+        if (result)
+            return result;
+    }
+
+    return nil;
 }
 
 PassRefPtr<AccessibilityUIElement> AccessibilityController::accessibleElementById(JSStringRef idAttribute)
 {
-    WKBundlePageRef page = InjectedBundle::shared().page()->page();
+    WKBundlePageRef page = InjectedBundle::singleton().page()->page();
     id root = static_cast<PlatformUIElement>(WKAccessibilityRootObject(page));
 
     id result = findAccessibleObjectById(root, [NSString stringWithJSStringRef:idAttribute]);

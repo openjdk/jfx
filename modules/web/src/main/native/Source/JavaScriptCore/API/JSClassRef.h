@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -85,8 +85,8 @@ public:
 };
 
 struct OpaqueJSClass : public ThreadSafeRefCounted<OpaqueJSClass> {
-    static PassRefPtr<OpaqueJSClass> create(const JSClassDefinition*);
-    static PassRefPtr<OpaqueJSClass> createNoAutomaticPrototype(const JSClassDefinition*);
+    static Ref<OpaqueJSClass> create(const JSClassDefinition*);
+    static Ref<OpaqueJSClass> createNoAutomaticPrototype(const JSClassDefinition*);
     JS_EXPORT_PRIVATE ~OpaqueJSClass();
 
     String className();
@@ -118,10 +118,10 @@ private:
 
     OpaqueJSClassContextData& contextData(JSC::ExecState*);
 
-    // Strings in these data members should not be put into any IdentifierTable.
+    // Strings in these data members should not be put into any AtomicStringTable.
     String m_className;
-    OwnPtr<OpaqueJSClassStaticValuesTable> m_staticValues;
-    OwnPtr<OpaqueJSClassStaticFunctionsTable> m_staticFunctions;
+    std::unique_ptr<OpaqueJSClassStaticValuesTable> m_staticValues;
+    std::unique_ptr<OpaqueJSClassStaticFunctionsTable> m_staticFunctions;
 };
 
 #endif // JSClassRef_h

@@ -25,6 +25,7 @@
 
 #import "WebApplicationCacheQuotaManager.h"
 
+#import "WebApplicationCacheInternal.h"
 #import "WebSecurityOriginInternal.h"
 #import <WebCore/ApplicationCacheStorage.h>
 
@@ -50,7 +51,7 @@ using namespace WebCore;
 - (unsigned long long)usage
 {
     long long usage;
-    if (cacheStorage().calculateUsageForOrigin([_origin _core], usage))
+    if (webApplicationCacheStorage().calculateUsageForOrigin([_origin _core], usage))
         return usage;
     return 0;
 }
@@ -58,14 +59,14 @@ using namespace WebCore;
 - (unsigned long long)quota
 {
     long long quota;
-    if (cacheStorage().calculateQuotaForOrigin([_origin _core], quota))
+    if (webApplicationCacheStorage().calculateQuotaForOrigin([_origin _core], quota))
         return quota;
     return 0;
 }
 
 - (void)setQuota:(unsigned long long)quota
 {
-    cacheStorage().storeUpdatedQuotaForOrigin([_origin _core], quota);
+    webApplicationCacheStorage().storeUpdatedQuotaForOrigin([_origin _core], quota);
 }
 
 @end

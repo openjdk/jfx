@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -57,9 +57,9 @@ private:
     enum Type { InheritedListType, OrderedList, UnorderedList };
     static PassRefPtr<Node> increaseSelectionListLevel(Document*, Type);
 
-    static PassRefPtr<IncreaseSelectionListLevelCommand> create(Document& document, Type type)
+    static Ref<IncreaseSelectionListLevelCommand> create(Document& document, Type type)
     {
-        return adoptRef(new IncreaseSelectionListLevelCommand(document, type));
+        return adoptRef(*new IncreaseSelectionListLevelCommand(document, type));
     }
 
     IncreaseSelectionListLevelCommand(Document&, Type);
@@ -77,9 +77,9 @@ public:
     static void decreaseSelectionListLevel(Document*);
 
 private:
-    static PassRefPtr<DecreaseSelectionListLevelCommand> create(Document& document)
+    static Ref<DecreaseSelectionListLevelCommand> create(Document& document)
     {
-        return adoptRef(new DecreaseSelectionListLevelCommand(document));
+        return adoptRef(*new DecreaseSelectionListLevelCommand(document));
     }
 
     explicit DecreaseSelectionListLevelCommand(Document&);

@@ -24,9 +24,12 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "PlatformUtilities.h"
-#include <WebKit2/WKPreferencesPrivate.h>
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKPreferencesRefPrivate.h>
+#include <WebKit/WKRetainPtr.h>
 
 namespace TestWebKitAPI {
 
@@ -41,15 +44,15 @@ TEST(WebKit2, WKPreferencesBasic)
 
 TEST(WebKit2, WKPreferencesDefaults)
 {
-#if PLATFORM(WIN)
-    static const char* expectedStandardFontFamily = "Times New Roman";
+#if PLATFORM(GTK) || PLATFORM(EFL)
+    static const char* expectedStandardFontFamily = "Times";
     static const char* expectedFixedFontFamily = "Courier New";
-    static const char* expectedSerifFontFamily = "Times New Roman";
-    static const char* expectedSansSerifFontFamily = "Arial";
+    static const char* expectedSerifFontFamily = "Times";
+    static const char* expectedSansSerifFontFamily = "Helvetica";
     static const char* expectedCursiveFontFamily = "Comic Sans MS";
-    static const char* expectedFantasyFontFamily = "Comic Sans MS";
-    static const char* expectedPictographFontFamily = "Times New Roman";
-#elif PLATFORM(MAC)
+    static const char* expectedFantasyFontFamily = "Impact";
+    static const char* expectedPictographFontFamily = "Times";
+#elif WK_HAVE_C_SPI
     static const char* expectedStandardFontFamily = "Times";
     static const char* expectedFixedFontFamily = "Courier";
     static const char* expectedSerifFontFamily = "Times";
@@ -65,14 +68,6 @@ TEST(WebKit2, WKPreferencesDefaults)
     static const char* expectedCursiveFontFamily = "Snell Roundhand";
     static const char* expectedFantasyFontFamily = "Papyrus";
     static const char* expectedPictographFontFamily = "AppleColorEmoji";
-#elif PLATFORM(GTK) || PLATFORM(EFL)
-    static const char* expectedStandardFontFamily = "Times";
-    static const char* expectedFixedFontFamily = "Courier New";
-    static const char* expectedSerifFontFamily = "Times";
-    static const char* expectedSansSerifFontFamily = "Helvetica";
-    static const char* expectedCursiveFontFamily = "Comic Sans MS";
-    static const char* expectedFantasyFontFamily = "Impact";
-    static const char* expectedPictographFontFamily = "Times";
 #endif
 
     WKPreferencesRef preference = WKPreferencesCreate();
@@ -99,11 +94,7 @@ TEST(WebKit2, WKPreferencesDefaults)
     EXPECT_FALSE(WKPreferencesGetDeveloperExtrasEnabled(preference));
     EXPECT_TRUE(WKPreferencesGetTextAreasAreResizable(preference));
 
-#if PLATFORM(WIN)
-    EXPECT_EQ(kWKFontSmoothingLevelWindows, WKPreferencesGetFontSmoothingLevel(preference));
-#else
     EXPECT_EQ(kWKFontSmoothingLevelMedium, WKPreferencesGetFontSmoothingLevel(preference));
-#endif
 
     EXPECT_TRUE(WKPreferencesGetAcceleratedCompositingEnabled(preference));
     EXPECT_FALSE(WKPreferencesGetCompositingBordersVisible(preference));
@@ -130,3 +121,5 @@ TEST(WebKit2, WKPreferencesCopying)
 }
 
 } // namespace TestWebKitAPI
+
+#endif

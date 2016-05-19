@@ -38,7 +38,7 @@ namespace JSC {
 static EncodedJSValue JSC_HOST_CALL arrayBufferFuncIsView(ExecState*);
 
 const ClassInfo JSArrayBufferConstructor::s_info = {
-    "Function", &Base::s_info, 0, 0,
+    "Function", &Base::s_info, 0,
     CREATE_METHOD_TABLE(JSArrayBufferConstructor)
 };
 
@@ -49,7 +49,7 @@ JSArrayBufferConstructor::JSArrayBufferConstructor(VM& vm, Structure* structure)
 
 void JSArrayBufferConstructor::finishCreation(VM& vm, JSArrayBufferPrototype* prototype)
 {
-    Base::finishCreation(vm, "ArrayBuffer");
+    Base::finishCreation(vm, ASCIILiteral("ArrayBuffer"));
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, DontEnum | DontDelete | ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), DontEnum | DontDelete | ReadOnly);
 
@@ -92,10 +92,10 @@ static EncodedJSValue JSC_HOST_CALL constructArrayBuffer(ExecState* exec)
 
     RefPtr<ArrayBuffer> buffer = ArrayBuffer::create(length, 1);
     if (!buffer)
-        return throwVMError(exec, createOutOfMemoryError(constructor->globalObject()));
+        return throwVMError(exec, createOutOfMemoryError(exec));
 
     JSArrayBuffer* result = JSArrayBuffer::create(
-        exec->vm(), constructor->globalObject()->arrayBufferStructure(), buffer);
+        exec->vm(), constructor->globalObject()->arrayBufferStructure(), buffer.release());
 
     return JSValue::encode(result);
 }

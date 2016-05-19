@@ -45,12 +45,13 @@ enum {
     SnapshotOptionsPaintSelectionOnly = 1 << 1,
     SnapshotOptionsInViewCoordinates = 1 << 2,
     SnapshotOptionsForceBlackText = 1 << 3,
+    SnapshotOptionsPaintSelectionAndBackgroundsOnly = 1 << 4,
 };
 typedef unsigned SnapshotOptions;
 
-std::unique_ptr<ImageBuffer> snapshotFrameRect(Frame&, const IntRect&, SnapshotOptions = SnapshotOptionsNone);
+WEBCORE_EXPORT std::unique_ptr<ImageBuffer> snapshotFrameRect(Frame&, const IntRect&, SnapshotOptions = SnapshotOptionsNone);
 std::unique_ptr<ImageBuffer> snapshotNode(Frame&, Node&);
-std::unique_ptr<ImageBuffer> snapshotSelection(Frame&, SnapshotOptions = SnapshotOptionsNone);
+WEBCORE_EXPORT std::unique_ptr<ImageBuffer> snapshotSelection(Frame&, SnapshotOptions = SnapshotOptionsNone);
 
 } // namespace WebCore
 

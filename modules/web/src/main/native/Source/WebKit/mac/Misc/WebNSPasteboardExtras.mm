@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -42,9 +42,10 @@
 #import <WebCore/Element.h>
 #import <WebCore/Image.h>
 #import <WebCore/MIMETypeRegistry.h>
+#import <WebCore/RenderAttachment.h>
 #import <WebCore/RenderImage.h>
-#import <WebKit/DOMExtensions.h>
-#import <WebKit/DOMPrivate.h>
+#import <WebKitLegacy/DOMExtensions.h>
+#import <WebKitLegacy/DOMPrivate.h>
 #import <WebKitSystemInterface.h>
 #import <wtf/Assertions.h>
 #import <wtf/RetainPtr.h>
@@ -59,7 +60,7 @@ NSString *WebURLNamePboardType = @"public.url-name";
 
 + (NSArray *)_web_writableTypesForURL
 {
-    DEFINE_STATIC_LOCAL(RetainPtr<NSArray>, types, ([[NSArray alloc] initWithObjects:
+    DEPRECATED_DEFINE_STATIC_LOCAL(RetainPtr<NSArray>, types, ([[NSArray alloc] initWithObjects:
         WebURLsWithTitlesPboardType,
         NSURLPboardType,
         WebURLPboardType,
@@ -78,7 +79,7 @@ static inline NSArray *_createWritableTypesForImageWithoutArchive()
 
 static NSArray *_writableTypesForImageWithoutArchive (void)
 {
-    DEFINE_STATIC_LOCAL(RetainPtr<NSArray>, types, (_createWritableTypesForImageWithoutArchive()));
+    DEPRECATED_DEFINE_STATIC_LOCAL(RetainPtr<NSArray>, types, (_createWritableTypesForImageWithoutArchive()));
     return types.get();
 }
 
@@ -92,7 +93,7 @@ static inline NSArray *_createWritableTypesForImageWithArchive()
 
 static NSArray *_writableTypesForImageWithArchive (void)
 {
-    DEFINE_STATIC_LOCAL(RetainPtr<NSArray>, types, (_createWritableTypesForImageWithArchive()));
+    DEPRECATED_DEFINE_STATIC_LOCAL(RetainPtr<NSArray>, types, (_createWritableTypesForImageWithArchive()));
     return types.get();
 }
 
@@ -193,7 +194,7 @@ static NSArray *_writableTypesForImageWithArchive (void)
     NSAttributedString *string = [NSAttributedString attributedStringWithAttachment:attachment];
     [attachment release];
 
-    NSData *RTFDData = [string RTFDFromRange:NSMakeRange(0, [string length]) documentAttributes:nil];
+    NSData *RTFDData = [string RTFDFromRange:NSMakeRange(0, [string length]) documentAttributes:@{ }];
     [self setData:RTFDData forType:NSRTFDPboardType];
 }
 
@@ -220,13 +221,13 @@ static CachedImage* imageFromElement(DOMElement *domElement)
 {
     Element* element = core(domElement);
     if (!element)
-        return 0;
+        return nullptr;
 
-    RenderObject* renderer = element->renderer();
-    RenderImage* imageRenderer = toRenderImage(renderer);
-    if (!imageRenderer->cachedImage() || imageRenderer->cachedImage()->errorOccurred())
-        return 0;
-    return imageRenderer->cachedImage();
+    ASSERT(element->renderer());
+    auto& imageRenderer = downcast<RenderImage>(*element->renderer());
+    if (!imageRenderer.cachedImage() || imageRenderer.cachedImage()->errorOccurred())
+        return nullptr;
+    return imageRenderer.cachedImage();
 }
 
 - (void)_web_writeImage:(NSImage *)image
@@ -271,21 +272,30 @@ static CachedImage* imageFromElement(DOMElement *domElement)
     ASSERT(self == [NSPasteboard pasteboardWithName:NSDragPboard]);
 
     NSString *extension = @"";
-    if (RenderObject* renderer = core(element)->renderer()) {
-        if (renderer->isRenderImage()) {
-            if (CachedImage* image = toRenderImage(renderer)->cachedImage()) {
+    RetainPtr<NSMutableArray> types = adoptNS([[NSMutableArray alloc] initWithObjects:NSFilesPromisePboardType, nil]);
+    if (auto* renderer = core(element)->renderer()) {
+        if (is<RenderImage>(*renderer)) {
+            if (CachedImage* image = downcast<RenderImage>(*renderer).cachedImage()) {
                 extension = image->image()->filenameExtension();
                 if (![extension length])
-                    return 0;
+                    return nullptr;
+                [types addObjectsFromArray:[NSPasteboard _web_writableTypesForImageIncludingArchive:(archive != nil)]];
+                [self declareTypes:types.get() owner:source];
             }
         }
+#if ENABLE(ATTACHMENT_ELEMENT)
+        else if (is<RenderAttachment>(*renderer)) {
+            extension = URL.pathExtension;
+            [types addObjectsFromArray:[NSPasteboard _web_dragTypesForURL]];
+            [self declareTypes:types.get() owner:source];
+            RetainPtr<NSMutableArray> paths = adoptNS([[NSMutableArray alloc] init]);
+            [paths.get() addObject:title];
+            [self setPropertyList:paths.get() forType:NSFilenamesPboardType];
+        }
+#endif
     }
 
-    NSMutableArray *types = [[NSMutableArray alloc] initWithObjects:NSFilesPromisePboardType, nil];
-    [types addObjectsFromArray:[NSPasteboard _web_writableTypesForImageIncludingArchive:(archive != nil)]];
-    [self declareTypes:types owner:source];
-    [self _web_writeImage:nil element:element URL:URL title:title archive:archive types:types source:source];
-    [types release];
+    [self _web_writeImage:nil element:element URL:URL title:title archive:archive types:types.get() source:source];
 
     NSArray *extensions = [[NSArray alloc] initWithObjects:extension, nil];
     [self setPropertyList:extensions forType:NSFilesPromisePboardType];

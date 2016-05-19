@@ -31,6 +31,7 @@ from google.appengine.ext import db
 from datetime import timedelta, datetime
 import time
 
+from config.queues import work_item_lock_timeout
 from model.queuepropertymixin import QueuePropertyMixin
 
 
@@ -79,8 +80,10 @@ class ActiveWorkItems(db.Model, QueuePropertyMixin):
         return db.run_in_transaction(self._expire_item, self.key(), item_id)
 
     def deactivate_expired(self, now):
-        one_hour_ago = time.mktime((now - timedelta(minutes=60)).timetuple())
-        nonexpired_pairs = [pair for pair in self._item_time_pairs() if pair[1] > one_hour_ago]
+        # If the patch is still active after this much time, then a bot must have frozen or rebooted,
+        # and dropped the patch on the floor. Let another bot pick it up.
+        cutoff_time = time.mktime((now - work_item_lock_timeout).timetuple())
+        nonexpired_pairs = [pair for pair in self._item_time_pairs() if pair[1] > cutoff_time]
         self._set_item_time_pairs(nonexpired_pairs)
 
     def next_item(self, work_item_ids, now):

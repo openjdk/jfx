@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "WebApplicationCache.h"
+#import "WebApplicationCacheInternal.h"
 
 #import "WebSecurityOriginInternal.h"
 #import <WebCore/ApplicationCache.h>
@@ -53,7 +53,7 @@ using namespace WebCore;
 
     SQLiteDatabaseTracker::setClient(WebSQLiteDatabaseTrackerClient::sharedWebSQLiteDatabaseTrackerClient());
 
-    cacheStorage().setCacheDirectory([NSString _webkit_localCacheDirectoryWithBundleIdentifier:bundleIdentifier]);
+    webApplicationCacheStorage().setCacheDirectory([NSString _webkit_localCacheDirectoryWithBundleIdentifier:bundleIdentifier]);
 
     initialized = YES;
 }
@@ -61,44 +61,44 @@ using namespace WebCore;
 
 + (long long)maximumSize
 {
-    return cacheStorage().maximumSize();
+    return webApplicationCacheStorage().maximumSize();
 }
 
 + (void)setMaximumSize:(long long)size
 {
-    [WebApplicationCache deleteAllApplicationCaches];
-    cacheStorage().setMaximumSize(size);
+    webApplicationCacheStorage().deleteAllEntries();
+    webApplicationCacheStorage().setMaximumSize(size);
 }
 
 + (long long)defaultOriginQuota
 {
-    return cacheStorage().defaultOriginQuota();
+    return webApplicationCacheStorage().defaultOriginQuota();
 }
 
 + (void)setDefaultOriginQuota:(long long)size
 {
-    cacheStorage().setDefaultOriginQuota(size);
+    webApplicationCacheStorage().setDefaultOriginQuota(size);
 }
 
 + (long long)diskUsageForOrigin:(WebSecurityOrigin *)origin
 {
-    return ApplicationCache::diskUsageForOrigin([origin _core]);
+    return webApplicationCacheStorage().diskUsageForOrigin(*[origin _core]);
 }
 
 + (void)deleteAllApplicationCaches
 {
-    cacheStorage().deleteAllEntries();
+    webApplicationCacheStorage().deleteAllCaches();
 }
 
 + (void)deleteCacheForOrigin:(WebSecurityOrigin *)origin
 {
-    ApplicationCache::deleteCacheForOrigin([origin _core]);
+    webApplicationCacheStorage().deleteCacheForOrigin(*[origin _core]);
 }
 
 + (NSArray *)originsWithCache
 {
     HashSet<RefPtr<SecurityOrigin>> coreOrigins;
-    cacheStorage().getOriginsWithCache(coreOrigins);
+    webApplicationCacheStorage().getOriginsWithCache(coreOrigins);
 
     NSMutableArray *webOrigins = [[[NSMutableArray alloc] initWithCapacity:coreOrigins.size()] autorelease];
 
@@ -112,3 +112,8 @@ using namespace WebCore;
 }
 
 @end
+
+WebCore::ApplicationCacheStorage& webApplicationCacheStorage()
+{
+    return ApplicationCacheStorage::singleton();
+}

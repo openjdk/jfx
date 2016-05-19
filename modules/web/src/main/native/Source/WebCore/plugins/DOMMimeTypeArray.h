@@ -24,10 +24,8 @@
 #include "DOMMimeType.h"
 #include "DOMWindowProperty.h"
 #include "ScriptWrappable.h"
-#include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -36,7 +34,7 @@ class PluginData;
 
 class DOMMimeTypeArray : public ScriptWrappable, public RefCounted<DOMMimeTypeArray>, public DOMWindowProperty {
 public:
-    static PassRefPtr<DOMMimeTypeArray> create(Frame* frame) { return adoptRef(new DOMMimeTypeArray(frame)); }
+    static Ref<DOMMimeTypeArray> create(Frame* frame) { return adoptRef(*new DOMMimeTypeArray(frame)); }
     ~DOMMimeTypeArray();
 
     unsigned length() const;
@@ -51,4 +49,4 @@ private:
 
 } // namespace WebCore
 
-#endif // MimeTypeArray_h
+#endif // DOMMimeTypeArray_h

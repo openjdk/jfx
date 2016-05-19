@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,24 +37,24 @@
 
 namespace WebCore {
 
-    class Frame;
+class Frame;
 
-    class Screen : public ScriptWrappable, public RefCounted<Screen>, public DOMWindowProperty {
-    public:
-        static PassRefPtr<Screen> create(Frame *frame) { return adoptRef(new Screen(frame)); }
+class Screen final : public ScriptWrappable, public RefCounted<Screen>, public DOMWindowProperty {
+public:
+    static Ref<Screen> create(Frame* frame) { return adoptRef(*new Screen(frame)); }
 
-        unsigned height() const;
-        unsigned width() const;
-        unsigned colorDepth() const;
-        unsigned pixelDepth() const;
-        int availLeft() const;
-        int availTop() const;
-        unsigned availHeight() const;
-        unsigned availWidth() const;
+    unsigned height() const;
+    unsigned width() const;
+    unsigned colorDepth() const;
+    unsigned pixelDepth() const;
+    int availLeft() const;
+    int availTop() const;
+    unsigned availHeight() const;
+    unsigned availWidth() const;
 
-    private:
-        explicit Screen(Frame*);
-    };
+private:
+    explicit Screen(Frame*);
+};
 
 } // namespace WebCore
 

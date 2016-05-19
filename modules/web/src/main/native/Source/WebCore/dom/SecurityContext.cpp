@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY GOOGLE, INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,6 +30,7 @@
 #include "ContentSecurityPolicy.h"
 #include "HTMLParserIdioms.h"
 #include "SecurityOrigin.h"
+#include "SecurityOriginPolicy.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -44,15 +45,23 @@ SecurityContext::~SecurityContext()
 {
 }
 
-void SecurityContext::setSecurityOrigin(PassRefPtr<SecurityOrigin> securityOrigin)
+void SecurityContext::setSecurityOriginPolicy(RefPtr<SecurityOriginPolicy>&& securityOriginPolicy)
 {
-    m_securityOrigin = securityOrigin;
+    m_securityOriginPolicy = WTF::move(securityOriginPolicy);
     m_haveInitializedSecurityOrigin = true;
 }
 
-void SecurityContext::setContentSecurityPolicy(PassOwnPtr<ContentSecurityPolicy> contentSecurityPolicy)
+SecurityOrigin* SecurityContext::securityOrigin() const
 {
-    m_contentSecurityPolicy = contentSecurityPolicy;
+    if (!m_securityOriginPolicy)
+        return nullptr;
+
+    return &m_securityOriginPolicy->origin();
+}
+
+void SecurityContext::setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy> contentSecurityPolicy)
+{
+    m_contentSecurityPolicy = WTF::move(contentSecurityPolicy);
 }
 
 bool SecurityContext::isSecureTransitionTo(const URL& url) const
@@ -63,8 +72,7 @@ bool SecurityContext::isSecureTransitionTo(const URL& url) const
     if (!haveInitializedSecurityOrigin())
         return true;
 
-    RefPtr<SecurityOrigin> other = SecurityOrigin::create(url);
-    return securityOrigin()->canAccess(other.get());
+    return securityOriginPolicy()->origin().canAccess(SecurityOrigin::create(url).ptr());
 }
 
 void SecurityContext::enforceSandboxFlags(SandboxFlags mask)
@@ -72,8 +80,8 @@ void SecurityContext::enforceSandboxFlags(SandboxFlags mask)
     m_sandboxFlags |= mask;
 
     // The SandboxOrigin is stored redundantly in the security origin.
-    if (isSandboxed(SandboxOrigin) && securityOrigin() && !securityOrigin()->isUnique())
-        setSecurityOrigin(SecurityOrigin::createUnique());
+    if (isSandboxed(SandboxOrigin) && securityOriginPolicy() && !securityOriginPolicy()->origin().isUnique())
+        setSecurityOriginPolicy(SecurityOriginPolicy::create(SecurityOrigin::createUnique()));
 }
 
 SandboxFlags SecurityContext::parseSandboxPolicy(const String& policy, String& invalidTokensErrorMessage)

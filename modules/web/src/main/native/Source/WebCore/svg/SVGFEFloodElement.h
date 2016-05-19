@@ -21,7 +21,6 @@
 #ifndef SVGFEFloodElement_h
 #define SVGFEFloodElement_h
 
-#if ENABLE(FILTERS)
 #include "FEFlood.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
@@ -29,16 +28,15 @@ namespace WebCore {
 
 class SVGFEFloodElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFEFloodElement> create(const QualifiedName&, Document&);
+    static Ref<SVGFEFloodElement> create(const QualifiedName&, Document&);
 
 private:
     SVGFEFloodElement(const QualifiedName&, Document&);
 
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName) override;
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
+    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
 #endif

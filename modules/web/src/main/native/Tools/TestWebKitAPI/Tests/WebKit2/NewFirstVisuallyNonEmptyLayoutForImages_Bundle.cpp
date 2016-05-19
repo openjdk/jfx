@@ -24,11 +24,14 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "InjectedBundleTest.h"
 
 #include "PlatformUtilities.h"
-#include <WebKit2/WKBundlePage.h>
-#include <WebKit2/WKBundlePagePrivate.h>
+#include <WebKit/WKBundlePage.h>
+#include <WebKit/WKBundlePagePrivate.h>
 
 namespace TestWebKitAPI {
 
@@ -49,3 +52,5 @@ public:
 static InjectedBundleTest::Register<NewFirstVisuallyNonEmptyLayoutForImagesTest> registrar("NewFirstVisuallyNonEmptyLayoutForImagesTest");
 
 } // namespace TestWebKitAPI
+
+#endif

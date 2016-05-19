@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,10 +27,13 @@
 
 #include "PlatformCALayerWinInternal.h"
 
-#include "Font.h"
-#include "FontCache.h"
+#include "FontCascade.h"
+#include "GraphicsContext.h"
 #include "PlatformCALayer.h"
 #include "TextRun.h"
+#include "TileController.h"
+#include "TiledBacking.h"
+#include "WebCoreHeaderDetection.h"
 #include <QuartzCore/CACFLayer.h>
 #include <wtf/MainThread.h>
 
@@ -42,15 +45,26 @@ using namespace WebCore;
 // to keep the overall tile cost low.
 static const int cTiledLayerTileSize = 512;
 
+static bool layerTypeIsTiled(const PlatformCALayer::LayerType layerType)
+{
+    return layerType == PlatformCALayer::LayerTypeWebTiledLayer
+        || layerType == PlatformCALayer::LayerTypePageTiledBackingLayer
+        || layerType == PlatformCALayer::LayerTypeTiledBackingLayer;
+}
+
 PlatformCALayerWinInternal::PlatformCALayerWinInternal(PlatformCALayer* owner)
     : m_tileSize(CGSizeMake(cTiledLayerTileSize, cTiledLayerTileSize))
     , m_constrainedSize(constrainedSize(owner->bounds().size()))
     , m_owner(owner)
 {
-    if (m_owner->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    if (layerTypeIsTiled(m_owner->layerType())) {
         // Tiled layers are placed in a child layer that is always the first child of the TiledLayer
         m_tileParent = adoptCF(CACFLayerCreate(kCACFLayer));
         CACFLayerInsertSublayer(m_owner->platformLayer(), m_tileParent.get(), 0);
+#if HAVE(CACFLAYER_SETCONTENTSSCALE)
+        CACFLayerSetContentsScale(m_tileParent.get(), CACFLayerGetContentsScale(m_owner->platformLayer()));
+#endif
+
         updateTiles();
     }
 }
@@ -59,9 +73,35 @@ PlatformCALayerWinInternal::~PlatformCALayerWinInternal()
 {
 }
 
-void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContextRef context)
+struct DisplayOnMainThreadContext {
+    RetainPtr<CACFLayerRef> layer;
+    RetainPtr<CGContextRef> context;
+
+    DisplayOnMainThreadContext(CACFLayerRef caLayer, CGContextRef caContext)
+        : layer(caLayer)
+        , context(caContext)
+    {
+    }
+};
+
+static void redispatchOnMainQueue(void* context)
 {
     ASSERT(isMainThread());
+    std::unique_ptr<DisplayOnMainThreadContext> retainedContext(reinterpret_cast<DisplayOnMainThreadContext*>(context));
+    if (!retainedContext)
+        return;
+
+    PlatformCALayerWinInternal* self = static_cast<PlatformCALayerWinInternal*>(CACFLayerGetUserData(retainedContext->layer.get()));
+
+    self->displayCallback(retainedContext->layer.get(), retainedContext->context.get());
+}
+
+void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContextRef context)
+{
+    if (!isMainThread()) {
+        dispatch_async_f(dispatch_get_main_queue(), new DisplayOnMainThreadContext(caLayer, context), redispatchOnMainQueue);
+        return;
+    }
 
     if (!owner() || !owner()->owner())
         return;
@@ -95,8 +135,6 @@ void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContext
 #endif
 
     if (owner()->owner()->platformCALayerShowRepaintCounter(owner())) {
-        FontCachePurgePreventer fontCachePurgePreventer;
-
         String text = String::number(owner()->owner()->platformCALayerIncrementRepaintCount(owner()));
 
         CGContextSaveGState(context);
@@ -126,7 +164,7 @@ void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContext
 
         desc.setComputedSize(18);
 
-        Font font = Font(desc, 0, 0);
+        FontCascade font = FontCascade(desc, 0, 0);
         font.update(0);
 
         GraphicsContext cg(context);
@@ -138,7 +176,7 @@ void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContext
 
     CGContextRestoreGState(context);
 
-    owner()->owner()->platformCALayerLayerDidDisplay(caLayer);
+    owner()->owner()->platformCALayerLayerDidDisplay(owner());
 }
 
 void PlatformCALayerWinInternal::internalSetNeedsDisplay(const FloatRect* dirtyRect)
@@ -150,16 +188,19 @@ void PlatformCALayerWinInternal::internalSetNeedsDisplay(const FloatRect* dirtyR
         CACFLayerSetNeedsDisplay(owner()->platformLayer(), 0);
 }
 
-void PlatformCALayerWinInternal::setNeedsDisplay(const FloatRect* dirtyRect)
+void PlatformCALayerWinInternal::setNeedsDisplay()
 {
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    internalSetNeedsDisplay(0);
+}
+
+void PlatformCALayerWinInternal::setNeedsDisplayInRect(const FloatRect& dirtyRect)
+{
+    if (layerTypeIsTiled(m_owner->layerType())) {
         // FIXME: Only setNeedsDisplay for tiles that are currently visible
         int numTileLayers = tileCount();
-        CGRect rect;
-        if (dirtyRect)
-            rect = *dirtyRect;
+        CGRect rect = dirtyRect;
         for (int i = 0; i < numTileLayers; ++i)
-            CACFLayerSetNeedsDisplay(tileAtIndex(i), dirtyRect ? &rect : 0);
+            CACFLayerSetNeedsDisplay(tileAtIndex(i), &rect);
 
         if (m_owner->owner() && m_owner->owner()->platformCALayerShowRepaintCounter(m_owner)) {
             CGRect layerBounds = m_owner->bounds();
@@ -179,15 +220,15 @@ void PlatformCALayerWinInternal::setNeedsDisplay(const FloatRect* dirtyRect)
                     repaintCounterRect.setY(layerBounds.height() - (layerBounds.y() + repaintCounterRect.height()));
                 internalSetNeedsDisplay(&repaintCounterRect);
             }
-            if (dirtyRect && owner()->owner()->platformCALayerContentsOrientation() == WebCore::GraphicsLayer::CompositingCoordinatesTopDown) {
-                FloatRect flippedDirtyRect = *dirtyRect;
+            if (owner()->owner()->platformCALayerContentsOrientation() == WebCore::GraphicsLayer::CompositingCoordinatesTopDown) {
+                FloatRect flippedDirtyRect = dirtyRect;
                 flippedDirtyRect.setY(owner()->bounds().height() - (flippedDirtyRect.y() + flippedDirtyRect.height()));
                 internalSetNeedsDisplay(&flippedDirtyRect);
                 return;
             }
         }
 
-        internalSetNeedsDisplay(dirtyRect);
+        internalSetNeedsDisplay(&dirtyRect);
     }
     owner()->setNeedsCommit();
 }
@@ -207,7 +248,7 @@ void PlatformCALayerWinInternal::setSublayers(const PlatformCALayerList& list)
 
     owner()->setNeedsCommit();
 
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    if (layerTypeIsTiled(m_owner->layerType())) {
         // Preserve the tile parent after set
         CACFLayerInsertSublayer(owner()->platformLayer(), m_tileParent.get(), 0);
     }
@@ -224,7 +265,7 @@ void PlatformCALayerWinInternal::getSublayers(PlatformCALayerList& list) const
     size_t count = CFArrayGetCount(sublayers);
 
     size_t layersToSkip = 0;
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    if (layerTypeIsTiled(m_owner->layerType())) {
         // Exclude the tile parent layer.
         layersToSkip = 1;
     }
@@ -239,22 +280,22 @@ void PlatformCALayerWinInternal::removeAllSublayers()
     CACFLayerSetSublayers(owner()->platformLayer(), 0);
     owner()->setNeedsCommit();
 
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    if (layerTypeIsTiled(m_owner->layerType())) {
         // Restore the tile parent after removal
         CACFLayerInsertSublayer(owner()->platformLayer(), m_tileParent.get(), 0);
     }
 }
 
-void PlatformCALayerWinInternal::insertSublayer(PlatformCALayer* layer, size_t index)
+void PlatformCALayerWinInternal::insertSublayer(PlatformCALayer& layer, size_t index)
 {
     index = min(index, sublayerCount());
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    if (layerTypeIsTiled(m_owner->layerType())) {
         // Add 1 to account for the tile parent layer
-        index++;
+        ++index;
     }
 
-    layer->removeFromSuperlayer();
-    CACFLayerInsertSublayer(owner()->platformLayer(), layer->platformLayer(), index);
+    layer.removeFromSuperlayer();
+    CACFLayerInsertSublayer(owner()->platformLayer(), layer.platformLayer(), index);
     owner()->setNeedsCommit();
 }
 
@@ -263,7 +304,7 @@ size_t PlatformCALayerWinInternal::sublayerCount() const
     CFArrayRef sublayers = CACFLayerGetSublayers(owner()->platformLayer());
     size_t count = sublayers ? CFArrayGetCount(sublayers) : 0;
 
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    if (layerTypeIsTiled(m_owner->layerType())) {
         // Subtract 1 to account for the tile parent layer
         ASSERT(count > 0);
         count--;
@@ -284,7 +325,7 @@ int PlatformCALayerWinInternal::indexOfSublayer(const PlatformCALayer* reference
 
     size_t n = CFArrayGetCount(sublayers);
 
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    if (layerTypeIsTiled(m_owner->layerType())) {
         for (size_t i = 1; i < n; ++i) {
             if (CFArrayGetValueAtIndex(sublayers, i) == ref)
                 return i - 1;
@@ -301,7 +342,7 @@ int PlatformCALayerWinInternal::indexOfSublayer(const PlatformCALayer* reference
 
 PlatformCALayer* PlatformCALayerWinInternal::sublayerAtIndex(int index) const
 {
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    if (layerTypeIsTiled(m_owner->layerType())) {
         // Add 1 to account for the tile parent layer
         index++;
     }
@@ -321,7 +362,7 @@ void PlatformCALayerWinInternal::setBounds(const FloatRect& rect)
     CACFLayerSetBounds(owner()->platformLayer(), rect);
     owner()->setNeedsCommit();
 
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer) {
+    if (layerTypeIsTiled(m_owner->layerType())) {
         m_constrainedSize = constrainedSize(rect.size());
         updateTiles();
     }
@@ -336,7 +377,7 @@ void PlatformCALayerWinInternal::setFrame(const FloatRect& rect)
     CACFLayerSetFrame(owner()->platformLayer(), rect);
     owner()->setNeedsCommit();
 
-    if (owner()->layerType() == PlatformCALayer::LayerTypeWebTiledLayer)
+    if (layerTypeIsTiled(m_owner->layerType()))
         updateTiles();
 }
 
@@ -384,6 +425,9 @@ void PlatformCALayerWinInternal::addTile()
     CACFLayerSetAnchorPoint(newLayer.get(), CGPointMake(0, 1));
     CACFLayerSetUserData(newLayer.get(), this);
     CACFLayerSetDisplayCallback(newLayer.get(), tileDisplayCallback);
+#if HAVE(CACFLAYER_SETCONTENTSSCALE)
+    CACFLayerSetContentsScale(newLayer.get(), CACFLayerGetContentsScale(m_tileParent.get()));
+#endif
 
     CFArrayRef sublayers = CACFLayerGetSublayers(m_tileParent.get());
     CACFLayerInsertSublayer(m_tileParent.get(), newLayer.get(), sublayers ? CFArrayGetCount(sublayers) : 0);
@@ -468,9 +512,6 @@ void PlatformCALayerWinInternal::drawTile(CACFLayerRef tile, CGContextRef contex
 
     CGContextSaveGState(context);
 
-    // Transform context to be at the origin of the parent layer
-    CGContextTranslateCTM(context, -tilePosition.x, -tilePosition.y);
-
     // Set the context clipping rectangle to the current tile
     CGContextClipToRect(context, CGRectMake(tilePosition.x, tilePosition.y, tileBounds.size.width, tileBounds.size.height));
 
@@ -485,4 +526,16 @@ void PlatformCALayerWinInternal::drawTile(CACFLayerRef tile, CGContextRef contex
     displayCallback(owner()->platformLayer(), context);
 
     CGContextRestoreGState(context);
+}
+
+TileController* PlatformCALayerWinInternal::createTileController(PlatformCALayer* rootLayer)
+{
+    ASSERT(!m_tileController);
+    m_tileController = std::make_unique<TileController>(rootLayer);
+    return m_tileController.get();
+}
+
+TiledBacking* PlatformCALayerWinInternal::tiledBacking()
+{
+    return m_tileController.get();
 }

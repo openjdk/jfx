@@ -40,16 +40,16 @@ GenericTypedArrayView<Adaptor>::GenericTypedArrayView(
 }
 
 template<typename Adaptor>
-PassRefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(unsigned length)
+RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(unsigned length)
 {
     RefPtr<ArrayBuffer> buffer = ArrayBuffer::create(length, sizeof(typename Adaptor::Type));
     if (!buffer)
-        return 0;
-    return create(buffer, 0, length);
+        return nullptr;
+    return create(buffer.release(), 0, length);
 }
 
 template<typename Adaptor>
-PassRefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(
+RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(
     const typename Adaptor::Type* array, unsigned length)
 {
     RefPtr<GenericTypedArrayView> result = create(length);
@@ -58,36 +58,38 @@ PassRefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::creat
 }
 
 template<typename Adaptor>
-PassRefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(
+RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(
     PassRefPtr<ArrayBuffer> passedBuffer, unsigned byteOffset, unsigned length)
 {
     RefPtr<ArrayBuffer> buffer = passedBuffer;
-    if (!verifySubRange<typename Adaptor::Type>(buffer, byteOffset, length))
-        return 0;
+    if (!verifySubRangeLength(buffer, byteOffset, length, sizeof(typename Adaptor::Type))
+        || !verifyByteOffsetAlignment(byteOffset, sizeof(typename Adaptor::Type))) {
+        return nullptr;
+    }
 
-    return adoptRef(new GenericTypedArrayView(buffer, byteOffset, length));
+    return adoptRef(new GenericTypedArrayView(buffer.release(), byteOffset, length));
 }
 
 template<typename Adaptor>
-PassRefPtr<GenericTypedArrayView<Adaptor>>
+RefPtr<GenericTypedArrayView<Adaptor>>
 GenericTypedArrayView<Adaptor>::createUninitialized(unsigned length)
 {
     RefPtr<ArrayBuffer> buffer =
         ArrayBuffer::createUninitialized(length, sizeof(typename Adaptor::Type));
     if (!buffer)
-        return 0;
-    return create(buffer, 0, length);
+        return nullptr;
+    return create(buffer.release(), 0, length);
 }
 
 template<typename Adaptor>
-PassRefPtr<GenericTypedArrayView<Adaptor>>
+RefPtr<GenericTypedArrayView<Adaptor>>
 GenericTypedArrayView<Adaptor>::subarray(int start) const
 {
     return subarray(start, length());
 }
 
 template<typename Adaptor>
-PassRefPtr<GenericTypedArrayView<Adaptor>>
+RefPtr<GenericTypedArrayView<Adaptor>>
 GenericTypedArrayView<Adaptor>::subarray(int start, int end) const
 {
     unsigned offset, length;

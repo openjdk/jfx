@@ -30,33 +30,36 @@ class CSSStyleDeclaration;
 class StyleRuleCSSStyleDeclaration;
 class StyleRule;
 
-class CSSStyleRule : public CSSRule {
+class CSSStyleRule final : public CSSRule {
 public:
-    static PassRefPtr<CSSStyleRule> create(StyleRule* rule, CSSStyleSheet* sheet) { return adoptRef(new CSSStyleRule(rule, sheet)); }
+    static Ref<CSSStyleRule> create(StyleRule& rule, CSSStyleSheet* sheet) { return adoptRef(*new CSSStyleRule(rule, sheet)); }
 
     virtual ~CSSStyleRule();
 
-    virtual CSSRule::Type type() const { return STYLE_RULE; }
     virtual String cssText() const override;
-    virtual void reattach(StyleRuleBase*) override;
+    virtual void reattach(StyleRuleBase&) override;
 
     String selectorText() const;
     void setSelectorText(const String&);
 
-    CSSStyleDeclaration* style();
+    CSSStyleDeclaration& style();
 
     // FIXME: Not CSSOM. Remove.
-    StyleRule* styleRule() const { return m_styleRule.get(); }
+    StyleRule& styleRule() const { return const_cast<StyleRule&>(m_styleRule.get()); }
 
 private:
-    CSSStyleRule(StyleRule*, CSSStyleSheet*);
+    CSSStyleRule(StyleRule&, CSSStyleSheet*);
+
+    virtual CSSRule::Type type() const override { return STYLE_RULE; }
 
     String generateSelectorText() const;
 
-    RefPtr<StyleRule> m_styleRule;
-    mutable RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;
+    Ref<StyleRule> m_styleRule;
+    RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSStyleRule, CSSRule::STYLE_RULE)
 
 #endif // CSSStyleRule_h

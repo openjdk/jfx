@@ -55,9 +55,9 @@ unsigned short PerformanceNavigation::type() const
 
     WebCore::NavigationType navigationType = documentLoader->triggeringAction().type();
     switch (navigationType) {
-    case NavigationTypeReload:
+    case NavigationType::Reload:
         return TYPE_RELOAD;
-    case NavigationTypeBackForward:
+    case NavigationType::BackForward:
         return TYPE_BACK_FORWARD;
     default:
         return TYPE_NAVIGATE;
@@ -73,11 +73,11 @@ unsigned short PerformanceNavigation::redirectCount() const
     if (!loader)
         return 0;
 
-    DocumentLoadTiming* timing = loader->timing();
-    if (timing->hasCrossOriginRedirect())
+    DocumentLoadTiming& timing = loader->timing();
+    if (timing.hasCrossOriginRedirect())
         return 0;
 
-    return timing->redirectCount();
+    return timing.redirectCount();
 }
 
 } // namespace WebCore

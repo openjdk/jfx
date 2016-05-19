@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,21 +26,27 @@
 #ifndef DFGAbstractValue_h
 #define DFGAbstractValue_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "ArrayProfile.h"
 #include "DFGFiltrationResult.h"
+#include "DFGFrozenValue.h"
+#include "DFGNodeFlags.h"
 #include "DFGStructureAbstractValue.h"
+#include "DFGStructureClobberState.h"
 #include "JSCell.h"
 #include "SpeculatedType.h"
 #include "DumpContext.h"
 #include "StructureSet.h"
 
-namespace JSC { namespace DFG {
+namespace JSC {
+
+class TrackedReferences;
+
+namespace DFG {
 
 class Graph;
+struct Node;
 
 struct AbstractValue {
     AbstractValue()
@@ -53,8 +59,7 @@ struct AbstractValue {
     {
         m_type = SpecNone;
         m_arrayModes = 0;
-        m_currentKnownStructure.clear();
-        m_futurePossibleStructure.clear();
+        m_structure.clear();
         m_value = JSValue();
         checkConsistency();
     }
@@ -72,17 +77,81 @@ struct AbstractValue {
         makeTop(SpecBytecodeTop);
     }
 
+    void makeFullTop()
+    {
+        makeTop(SpecFullTop);
+    }
+
     void clobberStructures()
     {
         if (m_type & SpecCell) {
-            m_currentKnownStructure.makeTop();
+            m_structure.clobber();
             clobberArrayModes();
         } else {
-            ASSERT(m_currentKnownStructure.isClear());
+            ASSERT(m_structure.isClear());
             ASSERT(!m_arrayModes);
         }
         checkConsistency();
     }
+
+    static void clobberStructuresFor(AbstractValue& value)
+    {
+        value.clobberStructures();
+    }
+
+    void observeInvalidationPoint()
+    {
+        m_structure.observeInvalidationPoint();
+        checkConsistency();
+    }
+
+    static void observeInvalidationPointFor(AbstractValue& value)
+    {
+        value.observeInvalidationPoint();
+    }
+
+    void observeTransition(Structure* from, Structure* to)
+    {
+        if (m_type & SpecCell) {
+            m_structure.observeTransition(from, to);
+            observeIndexingTypeTransition(from->indexingType(), to->indexingType());
+        }
+        checkConsistency();
+    }
+
+    void observeTransitions(const TransitionVector& vector);
+
+    class TransitionObserver {
+    public:
+        TransitionObserver(Structure* from, Structure* to)
+            : m_from(from)
+            , m_to(to)
+        {
+        }
+
+        void operator()(AbstractValue& value)
+        {
+            value.observeTransition(m_from, m_to);
+        }
+    private:
+        Structure* m_from;
+        Structure* m_to;
+    };
+
+    class TransitionsObserver {
+    public:
+        TransitionsObserver(const TransitionVector& vector)
+            : m_vector(vector)
+        {
+        }
+
+        void operator()(AbstractValue& value)
+        {
+            value.observeTransitions(m_vector);
+        }
+    private:
+        const TransitionVector& m_vector;
+    };
 
     void clobberValue()
     {
@@ -91,7 +160,10 @@ struct AbstractValue {
 
     bool isHeapTop() const
     {
-        return (m_type | SpecHeapTop) == m_type && m_currentKnownStructure.isTop() && m_futurePossibleStructure.isTop();
+        return (m_type | SpecHeapTop) == m_type
+            && m_structure.isTop()
+            && m_arrayModes == ALL_ARRAY_MODES
+            && !m_value;
     }
 
     bool valueIsTop() const
@@ -111,32 +183,46 @@ struct AbstractValue {
         return result;
     }
 
-    void setMostSpecific(Graph&, JSValue);
-    void set(Graph&, JSValue);
-    void set(Graph&, Structure*);
+    static AbstractValue bytecodeTop()
+    {
+        AbstractValue result;
+        result.makeBytecodeTop();
+        return result;
+    }
 
+    static AbstractValue fullTop()
+    {
+        AbstractValue result;
+        result.makeFullTop();
+        return result;
+    }
+
+    void set(Graph&, const FrozenValue&, StructureClobberState);
+    void set(Graph&, Structure*);
+    void set(Graph&, const StructureSet&);
+
+    // Set this value to represent the given set of types as precisely as possible.
+    void setType(Graph&, SpeculatedType);
+
+    // As above, but only valid for non-cell types.
     void setType(SpeculatedType type)
     {
-        if (type & SpecCell) {
-            m_currentKnownStructure.makeTop();
-            m_futurePossibleStructure.makeTop();
-            m_arrayModes = ALL_ARRAY_MODES;
-        } else {
-            m_currentKnownStructure.clear();
-            m_futurePossibleStructure.clear();
-            m_arrayModes = 0;
-        }
+        RELEASE_ASSERT(!(type & SpecCell));
+        m_structure.clear();
+        m_arrayModes = 0;
         m_type = type;
         m_value = JSValue();
         checkConsistency();
     }
 
+    void fixTypeForRepresentation(Graph&, NodeFlags representation, Node* = nullptr);
+    void fixTypeForRepresentation(Graph&, Node*);
+
     bool operator==(const AbstractValue& other) const
     {
         return m_type == other.m_type
             && m_arrayModes == other.m_arrayModes
-            && m_currentKnownStructure == other.m_currentKnownStructure
-            && m_futurePossibleStructure == other.m_futurePossibleStructure
+            && m_structure == other.m_structure
             && m_value == other.m_value;
     }
     bool operator!=(const AbstractValue& other) const
@@ -159,8 +245,7 @@ struct AbstractValue {
         } else {
             result |= mergeSpeculation(m_type, other.m_type);
             result |= mergeArrayModes(m_arrayModes, other.m_arrayModes);
-            result |= m_currentKnownStructure.addAll(other.m_currentKnownStructure);
-            result |= m_futurePossibleStructure.addAll(other.m_futurePossibleStructure);
+            result |= m_structure.merge(other.m_structure);
             if (m_value != other.m_value) {
                 result |= !!m_value;
                 m_value = JSValue();
@@ -171,13 +256,14 @@ struct AbstractValue {
         return result;
     }
 
+    bool mergeOSREntryValue(Graph&, JSValue);
+
     void merge(SpeculatedType type)
     {
         mergeSpeculation(m_type, type);
 
         if (type & SpecCell) {
-            m_currentKnownStructure.makeTop();
-            m_futurePossibleStructure.makeTop();
+            m_structure.makeTop();
             m_arrayModes = ALL_ARRAY_MODES;
         }
         m_value = JSValue();
@@ -185,23 +271,25 @@ struct AbstractValue {
         checkConsistency();
     }
 
-    bool couldBeType(SpeculatedType desiredType)
+    bool couldBeType(SpeculatedType desiredType) const
     {
         return !!(m_type & desiredType);
     }
 
-    bool isType(SpeculatedType desiredType)
+    bool isType(SpeculatedType desiredType) const
     {
         return !(m_type & ~desiredType);
     }
 
     FiltrationResult filter(Graph&, const StructureSet&);
+    FiltrationResult filterArrayModes(ArrayModes);
+    FiltrationResult filter(SpeculatedType);
+    FiltrationResult filterByValue(const FrozenValue& value);
+    FiltrationResult filter(const AbstractValue&);
 
-    FiltrationResult filterArrayModes(ArrayModes arrayModes);
+    FiltrationResult changeStructure(Graph&, const StructureSet&);
 
-    FiltrationResult filter(SpeculatedType type);
-
-    FiltrationResult filterByValue(JSValue value);
+    bool contains(Structure*) const;
 
     bool validate(JSValue value) const
     {
@@ -222,74 +310,31 @@ struct AbstractValue {
         if (!!value && value.isCell()) {
             ASSERT(m_type & SpecCell);
             Structure* structure = value.asCell()->structure();
-            return m_currentKnownStructure.contains(structure)
-                && m_futurePossibleStructure.contains(structure)
+            return m_structure.contains(structure)
                 && (m_arrayModes & asArrayModes(structure->indexingType()));
         }
 
         return true;
     }
 
-    Structure* bestProvenStructure() const
-    {
-        if (m_currentKnownStructure.hasSingleton())
-            return m_currentKnownStructure.singleton();
-        if (m_futurePossibleStructure.hasSingleton())
-            return m_futurePossibleStructure.singleton();
-        return 0;
-    }
-
     bool hasClobberableState() const
     {
-        return m_currentKnownStructure.isNeitherClearNorTop()
+        return m_structure.isNeitherClearNorTop()
             || !arrayModesAreClearOrTop(m_arrayModes);
     }
 
 #if ASSERT_DISABLED
     void checkConsistency() const { }
+    void assertIsRegistered(Graph&) const { }
 #else
     void checkConsistency() const;
+    void assertIsRegistered(Graph&) const;
 #endif
 
     void dumpInContext(PrintStream&, DumpContext*) const;
     void dump(PrintStream&) const;
 
-    // A great way to think about the difference between m_currentKnownStructure and
-    // m_futurePossibleStructure is to consider these four examples:
-    //
-    // 1) x = foo();
-    //
-    //    In this case x's m_currentKnownStructure and m_futurePossibleStructure will
-    //    both be TOP, since we don't know anything about x for sure, yet.
-    //
-    // 2) x = foo();
-    //    y = x.f;
-    //
-    //    Where x will later have a new property added to it, 'g'. Because of the
-    //    known but not-yet-executed property addition, x's current structure will
-    //    not be watchpointable; hence we have no way of statically bounding the set
-    //    of possible structures that x may have if a clobbering event happens. So,
-    //    x's m_currentKnownStructure will be whatever structure we check to get
-    //    property 'f', and m_futurePossibleStructure will be TOP.
-    //
-    // 3) x = foo();
-    //    y = x.f;
-    //
-    //    Where x has a terminal structure that is still watchpointable. In this case,
-    //    x's m_currentKnownStructure and m_futurePossibleStructure will both be
-    //    whatever structure we checked for when getting 'f'.
-    //
-    // 4) x = foo();
-    //    y = x.f;
-    //    bar();
-    //
-    //    Where x has a terminal structure that is still watchpointable. In this
-    //    case, m_currentKnownStructure will be TOP because bar() may potentially
-    //    change x's structure and we have no way of proving otherwise, but
-    //    x's m_futurePossibleStructure will be whatever structure we had checked
-    //    when getting property 'f'.
-
-    // NB. All fields in this struct must have trivial destructors.
+    void validateReferences(const TrackedReferences&);
 
     // This is a proven constraint on the structures that this value can have right
     // now. The structure of the current value must belong to this set. The set may
@@ -298,44 +343,25 @@ struct AbstractValue {
     // in which case this value cannot be a cell. This is all subject to change
     // anytime a new value is assigned to this one, anytime there is a control flow
     // merge, or most crucially, anytime a side-effect or structure check happens.
-    // In case of a side-effect, we typically must assume that any value may have
-    // had its structure changed, hence contravening our proof. We make the proof
-    // valid again by switching this to TOP (i.e. claiming that we have proved that
-    // this value may have any structure). Of note is that the proof represented by
-    // this field is not subject to structure transition watchpoints - even if one
-    // fires, we can be sure that this proof is still valid.
-    StructureAbstractValue m_currentKnownStructure;
-
-    // This is a proven constraint on the structures that this value can have now
-    // or any time in the future subject to the structure transition watchpoints of
-    // all members of this set not having fired. This set is impervious to side-
-    // effects; even if one happens the side-effect can only cause the value to
-    // change to at worst another structure that is also a member of this set. But,
-    // the theorem being proved by this field is predicated upon there not being
-    // any new structure transitions introduced into any members of this set. In
-    // cases where there is no way for us to guard this happening, the set must be
-    // TOP. But in cases where we can guard new structure transitions (all members
-    // of the set have still-valid structure transition watchpoints) then this set
-    // will be finite. Anytime that we make use of the finite nature of this set,
-    // we must first issue a structure transition watchpoint, which will effectively
-    // result in m_currentKnownStructure being filtered according to
-    // m_futurePossibleStructure.
-    StructureAbstractValue m_futurePossibleStructure;
+    // In case of a side-effect, we must assume that any value with a structure that
+    // isn't being watched may have had its structure changed, hence contravening
+    // our proof. In such a case we make the proof valid again by switching this to
+    // TOP (i.e. claiming that we have proved that this value may have any
+    // structure).
+    StructureAbstractValue m_structure;
 
     // This is a proven constraint on the possible types that this value can have
     // now or any time in the future, unless it is reassigned. This field is
-    // impervious to side-effects unless the side-effect can reassign the value
-    // (for example if we're talking about a captured variable). The relationship
-    // between this field, and the structure fields above, is as follows. The
-    // fields above constraint the structures that a cell may have, but they say
-    // nothing about whether or not the value is known to be a cell. More formally,
-    // the m_currentKnownStructure is itself an abstract value that consists of the
-    // union of the set of all non-cell values and the set of cell values that have
-    // the given structure. This abstract value is then the intersection of the
-    // m_currentKnownStructure and the set of values whose type is m_type. So, for
-    // example if m_type is SpecFinal|SpecInt32 and m_currentKnownStructure is
-    // [0x12345] then this abstract value corresponds to the set of all integers
-    // unified with the set of all objects with structure 0x12345.
+    // impervious to side-effects. The relationship between this field, and the
+    // structure fields above, is as follows. The fields above constraint the
+    // structures that a cell may have, but they say nothing about whether or not
+    // the value is known to be a cell. More formally, the m_structure is itself an
+    // abstract value that consists of the union of the set of all non-cell values
+    // and the set of cell values that have the given structure. This abstract
+    // value is then the intersection of the m_structure and the set of values
+    // whose type is m_type. So, for example if m_type is SpecFinal|SpecInt32 and
+    // m_structure is [0x12345] then this abstract value corresponds to the set of
+    // all integers unified with the set of all objects with structure 0x12345.
     SpeculatedType m_type;
 
     // This is a proven constraint on the possible indexing types that this value
@@ -350,7 +376,11 @@ struct AbstractValue {
     // implies nothing about the structure. Oddly, JSValue() (i.e. the empty value)
     // means either BOTTOM or TOP depending on the state of m_type: if m_type is
     // BOTTOM then JSValue() means BOTTOM; if m_type is not BOTTOM then JSValue()
-    // means TOP.
+    // means TOP. Also note that this value isn't necessarily known to the GC
+    // (strongly or even weakly - it may be an "fragile" value, see
+    // DFGValueStrength.h). If you perform any optimization based on a cell m_value
+    // that requires that the value be kept alive, you must call freeze() on that
+    // value, which will turn it into a weak value.
     JSValue m_value;
 
 private:
@@ -359,6 +389,12 @@ private:
         // FIXME: We could make this try to predict the set of array modes that this object
         // could have in the future. For now, just do the simple thing.
         m_arrayModes = ALL_ARRAY_MODES;
+    }
+
+    void observeIndexingTypeTransition(IndexingType from, IndexingType to)
+    {
+        if (m_arrayModes & asArrayModes(from))
+            m_arrayModes |= asArrayModes(to);
     }
 
     bool validateType(JSValue value) const
@@ -388,19 +424,17 @@ private:
     {
         m_type |= top;
         m_arrayModes = ALL_ARRAY_MODES;
-        m_currentKnownStructure.makeTop();
-        m_futurePossibleStructure.makeTop();
+        m_structure.makeTop();
         m_value = JSValue();
         checkConsistency();
     }
-
-    void setFuturePossibleStructure(Graph&, Structure* structure);
 
     void filterValueByType();
     void filterArrayModesByType();
 
     bool shouldBeClear() const;
     FiltrationResult normalizeClarity();
+    FiltrationResult normalizeClarity(Graph&);
 };
 
 } } // namespace JSC::DFG

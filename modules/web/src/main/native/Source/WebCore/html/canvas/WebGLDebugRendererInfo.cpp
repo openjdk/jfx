@@ -29,11 +29,11 @@
 
 #include "WebGLDebugRendererInfo.h"
 
-#include "WebGLRenderingContext.h"
+#include "WebGLRenderingContextBase.h"
 
 namespace WebCore {
 
-WebGLDebugRendererInfo::WebGLDebugRendererInfo(WebGLRenderingContext* context)
+WebGLDebugRendererInfo::WebGLDebugRendererInfo(WebGLRenderingContextBase* context)
     : WebGLExtension(context)
 {
 }
@@ -45,11 +45,6 @@ WebGLDebugRendererInfo::~WebGLDebugRendererInfo()
 WebGLExtension::ExtensionName WebGLDebugRendererInfo::getName() const
 {
     return WebGLDebugRendererInfoName;
-}
-
-OwnPtr<WebGLDebugRendererInfo> WebGLDebugRendererInfo::create(WebGLRenderingContext* context)
-{
-    return adoptPtr(new WebGLDebugRendererInfo(context));
 }
 
 } // namespace WebCore

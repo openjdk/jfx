@@ -31,10 +31,10 @@
 
 namespace Inspector {
 
-class InspectorBackendDispatcher;
-class InspectorFrontendChannel;
+class BackendDispatcher;
+class FrontendChannel;
 
-enum class InspectorDisconnectReason {
+enum class DisconnectReason {
     InspectedTargetDestroyed,
     InspectorDestroyed
 };
@@ -43,8 +43,10 @@ class InspectorAgentBase {
 public:
     virtual ~InspectorAgentBase() { }
 
-    virtual void didCreateFrontendAndBackend(InspectorFrontendChannel*, InspectorBackendDispatcher*) = 0;
-    virtual void willDestroyFrontendAndBackend(InspectorDisconnectReason reason) = 0;
+    String domainName() const { return m_name; }
+
+    virtual void didCreateFrontendAndBackend(FrontendChannel*, BackendDispatcher*) = 0;
+    virtual void willDestroyFrontendAndBackend(DisconnectReason) = 0;
     virtual void discardAgent() { }
 
 protected:

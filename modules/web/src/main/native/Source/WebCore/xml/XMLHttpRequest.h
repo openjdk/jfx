@@ -24,7 +24,6 @@
 
 #include "ActiveDOMObject.h"
 #include "EventListener.h"
-#include "EventNames.h"
 #include "EventTarget.h"
 #include "FormData.h"
 #include "ResourceResponse.h"
@@ -53,8 +52,8 @@ class ThreadableLoader;
 class XMLHttpRequest final : public ScriptWrappable, public RefCounted<XMLHttpRequest>, public EventTargetWithInlineData, private ThreadableLoaderClient, public ActiveDOMObject {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassRefPtr<XMLHttpRequest> create(ScriptExecutionContext&);
-    ~XMLHttpRequest();
+    static Ref<XMLHttpRequest> create(ScriptExecutionContext&);
+    WEBCORE_EXPORT ~XMLHttpRequest();
 
     // These exact numeric values are important because JS expects them.
     enum State {
@@ -85,8 +84,8 @@ public:
     virtual ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
 
     const URL& url() const { return m_url; }
-    String statusText(ExceptionCode&) const;
-    int status(ExceptionCode&) const;
+    String statusText() const;
+    int status() const;
     State readyState() const;
     bool withCredentials() const { return m_includeCredentials; }
     void setWithCredentials(bool, ExceptionCode&);
@@ -102,13 +101,14 @@ public:
     void send(JSC::ArrayBuffer*, ExceptionCode&);
     void send(JSC::ArrayBufferView*, ExceptionCode&);
     void abort();
-    void setRequestHeader(const AtomicString& name, const String& value, ExceptionCode&);
-    void overrideMimeType(const String& override);
+    void setRequestHeader(const String& name, const String& value, ExceptionCode&);
+    void overrideMimeType(const String& override, ExceptionCode&);
     bool doneWithoutErrors() const { return !m_error && m_state == DONE; }
     String getAllResponseHeaders() const;
-    String getResponseHeader(const AtomicString& name) const;
+    String getResponseHeader(const String& name) const;
     String responseText(ExceptionCode&);
     String responseTextIgnoringResponseType() const { return m_responseBuilder.toStringPreserveCapacity(); }
+    String responseMIMEType() const;
     Document* responseXML(ExceptionCode&);
     Document* optionalResponseXML() const { return m_responseDocument.get(); }
     Blob* responseBlob();
@@ -121,8 +121,6 @@ public:
     bool responseCacheIsValid() const { return m_responseCacheIsValid; }
     void didCacheResponseJSON();
 
-    void sendFromInspector(PassRefPtr<FormData>, ExceptionCode&);
-
     // Expose HTTP validation methods for other untrusted requests.
     static bool isAllowedHTTPMethod(const String&);
     static String uppercaseKnownHTTPMethod(const String&);
@@ -131,6 +129,8 @@ public:
     void setResponseType(const String&, ExceptionCode&);
     String responseType();
     ResponseTypeCode responseTypeCode() const { return m_responseTypeCode; }
+
+    String responseURL() const;
 
     // response attribute has custom getter.
     JSC::ArrayBuffer* responseArrayBuffer();
@@ -142,16 +142,7 @@ public:
     XMLHttpRequestUpload* upload();
     XMLHttpRequestUpload* optionalUpload() const { return m_upload.get(); }
 
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(readystatechange);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(load);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(loadend);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(loadstart);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(progress);
-#if ENABLE(XHR_TIMEOUT)
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(timeout);
-#endif
+    const ResourceResponse& resourceResponse() const { return m_response; }
 
     using RefCounted<XMLHttpRequest>::ref;
     using RefCounted<XMLHttpRequest>::deref;
@@ -160,11 +151,12 @@ private:
     explicit XMLHttpRequest(ScriptExecutionContext&);
 
     // ActiveDOMObject
-    virtual void contextDestroyed() override;
-    virtual bool canSuspend() const override;
-    virtual void suspend(ReasonForSuspension) override;
-    virtual void resume() override;
-    virtual void stop() override;
+    void contextDestroyed() override;
+    bool canSuspendForPageCache() const override;
+    void suspend(ReasonForSuspension) override;
+    void resume() override;
+    void stop() override;
+    const char* activeDOMObjectName() const override;
 
     virtual void refEventTarget() override { ref(); }
     virtual void derefEventTarget() override { deref(); }
@@ -183,19 +175,22 @@ private:
     virtual void didFail(const ResourceError&) override;
     virtual void didFailRedirectCheck() override;
 
-    String responseMIMEType() const;
     bool responseIsXML() const;
 
     bool initSend(ExceptionCode&);
     void sendBytesData(const void*, size_t, ExceptionCode&);
 
-    String getRequestHeader(const AtomicString& name) const;
-    void setRequestHeaderInternal(const AtomicString& name, const String& value);
+    String getRequestHeader(const String& name) const;
+    void setRequestHeaderInternal(const String& name, const String& value);
 
     void changeState(State newState);
     void callReadyStateChangeListener();
     void dropProtection();
-    void internalAbort();
+
+    // Returns false when cancelling the loader within internalAbort() triggers an event whose callback creates a new loader.
+    // In that case, the function calling internalAbort should exit.
+    bool internalAbort();
+
     void clearResponse();
     void clearResponseBuffers();
     void clearRequest();
@@ -209,6 +204,8 @@ private:
     bool shouldDecodeResponse() const { return m_responseTypeCode < FirstBinaryResponseType; }
 
     void dispatchErrorEvents(const AtomicString&);
+
+    void resumeTimerFired();
 
     std::unique_ptr<XMLHttpRequestUpload> m_upload;
 
@@ -259,6 +256,9 @@ private:
     // An enum corresponding to the allowed string values for the responseType attribute.
     ResponseTypeCode m_responseTypeCode;
     bool m_responseCacheIsValid;
+
+    Timer m_resumeTimer;
+    bool m_dispatchErrorOnResuming;
 };
 
 } // namespace WebCore

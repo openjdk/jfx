@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2011, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
@@ -16,7 +16,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,12 +37,13 @@
 
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "ElementChildIterator.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
+#include "HTMLHeadElement.h"
+#include "HTMLLinkElement.h"
 #include "IconDatabase.h"
-#include "IconDatabaseBase.h"
 #include "IconLoader.h"
-#include "IconURL.h"
 #include "Logging.h"
 #include "MainFrame.h"
 #include "Page.h"
@@ -53,7 +54,6 @@ namespace WebCore {
 
 IconController::IconController(Frame& frame)
     : m_frame(frame)
-    , m_waitingForLoadDecision(false)
 {
 }
 
@@ -61,63 +61,55 @@ IconController::~IconController()
 {
 }
 
-URL IconController::url()
+static URL iconFromLinkElements(Frame& frame)
 {
-    IconURLs iconURLs = urlsForTypes(Favicon);
-    return iconURLs.isEmpty() ? URL() : iconURLs[0].m_iconURL;
-}
+    // This function returns the first icon with a mime type.
+    // If no icon with mime type exists, the last icon is returned.
+    // It may make more sense to always return the last icon,
+    // but this implementation is consistent with previous behavior.
 
-IconURL IconController::iconURL(IconType iconType) const
-{
-    IconURL result;
-    const Vector<IconURL>& iconURLs = m_frame.document()->iconURLs(iconType);
-    Vector<IconURL>::const_iterator iter(iconURLs.begin());
-    for (; iter != iconURLs.end(); ++iter) {
-        if (result.m_iconURL.isEmpty() || !iter->m_mimeType.isEmpty())
-            result = *iter;
+    URL result;
+
+    auto* document = frame.document();
+    if (!document)
+        return result;
+
+    auto* head = document->head();
+    if (!head)
+        return result;
+
+    for (auto& linkElement : childrenOfType<HTMLLinkElement>(*head)) {
+        if (!(linkElement.iconType() & Favicon))
+            continue;
+        if (linkElement.href().isEmpty())
+            continue;
+        result = linkElement.href();
+        if (!linkElement.type().isEmpty())
+            break;
     }
 
     return result;
 }
 
-IconURLs IconController::urlsForTypes(int iconTypesMask)
+URL IconController::url()
 {
-    IconURLs iconURLs;
-    if (m_frame.tree().parent())
-        return iconURLs;
+    if (!m_frame.isMainFrame())
+        return URL();
 
-    if (iconTypesMask & Favicon && !appendToIconURLs(Favicon, &iconURLs))
-        iconURLs.append(defaultURL(Favicon));
+    auto icon = iconFromLinkElements(m_frame);
+    if (!icon.isEmpty())
+        return icon;
 
-#if ENABLE(TOUCH_ICON_LOADING)
-    int missedIcons = 0;
-    if (iconTypesMask & TouchPrecomposedIcon)
-        missedIcons += appendToIconURLs(TouchPrecomposedIcon, &iconURLs) ? 0:1;
-
-    if (iconTypesMask & TouchIcon)
-      missedIcons += appendToIconURLs(TouchIcon, &iconURLs) ? 0:1;
-
-    // Only return the default touch icons when the both were required and neither was gotten.
-    if (missedIcons == 2) {
-        iconURLs.append(defaultURL(TouchPrecomposedIcon));
-        iconURLs.append(defaultURL(TouchIcon));
-    }
-#endif
-
-    // Finally, append all remaining icons of this type.
-    const Vector<IconURL>& allIconURLs = m_frame.document()->iconURLs(iconTypesMask);
-    for (Vector<IconURL>::const_iterator iter = allIconURLs.begin(); iter != allIconURLs.end(); ++iter) {
-        int i;
-        int iconCount = iconURLs.size();
-        for (i = 0; i < iconCount; ++i) {
-            if (*iter == iconURLs.at(i))
-                break;
-        }
-        if (i == iconCount)
-            iconURLs.append(*iter);
+    icon = m_frame.document()->completeURL(ASCIILiteral("/favicon.ico"));
+    if (icon.protocolIsInHTTPFamily()) {
+        // FIXME: Not sure we need to remove credentials like this.
+        // However this preserves behavior this code path has historically had.
+        icon.setUser(String());
+        icon.setPass(String());
+        return icon;
     }
 
-    return iconURLs;
+    return URL();
 }
 
 void IconController::commitToDatabase(const URL& icon)
@@ -142,9 +134,8 @@ void IconController::startLoader()
     if (!documentCanHaveIcon(m_frame.document()->url()))
         return;
 
-    URL iconURL(url());
-    String urlString(iconURL.string());
-    if (urlString.isEmpty())
+    URL iconURL = url();
+    if (iconURL.isEmpty())
         return;
 
     // People who want to avoid loading images generally want to avoid loading all images, unless an exception has been made for site icons.
@@ -154,26 +145,30 @@ void IconController::startLoader()
 
     // If we're reloading the page, always start the icon load now.
     // FIXME: How can this condition ever be true?
-    if (m_frame.loader().loadType() == FrameLoadTypeReload && m_frame.loader().loadType() == FrameLoadTypeReloadFromOrigin) {
+    if (m_frame.loader().loadType() == FrameLoadType::Reload && m_frame.loader().loadType() == FrameLoadType::ReloadFromOrigin) {
         continueLoadWithDecision(IconLoadYes);
         return;
     }
 
     if (iconDatabase().supportsAsynchronousMode()) {
-        m_frame.loader().documentLoader()->getIconLoadDecisionForIconURL(urlString);
+        // FIXME (<rdar://problem/9168605>) - We should support in-memory-only private browsing icons in asynchronous icon database mode.
+        if (m_frame.page() && m_frame.page()->usesEphemeralSession())
+            return;
+
+        m_frame.loader().documentLoader()->getIconLoadDecisionForIconURL(iconURL.string());
         // Commit the icon url mapping to the database just in case we don't end up loading later.
         commitToDatabase(iconURL);
         return;
     }
 
-    IconLoadDecision decision = iconDatabase().synchronousLoadDecisionForIconURL(urlString, m_frame.loader().documentLoader());
+    IconLoadDecision decision = iconDatabase().synchronousLoadDecisionForIconURL(iconURL.string(), m_frame.loader().documentLoader());
 
     if (decision == IconLoadUnknown) {
         // In this case, we may end up loading the icon later, but we still want to commit the icon url mapping to the database
         // just in case we don't end up loading later - if we commit the mapping a second time after the load, that's no big deal
         // We also tell the client to register for the notification that the icon is received now so it isn't missed in case the
         // icon is later read in from disk
-        LOG(IconDatabase, "IconController %p might load icon %s later", this, urlString.ascii().data());
+        LOG(IconDatabase, "IconController %p might load icon %s later", this, iconURL.string().utf8().data());
         m_waitingForLoadDecision = true;
         m_frame.loader().client().registerForIconNotification();
         commitToDatabase(iconURL);
@@ -203,21 +198,16 @@ void IconController::continueLoadWithDecision(IconLoadDecision iconLoadDecision)
 {
     ASSERT(iconLoadDecision != IconLoadUnknown);
 
-    //  FIXME (<rdar://problem/9168605>) - We should support in-memory-only private browsing icons in asynchronous icon database mode.
-    if (iconDatabase().supportsAsynchronousMode() && m_frame.page()->settings().privateBrowsingEnabled())
-        return;
-
     if (iconLoadDecision == IconLoadNo) {
-        URL iconURL(url());
-        String urlString(iconURL.string());
-        if (urlString.isEmpty())
+        URL iconURL = url();
+        if (iconURL.isEmpty())
             return;
 
-        LOG(IconDatabase, "IconController::startLoader() - Told not to load this icon, committing iconURL %s to database for pageURL mapping", urlString.ascii().data());
+        LOG(IconDatabase, "IconController::startLoader() - Told not to load this icon, committing iconURL %s to database for pageURL mapping", iconURL.string().utf8().data());
         commitToDatabase(iconURL);
 
         if (iconDatabase().supportsAsynchronousMode()) {
-            m_frame.loader().documentLoader()->getIconDataForIconURL(urlString);
+            m_frame.loader().documentLoader()->getIconDataForIconURL(iconURL.string());
             return;
         }
 
@@ -225,8 +215,8 @@ void IconController::continueLoadWithDecision(IconLoadDecision iconLoadDecision)
         // If the icon data hasn't been read in from disk yet, kick off the read of the icon from the database to make sure someone
         // has done it. This is after registering for the notification so the WebView can call the appropriate delegate method.
         // Otherwise if the icon data *is* available, notify the delegate
-        if (!iconDatabase().synchronousIconDataKnownForIconURL(urlString)) {
-            LOG(IconDatabase, "Told not to load icon %s but icon data is not yet available - registering for notification and requesting load from disk", urlString.ascii().data());
+        if (!iconDatabase().synchronousIconDataKnownForIconURL(iconURL.string())) {
+            LOG(IconDatabase, "Told not to load icon %s but icon data is not yet available - registering for notification and requesting load from disk", iconURL.string().ascii().data());
             m_frame.loader().client().registerForIconNotification();
             iconDatabase().synchronousIconForPageURL(m_frame.document()->url().string(), IntSize(0, 0));
             iconDatabase().synchronousIconForPageURL(m_frame.loader().initialRequest().url().string(), IntSize(0, 0));
@@ -240,47 +230,6 @@ void IconController::continueLoadWithDecision(IconLoadDecision iconLoadDecision)
         m_iconLoader = std::make_unique<IconLoader>(m_frame);
 
     m_iconLoader->startLoading();
-}
-
-bool IconController::appendToIconURLs(IconType iconType, IconURLs* iconURLs)
-{
-    IconURL faviconURL = iconURL(iconType);
-    if (faviconURL.m_iconURL.isEmpty())
-        return false;
-
-    iconURLs->append(faviconURL);
-    return true;
-}
-
-IconURL IconController::defaultURL(IconType iconType)
-{
-    // Don't return a favicon iconURL unless we're http or https
-    URL documentURL = m_frame.document()->url();
-    if (!documentURL.protocolIsInHTTPFamily())
-        return IconURL();
-
-    URL url;
-    bool couldSetProtocol = url.setProtocol(documentURL.protocol());
-    ASSERT_UNUSED(couldSetProtocol, couldSetProtocol);
-    url.setHost(documentURL.host());
-    if (documentURL.hasPort())
-        url.setPort(documentURL.port());
-
-    if (iconType == Favicon) {
-        url.setPath("/favicon.ico");
-        return IconURL::defaultIconURL(url, Favicon);
-    }
-#if ENABLE(TOUCH_ICON_LOADING)
-    if (iconType == TouchPrecomposedIcon) {
-        url.setPath("/apple-touch-icon-precomposed.png");
-        return IconURL::defaultIconURL(url, TouchPrecomposedIcon);
-    }
-    if (iconType == TouchIcon) {
-        url.setPath("/apple-touch-icon.png");
-        return IconURL::defaultIconURL(url, TouchIcon);
-    }
-#endif
-    return IconURL();
 }
 
 }

@@ -30,7 +30,7 @@
 #include "Document.h"
 #include "Frame.h"
 #include "Page.h"
-#include "PageConsole.h"
+#include "PageConsoleClient.h"
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
@@ -40,6 +40,7 @@
 #include "XSLTExtensions.h"
 #include "XSLTUnicodeSort.h"
 #include "markup.h"
+#include <JavaScriptCore/Profile.h>
 #include <libxslt/imports.h>
 #include <libxslt/security.h>
 #include <libxslt/variables.h>
@@ -79,7 +80,7 @@ void XSLTProcessor::genericErrorFunc(void*, const char*, ...)
 
 void XSLTProcessor::parseErrorFunc(void* userData, xmlError* error)
 {
-    PageConsole* console = static_cast<PageConsole*>(userData);
+    PageConsoleClient* console = static_cast<PageConsoleClient*>(userData);
     if (!console)
         return;
 
@@ -103,8 +104,8 @@ void XSLTProcessor::parseErrorFunc(void* userData, xmlError* error)
 }
 
 // FIXME: There seems to be no way to control the ctxt pointer for loading here, thus we have globals.
-static XSLTProcessor* globalProcessor = 0;
-static CachedResourceLoader* globalCachedResourceLoader = 0;
+static XSLTProcessor* globalProcessor = nullptr;
+static CachedResourceLoader* globalCachedResourceLoader = nullptr;
 static xmlDocPtr docLoaderFunc(const xmlChar* uri,
                                xmlDictPtr,
                                int options,
@@ -123,19 +124,23 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         ResourceError error;
         ResourceResponse response;
 
-        Vector<char> data;
+        RefPtr<SharedBuffer> data;
 
         bool requestAllowed = globalCachedResourceLoader->frame() && globalCachedResourceLoader->document()->securityOrigin()->canRequest(url);
         if (requestAllowed) {
             globalCachedResourceLoader->frame()->loader().loadResourceSynchronously(url, AllowStoredCredentials, DoNotAskClientForCrossOriginCredentials, error, response, data);
-            requestAllowed = globalCachedResourceLoader->document()->securityOrigin()->canRequest(response.url());
+            if (error.isNull())
+                requestAllowed = globalCachedResourceLoader->document()->securityOrigin()->canRequest(response.url());
+            else if (data)
+                data = nullptr;
         }
         if (!requestAllowed) {
-            data.clear();
+            if (data)
+                data = nullptr;
             globalCachedResourceLoader->printAccessDeniedMessage(url);
         }
 
-        PageConsole* console = 0;
+        PageConsoleClient* console = nullptr;
         Frame* frame = globalProcessor->xslStylesheet()->ownerDocument()->frame();
         if (frame && frame->page())
             console = &frame->page()->console();
@@ -144,7 +149,7 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
 
         // We don't specify an encoding here. Neither Gecko nor WinIE respects
         // the encoding specified in the HTTP headers.
-        xmlDocPtr doc = xmlReadMemory(data.data(), data.size(), (const char*)uri, 0, options);
+        xmlDocPtr doc = xmlReadMemory(data ? data->data() : nullptr, data ? data->size() : 0, (const char*)uri, 0, options);
 
         xmlSetStructuredErrorFunc(0, 0);
         xmlSetGenericErrorFunc(0, 0);
@@ -192,7 +197,7 @@ static int writeToStringBuilder(void* context, const char* buffer, int len)
 
 static bool saveResultToString(xmlDocPtr resultDoc, xsltStylesheetPtr sheet, String& resultString)
 {
-    xmlOutputBufferPtr outputBuf = xmlAllocOutputBuffer(0);
+    xmlOutputBufferPtr outputBuf = xmlAllocOutputBuffer(nullptr);
     if (!outputBuf)
         return false;
 
@@ -221,13 +226,12 @@ static const char** xsltParamArrayFromParameterMap(XSLTProcessor::ParameterMap& 
 
     const char** parameterArray = (const char**)fastMalloc(((parameters.size() * 2) + 1) * sizeof(char*));
 
-    XSLTProcessor::ParameterMap::iterator end = parameters.end();
     unsigned index = 0;
-    for (XSLTProcessor::ParameterMap::iterator it = parameters.begin(); it != end; ++it) {
-        parameterArray[index++] = fastStrDup(it->key.utf8().data());
-        parameterArray[index++] = fastStrDup(it->value.utf8().data());
+    for (auto& parameter : parameters) {
+        parameterArray[index++] = fastStrDup(parameter.key.utf8().data());
+        parameterArray[index++] = fastStrDup(parameter.value.utf8().data());
     }
-    parameterArray[index] = 0;
+    parameterArray[index] = nullptr;
 
     return parameterArray;
 }
@@ -268,7 +272,7 @@ static inline xmlDocPtr xmlDocPtrFromNode(Node& sourceNode, bool& shouldDelete)
     Ref<Document> ownerDocument(sourceNode.document());
     bool sourceIsDocument = (&sourceNode == &ownerDocument.get());
 
-    xmlDocPtr sourceDoc = 0;
+    xmlDocPtr sourceDoc = nullptr;
     if (sourceIsDocument && ownerDocument->transformSource())
         sourceDoc = (xmlDocPtr)ownerDocument->transformSource()->platformSource();
     if (!sourceDoc) {
@@ -285,7 +289,7 @@ static inline String resultMIMEType(xmlDocPtr resultDoc, xsltStylesheetPtr sheet
     // HTML (create an HTML document), XML (create an XML document),
     // and text (wrap in a <pre> and create an XML document).
 
-    const xmlChar* resultType = 0;
+    const xmlChar* resultType = nullptr;
     XSLT_GET_IMPORT_PTR(resultType, sheet, method);
     if (!resultType && resultDoc->type == XML_HTML_DOCUMENT_NODE)
         resultType = (const xmlChar*)"html";
@@ -302,11 +306,11 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 {
     Ref<Document> ownerDocument(sourceNode.document());
 
-    setXSLTLoadCallBack(docLoaderFunc, this, ownerDocument->cachedResourceLoader());
+    setXSLTLoadCallBack(docLoaderFunc, this, &ownerDocument->cachedResourceLoader());
     xsltStylesheetPtr sheet = xsltStylesheetPointer(m_stylesheet, m_stylesheetRootNode.get());
     if (!sheet) {
-        setXSLTLoadCallBack(0, 0, 0);
-        m_stylesheet = 0;
+        setXSLTLoadCallBack(nullptr, nullptr, nullptr);
+        m_stylesheet = nullptr;
         return false;
     }
     m_stylesheet->clearDocuments();
@@ -365,7 +369,7 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
     sheet->method = origMethod;
     setXSLTLoadCallBack(0, 0, 0);
     xsltFreeStylesheet(sheet);
-    m_stylesheet = 0;
+    m_stylesheet = nullptr;
 
     return success;
 }

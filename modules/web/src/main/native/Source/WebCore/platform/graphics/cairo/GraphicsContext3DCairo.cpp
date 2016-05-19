@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,9 +26,11 @@
  */
 
 #include "config.h"
-#include "GraphicsContext3D.h"
 
-#if USE(3D_GRAPHICS)
+#if USE(CAIRO)
+
+#if ENABLE(GRAPHICS_CONTEXT_3D)
+#include "GraphicsContext3D.h"
 
 #include "CairoUtilities.h"
 #include "GraphicsContext3DPrivate.h"
@@ -38,13 +40,11 @@
 #include "PlatformContextCairo.h"
 #include "RefPtrCairo.h"
 #include <cairo.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 
 #if PLATFORM(WIN)
-#include "GLSLANG/ShaderLang.h"
+#include <GLSLANG/ShaderLang.h>
 #else
-#include "ShaderLang.h"
+#include <ANGLE/ShaderLang.h>
 #endif
 
 #if USE(OPENGL_ES_2)
@@ -89,7 +89,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attributes, H
     , m_multisampleFBO(0)
     , m_multisampleDepthStencilBuffer(0)
     , m_multisampleColorBuffer(0)
-    , m_private(GraphicsContext3DPrivate::create(this, renderStyle))
+    , m_private(std::make_unique<GraphicsContext3DPrivate>(this, renderStyle))
 {
     makeContextCurrent();
 
@@ -272,11 +272,11 @@ void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imag
     context->restore();
 }
 
-void GraphicsContext3D::setContextLostCallback(PassOwnPtr<ContextLostCallback>)
+void GraphicsContext3D::setContextLostCallback(std::unique_ptr<ContextLostCallback>)
 {
 }
 
-void GraphicsContext3D::setErrorMessageCallback(PassOwnPtr<ErrorMessageCallback>)
+void GraphicsContext3D::setErrorMessageCallback(std::unique_ptr<ErrorMessageCallback>)
 {
 }
 
@@ -285,6 +285,10 @@ bool GraphicsContext3D::makeContextCurrent()
     if (!m_private)
         return false;
     return m_private->makeContextCurrent();
+}
+
+void GraphicsContext3D::checkGPUStatusIfNecessary()
+{
 }
 
 PlatformGraphicsContext3D GraphicsContext3D::platformGraphicsContext3D()
@@ -313,4 +317,6 @@ PlatformLayer* GraphicsContext3D::platformLayer() const
 
 } // namespace WebCore
 
-#endif // USE(3D_GRAPHICS)
+#endif // ENABLE(GRAPHICS_CONTEXT_3D)
+
+#endif // USE(CAIRO)

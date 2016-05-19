@@ -26,8 +26,6 @@
 #ifndef RegisterSet_h
 #define RegisterSet_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(JIT)
 
 #include "FPRInfo.h"
@@ -41,10 +39,16 @@ namespace JSC {
 
 class RegisterSet {
 public:
-    RegisterSet() { }
+    template<typename... Regs>
+    explicit RegisterSet(Regs... regs)
+    {
+        setMany(regs...);
+    }
 
     static RegisterSet stackRegisters();
-    static RegisterSet specialRegisters();
+    static RegisterSet reservedHardwareRegisters();
+    static RegisterSet runtimeRegisters();
+    static RegisterSet specialRegisters(); // The union of stack, reserved hardware, and runtime registers.
     static RegisterSet calleeSaveRegisters();
     static RegisterSet allGPRs();
     static RegisterSet allFPRs();
@@ -79,6 +83,8 @@ public:
     void filter(const RegisterSet& other) { m_vector.filter(other.m_vector); }
     void exclude(const RegisterSet& other) { m_vector.exclude(other.m_vector); }
 
+    size_t numberOfSetGPRs() const;
+    size_t numberOfSetFPRs() const;
     size_t numberOfSetRegisters() const { return m_vector.bitCount(); }
 
     void dump(PrintStream&) const;
@@ -103,6 +109,16 @@ public:
     unsigned hash() const { return m_vector.hash(); }
 
 private:
+    void setAny(Reg reg) { set(reg); }
+    void setAny(const RegisterSet& set) { merge(set); }
+    void setMany() { }
+    template<typename RegType, typename... Regs>
+    void setMany(RegType reg, Regs... regs)
+    {
+        setAny(reg);
+        setMany(regs...);
+    }
+
     BitVector m_vector;
 };
 

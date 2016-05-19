@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -34,20 +34,18 @@
 #include "Document.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
-#include "GroupSettings.h"
-#include "HistogramSupport.h"
 #include "IDBBindingUtilities.h"
 #include "IDBDatabase.h"
 #include "IDBDatabaseCallbacksImpl.h"
 #include "IDBDatabaseException.h"
 #include "IDBFactoryBackendInterface.h"
-#include "IDBHistograms.h"
 #include "IDBKey.h"
 #include "IDBKeyRange.h"
 #include "IDBOpenDBRequest.h"
 #include "Logging.h"
 #include "Page.h"
 #include "PageGroup.h"
+#include "SchemeRegistry.h"
 #include "SecurityOrigin.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerLoaderProxy.h"
@@ -66,29 +64,14 @@ IDBFactory::~IDBFactory()
 {
 }
 
-namespace {
 static bool isContextValid(ScriptExecutionContext* context)
 {
-    ASSERT(context->isDocument() || context->isWorkerGlobalScope());
-    if (context->isDocument()) {
-        Document* document = toDocument(context);
-        return document->frame() && document->page();
+    ASSERT(is<Document>(*context) || context->isWorkerGlobalScope());
+    if (is<Document>(*context)) {
+        Document& document = downcast<Document>(*context);
+        return document.frame() && document.page() && (!document.page()->usesEphemeralSession() || SchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(document.securityOrigin()->protocol()));
     }
     return true;
-}
-
-static String getIndexedDBDatabasePath(ScriptExecutionContext* context)
-{
-    ASSERT(isContextValid(context));
-    if (context->isDocument()) {
-        Document* document = toDocument(context);
-        return document->page()->group().groupSettings().indexedDBDatabasePath();
-    }
-    const GroupSettings* groupSettings = toWorkerGlobalScope(context)->groupSettings();
-    if (groupSettings)
-        return groupSettings->indexedDBDatabasePath();
-    return String();
-}
 }
 
 PassRefPtr<IDBRequest> IDBFactory::getDatabaseNames(ScriptExecutionContext* context, ExceptionCode& ec)
@@ -102,7 +85,7 @@ PassRefPtr<IDBRequest> IDBFactory::getDatabaseNames(ScriptExecutionContext* cont
     }
 
     RefPtr<IDBRequest> request = IDBRequest::create(context, IDBAny::create(this), 0);
-    m_backend->getDatabaseNames(request, *(context->securityOrigin()), *(context->topOrigin()), context, getIndexedDBDatabasePath(context));
+    m_backend->getDatabaseNames(request, *(context->securityOrigin()), *(context->topOrigin()), context);
     return request;
 }
 
@@ -124,7 +107,6 @@ PassRefPtr<IDBOpenDBRequest> IDBFactory::open(ScriptExecutionContext* context, c
 
 PassRefPtr<IDBOpenDBRequest> IDBFactory::openInternal(ScriptExecutionContext* context, const String& name, uint64_t version, IndexedDB::VersionNullness versionNullness, ExceptionCode& ec)
 {
-    HistogramSupport::histogramEnumeration("WebCore.IndexedDB.FrontEndAPICalls", IDBOpenCall, IDBMethodsMax);
     ASSERT(version >= 1 || versionNullness == IndexedDB::VersionNullness::Null);
     if (name.isNull()) {
         ec = TypeError;
@@ -147,7 +129,6 @@ PassRefPtr<IDBOpenDBRequest> IDBFactory::openInternal(ScriptExecutionContext* co
 PassRefPtr<IDBOpenDBRequest> IDBFactory::deleteDatabase(ScriptExecutionContext* context, const String& name, ExceptionCode& ec)
 {
     LOG(StorageAPI, "IDBFactory::deleteDatabase");
-    HistogramSupport::histogramEnumeration("WebCore.IndexedDB.FrontEndAPICalls", IDBDeleteDatabaseCall, IDBMethodsMax);
     if (name.isNull()) {
         ec = TypeError;
         return 0;
@@ -160,7 +141,7 @@ PassRefPtr<IDBOpenDBRequest> IDBFactory::deleteDatabase(ScriptExecutionContext* 
     }
 
     RefPtr<IDBOpenDBRequest> request = IDBOpenDBRequest::create(context, 0, 0, 0, IndexedDB::VersionNullness::Null);
-    m_backend->deleteDatabase(name, *context->securityOrigin(), *context->topOrigin(), request, context, getIndexedDBDatabasePath(context));
+    m_backend->deleteDatabase(name, *context->securityOrigin(), *context->topOrigin(), request, context);
     return request;
 }
 

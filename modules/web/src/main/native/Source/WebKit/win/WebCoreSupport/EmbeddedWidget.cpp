@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "EmbeddedWidget.h"
 
 #include <WebCore/Document.h>
@@ -56,16 +55,15 @@ bool EmbeddedWidget::createWindow(HWND parentWindow, const IntSize& size)
 {
     ASSERT(!m_window);
 
-    OLE_HANDLE window;
-
+    HWND window;
     SIZE pluginSize(size);
 
-    HRESULT hr = m_view->createViewWindow(reinterpret_cast<OLE_HANDLE>(parentWindow), &pluginSize, &window);
+    HRESULT hr = m_view->createViewWindow(parentWindow, &pluginSize, &window);
 
     if (FAILED(hr) || !window)
         return false;
 
-    m_window = reinterpret_cast<HWND>(window);
+    m_window = window;
     return true;
 }
 
@@ -94,13 +92,12 @@ void EmbeddedWidget::frameRectsChanged()
     if (!parent())
         return;
 
-    ASSERT(parent()->isFrameView());
-    FrameView* frameView = toFrameView(parent());
+    FrameView& frameView = downcast<FrameView>(*parent());
 
     IntRect oldWindowRect = m_windowRect;
     IntRect oldClipRect = m_clipRect;
 
-    m_windowRect = IntRect(frameView->contentsToWindow(frameRect().location()), frameRect().size());
+    m_windowRect = IntRect(frameView.contentsToWindow(frameRect().location()), frameRect().size());
     m_clipRect = windowClipRect();
     m_clipRect.move(-m_windowRect.x(), -m_windowRect.y());
 

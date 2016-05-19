@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,18 +37,14 @@ namespace WebCore {
 
 class RenderTableSection;
 
-class AccessibilityTableColumn : public AccessibilityMockObject {
-
-private:
-    AccessibilityTableColumn();
+class AccessibilityTableColumn final : public AccessibilityMockObject {
 public:
-    static PassRefPtr<AccessibilityTableColumn> create();
+    static Ref<AccessibilityTableColumn> create();
     virtual ~AccessibilityTableColumn();
 
     AccessibilityObject* headerObject();
 
     virtual AccessibilityRole roleValue() const override { return ColumnRole; }
-    virtual bool isTableColumn() const override { return true; }
 
     void setColumnIndex(int columnIndex) { m_columnIndex = columnIndex; }
     int columnIndex() const { return m_columnIndex; }
@@ -59,15 +55,18 @@ public:
     virtual LayoutRect elementRect() const override;
 
 private:
-    unsigned m_columnIndex;
-    LayoutRect m_columnRect;
+    AccessibilityTableColumn();
 
     AccessibilityObject* headerObjectForSection(RenderTableSection*, bool thTagRequired);
     virtual bool computeAccessibilityIsIgnored() const override;
+    virtual bool isTableColumn() const override { return true; }
+
+    unsigned m_columnIndex;
+    LayoutRect m_columnRect;
 };
 
-ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityTableColumn, isTableColumn())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityTableColumn, isTableColumn())
 
 #endif // AccessibilityTableColumn_h

@@ -28,7 +28,8 @@
 
 import os
 import tempfile
-import unittest2 as unittest
+import unittest
+
 from webkitpy.common.net.credentials import Credentials
 from webkitpy.common.system.executive import Executive
 from webkitpy.common.system.outputcapture import OutputCapture
@@ -109,7 +110,7 @@ password: "SECRETSAUCE"
         # by the test case CredentialsTest._assert_security_call (below).
         outputCapture = OutputCapture()
         outputCapture.capture_output()
-        self.assertIsNone(credentials._run_security_tool())
+        self.assertIsNone(credentials._run_security_tool("find-internet-password"))
         outputCapture.restore_output()
 
     def _assert_security_call(self, username=None):
@@ -117,7 +118,7 @@ password: "SECRETSAUCE"
         credentials = MockedCredentials("example.com", executive=executive_mock)
 
         expected_logs = "Reading Keychain for example.com account and password.  Click \"Allow\" to continue...\n"
-        OutputCapture().assert_outputs(self, credentials._run_security_tool, [username], expected_logs=expected_logs)
+        OutputCapture().assert_outputs(self, credentials._run_security_tool, ["find-internet-password", username], expected_logs=expected_logs)
 
         security_args = ["/usr/bin/security", "find-internet-password", "-g", "-s", "example.com"]
         if username:
@@ -206,3 +207,31 @@ password: "SECRETSAUCE"
             # FIXME: Using read_credentials here seems too broad as higher-priority
             # credential source could be affected by the user's environment.
             self.assertEqual(credentials.read_credentials(FakeUser), ("test@webkit.org", "NOMNOMNOM"))
+
+    def test_do_not_use_stored_credentials(self):
+        class MockKeyring(object):
+            def get_password(self, host, username):
+                raise AssertionError("Should not read from keyring.")
+
+        class FakeCredentials(MockedCredentials):
+            def _credentials_from_keychain(self, username):
+                raise AssertionError("Should not read from keychain.")
+
+            def _credentials_from_environment(self):
+                raise AssertionError("Should not read from environment.")
+
+            def _offer_to_store_credentials_in_keyring(self, username, password):
+                pass
+
+        class FakeUser(MockUser):
+            @classmethod
+            def prompt(cls, message, repeat=1, raw_input=raw_input):
+                return "test@webkit.org"
+
+            @classmethod
+            def prompt_password(cls, message, repeat=1, raw_input=raw_input):
+                return "NOMNOMNOM"
+
+        with _TemporaryDirectory(suffix="not_a_git_repo") as temp_dir_path:
+            credentials = FakeCredentials("fake.hostname", cwd=temp_dir_path, keyring=MockKeyring())
+            self.assertEqual(credentials.read_credentials(FakeUser, use_stored_credentials=False), ("test@webkit.org", "NOMNOMNOM"))

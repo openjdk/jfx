@@ -29,7 +29,7 @@ namespace WebCore {
 
 class HTMLBaseElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLBaseElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLBaseElement> create(const QualifiedName&, Document&);
 
     URL href() const;
     void setHref(const AtomicString&);
@@ -43,8 +43,6 @@ private:
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
     virtual void removedFrom(ContainerNode&) override;
 };
-
-NODE_TYPE_CASTS(HTMLBaseElement)
 
 } // namespace
 

@@ -25,7 +25,6 @@
 #include "config.h"
 #include "HTMLTableCaptionElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "HTMLNames.h"
 
@@ -39,9 +38,9 @@ inline HTMLTableCaptionElement::HTMLTableCaptionElement(const QualifiedName& tag
     ASSERT(hasTagName(captionTag));
 }
 
-PassRefPtr<HTMLTableCaptionElement> HTMLTableCaptionElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLTableCaptionElement> HTMLTableCaptionElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLTableCaptionElement(tagName, document));
+    return adoptRef(*new HTMLTableCaptionElement(tagName, document));
 }
 
 bool HTMLTableCaptionElement::isPresentationAttribute(const QualifiedName& name) const

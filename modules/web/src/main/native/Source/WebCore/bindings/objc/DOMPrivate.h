@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004-2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -40,6 +40,7 @@
 
 @interface DOMNode (WebPrivate)
 + (id)_nodeFromJSWrapper:(JSObjectRef)jsWrapper;
+- (void)getPreviewSnapshotImage:(CGImageRef*)cgImage andRects:(NSArray **)rects;
 @end
 
 // FIXME: this should be removed as soon as all internal Apple uses of it have been replaced with
@@ -100,16 +101,14 @@
 // Each one should eventually be replaced by public DOM API, and when that happens Safari will switch to implementations
 // using that public API, and these will be deleted.
 @interface DOMHTMLInputElement (FormAutoFillTransition)
-- (BOOL)_isAutofilled;
 - (BOOL)_isTextField;
-#if !TARGET_OS_IPHONE
-- (NSRect)_rectOnScreen; // bounding box of the text field, in screen coordinates
-#endif
-- (void)_replaceCharactersInRange:(NSRange)targetRange withString:(NSString *)replacementString selectingFromIndex:(int)index;
-- (NSRange)_selectedRange;
+#if TARGET_OS_IPHONE
+- (BOOL)_isAutofilled;
 - (void)_setAutofilled:(BOOL)filled;
+#endif
 @end
 
+#if TARGET_OS_IPHONE
 // These changes are necessary to detect whether a form input was modified by a user
 // or javascript
 @interface DOMHTMLInputElement (FormPromptAdditions)
@@ -119,6 +118,7 @@
 @interface DOMHTMLTextAreaElement (FormPromptAdditions)
 - (BOOL)_isEdited;
 @end
+#endif // TARGET_OS_IPHONE
 
 // All the methods in this category are used by Safari forms autofill and should not be used for any other purpose.
 // They are stopgap measures until we finish transitioning form controls to not use NSView. Each one should become

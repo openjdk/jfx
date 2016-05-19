@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -41,8 +41,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderHTMLCanvas::RenderHTMLCanvas(HTMLCanvasElement& element, PassRef<RenderStyle> style)
-    : RenderReplaced(element, std::move(style), element.size())
+RenderHTMLCanvas::RenderHTMLCanvas(HTMLCanvasElement& element, Ref<RenderStyle>&& style)
+    : RenderReplaced(element, WTF::move(style), element.size())
 {
     // Actual size is not known yet, report the default intrinsic size.
     view().frameView().incrementVisuallyNonEmptyPixelCount(roundedIntSize(intrinsicSize()));
@@ -50,7 +50,7 @@ RenderHTMLCanvas::RenderHTMLCanvas(HTMLCanvasElement& element, PassRef<RenderSty
 
 HTMLCanvasElement& RenderHTMLCanvas::canvasElement() const
 {
-    return toHTMLCanvasElement(nodeForNonAnonymous());
+    return downcast<HTMLCanvasElement>(nodeForNonAnonymous());
 }
 
 bool RenderHTMLCanvas::requiresLayer() const
@@ -68,24 +68,24 @@ void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& pa
 {
     GraphicsContext* context = paintInfo.context;
 
-    LayoutRect contentRect = contentBoxRect();
-    contentRect.moveBy(paintOffset);
-    LayoutRect paintRect = replacedContentRect(intrinsicSize());
-    paintRect.moveBy(paintOffset);
+    LayoutRect contentBoxRect = this->contentBoxRect();
+    contentBoxRect.moveBy(paintOffset);
+    LayoutRect replacedContentRect = this->replacedContentRect(intrinsicSize());
+    replacedContentRect.moveBy(paintOffset);
 
     // Not allowed to overflow the content box.
-    bool clip = !contentRect.contains(paintRect);
+    bool clip = !contentBoxRect.contains(replacedContentRect);
     GraphicsContextStateSaver stateSaver(*paintInfo.context, clip);
     if (clip)
-        paintInfo.context->clip(pixelSnappedIntRect(contentRect));
+        paintInfo.context->clip(snappedIntRect(contentBoxRect));
 
     if (Page* page = frame().page()) {
         if (paintInfo.phase == PaintPhaseForeground)
-            page->addRelevantRepaintedObject(this, intersection(paintRect, contentRect));
+            page->addRelevantRepaintedObject(this, intersection(replacedContentRect, contentBoxRect));
     }
 
     bool useLowQualityScale = style().imageRendering() == ImageRenderingCrispEdges || style().imageRendering() == ImageRenderingOptimizeSpeed;
-    canvasElement().paint(context, paintRect, useLowQualityScale);
+    canvasElement().paint(context, replacedContentRect, useLowQualityScale);
 }
 
 void RenderHTMLCanvas::canvasSizeChanged()

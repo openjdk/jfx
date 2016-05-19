@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2010, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2008, 2010, 2012-2013, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Justin Haygood (jhaygood@reaktix.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -59,7 +59,7 @@
 #ifndef Atomics_h
 #define Atomics_h
 
-#include <wtf/Platform.h>
+#include <atomic>
 #include <wtf/StdLibExtras.h>
 
 #if OS(WINDOWS)
@@ -72,14 +72,42 @@ extern "C" void _ReadWriteBarrier(void);
 
 namespace WTF {
 
+// Atomic wraps around std::atomic with the sole purpose of making the compare_exchange
+// operations not alter the expected value. This is more in line with how we typically
+// use CAS in our code.
+//
+// Atomic is a struct without explicitly defined constructors so that it can be
+// initialized at compile time.
+
+template<typename T>
+struct Atomic {
+    // Don't pass a non-default value for the order parameter unless you really know
+    // what you are doing and have thought about it very hard. The cost of seq_cst
+    // is usually not high enough to justify the risk.
+
+    T load(std::memory_order order = std::memory_order_seq_cst) const { return value.load(order); }
+
+    void store(T desired, std::memory_order order = std::memory_order_seq_cst) { value.store(desired, order); }
+
+    bool compareExchangeWeak(T expected, T desired, std::memory_order order = std::memory_order_seq_cst)
+    {
+        T expectedOrActual = expected;
+        return value.compare_exchange_weak(expectedOrActual, desired, order);
+    }
+
+    bool compareExchangeStrong(T expected, T desired, std::memory_order order = std::memory_order_seq_cst)
+    {
+        T expectedOrActual = expected;
+        return value.compare_exchange_strong(expectedOrActual, desired, order);
+    }
+
+    std::atomic<T> value;
+};
+
 #if OS(WINDOWS)
 inline bool weakCompareAndSwap(volatile unsigned* location, unsigned expected, unsigned newValue)
 {
-#if OS(WINCE)
-    return InterlockedCompareExchange(reinterpret_cast<LONG*>(const_cast<unsigned*>(location)), static_cast<LONG>(newValue), static_cast<LONG>(expected)) == static_cast<LONG>(expected);
-#else
     return InterlockedCompareExchange(reinterpret_cast<LONG volatile*>(location), static_cast<LONG>(newValue), static_cast<LONG>(expected)) == static_cast<LONG>(expected);
-#endif
 }
 
 inline bool weakCompareAndSwap(void*volatile* location, void* expected, void* newValue)
@@ -110,6 +138,20 @@ inline bool weakCompareAndSwap(volatile unsigned* location, unsigned expected, u
         "strex %1, %4, %0\n\t"
         "0:"
         : "+Q"(*location), "=&r"(result), "=&r"(tmp)
+        : "r"(expected), "r"(newValue)
+        : "memory");
+    result = !result;
+#elif CPU(ARM64) && COMPILER(GCC)
+    unsigned tmp;
+    unsigned result;
+    asm volatile(
+        "mov %w1, #1\n\t"
+        "ldxr %w2, [%0]\n\t"
+        "cmp %w3, %w2\n\t"
+        "b.ne 0f\n\t"
+        "stxr %w1, %w4, [%0]\n\t"
+        "0:"
+        : "+r"(location), "=&r"(result), "=&r"(tmp)
         : "r"(expected), "r"(newValue)
         : "memory");
     result = !result;
@@ -153,6 +195,20 @@ inline bool weakCompareAndSwap(void*volatile* location, void* expected, void* ne
         : "memory"
         );
     return result;
+#elif CPU(ARM64) && COMPILER(GCC)
+    bool result;
+    void* tmp;
+    asm volatile(
+        "mov %w1, #1\n\t"
+        "ldxr %x2, [%0]\n\t"
+        "cmp %x3, %x2\n\t"
+        "b.ne 0f\n\t"
+        "stxr %w1, %x4, [%0]\n\t"
+        "0:"
+        : "+r"(location), "=&r"(result), "=&r"(tmp)
+        : "r"(expected), "r"(newValue)
+        : "memory");
+    return !result;
 #elif CPU(ARM64)
     bool result;
     void* tmp;
@@ -292,16 +348,24 @@ inline bool weakCompareAndSwap(uint8_t* location, uint8_t expected, uint8_t newV
     unsigned* alignedLocation = bitwise_cast<unsigned*>(alignedLocationValue);
     // Make sure that this load is always issued and never optimized away.
     unsigned oldAlignedValue = *const_cast<volatile unsigned*>(alignedLocation);
-    union {
-        uint8_t bytes[sizeof(unsigned)];
-        unsigned word;
-    } u;
-    u.word = oldAlignedValue;
-    if (u.bytes[locationOffset] != expected)
-        return false;
-    u.bytes[locationOffset] = newValue;
-    unsigned newAlignedValue = u.word;
-    return weakCompareAndSwap(alignedLocation, oldAlignedValue, newAlignedValue);
+
+    struct Splicer {
+        static unsigned splice(unsigned value, uint8_t byte, uintptr_t byteIndex)
+        {
+            union {
+                unsigned word;
+                uint8_t bytes[sizeof(unsigned)];
+            } u;
+            u.word = value;
+            u.bytes[byteIndex] = byte;
+            return u.word;
+        }
+    };
+
+    unsigned expectedAlignedValue = Splicer::splice(oldAlignedValue, expected, locationOffset);
+    unsigned newAlignedValue = Splicer::splice(oldAlignedValue, newValue, locationOffset);
+
+    return weakCompareAndSwap(alignedLocation, expectedAlignedValue, newAlignedValue);
 #endif
 #else
     UNUSED_PARAM(location);
@@ -313,5 +377,7 @@ inline bool weakCompareAndSwap(uint8_t* location, uint8_t expected, uint8_t newV
 }
 
 } // namespace WTF
+
+using WTF::Atomic;
 
 #endif // Atomics_h

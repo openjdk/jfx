@@ -33,51 +33,13 @@ namespace WebCore {
 
 class Decimal;
 
-class ImageWithScale {
-public:
-    ImageWithScale()
-        : m_imageURLStart(0)
-        , m_imageURLLength(0)
-        , m_scaleFactor(1)
-    {
-    }
-
-    ImageWithScale(unsigned start, unsigned length, float scaleFactor)
-        : m_imageURLStart(start)
-        , m_imageURLLength(length)
-        , m_scaleFactor(scaleFactor)
-    {
-    }
-
-    String imageURL(const String& srcAttribute, const String& srcsetAttribute) const
-    {
-        return m_imageURLLength ? srcsetAttribute.substringSharingImpl(m_imageURLStart, m_imageURLLength) : srcAttribute;
-    }
-
-    float scaleFactor() const
-    {
-        return m_scaleFactor;
-    }
-
-private:
-    unsigned m_imageURLStart;
-    unsigned m_imageURLLength;
-    float m_scaleFactor;
-};
-
 // Space characters as defined by the HTML specification.
-bool isHTMLSpace(UChar);
 bool isHTMLLineBreak(UChar);
 bool isNotHTMLSpace(UChar);
 bool isHTMLSpaceButNotLineBreak(UChar character);
 
 // Strip leading and trailing whitespace as defined by the HTML specification.
-String stripLeadingAndTrailingHTMLSpaces(const String&);
-template<size_t inlineCapacity>
-String stripLeadingAndTrailingHTMLSpaces(const Vector<UChar, inlineCapacity>& vector)
-{
-    return stripLeadingAndTrailingHTMLSpaces(StringImpl::create8BitIfPossible(vector));
-}
+WEBCORE_EXPORT String stripLeadingAndTrailingHTMLSpaces(const String&);
 
 // An implementation of the HTML specification's algorithm to convert a number to a string for number and range types.
 String serializeForNumberType(const Decimal&);
@@ -98,8 +60,8 @@ bool parseHTMLInteger(const String&, int&);
 bool parseHTMLNonNegativeInteger(const String&, unsigned int&);
 
 // Inline implementations of some of the functions declared above.
-
-inline bool isHTMLSpace(UChar character)
+template<typename CharType>
+inline bool isHTMLSpace(CharType character)
 {
     // Histogram from Apple's page load test combined with some ad hoc browsing some other test suites.
     //
@@ -119,6 +81,18 @@ inline bool isHTMLLineBreak(UChar character)
     return character <= '\r' && (character == '\n' || character == '\r');
 }
 
+template<typename CharType>
+inline bool isComma(CharType character)
+{
+    return character == ',';
+}
+
+template<typename CharType>
+inline bool isHTMLSpaceOrComma(CharType character)
+{
+    return isComma(character) || isHTMLSpace<CharType>(character);
+}
+
 inline bool isNotHTMLSpace(UChar character)
 {
     return !isHTMLSpace(character);
@@ -130,8 +104,6 @@ inline bool isHTMLSpaceButNotLineBreak(UChar character)
 }
 
 bool threadSafeMatch(const QualifiedName&, const QualifiedName&);
-
-ImageWithScale bestFitSourceForImageAttributes(float deviceScaleFactor, const String& srcAttribute, const String& sourceSetAttribute);
 
 }
 

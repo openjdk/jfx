@@ -35,7 +35,7 @@
 
 import logging
 import os
-import unittest2 as unittest
+import unittest
 
 import checker as style
 from webkitpy.common.system.logtesting import LogTesting, TestLogStream
@@ -221,7 +221,7 @@ class GlobalVariablesTest(unittest.TestCase):
                       "readability/naming")
         assertNoCheck("Tools/DumpRenderTree/gtk/DumpRenderTree.cpp",
                       "readability/null")
-        assertNoCheck("Source/WebKit/efl/ewk/ewk_view.h",
+        assertNoCheck("Source/WebKit2/UIProcess/API/efl/ewk_view.h",
                       "readability/naming")
         assertNoCheck("Source/WebCore/css/CSSParser.cpp",
                       "readability/naming")
@@ -442,6 +442,8 @@ class CheckerDispatcherDispatchTest(unittest.TestCase):
             "foo.c",
             "foo.cpp",
             "foo.h",
+            "foo.mm",
+            "foo.m",
             ]
 
         for path in paths:
@@ -537,7 +539,6 @@ class CheckerDispatcherDispatchTest(unittest.TestCase):
            "foo.html",
            "foo.idl",
            "foo.in",
-           "foo.mm",
            "foo.php",
            "foo.pl",
            "foo.pm",

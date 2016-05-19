@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2013 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2003, 2006, 2013, 2015 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -37,23 +37,29 @@
 
 namespace WebCore {
 
+//XXX: WEBCORE_LOG_CHANNELS LiveConnect was removed in trunk
 #define WEBCORE_LOG_CHANNELS(M) \
     M(Animations) \
     M(Archives) \
     M(BackForward) \
     M(Compositing) \
-    M(DiskImageCache) \
+    M(ContentFiltering) \
+    M(DOMTimers) \
     M(Editing) \
     M(Events) \
     M(FTP) \
     M(FileAPI) \
     M(Frames) \
+    M(Fullscreen) \
     M(Gamepad) \
     M(History) \
     M(IconDatabase) \
     M(LiveConnect) \
+    M(Layout) \
     M(Loading) \
     M(Media) \
+    M(MediaSource) \
+    M(MediaSourceSamples) \
     M(MemoryPressure) \
     M(Network) \
     M(NotYetImplemented) \
@@ -65,25 +71,25 @@ namespace WebCore {
     M(RemoteInspector) \
     M(ResourceLoading) \
     M(SQLDatabase) \
+    M(Services) \
     M(SpellingAndGrammar) \
     M(StorageAPI) \
     M(Threading) \
     M(WebAudio) \
     M(WebGL) \
+    M(WebReplay) \
+    M(WheelEventTestTriggers) \
 
 #define DECLARE_LOG_CHANNEL(name) \
-    extern WTFLogChannel JOIN_LOG_CHANNEL_WITH_PREFIX(LOG_CHANNEL_PREFIX, name);
+    WEBCORE_EXPORT extern WTFLogChannel JOIN_LOG_CHANNEL_WITH_PREFIX(LOG_CHANNEL_PREFIX, name);
 
 WEBCORE_LOG_CHANNELS(DECLARE_LOG_CHANNEL)
 
 #undef DECLARE_LOG_CHANNEL
 
-    extern WTFLogChannel* logChannels[];
-    extern size_t logChannelCount;
-
     String logLevelString();
-    WTFLogChannel* logChannelByName(const String&);
-    void initializeLoggingChannelsIfNecessary();
+    bool isLogChannelEnabled(const String& name);
+    WEBCORE_EXPORT void initializeLoggingChannelsIfNecessary();
 }
 
 #endif // !LOG_DISABLED

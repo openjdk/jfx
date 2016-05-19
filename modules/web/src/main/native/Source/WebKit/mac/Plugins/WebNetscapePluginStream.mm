@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -80,7 +80,7 @@ private:
 typedef HashMap<NPStream*, NPP> StreamMap;
 static StreamMap& streams()
 {
-    DEFINE_STATIC_LOCAL(StreamMap, staticStreams, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(StreamMap, staticStreams, ());
     return staticStreams;
 }
 
@@ -135,7 +135,7 @@ WebNetscapePluginStream::WebNetscapePluginStream(FrameLoader* frameLoader)
     , m_newStreamSuccessful(false)
     , m_frameLoader(frameLoader)
     , m_pluginFuncs(0)
-    , m_deliverDataTimer(this, &WebNetscapePluginStream::deliverDataTimerFired)
+    , m_deliverDataTimer(*this, &WebNetscapePluginStream::deliverDataTimerFired)
 {
     memset(&m_stream, 0, sizeof(NPStream));
 }
@@ -155,7 +155,7 @@ WebNetscapePluginStream::WebNetscapePluginStream(NSURLRequest *request, NPP plug
     , m_frameLoader(0)
     , m_request(adoptNS([request mutableCopy]))
     , m_pluginFuncs(0)
-    , m_deliverDataTimer(this, &WebNetscapePluginStream::deliverDataTimerFired)
+    , m_deliverDataTimer(*this, &WebNetscapePluginStream::deliverDataTimerFired)
 {
     memset(&m_stream, 0, sizeof(NPStream));
 
@@ -552,7 +552,7 @@ void WebNetscapePluginStream::deliverData()
     }
 }
 
-void WebNetscapePluginStream::deliverDataTimerFired(WebCore::Timer<WebNetscapePluginStream>* timer)
+void WebNetscapePluginStream::deliverDataTimerFired()
 {
     deliverData();
 }

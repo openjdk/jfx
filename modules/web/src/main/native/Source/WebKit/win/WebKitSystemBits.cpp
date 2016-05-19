@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,12 +26,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitSystemBits.h"
 
-#include <CoreFoundation/CoreFoundation.h>
 #include <windows.h>
-#include <wtf/text/WTFString.h>
 
 unsigned long long WebMemorySize()
 {
@@ -41,9 +38,8 @@ unsigned long long WebMemorySize()
     return statex.ullTotalPhys;
 }
 
-unsigned long long WebVolumeFreeSize(CFStringRef cfstringPath)
+unsigned long long WebVolumeFreeSize(const String& path)
 {
-    WTF::String path(cfstringPath);
     ULARGE_INTEGER freeBytesToCaller;
     BOOL result = GetDiskFreeSpaceExW((LPCWSTR)path.charactersWithNullTermination().data(), &freeBytesToCaller, 0, 0);
     if (!result)

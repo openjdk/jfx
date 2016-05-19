@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -44,32 +44,33 @@
 #include "IDBTransaction.h"
 #include "Logging.h"
 #include "ScriptExecutionContext.h"
+#include "SharedBuffer.h"
 
 namespace WebCore {
 
-PassRefPtr<IDBRequest> IDBRequest::create(ScriptExecutionContext* context, PassRefPtr<IDBAny> source, IDBTransaction* transaction)
+Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext* context, PassRefPtr<IDBAny> source, IDBTransaction* transaction)
 {
-    RefPtr<IDBRequest> request(adoptRef(new IDBRequest(context, source, IDBDatabaseBackend::NormalTask, transaction)));
+    Ref<IDBRequest> request(adoptRef(*new IDBRequest(context, source, IDBDatabaseBackend::NormalTask, transaction)));
     request->suspendIfNeeded();
     // Requests associated with IDBFactory (open/deleteDatabase/getDatabaseNames) are not associated with transactions.
     if (transaction)
-        transaction->registerRequest(request.get());
-    return request.release();
+        transaction->registerRequest(request.ptr());
+    return request;
 }
 
-PassRefPtr<IDBRequest> IDBRequest::create(ScriptExecutionContext* context, PassRefPtr<IDBAny> source, IDBDatabaseBackend::TaskType taskType, IDBTransaction* transaction)
+Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext* context, PassRefPtr<IDBAny> source, IDBDatabaseBackend::TaskType taskType, IDBTransaction* transaction)
 {
-    RefPtr<IDBRequest> request(adoptRef(new IDBRequest(context, source, taskType, transaction)));
+    Ref<IDBRequest> request(adoptRef(*new IDBRequest(context, source, taskType, transaction)));
     request->suspendIfNeeded();
     // Requests associated with IDBFactory (open/deleteDatabase/getDatabaseNames) are not associated with transactions.
     if (transaction)
-        transaction->registerRequest(request.get());
-    return request.release();
+        transaction->registerRequest(request.ptr());
+    return request;
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext* context, PassRefPtr<IDBAny> source, IDBDatabaseBackend::TaskType taskType, IDBTransaction* transaction)
     : ActiveDOMObject(context)
-    , m_result(0)
+    , m_result(nullptr)
     , m_errorCode(0)
     , m_contextStopped(false)
     , m_transaction(transaction)
@@ -81,7 +82,7 @@ IDBRequest::IDBRequest(ScriptExecutionContext* context, PassRefPtr<IDBAny> sourc
     , m_cursorType(IndexedDB::CursorType::KeyAndValue)
     , m_cursorDirection(IndexedDB::CursorDirection::Next)
     , m_cursorFinished(false)
-    , m_pendingCursor(0)
+    , m_pendingCursor(nullptr)
     , m_didFireUpgradeNeededEvent(false)
     , m_preventPropagation(false)
     , m_requestState(context)
@@ -90,7 +91,6 @@ IDBRequest::IDBRequest(ScriptExecutionContext* context, PassRefPtr<IDBAny> sourc
 
 IDBRequest::~IDBRequest()
 {
-    ASSERT(m_readyState == DONE || m_readyState == EarlyDeath || !scriptExecutionContext());
 }
 
 PassRefPtr<IDBAny> IDBRequest::result(ExceptionCode& ec) const
@@ -133,8 +133,8 @@ PassRefPtr<IDBTransaction> IDBRequest::transaction() const
 const String& IDBRequest::readyState() const
 {
     ASSERT(m_readyState == PENDING || m_readyState == DONE);
-    DEFINE_STATIC_LOCAL(AtomicString, pending, ("pending", AtomicString::ConstructFromLiteral));
-    DEFINE_STATIC_LOCAL(AtomicString, done, ("done", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, pending, ("pending", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, done, ("done", AtomicString::ConstructFromLiteral));
 
     if (m_readyState == PENDING)
         return pending;
@@ -163,16 +163,16 @@ void IDBRequest::abort()
     RefPtr<IDBRequest> self(this);
 
     EventQueue& eventQueue = scriptExecutionContext()->eventQueue();
-    for (size_t i = 0; i < m_enqueuedEvents.size(); ++i) {
-        bool removed = eventQueue.cancelEvent(*m_enqueuedEvents[i]);
+    for (auto& event : m_enqueuedEvents) {
+        bool removed = eventQueue.cancelEvent(*event);
         ASSERT_UNUSED(removed, removed);
     }
     m_enqueuedEvents.clear();
 
     m_errorCode = 0;
-    m_error.clear();
+    m_error = nullptr;
     m_errorMessage = String();
-    m_result.clear();
+    m_result = nullptr;
     onError(IDBDatabaseError::create(IDBDatabaseException::AbortError));
     m_requestAborted = true;
 }
@@ -194,23 +194,23 @@ void IDBRequest::setPendingCursor(PassRefPtr<IDBCursor> cursor)
     ASSERT(cursor == getResultCursor());
 
     m_pendingCursor = cursor;
-    m_result.clear();
+    m_result = nullptr;
     m_readyState = PENDING;
     m_errorCode = 0;
-    m_error.clear();
+    m_error = nullptr;
     m_errorMessage = String();
     m_transaction->registerRequest(this);
 }
 
-PassRefPtr<IDBCursor> IDBRequest::getResultCursor()
+RefPtr<IDBCursor> IDBRequest::getResultCursor()
 {
     if (!m_result)
-        return 0;
+        return nullptr;
     if (m_result->type() == IDBAny::IDBCursorType)
         return m_result->idbCursor();
     if (m_result->type() == IDBAny::IDBCursorWithValueType)
         return m_result->idbCursorWithValue();
-    return 0;
+    return nullptr;
 }
 
 void IDBRequest::setResultCursor(PassRefPtr<IDBCursor> cursor, PassRefPtr<IDBKey> key, PassRefPtr<IDBKey> primaryKey, const Deprecated::ScriptValue& value)
@@ -256,7 +256,7 @@ void IDBRequest::onError(PassRefPtr<IDBDatabaseError> error)
     m_errorCode = error->code();
     m_errorMessage = error->message();
     m_error = DOMError::create(IDBDatabaseException::getErrorName(error->idbCode()));
-    m_pendingCursor.clear();
+    m_pendingCursor = nullptr;
     enqueueEvent(Event::create(eventNames().errorEvent, true, true));
 }
 
@@ -404,7 +404,7 @@ void IDBRequest::onSuccessInternal(const Deprecated::ScriptValue& value)
     m_result = IDBAny::create(value);
     if (m_pendingCursor) {
         m_pendingCursor->close();
-        m_pendingCursor.clear();
+        m_pendingCursor = nullptr;
     }
     enqueueEvent(createSuccessEvent());
 }
@@ -441,6 +441,16 @@ void IDBRequest::stop()
     m_requestState.clear();
     if (m_readyState == PENDING)
         markEarlyDeath();
+}
+
+bool IDBRequest::canSuspendForPageCache() const
+{
+    return !m_hasPendingActivity;
+}
+
+const char* IDBRequest::activeDOMObjectName() const
+{
+    return "IDBRequest";
 }
 
 EventTargetInterface IDBRequest::eventTargetInterface() const
@@ -543,7 +553,7 @@ void IDBRequest::transactionDidFinishAndDispatch()
     ASSERT(m_transaction->isVersionChange());
     ASSERT(m_readyState == DONE);
     ASSERT(scriptExecutionContext());
-    m_transaction.clear();
+    m_transaction = nullptr;
     m_readyState = PENDING;
 }
 

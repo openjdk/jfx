@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -50,10 +50,6 @@ extern NSString *WebKitLocalCacheDefaultsKey;
 
 - (NSString *)_web_stringByStrippingReturnCharacters;
 
-#if !TARGET_OS_IPHONE
-+ (NSStringEncoding)_web_encodingForResource:(Handle)resource;
-#endif
-
 - (BOOL)_webkit_isCaseInsensitiveEqualToString:(NSString *)string;
 - (BOOL)_webkit_hasCaseInsensitivePrefix:(NSString *)suffix;
 - (BOOL)_webkit_hasCaseInsensitiveSuffix:(NSString *)suffix;
@@ -63,9 +59,6 @@ extern NSString *WebKitLocalCacheDefaultsKey;
 - (NSString *)_webkit_stringByTrimmingWhitespace;
 - (NSString *)_webkit_stringByCollapsingNonPrintingCharacters;
 - (NSString *)_webkit_stringByCollapsingWhitespaceCharacters;
-#if !TARGET_OS_IPHONE
-- (NSString *)_webkit_fixedCarbonPOSIXPath;
-#endif
 
 #if TARGET_OS_IPHONE
 + (NSString *)_web_stringWithData:(NSData *)data textEncodingName:(NSString *)textEncodingName;

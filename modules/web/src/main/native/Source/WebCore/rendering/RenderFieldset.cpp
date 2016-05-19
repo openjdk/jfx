@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.
+ * Copyright (C) 2004, 2005, 2006 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -34,8 +34,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderFieldset::RenderFieldset(HTMLFieldSetElement& element, PassRef<RenderStyle> style)
-    : RenderBlockFlow(element, std::move(style))
+RenderFieldset::RenderFieldset(HTMLFieldSetElement& element, Ref<RenderStyle>&& style)
+    : RenderBlockFlow(element, WTF::move(style))
 {
 }
 
@@ -54,7 +54,7 @@ void RenderFieldset::computePreferredLogicalWidths()
         if (legendMarginRight.isFixed())
             legendMinWidth += legendMarginRight.value();
 
-        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, legendMinWidth + borderAndPaddingWidth());
+        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, legendMinWidth + horizontalBorderAndPaddingExtent());
     }
 }
 
@@ -130,8 +130,8 @@ RenderBox* RenderFieldset::findLegend(FindLegendOption option) const
         if (option == IgnoreFloatingOrOutOfFlow && legend->isFloatingOrOutOfFlowPositioned())
             continue;
 
-        if (legend->node() && (legend->node()->hasTagName(legendTag)))
-            return toRenderBox(legend);
+        if (is<HTMLLegendElement>(legend->node()))
+            return downcast<RenderBox>(legend);
     }
     return nullptr;
 }
@@ -159,10 +159,10 @@ void RenderFieldset::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint
         paintRect.setX(paintRect.x() + xOff);
     }
 
-    if (!boxShadowShouldBeAppliedToBackground(determineBackgroundBleedAvoidance(paintInfo.context)))
-        paintBoxShadow(paintInfo, paintRect, &style(), Normal);
+    if (!boxShadowShouldBeAppliedToBackground(paintRect.location(), determineBackgroundBleedAvoidance(paintInfo.context)))
+        paintBoxShadow(paintInfo, paintRect, style(), Normal);
     paintFillLayers(paintInfo, style().visitedDependentColor(CSSPropertyBackgroundColor), style().backgroundLayers(), paintRect);
-    paintBoxShadow(paintInfo, paintRect, &style(), Inset);
+    paintBoxShadow(paintInfo, paintRect, style(), Inset);
 
     if (!style().hasBorder())
         return;
@@ -174,17 +174,21 @@ void RenderFieldset::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint
     // FIXME: We need to work with "rl" and "bt" block flow directions.  In those
     // cases the legend is embedded in the right and bottom borders respectively.
     // https://bugs.webkit.org/show_bug.cgi?id=47236
+    LayoutRect clipRect;
     if (style().isHorizontalWritingMode()) {
-        LayoutUnit clipTop = paintRect.y();
-        LayoutUnit clipHeight = std::max(static_cast<LayoutUnit>(style().borderTopWidth()), legend->height() - ((legend->height() - borderTop()) / 2));
-        graphicsContext->clipOut(pixelSnappedIntRect(paintRect.x() + legend->x(), clipTop, legend->width(), clipHeight));
+        clipRect.setX(paintRect.x() + legend->x());
+        clipRect.setY(paintRect.y());
+        clipRect.setWidth(legend->width());
+        clipRect.setHeight(std::max<LayoutUnit>(style().borderTopWidth(), legend->height() - ((legend->height() - borderTop()) / 2)));
     } else {
-        LayoutUnit clipLeft = paintRect.x();
-        LayoutUnit clipWidth = std::max(static_cast<LayoutUnit>(style().borderLeftWidth()), legend->width());
-        graphicsContext->clipOut(pixelSnappedIntRect(clipLeft, paintRect.y() + legend->y(), clipWidth, legend->height()));
+        clipRect.setX(paintRect.x());
+        clipRect.setY(paintRect.y() + legend->y());
+        clipRect.setWidth(std::max<LayoutUnit>(style().borderLeftWidth(), legend->width()));
+        clipRect.setHeight(legend->height());
     }
+    graphicsContext->clipOut(snapRectToDevicePixels(clipRect, document().deviceScaleFactor()));
 
-    paintBorder(paintInfo, paintRect, &style());
+    paintBorder(paintInfo, paintRect, style());
 }
 
 void RenderFieldset::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOffset)

@@ -23,15 +23,14 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebPlatformStrategies.h"
 
 #include "FrameLoader.h"
+#include "PluginDatabase.h"
 #include "WebFrameNetworkingContext.h"
 #include <WebCore/Page.h>
 #include <WebCore/PageGroup.h>
 #include <WebCore/PlatformCookieJar.h>
-#include <WebCore/PluginDatabase.h>
 #if USE(CFNETWORK)
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #endif
@@ -40,7 +39,7 @@ using namespace WebCore;
 
 void WebPlatformStrategies::initialize()
 {
-    DEFINE_STATIC_LOCAL(WebPlatformStrategies, platformStrategies, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(WebPlatformStrategies, platformStrategies, ());
 }
 
 WebPlatformStrategies::WebPlatformStrategies()
@@ -49,11 +48,6 @@ WebPlatformStrategies::WebPlatformStrategies()
 }
 
 CookiesStrategy* WebPlatformStrategies::createCookiesStrategy()
-{
-    return this;
-}
-
-DatabaseStrategy* WebPlatformStrategies::createDatabaseStrategy()
 {
     return this;
 }
@@ -69,21 +63,6 @@ PasteboardStrategy* WebPlatformStrategies::createPasteboardStrategy()
 }
 
 PluginStrategy* WebPlatformStrategies::createPluginStrategy()
-{
-    return this;
-}
-
-SharedWorkerStrategy* WebPlatformStrategies::createSharedWorkerStrategy()
-{
-    return this;
-}
-
-StorageStrategy* WebPlatformStrategies::createStorageStrategy()
-{
-    return this;
-}
-
-VisitedLinkStrategy* WebPlatformStrategies::createVisitedLinkStrategy()
 {
     return this;
 }
@@ -156,12 +135,7 @@ void WebPlatformStrategies::getPluginInfo(const WebCore::Page*, Vector<WebCore::
     }
 }
 
-bool WebPlatformStrategies::isLinkVisited(Page* page, LinkHash hash, const URL&, const AtomicString&)
+void WebPlatformStrategies::getWebVisiblePluginInfo(const Page* page, Vector<PluginInfo>& plugins)
 {
-    return page->group().isLinkVisited(hash);
-}
-
-void WebPlatformStrategies::addVisitedLink(Page* page, LinkHash hash)
-{
-    page->group().addVisitedLinkHash(hash);
+    getPluginInfo(page, plugins);
 }

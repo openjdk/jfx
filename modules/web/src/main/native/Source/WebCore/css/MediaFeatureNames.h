@@ -32,6 +32,8 @@ namespace WebCore {
 #endif
 
 #define CSS_MEDIAQUERY_NAMES_FOR_EACH_MEDIAFEATURE(macro) \
+    macro(any_hover, "any-hover") \
+    macro(any_pointer, "any-pointer") \
     macro(color, "color") \
     macro(color_index, "color-index") \
     macro(grid, "grid") \
@@ -45,6 +47,7 @@ namespace WebCore {
     macro(device_pixel_ratio, "-webkit-device-pixel-ratio") \
     macro(device_height, "device-height") \
     macro(device_width, "device-width") \
+    macro(inverted_colors, "inverted-colors") \
     macro(max_color, "max-color") \
     macro(max_color_index, "max-color-index") \
     macro(max_aspect_ratio, "max-aspect-ratio") \

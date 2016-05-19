@@ -99,36 +99,32 @@
     boolean            isDefaultNamespace([TreatNullAs=NullString,Default=Undefined] optional DOMString namespaceURI);
     [TreatReturnedNullStringAs=Null] DOMString          lookupNamespaceURI([TreatNullAs=NullString,Default=Undefined] optional DOMString prefix);
 
-        // DocumentPosition
-        const unsigned short      DOCUMENT_POSITION_DISCONNECTED = 0x01;
-        const unsigned short      DOCUMENT_POSITION_PRECEDING    = 0x02;
-        const unsigned short      DOCUMENT_POSITION_FOLLOWING    = 0x04;
-        const unsigned short      DOCUMENT_POSITION_CONTAINS     = 0x08;
-        const unsigned short      DOCUMENT_POSITION_CONTAINED_BY = 0x10;
-        const unsigned short      DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC = 0x20;
+    // DocumentPosition
+    const unsigned short      DOCUMENT_POSITION_DISCONNECTED = 0x01;
+    const unsigned short      DOCUMENT_POSITION_PRECEDING    = 0x02;
+    const unsigned short      DOCUMENT_POSITION_FOLLOWING    = 0x04;
+    const unsigned short      DOCUMENT_POSITION_CONTAINS     = 0x08;
+    const unsigned short      DOCUMENT_POSITION_CONTAINED_BY = 0x10;
+    const unsigned short      DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC = 0x20;
 
     unsigned short     compareDocumentPosition([Default=Undefined] optional Node other);
 
-        // Introduced in DOM4
+    // Introduced in DOM4
     boolean contains([Default=Undefined] optional Node other);
 
-        // IE extensions
-        readonly attribute Element          parentElement;
+    // IE extensions
+    readonly attribute Element          parentElement;
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
-        // Objective-C extensions
-        readonly attribute boolean          isContentEditable;
+    // Objective-C extensions
+    readonly attribute boolean          isContentEditable;
 
-        void inspect();
-#endif /* defined(LANGUAGE_OBJECTIVE_C) */
+    void inspect();
+#endif
 
 #if !defined(LANGUAGE_OBJECTIVE_C) || !LANGUAGE_OBJECTIVE_C
-    void addEventListener(DOMString type, 
-                          EventListener listener, 
-                          optional boolean useCapture);
-    void removeEventListener(DOMString type, 
-                             EventListener listener, 
-                             optional boolean useCapture);
+    void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
     [RaisesException] boolean dispatchEvent(Event event);
 #endif
 

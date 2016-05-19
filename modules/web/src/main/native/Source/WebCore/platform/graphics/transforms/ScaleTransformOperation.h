@@ -26,19 +26,25 @@
 #define ScaleTransformOperation_h
 
 #include "TransformOperation.h"
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
-class ScaleTransformOperation : public TransformOperation {
+class ScaleTransformOperation final : public TransformOperation {
 public:
-    static PassRefPtr<ScaleTransformOperation> create(double sx, double sy, OperationType type)
+    static Ref<ScaleTransformOperation> create(double sx, double sy, OperationType type)
     {
-        return adoptRef(new ScaleTransformOperation(sx, sy, 1, type));
+        return adoptRef(*new ScaleTransformOperation(sx, sy, 1, type));
     }
 
-    static PassRefPtr<ScaleTransformOperation> create(double sx, double sy, double sz, OperationType type)
+    static Ref<ScaleTransformOperation> create(double sx, double sy, double sz, OperationType type)
     {
-        return adoptRef(new ScaleTransformOperation(sx, sy, sz, type));
+        return adoptRef(*new ScaleTransformOperation(sx, sy, sz, type));
+    }
+
+    virtual Ref<TransformOperation> clone() const override
+    {
+        return adoptRef(*new ScaleTransformOperation(m_x, m_y, m_z, m_type));
     }
 
     double x() const { return m_x; }
@@ -46,26 +52,21 @@ public:
     double z() const { return m_z; }
 
 private:
-    virtual bool isIdentity() const { return m_x == 1 &&  m_y == 1 &&  m_z == 1; }
+    virtual bool isIdentity() const override { return m_x == 1 &&  m_y == 1 &&  m_z == 1; }
+    virtual bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
 
-    virtual OperationType type() const { return m_type; }
-    virtual bool isSameType(const TransformOperation& o) const { return o.type() == m_type; }
+    virtual OperationType type() const override { return m_type; }
+    virtual bool isSameType(const TransformOperation& o) const override { return o.type() == m_type; }
 
-    virtual bool operator==(const TransformOperation& o) const
-    {
-        if (!isSameType(o))
-            return false;
-        const ScaleTransformOperation* s = static_cast<const ScaleTransformOperation*>(&o);
-        return m_x == s->m_x && m_y == s->m_y && m_z == s->m_z;
-    }
+    virtual bool operator==(const TransformOperation&) const override;
 
-    virtual bool apply(TransformationMatrix& transform, const FloatSize&) const
+    virtual bool apply(TransformationMatrix& transform, const FloatSize&) const override
     {
         transform.scale3d(m_x, m_y, m_z);
         return false;
     }
 
-    virtual PassRefPtr<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false);
+    virtual Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) override;
 
     ScaleTransformOperation(double sx, double sy, double sz, OperationType type)
         : m_x(sx)
@@ -73,7 +74,7 @@ private:
         , m_z(sz)
         , m_type(type)
     {
-        ASSERT(type == SCALE_X || type == SCALE_Y || type == SCALE_Z || type == SCALE || type == SCALE_3D);
+        ASSERT(isScaleTransformOperationType());
     }
 
     double m_x;
@@ -83,5 +84,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::ScaleTransformOperation, isScaleTransformOperationType())
 
 #endif // ScaleTransformOperation_h

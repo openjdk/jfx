@@ -33,14 +33,14 @@ inline SVGTSpanElement::SVGTSpanElement(const QualifiedName& tagName, Document& 
     ASSERT(hasTagName(SVGNames::tspanTag));
 }
 
-PassRefPtr<SVGTSpanElement> SVGTSpanElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGTSpanElement> SVGTSpanElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGTSpanElement(tagName, document));
+    return adoptRef(*new SVGTSpanElement(tagName, document));
 }
 
-RenderPtr<RenderElement> SVGTSpanElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> SVGTSpanElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGTSpan>(*this, std::move(style));
+    return createRenderer<RenderSVGTSpan>(*this, WTF::move(style));
 }
 
 bool SVGTSpanElement::childShouldCreateRenderer(const Node& child) const

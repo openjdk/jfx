@@ -3,7 +3,7 @@
  * (C) 2000 Gunnstein Lye (gunnstein@netcom.no)
  * (C) 2000 Frederik Holljen (frederik.holljen@hig.no)
  * (C) 2001 Peter Kelly (pmk@post.com)
- * Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.
+ * Copyright (C) 2004, 2005, 2006 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -31,9 +31,9 @@ namespace WebCore {
 
 class RangeException : public ExceptionBase {
 public:
-    static PassRefPtr<RangeException> create(const ExceptionCodeDescription& description)
+    static Ref<RangeException> create(const ExceptionCodeDescription& description)
     {
-        return adoptRef(new RangeException(description));
+        return adoptRef(*new RangeException(description));
     }
 
     static const int RangeExceptionOffset = 200;

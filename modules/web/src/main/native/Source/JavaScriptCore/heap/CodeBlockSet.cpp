@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,56 +29,77 @@
 #include "CodeBlock.h"
 #include "JSCInlines.h"
 #include "SlotVisitor.h"
+#include <wtf/CommaPrinter.h>
 
 namespace JSC {
 
 static const bool verbose = false;
 
-CodeBlockSet::CodeBlockSet(BlockAllocator& blockAllocator)
-    : m_currentlyExecuting(blockAllocator)
+CodeBlockSet::CodeBlockSet()
 {
 }
 
 CodeBlockSet::~CodeBlockSet()
 {
-    HashSet<CodeBlock*>::iterator iter = m_set.begin();
-    HashSet<CodeBlock*>::iterator end = m_set.end();
-    for (; iter != end; ++iter)
-        (*iter)->deref();
+    for (CodeBlock* codeBlock : m_oldCodeBlocks)
+        codeBlock->deref();
+
+    for (CodeBlock* codeBlock : m_newCodeBlocks)
+        codeBlock->deref();
 }
 
 void CodeBlockSet::add(PassRefPtr<CodeBlock> codeBlock)
 {
     CodeBlock* block = codeBlock.leakRef();
-    bool isNewEntry = m_set.add(block).isNewEntry;
+    bool isNewEntry = m_newCodeBlocks.add(block).isNewEntry;
     ASSERT_UNUSED(isNewEntry, isNewEntry);
 }
 
-void CodeBlockSet::clearMarks()
+void CodeBlockSet::promoteYoungCodeBlocks()
 {
-    HashSet<CodeBlock*>::iterator iter = m_set.begin();
-    HashSet<CodeBlock*>::iterator end = m_set.end();
-    for (; iter != end; ++iter) {
-        CodeBlock* codeBlock = *iter;
+    m_oldCodeBlocks.add(m_newCodeBlocks.begin(), m_newCodeBlocks.end());
+    m_newCodeBlocks.clear();
+}
+
+void CodeBlockSet::clearMarksForFullCollection()
+{
+    for (CodeBlock* codeBlock : m_oldCodeBlocks) {
         codeBlock->m_mayBeExecuting = false;
-        codeBlock->m_visitAggregateHasBeenCalled = false;
+        codeBlock->m_visitAggregateHasBeenCalled.store(false, std::memory_order_relaxed);
+    }
+
+    // We promote after we clear marks on the old generation CodeBlocks because
+    // none of the young generations CodeBlocks need to be cleared.
+    promoteYoungCodeBlocks();
+}
+
+void CodeBlockSet::clearMarksForEdenCollection(const Vector<const JSCell*>& rememberedSet)
+{
+    // This ensures that we will revisit CodeBlocks in remembered Executables even if they were previously marked.
+    for (const JSCell* cell : rememberedSet) {
+        ScriptExecutable* executable = const_cast<ScriptExecutable*>(jsDynamicCast<const ScriptExecutable*>(cell));
+        if (!executable)
+            continue;
+        executable->forEachCodeBlock([](CodeBlock* codeBlock) {
+            codeBlock->m_mayBeExecuting = false;
+            codeBlock->m_visitAggregateHasBeenCalled.store(false, std::memory_order_relaxed);
+        });
     }
 }
 
-void CodeBlockSet::deleteUnmarkedAndUnreferenced()
+void CodeBlockSet::deleteUnmarkedAndUnreferenced(HeapOperation collectionType)
 {
+    HashSet<CodeBlock*>& set = collectionType == EdenCollection ? m_newCodeBlocks : m_oldCodeBlocks;
+
     // This needs to be a fixpoint because code blocks that are unmarked may
     // refer to each other. For example, a DFG code block that is owned by
     // the GC may refer to an FTL for-entry code block that is also owned by
     // the GC.
     Vector<CodeBlock*, 16> toRemove;
     if (verbose)
-        dataLog("Fixpointing over unmarked, set size = ", m_set.size(), "...\n");
+        dataLog("Fixpointing over unmarked, set size = ", set.size(), "...\n");
     for (;;) {
-        HashSet<CodeBlock*>::iterator iter = m_set.begin();
-        HashSet<CodeBlock*>::iterator end = m_set.end();
-        for (; iter != end; ++iter) {
-            CodeBlock* codeBlock = *iter;
+        for (CodeBlock* codeBlock : set) {
             if (!codeBlock->hasOneRef())
                 continue;
             if (codeBlock->m_mayBeExecuting)
@@ -90,22 +111,33 @@ void CodeBlockSet::deleteUnmarkedAndUnreferenced()
             dataLog("    Removing ", toRemove.size(), " blocks.\n");
         if (toRemove.isEmpty())
             break;
-        for (unsigned i = toRemove.size(); i--;)
-            m_set.remove(toRemove[i]);
+        for (CodeBlock* codeBlock : toRemove)
+            set.remove(codeBlock);
         toRemove.resize(0);
     }
+
+    // Any remaining young CodeBlocks are live and need to be promoted to the set of old CodeBlocks.
+    if (collectionType == EdenCollection)
+        promoteYoungCodeBlocks();
+}
+
+void CodeBlockSet::remove(CodeBlock* codeBlock)
+{
+    codeBlock->deref();
+    if (m_oldCodeBlocks.contains(codeBlock)) {
+        m_oldCodeBlocks.remove(codeBlock);
+        return;
+    }
+    ASSERT(m_newCodeBlocks.contains(codeBlock));
+    m_newCodeBlocks.remove(codeBlock);
 }
 
 void CodeBlockSet::traceMarked(SlotVisitor& visitor)
 {
     if (verbose)
-        dataLog("Tracing ", m_set.size(), " code blocks.\n");
-    HashSet<CodeBlock*>::iterator iter = m_set.begin();
-    HashSet<CodeBlock*>::iterator end = m_set.end();
-    for (; iter != end; ++iter) {
-        CodeBlock* codeBlock = *iter;
-        if (!codeBlock->m_mayBeExecuting)
-            continue;
+        dataLog("Tracing ", m_currentlyExecuting.size(), " code blocks.\n");
+    for (CodeBlock* codeBlock : m_currentlyExecuting) {
+        ASSERT(codeBlock->m_mayBeExecuting);
         codeBlock->visitAggregate(visitor);
     }
 }
@@ -113,12 +145,33 @@ void CodeBlockSet::traceMarked(SlotVisitor& visitor)
 void CodeBlockSet::rememberCurrentlyExecutingCodeBlocks(Heap* heap)
 {
 #if ENABLE(GGC)
-    for (CodeBlock* codeBlock : m_currentlyExecuting)
+    if (verbose)
+        dataLog("Remembering ", m_currentlyExecuting.size(), " code blocks.\n");
+    for (CodeBlock* codeBlock : m_currentlyExecuting) {
         heap->addToRememberedSet(codeBlock->ownerExecutable());
+        ASSERT(codeBlock->m_mayBeExecuting);
+    }
     m_currentlyExecuting.clear();
 #else
     UNUSED_PARAM(heap);
 #endif // ENABLE(GGC)
+}
+
+void CodeBlockSet::dump(PrintStream& out) const
+{
+    CommaPrinter comma;
+    out.print("{old = [");
+    for (CodeBlock* codeBlock : m_oldCodeBlocks)
+        out.print(comma, pointerDump(codeBlock));
+    out.print("], new = [");
+    comma = CommaPrinter();
+    for (CodeBlock* codeBlock : m_newCodeBlocks)
+        out.print(comma, pointerDump(codeBlock));
+    out.print("], currentlyExecuting = [");
+    comma = CommaPrinter();
+    for (CodeBlock* codeBlock : m_currentlyExecuting)
+        out.print(comma, pointerDump(codeBlock));
+    out.print("]}");
 }
 
 } // namespace JSC

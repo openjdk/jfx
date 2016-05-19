@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# Copyright (C) 2005 Apple Computer, Inc.
+# Copyright (C) 2005 Apple Inc.
 # Copyright (C) 2006 Anders Carlsson <andersca@mac.com>
 # 
 # This file is part of WebKit
@@ -114,7 +114,7 @@ if ($supplementalDependencyFile) {
     }
 
     if (!$idlFound) {
-        my $codeGen = CodeGenerator->new(\@idlDirectories, $generator, $outputDirectory, $outputHeadersDirectory, 0, $preprocessor, $writeDependencies, $verbose);
+        my $codeGen = CodeGenerator->new(\@idlDirectories, $generator, $outputDirectory, $outputHeadersDirectory, $preprocessor, $writeDependencies, $verbose);
 
         # We generate empty .h and .cpp files just to tell build scripts that .h and .cpp files are created.
         generateEmptyHeaderAndCpp($codeGen->FileNamePrefix(), $targetInterfaceName, $outputHeadersDirectory, $outputDirectory);
@@ -191,7 +191,7 @@ foreach my $idlFile (@supplementedIdlFiles) {
 }
 
 # Generate desired output for the target IDL file.
-my $codeGen = CodeGenerator->new(\@idlDirectories, $generator, $outputDirectory, $outputHeadersDirectory, 0, $preprocessor, $writeDependencies, $verbose, $targetIdlFile);
+my $codeGen = CodeGenerator->new(\@idlDirectories, $generator, $outputDirectory, $outputHeadersDirectory, $preprocessor, $writeDependencies, $verbose, $targetIdlFile);
 $codeGen->ProcessDocument($targetDocument, $defines);
 
 sub generateEmptyHeaderAndCpp

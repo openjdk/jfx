@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,13 +29,10 @@
 #include "config.h"
 #include "SQLTransactionBackend.h"
 
-#if ENABLE(SQL_DATABASE)
-
-#include "AbstractSQLTransaction.h"
 #include "Database.h" // FIXME: Should only be used in the frontend.
 #include "DatabaseAuthorizer.h"
 #include "DatabaseBackend.h"
-#include "DatabaseBackendContext.h"
+#include "DatabaseContext.h"
 #include "DatabaseThread.h"
 #include "DatabaseTracker.h"
 #include "ExceptionCode.h"
@@ -43,6 +40,9 @@
 #include "OriginLock.h"
 #include "SQLError.h"
 #include "SQLStatementBackend.h"
+#include "SQLStatementCallback.h"
+#include "SQLStatementErrorCallback.h"
+#include "SQLTransaction.h"
 #include "SQLTransactionClient.h"
 #include "SQLTransactionCoordinator.h"
 #include "SQLValue.h"
@@ -344,14 +344,12 @@
 
 namespace WebCore {
 
-PassRefPtr<SQLTransactionBackend> SQLTransactionBackend::create(DatabaseBackend* db,
-    PassRefPtr<AbstractSQLTransaction> frontend, PassRefPtr<SQLTransactionWrapper> wrapper, bool readOnly)
+Ref<SQLTransactionBackend> SQLTransactionBackend::create(Database* db, PassRefPtr<SQLTransaction> frontend, PassRefPtr<SQLTransactionWrapper> wrapper, bool readOnly)
 {
-    return adoptRef(new SQLTransactionBackend(db, frontend, wrapper, readOnly));
+    return adoptRef(*new SQLTransactionBackend(db, frontend, wrapper, readOnly));
 }
 
-SQLTransactionBackend::SQLTransactionBackend(DatabaseBackend* db,
-    PassRefPtr<AbstractSQLTransaction> frontend, PassRefPtr<SQLTransactionWrapper> wrapper, bool readOnly)
+SQLTransactionBackend::SQLTransactionBackend(Database* db, PassRefPtr<SQLTransaction> frontend, PassRefPtr<SQLTransactionWrapper> wrapper, bool readOnly)
     : m_frontend(frontend)
     , m_database(db)
     , m_wrapper(wrapper)
@@ -378,7 +376,7 @@ void SQLTransactionBackend::doCleanup()
 {
     if (!m_frontend)
         return;
-    m_frontend = 0; // Break the reference cycle. See comment about the life-cycle above.
+    m_frontend = nullptr; // Break the reference cycle. See comment about the life-cycle above.
 
     ASSERT(currentThread() == database()->databaseContext()->databaseThread()->getThreadID());
 
@@ -423,10 +421,10 @@ void SQLTransactionBackend::doCleanup()
     // SQLTransactionBackend is guaranteed to not destruct until the frontend
     // is also destructing.
 
-    m_wrapper = 0;
+    m_wrapper = nullptr;
 }
 
-AbstractSQLStatement* SQLTransactionBackend::currentStatement()
+SQLStatement* SQLTransactionBackend::currentStatement()
 {
     return m_currentStatementBackend->frontend();
 }
@@ -526,11 +524,10 @@ bool SQLTransactionBackend::shouldPerformWhilePaused() const
 }
 #endif
 
-void SQLTransactionBackend::executeSQL(std::unique_ptr<AbstractSQLStatement> statement,
-    const String& sqlStatement, const Vector<SQLValue>& arguments, int permissions)
+void SQLTransactionBackend::executeSQL(std::unique_ptr<SQLStatement> statement, const String& sqlStatement, const Vector<SQLValue>& arguments, int permissions)
 {
     RefPtr<SQLStatementBackend> statementBackend;
-    statementBackend = SQLStatementBackend::create(std::move(statement), sqlStatement, arguments, permissions);
+    statementBackend = SQLStatementBackend::create(WTF::move(statement), sqlStatement, arguments, permissions);
 
     if (Database::from(m_database.get())->deleted())
         statementBackend->setDatabaseDeletedError();
@@ -667,7 +664,7 @@ SQLTransactionState SQLTransactionBackend::runStatements()
 
 void SQLTransactionBackend::getNextStatement()
 {
-    m_currentStatementBackend = 0;
+    m_currentStatementBackend = nullptr;
 
     MutexLocker locker(m_statementMutex);
     if (!m_statementQueue.isEmpty())
@@ -686,7 +683,7 @@ SQLTransactionState SQLTransactionBackend::runCurrentStatementAndGetNextState()
     if (m_hasVersionMismatch)
         m_currentStatementBackend->setVersionMismatchedError();
 
-    if (m_currentStatementBackend->execute(m_database.get())) {
+    if (m_currentStatementBackend->execute(*m_database)) {
         if (m_database->lastActionChangedDatabase()) {
             // Flag this transaction as having changed the database for later delegate notification
             m_modifiedDatabase = true;
@@ -848,10 +845,8 @@ void SQLTransactionBackend::releaseOriginLockIfNeeded()
 {
     if (m_originLock) {
         m_originLock->unlock();
-        m_originLock.clear();
+        m_originLock = nullptr;
     }
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)

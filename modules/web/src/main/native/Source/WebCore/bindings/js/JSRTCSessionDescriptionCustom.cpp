@@ -31,12 +31,13 @@
 
 #include "Dictionary.h"
 #include "ExceptionCode.h"
+#include "JSDOMBinding.h"
 
 using namespace JSC;
 
 namespace WebCore {
 
-EncodedJSValue JSC_HOST_CALL JSRTCSessionDescriptionConstructor::constructJSRTCSessionDescription(ExecState* exec)
+EncodedJSValue JSC_HOST_CALL constructJSRTCSessionDescription(ExecState* exec)
 {
     ExceptionCode ec = 0;
     Dictionary sessionInit;
@@ -49,7 +50,7 @@ EncodedJSValue JSC_HOST_CALL JSRTCSessionDescriptionConstructor::constructJSRTCS
             return JSValue::encode(jsUndefined());
     }
 
-    JSRTCSessionDescriptionConstructor* jsConstructor = jsCast<JSRTCSessionDescriptionConstructor*>(exec->callee());
+    DOMConstructorObject* jsConstructor = jsCast<DOMConstructorObject*>(exec->callee());
     RefPtr<RTCSessionDescription> sessionDescription = RTCSessionDescription::create(sessionInit, ec);
     if (ec == TYPE_MISMATCH_ERR) {
         setDOMException(exec, ec);
@@ -61,7 +62,7 @@ EncodedJSValue JSC_HOST_CALL JSRTCSessionDescriptionConstructor::constructJSRTCS
         return throwVMError(exec, createTypeError(exec, "Error creating RTCSessionDescription"));
     }
 
-    return JSValue::encode(CREATE_DOM_WRAPPER(exec, jsConstructor->globalObject(), RTCSessionDescription, sessionDescription.get()));
+    return JSValue::encode(CREATE_DOM_WRAPPER(jsConstructor->globalObject(), RTCSessionDescription, sessionDescription.get()));
 }
 
 } // namespace WebCore

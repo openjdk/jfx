@@ -130,7 +130,7 @@ extern "C" {
     acceleratedCompositingEnabled = [[[self webView] preferences] acceleratedCompositingEnabled];
     _hostsLayersInWindowServer = [self windowHostsLayersInWindowServer];
 
-    _proxy = NetscapePluginHostManager::shared().instantiatePlugin([_pluginPackage.get() path], [_pluginPackage.get() pluginHostArchitecture], [_pluginPackage.get() bundleIdentifier], self, _MIMEType.get(), _attributeKeys.get(), _attributeValues.get(), userAgent, _sourceURL.get(),
+    _proxy = NetscapePluginHostManager::singleton().instantiatePlugin([_pluginPackage.get() path], [_pluginPackage.get() pluginHostArchitecture], [_pluginPackage.get() bundleIdentifier], self, _MIMEType.get(), _attributeKeys.get(), _attributeValues.get(), userAgent, _sourceURL.get(),
                                                                    _mode == NP_FULL, _isPrivateBrowsingEnabled, acceleratedCompositingEnabled, _hostsLayersInWindowServer);
     if (!_proxy)
         return NO;
@@ -162,8 +162,6 @@ extern "C" {
         _pluginLayer = adoptNS([[CALayer alloc] init]);
         _pluginLayer.get().bounds = realPluginLayer.get().bounds;
         _pluginLayer.get().geometryFlipped = YES;
-
-        _pluginLayer.get().backgroundColor = adoptCF(CGColorCreateGenericRGB(1, 0, 1, 1)).get();
 
         realPluginLayer.get().autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
         [_pluginLayer.get() addSublayer:realPluginLayer.get()];
@@ -283,7 +281,7 @@ extern "C" {
         }
 
         _proxy->destroy();
-        _proxy = 0;
+        _proxy = nullptr;
     }
 
     _pluginLayer = 0;
@@ -430,13 +428,11 @@ extern "C" {
 
 - (void)pluginHostDied
 {
-    if (_element->renderer() && _element->renderer()->isEmbeddedObject()) {
-        RenderEmbeddedObject* renderer = toRenderEmbeddedObject(_element->renderer());
-        renderer->setPluginUnavailabilityReason(RenderEmbeddedObject::PluginCrashed);
-    }
+    if (is<RenderEmbeddedObject>(_element->renderer()))
+        downcast<RenderEmbeddedObject>(*_element->renderer()).setPluginUnavailabilityReason(RenderEmbeddedObject::PluginCrashed);
 
     _pluginLayer = nil;
-    _proxy = 0;
+    _proxy = nullptr;
 
     // No need for us to be layer backed anymore
     self.wantsLayer = NO;

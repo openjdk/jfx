@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2012, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
@@ -30,56 +30,83 @@
 #include "RuleFeature.h"
 
 #include "CSSSelector.h"
+#include "CSSSelectorList.h"
 
 namespace WebCore {
 
-void RuleFeatureSet::collectFeaturesFromSelector(const CSSSelector* selector)
+static void recursivelyCollectFeaturesFromSelector(RuleFeatureSet& features, const CSSSelector& firstSelector, bool& hasSiblingSelector)
 {
-    if (selector->m_match == CSSSelector::Id)
-        idsInRules.add(selector->value().impl());
-    else if (selector->m_match == CSSSelector::Class)
-        classesInRules.add(selector->value().impl());
-    else if (selector->isAttributeSelector())
-        attrsInRules.add(selector->attribute().localName().impl());
-    switch (selector->pseudoType()) {
-    case CSSSelector::PseudoFirstLine:
-        usesFirstLineRules = true;
-        break;
-    case CSSSelector::PseudoBefore:
-    case CSSSelector::PseudoAfter:
-        usesBeforeAfterRules = true;
-        break;
-    default:
-        break;
-    }
+    const CSSSelector* selector = &firstSelector;
+    do {
+        if (selector->match() == CSSSelector::Id)
+            features.idsInRules.add(selector->value().impl());
+        else if (selector->match() == CSSSelector::Class)
+            features.classesInRules.add(selector->value().impl());
+        else if (selector->isAttributeSelector()) {
+            features.attributeCanonicalLocalNamesInRules.add(selector->attributeCanonicalLocalName().impl());
+            features.attributeLocalNamesInRules.add(selector->attribute().localName().impl());
+        } else if (selector->match() == CSSSelector::PseudoElement) {
+            switch (selector->pseudoElementType()) {
+            case CSSSelector::PseudoElementFirstLine:
+                features.usesFirstLineRules = true;
+                break;
+            case CSSSelector::PseudoElementFirstLetter:
+                features.usesFirstLetterRules = true;
+                break;
+            default:
+                break;
+            }
+        }
+
+        if (!hasSiblingSelector && selector->isSiblingSelector())
+            hasSiblingSelector = true;
+
+        if (const CSSSelectorList* selectorList = selector->selectorList()) {
+            for (const CSSSelector* subSelector = selectorList->first(); subSelector; subSelector = CSSSelectorList::next(subSelector)) {
+                if (!hasSiblingSelector && selector->isSiblingSelector())
+                    hasSiblingSelector = true;
+                recursivelyCollectFeaturesFromSelector(features, *subSelector, hasSiblingSelector);
+            }
+        }
+
+        selector = selector->tagHistory();
+    } while (selector);
+}
+
+void RuleFeatureSet::collectFeaturesFromSelector(const CSSSelector& firstSelector, bool& hasSiblingSelector)
+{
+    hasSiblingSelector = false;
+    recursivelyCollectFeaturesFromSelector(*this, firstSelector, hasSiblingSelector);
 }
 
 void RuleFeatureSet::add(const RuleFeatureSet& other)
 {
-    HashSet<AtomicStringImpl*>::const_iterator end = other.idsInRules.end();
-    for (HashSet<AtomicStringImpl*>::const_iterator it = other.idsInRules.begin(); it != end; ++it)
-        idsInRules.add(*it);
-    end = other.classesInRules.end();
-    for (HashSet<AtomicStringImpl*>::const_iterator it = other.classesInRules.begin(); it != end; ++it)
-        classesInRules.add(*it);
-    end = other.attrsInRules.end();
-    for (HashSet<AtomicStringImpl*>::const_iterator it = other.attrsInRules.begin(); it != end; ++it)
-        attrsInRules.add(*it);
+    idsInRules.add(other.idsInRules.begin(), other.idsInRules.end());
+    classesInRules.add(other.classesInRules.begin(), other.classesInRules.end());
+    attributeCanonicalLocalNamesInRules.add(other.attributeCanonicalLocalNamesInRules.begin(), other.attributeCanonicalLocalNamesInRules.end());
+    attributeLocalNamesInRules.add(other.attributeLocalNamesInRules.begin(), other.attributeLocalNamesInRules.end());
     siblingRules.appendVector(other.siblingRules);
     uncommonAttributeRules.appendVector(other.uncommonAttributeRules);
     usesFirstLineRules = usesFirstLineRules || other.usesFirstLineRules;
-    usesBeforeAfterRules = usesBeforeAfterRules || other.usesBeforeAfterRules;
+    usesFirstLetterRules = usesFirstLetterRules || other.usesFirstLetterRules;
 }
 
 void RuleFeatureSet::clear()
 {
     idsInRules.clear();
     classesInRules.clear();
-    attrsInRules.clear();
+    attributeCanonicalLocalNamesInRules.clear();
+    attributeLocalNamesInRules.clear();
     siblingRules.clear();
     uncommonAttributeRules.clear();
     usesFirstLineRules = false;
-    usesBeforeAfterRules = false;
+    usesFirstLetterRules = false;
+}
+
+void RuleFeatureSet::shrinkToFit()
+{
+    siblingRules.shrinkToFit();
+    uncommonAttributeRules.shrinkToFit();
 }
 
 } // namespace WebCore

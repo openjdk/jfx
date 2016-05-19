@@ -35,15 +35,14 @@ class AccessibilityMenuListOption;
 class HTMLElement;
 class HTMLSelectElement;
 
-class AccessibilityMenuListPopup : public AccessibilityMockObject {
+class AccessibilityMenuListPopup final : public AccessibilityMockObject {
 public:
-    static PassRefPtr<AccessibilityMenuListPopup> create() { return adoptRef(new AccessibilityMenuListPopup); }
+    static Ref<AccessibilityMenuListPopup> create() { return adoptRef(*new AccessibilityMenuListPopup); }
 
     virtual bool isEnabled() const override;
     virtual bool isOffScreen() const override;
 
     void didUpdateActiveOption(int optionIndex);
-
 
 private:
     AccessibilityMenuListPopup();
@@ -54,7 +53,7 @@ private:
     virtual AccessibilityRole roleValue() const override { return MenuListPopupRole; }
 
     virtual bool isVisible() const override;
-    virtual bool press() const override;
+    virtual bool press() override;
     virtual void addChildren() override;
     virtual void childrenChanged() override;
     virtual bool computeAccessibilityIsIgnored() const override;
@@ -62,8 +61,8 @@ private:
     AccessibilityMenuListOption* menuListOptionAccessibilityObject(HTMLElement*) const;
 };
 
-ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityMenuListPopup, isMenuListPopup())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityMenuListPopup, isMenuListPopup())
 
 #endif // AccessibilityMenuListPopup_h

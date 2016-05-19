@@ -37,6 +37,7 @@
 #if OS(DARWIN)
 #include <mach/mach.h>
 #include <mach/mach_time.h>
+#include <mutex>
 #include <sys/time.h>
 #elif OS(WINDOWS)
 
@@ -76,11 +77,7 @@ static double lowResUTCTime()
 {
     FILETIME fileTime;
 
-#if OS(WINCE)
-    GetCurrentFT(&fileTime);
-#else
     GetSystemTimeAsFileTime(&fileTime);
-#endif
 
     // As per Windows documentation for FILETIME, copy the resulting FILETIME structure to a
     // ULARGE_INTEGER structure using memcpy (using memcpy instead of direct assignment can
@@ -111,7 +108,11 @@ static double highResUpTime()
 
     LARGE_INTEGER qpc;
     QueryPerformanceCounter(&qpc);
+#if defined(_M_IX86) || defined(__i386__)
     DWORD tickCount = GetTickCount();
+#else
+    ULONGLONG tickCount = GetTickCount64();
+#endif
 
     if (inited) {
         __int64 qpcElapsed = ((qpc.QuadPart - qpcLast.QuadPart) * 1000) / qpcFrequency.QuadPart;
@@ -295,12 +296,15 @@ double monotonicallyIncreasingTime()
 
 double monotonicallyIncreasingTime()
 {
-    // Based on listing #2 from Apple QA 1398.
+    // Based on listing #2 from Apple QA 1398, but modified to be thread-safe.
     static mach_timebase_info_data_t timebaseInfo;
-    if (!timebaseInfo.denom) {
+    static std::once_flag initializeTimerOnceFlag;
+    std::call_once(initializeTimerOnceFlag, [] {
         kern_return_t kr = mach_timebase_info(&timebaseInfo);
         ASSERT_UNUSED(kr, kr == KERN_SUCCESS);
-    }
+        ASSERT(timebaseInfo.denom);
+    });
+
     return (mach_absolute_time() * timebaseInfo.numer) / (1.0e9 * timebaseInfo.denom);
 }
 
@@ -318,7 +322,7 @@ double monotonicallyIncreasingTime()
 
 #endif
 
-double currentCPUTime()
+std::chrono::microseconds currentCPUTime()
 {
 #if OS(DARWIN)
     mach_msg_type_number_t infoCount = THREAD_BASIC_INFO_COUNT;
@@ -329,10 +333,7 @@ double currentCPUTime()
     thread_info(threadPort, THREAD_BASIC_INFO, reinterpret_cast<thread_info_t>(&info), &infoCount);
     mach_port_deallocate(mach_task_self(), threadPort);
 
-    double time = info.user_time.seconds + info.user_time.microseconds / 1000000.;
-    time += info.system_time.seconds + info.system_time.microseconds / 1000000.;
-
-    return time;
+    return std::chrono::seconds(info.user_time.seconds + info.system_time.seconds) + std::chrono::microseconds(info.user_time.microseconds + info.system_time.microseconds);
 #elif OS(WINDOWS)
     union {
         FILETIME fileTime;
@@ -345,19 +346,13 @@ double currentCPUTime()
 
     GetThreadTimes(GetCurrentThread(), &creationTime, &exitTime, &kernelTime.fileTime, &userTime.fileTime);
 
-    return userTime.fileTimeAsLong / 10000000. + kernelTime.fileTimeAsLong / 10000000.;
+    return std::chrono::microseconds((userTime.fileTimeAsLong + kernelTime.fileTimeAsLong) / 10);
 #else
     // FIXME: We should return the time the current thread has spent executing.
 
-    // use a relative time from first call in order to avoid an overflow
-    static double firstTime = currentTime();
-    return currentTime() - firstTime;
+    static auto firstTime = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - firstTime);
 #endif
-}
-
-double currentCPUTimeMS()
-{
-    return currentCPUTime() * 1000;
 }
 
 } // namespace WTF

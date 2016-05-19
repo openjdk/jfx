@@ -30,14 +30,13 @@
 
 #include "config.h"
 
-#if ENABLE(BLOB)
-
 #include "BlobResourceHandle.h"
 
 #include "AsyncFileStream.h"
-#include "BlobStorageData.h"
+#include "BlobData.h"
 #include "FileStream.h"
 #include "FileSystem.h"
+#include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
 #include "URL.h"
 #include "ResourceError.h"
@@ -135,7 +134,7 @@ void BlobResourceSynchronousLoader::didFail(ResourceHandle*, const ResourceError
 ///////////////////////////////////////////////////////////////////////////////
 // BlobResourceHandle
 
-PassRefPtr<BlobResourceHandle> BlobResourceHandle::createAsync(BlobStorageData* blobData, const ResourceRequest& request, ResourceHandleClient* client)
+PassRefPtr<BlobResourceHandle> BlobResourceHandle::createAsync(BlobData* blobData, const ResourceRequest& request, ResourceHandleClient* client)
 {
     // FIXME: Should probably call didFail() instead of blocking the load without explanation.
     if (!equalIgnoringCase(request.httpMethod(), "GET"))
@@ -144,7 +143,7 @@ PassRefPtr<BlobResourceHandle> BlobResourceHandle::createAsync(BlobStorageData* 
     return adoptRef(new BlobResourceHandle(blobData, request, client, true));
 }
 
-void BlobResourceHandle::loadResourceSynchronously(BlobStorageData* blobData, const ResourceRequest& request, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+void BlobResourceHandle::loadResourceSynchronously(BlobData* blobData, const ResourceRequest& request, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
     if (!equalIgnoringCase(request.httpMethod(), "GET")) {
         error = ResourceError(webKitBlobResourceDomain, methodNotAllowed, response.url(), "Request method must be GET");
@@ -156,7 +155,7 @@ void BlobResourceHandle::loadResourceSynchronously(BlobStorageData* blobData, co
     handle->start();
 }
 
-BlobResourceHandle::BlobResourceHandle(PassRefPtr<BlobStorageData> blobData, const ResourceRequest& request, ResourceHandleClient* client, bool async)
+BlobResourceHandle::BlobResourceHandle(BlobData* blobData, const ResourceRequest& request, ResourceHandleClient* client, bool async)
     : ResourceHandle(0, request, client, false, false)
     , m_blobData(blobData)
     , m_async(async)
@@ -172,58 +171,48 @@ BlobResourceHandle::BlobResourceHandle(PassRefPtr<BlobStorageData> blobData, con
     , m_fileOpened(false)
 {
     if (m_async)
-        m_asyncStream = AsyncFileStream::create(this);
+        m_asyncStream = std::make_unique<AsyncFileStream>(*this);
     else
-        m_stream = FileStream::create();
+        m_stream = std::make_unique<FileStream>();
 }
 
 BlobResourceHandle::~BlobResourceHandle()
 {
-    if (m_async) {
-        if (m_asyncStream)
-            m_asyncStream->stop();
-    } else {
-        if (m_stream)
-            m_stream->stop();
-    }
 }
 
 void BlobResourceHandle::cancel()
 {
-    if (m_async) {
-        if (m_asyncStream) {
-            m_asyncStream->stop();
-            m_asyncStream = 0;
-        }
-    }
+    m_asyncStream = nullptr;
 
     m_aborted = true;
 
     ResourceHandle::cancel();
 }
 
-void delayedStartBlobResourceHandle(void* context)
+void BlobResourceHandle::continueDidReceiveResponse()
 {
-    RefPtr<BlobResourceHandle> handle = adoptRef(static_cast<BlobResourceHandle*>(context));
-    handle->doStart();
+    // BlobResourceHandle doesn't wait for didReceiveResponse, and it currently cannot be used for downloading.
 }
 
 void BlobResourceHandle::start()
 {
-    if (m_async) {
-        // Keep BlobResourceHandle alive until delayedStartBlobResourceHandle runs.
-        ref();
-
-        // Finish this async call quickly and return.
-        callOnMainThread(delayedStartBlobResourceHandle, this);
+    if (!m_async) {
+        doStart();
         return;
     }
 
-    doStart();
+    RefPtr<BlobResourceHandle> handle(this);
+
+    // Finish this async call quickly and return.
+    callOnMainThread([handle] {
+        handle->doStart();
+    });
 }
 
 void BlobResourceHandle::doStart()
 {
+    ASSERT(isMainThread());
+
     // Do not continue if the request is aborted or an error occurs.
     if (m_aborted || m_errorCode)
         return;
@@ -236,7 +225,7 @@ void BlobResourceHandle::doStart()
     }
 
     // Parse the "Range" header we care about.
-    String range = firstRequest().httpHeaderField("Range");
+    String range = firstRequest().httpHeaderField(HTTPHeaderName::Range);
     if (!range.isEmpty() && !parseRange(range, m_rangeOffset, m_rangeEnd, m_rangeSuffixLength)) {
         m_errorCode = rangeError;
         notifyResponse();
@@ -255,6 +244,8 @@ void BlobResourceHandle::doStart()
 
 void BlobResourceHandle::getSizeForNext()
 {
+    ASSERT(isMainThread());
+
     // Do we finish validating and counting size for all items?
     if (m_sizeItemCount >= m_blobData->items().size()) {
         seek();
@@ -272,13 +263,14 @@ void BlobResourceHandle::getSizeForNext()
     const BlobDataItem& item = m_blobData->items().at(m_sizeItemCount);
     switch (item.type) {
     case BlobDataItem::Data:
-        didGetSize(item.length);
+        didGetSize(item.length());
         break;
     case BlobDataItem::File:
+        // Files know their sizes, but asking the stream to verify that the file wasn't modified.
         if (m_async)
-            m_asyncStream->getSize(item.path, item.expectedModificationTime);
+            m_asyncStream->getSize(item.file->path(), item.file->expectedModificationTime());
         else
-            didGetSize(m_stream->getSize(item.path, item.expectedModificationTime));
+            didGetSize(m_stream->getSize(item.file->path(), item.file->expectedModificationTime()));
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -287,6 +279,8 @@ void BlobResourceHandle::getSizeForNext()
 
 void BlobResourceHandle::didGetSize(long long size)
 {
+    ASSERT(isMainThread());
+
     // Do not continue if the request is aborted or an error occurs.
     if (m_aborted || m_errorCode)
         return;
@@ -300,8 +294,7 @@ void BlobResourceHandle::didGetSize(long long size)
 
     // The size passed back is the size of the whole file. If the underlying item is a sliced file, we need to use the slice length.
     const BlobDataItem& item = m_blobData->items().at(m_sizeItemCount);
-    if (item.type == BlobDataItem::File && item.length != BlobDataItem::toEndOfFile)
-        size = item.length;
+    size = item.length();
 
     // Cache the size.
     m_itemLengthList.append(size);
@@ -316,6 +309,8 @@ void BlobResourceHandle::didGetSize(long long size)
 
 void BlobResourceHandle::seek()
 {
+    ASSERT(isMainThread());
+
     // Convert from the suffix length to the range.
     if (m_rangeSuffixLength != positionNotSpecified) {
         m_rangeOffset = m_totalRemainingSize - m_rangeSuffixLength;
@@ -345,6 +340,8 @@ void BlobResourceHandle::seek()
 
 int BlobResourceHandle::readSync(char* buf, int length)
 {
+    ASSERT(isMainThread());
+
     ASSERT(!m_async);
     Ref<BlobResourceHandle> protect(*this);
 
@@ -391,17 +388,19 @@ int BlobResourceHandle::readSync(char* buf, int length)
 
 int BlobResourceHandle::readDataSync(const BlobDataItem& item, char* buf, int length)
 {
+    ASSERT(isMainThread());
+
     ASSERT(!m_async);
 
-    long long remaining = item.length - m_currentItemReadSize;
+    long long remaining = item.length() - m_currentItemReadSize;
     int bytesToRead = (length > remaining) ? static_cast<int>(remaining) : length;
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = static_cast<int>(m_totalRemainingSize);
-    memcpy(buf, item.data->data() + item.offset + m_currentItemReadSize, bytesToRead);
+    memcpy(buf, item.data->data() + item.offset() + m_currentItemReadSize, bytesToRead);
     m_totalRemainingSize -= bytesToRead;
 
     m_currentItemReadSize += bytesToRead;
-    if (m_currentItemReadSize == item.length) {
+    if (m_currentItemReadSize == item.length()) {
         m_readItemCount++;
         m_currentItemReadSize = 0;
     }
@@ -411,13 +410,15 @@ int BlobResourceHandle::readDataSync(const BlobDataItem& item, char* buf, int le
 
 int BlobResourceHandle::readFileSync(const BlobDataItem& item, char* buf, int length)
 {
+    ASSERT(isMainThread());
+
     ASSERT(!m_async);
 
     if (!m_fileOpened) {
         long long bytesToRead = m_itemLengthList[m_readItemCount] - m_currentItemReadSize;
         if (bytesToRead > m_totalRemainingSize)
             bytesToRead = m_totalRemainingSize;
-        bool success = m_stream->openForRead(item.path, item.offset + m_currentItemReadSize, bytesToRead);
+        bool success = m_stream->openForRead(item.file->path(), item.offset() + m_currentItemReadSize, bytesToRead);
         m_currentItemReadSize = 0;
         if (!success) {
             m_errorCode = notReadableError;
@@ -444,6 +445,7 @@ int BlobResourceHandle::readFileSync(const BlobDataItem& item, char* buf, int le
 
 void BlobResourceHandle::readAsync()
 {
+    ASSERT(isMainThread());
     ASSERT(m_async);
 
     // Do not continue if the request is aborted or an error occurs.
@@ -467,18 +469,20 @@ void BlobResourceHandle::readAsync()
 
 void BlobResourceHandle::readDataAsync(const BlobDataItem& item)
 {
+    ASSERT(isMainThread());
     ASSERT(m_async);
     Ref<BlobResourceHandle> protect(*this);
 
-    long long bytesToRead = item.length - m_currentItemReadSize;
+    long long bytesToRead = item.length() - m_currentItemReadSize;
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = m_totalRemainingSize;
-    consumeData(item.data->data() + item.offset + m_currentItemReadSize, static_cast<int>(bytesToRead));
+    consumeData(item.data->data() + item.offset() + m_currentItemReadSize, static_cast<int>(bytesToRead));
     m_currentItemReadSize = 0;
 }
 
 void BlobResourceHandle::readFileAsync(const BlobDataItem& item)
 {
+    ASSERT(isMainThread());
     ASSERT(m_async);
 
     if (m_fileOpened) {
@@ -489,7 +493,7 @@ void BlobResourceHandle::readFileAsync(const BlobDataItem& item)
     long long bytesToRead = m_itemLengthList[m_readItemCount] - m_currentItemReadSize;
     if (bytesToRead > m_totalRemainingSize)
         bytesToRead = static_cast<int>(m_totalRemainingSize);
-    m_asyncStream->openForRead(item.path, item.offset + m_currentItemReadSize, bytesToRead);
+    m_asyncStream->openForRead(item.file->path(), item.offset() + m_currentItemReadSize, bytesToRead);
     m_fileOpened = true;
     m_currentItemReadSize = 0;
 }
@@ -577,13 +581,15 @@ void BlobResourceHandle::notifyResponse()
 
 void BlobResourceHandle::notifyResponseOnSuccess()
 {
+    ASSERT(isMainThread());
+
     bool isRangeRequest = m_rangeOffset != positionNotSpecified;
-    ResourceResponse response(firstRequest().url(), m_blobData->contentType(), m_totalRemainingSize, String(), String());
-    response.setExpectedContentLength(m_totalRemainingSize);
+    ResourceResponse response(firstRequest().url(), m_blobData->contentType(), m_totalRemainingSize, String());
     response.setHTTPStatusCode(isRangeRequest ? httpPartialContent : httpOK);
     response.setHTTPStatusText(isRangeRequest ? httpPartialContentText : httpOKText);
-    if (!m_blobData->contentDisposition().isEmpty())
-        response.setHTTPHeaderField("Content-Disposition", m_blobData->contentDisposition());
+    // FIXME: If a resource identified with a blob: URL is a File object, user agents must use that file's name attribute,
+    // as if the response had a Content-Disposition header with the filename parameter set to the File's name attribute.
+    // Notably, this will affect a name suggested in "File Save As".
 
     // BlobResourceHandle cannot be used with downloading, and doesn't even wait for continueDidReceiveResponse.
     // It's currently client's responsibility to know that didReceiveResponseAsync cannot be used to convert a
@@ -598,7 +604,7 @@ void BlobResourceHandle::notifyResponseOnError()
 {
     ASSERT(m_errorCode);
 
-    ResourceResponse response(firstRequest().url(), "text/plain", 0, String(), String());
+    ResourceResponse response(firstRequest().url(), "text/plain", 0, String());
     switch (m_errorCode) {
     case rangeError:
         response.setHTTPStatusCode(httpRequestedRangeNotSatisfiable);
@@ -664,5 +670,3 @@ void BlobResourceHandle::notifyFinish()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(BLOB)

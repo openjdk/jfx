@@ -30,6 +30,8 @@
 #include "config.h"
 #include "StyleGridItemData.h"
 
+#if ENABLE(CSS_GRID_LAYOUT)
+
 #include "RenderStyle.h"
 
 namespace WebCore {
@@ -51,9 +53,11 @@ inline StyleGridItemData::StyleGridItemData(const StyleGridItemData& o)
 {
 }
 
-PassRef<StyleGridItemData> StyleGridItemData::copy() const
+Ref<StyleGridItemData> StyleGridItemData::copy() const
 {
     return adoptRef(*new StyleGridItemData(*this));
 }
 
 } // namespace WebCore
+
+#endif /* ENABLE(CSS_GRID_LAYOUT) */

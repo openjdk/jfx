@@ -25,6 +25,8 @@
 #include "CSSCharsetRule.h"
 #include "CSSFontFaceRule.h"
 #include "CSSImportRule.h"
+#include "CSSKeyframeRule.h"
+#include "CSSKeyframesRule.h"
 #include "CSSMediaRule.h"
 #include "CSSPageRule.h"
 #include "CSSStyleRule.h"
@@ -32,8 +34,6 @@
 #include "CSSUnknownRule.h"
 #include "StyleProperties.h"
 #include "StyleRuleImport.h"
-#include "WebKitCSSKeyframeRule.h"
-#include "WebKitCSSKeyframesRule.h"
 #include "WebKitCSSRegionRule.h"
 #include "WebKitCSSViewportRule.h"
 
@@ -59,36 +59,34 @@ void StyleRuleBase::destroy()
 {
     switch (type()) {
     case Style:
-        delete static_cast<StyleRule*>(this);
+        delete downcast<StyleRule>(this);
         return;
     case Page:
-        delete static_cast<StyleRulePage*>(this);
+        delete downcast<StyleRulePage>(this);
         return;
     case FontFace:
-        delete static_cast<StyleRuleFontFace*>(this);
+        delete downcast<StyleRuleFontFace>(this);
         return;
     case Media:
-        delete static_cast<StyleRuleMedia*>(this);
+        delete downcast<StyleRuleMedia>(this);
         return;
-#if ENABLE(CSS3_CONDITIONAL_RULES)
     case Supports:
-        delete static_cast<StyleRuleSupports*>(this);
+        delete downcast<StyleRuleSupports>(this);
         return;
-#endif
 #if ENABLE(CSS_REGIONS)
     case Region:
-        delete static_cast<StyleRuleRegion*>(this);
+        delete downcast<StyleRuleRegion>(this);
         return;
 #endif
     case Import:
-        delete static_cast<StyleRuleImport*>(this);
+        delete downcast<StyleRuleImport>(this);
         return;
     case Keyframes:
-        delete static_cast<StyleRuleKeyframes*>(this);
+        delete downcast<StyleRuleKeyframes>(this);
         return;
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     case Viewport:
-        delete static_cast<StyleRuleViewport*>(this);
+        delete downcast<StyleRuleViewport>(this);
         return;
 #endif
     case Unknown:
@@ -103,30 +101,28 @@ void StyleRuleBase::destroy()
     ASSERT_NOT_REACHED();
 }
 
-PassRef<StyleRuleBase> StyleRuleBase::copy() const
+Ref<StyleRuleBase> StyleRuleBase::copy() const
 {
     switch (type()) {
     case Style:
-        return static_cast<const StyleRule*>(this)->copy();
+        return downcast<StyleRule>(*this).copy();
     case Page:
-        return static_cast<const StyleRulePage*>(this)->copy();
+        return downcast<StyleRulePage>(*this).copy();
     case FontFace:
-        return static_cast<const StyleRuleFontFace*>(this)->copy();
+        return downcast<StyleRuleFontFace>(*this).copy();
     case Media:
-        return static_cast<const StyleRuleMedia*>(this)->copy();
-#if ENABLE(CSS3_CONDITIONAL_RULES)
+        return downcast<StyleRuleMedia>(*this).copy();
     case Supports:
-        return static_cast<const StyleRuleSupports*>(this)->copy();
-#endif
+        return downcast<StyleRuleSupports>(*this).copy();
 #if ENABLE(CSS_REGIONS)
     case Region:
-        return static_cast<const StyleRuleRegion*>(this)->copy();
+        return downcast<StyleRuleRegion>(*this).copy();
 #endif
     case Keyframes:
-        return static_cast<const StyleRuleKeyframes*>(this)->copy();
+        return downcast<StyleRuleKeyframes>(*this).copy();
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     case Viewport:
-        return static_cast<const StyleRuleViewport*>(this)->copy();
+        return downcast<StyleRuleViewport>(*this).copy();
 #endif
     case Import:
         // FIXME: Copy import rules.
@@ -141,45 +137,43 @@ PassRef<StyleRuleBase> StyleRuleBase::copy() const
     }
     CRASH();
     // HACK: EFL won't build without this (old GCC with crappy -Werror=return-type)
-    return PassRef<StyleRuleBase>(*static_cast<StyleRuleBase*>(nullptr));
+    return Ref<StyleRuleBase>(*static_cast<StyleRuleBase*>(nullptr));
 }
 
 PassRefPtr<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet, CSSRule* parentRule) const
 {
     RefPtr<CSSRule> rule;
-    StyleRuleBase* self = const_cast<StyleRuleBase*>(this);
+    StyleRuleBase& self = const_cast<StyleRuleBase&>(*this);
     switch (type()) {
     case Style:
-        rule = CSSStyleRule::create(static_cast<StyleRule*>(self), parentSheet);
+        rule = CSSStyleRule::create(downcast<StyleRule>(self), parentSheet);
         break;
     case Page:
-        rule = CSSPageRule::create(static_cast<StyleRulePage*>(self), parentSheet);
+        rule = CSSPageRule::create(downcast<StyleRulePage>(self), parentSheet);
         break;
     case FontFace:
-        rule = CSSFontFaceRule::create(static_cast<StyleRuleFontFace*>(self), parentSheet);
+        rule = CSSFontFaceRule::create(downcast<StyleRuleFontFace>(self), parentSheet);
         break;
     case Media:
-        rule = CSSMediaRule::create(static_cast<StyleRuleMedia*>(self), parentSheet);
+        rule = CSSMediaRule::create(downcast<StyleRuleMedia>(self), parentSheet);
         break;
-#if ENABLE(CSS3_CONDITIONAL_RULES)
     case Supports:
-        rule = CSSSupportsRule::create(static_cast<StyleRuleSupports*>(self), parentSheet);
+        rule = CSSSupportsRule::create(downcast<StyleRuleSupports>(self), parentSheet);
         break;
-#endif
 #if ENABLE(CSS_REGIONS)
     case Region:
-        rule = WebKitCSSRegionRule::create(static_cast<StyleRuleRegion*>(self), parentSheet);
+        rule = WebKitCSSRegionRule::create(downcast<StyleRuleRegion>(self), parentSheet);
         break;
 #endif
     case Import:
-        rule = CSSImportRule::create(static_cast<StyleRuleImport*>(self), parentSheet);
+        rule = CSSImportRule::create(downcast<StyleRuleImport>(self), parentSheet);
         break;
     case Keyframes:
-        rule = WebKitCSSKeyframesRule::create(static_cast<StyleRuleKeyframes*>(self), parentSheet);
+        rule = CSSKeyframesRule::create(downcast<StyleRuleKeyframes>(self), parentSheet);
         break;
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     case Viewport:
-        rule = WebKitCSSViewportRule::create(static_cast<StyleRuleViewport*>(self), parentSheet);
+        rule = WebKitCSSViewportRule::create(downcast<StyleRuleViewport>(self), parentSheet);
         break;
 #endif
     case Unknown:
@@ -189,7 +183,7 @@ PassRefPtr<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet
     case Region:
 #endif
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
     if (parentRule)
         rule->setParentRule(parentRule);
@@ -201,9 +195,9 @@ unsigned StyleRule::averageSizeInBytes()
     return sizeof(StyleRule) + sizeof(CSSSelector) + StyleProperties::averageSizeInBytes();
 }
 
-StyleRule::StyleRule(int sourceLine, PassRef<StyleProperties> properties)
+StyleRule::StyleRule(int sourceLine, Ref<StyleProperties>&& properties)
     : StyleRuleBase(Style, sourceLine)
-    , m_properties(std::move(properties))
+    , m_properties(WTF::move(properties))
 {
 }
 
@@ -220,19 +214,19 @@ StyleRule::~StyleRule()
 
 MutableStyleProperties& StyleRule::mutableProperties()
 {
-    if (!m_properties->isMutable())
+    if (!is<MutableStyleProperties>(m_properties.get()))
         m_properties = m_properties->mutableCopy();
-    return static_cast<MutableStyleProperties&>(m_properties.get());
+    return downcast<MutableStyleProperties>(m_properties.get());
 }
 
-PassRef<StyleRule> StyleRule::create(int sourceLine, const Vector<const CSSSelector*>& selectors, PassRef<StyleProperties> properties)
+Ref<StyleRule> StyleRule::create(int sourceLine, const Vector<const CSSSelector*>& selectors, Ref<StyleProperties>&& properties)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(!selectors.isEmpty());
     CSSSelector* selectorListArray = reinterpret_cast<CSSSelector*>(fastMalloc(sizeof(CSSSelector) * selectors.size()));
     for (unsigned i = 0; i < selectors.size(); ++i)
         new (NotNull, &selectorListArray[i]) CSSSelector(*selectors.at(i));
     selectorListArray[selectors.size() - 1].setLastInSelectorList();
-    auto rule = StyleRule::create(sourceLine, std::move(properties));
+    auto rule = StyleRule::create(sourceLine, WTF::move(properties));
     rule.get().parserAdoptSelectorArray(selectorListArray);
     return rule;
 }
@@ -263,9 +257,9 @@ Vector<RefPtr<StyleRule>> StyleRule::splitIntoMultipleRulesWithMaximumSelectorCo
     return rules;
 }
 
-StyleRulePage::StyleRulePage(PassRef<StyleProperties> properties)
+StyleRulePage::StyleRulePage(Ref<StyleProperties>&& properties)
     : StyleRuleBase(Page)
-    , m_properties(std::move(properties))
+    , m_properties(WTF::move(properties))
 {
 }
 
@@ -282,14 +276,14 @@ StyleRulePage::~StyleRulePage()
 
 MutableStyleProperties& StyleRulePage::mutableProperties()
 {
-    if (!m_properties->isMutable())
+    if (!is<MutableStyleProperties>(m_properties.get()))
         m_properties = m_properties->mutableCopy();
-    return static_cast<MutableStyleProperties&>(m_properties.get());
+    return downcast<MutableStyleProperties>(m_properties.get());
 }
 
-StyleRuleFontFace::StyleRuleFontFace(PassRef<StyleProperties> properties)
+StyleRuleFontFace::StyleRuleFontFace(Ref<StyleProperties>&& properties)
     : StyleRuleBase(FontFace, 0)
-    , m_properties(std::move(properties))
+    , m_properties(WTF::move(properties))
 {
 }
 
@@ -305,9 +299,9 @@ StyleRuleFontFace::~StyleRuleFontFace()
 
 MutableStyleProperties& StyleRuleFontFace::mutableProperties()
 {
-    if (!m_properties->isMutable())
+    if (!is<MutableStyleProperties>(m_properties.get()))
         m_properties = m_properties->mutableCopy();
-    return static_cast<MutableStyleProperties&>(m_properties.get());
+    return downcast<MutableStyleProperties>(m_properties.get());
 }
 
 StyleRuleGroup::StyleRuleGroup(Type type, Vector<RefPtr<StyleRuleBase>>& adoptRule)
@@ -324,9 +318,9 @@ StyleRuleGroup::StyleRuleGroup(const StyleRuleGroup& o)
         m_childRules.uncheckedAppend(o.m_childRules[i]->copy());
 }
 
-void StyleRuleGroup::wrapperInsertRule(unsigned index, PassRef<StyleRuleBase> rule)
+void StyleRuleGroup::wrapperInsertRule(unsigned index, Ref<StyleRuleBase>&& rule)
 {
-    m_childRules.insert(index, std::move(rule));
+    m_childRules.insert(index, WTF::move(rule));
 }
 
 void StyleRuleGroup::wrapperRemoveRule(unsigned index)
@@ -349,7 +343,6 @@ StyleRuleMedia::StyleRuleMedia(const StyleRuleMedia& o)
 }
 
 
-#if ENABLE(CSS3_CONDITIONAL_RULES)
 StyleRuleSupports::StyleRuleSupports(const String& conditionText, bool conditionIsSupported, Vector<RefPtr<StyleRuleBase>>& adoptRules)
     : StyleRuleGroup(Supports, adoptRules)
     , m_conditionText(conditionText)
@@ -363,7 +356,6 @@ StyleRuleSupports::StyleRuleSupports(const StyleRuleSupports& o)
     , m_conditionIsSupported(o.m_conditionIsSupported)
 {
 }
-#endif
 
 StyleRuleRegion::StyleRuleRegion(Vector<std::unique_ptr<CSSParserSelector>>* selectors, Vector<RefPtr<StyleRuleBase>>& adoptRules)
     : StyleRuleGroup(Region, adoptRules)
@@ -379,9 +371,9 @@ StyleRuleRegion::StyleRuleRegion(const StyleRuleRegion& o)
 
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
-StyleRuleViewport::StyleRuleViewport(PassRef<StyleProperties> properties)
+StyleRuleViewport::StyleRuleViewport(Ref<StyleProperties>&& properties)
     : StyleRuleBase(Viewport, 0)
-    , m_properties(std::move(properties))
+    , m_properties(WTF::move(properties))
 {
 }
 

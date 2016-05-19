@@ -28,11 +28,14 @@
 #ifndef RemoteInspectorDebuggable_h
 #define RemoteInspectorDebuggable_h
 
+#include <CoreFoundation/CFRunLoop.h>
+#include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
 
-class InspectorFrontendChannel;
+class FrontendChannel;
+
 struct RemoteInspectorDebuggableInfo;
 
 class JS_EXPORT_PRIVATE RemoteInspectorDebuggable {
@@ -49,6 +52,9 @@ public:
     bool remoteDebuggingAllowed() const { return m_allowed; }
     void setRemoteDebuggingAllowed(bool);
 
+    CFRunLoopRef debuggerRunLoop() { return m_runLoop.get(); }
+    void setDebuggerRunLoop(CFRunLoopRef runLoop) { m_runLoop = runLoop; }
+
     RemoteInspectorDebuggableInfo info() const;
 
     enum DebuggableType { JavaScript, Web };
@@ -56,16 +62,21 @@ public:
     virtual String name() const { return String(); } // JavaScript and Web
     virtual String url() const { return String(); } // Web
     virtual bool hasLocalDebugger() const = 0;
-    virtual pid_t parentProcessIdentifier() const { return 0; }
 
-    virtual void connect(InspectorFrontendChannel*) = 0;
+    virtual void connect(FrontendChannel*, bool isAutomaticInspection) = 0;
     virtual void disconnect() = 0;
     virtual void dispatchMessageFromRemoteFrontend(const String& message) = 0;
     virtual void setIndicating(bool) { } // Default is to do nothing.
+    virtual void pause() { };
+
+    virtual bool automaticInspectionAllowed() const { return false; }
+    virtual void pauseWaitingForAutomaticInspection();
+    virtual void unpauseForInitializedInspector();
 
 private:
     unsigned m_identifier;
     bool m_allowed;
+    RetainPtr<CFRunLoopRef> m_runLoop;
 };
 
 struct RemoteInspectorDebuggableInfo {
@@ -74,11 +85,8 @@ struct RemoteInspectorDebuggableInfo {
         , type(RemoteInspectorDebuggable::JavaScript)
         , hasLocalDebugger(false)
         , remoteDebuggingAllowed(false)
-        , parentProcessIdentifier(0)
     {
     }
-
-    bool hasParentProcess() const { return !!parentProcessIdentifier; }
 
     unsigned identifier;
     RemoteInspectorDebuggable::DebuggableType type;
@@ -86,7 +94,6 @@ struct RemoteInspectorDebuggableInfo {
     String url;
     bool hasLocalDebugger;
     bool remoteDebuggingAllowed;
-    pid_t parentProcessIdentifier;
 };
 
 } // namespace Inspector

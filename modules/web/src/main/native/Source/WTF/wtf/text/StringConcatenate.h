@@ -28,8 +28,12 @@
 
 #include <string.h>
 
-#ifndef WTFString_h
+#ifndef AtomicString_h
 #include <wtf/text/AtomicString.h>
+#endif
+
+#ifndef StringView_h
+#include <wtf/text/StringView.h>
 #endif
 
 // This macro is helpful for testing how many intermediate Strings are created while evaluating an
@@ -41,379 +45,206 @@
 namespace WTF {
 
 template<typename StringType>
-class StringTypeAdapter {
-};
+class StringTypeAdapter;
 
 template<>
 class StringTypeAdapter<char> {
 public:
-    StringTypeAdapter<char>(char buffer)
-        : m_buffer(buffer)
+    StringTypeAdapter<char>(char character)
+        : m_character(character)
     {
     }
 
     unsigned length() { return 1; }
-
     bool is8Bit() { return true; }
 
-    void writeTo(LChar* destination)
+    void writeTo(LChar* destination) const
     {
-        *destination = m_buffer;
+        *destination = m_character;
     }
 
-    void writeTo(UChar* destination) { *destination = m_buffer; }
+    void writeTo(UChar* destination) const
+    {
+        *destination = m_character;
+    }
 
 private:
-    unsigned char m_buffer;
-};
-
-template<>
-class StringTypeAdapter<LChar> {
-public:
-    StringTypeAdapter<LChar>(LChar buffer)
-        : m_buffer(buffer)
-    {
-    }
-
-    unsigned length() { return 1; }
-
-    bool is8Bit() { return true; }
-
-    void writeTo(LChar* destination)
-    {
-        *destination = m_buffer;
-    }
-
-    void writeTo(UChar* destination) { *destination = m_buffer; }
-
-private:
-    LChar m_buffer;
+    char m_character;
 };
 
 template<>
 class StringTypeAdapter<UChar> {
 public:
-    StringTypeAdapter<UChar>(UChar buffer)
-        : m_buffer(buffer)
+    StringTypeAdapter<UChar>(UChar character)
+        : m_character(character)
     {
     }
 
-    unsigned length() { return 1; }
+    unsigned length() const { return 1; }
+    bool is8Bit() const { return m_character <= 0xff; }
 
-    bool is8Bit() { return m_buffer <= 0xff; }
-
-    void writeTo(LChar* destination)
+    void writeTo(LChar* destination) const
     {
         ASSERT(is8Bit());
-        *destination = static_cast<LChar>(m_buffer);
+        *destination = static_cast<LChar>(m_character);
     }
 
-    void writeTo(UChar* destination) { *destination = m_buffer; }
+    void writeTo(UChar* destination) const
+    {
+        *destination = m_character;
+    }
 
 private:
-    UChar m_buffer;
+    UChar m_character;
 };
 
 template<>
-class StringTypeAdapter<char*> {
+class StringTypeAdapter<const LChar*> {
 public:
-    StringTypeAdapter<char*>(char* buffer)
-        : m_buffer(buffer)
-        , m_length(strlen(buffer))
+    StringTypeAdapter(const LChar* characters)
+        : m_characters(characters)
+        , m_length(strlen(reinterpret_cast<const char*>(characters)))
     {
     }
 
-    unsigned length() { return m_length; }
+    unsigned length() const { return m_length; }
+    bool is8Bit() const { return true; }
 
-    bool is8Bit() { return true; }
-
-    void writeTo(LChar* destination)
+    void writeTo(LChar* destination) const
     {
-        for (unsigned i = 0; i < m_length; ++i)
-            destination[i] = static_cast<LChar>(m_buffer[i]);
+        StringView(m_characters, m_length).getCharactersWithUpconvert(destination);
     }
 
-    void writeTo(UChar* destination)
+    void writeTo(UChar* destination) const
     {
-        for (unsigned i = 0; i < m_length; ++i) {
-            unsigned char c = m_buffer[i];
-            destination[i] = c;
-        }
+        StringView(m_characters, m_length).getCharactersWithUpconvert(destination);
     }
 
 private:
-    const char* m_buffer;
-    unsigned m_length;
-};
-
-template<>
-class StringTypeAdapter<LChar*> {
-public:
-    StringTypeAdapter<LChar*>(LChar* buffer)
-    : m_buffer(buffer)
-    , m_length(strlen(reinterpret_cast<char*>(buffer)))
-    {
-    }
-
-    unsigned length() { return m_length; }
-
-    bool is8Bit() { return true; }
-
-    void writeTo(LChar* destination)
-    {
-        memcpy(destination, m_buffer, m_length * sizeof(LChar));
-    }
-
-    void writeTo(UChar* destination)
-    {
-        StringImpl::copyChars(destination, m_buffer, m_length);
-    }
-
-private:
-    const LChar* m_buffer;
+    const LChar* m_characters;
     unsigned m_length;
 };
 
 template<>
 class StringTypeAdapter<const UChar*> {
 public:
-    StringTypeAdapter<const UChar*>(const UChar* buffer)
-        : m_buffer(buffer)
+    StringTypeAdapter(const UChar* characters)
+        : m_characters(characters)
     {
-        size_t len = 0;
-        while (m_buffer[len] != UChar(0))
-            ++len;
+        unsigned length = 0;
+        while (m_characters[length])
+            ++length;
 
-        if (len > std::numeric_limits<unsigned>::max())
+        if (length > std::numeric_limits<unsigned>::max())
             CRASH();
 
-        m_length = len;
+        m_length = length;
     }
 
-    unsigned length() { return m_length; }
+    unsigned length() const { return m_length; }
+    bool is8Bit() const { return false; }
 
-    bool is8Bit() { return false; }
-
-    NO_RETURN_DUE_TO_CRASH void writeTo(LChar*)
+    NO_RETURN_DUE_TO_CRASH void writeTo(LChar*) const
     {
         CRASH();
     }
 
-    void writeTo(UChar* destination)
+    void writeTo(UChar* destination) const
     {
-        memcpy(destination, m_buffer, m_length * sizeof(UChar));
+        memcpy(destination, m_characters, m_length * sizeof(UChar));
     }
 
 private:
-    const UChar* m_buffer;
+    const UChar* m_characters;
     unsigned m_length;
 };
 
 template<>
-class StringTypeAdapter<const char*> {
+class StringTypeAdapter<const char*> : public StringTypeAdapter<const LChar*> {
 public:
-    StringTypeAdapter<const char*>(const char* buffer)
-        : m_buffer(buffer)
-        , m_length(strlen(buffer))
+    StringTypeAdapter(const char* characters)
+        : StringTypeAdapter<const LChar*>(reinterpret_cast<const LChar*>(characters))
     {
     }
-
-    unsigned length() { return m_length; }
-
-    bool is8Bit() { return true; }
-
-    void writeTo(LChar* destination)
-    {
-        memcpy(destination, m_buffer, static_cast<size_t>(m_length) * sizeof(LChar));
-    }
-
-    void writeTo(UChar* destination)
-    {
-        for (unsigned i = 0; i < m_length; ++i) {
-            unsigned char c = m_buffer[i];
-            destination[i] = c;
-        }
-    }
-
-private:
-    const char* m_buffer;
-    unsigned m_length;
 };
 
 template<>
-class StringTypeAdapter<const LChar*> {
+class StringTypeAdapter<char*> : public StringTypeAdapter<const char*> {
 public:
-    StringTypeAdapter<const LChar*>(const LChar* buffer)
-        : m_buffer(buffer)
-        , m_length(strlen(reinterpret_cast<const char*>(buffer)))
+    StringTypeAdapter(const char* characters)
+        : StringTypeAdapter<const char*>(characters)
     {
     }
-
-    unsigned length() { return m_length; }
-
-    bool is8Bit() { return true; }
-
-    void writeTo(LChar* destination)
-    {
-        memcpy(destination, m_buffer, static_cast<size_t>(m_length) * sizeof(LChar));
-    }
-
-    void writeTo(UChar* destination)
-    {
-        StringImpl::copyChars(destination, m_buffer, m_length);
-    }
-
-private:
-    const LChar* m_buffer;
-    unsigned m_length;
 };
 
 template<>
-class StringTypeAdapter<ASCIILiteral> {
+class StringTypeAdapter<ASCIILiteral> : public StringTypeAdapter<const char*> {
 public:
-    StringTypeAdapter<ASCIILiteral>(ASCIILiteral buffer)
-        : m_buffer(reinterpret_cast<const LChar*>(static_cast<const char*>(buffer)))
-        , m_length(strlen(buffer))
+    StringTypeAdapter(ASCIILiteral characters)
+        : StringTypeAdapter<const char*>(characters)
     {
     }
-
-    size_t length() { return m_length; }
-
-    bool is8Bit() { return true; }
-
-    void writeTo(LChar* destination)
-    {
-        memcpy(destination, m_buffer, static_cast<size_t>(m_length));
-    }
-
-    void writeTo(UChar* destination)
-    {
-        StringImpl::copyChars(destination, m_buffer, m_length);
-    }
-
-private:
-    const LChar* m_buffer;
-    unsigned m_length;
 };
 
 template<>
 class StringTypeAdapter<Vector<char>> {
 public:
-    StringTypeAdapter<Vector<char>>(const Vector<char>& buffer)
-        : m_buffer(buffer)
+    StringTypeAdapter(const Vector<char>& vector)
+        : m_vector(vector)
     {
     }
 
-    size_t length() { return m_buffer.size(); }
+    size_t length() const { return m_vector.size(); }
+    bool is8Bit() const { return true; }
 
-    bool is8Bit() { return true; }
-
-    void writeTo(LChar* destination)
+    void writeTo(LChar* destination) const
     {
-        for (size_t i = 0; i < m_buffer.size(); ++i)
-            destination[i] = static_cast<unsigned char>(m_buffer[i]);
+        StringView(reinterpret_cast<const LChar*>(m_vector.data()), m_vector.size()).getCharactersWithUpconvert(destination);
     }
 
-    void writeTo(UChar* destination)
+    void writeTo(UChar* destination) const
     {
-        for (size_t i = 0; i < m_buffer.size(); ++i)
-            destination[i] = static_cast<unsigned char>(m_buffer[i]);
+        StringView(reinterpret_cast<const LChar*>(m_vector.data()), m_vector.size()).getCharactersWithUpconvert(destination);
     }
 
 private:
-    const Vector<char>& m_buffer;
-};
-
-template<>
-class StringTypeAdapter<Vector<LChar>> {
-public:
-    StringTypeAdapter<Vector<LChar>>(const Vector<LChar>& buffer)
-        : m_buffer(buffer)
-    {
-    }
-
-    size_t length() { return m_buffer.size(); }
-
-    bool is8Bit() { return true; }
-
-    void writeTo(LChar* destination)
-    {
-        for (size_t i = 0; i < m_buffer.size(); ++i)
-            destination[i] = m_buffer[i];
-    }
-
-    void writeTo(UChar* destination)
-    {
-        for (size_t i = 0; i < m_buffer.size(); ++i)
-            destination[i] = m_buffer[i];
-    }
-
-private:
-    const Vector<LChar>& m_buffer;
+    const Vector<char>& m_vector;
 };
 
 template<>
 class StringTypeAdapter<String> {
 public:
     StringTypeAdapter<String>(const String& string)
-        : m_buffer(string)
+        : m_string(string)
     {
     }
 
-    unsigned length() { return m_buffer.length(); }
+    unsigned length() const { return m_string.length(); }
+    bool is8Bit() const { return m_string.isNull() || m_string.is8Bit(); }
 
-    bool is8Bit() { return m_buffer.isNull() || m_buffer.is8Bit(); }
-
-    void writeTo(LChar* destination)
+    void writeTo(LChar* destination) const
     {
-        unsigned length = m_buffer.length();
-
-        ASSERT(is8Bit());
-        const LChar* data = m_buffer.characters8();
-        for (unsigned i = 0; i < length; ++i)
-            destination[i] = data[i];
-
+        StringView(m_string).getCharactersWithUpconvert(destination);
         WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING();
     }
 
-    void writeTo(UChar* destination)
+    void writeTo(UChar* destination) const
     {
-        unsigned length = m_buffer.length();
-
-        if (is8Bit()) {
-            const LChar* data = m_buffer.characters8();
-            for (unsigned i = 0; i < length; ++i)
-                destination[i] = data[i];
-        } else {
-            const UChar* data = m_buffer.characters16();
-            for (unsigned i = 0; i < length; ++i)
-                destination[i] = data[i];
-        }
-
+        StringView(m_string).getCharactersWithUpconvert(destination);
         WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING();
     }
 
 private:
-    const String& m_buffer;
+    const String& m_string;
 };
 
 template<>
-class StringTypeAdapter<AtomicString> {
+class StringTypeAdapter<AtomicString> : public StringTypeAdapter<String> {
 public:
-    StringTypeAdapter<AtomicString>(const AtomicString& string)
-        : m_adapter(string.string())
+    StringTypeAdapter(const AtomicString& string)
+        : StringTypeAdapter<String>(string.string())
     {
     }
-
-    unsigned length() { return m_adapter.length(); }
-
-    bool is8Bit() { return m_adapter.is8Bit(); }
-
-    void writeTo(LChar* destination) { m_adapter.writeTo(destination); }
-    void writeTo(UChar* destination) { m_adapter.writeTo(destination); }
-
-private:
-    StringTypeAdapter<String> m_adapter;
 };
 
 inline void sumWithOverflow(unsigned& total, unsigned addend, bool& overflow)
@@ -425,7 +256,7 @@ inline void sumWithOverflow(unsigned& total, unsigned addend, bool& overflow)
 }
 
 template<typename StringType1, typename StringType2>
-PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2)
+RefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2)
 {
     StringTypeAdapter<StringType1> adapter1(string1);
     StringTypeAdapter<StringType2> adapter2(string2);
@@ -434,37 +265,37 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2)
     unsigned length = adapter1.length();
     sumWithOverflow(length, adapter2.length(), overflow);
     if (overflow)
-        return 0;
+        return nullptr;
 
     if (adapter1.is8Bit() && adapter2.is8Bit()) {
         LChar* buffer;
         RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
         if (!resultImpl)
-            return 0;
+            return nullptr;
 
         LChar* result = buffer;
         adapter1.writeTo(result);
         result += adapter1.length();
         adapter2.writeTo(result);
 
-        return resultImpl.release();
+        return WTF::move(resultImpl);
     }
 
     UChar* buffer;
     RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
     if (!resultImpl)
-        return 0;
+        return nullptr;
 
     UChar* result = buffer;
     adapter1.writeTo(result);
     result += adapter1.length();
     adapter2.writeTo(result);
 
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3>
-PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3)
+RefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3)
 {
     StringTypeAdapter<StringType1> adapter1(string1);
     StringTypeAdapter<StringType2> adapter2(string2);
@@ -475,13 +306,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     sumWithOverflow(length, adapter2.length(), overflow);
     sumWithOverflow(length, adapter3.length(), overflow);
     if (overflow)
-        return 0;
+        return nullptr;
 
     if (adapter1.is8Bit() && adapter2.is8Bit() && adapter3.is8Bit()) {
         LChar* buffer;
         RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
         if (!resultImpl)
-            return 0;
+            return nullptr;
 
         LChar* result = buffer;
         adapter1.writeTo(result);
@@ -490,13 +321,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
         result += adapter2.length();
         adapter3.writeTo(result);
 
-        return resultImpl.release();
+        return WTF::move(resultImpl);
     }
 
     UChar* buffer = 0;
     RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
     if (!resultImpl)
-        return 0;
+        return nullptr;
 
     UChar* result = buffer;
     adapter1.writeTo(result);
@@ -505,11 +336,11 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     result += adapter2.length();
     adapter3.writeTo(result);
 
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4>
-PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4)
+RefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4)
 {
     StringTypeAdapter<StringType1> adapter1(string1);
     StringTypeAdapter<StringType2> adapter2(string2);
@@ -522,13 +353,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     sumWithOverflow(length, adapter3.length(), overflow);
     sumWithOverflow(length, adapter4.length(), overflow);
     if (overflow)
-        return 0;
+        return nullptr;
 
     if (adapter1.is8Bit() && adapter2.is8Bit() && adapter3.is8Bit() && adapter4.is8Bit()) {
         LChar* buffer;
         RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
         if (!resultImpl)
-            return 0;
+            return nullptr;
 
         LChar* result = buffer;
         adapter1.writeTo(result);
@@ -539,13 +370,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
         result += adapter3.length();
         adapter4.writeTo(result);
 
-        return resultImpl.release();
+        return WTF::move(resultImpl);
     }
 
     UChar* buffer;
     RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
     if (!resultImpl)
-        return 0;
+        return nullptr;
 
     UChar* result = buffer;
     adapter1.writeTo(result);
@@ -556,11 +387,11 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     result += adapter3.length();
     adapter4.writeTo(result);
 
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5>
-PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5)
+RefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5)
 {
     StringTypeAdapter<StringType1> adapter1(string1);
     StringTypeAdapter<StringType2> adapter2(string2);
@@ -575,13 +406,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     sumWithOverflow(length, adapter4.length(), overflow);
     sumWithOverflow(length, adapter5.length(), overflow);
     if (overflow)
-        return 0;
+        return nullptr;
 
     if (adapter1.is8Bit() && adapter2.is8Bit() && adapter3.is8Bit() && adapter4.is8Bit() && adapter5.is8Bit()) {
         LChar* buffer;
         RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
         if (!resultImpl)
-            return 0;
+            return nullptr;
 
         LChar* result = buffer;
         adapter1.writeTo(result);
@@ -594,13 +425,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
         result += adapter4.length();
         adapter5.writeTo(result);
 
-        return resultImpl.release();
+        return WTF::move(resultImpl);
     }
 
     UChar* buffer;
     RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
     if (!resultImpl)
-        return 0;
+        return nullptr;
 
     UChar* result = buffer;
     adapter1.writeTo(result);
@@ -613,11 +444,11 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     result += adapter4.length();
     adapter5.writeTo(result);
 
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5, typename StringType6>
-PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5, StringType6 string6)
+RefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5, StringType6 string6)
 {
     StringTypeAdapter<StringType1> adapter1(string1);
     StringTypeAdapter<StringType2> adapter2(string2);
@@ -634,13 +465,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     sumWithOverflow(length, adapter5.length(), overflow);
     sumWithOverflow(length, adapter6.length(), overflow);
     if (overflow)
-        return 0;
+        return nullptr;
 
     if (adapter1.is8Bit() && adapter2.is8Bit() && adapter3.is8Bit() && adapter4.is8Bit() && adapter5.is8Bit() && adapter6.is8Bit()) {
         LChar* buffer;
         RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
         if (!resultImpl)
-            return 0;
+            return nullptr;
 
         LChar* result = buffer;
         adapter1.writeTo(result);
@@ -655,13 +486,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
         result += adapter5.length();
         adapter6.writeTo(result);
 
-        return resultImpl.release();
+        return WTF::move(resultImpl);
     }
 
     UChar* buffer;
     RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
     if (!resultImpl)
-        return 0;
+        return nullptr;
 
     UChar* result = buffer;
     adapter1.writeTo(result);
@@ -676,11 +507,11 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     result += adapter5.length();
     adapter6.writeTo(result);
 
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5, typename StringType6, typename StringType7>
-PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5, StringType6 string6, StringType7 string7)
+RefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5, StringType6 string6, StringType7 string7)
 {
     StringTypeAdapter<StringType1> adapter1(string1);
     StringTypeAdapter<StringType2> adapter2(string2);
@@ -699,13 +530,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     sumWithOverflow(length, adapter6.length(), overflow);
     sumWithOverflow(length, adapter7.length(), overflow);
     if (overflow)
-        return 0;
+        return nullptr;
 
     if (adapter1.is8Bit() && adapter2.is8Bit() && adapter3.is8Bit() && adapter4.is8Bit() && adapter5.is8Bit() && adapter6.is8Bit() && adapter7.is8Bit()) {
         LChar* buffer;
         RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
         if (!resultImpl)
-            return 0;
+            return nullptr;
 
         LChar* result = buffer;
         adapter1.writeTo(result);
@@ -722,13 +553,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
         result += adapter6.length();
         adapter7.writeTo(result);
 
-        return resultImpl.release();
+        return WTF::move(resultImpl);
     }
 
     UChar* buffer;
     RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
     if (!resultImpl)
-        return 0;
+        return nullptr;
 
     UChar* result = buffer;
     adapter1.writeTo(result);
@@ -745,11 +576,11 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     result += adapter6.length();
     adapter7.writeTo(result);
 
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5, typename StringType6, typename StringType7, typename StringType8>
-PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5, StringType6 string6, StringType7 string7, StringType8 string8)
+RefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5, StringType6 string6, StringType7 string7, StringType8 string8)
 {
     StringTypeAdapter<StringType1> adapter1(string1);
     StringTypeAdapter<StringType2> adapter2(string2);
@@ -770,13 +601,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     sumWithOverflow(length, adapter7.length(), overflow);
     sumWithOverflow(length, adapter8.length(), overflow);
     if (overflow)
-        return 0;
+        return nullptr;
 
     if (adapter1.is8Bit() && adapter2.is8Bit() && adapter3.is8Bit() && adapter4.is8Bit() && adapter5.is8Bit() && adapter6.is8Bit() && adapter7.is8Bit() && adapter8.is8Bit()) {
         LChar* buffer;
         RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
         if (!resultImpl)
-            return 0;
+            return nullptr;
 
         LChar* result = buffer;
         adapter1.writeTo(result);
@@ -795,13 +626,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
         result += adapter7.length();
         adapter8.writeTo(result);
 
-        return resultImpl.release();
+        return WTF::move(resultImpl);
     }
 
     UChar* buffer;
     RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
     if (!resultImpl)
-        return 0;
+        return nullptr;
 
     UChar* result = buffer;
     adapter1.writeTo(result);
@@ -820,11 +651,11 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     result += adapter7.length();
     adapter8.writeTo(result);
 
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5, typename StringType6, typename StringType7, typename StringType8, typename StringType9>
-PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5, StringType6 string6, StringType7 string7, StringType8 string8, StringType9 string9)
+RefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5, StringType6 string6, StringType7 string7, StringType8 string8, StringType9 string9)
 {
     StringTypeAdapter<StringType1> adapter1(string1);
     StringTypeAdapter<StringType2> adapter2(string2);
@@ -847,13 +678,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     sumWithOverflow(length, adapter8.length(), overflow);
     sumWithOverflow(length, adapter9.length(), overflow);
     if (overflow)
-        return 0;
+        return nullptr;
 
     if (adapter1.is8Bit() && adapter2.is8Bit() && adapter3.is8Bit() && adapter4.is8Bit() && adapter5.is8Bit() && adapter6.is8Bit() && adapter7.is8Bit() && adapter8.is8Bit() && adapter9.is8Bit()) {
         LChar* buffer;
         RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
         if (!resultImpl)
-            return 0;
+            return nullptr;
 
         LChar* result = buffer;
         adapter1.writeTo(result);
@@ -874,13 +705,13 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
         result += adapter8.length();
         adapter9.writeTo(result);
 
-        return resultImpl.release();
+        return WTF::move(resultImpl);
     }
 
     UChar* buffer;
     RefPtr<StringImpl> resultImpl = StringImpl::tryCreateUninitialized(length, buffer);
     if (!resultImpl)
-        return 0;
+        return nullptr;
 
     UChar* result = buffer;
     adapter1.writeTo(result);
@@ -901,7 +732,7 @@ PassRefPtr<StringImpl> tryMakeString(StringType1 string1, StringType2 string2, S
     result += adapter8.length();
     adapter9.writeTo(result);
 
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 
@@ -918,7 +749,7 @@ String makeString(StringType1 string1, StringType2 string2)
     RefPtr<StringImpl> resultImpl = tryMakeString(string1, string2);
     if (!resultImpl)
         CRASH();
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3>
@@ -927,7 +758,7 @@ String makeString(StringType1 string1, StringType2 string2, StringType3 string3)
     RefPtr<StringImpl> resultImpl = tryMakeString(string1, string2, string3);
     if (!resultImpl)
         CRASH();
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4>
@@ -936,7 +767,7 @@ String makeString(StringType1 string1, StringType2 string2, StringType3 string3,
     RefPtr<StringImpl> resultImpl = tryMakeString(string1, string2, string3, string4);
     if (!resultImpl)
         CRASH();
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5>
@@ -945,7 +776,7 @@ String makeString(StringType1 string1, StringType2 string2, StringType3 string3,
     RefPtr<StringImpl> resultImpl = tryMakeString(string1, string2, string3, string4, string5);
     if (!resultImpl)
         CRASH();
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5, typename StringType6>
@@ -954,7 +785,7 @@ String makeString(StringType1 string1, StringType2 string2, StringType3 string3,
     RefPtr<StringImpl> resultImpl = tryMakeString(string1, string2, string3, string4, string5, string6);
     if (!resultImpl)
         CRASH();
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5, typename StringType6, typename StringType7>
@@ -963,7 +794,7 @@ String makeString(StringType1 string1, StringType2 string2, StringType3 string3,
     RefPtr<StringImpl> resultImpl = tryMakeString(string1, string2, string3, string4, string5, string6, string7);
     if (!resultImpl)
         CRASH();
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5, typename StringType6, typename StringType7, typename StringType8>
@@ -972,7 +803,7 @@ String makeString(StringType1 string1, StringType2 string2, StringType3 string3,
     RefPtr<StringImpl> resultImpl = tryMakeString(string1, string2, string3, string4, string5, string6, string7, string8);
     if (!resultImpl)
         CRASH();
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5, typename StringType6, typename StringType7, typename StringType8, typename StringType9>
@@ -981,7 +812,7 @@ String makeString(StringType1 string1, StringType2 string2, StringType3 string3,
     RefPtr<StringImpl> resultImpl = tryMakeString(string1, string2, string3, string4, string5, string6, string7, string8, string9);
     if (!resultImpl)
         CRASH();
-    return resultImpl.release();
+    return WTF::move(resultImpl);
 }
 
 } // namespace WTF

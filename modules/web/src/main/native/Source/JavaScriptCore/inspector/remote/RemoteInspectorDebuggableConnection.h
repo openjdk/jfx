@@ -30,7 +30,6 @@
 
 #import "InspectorFrontendChannel.h"
 #import "RemoteInspectorDebuggable.h"
-#import <dispatch/dispatch.h>
 #import <mutex>
 #import <wtf/RetainPtr.h>
 #import <wtf/ThreadSafeRefCounted.h>
@@ -39,7 +38,43 @@ OBJC_CLASS NSString;
 
 namespace Inspector {
 
-class RemoteInspectorDebuggableConnection final : public ThreadSafeRefCounted<RemoteInspectorDebuggableConnection>, public InspectorFrontendChannel {
+class RemoteInspectorBlock {
+public:
+    RemoteInspectorBlock(void (^task)())
+        : m_task(Block_copy(task))
+    {
+    }
+
+    RemoteInspectorBlock(const RemoteInspectorBlock& other)
+        : m_task(Block_copy(other.m_task))
+    {
+    }
+
+    ~RemoteInspectorBlock()
+    {
+        Block_release(m_task);
+    }
+
+    RemoteInspectorBlock& operator=(const RemoteInspectorBlock& other)
+    {
+        void (^oldTask)() = m_task;
+        m_task = Block_copy(other.m_task);
+        Block_release(oldTask);
+        return *this;
+    }
+
+    void operator()() const
+    {
+        m_task();
+    }
+
+private:
+    void (^m_task)();
+};
+
+typedef Vector<RemoteInspectorBlock> RemoteInspectorQueue;
+
+class RemoteInspectorDebuggableConnection final : public ThreadSafeRefCounted<RemoteInspectorDebuggableConnection>, public FrontendChannel {
 public:
     RemoteInspectorDebuggableConnection(RemoteInspectorDebuggable*, NSString *connectionIdentifier, NSString *destination, RemoteInspectorDebuggable::DebuggableType);
     virtual ~RemoteInspectorDebuggableConnection();
@@ -48,7 +83,7 @@ public:
     NSString *connectionIdentifier() const;
     unsigned identifier() const { return m_identifier; }
 
-    bool setup();
+    bool setup(bool isAutomaticInspection, bool automaticallyPause);
 
     void close();
     void closeFromDebuggable();
@@ -56,17 +91,30 @@ public:
     void sendMessageToBackend(NSString *);
     virtual bool sendMessageToFrontend(const String&) override;
 
+    std::mutex& queueMutex() { return m_queueMutex; }
+    RemoteInspectorQueue queue() const { return m_queue; }
+    void clearQueue() { m_queue.clear(); }
+
 private:
-    void dispatchSyncOnDebuggable(void (^block)());
     void dispatchAsyncOnDebuggable(void (^block)());
+
+    void setupRunLoop();
+    void teardownRunLoop();
+    void queueTaskOnPrivateRunLoop(void (^block)());
 
     // This connection from the RemoteInspector singleton to the Debuggable
     // can be used on multiple threads. So any access to the debuggable
     // itself must take this mutex to ensure m_debuggable is valid.
     std::mutex m_debuggableMutex;
 
+    // If a debuggable has a specific run loop it wants to evaluate on
+    // we setup our run loop sources on that specific run loop.
+    RetainPtr<CFRunLoopRef> m_runLoop;
+    RetainPtr<CFRunLoopSourceRef> m_runLoopSource;
+    RemoteInspectorQueue m_queue;
+    std::mutex m_queueMutex;
+
     RemoteInspectorDebuggable* m_debuggable;
-    dispatch_queue_t m_queueForDebuggable;
     RetainPtr<NSString> m_connectionIdentifier;
     RetainPtr<NSString> m_destination;
     unsigned m_identifier;

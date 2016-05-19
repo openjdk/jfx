@@ -24,7 +24,6 @@
 #ifndef RenderSVGResourceFilter_h
 #define RenderSVGResourceFilter_h
 
-#if ENABLE(FILTERS)
 #include "ImageBuffer.h"
 #include "RenderSVGResourceContainer.h"
 #include "SVGFilter.h"
@@ -63,10 +62,10 @@ class GraphicsContext;
 
 class RenderSVGResourceFilter final : public RenderSVGResourceContainer {
 public:
-    RenderSVGResourceFilter(SVGFilterElement&, PassRef<RenderStyle>);
+    RenderSVGResourceFilter(SVGFilterElement&, Ref<RenderStyle>&&);
     virtual ~RenderSVGResourceFilter();
 
-    SVGFilterElement& filterElement() const { return toSVGFilterElement(RenderSVGResourceContainer::element()); }
+    SVGFilterElement& filterElement() const { return downcast<SVGFilterElement>(RenderSVGResourceContainer::element()); }
 
     virtual void removeAllClientsFromCache(bool markForInvalidation = true) override;
     virtual void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
@@ -76,15 +75,14 @@ public:
 
     virtual FloatRect resourceBoundingBox(const RenderObject&) override;
 
-    std::unique_ptr<SVGFilterBuilder> buildPrimitives(SVGFilter*) const;
+    std::unique_ptr<SVGFilterBuilder> buildPrimitives(SVGFilter&) const;
 
     SVGUnitTypes::SVGUnitType filterUnits() const { return filterElement().filterUnits(); }
     SVGUnitTypes::SVGUnitType primitiveUnits() const { return filterElement().primitiveUnits(); }
 
     void primitiveAttributeChanged(RenderObject*, const QualifiedName&);
 
-    virtual RenderSVGResourceType resourceType() const { return s_resourceType; }
-    static RenderSVGResourceType s_resourceType;
+    virtual RenderSVGResourceType resourceType() const override { return FilterResourceType; }
 
     FloatRect drawingRegion(RenderObject*) const;
 private:
@@ -93,14 +91,14 @@ private:
     virtual const char* renderName() const override { return "RenderSVGResourceFilter"; }
     virtual bool isSVGResourceFilter() const override { return true; }
 
-    bool fitsInMaximumImageSize(const FloatSize&, FloatSize&);
-
     HashMap<RenderObject*, std::unique_ptr<FilterData>> m_filter;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSVGResourceFilter, isSVGResourceFilter())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RenderSVGResourceFilter)
+    static bool isType(const WebCore::RenderObject& renderer) { return renderer.isSVGResourceFilter(); }
+    static bool isType(const WebCore::RenderSVGResource& resource) { return resource.resourceType() == WebCore::FilterResourceType; }
+SPECIALIZE_TYPE_TRAITS_END()
 
-#endif
-#endif
+#endif // RenderSVGResourceFilter_h

@@ -30,11 +30,10 @@
 
 #include "config.h"
 
-#if ENABLE(BLOB)
-
 #include "JSFileReader.h"
 
 #include "FileReader.h"
+#include "JSDOMBinding.h"
 #include <runtime/ArrayBuffer.h>
 #include <runtime/JSArrayBuffer.h>
 
@@ -51,5 +50,3 @@ JSValue JSFileReader::result(ExecState* exec) const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(BLOB)

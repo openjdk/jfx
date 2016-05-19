@@ -37,8 +37,8 @@ class HTMLTableSectionElement;
 
 class HTMLTableElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLTableElement> create(Document&);
-    static PassRefPtr<HTMLTableElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLTableElement> create(Document&);
+    static Ref<HTMLTableElement> create(const QualifiedName&, Document&);
 
     HTMLTableCaptionElement* caption() const;
     void setCaption(PassRefPtr<HTMLTableCaptionElement>, ExceptionCode&);
@@ -49,21 +49,22 @@ public:
     HTMLTableSectionElement* tFoot() const;
     void setTFoot(PassRefPtr<HTMLTableSectionElement>, ExceptionCode&);
 
-    PassRefPtr<HTMLElement> createTHead();
+    RefPtr<HTMLElement> createTHead();
     void deleteTHead();
-    PassRefPtr<HTMLElement> createTFoot();
+    RefPtr<HTMLElement> createTFoot();
     void deleteTFoot();
-    PassRefPtr<HTMLElement> createTBody();
-    PassRefPtr<HTMLElement> createCaption();
+    RefPtr<HTMLElement> createTBody();
+    RefPtr<HTMLElement> createCaption();
     void deleteCaption();
-    PassRefPtr<HTMLElement> insertRow(int index, ExceptionCode&);
+    RefPtr<HTMLElement> insertRow(ExceptionCode& ec) { return insertRow(-1, ec); }
+    RefPtr<HTMLElement> insertRow(int index, ExceptionCode&);
     void deleteRow(int index, ExceptionCode&);
 
-    PassRefPtr<HTMLCollection> rows();
-    PassRefPtr<HTMLCollection> tBodies();
+    Ref<HTMLCollection> rows();
+    Ref<HTMLCollection> tBodies();
 
-    String rules() const;
-    String summary() const;
+    const AtomicString& rules() const;
+    const AtomicString& summary() const;
 
     const StyleProperties* additionalCellStyle();
     const StyleProperties* additionalGroupStyle(bool rows);
@@ -86,7 +87,7 @@ private:
 
     CellBorders cellBorders() const;
 
-    PassRefPtr<StyleProperties> createSharedCellStyle();
+    RefPtr<StyleProperties> createSharedCellStyle();
 
     HTMLTableSectionElement* lastBody() const;
 
@@ -99,8 +100,6 @@ private:
     unsigned short m_padding;
     RefPtr<StyleProperties> m_sharedCellStyle;
 };
-
-NODE_TYPE_CASTS(HTMLTableElement)
 
 } //namespace
 

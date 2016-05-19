@@ -38,27 +38,26 @@ namespace WebCore {
 
 class RenderFlexibleBox : public RenderBlock {
 public:
-    RenderFlexibleBox(Element&, PassRef<RenderStyle>);
-    RenderFlexibleBox(Document&, PassRef<RenderStyle>);
+    RenderFlexibleBox(Element&, Ref<RenderStyle>&&);
+    RenderFlexibleBox(Document&, Ref<RenderStyle>&&);
     virtual ~RenderFlexibleBox();
 
     virtual const char* renderName() const override;
 
-    virtual bool isFlexibleBox() const override final { return true; }
     virtual bool avoidsFloats() const override final { return true; }
     virtual bool canCollapseAnonymousBlockChild() const override final { return false; }
     virtual void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0) override final;
 
     virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
-    virtual int firstLineBaseline() const override;
-    virtual int inlineBlockBaseline(LineDirectionMode) const override;
+    virtual Optional<int> firstLineBaseline() const override;
+    virtual Optional<int> inlineBlockBaseline(LineDirectionMode) const override;
 
     virtual void paintChildren(PaintInfo& forSelf, const LayoutPoint&, PaintInfo& forChild, bool usePrintRect) override;
 
     bool isHorizontalFlow() const;
 
-    bool isTopLayoutOverflowAllowed() const override;
-    bool isLeftLayoutOverflowAllowed() const override;
+    virtual bool isTopLayoutOverflowAllowed() const override;
+    virtual bool isLeftLayoutOverflowAllowed() const override;
 
 protected:
     virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
@@ -86,6 +85,7 @@ private:
     // Use an inline capacity of 8, since flexbox containers usually have less than 8 children.
     typedef Vector<LayoutRect, 8> ChildFrameRects;
 
+    virtual bool isFlexibleBox() const override final { return true; }
     bool hasOrthogonalFlow(RenderBox& child) const;
     bool isColumnFlow() const;
     bool isLeftToRightFlow() const;
@@ -118,7 +118,7 @@ private:
     // FIXME: Supporting layout deltas.
     void setFlowAwareLocationForChild(RenderBox& child, const LayoutPoint&);
     void adjustAlignmentForChild(RenderBox& child, LayoutUnit);
-    EAlignItems alignmentForChild(RenderBox& child) const;
+    ItemPosition alignmentForChild(RenderBox& child) const;
     LayoutUnit mainAxisBorderAndPaddingExtentForChild(RenderBox& child) const;
     LayoutUnit mainAxisScrollbarExtentForChild(RenderBox& child) const;
     LayoutUnit preferredMainAxisContentExtentForChild(RenderBox& child, bool hasInfiniteLineLength);
@@ -137,7 +137,7 @@ private:
     LayoutUnit marginBoxAscentForChild(RenderBox&);
 
     LayoutUnit computeChildMarginValue(const Length& margin);
-    void computeMainAxisPreferredSizes(OrderIterator::OrderValues&);
+    void prepareOrderIteratorAndMargins();
     LayoutUnit adjustChildSizeForMinAndMax(RenderBox&, LayoutUnit childSize);
     bool computeNextFlexLine(OrderedFlexItemList& orderedChildren, LayoutUnit& preferredMainAxisExtent, double& totalFlexGrow, double& totalWeightedFlexShrink, LayoutUnit& minMaxAppliedMainAxisExtent, bool& hasInfiniteLineLength);
 
@@ -161,8 +161,8 @@ private:
     int m_numberOfInFlowChildrenOnFirstLine;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderFlexibleBox, isFlexibleBox())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFlexibleBox, isFlexibleBox())
 
 #endif // RenderFlexibleBox_h

@@ -26,34 +26,40 @@
 #define IdentityTransformOperation_h
 
 #include "TransformOperation.h"
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
-class IdentityTransformOperation : public TransformOperation {
+class IdentityTransformOperation final : public TransformOperation {
 public:
-    static PassRefPtr<IdentityTransformOperation> create()
+    static Ref<IdentityTransformOperation> create()
     {
-        return adoptRef(new IdentityTransformOperation());
+        return adoptRef(*new IdentityTransformOperation());
+    }
+
+    virtual Ref<TransformOperation> clone() const override
+    {
+        return create();
     }
 
 private:
-    virtual bool isIdentity() const { return true; }
-    virtual OperationType type() const { return IDENTITY; }
-    virtual bool isSameType(const TransformOperation& o) const { return o.type() == IDENTITY; }
+    virtual bool isIdentity() const override { return true; }
+    virtual OperationType type() const override { return IDENTITY; }
+    virtual bool isSameType(const TransformOperation& o) const override { return o.type() == IDENTITY; }
 
-    virtual bool operator==(const TransformOperation& o) const
+    virtual bool operator==(const TransformOperation& o) const override
     {
         return isSameType(o);
     }
 
-    virtual bool apply(TransformationMatrix&, const FloatSize&) const
+    virtual bool apply(TransformationMatrix&, const FloatSize&) const override
     {
         return false;
     }
 
-    virtual PassRefPtr<TransformOperation> blend(const TransformOperation*, double, bool = false)
+    virtual Ref<TransformOperation> blend(const TransformOperation*, double, bool = false) override
     {
-        return this;
+        return *this;
     }
 
     IdentityTransformOperation()
@@ -63,5 +69,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::IdentityTransformOperation, type() == WebCore::TransformOperation::IDENTITY)
 
 #endif // IdentityTransformOperation_h

@@ -27,7 +27,6 @@
 //  no problem in gcc
 //  GPF with ms cc (_fastcall in caller, but _stdcall/_thiscall in fact)
 #include "PolicyChecker.h"
-#include "ResourceBuffer.h"
 #include "ProgressTracker.h"
 #include "ScriptController.h"
 #include "Settings.h"
@@ -246,7 +245,7 @@ void FrameLoaderClientJava::postLoadEvent(Frame* f, int state,
         DocumentLoader* dl = f->loader().activeDocumentLoader();
         unsigned size = 0;
         if (dl && dl->mainResourceData()) {
-            size = dl->mainResourceData()->sharedBuffer()->size();
+            size = dl->mainResourceData()->size(); //XXX recheck
         }
     }
 
@@ -300,10 +299,9 @@ void FrameLoaderClientJava::transitionToCommittedForNewPage()
     frame()->createView(IntRect(pageRect).size(), bkColor, isTransparent);
 }
 
-WTF::PassRefPtr<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(const WebCore::ResourceRequest& request, const SubstituteData& substituteData)
+WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(const WebCore::ResourceRequest& request, const SubstituteData& substituteData)
 {
-    RefPtr<DocumentLoader> loader = DocumentLoader::create(request, substituteData);
-    return loader.release();
+    return DocumentLoader::create(request, substituteData);
 }
 
 void FrameLoaderClientJava::dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction policyFunction)
@@ -366,7 +364,7 @@ void FrameLoaderClientJava::progressFinished(Frame& originatingProgressFrame)
     if (statusCode == 204 || statusCode == 205) {
         // The server does not want us to replace the page contents.
         action = PolicyIgnore;
-    } else if (WebCore::contentDispositionType(response.httpHeaderField("Content-Disposition")) == WebCore::ContentDispositionAttachment) {
+    } else if (WebCore::contentDispositionType(response.httpHeaderField(HTTPHeaderName::ContentDisposition)) == WebCore::ContentDispositionAttachment) {
         // The server wants us to download instead of replacing the page contents.
         // Downloading is handled by the embedder, but we still get the initial
         // response so that we can ignore it and clean up properly.
@@ -391,7 +389,7 @@ void FrameLoaderClientJava::dispatchDidReceiveResponse(DocumentLoader* l, unsign
         double progress = page()->progress().estimatedProgress();
         postLoadEvent(frame(),
                       com_sun_webkit_LoadListenerClient_CONTENTTYPE_RECEIVED,
-                      response.url().deprecatedString(),
+                      response.url().string(),
                       response.mimeType(),
                       progress);
     }
@@ -439,14 +437,14 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
     JLString urlJavaString(req.url().string().toJavaString(env));
 
     // 1. Submitting/resubmitting data.
-    if (action.type() == NavigationTypeFormSubmitted ||
-        action.type() == NavigationTypeFormResubmitted)
+    if (action.type() == NavigationType::FormSubmitted ||
+        action.type() == NavigationType::FormResubmitted)
     {
         JLString httpMethodString(req.httpMethod().toJavaString(env));
         permit = env->CallBooleanMethod(m_webPage, permitSubmitDataActionMID,
                                         ptr_to_jlong(frame()), (jstring)urlJavaString,
                                         (jstring)httpMethodString,
-                                        bool_to_jbool(action.type() == NavigationTypeFormSubmitted));
+                                        bool_to_jbool(action.type() == NavigationType::FormSubmitted));
         CheckAndClearException(env);
     // 2. Redirecting page.
     } else if (m_isPageRedirected) {
@@ -464,7 +462,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
     policyFunction(permit ? PolicyUse : PolicyIgnore);
 }
 
-PassRefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, HTMLPlugInElement* element, const URL& url,
+RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, HTMLPlugInElement* element, const URL& url,
                                             const Vector<String>& paramNames, const Vector<String>& paramValues,
                                             const String& mimeType, bool loadManually)
 {
@@ -472,13 +470,13 @@ PassRefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, H
         m_webPage,
         element,
         intSize,
-        url.deprecatedString(),
+        url.string(),
         mimeType,
         paramNames,
-        paramValues));
+        paramValues)); //XXX adoptRef to ?
 }
 
-PassRefPtr<Frame> FrameLoaderClientJava::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
+RefPtr<Frame> FrameLoaderClientJava::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
                                         const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
@@ -510,7 +508,7 @@ PassRefPtr<Frame> FrameLoaderClientJava::createFrame(const URL& url, const Strin
     env->CallVoidMethod(m_webPage, frameCreatedMID, ptr_to_jlong(childFrame.get()));
     CheckAndClearException(env);
 
-    return childFrame.release();
+    return childFrame;
 }
 
 void FrameLoaderClientJava::redirectDataToPlugin(Widget* pluginWidget)
@@ -586,6 +584,18 @@ void FrameLoaderClientJava::assignIdentifierToInitialRequest(unsigned long ident
     notImplemented();
 }
 
+void FrameLoaderClientJava::willReplaceMultipartContent() {
+    notImplemented(); //XXX: recheck
+}
+
+void FrameLoaderClientJava::didReplaceMultipartContent() {
+    notImplemented(); //XXX: recheck
+}
+
+void FrameLoaderClientJava::updateCachedDocumentLoader(DocumentLoader&) {
+    notImplemented(); //XXX: recheck
+}
+
 void FrameLoaderClientJava::dispatchDidStartProvisionalLoad()
 {
     mainResourceRequestID = -1;
@@ -608,14 +618,14 @@ void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, unsigned 
         mainResourceRequestID = identifier;
         postLoadEvent(f,
                       com_sun_webkit_LoadListenerClient_PAGE_STARTED,
-                      req.url().deprecatedString(),
+                      req.url().string(),
                       res.mimeType(),
                       progress);
     } else if (mainResourceRequestID == identifier) { // serever-side redirection
         m_isPageRedirected = true;
         postLoadEvent(f,
                       com_sun_webkit_LoadListenerClient_PAGE_REDIRECTED,
-                      req.url().deprecatedString(),
+                      req.url().string(),
                       res.mimeType(),
                       progress);
     } else {
@@ -630,7 +640,7 @@ void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, unsigned 
 */
             req.setURL(URL());
         } else {
-            setRequestURL(f, identifier, req.url().deprecatedString());
+            setRequestURL(f, identifier, req.url().string());
             postResourceLoadEvent(f,
                                   com_sun_webkit_LoadListenerClient_RESOURCE_STARTED,
                                   identifier,
@@ -671,7 +681,7 @@ void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& 
         ? com_sun_webkit_LoadListenerClient_LOAD_STOPPED
         : com_sun_webkit_LoadListenerClient_LOAD_FAILED;
     postLoadEvent(frame(), state,
-                  dl->url().deprecatedString(),
+                  dl->url().string(),
                   dl->responseMIMEType(),
                   progress,
                   error.errorCode());
@@ -755,7 +765,7 @@ void FrameLoaderClientJava::dispatchDidLoadMainResource(DocumentLoader* l)
                   progress);
     postLoadEvent(frame(),
                   com_sun_webkit_LoadListenerClient_CONTENT_RECEIVED,
-                  l->responseURL().deprecatedString(),
+                  l->responseURL().string(),
                   l->responseMIMEType(),
                   progress);
 }
@@ -810,7 +820,10 @@ Frame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& action)
     struct WindowFeatures features;
     Page* newPage = frame()->page()->chrome().createWindow(
         frame(),
-        FrameLoadRequest( frame()->document()->securityOrigin() ),
+        FrameLoadRequest( frame()->document()->securityOrigin(), LockHistory::No,
+                            LockBackForwardList::No, ShouldSendReferrer::MaybeSendReferrer,
+                            AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, //XXX check params
+                            ShouldOpenExternalURLsPolicy::ShouldNotAllow),
         features,
         action);
 

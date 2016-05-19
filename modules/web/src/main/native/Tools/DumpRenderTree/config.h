@@ -20,16 +20,11 @@
 
 #define Config_H
 
-#if defined(HAVE_CONFIG_H) && HAVE_CONFIG_H
-#if defined(BUILDING_WITH_CMAKE)
+#if defined(HAVE_CONFIG_H) && HAVE_CONFIG_H && defined(BUILDING_WITH_CMAKE)
 #include "cmakeconfig.h"
-#else
-#include "autotoolsconfig.h"
-#endif
 #endif
 
-#include <wtf/Platform.h>
-#include <wtf/ExportMacros.h>
+#include <WebCore/PlatformExportMacros.h>
 #include <runtime/JSExportMacros.h>
 
 #ifdef __cplusplus
@@ -39,24 +34,24 @@
 #endif
 
 #if PLATFORM(COCOA)
-#define WTF_USE_CF 1
+#define USE_CF 1
 #endif
 
 #if PLATFORM(WIN)
-#define WTF_USE_CF 1
+#define USE_CF 1
 #if PLATFORM(WIN_CAIRO)
-#define WTF_USE_CAIRO 1
-#define WTF_USE_CURL 1
+#define USE_CAIRO 1
+#define USE_CURL 1
 #else
-#define WTF_USE_CG 1
-#define WTF_USE_CFNETWORK 1
+#define USE_CG 1
+#define USE_CFNETWORK 1
 #endif
 
 #undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0502
+#define _WIN32_WINNT 0x601
 
 #undef WINVER
-#define WINVER 0x0502
+#define WINVER 0x0601
 
 #undef _WINSOCKAPI_
 #define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h

@@ -22,7 +22,6 @@
 #ifndef FEOffset_h
 #define FEOffset_h
 
-#if ENABLE(FILTERS)
 #include "FilterEffect.h"
 #include "Filter.h"
 
@@ -30,7 +29,7 @@ namespace WebCore {
 
 class FEOffset : public FilterEffect {
 public:
-    static PassRefPtr<FEOffset> create(Filter*, float dx, float dy);
+    static Ref<FEOffset> create(Filter&, float dx, float dy);
 
     float dx() const;
     void setDx(float);
@@ -46,14 +45,12 @@ public:
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;
 
 private:
-    FEOffset(Filter*, float dx, float dy);
+    FEOffset(Filter&, float dx, float dy);
 
     float m_dx;
     float m_dy;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // FEOffset_h

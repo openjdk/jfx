@@ -29,9 +29,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INSPECTOR)
-
 #include "InspectorFrontendClientLocal.h"
 
 #include "Chrome.h"
@@ -44,7 +41,6 @@
 #include "InspectorController.h"
 #include "InspectorFrontendHost.h"
 #include "InspectorPageAgent.h"
-#include "InspectorWebBackendDispatchers.h"
 #include "MainFrame.h"
 #include "Page.h"
 #include "ScriptController.h"
@@ -55,9 +51,9 @@
 #include "UserGestureIndicator.h"
 #include "WindowFeatures.h"
 #include <bindings/ScriptValue.h>
+#include <inspector/InspectorBackendDispatchers.h>
 #include <wtf/Deque.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/WTFString.h>
 
 using namespace Inspector;
 
@@ -67,7 +63,7 @@ static const char* inspectorAttachedHeightSetting = "inspectorAttachedHeight";
 static const unsigned defaultAttachedHeight = 300;
 static const float minimumAttachedHeight = 250.0f;
 static const float maximumAttachedHeightRatio = 0.75f;
-static const float minimumAttachedWidth = 750.0f;
+static const float minimumAttachedWidth = 500.0f;
 static const float minimumAttachedInspectedWidth = 320.0f;
 
 class InspectorBackendDispatchTask {
@@ -75,7 +71,7 @@ class InspectorBackendDispatchTask {
 public:
     InspectorBackendDispatchTask(InspectorController* inspectorController)
         : m_inspectorController(inspectorController)
-        , m_timer(this, &InspectorBackendDispatchTask::timerFired)
+        , m_timer(*this, &InspectorBackendDispatchTask::timerFired)
     {
     }
 
@@ -92,7 +88,7 @@ public:
         m_timer.stop();
     }
 
-    void timerFired(Timer<InspectorBackendDispatchTask>&)
+    void timerFired()
     {
         if (!m_messages.isEmpty()) {
             // Dispatch can lead to the timer destruction -> schedule the next shot first.
@@ -103,7 +99,7 @@ public:
 
 private:
     InspectorController* m_inspectorController;
-    Timer<InspectorBackendDispatchTask> m_timer;
+    Timer m_timer;
     Deque<String> m_messages;
 };
 
@@ -119,11 +115,13 @@ void InspectorFrontendClientLocal::Settings::setProperty(const String&, const St
 InspectorFrontendClientLocal::InspectorFrontendClientLocal(InspectorController* inspectorController, Page* frontendPage, std::unique_ptr<Settings> settings)
     : m_inspectorController(inspectorController)
     , m_frontendPage(frontendPage)
-    , m_settings(std::move(settings))
+    , m_settings(WTF::move(settings))
     , m_frontendLoaded(false)
-    , m_dockSide(UNDOCKED)
+    , m_dockSide(DockSide::Undocked)
 {
     m_frontendPage->settings().setAllowFileAccessFromFileURLs(true);
+    m_frontendPage->settings().setJavaScriptRuntimeFlags({
+    });
     m_dispatchTask = std::make_unique<InspectorBackendDispatchTask>(inspectorController);
 }
 
@@ -161,7 +159,7 @@ void InspectorFrontendClientLocal::frontendLoaded()
 
 void InspectorFrontendClientLocal::requestSetDockSide(DockSide dockSide)
 {
-    if (dockSide == UNDOCKED) {
+    if (dockSide == DockSide::Undocked) {
         detachWindow();
         setAttachedWindow(dockSide);
     } else if (canAttachWindow()) {
@@ -178,7 +176,7 @@ bool InspectorFrontendClientLocal::canAttachWindow()
         return false;
 
     // If we are already attached, allow attaching again to allow switching sides.
-    if (m_dockSide != UNDOCKED)
+    if (m_dockSide != DockSide::Undocked)
         return true;
 
     // Don't allow the attach if the window would be too small to accommodate the minimum inspector size.
@@ -212,11 +210,11 @@ void InspectorFrontendClientLocal::openInNewTab(const String& url)
 {
     UserGestureIndicator indicator(DefinitelyProcessingUserGesture);
     Frame& mainFrame = m_inspectorController->inspectedPage().mainFrame();
-    FrameLoadRequest request(mainFrame.document()->securityOrigin(), ResourceRequest(), "_blank");
+    FrameLoadRequest request(mainFrame.document()->securityOrigin(), ResourceRequest(), "_blank", LockHistory::No, LockBackForwardList::No, MaybeSendReferrer, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, ReplaceDocumentIfJavaScriptURL, ShouldOpenExternalURLsPolicy::ShouldNotAllow);
 
     bool created;
     WindowFeatures windowFeatures;
-    RefPtr<Frame> frame = WebCore::createWindow(&mainFrame, &mainFrame, request, windowFeatures, created);
+    RefPtr<Frame> frame = WebCore::createWindow(mainFrame, mainFrame, request, windowFeatures, created);
     if (!frame)
         return;
 
@@ -224,7 +222,9 @@ void InspectorFrontendClientLocal::openInNewTab(const String& url)
     frame->page()->setOpenedByDOM();
 
     // FIXME: Why does one use mainFrame and the other frame?
-    frame->loader().changeLocation(mainFrame.document()->securityOrigin(), frame->document()->completeURL(url), "", false, false);
+    ResourceRequest resourceRequest(frame->document()->completeURL(url));
+    FrameLoadRequest frameRequest(mainFrame.document()->securityOrigin(), resourceRequest, "_self", LockHistory::No, LockBackForwardList::No, MaybeSendReferrer, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, ReplaceDocumentIfJavaScriptURL, ShouldOpenExternalURLsPolicy::ShouldNotAllow);
+    frame->loader().changeLocation(frameRequest);
 }
 
 void InspectorFrontendClientLocal::moveWindowBy(float x, float y)
@@ -238,13 +238,13 @@ void InspectorFrontendClientLocal::setAttachedWindow(DockSide dockSide)
 {
     const char* side = "undocked";
     switch (dockSide) {
-    case UNDOCKED:
+    case DockSide::Undocked:
         side = "undocked";
         break;
-    case DOCKED_TO_RIGHT:
+    case DockSide::Right:
         side = "right";
         break;
-    case DOCKED_TO_BOTTOM:
+    case DockSide::Bottom:
         side = "bottom";
         break;
     }
@@ -358,5 +358,3 @@ void InspectorFrontendClientLocal::evaluateOnLoad(const String& expression)
 }
 
 } // namespace WebCore
-
-#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,10 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebInspectorClient.h"
-
-#if ENABLE(INSPECTOR)
 
 #include "WebCoreBundleWin.h"
 #include "WebInspectorDelegate.h"
@@ -37,7 +34,6 @@
 #include "WebMutableURLRequest.h"
 #include "WebNodeHighlight.h"
 #include "WebView.h"
-
 #include <WebCore/BString.h>
 #include <WebCore/Element.h>
 #include <WebCore/FloatRect.h>
@@ -47,7 +43,6 @@
 #include <WebCore/Page.h>
 #include <WebCore/RenderObject.h>
 #include <WebCore/WindowMessageBroadcaster.h>
-
 #include <inspector/InspectorAgentBase.h>
 #include <wchar.h>
 #include <wtf/RetainPtr.h>
@@ -68,7 +63,6 @@ static const IntRect& defaultWindowRect()
 WebInspectorClient::WebInspectorClient(WebView* webView)
     : m_inspectedWebView(webView)
     , m_frontendPage(0)
-    , m_frontendClient(0)
 {
     ASSERT(m_inspectedWebView);
     m_inspectedWebView->viewWindow(&m_inspectedWebViewHandle);
@@ -97,7 +91,7 @@ WebCore::InspectorFrontendChannel* WebInspectorClient::openInspectorFrontend(Ins
 
     COMPtr<WebView> frontendWebView(AdoptCOM, WebView::createInstance());
 
-    if (FAILED(frontendWebView->setHostWindow((OLE_HANDLE)(ULONG64)frontendHwnd)))
+    if (FAILED(frontendWebView->setHostWindow(frontendHwnd)))
         return 0;
 
     RECT rect;
@@ -154,7 +148,7 @@ WebCore::InspectorFrontendChannel* WebInspectorClient::openInspectorFrontend(Ins
     frontendWebView->setProhibitsMainFrameScrolling(TRUE);
 
     HWND frontendWebViewHwnd;
-    if (FAILED(frontendWebView->viewWindow(reinterpret_cast<OLE_HANDLE*>(&frontendWebViewHwnd))))
+    if (FAILED(frontendWebView->viewWindow(&frontendWebViewHwnd)))
         return 0;
 
     COMPtr<WebMutableURLRequest> request(AdoptCOM, WebMutableURLRequest::createInstance());
@@ -171,10 +165,9 @@ WebCore::InspectorFrontendChannel* WebInspectorClient::openInspectorFrontend(Ins
         return 0;
 
     m_frontendPage = core(frontendWebView.get());
-    auto frontendClient = std::make_unique<WebInspectorFrontendClient>(m_inspectedWebView, reinterpret_cast<HWND>(m_inspectedWebViewHandle), frontendHwnd, frontendWebView, frontendWebViewHwnd, this, createFrontendSettings());
-    m_frontendClient = frontendClient.get();
-    m_frontendPage->inspectorController().setInspectorFrontendClient(std::move(frontendClient));
-    m_frontendHandle = reinterpret_cast<OLE_HANDLE>(frontendHwnd);
+    m_frontendClient = std::make_unique<WebInspectorFrontendClient>(m_inspectedWebView, m_inspectedWebViewHandle, frontendHwnd, frontendWebView, frontendWebViewHwnd, this, createFrontendSettings());
+    m_frontendPage->inspectorController().setInspectorFrontendClient(m_frontendClient.get());
+    m_frontendHandle = frontendHwnd;
     return this;
 }
 
@@ -194,15 +187,15 @@ void WebInspectorClient::highlight()
     bool creatingHighlight = !m_highlight;
 
     if (creatingHighlight)
-        m_highlight = adoptPtr(new WebNodeHighlight(m_inspectedWebView));
+        m_highlight = std::make_unique<WebNodeHighlight>(m_inspectedWebView);
 
     if (m_highlight->isShowing())
         m_highlight->update();
     else
         m_highlight->setShowsWhileWebViewIsVisible(true);
 
-    if (creatingHighlight && IsWindowVisible((HWND)m_frontendHandle))
-        m_highlight->placeBehindWindow(reinterpret_cast<HWND>(m_frontendHandle));
+    if (creatingHighlight && IsWindowVisible(m_frontendHandle))
+        m_highlight->placeBehindWindow(m_frontendHandle);
 }
 
 void WebInspectorClient::hideHighlight()
@@ -219,13 +212,13 @@ void WebInspectorClient::updateHighlight()
 
 void WebInspectorClient::releaseFrontend()
 {
-    m_frontendClient = 0;
+    m_frontendClient = nullptr;
     m_frontendPage = 0;
     m_frontendHandle = 0;
 }
 
 WebInspectorFrontendClient::WebInspectorFrontendClient(WebView* inspectedWebView, HWND inspectedWebViewHwnd, HWND frontendHwnd, const COMPtr<WebView>& frontendWebView, HWND frontendWebViewHwnd, WebInspectorClient* inspectorClient, std::unique_ptr<Settings> settings)
-    : InspectorFrontendClientLocal(&inspectedWebView->page()->inspectorController(),  core(frontendWebView.get()), std::move(settings))
+    : InspectorFrontendClientLocal(&inspectedWebView->page()->inspectorController(),  core(frontendWebView.get()), WTF::move(settings))
     , m_inspectedWebView(inspectedWebView)
     , m_inspectedWebViewHwnd(inspectedWebViewHwnd)
     , m_inspectorClient(inspectorClient)
@@ -254,7 +247,7 @@ void WebInspectorFrontendClient::frontendLoaded()
     if (m_attached)
         restoreAttachedWindowHeight();
 
-    setAttachedWindow(m_attached ? DOCKED_TO_BOTTOM : UNDOCKED);
+    setAttachedWindow(m_attached ? DockSide::Bottom : DockSide::Undocked);
 }
 
 String WebInspectorFrontendClient::localizedStringsURL()
@@ -313,12 +306,12 @@ void WebInspectorFrontendClient::setAttachedWindowHeight(unsigned height)
     if (!m_attached)
         return;
 
-    OLE_HANDLE hostWindow;
+    HWND hostWindow;
     if (!SUCCEEDED(m_inspectedWebView->hostWindow(&hostWindow)))
         return;
 
     RECT hostWindowRect;
-    GetClientRect(reinterpret_cast<HWND>(hostWindow), &hostWindowRect);
+    GetClientRect(hostWindow, &hostWindowRect);
 
     RECT inspectedRect;
     GetClientRect(m_inspectedWebViewHwnd, &inspectedRect);
@@ -371,12 +364,12 @@ void WebInspectorFrontendClient::closeWindowWithoutNotifications()
 
     m_attached = false;
 
-    m_frontendWebView->setHostWindow(reinterpret_cast<OLE_HANDLE>(m_frontendHwnd));
+    m_frontendWebView->setHostWindow(m_frontendHwnd);
 
     // Make sure everything has the right size/position.
-    OLE_HANDLE hostWindow;
+    HWND hostWindow;
     if (SUCCEEDED(m_inspectedWebView->hostWindow(&hostWindow)))
-        SendMessage(reinterpret_cast<HWND>(hostWindow), WM_SIZE, 0, 0);
+        SendMessage(hostWindow, WM_SIZE, 0, 0);
 }
 
 void WebInspectorFrontendClient::showWindowWithoutNotifications()
@@ -401,7 +394,7 @@ void WebInspectorFrontendClient::showWindowWithoutNotifications()
 
     if (!shouldAttach) {
         // Put the Inspector's WebView inside our window and show it.
-        m_frontendWebView->setHostWindow(reinterpret_cast<OLE_HANDLE>(m_frontendHwnd));
+        m_frontendWebView->setHostWindow(m_frontendHwnd);
         SendMessage(m_frontendHwnd, WM_SIZE, 0, 0);
         updateWindowTitle();
 
@@ -413,10 +406,10 @@ void WebInspectorFrontendClient::showWindowWithoutNotifications()
     WindowMessageBroadcaster::addListener(m_inspectedWebViewHwnd, this);
 
     HWND hostWindow;
-    if (FAILED(m_inspectedWebView->hostWindow(reinterpret_cast<OLE_HANDLE*>(&hostWindow))))
+    if (FAILED(m_inspectedWebView->hostWindow(&hostWindow)))
         return;
 
-    m_frontendWebView->setHostWindow(reinterpret_cast<OLE_HANDLE>(hostWindow));
+    m_frontendWebView->setHostWindow(hostWindow);
 
     // Then hide our own window.
     ShowWindow(m_frontendHwnd, SW_HIDE);
@@ -439,7 +432,7 @@ void WebInspectorFrontendClient::destroyInspectorView(bool notifyInspectorContro
     closeWindowWithoutNotifications();
 
     if (notifyInspectorController) {
-        m_inspectedWebView->page()->inspectorController().disconnectFrontend(Inspector::InspectorDisconnectReason::InspectorDestroyed);
+        m_inspectedWebView->page()->inspectorController().disconnectFrontend(Inspector::DisconnectReason::InspectorDestroyed);
         m_inspectorClient->updateHighlight();
     }
     ::DestroyWindow(m_frontendHwnd);
@@ -563,5 +556,3 @@ static ATOM registerWindowClass()
 
     return ::RegisterClassEx(&wcex);
 }
-
-#endif // ENABLE(INSPECTOR)

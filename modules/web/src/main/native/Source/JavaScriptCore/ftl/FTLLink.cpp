@@ -60,18 +60,19 @@ void link(State& state)
 
     state.jitCode->common.requiredRegisterCountForExit = graph.requiredRegisterCountForExit();
 
-    if (!graph.m_inlineCallFrames->isEmpty())
-        state.jitCode->common.inlineCallFrames = std::move(graph.m_inlineCallFrames);
+    if (!graph.m_plan.inlineCallFrames->isEmpty())
+        state.jitCode->common.inlineCallFrames = graph.m_plan.inlineCallFrames;
+
+    graph.registerFrozenValues();
 
     // Create the entrypoint. Note that we use this entrypoint totally differently
     // depending on whether we're doing OSR entry or not.
     CCallHelpers jit(&vm, codeBlock);
 
-    OwnPtr<LinkBuffer> linkBuffer;
-    CCallHelpers::Label arityCheck;
+    std::unique_ptr<LinkBuffer> linkBuffer;
 
     CCallHelpers::Address frame = CCallHelpers::Address(
-        CCallHelpers::stackPointerRegister, -static_cast<int32_t>(sizeof(void*)));
+        CCallHelpers::stackPointerRegister, -static_cast<int32_t>(AssemblyHelpers::prologueStackPointerDelta()));
 
     if (Profiler::Compilation* compilation = graph.compilation()) {
         compilation->addDescription(
@@ -97,8 +98,6 @@ void link(State& state)
 
             for (size_t nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                 Node* node = block->at(nodeIndex);
-                if (!node->willHaveCodeGenOrOSR() && !Options::showAllDFGNodes())
-                    continue;
 
                 Profiler::OriginStack stack;
 
@@ -127,13 +126,13 @@ void link(State& state)
 
         out.print("    Disassembly:\n");
         for (unsigned i = 0; i < state.jitCode->handles().size(); ++i) {
-            if (state.codeSectionNames[i] != "__text")
+            if (state.codeSectionNames[i] != SECTION_NAME("text"))
                 continue;
 
-                ExecutableMemoryHandle* handle = state.jitCode->handles()[i].get();
-                disassemble(
-                    MacroAssemblerCodePtr(handle->start()), handle->sizeInBytes(),
-                    "      ", out, LLVMSubset);
+            ExecutableMemoryHandle* handle = state.jitCode->handles()[i].get();
+            disassemble(
+                MacroAssemblerCodePtr(handle->start()), handle->sizeInBytes(),
+                "      ", out, LLVMSubset);
         }
         compilation->addDescription(Profiler::OriginStack(), out.toCString());
         out.reset();
@@ -170,15 +169,21 @@ void link(State& state)
         jit.emitFunctionEpilogue();
         mainPathJumps.append(jit.branchTest32(CCallHelpers::Zero, GPRInfo::regT0));
         jit.emitFunctionPrologue();
-        jit.move(CCallHelpers::TrustedImmPtr(vm.arityCheckFailReturnThunks->returnPCsFor(vm, codeBlock->numParameters())), GPRInfo::regT5);
-        jit.loadPtr(CCallHelpers::BaseIndex(GPRInfo::regT5, GPRInfo::regT0, CCallHelpers::timesPtr()), GPRInfo::regT5);
+        CodeLocationLabel* arityThunkLabels =
+            vm.arityCheckFailReturnThunks->returnPCsFor(vm, codeBlock->numParameters());
+        jit.move(CCallHelpers::TrustedImmPtr(arityThunkLabels), GPRInfo::regT7);
+        jit.loadPtr(CCallHelpers::BaseIndex(GPRInfo::regT7, GPRInfo::regT0, CCallHelpers::timesPtr()), GPRInfo::regT7);
         CCallHelpers::Call callArityFixup = jit.call();
         jit.emitFunctionEpilogue();
         mainPathJumps.append(jit.jump());
 
-        linkBuffer = adoptPtr(new LinkBuffer(vm, &jit, codeBlock, JITCompilationMustSucceed));
+        linkBuffer = std::make_unique<LinkBuffer>(vm, jit, codeBlock, JITCompilationCanFail);
+        if (linkBuffer->didFailToAllocate()) {
+            state.allocationFailed = true;
+            return;
+        }
         linkBuffer->link(callArityCheck, codeBlock->m_isConstructor ? operationConstructArityCheck : operationCallArityCheck);
-        linkBuffer->link(callArityFixup, FunctionPtr((vm.getCTIStub(arityFixup)).code().executableAddress()));
+        linkBuffer->link(callArityFixup, FunctionPtr((vm.getCTIStub(arityFixupGenerator)).code().executableAddress()));
         linkBuffer->link(mainPathJumps, CodeLocationLabel(bitwise_cast<void*>(state.generatedFunction)));
 
         state.jitCode->initializeAddressForCall(MacroAssemblerCodePtr(bitwise_cast<void*>(state.generatedFunction)));
@@ -194,7 +199,11 @@ void link(State& state)
         jit.emitFunctionEpilogue();
         CCallHelpers::Jump mainPathJump = jit.jump();
 
-        linkBuffer = adoptPtr(new LinkBuffer(vm, &jit, codeBlock, JITCompilationMustSucceed));
+        linkBuffer = std::make_unique<LinkBuffer>(vm, jit, codeBlock, JITCompilationCanFail);
+        if (linkBuffer->didFailToAllocate()) {
+            state.allocationFailed = true;
+            return;
+        }
         linkBuffer->link(mainPathJump, CodeLocationLabel(bitwise_cast<void*>(state.generatedFunction)));
 
         state.jitCode->initializeAddressForCall(linkBuffer->locationOf(start));
@@ -206,9 +215,8 @@ void link(State& state)
         break;
     }
 
-    state.finalizer->entrypointLinkBuffer = linkBuffer.release();
+    state.finalizer->entrypointLinkBuffer = WTF::move(linkBuffer);
     state.finalizer->function = state.generatedFunction;
-    state.finalizer->arityCheck = arityCheck;
     state.finalizer->jitCode = state.jitCode;
 }
 

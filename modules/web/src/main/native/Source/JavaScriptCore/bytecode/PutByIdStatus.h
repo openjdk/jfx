@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,9 @@
 #ifndef PutByIdStatus_h
 #define PutByIdStatus_h
 
+#include "CallLinkStatus.h"
 #include "ExitingJITType.h"
-#include "IntendedStructureChain.h"
-#include "PropertyOffset.h"
+#include "PutByIdVariant.h"
 #include "StructureStubInfo.h"
 #include <wtf/text/StringImpl.h>
 
@@ -45,85 +45,66 @@ public:
     enum State {
         // It's uncached so we have no information.
         NoInformation,
-        // It's cached as a direct store into an object property for cases where the object
-        // already has the property.
-        SimpleReplace,
-        // It's cached as a transition from one structure that lacks the property to one that
-        // includes the property, and a direct store to this new property.
-        SimpleTransition,
+        // It's cached as a simple store of some kind.
+        Simple,
         // It's known to often take slow path.
-        TakesSlowPath
+        TakesSlowPath,
+        // It's known to take paths that make calls.
+        MakesCalls
     };
 
     PutByIdStatus()
         : m_state(NoInformation)
-        , m_oldStructure(0)
-        , m_newStructure(0)
-        , m_structureChain(0)
-        , m_offset(invalidOffset)
     {
     }
 
     explicit PutByIdStatus(State state)
         : m_state(state)
-        , m_oldStructure(0)
-        , m_newStructure(0)
-        , m_structureChain(0)
-        , m_offset(invalidOffset)
     {
-        ASSERT(m_state == NoInformation || m_state == TakesSlowPath);
+        ASSERT(m_state == NoInformation || m_state == TakesSlowPath || m_state == MakesCalls);
     }
 
-    PutByIdStatus(
-        State state,
-        Structure* oldStructure,
-        Structure* newStructure,
-        PassRefPtr<IntendedStructureChain> structureChain,
-        PropertyOffset offset)
-        : m_state(state)
-        , m_oldStructure(oldStructure)
-        , m_newStructure(newStructure)
-        , m_structureChain(structureChain)
-        , m_offset(offset)
+    PutByIdStatus(const PutByIdVariant& variant)
+        : m_state(Simple)
     {
-        ASSERT((m_state == NoInformation || m_state == TakesSlowPath) == !m_oldStructure);
-        ASSERT((m_state != SimpleTransition) == !m_newStructure);
-        ASSERT(!((m_state != SimpleTransition) && m_structureChain));
-        ASSERT((m_state == NoInformation || m_state == TakesSlowPath) == (m_offset == invalidOffset));
+        m_variants.append(variant);
     }
 
-    static PutByIdStatus computeFor(CodeBlock*, StubInfoMap&, unsigned bytecodeIndex, StringImpl* uid);
-    static PutByIdStatus computeFor(VM&, JSGlobalObject*, Structure*, StringImpl* uid, bool isDirect);
+    static PutByIdStatus computeFor(CodeBlock*, StubInfoMap&, unsigned bytecodeIndex, UniquedStringImpl* uid);
+    static PutByIdStatus computeFor(JSGlobalObject*, const StructureSet&, UniquedStringImpl* uid, bool isDirect);
 
-    static PutByIdStatus computeFor(CodeBlock* baselineBlock, CodeBlock* dfgBlock, StubInfoMap& baselineMap, StubInfoMap& dfgMap, CodeOrigin, StringImpl* uid);
+    static PutByIdStatus computeFor(CodeBlock* baselineBlock, CodeBlock* dfgBlock, StubInfoMap& baselineMap, StubInfoMap& dfgMap, CodeOrigin, UniquedStringImpl* uid);
 
     State state() const { return m_state; }
 
     bool isSet() const { return m_state != NoInformation; }
     bool operator!() const { return m_state == NoInformation; }
-    bool isSimpleReplace() const { return m_state == SimpleReplace; }
-    bool isSimpleTransition() const { return m_state == SimpleTransition; }
-    bool takesSlowPath() const { return m_state == TakesSlowPath; }
+    bool isSimple() const { return m_state == Simple; }
+    bool takesSlowPath() const { return m_state == TakesSlowPath || m_state == MakesCalls; }
+    bool makesCalls() const;
 
-    Structure* oldStructure() const { return m_oldStructure; }
-    Structure* newStructure() const { return m_newStructure; }
-    IntendedStructureChain* structureChain() const { return m_structureChain.get(); }
-    PropertyOffset offset() const { return m_offset; }
+    size_t numVariants() const { return m_variants.size(); }
+    const Vector<PutByIdVariant, 1>& variants() const { return m_variants; }
+    const PutByIdVariant& at(size_t index) const { return m_variants[index]; }
+    const PutByIdVariant& operator[](size_t index) const { return at(index); }
+
+    void dump(PrintStream&) const;
 
 private:
 #if ENABLE(DFG_JIT)
-    static bool hasExitSite(const ConcurrentJITLocker&, CodeBlock*, unsigned bytecodeIndex, ExitingJITType = ExitFromAnything);
+    static bool hasExitSite(const ConcurrentJITLocker&, CodeBlock*, unsigned bytecodeIndex);
 #endif
 #if ENABLE(JIT)
-    static PutByIdStatus computeForStubInfo(const ConcurrentJITLocker&, CodeBlock*, StructureStubInfo*, StringImpl* uid);
+    static PutByIdStatus computeForStubInfo(
+        const ConcurrentJITLocker&, CodeBlock*, StructureStubInfo*, UniquedStringImpl* uid,
+        CallLinkStatus::ExitSiteData);
 #endif
-    static PutByIdStatus computeFromLLInt(CodeBlock*, unsigned bytecodeIndex, StringImpl* uid);
+    static PutByIdStatus computeFromLLInt(CodeBlock*, unsigned bytecodeIndex, UniquedStringImpl* uid);
+
+    bool appendVariant(const PutByIdVariant&);
 
     State m_state;
-    Structure* m_oldStructure;
-    Structure* m_newStructure;
-    RefPtr<IntendedStructureChain> m_structureChain;
-    PropertyOffset m_offset;
+    Vector<PutByIdVariant, 1> m_variants;
 };
 
 } // namespace JSC

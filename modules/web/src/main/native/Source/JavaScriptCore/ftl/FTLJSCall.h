@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,7 @@
 
 #if ENABLE(FTL_JIT)
 
-#include "CCallHelpers.h"
-#include "CallLinkInfo.h"
-#include "CodeOrigin.h"
-#include "LinkBuffer.h"
+#include "FTLJSCallBase.h"
 
 namespace JSC {
 
@@ -41,13 +38,10 @@ struct Node;
 
 namespace FTL {
 
-class JSCall {
+class JSCall : public JSCallBase {
 public:
     JSCall();
     JSCall(unsigned stackmapID, DFG::Node*);
-
-    void emit(CCallHelpers&);
-    void link(VM&, LinkBuffer&, CallLinkInfo&);
 
     unsigned stackmapID() const { return m_stackmapID; }
 
@@ -58,10 +52,6 @@ public:
 
 private:
     unsigned m_stackmapID;
-    DFG::Node* m_node;
-    CCallHelpers::DataLabelPtr m_targetToCheck;
-    CCallHelpers::Call m_fastCall;
-    CCallHelpers::Call m_slowCall;
 
 public:
     uint32_t m_instructionOffset;

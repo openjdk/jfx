@@ -23,35 +23,48 @@
 #include "SVGAnimatedProperty.h"
 #include "SVGElement.h"
 #include "SVGProperty.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class SVGPropertyTearOffBase : public SVGProperty {
+public:
+    virtual void detachWrapper() = 0;
+};
+
 template<typename PropertyType>
-class SVGPropertyTearOff : public SVGProperty {
+class SVGPropertyTearOff : public SVGPropertyTearOffBase {
 public:
     typedef SVGPropertyTearOff<PropertyType> Self;
 
     // Used for child types (baseVal/animVal) of a SVGAnimated* property (for example: SVGAnimatedLength::baseVal()).
     // Also used for list tear offs (for example: text.x.baseVal.getItem(0)).
-    static PassRefPtr<Self> create(SVGAnimatedProperty* animatedProperty, SVGPropertyRole role, PropertyType& value)
+    static Ref<Self> create(SVGAnimatedProperty* animatedProperty, SVGPropertyRole role, PropertyType& value)
     {
         ASSERT(animatedProperty);
-        return adoptRef(new Self(animatedProperty, role, value));
+        return adoptRef(*new Self(animatedProperty, role, value));
     }
 
     // Used for non-animated POD types (for example: SVGSVGElement::createSVGLength()).
-    static PassRefPtr<Self> create(const PropertyType& initialValue)
+    static Ref<Self> create(const PropertyType& initialValue)
     {
-        return adoptRef(new Self(initialValue));
+        return adoptRef(*new Self(initialValue));
     }
 
-    PropertyType& propertyReference() { return *m_value; }
+    static Ref<Self> create(const PropertyType* initialValue)
+    {
+        return adoptRef(*new Self(initialValue));
+    }
+
+    virtual PropertyType& propertyReference() { return *m_value; }
     SVGAnimatedProperty* animatedProperty() const { return m_animatedProperty; }
 
-    void setValue(PropertyType& value)
+    virtual void setValue(PropertyType& value)
     {
-        if (m_valueIsCopy)
+        if (m_valueIsCopy) {
+            detachChildren();
             delete m_value;
+        }
         m_valueIsCopy = false;
         m_value = &value;
     }
@@ -71,10 +84,17 @@ public:
         return m_contextElement.get();
     }
 
-    void detachWrapper()
+    void addChild(WeakPtr<SVGPropertyTearOffBase> child)
+    {
+        m_childTearOffs.append(child);
+    }
+
+    virtual void detachWrapper() override
     {
         if (m_valueIsCopy)
             return;
+
+        detachChildren();
 
         // Switch from a live value, to a non-live value.
         // For example: <text x="50"/>
@@ -85,7 +105,7 @@ public:
         // Whenever the XML DOM modifies the "x" attribute, all existing wrappers are detached, using this function.
         m_value = new PropertyType(*m_value);
         m_valueIsCopy = true;
-        m_animatedProperty = 0;
+        m_animatedProperty = nullptr;
     }
 
     virtual void commitChange() override
@@ -119,23 +139,40 @@ protected:
     }
 
     SVGPropertyTearOff(const PropertyType& initialValue)
-        : m_animatedProperty(0)
+        : SVGPropertyTearOff(&initialValue)
+    {
+    }
+
+    SVGPropertyTearOff(const PropertyType* initialValue)
+        : m_animatedProperty(nullptr)
         , m_role(UndefinedRole)
-        , m_value(new PropertyType(initialValue))
+        , m_value(initialValue ? new PropertyType(*initialValue) : nullptr)
         , m_valueIsCopy(true)
     {
     }
 
     virtual ~SVGPropertyTearOff()
     {
-        if (m_valueIsCopy)
+        if (m_valueIsCopy) {
+            detachChildren();
             delete m_value;
+        }
+    }
+
+    void detachChildren()
+    {
+        for (const auto& childTearOff : m_childTearOffs) {
+            if (childTearOff.get())
+                childTearOff.get()->detachWrapper();
+        }
+        m_childTearOffs.clear();
     }
 
     RefPtr<SVGElement> m_contextElement;
     SVGAnimatedProperty* m_animatedProperty;
     SVGPropertyRole m_role;
     PropertyType* m_value;
+    Vector<WeakPtr<SVGPropertyTearOffBase>> m_childTearOffs;
     bool m_valueIsCopy : 1;
 };
 

@@ -26,6 +26,7 @@
 #ifndef ViewportConfiguration_h
 #define ViewportConfiguration_h
 
+#include "FloatSize.h"
 #include "IntSize.h"
 #include "ViewportArguments.h"
 #include <wtf/Noncopyable.h>
@@ -44,6 +45,7 @@ public:
             , minimumScale(0)
             , maximumScale(0)
             , allowsUserScaling(false)
+            , allowsShrinkToFit(false)
             , widthIsSet(false)
             , heightIsSet(false)
             , initialScaleIsSet(false)
@@ -56,47 +58,68 @@ public:
         double minimumScale;
         double maximumScale;
         bool allowsUserScaling;
+        bool allowsShrinkToFit;
 
         bool widthIsSet;
         bool heightIsSet;
         bool initialScaleIsSet;
     };
 
-    ViewportConfiguration();
+    WEBCORE_EXPORT ViewportConfiguration();
 
     const Parameters& defaultConfiguration() const { return m_defaultConfiguration; }
-    void setDefaultConfiguration(const Parameters&);
+    WEBCORE_EXPORT void setDefaultConfiguration(const Parameters&);
 
     const IntSize& contentsSize() const { return m_contentSize; }
-    void setContentsSize(const IntSize&);
+    WEBCORE_EXPORT void setContentsSize(const IntSize&);
 
-    const IntSize& minimumLayoutSize() const { return m_minimumLayoutSize; }
-    void setMinimumLayoutSize(const IntSize&);
+    const FloatSize& minimumLayoutSize() const { return m_minimumLayoutSize; }
+    WEBCORE_EXPORT void setMinimumLayoutSize(const FloatSize&);
 
     const ViewportArguments& viewportArguments() const { return m_viewportArguments; }
-    void setViewportArguments(const ViewportArguments&);
+    WEBCORE_EXPORT void setViewportArguments(const ViewportArguments&);
 
-    IntSize layoutSize() const;
-    double initialScale() const;
-    double minimumScale() const;
+    void setCanIgnoreScalingConstraints(bool canIgnoreScalingConstraints) { m_canIgnoreScalingConstraints = canIgnoreScalingConstraints; }
+    void setForceAlwaysUserScalable(bool forceAlwaysUserScalable) { m_forceAlwaysUserScalable = forceAlwaysUserScalable; }
+
+    WEBCORE_EXPORT IntSize layoutSize() const;
+    WEBCORE_EXPORT double initialScale() const;
+    WEBCORE_EXPORT double initialScaleIgnoringContentSize() const;
+    WEBCORE_EXPORT double minimumScale() const;
     double maximumScale() const { return m_configuration.maximumScale; }
-    bool allowsUserScaling() const { return m_configuration.allowsUserScaling; }
+    WEBCORE_EXPORT bool allowsUserScaling() const;
+    bool allowsShrinkToFit() const;
 
-    static Parameters webpageParameters();
-    static Parameters textDocumentParameters();
-    static Parameters imageDocumentParameters();
-    static Parameters xhtmlMobileParameters();
+    WEBCORE_EXPORT static Parameters webpageParameters();
+    WEBCORE_EXPORT static Parameters textDocumentParameters();
+    WEBCORE_EXPORT static Parameters imageDocumentParameters();
+    WEBCORE_EXPORT static Parameters xhtmlMobileParameters();
+    WEBCORE_EXPORT static Parameters testingParameters();
+
+#ifndef NDEBUG
+    WTF::CString description() const;
+    void dump() const;
+#endif
 
 private:
     void updateConfiguration();
+    double viewportArgumentsLength(double length) const;
+    double initialScaleFromSize(double width, double height, bool shouldIgnoreScalingConstraints) const;
     int layoutWidth() const;
     int layoutHeight() const;
+
+    bool shouldIgnoreScalingConstraints() const;
+    bool shouldIgnoreVerticalScalingConstraints() const;
+    bool shouldIgnoreHorizontalScalingConstraints() const;
 
     Parameters m_configuration;
     Parameters m_defaultConfiguration;
     IntSize m_contentSize;
-    IntSize m_minimumLayoutSize;
+    FloatSize m_minimumLayoutSize;
     ViewportArguments m_viewportArguments;
+
+    bool m_canIgnoreScalingConstraints;
+    bool m_forceAlwaysUserScalable;
 };
 
 } // namespace WebCore

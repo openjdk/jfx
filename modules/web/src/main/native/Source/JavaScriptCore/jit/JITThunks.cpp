@@ -36,7 +36,7 @@
 namespace JSC {
 
 JITThunks::JITThunks()
-    : m_hostFunctionStubMap(adoptPtr(new HostFunctionStubMap))
+    : m_hostFunctionStubMap(std::make_unique<HostFunctionStubMap>())
 {
 }
 
@@ -46,19 +46,15 @@ JITThunks::~JITThunks()
 
 MacroAssemblerCodePtr JITThunks::ctiNativeCall(VM* vm)
 {
-#if ENABLE(LLINT)
     if (!vm->canUseJIT())
         return MacroAssemblerCodePtr::createLLIntCodePtr(llint_native_call_trampoline);
-#endif
     return ctiStub(vm, nativeCallGenerator).code();
 }
 
 MacroAssemblerCodePtr JITThunks::ctiNativeConstruct(VM* vm)
 {
-#if ENABLE(LLINT)
     if (!vm->canUseJIT())
         return MacroAssemblerCodePtr::createLLIntCodePtr(llint_native_construct_trampoline);
-#endif
     return ctiStub(vm, nativeConstructGenerator).code();
 }
 
@@ -80,6 +76,12 @@ MacroAssemblerCodeRef JITThunks::ctiStub(VM* vm, ThunkGenerator generator)
     return entry.iterator->value;
 }
 
+void JITThunks::finalize(Handle<Unknown> handle, void*)
+{
+    auto* nativeExecutable = jsCast<NativeExecutable*>(handle.get().asCell());
+    weakRemove(*m_hostFunctionStubMap, std::make_pair(nativeExecutable->function(), nativeExecutable->constructor()), nativeExecutable);
+}
+
 NativeExecutable* JITThunks::hostFunctionStub(VM* vm, NativeFunction function, NativeFunction constructor)
 {
     ASSERT(!isCompilationThread());
@@ -93,36 +95,35 @@ NativeExecutable* JITThunks::hostFunctionStub(VM* vm, NativeFunction function, N
         function,
         adoptRef(new NativeJITCode(MacroAssemblerCodeRef::createSelfManagedCodeRef(ctiNativeConstruct(vm)), JITCode::HostCallThunk)),
         constructor, NoIntrinsic);
-    weakAdd(*m_hostFunctionStubMap, std::make_pair(function, constructor), Weak<NativeExecutable>(nativeExecutable));
+    weakAdd(*m_hostFunctionStubMap, std::make_pair(function, constructor), Weak<NativeExecutable>(nativeExecutable, this));
     return nativeExecutable;
 }
 
 NativeExecutable* JITThunks::hostFunctionStub(VM* vm, NativeFunction function, ThunkGenerator generator, Intrinsic intrinsic)
 {
     ASSERT(!isCompilationThread());
+    ASSERT(vm->canUseJIT());
 
     if (NativeExecutable* nativeExecutable = m_hostFunctionStubMap->get(std::make_pair(function, &callHostFunctionAsConstructor)))
         return nativeExecutable;
 
     RefPtr<JITCode> forCall;
     if (generator) {
-        if (vm->canUseJIT()) {
-            MacroAssemblerCodeRef entry = generator(vm);
-            forCall = adoptRef(new DirectJITCode(entry, entry.code(), JITCode::HostCallThunk));
-        }
+        MacroAssemblerCodeRef entry = generator(vm);
+        forCall = adoptRef(new DirectJITCode(entry, entry.code(), JITCode::HostCallThunk));
     } else
         forCall = adoptRef(new NativeJITCode(JIT::compileCTINativeCall(vm, function), JITCode::HostCallThunk));
 
     RefPtr<JITCode> forConstruct = adoptRef(new NativeJITCode(MacroAssemblerCodeRef::createSelfManagedCodeRef(ctiNativeConstruct(vm)), JITCode::HostCallThunk));
 
     NativeExecutable* nativeExecutable = NativeExecutable::create(*vm, forCall, function, forConstruct, callHostFunctionAsConstructor, intrinsic);
-    weakAdd(*m_hostFunctionStubMap, std::make_pair(function, &callHostFunctionAsConstructor), Weak<NativeExecutable>(nativeExecutable));
+    weakAdd(*m_hostFunctionStubMap, std::make_pair(function, &callHostFunctionAsConstructor), Weak<NativeExecutable>(nativeExecutable, this));
     return nativeExecutable;
 }
 
 void JITThunks::clearHostFunctionStubs()
 {
-    m_hostFunctionStubMap.clear();
+    m_hostFunctionStubMap = nullptr;
 }
 
 } // namespace JSC

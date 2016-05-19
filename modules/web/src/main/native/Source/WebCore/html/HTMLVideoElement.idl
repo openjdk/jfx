@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -22,6 +22,9 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
+
+// FIXME: This should be Conditional=VIDEO_PRESENTATION_MODE.
+enum VideoPresentationMode { "fullscreen", "picture-in-picture", "inline" };
 
 [
     Conditional=VIDEO,
@@ -43,13 +46,17 @@
     [RaisesException] void webkitEnterFullScreen();
     void webkitExitFullScreen();
 
-    [Conditional=IOS_AIRPLAY] attribute boolean webkitWirelessVideoPlaybackDisabled;
+    [Conditional=WIRELESS_PLAYBACK_TARGET] attribute boolean webkitWirelessVideoPlaybackDisabled;
 
-    // The number of frames that have been decoded and made available for
-    // playback.
+    // The number of frames that have been decoded and made available for playback.
     [Conditional=MEDIA_STATISTICS] readonly attribute unsigned long webkitDecodedFrameCount;
 
-    // The number of decoded frames that have been dropped by the player
-    // for performance reasons during playback.
+    // The number of decoded frames that have been dropped by the player for performance reasons during playback.
     [Conditional=MEDIA_STATISTICS] readonly attribute unsigned long webkitDroppedFrameCount;
+
+#if !defined(LANGUAGE_GOBJECT) || !LANGUAGE_GOBJECT // Work around shortcomings in the gobject binding generator handling of conditional features by turning these off for gobject.
+    [Conditional=VIDEO_PRESENTATION_MODE] boolean webkitSupportsPresentationMode(VideoPresentationMode mode);
+    [Conditional=VIDEO_PRESENTATION_MODE] readonly attribute VideoPresentationMode webkitPresentationMode;
+    [Conditional=VIDEO_PRESENTATION_MODE] void webkitSetPresentationMode(VideoPresentationMode mode);
+#endif
 };

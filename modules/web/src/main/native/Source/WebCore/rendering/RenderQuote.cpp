@@ -31,27 +31,20 @@ using namespace WTF::Unicode;
 
 namespace WebCore {
 
-RenderQuote::RenderQuote(Document& document, PassRef<RenderStyle> style, QuoteType quote)
-    : RenderInline(document, std::move(style))
+RenderQuote::RenderQuote(Document& document, Ref<RenderStyle>&& style, QuoteType quote)
+    : RenderInline(document, WTF::move(style))
     , m_type(quote)
-    , m_depth(-1)
-    , m_next(0)
-    , m_previous(0)
-    , m_isAttached(false)
+    , m_text(emptyString())
 {
 }
 
 RenderQuote::~RenderQuote()
 {
+    detachQuote();
+
     ASSERT(!m_isAttached);
     ASSERT(!m_next);
     ASSERT(!m_previous);
-}
-
-void RenderQuote::willBeDestroyed()
-{
-    detachQuote();
-    RenderInline::willBeDestroyed();
 }
 
 void RenderQuote::willBeRemovedFromTree()
@@ -337,24 +330,30 @@ static inline StringImpl* apostropheString()
     return apostropheString;
 }
 
+static RenderTextFragment* fragmentChild(RenderObject* lastChild)
+{
+    if (!lastChild)
+        return nullptr;
+
+    if (!is<RenderTextFragment>(lastChild))
+        return nullptr;
+
+    return downcast<RenderTextFragment>(lastChild);
+}
+
 void RenderQuote::updateText()
 {
     String text = computeText();
     if (m_text == text)
         return;
-
-    while (RenderObject* child = firstChild())
-        child->destroy();
-
-    if (text == emptyString() || text == String()) {
-        m_text = String();
+    m_text = text;
+    // Start from the end of the child list because, if we've had a first-letter
+    // renderer inserted then the remaining text will be at the end.
+    if (auto* fragment = fragmentChild(lastChild())) {
+        fragment->setContentString(m_text);
         return;
     }
-
-    m_text = text;
-
-    RenderTextFragment* fragment = new RenderTextFragment(document(), m_text.impl());
-    addChild(fragment);
+    addChild(new RenderTextFragment(document(), m_text));
 }
 
 String RenderQuote::computeText() const
@@ -393,9 +392,9 @@ void RenderQuote::attachQuote()
         for (RenderObject* predecessor = previousInPreOrder(); predecessor; predecessor = predecessor->previousInPreOrder()) {
             // Skip unattached predecessors to avoid having stale m_previous pointers
             // if the previous node is never attached and is then destroyed.
-            if (!predecessor->isQuote() || !toRenderQuote(predecessor)->m_isAttached)
+            if (!is<RenderQuote>(*predecessor) || !downcast<RenderQuote>(*predecessor).m_isAttached)
                 continue;
-            m_previous = toRenderQuote(predecessor);
+            m_previous = downcast<RenderQuote>(predecessor);
             m_next = m_previous->m_next;
             m_previous->m_next = this;
             if (m_next)

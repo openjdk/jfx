@@ -48,26 +48,26 @@ struct CSSFontFaceLoadEventInit : public EventInit {
     RefPtr<DOMError> error;
 };
 
-class CSSFontFaceLoadEvent : public Event {
+class CSSFontFaceLoadEvent final : public Event {
 public:
-    static PassRefPtr<CSSFontFaceLoadEvent> create()
+    static Ref<CSSFontFaceLoadEvent> create()
     {
-        return adoptRef<CSSFontFaceLoadEvent>(new CSSFontFaceLoadEvent());
+        return adoptRef<CSSFontFaceLoadEvent>(*new CSSFontFaceLoadEvent);
     }
 
-    static PassRefPtr<CSSFontFaceLoadEvent> create(const AtomicString& type, const CSSFontFaceLoadEventInit& initializer)
+    static Ref<CSSFontFaceLoadEvent> create(const AtomicString& type, const CSSFontFaceLoadEventInit& initializer)
     {
-        return adoptRef<CSSFontFaceLoadEvent>(new CSSFontFaceLoadEvent(type, initializer));
+        return adoptRef<CSSFontFaceLoadEvent>(*new CSSFontFaceLoadEvent(type, initializer));
     }
 
-    static PassRefPtr<CSSFontFaceLoadEvent> createForFontFaceRule(const AtomicString& type, PassRefPtr<CSSFontFaceRule> rule)
+    static Ref<CSSFontFaceLoadEvent> createForFontFaceRule(const AtomicString& type, PassRefPtr<CSSFontFaceRule> rule)
     {
-        return adoptRef<CSSFontFaceLoadEvent>(new CSSFontFaceLoadEvent(type, rule, 0));
+        return adoptRef<CSSFontFaceLoadEvent>(*new CSSFontFaceLoadEvent(type, rule, 0));
     }
 
-    static PassRefPtr<CSSFontFaceLoadEvent> createForError(PassRefPtr<CSSFontFaceRule> rule, PassRefPtr<DOMError> error)
+    static Ref<CSSFontFaceLoadEvent> createForError(PassRefPtr<CSSFontFaceRule> rule, PassRefPtr<DOMError> error)
     {
-        return adoptRef<CSSFontFaceLoadEvent>(new CSSFontFaceLoadEvent(eventNames().errorEvent, rule, error));
+        return adoptRef<CSSFontFaceLoadEvent>(*new CSSFontFaceLoadEvent(eventNames().errorEvent, rule, error));
     }
 
     virtual ~CSSFontFaceLoadEvent();
@@ -75,7 +75,7 @@ public:
     CSSFontFaceRule* fontface() const { return m_fontface.get(); }
     DOMError* error() const { return m_error.get(); }
 
-    virtual EventInterface eventInterface() const;
+    virtual EventInterface eventInterface() const override;
 
 private:
     CSSFontFaceLoadEvent();

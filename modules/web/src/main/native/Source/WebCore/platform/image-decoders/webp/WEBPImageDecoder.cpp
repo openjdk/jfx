@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,8 +32,8 @@
 #if USE(WEBP)
 
 #ifdef QCMS_WEBP_COLOR_CORRECTION
-#include "qcms.h"
-#include "webp/demux.h"
+#include <qcms.h>
+#include <webp/demux.h>
 #else
 #undef ICCP_FLAG
 #define ICCP_FLAG 0

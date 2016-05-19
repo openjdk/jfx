@@ -28,7 +28,7 @@
 
 import sys
 import time
-import unittest2 as unittest
+import unittest
 
 from webkitpy.port.factory import PortFactory
 from webkitpy.port import server_process
@@ -65,6 +65,10 @@ class MockFile(object):
     def write(self, line):
         self._server_process.broken_pipes.append(self)
         raise IOError
+
+    def read(self, size=0):
+        # This means end of file
+        return ''
 
     def close(self):
         self.closed = True

@@ -39,8 +39,8 @@
 
 namespace WebCore {
 
-RenderSVGModelObject::RenderSVGModelObject(SVGElement& element, PassRef<RenderStyle> style)
-    : RenderElement(element, std::move(style), 0)
+RenderSVGModelObject::RenderSVGModelObject(SVGElement& element, Ref<RenderStyle>&& style)
+    : RenderElement(element, WTF::move(style), 0)
     , m_hasSVGShadow(false)
 {
 }
@@ -74,7 +74,7 @@ LayoutRect RenderSVGModelObject::outlineBoundsForRepaint(const RenderLayerModelO
     adjustRectForOutlineAndShadow(box);
 
     FloatQuad containerRelativeQuad = localToContainerQuad(FloatRect(box), repaintContainer);
-    return containerRelativeQuad.enclosingBoundingBox();
+    return LayoutRect(snapRectToDevicePixels(LayoutRect(containerRelativeQuad.boundingBox()), document().deviceScaleFactor()));
 }
 
 void RenderSVGModelObject::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
@@ -86,7 +86,7 @@ void RenderSVGModelObject::absoluteRects(Vector<IntRect>& rects, const LayoutPoi
 
 void RenderSVGModelObject::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
-    quads.append(localToAbsoluteQuad(strokeBoundingBox(), 0 /* mode */, wasFixed));
+    quads.append(localToAbsoluteQuad(strokeBoundingBox(), UseTransforms, wasFixed));
 }
 
 void RenderSVGModelObject::willBeDestroyed()
@@ -124,11 +124,11 @@ static void getElementCTM(SVGElement* element, AffineTransform& transform)
     Node* current = element;
 
     while (current && current->isSVGElement()) {
-        SVGElement* currentElement = toSVGElement(current);
-        localTransform = currentElement->renderer()->localToParentTransform();
+        SVGElement& currentElement = downcast<SVGElement>(*current);
+        localTransform = currentElement.renderer()->localToParentTransform();
         transform = localTransform.multiply(transform);
         // For getCTM() computation, stop at the nearest viewport element
-        if (currentElement == stopAtElement)
+        if (&currentElement == stopAtElement)
             break;
 
         current = current->parentOrShadowHostNode();
@@ -171,7 +171,7 @@ bool RenderSVGModelObject::checkIntersection(RenderElement* renderer, const Floa
     if (!isGraphicsElement(*renderer))
         return false;
     AffineTransform ctm;
-    SVGElement* svgElement = toSVGElement(renderer->element());
+    SVGElement* svgElement = downcast<SVGElement>(renderer->element());
     getElementCTM(svgElement, ctm);
     ASSERT(svgElement->renderer());
     return intersectsAllowingEmpty(rect, ctm.mapRect(svgElement->renderer()->repaintRectInLocalCoordinates()));
@@ -184,7 +184,7 @@ bool RenderSVGModelObject::checkEnclosure(RenderElement* renderer, const FloatRe
     if (!isGraphicsElement(*renderer))
         return false;
     AffineTransform ctm;
-    SVGElement* svgElement = toSVGElement(renderer->element());
+    SVGElement* svgElement = downcast<SVGElement>(renderer->element());
     getElementCTM(svgElement, ctm);
     ASSERT(svgElement->renderer());
     return rect.contains(ctm.mapRect(svgElement->renderer()->repaintRectInLocalCoordinates()));

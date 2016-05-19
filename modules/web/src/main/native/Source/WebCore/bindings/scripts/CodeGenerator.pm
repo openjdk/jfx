@@ -35,7 +35,6 @@ my $useGenerator = "";
 my $useOutputDir = "";
 my $useOutputHeadersDir = "";
 my $useDirectories = "";
-my $useLayerOnTop = 0;
 my $preprocessor;
 my $writeDependencies = 0;
 my $defines = "";
@@ -48,8 +47,9 @@ my $verbose = 0;
 my %numericTypeHash = ("int" => 1, "short" => 1, "long" => 1, "long long" => 1,
                        "unsigned int" => 1, "unsigned short" => 1,
                        "unsigned long" => 1, "unsigned long long" => 1,
-                       "float" => 1, "double" => 1, "byte" => 1,
-                       "octet" => 1);
+                       "float" => 1, "double" => 1, 
+                       "unrestricted float" => 1, "unrestricted double" => 1,
+                       "byte" => 1, "octet" => 1);
 
 my %primitiveTypeHash = ( "boolean" => 1, "void" => 1, "Date" => 1);
 
@@ -109,7 +109,6 @@ sub new
     $useGenerator = shift;
     $useOutputDir = shift;
     $useOutputHeadersDir = shift;
-    $useLayerOnTop = shift;
     $preprocessor = shift;
     $writeDependencies = shift;
     $verbose = shift;
@@ -131,7 +130,7 @@ sub ProcessDocument
     %enumTypeHash = map { $_->name => $_->values } @{$useDocument->enumerations};
 
     # Dynamically load external code generation perl module
-    $codeGenerator = $ifaceName->new($object, $useLayerOnTop, $preprocessor, $writeDependencies, $verbose, $targetIdlFilePath);
+    $codeGenerator = $ifaceName->new($object, $writeDependencies, $verbose, $targetIdlFilePath);
     unless (defined($codeGenerator)) {
         my $interfaces = $useDocument->interfaces;
         foreach my $interface (@$interfaces) {
@@ -156,7 +155,7 @@ sub FileNamePrefix
     require $ifaceName . ".pm";
 
     # Dynamically load external code generation perl module
-    $codeGenerator = $ifaceName->new($object, $useLayerOnTop, $preprocessor, $writeDependencies, $verbose);
+    $codeGenerator = $ifaceName->new($object, $writeDependencies, $verbose);
     return $codeGenerator->FileNamePrefix();
 }
 
@@ -449,6 +448,14 @@ sub GetArrayType
     return "";
 }
 
+sub GetArrayOrSequenceType
+{
+    my $object = shift;
+    my $type = shift;
+
+    return $object->GetArrayType($type) || $object->GetSequenceType($type);
+}
+
 sub AssertNotSequenceType
 {
     my $object = shift;
@@ -598,15 +605,19 @@ sub SetterExpression
         return ("set" . $generator->WK_ucfirst($generator->AttributeNameForGetterAndSetter($attribute)));
     }
 
+    my $attributeType = $attribute->signature->type;
+
     my $functionName;
-    if ($attribute->signature->type eq "boolean") {
+    if ($attributeType eq "boolean") {
         $functionName = "setBooleanAttribute";
-    } elsif ($attribute->signature->type eq "long") {
+    } elsif ($attributeType eq "long") {
         $functionName = "setIntegralAttribute";
-    } elsif ($attribute->signature->type eq "unsigned long") {
+    } elsif ($attributeType eq "unsigned long") {
         $functionName = "setUnsignedIntegralAttribute";
-    } else {
+    } elsif ($generator->IsSVGAnimatedType($attributeType)) {
         $functionName = "setAttribute";
+    } else {
+        $functionName = "setAttributeWithoutSynchronization";
     }
 
     print "tav>> functionName=$functionName\n";
@@ -680,15 +691,26 @@ sub GenerateConditionalStringFromAttributeValue
     my $generator = shift;
     my $conditional = shift;
 
-    my $operator = ($conditional =~ /&/ ? '&' : ($conditional =~ /\|/ ? '|' : ''));
-    if ($operator) {
-        # Avoid duplicated conditions.
-        my %conditions;
-        map { $conditions{$_} = 1 } split('\\' . $operator, $conditional);
-        return "ENABLE(" . join(") $operator$operator ENABLE(", sort keys %conditions) . ")";
-    } else {
-        return "ENABLE(" . $conditional . ")";
-    }
+    my %disjunction;
+    map {
+        my $expression = $_;
+        my %conjunction;
+        map { $conjunction{$_} = 1; } split(/&/, $expression);
+        $expression = "ENABLE(" . join(") && ENABLE(", sort keys %conjunction) . ")";
+        $disjunction{$expression} = 1
+    } split(/\|/, $conditional);
+
+    return "1" if keys %disjunction == 0;
+    return (%disjunction)[0] if keys %disjunction == 1;
+
+    my @parenthesized;
+    map {
+        my $expression = $_;
+        $expression = "($expression)" if $expression =~ / /;
+        push @parenthesized, $expression;
+    } sort keys %disjunction;
+
+    return join(" || ", @parenthesized);
 }
 
 sub GenerateCompileTimeCheckForEnumsIfNeeded

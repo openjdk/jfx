@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,20 +26,19 @@
 #import "config.h"
 #import "objc_instance.h"
 
-#import "runtime_method.h"
-#import <runtime/ObjectPrototype.h>
 #import "JSDOMBinding.h"
+#import "NSPointerFunctionsSPI.h"
 #import "ObjCRuntimeObject.h"
 #import "WebScriptObject.h"
+#import "WebScriptObjectProtocol.h"
+#import "runtime/FunctionPrototype.h"
+#import "runtime_method.h"
 #import <objc/objc-auto.h>
 #import <runtime/Error.h>
 #import <runtime/JSLock.h>
-#import "runtime/FunctionPrototype.h"
+#import <runtime/ObjectPrototype.h>
 #import <wtf/Assertions.h>
-
-#if PLATFORM(IOS)
-#import <Foundation/NSMapTable.h>
-#endif // PLATFORM(IOS)
+#import <wtf/spi/cocoa/NSMapTableSPI.h>
 
 #ifdef NDEBUG
 #define OBJC_LOG(formatAndArgs...) ((void)0)
@@ -196,7 +195,7 @@ public:
         return runtimeMethod;
     }
 
-    static Structure* createStructure(VM& vm, JSC::JSGlobalObject* globalObject, JSValue prototype)
+    static Structure* createStructure(VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
     }
@@ -218,15 +217,15 @@ private:
     }
 };
 
-const ClassInfo ObjCRuntimeMethod::s_info = { "ObjCRuntimeMethod", &RuntimeMethod::s_info, 0, 0, CREATE_METHOD_TABLE(ObjCRuntimeMethod) };
+const ClassInfo ObjCRuntimeMethod::s_info = { "ObjCRuntimeMethod", &RuntimeMethod::s_info, 0, CREATE_METHOD_TABLE(ObjCRuntimeMethod) };
 
-JSValue ObjcInstance::getMethod(ExecState* exec, PropertyName propertyName)
+JSC::JSValue ObjcInstance::getMethod(ExecState* exec, PropertyName propertyName)
 {
     Method* method = getClass()->methodNamed(propertyName, this);
     return ObjCRuntimeMethod::create(exec, exec->lexicalGlobalObject(), propertyName.publicName(), method);
 }
 
-JSValue ObjcInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
+JSC::JSValue ObjcInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
 {
     if (!asObject(runtimeMethod)->inherits(ObjCRuntimeMethod::info()))
         return exec->vm().throwException(exec, createTypeError(exec, "Attempt to invoke non-plug-in method on plug-in object."));
@@ -237,7 +236,7 @@ JSValue ObjcInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     return invokeObjcMethod(exec, method);
 }
 
-JSValue ObjcInstance::invokeObjcMethod(ExecState* exec, ObjcMethod* method)
+JSC::JSValue ObjcInstance::invokeObjcMethod(ExecState* exec, ObjcMethod* method)
 {
     JSValue result = jsUndefined();
 
@@ -355,7 +354,7 @@ JSValue ObjcInstance::invokeObjcMethod(ExecState* exec, ObjcMethod* method)
     return const_cast<JSValue&>(result);
 }
 
-JSValue ObjcInstance::invokeDefaultMethod(ExecState* exec)
+JSC::JSValue ObjcInstance::invokeDefaultMethod(ExecState* exec)
 {
     JSValue result = jsUndefined();
 
@@ -438,7 +437,7 @@ bool ObjcInstance::setValueOfUndefinedField(ExecState* exec, PropertyName proper
     return true;
 }
 
-JSValue ObjcInstance::getValueOfUndefinedField(ExecState* exec, PropertyName propertyName) const
+JSC::JSValue ObjcInstance::getValueOfUndefinedField(ExecState* exec, PropertyName propertyName) const
 {
     String name(propertyName.publicName());
     if (name.isNull())
@@ -471,7 +470,7 @@ JSValue ObjcInstance::getValueOfUndefinedField(ExecState* exec, PropertyName pro
     return const_cast<JSValue&>(result);
 }
 
-JSValue ObjcInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint) const
+JSC::JSValue ObjcInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint) const
 {
     if (hint == PreferString)
         return stringValue(exec);
@@ -484,24 +483,24 @@ JSValue ObjcInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint)
     return valueOf(exec);
 }
 
-JSValue ObjcInstance::stringValue(ExecState* exec) const
+JSC::JSValue ObjcInstance::stringValue(ExecState* exec) const
 {
     return convertNSStringToString(exec, [getObject() description]);
 }
 
-JSValue ObjcInstance::numberValue(ExecState*) const
+JSC::JSValue ObjcInstance::numberValue(ExecState*) const
 {
     // FIXME:  Implement something sensible
     return jsNumber(0);
 }
 
-JSValue ObjcInstance::booleanValue() const
+JSC::JSValue ObjcInstance::booleanValue() const
 {
     // FIXME:  Implement something sensible
     return jsBoolean(false);
 }
 
-JSValue ObjcInstance::valueOf(ExecState* exec) const
+JSC::JSValue ObjcInstance::valueOf(ExecState* exec) const
 {
     return stringValue(exec);
 }

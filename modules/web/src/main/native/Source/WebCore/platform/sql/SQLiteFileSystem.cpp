@@ -50,33 +50,7 @@ SQLiteFileSystem::SQLiteFileSystem()
 
 int SQLiteFileSystem::openDatabase(const String& filename, sqlite3** database, bool)
 {
-    return sqlite3_open(filename.utf8().data(), database);
-}
-
-String SQLiteFileSystem::getFileNameForNewDatabase(const String& dbDir, const String&,
-                                                   const String&, SQLiteDatabase* db)
-{
-    // try to get the next sequence number from the given database
-    // if we can't get a number, return an empty string
-    SQLiteStatement sequenceStatement(*db, "SELECT seq FROM sqlite_sequence WHERE name='Databases';");
-    if (sequenceStatement.prepare() != SQLResultOk)
-        return String();
-    int result = sequenceStatement.step();
-    int64_t seq = 0;
-    if (result == SQLResultRow)
-        seq = sequenceStatement.getColumnInt64(0);
-    else if (result != SQLResultDone)
-        return String();
-    sequenceStatement.finalize();
-
-    // increment the number until we can use it to form a file name that doesn't exist
-    String fileName;
-    do {
-        ++seq;
-        fileName = pathByAppendingComponent(dbDir, String::format("%016" PRIx64 ".db", seq));
-    } while (fileExists(fileName));
-
-    return String::format("%016" PRIx64 ".db", seq);
+    return sqlite3_open(fileSystemRepresentation(filename).data(), database);
 }
 
 String SQLiteFileSystem::appendDatabaseFileNameToPath(const String& path, const String& fileName)

@@ -22,7 +22,6 @@
 #ifndef FEMerge_h
 #define FEMerge_h
 
-#if ENABLE(FILTERS)
 #include "FilterEffect.h"
 #include "Filter.h"
 #include <wtf/Vector.h>
@@ -31,7 +30,7 @@ namespace WebCore {
 
 class FEMerge : public FilterEffect {
 public:
-    static PassRefPtr<FEMerge> create(Filter*);
+    static Ref<FEMerge> create(Filter&);
 
     virtual void platformApplySoftware();
 #if ENABLE(OPENCL)
@@ -42,11 +41,9 @@ public:
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;
 
 private:
-    FEMerge(Filter*);
+    FEMerge(Filter&);
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // FEMerge_h

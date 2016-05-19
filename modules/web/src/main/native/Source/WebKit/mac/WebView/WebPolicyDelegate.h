@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -88,7 +88,7 @@ extern NSString *WebActionOriginalURLKey; // NSURL
     called with an appropriate error.
 
     <p>If a new window is going to be created for this navigation as a
-    result of frame targetting, then it will be created once you call
+    result of frame targeting, then it will be created once you call
     this method.
 */
 - (void)use;
@@ -137,7 +137,9 @@ extern NSString *WebActionOriginalURLKey; // NSURL
     documents come in one navigation, with each replacing the last. In
     this case, conent policy will be checked for each one.
 */
-@interface NSObject (WebPolicyDelegate)
+@protocol WebPolicyDelegate <NSObject>
+
+@optional
 
 /*!
    @method webView:decidePolicyForNavigationAction:request:frame:decisionListener:

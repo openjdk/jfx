@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebActionPropertyBag.h"
 
@@ -47,13 +46,13 @@ WebActionPropertyBag::WebActionPropertyBag(const NavigationAction& action, PassR
     , m_frame(frame)
 {
     gClassCount++;
-    gClassNameCount.add("WebActionPropertyBag");
+    gClassNameCount().add("WebActionPropertyBag");
 }
 
 WebActionPropertyBag::~WebActionPropertyBag()
 {
     gClassCount--;
-    gClassNameCount.remove("WebActionPropertyBag");
+    gClassNameCount().remove("WebActionPropertyBag");
 }
 
 WebActionPropertyBag* WebActionPropertyBag::createInstance(const NavigationAction& action, PassRefPtr<HTMLFormElement> form, PassRefPtr<Frame> frame)
@@ -106,16 +105,16 @@ static const MouseEvent* findMouseEvent(const Event* event)
     return 0;
 }
 
-HRESULT STDMETHODCALLTYPE WebActionPropertyBag::Read(LPCOLESTR pszPropName, VARIANT *pVar, IErrorLog * /*pErrorLog*/)
+HRESULT WebActionPropertyBag::Read(LPCOLESTR pszPropName, VARIANT *pVar, IErrorLog * /*pErrorLog*/)
 {
     if (!pszPropName)
         return E_POINTER;
 
-    VariantClear(pVar);
+    ::VariantClear(pVar);
 
     if (isEqual(pszPropName, WebActionNavigationTypeKey)) {
         V_VT(pVar) = VT_I4;
-        V_I4(pVar) = m_action.type();
+        V_I4(pVar) = static_cast<LONG>(m_action.type());
         return S_OK;
     }
     if (isEqual(pszPropName, WebActionElementKey)) {

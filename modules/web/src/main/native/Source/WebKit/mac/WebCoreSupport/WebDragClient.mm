@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -42,7 +42,7 @@
 #import "WebUIDelegate.h"
 #import "WebUIDelegatePrivate.h"
 #import "WebViewInternal.h"
-#import <WebCore/Clipboard.h>
+#import <WebCore/DataTransfer.h>
 #import <WebCore/DragData.h>
 #import <WebCore/Editor.h>
 #import <WebCore/EditorClient.h>
@@ -84,12 +84,12 @@ WebCore::DragSourceAction WebDragClient::dragSourceActionMaskForPoint(const IntP
     return (DragSourceAction)[[m_webView _UIDelegateForwarder] webView:m_webView dragSourceActionMaskForPoint:viewPoint];
 }
 
-void WebDragClient::willPerformDragSourceAction(WebCore::DragSourceAction action, const WebCore::IntPoint& mouseDownPoint, WebCore::Clipboard& clipboard)
+void WebDragClient::willPerformDragSourceAction(WebCore::DragSourceAction action, const WebCore::IntPoint& mouseDownPoint, WebCore::DataTransfer& dataTransfer)
 {
-    [[m_webView _UIDelegateForwarder] webView:m_webView willPerformDragSourceAction:(WebDragSourceAction)action fromPoint:mouseDownPoint withPasteboard:[NSPasteboard pasteboardWithName:clipboard.pasteboard().name()]];
+    [[m_webView _UIDelegateForwarder] webView:m_webView willPerformDragSourceAction:(WebDragSourceAction)action fromPoint:mouseDownPoint withPasteboard:[NSPasteboard pasteboardWithName:dataTransfer.pasteboard().name()]];
 }
 
-void WebDragClient::startDrag(DragImageRef dragImage, const IntPoint& at, const IntPoint& eventPos, Clipboard& clipboard, Frame& frame, bool linkDrag)
+void WebDragClient::startDrag(DragImageRef dragImage, const IntPoint& at, const IntPoint& eventPos, DataTransfer& dataTransfer, Frame& frame, bool linkDrag)
 {
     RetainPtr<WebHTMLView> htmlView = (WebHTMLView*)[[kit(&frame) frameView] documentView];
     if (![htmlView.get() isKindOfClass:[WebHTMLView class]])
@@ -100,10 +100,14 @@ void WebDragClient::startDrag(DragImageRef dragImage, const IntPoint& at, const 
     RetainPtr<WebHTMLView> topViewProtector = topHTMLView;
 
     [topHTMLView _stopAutoscrollTimer];
-    NSPasteboard *pasteboard = [NSPasteboard pasteboardWithName:clipboard.pasteboard().name()];
+    NSPasteboard *pasteboard = [NSPasteboard pasteboardWithName:dataTransfer.pasteboard().name()];
 
     NSImage *dragNSImage = dragImage.get();
     WebHTMLView *sourceHTMLView = htmlView.get();
+
+    IntSize size([dragNSImage size]);
+    size.scale(1 / frame.page()->deviceScaleFactor());
+    [dragNSImage setSize:size];
 
     id delegate = [m_webView UIDelegate];
     SEL selector = @selector(webView:dragImage:at:offset:event:pasteboard:source:slideBack:forView:);
@@ -123,11 +127,17 @@ void WebDragClient::startDrag(DragImageRef dragImage, const IntPoint& at, const 
 void WebDragClient::declareAndWriteDragImage(const String& pasteboardName, Element& element, const URL& url, const String& title, WebCore::Frame* frame)
 {
     ASSERT(pasteboardName);
-    WebHTMLView *source = getTopHTMLView(frame);
-    WebArchive *archive = [kit(&element) webArchive];
-
-    [[NSPasteboard pasteboardWithName:pasteboardName] _web_declareAndWriteDragImageForElement:kit(&element) URL:url title:title archive:archive source:source];
+    [[NSPasteboard pasteboardWithName:pasteboardName] _web_declareAndWriteDragImageForElement:kit(&element) URL:url title:title archive:[kit(&element) webArchive] source:getTopHTMLView(frame)];
 }
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+void WebDragClient::declareAndWriteAttachment(const String& pasteboardName, Element& element, const URL& url, const String& path, WebCore::Frame* frame)
+{
+    ASSERT(pasteboardName);
+
+    [[NSPasteboard pasteboardWithName:pasteboardName] _web_declareAndWriteDragImageForElement:kit(&element) URL:url title:path archive:nil source:getTopHTMLView(frame)];
+}
+#endif
 
 void WebDragClient::dragControllerDestroyed()
 {

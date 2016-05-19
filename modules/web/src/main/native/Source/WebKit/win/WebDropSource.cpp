@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebDropSource.h"
 
 #include "WebKitDLL.h"
@@ -57,13 +56,13 @@ WebDropSource::WebDropSource(WebView* webView)
 , m_webView(webView)
 {
     gClassCount++;
-    gClassNameCount.add("WebDropSource");
+    gClassNameCount().add("WebDropSource");
 }
 
 WebDropSource::~WebDropSource()
 {
     gClassCount--;
-    gClassNameCount.remove("WebDropSource");
+    gClassNameCount().remove("WebDropSource");
 }
 
 STDMETHODIMP WebDropSource::QueryInterface(REFIID riid, void** ppvObject)
@@ -98,11 +97,11 @@ PlatformMouseEvent generateMouseEvent(WebView* webView, bool isDrag)
     POINTL pt;
     ::GetCursorPos((LPPOINT)&pt);
     POINTL localpt = pt;
-    OLE_HANDLE viewWindow;
+    HWND viewWindow;
     if (SUCCEEDED(webView->viewWindow(&viewWindow)))
-        ::ScreenToClient(reinterpret_cast<HWND>(viewWindow), reinterpret_cast<LPPOINT>(&localpt));
+        ::ScreenToClient(viewWindow, reinterpret_cast<LPPOINT>(&localpt));
     return PlatformMouseEvent(IntPoint(localpt.x, localpt.y), IntPoint(pt.x, pt.y),
-        isDrag ? LeftButton : NoButton, PlatformEvent::MouseMoved, 0, false, false, false, false, currentTime());
+        isDrag ? LeftButton : NoButton, PlatformEvent::MouseMoved, 0, false, false, false, false, currentTime(), 0);
 }
 
 STDMETHODIMP WebDropSource::QueryContinueDrag(BOOL fEscapePressed, DWORD grfKeyState)
@@ -131,7 +130,7 @@ STDMETHODIMP WebDropSource::GiveFeedback(DWORD dwEffect)
         return DRAGDROP_S_USEDEFAULTCURSORS;
 
     HWND viewWindow;
-    if (FAILED(m_webView->viewWindow(reinterpret_cast<OLE_HANDLE*>(&viewWindow))))
+    if (FAILED(m_webView->viewWindow(&viewWindow)))
         return DRAGDROP_S_USEDEFAULTCURSORS;
 
     RECT webViewRect;

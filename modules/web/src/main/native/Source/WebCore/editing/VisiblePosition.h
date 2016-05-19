@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,7 +28,7 @@
 
 #include "EditingBoundary.h"
 #include "Position.h"
-#include "TextDirection.h"
+#include "TextFlags.h"
 
 namespace WebCore {
 
@@ -53,7 +53,7 @@ public:
     // NOTE: UPSTREAM affinity will be used only if pos is at end of a wrapped line,
     // otherwise it will be converted to DOWNSTREAM
     VisiblePosition() : m_affinity(VP_DEFAULT_AFFINITY) { }
-    VisiblePosition(const Position&, EAffinity = VP_DEFAULT_AFFINITY);
+    WEBCORE_EXPORT VisiblePosition(const Position&, EAffinity = VP_DEFAULT_AFFINITY);
 
     void clear() { m_deepPosition.clear(); }
 
@@ -68,15 +68,15 @@ public:
     // FIXME: Change the following functions' parameter from a boolean to StayInEditableContent.
 
     // next() and previous() will increment/decrement by a character cluster.
-    VisiblePosition next(EditingBoundaryCrossingRule = CanCrossEditingBoundary) const;
-    VisiblePosition previous(EditingBoundaryCrossingRule = CanCrossEditingBoundary) const;
+    WEBCORE_EXPORT VisiblePosition next(EditingBoundaryCrossingRule = CanCrossEditingBoundary) const;
+    WEBCORE_EXPORT VisiblePosition previous(EditingBoundaryCrossingRule = CanCrossEditingBoundary) const;
     VisiblePosition honorEditingBoundaryAtOrBefore(const VisiblePosition&) const;
     VisiblePosition honorEditingBoundaryAtOrAfter(const VisiblePosition&) const;
 
-    VisiblePosition left(bool stayInEditableContent = false) const;
-    VisiblePosition right(bool stayInEditableContent = false) const;
+    WEBCORE_EXPORT VisiblePosition left(bool stayInEditableContent = false) const;
+    WEBCORE_EXPORT VisiblePosition right(bool stayInEditableContent = false) const;
 
-    UChar32 characterAfter() const;
+    WEBCORE_EXPORT UChar32 characterAfter() const;
     UChar32 characterBefore() const { return previous().characterAfter(); }
 
     // FIXME: This does not handle [table, 0] correctly.
@@ -93,14 +93,14 @@ public:
     }
 
     // Rect is local to the returned renderer
-    LayoutRect localCaretRect(RenderObject*&) const;
+    WEBCORE_EXPORT LayoutRect localCaretRect(RenderObject*&) const;
     // Bounds of (possibly transformed) caret in absolute coords
-    IntRect absoluteCaretBounds() const;
+    WEBCORE_EXPORT IntRect absoluteCaretBounds() const;
     // Abs x/y position of the caret ignoring transforms.
     // FIXME: navigation with transforms should be smarter.
-    int lineDirectionPointForBlockDirectionNavigation() const;
+    WEBCORE_EXPORT int lineDirectionPointForBlockDirectionNavigation() const;
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
     void debugPosition(const char* msg = "") const;
     void formatForDebugger(char* buffer, unsigned length) const;
     void showTreeForThis() const;
@@ -128,7 +128,6 @@ inline bool operator!=(const VisiblePosition& a, const VisiblePosition& b)
     return !(a == b);
 }
 
-#if PLATFORM(IOS)
 inline bool operator<(const VisiblePosition& a, const VisiblePosition& b)
 {
     return a.deepEquivalent() < b.deepEquivalent();
@@ -148,22 +147,21 @@ inline bool operator>=(const VisiblePosition& a, const VisiblePosition& b)
 {
     return a.deepEquivalent() >= b.deepEquivalent();
 }
-#endif
 
-PassRefPtr<Range> makeRange(const VisiblePosition&, const VisiblePosition&);
+WEBCORE_EXPORT PassRefPtr<Range> makeRange(const VisiblePosition&, const VisiblePosition&);
 bool setStart(Range*, const VisiblePosition&);
 bool setEnd(Range*, const VisiblePosition&);
 VisiblePosition startVisiblePosition(const Range*, EAffinity);
 VisiblePosition endVisiblePosition(const Range*, EAffinity);
 
-Element* enclosingBlockFlowElement(const VisiblePosition&);
+WEBCORE_EXPORT Element* enclosingBlockFlowElement(const VisiblePosition&);
 
 bool isFirstVisiblePositionInNode(const VisiblePosition&, const Node*);
 bool isLastVisiblePositionInNode(const VisiblePosition&, const Node*);
 
 } // namespace WebCore
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 // Outside the WebCore namespace for ease of invocation from gdb.
 void showTree(const WebCore::VisiblePosition*);
 void showTree(const WebCore::VisiblePosition&);

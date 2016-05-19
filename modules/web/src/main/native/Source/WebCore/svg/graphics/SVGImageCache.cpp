@@ -24,6 +24,7 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include "LayoutSize.h"
 #include "Page.h"
 #include "RenderSVGRoot.h"
 #include "SVGImage.h"
@@ -49,7 +50,7 @@ void SVGImageCache::removeClientFromCache(const CachedImageClient* client)
     m_imageForContainerMap.remove(client);
 }
 
-void SVGImageCache::setContainerSizeForRenderer(const CachedImageClient* client, const IntSize& containerSize, float containerZoom)
+void SVGImageCache::setContainerSizeForRenderer(const CachedImageClient* client, const LayoutSize& containerSize, float containerZoom)
 {
     ASSERT(client);
     ASSERT(!containerSize.isEmpty());
@@ -61,35 +62,26 @@ void SVGImageCache::setContainerSizeForRenderer(const CachedImageClient* client,
     m_imageForContainerMap.set(client, SVGImageForContainer::create(m_svgImage, containerSizeWithoutZoom, containerZoom));
 }
 
-IntSize SVGImageCache::imageSizeForRenderer(const RenderObject* renderer) const
+Image* SVGImageCache::findImageForRenderer(const RenderObject* renderer) const
 {
-    IntSize imageSize = m_svgImage->size();
-    if (!renderer)
-        return imageSize;
+    return renderer ? m_imageForContainerMap.get(renderer) : nullptr;
+}
 
-    ImageForContainerMap::const_iterator it = m_imageForContainerMap.find(renderer);
-    if (it == m_imageForContainerMap.end())
-        return imageSize;
-
-    RefPtr<SVGImageForContainer> imageForContainer = it->value;
-    ASSERT(!imageForContainer->size().isEmpty());
-    return imageForContainer->size();
+FloatSize SVGImageCache::imageSizeForRenderer(const RenderObject* renderer) const
+{
+    auto* image = findImageForRenderer(renderer);
+    return image ? image->size() : m_svgImage->size();
 }
 
 // FIXME: This doesn't take into account the animation timeline so animations will not
 // restart on page load, nor will two animations in different pages have different timelines.
-Image* SVGImageCache::imageForRenderer(const RenderObject* renderer)
+Image* SVGImageCache::imageForRenderer(const RenderObject* renderer) const
 {
-    if (!renderer)
+    auto* image = findImageForRenderer(renderer);
+    if (!image)
         return Image::nullImage();
-
-    ImageForContainerMap::iterator it = m_imageForContainerMap.find(renderer);
-    if (it == m_imageForContainerMap.end())
-        return Image::nullImage();
-
-    RefPtr<SVGImageForContainer> imageForContainer = it->value;
-    ASSERT(!imageForContainer->size().isEmpty());
-    return imageForContainer.get();
+    ASSERT(!image->size().isEmpty());
+    return image;
 }
 
 } // namespace WebCore

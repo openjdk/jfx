@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -25,8 +25,6 @@
 
 #ifndef WebKitCSSFilterValue_h
 #define WebKitCSSFilterValue_h
-
-#if ENABLE(CSS_FILTERS)
 
 #include "CSSValueList.h"
 #include <wtf/PassRefPtr.h>
@@ -52,7 +50,7 @@ public:
         DropShadowFilterOperation
     };
 
-    static PassRef<WebKitCSSFilterValue> create(FilterOperationType type)
+    static Ref<WebKitCSSFilterValue> create(FilterOperationType type)
     {
         return adoptRef(*new WebKitCSSFilterValue(type));
     }
@@ -72,10 +70,8 @@ private:
     FilterOperationType m_type;
 };
 
-CSS_VALUE_TYPE_CASTS(WebKitCSSFilterValue, isWebKitCSSFilterValue())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(WebKitCSSFilterValue, isWebKitCSSFilterValue())
 
-#endif // ENABLE(CSS_FILTERS)
-
-#endif
+#endif // WebKitCSSFilterValue_h

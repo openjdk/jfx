@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,6 +37,11 @@
 #include <functional>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
+
+#if ENABLE(CONTENT_FILTERING)
+#include "ContentFilterUnblockHandler.h"
+#endif
 
 #if PLATFORM(COCOA)
 #ifdef __OBJC__
@@ -72,9 +77,6 @@ namespace WebCore {
     class HTMLAppletElement;
     class HTMLFormElement;
     class HTMLFrameOwnerElement;
-#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-    class HTMLMediaElement;
-#endif
     class HTMLPlugInElement;
     class IntSize;
     class URL;
@@ -82,7 +84,7 @@ namespace WebCore {
     class NavigationAction;
     class Page;
     class ProtectionSpace;
-    class PluginView;
+    class PluginViewBase;
     class PolicyChecker;
     class ResourceError;
     class ResourceHandle;
@@ -97,9 +99,13 @@ namespace WebCore {
     class SubstituteData;
     class Widget;
 
+#if USE(QUICK_LOOK)
+    class QuickLookHandle;
+#endif
+
     typedef std::function<void (PolicyAction)> FramePolicyFunction;
 
-    class FrameLoaderClient {
+    class WEBCORE_EXPORT FrameLoaderClient {
     public:
         // An inline function cannot be the first non-abstract virtual function declared
         // in the class as it results in the vtable being generated as a weak symbol.
@@ -114,9 +120,10 @@ namespace WebCore {
         virtual bool hasWebView() const = 0; // mainly for assertions
 
         virtual void makeRepresentation(DocumentLoader*) = 0;
-        virtual void forceLayout() = 0;
+
 #if PLATFORM(IOS)
-        virtual void forceLayoutWithoutRecalculatingStyles() = 0;
+        // Returns true if the client forced the layout.
+        virtual bool forceLayoutOnRestoreFromPageCache() = 0;
 #endif
         virtual void forceLayoutForNonHTML() = 0;
 
@@ -147,6 +154,7 @@ namespace WebCore {
 
         virtual void dispatchDidHandleOnloadEvents() = 0;
         virtual void dispatchDidReceiveServerRedirectForProvisionalLoad() = 0;
+        virtual void dispatchDidChangeProvisionalURL() { }
         virtual void dispatchDidCancelClientRedirect() = 0;
         virtual void dispatchWillPerformClientRedirect(const URL&, double interval, double fireDate) = 0;
         virtual void dispatchDidNavigateWithinPage() { }
@@ -178,8 +186,6 @@ namespace WebCore {
 
         virtual void dispatchUnableToImplementPolicy(const ResourceError&) = 0;
 
-        virtual void dispatchWillRequestResource(CachedResourceRequest*) { }
-
         virtual void dispatchWillSendSubmitEvent(PassRefPtr<FormState>) = 0;
         virtual void dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction) = 0;
 
@@ -192,6 +198,9 @@ namespace WebCore {
 
         virtual void willChangeTitle(DocumentLoader*) = 0;
         virtual void didChangeTitle(DocumentLoader*) = 0;
+
+        virtual void willReplaceMultipartContent() = 0;
+        virtual void didReplaceMultipartContent() = 0;
 
         virtual void committedLoad(DocumentLoader*, const char*, int) = 0;
         virtual void finishedLoading(DocumentLoader*) = 0;
@@ -241,7 +250,8 @@ namespace WebCore {
         virtual void didFinishLoad() = 0;
         virtual void prepareForDataSourceReplacement() = 0;
 
-        virtual PassRefPtr<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) = 0;
+        virtual Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) = 0;
+        virtual void updateCachedDocumentLoader(DocumentLoader&) = 0;
         virtual void setTitle(const StringWithDirection&, const URL&) = 0;
 
         virtual String userAgent(const URL&) = 0;
@@ -261,19 +271,14 @@ namespace WebCore {
         virtual bool canCachePage() const = 0;
         virtual void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) = 0;
 
-        virtual PassRefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement, const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) = 0;
-        virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) = 0;
+        virtual RefPtr<Frame> createFrame(const URL&, const String& name, HTMLFrameOwnerElement*, const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) = 0;
+        virtual RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) = 0;
         virtual void recreatePlugin(Widget*) = 0;
         virtual void redirectDataToPlugin(Widget* pluginWidget) = 0;
 
         virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) = 0;
 
-        virtual void dispatchDidFailToStartPlugin(const PluginView*) const { }
-#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-        virtual PassRefPtr<Widget> createMediaPlayerProxyPlugin(const IntSize&, HTMLMediaElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&) = 0;
-        virtual void hideMediaPlayerProxyPlugin(Widget*) = 0;
-        virtual void showMediaPlayerProxyPlugin(Widget*) = 0;
-#endif
+        virtual void dispatchDidFailToStartPlugin(const PluginViewBase*) const { }
 
         virtual ObjectContentType objectContentType(const URL&, const String& mimeType, bool shouldPreferPlugInsForImages) = 0;
         virtual String overrideMediaType() const = 0;
@@ -298,16 +303,15 @@ namespace WebCore {
         virtual void didChangeScrollOffset() { }
 
         virtual bool allowScript(bool enabledPerSettings) { return enabledPerSettings; }
-        virtual bool allowScriptFromSource(bool enabledPerSettings, const URL&) { return enabledPerSettings; }
-        virtual bool allowPlugins(bool enabledPerSettings) { return enabledPerSettings; }
-        virtual bool allowImage(bool enabledPerSettings, const URL&) { return enabledPerSettings; }
-        virtual bool allowDisplayingInsecureContent(bool enabledPerSettings, SecurityOrigin*, const URL&) { return enabledPerSettings; }
-        virtual bool allowRunningInsecureContent(bool enabledPerSettings, SecurityOrigin*, const URL&) { return enabledPerSettings; }
 
         // Clients that generally disallow universal access can make exceptions for particular URLs.
         virtual bool shouldForceUniversalAccessFromLocalURL(const URL&) { return false; }
 
         virtual PassRefPtr<FrameNetworkingContext> createNetworkingContext() = 0;
+
+#if ENABLE(REQUEST_AUTOCOMPLETE)
+        virtual void didRequestAutocomplete(PassRefPtr<FormState>) = 0;
+#endif
 
         virtual bool shouldPaintBrokenImage(const URL&) const { return true; }
 
@@ -325,13 +329,27 @@ namespace WebCore {
         // Informs the embedder that a WebGL canvas inside this frame received a lost context
         // notification with the given GL_ARB_robustness guilt/innocence code (see Extensions3D.h).
         virtual void didLoseWebGLContext(int) { }
-        virtual WebGLLoadPolicy webGLPolicyForURL(const String&) const { return WebGLAllow; }
+        virtual WebGLLoadPolicy webGLPolicyForURL(const String&) const { return WebGLAllowCreation; }
+        virtual WebGLLoadPolicy resolveWebGLPolicyForURL(const String&) const { return WebGLAllowCreation; }
 #endif
 
         virtual void forcePageTransitionIfNeeded() { }
 
         // FIXME (bug 116233): We need to get rid of EmptyFrameLoaderClient completely, then this will no longer be needed.
         virtual bool isEmptyFrameLoaderClient() { return false; }
+
+#if PLATFORM(JAVA)
+        virtual bool isJavaFrameLoaderClient() { return false; }
+#endif
+        virtual FrameLoader* dataProtocolLoader() const { return nullptr; }
+
+#if USE(QUICK_LOOK)
+        virtual void didCreateQuickLookHandle(QuickLookHandle&) { }
+#endif
+
+#if ENABLE(CONTENT_FILTERING)
+        virtual void contentFilterDidBlockLoad(ContentFilterUnblockHandler) { }
+#endif
     };
 
 } // namespace WebCore

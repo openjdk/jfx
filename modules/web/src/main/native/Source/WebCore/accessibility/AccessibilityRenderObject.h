@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -57,13 +57,9 @@ class VisibleSelection;
 class Widget;
 
 class AccessibilityRenderObject : public AccessibilityNodeObject {
-protected:
-    explicit AccessibilityRenderObject(RenderObject*);
 public:
-    static PassRefPtr<AccessibilityRenderObject> create(RenderObject*);
+    static Ref<AccessibilityRenderObject> create(RenderObject*);
     virtual ~AccessibilityRenderObject();
-
-    virtual bool isAccessibilityRenderObject() const override { return true; }
 
     virtual void init() override;
 
@@ -214,9 +210,9 @@ public:
     virtual String passwordFieldValue() const override;
 
 protected:
-    RenderObject* m_renderer;
-
+    explicit AccessibilityRenderObject(RenderObject*);
     void setRenderObject(RenderObject* renderer) { m_renderer = renderer; }
+    void ariaElementsFromAttribute(AccessibilityChildrenVector&, const QualifiedName&) const;
     bool needsToUpdateChildren() const { return m_childrenDirty; }
     virtual ScrollableArea* getScrollableAreaIfScrollable() const override;
     virtual void scrollTo(const IntPoint&) const override;
@@ -226,14 +222,16 @@ protected:
     virtual AccessibilityRole determineAccessibilityRole() override;
     virtual bool computeAccessibilityIsIgnored() const override;
 
+    RenderObject* m_renderer;
+
 private:
-    void ariaElementsFromAttribute(AccessibilityChildrenVector&, const QualifiedName&) const;
+    virtual bool isAccessibilityRenderObject() const override final { return true; }
     void ariaListboxSelectedChildren(AccessibilityChildrenVector&);
     void ariaListboxVisibleChildren(AccessibilityChildrenVector&);
     bool isAllowedChildOfTree() const;
     bool hasTextAlternative() const;
     String positionalDescriptionForMSAA() const;
-    PlainTextRange ariaSelectedTextRange() const;
+    PlainTextRange documentBasedSelectedTextRange() const;
     Element* rootEditableElementForPosition(const Position&) const;
     bool nodeIsTextControl(const Node*) const;
     virtual void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
@@ -247,7 +245,7 @@ private:
     AccessibilityObject* accessibilityParentForImageMap(HTMLMapElement*) const;
     virtual AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const override;
 
-    bool renderObjectIsObservable(RenderObject*) const;
+    bool renderObjectIsObservable(RenderObject&) const;
     RenderObject* renderParentObject() const;
     bool isDescendantOfElementType(const QualifiedName& tagName) const;
 
@@ -267,6 +265,9 @@ private:
 #if PLATFORM(COCOA)
     void updateAttachmentViewParents();
 #endif
+    virtual String expandedTextValue() const override;
+    virtual bool supportsExpandedTextValue() const override;
+    void updateRoleAfterChildrenCreation();
 
     void ariaSelectedRows(AccessibilityChildrenVector&);
 
@@ -275,12 +276,12 @@ private:
 
     virtual ESpeak speakProperty() const override;
 
-    virtual const AtomicString& ariaLiveRegionStatus() const override;
+    virtual const String ariaLiveRegionStatus() const override;
     virtual const AtomicString& ariaLiveRegionRelevant() const override;
     virtual bool ariaLiveRegionAtomic() const override;
     virtual bool ariaLiveRegionBusy() const override;
 
-    bool inheritsPresentationalRole() const;
+    virtual bool inheritsPresentationalRole() const override;
 
 #if ENABLE(MATHML)
     // All math elements return true for isMathElement().
@@ -302,6 +303,9 @@ private:
     virtual bool isMathTableRow() const override;
     virtual bool isMathTableCell() const override;
     virtual bool isMathMultiscript() const override;
+    virtual bool isMathToken() const override;
+    virtual bool isMathScriptObject(AccessibilityMathScriptObjectType) const override;
+    virtual bool isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType) const override;
 
     // Generic components.
     virtual AccessibilityObject* mathBaseObject() override;
@@ -335,8 +339,8 @@ private:
 #endif
 };
 
-ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityRenderObject, isAccessibilityRenderObject())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityRenderObject, isAccessibilityRenderObject())
 
 #endif // AccessibilityRenderObject_h

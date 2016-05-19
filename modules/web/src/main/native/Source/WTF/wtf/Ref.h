@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,55 +26,170 @@
 #ifndef WTF_Ref_h
 #define WTF_Ref_h
 
-#include "Noncopyable.h"
+#include <wtf/Assertions.h>
+#include <wtf/GetPtr.h>
+#include <wtf/Noncopyable.h>
+#include <wtf/StdLibExtras.h>
+
+#if ASAN_ENABLED
+extern "C" void __asan_poison_memory_region(void const volatile *addr, size_t size);
+extern "C" void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
+extern "C" bool __asan_address_is_poisoned(void const volatile *addr);
+#endif
 
 namespace WTF {
 
-template<typename T> class PassRef;
+inline void adopted(const void*) { }
+
+template<typename T> class Ref;
+template<typename T> Ref<T> adoptRef(T&);
 
 template<typename T> class Ref {
-    WTF_MAKE_NONCOPYABLE(Ref)
 public:
-    Ref(T& object) : m_ptr(&object) { m_ptr->ref(); }
-    template<typename U> Ref(PassRef<U> reference) : m_ptr(&reference.leakRef()) { }
+    ~Ref()
+    {
+#if ASAN_ENABLED
+        if (__asan_address_is_poisoned(this))
+            __asan_unpoison_memory_region(this, sizeof(*this));
+#endif
+        if (m_ptr)
+            m_ptr->deref();
+    }
 
-    ~Ref() { m_ptr->deref(); }
+    Ref(T& object)
+        : m_ptr(&object)
+    {
+        m_ptr->ref();
+    }
+
+    // Use copyRef() instead.
+    Ref(const Ref& other) = delete;
+    template<typename U> Ref(const Ref<U>& other) = delete;
+
+    Ref(Ref&& other)
+        : m_ptr(&other.leakRef())
+    {
+        ASSERT(m_ptr);
+    }
+
+    template<typename U>
+    Ref(Ref<U>&& other)
+        : m_ptr(&other.leakRef())
+    {
+        ASSERT(m_ptr);
+    }
 
     Ref& operator=(T& object)
     {
+        ASSERT(m_ptr);
         object.ref();
         m_ptr->deref();
         m_ptr = &object;
+        ASSERT(m_ptr);
         return *this;
     }
-    template<typename U> Ref& operator=(PassRef<U> reference)
+
+    // Use copyRef() and the move assignment operators instead.
+    Ref& operator=(const Ref& reference) = delete;
+    template<typename U> Ref& operator=(const Ref<U>& reference) = delete;
+
+    Ref& operator=(Ref&& reference)
     {
+        ASSERT(m_ptr);
         m_ptr->deref();
         m_ptr = &reference.leakRef();
+        ASSERT(m_ptr);
         return *this;
     }
 
-    const T* operator->() const { return m_ptr; }
-    T* operator->() { return m_ptr; }
+    template<typename U> Ref& operator=(Ref<U>&& reference)
+    {
+        ASSERT(m_ptr);
+        m_ptr->deref();
+        m_ptr = &reference.leakRef();
+        ASSERT(m_ptr);
+        return *this;
+    }
 
-    const T& get() const { return *m_ptr; }
-    T& get() { return *m_ptr; }
+    const T* operator->() const { ASSERT(m_ptr); return m_ptr; }
+    T* operator->() { ASSERT(m_ptr); return m_ptr; }
 
-    template<typename U> PassRef<T> replace(PassRef<U>) WARN_UNUSED_RETURN;
+    const T* ptr() const { ASSERT(m_ptr); return m_ptr; }
+    T* ptr() { ASSERT(m_ptr); return m_ptr; }
+
+    const T& get() const { ASSERT(m_ptr); return *m_ptr; }
+    T& get() { ASSERT(m_ptr); return *m_ptr; }
+
+    operator T&() { ASSERT(m_ptr); return *m_ptr; }
+    operator const T&() const { ASSERT(m_ptr); return *m_ptr; }
+
+    template<typename U> Ref<T> replace(Ref<U>&&) WARN_UNUSED_RETURN;
+
+#if COMPILER_SUPPORTS(CXX_REFERENCE_QUALIFIED_FUNCTIONS)
+    Ref copyRef() && = delete;
+    Ref copyRef() const & WARN_UNUSED_RETURN { return Ref(*m_ptr); }
+#else
+    Ref copyRef() const WARN_UNUSED_RETURN { return Ref(*m_ptr); }
+#endif
+
+    T& leakRef() WARN_UNUSED_RETURN
+    {
+        ASSERT(m_ptr);
+
+        T& result = *std::exchange(m_ptr, nullptr);
+#if ASAN_ENABLED
+        __asan_poison_memory_region(this, sizeof(*this));
+#endif
+        return result;
+    }
 
 private:
+    friend Ref adoptRef<T>(T&);
+
+    enum AdoptTag { Adopt };
+    Ref(T& object, AdoptTag)
+        : m_ptr(&object)
+    {
+    }
+
     T* m_ptr;
 };
 
-template<typename T> template<typename U> inline PassRef<T> Ref<T>::replace(PassRef<U> reference)
+template<typename T> template<typename U> inline Ref<T> Ref<T>::replace(Ref<U>&& reference)
 {
     auto oldReference = adoptRef(*m_ptr);
     m_ptr = &reference.leakRef();
     return oldReference;
 }
 
+template<typename T, typename U> inline Ref<T> static_reference_cast(Ref<U>& reference)
+{
+    return Ref<T>(static_cast<T&>(reference.get()));
+}
+
+template<typename T, typename U> inline Ref<T> static_reference_cast(const Ref<U>& reference)
+{
+    return Ref<T>(static_cast<T&>(reference.copyRef().get()));
+}
+
+template <typename T>
+struct GetPtrHelper<Ref<T>> {
+    typedef T* PtrType;
+    static T* getPtr(const Ref<T>& p) { return const_cast<T*>(p.ptr()); }
+};
+
+template<typename T>
+inline Ref<T> adoptRef(T& reference)
+{
+    adopted(&reference);
+    return Ref<T>(reference, Ref<T>::Adopt);
+
+}
+
 } // namespace WTF
 
 using WTF::Ref;
+using WTF::adoptRef;
+using WTF::static_reference_cast;
 
 #endif // WTF_Ref_h

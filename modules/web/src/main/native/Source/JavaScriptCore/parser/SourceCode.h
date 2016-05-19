@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -120,8 +120,6 @@ namespace JSC {
 
     inline SourceCode SourceCode::subExpression(unsigned openBrace, unsigned closeBrace, int firstLine, int startColumn)
     {
-        ASSERT(provider()->source()[openBrace] == '{');
-        ASSERT(provider()->source()[closeBrace] == '}');
         startColumn += 1; // Convert to base 1.
         return SourceCode(provider(), openBrace, closeBrace + 1, firstLine, startColumn);
     }

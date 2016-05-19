@@ -38,29 +38,29 @@ CopiedSpace::CopiedSpace(Heap* heap)
     , m_inCopyingPhase(false)
     , m_shouldDoCopyPhase(false)
     , m_numberOfLoanedBlocks(0)
+    , m_bytesRemovedFromOldSpaceDueToReallocation(0)
 {
-    m_toSpaceLock.Init();
 }
 
 CopiedSpace::~CopiedSpace()
 {
     while (!m_oldGen.toSpace->isEmpty())
-        m_heap->blockAllocator().deallocate(CopiedBlock::destroy(m_oldGen.toSpace->removeHead()));
+        CopiedBlock::destroy(m_oldGen.toSpace->removeHead());
 
     while (!m_oldGen.fromSpace->isEmpty())
-        m_heap->blockAllocator().deallocate(CopiedBlock::destroy(m_oldGen.fromSpace->removeHead()));
+        CopiedBlock::destroy(m_oldGen.fromSpace->removeHead());
 
     while (!m_oldGen.oversizeBlocks.isEmpty())
-        m_heap->blockAllocator().deallocateCustomSize(CopiedBlock::destroy(m_oldGen.oversizeBlocks.removeHead()));
+        CopiedBlock::destroy(m_oldGen.oversizeBlocks.removeHead());
 
     while (!m_newGen.toSpace->isEmpty())
-        m_heap->blockAllocator().deallocate(CopiedBlock::destroy(m_newGen.toSpace->removeHead()));
+        CopiedBlock::destroy(m_newGen.toSpace->removeHead());
 
     while (!m_newGen.fromSpace->isEmpty())
-        m_heap->blockAllocator().deallocate(CopiedBlock::destroy(m_newGen.fromSpace->removeHead()));
+        CopiedBlock::destroy(m_newGen.fromSpace->removeHead());
 
     while (!m_newGen.oversizeBlocks.isEmpty())
-        m_heap->blockAllocator().deallocateCustomSize(CopiedBlock::destroy(m_newGen.oversizeBlocks.removeHead()));
+        CopiedBlock::destroy(m_newGen.oversizeBlocks.removeHead());
 
     ASSERT(m_oldGen.toSpace->isEmpty());
     ASSERT(m_oldGen.fromSpace->isEmpty());
@@ -99,7 +99,7 @@ CheckedBoolean CopiedSpace::tryAllocateOversize(size_t bytes, void** outPtr)
 {
     ASSERT(isOversize(bytes));
 
-    CopiedBlock* block = CopiedBlock::create(m_heap->blockAllocator().allocateCustomSize(sizeof(CopiedBlock) + bytes, CopiedBlock::blockSize));
+    CopiedBlock* block = CopiedBlock::create(WTF::roundUpToMultipleOf<sizeof(double)>(sizeof(CopiedBlock) + bytes));
     m_newGen.oversizeBlocks.push(block);
     m_newGen.blockFilter.add(reinterpret_cast<Bits>(block));
     m_blockSet.add(block);
@@ -110,7 +110,7 @@ CheckedBoolean CopiedSpace::tryAllocateOversize(size_t bytes, void** outPtr)
     *outPtr = allocator.forceAllocate(bytes);
     allocator.resetCurrentBlock();
 
-    m_heap->didAllocate(block->region()->blockSize());
+    m_heap->didAllocate(block->capacity());
 
     return true;
 }
@@ -156,12 +156,16 @@ CheckedBoolean CopiedSpace::tryReallocateOversize(void** ptr, size_t oldSize, si
 
     CopiedBlock* oldBlock = CopiedSpace::blockFor(oldPtr);
     if (oldBlock->isOversize()) {
-        if (oldBlock->isOld())
+        // FIXME: Eagerly deallocating the old space block probably buys more confusion than
+        // value.
+        // https://bugs.webkit.org/show_bug.cgi?id=144750
+        if (oldBlock->isOld()) {
+            m_bytesRemovedFromOldSpaceDueToReallocation += oldBlock->size();
             m_oldGen.oversizeBlocks.remove(oldBlock);
-        else
+        } else
             m_newGen.oversizeBlocks.remove(oldBlock);
         m_blockSet.remove(oldBlock);
-        m_heap->blockAllocator().deallocateCustomSize(CopiedBlock::destroy(oldBlock));
+        CopiedBlock::destroy(oldBlock);
     }
 
     *ptr = newPtr;
@@ -253,6 +257,7 @@ void CopiedSpace::doneCopying()
         // We don't add the block to the blockSet because it was never removed.
         ASSERT(m_blockSet.contains(block));
         blockFilter->add(reinterpret_cast<Bits>(block));
+        block->didSurviveGC();
         toSpace->push(block);
     }
 

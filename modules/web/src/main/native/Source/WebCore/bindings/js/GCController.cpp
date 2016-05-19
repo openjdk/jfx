@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,6 +31,8 @@
 #include <runtime/JSLock.h>
 #include <heap/Heap.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/FastMalloc.h>
+#include <wtf/NeverDestroyed.h>
 
 using namespace JSC;
 
@@ -39,56 +41,64 @@ namespace WebCore {
 static void collect(void*)
 {
     JSLockHolder lock(JSDOMWindow::commonVM());
-    JSDOMWindow::commonVM()->heap.collectAllGarbage();
+    JSDOMWindow::commonVM().heap.collectAllGarbage();
 }
 
-GCController& gcController()
+GCController& GCController::singleton()
 {
-    DEFINE_STATIC_LOCAL(GCController, staticGCController, ());
-    return staticGCController;
+    static NeverDestroyed<GCController> controller;
+    return controller;
 }
 
 GCController::GCController()
-#if !USE(CF)
-    : m_GCTimer(this, &GCController::gcTimerFired)
-#endif
+    : m_GCTimer(*this, &GCController::gcTimerFired)
 {
 }
 
 void GCController::garbageCollectSoon()
 {
     // We only use reportAbandonedObjectGraph on systems with CoreFoundation
-    // since it uses a runloop-based timer that is currently only available on
+    // since it uses a run-loop-based timer that is currently only available on
     // systems with CoreFoundation. If and when the notion of a run loop is pushed
     // down into WTF so that more platforms can take advantage of it, we will be
     // able to use reportAbandonedObjectGraph on more platforms.
 #if USE(CF)
     JSLockHolder lock(JSDOMWindow::commonVM());
-    JSDOMWindow::commonVM()->heap.reportAbandonedObjectGraph();
+    JSDOMWindow::commonVM().heap.reportAbandonedObjectGraph();
 #else
-    if (!m_GCTimer.isActive())
-        m_GCTimer.startOneShot(0);
+    garbageCollectOnNextRunLoop();
 #endif
 }
 
-#if !USE(CF)
-void GCController::gcTimerFired(Timer<GCController>*)
+void GCController::garbageCollectOnNextRunLoop()
 {
-    collect(0);
+    if (!m_GCTimer.isActive())
+        m_GCTimer.startOneShot(0);
 }
-#endif
+
+void GCController::gcTimerFired()
+{
+    collect(nullptr);
+}
 
 void GCController::garbageCollectNow()
 {
     JSLockHolder lock(JSDOMWindow::commonVM());
-#if PLATFORM(IOS)
-    // If JavaScript was never run in this process, there's no need to call GC which will
-    // end up creating a VM unnecessarily.
-    if (!JSDOMWindow::commonVMExists())
-        return;
+    if (!JSDOMWindow::commonVM().heap.isBusy()) {
+        JSDOMWindow::commonVM().heap.collectAllGarbage();
+        WTF::releaseFastMallocFreeMemory();
+    }
+}
+
+void GCController::garbageCollectNowIfNotDoneRecently()
+{
+#if USE(CF)
+    JSLockHolder lock(JSDOMWindow::commonVM());
+    if (!JSDOMWindow::commonVM().heap.isBusy())
+        JSDOMWindow::commonVM().heap.collectAllGarbageIfNotDoneRecently();
+#else
+    garbageCollectSoon();
 #endif
-    if (!JSDOMWindow::commonVM()->heap.isBusy())
-        JSDOMWindow::commonVM()->heap.collectAllGarbage();
 }
 
 void GCController::garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone)
@@ -107,33 +117,24 @@ void GCController::releaseExecutableMemory()
 {
     JSLockHolder lock(JSDOMWindow::commonVM());
 
-#if PLATFORM(IOS)
-    // If JavaScript was never run in this process, there's no need to call GC which will
-    // end up creating a VM unnecessarily.
-    if (!JSDOMWindow::commonVMExists())
-        return;
-#endif
-
-    // We shouldn't have any javascript running on our stack when this function is called. The
-    // following line asserts that.
-    ASSERT(!JSDOMWindow::commonVM()->entryScope);
-
-    // But be safe in release builds just in case...
-    if (JSDOMWindow::commonVM()->entryScope)
+    // We shouldn't have any JavaScript running on our stack when this function is called.
+    // The following line asserts that, but to be safe we check this in release builds anyway.
+    ASSERT(!JSDOMWindow::commonVM().entryScope);
+    if (JSDOMWindow::commonVM().entryScope)
         return;
 
-    JSDOMWindow::commonVM()->releaseExecutableMemory();
+    JSDOMWindow::commonVM().releaseExecutableMemory();
 }
 
 void GCController::setJavaScriptGarbageCollectorTimerEnabled(bool enable)
 {
-    JSDOMWindow::commonVM()->heap.setGarbageCollectionTimerEnabled(enable);
+    JSDOMWindow::commonVM().heap.setGarbageCollectionTimerEnabled(enable);
 }
 
 void GCController::discardAllCompiledCode()
 {
     JSLockHolder lock(JSDOMWindow::commonVM());
-    JSDOMWindow::commonVM()->discardAllCode();
+    JSDOMWindow::commonVM().discardAllCode();
 }
 
 } // namespace WebCore

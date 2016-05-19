@@ -29,17 +29,6 @@ private:
     const ClassInfo* m_classInfo;
 };
 
-inline const ClassInfo* JSCell::classInfo() const
-{
-    if (MarkedBlock::blockFor(this)->destructorType() == MarkedBlock::Normal)
-        return static_cast<const JSDestructibleObject*>(this)->classInfo();
-#if ENABLE(GC_VALIDATION)
-    return m_structure.unvalidatedGet()->classInfo();
-#else
-    return m_structure->classInfo();
-#endif
-}
-
 } // namespace JSC
 
 #endif

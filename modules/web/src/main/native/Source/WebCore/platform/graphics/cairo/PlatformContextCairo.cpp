@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,10 +28,11 @@
 #include "config.h"
 #include "PlatformContextCairo.h"
 
+#if USE(CAIRO)
+
 #include "CairoUtilities.h"
 #include "Gradient.h"
 #include "GraphicsContext.h"
-#include "OwnPtrCairo.h"
 #include "Pattern.h"
 #include <cairo.h>
 
@@ -304,7 +305,7 @@ void PlatformContextCairo::clipForPatternFilling(const GraphicsContextState& sta
     ASSERT(state.fillPattern);
 
     // Hold current cairo path in a variable for restoring it after configuring the pattern clip rectangle.
-    OwnPtr<cairo_path_t> currentPath = adoptPtr(cairo_copy_path(m_cr.get()));
+    auto currentPath = cairo_copy_path(m_cr.get());
     cairo_new_path(m_cr.get());
 
     // Initialize clipping extent from current cairo clip extents, then shrink if needed according to pattern.
@@ -335,7 +336,10 @@ void PlatformContextCairo::clipForPatternFilling(const GraphicsContextState& sta
     }
 
     // Restoring cairo path.
-    cairo_append_path(m_cr.get(), currentPath.get());
+    cairo_append_path(m_cr.get(), currentPath);
+    cairo_path_destroy(currentPath);
 }
 
 } // namespace WebCore
+
+#endif // USE(CAIRO)

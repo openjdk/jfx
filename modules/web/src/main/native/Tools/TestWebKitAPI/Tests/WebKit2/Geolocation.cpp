@@ -24,10 +24,13 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "PlatformUtilities.h"
 #include "PlatformWebView.h"
 #include "Test.h"
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKRetainPtr.h>
 #include <string.h>
 #include <vector>
 
@@ -103,7 +106,7 @@ void decidePolicyForGeolocationPermissionRequestCallBack(WKPageRef page, WKFrame
 void setupGeolocationProvider(WKContextRef context, void *clientInfo)
 {
     WKGeolocationProviderV1 providerCallback;
-    memset(&providerCallback, 0, sizeof(WKGeolocationProvider));
+    memset(&providerCallback, 0, sizeof(WKGeolocationProviderV1));
 
     providerCallback.base.version = 1;
     providerCallback.base.clientInfo = clientInfo;
@@ -335,3 +338,5 @@ TEST(WebKit2, GeolocationTransitionToLowAccuracy)
 }
 
 } // namespace TestWebKitAPI
+
+#endif

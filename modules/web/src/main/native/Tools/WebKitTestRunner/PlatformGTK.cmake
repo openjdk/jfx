@@ -1,7 +1,7 @@
 add_custom_target(WebKitTestRunner-forwarding-headers
-    COMMAND ${PERL_EXECUTABLE} ${WEBKIT2_DIR}/Scripts/generate-forwarding-headers.pl ${WEBKIT_TESTRUNNER_DIR} ${FORWARDING_HEADERS_DIR} gtk
-    COMMAND ${PERL_EXECUTABLE} ${WEBKIT2_DIR}/Scripts/generate-forwarding-headers.pl ${WEBKIT_TESTRUNNER_DIR} ${FORWARDING_HEADERS_DIR} soup
+    COMMAND ${PERL_EXECUTABLE} ${WEBKIT2_DIR}/Scripts/generate-forwarding-headers.pl --include-path ${WEBKIT_TESTRUNNER_DIR} --output ${FORWARDING_HEADERS_DIR} --platform gtk --platform soup
 )
+
 set(ForwardingHeadersForWebKitTestRunner_NAME WebKitTestRunner-forwarding-headers)
 
 list(APPEND WebKitTestRunner_SOURCES
@@ -19,7 +19,10 @@ list(APPEND WebKitTestRunner_SOURCES
 
 list(APPEND WebKitTestRunner_INCLUDE_DIRECTORIES
     ${FORWARDING_HEADERS_DIR}
-    ${WTF_DIR}/wtf/gobject
+    ${WTF_DIR}/wtf/glib
+)
+
+list(APPEND WebKitTestRunner_SYSTEM_INCLUDE_DIRECTORIES
     ${ATK_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${GTK3_INCLUDE_DIRS}
@@ -56,6 +59,6 @@ list(APPEND WebKitTestRunnerInjectedBundle_SOURCES
 )
 
 add_definitions(
-    -DFONTS_CONF_DIR="${TOOLS_DIR}/DumpRenderTree/gtk/fonts"
+    -DFONTS_CONF_DIR="${TOOLS_DIR}/WebKitTestRunner/gtk/fonts"
     -DTOP_LEVEL_DIR="${CMAKE_SOURCE_DIR}"
 )

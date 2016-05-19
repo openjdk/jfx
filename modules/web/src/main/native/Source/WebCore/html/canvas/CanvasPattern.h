@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,8 +28,8 @@
 
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
@@ -40,19 +40,20 @@ typedef int ExceptionCode;
 
 class CanvasPattern : public RefCounted<CanvasPattern> {
 public:
-    static PassRefPtr<CanvasPattern> create(PassRefPtr<Image>, bool repeatX, bool repeatY, bool originClean);
+    static Ref<CanvasPattern> create(PassRefPtr<Image>, bool repeatX, bool repeatY, bool originClean);
     ~CanvasPattern();
 
     static void parseRepetitionType(const String&, bool& repeatX, bool& repeatY, ExceptionCode&);
 
-    Pattern* pattern() const { return m_pattern.get(); }
+    Pattern& pattern() { return m_pattern; }
+    const Pattern& pattern() const { return m_pattern; }
 
     bool originClean() const { return m_originClean; }
 
 private:
     CanvasPattern(PassRefPtr<Image>, bool repeatX, bool repeatY, bool originClean);
 
-    RefPtr<Pattern> m_pattern;
+    Ref<Pattern> m_pattern;
     bool m_originClean;
 };
 

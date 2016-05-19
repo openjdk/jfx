@@ -1,3 +1,5 @@
+set(JavaScriptCore_OUTPUT_NAME javascriptcoregtk-${WEBKITGTK_API_VERSION})
+
 configure_file(javascriptcoregtk.pc.in ${CMAKE_BINARY_DIR}/Source/JavaScriptCore/javascriptcoregtk-${WEBKITGTK_API_VERSION}.pc @ONLY)
 configure_file(JavaScriptCore.gir.in ${CMAKE_BINARY_DIR}/JavaScriptCore-${WEBKITGTK_API_VERSION}.gir @ONLY)
 
@@ -23,9 +25,20 @@ install(FILES API/JavaScript.h
         DESTINATION "${WEBKITGTK_HEADER_INSTALL_DIR}/JavaScriptCore"
 )
 
-install(FILES ${CMAKE_BINARY_DIR}/JavaScriptCore-${WEBKITGTK_API_VERSION}.gir
-        DESTINATION ${INTROSPECTION_INSTALL_GIRDIR}
+if (ENABLE_INTROSPECTION)
+    install(FILES ${CMAKE_BINARY_DIR}/JavaScriptCore-${WEBKITGTK_API_VERSION}.gir
+            DESTINATION ${INTROSPECTION_INSTALL_GIRDIR}
+    )
+    install(FILES ${CMAKE_BINARY_DIR}/JavaScriptCore-${WEBKITGTK_API_VERSION}.typelib
+            DESTINATION ${INTROSPECTION_INSTALL_TYPELIBDIR}
+    )
+endif ()
+
+add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
+
+list(APPEND JavaScriptCore_LIBRARIES
+    ${GLIB_LIBRARIES}
 )
-install(FILES ${CMAKE_BINARY_DIR}/JavaScriptCore-${WEBKITGTK_API_VERSION}.typelib
-        DESTINATION ${INTROSPECTION_INSTALL_TYPELIBDIR}
+list(APPEND JavaScriptCore_SYSTEM_INCLUDE_DIRECTORIES
+    ${GLIB_INCLUDE_DIRS}
 )

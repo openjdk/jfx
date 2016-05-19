@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebElementPropertyBag.h"
 
@@ -31,6 +30,7 @@
 #include "DOMCoreClasses.h"
 #include "WebFrame.h"
 #include "WebFrameLoaderClient.h"
+#include <WebCore/BString.h>
 #include <WebCore/Document.h>
 #include <WebCore/Frame.h>
 #include <WebCore/HitTestResult.h>
@@ -43,17 +43,17 @@ using namespace WebCore;
 
 // WebElementPropertyBag -----------------------------------------------
 WebElementPropertyBag::WebElementPropertyBag(const HitTestResult& result)
-    : m_result(adoptPtr(new HitTestResult(result)))
+    : m_result(std::make_unique<HitTestResult>(result))
     , m_refCount(0)
 {
     gClassCount++;
-    gClassNameCount.add("WebElementPropertyBag");
+    gClassNameCount().add("WebElementPropertyBag");
 }
 
 WebElementPropertyBag::~WebElementPropertyBag()
 {
     gClassCount--;
-    gClassNameCount.remove("WebElementPropertyBag");
+    gClassNameCount().remove("WebElementPropertyBag");
 }
 
 WebElementPropertyBag* WebElementPropertyBag::createInstance(const HitTestResult& result)
@@ -102,7 +102,7 @@ static bool isEqual(LPCWSTR s1, LPCWSTR s2)
 static HRESULT convertStringToVariant(VARIANT* pVar, const String& string)
 {
     V_VT(pVar) = VT_BSTR;
-    V_BSTR(pVar) = SysAllocStringLen(string.deprecatedCharacters(), string.length());
+    V_BSTR(pVar) = BString(string).release();
     if (string.length() && !V_BSTR(pVar))
         return E_OUTOFMEMORY;
 
@@ -119,7 +119,7 @@ HRESULT WebElementPropertyBag::Read(LPCOLESTR pszPropName, VARIANT *pVar, IError
         return E_FAIL;
 
     BSTR key = (BSTR)pszPropName;
-    VariantClear(pVar);
+    ::VariantClear(pVar);
     if (isEqual(WebElementDOMNodeKey, key)) {
         IDOMNode* node = DOMNode::createInstance(m_result->innerNonSharedNode());
         V_VT(pVar) = VT_UNKNOWN;

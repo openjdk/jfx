@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,6 +31,7 @@
 
 #include "Executable.h"
 #include "JSGlobalObject.h"
+#include "Options.h"
 #include "SourceCode.h"
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
@@ -44,18 +45,20 @@ namespace JSC {
     public:
         EvalExecutable* tryGet(bool inStrictContext, const String& evalSource, JSScope* scope)
         {
-            if (!inStrictContext && evalSource.length() < maxCacheableSourceLength && scope->begin()->isVariableObject())
+            if (isCacheable(inStrictContext, evalSource, scope))
                 return m_cacheMap.get(evalSource.impl()).get();
             return 0;
         }
 
-        EvalExecutable* getSlow(ExecState* exec, ScriptExecutable* owner, bool inStrictContext, const String& evalSource, JSScope* scope)
+        EvalExecutable* getSlow(ExecState* exec, ScriptExecutable* owner, bool inStrictContext, ThisTDZMode thisTDZMode, const String& evalSource, JSScope* scope)
         {
-            EvalExecutable* evalExecutable = EvalExecutable::create(exec, makeSource(evalSource), inStrictContext);
+            VariableEnvironment variablesUnderTDZ;
+            JSScope::collectVariablesUnderTDZ(scope, variablesUnderTDZ);
+            EvalExecutable* evalExecutable = EvalExecutable::create(exec, makeSource(evalSource), inStrictContext, thisTDZMode, &variablesUnderTDZ);
             if (!evalExecutable)
                 return 0;
 
-            if (!inStrictContext && evalSource.length() < maxCacheableSourceLength && scope->begin()->isVariableObject() && m_cacheMap.size() < maxCacheEntries)
+            if (isCacheable(inStrictContext, evalSource, scope) && m_cacheMap.size() < maxCacheEntries)
                 m_cacheMap.set(evalSource.impl(), WriteBarrier<EvalExecutable>(exec->vm(), owner, evalExecutable));
 
             return evalExecutable;
@@ -71,7 +74,15 @@ namespace JSC {
         }
 
     private:
-        static const unsigned maxCacheableSourceLength = 256;
+        ALWAYS_INLINE bool isCacheable(bool inStrictContext, const String& evalSource, JSScope* scope) const
+        {
+            // If eval() is called and it has access to a lexical scope, we can't soundly cache it.
+            // If the eval() only has access to the "var" scope, then we can cache it.
+            return !inStrictContext
+                && evalSource.length() < Options::maximumEvalCacheableSourceLength()
+                && scope->begin()->isVariableObject()
+                && !scope->isLexicalScope();
+        }
         static const int maxCacheEntries = 64;
 
         typedef HashMap<RefPtr<StringImpl>, WriteBarrier<EvalExecutable>> EvalCacheMap;

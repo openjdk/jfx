@@ -28,19 +28,16 @@ namespace WebCore {
 
 class BatteryManager;
 class Navigator;
-class ScriptExecutionContext;
 
 class NavigatorBattery : public Supplement<Navigator> {
 public:
+    NavigatorBattery();
     virtual ~NavigatorBattery();
 
     static NavigatorBattery* from(Navigator*);
-
     static BatteryManager* webkitBattery(Navigator*);
-    BatteryManager* batteryManager();
 
  private:
-    NavigatorBattery();
     static const char* supplementName();
 
     RefPtr<BatteryManager> m_batteryManager;
@@ -51,5 +48,3 @@ public:
 #endif // ENABLE(BATTERY_STATUS)
 
 #endif // NavigatorBattery_h
-
-

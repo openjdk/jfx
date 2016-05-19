@@ -57,6 +57,14 @@ public:
         {
         }
 
+        explicit Radii(float uniformRadius)
+            : m_topLeft(uniformRadius, uniformRadius)
+            , m_topRight(uniformRadius, uniformRadius)
+            , m_bottomLeft(uniformRadius, uniformRadius)
+            , m_bottomRight(uniformRadius, uniformRadius)
+        {
+        }
+
         void setTopLeft(const FloatSize& size) { m_topLeft = size; }
         void setTopRight(const FloatSize& size) { m_topRight = size; }
         void setBottomLeft(const FloatSize& size) { m_bottomLeft = size; }
@@ -67,8 +75,10 @@ public:
         const FloatSize& bottomRight() const { return m_bottomRight; }
 
         bool isZero() const;
+        bool isUniformCornerRadius() const; // Including no radius.
 
         void scale(float factor);
+        void scale(float horizontalFactor, float verticalFactor);
         void expand(float topWidth, float bottomWidth, float leftWidth, float rightWidth);
         void expand(float size) { expand(size, size, size, size); }
         void shrink(float topWidth, float bottomWidth, float leftWidth, float rightWidth) { expand(-topWidth, -bottomWidth, -leftWidth, -rightWidth); }
@@ -81,7 +91,8 @@ public:
         FloatSize m_bottomRight;
     };
 
-    explicit FloatRoundedRect(const FloatRect&, const Radii& = Radii());
+    WEBCORE_EXPORT explicit FloatRoundedRect(const FloatRect& = FloatRect(), const Radii& = Radii());
+    explicit FloatRoundedRect(const RoundedRect&);
     FloatRoundedRect(float x, float y, float width, float height);
     FloatRoundedRect(const FloatRect&, const FloatSize& topLeft, const FloatSize& topRight, const FloatSize& bottomLeft, const FloatSize& bottomRight);
 
@@ -97,6 +108,8 @@ public:
     void inflate(float size) { m_rect.inflate(size);  }
     void expandRadii(float size) { m_radii.expand(size); }
     void shrinkRadii(float size) { m_radii.shrink(size); }
+    void inflateWithRadii(float size);
+    void adjustRadii();
 
     FloatRect topLeftCorner() const
     {
@@ -115,6 +128,7 @@ public:
         return FloatRect(m_rect.maxX() - m_radii.bottomRight().width(), m_rect.maxY() - m_radii.bottomRight().height(), m_radii.bottomRight().width(), m_radii.bottomRight().height());
     }
 
+    bool isRenderable() const;
     bool xInterceptsAtY(float y, float& minXIntercept, float& maxXIntercept) const;
 
 private:
@@ -130,6 +144,38 @@ inline bool operator==(const FloatRoundedRect::Radii& a, const FloatRoundedRect:
 inline bool operator==(const FloatRoundedRect& a, const FloatRoundedRect& b)
 {
     return a.rect() == b.rect() && a.radii() == b.radii();
+}
+
+inline float calcBorderRadiiConstraintScaleFor(const FloatRect& rect, const FloatRoundedRect::Radii& radii)
+{
+    // Constrain corner radii using CSS3 rules:
+    // http://www.w3.org/TR/css3-background/#the-border-radius
+
+    float factor = 1;
+    float radiiSum;
+
+    // top
+    radiiSum = radii.topLeft().width() + radii.topRight().width(); // Casts to avoid integer overflow.
+    if (radiiSum > rect.width())
+        factor = std::min(rect.width() / radiiSum, factor);
+
+    // bottom
+    radiiSum = radii.bottomLeft().width() + radii.bottomRight().width();
+    if (radiiSum > rect.width())
+        factor = std::min(rect.width() / radiiSum, factor);
+
+    // left
+    radiiSum = radii.topLeft().height() + radii.bottomLeft().height();
+    if (radiiSum > rect.height())
+        factor = std::min(rect.height() / radiiSum, factor);
+
+    // right
+    radiiSum = radii.topRight().height() + radii.bottomRight().height();
+    if (radiiSum > rect.height())
+        factor = std::min(rect.height() / radiiSum, factor);
+
+    ASSERT(factor <= 1);
+    return factor;
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,21 +23,22 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "WebViewPrivate.h"
-#include "WebFrameInternal.h"
-#include <WebFrameNetworkingContext.h>
-#include <WebCore/FrameLoader.h>
-#include <WebCore/FrameLoaderClient.h>
-#include <WebCore/NetworkStorageSession.h>
-#include <WebCore/Page.h>
-#include <WebCore/ResourceError.h>
-#include <WebCore/Settings.h>
-#include <wtf/NeverDestroyed.h>
+#import "WebFrameNetworkingContext.h"
+
+#import "WebFrameInternal.h"
+#import "WebViewPrivate.h"
+#import <WebCore/CFNetworkSPI.h>
+#import <WebCore/FrameLoader.h>
+#import <WebCore/FrameLoaderClient.h>
+#import <WebCore/NetworkStorageSession.h>
+#import <WebCore/Page.h>
+#import <WebCore/ResourceError.h>
+#import <WebCore/Settings.h>
+#import <wtf/NeverDestroyed.h>
 
 #if PLATFORM(IOS)
-#import <CFNetwork/CFHTTPCookiesPriv.h>
 #import <WebCore/WebCoreThread.h>
-#import <WebKit/WebFrameLoadDelegate.h>
+#import <WebKitLegacy/WebFrameLoadDelegate.h>
 #endif
 
 using namespace WebCore;
@@ -65,21 +66,6 @@ void WebFrameNetworkingContext::destroyPrivateBrowsingSession()
     privateSession() = nullptr;
 }
 
-#if PLATFORM(IOS)
-void WebFrameNetworkingContext::clearPrivateBrowsingSessionCookieStorage()
-{
-    ASSERT(isMainThread());
-    ASSERT(privateSession());
-
-    CFHTTPCookieStorageDeleteAllCookies(privateSession()->cookieStorage().get());
-}
-#endif
-
-bool WebFrameNetworkingContext::needsSiteSpecificQuirks() const
-{
-    return frame() && frame()->settings().needsSiteSpecificQuirks();
-}
-
 bool WebFrameNetworkingContext::localFileContentSniffingEnabled() const
 {
     return frame() && frame()->settings().localFileContentSniffingEnabled();
@@ -104,6 +90,11 @@ RetainPtr<CFDataRef> WebFrameNetworkingContext::sourceApplicationAuditData() con
     return reinterpret_cast<CFDataRef>(webview._sourceApplicationAuditData);
 }
 
+String WebFrameNetworkingContext::sourceApplicationIdentifier() const
+{
+    return emptyString();
+}
+
 ResourceError WebFrameNetworkingContext::blockedError(const ResourceRequest& request) const
 {
     return frame()->loader().client().blockedError(request);
@@ -112,9 +103,11 @@ ResourceError WebFrameNetworkingContext::blockedError(const ResourceRequest& req
 NetworkStorageSession& WebFrameNetworkingContext::storageSession() const
 {
     ASSERT(isMainThread());
-
-    if (frame() && frame()->settings().privateBrowsingEnabled())
-        return *privateSession();
-
+    if (frame() && frame()->page()->sessionID().isEphemeral()) {
+        if (NetworkStorageSession* session = privateSession().get())
+            return *session;
+        // Some requests may still be coming shortly before WebCore updates the session ID and after WebKit destroys the private browsing session.
+        LOG_ERROR("Invalid session ID. Please file a bug unless you just disabled private browsing, in which case it's an expected race.");
+    }
     return NetworkStorageSession::defaultStorageSession();
 }

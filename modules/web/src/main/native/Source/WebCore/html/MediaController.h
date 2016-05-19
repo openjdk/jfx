@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -45,7 +45,7 @@ class ScriptExecutionContext;
 
 class MediaController final : public RefCounted<MediaController>, public MediaControllerInterface, public EventTargetWithInlineData {
 public:
-    static PassRefPtr<MediaController> create(ScriptExecutionContext&);
+    static Ref<MediaController> create(ScriptExecutionContext&);
     virtual ~MediaController();
 
     void addMediaElement(HTMLMediaElement*);
@@ -98,6 +98,8 @@ public:
 
     virtual void beginScrubbing() override;
     virtual void endScrubbing() override;
+    virtual void beginScanning(ScanDirection) override;
+    virtual void endScanning() override;
 
     virtual bool canPlay() const override;
 
@@ -121,11 +123,11 @@ private:
     void updateMediaElements();
     void bringElementUpToSpeed(HTMLMediaElement*);
     void scheduleEvent(const AtomicString& eventName);
-    void asyncEventTimerFired(Timer<MediaController>&);
-    void clearPositionTimerFired(Timer<MediaController>&);
+    void asyncEventTimerFired();
+    void clearPositionTimerFired();
     bool hasEnded() const;
     void scheduleTimeupdateEvent();
-    void timeupdateTimerFired(Timer<MediaController>&);
+    void timeupdateTimerFired();
     void startTimeupdateTimer();
 
     // EventTarget
@@ -145,13 +147,13 @@ private:
     ReadyState m_readyState;
     PlaybackState m_playbackState;
     Vector<RefPtr<Event>> m_pendingEvents;
-    Timer<MediaController> m_asyncEventTimer;
-    mutable Timer<MediaController> m_clearPositionTimer;
+    Timer m_asyncEventTimer;
+    mutable Timer m_clearPositionTimer;
     String m_mediaGroup;
     bool m_closedCaptionsVisible;
     std::unique_ptr<Clock> m_clock;
     ScriptExecutionContext& m_scriptExecutionContext;
-    Timer<MediaController> m_timeupdateTimer;
+    Timer m_timeupdateTimer;
     double m_previousTimeupdateTime;
 };
 

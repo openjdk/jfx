@@ -29,19 +29,18 @@
 
 #include "CanvasContextAttributes.h"
 #include "GraphicsContext3D.h"
-#include <wtf/PassRefPtr.h>
 
 namespace WebCore {
 
-class WebGLContextAttributes : public CanvasContextAttributes {
+class WebGLContextAttributes final : public CanvasContextAttributes {
   public:
     virtual ~WebGLContextAttributes();
 
     // Create a new attributes object
-    static PassRefPtr<WebGLContextAttributes> create();
+    static Ref<WebGLContextAttributes> create();
 
     // Create a new attributes object initialized with preexisting attributes
-    static PassRefPtr<WebGLContextAttributes> create(GraphicsContext3D::Attributes attributes);
+    static Ref<WebGLContextAttributes> create(GraphicsContext3D::Attributes);
 
     // Whether or not the drawing buffer has an alpha channel; default=true
     bool alpha() const;

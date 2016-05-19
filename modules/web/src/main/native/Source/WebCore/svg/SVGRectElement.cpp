@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
+ * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,11 +22,9 @@
 #include "config.h"
 #include "SVGRectElement.h"
 
-#include "Attribute.h"
 #include "RenderSVGPath.h"
 #include "RenderSVGRect.h"
 #include "RenderSVGResource.h"
-#include "SVGElementInstance.h"
 #include "SVGLength.h"
 #include "SVGNames.h"
 
@@ -64,34 +63,16 @@ inline SVGRectElement::SVGRectElement(const QualifiedName& tagName, Document& do
     registerAnimatedPropertiesForSVGRectElement();
 }
 
-PassRefPtr<SVGRectElement> SVGRectElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGRectElement> SVGRectElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGRectElement(tagName, document));
-}
-
-bool SVGRectElement::isSupportedAttribute(const QualifiedName& attrName)
-{
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty()) {
-        SVGLangSpace::addSupportedAttributes(supportedAttributes);
-        SVGExternalResourcesRequired::addSupportedAttributes(supportedAttributes);
-        supportedAttributes.add(SVGNames::xAttr);
-        supportedAttributes.add(SVGNames::yAttr);
-        supportedAttributes.add(SVGNames::widthAttr);
-        supportedAttributes.add(SVGNames::heightAttr);
-        supportedAttributes.add(SVGNames::rxAttr);
-        supportedAttributes.add(SVGNames::ryAttr);
-    }
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return adoptRef(*new SVGRectElement(tagName, document));
 }
 
 void SVGRectElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     SVGParsingError parseError = NoError;
 
-    if (!isSupportedAttribute(name))
-        SVGGraphicsElement::parseAttribute(name, value);
-    else if (name == SVGNames::xAttr)
+    if (name == SVGNames::xAttr)
         setXBaseValue(SVGLength::construct(LengthModeWidth, value, parseError));
     else if (name == SVGNames::yAttr)
         setYBaseValue(SVGLength::construct(LengthModeHeight, value, parseError));
@@ -103,64 +84,35 @@ void SVGRectElement::parseAttribute(const QualifiedName& name, const AtomicStrin
         setWidthBaseValue(SVGLength::construct(LengthModeWidth, value, parseError, ForbidNegativeLengths));
     else if (name == SVGNames::heightAttr)
         setHeightBaseValue(SVGLength::construct(LengthModeHeight, value, parseError, ForbidNegativeLengths));
-    else if (SVGLangSpace::parseAttribute(name, value)
-             || SVGExternalResourcesRequired::parseAttribute(name, value)) {
-    } else
-        ASSERT_NOT_REACHED();
 
     reportAttributeParsingError(parseError, name, value);
+
+    SVGGraphicsElement::parseAttribute(name, value);
+    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGRectElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (!isSupportedAttribute(attrName)) {
-        SVGGraphicsElement::svgAttributeChanged(attrName);
-        return;
-    }
-
-    SVGElementInstance::InvalidationGuard invalidationGuard(this);
-
-    bool isLengthAttribute = attrName == SVGNames::xAttr
-                          || attrName == SVGNames::yAttr
-                          || attrName == SVGNames::widthAttr
-                          || attrName == SVGNames::heightAttr
-                          || attrName == SVGNames::rxAttr
-                          || attrName == SVGNames::ryAttr;
-
-    if (isLengthAttribute)
-        updateRelativeLengthsInformation();
-
-    RenderSVGShape* renderer = toRenderSVGShape(this->renderer());
-    if (!renderer)
-        return;
-
-    if (isLengthAttribute) {
-        renderer->setNeedsShapeUpdate();
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+    if (attrName == SVGNames::xAttr || attrName == SVGNames::yAttr || attrName == SVGNames::widthAttr || attrName == SVGNames::heightAttr || attrName == SVGNames::rxAttr || attrName == SVGNames::ryAttr) {
+        InstanceInvalidationGuard guard(*this);
+        invalidateSVGPresentationAttributeStyle();
         return;
     }
 
     if (SVGLangSpace::isKnownAttribute(attrName) || SVGExternalResourcesRequired::isKnownAttribute(attrName)) {
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+        if (auto* renderer = downcast<RenderSVGShape>(this->renderer())) {
+            InstanceInvalidationGuard guard(*this);
+            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+        }
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGGraphicsElement::svgAttributeChanged(attrName);
 }
 
-bool SVGRectElement::selfHasRelativeLengths() const
+RenderPtr<RenderElement> SVGRectElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return x().isRelative()
-        || y().isRelative()
-        || width().isRelative()
-        || height().isRelative()
-        || rx().isRelative()
-        || ry().isRelative();
-}
-
-RenderPtr<RenderElement> SVGRectElement::createElementRenderer(PassRef<RenderStyle> style)
-{
-    return createRenderer<RenderSVGRect>(*this, std::move(style));
+    return createRenderer<RenderSVGRect>(*this, WTF::move(style));
 }
 
 }

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,8 +28,6 @@
 #ifndef ChangeVersionWrapper_h
 #define ChangeVersionWrapper_h
 
-#if ENABLE(SQL_DATABASE)
-
 #include "SQLTransactionBackend.h"
 #include <wtf/Forward.h>
 
@@ -39,7 +37,7 @@ class SQLError;
 
 class ChangeVersionWrapper : public SQLTransactionWrapper {
 public:
-    static PassRefPtr<ChangeVersionWrapper> create(const String& oldVersion, const String& newVersion) { return adoptRef(new ChangeVersionWrapper(oldVersion, newVersion)); }
+    static Ref<ChangeVersionWrapper> create(const String& oldVersion, const String& newVersion) { return adoptRef(*new ChangeVersionWrapper(oldVersion, newVersion)); }
 
     virtual bool performPreflight(SQLTransactionBackend*);
     virtual bool performPostflight(SQLTransactionBackend*);
@@ -55,7 +53,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif
 
 #endif // ChangeVersionWrapper_h

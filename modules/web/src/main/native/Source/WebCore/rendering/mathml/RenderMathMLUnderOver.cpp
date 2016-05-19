@@ -29,22 +29,25 @@
 
 #include "RenderMathMLUnderOver.h"
 
+#include "MathMLElement.h"
 #include "MathMLNames.h"
+#include "RenderIterator.h"
+#include "RenderMathMLOperator.h"
 
 namespace WebCore {
 
 using namespace MathMLNames;
 
-RenderMathMLUnderOver::RenderMathMLUnderOver(Element& element, PassRef<RenderStyle> style)
-    : RenderMathMLBlock(element, std::move(style))
+RenderMathMLUnderOver::RenderMathMLUnderOver(Element& element, Ref<RenderStyle>&& style)
+    : RenderMathMLBlock(element, WTF::move(style))
 {
     // Determine what kind of under/over expression we have by element name
-    if (element.hasLocalName(MathMLNames::munderTag))
+    if (element.hasTagName(MathMLNames::munderTag))
         m_kind = Under;
-    else if (element.hasLocalName(MathMLNames::moverTag))
+    else if (element.hasTagName(MathMLNames::moverTag))
         m_kind = Over;
     else {
-        ASSERT(element.hasLocalName(MathMLNames::munderoverTag));
+        ASSERT(element.hasTagName(MathMLNames::munderoverTag));
         m_kind = UnderOver;
     }
 }
@@ -52,20 +55,50 @@ RenderMathMLUnderOver::RenderMathMLUnderOver(Element& element, PassRef<RenderSty
 RenderMathMLOperator* RenderMathMLUnderOver::unembellishedOperator()
 {
     RenderObject* base = firstChild();
-    if (!base || !base->isRenderMathMLBlock())
-        return 0;
-    return toRenderMathMLBlock(base)->unembellishedOperator();
+    if (!is<RenderMathMLBlock>(base))
+        return nullptr;
+    return downcast<RenderMathMLBlock>(*base).unembellishedOperator();
 }
 
-int RenderMathMLUnderOver::firstLineBaseline() const
+Optional<int> RenderMathMLUnderOver::firstLineBaseline() const
 {
     RenderBox* base = firstChildBox();
     if (!base)
-        return -1;
-    LayoutUnit baseline = base->firstLineBaseline();
-    if (baseline != -1)
-        baseline += base->logicalTop();
+        return Optional<int>();
+    Optional<int> baseline = base->firstLineBaseline();
+    if (baseline)
+        baseline.value() += static_cast<int>(base->logicalTop());
     return baseline;
+}
+
+void RenderMathMLUnderOver::layout()
+{
+    LayoutUnit stretchWidth = 0;
+    Vector<RenderMathMLOperator*, 2> renderOperators;
+
+    for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
+        if (child->needsLayout()) {
+            if (is<RenderMathMLBlock>(child)) {
+                if (auto renderOperator = downcast<RenderMathMLBlock>(*child).unembellishedOperator()) {
+                    renderOperator->resetStretchSize();
+                    renderOperators.append(renderOperator);
+                }
+            }
+
+            downcast<RenderElement>(*child).layout();
+        }
+
+        // Skipping the embellished op does not work for nested structures like
+        // <munder><mover><mo>_</mo>...</mover> <mo>_</mo></munder>.
+        if (is<RenderBox>(*child))
+            stretchWidth = std::max<LayoutUnit>(stretchWidth, downcast<RenderBox>(*child).logicalWidth());
+    }
+
+    // Set the sizes of (possibly embellished) stretchy operator children.
+    for (auto& renderOperator : renderOperators)
+        renderOperator->stretchTo(stretchWidth);
+
+    RenderMathMLBlock::layout();
 }
 
 }

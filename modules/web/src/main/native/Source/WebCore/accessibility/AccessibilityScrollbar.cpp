@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -42,9 +42,9 @@ AccessibilityScrollbar::AccessibilityScrollbar(Scrollbar* scrollbar)
     ASSERT(scrollbar);
 }
 
-PassRefPtr<AccessibilityScrollbar> AccessibilityScrollbar::create(Scrollbar* scrollbar)
+Ref<AccessibilityScrollbar> AccessibilityScrollbar::create(Scrollbar* scrollbar)
 {
-    return adoptRef(new AccessibilityScrollbar(scrollbar));
+    return adoptRef(*new AccessibilityScrollbar(scrollbar));
 }
 
 LayoutRect AccessibilityScrollbar::elementRect() const
@@ -59,7 +59,7 @@ Document* AccessibilityScrollbar::document() const
 {
     AccessibilityObject* parent = parentObject();
     if (!parent)
-        return 0;
+        return nullptr;
     return parent->document();
 }
 
@@ -96,11 +96,8 @@ void AccessibilityScrollbar::setValue(float value)
     if (!m_scrollbar)
         return;
 
-    if (!m_scrollbar->scrollableArea())
-        return;
-
     float newValue = value * m_scrollbar->maximum();
-    m_scrollbar->scrollableArea()->scrollToOffsetWithoutAnimation(m_scrollbar->orientation(), newValue);
+    m_scrollbar->scrollableArea().scrollToOffsetWithoutAnimation(m_scrollbar->orientation(), newValue);
 }
 
 } // namespace WebCore

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
@@ -25,7 +25,6 @@
 #include "config.h"
 #include "TextDocumentParser.h"
 
-#include "HTMLDocument.h"
 #include "HTMLTreeBuilder.h"
 
 namespace WebCore {
@@ -34,11 +33,6 @@ using namespace HTMLNames;
 
 TextDocumentParser::TextDocumentParser(HTMLDocument& document)
     : HTMLDocumentParser(document)
-    , m_haveInsertedFakePreElement(false)
-{
-}
-
-TextDocumentParser::~TextDocumentParser()
 {
 }
 
@@ -58,16 +52,16 @@ void TextDocumentParser::insertFakePreElement()
     // distrubing the line/column number calculations.
     Vector<Attribute> attributes;
     attributes.append(Attribute(styleAttr, "word-wrap: break-word; white-space: pre-wrap;"));
-    AtomicHTMLToken fakePre(HTMLToken::StartTag, preTag.localName(), attributes);
-    treeBuilder()->constructTree(&fakePre);
+    AtomicHTMLToken fakePre(HTMLToken::StartTag, preTag.localName(), WTF::move(attributes));
+    treeBuilder().constructTree(fakePre);
 
     // Normally we would skip the first \n after a <pre> element, but we don't
     // want to skip the first \n for text documents!
-    treeBuilder()->setShouldSkipLeadingNewline(false);
+    treeBuilder().setShouldSkipLeadingNewline(false);
 
     // Although Text Documents expose a "pre" element in their DOM, they
     // act like a <plaintext> tag, so we have to force plaintext mode.
-    forcePlaintextForTextDocument();
+    tokenizer().setPLAINTEXTState();
 
     m_haveInsertedFakePreElement = true;
 }

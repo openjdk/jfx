@@ -32,8 +32,8 @@
 
 namespace WebCore {
 
-RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element, PassRef<RenderStyle> style)
-    : RenderTextControl(element, std::move(style))
+RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element, Ref<RenderStyle>&& style)
+    : RenderTextControl(element, WTF::move(style))
 {
 }
 
@@ -45,7 +45,7 @@ RenderTextControlMultiLine::~RenderTextControlMultiLine()
 
 HTMLTextAreaElement& RenderTextControlMultiLine::textAreaElement() const
 {
-    return toHTMLTextAreaElement(RenderTextControl::textFormControlElement());
+    return downcast<HTMLTextAreaElement>(RenderTextControl::textFormControlElement());
 }
 
 bool RenderTextControlMultiLine::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)
@@ -59,22 +59,22 @@ bool RenderTextControlMultiLine::nodeAtPoint(const HitTestRequest& request, HitT
     return true;
 }
 
-float RenderTextControlMultiLine::getAvgCharWidth(AtomicString family)
+float RenderTextControlMultiLine::getAverageCharWidth()
 {
 #if !PLATFORM(IOS)
     // Since Lucida Grande is the default font, we want this to match the width
     // of Courier New, the default font for textareas in IE, Firefox and Safari Win.
     // 1229 is the avgCharWidth value in the OS/2 table for Courier New.
-    if (family == "Lucida Grande")
+    if (style().fontCascade().firstFamily() == "Lucida Grande")
         return scaleEmToUnits(1229);
 #endif
 
-    return RenderTextControl::getAvgCharWidth(family);
+    return RenderTextControl::getAverageCharWidth();
 }
 
 LayoutUnit RenderTextControlMultiLine::preferredContentLogicalWidth(float charWidth) const
 {
-    return static_cast<LayoutUnit>(ceilf(charWidth * textAreaElement().cols())) + scrollbarThickness();
+    return ceilf(charWidth * textAreaElement().cols()) + scrollbarThickness();
 }
 
 LayoutUnit RenderTextControlMultiLine::computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const
@@ -87,11 +87,11 @@ int RenderTextControlMultiLine::baselinePosition(FontBaseline baselineType, bool
     return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
 }
 
-PassRef<RenderStyle> RenderTextControlMultiLine::createInnerTextStyle(const RenderStyle* startStyle) const
+Ref<RenderStyle> RenderTextControlMultiLine::createInnerTextStyle(const RenderStyle* startStyle) const
 {
     auto textBlockStyle = RenderStyle::create();
     textBlockStyle.get().inheritFrom(startStyle);
-    adjustInnerTextStyle(startStyle, &textBlockStyle.get());
+    adjustInnerTextStyle(startStyle, textBlockStyle.get());
     textBlockStyle.get().setDisplay(BLOCK);
 
 #if PLATFORM(IOS)
@@ -106,15 +106,13 @@ PassRef<RenderStyle> RenderTextControlMultiLine::createInnerTextStyle(const Rend
 RenderObject* RenderTextControlMultiLine::layoutSpecialExcludedChild(bool relayoutChildren)
 {
     RenderObject* placeholderRenderer = RenderTextControl::layoutSpecialExcludedChild(relayoutChildren);
-    if (!placeholderRenderer)
-        return 0;
-    if (!placeholderRenderer->isBox())
-        return placeholderRenderer;
-    RenderBox* placeholderBox = toRenderBox(placeholderRenderer);
-    placeholderBox->style().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox->borderAndPaddingLogicalWidth(), Fixed));
-    placeholderBox->layoutIfNeeded();
-    placeholderBox->setX(borderLeft() + paddingLeft());
-    placeholderBox->setY(borderTop() + paddingTop());
+    if (is<RenderBox>(placeholderRenderer)) {
+        auto& placeholderBox = downcast<RenderBox>(*placeholderRenderer);
+        placeholderBox.style().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox.borderAndPaddingLogicalWidth(), Fixed));
+        placeholderBox.layoutIfNeeded();
+        placeholderBox.setX(borderLeft() + paddingLeft());
+        placeholderBox.setY(borderTop() + paddingTop());
+    }
     return placeholderRenderer;
 }
 

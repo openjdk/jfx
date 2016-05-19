@@ -29,7 +29,7 @@ namespace WebCore {
 class RadioButtonGroup {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<RadioButtonGroup> create();
+    RadioButtonGroup();
     bool isEmpty() const { return m_members.isEmpty(); }
     bool isRequired() const { return m_requiredCount; }
     HTMLInputElement* checkedButton() const { return m_checkedButton; }
@@ -40,8 +40,7 @@ public:
     bool contains(HTMLInputElement*) const;
 
 private:
-    RadioButtonGroup();
-    void setNeedsValidityCheckForAllButtons();
+    void updateValidityForAllButtons();
     bool isValid() const;
     void setCheckedButton(HTMLInputElement*);
 
@@ -51,14 +50,9 @@ private:
 };
 
 RadioButtonGroup::RadioButtonGroup()
-    : m_checkedButton(0)
+    : m_checkedButton(nullptr)
     , m_requiredCount(0)
 {
-}
-
-PassOwnPtr<RadioButtonGroup> RadioButtonGroup::create()
-{
-    return adoptPtr(new RadioButtonGroup);
 }
 
 inline bool RadioButtonGroup::isValid() const
@@ -89,11 +83,11 @@ void RadioButtonGroup::add(HTMLInputElement* button)
 
     bool groupIsValid = isValid();
     if (groupWasValid != groupIsValid)
-        setNeedsValidityCheckForAllButtons();
+        updateValidityForAllButtons();
     else if (!groupIsValid) {
         // A radio button not in a group is always valid. We need to make it
         // invalid only if the group is invalid.
-        button->setNeedsValidityCheck();
+        button->updateValidity();
     }
 }
 
@@ -109,7 +103,7 @@ void RadioButtonGroup::updateCheckedState(HTMLInputElement* button)
             m_checkedButton = 0;
     }
     if (wasValid != isValid())
-        setNeedsValidityCheckForAllButtons();
+        updateValidityForAllButtons();
 }
 
 void RadioButtonGroup::requiredAttributeChanged(HTMLInputElement* button)
@@ -124,7 +118,7 @@ void RadioButtonGroup::requiredAttributeChanged(HTMLInputElement* button)
         --m_requiredCount;
     }
     if (wasValid != isValid())
-        setNeedsValidityCheckForAllButtons();
+        updateValidityForAllButtons();
 }
 
 void RadioButtonGroup::remove(HTMLInputElement* button)
@@ -140,28 +134,28 @@ void RadioButtonGroup::remove(HTMLInputElement* button)
         --m_requiredCount;
     }
     if (m_checkedButton == button)
-        m_checkedButton = 0;
+        m_checkedButton = nullptr;
 
     if (m_members.isEmpty()) {
         ASSERT(!m_requiredCount);
         ASSERT(!m_checkedButton);
     } else if (wasValid != isValid())
-        setNeedsValidityCheckForAllButtons();
+        updateValidityForAllButtons();
     if (!wasValid) {
         // A radio button not in a group is always valid. We need to make it
         // valid only if the group was invalid.
-        button->setNeedsValidityCheck();
+        button->updateValidity();
     }
 }
 
-void RadioButtonGroup::setNeedsValidityCheckForAllButtons()
+void RadioButtonGroup::updateValidityForAllButtons()
 {
     typedef HashSet<HTMLInputElement*>::const_iterator Iterator;
     Iterator end = m_members.end();
     for (Iterator it = m_members.begin(); it != end; ++it) {
         HTMLInputElement* button = *it;
         ASSERT(button->isRadioButton());
-        button->setNeedsValidityCheck();
+        button->updateValidity();
     }
 }
 
@@ -190,11 +184,11 @@ void CheckedRadioButtons::addButton(HTMLInputElement* element)
         return;
 
     if (!m_nameToGroupMap)
-        m_nameToGroupMap = adoptPtr(new NameToGroupMap);
+        m_nameToGroupMap = std::make_unique<NameToGroupMap>();
 
-    OwnPtr<RadioButtonGroup>& group = m_nameToGroupMap->add(element->name().impl(), PassOwnPtr<RadioButtonGroup>()).iterator->value;
+    auto& group = m_nameToGroupMap->add(element->name().impl(), nullptr).iterator->value;
     if (!group)
-        group = RadioButtonGroup::create();
+        group = std::make_unique<RadioButtonGroup>();
     group->add(element);
 }
 
@@ -263,7 +257,7 @@ void CheckedRadioButtons::removeButton(HTMLInputElement* element)
         // of m_nameToGroupMap from AtomicStringImpl* to RefPtr<AtomicStringImpl>.
         m_nameToGroupMap->remove(it);
         if (m_nameToGroupMap->isEmpty())
-            m_nameToGroupMap.clear();
+            m_nameToGroupMap = nullptr;
     }
 }
 

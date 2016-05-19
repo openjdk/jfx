@@ -32,6 +32,8 @@
 #ifndef CSSGridTemplateAreasValue_h
 #define CSSGridTemplateAreasValue_h
 
+#if ENABLE(CSS_GRID_LAYOUT)
+
 #include "CSSValue.h"
 #include "GridCoordinate.h"
 
@@ -39,7 +41,7 @@ namespace WebCore {
 
 class CSSGridTemplateAreasValue : public CSSValue {
 public:
-    static PassRef<CSSGridTemplateAreasValue> create(const NamedGridAreaMap& gridAreaMap, size_t rowCount, size_t columnCount)
+    static Ref<CSSGridTemplateAreasValue> create(const NamedGridAreaMap& gridAreaMap, size_t rowCount, size_t columnCount)
     {
         return adoptRef(*new CSSGridTemplateAreasValue(gridAreaMap, rowCount, columnCount));
     }
@@ -60,8 +62,10 @@ private:
     size_t m_columnCount;
 };
 
-CSS_VALUE_TYPE_CASTS(CSSGridTemplateAreasValue, isGridTemplateAreasValue())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSGridTemplateAreasValue, isGridTemplateAreasValue())
+
+#endif /* ENABLE(CSS_GRID_LAYOUT) */
 
 #endif // CSSGridTemplateAreasValue_h

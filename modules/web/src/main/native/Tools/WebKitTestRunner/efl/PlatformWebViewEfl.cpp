@@ -23,11 +23,10 @@
 #include "PlatformWebView.h"
 
 #include "EWebKit2.h"
-#include "WebKit2/WKAPICast.h"
 #include <Ecore_Evas.h>
 #include <WebCore/RefPtrCairo.h>
-#include <WebKit2/WKImageCairo.h>
-#include <WebKit2/WKViewEfl.h>
+#include <WebKit/WKImageCairo.h>
+#include <WebKit/WKViewEfl.h>
 #include <cairo.h>
 
 using namespace WebKit;
@@ -69,7 +68,7 @@ PlatformWebView::PlatformWebView(WKContextRef context, WKPageGroupRef pageGroup,
     if (m_usingFixedLayout)
         resizeTo(800, 600);
 
-    ewk_view_theme_set(m_view, TEST_THEME_DIR "/default.edj");
+    ewk_view_theme_set(m_view, DEFAULT_THEME_DIR "/default.edj");
     m_windowIsKey = false;
     evas_object_show(m_view);
 }
@@ -83,6 +82,7 @@ PlatformWebView::~PlatformWebView()
 
 void PlatformWebView::resizeTo(unsigned width, unsigned height)
 {
+    // FIXME: Don't we need to resize the window too?
     evas_object_resize(m_view, width, height);
 }
 
@@ -113,6 +113,7 @@ WKRect PlatformWebView::windowFrame()
 void PlatformWebView::setWindowFrame(WKRect frame)
 {
     ecore_evas_move_resize(m_window, frame.origin.x, frame.origin.y, frame.size.width, frame.size.height);
+    evas_object_resize(m_view, frame.size.width, frame.size.height);
 }
 
 void PlatformWebView::addChromeInputField()
@@ -124,6 +125,10 @@ void PlatformWebView::removeChromeInputField()
 }
 
 void PlatformWebView::makeWebViewFirstResponder()
+{
+}
+
+void PlatformWebView::changeWindowScaleIfNeeded(float)
 {
 }
 

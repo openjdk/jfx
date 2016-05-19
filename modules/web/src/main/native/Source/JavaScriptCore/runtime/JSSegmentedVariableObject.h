@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -41,11 +41,11 @@ namespace JSC {
 class LLIntOffsetsExtractor;
 class Register;
 
-// This is a mostly drop-in replacement for JSVariableObject, except that it preserves
+// This is a mostly drop-in replacement for JSEnvironmentRecord, except that it preserves
 // the invariant that after a variable is created, its address in memory will not change
 // so long as the JSSegmentedVariableObject is alive. This allows optimizations based
 // on getting the address of the variable and remembering it. As well, unlike a
-// JSVariableObject, this will manage the memory for the registers itself and neither
+// JSEnvironmentRecord, this will manage the memory for the registers itself and neither
 // requires nor allows for the subclasses to manage that memory. Finally,
 // JSSegmentedVariableObject has its own GC tracing functionality, since it knows the
 // exact dimensions of the variables array at all times.
@@ -57,30 +57,31 @@ class JSSegmentedVariableObject : public JSSymbolTableObject {
 public:
     typedef JSSymbolTableObject Base;
 
-    WriteBarrier<Unknown>& registerAt(int index) { return m_registers[index]; }
+    // This is not thread-safe, since m_variables is a segmented vector, and its spine can resize with
+    // malloc/free if new variables - unrelated to the one you are accessing - are added. You can get
+    // around this by grabbing m_lock, or finding some other way to get to the variable pointer (global
+    // variable access bytecode instructions will have a direct pointer already).
+    WriteBarrier<Unknown>& variableAt(ScopeOffset offset) { return m_variables[offset.offset()]; }
 
     // This is a slow method call, which searches the register bank to find the index
     // given a pointer. It will CRASH() if it does not find the register. Only use this
     // in debug code (like bytecode dumping).
-    JS_EXPORT_PRIVATE int findRegisterIndex(void*);
+    JS_EXPORT_PRIVATE ScopeOffset findVariableIndex(void*);
 
-    WriteBarrier<Unknown>* assertRegisterIsInThisObject(WriteBarrier<Unknown>* registerPointer)
+    WriteBarrier<Unknown>* assertVariableIsInThisObject(WriteBarrier<Unknown>* variablePointer)
     {
-#if !ASSERT_DISABLED
-        findRegisterIndex(registerPointer);
-#endif
-        return registerPointer;
+        if (!ASSERT_DISABLED)
+            findVariableIndex(variablePointer);
+        return variablePointer;
     }
 
     // Adds numberOfRegistersToAdd registers, initializes them to Undefined, and returns
     // the index of the first one added.
-    JS_EXPORT_PRIVATE int addRegisters(int numberOfRegistersToAdd);
+    JS_EXPORT_PRIVATE ScopeOffset addVariables(unsigned numberOfVariablesToAdd);
 
     JS_EXPORT_PRIVATE static void visitChildren(JSCell*, SlotVisitor&);
 
 protected:
-    static const unsigned StructureFlags = OverridesVisitChildren | JSSymbolTableObject::StructureFlags;
-
     JSSegmentedVariableObject(VM& vm, Structure* structure, JSScope* scope)
         : JSSymbolTableObject(vm, structure, scope)
     {
@@ -89,9 +90,10 @@ protected:
     void finishCreation(VM& vm)
     {
         Base::finishCreation(vm);
+        setSymbolTable(vm, SymbolTable::create(vm));
     }
 
-    SegmentedVector<WriteBarrier<Unknown>, 16> m_registers;
+    SegmentedVector<WriteBarrier<Unknown>, 16> m_variables;
     ConcurrentJITLock m_lock;
 };
 

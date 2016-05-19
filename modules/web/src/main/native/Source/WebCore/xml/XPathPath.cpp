@@ -36,7 +36,7 @@ namespace WebCore {
 namespace XPath {
 
 Filter::Filter(std::unique_ptr<Expression> expression, Vector<std::unique_ptr<Expression>> predicates)
-    : m_expression(std::move(expression)), m_predicates(std::move(predicates))
+    : m_expression(WTF::move(expression)), m_predicates(WTF::move(predicates))
 {
     setIsContextNodeSensitive(m_expression->isContextNodeSensitive());
     setIsContextPositionSensitive(m_expression->isContextPositionSensitive());
@@ -51,21 +51,19 @@ Value Filter::evaluate() const
     nodes.sort();
 
     EvaluationContext& evaluationContext = Expression::evaluationContext();
-    for (unsigned i = 0; i < m_predicates.size(); i++) {
+    for (auto& predicate : m_predicates) {
         NodeSet newNodes;
         evaluationContext.size = nodes.size();
         evaluationContext.position = 0;
 
-        for (unsigned j = 0; j < nodes.size(); j++) {
-            Node* node = nodes[j];
-
+        for (auto& node : nodes) {
             evaluationContext.node = node;
             ++evaluationContext.position;
 
-            if (evaluatePredicate(*m_predicates[i]))
+            if (evaluatePredicate(*predicate))
                 newNodes.append(node);
         }
-        nodes = std::move(newNodes);
+        nodes = WTF::move(newNodes);
     }
 
     return result;
@@ -102,43 +100,41 @@ Value LocationPath::evaluate() const
     evaluate(nodes);
 
     evaluationContext = backupContext;
-    return Value(std::move(nodes));
+    return Value(WTF::move(nodes));
 }
 
 void LocationPath::evaluate(NodeSet& nodes) const
 {
     bool resultIsSorted = nodes.isSorted();
 
-    for (unsigned i = 0; i < m_steps.size(); i++) {
-        Step& step = *m_steps[i];
+    for (auto& step : m_steps) {
         NodeSet newNodes;
         HashSet<Node*> newNodesSet;
 
-        bool needToCheckForDuplicateNodes = !nodes.subtreesAreDisjoint() || (step.axis() != Step::ChildAxis && step.axis() != Step::SelfAxis
-            && step.axis() != Step::DescendantAxis && step.axis() != Step::DescendantOrSelfAxis && step.axis() != Step::AttributeAxis);
+        bool needToCheckForDuplicateNodes = !nodes.subtreesAreDisjoint() || (step->axis() != Step::ChildAxis && step->axis() != Step::SelfAxis
+            && step->axis() != Step::DescendantAxis && step->axis() != Step::DescendantOrSelfAxis && step->axis() != Step::AttributeAxis);
 
         if (needToCheckForDuplicateNodes)
             resultIsSorted = false;
 
         // This is a simplified check that can be improved to handle more cases.
-        if (nodes.subtreesAreDisjoint() && (step.axis() == Step::ChildAxis || step.axis() == Step::SelfAxis))
+        if (nodes.subtreesAreDisjoint() && (step->axis() == Step::ChildAxis || step->axis() == Step::SelfAxis))
             newNodes.markSubtreesDisjoint(true);
 
-        for (unsigned j = 0; j < nodes.size(); j++) {
+        for (auto& node : nodes) {
             NodeSet matches;
-            step.evaluate(*nodes[j], matches);
+            step->evaluate(*node, matches);
 
             if (!matches.isSorted())
                 resultIsSorted = false;
 
-            for (size_t nodeIndex = 0; nodeIndex < matches.size(); ++nodeIndex) {
-                Node* node = matches[nodeIndex];
-                if (!needToCheckForDuplicateNodes || newNodesSet.add(node).isNewEntry)
-                    newNodes.append(node);
+            for (auto& match : matches) {
+                if (!needToCheckForDuplicateNodes || newNodesSet.add(match.get()).isNewEntry)
+                    newNodes.append(match);
             }
         }
 
-        nodes = std::move(newNodes);
+        nodes = WTF::move(newNodes);
     }
 
     nodes.markSorted(resultIsSorted);
@@ -154,7 +150,7 @@ void LocationPath::appendStep(std::unique_ptr<Step> step)
             return;
     }
     step->optimize();
-    m_steps.append(std::move(step));
+    m_steps.append(WTF::move(step));
 }
 
 void LocationPath::prependStep(std::unique_ptr<Step> step)
@@ -163,17 +159,17 @@ void LocationPath::prependStep(std::unique_ptr<Step> step)
         bool dropSecondStep;
         optimizeStepPair(*step, *m_steps[0], dropSecondStep);
         if (dropSecondStep) {
-            m_steps[0] = std::move(step);
+            m_steps[0] = WTF::move(step);
             return;
         }
     }
     step->optimize();
-    m_steps.insert(0, std::move(step));
+    m_steps.insert(0, WTF::move(step));
 }
 
 Path::Path(std::unique_ptr<Expression> filter, std::unique_ptr<LocationPath> path)
-    : m_filter(std::move(filter))
-    , m_path(std::move(path))
+    : m_filter(WTF::move(filter))
+    , m_path(WTF::move(path))
 {
     setIsContextNodeSensitive(m_filter->isContextNodeSensitive());
     setIsContextPositionSensitive(m_filter->isContextPositionSensitive());

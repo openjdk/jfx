@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -42,10 +42,6 @@
 #import <wtf/ObjcRuntimeExtras.h>
 #import <unicode/uchar.h>
 #import <unicode/uscript.h>
-
-#if PLATFORM(IOS)
-#import <Foundation/NSString_NSURLExtras.h>
-#endif
 
 using namespace WebCore;
 using namespace WTF;
@@ -129,38 +125,12 @@ using namespace WTF;
 
 - (NSURL *)_webkit_canonicalize
 {
-    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:self];
-    Class concreteClass = WKNSURLProtocolClassForRequest(request);
-    if (!concreteClass) {
-        [request release];
-        return self;
-    }
-
-    // This applies NSURL's concept of canonicalization, but not URL's concept. It would
-    // make sense to apply both, but when we tried that it caused a performance degradation
-    // (see 5315926). It might make sense to apply only the URL concept and not the NSURL
-    // concept, but it's too risky to make that change for WebKit 3.0.
-    NSURLRequest *newRequest = [concreteClass canonicalRequestForRequest:request];
-    NSURL *newURL = [newRequest URL];
-    NSURL *result = [[newURL retain] autorelease];
-    [request release];
-
-    return result;
-}
-
-- (NSURL *)_web_URLByTruncatingOneCharacterBeforeComponent:(CFURLComponentType)component
-{
-    return URLByTruncatingOneCharacterBeforeComponent(self, component);
+    return URLByCanonicalizingURL(self);
 }
 
 - (NSURL *)_webkit_URLByRemovingFragment
 {
     return URLByTruncatingOneCharacterBeforeComponent(self, kCFURLComponentFragment);
-}
-
-- (NSURL *)_webkit_URLByRemovingResourceSpecifier
-{
-    return URLByTruncatingOneCharacterBeforeComponent(self, kCFURLComponentResourceSpecifier);
 }
 
 - (NSURL *)_web_URLByRemovingUserInfo
@@ -182,57 +152,6 @@ using namespace WTF;
 {
     return [[self _web_originalDataAsString] _webkit_isFileURL];
 }
-
-- (BOOL)_webkit_isFTPDirectoryURL
-{
-    return [[self _web_originalDataAsString] _webkit_isFTPDirectoryURL];
-}
-
-- (BOOL)_webkit_shouldLoadAsEmptyDocument
-{
-    return [[self _web_originalDataAsString] _webkit_hasCaseInsensitivePrefix:@"about:"] || [self _web_isEmpty];
-}
-
-- (NSURL *)_web_URLWithLowercasedScheme
-{
-    CFRange range;
-    CFURLGetByteRangeForComponent((CFURLRef)self, kCFURLComponentScheme, &range);
-    if (range.location == kCFNotFound) {
-        return self;
-    }
-
-    UInt8 static_buffer[URL_BYTES_BUFFER_LENGTH];
-    UInt8 *buffer = static_buffer;
-    CFIndex bytesFilled = CFURLGetBytes((CFURLRef)self, buffer, URL_BYTES_BUFFER_LENGTH);
-    if (bytesFilled == -1) {
-        CFIndex bytesToAllocate = CFURLGetBytes((CFURLRef)self, NULL, 0);
-        buffer = static_cast<UInt8 *>(malloc(bytesToAllocate));
-        bytesFilled = CFURLGetBytes((CFURLRef)self, buffer, bytesToAllocate);
-        ASSERT(bytesFilled == bytesToAllocate);
-    }
-
-    int i;
-    BOOL changed = NO;
-    for (i = 0; i < range.length; ++i) {
-        char c = buffer[range.location + i];
-        char lower = toASCIILower(c);
-        if (c != lower) {
-            buffer[range.location + i] = lower;
-            changed = YES;
-        }
-    }
-
-    NSURL *result = changed
-        ? CFBridgingRelease(CFURLCreateAbsoluteURLWithBytes(NULL, buffer, bytesFilled, kCFStringEncodingUTF8, nil, YES))
-        : self;
-
-    if (buffer != static_buffer) {
-        free(buffer);
-    }
-
-    return result;
-}
-
 
 -(NSData *)_web_schemeSeparatorWithoutColon
 {
@@ -290,100 +209,6 @@ using namespace WTF;
 }
 
 #if PLATFORM(IOS)
-static inline NSURL *createYouTubeURL(NSString *videoID, NSString *timeID)
-{
-    // This method creates a youtube: URL, which is an internal format that is passed to YouTube.app.
-    // If the format of these internal links is changed below, then the app probably needs to be updated as well.
-
-    ASSERT(videoID && [videoID length] > 0 && ![videoID isEqualToString:@"/"]);
-
-    if ([timeID length])
-        return [NSURL URLWithString:[NSString stringWithFormat:@"youtube:%@?t=%@", videoID, timeID]];
-    return [NSURL URLWithString:[NSString stringWithFormat:@"youtube:%@", videoID]];
-}
-
-- (NSURL *)_webkit_youTubeURL
-{
-    // Bail out early if we aren't even on www.youtube.com or youtube.com.
-    NSString *scheme = [[self scheme] lowercaseString];
-    if (![scheme isEqualToString:@"http"] && ![scheme isEqualToString:@"https"])
-        return nil;
-
-    NSString *hostName = [[self host] lowercaseString];
-    BOOL isYouTubeMobileWebAppURL = [hostName isEqualToString:@"m.youtube.com"];
-    BOOL isYouTubeShortenedURL = [hostName isEqualToString:@"youtu.be"];
-    if (!isYouTubeMobileWebAppURL
-        && !isYouTubeShortenedURL
-        && ![hostName isEqualToString:@"www.youtube.com"]
-        && ![hostName isEqualToString:@"youtube.com"])
-        return nil;
-
-    NSString *path = [self path];
-
-    // Short URL of the form: http://youtu.be/v1d301D
-    if (isYouTubeShortenedURL) {
-        NSString *videoID = [path lastPathComponent];
-        if (videoID && ![videoID isEqualToString:@"/"])
-            return createYouTubeURL(videoID, nil);
-        return nil;
-    }
-
-    NSString *query = [self query];
-    NSString *fragment = [self fragment];
-
-    // On the YouTube mobile web app, the path and query string are put into the
-    // fragment so that one web page is only ever loaded (see <rdar://problem/9550639>).
-    if (isYouTubeMobileWebAppURL) {
-        NSRange range = [fragment rangeOfString:@"?"];
-        if (range.location == NSNotFound) {
-            path = fragment;
-            query = nil;
-        } else {
-            path = [fragment substringToIndex:range.location];
-            query = [fragment substringFromIndex:(range.location + 1)];
-        }
-        fragment = nil;
-    }
-
-    if ([[path lowercaseString] isEqualToString:@"/watch"]) {
-        if ([query length]) {
-            NSString *videoID = [[query _webkit_queryKeysAndValues] objectForKey:@"v"];
-            if (videoID) {
-                NSDictionary *fragmentDict = [[self fragment] _webkit_queryKeysAndValues];
-                NSString *timeID = [fragmentDict objectForKey:@"t"];
-                return createYouTubeURL(videoID, timeID);
-            }
-        }
-
-        // May be a new-style link (see <rdar://problem/7733692>).
-        if ([fragment hasPrefix:@"!"]) {
-            query = [fragment substringFromIndex:1];
-
-            if ([query length]) {
-                NSDictionary *queryDict = [query _webkit_queryKeysAndValues];
-                NSString *videoID = [queryDict objectForKey:@"v"];
-                if (videoID) {
-                    NSString *timeID = [queryDict objectForKey:@"t"];
-                    return createYouTubeURL(videoID, timeID);
-                }
-            }
-        }
-    } else if ([path _web_hasCaseInsensitivePrefix:@"/v/"] || [path _web_hasCaseInsensitivePrefix:@"/e/"]) {
-        NSString *videoID = [path lastPathComponent];
-
-        // These URLs are funny - they don't have a ? for the first query parameter.
-        // Strip all characters after and including '&' to remove extraneous parameters after the video ID.
-        NSRange ampersand = [videoID rangeOfString:@"&"];
-        if (ampersand.location != NSNotFound)
-            videoID = [videoID substringToIndex:ampersand.location];
-
-        if (videoID)
-            return createYouTubeURL(videoID, nil);
-    }
-
-    return nil;
-}
-
 + (NSURL *)uniqueURLWithRelativePart:(NSString *)relativePart
 {
     CFUUIDRef UUIDRef = CFUUIDCreate(kCFAllocatorDefault);
@@ -428,36 +253,6 @@ static inline NSURL *createYouTubeURL(NSString *videoID, NSString *timeID)
     return [[self substringFromIndex:11] _webkit_stringByReplacingValidPercentEscapes];
 }
 
-- (BOOL)_webkit_isFTPDirectoryURL
-{
-    int length = [self length];
-    if (length < 5) {  // 5 is length of "ftp:/"
-        return NO;
-    }
-    unichar lastChar = [self characterAtIndex:length - 1];
-    return lastChar == '/' && [self _webkit_hasCaseInsensitivePrefix:@"ftp:"];
-}
-
-- (BOOL)_web_hostNameNeedsDecodingWithRange:(NSRange)range
-{
-    return hostNameNeedsDecodingWithRange(self, range);
-}
-
-- (BOOL)_web_hostNameNeedsEncodingWithRange:(NSRange)range
-{
-    return hostNameNeedsEncodingWithRange(self, range);
-}
-
-- (NSString *)_web_decodeHostNameWithRange:(NSRange)range
-{
-    return decodeHostNameWithRange(self, range);
-}
-
-- (NSString *)_web_encodeHostNameWithRange:(NSRange)range
-{
-    return encodeHostNameWithRange(self, range);
-}
-
 - (NSString *)_web_decodeHostName
 {
     return decodeHostName(self);
@@ -496,23 +291,16 @@ static inline NSURL *createYouTubeURL(NSString *videoID, NSString *timeID)
     return [[self _webkit_stringByTrimmingWhitespace] _webkit_rangeOfURLScheme].location != NSNotFound;
 }
 
-- (NSString *)_webkit_URLFragment
-{
-    NSRange fragmentRange;
-
-    fragmentRange = [self rangeOfString:@"#" options:NSLiteralSearch];
-    if (fragmentRange.location == NSNotFound)
-        return nil;
-    return [self substringFromIndex:fragmentRange.location + 1];
-}
-
 #if PLATFORM(IOS)
 
 - (NSString *)_webkit_unescapedQueryValue
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSMutableString *string = [[[self stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding] mutableCopy] autorelease];
     if (!string) // If we failed to decode the URL as UTF8, fall back to Latin1
         string = [[[self stringByReplacingPercentEscapesUsingEncoding:NSISOLatin1StringEncoding] mutableCopy] autorelease];
+#pragma clang diagnostic pop
     [string replaceOccurrencesOfString:@"+" withString:@" " options:NSLiteralSearch range:NSMakeRange(0, [string length])];
     return string;
 }

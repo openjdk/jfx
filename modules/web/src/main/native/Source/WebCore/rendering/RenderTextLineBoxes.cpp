@@ -109,7 +109,7 @@ void RenderTextLineBoxes::removeAllFromParent(RenderText& renderer)
 {
     if (!m_first) {
         if (renderer.parent())
-            renderer.parent()->dirtyLinesFromChangedChild(&renderer);
+            renderer.parent()->dirtyLinesFromChangedChild(renderer);
         return;
     }
     for (auto box = m_first; box; box = box->nextTextBox())
@@ -167,6 +167,13 @@ IntRect RenderTextLineBoxes::boundingBox(const RenderText& renderer) const
     float width = isHorizontal ? logicalRightSide - logicalLeftSide : m_last->logicalBottom() - x;
     float height = isHorizontal ? m_last->logicalBottom() - y : logicalRightSide - logicalLeftSide;
     return enclosingIntRect(FloatRect(x, y, width, height));
+}
+
+IntPoint RenderTextLineBoxes::firstRunLocation() const
+{
+    if (!m_first)
+        return IntPoint();
+    return IntPoint(m_first->topLeft());
 }
 
 LayoutRect RenderTextLineBoxes::visualOverflowBoundingBox(const RenderText& renderer) const
@@ -487,6 +494,17 @@ LayoutRect RenderTextLineBoxes::selectionRectForRange(unsigned start, unsigned e
     return rect;
 }
 
+void RenderTextLineBoxes::collectSelectionRectsForRange(unsigned start, unsigned end, Vector<LayoutRect>& rects)
+{
+    for (auto box = m_first; box; box = box->nextTextBox()) {
+        LayoutRect rect;
+        rect.unite(box->localSelectionRect(start, end));
+        rect.unite(ellipsisRectForBox(*box, start, end));
+        if (!rect.size().isEmpty())
+            rects.append(rect);
+    }
+}
+
 Vector<IntRect> RenderTextLineBoxes::absoluteRects(const LayoutPoint& accumulatedOffset) const
 {
     Vector<IntRect> rects;
@@ -532,13 +550,13 @@ Vector<IntRect> RenderTextLineBoxes::absoluteRectsForRange(const RenderText& ren
                     boundaries.setX(selectionRect.x());
                 }
             }
-            rects.append(renderer.localToAbsoluteQuad(boundaries, 0, wasFixed).enclosingBoundingBox());
+            rects.append(renderer.localToAbsoluteQuad(boundaries, UseTransforms, wasFixed).enclosingBoundingBox());
             continue;
         }
         // FIXME: This code is wrong. It's converting local to absolute twice. http://webkit.org/b/65722
         FloatRect rect = localQuadForTextBox(*box, start, end, useSelectionHeight);
         if (!rect.isZero())
-            rects.append(renderer.localToAbsoluteQuad(rect, 0, wasFixed).enclosingBoundingBox());
+            rects.append(renderer.localToAbsoluteQuad(rect, UseTransforms, wasFixed).enclosingBoundingBox());
     }
     return rects;
 }
@@ -558,7 +576,7 @@ Vector<FloatQuad> RenderTextLineBoxes::absoluteQuads(const RenderText& renderer,
             else
                 boundaries.setHeight(ellipsisRect.maxY() - boundaries.y());
         }
-        quads.append(renderer.localToAbsoluteQuad(boundaries, 0, wasFixed));
+        quads.append(renderer.localToAbsoluteQuad(boundaries, UseTransforms, wasFixed));
     }
     return quads;
 }
@@ -580,12 +598,12 @@ Vector<FloatQuad> RenderTextLineBoxes::absoluteQuadsForRange(const RenderText& r
                     boundaries.setX(selectionRect.x());
                 }
             }
-            quads.append(renderer.localToAbsoluteQuad(boundaries, 0, wasFixed));
+            quads.append(renderer.localToAbsoluteQuad(boundaries, UseTransforms, wasFixed));
             continue;
         }
         FloatRect rect = localQuadForTextBox(*box, start, end, useSelectionHeight);
         if (!rect.isZero())
-            quads.append(renderer.localToAbsoluteQuad(rect, 0, wasFixed));
+            quads.append(renderer.localToAbsoluteQuad(rect, UseTransforms, wasFixed));
     }
     return quads;
 }
@@ -615,8 +633,7 @@ bool RenderTextLineBoxes::dirtyRange(RenderText& renderer, unsigned start, unsig
             if (!firstRootBox) {
                 firstRootBox = &rootBox;
                 if (!dirtiedLines) {
-                    // The affected area was in between two runs. Go ahead and mark the root box of
-                    // the run after the affected area as dirty.
+                    // The affected area was in between two runs. Mark the root box of the run after the affected area as dirty.
                     firstRootBox->markDirty();
                     dirtiedLines = true;
                 }
@@ -665,7 +682,7 @@ bool RenderTextLineBoxes::dirtyRange(RenderText& renderer, unsigned start, unsig
 
     // If the text node is empty, dirty the line where new text will be inserted.
     if (!m_first && renderer.parent()) {
-        renderer.parent()->dirtyLinesFromChangedChild(&renderer);
+        renderer.parent()->dirtyLinesFromChangedChild(renderer);
         dirtiedLines = true;
     }
     return dirtiedLines;
@@ -697,10 +714,8 @@ RenderTextLineBoxes::~RenderTextLineBoxes()
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
 void RenderTextLineBoxes::invalidateParentChildLists()
 {
-    for (auto box = m_first; box; box = box->nextTextBox()) {
-        if (auto parent = box->parent())
-            parent->setHasBadChildList();
-    }
+    for (auto box = m_first; box; box = box->nextTextBox())
+        box->invalidateParentChildList();
 }
 #endif
 

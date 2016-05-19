@@ -30,11 +30,12 @@
 namespace WebCore {
 
 class Position;
+class RenderRegion;
 
 class RenderInline : public RenderBoxModelObject {
 public:
-    RenderInline(Element&, PassRef<RenderStyle>);
-    RenderInline(Document&, PassRef<RenderStyle>);
+    RenderInline(Element&, Ref<RenderStyle>&&);
+    RenderInline(Document&, Ref<RenderStyle>&&);
 
     virtual void addChild(RenderObject* newChild, RenderObject* beforeChild = 0) override;
 
@@ -50,9 +51,15 @@ public:
     virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override final;
     virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
-    virtual LayoutSize offsetFromContainer(RenderObject*, const LayoutPoint&, bool* offsetDependsOnPoint = 0) const override final;
+    virtual LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override final;
 
-    IntRect linesBoundingBox() const;
+    virtual IntRect borderBoundingBox() const override final
+    {
+        IntRect boundingBox = linesBoundingBox();
+        return IntRect(0, 0, boundingBox.width(), boundingBox.height());
+    }
+
+    WEBCORE_EXPORT IntRect linesBoundingBox() const;
     LayoutRect linesVisualOverflowBoundingBox() const;
     LayoutRect linesVisualOverflowBoundingBoxInRegion(const RenderRegion*) const;
 
@@ -99,6 +106,8 @@ protected:
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
+    virtual void updateFromStyle() override;
+
 private:
     virtual const char* renderName() const override;
 
@@ -114,7 +123,7 @@ private:
     void generateCulledLineBoxRects(GeneratorContext& yield, const RenderInline* container) const;
 
     void addChildToContinuation(RenderObject* newChild, RenderObject* beforeChild);
-    virtual void addChildIgnoringContinuation(RenderObject* newChild, RenderObject* beforeChild = 0) override final;
+    virtual void addChildIgnoringContinuation(RenderObject* newChild, RenderObject* beforeChild = nullptr) override final;
 
     void splitInlines(RenderBlock* fromBlock, RenderBlock* toBlock, RenderBlock* middleBlock,
                       RenderObject* beforeChild, RenderBoxModelObject* oldCont);
@@ -138,27 +147,21 @@ private:
     virtual LayoutRect rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const override final;
     virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed) const override final;
 
-    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const override;
+    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
-    virtual VisiblePosition positionForPoint(const LayoutPoint&) override final;
+    virtual VisiblePosition positionForPoint(const LayoutPoint&, const RenderRegion*) override final;
 
     virtual LayoutRect frameRectForStickyPositioning() const override final { return linesBoundingBox(); }
 
-    virtual IntRect borderBoundingBox() const override final
-    {
-        IntRect boundingBox = linesBoundingBox();
-        return IntRect(0, 0, boundingBox.width(), boundingBox.height());
-    }
-
     virtual std::unique_ptr<InlineFlowBox> createInlineFlowBox(); // Subclassed by RenderSVGInline
 
-    virtual void dirtyLinesFromChangedChild(RenderObject* child) override final { m_lineBoxes.dirtyLinesFromChangedChild(this, child); }
+    virtual void dirtyLinesFromChangedChild(RenderObject& child) override final { m_lineBoxes.dirtyLinesFromChangedChild(*this, child); }
 
     virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override final;
     virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override final;
 
-    virtual void childBecameNonInline(RenderObject* child) override final;
+    virtual void childBecameNonInline(RenderElement&) override final;
 
     virtual void updateHitTestResult(HitTestResult&, const LayoutPoint&) override final;
 
@@ -167,8 +170,6 @@ private:
 #if ENABLE(DASHBOARD_SUPPORT)
     virtual void addAnnotatedRegions(Vector<AnnotatedRegionValue>&) override final;
 #endif
-
-    virtual void updateFromStyle() override final;
 
     RenderPtr<RenderInline> clone() const;
 
@@ -179,8 +180,8 @@ private:
     RenderLineBoxList m_lineBoxes;   // All of the line boxes created for this inline flow.  For example, <i>Hello<br>world.</i> will have two <i> line boxes.
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderInline, isRenderInline())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderInline, isRenderInline())
 
 #endif // RenderInline_h

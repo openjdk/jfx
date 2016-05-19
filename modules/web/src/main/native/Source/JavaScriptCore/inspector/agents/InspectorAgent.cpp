@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,17 +31,15 @@
 #include "config.h"
 #include "InspectorAgent.h"
 
-#if ENABLE(INSPECTOR)
-
+#include "InspectorEnvironment.h"
 #include "InspectorValues.h"
 #include "ScriptValue.h"
-#include <wtf/PassRefPtr.h>
-#include <wtf/RefPtr.h>
 
 namespace Inspector {
 
-InspectorAgent::InspectorAgent()
+InspectorAgent::InspectorAgent(InspectorEnvironment& environment)
     : InspectorAgentBase(ASCIILiteral("Inspector"))
+    , m_environment(environment)
     , m_enabled(false)
 {
 }
@@ -50,41 +48,56 @@ InspectorAgent::~InspectorAgent()
 {
 }
 
-void InspectorAgent::didCreateFrontendAndBackend(InspectorFrontendChannel* frontendChannel, InspectorBackendDispatcher* backendDispatcher)
+void InspectorAgent::didCreateFrontendAndBackend(FrontendChannel* frontendChannel, BackendDispatcher* backendDispatcher)
 {
-    m_frontendDispatcher = std::make_unique<InspectorInspectorFrontendDispatcher>(frontendChannel);
-    m_backendDispatcher = InspectorInspectorBackendDispatcher::create(backendDispatcher, this);
+    m_frontendDispatcher = std::make_unique<InspectorFrontendDispatcher>(frontendChannel);
+    m_backendDispatcher = InspectorBackendDispatcher::create(backendDispatcher, this);
 }
 
-void InspectorAgent::willDestroyFrontendAndBackend(InspectorDisconnectReason)
+void InspectorAgent::willDestroyFrontendAndBackend(DisconnectReason)
 {
     m_frontendDispatcher = nullptr;
-    m_backendDispatcher.clear();
+    m_backendDispatcher = nullptr;
 
     m_pendingEvaluateTestCommands.clear();
 
-    ErrorString error;
-    disable(&error);
+    ErrorString unused;
+    disable(unused);
 }
 
-void InspectorAgent::enable(ErrorString*)
+void InspectorAgent::enable(ErrorString&)
 {
     m_enabled = true;
 
     if (m_pendingInspectData.first)
-        inspect(m_pendingInspectData.first, m_pendingInspectData.second);
+        inspect(m_pendingInspectData.first.copyRef(), m_pendingInspectData.second.copyRef());
 
-    for (Vector<std::pair<long, String>>::iterator it = m_pendingEvaluateTestCommands.begin(); m_frontendDispatcher && it != m_pendingEvaluateTestCommands.end(); ++it)
-        m_frontendDispatcher->evaluateForTestInFrontend(static_cast<int>((*it).first), (*it).second);
+#if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
+    if (m_pendingExtraDomainsData)
+        m_frontendDispatcher->activateExtraDomains(m_pendingExtraDomainsData);
+#endif
+
+    for (auto& testCommand : m_pendingEvaluateTestCommands) {
+        if (!m_frontendDispatcher)
+            break;
+
+        m_frontendDispatcher->evaluateForTestInFrontend(testCommand);
+    }
+
     m_pendingEvaluateTestCommands.clear();
 }
 
-void InspectorAgent::disable(ErrorString*)
+void InspectorAgent::disable(ErrorString&)
 {
     m_enabled = false;
 }
 
-void InspectorAgent::inspect(PassRefPtr<TypeBuilder::Runtime::RemoteObject> objectToInspect, PassRefPtr<InspectorObject> hints)
+void InspectorAgent::initialized(ErrorString&)
+{
+    m_environment.frontendInitialized();
+}
+
+void InspectorAgent::inspect(RefPtr<Protocol::Runtime::RemoteObject>&& objectToInspect, RefPtr<InspectorObject>&& hints)
 {
     if (m_enabled && m_frontendDispatcher) {
         m_frontendDispatcher->inspect(objectToInspect, hints);
@@ -97,14 +110,43 @@ void InspectorAgent::inspect(PassRefPtr<TypeBuilder::Runtime::RemoteObject> obje
     m_pendingInspectData.second = hints;
 }
 
-void InspectorAgent::evaluateForTestInFrontend(long callId, const String& script)
+void InspectorAgent::evaluateForTestInFrontend(const String& script)
 {
     if (m_enabled && m_frontendDispatcher)
-        m_frontendDispatcher->evaluateForTestInFrontend(static_cast<int>(callId), script);
+        m_frontendDispatcher->evaluateForTestInFrontend(script);
     else
-        m_pendingEvaluateTestCommands.append(std::pair<long, String>(callId, script));
+        m_pendingEvaluateTestCommands.append(script);
 }
 
-} // namespace Inspector
+#if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
+void InspectorAgent::activateExtraDomain(const String& domainName)
+{
+    if (!m_enabled) {
+        if (!m_pendingExtraDomainsData)
+            m_pendingExtraDomainsData = Inspector::Protocol::Array<String>::create();
+        m_pendingExtraDomainsData->addItem(domainName);
+        return;
+    }
 
-#endif // ENABLE(INSPECTOR)
+    Ref<Inspector::Protocol::Array<String>> domainNames = Inspector::Protocol::Array<String>::create();
+    domainNames->addItem(domainName);
+    m_frontendDispatcher->activateExtraDomains(WTF::move(domainNames));
+}
+
+void InspectorAgent::activateExtraDomains(const Vector<String>& extraDomains)
+{
+    if (extraDomains.isEmpty())
+        return;
+
+    RefPtr<Inspector::Protocol::Array<String>> domainNames = Inspector::Protocol::Array<String>::create();
+    for (auto domainName : extraDomains)
+        domainNames->addItem(domainName);
+
+    if (!m_enabled)
+        m_pendingExtraDomainsData = domainNames.release();
+    else
+        m_frontendDispatcher->activateExtraDomains(domainNames.release());
+}
+#endif
+
+} // namespace Inspector

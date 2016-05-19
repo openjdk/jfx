@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2004 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2003, 2004 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,27 +26,27 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/DOM.h>
-#import <WebKit/WebArchive.h>
-#import <WebKit/WebBackForwardList.h>
-#import <WebKit/WebDataSource.h>
-#import <WebKit/WebDocument.h>
-#import <WebKit/WebDOMOperations.h>
-#import <WebKit/WebDownload.h>
-#import <WebKit/WebEditingDelegate.h>
-#import <WebKit/WebFrame.h>
-#import <WebKit/WebFrameLoadDelegate.h>
-#import <WebKit/WebFrameView.h>
-#import <WebKit/WebHistory.h>
-#import <WebKit/WebHistoryItem.h>
-#import <WebKit/WebKitErrors.h>
-#import <WebKit/WebPlugin.h>
-#import <WebKit/WebPluginContainer.h>
-#import <WebKit/WebPluginViewFactory.h>
-#import <WebKit/WebPolicyDelegate.h>
-#import <WebKit/WebPreferences.h>
-#import <WebKit/WebResource.h>
-#import <WebKit/WebResourceLoadDelegate.h>
-#import <WebKit/WebScriptObject.h>
-#import <WebKit/WebUIDelegate.h>
-#import <WebKit/WebView.h>
+#import <WebKitLegacy/DOM.h>
+#import <WebKitLegacy/WebArchive.h>
+#import <WebKitLegacy/WebBackForwardList.h>
+#import <WebKitLegacy/WebDataSource.h>
+#import <WebKitLegacy/WebDocument.h>
+#import <WebKitLegacy/WebDOMOperations.h>
+#import <WebKitLegacy/WebDownload.h>
+#import <WebKitLegacy/WebEditingDelegate.h>
+#import <WebKitLegacy/WebFrame.h>
+#import <WebKitLegacy/WebFrameLoadDelegate.h>
+#import <WebKitLegacy/WebFrameView.h>
+#import <WebKitLegacy/WebHistory.h>
+#import <WebKitLegacy/WebHistoryItem.h>
+#import <WebKitLegacy/WebKitErrors.h>
+#import <WebKitLegacy/WebPlugin.h>
+#import <WebKitLegacy/WebPluginContainer.h>
+#import <WebKitLegacy/WebPluginViewFactory.h>
+#import <WebKitLegacy/WebPolicyDelegate.h>
+#import <WebKitLegacy/WebPreferences.h>
+#import <WebKitLegacy/WebResource.h>
+#import <WebKitLegacy/WebResourceLoadDelegate.h>
+#import <WebKitLegacy/WebScriptObject.h>
+#import <WebKitLegacy/WebUIDelegate.h>
+#import <WebKitLegacy/WebView.h>

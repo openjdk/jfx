@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -25,8 +25,7 @@
 #include "config.h"
 #include "WebCoreTextRenderer.h"
 
-#include "Font.h"
-#include "FontCache.h"
+#include "FontCascade.h"
 #include "FontDescription.h"
 #include "GraphicsContext.h"
 #include "StringTruncator.h"
@@ -46,11 +45,9 @@ static bool isOneLeftToRightRun(const TextRun& run)
     return true;
 }
 
-static void doDrawTextAtPoint(GraphicsContext& context, const String& text, const IntPoint& point, const Font& font, const Color& color, int underlinedIndex)
+static void doDrawTextAtPoint(GraphicsContext& context, const String& text, const IntPoint& point, const FontCascade& font, const Color& color, int underlinedIndex)
 {
-    FontCachePurgePreventer fontCachePurgePreventer;
-
-    TextRun run(text.deprecatedCharacters(), text.length());
+    TextRun run(text);
 
     context.setFillColor(color, ColorSpaceDeviceRGB);
     if (isOneLeftToRightRun(run))
@@ -63,12 +60,12 @@ static void doDrawTextAtPoint(GraphicsContext& context, const String& text, cons
 
         int beforeWidth;
         if (underlinedIndex > 0) {
-            TextRun beforeRun(text.deprecatedCharacters(), underlinedIndex);
+            TextRun beforeRun(StringView(text).substring(0, underlinedIndex));
             beforeWidth = font.width(beforeRun);
         } else
             beforeWidth = 0;
 
-        TextRun underlinedRun(text.deprecatedCharacters() + underlinedIndex, 1);
+        TextRun underlinedRun(StringView(text).substring(underlinedIndex, 1));
         int underlinedWidth = font.width(underlinedRun);
 
         IntPoint underlinePoint(point);
@@ -79,7 +76,7 @@ static void doDrawTextAtPoint(GraphicsContext& context, const String& text, cons
     }
 }
 
-void WebCoreDrawDoubledTextAtPoint(GraphicsContext& context, const String& text, const IntPoint& point, const Font& font, const Color& topColor, const Color& bottomColor, int underlinedIndex)
+void WebCoreDrawDoubledTextAtPoint(GraphicsContext& context, const String& text, const IntPoint& point, const FontCascade& font, const Color& topColor, const Color& bottomColor, int underlinedIndex)
 {
     context.save();
 
@@ -92,10 +89,8 @@ void WebCoreDrawDoubledTextAtPoint(GraphicsContext& context, const String& text,
     context.restore();
 }
 
-float WebCoreTextFloatWidth(const String& text, const Font& font)
+float WebCoreTextFloatWidth(const String& text, const FontCascade& font)
 {
-    FontCachePurgePreventer fontCachePurgePreventer;
-
     return StringTruncator::width(text, font, StringTruncator::EnableRoundingHacks);
 }
 
@@ -111,12 +106,12 @@ bool WebCoreShouldUseFontSmoothing()
 
 void WebCoreSetAlwaysUsesComplexTextCodePath(bool complex)
 {
-    Font::setCodePath(complex ? Font::Complex : Font::Auto);
+    FontCascade::setCodePath(complex ? FontCascade::Complex : FontCascade::Auto);
 }
 
 bool WebCoreAlwaysUsesComplexTextCodePath()
 {
-    return Font::codePath() == Font::Complex;
+    return FontCascade::codePath() == FontCascade::Complex;
 }
 
 } // namespace WebCore

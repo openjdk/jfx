@@ -30,7 +30,9 @@
 #include "DOMTimeStamp.h"
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-#include "DisplayRefreshMonitor.h"
+#include "Chrome.h"
+#include "ChromeClient.h"
+#include "DisplayRefreshMonitorClient.h"
 #endif
 #include "Timer.h"
 #endif
@@ -50,9 +52,9 @@ class ScriptedAnimationController : public RefCounted<ScriptedAnimationControlle
 #endif
 {
 public:
-    static PassRefPtr<ScriptedAnimationController> create(Document* document, PlatformDisplayID displayID)
+    static Ref<ScriptedAnimationController> create(Document* document, PlatformDisplayID displayID)
     {
-        return adoptRef(new ScriptedAnimationController(document, displayID));
+        return adoptRef(*new ScriptedAnimationController(document, displayID));
     }
     ~ScriptedAnimationController();
     void clearDocumentPointer() { m_document = 0; }
@@ -66,6 +68,7 @@ public:
     void suspend();
     void resume();
     void setThrottled(bool);
+    WEBCORE_EXPORT bool isThrottled() const;
 
     void windowScreenDidChange(PlatformDisplayID);
 
@@ -76,22 +79,23 @@ private:
     CallbackList m_callbacks;
 
     Document* m_document;
-    CallbackId m_nextCallbackId;
-    int m_suspendCount;
+    CallbackId m_nextCallbackId { 0 };
+    int m_suspendCount { 0 };
 
     void scheduleAnimation();
 
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
-    void animationTimerFired(Timer<ScriptedAnimationController>&);
-    Timer<ScriptedAnimationController> m_animationTimer;
-    double m_lastAnimationFrameTimeMonotonic;
+    void animationTimerFired();
+    Timer m_animationTimer;
+    double m_lastAnimationFrameTimeMonotonic { 0 };
 
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
     // Override for DisplayRefreshMonitorClient
     virtual void displayRefreshFired(double timestamp) override;
+    virtual RefPtr<DisplayRefreshMonitor> createDisplayRefreshMonitor(PlatformDisplayID) const override;
 
-    bool m_isUsingTimer;
-    bool m_isThrottled;
+    bool m_isUsingTimer { false };
+    bool m_isThrottled { false };
 #endif
 #endif
 };

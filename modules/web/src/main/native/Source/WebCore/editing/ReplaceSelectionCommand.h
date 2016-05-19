@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -42,21 +42,21 @@ public:
         MatchStyle = 1 << 2,
         PreventNesting = 1 << 3,
         MovingParagraph = 1 << 4,
-        SanitizeFragment = 1 << 5
+        SanitizeFragment = 1 << 5,
+        IgnoreMailBlockquote = 1 << 6,
     };
 
     typedef unsigned CommandOptions;
 
-    static PassRefPtr<ReplaceSelectionCommand> create(Document& document, PassRefPtr<DocumentFragment> fragment, CommandOptions options, EditAction action = EditActionPaste)
+    static Ref<ReplaceSelectionCommand> create(Document& document, RefPtr<DocumentFragment>&& fragment, CommandOptions options, EditAction editingAction = EditActionInsert)
     {
-        return adoptRef(new ReplaceSelectionCommand(document, fragment, options, action));
+        return adoptRef(*new ReplaceSelectionCommand(document, WTF::move(fragment), options, editingAction));
     }
 
 private:
-    ReplaceSelectionCommand(Document&, PassRefPtr<DocumentFragment>, CommandOptions, EditAction);
+    ReplaceSelectionCommand(Document&, RefPtr<DocumentFragment>&&, CommandOptions, EditAction);
 
     virtual void doApply();
-    virtual EditAction editingAction() const;
 
     class InsertedNodes {
     public:
@@ -67,7 +67,14 @@ private:
 
         Node* firstNodeInserted() const { return m_firstNodeInserted.get(); }
         Node* lastLeafInserted() const { return m_lastNodeInserted->lastDescendant(); }
-        Node* pastLastLeaf() const { return m_lastNodeInserted ? NodeTraversal::next(lastLeafInserted()) : 0; }
+        Node* pastLastLeaf() const
+        {
+            if (m_lastNodeInserted) {
+                ASSERT(lastLeafInserted());
+                return NodeTraversal::next(*lastLeafInserted());
+            }
+            return nullptr;
+        }
 
     private:
         RefPtr<Node> m_firstNodeInserted;
@@ -89,7 +96,7 @@ private:
 
     void removeRedundantStylesAndKeepStyleSpanInline(InsertedNodes&);
     void makeInsertedContentRoundTrippableWithHTMLTreeBuilder(InsertedNodes&);
-    void moveNodeOutOfAncestor(PassRefPtr<Node>, PassRefPtr<Node> ancestor);
+    void moveNodeOutOfAncestor(PassRefPtr<Node>, PassRefPtr<Node> ancestor, InsertedNodes&);
     void handleStyleSpans(InsertedNodes&);
     void handlePasteAsQuotationNode();
 
@@ -112,9 +119,9 @@ private:
     RefPtr<DocumentFragment> m_documentFragment;
     bool m_preventNesting;
     bool m_movingParagraph;
-    EditAction m_editAction;
     bool m_sanitizeFragment;
     bool m_shouldMergeEnd;
+    bool m_ignoreMailBlockquote;
 };
 
 } // namespace WebCore

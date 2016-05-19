@@ -37,12 +37,12 @@ AccessibilityMenuList::AccessibilityMenuList(RenderMenuList* renderer)
 {
 }
 
-PassRefPtr<AccessibilityMenuList> AccessibilityMenuList::create(RenderMenuList* renderer)
+Ref<AccessibilityMenuList> AccessibilityMenuList::create(RenderMenuList* renderer)
 {
-    return adoptRef(new AccessibilityMenuList(renderer));
+    return adoptRef(*new AccessibilityMenuList(renderer));
 }
 
-bool AccessibilityMenuList::press() const
+bool AccessibilityMenuList::press()
 {
 #if !PLATFORM(IOS)
     RenderMenuList* menuList = static_cast<RenderMenuList*>(m_renderer);
@@ -58,20 +58,24 @@ bool AccessibilityMenuList::press() const
 
 void AccessibilityMenuList::addChildren()
 {
-    m_haveChildren = true;
+    if (!m_renderer)
+        return;
 
-    AXObjectCache* cache = m_renderer->document().axObjectCache();
+    AXObjectCache* cache = axObjectCache();
+    if (!cache)
+        return;
 
     AccessibilityObject* list = cache->getOrCreate(MenuListPopupRole);
     if (!list)
         return;
 
-    toAccessibilityMockObject(list)->setParent(this);
+    downcast<AccessibilityMockObject>(*list).setParent(this);
     if (list->accessibilityIsIgnored()) {
         cache->remove(list->axObjectID());
         return;
     }
 
+    m_haveChildren = true;
     m_children.append(list);
 
     list->addChildren();
@@ -100,7 +104,7 @@ bool AccessibilityMenuList::canSetFocusAttribute() const
     if (!node())
         return false;
 
-    return !toElement(node())->isDisabledFormControl();
+    return !downcast<Element>(*node()).isDisabledFormControl();
 }
 
 void AccessibilityMenuList::didUpdateActiveOption(int optionIndex)
@@ -111,15 +115,21 @@ void AccessibilityMenuList::didUpdateActiveOption(int optionIndex)
     const auto& childObjects = children();
     if (!childObjects.isEmpty()) {
         ASSERT(childObjects.size() == 1);
-        ASSERT(childObjects[0]->isMenuListPopup());
+        ASSERT(is<AccessibilityMenuListPopup>(*childObjects[0]));
 
-        if (childObjects[0]->isMenuListPopup()) {
-            if (AccessibilityMenuListPopup* popup = toAccessibilityMenuListPopup(childObjects[0].get()))
-                popup->didUpdateActiveOption(optionIndex);
-        }
+        // We might be calling this method in situations where the renderers for list items
+        // associated to the menu list have not been created (e.g. they might be rendered
+        // in the UI process, as it's the case in the GTK+ port, which uses GtkMenuItem).
+        // So, we need to make sure that the accessibility popup object has some children
+        // before asking it to update its active option, or it will read invalid memory.
+        // You can reproduce the issue in the GTK+ port by removing this check and running
+        // accessibility/insert-selected-option-into-select-causes-crash.html (will crash).
+        int popupChildrenSize = static_cast<int>(childObjects[0]->children().size());
+        if (is<AccessibilityMenuListPopup>(*childObjects[0]) && optionIndex >= 0 && optionIndex < popupChildrenSize)
+            downcast<AccessibilityMenuListPopup>(*childObjects[0]).didUpdateActiveOption(optionIndex);
     }
 
-    cache->postNotification(this, &document.get(), AXObjectCache::AXMenuListValueChanged, TargetElement, PostSynchronously);
+    cache->postNotification(this, document.ptr(), AXObjectCache::AXMenuListValueChanged, TargetElement, PostSynchronously);
 }
 
 } // namespace WebCore

@@ -31,7 +31,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ErrorConstructor);
 
-const ClassInfo ErrorConstructor::s_info = { "Function", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(ErrorConstructor) };
+const ClassInfo ErrorConstructor::s_info = { "Function", &Base::s_info, 0, CREATE_METHOD_TABLE(ErrorConstructor) };
 
 ErrorConstructor::ErrorConstructor(VM& vm, Structure* structure)
     : InternalFunction(vm, structure)
@@ -52,10 +52,7 @@ EncodedJSValue JSC_HOST_CALL Interpreter::constructWithErrorConstructor(ExecStat
 {
     JSValue message = exec->argumentCount() ? exec->argument(0) : jsUndefined();
     Structure* errorStructure = asInternalFunction(exec->callee())->globalObject()->errorStructure();
-    Vector<StackFrame> stackTrace;
-    exec->vm().interpreter->getStackTrace(stackTrace, std::numeric_limits<size_t>::max());
-    stackTrace.remove(0);
-    return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, stackTrace));
+    return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, nullptr, TypeNothing, false));
 }
 
 ConstructType ErrorConstructor::getConstructData(JSCell*, ConstructData& constructData)
@@ -68,10 +65,7 @@ EncodedJSValue JSC_HOST_CALL Interpreter::callErrorConstructor(ExecState* exec)
 {
     JSValue message = exec->argumentCount() ? exec->argument(0) : jsUndefined();
     Structure* errorStructure = asInternalFunction(exec->callee())->globalObject()->errorStructure();
-    Vector<StackFrame> stackTrace;
-    exec->vm().interpreter->getStackTrace(stackTrace, std::numeric_limits<size_t>::max());
-    stackTrace.remove(0);
-    return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, stackTrace));
+    return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, nullptr, TypeNothing, false));
 }
 
 CallType ErrorConstructor::getCallData(JSCell*, CallData& callData)

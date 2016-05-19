@@ -27,7 +27,6 @@
 #define WorkQueueManager_h
 
 #include <wtf/Deque.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTR {
@@ -42,7 +41,7 @@ public:
     void clearWorkQueue();
     bool processWorkQueue(); // Returns 'true' if queue is processed (no new loading is started), returns 'false' otherwise.
 
-    void queueLoad(const String& url, const String& target);
+    void queueLoad(const String& url, const String& target, bool shouldOpenExternalURLs);
     void queueLoadHTMLString(const String& content, const String& baseURL, const String& unreachableURL);
     void queueBackNavigation(unsigned howFarBackward);
     void queueForwardNavigation(unsigned howFarForward);
@@ -51,7 +50,7 @@ public:
     void queueNonLoadingScript(const String& script);
 
 private:
-    typedef Deque<OwnPtr<class WorkQueueItem> > WorkQueue;
+    typedef Deque<std::unique_ptr<class WorkQueueItem>> WorkQueue;
 
     void enqueue(WorkQueueItem*); // Adopts pointer.
 

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -38,7 +38,7 @@ struct OverflowEventInit : public EventInit {
     bool verticalOverflow;
 };
 
-class OverflowEvent : public Event {
+class OverflowEvent final : public Event {
 public:
     enum orientType {
         HORIZONTAL = 0,
@@ -46,17 +46,17 @@ public:
         BOTH       = 2
     };
 
-    static PassRefPtr<OverflowEvent> create()
+    static Ref<OverflowEvent> create()
     {
-        return adoptRef(new OverflowEvent);
+        return adoptRef(*new OverflowEvent);
     }
-    static PassRefPtr<OverflowEvent> create(bool horizontalOverflowChanged, bool horizontalOverflow, bool verticalOverflowChanged, bool verticalOverflow)
+    static Ref<OverflowEvent> create(bool horizontalOverflowChanged, bool horizontalOverflow, bool verticalOverflowChanged, bool verticalOverflow)
     {
-        return adoptRef(new OverflowEvent(horizontalOverflowChanged, horizontalOverflow, verticalOverflowChanged, verticalOverflow));
+        return adoptRef(*new OverflowEvent(horizontalOverflowChanged, horizontalOverflow, verticalOverflowChanged, verticalOverflow));
     }
-    static PassRefPtr<OverflowEvent> create(const AtomicString& type, const OverflowEventInit& initializer)
+    static Ref<OverflowEvent> create(const AtomicString& type, const OverflowEventInit& initializer)
     {
-        return adoptRef(new OverflowEvent(type, initializer));
+        return adoptRef(*new OverflowEvent(type, initializer));
     }
 
     void initOverflowEvent(unsigned short orient, bool horizontalOverflow, bool verticalOverflow);

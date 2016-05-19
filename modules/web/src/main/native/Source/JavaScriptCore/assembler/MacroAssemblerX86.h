@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,6 @@
 #if ENABLE(ASSEMBLER) && CPU(X86)
 
 #include "MacroAssemblerX86Common.h"
-
-#if USE(MASM_PROBE)
-#include <wtf/StdLibExtras.h>
-#endif
 
 namespace JSC {
 
@@ -111,6 +107,18 @@ public:
         m_assembler.movzbl_mr(address, dest);
     }
 
+    void abortWithReason(AbortReason reason)
+    {
+        move(TrustedImm32(reason), X86Registers::eax);
+        breakpoint();
+    }
+
+    void abortWithReason(AbortReason reason, intptr_t misc)
+    {
+        move(TrustedImm32(misc), X86Registers::edx);
+        abortWithReason(reason);
+    }
+
     ConvertibleLoadLabel convertibleLoadPtr(Address address, RegisterID dest)
     {
         ConvertibleLoadLabel result = ConvertibleLoadLabel(this);
@@ -123,11 +131,11 @@ public:
         m_assembler.addsd_mr(address.m_ptr, dest);
     }
 
-    void storeDouble(FPRegisterID src, const void* address)
+    void storeDouble(FPRegisterID src, TrustedImmPtr address)
     {
         ASSERT(isSSE2Present());
-        ASSERT(address);
-        m_assembler.movsd_rm(src, address);
+        ASSERT(address.m_value);
+        m_assembler.movsd_rm(src, address.m_value);
     }
 
     void convertInt32ToDouble(AbsoluteAddress src, FPRegisterID dest)
@@ -156,12 +164,14 @@ public:
         m_assembler.movb_i8m(imm.m_value, address);
     }
 
-    // Possibly clobbers src.
     void moveDoubleToInts(FPRegisterID src, RegisterID dest1, RegisterID dest2)
     {
+        ASSERT(isSSE2Present());
+        m_assembler.pextrw_irr(3, src, dest1);
+        m_assembler.pextrw_irr(2, src, dest2);
+        lshift32(TrustedImm32(16), dest1);
+        or32(dest1, dest2);
         movePackedToInt32(src, dest1);
-        rshiftPacked(TrustedImm32(32), src);
-        movePackedToInt32(src, dest2);
     }
 
     void moveIntsToDouble(RegisterID src1, RegisterID src2, FPRegisterID dest, FPRegisterID scratch)
@@ -257,6 +267,14 @@ public:
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
+    Jump branch32WithPatch(RelationalCondition cond, Address left, DataLabel32& dataLabel, TrustedImm32 initialRightValue = TrustedImm32(0))
+    {
+        padBeforePatch();
+        m_assembler.cmpl_im_force32(initialRightValue.m_value, left.offset, left.base);
+        dataLabel = DataLabel32(this);
+        return Jump(m_assembler.jCC(x86Condition(cond)));
+    }
+
     DataLabelPtr storePtrWithPatch(TrustedImmPtr initialValue, ImplicitAddress address)
     {
         padBeforePatch();
@@ -265,7 +283,6 @@ public:
     }
 
     static bool supportsFloatingPoint() { return isSSE2Present(); }
-    // See comment on MacroAssemblerARMv7::supportsFloatingPointTruncate()
     static bool supportsFloatingPointTruncate() { return isSSE2Present(); }
     static bool supportsFloatingPointSqrt() { return isSSE2Present(); }
     static bool supportsFloatingPointAbs() { return isSSE2Present(); }
@@ -277,6 +294,7 @@ public:
     }
 
     static bool canJumpReplacePatchableBranchPtrWithPatch() { return true; }
+    static bool canJumpReplacePatchableBranch32WithPatch() { return true; }
 
     static CodeLocationLabel startOfBranchPtrWithPatchOnRegister(CodeLocationDataLabelPtr label)
     {
@@ -299,6 +317,17 @@ public:
         return label.labelAtOffset(-totalBytes);
     }
 
+    static CodeLocationLabel startOfPatchableBranch32WithPatchOnAddress(CodeLocationDataLabel32 label)
+    {
+        const int opcodeBytes = 1;
+        const int modRMBytes = 1;
+        const int offsetBytes = 0;
+        const int immediateBytes = 4;
+        const int totalBytes = opcodeBytes + modRMBytes + offsetBytes + immediateBytes;
+        ASSERT(totalBytes >= maxJumpReplacementSize());
+        return label.labelAtOffset(-totalBytes);
+    }
+
     static void revertJumpReplacementToBranchPtrWithPatch(CodeLocationLabel instructionStart, RegisterID reg, void* initialValue)
     {
         X86Assembler::revertJumpTo_cmpl_ir_force32(instructionStart.executableAddress(), reinterpret_cast<intptr_t>(initialValue), reg);
@@ -310,10 +339,11 @@ public:
         X86Assembler::revertJumpTo_cmpl_im_force32(instructionStart.executableAddress(), reinterpret_cast<intptr_t>(initialValue), 0, address.base);
     }
 
-#if USE(MASM_PROBE)
-    // For details about probe(), see comment in MacroAssemblerX86_64.h.
-    void probe(ProbeFunction, void* arg1 = 0, void* arg2 = 0);
-#endif // USE(MASM_PROBE)
+    static void revertJumpReplacementToPatchableBranch32WithPatch(CodeLocationLabel instructionStart, Address address, int32_t initialValue)
+    {
+        ASSERT(!address.offset);
+        X86Assembler::revertJumpTo_cmpl_im_force32(instructionStart.executableAddress(), initialValue, 0, address.base);
+    }
 
 private:
     friend class LinkBuffer;
@@ -333,45 +363,7 @@ private:
     {
         X86Assembler::relinkCall(call.dataLocation(), destination.executableAddress());
     }
-
-#if USE(MASM_PROBE)
-    inline TrustedImm32 trustedImm32FromPtr(void* ptr)
-    {
-        return TrustedImm32(TrustedImmPtr(ptr));
-    }
-
-    inline TrustedImm32 trustedImm32FromPtr(ProbeFunction function)
-    {
-        return TrustedImm32(TrustedImmPtr(reinterpret_cast<void*>(function)));
-    }
-
-    inline TrustedImm32 trustedImm32FromPtr(void (*function)())
-    {
-        return TrustedImm32(TrustedImmPtr(reinterpret_cast<void*>(function)));
-    }
-#endif
 };
-
-#if USE(MASM_PROBE)
-
-extern "C" void ctiMasmProbeTrampoline();
-
-// For details on "What code is emitted for the probe?" and "What values are in
-// the saved registers?", see comment for MacroAssemblerX86::probe() in
-// MacroAssemblerX86_64.h.
-
-inline void MacroAssemblerX86::probe(MacroAssemblerX86::ProbeFunction function, void* arg1, void* arg2)
-{
-    push(RegisterID::esp);
-    push(RegisterID::eax);
-    push(trustedImm32FromPtr(arg2));
-    push(trustedImm32FromPtr(arg1));
-    push(trustedImm32FromPtr(function));
-
-    move(trustedImm32FromPtr(ctiMasmProbeTrampoline), RegisterID::eax);
-    call(RegisterID::eax);
-}
-#endif // USE(MASM_PROBE)
 
 } // namespace JSC
 

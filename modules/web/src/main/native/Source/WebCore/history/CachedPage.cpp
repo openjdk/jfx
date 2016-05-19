@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -50,13 +50,8 @@ namespace WebCore {
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, cachedPageCounter, ("CachedPage"));
 
 CachedPage::CachedPage(Page& page)
-    : m_timeStamp(monotonicallyIncreasingTime())
-    , m_expirationTime(m_timeStamp + page.settings().backForwardCacheExpirationInterval())
+    : m_expirationTime(monotonicallyIncreasingTime() + page.settings().backForwardCacheExpirationInterval())
     , m_cachedMainFrame(std::make_unique<CachedFrame>(page.mainFrame()))
-    , m_needStyleRecalcForVisitedLinks(false)
-    , m_needsFullStyleRecalc(false)
-    , m_needsCaptionPreferencesChanged(false)
-    , m_needsDeviceScaleChanged(false)
 {
 #ifndef NDEBUG
     cachedPageCounter.increment();
@@ -69,8 +64,8 @@ CachedPage::~CachedPage()
     cachedPageCounter.decrement();
 #endif
 
-    destroy();
-    ASSERT(!m_cachedMainFrame);
+    if (m_cachedMainFrame)
+        m_cachedMainFrame->destroy();
 }
 
 void CachedPage::restore(Page& page)
@@ -89,9 +84,18 @@ void CachedPage::restore(Page& page)
         // We don't want focused nodes changing scroll position when restoring from the cache
         // as it can cause ugly jumps before we manage to restore the cached position.
         page.mainFrame().selection().suppressScrolling();
+
+        bool hadProhibitsScrolling = false;
+        FrameView* frameView = page.mainFrame().view();
+        if (frameView) {
+            hadProhibitsScrolling = frameView->prohibitsScrolling();
+            frameView->setProhibitsScrolling(true);
+        }
 #endif
         element->updateFocusAppearance(true);
 #if PLATFORM(IOS)
+        if (frameView)
+            frameView->setProhibitsScrolling(hadProhibitsScrolling);
         page.mainFrame().selection().restoreScrolling();
 #endif
     }
@@ -101,9 +105,8 @@ void CachedPage::restore(Page& page)
             frame->document()->visitedLinkState().invalidateStyleForAllLinks();
     }
 
-    if (m_needsDeviceScaleChanged) {
+    if (m_needsDeviceOrPageScaleChanged)
         page.mainFrame().deviceOrPageScaleFactorChanged();
-    }
 
     if (m_needsFullStyleRecalc)
         page.setNeedsRecalcStyleInAllFrames();
@@ -113,6 +116,11 @@ void CachedPage::restore(Page& page)
         page.captionPreferencesChanged();
 #endif
 
+    if (m_needsUpdateContentsSize) {
+        if (FrameView* frameView = page.mainFrame().view())
+            frameView->updateContentsSize();
+    }
+
     clear();
 }
 
@@ -120,17 +128,14 @@ void CachedPage::clear()
 {
     ASSERT(m_cachedMainFrame);
     m_cachedMainFrame->clear();
-    m_cachedMainFrame = 0;
+    m_cachedMainFrame = nullptr;
     m_needStyleRecalcForVisitedLinks = false;
     m_needsFullStyleRecalc = false;
-}
-
-void CachedPage::destroy()
-{
-    if (m_cachedMainFrame)
-        m_cachedMainFrame->destroy();
-
-    m_cachedMainFrame = 0;
+#if ENABLE(VIDEO_TRACK)
+    m_needsCaptionPreferencesChanged = false;
+#endif
+    m_needsDeviceOrPageScaleChanged = false;
+    m_needsUpdateContentsSize = false;
 }
 
 bool CachedPage::hasExpired() const

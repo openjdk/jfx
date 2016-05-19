@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,15 +31,12 @@
 #include "TextEncoding.h"
 #include "markup.h"
 #include <shlobj.h>
+#include <shlwapi.h>
 #include <wininet.h> // for INTERNET_MAX_URL_LENGTH
 #include <wtf/StringExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/WTFString.h>
 
-#if !OS(WINCE)
-#include <shlwapi.h>
-#endif
 
 #if USE(CF)
 #include <CoreFoundation/CoreFoundation.h>
@@ -194,7 +191,7 @@ HGLOBAL createGlobalData(const String& str)
     if (!vm)
         return 0;
     UChar* buffer = static_cast<UChar*>(GlobalLock(vm));
-    memcpy(buffer, str.deprecatedCharacters(), str.length() * sizeof(UChar));
+    StringView(str).getCharactersWithUpconvert(buffer);
     buffer[str.length()] = 0;
     GlobalUnlock(vm);
     return vm;
@@ -302,7 +299,7 @@ void markupToCFHTML(const String& markup, const String& srcURL, Vector<char>& re
 
 void replaceNewlinesWithWindowsStyleNewlines(String& str)
 {
-    DEFINE_STATIC_LOCAL(String, windowsNewline, (ASCIILiteral("\r\n")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, windowsNewline, (ASCIILiteral("\r\n")));
     StringBuilder result;
     for (unsigned index = 0; index < str.length(); ++index) {
         if (str[index] != '\n' || (index > 0 && str[index - 1] == '\r'))

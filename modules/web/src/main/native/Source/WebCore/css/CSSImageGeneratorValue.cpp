@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,13 +32,14 @@
 #include "CSSFilterImageValue.h"
 #include "CSSGradientValue.h"
 #include "CSSImageValue.h"
+#include "CSSNamedImageValue.h"
 #include "GeneratedImage.h"
 #include "RenderElement.h"
 #include "StyleCachedImage.h"
 
 namespace WebCore {
 
-static const double timeToKeepCachedGeneratedImagesInSeconds = 3;
+static const auto timeToKeepCachedGeneratedImages = std::chrono::seconds { 3 };
 
 CSSImageGeneratorValue::CSSImageGeneratorValue(ClassType classType)
     : CSSValue(classType)
@@ -65,7 +66,7 @@ void CSSImageGeneratorValue::removeClient(RenderElement* renderer)
         deref();
 }
 
-GeneratedImage* CSSImageGeneratorValue::cachedImageForSize(IntSize size)
+GeneratedImage* CSSImageGeneratorValue::cachedImageForSize(FloatSize size)
 {
     if (size.isEmpty())
         return nullptr;
@@ -78,48 +79,48 @@ GeneratedImage* CSSImageGeneratorValue::cachedImageForSize(IntSize size)
     return cachedGeneratedImage->image();
 }
 
-void CSSImageGeneratorValue::saveCachedImageForSize(IntSize size, PassRefPtr<GeneratedImage> image)
+void CSSImageGeneratorValue::saveCachedImageForSize(FloatSize size, PassRefPtr<GeneratedImage> image)
 {
     ASSERT(!m_images.contains(size));
     m_images.add(size, std::make_unique<CachedGeneratedImage>(*this, size, image));
 }
 
-void CSSImageGeneratorValue::evictCachedGeneratedImage(IntSize size)
+void CSSImageGeneratorValue::evictCachedGeneratedImage(FloatSize size)
 {
     ASSERT(m_images.contains(size));
     m_images.remove(size);
 }
 
-CSSImageGeneratorValue::CachedGeneratedImage::CachedGeneratedImage(CSSImageGeneratorValue& owner, IntSize size, PassRefPtr<GeneratedImage> image)
+CSSImageGeneratorValue::CachedGeneratedImage::CachedGeneratedImage(CSSImageGeneratorValue& owner, FloatSize size, PassRefPtr<GeneratedImage> image)
     : m_owner(owner)
     , m_size(size)
     , m_image(image)
-    , m_evictionTimer(this, &CSSImageGeneratorValue::CachedGeneratedImage::evictionTimerFired, timeToKeepCachedGeneratedImagesInSeconds)
+    , m_evictionTimer(*this, &CSSImageGeneratorValue::CachedGeneratedImage::evictionTimerFired, timeToKeepCachedGeneratedImages)
 {
     m_evictionTimer.restart();
 }
 
-void CSSImageGeneratorValue::CachedGeneratedImage::evictionTimerFired(DeferrableOneShotTimer<CachedGeneratedImage>&)
+void CSSImageGeneratorValue::CachedGeneratedImage::evictionTimerFired()
 {
     // NOTE: This is essentially a "delete this", the object is no longer valid after this line.
     m_owner.evictCachedGeneratedImage(m_size);
 }
 
-PassRefPtr<Image> CSSImageGeneratorValue::image(RenderElement* renderer, const IntSize& size)
+PassRefPtr<Image> CSSImageGeneratorValue::image(RenderElement* renderer, const FloatSize& size)
 {
     switch (classType()) {
     case CanvasClass:
-        return toCSSCanvasValue(this)->image(renderer, size);
+        return downcast<CSSCanvasValue>(*this).image(renderer, size);
+    case NamedImageClass:
+        return downcast<CSSNamedImageValue>(*this).image(renderer, size);
     case CrossfadeClass:
-        return toCSSCrossfadeValue(this)->image(renderer, size);
-#if ENABLE(CSS_FILTERS)
+        return downcast<CSSCrossfadeValue>(*this).image(renderer, size);
     case FilterImageClass:
-        return toCSSFilterImageValue(this)->image(renderer, size);
-#endif
+        return downcast<CSSFilterImageValue>(*this).image(renderer, size);
     case LinearGradientClass:
-        return toCSSLinearGradientValue(this)->image(renderer, size);
+        return downcast<CSSLinearGradientValue>(*this).image(renderer, size);
     case RadialGradientClass:
-        return toCSSRadialGradientValue(this)->image(renderer, size);
+        return downcast<CSSRadialGradientValue>(*this).image(renderer, size);
     default:
         ASSERT_NOT_REACHED();
     }
@@ -130,59 +131,57 @@ bool CSSImageGeneratorValue::isFixedSize() const
 {
     switch (classType()) {
     case CanvasClass:
-        return toCSSCanvasValue(this)->isFixedSize();
+        return downcast<CSSCanvasValue>(*this).isFixedSize();
+    case NamedImageClass:
+        return downcast<CSSNamedImageValue>(*this).isFixedSize();
     case CrossfadeClass:
-        return toCSSCrossfadeValue(this)->isFixedSize();
-#if ENABLE(CSS_FILTERS)
+        return downcast<CSSCrossfadeValue>(*this).isFixedSize();
     case FilterImageClass:
-        return toCSSFilterImageValue(this)->isFixedSize();
-#endif
+        return downcast<CSSFilterImageValue>(*this).isFixedSize();
     case LinearGradientClass:
-        return toCSSLinearGradientValue(this)->isFixedSize();
+        return downcast<CSSLinearGradientValue>(*this).isFixedSize();
     case RadialGradientClass:
-        return toCSSRadialGradientValue(this)->isFixedSize();
+        return downcast<CSSRadialGradientValue>(*this).isFixedSize();
     default:
         ASSERT_NOT_REACHED();
     }
     return false;
 }
 
-IntSize CSSImageGeneratorValue::fixedSize(const RenderElement* renderer)
+FloatSize CSSImageGeneratorValue::fixedSize(const RenderElement* renderer)
 {
     switch (classType()) {
     case CanvasClass:
-        return toCSSCanvasValue(this)->fixedSize(renderer);
+        return downcast<CSSCanvasValue>(*this).fixedSize(renderer);
     case CrossfadeClass:
-        return toCSSCrossfadeValue(this)->fixedSize(renderer);
-#if ENABLE(CSS_FILTERS)
+        return downcast<CSSCrossfadeValue>(*this).fixedSize(renderer);
     case FilterImageClass:
-        return toCSSFilterImageValue(this)->fixedSize(renderer);
-#endif
+        return downcast<CSSFilterImageValue>(*this).fixedSize(renderer);
     case LinearGradientClass:
-        return toCSSLinearGradientValue(this)->fixedSize(renderer);
+        return downcast<CSSLinearGradientValue>(*this).fixedSize(renderer);
     case RadialGradientClass:
-        return toCSSRadialGradientValue(this)->fixedSize(renderer);
+        return downcast<CSSRadialGradientValue>(*this).fixedSize(renderer);
     default:
         ASSERT_NOT_REACHED();
     }
-    return IntSize();
+    return FloatSize();
 }
 
 bool CSSImageGeneratorValue::isPending() const
 {
     switch (classType()) {
     case CrossfadeClass:
-        return toCSSCrossfadeValue(this)->isPending();
+        return downcast<CSSCrossfadeValue>(*this).isPending();
     case CanvasClass:
-        return toCSSCanvasValue(this)->isPending();
-#if ENABLE(CSS_FILTERS)
+        return downcast<CSSCanvasValue>(*this).isPending();
+    case NamedImageClass:
+        return downcast<CSSNamedImageValue>(*this).isPending();
     case FilterImageClass:
-        return toCSSFilterImageValue(this)->isPending();
-#endif
+        return downcast<CSSFilterImageValue>(*this).isPending();
     case LinearGradientClass:
-        return toCSSLinearGradientValue(this)->isPending();
+        return downcast<CSSLinearGradientValue>(*this).isPending();
     case RadialGradientClass:
-        return toCSSRadialGradientValue(this)->isPending();
+        return downcast<CSSRadialGradientValue>(*this).isPending();
     default:
         ASSERT_NOT_REACHED();
     }
@@ -193,42 +192,40 @@ bool CSSImageGeneratorValue::knownToBeOpaque(const RenderElement* renderer) cons
 {
     switch (classType()) {
     case CrossfadeClass:
-        return toCSSCrossfadeValue(this)->knownToBeOpaque(renderer);
+        return downcast<CSSCrossfadeValue>(*this).knownToBeOpaque(renderer);
     case CanvasClass:
         return false;
-#if ENABLE(CSS_FILTERS)
+    case NamedImageClass:
+        return false;
     case FilterImageClass:
-        return toCSSFilterImageValue(this)->knownToBeOpaque(renderer);
-#endif
+        return downcast<CSSFilterImageValue>(*this).knownToBeOpaque(renderer);
     case LinearGradientClass:
-        return toCSSLinearGradientValue(this)->knownToBeOpaque(renderer);
+        return downcast<CSSLinearGradientValue>(*this).knownToBeOpaque(renderer);
     case RadialGradientClass:
-        return toCSSRadialGradientValue(this)->knownToBeOpaque(renderer);
+        return downcast<CSSRadialGradientValue>(*this).knownToBeOpaque(renderer);
     default:
         ASSERT_NOT_REACHED();
     }
     return false;
 }
 
-void CSSImageGeneratorValue::loadSubimages(CachedResourceLoader* cachedResourceLoader)
+void CSSImageGeneratorValue::loadSubimages(CachedResourceLoader& cachedResourceLoader, const ResourceLoaderOptions& options)
 {
     switch (classType()) {
     case CrossfadeClass:
-        toCSSCrossfadeValue(this)->loadSubimages(cachedResourceLoader);
+        downcast<CSSCrossfadeValue>(*this).loadSubimages(cachedResourceLoader, options);
         break;
     case CanvasClass:
-        toCSSCanvasValue(this)->loadSubimages(cachedResourceLoader);
+        downcast<CSSCanvasValue>(*this).loadSubimages(cachedResourceLoader, options);
         break;
-#if ENABLE(CSS_FILTERS)
     case FilterImageClass:
-        toCSSFilterImageValue(this)->loadSubimages(cachedResourceLoader);
+        downcast<CSSFilterImageValue>(*this).loadSubimages(cachedResourceLoader, options);
         break;
-#endif
     case LinearGradientClass:
-        toCSSLinearGradientValue(this)->loadSubimages(cachedResourceLoader);
+        downcast<CSSLinearGradientValue>(*this).loadSubimages(cachedResourceLoader, options);
         break;
     case RadialGradientClass:
-        toCSSRadialGradientValue(this)->loadSubimages(cachedResourceLoader);
+        downcast<CSSRadialGradientValue>(*this).loadSubimages(cachedResourceLoader, options);
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -237,13 +234,13 @@ void CSSImageGeneratorValue::loadSubimages(CachedResourceLoader* cachedResourceL
 
 bool CSSImageGeneratorValue::subimageIsPending(CSSValue* value)
 {
-    if (value->isImageValue())
-        return toCSSImageValue(value)->cachedOrPendingImage()->isPendingImage();
+    if (is<CSSImageValue>(*value))
+        return downcast<CSSImageValue>(*value).cachedOrPendingImage()->isPendingImage();
 
-    if (value->isImageGeneratorValue())
-        return toCSSImageGeneratorValue(value)->isPending();
+    if (is<CSSImageGeneratorValue>(*value))
+        return downcast<CSSImageGeneratorValue>(*value).isPending();
 
-    if (value->isPrimitiveValue() && toCSSPrimitiveValue(value)->getValueID() == CSSValueNone)
+    if (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).getValueID() == CSSValueNone)
         return false;
 
     ASSERT_NOT_REACHED();
@@ -251,26 +248,26 @@ bool CSSImageGeneratorValue::subimageIsPending(CSSValue* value)
     return false;
 }
 
-CachedImage* CSSImageGeneratorValue::cachedImageForCSSValue(CSSValue* value, CachedResourceLoader* cachedResourceLoader)
+CachedImage* CSSImageGeneratorValue::cachedImageForCSSValue(CSSValue* value, CachedResourceLoader& cachedResourceLoader, const ResourceLoaderOptions& options)
 {
     if (!value)
         return nullptr;
 
-    if (value->isImageValue()) {
-        StyleCachedImage* styleCachedImage = toCSSImageValue(value)->cachedImage(cachedResourceLoader);
+    if (is<CSSImageValue>(*value)) {
+        StyleCachedImage* styleCachedImage = downcast<CSSImageValue>(*value).cachedImage(cachedResourceLoader, options);
         if (!styleCachedImage)
             return nullptr;
 
         return styleCachedImage->cachedImage();
     }
 
-    if (value->isImageGeneratorValue()) {
-        toCSSImageGeneratorValue(value)->loadSubimages(cachedResourceLoader);
+    if (is<CSSImageGeneratorValue>(*value)) {
+        downcast<CSSImageGeneratorValue>(*value).loadSubimages(cachedResourceLoader, options);
         // FIXME: Handle CSSImageGeneratorValue (and thus cross-fades with gradients and canvas).
         return nullptr;
     }
 
-    if (value->isPrimitiveValue() && toCSSPrimitiveValue(value)->getValueID() == CSSValueNone)
+    if (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).getValueID() == CSSValueNone)
         return nullptr;
 
     ASSERT_NOT_REACHED();

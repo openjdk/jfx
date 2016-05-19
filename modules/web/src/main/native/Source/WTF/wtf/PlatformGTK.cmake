@@ -1,9 +1,14 @@
-list(APPEND WTF_SOURCES
-    gobject/GRefPtr.cpp
-    gobject/GlibUtilities.cpp
+set(WTF_LIBRARY_TYPE STATIC)
+set(WTF_OUTPUT_NAME WTFGTK)
 
-    gtk/MainThreadGtk.cpp
-    gtk/RunLoopGtk.cpp
+list(APPEND WTF_SOURCES
+    glib/GLibUtilities.cpp
+    glib/GMainLoopSource.cpp
+    glib/GRefPtr.cpp
+    glib/GThreadSafeMainLoopSource.cpp
+    glib/MainThreadGLib.cpp
+    glib/RunLoopGLib.cpp
+    glib/WorkQueueGLib.cpp
 )
 
 list(APPEND WTF_LIBRARIES
@@ -14,6 +19,6 @@ list(APPEND WTF_LIBRARIES
     ${ZLIB_LIBRARIES}
 )
 
-list(APPEND WTF_INCLUDE_DIRECTORIES
+list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
     ${GLIB_INCLUDE_DIRS}
 )

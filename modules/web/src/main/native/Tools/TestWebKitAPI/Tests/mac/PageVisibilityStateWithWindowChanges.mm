@@ -28,7 +28,7 @@
 #import "Test.h"
 #import "WebKitAgnosticTest.h"
 #import <WebKit/WebViewPrivate.h>
-#import <WebKit2/WKViewPrivate.h>
+#import <WebKit/WKViewPrivate.h>
 #import <wtf/RetainPtr.h>
 
 static bool isWaitingForPageSignalToContinue = false;
@@ -36,7 +36,7 @@ static bool didGetPageSignalToContinue = false;
 
 // WebKit1 WebUIDelegate
 
-@interface PageVisibilityStateDelegate : NSObject
+@interface PageVisibilityStateDelegate : NSObject <WebUIDelegate>
 @end
 
 @implementation PageVisibilityStateDelegate

@@ -20,7 +20,6 @@
 #ifndef SourceAlpha_h
 #define SourceAlpha_h
 
-#if ENABLE(FILTERS)
 #include "FilterEffect.h"
 #include "Filter.h"
 
@@ -28,7 +27,7 @@ namespace WebCore {
 
 class SourceAlpha : public FilterEffect {
 public:
-    static PassRefPtr<SourceAlpha> create(Filter*);
+    static Ref<SourceAlpha> create(FilterEffect&);
 
     static const AtomicString& effectName();
 
@@ -45,14 +44,9 @@ public:
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;
 
 private:
-    SourceAlpha(Filter* filter)
-        : FilterEffect(filter)
-    {
-    }
+    explicit SourceAlpha(FilterEffect&);
 };
 
 } //namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // SourceAlpha_h

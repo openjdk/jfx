@@ -6,7 +6,7 @@
 #include "FileSystem.h"
 #include "FileMetadata.h"
 #include "JavaEnv.h"
-#include <text/CString.h>
+#include <wtf/text/CString.h>
 
 static jclass GetFileSystemClass(JNIEnv* env)
 {

@@ -26,8 +26,6 @@
 #ifndef FTLCommonValues_h
 #define FTLCommonValues_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(FTL_JIT)
 
 #include "FTLAbbreviations.h"
@@ -76,6 +74,8 @@ public:
     const LValue doubleZero;
 
     const unsigned rangeKind;
+    const unsigned profKind;
+    const LValue branchWeights;
 
     const ValueRange nonNegativeInt32;
 

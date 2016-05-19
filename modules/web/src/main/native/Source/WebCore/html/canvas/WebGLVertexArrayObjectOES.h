@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,77 +28,17 @@
 
 #include "WebGLBuffer.h"
 #include "WebGLContextObject.h"
-
-#include <wtf/PassRefPtr.h>
+#include "WebGLVertexArrayObjectBase.h"
 
 namespace WebCore {
 
-class WebGLVertexArrayObjectOES : public WebGLContextObject {
+class WebGLVertexArrayObjectOES final : public WebGLVertexArrayObjectBase {
 public:
-    enum VaoType {
-        VaoTypeDefault,
-        VaoTypeUser,
-    };
-
+    static Ref<WebGLVertexArrayObjectOES> create(WebGLRenderingContextBase*, VAOType);
     virtual ~WebGLVertexArrayObjectOES();
-
-    static PassRefPtr<WebGLVertexArrayObjectOES> create(WebGLRenderingContext*, VaoType);
-
-    // Cached values for vertex attrib range checks
-    struct VertexAttribState {
-        VertexAttribState()
-            : enabled(false)
-            , bytesPerElement(0)
-            , size(4)
-            , type(GraphicsContext3D::FLOAT)
-            , normalized(false)
-            , stride(16)
-            , originalStride(0)
-            , offset(0)
-            , divisor(0)
-        {
-        }
-
-        bool isBound() const { return bufferBinding && bufferBinding->object(); }
-        bool validateBinding() const { return !enabled || isBound(); }
-
-        bool enabled;
-        RefPtr<WebGLBuffer> bufferBinding;
-        GC3Dsizei bytesPerElement;
-        GC3Dint size;
-        GC3Denum type;
-        bool normalized;
-        GC3Dsizei stride;
-        GC3Dsizei originalStride;
-        GC3Dintptr offset;
-        GC3Duint divisor;
-    };
-
-    bool isDefaultObject() const { return m_type == VaoTypeDefault; }
-
-    bool hasEverBeenBound() const { return object() && m_hasEverBeenBound; }
-    void setHasEverBeenBound() { m_hasEverBeenBound = true; }
-
-    PassRefPtr<WebGLBuffer> getElementArrayBuffer() const { return m_boundElementArrayBuffer; }
-    void setElementArrayBuffer(PassRefPtr<WebGLBuffer>);
-
-    VertexAttribState& getVertexAttribState(int index) { return m_vertexAttribState[index]; }
-    void setVertexAttribState(GC3Duint, GC3Dsizei, GC3Dint, GC3Denum, GC3Dboolean, GC3Dsizei, GC3Dintptr, PassRefPtr<WebGLBuffer>);
-    void unbindBuffer(PassRefPtr<WebGLBuffer>);
-
-    void setVertexAttribDivisor(GC3Duint index, GC3Duint divisor);
-
 private:
-    WebGLVertexArrayObjectOES(WebGLRenderingContext*, VaoType);
-
+    WebGLVertexArrayObjectOES(WebGLRenderingContextBase*, VAOType);
     virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
-
-    virtual bool isVertexArray() const { return true; }
-
-    VaoType m_type;
-    bool m_hasEverBeenBound;
-    RefPtr<WebGLBuffer> m_boundElementArrayBuffer;
-    Vector<VertexAttribState> m_vertexAttribState;
 };
 
 } // namespace WebCore

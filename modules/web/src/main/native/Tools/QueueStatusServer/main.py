@@ -1,4 +1,5 @@
 # Copyright (C) 2009 Google Inc. All rights reserved.
+# Copyright (C) 2014 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -34,17 +35,18 @@ from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
 from handlers.activebots import ActiveBots
-from handlers.dashboard import Dashboard
 from handlers.gc import GC
 from handlers.nextpatch import NextPatch
 from handlers.patch import Patch
 from handlers.patchstatus import PatchStatus
+from handlers.processingtimesjson import ProcessingTimesJSON
 from handlers.queuecharts import QueueCharts
 from handlers.queuelengthjson import QueueLengthJSON
 from handlers.queuestatus import QueueStatus
 from handlers.queuestatusjson import QueueStatusJSON
 from handlers.recentstatus import QueuesOverview
 from handlers.releasepatch import ReleasePatch
+from handlers.releaselock import ReleaseLock
 from handlers.showresults import ShowResults
 from handlers.statusbubble import StatusBubble
 from handlers.submittoews import SubmitToEWS
@@ -59,12 +61,11 @@ webapp.template.register_template_library('filters.webkit_extras')
 
 routes = [
     ('/', QueuesOverview),
-    ('/dashboard', Dashboard),
     ('/gc', GC),
     ('/sync-queue-logs', SyncQueueLogs),
     (r'/patch-status/(.*)/(.*)', PatchStatus),
     (r'/patch/(.*)', Patch),
-    (r'/submit-to-ews', SubmitToEWS),
+    ('/submit-to-ews', SubmitToEWS),
     (r'/results/(.*)', ShowResults),
     (r'/status-bubble/(.*)', StatusBubble),
     (r'/svn-revision/(.*)', SVNRevision),
@@ -74,11 +75,13 @@ routes = [
     (r'/queue-status/(.*)', QueueStatus),
     (r'/queue-status-json/(.*)', QueueStatusJSON),
     (r'/next-patch/(.*)', NextPatch),
-    (r'/release-patch', ReleasePatch),
+    ('/release-patch', ReleasePatch),
+    ('/release-lock', ReleaseLock),
     ('/update-status', UpdateStatus),
     ('/update-work-items', UpdateWorkItems),
     ('/update-svn-revision', UpdateSVNRevision),
     ('/active-bots', ActiveBots),
+    (r'/processing-times-json/(\d+)\-(\d+)\-(\d+)\-(\d+)\-(\d+)\-(\d+)\-(\d+)\-(\d+)\-(\d+)\-(\d+)\-(\d+)\-(\d+)', ProcessingTimesJSON),
 ]
 
 application = webapp.WSGIApplication(routes, debug=True)

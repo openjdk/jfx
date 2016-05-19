@@ -46,16 +46,16 @@
 namespace WebCore {
 namespace SimpleLineLayout {
 
-static void paintDebugBorders(GraphicsContext& context, const LayoutRect& borderRect, const LayoutPoint& paintOffset)
+static void paintDebugBorders(GraphicsContext& context, LayoutRect borderRect, const LayoutPoint& paintOffset)
 {
-    if (borderRect.isEmpty())
+    borderRect.moveBy(paintOffset);
+    IntRect snappedRect = snappedIntRect(borderRect);
+    if (snappedRect.isEmpty())
         return;
     GraphicsContextStateSaver stateSaver(context);
     context.setStrokeColor(Color(0, 255, 0), ColorSpaceDeviceRGB);
     context.setFillColor(Color::transparent, ColorSpaceDeviceRGB);
-    LayoutRect rect(borderRect);
-    rect.moveBy(paintOffset);
-    context.drawRect(pixelSnappedIntRect(rect));
+    context.drawRect(snappedRect);
 }
 
 void paintFlow(const RenderBlockFlow& flow, const Layout& layout, PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -67,34 +67,32 @@ void paintFlow(const RenderBlockFlow& flow, const Layout& layout, PaintInfo& pai
     if (style.visibility() != VISIBLE)
         return;
 
-    RenderText& textRenderer = toRenderText(*flow.firstChild());
-    ASSERT(!textRenderer.firstTextBox());
-
     bool debugBordersEnabled = flow.frame().settings().simpleLineLayoutDebugBordersEnabled();
 
     GraphicsContext& context = *paintInfo.context;
-
-    const Font& font = style.font();
-    TextPaintStyle textPaintStyle = computeTextPaintStyle(textRenderer, style, paintInfo);
+    const FontCascade& font = style.fontCascade();
+    TextPaintStyle textPaintStyle = computeTextPaintStyle(flow.frame(), style, paintInfo);
     GraphicsContextStateSaver stateSaver(context, textPaintStyle.strokeWidth > 0);
 
     updateGraphicsContext(context, textPaintStyle);
-    LayoutPoint adjustedPaintOffset = roundedIntPoint(paintOffset);
-
     LayoutRect paintRect = paintInfo.rect;
-    paintRect.moveBy(-adjustedPaintOffset);
+    paintRect.moveBy(-paintOffset);
 
     auto resolver = runResolver(flow, layout);
-    auto range = resolver.rangeForRect(paintRect);
-    for (auto it = range.begin(), end = range.end(); it != end; ++it) {
-        const auto& run = *it;
-        if (!run.rect().intersects(paintRect))
+    float strokeOverflow = ceilf(flow.style().textStrokeWidth());
+    for (const auto& run : resolver.rangeForRect(paintRect)) {
+        FloatRect rect = run.rect();
+        rect.inflate(strokeOverflow);
+        if (!rect.intersects(paintRect) || run.start() == run.end())
             continue;
         TextRun textRun(run.text());
         textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
-        context.drawText(font, textRun, run.baseline() + adjustedPaintOffset);
+        textRun.setXPos(run.rect().x());
+        FloatPoint textOrigin = run.baseline() + paintOffset;
+        textOrigin.setY(roundToDevicePixel(LayoutUnit(textOrigin.y()), flow.document().deviceScaleFactor()));
+        context.drawText(font, textRun, textOrigin);
         if (debugBordersEnabled)
-            paintDebugBorders(context, run.rect(), adjustedPaintOffset);
+            paintDebugBorders(context, run.rect(), paintOffset);
     }
 }
 
@@ -110,8 +108,7 @@ bool hitTestFlow(const RenderBlockFlow& flow, const Layout& layout, const HitTes
     if (style.visibility() != VISIBLE || style.pointerEvents() == PE_NONE)
         return false;
 
-    RenderText& textRenderer = toRenderText(*flow.firstChild());
-
+    RenderObject& renderer = *flow.firstChild();
     LayoutRect rangeRect = locationInContainer.boundingBox();
     rangeRect.moveBy(-accumulatedOffset);
 
@@ -122,8 +119,8 @@ bool hitTestFlow(const RenderBlockFlow& flow, const Layout& layout, const HitTes
         lineRect.moveBy(accumulatedOffset);
         if (!locationInContainer.intersects(lineRect))
             continue;
-        textRenderer.updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
-        if (!result.addNodeToRectBasedTestResult(textRenderer.textNode(), request, locationInContainer, lineRect))
+        renderer.updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
+        if (!result.addNodeToRectBasedTestResult(renderer.node(), request, locationInContainer, lineRect))
             return true;
     }
 
@@ -133,63 +130,93 @@ bool hitTestFlow(const RenderBlockFlow& flow, const Layout& layout, const HitTes
 void collectFlowOverflow(RenderBlockFlow& flow, const Layout& layout)
 {
     auto resolver = lineResolver(flow, layout);
+    float strokeOverflow = ceilf(flow.style().textStrokeWidth());
     for (auto it = resolver.begin(), end = resolver.end(); it != end; ++it) {
         auto rect = *it;
+        rect.inflate(strokeOverflow);
         flow.addLayoutOverflow(rect);
         flow.addVisualOverflow(rect);
     }
 }
 
-IntRect computeTextBoundingBox(const RenderText& textRenderer, const Layout& layout)
+IntRect computeBoundingBox(const RenderObject& renderer, const Layout& layout)
 {
-    auto resolver = lineResolver(toRenderBlockFlow(*textRenderer.parent()), layout);
-    auto it = resolver.begin();
-    auto end = resolver.end();
-    if (it == end)
-        return IntRect();
-    auto firstLineRect = *it;
-    float left = firstLineRect.x();
-    float right = firstLineRect.maxX();
-    float bottom = firstLineRect.maxY();
-    for (++it; it != end; ++it) {
-        auto rect = *it;
-        if (rect.x() < left)
-            left = rect.x();
-        if (rect.maxX() > right)
-            right = rect.maxX();
-        if (rect.maxY() > bottom)
-            bottom = rect.maxY();
+    auto resolver = runResolver(downcast<RenderBlockFlow>(*renderer.parent()), layout);
+    FloatRect boundingBoxRect;
+    for (const auto& run : resolver.rangeForRenderer(renderer)) {
+        FloatRect rect = run.rect();
+        if (boundingBoxRect == FloatRect())
+            boundingBoxRect = rect;
+        else
+            boundingBoxRect.uniteEvenIfEmpty(rect);
     }
-    float x = firstLineRect.x();
-    float y = firstLineRect.y();
-    float width = right - left;
-    float height = bottom - y;
-    return enclosingIntRect(FloatRect(x, y, width, height));
+    return enclosingIntRect(boundingBoxRect);
 }
 
-Vector<IntRect> collectTextAbsoluteRects(const RenderText& textRenderer, const Layout& layout, const LayoutPoint& accumulatedOffset)
+IntPoint computeFirstRunLocation(const RenderObject& renderer, const Layout& layout)
+{
+    auto resolver = runResolver(downcast<RenderBlockFlow>(*renderer.parent()), layout);
+    const auto& it = resolver.rangeForRenderer(renderer);
+    auto begin = it.begin();
+    if (begin == it.end())
+        return IntPoint(0, 0);
+
+    return flooredIntPoint((*begin).rect().location());
+}
+
+Vector<IntRect> collectAbsoluteRects(const RenderObject& renderer, const Layout& layout, const LayoutPoint& accumulatedOffset)
 {
     Vector<IntRect> rects;
-    auto resolver = runResolver(toRenderBlockFlow(*textRenderer.parent()), layout);
-    for (auto it = resolver.begin(), end = resolver.end(); it != end; ++it) {
-        const auto& run = *it;
-        auto rect = run.rect();
+    auto resolver = runResolver(downcast<RenderBlockFlow>(*renderer.parent()), layout);
+    for (const auto& run : resolver.rangeForRenderer(renderer)) {
+        LayoutRect rect = run.rect();
         rects.append(enclosingIntRect(FloatRect(accumulatedOffset + rect.location(), rect.size())));
     }
     return rects;
 }
 
-Vector<FloatQuad> collectTextAbsoluteQuads(const RenderText& textRenderer, const Layout& layout, bool* wasFixed)
+Vector<FloatQuad> collectAbsoluteQuads(const RenderObject& renderer, const Layout& layout, bool* wasFixed)
 {
     Vector<FloatQuad> quads;
-    auto resolver = runResolver(toRenderBlockFlow(*textRenderer.parent()), layout);
-    for (auto it = resolver.begin(), end = resolver.end(); it != end; ++it) {
-        const auto& run = *it;
-        auto rect = run.rect();
-        quads.append(textRenderer.localToAbsoluteQuad(FloatQuad(rect), 0, wasFixed));
-    }
+    auto resolver = runResolver(downcast<RenderBlockFlow>(*renderer.parent()), layout);
+    for (const auto& run : resolver.rangeForRenderer(renderer))
+        quads.append(renderer.localToAbsoluteQuad(FloatQuad(run.rect()), UseTransforms, wasFixed));
     return quads;
 }
+
+#if ENABLE(TREE_DEBUGGING)
+static void printPrefix(int& printedCharacters, int depth)
+{
+    fprintf(stderr, "------- --");
+    printedCharacters = 0;
+    while (++printedCharacters <= depth * 2)
+        fputc(' ', stderr);
+}
+
+void showLineLayoutForFlow(const RenderBlockFlow& flow, const Layout& layout, int depth)
+{
+    int printedCharacters = 0;
+    printPrefix(printedCharacters, depth);
+
+    fprintf(stderr, "SimpleLineLayout (%u lines, %u runs) (%p)\n", layout.lineCount(), layout.runCount(), &layout);
+    ++depth;
+
+    auto resolver = runResolver(flow, layout);
+    for (auto it = resolver.begin(), end = resolver.end(); it != end; ++it) {
+        const auto& run = *it;
+        LayoutRect r = run.rect();
+        printPrefix(printedCharacters, depth);
+        if (run.start() < run.end()) {
+            fprintf(stderr, "line %u run(%u, %u) (%.2f, %.2f) (%.2f, %.2f) \"%s\"\n", run.lineIndex(), run.start(), run.end(),
+                r.x().toFloat(), r.y().toFloat(), r.width().toFloat(), r.height().toFloat(), run.text().toStringWithoutCopying().utf8().data());
+        } else {
+            ASSERT(run.start() == run.end());
+            fprintf(stderr, "line break %u run(%u, %u) (%.2f, %.2f) (%.2f, %.2f)\n", run.lineIndex(), run.start(), run.end(),
+                r.x().toFloat(), r.y().toFloat(), r.width().toFloat(), r.height().toFloat());
+        }
+    }
+}
+#endif
 
 }
 }

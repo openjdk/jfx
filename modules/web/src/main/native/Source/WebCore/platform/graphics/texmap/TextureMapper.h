@@ -22,10 +22,11 @@
 
 #if USE(TEXTURE_MAPPER)
 
-#if (PLATFORM(GTK) || PLATFORM(EFL)) && USE(OPENGL_ES_2)
+#if USE(OPENGL_ES_2)
 #define TEXMAP_OPENGL_ES_2
 #endif
 
+#include "BitmapTexture.h"
 #include "GraphicsContext.h"
 #include "IntRect.h"
 #include "IntSize.h"
@@ -43,67 +44,9 @@ class GraphicsLayer;
 class TextureMapper;
 class FilterOperations;
 
-// A 2D texture that can be the target of software or GL rendering.
-class BitmapTexture : public RefCounted<BitmapTexture> {
-public:
-    enum Flag {
-        SupportsAlpha = 0x01
-    };
-
-    enum UpdateContentsFlag {
-        UpdateCanModifyOriginalImageData,
-        UpdateCannotModifyOriginalImageData
-    };
-
-    typedef unsigned Flags;
-
-    BitmapTexture()
-        : m_flags(0)
-    {
-    }
-
-    virtual ~BitmapTexture() { }
-    virtual bool isBackedByOpenGL() const { return false; }
-
-    virtual IntSize size() const = 0;
-    virtual void updateContents(Image*, const IntRect&, const IntPoint& offset, UpdateContentsFlag) = 0;
-    virtual void updateContents(TextureMapper*, GraphicsLayer*, const IntRect& target, const IntPoint& offset, UpdateContentsFlag);
-    virtual void updateContents(const void*, const IntRect& target, const IntPoint& offset, int bytesPerLine, UpdateContentsFlag) = 0;
-    virtual bool isValid() const = 0;
-    inline Flags flags() const { return m_flags; }
-
-    virtual int bpp() const { return 32; }
-    virtual bool canReuseWith(const IntSize& /* contentsSize */, Flags = 0) { return false; }
-    void reset(const IntSize& size, Flags flags = 0)
-    {
-        m_flags = flags;
-        m_contentSize = size;
-        didReset();
-    }
-    virtual void didReset() { }
-
-    inline IntSize contentSize() const { return m_contentSize; }
-    inline int numberOfBytes() const { return size().width() * size().height() * bpp() >> 3; }
-    inline bool isOpaque() const { return !(m_flags & SupportsAlpha); }
-
-#if ENABLE(CSS_FILTERS)
-    virtual PassRefPtr<BitmapTexture> applyFilters(TextureMapper*, const FilterOperations&) { return this; }
-#endif
-
-protected:
-    IntSize m_contentSize;
-
-private:
-    Flags m_flags;
-};
-
-// A "context" class used to encapsulate accelerated texture mapping functions: i.e. drawing a texture
-// onto the screen or into another texture with a specified transform, opacity and mask.
 class TextureMapper {
     WTF_MAKE_FAST_ALLOCATED;
-    friend class BitmapTexture;
 public:
-    enum AccelerationMode { SoftwareMode, OpenGLMode };
     enum PaintFlag {
         PaintingMirrored = 1 << 0,
     };
@@ -115,7 +58,9 @@ public:
 
     typedef unsigned PaintFlags;
 
-    static PassOwnPtr<TextureMapper> create(AccelerationMode newMode = SoftwareMode);
+    static std::unique_ptr<TextureMapper> create();
+
+    explicit TextureMapper();
     virtual ~TextureMapper();
 
     enum ExposedEdges {
@@ -147,7 +92,6 @@ public:
 
     InterpolationQuality imageInterpolationQuality() const { return m_interpolationQuality; }
     TextDrawingModeFlags textDrawingMode() const { return m_textDrawingMode; }
-    AccelerationMode accelerationMode() const { return m_accelerationMode; }
 
     virtual void beginPainting(PaintFlags = 0) { }
     virtual void endPainting() { }
@@ -156,15 +100,14 @@ public:
 
     virtual IntSize maxTextureSize() const = 0;
 
-    virtual PassRefPtr<BitmapTexture> acquireTextureFromPool(const IntSize&);
+    virtual PassRefPtr<BitmapTexture> acquireTextureFromPool(const IntSize&, const BitmapTexture::Flags = BitmapTexture::SupportsAlpha);
 
     void setPatternTransform(const TransformationMatrix& p) { m_patternTransform = p; }
     void setWrapMode(WrapMode m) { m_wrapMode = m; }
 
 protected:
-    explicit TextureMapper(AccelerationMode);
-
     GraphicsContext* m_context;
+    std::unique_ptr<BitmapTexturePool> m_texturePool;
 
     bool isInMaskMode() const { return m_isMaskMode; }
     WrapMode wrapMode() const { return m_wrapMode; }
@@ -172,17 +115,15 @@ protected:
 
 private:
 #if USE(TEXTURE_MAPPER_GL)
-    static PassOwnPtr<TextureMapper> platformCreateAccelerated();
+    static std::unique_ptr<TextureMapper> platformCreateAccelerated();
 #else
-    static PassOwnPtr<TextureMapper> platformCreateAccelerated()
+    static std::unique_ptr<TextureMapper> platformCreateAccelerated()
     {
-        return PassOwnPtr<TextureMapper>();
+        return nullptr;
     }
 #endif
     InterpolationQuality m_interpolationQuality;
     TextDrawingModeFlags m_textDrawingMode;
-    OwnPtr<BitmapTexturePool> m_texturePool;
-    AccelerationMode m_accelerationMode;
     bool m_isMaskMode;
     TransformationMatrix m_patternTransform;
     WrapMode m_wrapMode;

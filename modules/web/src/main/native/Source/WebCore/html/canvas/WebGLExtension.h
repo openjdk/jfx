@@ -26,7 +26,7 @@
 #ifndef WebGLExtension_h
 #define WebGLExtension_h
 
-#include "WebGLRenderingContext.h"
+#include "WebGLRenderingContextBase.h"
 
 namespace WebCore {
 
@@ -36,8 +36,11 @@ public:
     // Extension names are needed to properly wrap instances in JavaScript objects.
     enum ExtensionName {
         WebGLLoseContextName,
-        EXTDrawBuffersName,
+        EXTBlendMinMaxName,
+        EXTFragDepthName,
+        EXTShaderTextureLODName,
         EXTTextureFilterAnisotropicName,
+        EXTsRGBName,
         OESTextureFloatName,
         OESTextureFloatLinearName,
         OESTextureHalfFloatName,
@@ -48,6 +51,7 @@ public:
         WebGLDebugShadersName,
         WebGLCompressedTextureS3TCName,
         WebGLDepthTextureName,
+        WebGLDrawBuffersName,
         OESElementIndexUintName,
         WebGLCompressedTextureATCName,
         WebGLCompressedTexturePVRTCName,
@@ -56,14 +60,14 @@ public:
 
     void ref() { m_context->ref(); }
     void deref() { m_context->deref(); }
-    WebGLRenderingContext* context() { return m_context; }
+    WebGLRenderingContextBase* context() { return m_context; }
 
     virtual ~WebGLExtension();
     virtual ExtensionName getName() const = 0;
 
 protected:
-    WebGLExtension(WebGLRenderingContext*);
-    WebGLRenderingContext* m_context;
+    WebGLExtension(WebGLRenderingContextBase*);
+    WebGLRenderingContextBase* m_context;
 };
 
 } // namespace WebCore

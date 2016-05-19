@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -62,9 +62,8 @@ private:
 
     virtual void makeRepresentation(WebCore::DocumentLoader*) override;
     virtual bool hasHTMLView() const override;
-    virtual void forceLayout() override;
 #if PLATFORM(IOS)
-    virtual void forceLayoutWithoutRecalculatingStyles() override;
+    virtual bool forceLayoutOnRestoreFromPageCache() override;
 #endif
     virtual void forceLayoutForNonHTML() override;
 
@@ -120,7 +119,7 @@ private:
     virtual WebCore::Frame* dispatchCreatePage(const WebCore::NavigationAction&) override;
     virtual void dispatchShow() override;
 
-    virtual void dispatchDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, WebCore::FramePolicyFunction);
+    virtual void dispatchDecidePolicyForResponse(const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, WebCore::FramePolicyFunction) override;
     virtual void dispatchDecidePolicyForNewWindowAction(const WebCore::NavigationAction&, const WebCore::ResourceRequest&, PassRefPtr<WebCore::FormState>, const WTF::String& frameName, WebCore::FramePolicyFunction) override;
     virtual void dispatchDecidePolicyForNavigationAction(const WebCore::NavigationAction&, const WebCore::ResourceRequest&, PassRefPtr<WebCore::FormState>, WebCore::FramePolicyFunction) override;
     virtual void cancelPolicyCheck() override;
@@ -140,6 +139,9 @@ private:
 
     virtual void willChangeTitle(WebCore::DocumentLoader*) override;
     virtual void didChangeTitle(WebCore::DocumentLoader*) override;
+
+    virtual void willReplaceMultipartContent() override { }
+    virtual void didReplaceMultipartContent() override;
 
     virtual void committedLoad(WebCore::DocumentLoader*, const char*, int) override;
     virtual void finishedLoading(WebCore::DocumentLoader*) override;
@@ -190,26 +192,25 @@ private:
     virtual void provisionalLoadStarted() override;
     virtual void didFinishLoad() override;
     virtual void prepareForDataSourceReplacement() override;
-    virtual PassRefPtr<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&) override;
+    virtual Ref<WebCore::DocumentLoader> createDocumentLoader(const WebCore::ResourceRequest&, const WebCore::SubstituteData&) override;
+    virtual void updateCachedDocumentLoader(WebCore::DocumentLoader&) override { }
 
     virtual void setTitle(const WebCore::StringWithDirection&, const WebCore::URL&) override;
 
-    virtual PassRefPtr<WebCore::Frame> createFrame(const WebCore::URL& url, const WTF::String& name, WebCore::HTMLFrameOwnerElement*,
+    virtual RefPtr<WebCore::Frame> createFrame(const WebCore::URL&, const WTF::String& name, WebCore::HTMLFrameOwnerElement*,
         const WTF::String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) override;
-    virtual PassRefPtr<WebCore::Widget> createPlugin(const WebCore::IntSize&, WebCore::HTMLPlugInElement*, const WebCore::URL&, const Vector<WTF::String>&,
+    virtual RefPtr<WebCore::Widget> createPlugin(const WebCore::IntSize&, WebCore::HTMLPlugInElement*, const WebCore::URL&, const Vector<WTF::String>&,
         const Vector<WTF::String>&, const WTF::String&, bool) override;
     virtual void recreatePlugin(WebCore::Widget*) override;
     virtual void redirectDataToPlugin(WebCore::Widget* pluginWidget) override;
 
+#if ENABLE(WEBGL)
+    virtual WebCore::WebGLLoadPolicy webGLPolicyForURL(const String&) const override;
+    virtual WebCore::WebGLLoadPolicy resolveWebGLPolicyForURL(const String&) const override;
+#endif // ENABLE(WEBGL)
+
     virtual PassRefPtr<WebCore::Widget> createJavaAppletWidget(const WebCore::IntSize&, WebCore::HTMLAppletElement*, const WebCore::URL& baseURL,
         const Vector<WTF::String>& paramNames, const Vector<WTF::String>& paramValues) override;
-
-#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-    virtual PassRefPtr<WebCore::Widget> createMediaPlayerProxyPlugin(const WebCore::IntSize&, WebCore::HTMLMediaElement*, const WebCore::URL&,
-        const Vector<WTF::String>&, const Vector<WTF::String>&, const WTF::String&) override;
-    virtual void hideMediaPlayerProxyPlugin(WebCore::Widget*) override;
-    virtual void showMediaPlayerProxyPlugin(WebCore::Widget*) override;
-#endif
 
     virtual WebCore::ObjectContentType objectContentType(const WebCore::URL&, const WTF::String& mimeType, bool shouldPreferPlugInsForImages) override;
     virtual WTF::String overrideMediaType() const override;
@@ -224,15 +225,27 @@ private:
 
     virtual RemoteAXObjectRef accessibilityRemoteObject() override { return 0; }
 
-    RetainPtr<WebFramePolicyListener> setUpPolicyListener(WebCore::FramePolicyFunction);
+    RetainPtr<WebFramePolicyListener> setUpPolicyListener(WebCore::FramePolicyFunction, NSURL *appLinkURL = nil);
 
     NSDictionary *actionDictionary(const WebCore::NavigationAction&, PassRefPtr<WebCore::FormState>) const;
 
-    virtual bool canCachePage() const;
+    virtual bool canCachePage() const override;
 
-    virtual PassRefPtr<WebCore::FrameNetworkingContext> createNetworkingContext();
+    virtual PassRefPtr<WebCore::FrameNetworkingContext> createNetworkingContext() override;
 
-    virtual bool shouldPaintBrokenImage(const WebCore::URL&) const;
+#if ENABLE(REQUEST_AUTOCOMPLETE)
+    virtual void didRequestAutocomplete(PassRefPtr<WebCore::FormState>) override { }
+#endif
+
+    virtual bool shouldPaintBrokenImage(const WebCore::URL&) const override;
+
+#if USE(QUICK_LOOK)
+    virtual void didCreateQuickLookHandle(WebCore::QuickLookHandle&) override;
+#endif
+
+#if ENABLE(CONTENT_FILTERING)
+    void contentFilterDidBlockLoad(WebCore::ContentFilterUnblockHandler) override;
+#endif
 
     RetainPtr<WebFrame> m_webFrame;
 

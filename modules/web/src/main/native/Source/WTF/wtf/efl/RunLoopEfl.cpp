@@ -28,8 +28,6 @@
 #include "RunLoop.h"
 
 #include <Ecore.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 
 static const int ecorePipeMessageSize = 1;
 static const char wakupEcorePipeMessage[] = "W";
@@ -37,11 +35,9 @@ static const char wakupEcorePipeMessage[] = "W";
 namespace WTF {
 
 RunLoop::RunLoop()
-    : m_initEfl(false)
-    , m_wakeUpEventRequested(false)
+    : m_wakeUpEventRequested(false)
 {
-    m_pipe = adoptPtr(ecore_pipe_add(wakeUpEvent, this));
-    m_initEfl = true;
+    m_pipe = EflUniquePtr<Ecore_Pipe>(ecore_pipe_add(wakeUpEvent, this));
 }
 
 RunLoop::~RunLoop()
@@ -85,8 +81,9 @@ void RunLoop::wakeUp()
     }
 }
 
-RunLoop::TimerBase::TimerBase(RunLoop*)
-    : m_timer(0)
+RunLoop::TimerBase::TimerBase(RunLoop& runLoop)
+    : m_runLoop(runLoop)
+    , m_timer(0)
     , m_isRepeating(false)
 {
 }

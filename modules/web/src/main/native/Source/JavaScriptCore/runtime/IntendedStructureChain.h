@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,6 +26,7 @@
 #ifndef IntendedStructureChain_h
 #define IntendedStructureChain_h
 
+#include "ConstantStructureCheck.h"
 #include "Structure.h"
 #include <wtf/RefCounted.h>
 
@@ -39,7 +40,8 @@ struct DumpContext;
 
 class IntendedStructureChain : public RefCounted<IntendedStructureChain> {
 public:
-    IntendedStructureChain(JSGlobalObject* globalObject, Structure* head);
+    IntendedStructureChain(JSGlobalObject* globalObject, JSValue prototype);
+    IntendedStructureChain(JSGlobalObject* globalObject, Structure*);
     IntendedStructureChain(CodeBlock* codeBlock, Structure* head, Structure* prototypeStructure);
     IntendedStructureChain(CodeBlock* codeBlock, Structure* head, StructureChain* chain);
     IntendedStructureChain(CodeBlock* codeBlock, Structure* head, StructureChain* chain, unsigned count);
@@ -47,19 +49,28 @@ public:
 
     bool isStillValid() const;
     bool matches(StructureChain*) const;
-    StructureChain* chain(VM&) const;
-    bool mayInterceptStoreTo(VM&, StringImpl* uid);
+    bool mayInterceptStoreTo(UniquedStringImpl* uid);
     bool isNormalized();
 
-    Structure* head() const { return m_head; }
+    bool takesSlowPathInDFGForImpureProperty();
+
+    JSValue prototype() const { return m_prototype; }
 
     size_t size() const { return m_vector.size(); }
-    Structure* at(size_t index) { return m_vector[index]; }
-    Structure* operator[](size_t index) { return at(index); }
+    Structure* at(size_t index) const { return m_vector[index]; }
+    Structure* operator[](size_t index) const { return at(index); }
 
     JSObject* terminalPrototype() const;
 
     Structure* last() const { return m_vector.last(); }
+
+    bool operator==(const IntendedStructureChain&) const;
+    bool operator!=(const IntendedStructureChain& other) const
+    {
+        return !(*this == other);
+    }
+
+    void gatherChecks(ConstantStructureCheckVector&) const;
 
     void visitChildren(SlotVisitor&);
     void dump(PrintStream&) const;
@@ -67,7 +78,7 @@ public:
 
 private:
     JSGlobalObject* m_globalObject;
-    Structure* m_head;
+    JSValue m_prototype;
     Vector<Structure*> m_vector;
 };
 

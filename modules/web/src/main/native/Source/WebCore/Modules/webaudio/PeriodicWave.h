@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -41,13 +41,13 @@ namespace WebCore {
 
 class PeriodicWave : public RefCounted<PeriodicWave> {
 public:
-    static PassRefPtr<PeriodicWave> createSine(float sampleRate);
-    static PassRefPtr<PeriodicWave> createSquare(float sampleRate);
-    static PassRefPtr<PeriodicWave> createSawtooth(float sampleRate);
-    static PassRefPtr<PeriodicWave> createTriangle(float sampleRate);
+    static Ref<PeriodicWave> createSine(float sampleRate);
+    static Ref<PeriodicWave> createSquare(float sampleRate);
+    static Ref<PeriodicWave> createSawtooth(float sampleRate);
+    static Ref<PeriodicWave> createTriangle(float sampleRate);
 
     // Creates an arbitrary wave given the frequency components (Fourier coefficients).
-    static PassRefPtr<PeriodicWave> create(float sampleRate, Float32Array* real, Float32Array* imag);
+    static RefPtr<PeriodicWave> create(float sampleRate, Float32Array* real, Float32Array* imag);
 
     // Returns pointers to the lower and higher wave data for the pitch range containing
     // the given fundamental frequency. These two tables are in adjacent "pitch" ranges

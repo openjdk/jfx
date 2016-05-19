@@ -2,44 +2,33 @@
  * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
-#include "MainThreadJava.h"
-#include "JavaRef.h"
 
-#if USE(PTHREADS)
-  #include "../ThreadingPthreads.cpp"
-  #include "../ThreadIdentifierDataPthreads.cpp"
-#else
-  #include "../ThreadingWin.cpp"
-  #include "../ThreadSpecificWin.cpp"
-#endif
+#include "JavaRef.h"
+#include "wtf/MainThread.h"
 
 namespace WTF {
-    void scheduleDispatchFunctionsOnMainThread()
-    {
+void scheduleDispatchFunctionsOnMainThread()
+{
     JSC_GETJAVAENV_CHKRET(env);
 
-        static JGClass jMainThreadCls(env->FindClass("com/sun/webkit/MainThread"));
+    static JGClass jMainThreadCls(env->FindClass("com/sun/webkit/MainThread"));
 
-        static jmethodID mid = env->GetStaticMethodID(
+    static jmethodID mid = env->GetStaticMethodID(
             jMainThreadCls,
             "fwkScheduleDispatchFunctions",
             "()V");
 
-        ASSERT(mid);
+    ASSERT(mid);
 
-        env->CallStaticVoidMethod(jMainThreadCls, mid);
-        CheckAndClearException(env);
-    }
+    env->CallStaticVoidMethod(jMainThreadCls, mid);
+    CheckAndClearException(env);
+}
 
-    void initializeMainThreadPlatform()
-    {
-        MainThreadJavaScheduler::instance();
-    }
-} // namespace WTF
+void initializeMainThreadPlatform()
+{
+}
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 
 /*
  * Class:     com_sun_webkit_MainThread
@@ -47,11 +36,10 @@ extern "C" {
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_com_sun_webkit_MainThread_twkScheduleDispatchFunctions
-  (JNIEnv* env, jobject)
+  (JNIEnv*, jobject)
 {
-    WTF::MainThreadJavaScheduler::scheduleDispatch();
+    dispatchFunctionsFromMainThread();
+}
 }
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace WTF

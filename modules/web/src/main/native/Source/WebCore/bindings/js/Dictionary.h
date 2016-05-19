@@ -29,7 +29,6 @@
 
 #include "JSDictionary.h"
 #include "JSEventListener.h"
-#include "NotImplemented.h"
 #include <bindings/ScriptValue.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/CString.h>
@@ -62,7 +61,7 @@ public:
     bool isUndefinedOrNull() const { return !m_dictionary.isValid(); }
     bool getOwnPropertiesAsStringHashMap(HashMap<String, String>&) const;
     bool getOwnPropertyNames(Vector<String>&) const;
-    bool getWithUndefinedOrNullCheck(const String& propertyName, String& value) const;
+    bool getWithUndefinedOrNullCheck(const char* propertyName, String& value) const;
 
 private:
     template <typename T>

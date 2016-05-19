@@ -33,6 +33,7 @@
 namespace JSC {
 
 class SlotVisitor;
+class VM;
 
 namespace DFG {
 
@@ -41,19 +42,43 @@ struct Plan;
 
 class Safepoint {
 public:
-    Safepoint(Plan&);
+    class Result {
+    public:
+        Result()
+            : m_didGetCancelled(false)
+            , m_wasChecked(true)
+        {
+        }
+
+        ~Result();
+
+        bool didGetCancelled();
+
+    private:
+        friend class Safepoint;
+
+        bool m_didGetCancelled;
+        bool m_wasChecked;
+    };
+
+    Safepoint(Plan&, Result&);
     ~Safepoint();
 
     void add(Scannable*);
 
     void begin();
 
-    void visitChildren(SlotVisitor&);
+    void checkLivenessAndVisitChildren(SlotVisitor&);
+    bool isKnownToBeLiveDuringGC();
+    void cancel();
+
+    VM& vm() const;
 
 private:
     Plan& m_plan;
     Vector<Scannable*> m_scannables;
     bool m_didCallBegin;
+    Result& m_result;
 };
 
 } } // namespace JSC::DFG

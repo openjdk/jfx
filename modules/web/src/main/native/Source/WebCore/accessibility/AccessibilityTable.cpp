@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -50,8 +50,8 @@ using namespace HTMLNames;
 
 AccessibilityTable::AccessibilityTable(RenderObject* renderer)
     : AccessibilityRenderObject(renderer)
-    , m_headerContainer(0)
-    , m_isAccessibilityTable(true)
+    , m_headerContainer(nullptr)
+    , m_isExposableThroughAccessibility(true)
 {
 }
 
@@ -62,12 +62,12 @@ AccessibilityTable::~AccessibilityTable()
 void AccessibilityTable::init()
 {
     AccessibilityRenderObject::init();
-    m_isAccessibilityTable = isTableExposableThroughAccessibility();
+    m_isExposableThroughAccessibility = computeIsTableExposableThroughAccessibility();
 }
 
-PassRefPtr<AccessibilityTable> AccessibilityTable::create(RenderObject* renderer)
+Ref<AccessibilityTable> AccessibilityTable::create(RenderObject* renderer)
 {
-    return adoptRef(new AccessibilityTable(renderer));
+    return adoptRef(*new AccessibilityTable(renderer));
 }
 
 bool AccessibilityTable::hasARIARole() const
@@ -82,12 +82,34 @@ bool AccessibilityTable::hasARIARole() const
     return false;
 }
 
-bool AccessibilityTable::isAccessibilityTable() const
+bool AccessibilityTable::isExposableThroughAccessibility() const
 {
     if (!m_renderer)
         return false;
 
-    return m_isAccessibilityTable;
+    return m_isExposableThroughAccessibility;
+}
+
+HTMLTableElement* AccessibilityTable::tableElement() const
+{
+    if (!is<RenderTable>(*m_renderer))
+        return nullptr;
+
+    RenderTable& table = downcast<RenderTable>(*m_renderer);
+    if (is<HTMLTableElement>(table.element()))
+        return downcast<HTMLTableElement>(table.element());
+
+    // If the table has a display:table-row-group, then the RenderTable does not have a pointer to it's HTMLTableElement.
+    // We can instead find it by asking the firstSection for its parent.
+    RenderTableSection* firstBody = table.firstBody();
+    if (!firstBody || !firstBody->element())
+        return nullptr;
+
+    Element* actualTable = firstBody->element()->parentElement();
+    if (!is<HTMLTableElement>(actualTable))
+        return nullptr;
+
+    return downcast<HTMLTableElement>(actualTable);
 }
 
 bool AccessibilityTable::isDataTable() const
@@ -105,34 +127,38 @@ bool AccessibilityTable::isDataTable() const
     if (node() && node()->hasEditableStyle())
         return true;
 
+    if (!is<RenderTable>(*m_renderer))
+        return false;
+
     // This employs a heuristic to determine if this table should appear.
     // Only "data" tables should be exposed as tables.
     // Unfortunately, there is no good way to determine the difference
     // between a "layout" table and a "data" table.
-
-    RenderTable* table = toRenderTable(m_renderer);
-    if (!table->element() || !isHTMLTableElement(table->element()))
-        return false;
-
-    // if there is a caption element, summary, THEAD, or TFOOT section, it's most certainly a data table
-    HTMLTableElement* tableElement = toHTMLTableElement(table->element());
-    if (!tableElement->summary().isEmpty() || tableElement->tHead() || tableElement->tFoot() || tableElement->caption())
-        return true;
-
-    // if someone used "rules" attribute than the table should appear
-    if (!tableElement->rules().isEmpty())
-        return true;
-
-    // if there's a colgroup or col element, it's probably a data table.
-    for (const auto& child : childrenOfType<Element>(*tableElement)) {
-        if (child.hasTagName(colTag) || child.hasTagName(colgroupTag))
+    if (HTMLTableElement* tableElement = this->tableElement()) {
+        // If there is a caption element, summary, THEAD, or TFOOT section, it's most certainly a data table.
+        if (!tableElement->summary().isEmpty() || tableElement->tHead() || tableElement->tFoot() || tableElement->caption())
             return true;
+
+        // If someone used "rules" attribute than the table should appear.
+        if (!tableElement->rules().isEmpty())
+            return true;
+
+        // If there's a colgroup or col element, it's probably a data table.
+        for (const auto& child : childrenOfType<HTMLElement>(*tableElement)) {
+            if (child.hasTagName(colTag) || child.hasTagName(colgroupTag))
+                return true;
+        }
     }
 
+    // The following checks should only apply if this is a real <table> element.
+    if (!hasTagName(tableTag))
+        return false;
+
+    RenderTable& table = downcast<RenderTable>(*m_renderer);
     // go through the cell's and check for tell-tale signs of "data" table status
     // cells have borders, or use attributes like headers, abbr, scope or axis
-    table->recalcSectionsIfNeeded();
-    RenderTableSection* firstBody = table->firstBody();
+    table.recalcSectionsIfNeeded();
+    RenderTableSection* firstBody = table.firstBody();
     if (!firstBody)
         return false;
 
@@ -148,7 +174,7 @@ bool AccessibilityTable::isDataTable() const
         return true;
 
     // Store the background color of the table to check against cell's background colors.
-    const RenderStyle& tableStyle = table->style();
+    const RenderStyle& tableStyle = table.style();
     Color tableBGColor = tableStyle.visitedDependentColor(CSSPropertyBackgroundColor);
 
     // check enough of the cells to find if the table matches our criteria
@@ -183,22 +209,22 @@ bool AccessibilityTable::isDataTable() const
             if (cell->width() < 1 || cell->height() < 1)
                 continue;
 
-            validCellCount++;
+            ++validCellCount;
 
             bool isTHCell = cellElement->hasTagName(thTag);
             // If the first row is comprised of all <th> tags, assume it is a data table.
             if (!row && isTHCell)
-                headersInFirstRowCount++;
+                ++headersInFirstRowCount;
 
             // If the first column is comprised of all <th> tags, assume it is a data table.
             if (!col && isTHCell)
-                headersInFirstColumnCount++;
+                ++headersInFirstColumnCount;
 
             // In this case, the developer explicitly assigned a "data" table attribute.
-            if (cellElement->hasTagName(tdTag) || cellElement->hasTagName(thTag)) {
-                HTMLTableCellElement* tableCellElement = toHTMLTableCellElement(cellElement);
-                if (!tableCellElement->headers().isEmpty() || !tableCellElement->abbr().isEmpty()
-                    || !tableCellElement->axis().isEmpty() || !tableCellElement->scope().isEmpty())
+            if (is<HTMLTableCellElement>(*cellElement)) {
+                HTMLTableCellElement& tableCellElement = downcast<HTMLTableCellElement>(*cellElement);
+                if (!tableCellElement.headers().isEmpty() || !tableCellElement.abbr().isEmpty()
+                    || !tableCellElement.axis().isEmpty() || !tableCellElement.scope().isEmpty())
                     return true;
             }
             const RenderStyle& renderStyle = cell->style();
@@ -210,25 +236,25 @@ bool AccessibilityTable::isDataTable() const
             // If a cell has matching bordered sides, call it a (fully) bordered cell.
             if ((cell->borderTop() > 0 && cell->borderBottom() > 0)
                 || (cell->borderLeft() > 0 && cell->borderRight() > 0))
-                borderedCellCount++;
+                ++borderedCellCount;
 
             // Also keep track of each individual border, so we can catch tables where most
             // cells have a bottom border, for example.
             if (cell->borderTop() > 0)
-                cellsWithTopBorder++;
+                ++cellsWithTopBorder;
             if (cell->borderBottom() > 0)
-                cellsWithBottomBorder++;
+                ++cellsWithBottomBorder;
             if (cell->borderLeft() > 0)
-                cellsWithLeftBorder++;
+                ++cellsWithLeftBorder;
             if (cell->borderRight() > 0)
-                cellsWithRightBorder++;
+                ++cellsWithRightBorder;
 
             // If the cell has a different color from the table and there is cell spacing,
             // then it is probably a data table cell (spacing and colors take the place of borders).
             Color cellColor = renderStyle.visitedDependentColor(CSSPropertyBackgroundColor);
-            if (table->hBorderSpacing() > 0 && table->vBorderSpacing() > 0
+            if (table.hBorderSpacing() > 0 && table.vBorderSpacing() > 0
                 && tableBGColor != cellColor && cellColor.alpha() != 1)
-                backgroundDifferenceCellCount++;
+                ++backgroundDifferenceCellCount;
 
             // If we've found 10 "good" cells, we don't need to keep searching.
             if (borderedCellCount >= 10 || backgroundDifferenceCellCount >= 10)
@@ -236,13 +262,13 @@ bool AccessibilityTable::isDataTable() const
 
             // For the first 5 rows, cache the background color so we can check if this table has zebra-striped rows.
             if (row < 5 && row == alternatingRowColorCount) {
-                RenderObject* renderRow = cell->parent();
-                if (!renderRow || !renderRow->isBoxModelObject() || !toRenderBoxModelObject(renderRow)->isTableRow())
+                RenderElement* renderRow = cell->parent();
+                if (!is<RenderTableRow>(renderRow))
                     continue;
                 const RenderStyle& rowRenderStyle = renderRow->style();
                 Color rowColor = rowRenderStyle.visitedDependentColor(CSSPropertyBackgroundColor);
                 alternatingRowColors[alternatingRowColorCount] = rowColor;
-                alternatingRowColorCount++;
+                ++alternatingRowColorCount;
             }
         }
 
@@ -287,7 +313,7 @@ bool AccessibilityTable::isDataTable() const
     return false;
 }
 
-bool AccessibilityTable::isTableExposableThroughAccessibility() const
+bool AccessibilityTable::computeIsTableExposableThroughAccessibility() const
 {
     // The following is a heuristic used to determine if a
     // <table> should be exposed as an AXTable. The goal
@@ -302,13 +328,20 @@ bool AccessibilityTable::isTableExposableThroughAccessibility() const
     if (hasARIARole())
         return false;
 
-    // Gtk+ ATs expect all tables to be exposed as tables.
-#if PLATFORM(GTK) || PLATFORM(EFL)
-    Element* tableNode = toRenderTable(m_renderer)->element();
-    return tableNode && isHTMLTableElement(tableNode);
+    if (isDataTable())
+        return true;
+
+    // Gtk+ ATs used to expect all tables to be exposed as tables.
+    // N.B. Efl may wish to follow suit and also defer to WebCore. In the meantime, the following
+    // check fails for data tables with display:table-row-group. By checking for data tables first,
+    // we can handle that edge case without introducing regressions prior to switching to WebCore's
+    // default behavior for table exposure.
+#if PLATFORM(EFL)
+    Element* tableNode = downcast<RenderTable>(*m_renderer).element();
+    return is<HTMLTableElement>(tableNode);
 #endif
 
-    return isDataTable();
+    return false;
 }
 
 void AccessibilityTable::clearChildren()
@@ -319,13 +352,13 @@ void AccessibilityTable::clearChildren()
 
     if (m_headerContainer) {
         m_headerContainer->detachFromParent();
-        m_headerContainer = 0;
+        m_headerContainer = nullptr;
     }
 }
 
 void AccessibilityTable::addChildren()
 {
-    if (!isAccessibilityTable()) {
+    if (!isExposableThroughAccessibility()) {
         AccessibilityRenderObject::addChildren();
         return;
     }
@@ -333,68 +366,94 @@ void AccessibilityTable::addChildren()
     ASSERT(!m_haveChildren);
 
     m_haveChildren = true;
-    if (!m_renderer || !m_renderer->isTable())
+    if (!is<RenderTable>(m_renderer))
         return;
 
-    RenderTable* table = toRenderTable(m_renderer);
-    AXObjectCache* axCache = m_renderer->document().axObjectCache();
-
+    RenderTable& table = downcast<RenderTable>(*m_renderer);
     // Go through all the available sections to pull out the rows and add them as children.
-    table->recalcSectionsIfNeeded();
-    RenderTableSection* tableSection = table->topSection();
-    if (!tableSection)
-        return;
+    table.recalcSectionsIfNeeded();
 
-    unsigned maxColumnCount = 0;
-    while (tableSection) {
-
-        HashSet<AccessibilityObject*> appendedRows;
-        unsigned numRows = tableSection->numRows();
-        for (unsigned rowIndex = 0; rowIndex < numRows; ++rowIndex) {
-
-            RenderTableRow* renderRow = tableSection->rowRendererAt(rowIndex);
-            if (!renderRow)
-                continue;
-
-            AccessibilityObject* rowObject = axCache->getOrCreate(renderRow);
-            if (!rowObject->isTableRow())
-                continue;
-
-            AccessibilityTableRow* row = toAccessibilityTableRow(rowObject);
-            // We need to check every cell for a new row, because cell spans
-            // can cause us to miss rows if we just check the first column.
-            if (appendedRows.contains(row))
-                continue;
-
-            row->setRowIndex(static_cast<int>(m_rows.size()));
-            m_rows.append(row);
-            if (!row->accessibilityIsIgnored())
-                m_children.append(row);
-#if PLATFORM(GTK) || PLATFORM(EFL)
-            else
-                m_children.appendVector(row->children());
-#endif
-            appendedRows.add(row);
+    if (HTMLTableElement* tableElement = this->tableElement()) {
+        if (HTMLTableCaptionElement* caption = tableElement->caption()) {
+            AccessibilityObject* axCaption = axObjectCache()->getOrCreate(caption);
+            if (axCaption && !axCaption->accessibilityIsIgnored())
+                m_children.append(axCaption);
         }
-
-        maxColumnCount = std::max(tableSection->numColumns(), maxColumnCount);
-        tableSection = table->sectionBelow(tableSection, SkipEmptySections);
     }
 
+    unsigned maxColumnCount = 0;
+    RenderTableSection* footer = table.footer();
+
+    for (RenderTableSection* tableSection = table.topSection(); tableSection; tableSection = table.sectionBelow(tableSection, SkipEmptySections)) {
+        if (tableSection == footer)
+            continue;
+        addChildrenFromSection(tableSection, maxColumnCount);
+    }
+
+    // Process the footer last, in case it was ordered earlier in the DOM.
+    if (footer)
+        addChildrenFromSection(footer, maxColumnCount);
+
+    AXObjectCache* axCache = m_renderer->document().axObjectCache();
     // make the columns based on the number of columns in the first body
     unsigned length = maxColumnCount;
     for (unsigned i = 0; i < length; ++i) {
-        AccessibilityTableColumn* column = toAccessibilityTableColumn(axCache->getOrCreate(ColumnRole));
-        column->setColumnIndex((int)i);
-        column->setParent(this);
-        m_columns.append(column);
-        if (!column->accessibilityIsIgnored())
-            m_children.append(column);
+        auto& column = downcast<AccessibilityTableColumn>(*axCache->getOrCreate(ColumnRole));
+        column.setColumnIndex((int)i);
+        column.setParent(this);
+        m_columns.append(&column);
+        if (!column.accessibilityIsIgnored())
+            m_children.append(&column);
     }
 
     AccessibilityObject* headerContainerObject = headerContainer();
     if (headerContainerObject && !headerContainerObject->accessibilityIsIgnored())
         m_children.append(headerContainerObject);
+
+    // Sometimes the cell gets the wrong role initially because it is created before the parent
+    // determines whether it is an accessibility table. Iterate all the cells and allow them to
+    // update their roles now that the table knows its status.
+    // see bug: https://bugs.webkit.org/show_bug.cgi?id=147001
+    for (const auto& row : m_rows) {
+        for (const auto& cell : row->children())
+            cell->updateAccessibilityRole();
+    }
+
+}
+
+void AccessibilityTable::addChildrenFromSection(RenderTableSection* tableSection, unsigned& maxColumnCount)
+{
+    ASSERT(tableSection);
+    if (!tableSection)
+        return;
+
+    AXObjectCache* axCache = m_renderer->document().axObjectCache();
+    HashSet<AccessibilityObject*> appendedRows;
+    unsigned numRows = tableSection->numRows();
+    for (unsigned rowIndex = 0; rowIndex < numRows; ++rowIndex) {
+
+        RenderTableRow* renderRow = tableSection->rowRendererAt(rowIndex);
+        if (!renderRow)
+            continue;
+
+        AccessibilityObject& rowObject = *axCache->getOrCreate(renderRow);
+        if (!is<AccessibilityTableRow>(rowObject))
+            continue;
+
+        auto& row = downcast<AccessibilityTableRow>(rowObject);
+        // We need to check every cell for a new row, because cell spans
+        // can cause us to miss rows if we just check the first column.
+        if (appendedRows.contains(&row))
+            continue;
+
+        row.setRowIndex(static_cast<int>(m_rows.size()));
+        m_rows.append(&row);
+        if (!row.accessibilityIsIgnored())
+            m_children.append(&row);
+        appendedRows.add(&row);
+    }
+
+    maxColumnCount = std::max(tableSection->numColumns(), maxColumnCount);
 }
 
 AccessibilityObject* AccessibilityTable::headerContainer()
@@ -402,10 +461,10 @@ AccessibilityObject* AccessibilityTable::headerContainer()
     if (m_headerContainer)
         return m_headerContainer.get();
 
-    AccessibilityMockObject* tableHeader = toAccessibilityMockObject(axObjectCache()->getOrCreate(TableHeaderContainerRole));
-    tableHeader->setParent(this);
+    auto& tableHeader = downcast<AccessibilityMockObject>(*axObjectCache()->getOrCreate(TableHeaderContainerRole));
+    tableHeader.setParent(this);
 
-    m_headerContainer = tableHeader;
+    m_headerContainer = &tableHeader;
     return m_headerContainer.get();
 }
 
@@ -431,7 +490,7 @@ void AccessibilityTable::columnHeaders(AccessibilityChildrenVector& headers)
     updateChildrenIfNecessary();
 
     for (const auto& column : m_columns) {
-        if (AccessibilityObject* header = toAccessibilityTableColumn(column.get())->headerObject())
+        if (AccessibilityObject* header = downcast<AccessibilityTableColumn>(*column).headerObject())
             headers.append(header);
     }
 }
@@ -444,7 +503,7 @@ void AccessibilityTable::rowHeaders(AccessibilityChildrenVector& headers)
     updateChildrenIfNecessary();
 
     for (const auto& row : m_rows) {
-        if (AccessibilityObject* header = toAccessibilityTableRow(row.get())->headerObject())
+        if (AccessibilityObject* header = downcast<AccessibilityTableRow>(*row).headerObject())
             headers.append(header);
     }
 }
@@ -491,7 +550,7 @@ int AccessibilityTable::tableLevel() const
 {
     int level = 0;
     for (AccessibilityObject* obj = static_cast<AccessibilityObject*>(const_cast<AccessibilityTable*>(this)); obj; obj = obj->parentObject()) {
-        if (obj->isAccessibilityTable())
+        if (is<AccessibilityTable>(*obj) && downcast<AccessibilityTable>(*obj).isExposableThroughAccessibility())
             ++level;
     }
 
@@ -502,7 +561,7 @@ AccessibilityTableCell* AccessibilityTable::cellForColumnAndRow(unsigned column,
 {
     updateChildrenIfNecessary();
     if (column >= columnCount() || row >= rowCount())
-        return 0;
+        return nullptr;
 
     // Iterate backwards through the rows in case the desired cell has a rowspan and exists in a previous row.
     for (unsigned rowIndexCounter = row + 1; rowIndexCounter > 0; --rowIndexCounter) {
@@ -513,29 +572,33 @@ AccessibilityTableCell* AccessibilityTable::cellForColumnAndRow(unsigned column,
         for (unsigned colIndexCounter = std::min(static_cast<unsigned>(children.size()), column + 1); colIndexCounter > 0; --colIndexCounter) {
             unsigned colIndex = colIndexCounter - 1;
             AccessibilityObject* child = children[colIndex].get();
-            ASSERT(child->isTableCell());
-            if (!child->isTableCell())
+            ASSERT(is<AccessibilityTableCell>(*child));
+            if (!is<AccessibilityTableCell>(*child))
                 continue;
 
             std::pair<unsigned, unsigned> columnRange;
             std::pair<unsigned, unsigned> rowRange;
-            AccessibilityTableCell* tableCellChild = toAccessibilityTableCell(child);
-            tableCellChild->columnIndexRange(columnRange);
-            tableCellChild->rowIndexRange(rowRange);
+            auto& tableCellChild = downcast<AccessibilityTableCell>(*child);
+            tableCellChild.columnIndexRange(columnRange);
+            tableCellChild.rowIndexRange(rowRange);
 
             if ((column >= columnRange.first && column < (columnRange.first + columnRange.second))
                 && (row >= rowRange.first && row < (rowRange.first + rowRange.second)))
-                return tableCellChild;
+                return &tableCellChild;
         }
     }
 
-    return 0;
+    return nullptr;
 }
 
 AccessibilityRole AccessibilityTable::roleValue() const
 {
-    if (!isAccessibilityTable())
+    if (!isExposableThroughAccessibility())
         return AccessibilityRenderObject::roleValue();
+
+    AccessibilityRole ariaRole = ariaRoleAttribute();
+    if (ariaRole == GridRole || ariaRole == TreeGridRole)
+        return GridRole;
 
     return TableRole;
 }
@@ -548,7 +611,7 @@ bool AccessibilityTable::computeAccessibilityIsIgnored() const
     if (decision == IgnoreObject)
         return true;
 
-    if (!isAccessibilityTable())
+    if (!isExposableThroughAccessibility())
         return AccessibilityRenderObject::computeAccessibilityIsIgnored();
 
     return false;
@@ -563,7 +626,7 @@ void AccessibilityTable::titleElementText(Vector<AccessibilityText>& textOrder) 
 
 String AccessibilityTable::title() const
 {
-    if (!isAccessibilityTable())
+    if (!isExposableThroughAccessibility())
         return AccessibilityRenderObject::title();
 
     String title;
@@ -572,9 +635,8 @@ String AccessibilityTable::title() const
 
     // see if there is a caption
     Node* tableElement = m_renderer->node();
-    if (tableElement && isHTMLTableElement(tableElement)) {
-        HTMLTableCaptionElement* caption = toHTMLTableElement(tableElement)->caption();
-        if (caption)
+    if (is<HTMLTableElement>(tableElement)) {
+        if (HTMLTableCaptionElement* caption = downcast<HTMLTableElement>(*tableElement).caption())
             title = caption->innerText();
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,59 +30,163 @@
 
 #include "DFGGraph.h"
 #include "JSCInlines.h"
+#include "TrackedReferences.h"
 
 namespace JSC { namespace DFG {
 
-void AbstractValue::setMostSpecific(Graph& graph, JSValue value)
+void AbstractValue::observeTransitions(const TransitionVector& vector)
 {
-    if (!!value && value.isCell()) {
-        Structure* structure = value.asCell()->structure();
-        m_currentKnownStructure = structure;
-        setFuturePossibleStructure(graph, structure);
-        m_arrayModes = asArrayModes(structure->indexingType());
-    } else {
-        m_currentKnownStructure.clear();
-        m_futurePossibleStructure.clear();
-        m_arrayModes = 0;
+    if (m_type & SpecCell) {
+        m_structure.observeTransitions(vector);
+        ArrayModes newModes = 0;
+        for (unsigned i = vector.size(); i--;) {
+            if (m_arrayModes & asArrayModes(vector[i].previous->indexingType()))
+                newModes |= asArrayModes(vector[i].next->indexingType());
+        }
+        m_arrayModes |= newModes;
     }
-
-    m_type = speculationFromValue(value);
-    m_value = value;
-
     checkConsistency();
 }
 
-void AbstractValue::set(Graph& graph, JSValue value)
+void AbstractValue::set(Graph& graph, const FrozenValue& value, StructureClobberState clobberState)
 {
-    if (!!value && value.isCell()) {
-        m_currentKnownStructure.makeTop();
-        Structure* structure = value.asCell()->structure();
-        setFuturePossibleStructure(graph, structure);
-        m_arrayModes = asArrayModes(structure->indexingType());
-        clobberArrayModes();
+    if (!!value && value.value().isCell()) {
+        Structure* structure = value.structure();
+        if (graph.registerStructure(structure) == StructureRegisteredAndWatched) {
+            m_structure = structure;
+            if (clobberState == StructuresAreClobbered) {
+                m_arrayModes = ALL_ARRAY_MODES;
+                m_structure.clobber();
+            } else
+                m_arrayModes = asArrayModes(structure->indexingType());
+        } else {
+            m_structure.makeTop();
+            m_arrayModes = ALL_ARRAY_MODES;
+        }
     } else {
-        m_currentKnownStructure.clear();
-        m_futurePossibleStructure.clear();
+        m_structure.clear();
         m_arrayModes = 0;
     }
 
-    m_type = speculationFromValue(value);
-    if (m_type == SpecInt52AsDouble)
-        m_type = SpecInt52;
-    m_value = value;
+    m_type = speculationFromValue(value.value());
+    m_value = value.value();
 
     checkConsistency();
+    assertIsRegistered(graph);
 }
 
 void AbstractValue::set(Graph& graph, Structure* structure)
 {
-    m_currentKnownStructure = structure;
-    setFuturePossibleStructure(graph, structure);
+    m_structure = structure;
     m_arrayModes = asArrayModes(structure->indexingType());
     m_type = speculationFromStructure(structure);
     m_value = JSValue();
 
     checkConsistency();
+    assertIsRegistered(graph);
+}
+
+void AbstractValue::set(Graph& graph, const StructureSet& set)
+{
+    m_structure = set;
+    m_arrayModes = set.arrayModesFromStructures();
+    m_type = set.speculationFromStructures();
+    m_value = JSValue();
+
+    checkConsistency();
+    assertIsRegistered(graph);
+}
+
+void AbstractValue::setType(Graph& graph, SpeculatedType type)
+{
+    SpeculatedType cellType = type & SpecCell;
+    if (cellType) {
+        if (!(cellType & ~SpecString))
+            m_structure = graph.m_vm.stringStructure.get();
+        else if (isSymbolSpeculation(cellType))
+            m_structure = graph.m_vm.symbolStructure.get();
+        else
+            m_structure.makeTop();
+        m_arrayModes = ALL_ARRAY_MODES;
+    } else {
+        m_structure.clear();
+        m_arrayModes = 0;
+    }
+    m_type = type;
+    m_value = JSValue();
+    checkConsistency();
+}
+
+void AbstractValue::fixTypeForRepresentation(Graph& graph, NodeFlags representation, Node* node)
+{
+    if (representation == NodeResultDouble) {
+        if (m_value) {
+            ASSERT(m_value.isNumber());
+            if (m_value.isInt32())
+                m_value = jsDoubleNumber(m_value.asNumber());
+        }
+        if (m_type & SpecMachineInt) {
+            m_type &= ~SpecMachineInt;
+            m_type |= SpecInt52AsDouble;
+        }
+        if (m_type & ~SpecFullDouble)
+            DFG_CRASH(graph, node, toCString("Abstract value ", *this, " for double node has type outside SpecFullDouble.\n").data());
+    } else if (representation == NodeResultInt52) {
+        if (m_type & SpecInt52AsDouble) {
+            m_type &= ~SpecInt52AsDouble;
+            m_type |= SpecInt52;
+        }
+        if (m_type & ~SpecMachineInt)
+            DFG_CRASH(graph, node, toCString("Abstract value ", *this, " for int52 node has type outside SpecMachineInt.\n").data());
+    } else {
+        if (m_type & SpecInt52) {
+            m_type &= ~SpecInt52;
+            m_type |= SpecInt52AsDouble;
+        }
+        if (m_type & ~SpecBytecodeTop)
+            DFG_CRASH(graph, node, toCString("Abstract value ", *this, " for value node has type outside SpecBytecodeTop.\n").data());
+    }
+
+    checkConsistency();
+}
+
+void AbstractValue::fixTypeForRepresentation(Graph& graph, Node* node)
+{
+    fixTypeForRepresentation(graph, node->result(), node);
+}
+
+bool AbstractValue::mergeOSREntryValue(Graph& graph, JSValue value)
+{
+    AbstractValue oldMe = *this;
+
+    if (isClear()) {
+        FrozenValue* frozenValue = graph.freeze(value);
+        if (frozenValue->pointsToHeap()) {
+            m_structure = frozenValue->structure();
+            m_arrayModes = asArrayModes(frozenValue->structure()->indexingType());
+        } else {
+            m_structure.clear();
+            m_arrayModes = 0;
+        }
+
+        m_type = speculationFromValue(value);
+        m_value = value;
+    } else {
+        mergeSpeculation(m_type, speculationFromValue(value));
+        if (!!value && value.isCell()) {
+            Structure* structure = value.asCell()->structure();
+            graph.registerStructure(structure);
+            mergeArrayModes(m_arrayModes, asArrayModes(structure->indexingType()));
+            m_structure.merge(StructureSet(structure));
+        }
+        if (m_value != value)
+            m_value = JSValue();
+    }
+
+    checkConsistency();
+    assertIsRegistered(graph);
+
+    return oldMe != *this;
 }
 
 FiltrationResult AbstractValue::filter(Graph& graph, const StructureSet& other)
@@ -96,21 +200,29 @@ FiltrationResult AbstractValue::filter(Graph& graph, const StructureSet& other)
 
     m_type &= other.speculationFromStructures();
     m_arrayModes &= other.arrayModesFromStructures();
-    m_currentKnownStructure.filter(other);
+    m_structure.filter(other);
 
     // It's possible that prior to the above two statements we had (Foo, TOP), where
     // Foo is a SpeculatedType that is disjoint with the passed StructureSet. In that
     // case, we will now have (None, [someStructure]). In general, we need to make
     // sure that new information gleaned from the SpeculatedType needs to be fed back
     // into the information gleaned from the StructureSet.
-    m_currentKnownStructure.filter(m_type);
-
-    if (m_currentKnownStructure.hasSingleton())
-        setFuturePossibleStructure(graph, m_currentKnownStructure.singleton());
+    m_structure.filter(m_type);
 
     filterArrayModesByType();
     filterValueByType();
-    return normalizeClarity();
+    return normalizeClarity(graph);
+}
+
+FiltrationResult AbstractValue::changeStructure(Graph& graph, const StructureSet& other)
+{
+    m_type &= other.speculationFromStructures();
+    m_arrayModes = other.arrayModesFromStructures();
+    m_structure = other;
+
+    filterValueByType();
+
+    return normalizeClarity(graph);
 }
 
 FiltrationResult AbstractValue::filterArrayModes(ArrayModes arrayModes)
@@ -130,34 +242,77 @@ FiltrationResult AbstractValue::filter(SpeculatedType type)
     if ((m_type & type) == m_type)
         return FiltrationOK;
 
+    // Fast path for the case that we don't even have a cell.
+    if (!(m_type & SpecCell)) {
+        m_type &= type;
+        FiltrationResult result;
+        if (m_type == SpecNone) {
+            clear();
+            result = Contradiction;
+        } else
+            result = FiltrationOK;
+        checkConsistency();
+        return result;
+    }
+
     m_type &= type;
 
     // It's possible that prior to this filter() call we had, say, (Final, TOP), and
     // the passed type is Array. At this point we'll have (None, TOP). The best way
     // to ensure that the structure filtering does the right thing is to filter on
     // the new type (None) rather than the one passed (Array).
-    m_currentKnownStructure.filter(m_type);
-    m_futurePossibleStructure.filter(m_type);
+    m_structure.filter(type);
     filterArrayModesByType();
     filterValueByType();
     return normalizeClarity();
 }
 
-FiltrationResult AbstractValue::filterByValue(JSValue value)
+FiltrationResult AbstractValue::filterByValue(const FrozenValue& value)
 {
-    FiltrationResult result = filter(speculationFromValue(value));
+    FiltrationResult result = filter(speculationFromValue(value.value()));
     if (m_type)
-        m_value = value;
+        m_value = value.value();
     return result;
 }
 
-void AbstractValue::setFuturePossibleStructure(Graph& graph, Structure* structure)
+bool AbstractValue::contains(Structure* structure) const
 {
-    ASSERT(structure);
-    if (graph.watchpoints().isStillValid(structure->transitionWatchpointSet()))
-        m_futurePossibleStructure = structure;
-    else
-        m_futurePossibleStructure.makeTop();
+    return couldBeType(speculationFromStructure(structure))
+        && (m_arrayModes & arrayModeFromStructure(structure))
+        && m_structure.contains(structure);
+}
+
+FiltrationResult AbstractValue::filter(const AbstractValue& other)
+{
+    m_type &= other.m_type;
+    m_structure.filter(other.m_structure);
+    m_arrayModes &= other.m_arrayModes;
+
+    m_structure.filter(m_type);
+    filterArrayModesByType();
+    filterValueByType();
+
+    if (normalizeClarity() == Contradiction)
+        return Contradiction;
+
+    if (m_value == other.m_value)
+        return FiltrationOK;
+
+    // Neither of us are BOTTOM, so an empty value means TOP.
+    if (!m_value) {
+        // We previously didn't prove a value but now we have done so.
+        m_value = other.m_value;
+        return FiltrationOK;
+    }
+
+    if (!other.m_value) {
+        // We had proved a value but the other guy hadn't, so keep our proof.
+        return FiltrationOK;
+    }
+
+    // We both proved there to be a specific value but they are different.
+    clear();
+    return Contradiction;
 }
 
 void AbstractValue::filterValueByType()
@@ -205,8 +360,7 @@ bool AbstractValue::shouldBeClear() const
         return true;
 
     if (!(m_type & ~SpecCell)
-        && (!m_arrayModes
-            || m_currentKnownStructure.isClear()))
+        && (!m_arrayModes || m_structure.isClear()))
         return true;
 
     return false;
@@ -230,12 +384,18 @@ FiltrationResult AbstractValue::normalizeClarity()
     return result;
 }
 
+FiltrationResult AbstractValue::normalizeClarity(Graph& graph)
+{
+    FiltrationResult result = normalizeClarity();
+    assertIsRegistered(graph);
+    return result;
+}
+
 #if !ASSERT_DISABLED
 void AbstractValue::checkConsistency() const
 {
     if (!(m_type & SpecCell)) {
-        ASSERT(m_currentKnownStructure.isClear());
-        ASSERT(m_futurePossibleStructure.isClear());
+        ASSERT(m_structure.isClear());
         ASSERT(!m_arrayModes);
     }
 
@@ -244,6 +404,8 @@ void AbstractValue::checkConsistency() const
 
     if (!!m_value) {
         SpeculatedType type = m_type;
+        // This relaxes the assertion below a bit, since we don't know the representation of the
+        // node.
         if (type & SpecInt52)
             type |= SpecInt52AsDouble;
         ASSERT(mergeSpeculations(type, speculationFromValue(m_value)) == type);
@@ -253,6 +415,11 @@ void AbstractValue::checkConsistency() const
     // the value is bottom and that any code that uses the value is unreachable. But
     // we don't want to get pedantic about this as it would only increase the computational
     // complexity of the code.
+}
+
+void AbstractValue::assertIsRegistered(Graph& graph) const
+{
+    m_structure.assertIsRegistered(graph);
 }
 #endif
 
@@ -267,12 +434,17 @@ void AbstractValue::dumpInContext(PrintStream& out, DumpContext* context) const
     if (m_type & SpecCell) {
         out.print(
             ", ", ArrayModesDump(m_arrayModes), ", ",
-            inContext(m_currentKnownStructure, context), ", ",
-            inContext(m_futurePossibleStructure, context));
+            inContext(m_structure, context));
     }
     if (!!m_value)
         out.print(", ", inContext(m_value, context));
     out.print(")");
+}
+
+void AbstractValue::validateReferences(const TrackedReferences& trackedReferences)
+{
+    trackedReferences.check(m_value);
+    m_structure.validateReferences(trackedReferences);
 }
 
 } } // namespace JSC::DFG

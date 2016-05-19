@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -27,11 +27,10 @@
  */
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
-#import <WebKit/npapi.h>
+#import <WebKitLegacy/npapi.h>
 
 #import "WebNetscapePluginView.h"
 #import "WebKitLogging.h"
-#import <WebCore/PluginMainThreadScheduler.h>
 
 using namespace WebCore;
 
@@ -173,7 +172,16 @@ void NPN_PopPopupsEnabledState(NPP instance)
 
 void NPN_PluginThreadAsyncCall(NPP instance, void (*func) (void *), void *userData)
 {
-    PluginMainThreadScheduler::scheduler().scheduleCall(instance, func, userData);
+    WebNetscapePluginView *pluginView = pluginViewForInstance(instance);
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!pluginView || !pluginView->plugin) {
+            // The plug-in has already been destroyed.
+            return;
+        }
+
+        func(userData);
+    });
 }
 
 uint32_t NPN_ScheduleTimer(NPP instance, uint32_t interval, NPBool repeat, void (*timerFunc)(NPP npp, uint32_t timerID))

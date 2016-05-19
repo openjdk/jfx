@@ -1,5 +1,9 @@
 #if defined(WIN32) || defined(_WIN32)
 
+#ifdef _HAS_EXCEPTIONS
+#undef _HAS_EXCEPTIONS
+#endif
+
 #ifndef WINVER
 #define WINVER 0x0502
 #endif
@@ -75,15 +79,10 @@
 #include <wtf/ListHashSet.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/OwnPtrCommon.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StringExtras.h>
-#include <wtf/TCPageMap.h>
-#include <wtf/TCSystemAlloc.h>
 #include <wtf/Vector.h>
 #include <wtf/VectorTraits.h>
 

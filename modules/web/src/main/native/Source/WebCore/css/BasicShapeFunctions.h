@@ -36,15 +36,14 @@
 namespace WebCore {
 
 class CSSBasicShape;
+class CSSToLengthConversionData;
 class CSSPrimitiveValue;
+class CSSToLengthConversionData;
 class CSSValue;
 class RenderStyle;
 
-PassRefPtr<CSSValue> valueForBasicShape(const RenderStyle*, const BasicShape*);
-PassRefPtr<BasicShape> basicShapeForValue(const RenderStyle*, const RenderStyle* rootStyle, const CSSBasicShape*);
-
-PassRefPtr<CSSPrimitiveValue> valueForBox(LayoutBox);
-LayoutBox boxForValue(const CSSPrimitiveValue*);
+Ref<CSSValue> valueForBasicShape(const RenderStyle&, const BasicShape&);
+Ref<BasicShape> basicShapeForValue(const CSSToLengthConversionData&, const CSSBasicShape*);
 
 float floatValueForCenterCoordinate(const BasicShapeCenterCoordinate&, float);
 }

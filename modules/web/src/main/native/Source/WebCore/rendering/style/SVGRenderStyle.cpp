@@ -7,7 +7,7 @@
     Copyright (C) 1999 Antti Koivisto (koivisto@kde.org)
     Copyright (C) 1999-2003 Lars Knoll (knoll@kde.org)
     Copyright (C) 2002-2003 Dirk Mueller (mueller@kde.org)
-    Copyright (C) 2002 Apple Computer, Inc.
+    Copyright (C) 2002 Apple Inc.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -43,7 +43,7 @@ static const SVGRenderStyle& defaultSVGStyle()
     return *style.get().get();
 }
 
-PassRef<SVGRenderStyle> SVGRenderStyle::createDefaultStyle()
+Ref<SVGRenderStyle> SVGRenderStyle::createDefaultStyle()
 {
     return adoptRef(*new SVGRenderStyle(CreateDefault));
 }
@@ -56,6 +56,7 @@ SVGRenderStyle::SVGRenderStyle()
     , stops(defaultSVGStyle().stops)
     , misc(defaultSVGStyle().misc)
     , shadowSVG(defaultSVGStyle().shadowSVG)
+    , layout(defaultSVGStyle().layout)
     , resources(defaultSVGStyle().resources)
 {
     setBitDefaults();
@@ -69,6 +70,7 @@ SVGRenderStyle::SVGRenderStyle(CreateDefaultType)
     , stops(StyleStopData::create())
     , misc(StyleMiscData::create())
     , shadowSVG(StyleShadowSVGData::create())
+    , layout(StyleLayoutData::create())
     , resources(StyleResourceData::create())
 {
     setBitDefaults();
@@ -85,11 +87,12 @@ inline SVGRenderStyle::SVGRenderStyle(const SVGRenderStyle& other)
     , stops(other.stops)
     , misc(other.misc)
     , shadowSVG(other.shadowSVG)
+    , layout(other.layout)
     , resources(other.resources)
 {
 }
 
-PassRef<SVGRenderStyle> SVGRenderStyle::copy() const
+Ref<SVGRenderStyle> SVGRenderStyle::copy() const
 {
     return adoptRef(*new SVGRenderStyle(*this));
 }
@@ -106,6 +109,7 @@ bool SVGRenderStyle::operator==(const SVGRenderStyle& other) const
         && stops == other.stops
         && misc == other.misc
         && shadowSVG == other.shadowSVG
+        && layout == other.layout
         && inheritedResources == other.inheritedResources
         && resources == other.resources
         && svg_inherited_flags == other.svg_inherited_flags
@@ -140,7 +144,48 @@ void SVGRenderStyle::copyNonInheritedFrom(const SVGRenderStyle* other)
     stops = other->stops;
     misc = other->misc;
     shadowSVG = other->shadowSVG;
+    layout = other->layout;
     resources = other->resources;
+}
+
+Vector<PaintType, 3> SVGRenderStyle::paintTypesForPaintOrder() const
+{
+    Vector<PaintType, 3> paintOrder;
+    switch (this->paintOrder()) {
+    case PaintOrderNormal:
+        FALLTHROUGH;
+    case PaintOrderFill:
+        paintOrder.append(PaintTypeFill);
+        paintOrder.append(PaintTypeStroke);
+        paintOrder.append(PaintTypeMarkers);
+        break;
+    case PaintOrderFillMarkers:
+        paintOrder.append(PaintTypeFill);
+        paintOrder.append(PaintTypeMarkers);
+        paintOrder.append(PaintTypeStroke);
+        break;
+    case PaintOrderStroke:
+        paintOrder.append(PaintTypeStroke);
+        paintOrder.append(PaintTypeFill);
+        paintOrder.append(PaintTypeMarkers);
+        break;
+    case PaintOrderStrokeMarkers:
+        paintOrder.append(PaintTypeStroke);
+        paintOrder.append(PaintTypeMarkers);
+        paintOrder.append(PaintTypeFill);
+        break;
+    case PaintOrderMarkers:
+        paintOrder.append(PaintTypeMarkers);
+        paintOrder.append(PaintTypeFill);
+        paintOrder.append(PaintTypeStroke);
+        break;
+    case PaintOrderMarkersStroke:
+        paintOrder.append(PaintTypeMarkers);
+        paintOrder.append(PaintTypeStroke);
+        paintOrder.append(PaintTypeFill);
+        break;
+    };
+    return paintOrder;
 }
 
 StyleDifference SVGRenderStyle::diff(const SVGRenderStyle* other) const
@@ -181,6 +226,10 @@ StyleDifference SVGRenderStyle::diff(const SVGRenderStyle* other) const
 
     // Shadow changes require relayouts, as they affect the repaint rects.
     if (shadowSVG != other->shadowSVG)
+        return StyleDifferenceLayout;
+
+    // The x or y properties require relayout.
+    if (layout != other->layout)
         return StyleDifferenceLayout;
 
     // Some stroke properties, requires relayouts, as the cached stroke boundaries need to be recalculated.

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -46,8 +46,8 @@ class HRTFElevation {
     WTF_MAKE_NONCOPYABLE(HRTFElevation);
 public:
     HRTFElevation(std::unique_ptr<HRTFKernelList> kernelListL, std::unique_ptr<HRTFKernelList> kernelListR, int elevation, float sampleRate)
-        : m_kernelListL(std::move(kernelListL))
-        , m_kernelListR(std::move(kernelListR))
+        : m_kernelListL(WTF::move(kernelListL))
+        , m_kernelListR(WTF::move(kernelListR))
         , m_elevationAngle(elevation)
         , m_sampleRate(sampleRate)
     {

@@ -34,32 +34,35 @@ namespace WebCore {
 
 class MediaDocument final : public HTMLDocument {
 public:
-    static PassRefPtr<MediaDocument> create(Frame* frame, const URL& url)
+    static Ref<MediaDocument> create(Frame* frame, const URL& url)
     {
-        return adoptRef(new MediaDocument(frame, url));
+        return adoptRef(*new MediaDocument(frame, url));
     }
     virtual ~MediaDocument();
 
     void mediaElementSawUnsupportedTracks();
+    void mediaElementNaturalSizeChanged(const IntSize&);
+    String outgoingReferrer() const { return m_outgoingReferrer; }
 
 private:
     MediaDocument(Frame*, const URL&);
 
-    virtual PassRefPtr<DocumentParser> createParser() override;
+    virtual Ref<DocumentParser> createParser() override;
 
     virtual void defaultEventHandler(Event*) override;
 
-    void replaceMediaElementTimerFired(Timer<MediaDocument>&);
+    void replaceMediaElementTimerFired();
 
-    Timer<MediaDocument> m_replaceMediaElementTimer;
+    Timer m_replaceMediaElementTimer;
+    String m_outgoingReferrer;
 };
 
-inline bool isMediaDocument(const Document& document) { return document.isMediaDocument(); }
-void isMediaDocument(const MediaDocument&); // Catch unnecessary runtime check of type known at compile time.
+} // namespace WebCore
 
-DOCUMENT_TYPE_CASTS(MediaDocument)
-
-}
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MediaDocument)
+    static bool isType(const WebCore::Document& document) { return document.isMediaDocument(); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif
 #endif

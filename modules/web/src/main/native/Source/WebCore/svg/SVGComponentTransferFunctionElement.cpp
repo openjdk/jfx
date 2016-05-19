@@ -19,15 +19,12 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SVGComponentTransferFunctionElement.h"
 
-#include "Attribute.h"
-#include "SVGElementInstance.h"
 #include "SVGFEComponentTransferElement.h"
 #include "SVGNames.h"
 #include "SVGNumberList.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -62,26 +59,21 @@ SVGComponentTransferFunctionElement::SVGComponentTransferFunctionElement(const Q
 
 bool SVGComponentTransferFunctionElement::isSupportedAttribute(const QualifiedName& attrName)
 {
-    DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty()) {
-        supportedAttributes.add(SVGNames::typeAttr);
-        supportedAttributes.add(SVGNames::tableValuesAttr);
-        supportedAttributes.add(SVGNames::slopeAttr);
-        supportedAttributes.add(SVGNames::interceptAttr);
-        supportedAttributes.add(SVGNames::amplitudeAttr);
-        supportedAttributes.add(SVGNames::exponentAttr);
-        supportedAttributes.add(SVGNames::offsetAttr);
+    static NeverDestroyed<HashSet<QualifiedName>> supportedAttributes;
+    if (supportedAttributes.get().isEmpty()) {
+        supportedAttributes.get().add(SVGNames::typeAttr);
+        supportedAttributes.get().add(SVGNames::tableValuesAttr);
+        supportedAttributes.get().add(SVGNames::slopeAttr);
+        supportedAttributes.get().add(SVGNames::interceptAttr);
+        supportedAttributes.get().add(SVGNames::amplitudeAttr);
+        supportedAttributes.get().add(SVGNames::exponentAttr);
+        supportedAttributes.get().add(SVGNames::offsetAttr);
     }
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.get().contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGComponentTransferFunctionElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (!isSupportedAttribute(name)) {
-        SVGElement::parseAttribute(name, value);
-        return;
-    }
-
     if (name == SVGNames::typeAttr) {
         ComponentTransferType propertyValue = SVGPropertyTraits<ComponentTransferType>::fromString(value);
         if (propertyValue > 0)
@@ -122,7 +114,7 @@ void SVGComponentTransferFunctionElement::parseAttribute(const QualifiedName& na
         return;
     }
 
-    ASSERT_NOT_REACHED();
+    SVGElement::parseAttribute(name, value);
 }
 
 void SVGComponentTransferFunctionElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -132,7 +124,7 @@ void SVGComponentTransferFunctionElement::svgAttributeChanged(const QualifiedNam
         return;
     }
 
-    SVGElementInstance::InvalidationGuard invalidationGuard(this);
+    InstanceInvalidationGuard guard(*this);
 
     invalidateFilterPrimitiveParent(this);
 }
@@ -151,5 +143,3 @@ ComponentTransferFunction SVGComponentTransferFunctionElement::transferFunction(
 }
 
 }
-
-#endif

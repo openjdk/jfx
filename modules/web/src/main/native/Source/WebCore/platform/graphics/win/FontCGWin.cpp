@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -24,14 +24,14 @@
  */
 
 #include "config.h"
-#include "Font.h"
+#include "FontCascade.h"
 
 #include "AffineTransform.h"
 #include "FloatConversion.h"
+#include "Font.h"
 #include "GlyphBuffer.h"
 #include "GraphicsContext.h"
 #include "IntRect.h"
-#include "SimpleFontData.h"
 #include "UniscribeController.h"
 #include "WebCoreTextRenderer.h"
 #include <ApplicationServices/ApplicationServices.h>
@@ -127,8 +127,8 @@ static CGPathRef createPathForGlyph(HDC hdc, Glyph glyph)
     return path;
 }
 
-void Font::drawGlyphs(GraphicsContext* graphicsContext, const SimpleFontData* font, const GlyphBuffer& glyphBuffer,
-                      int from, int numGlyphs, const FloatPoint& point) const
+void FontCascade::drawGlyphs(GraphicsContext* graphicsContext, const Font* font, const GlyphBuffer& glyphBuffer,
+    int from, int numGlyphs, const FloatPoint& point) const
 {
     CGContextRef cgContext = graphicsContext->platformContext();
     bool shouldUseFontSmoothing = WebCoreShouldUseFontSmoothing();

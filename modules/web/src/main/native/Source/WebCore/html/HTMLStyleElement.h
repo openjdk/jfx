@@ -36,7 +36,7 @@ typedef EventSender<HTMLStyleElement> StyleEventSender;
 
 class HTMLStyleElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLStyleElement> create(const QualifiedName&, Document&, bool createdByParser);
+    static Ref<HTMLStyleElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLStyleElement();
 
     CSSStyleSheet* sheet() const { return m_styleSheetOwner.sheet(); }
@@ -58,7 +58,7 @@ private:
 
     virtual void finishParsingChildren() override;
 
-    virtual bool isLoading() const { return m_styleSheetOwner.isLoading(); }
+    bool isLoading() const { return m_styleSheetOwner.isLoading(); }
     virtual bool sheetLoaded() override { return m_styleSheetOwner.sheetLoaded(document()); }
     virtual void notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred) override;
     virtual void startLoadingDynamicSheet() override { m_styleSheetOwner.startLoadingDynamicSheet(document()); }
@@ -69,8 +69,6 @@ private:
     bool m_firedLoad;
     bool m_loadedSheet;
 };
-
-NODE_TYPE_CASTS(HTMLStyleElement)
 
 } //namespace
 

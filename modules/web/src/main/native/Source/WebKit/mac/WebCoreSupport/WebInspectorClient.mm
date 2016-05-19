@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,7 +40,7 @@
 #import "WebPolicyDelegate.h"
 #import "WebQuotaManager.h"
 #import "WebSecurityOriginPrivate.h"
-#import "WebUIDelegate.h"
+#import "WebUIDelegatePrivate.h"
 #import "WebViewInternal.h"
 #import <algorithm>
 #import <bindings/ScriptValue.h>
@@ -51,55 +51,22 @@
 #import <WebCore/Page.h>
 #import <WebCore/ScriptController.h>
 #import <WebCore/SoftLinking.h>
-#import <WebKit/DOMExtensions.h>
+#import <WebKitLegacy/DOMExtensions.h>
 #import <WebKitSystemInterface.h>
 #import <wtf/text/Base64.h>
 
 SOFT_LINK_STAGED_FRAMEWORK(WebInspectorUI, PrivateFrameworks, A)
 
-// The margin from the top and right of the dock button (same as the full screen button).
-static const CGFloat dockButtonMargin = 3;
-
 using namespace WebCore;
 
-@interface NSWindow (AppKitDetails)
-- (NSCursor *)_cursorForResizeDirection:(NSInteger)direction;
-- (NSRect)_customTitleFrame;
-@end
+static const CGFloat minimumWindowWidth = 500;
+static const CGFloat minimumWindowHeight = 400;
+static const CGFloat initialWindowWidth = 1000;
+static const CGFloat initialWindowHeight = 650;
 
-@interface WebInspectorWindow : NSWindow {
-@public
-    RetainPtr<NSButton> _dockButton;
-}
-@end
-
-@implementation WebInspectorWindow
-
-- (NSCursor *)_cursorForResizeDirection:(NSInteger)direction
-{
-    // Don't show a resize cursor for the northeast (top right) direction if the dock button is visible.
-    // This matches what happens when the full screen button is visible.
-    if (direction == 1 && ![_dockButton isHidden])
-        return nil;
-    return [super _cursorForResizeDirection:direction];
-}
-
-- (NSRect)_customTitleFrame
-{
-    // Adjust the title frame if needed to prevent it from intersecting the dock button.
-    NSRect titleFrame = [super _customTitleFrame];
-    NSRect dockButtonFrame = _dockButton.get().frame;
-    if (NSMaxX(titleFrame) > NSMinX(dockButtonFrame) - dockButtonMargin)
-        titleFrame.size.width -= (NSMaxX(titleFrame) - NSMinX(dockButtonFrame)) + dockButtonMargin;
-    return titleFrame;
-}
-
-@end
-
-@interface WebInspectorWindowController : NSWindowController <NSWindowDelegate> {
+@interface WebInspectorWindowController : NSWindowController <NSWindowDelegate, WebPolicyDelegate, WebUIDelegate> {
 @private
     RetainPtr<WebView> _inspectedWebView;
-    RetainPtr<NSButton> _dockButton;
     WebView *_webView;
     WebInspectorFrontendClient* _frontendClient;
     WebInspectorClient* _inspectorClient;
@@ -108,8 +75,9 @@ using namespace WebCore;
     BOOL _visible;
     BOOL _destroyingInspectorView;
 }
-- (id)initWithInspectedWebView:(WebView *)webView;
+- (id)initWithInspectedWebView:(WebView *)webView isUnderTest:(BOOL)isUnderTest;
 - (NSString *)inspectorPagePath;
+- (NSString *)inspectorTestPagePath;
 - (WebView *)webView;
 - (void)attach;
 - (void)detach;
@@ -128,8 +96,7 @@ using namespace WebCore;
 WebInspectorClient::WebInspectorClient(WebView *webView)
     : m_webView(webView)
     , m_highlighter(adoptNS([[WebNodeHighlighter alloc] initWithInspectedWebView:webView]))
-    , m_frontendPage(0)
-    , m_frontendClient(0)
+    , m_frontendPage(nullptr)
 {
 }
 
@@ -141,15 +108,17 @@ void WebInspectorClient::inspectorDestroyed()
 
 InspectorFrontendChannel* WebInspectorClient::openInspectorFrontend(InspectorController* inspectorController)
 {
-    RetainPtr<WebInspectorWindowController> windowController = adoptNS([[WebInspectorWindowController alloc] initWithInspectedWebView:m_webView]);
+    RetainPtr<WebInspectorWindowController> windowController = adoptNS([[WebInspectorWindowController alloc] initWithInspectedWebView:m_webView isUnderTest:inspectorController->isUnderTest()]);
     [windowController.get() setInspectorClient:this];
 
     m_frontendPage = core([windowController.get() webView]);
-    auto frontendClient = std::make_unique<WebInspectorFrontendClient>(m_webView, windowController.get(), inspectorController, m_frontendPage, createFrontendSettings());
-    m_frontendClient = frontendClient.get();
-    RetainPtr<WebInspectorFrontend> webInspectorFrontend = adoptNS([[WebInspectorFrontend alloc] initWithFrontendClient:frontendClient.get()]);
+    m_frontendClient = std::make_unique<WebInspectorFrontendClient>(m_webView, windowController.get(), inspectorController, m_frontendPage, createFrontendSettings());
+
+    RetainPtr<WebInspectorFrontend> webInspectorFrontend = adoptNS([[WebInspectorFrontend alloc] initWithFrontendClient:m_frontendClient.get()]);
     [[m_webView inspector] setFrontend:webInspectorFrontend.get()];
-    m_frontendPage->inspectorController().setInspectorFrontendClient(std::move(frontendClient));
+
+    m_frontendPage->inspectorController().setInspectorFrontendClient(m_frontendClient.get());
+
     return this;
 }
 
@@ -167,7 +136,18 @@ void WebInspectorClient::bringFrontendToFront()
 void WebInspectorClient::didResizeMainFrame(Frame*)
 {
     if (m_frontendClient)
-        m_frontendClient->attachAvailabilityChanged(m_frontendClient->canAttachWindow() && !inspectorAttachDisabled());
+        m_frontendClient->attachAvailabilityChanged(canAttach());
+}
+
+void WebInspectorClient::windowFullScreenDidChange()
+{
+    if (m_frontendClient)
+        m_frontendClient->attachAvailabilityChanged(canAttach());
+}
+
+bool WebInspectorClient::canAttach()
+{
+    return m_frontendClient->canAttach() && !inspectorAttachDisabled();
 }
 
 void WebInspectorClient::highlight()
@@ -178,16 +158,6 @@ void WebInspectorClient::highlight()
 void WebInspectorClient::hideHighlight()
 {
     [m_highlighter.get() hideHighlight];
-}
-
-void WebInspectorClient::indicate()
-{
-    [m_webView setIndicatingForRemoteInspector:YES];
-}
-
-void WebInspectorClient::hideIndication()
-{
-    [m_webView setIndicatingForRemoteInspector:NO];
 }
 
 void WebInspectorClient::didSetSearchingForNode(bool enabled)
@@ -204,13 +174,13 @@ void WebInspectorClient::didSetSearchingForNode(bool enabled)
 
 void WebInspectorClient::releaseFrontend()
 {
-    m_frontendClient = 0;
-    m_frontendPage = 0;
+    m_frontendClient = nullptr;
+    m_frontendPage = nullptr;
 }
 
 
 WebInspectorFrontendClient::WebInspectorFrontendClient(WebView* inspectedWebView, WebInspectorWindowController* windowController, InspectorController* inspectorController, Page* frontendPage, std::unique_ptr<Settings> settings)
-    : InspectorFrontendClientLocal(inspectorController,  frontendPage, std::move(settings))
+    : InspectorFrontendClientLocal(inspectorController,  frontendPage, WTF::move(settings))
     , m_inspectedWebView(inspectedWebView)
     , m_windowController(windowController)
 {
@@ -221,6 +191,14 @@ void WebInspectorFrontendClient::attachAvailabilityChanged(bool available)
 {
     setDockingUnavailable(!available);
     [m_windowController.get() setDockingUnavailable:!available];
+}
+
+bool WebInspectorFrontendClient::canAttach()
+{
+    if ([[m_windowController window] styleMask] & NSFullScreenWindowMask)
+        return false;
+
+    return canAttachWindow();
 }
 
 void WebInspectorFrontendClient::frontendLoaded()
@@ -239,7 +217,14 @@ void WebInspectorFrontendClient::frontendLoaded()
                               @selector(webView:didClearInspectorWindowObject:forFrame:), [frame windowObject], frame);
 
     bool attached = [m_windowController.get() attached];
-    setAttachedWindow(attached ? DOCKED_TO_BOTTOM : UNDOCKED);
+    setAttachedWindow(attached ? DockSide::Bottom : DockSide::Undocked);
+}
+
+void WebInspectorFrontendClient::startWindowDrag()
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
+    [[m_windowController window] performWindowDragWithEvent:[NSApp currentEvent]];
+#endif
 }
 
 String WebInspectorFrontendClient::localizedStringsURL()
@@ -300,7 +285,9 @@ void WebInspectorFrontendClient::setAttachedWindowWidth(unsigned)
 
 void WebInspectorFrontendClient::setToolbarHeight(unsigned height)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1090
     [[m_windowController window] setContentBorderThickness:height forEdge:NSMaxYEdge];
+#endif
 }
 
 void WebInspectorFrontendClient::inspectedURLChanged(const String& newURL)
@@ -360,12 +347,18 @@ void WebInspectorFrontendClient::save(const String& suggestedURL, const String& 
     panel.nameFieldStringValue = platformURL.lastPathComponent;
     panel.directoryURL = [platformURL URLByDeletingLastPathComponent];
 
-    [panel beginSheetModalForWindow:[[m_windowController webView] window] completionHandler:^(NSInteger result) {
+    auto completionHandler = ^(NSInteger result) {
         if (result == NSFileHandlingPanelCancelButton)
             return;
         ASSERT(result == NSFileHandlingPanelOKButton);
         saveToURL(panel.URL);
-    }];
+    };
+
+    NSWindow *window = [[m_windowController webView] window];
+    if (window)
+        [panel beginSheetModalForWindow:window completionHandler:completionHandler];
+    else
+        completionHandler([panel runModal]);
 }
 
 void WebInspectorFrontendClient::append(const String& suggestedURL, const String& content)
@@ -397,7 +390,6 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
     WebPreferences *preferences = [[WebPreferences alloc] init];
     [preferences setAllowsAnimatedImages:YES];
-    [preferences setApplicationChromeModeEnabled:YES];
     [preferences setAuthorAndUserStylesEnabled:YES];
     [preferences setAutosaves:NO];
     [preferences setDefaultFixedFontSize:11];
@@ -413,27 +405,32 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
     _webView = [[WebView alloc] init];
     [_webView setPreferences:preferences];
-    [_webView setDrawsBackground:NO];
     [_webView setProhibitsMainFrameScrolling:YES];
     [_webView setUIDelegate:self];
     [_webView setPolicyDelegate:self];
 
-    [preferences release];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1090
+    [_webView setDrawsBackground:NO];
+#endif
 
-    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:[NSURL fileURLWithPath:[self inspectorPagePath]]];
-    [[_webView mainFrame] loadRequest:request];
-    [request release];
+    [preferences release];
 
     [self setWindowFrameAutosaveName:@"Web Inspector 2"];
     return self;
 }
 
-- (id)initWithInspectedWebView:(WebView *)webView
+- (id)initWithInspectedWebView:(WebView *)webView isUnderTest:(BOOL)isUnderTest
 {
     if (!(self = [self init]))
         return nil;
 
     _inspectedWebView = webView;
+
+    NSString *pagePath = isUnderTest ? [self inspectorTestPagePath] : [self inspectorPagePath];
+    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:[NSURL fileURLWithPath: pagePath]];
+    [[_webView mainFrame] loadRequest:request];
+    [request release];
+
     return self;
 }
 
@@ -455,6 +452,20 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     return path;
 }
 
+- (NSString *)inspectorTestPagePath
+{
+    // Call the soft link framework function to dlopen it, then [NSBundle bundleWithIdentifier:] will work.
+    WebInspectorUILibrary();
+
+    NSString *path = [[NSBundle bundleWithIdentifier:@"com.apple.WebInspectorUI"] pathForResource:@"Test" ofType:@"html"];
+
+    // We might not have a Test.html in Production builds.
+    if (!path)
+        return nil;
+
+    return path;
+}
+
 // MARK: -
 
 - (WebView *)webView
@@ -464,56 +475,34 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
 - (NSWindow *)window
 {
-    WebInspectorWindow *window = (WebInspectorWindow *)[super window];
+    NSWindow *window = [super window];
     if (window)
         return window;
 
-    NSUInteger styleMask = (NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask | NSTexturedBackgroundWindowMask);
-    window = [[WebInspectorWindow alloc] initWithContentRect:NSMakeRect(60.0, 200.0, 750.0, 650.0) styleMask:styleMask backing:NSBackingStoreBuffered defer:NO];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask | NSFullSizeContentViewWindowMask;
+#else
+    NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask | NSTexturedBackgroundWindowMask;
+#endif
+
+    window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, initialWindowWidth, initialWindowHeight) styleMask:styleMask backing:NSBackingStoreBuffered defer:NO];
     [window setDelegate:self];
-    [window setMinSize:NSMakeSize(400.0, 400.0)];
+    [window setMinSize:NSMakeSize(minimumWindowWidth, minimumWindowHeight)];
+    [window setCollectionBehavior:([window collectionBehavior] | NSWindowCollectionBehaviorFullScreenPrimary)];
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
+    CGFloat approximatelyHalfScreenSize = (window.screen.frame.size.width / 2) - 4;
+    CGFloat minimumFullScreenWidth = std::max<CGFloat>(636, approximatelyHalfScreenSize);
+    [window setMinFullScreenContentSize:NSMakeSize(minimumFullScreenWidth, minimumWindowHeight)];
+    [window setCollectionBehavior:([window collectionBehavior] | NSWindowCollectionBehaviorFullScreenAllowsTiling)];
+#endif
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    window.titlebarAppearsTransparent = YES;
+#else
     [window setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
     [window setContentBorderThickness:55. forEdge:NSMaxYEdge];
-    WKNSWindowMakeBottomCornersSquare(window);
-
-    // Create a full screen button so we can turn it into a dock button.
-    _dockButton = [NSWindow standardWindowButton:NSWindowFullScreenButton forStyleMask:styleMask];
-    _dockButton.get().target = self;
-    _dockButton.get().action = @selector(attachWindow:);
-
-    // Store the dock button on the window too so it can check its visibility.
-    window->_dockButton = _dockButton;
-
-    // Get the dock image and make it a template so the button cell effects will apply.
-    NSImage *dockImage = [[NSBundle bundleForClass:[self class]] imageForResource:@"Dock"];
-    [dockImage setTemplate:YES];
-
-    // Set the dock image on the button cell.
-    NSCell *dockButtonCell = _dockButton.get().cell;
-    dockButtonCell.image = dockImage;
-
-    // Get the frame view, the superview of the content view, and its frame.
-    // This will be the superview of the dock button too.
-    NSView *contentView = window.contentView;
-    NSView *frameView = contentView.superview;
-    NSRect frameViewBounds = frameView.bounds;
-    NSSize dockButtonSize = _dockButton.get().frame.size;
-
-    ASSERT(!frameView.isFlipped);
-
-    // Position the dock button in the corner to match where the full screen button is normally.
-    NSPoint dockButtonOrigin;
-    dockButtonOrigin.x = NSMaxX(frameViewBounds) - dockButtonSize.width - dockButtonMargin;
-    dockButtonOrigin.y = NSMaxY(frameViewBounds) - dockButtonSize.height - dockButtonMargin;
-    _dockButton.get().frameOrigin = dockButtonOrigin;
-
-    // Set the autoresizing mask to keep the dock button pinned to the top right corner.
-    _dockButton.get().autoresizingMask = NSViewMinXMargin | NSViewMinYMargin;
-
-    [frameView addSubview:_dockButton.get()];
-
-    // Hide the dock button if we can't attach.
-    _dockButton.get().hidden = !_frontendClient->canAttachWindow() || _inspectorClient->inspectorAttachDisabled();
+#endif
 
     [self setWindow:window];
     [window release];
@@ -536,6 +525,16 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     [self destroyInspectorView:true];
 
     return YES;
+}
+
+- (void)windowDidEnterFullScreen:(NSNotification *)notification
+{
+    _inspectorClient->windowFullScreenDidChange();
+}
+
+- (void)windowDidExitFullScreen:(NSNotification *)notification
+{
+    _inspectorClient->windowFullScreenDidChange();
 }
 
 - (void)close
@@ -569,7 +568,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
 - (IBAction)attachWindow:(id)sender
 {
-    _frontendClient->attachWindow(InspectorFrontendClient::DOCKED_TO_BOTTOM);
+    _frontendClient->attachWindow(InspectorFrontendClient::DockSide::Bottom);
 }
 
 - (IBAction)showWindow:(id)sender
@@ -582,7 +581,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
     _visible = YES;
 
-    _shouldAttach = _inspectorClient->inspectorStartsAttached() && _frontendClient->canAttachWindow() && !_inspectorClient->inspectorAttachDisabled();
+    _shouldAttach = _inspectorClient->inspectorStartsAttached() && _frontendClient->canAttach();
 
     if (_shouldAttach) {
         WebFrameView *frameView = [[_inspectedWebView.get() mainFrame] frameView];
@@ -616,7 +615,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
         return;
 
     _inspectorClient->setInspectorStartsAttached(true);
-    _frontendClient->setAttachedWindow(InspectorFrontendClient::DOCKED_TO_BOTTOM);
+    _frontendClient->setAttachedWindow(InspectorFrontendClient::DockSide::Bottom);
 
     [self close];
     [self showWindow:nil];
@@ -628,7 +627,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
         return;
 
     _inspectorClient->setInspectorStartsAttached(false);
-    _frontendClient->setAttachedWindow(InspectorFrontendClient::UNDOCKED);
+    _frontendClient->setAttachedWindow(InspectorFrontendClient::DockSide::Undocked);
 
     [self close];
     [self showWindow:nil];
@@ -674,11 +673,13 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
 - (void)setDockingUnavailable:(BOOL)unavailable
 {
-    _dockButton.get().hidden = unavailable;
+    // Do nothing.
 }
 
 - (void)destroyInspectorView:(bool)notifyInspectorController
 {
+    RetainPtr<WebInspectorWindowController> protect(self);
+
     [[_inspectedWebView.get() inspector] releaseFrontend];
     _inspectorClient->releaseFrontend();
 
@@ -693,10 +694,9 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
     if (notifyInspectorController) {
         if (Page* inspectedPage = [_inspectedWebView.get() page])
-            inspectedPage->inspectorController().disconnectFrontend(Inspector::InspectorDisconnectReason::InspectorDestroyed);
+            inspectedPage->inspectorController().disconnectFrontend(Inspector::DisconnectReason::InspectorDestroyed);
     }
 
-    RetainPtr<WebInspectorWindowController> protect(self);
     [_webView close];
 }
 
@@ -710,7 +710,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     panel.canChooseFiles = YES;
     panel.allowsMultipleSelection = allowMultipleFiles;
 
-    [panel beginSheetModalForWindow:_webView.window completionHandler:^(NSInteger result) {
+    auto completionHandler = ^(NSInteger result) {
         if (result == NSFileHandlingPanelCancelButton) {
             [resultListener cancel];
             return;
@@ -719,17 +719,44 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
         NSArray *URLs = panel.URLs;
         NSMutableArray *filenames = [NSMutableArray arrayWithCapacity:URLs.count];
-        for (NSURL *URL in URLs) {
+        for (NSURL *URL in URLs)
             [filenames addObject:URL.path];
-        }
+
         [resultListener chooseFilenames:filenames];
-    }];
+    };
+
+    if (_webView.window)
+        [panel beginSheetModalForWindow:_webView.window completionHandler:completionHandler];
+    else
+        completionHandler([panel runModal]);
 }
 
 - (void)webView:(WebView *)sender frame:(WebFrame *)frame exceededDatabaseQuotaForSecurityOrigin:(WebSecurityOrigin *)origin database:(NSString *)databaseIdentifier
 {
     id <WebQuotaManager> databaseQuotaManager = origin.databaseQuotaManager;
     databaseQuotaManager.quota = std::max<unsigned long long>(5 * 1024 * 1024, databaseQuotaManager.usage * 1.25);
+}
+
+- (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems
+{
+    NSMutableArray *menuItems = [[NSMutableArray alloc] init];
+
+    for (NSMenuItem *item in defaultMenuItems) {
+        switch (item.tag) {
+        case WebMenuItemTagOpenLinkInNewWindow:
+        case WebMenuItemTagOpenImageInNewWindow:
+        case WebMenuItemTagOpenFrameInNewWindow:
+        case WebMenuItemTagOpenMediaInNewWindow:
+        case WebMenuItemTagDownloadLinkToDisk:
+        case WebMenuItemTagDownloadImageToDisk:
+            break;
+        default:
+            [menuItems addObject:item];
+            break;
+        }
+    }
+
+    return [menuItems autorelease];
 }
 
 // MARK: -
@@ -745,6 +772,13 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
 
     // Allow loading of the main inspector file.
     if ([[request URL] isFileURL] && [[[request URL] path] isEqualToString:[self inspectorPagePath]]) {
+        [listener use];
+        return;
+    }
+
+    // Allow loading of the test inspector file.
+    NSString *testPagePath = [self inspectorTestPagePath];
+    if (testPagePath && [[request URL] isFileURL] && [[[request URL] path] isEqualToString:testPagePath]) {
         [listener use];
         return;
     }

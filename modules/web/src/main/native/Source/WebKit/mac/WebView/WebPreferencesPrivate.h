@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2007, 2011, 2012 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005, 2007, 2011, 2012 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WebPreferences.h>
+#import <WebKitLegacy/WebPreferences.h>
 
 #if !TARGET_OS_IPHONE
 #import <Quartz/Quartz.h>
@@ -52,6 +52,10 @@ typedef enum {
     WebBlockAllStorage
 } WebStorageBlockingPolicy;
 
+typedef enum {
+    WebKitJavaScriptRuntimeFlagsAllEnabled = 0
+} WebKitJavaScriptRuntimeFlags;
+
 extern NSString *WebPreferencesChangedNotification;
 extern NSString *WebPreferencesRemovedNotification;
 extern NSString *WebPreferencesChangedInternalNotification;
@@ -67,8 +71,8 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)developerExtrasEnabled;
 - (void)setDeveloperExtrasEnabled:(BOOL)flag;
 
-- (BOOL)javaScriptExperimentsEnabled;
-- (void)setJavaScriptExperimentsEnabled:(BOOL)flag;
+- (WebKitJavaScriptRuntimeFlags)javaScriptRuntimeFlags;
+- (void)setJavaScriptRuntimeFlags:(WebKitJavaScriptRuntimeFlags)flags;
 
 - (BOOL)authorAndUserStylesEnabled;
 - (void)setAuthorAndUserStylesEnabled:(BOOL)flag;
@@ -101,6 +105,9 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 
 - (BOOL)automaticallyDetectsCacheModel;
 - (void)setAutomaticallyDetectsCacheModel:(BOOL)automaticallyDetectsCacheModel;
+
+- (BOOL)domTimersThrottlingEnabled;
+- (void)setDOMTimersThrottlingEnabled:(BOOL)domTimersThrottlingEnabled;
 
 - (BOOL)webArchiveDebugModeEnabled;
 - (void)setWebArchiveDebugModeEnabled:(BOOL)webArchiveDebugModeEnabled;
@@ -205,11 +212,11 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)cssCompositingEnabled;
 - (void)setCSSCompositingEnabled:(BOOL)enabled;
 
-- (BOOL)cssGridLayoutEnabled;
-- (void)setCSSGridLayoutEnabled:(BOOL)enabled;
-
 - (BOOL)showDebugBorders;
 - (void)setShowDebugBorders:(BOOL)show;
+
+- (BOOL)simpleLineLayoutDebugBordersEnabled;
+- (void)setSimpleLineLayoutDebugBordersEnabled:(BOOL)enabled;
 
 - (BOOL)showRepaintCounter;
 - (void)setShowRepaintCounter:(BOOL)show;
@@ -217,11 +224,11 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)webAudioEnabled;
 - (void)setWebAudioEnabled:(BOOL)enabled;
 
+- (BOOL)subpixelCSSOMElementMetricsEnabled;
+- (void)setSubpixelCSSOMElementMetricsEnabled:(BOOL)enabled;
+
 - (BOOL)webGLEnabled;
 - (void)setWebGLEnabled:(BOOL)enabled;
-
-- (BOOL)multithreadedWebGLEnabled;
-- (void)setMultithreadedWebGLEnabled:(BOOL)enabled;
 
 - (BOOL)forceSoftwareWebGLRendering;
 - (void)setForceSoftwareWebGLRendering:(BOOL)forced;
@@ -240,6 +247,15 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 
 - (void)setMediaPlaybackAllowsInline:(BOOL)flag;
 - (BOOL)mediaPlaybackAllowsInline;
+
+- (void)setMediaControlsScaleWithPageZoom:(BOOL)flag;
+- (BOOL)mediaControlsScaleWithPageZoom;
+
+- (void)setAllowsAlternateFullscreen:(BOOL)flag;
+- (BOOL)allowsAlternateFullscreen;
+
+- (void)setAllowsPictureInPictureMediaPlayback:(BOOL)flag;
+- (BOOL)allowsPictureInPictureMediaPlayback;
 
 - (NSString *)pictographFontFamily;
 - (void)setPictographFontFamily:(NSString *)family;
@@ -271,31 +287,22 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (void)_setMinimumZoomFontSize:(float)size;
 - (float)_minimumZoomFontSize;
 
-- (BOOL)diskImageCacheEnabled;
+// Deprecated. Has no effect.
 - (void)setDiskImageCacheEnabled:(BOOL)enabled;
-
-- (unsigned)diskImageCacheMinimumImageSize;
-- (void)setDiskImageCacheMinimumImageSize:(unsigned)minimumSize;
-
-- (unsigned)diskImageCacheMaximumCacheSize;
-- (void)setDiskImageCacheMaximumCacheSize:(unsigned)maximumSize;
-
-- (NSString *)_diskImageCacheSavedCacheDirectory;
-- (void)_setDiskImageCacheSavedCacheDirectory:(NSString *)path;
 
 - (void)setMediaPlaybackAllowsAirPlay:(BOOL)flag;
 - (BOOL)mediaPlaybackAllowsAirPlay;
 #endif
 
+- (BOOL)isInheritURIQueryComponentEnabled;
+- (void)setEnableInheritURIQueryComponent:(BOOL)flag;
+
 // Other private methods
 #if TARGET_OS_IPHONE
-- (size_t)_maximumImageSize;
 - (BOOL)_standalone;
 - (void)_setStandalone:(BOOL)flag;
 - (void)_setTelephoneNumberParsingEnabled:(BOOL)flag;
 - (BOOL)_telephoneNumberParsingEnabled;
-- (void)_setAlwaysUseBaselineOfPrimaryFont:(BOOL)flag;
-- (BOOL)_alwaysUseBaselineOfPrimaryFont;
 - (void)_setAllowMultiElementImplicitFormSubmission:(BOOL)flag;
 - (BOOL)_allowMultiElementImplicitFormSubmission;
 - (void)_setAlwaysRequestGeolocationPermission:(BOOL)flag;
@@ -306,14 +313,6 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (int)_layoutInterval;
 - (void)_setMaxParseDuration:(float)d;
 - (float)_maxParseDuration;
-- (void)_setPageCacheSize:(int)size;
-- (int)_pageCacheSize;
-- (void)_setObjectCacheSize:(int)size;
-- (int)_objectCacheSize;
-- (void)_setNSURLMemoryCacheSize:(int)size;
-- (int)_NSURLMemoryCacheSize;
-- (void)_setNSURLDiskCacheSize:(int)size;
-- (int)_NSURLDiskCacheSize;
 - (void)_setInterpolationQuality:(int)quality;
 - (int)_interpolationQuality;
 - (BOOL)_allowPasswordEcho;
@@ -332,6 +331,7 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 // For DumpRenderTree use only.
 + (void)_switchNetworkLoaderToNewTestingSession;
 + (void)_setCurrentNetworkLoaderSessionCookieAcceptPolicy:(NSHTTPCookieAcceptPolicy)cookieAcceptPolicy;
++ (void)_clearNetworkLoaderSession;
 
 + (void)setWebKitLinkTimeVersion:(int)version;
 
@@ -361,17 +361,13 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (void)setQTKitEnabled:(BOOL)flag;
 - (BOOL)isQTKitEnabled;
 
-// VideoPluginProxy support is dependent on WebCore/WebKit being
-// compiled with ENABLE_PLUGIN_PROXY_FOR_VIDEO.
+// Deprecated, has no effect.
 - (void)setVideoPluginProxyEnabled:(BOOL)flag;
 - (BOOL)isVideoPluginProxyEnabled;
 
 // WebSocket support depends on ENABLE(WEB_SOCKETS).
 - (void)setHixie76WebSocketProtocolEnabled:(BOOL)flag;
 - (BOOL)isHixie76WebSocketProtocolEnabled;
-
-- (void)setRegionBasedColumnsEnabled:(BOOL)flag;
-- (BOOL)regionBasedColumnsEnabled;
 
 #if TARGET_OS_IPHONE
 - (void)_invalidateCachedPreferences;
@@ -408,9 +404,6 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)diagnosticLoggingEnabled;
 - (void)setDiagnosticLoggingEnabled:(BOOL)enabled;
 
-- (BOOL)screenFontSubstitutionEnabled;
-- (void)setScreenFontSubstitutionEnabled:(BOOL)enabled;
-
 - (void)setStorageBlockingPolicy:(WebStorageBlockingPolicy)storageBlockingPolicy;
 - (WebStorageBlockingPolicy)storageBlockingPolicy;
 
@@ -434,5 +427,32 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 
 - (void)setShouldConvertPositionStyleOnCopy:(BOOL)flag;
 - (BOOL)shouldConvertPositionStyleOnCopy;
+
+- (void)setImageControlsEnabled:(BOOL)flag;
+- (BOOL)imageControlsEnabled;
+
+- (void)setServiceControlsEnabled:(BOOL)flag;
+- (BOOL)serviceControlsEnabled;
+
+- (void)setGamepadsEnabled:(BOOL)flag;
+- (BOOL)gamepadsEnabled;
+
+- (void)setMediaKeysStorageDirectory:(NSString *)directory;
+- (NSString *)mediaKeysStorageDirectory;
+
+- (void)setAntialiasedFontDilationEnabled:(BOOL)flag;
+- (BOOL)antialiasedFontDilationEnabled;
+
+- (void)setMetaRefreshEnabled:(BOOL)flag;
+- (BOOL)metaRefreshEnabled;
+
+- (void)setHTTPEquivEnabled:(BOOL)flag;
+- (BOOL)httpEquivEnabled;
+
+@property (nonatomic) BOOL javaScriptMarkupEnabled;
+
+#if TARGET_OS_IPHONE && __IPHONE_OS_VERSION_MIN_REQUIRED < 80000
+- (void)_setAllowCompositingLayerVisualDegradation:(BOOL)flag;
+#endif
 
 @end

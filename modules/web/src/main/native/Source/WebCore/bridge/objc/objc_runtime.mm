@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,6 +29,7 @@
 #include "JSDOMBinding.h"
 #include "ObjCRuntimeObject.h"
 #include "WebScriptObject.h"
+#include "WebScriptObjectProtocol.h"
 #include "objc_instance.h"
 #include "runtime_array.h"
 #include "runtime_object.h"
@@ -70,6 +71,11 @@ int ObjcMethod::numParameters() const
 NSMethodSignature* ObjcMethod::getMethodSignature() const
 {
     return [_objcClass instanceMethodSignatureForSelector:_selector];
+}
+
+bool ObjcMethod::isFallbackMethod() const
+{
+    return _selector == @selector(invokeUndefinedMethodFromWebScript:withArguments:);
 }
 
 // ---------------------- ObjcField ----------------------
@@ -188,7 +194,7 @@ unsigned int ObjcArray::getLength() const
     return [_array.get() count];
 }
 
-const ClassInfo ObjcFallbackObjectImp::s_info = { "ObjcFallbackObject", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(ObjcFallbackObjectImp) };
+const ClassInfo ObjcFallbackObjectImp::s_info = { "ObjcFallbackObject", &Base::s_info, 0, CREATE_METHOD_TABLE(ObjcFallbackObjectImp) };
 
 ObjcFallbackObjectImp::ObjcFallbackObjectImp(JSGlobalObject* globalObject, Structure* structure, ObjcInstance* i, const String& propertyName)
     : JSDestructibleObject(globalObject->vm(), structure)
@@ -221,7 +227,7 @@ void ObjcFallbackObjectImp::put(JSCell*, ExecState*, PropertyName, JSValue, PutP
 
 static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     if (!thisValue.inherits(ObjCRuntimeObject::info()))
         return throwVMTypeError(exec);
 
@@ -239,7 +245,7 @@ static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(ExecState* exec)
 
     if ([targetObject respondsToSelector:@selector(invokeUndefinedMethodFromWebScript:withArguments:)]){
         ObjcClass* objcClass = static_cast<ObjcClass*>(objcInstance->getClass());
-        OwnPtr<ObjcMethod> fallbackMethod(adoptPtr(new ObjcMethod(objcClass->isa(), @selector(invokeUndefinedMethodFromWebScript:withArguments:))));
+        std::unique_ptr<ObjcMethod> fallbackMethod(std::make_unique<ObjcMethod>(objcClass->isa(), @selector(invokeUndefinedMethodFromWebScript:withArguments:)));
         const String& nameIdentifier = static_cast<ObjcFallbackObjectImp*>(exec->callee())->propertyName();
         fallbackMethod->setJavaScriptName(nameIdentifier.createCFString().get());
         result = objcInstance->invokeObjcMethod(exec, fallbackMethod.get());
@@ -268,7 +274,7 @@ bool ObjcFallbackObjectImp::deleteProperty(JSCell*, ExecState*, PropertyName)
 JSValue ObjcFallbackObjectImp::defaultValue(const JSObject* object, ExecState* exec, PreferredPrimitiveType)
 {
     const ObjcFallbackObjectImp* thisObject = jsCast<const ObjcFallbackObjectImp*>(object);
-    return thisObject->_instance->getValueOfUndefinedField(exec, Identifier(exec, thisObject->m_item));
+    return thisObject->_instance->getValueOfUndefinedField(exec, Identifier::fromString(exec, thisObject->m_item));
 }
 
 bool ObjcFallbackObjectImp::toBoolean(ExecState *) const

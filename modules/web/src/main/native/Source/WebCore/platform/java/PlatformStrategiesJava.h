@@ -6,16 +6,22 @@
 #define PlatformStrategiesJava_h
 
 #include "CookiesStrategy.h"
-#include "DatabaseStrategy.h"
 #include "LoaderStrategy.h"
 #include "PasteboardStrategy.h"
 #include "PlatformStrategies.h"
 #include "PluginStrategy.h"
-#include "SharedWorkerStrategy.h"
-#include "StorageStrategy.h"
-#include "VisitedLinkStrategy.h"
+// #include "SharedWorkerStrategy.h"
+// #include "StorageStrategy.h"
+// #include "VisitedLinkStrategy.h"
 
-class PlatformStrategiesJava : public WebCore::PlatformStrategies, private WebCore::CookiesStrategy, private WebCore::DatabaseStrategy, private WebCore::LoaderStrategy, private WebCore::PluginStrategy, private WebCore::SharedWorkerStrategy, private WebCore::StorageStrategy, private WebCore::VisitedLinkStrategy {
+class PlatformStrategiesJava : public WebCore::PlatformStrategies,
+    private WebCore::CookiesStrategy,
+    private WebCore::LoaderStrategy,
+    private WebCore::PluginStrategy
+ {
+    // ,private WebCore::SharedWorkerStrategy
+    // ,private WebCore::StorageStrategy
+    // ,private WebCore::VisitedLinkStrategy
 public:
     static void initialize();
 
@@ -24,13 +30,12 @@ private:
 
     // WebCore::PlatformStrategies
     virtual WebCore::CookiesStrategy* createCookiesStrategy();
-    virtual WebCore::DatabaseStrategy* createDatabaseStrategy();
     virtual WebCore::LoaderStrategy* createLoaderStrategy();
     virtual WebCore::PasteboardStrategy* createPasteboardStrategy();
     virtual WebCore::PluginStrategy* createPluginStrategy();
-    virtual WebCore::SharedWorkerStrategy* createSharedWorkerStrategy();
-    virtual WebCore::StorageStrategy* createStorageStrategy();
-    virtual WebCore::VisitedLinkStrategy* createVisitedLinkStrategy();
+    // virtual WebCore::SharedWorkerStrategy* createSharedWorkerStrategy();
+    // virtual WebCore::StorageStrategy* createStorageStrategy();
+    // virtual WebCore::VisitedLinkStrategy* createVisitedLinkStrategy();
 
     // WebCore::CookiesStrategy
     virtual String cookiesForDOM(const WebCore::NetworkStorageSession&, const WebCore::URL& firstParty, const WebCore::URL&);
@@ -46,10 +51,11 @@ private:
     // WebCore::PluginStrategy
     virtual void refreshPlugins();
     virtual void getPluginInfo(const WebCore::Page*, Vector<WebCore::PluginInfo>&);
+    virtual void getWebVisiblePluginInfo(const WebCore::Page*, Vector<WebCore::PluginInfo>&);
 
-    // WebCore::VisitedLinkStrategy
-    virtual bool isLinkVisited(WebCore::Page*, WebCore::LinkHash, const WebCore::URL& baseURL, const WTF::AtomicString& attributeURL);
-    virtual void addVisitedLink(WebCore::Page*, WebCore::LinkHash);
+    // // WebCore::VisitedLinkStrategy
+    // virtual bool isLinkVisited(WebCore::Page*, WebCore::LinkHash, const WebCore::URL& baseURL, const WTF::AtomicString& attributeURL);
+    // virtual void addVisitedLink(WebCore::Page*, WebCore::LinkHash);
 };
 
 #endif // PlatformStrategiesJava_h

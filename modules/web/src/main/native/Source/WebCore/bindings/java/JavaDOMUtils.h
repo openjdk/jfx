@@ -83,6 +83,11 @@ public:
                     mid = midCtor;
                 }
                 break;
+            case JavaUndefinedException:
+                {
+                    //XXX: handle?
+                }
+                break;
             }
 
             ASSERT(mid);
@@ -103,9 +108,33 @@ public:
 };
 
 template <typename T> class JavaReturn {
-    RefPtr<T> m_returnValue;
     JNIEnv* m_env;
+    RefPtr<T> m_returnValue;
 public:
+    JavaReturn(JNIEnv* env, T* returnValue)
+    : m_env(env)
+    , m_returnValue(returnValue)
+    {}
+
+    // JavaReturn(JNIEnv* env, T& returnValue)
+    // : m_env(env)
+    // // , m_returnValue(*returnValue)
+    // {
+    //    m_returnValue = *returnValue;
+    // }
+
+    // JavaReturn(JNIEnv* env, RefPtr<T>&& returnValue)
+    // : m_env(env)
+    // // , m_returnValue(returnValue)
+    // {
+    //     m_returnValue = WTF::move(returnValue);
+    // }
+
+    JavaReturn(JNIEnv* env, Ref<T> returnValue)
+    : m_env(env)
+    , m_returnValue(returnValue.ptr())
+    {}
+
     JavaReturn(JNIEnv* env, PassRefPtr<T> returnValue)
     : m_env(env)
     , m_returnValue(returnValue)
@@ -121,8 +150,8 @@ public:
 };
 
 template <> class JavaReturn<WTF::String> {
-    WTF::String m_returnValue;
     JNIEnv* m_env;
+    WTF::String m_returnValue;
 public:
     JavaReturn(JNIEnv* env, WTF::String returnValue)
     : m_env(env)

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "XSSAuditorDelegate.h"
 
-#include "Console.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FormData.h"
@@ -52,28 +50,28 @@ XSSAuditorDelegate::XSSAuditorDelegate(Document& document)
     ASSERT(isMainThread());
 }
 
-static inline String buildConsoleError(const XSSInfo& xssInfo, const String& url)
+static inline String buildConsoleError(const XSSInfo& xssInfo)
 {
     StringBuilder message;
-    message.append("The XSS Auditor ");
+    message.appendLiteral("The XSS Auditor ");
     message.append(xssInfo.m_didBlockEntirePage ? "blocked access to" : "refused to execute a script in");
-    message.append(" '");
-    message.append(url);
-    message.append("' because ");
+    message.appendLiteral(" '");
+    message.append(xssInfo.m_originalURL);
+    message.appendLiteral("' because ");
     message.append(xssInfo.m_didBlockEntirePage ? "the source code of a script" : "its source code");
-    message.append(" was found within the request.");
+    message.appendLiteral(" was found within the request.");
 
     if (xssInfo.m_didSendCSPHeader)
-        message.append(" The server sent a 'Content-Security-Policy' header requesting this behavior.");
+        message.appendLiteral(" The server sent a 'Content-Security-Policy' header requesting this behavior.");
     else if (xssInfo.m_didSendXSSProtectionHeader)
-        message.append(" The server sent an 'X-XSS-Protection' header requesting this behavior.");
+        message.appendLiteral(" The server sent an 'X-XSS-Protection' header requesting this behavior.");
     else
-        message.append(" The auditor was enabled as the server sent neither an 'X-XSS-Protection' nor 'Content-Security-Policy' header.");
+        message.appendLiteral(" The auditor was enabled as the server sent neither an 'X-XSS-Protection' nor 'Content-Security-Policy' header.");
 
     return message.toString();
 }
 
-PassRefPtr<FormData> XSSAuditorDelegate::generateViolationReport()
+PassRefPtr<FormData> XSSAuditorDelegate::generateViolationReport(const XSSInfo& xssInfo)
 {
     ASSERT(isMainThread());
 
@@ -84,12 +82,12 @@ PassRefPtr<FormData> XSSAuditorDelegate::generateViolationReport()
             httpBody = formData->flattenToString();
     }
 
-    RefPtr<InspectorObject> reportDetails = InspectorObject::create();
-    reportDetails->setString("request-url", m_document.url().string());
+    Ref<InspectorObject> reportDetails = InspectorObject::create();
+    reportDetails->setString("request-url", xssInfo.m_originalURL);
     reportDetails->setString("request-body", httpBody);
 
-    RefPtr<InspectorObject> reportObject = InspectorObject::create();
-    reportObject->setObject("xss-report", reportDetails.release());
+    Ref<InspectorObject> reportObject = InspectorObject::create();
+    reportObject->setObject("xss-report", WTF::move(reportDetails));
 
     return FormData::create(reportObject->toJSONString().utf8().data());
 }
@@ -98,7 +96,7 @@ void XSSAuditorDelegate::didBlockScript(const XSSInfo& xssInfo)
 {
     ASSERT(isMainThread());
 
-    m_document.addConsoleMessage(MessageSource::JS, MessageLevel::Error, buildConsoleError(xssInfo, m_document.url().string()));
+    m_document.addConsoleMessage(MessageSource::JS, MessageLevel::Error, buildConsoleError(xssInfo));
 
     FrameLoader& frameLoader = m_document.frame()->loader();
     if (xssInfo.m_didBlockEntirePage)
@@ -110,11 +108,11 @@ void XSSAuditorDelegate::didBlockScript(const XSSInfo& xssInfo)
         frameLoader.client().didDetectXSS(m_document.url(), xssInfo.m_didBlockEntirePage);
 
         if (!m_reportURL.isEmpty())
-            PingLoader::sendViolationReport(*m_document.frame(), m_reportURL, generateViolationReport());
+            PingLoader::sendViolationReport(*m_document.frame(), m_reportURL, generateViolationReport(xssInfo));
     }
 
     if (xssInfo.m_didBlockEntirePage)
-        m_document.frame()->navigationScheduler().scheduleLocationChange(m_document.securityOrigin(), SecurityOrigin::urlWithUniqueSecurityOrigin(), String());
+        m_document.frame()->navigationScheduler().scheduleLocationChange(&m_document, m_document.securityOrigin(), SecurityOrigin::urlWithUniqueSecurityOrigin(), String());
 }
 
 } // namespace WebCore

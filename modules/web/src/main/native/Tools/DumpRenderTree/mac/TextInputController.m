@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,15 +29,22 @@
 #import "config.h"
 #import "TextInputController.h"
 
-#if !PLATFORM(IOS)
+#if PLATFORM(MAC)
 // FIXME: <rdar://problem/5106287> DumpRenderTree: fix TextInputController to work with iOS and re-enable tests
 
 #import "DumpRenderTreeMac.h"
 #import <AppKit/NSInputManager.h>
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
-#define SUPPORT_DICTATION_ALTERNATIVES
 #import <AppKit/NSTextAlternatives.h>
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+#define SUPPORT_INSERTION_UNDO_GROUPING
+#if __has_include(<AppKit/NSTextInputContext_Private.h>)
+#import <AppKit/NSTextInputContext_Private.h>
+#else
+NSString *NSTextInsertionUndoableAttributeName;
 #endif
+#endif
+
 #import <WebKit/WebDocument.h>
 #import <WebKit/WebFrame.h>
 #import <WebKit/WebFramePrivate.h>
@@ -232,7 +239,8 @@
             || aSelector == @selector(validAttributesForMarkedText)
             || aSelector == @selector(attributedStringWithString:)
             || aSelector == @selector(setInputMethodHandler:)
-            || aSelector == @selector(dictatedStringWithPrimaryString:alternative:alternativeOffset:alternativeLength:))
+            || aSelector == @selector(dictatedStringWithPrimaryString:alternative:alternativeOffset:alternativeLength:)
+            || aSelector == @selector(stringWithUndoGroupingInsertion:))
         return NO;
     return YES;
 }
@@ -261,6 +269,8 @@
         return @"setInputMethodHandler";
     else if (aSelector == @selector(dictatedStringWithPrimaryString:alternative:alternativeOffset:alternativeLength:))
         return @"makeDictatedString";
+    else if (aSelector == @selector(stringWithUndoGroupingInsertion:))
+        return @"makeUndoGroupingInsertionString";
 
     return nil;
 }
@@ -452,9 +462,19 @@
     return [[[NSMutableAttributedString alloc] initWithString:aString] autorelease];
 }
 
+- (NSMutableAttributedString*)stringWithUndoGroupingInsertion:(NSString*)aString
+{
+#if defined(SUPPORT_INSERTION_UNDO_GROUPING)
+    NSMutableAttributedString* attributedString = [self dictatedStringWithPrimaryString:aString alternative:@"test" alternativeOffset:0 alternativeLength:1];
+    [attributedString addAttribute:NSTextInsertionUndoableAttributeName value:@YES range:NSMakeRange(0, [attributedString length])];
+    return attributedString;
+#else
+    return nil;
+#endif
+}
+
 - (NSMutableAttributedString*)dictatedStringWithPrimaryString:(NSString*)aString alternative:(NSString*)alternative alternativeOffset:(int)offset alternativeLength:(int)length
 {
-#if defined(SUPPORT_DICTATION_ALTERNATIVES)
     NSMutableAttributedString* dictatedString = [self attributedStringWithString:aString];
     NSRange rangeWithAlternative = NSMakeRange((NSUInteger)offset, (NSUInteger)length);
     NSString* subStringWithAlternative = [aString substringWithRange:rangeWithAlternative];
@@ -468,9 +488,6 @@
     [dictatedString addAttribute:NSTextAlternativesAttributeName value:alternativeObject range:rangeWithAlternative];
 
     return dictatedString;
-#else
-    return nil;
-#endif
 }
 
 - (void)setInputMethodHandler:(WebScriptObject *)handler
@@ -519,8 +536,12 @@
     [modifiers release];
 
     id result = [inputMethodHandler callWebScriptMethod:@"call" withArguments:[NSArray arrayWithObjects:inputMethodHandler, eventParam, nil]];
-    if (![result respondsToSelector:@selector(boolValue)] || ![result boolValue])
+    if (![result respondsToSelector:@selector(boolValue)] || ![result boolValue]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
         [sender doCommandBySelector:@selector(noop:)]; // AppKit sends noop: if the ime does not handle an event
+#pragma clang diagnostic pop
+    }
 
     inputMethodView = nil;
     return YES;

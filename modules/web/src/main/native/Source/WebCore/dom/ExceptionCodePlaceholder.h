@@ -31,6 +31,7 @@
 #ifndef ExceptionCodePlaceholder_h
 #define ExceptionCodePlaceholder_h
 
+#include "PlatformExportMacros.h"
 #include <wtf/Assertions.h>
 #include <wtf/Noncopyable.h>
 
@@ -68,8 +69,8 @@ class IgnorableExceptionCode : public ExceptionCodePlaceholder {
 
 class NoExceptionAssertionChecker : public ExceptionCodePlaceholder {
 public:
-    NoExceptionAssertionChecker(const char* file, int line);
-    ~NoExceptionAssertionChecker();
+    WEBCORE_EXPORT NoExceptionAssertionChecker(const char* file, int line);
+    WEBCORE_EXPORT ~NoExceptionAssertionChecker();
 
 private:
     static const ExceptionCode defaultExceptionCode = 0xaaaaaaaa;

@@ -21,7 +21,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-numProcs=`sysctl -n hw.activecpu`
+numProcs=`sysctl -n hw.activecpu 2>/dev/null`
 if [ $? -gt 0 ]
 then
     numProcs=`nproc --all 2>/dev/null`
@@ -36,16 +36,16 @@ testList=".all_tests.txt"
 tempFile=".temp.txt"
 lockDir=".lock_dir"
 
-trap "kill -9 0" SIGINT SIGHUP SIGTERM
+trap "kill -9 0" INT HUP TERM
 
 echo 0 > ${indexFile}
-ls test_script_* > ${testList}
+find . -maxdepth 1 -name 'test_script_*' | sort -t '_' -k3nr > ${testList}
 
-function lock_test_list() {
+lock_test_list() {
     until mkdir ${lockDir} 2> /dev/null; do sleep 0; done
 }
 
-function unlock_test_list() {
+unlock_test_list() {
     rmdir ${lockDir}
 }
 
@@ -54,7 +54,6 @@ then
     rmdir ${lockDir}
 fi
 
-total=`wc -l < "${testList}" | sed 's/ //g'`
 for proc in `seq ${numProcs}`
 do
     (
@@ -64,14 +63,13 @@ do
             index=`cat ${indexFile}`
             index=$((index + 1))
             echo "${index}" > ${indexFile}
-            printf "\r ${index}/${total}"
 
             nextTest=`tail -n 1 ${testList}`
             sed '$d' < ${testList} > ${tempFile}
             mv ${tempFile} ${testList}
             unlock_test_list
 
-            sh ${nextTest} > /dev/null
+            sh ${nextTest}
 
             lock_test_list
         done

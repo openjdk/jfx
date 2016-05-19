@@ -26,8 +26,11 @@
 #include "config.h"
 #include "PositionIterator.h"
 
+#include "HTMLBodyElement.h"
+#include "HTMLElement.h"
+#include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 #include "RenderText.h"
 #include "htmlediting.h"
 
@@ -40,10 +43,12 @@ PositionIterator::operator Position() const
     if (m_nodeAfterPositionInAnchor) {
         ASSERT(m_nodeAfterPositionInAnchor->parentNode() == m_anchorNode);
         // FIXME: This check is inadaquete because any ancestor could be ignored by editing
-        if (editingIgnoresContent(m_nodeAfterPositionInAnchor->parentNode()))
+        if (positionBeforeOrAfterNodeIsCandidate(m_anchorNode))
             return positionBeforeNode(m_anchorNode);
         return positionInParentBeforeNode(m_nodeAfterPositionInAnchor);
     }
+    if (positionBeforeOrAfterNodeIsCandidate(m_anchorNode))
+        return atStartOfNode() ? positionBeforeNode(m_anchorNode) : positionAfterNode(m_anchorNode);
     if (m_anchorNode->hasChildNodes())
         return lastPositionInOrAfterNode(m_anchorNode);
     return createLegacyEditingPosition(m_anchorNode, m_offsetInAnchor);
@@ -61,7 +66,7 @@ void PositionIterator::increment()
         return;
     }
 
-    if (!m_anchorNode->hasChildNodes() && m_offsetInAnchor < lastOffsetForEditing(m_anchorNode))
+    if (m_anchorNode->renderer() && !m_anchorNode->hasChildNodes() && m_offsetInAnchor < lastOffsetForEditing(m_anchorNode))
         m_offsetInAnchor = Position::uncheckedNextOffset(m_anchorNode, m_offsetInAnchor);
     else {
         m_nodeAfterPositionInAnchor = m_anchorNode;
@@ -93,7 +98,7 @@ void PositionIterator::decrement()
         m_anchorNode = m_anchorNode->lastChild();
         m_offsetInAnchor = m_anchorNode->hasChildNodes()? 0: lastOffsetForEditing(m_anchorNode);
     } else {
-        if (m_offsetInAnchor)
+        if (m_offsetInAnchor && m_anchorNode->renderer())
             m_offsetInAnchor = Position::uncheckedPreviousOffset(m_anchorNode, m_offsetInAnchor);
         else {
             m_nodeAfterPositionInAnchor = m_anchorNode;
@@ -153,15 +158,15 @@ bool PositionIterator::isCandidate() const
     if (renderer->isBR())
         return !m_offsetInAnchor && !Position::nodeIsUserSelectNone(m_anchorNode->parentNode());
 
-    if (renderer->isText())
-        return !Position::nodeIsUserSelectNone(m_anchorNode) && toRenderText(renderer)->containsCaretOffset(m_offsetInAnchor);
+    if (is<RenderText>(*renderer))
+        return !Position::nodeIsUserSelectNone(m_anchorNode) && downcast<RenderText>(*renderer).containsCaretOffset(m_offsetInAnchor);
 
     if (isRenderedTable(m_anchorNode) || editingIgnoresContent(m_anchorNode))
         return (atStartOfNode() || atEndOfNode()) && !Position::nodeIsUserSelectNone(m_anchorNode->parentNode());
 
-    if (!m_anchorNode->hasTagName(htmlTag) && renderer->isRenderBlockFlow()) {
-        RenderBlock& block = toRenderBlock(*renderer);
-        if (block.logicalHeight() || m_anchorNode->hasTagName(bodyTag)) {
+    if (!is<HTMLHtmlElement>(*m_anchorNode) && is<RenderBlockFlow>(*renderer)) {
+        RenderBlockFlow& block = downcast<RenderBlockFlow>(*renderer);
+        if (block.logicalHeight() || is<HTMLBodyElement>(*m_anchorNode)) {
             if (!Position::hasRenderedNonAnonymousDescendantsWithHeight(block))
                 return atStartOfNode() && !Position::nodeIsUserSelectNone(m_anchorNode);
             return m_anchorNode->hasEditableStyle() && !Position::nodeIsUserSelectNone(m_anchorNode) && Position(*this).atEditingBoundary();

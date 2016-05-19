@@ -25,6 +25,7 @@
 #include "DOMObjectCache.h"
 #include "Document.h"
 #include "ExceptionCode.h"
+#include "ExceptionCodeDescription.h"
 #include "GObjectEventListener.h"
 #include "JSMainThreadExecState.h"
 #include "WebKitDOMEventPrivate.h"
@@ -36,7 +37,7 @@
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
 
-#define WEBKIT_DOM_TEST_EVENT_TARGET_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_TYPE_DOM_TEST_EVENT_TARGET, WebKitDOMTestEventTargetPrivate)
+#define WEBKIT_DOM_TEST_EVENT_TARGET_GET_PRIVATE(obj) G_TYPE_INSTANCE_GET_PRIVATE(obj, WEBKIT_DOM_TYPE_TEST_EVENT_TARGET, WebKitDOMTestEventTargetPrivate)
 
 typedef struct _WebKitDOMTestEventTargetPrivate {
     RefPtr<WebCore::TestEventTarget> coreObject;
@@ -63,7 +64,7 @@ WebCore::TestEventTarget* core(WebKitDOMTestEventTarget* request)
 WebKitDOMTestEventTarget* wrapTestEventTarget(WebCore::TestEventTarget* coreObject)
 {
     ASSERT(coreObject);
-    return WEBKIT_DOM_TEST_EVENT_TARGET(g_object_new(WEBKIT_TYPE_DOM_TEST_EVENT_TARGET, "core-object", coreObject, NULL));
+    return WEBKIT_DOM_TEST_EVENT_TARGET(g_object_new(WEBKIT_DOM_TYPE_TEST_EVENT_TARGET, "core-object", coreObject, nullptr));
 }
 
 } // namespace WebKit
@@ -101,7 +102,7 @@ static void webkit_dom_event_target_init(WebKitDOMEventTargetIface* iface)
     iface->remove_event_listener = webkit_dom_test_event_target_remove_event_listener;
 }
 
-G_DEFINE_TYPE_WITH_CODE(WebKitDOMTestEventTarget, webkit_dom_test_event_target, WEBKIT_TYPE_DOM_OBJECT, G_IMPLEMENT_INTERFACE(WEBKIT_TYPE_DOM_EVENT_TARGET, webkit_dom_event_target_init))
+G_DEFINE_TYPE_WITH_CODE(WebKitDOMTestEventTarget, webkit_dom_test_event_target, WEBKIT_DOM_TYPE_OBJECT, G_IMPLEMENT_INTERFACE(WEBKIT_DOM_TYPE_EVENT_TARGET, webkit_dom_event_target_init))
 
 static void webkit_dom_test_event_target_finalize(GObject* object)
 {
@@ -145,22 +146,5 @@ WebKitDOMNode* webkit_dom_test_event_target_item(WebKitDOMTestEventTarget* self,
     WebCore::TestEventTarget* item = WebKit::core(self);
     RefPtr<WebCore::Node> gobjectResult = WTF::getPtr(item->item(index));
     return WebKit::kit(gobjectResult.get());
-}
-
-gboolean webkit_dom_test_event_target_dispatch_event(WebKitDOMTestEventTarget* self, WebKitDOMEvent* evt, GError** error)
-{
-    WebCore::JSMainThreadNullState state;
-    g_return_val_if_fail(WEBKIT_DOM_IS_TEST_EVENT_TARGET(self), FALSE);
-    g_return_val_if_fail(WEBKIT_DOM_IS_EVENT(evt), FALSE);
-    g_return_val_if_fail(!error || !*error, FALSE);
-    WebCore::TestEventTarget* item = WebKit::core(self);
-    WebCore::Event* convertedEvt = WebKit::core(evt);
-    WebCore::ExceptionCode ec = 0;
-    gboolean result = item->dispatchEvent(convertedEvt, ec);
-    if (ec) {
-        WebCore::ExceptionCodeDescription ecdesc(ec);
-        g_set_error_literal(error, g_quark_from_string("WEBKIT_DOM"), ecdesc.code, ecdesc.name);
-    }
-    return result;
 }
 

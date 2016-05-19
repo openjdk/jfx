@@ -29,6 +29,24 @@ namespace WebCore {
 class Page;
 struct PluginInfo;
 
+enum PluginLoadClientPolicy : uint8_t {
+    // No client-specific plug-in load policy has been defined. The plug-in should be visible in navigator.plugins and WebKit should synchronously
+    // ask the client whether the plug-in should be loaded.
+    PluginLoadClientPolicyUndefined = 0,
+
+    // The plug-in module should be blocked from being instantiated. The plug-in should be hidden in navigator.plugins.
+    PluginLoadClientPolicyBlock,
+
+    // WebKit should synchronously ask the client whether the plug-in should be loaded. The plug-in should be visible in navigator.plugins.
+    PluginLoadClientPolicyAsk,
+
+    // The plug-in module may be loaded if WebKit is not blocking it.
+    PluginLoadClientPolicyAllow,
+
+    // The plug-in module should be loaded irrespective of whether WebKit has asked it to be blocked.
+    PluginLoadClientPolicyAllowAlways,
+};
+
 struct MimeClassInfo {
     String type;
     String desc;
@@ -46,38 +64,61 @@ struct PluginInfo {
     String desc;
     Vector<MimeClassInfo> mimes;
     bool isApplicationPlugin;
+
+    PluginLoadClientPolicy clientLoadPolicy;
+
+#if PLATFORM(MAC)
+    String bundleIdentifier;
+    String versionString;
+#endif
 };
+
+inline bool operator==(PluginInfo& a, PluginInfo& b)
+{
+    bool result = a.name == b.name && a.file == b.file && a.desc == b.desc && a.mimes == b.mimes && a.isApplicationPlugin == b.isApplicationPlugin && a.clientLoadPolicy == b.clientLoadPolicy;
+#if PLATFORM(MAC)
+    result = result && a.bundleIdentifier == b.bundleIdentifier && a.versionString == b.versionString;
+#endif
+    return result;
+}
 
 // FIXME: merge with PluginDatabase in the future
 class PluginData : public RefCounted<PluginData> {
 public:
-    static PassRefPtr<PluginData> create(const Page* page) { return adoptRef(new PluginData(page)); }
+    static Ref<PluginData> create(const Page* page) { return adoptRef(*new PluginData(page)); }
 
     const Vector<PluginInfo>& plugins() const { return m_plugins; }
-    const Vector<MimeClassInfo>& mimes() const { return m_mimes; }
-    const Vector<size_t>& mimePluginIndices() const { return m_mimePluginIndices; }
+    Vector<PluginInfo> webVisiblePlugins() const;
+    WEBCORE_EXPORT void getWebVisibleMimesAndPluginIndices(Vector<MimeClassInfo>&, Vector<size_t>&) const;
 
     enum AllowedPluginTypes {
         AllPlugins,
         OnlyApplicationPlugins
     };
 
-    bool supportsMimeType(const String& mimeType, const AllowedPluginTypes) const;
-    String pluginNameForMimeType(const String& mimeType) const;
-    String pluginFileForMimeType(const String& mimeType) const;
+    WEBCORE_EXPORT bool supportsWebVisibleMimeType(const String& mimeType, const AllowedPluginTypes) const;
+    String pluginNameForWebVisibleMimeType(const String& mimeType) const;
+    String pluginFileForWebVisibleMimeType(const String& mimeType) const;
 
     static void refresh();
 
 private:
     explicit PluginData(const Page*);
-    void initPlugins(const Page*);
-    const PluginInfo* pluginInfoForMimeType(const String& mimeType) const;
+    void initPlugins();
+    bool getPluginInfoForWebVisibleMimeType(const String& mimeType, PluginInfo&) const;
 
+protected:
+#if defined ENABLE_WEB_REPLAY && ENABLE_WEB_REPLAY
+    PluginData(Vector<PluginInfo> plugins)
+        : m_plugins(plugins)
+    {
+    }
+#endif
+
+    const Page* m_page;
     Vector<PluginInfo> m_plugins;
-    Vector<MimeClassInfo> m_mimes;
-    Vector<size_t> m_mimePluginIndices;
 };
 
-}
+} // namespace WebCore
 
-#endif
+#endif // PluginData_h

@@ -26,11 +26,11 @@
 #include "config.h"
 #include "WebKitAgnosticTest.h"
 
-#include <WebKit2/WKURLCF.h>
-#include <WebKit2/WKViewPrivate.h>
+#include <WebKit/WKURLCF.h>
+#include <WebKit/WKViewPrivate.h>
 #include <wtf/RetainPtr.h>
 
-@interface FrameLoadDelegate : NSObject {
+@interface FrameLoadDelegate : NSObject <WebFrameLoadDelegate> {
     bool* _didFinishLoad;
 }
 

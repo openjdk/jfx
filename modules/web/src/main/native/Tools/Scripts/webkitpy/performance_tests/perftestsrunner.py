@@ -65,6 +65,11 @@ class PerfTestsRunner(object):
         else:
             self._host = Host()
             self._port = self._host.port_factory.get(self._options.platform, self._options)
+
+        # The GTK+ and EFL ports only supports WebKit2, so they always use WKTR.
+        if self._port.name().startswith("gtk") or self._port.name().startswith("efl"):
+            self._options.webkit_test_runner = True
+
         self._host.initialize_scm()
         self._webkit_base_dir_len = len(self._port.webkit_base())
         self._base_path = self._port.perf_tests_dir()
@@ -110,8 +115,8 @@ class PerfTestsRunner(object):
                 help="Don't launch a browser with results after the tests are done"),
             optparse.make_option("--test-results-server",
                 help="Upload the generated JSON file to the specified server when --output-json-path is present."),
-            optparse.make_option("--webkit-test-runner", "-2", action="store_true",
-                help="Use WebKitTestRunner rather than DumpRenderTree."),
+            optparse.make_option("--dump-render-tree", "-1", action="store_false", default=True, dest="webkit_test_runner",
+                help="Use DumpRenderTree rather than WebKitTestRunner."),
             optparse.make_option("--force", dest="use_skipped_list", action="store_false", default=True,
                 help="Run all tests, including the ones in the Skipped list."),
             optparse.make_option("--profile", action="store_true",
@@ -125,8 +130,12 @@ class PerfTestsRunner(object):
                 help="Alternative DumpRenderTree binary to use"),
             optparse.make_option("--repeat", default=1, type="int",
                 help="Specify number of times to run test set (default: 1)."),
-            optparse.make_option("--test-runner-count", default=DEFAULT_TEST_RUNNER_COUNT, type="int",
+            optparse.make_option("--test-runner-count", default=-1, type="int",
                 help="Specify number of times to invoke test runner for each performance test."),
+            optparse.make_option("--wrapper",
+                help="wrapper command to insert before invocations of "
+                 "DumpRenderTree or WebKitTestRunner; option is split on whitespace before "
+                 "running. (Example: --wrapper='valgrind --smc-check=all')"),
             ]
         return optparse.OptionParser(option_list=(perf_option_list)).parse_args(args)
 
@@ -152,11 +161,18 @@ class PerfTestsRunner(object):
         skipped_directories = set(['.svn', 'resources'])
         test_files = find_files.find(filesystem, self._base_path, paths, skipped_directories, _is_test_file)
         tests = []
+
+        test_runner_count = DEFAULT_TEST_RUNNER_COUNT
+        if self._options.test_runner_count > 0:
+            test_runner_count = self._options.test_runner_count
+        elif self._options.profile:
+            test_runner_count = 1
+
         for path in test_files:
             relative_path = filesystem.relpath(path, self._base_path).replace('\\', '/')
             if self._options.use_skipped_list and self._port.skips_perf_test(relative_path) and filesystem.normpath(relative_path) not in paths:
                 continue
-            test = PerfTestFactory.create_perf_test(self._port, relative_path, path, test_runner_count=self._options.test_runner_count)
+            test = PerfTestFactory.create_perf_test(self._port, relative_path, path, test_runner_count=test_runner_count)
             tests.append(test)
 
         return tests
@@ -170,6 +186,12 @@ class PerfTestsRunner(object):
         if not self._port.check_build(needs_http=False):
             _log.error("Build not up to date for %s" % self._port._path_to_driver())
             return self.EXIT_CODE_BAD_BUILD
+
+        # Check that the system dependencies (themes, fonts, ...) are correct.
+        if not self._port.check_sys_deps(needs_http=False):
+            _log.error("Failed to check system dependencies.")
+            self._port.stop_helper()
+            return self.EXIT_CODE_BAD_PREPARATION
 
         run_count = 0
         repeat = self._options.repeat
@@ -263,8 +285,14 @@ class PerfTestsRunner(object):
             for i in range(0, len(path)):
                 is_last_token = i + 1 == len(path)
                 url = view_source_url('PerformanceTests/' + '/'.join(path[0:i + 1]))
-                tests.setdefault(path[i], {'url': url})
-                current_test = tests[path[i]]
+                test_name = path[i]
+
+                # FIXME: This is a temporary workaround for the fact perf dashboard doesn't support renaming tests.
+                if test_name == 'Speedometer':
+                    test_name = 'DoYouEvenBench'
+
+                tests.setdefault(test_name, {'url': url})
+                current_test = tests[test_name]
                 if is_last_token:
                     current_test['url'] = view_source_url('PerformanceTests/' + metric.test_file_name())
                     current_test.setdefault('metrics', {})
@@ -309,7 +337,10 @@ class PerfTestsRunner(object):
         return None
 
     def _upload_json(self, test_results_server, json_path, host_path="/api/report", file_uploader=FileUploader):
-        url = "https://%s%s" % (test_results_server, host_path)
+        hypertext_protocol = ''
+        if not test_results_server.startswith('http'):
+            hypertext_protocol = 'https://'
+        url = hypertext_protocol + test_results_server + host_path
         uploader = file_uploader(url, 120)
         try:
             response = uploader.upload_single_text_file(self._host.filesystem, 'application/json', json_path)

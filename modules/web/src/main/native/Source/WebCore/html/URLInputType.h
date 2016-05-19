@@ -35,12 +35,11 @@
 
 namespace WebCore {
 
-class URLInputType : public BaseTextInputType {
+class URLInputType final : public BaseTextInputType {
 public:
     explicit URLInputType(HTMLInputElement& element) : BaseTextInputType(element) { }
 
 private:
-    virtual void attach() override;
     virtual const AtomicString& formControlType() const override;
     virtual bool typeMismatchFor(const String&) const override;
     virtual bool typeMismatch() const override;

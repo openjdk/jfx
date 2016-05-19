@@ -31,19 +31,24 @@
 #ifndef ThreadableBlobRegistry_h
 #define ThreadableBlobRegistry_h
 
-#include <wtf/PassRefPtr.h>
+#include <wtf/Forward.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
-class BlobData;
+class BlobPart;
 class URL;
 class SecurityOrigin;
 
 class ThreadableBlobRegistry {
 public:
-    static void registerBlobURL(const URL&, std::unique_ptr<BlobData>);
+    static void registerFileBlobURL(const URL&, const String& path, const String& contentType);
+    static void registerBlobURL(const URL&, Vector<BlobPart> blobParts, const String& contentType);
     static void registerBlobURL(SecurityOrigin*, const URL&, const URL& srcURL);
+    static void registerBlobURLForSlice(const URL& newURL, const URL& srcURL, long long start, long long end);
     static void unregisterBlobURL(const URL&);
+
+    static unsigned long long blobSize(const URL&);
 
     // Returns the origin for the given blob URL. This is because we are not able to embed the unique security origin or the origin of file URL
     // in the blob URL.

@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLPreElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "HTMLNames.h"
@@ -38,9 +37,9 @@ inline HTMLPreElement::HTMLPreElement(const QualifiedName& tagName, Document& do
 {
 }
 
-PassRefPtr<HTMLPreElement> HTMLPreElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLPreElement> HTMLPreElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLPreElement(tagName, document));
+    return adoptRef(*new HTMLPreElement(tagName, document));
 }
 
 bool HTMLPreElement::isPresentationAttribute(const QualifiedName& name) const

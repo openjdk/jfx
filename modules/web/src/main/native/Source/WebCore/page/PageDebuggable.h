@@ -36,6 +36,7 @@ namespace WebCore {
 class Page;
 
 class PageDebuggable final : public Inspector::RemoteInspectorDebuggable {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(PageDebuggable);
 public:
     PageDebuggable(Page&);
@@ -46,15 +47,15 @@ public:
     virtual String name() const override;
     virtual String url() const override;
     virtual bool hasLocalDebugger() const override;
-    virtual pid_t parentProcessIdentifier() const override;
 
-    virtual void connect(Inspector::InspectorFrontendChannel*) override;
+    virtual void connect(Inspector::FrontendChannel*, bool isAutomaticInspection) override;
     virtual void disconnect() override;
     virtual void dispatchMessageFromRemoteFrontend(const String& message) override;
     virtual void setIndicating(bool) override;
 
 private:
     Page& m_page;
+    bool m_forcedDeveloperExtrasEnabled;
 };
 
 } // namespace WebCore

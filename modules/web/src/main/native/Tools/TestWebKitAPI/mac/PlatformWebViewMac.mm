@@ -26,8 +26,9 @@
 #import "config.h"
 #import "PlatformWebView.h"
 
-#import <WebKit2/WKViewPrivate.h>
 #import <Carbon/Carbon.h>
+#import <WebKit/WKRetainPtr.h>
+#import <WebKit/WKViewPrivate.h>
 
 @interface ActiveOffscreenWindow : NSWindow
 @end
@@ -37,14 +38,19 @@
 {
     return YES;
 }
+- (BOOL)isVisible
+{
+    return YES;
+}
 @end
 
 namespace TestWebKitAPI {
 
-PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef)
+void PlatformWebView::initialize(WKPageConfigurationRef configuration, Class wkViewSubclass)
 {
     NSRect rect = NSMakeRect(0, 0, 800, 600);
-    m_view = [[WKView alloc] initWithFrame:rect contextRef:contextRef pageGroupRef:pageGroupRef];
+    m_view = [[wkViewSubclass alloc] initWithFrame:rect configurationRef:configuration];
+    [m_view setWindowOcclusionDetectionEnabled:NO];
 
     NSRect windowRect = NSOffsetRect(rect, -10000, [(NSScreen *)[[NSScreen screens] objectAtIndex:0] frame].size.height - rect.size.height + 10000);
     m_window = [[ActiveOffscreenWindow alloc] initWithContentRect:windowRect styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
@@ -53,6 +59,42 @@ PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGro
     [m_window orderBack:nil];
     [m_window setAutodisplay:NO];
     [m_window setReleasedWhenClosed:NO];
+}
+
+PlatformWebView::PlatformWebView(WKPageConfigurationRef configuration)
+{
+    initialize(configuration, [WKView class]);
+}
+
+PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef)
+{
+    WKRetainPtr<WKPageConfigurationRef> configuration = adoptWK(WKPageConfigurationCreate());
+
+    WKPageConfigurationSetContext(configuration.get(), contextRef);
+    WKPageConfigurationSetPageGroup(configuration.get(), pageGroupRef);
+
+    initialize(configuration.get(), [WKView class]);
+}
+
+PlatformWebView::PlatformWebView(WKPageRef relatedPage)
+{
+    WKRetainPtr<WKPageConfigurationRef> configuration = adoptWK(WKPageConfigurationCreate());
+
+    WKPageConfigurationSetContext(configuration.get(), WKPageGetContext(relatedPage));
+    WKPageConfigurationSetPageGroup(configuration.get(), WKPageGetPageGroup(relatedPage));
+    WKPageConfigurationSetRelatedPage(configuration.get(), relatedPage);
+
+    initialize(configuration.get(), [WKView class]);
+}
+
+PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef, Class wkViewSubclass)
+{
+    WKRetainPtr<WKPageConfigurationRef> configuration = adoptWK(WKPageConfigurationCreate());
+
+    WKPageConfigurationSetContext(configuration.get(), contextRef);
+    WKPageConfigurationSetPageGroup(configuration.get(), pageGroupRef);
+
+    initialize(configuration.get(), wkViewSubclass);
 }
 
 PlatformWebView::~PlatformWebView()
@@ -66,7 +108,6 @@ void PlatformWebView::resizeTo(unsigned width, unsigned height)
 {
     [m_view setFrame:NSMakeRect(0, 0, width, height)];
 }
-
 
 WKPageRef PlatformWebView::page() const
 {
@@ -150,6 +191,52 @@ void PlatformWebView::simulateMouseMove(unsigned x, unsigned y)
 
     [m_view mouseMoved:event];
 
+}
+
+static NSEventType eventTypeForButton(WKEventMouseButton button)
+{
+    switch (button) {
+    case kWKEventMouseButtonLeftButton:
+        return NSLeftMouseDown;
+    case kWKEventMouseButtonRightButton:
+        return NSRightMouseDown;
+    case kWKEventMouseButtonMiddleButton:
+        return NSOtherMouseDown;
+    case kWKEventMouseButtonNoButton:
+        return NSLeftMouseDown;
+    }
+
+    return NSLeftMouseDown;
+}
+
+static NSEventModifierFlags modifierFlagsForWKModifiers(WKEventModifiers modifiers)
+{
+    NSEventModifierFlags returnVal = 0;
+    if (modifiers & kWKEventModifiersShiftKey)
+        returnVal |= NSShiftKeyMask;
+    if (modifiers & kWKEventModifiersControlKey)
+        returnVal |= NSControlKeyMask;
+    if (modifiers & kWKEventModifiersAltKey)
+        returnVal |= NSAlternateKeyMask;
+    if (modifiers & kWKEventModifiersMetaKey)
+        returnVal |= NSCommandKeyMask;
+
+    return returnVal;
+}
+
+void PlatformWebView::simulateButtonClick(WKEventMouseButton button, unsigned x, unsigned y, WKEventModifiers modifiers)
+{
+    NSEvent *event = [NSEvent mouseEventWithType:eventTypeForButton(button)
+                                        location:NSMakePoint(x, y)
+                                   modifierFlags:modifierFlagsForWKModifiers(modifiers)
+                                       timestamp:GetCurrentEventTime()
+                                    windowNumber:[m_window windowNumber]
+                                         context:[NSGraphicsContext currentContext]
+                                     eventNumber:0
+                                      clickCount:0
+                                        pressure:0];
+
+    [m_view mouseDown:event];
 }
 
 } // namespace TestWebKitAPI

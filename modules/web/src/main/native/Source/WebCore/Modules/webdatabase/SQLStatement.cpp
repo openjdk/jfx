@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,13 +28,12 @@
 #include "config.h"
 #include "SQLStatement.h"
 
-#if ENABLE(SQL_DATABASE)
-
 #include "AbstractDatabaseServer.h"
-#include "AbstractSQLStatementBackend.h"
 #include "Database.h"
 #include "DatabaseManager.h"
 #include "Logging.h"
+#include "SQLError.h"
+#include "SQLStatementBackend.h"
 #include "SQLStatementCallback.h"
 #include "SQLStatementErrorCallback.h"
 #include "SQLTransaction.h"
@@ -45,14 +44,13 @@
 
 namespace WebCore {
 
-SQLStatement::SQLStatement(Database* database, PassRefPtr<SQLStatementCallback> callback,
-    PassRefPtr<SQLStatementErrorCallback> errorCallback)
-    : m_statementCallbackWrapper(callback, database->scriptExecutionContext())
-    , m_statementErrorCallbackWrapper(errorCallback, database->scriptExecutionContext())
+SQLStatement::SQLStatement(Database& database, PassRefPtr<SQLStatementCallback> callback, PassRefPtr<SQLStatementErrorCallback> errorCallback)
+    : m_statementCallbackWrapper(callback, database.scriptExecutionContext())
+    , m_statementErrorCallbackWrapper(errorCallback, database.scriptExecutionContext())
 {
 }
 
-void SQLStatement::setBackend(AbstractSQLStatementBackend* backend)
+void SQLStatement::setBackend(SQLStatementBackend* backend)
 {
     m_backend = backend;
 }
@@ -92,5 +90,3 @@ bool SQLStatement::performCallback(SQLTransaction* transaction)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)

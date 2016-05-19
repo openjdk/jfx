@@ -39,15 +39,13 @@ jclass getJScrollBarThemeClass()
     return jScrollbarThemeClass;
 }
 
-JLObject getJScrollBarTheme(ScrollbarThemeClient* sb)
+JLObject getJScrollBarTheme(Scrollbar& sb)  //XXX: ScrollbarThemeClient replaced by Scrollbar, double recheck
 {
-    ScrollView* sv = sb->root();
-    if (!sv) {
+    FrameView* fv = sb.root();
+    if (!fv) {
         // the scrollbar has been detached
         return 0;
     }
-    ASSERT(sv->isFrameView());
-    FrameView* fv = (FrameView*)sv;
     Page* page = fv->frame().page();
     JLObject jWebPage = ((ChromeClientJava*)&page->chrome().client())->platformPage();
 
@@ -66,10 +64,10 @@ JLObject getJScrollBarTheme(ScrollbarThemeClient* sb)
     return jScrollbarTheme;
 }
 
-bool ScrollbarThemeJava::paint(ScrollbarThemeClient* scrollbar, GraphicsContext* gc, const IntRect& damageRect)
+bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const IntRect& damageRect)
 {
     // platformContext() returns 0 when printing
-    if (gc->paintingDisabled() || !gc->platformContext()) {
+    if (gc.paintingDisabled() || !gc.platformContext()) {
         return true;
     }
     JLObject jtheme = getJScrollBarTheme(scrollbar);
@@ -87,30 +85,30 @@ bool ScrollbarThemeJava::paint(ScrollbarThemeClient* scrollbar, GraphicsContext*
     RefPtr<RQRef> widgetRef = RQRef::create( env->CallObjectMethod(
         jtheme,
         mid,
-        ptr_to_jlong(scrollbar),
-        (jint)scrollbar->width(),
-        (jint)scrollbar->height(),
-        (jint)scrollbar->orientation(),
-        (jint)scrollbar->value(),
-        (jint)scrollbar->visibleSize(),
-        (jint)scrollbar->totalSize()));
+        ptr_to_jlong(&scrollbar),
+        (jint)scrollbar.width(),
+        (jint)scrollbar.height(),
+        (jint)scrollbar.orientation(),
+        (jint)scrollbar.value(),
+        (jint)scrollbar.visibleSize(),
+        (jint)scrollbar.totalSize()));
     ASSERT(widgetRef.get());
     CheckAndClearException(env);
 
     // widgetRef will go into rq's inner refs vector.
-    gc->platformContext()->rq().freeSpace(28)
+    gc.platformContext()->rq().freeSpace(28)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWSCROLLBAR
         << RQRef::create(jtheme)
         << widgetRef
-        << (jint)scrollbar->x()
-        << (jint)scrollbar->y()
-        << (jint)scrollbar->pressedPart()
-        << (jint)scrollbar->hoveredPart();
+        << (jint)scrollbar.x()
+        << (jint)scrollbar.y()
+        << (jint)scrollbar.pressedPart()
+        << (jint)scrollbar.hoveredPart();
 
     return false;
 }
 
-ScrollbarPart ScrollbarThemeJava::hitTest(ScrollbarThemeClient* scrollbar, const IntPoint& pos)
+ScrollbarPart ScrollbarThemeJava::hitTest(Scrollbar& scrollbar, const IntPoint& pos)
 {
     JLObject jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
@@ -124,16 +122,16 @@ ScrollbarPart ScrollbarThemeJava::hitTest(ScrollbarThemeClient* scrollbar, const
         "(IIIIIIII)I");
     ASSERT(mid);
 
-    IntPoint p = scrollbar->convertFromContainingWindow(pos);
+    IntPoint p = scrollbar.convertFromContainingWindow(pos);
     int part = env->CallIntMethod(
         jtheme,
         mid,
-        (jint)scrollbar->width(),
-        (jint)scrollbar->height(),
-        (jint)scrollbar->orientation(),
-        (jint)scrollbar->value(),
-        (jint)scrollbar->visibleSize(),
-        (jint)scrollbar->totalSize(),
+        (jint)scrollbar.width(),
+        (jint)scrollbar.height(),
+        (jint)scrollbar.orientation(),
+        (jint)scrollbar.value(),
+        (jint)scrollbar.visibleSize(),
+        (jint)scrollbar.totalSize(),
         (jint)p.x(),
         (jint)p.y());
     CheckAndClearException(env);
@@ -141,13 +139,13 @@ ScrollbarPart ScrollbarThemeJava::hitTest(ScrollbarThemeClient* scrollbar, const
     return (ScrollbarPart)part;
 }
 
-void ScrollbarThemeJava::invalidatePart(ScrollbarThemeClient* scrollbar, ScrollbarPart)
+void ScrollbarThemeJava::invalidatePart(Scrollbar& scrollbar, ScrollbarPart)
 {
     // FIXME: Do more precise invalidation.
-    scrollbar->invalidate();
+    scrollbar.invalidate();
 }
 
-int ScrollbarThemeJava::thumbPosition(ScrollbarThemeClient* scrollbar)
+int ScrollbarThemeJava::thumbPosition(Scrollbar& scrollbar)
 {
     JLObject jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
@@ -164,18 +162,18 @@ int ScrollbarThemeJava::thumbPosition(ScrollbarThemeClient* scrollbar)
     int pos = env->CallIntMethod(
         jtheme,
         mid,
-        (jint)scrollbar->width(),
-        (jint)scrollbar->height(),
-        (jint)scrollbar->orientation(),
-        (jint)scrollbar->value(),
-        (jint)scrollbar->visibleSize(),
-        (jint)scrollbar->totalSize());
+        (jint)scrollbar.width(),
+        (jint)scrollbar.height(),
+        (jint)scrollbar.orientation(),
+        (jint)scrollbar.value(),
+        (jint)scrollbar.visibleSize(),
+        (jint)scrollbar.totalSize());
     CheckAndClearException(env);
 
     return pos;
 }
 
-int ScrollbarThemeJava::thumbLength(ScrollbarThemeClient* scrollbar)
+int ScrollbarThemeJava::thumbLength(Scrollbar& scrollbar)
 {
     JLObject jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
@@ -192,18 +190,18 @@ int ScrollbarThemeJava::thumbLength(ScrollbarThemeClient* scrollbar)
     int len = env->CallIntMethod(
         jtheme,
         mid,
-        (jint)scrollbar->width(),
-        (jint)scrollbar->height(),
-        (jint)scrollbar->orientation(),
-        (jint)scrollbar->value(),
-        (jint)scrollbar->visibleSize(),
-        (jint)scrollbar->totalSize());
+        (jint)scrollbar.width(),
+        (jint)scrollbar.height(),
+        (jint)scrollbar.orientation(),
+        (jint)scrollbar.value(),
+        (jint)scrollbar.visibleSize(),
+        (jint)scrollbar.totalSize());
     CheckAndClearException(env);
 
     return len;
 }
 
-int ScrollbarThemeJava::trackPosition(ScrollbarThemeClient* scrollbar)
+int ScrollbarThemeJava::trackPosition(Scrollbar& scrollbar)
 {
     JLObject jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
@@ -220,15 +218,15 @@ int ScrollbarThemeJava::trackPosition(ScrollbarThemeClient* scrollbar)
     int pos = env->CallIntMethod(
         jtheme,
         mid,
-        (jint)scrollbar->width(),
-        (jint)scrollbar->height(),
-        (jint)scrollbar->orientation());
+        (jint)scrollbar.width(),
+        (jint)scrollbar.height(),
+        (jint)scrollbar.orientation());
     CheckAndClearException(env);
 
     return pos;
 }
 
-int ScrollbarThemeJava::trackLength(ScrollbarThemeClient* scrollbar)
+int ScrollbarThemeJava::trackLength(Scrollbar& scrollbar)
 {
     JLObject jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
@@ -245,9 +243,9 @@ int ScrollbarThemeJava::trackLength(ScrollbarThemeClient* scrollbar)
     int len = env->CallIntMethod(
         jtheme,
         mid,
-        (jint)scrollbar->width(),
-        (jint)scrollbar->height(),
-        (jint)scrollbar->orientation());
+        (jint)scrollbar.width(),
+        (jint)scrollbar.height(),
+        (jint)scrollbar.orientation());
     CheckAndClearException(env);
 
     return len;

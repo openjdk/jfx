@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Canon Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +28,16 @@
 #include "FileSystem.h"
 
 #include <wtf/HexNumber.h>
+#include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
+
+// FIXME(arunprasadr): Implement it for Java also?
+#if !PLATFORM(WIN) && !(PLATFORM(JAVA) && OS(WINDOWS))
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 namespace WebCore {
 
@@ -112,5 +122,64 @@ bool excludeFromBackup(const String&)
 }
 
 #endif
+
+MappedFileData::~MappedFileData()
+{
+// FIXME(arunprasadr): Does Java Security model allows it?
+#if !PLATFORM(WIN) && !(PLATFORM(JAVA) && OS(WINDOWS))
+    if (!m_fileData)
+        return;
+    munmap(m_fileData, m_fileSize);
+#endif
+}
+
+MappedFileData::MappedFileData(const String& filePath, bool& success)
+{
+// FIXME(arunprasadr): Does Java Security model allows it?
+#if PLATFORM(WIN) || (PLATFORM(JAVA) && OS(WINDOWS))
+    // FIXME: Implement mapping
+    success = false;
+#else
+    CString fsRep = fileSystemRepresentation(filePath);
+    int fd = !fsRep.isNull() ? open(fsRep.data(), O_RDONLY) : -1;
+    if (fd < 0) {
+        success = false;
+        return;
+    }
+
+    struct stat fileStat;
+    if (fstat(fd, &fileStat)) {
+        close(fd);
+        success = false;
+        return;
+    }
+
+    if (fileStat.st_size < 0 || fileStat.st_size > std::numeric_limits<unsigned>::max()) {
+        close(fd);
+        success = false;
+        return;
+    }
+
+    unsigned size = static_cast<unsigned>(fileStat.st_size);
+
+    if (!size) {
+        close(fd);
+        success = true;
+        return;
+    }
+
+    void* data = mmap(0, size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
+    close(fd);
+
+    if (data == MAP_FAILED) {
+        success = false;
+        return;
+    }
+
+    success = true;
+    m_fileData = data;
+    m_fileSize = size;
+#endif
+}
 
 } // namespace WebCore

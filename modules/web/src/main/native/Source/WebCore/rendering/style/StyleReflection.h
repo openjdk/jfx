@@ -34,9 +34,9 @@ namespace WebCore {
 
 class StyleReflection : public RefCounted<StyleReflection> {
 public:
-    static PassRefPtr<StyleReflection> create()
+    static Ref<StyleReflection> create()
     {
-        return adoptRef(new StyleReflection);
+        return adoptRef(*new StyleReflection);
     }
 
     bool operator==(const StyleReflection& o) const
@@ -50,7 +50,7 @@ public:
     const NinePieceImage& mask() const { return m_mask; }
 
     void setDirection(CSSReflectionDirection dir) { m_direction = dir; }
-    void setOffset(Length offset) { m_offset = std::move(offset); }
+    void setOffset(Length offset) { m_offset = WTF::move(offset); }
     void setMask(const NinePieceImage& image) { m_mask = image; }
 
 private:

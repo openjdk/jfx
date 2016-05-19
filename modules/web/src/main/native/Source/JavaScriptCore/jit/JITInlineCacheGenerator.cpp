@@ -49,12 +49,12 @@ JITInlineCacheGenerator::JITInlineCacheGenerator(CodeBlock* codeBlock, CodeOrigi
 
 JITByIdGenerator::JITByIdGenerator(
     CodeBlock* codeBlock, CodeOrigin codeOrigin, const RegisterSet& usedRegisters,
-    JSValueRegs base, JSValueRegs value, bool registersFlushed)
+    JSValueRegs base, JSValueRegs value, SpillRegistersMode spillMode)
     : JITInlineCacheGenerator(codeBlock, codeOrigin)
     , m_base(base)
     , m_value(value)
 {
-    m_stubInfo->patch.registersFlushed = registersFlushed;
+    m_stubInfo->patch.spillMode = spillMode;
     m_stubInfo->patch.usedRegisters = usedRegisters;
 
     // This is a convenience - in cases where the only registers you're using are base/value,
@@ -101,13 +101,21 @@ void JITByIdGenerator::finalize(LinkBuffer& linkBuffer)
 
 void JITByIdGenerator::generateFastPathChecks(MacroAssembler& jit, GPRReg butterfly)
 {
-    m_structureCheck = jit.patchableBranchPtrWithPatch(
+    m_structureCheck = jit.patchableBranch32WithPatch(
         MacroAssembler::NotEqual,
-        MacroAssembler::Address(m_base.payloadGPR(), JSCell::structureOffset()),
-        m_structureImm, MacroAssembler::TrustedImmPtr(reinterpret_cast<void*>(unusedPointer)));
+        MacroAssembler::Address(m_base.payloadGPR(), JSCell::structureIDOffset()),
+        m_structureImm, MacroAssembler::TrustedImm32(0));
 
     m_propertyStorageLoad = jit.convertibleLoadPtr(
         MacroAssembler::Address(m_base.payloadGPR(), JSObject::butterflyOffset()), butterfly);
+}
+
+JITGetByIdGenerator::JITGetByIdGenerator(
+    CodeBlock* codeBlock, CodeOrigin codeOrigin, const RegisterSet& usedRegisters,
+    JSValueRegs base, JSValueRegs value, SpillRegistersMode spillMode)
+    : JITByIdGenerator(codeBlock, codeOrigin, usedRegisters, base, value, spillMode)
+{
+    RELEASE_ASSERT(base.payloadGPR() != value.tagGPR());
 }
 
 void JITGetByIdGenerator::generateFastPath(MacroAssembler& jit)
@@ -129,9 +137,9 @@ void JITGetByIdGenerator::generateFastPath(MacroAssembler& jit)
 
 JITPutByIdGenerator::JITPutByIdGenerator(
     CodeBlock* codeBlock, CodeOrigin codeOrigin, const RegisterSet& usedRegisters,
-    JSValueRegs base, JSValueRegs value, GPRReg scratch, bool registersFlushed,
+    JSValueRegs base, JSValueRegs value, GPRReg scratch, SpillRegistersMode spillMode,
     ECMAMode ecmaMode, PutKind putKind)
-    : JITByIdGenerator(codeBlock, codeOrigin, usedRegisters, base, value, registersFlushed)
+    : JITByIdGenerator(codeBlock, codeOrigin, usedRegisters, base, value, spillMode)
     , m_scratch(scratch)
     , m_ecmaMode(ecmaMode)
     , m_putKind(putKind)

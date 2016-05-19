@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,10 +43,10 @@ typedef const struct __SCDynamicStore * SCDynamicStoreRef;
 
 #include <windows.h>
 
-#elif PLATFORM(EFL)
+#elif PLATFORM(IOS)
 
-typedef struct _Ecore_Fd_Handler Ecore_Fd_Handler;
-typedef unsigned char Eina_Bool;
+#include <wtf/RetainPtr.h>
+OBJC_CLASS WebNetworkStateObserver;
 
 #endif
 
@@ -56,31 +56,29 @@ class NetworkStateNotifier {
     WTF_MAKE_NONCOPYABLE(NetworkStateNotifier); WTF_MAKE_FAST_ALLOCATED;
 public:
     NetworkStateNotifier();
-#if PLATFORM(EFL)
+#if PLATFORM(EFL) || PLATFORM(IOS)
     ~NetworkStateNotifier();
 #endif
     void addNetworkStateChangeListener(std::function<void (bool isOnLine)>);
 
-    bool onLine() const { return m_isOnLine; }
-
-#if PLATFORM(IOS)
-    void setIsOnLine(bool);
-#endif
+    bool onLine() const;
 
 private:
+#if !PLATFORM(IOS)
     bool m_isOnLine;
+#endif
     Vector<std::function<void (bool)>> m_listeners;
 
-    void notifyNetworkStateChange();
+    void notifyNetworkStateChange() const;
     void updateState();
 
 #if PLATFORM(MAC)
-    void networkStateChangeTimerFired(Timer<NetworkStateNotifier>&);
+    void networkStateChangeTimerFired();
 
     static void dynamicStoreCallback(SCDynamicStoreRef, CFArrayRef changedKeys, void *info);
 
     RetainPtr<SCDynamicStoreRef> m_store;
-    Timer<NetworkStateNotifier> m_networkStateChangeTimer;
+    Timer m_networkStateChangeTimer;
 
 #elif PLATFORM(WIN)
     static void CALLBACK addrChangeCallback(void*, BOOLEAN timedOut);
@@ -97,6 +95,14 @@ private:
 
     int m_netlinkSocket;
     Ecore_Fd_Handler* m_fdHandler;
+
+#elif PLATFORM(IOS)
+    void registerObserverIfNecessary() const;
+    friend void setOnLine(const NetworkStateNotifier*, bool);
+
+    mutable bool m_isOnLine;
+    mutable bool m_isOnLineInitialized;
+    mutable RetainPtr<WebNetworkStateObserver> m_observer;
 #endif
 };
 
@@ -111,8 +117,15 @@ inline void NetworkStateNotifier::updateState() { }
 
 #endif
 
-NetworkStateNotifier& networkStateNotifier();
+#if !PLATFORM(IOS)
+inline bool NetworkStateNotifier::onLine() const
+{
+    return m_isOnLine;
+}
+#endif
 
-};
+WEBCORE_EXPORT NetworkStateNotifier& networkStateNotifier();
+
+} // namespace WebCore
 
 #endif // NetworkStateNotifier_h

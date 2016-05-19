@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006, 2008 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,6 +31,7 @@
 #define FontCache_h
 
 #include "FontDescription.h"
+#include "Timer.h"
 #include <limits.h>
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
@@ -50,12 +51,11 @@
 
 namespace WebCore {
 
-class Font;
+class FontCascade;
 class FontPlatformData;
-class FontData;
 class FontSelector;
 class OpenTypeVerticalData;
-class SimpleFontData;
+class Font;
 
 #if PLATFORM(WIN)
 #if USE(IMLANG_FONT_LINK2)
@@ -79,10 +79,11 @@ struct FontDescriptionFontDataCacheKey {
     { }
     static unsigned makeFlagKey(const FontDescription& description)
     {
-        return static_cast<unsigned>(description.widthVariant()) << 4
-            | static_cast<unsigned>(description.orientation()) << 3
-            | static_cast<unsigned>(description.italic()) << 2
-            | static_cast<unsigned>(description.usePrinterFont()) << 1
+        return static_cast<unsigned>(description.fontSynthesis()) << 6
+            | static_cast<unsigned>(description.widthVariant()) << 4
+            | static_cast<unsigned>(description.nonCJKGlyphOrientation()) << 3
+            | static_cast<unsigned>(description.orientation()) << 2
+            | static_cast<unsigned>(description.italic()) << 1
             | static_cast<unsigned>(description.renderingMode());
     }
     bool operator==(const FontDescriptionFontDataCacheKey& other) const
@@ -103,25 +104,22 @@ struct FontDescriptionFontDataCacheKey {
 };
 
 class FontCache {
-    friend class FontCachePurgePreventer;
+    friend class WTF::NeverDestroyed<FontCache>;
 
     WTF_MAKE_NONCOPYABLE(FontCache); WTF_MAKE_FAST_ALLOCATED;
 public:
-    friend FontCache* fontCache();
+    WEBCORE_EXPORT static FontCache& singleton();
 
-    enum ShouldRetain { Retain, DoNotRetain };
-
-    PassRefPtr<FontData> getFontData(const FontDescription&, int& familyIndex, FontSelector*);
-    void releaseFontData(const SimpleFontData*);
-
-    // This method is implemented by the platform.
-    PassRefPtr<SimpleFontData> systemFallbackForCharacters(const FontDescription&, const SimpleFontData* originalFontData, bool isPlatformFont, const UChar* characters, int length);
-
-    // Also implemented by the platform.
+    // These methods are implemented by the platform.
+    RefPtr<Font> systemFallbackForCharacters(const FontDescription&, const Font* originalFontData, bool isPlatformFont, const UChar* characters, unsigned length);
+    Vector<String> systemFontFamilies();
     void platformInit();
 
 #if PLATFORM(IOS)
     static float weightOfCTFont(CTFontRef);
+#endif
+#if PLATFORM(MAC)
+    WEBCORE_EXPORT static void setFontWhitelist(const Vector<String>&);
 #endif
 #if PLATFORM(WIN)
     IMLangFontLinkType* getFontLinkInterface();
@@ -132,22 +130,23 @@ public:
 
     void getTraitsInFamily(const AtomicString&, Vector<unsigned>&);
 
-    PassRefPtr<SimpleFontData> getCachedFontData(const FontDescription&, const AtomicString&, bool checkingAlternateName = false, ShouldRetain = Retain);
-    PassRefPtr<SimpleFontData> getLastResortFallbackFont(const FontDescription&, ShouldRetain = Retain);
-    SimpleFontData* getNonRetainedLastResortFallbackFont(const FontDescription&);
+    WEBCORE_EXPORT RefPtr<Font> fontForFamily(const FontDescription&, const AtomicString&, bool checkingAlternateName = false);
+    WEBCORE_EXPORT Ref<Font> lastResortFallbackFont(const FontDescription&);
+    WEBCORE_EXPORT Ref<Font> fontForPlatformData(const FontPlatformData&);
+    RefPtr<Font> similarFont(const FontDescription&);
 
     void addClient(FontSelector*);
     void removeClient(FontSelector*);
 
     unsigned short generation();
-    void invalidate();
+    WEBCORE_EXPORT void invalidate();
 
-    size_t fontDataCount();
-    size_t inactiveFontDataCount();
-    void purgeInactiveFontData(int count = INT_MAX);
+    WEBCORE_EXPORT size_t fontCount();
+    WEBCORE_EXPORT size_t inactiveFontCount();
+    WEBCORE_EXPORT void purgeInactiveFontData(unsigned count = UINT_MAX);
 
 #if PLATFORM(WIN)
-    PassRefPtr<SimpleFontData> fontDataFromDescriptionAndLogFont(const FontDescription&, ShouldRetain, const LOGFONT&, AtomicString& outFontFamilyName);
+    RefPtr<Font> fontFromDescriptionAndLogFont(const FontDescription&, const LOGFONT&, AtomicString& outFontFamilyName);
 #endif
 
 #if ENABLE(OPENTYPE_VERTICAL)
@@ -155,26 +154,13 @@ public:
     PassRefPtr<OpenTypeVerticalData> getVerticalData(const FontFileKey&, const FontPlatformData&);
 #endif
 
-    struct SimpleFontFamily {
-        String name;
-        bool isBold;
-        bool isItalic;
-    };
-    static void getFontFamilyForCharacters(const UChar* characters, size_t numCharacters, const char* preferredLocale, SimpleFontFamily*);
-
 private:
     FontCache();
-    ~FontCache();
+    ~FontCache() = delete;
 
-    void disablePurging() { m_purgePreventCount++; }
-    void enablePurging()
-    {
-        ASSERT(m_purgePreventCount);
-        if (!--m_purgePreventCount)
-            purgeInactiveFontDataIfNeeded();
-    }
+    void purgeTimerFired();
 
-    void purgeInactiveFontDataIfNeeded();
+    WEBCORE_EXPORT void purgeInactiveFontDataIfNeeded();
 
     // FIXME: This method should eventually be removed.
     FontPlatformData* getCachedFontPlatformData(const FontDescription&, const AtomicString& family, bool checkingAlternateName = false);
@@ -182,32 +168,16 @@ private:
     // These methods are implemented by each platform.
 #if PLATFORM(IOS)
     FontPlatformData* getCustomFallbackFont(const UInt32, const FontDescription&);
-    PassRefPtr<SimpleFontData> getSystemFontFallbackForCharacters(const FontDescription&, const SimpleFontData*, const UChar* characters, int length);
+    PassRefPtr<Font> getSystemFontFallbackForCharacters(const FontDescription&, const Font*, const UChar* characters, unsigned length);
 #endif
-    PassOwnPtr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomicString& family);
-#if PLATFORM(COCOA)
-    PassRefPtr<SimpleFontData> similarFontPlatformData(const FontDescription&);
-#endif
+    std::unique_ptr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomicString& family);
 
-    PassRefPtr<SimpleFontData> getCachedFontData(const FontPlatformData*, ShouldRetain = Retain);
-
-    // Don't purge if this count is > 0;
-    int m_purgePreventCount;
+    Timer m_purgeTimer;
 
 #if PLATFORM(COCOA)
     friend class ComplexTextController;
 #endif
-    friend class SimpleFontData; // For getCachedFontData(const FontPlatformData*)
-    friend class FontGlyphs;
-};
-
-// Get the global fontCache.
-FontCache* fontCache();
-
-class FontCachePurgePreventer {
-public:
-    FontCachePurgePreventer() { fontCache()->disablePurging(); }
-    ~FontCachePurgePreventer() { fontCache()->enablePurging(); }
+    friend class Font;
 };
 
 }

@@ -35,9 +35,8 @@ from webkitpy.common.config.ports import DeprecatedPort
 from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.system.executive import ScriptError
 from webkitpy.tool.bot.earlywarningsystemtask import EarlyWarningSystemTask, EarlyWarningSystemTaskDelegate
-from webkitpy.tool.bot.expectedfailures import ExpectedFailures
 from webkitpy.tool.bot.layouttestresultsreader import LayoutTestResultsReader
-from webkitpy.tool.bot.patchanalysistask import UnableToApplyPatch
+from webkitpy.tool.bot.patchanalysistask import UnableToApplyPatch, PatchIsNotValid
 from webkitpy.tool.bot.queueengine import QueueEngine
 from webkitpy.tool.commands.queues import AbstractReviewQueue
 
@@ -55,15 +54,17 @@ class AbstractEarlyWarningSystem(AbstractReviewQueue, EarlyWarningSystemTaskDele
 
     def begin_work_queue(self):
         AbstractReviewQueue.begin_work_queue(self)
-        self._expected_failures = ExpectedFailures()
         self._layout_test_results_reader = LayoutTestResultsReader(self._tool, self._port.results_directory(), self._log_directory())
 
     def _failing_tests_message(self, task, patch):
         results = task.results_from_patch_test_run(patch)
-        unexpected_failures = self._expected_failures.unexpected_failures_observed(results)
-        if not unexpected_failures:
+
+        if not results:
             return None
-        return "New failing tests:\n%s" % "\n".join(unexpected_failures)
+
+        if results.did_exceed_test_failure_limit():
+            return "Number of test failures exceeded the failure limit."
+        return "New failing tests:\n%s" % "\n".join(results.failing_tests())
 
     def _post_reject_message_on_bug(self, tool, patch, status_id, extra_message_text=None):
         if not extra_message_text:
@@ -81,11 +82,15 @@ class AbstractEarlyWarningSystem(AbstractReviewQueue, EarlyWarningSystemTaskDele
 
     def review_patch(self, patch):
         task = EarlyWarningSystemTask(self, patch, self._options.run_tests)
-        if not task.validate():
+        try:
+            succeeded = task.run()
+            if not succeeded:
+                # Caller unlocks when review_patch returns True, so we only need to unlock on transient failure.
+                self._unlock_patch(patch)
+            return succeeded
+        except PatchIsNotValid:
             self._did_error(patch, "%s did not process patch." % self.name)
             return False
-        try:
-            return task.run()
         except UnableToApplyPatch, e:
             self._did_error(patch, "%s unable to apply patch." % self.name)
             return False
@@ -103,7 +108,7 @@ class AbstractEarlyWarningSystem(AbstractReviewQueue, EarlyWarningSystemTaskDele
         return self.name
 
     def run_command(self, command):
-        self.run_webkit_patch(command + [self._deprecated_port.flag()])
+        self.run_webkit_patch(command + [self._deprecated_port.flag()] + (['--architecture=%s' % self._port.architecture()] if self._port.architecture() and self._port.did_override_architecture else []))
 
     def command_passed(self, message, patch):
         pass
@@ -111,9 +116,6 @@ class AbstractEarlyWarningSystem(AbstractReviewQueue, EarlyWarningSystemTaskDele
     def command_failed(self, message, script_error, patch):
         failure_log = self._log_from_script_error_for_upload(script_error)
         return self._update_status(message, patch=patch, results_file=failure_log)
-
-    def expected_failures(self):
-        return self._expected_failures
 
     def test_results(self):
         return self._layout_test_results_reader.results()
@@ -151,6 +153,7 @@ class AbstractEarlyWarningSystem(AbstractReviewQueue, EarlyWarningSystemTaskDele
             classes.append(type(str(name.replace(' ', '')), (AbstractEarlyWarningSystem,), {
                 'name': config['port'] + '-ews',
                 'port_name': config['port'],
+                'architecture': config.get('architecture', None),
                 'watchers': config.get('watchers', []),
                 'run_tests': config.get('runTests', cls.run_tests),
             }))

@@ -40,8 +40,8 @@ typedef const struct __CTLine * CTLineRef;
 
 namespace WebCore {
 
+class FontCascade;
 class Font;
-class SimpleFontData;
 class TextRun;
 
 enum GlyphIterationStyle { IncludePartialGlyphs, ByWholeGlyphs };
@@ -50,10 +50,10 @@ enum GlyphIterationStyle { IncludePartialGlyphs, ByWholeGlyphs };
 // complex scripts on OS X.
 class ComplexTextController {
 public:
-    ComplexTextController(const Font*, const TextRun&, bool mayUseNaturalWritingDirection = false, HashSet<const SimpleFontData*>* fallbackFonts = 0, bool forTextEmphasis = false);
+    ComplexTextController(const FontCascade&, const TextRun&, bool mayUseNaturalWritingDirection = false, HashSet<const Font*>* fallbackFonts = 0, bool forTextEmphasis = false);
 
     // Advance and emit glyphs up to the specified character.
-    void advance(unsigned to, GlyphBuffer* = 0, GlyphIterationStyle = IncludePartialGlyphs, HashSet<const SimpleFontData*>* fallbackFonts = 0);
+    void advance(unsigned to, GlyphBuffer* = 0, GlyphIterationStyle = IncludePartialGlyphs, HashSet<const Font*>* fallbackFonts = 0);
 
     // Compute the character offset for a given x coordinate.
     int offsetForPosition(float x, bool includePartialGlyphs);
@@ -70,21 +70,23 @@ public:
     float minGlyphBoundingBoxY() const { return m_minGlyphBoundingBoxY; }
     float maxGlyphBoundingBoxY() const { return m_maxGlyphBoundingBoxY; }
 
+    float leadingExpansion() const { return m_leadingExpansion; }
+
 private:
     class ComplexTextRun : public RefCounted<ComplexTextRun> {
     public:
-        static PassRefPtr<ComplexTextRun> create(CTRunRef ctRun, const SimpleFontData* fontData, const UChar* characters, unsigned stringLocation, size_t stringLength, CFRange runRange)
+        static Ref<ComplexTextRun> create(CTRunRef ctRun, const Font& font, const UChar* characters, unsigned stringLocation, size_t stringLength, CFRange runRange)
         {
-            return adoptRef(new ComplexTextRun(ctRun, fontData, characters, stringLocation, stringLength, runRange));
+            return adoptRef(*new ComplexTextRun(ctRun, font, characters, stringLocation, stringLength, runRange));
         }
 
-        static PassRefPtr<ComplexTextRun> create(const SimpleFontData* fontData, const UChar* characters, unsigned stringLocation, size_t stringLength, bool ltr)
+        static Ref<ComplexTextRun> create(const Font& font, const UChar* characters, unsigned stringLocation, size_t stringLength, bool ltr)
         {
-            return adoptRef(new ComplexTextRun(fontData, characters, stringLocation, stringLength, ltr));
+            return adoptRef(*new ComplexTextRun(font, characters, stringLocation, stringLength, ltr));
         }
 
         unsigned glyphCount() const { return m_glyphCount; }
-        const SimpleFontData* fontData() const { return m_fontData; }
+        const Font& font() const { return m_font; }
         const UChar* characters() const { return m_characters; }
         unsigned stringLocation() const { return m_stringLocation; }
         size_t stringLength() const { return m_stringLength; }
@@ -100,11 +102,11 @@ private:
         void setIsNonMonotonic();
 
     private:
-        ComplexTextRun(CTRunRef, const SimpleFontData*, const UChar* characters, unsigned stringLocation, size_t stringLength, CFRange runRange);
-        ComplexTextRun(const SimpleFontData*, const UChar* characters, unsigned stringLocation, size_t stringLength, bool ltr);
+        ComplexTextRun(CTRunRef, const Font&, const UChar* characters, unsigned stringLocation, size_t stringLength, CFRange runRange);
+        ComplexTextRun(const Font&, const UChar* characters, unsigned stringLocation, size_t stringLength, bool ltr);
 
         unsigned m_glyphCount;
-        const SimpleFontData* m_fontData;
+        const Font& m_font;
         const UChar* m_characters;
         unsigned m_stringLocation;
         size_t m_stringLength;
@@ -127,7 +129,7 @@ private:
 
     void collectComplexTextRuns();
 
-    void collectComplexTextRunsForCharacters(const UChar*, unsigned length, unsigned stringLocation, const SimpleFontData*);
+    void collectComplexTextRunsForCharacters(const UChar*, unsigned length, unsigned stringLocation, const Font*);
     void adjustGlyphsAndAdvances();
 
     unsigned indexOfCurrentRun(unsigned& leftmostGlyph);
@@ -138,7 +140,7 @@ private:
     Vector<unsigned, 16> m_runIndices;
     Vector<unsigned, 16> m_glyphCountFromStartToIndex;
 
-    const Font& m_font;
+    const FontCascade& m_font;
     const TextRun& m_run;
     bool m_isLTROnly;
     bool m_mayUseNaturalWritingDirection;
@@ -147,7 +149,13 @@ private:
     Vector<String> m_stringsFor8BitRuns;
     Vector<UChar, 256> m_smallCapsBuffer;
 
-    // Retain lines rather than their runs for better performance.
+    // There is a 3-level hierarchy here. At the top, we are interested in m_run.string(). We partition that string
+    // into Lines, each of which is a sequence of characters which should use the same Font. Core Text then partitions
+    // the Line into ComplexTextRuns.
+    // ComplexTextRun::stringLocation() and ComplexTextRun::stringLength() refer to the offset and length of the Line
+    // relative to m_run.string(). ComplexTextRun::indexAt() returns to the offset of a codepoint relative to
+    // its Line. ComplexTextRun::glyphs() and ComplexTextRun::advances() refer to glyphs relative to the ComplexTextRun.
+    // The length of the entire TextRun is m_run.length()
     Vector<RetainPtr<CTLineRef>> m_coreTextLines;
     Vector<RefPtr<ComplexTextRun>, 16> m_complexTextRuns;
     Vector<CGSize, 256> m_adjustedAdvances;
@@ -167,9 +175,8 @@ private:
     float m_expansion;
     float m_expansionPerOpportunity;
     float m_leadingExpansion;
-    bool m_afterExpansion;
 
-    HashSet<const SimpleFontData*>* m_fallbackFonts;
+    HashSet<const Font*>* m_fallbackFonts;
 
     float m_minGlyphBoundingBoxX;
     float m_maxGlyphBoundingBoxX;

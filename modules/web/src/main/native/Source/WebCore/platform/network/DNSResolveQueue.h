@@ -14,7 +14,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -39,7 +39,7 @@ class DNSResolveQueue {
     friend NeverDestroyed<DNSResolveQueue>;
 
 public:
-    static DNSResolveQueue& shared();
+    static DNSResolveQueue& singleton();
 
     void add(const String& hostname);
     void decrementRequestCount()
@@ -55,9 +55,9 @@ private:
     bool platformProxyIsEnabledInSystemPreferences();
     void platformResolve(const String&);
 
-    void timerFired(Timer<DNSResolveQueue>&);
+    void timerFired();
 
-    Timer<DNSResolveQueue> m_timer;
+    Timer m_timer;
 
     HashSet<String> m_names;
     std::atomic<int> m_requestsInFlight;

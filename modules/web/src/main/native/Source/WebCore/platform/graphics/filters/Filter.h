@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,7 +21,6 @@
 #ifndef Filter_h
 #define Filter_h
 
-#if ENABLE(FILTERS)
 #include "FloatRect.h"
 #include "FloatSize.h"
 #include "ImageBuffer.h"
@@ -28,18 +28,26 @@
 
 namespace WebCore {
 
-class FilterEffect;
-
 class Filter : public RefCounted<Filter> {
 public:
-    Filter() : m_renderingMode(Unaccelerated) { }
+    Filter(const AffineTransform& absoluteTransform, float filterScale = 1)
+        : m_absoluteTransform(absoluteTransform)
+        , m_renderingMode(Unaccelerated)
+        , m_filterScale(filterScale)
+    { }
     virtual ~Filter() { }
 
-    void setSourceImage(std::unique_ptr<ImageBuffer> sourceImage) { m_sourceImage = std::move(sourceImage); }
+    void setSourceImage(std::unique_ptr<ImageBuffer> sourceImage) { m_sourceImage = WTF::move(sourceImage); }
     ImageBuffer* sourceImage() { return m_sourceImage.get(); }
 
     FloatSize filterResolution() const { return m_filterResolution; }
     void setFilterResolution(const FloatSize& filterResolution) { m_filterResolution = filterResolution; }
+
+    float filterScale() const { return m_filterScale; }
+    void setFilterScale(float scale) { m_filterScale = scale; }
+
+    const AffineTransform& absoluteTransform() const { return m_absoluteTransform; }
+    FloatPoint mapAbsolutePointToLocalPoint(const FloatPoint& point) const { return m_absoluteTransform.inverse().mapPoint(point); }
 
     RenderingMode renderingMode() const { return m_renderingMode; }
     void setRenderingMode(RenderingMode renderingMode) { m_renderingMode = renderingMode; }
@@ -52,19 +60,14 @@ public:
     virtual FloatRect sourceImageRect() const = 0;
     virtual FloatRect filterRegion() const = 0;
 
-    virtual FloatPoint mapAbsolutePointToLocalPoint(const FloatPoint&) const { return FloatPoint(); }
-
 private:
     std::unique_ptr<ImageBuffer> m_sourceImage;
     FloatSize m_filterResolution;
+    AffineTransform m_absoluteTransform;
     RenderingMode m_renderingMode;
+    float m_filterScale;
 };
 
-#define FILTER_TYPE_CASTS(ToValueTypeName, predicate) \
-    TYPE_CASTS_BASE(ToValueTypeName, Filter, filter, filter->predicate, filter.predicate)
-
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // Filter_h

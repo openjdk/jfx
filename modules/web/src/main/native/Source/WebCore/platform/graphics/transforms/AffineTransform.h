@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005, 2006 Apple Inc.  All rights reserved.
  *               2010 Dirk Schulze <krit@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,7 +27,9 @@
 #ifndef AffineTransform_h
 #define AffineTransform_h
 
-#include <string.h> // for memcpy
+#include "PlatformExportMacros.h"
+#include "FloatRect.h" //XXX: use forward declaration
+#include <array>
 #include <wtf/FastMalloc.h>
 
 #if USE(CG)
@@ -50,10 +52,8 @@ class TransformationMatrix;
 class AffineTransform {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    typedef double Transform[6];
-
-    AffineTransform();
-    AffineTransform(double a, double b, double c, double d, double e, double f);
+    WEBCORE_EXPORT AffineTransform();
+    WEBCORE_EXPORT AffineTransform(double a, double b, double c, double d, double e, double f);
 
 #if USE(CG)
     AffineTransform(const CGAffineTransform&);
@@ -64,9 +64,9 @@ public:
     void map(double x, double y, double& x2, double& y2) const;
 
     // Rounds the mapped point to the nearest integer value.
-    IntPoint mapPoint(const IntPoint&) const;
+    WEBCORE_EXPORT IntPoint mapPoint(const IntPoint&) const;
 
-    FloatPoint mapPoint(const FloatPoint&) const;
+    WEBCORE_EXPORT FloatPoint mapPoint(const FloatPoint&) const;
 
     IntSize mapSize(const IntSize&) const;
 
@@ -76,10 +76,10 @@ public:
     // box computations but may not be what is wanted in other contexts.
     IntRect mapRect(const IntRect&) const;
 
-    FloatRect mapRect(const FloatRect&) const;
+    WEBCORE_EXPORT FloatRect mapRect(const FloatRect&) const;
     FloatQuad mapQuad(const FloatQuad&) const;
 
-    bool isIdentity() const;
+    WEBCORE_EXPORT bool isIdentity() const;
 
     double a() const { return m_transform[0]; }
     void setA(double a) { m_transform[0] = a; }
@@ -96,28 +96,30 @@ public:
 
     void makeIdentity();
 
-    AffineTransform& multiply(const AffineTransform& other);
-    AffineTransform& scale(double);
+    WEBCORE_EXPORT AffineTransform& multiply(const AffineTransform& other);
+    WEBCORE_EXPORT AffineTransform& scale(double);
     AffineTransform& scale(double sx, double sy);
     AffineTransform& scaleNonUniform(double sx, double sy);
+    AffineTransform& scale(const FloatSize&);
     AffineTransform& rotate(double d);
     AffineTransform& rotateFromVector(double x, double y);
-    AffineTransform& translate(double tx, double ty);
+    WEBCORE_EXPORT AffineTransform& translate(double tx, double ty);
+    AffineTransform& translate(const FloatPoint&);
     AffineTransform& shear(double sx, double sy);
     AffineTransform& flipX();
-    AffineTransform& flipY();
+    WEBCORE_EXPORT AffineTransform& flipY();
     AffineTransform& skew(double angleX, double angleY);
     AffineTransform& skewX(double angle);
     AffineTransform& skewY(double angle);
 
     // These functions get the length of an axis-aligned unit vector
     // once it has been mapped through the transform
-    double xScale() const;
-    double yScale() const;
+    WEBCORE_EXPORT double xScale() const;
+    WEBCORE_EXPORT double yScale() const;
 
     double det() const;
-    bool isInvertible() const;
-    AffineTransform inverse() const;
+    WEBCORE_EXPORT bool isInvertible() const;
+    WEBCORE_EXPORT AffineTransform inverse() const;
 
     void blend(const AffineTransform& from, double progress);
 
@@ -187,13 +189,7 @@ public:
     void recompose(const DecomposedType&);
 
 private:
-    void setMatrix(const Transform m)
-    {
-        if (m && m != m_transform)
-            memcpy(m_transform, m, sizeof(Transform));
-    }
-
-    Transform m_transform;
+    std::array<double, 6> m_transform;
 };
 
 AffineTransform makeMapBetweenRects(const FloatRect& source, const FloatRect& dest);

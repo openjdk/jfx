@@ -45,6 +45,8 @@ public:
 
     bool run()
     {
+        DFG_ASSERT(m_graph, nullptr, m_graph.m_form == ThreadedCPS);
+
         ScoreBoard scoreBoard(m_graph.m_nextMachineLocal);
         scoreBoard.assertClear();
         for (size_t blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
@@ -53,6 +55,10 @@ public:
                 continue;
             if (!block->isReachable)
                 continue;
+            if (!ASSERT_DISABLED) {
+                // Force usage of highest-numbered virtual registers.
+                scoreBoard.sortFree();
+            }
             for (size_t indexInBlock = 0; indexInBlock < block->size(); ++indexInBlock) {
                 Node* node = block->at(indexInBlock);
 

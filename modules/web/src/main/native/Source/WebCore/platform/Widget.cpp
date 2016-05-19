@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,9 +26,8 @@
 #include "config.h"
 #include "Widget.h"
 
+#include "FrameView.h"
 #include "IntRect.h"
-#include "ScrollView.h"
-
 #include <wtf/Assertions.h>
 
 namespace WebCore {
@@ -53,20 +52,20 @@ void Widget::setParent(ScrollView* view)
         setParentVisible(true);
 }
 
-ScrollView* Widget::root() const
+FrameView* Widget::root() const
 {
     const Widget* top = this;
     while (top->parent())
         top = top->parent();
-    if (top->isFrameView())
-        return const_cast<ScrollView*>(toScrollView(top));
+    if (is<FrameView>(*top))
+        return const_cast<FrameView*>(downcast<FrameView>(top));
     return nullptr;
 }
 
 void Widget::removeFromParent()
 {
     if (parent())
-        parent()->removeChild(this);
+        parent()->removeChild(*this);
 }
 
 IntRect Widget::convertFromRootView(const IntRect& rootRect) const

@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,6 +31,7 @@
 #include <debugger/Debugger.h>
 #include <heap/Strong.h>
 #include <wtf/Forward.h>
+#include <wtf/NakedPtr.h>
 #include <wtf/Threading.h>
 
 namespace Deprecated {
@@ -60,9 +61,9 @@ namespace WebCore {
         }
 
         void evaluate(const ScriptSourceCode&);
-        void evaluate(const ScriptSourceCode&, Deprecated::ScriptValue* exception);
+        void evaluate(const ScriptSourceCode&, NakedPtr<JSC::Exception>& returnedException);
 
-        void setException(const Deprecated::ScriptValue&);
+        void setException(JSC::Exception*);
 
         // Async request to terminate a JS run execution. Eventually causes termination
         // exception raised during JS execution, if the worker thread happens to run JS.
@@ -79,7 +80,7 @@ namespace WebCore {
 
         void disableEval(const String& errorMessage);
 
-        JSC::VM* vm() { return m_vm.get(); }
+        JSC::VM& vm() { return *m_vm; }
 
         void attachDebugger(JSC::Debugger*);
         void detachDebugger(JSC::Debugger*);

@@ -66,6 +66,8 @@ public:
         m_operations.clear();
     }
 
+    bool affectedByTransformOrigin() const;
+
     Vector<RefPtr<TransformOperation>>& operations() { return m_operations; }
     const Vector<RefPtr<TransformOperation>>& operations() const { return m_operations; }
 

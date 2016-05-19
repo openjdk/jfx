@@ -52,6 +52,7 @@ public:
     //   GL_ARB_texture_non_power_of_two / GL_OES_texture_npot
     //   GL_EXT_packed_depth_stencil / GL_OES_packed_depth_stencil
     //   GL_ANGLE_framebuffer_blit / GL_ANGLE_framebuffer_multisample
+    //   GL_IMG_multisampled_render_to_texture
     //   GL_OES_texture_float
     //   GL_OES_texture_float_linear
     //   GL_OES_texture_half_float
@@ -71,8 +72,6 @@ public:
     //   GL_IMG_texture_compression_pvrtc
     //   EXT_texture_filter_anisotropic
     //   GL_EXT_debug_marker
-    //   GL_CHROMIUM_copy_texture
-    //   GL_CHROMIUM_flipy
     //   GL_ARB_draw_buffers / GL_EXT_draw_buffers
     //   GL_ANGLE_instanced_arrays
 
@@ -91,6 +90,16 @@ public:
     virtual bool isEnabled(const String&) = 0;
 
     enum ExtensionsEnumType {
+        // EXT_sRGB formats
+        SRGB_EXT = 0x8C40,
+        SRGB_ALPHA_EXT = 0x8C42,
+        SRGB8_ALPHA8_EXT = 0x8C43,
+        FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING_EXT = 0x8210,
+
+        // EXT_blend_minmax enums
+        MIN_EXT = 0x8007,
+        MAX_EXT = 0x8008,
+
         // GL_EXT_texture_format_BGRA8888 enums
         BGRA_EXT = 0x80E1,
 
@@ -112,6 +121,12 @@ public:
         RENDERBUFFER_SAMPLES = 0x8CAB,
         FRAMEBUFFER_INCOMPLETE_MULTISAMPLE = 0x8D56,
         MAX_SAMPLES = 0x8D57,
+
+        // GL_IMG_multisampled_render_to_texture
+        RENDERBUFFER_SAMPLES_IMG = 0x9133,
+        FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_IMG = 0x9134,
+        MAX_SAMPLES_IMG = 0x9135,
+        TEXTURE_SAMPLES_IMG = 0x9136,
 
         // GL_OES_standard_derivatives names
         FRAGMENT_SHADER_DERIVATIVE_HINT_OES = 0x8B8B,
@@ -154,13 +169,6 @@ public:
         // GL_EXT_texture_filter_anisotropic
         TEXTURE_MAX_ANISOTROPY_EXT = 0x84FE,
         MAX_TEXTURE_MAX_ANISOTROPY_EXT = 0x84FF,
-
-        // GL_CHROMIUM_flipy
-        UNPACK_FLIP_Y_CHROMIUM = 0x9240,
-
-        // GL_CHROMIUM_copy_texture
-        UNPACK_PREMULTIPLY_ALPHA_CHROMIUM = 0x9241,
-        UNPACK_UNPREMULTIPLY_ALPHA_CHROMIUM = 0x9242,
 
         // GL_ARB_draw_buffers / GL_EXT_draw_buffers
         MAX_DRAW_BUFFERS_EXT = 0x8824,
@@ -223,9 +231,6 @@ public:
     // GL_ANGLE_translated_shader_source
     virtual String getTranslatedShaderSourceANGLE(Platform3DObject) = 0;
 
-    // GL_CHROMIUM_copy_texture
-    virtual void copyTextureCHROMIUM(GC3Denum, Platform3DObject, Platform3DObject, GC3Dint, GC3Denum) = 0;
-
     // EXT Robustness - uses getGraphicsResetStatusARB
     virtual void readnPixelsEXT(int x, int y, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, GC3Dsizei bufSize, void *data) = 0;
     virtual void getnUniformfvEXT(GC3Duint program, int location, GC3Dsizei bufSize, float *params) = 0;
@@ -247,6 +252,7 @@ public:
     virtual bool isNVIDIA() = 0;
     virtual bool isAMD() = 0;
     virtual bool isIntel() = 0;
+    virtual bool isImagination() = 0;
     virtual String vendor() = 0;
 
     // If this method returns false then the system *definitely* does not support multisampling.
@@ -257,8 +263,10 @@ public:
     virtual bool maySupportMultisampling() = 0;
 
     // Some configurations have bugs regarding built-in functions in their OpenGL drivers
-    // that must be avoided. Ports should implement this flag such configurations.
+    // that must be avoided. Ports should implement these flags on such configurations.
     virtual bool requiresBuiltInFunctionEmulation() = 0;
+    virtual bool requiresRestrictedMaximumTextureSize() = 0;
+
 };
 
 } // namespace WebCore

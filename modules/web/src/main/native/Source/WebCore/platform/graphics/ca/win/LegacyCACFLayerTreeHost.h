@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -50,7 +50,7 @@ private:
     bool resetDevice(ResetReason);
 
     void renderSoon();
-    void renderTimerFired(Timer<LegacyCACFLayerTreeHost>*);
+    void renderTimerFired();
 
     virtual void initializeContext(void* userData, PlatformCALayer*);
     virtual void resize();
@@ -66,7 +66,7 @@ private:
     virtual GraphicsDeviceAdapter* graphicsDeviceAdapter() const override { return 0; }
 #endif
 
-    Timer<LegacyCACFLayerTreeHost> m_renderTimer;
+    Timer m_renderTimer;
     COMPtr<IDirect3DDevice9> m_d3dDevice;
     WKCACFContext* m_context;
     bool m_mightBeAbleToCreateDeviceLater;

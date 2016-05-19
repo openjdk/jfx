@@ -15,33 +15,63 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-import common
+import argparse
 import glob
 import os
 import sys
 
-resources_path = common.top_level_path() + "/Source/WebInspectorUI/"
-inspector_files = \
-    glob.glob(resources_path + 'UserInterface/*.html') + \
-    glob.glob(resources_path + 'UserInterface/*.js') + \
-    glob.glob(resources_path + 'UserInterface/*.css') + \
-    glob.glob(resources_path + 'UserInterface/Images/*.png') + \
-    glob.glob(resources_path + 'UserInterface/Images/*.svg') + \
-    glob.glob(resources_path + 'UserInterface/External/CodeMirror/*') + \
-    glob.glob(resources_path + 'Localizations/en.lproj/localizedStrings.js')
+COMPRESSIBLE_EXTENSIONS = ['.html', '.js', '.css', '.svg']
+BASE_DIR = 'WebInspectorUI/'
 
-gresources_file_content = \
-"""<?xml version=1.0 encoding=UTF-8?>
-<gresources>
-    <gresource prefix="/org/webkitgtk/inspector">
-"""
 
-for file in inspector_files:
-    gresources_file_content += "        <file>" + file.replace(resources_path, '') + "</file>\n"
+def get_filenames(args):
+    filenames = []
 
-gresources_file_content += \
-"""    </gresource>
+    for pattern in args:
+        paths = glob.glob(pattern)
+        for filename in paths:
+            base_dir_index = filename.rfind(BASE_DIR)
+            if base_dir_index != -1:
+                name = filename[base_dir_index + len(BASE_DIR):]
+                # The result should use forward slashes, thus make sure any os-specific
+                # separator, added by the glob.glob() call, is properly replaced
+                if os.sep != '/':
+                    name = name.replace(os.sep, '/')
+                filenames.append(name)
+    return filenames
+
+
+def is_compressible(filename):
+    return os.path.splitext(filename)[1] in COMPRESSIBLE_EXTENSIONS
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Generate a GResources file for the inspector.')
+    parser.add_argument('--output', nargs='?', type=argparse.FileType('w'), default=sys.stdout,
+                        help='the output file')
+    parser.add_argument('filenames', metavar='FILES', nargs='+',
+                        help='the list of files to include')
+
+    args = parser.parse_args(sys.argv[1:])
+
+    args.output.write(\
+    """<?xml version=1.0 encoding=UTF-8?>
+    <gresources>
+        <gresource prefix="/org/webkitgtk/inspector">
+""")
+
+    for filename in get_filenames(args.filenames):
+        line = '            <file'
+        if is_compressible(filename):
+            line += ' compressed="true"'
+        if 'Images/gtk/' in filename:
+            line += ' alias="%s"' % filename.replace('gtk/', '')
+        line += '>%s</file>\n' % filename
+
+        args.output.write(line)
+
+    args.output.write(\
+    """    </gresource>
 </gresources>
-"""
+""")
 
-open(sys.argv[1], 'w').write(gresources_file_content)

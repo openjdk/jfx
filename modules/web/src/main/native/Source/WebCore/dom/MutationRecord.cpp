@@ -52,7 +52,7 @@ public:
 
 private:
     virtual const AtomicString& type() override;
-    virtual Node* target() override { return &m_target.get(); }
+    virtual Node* target() override { return m_target.ptr(); }
     virtual NodeList* addedNodes() override { return m_addedNodes.get(); }
     virtual NodeList* removedNodes() override { return m_removedNodes.get(); }
     virtual Node* previousSibling() override { return m_previousSibling.get(); }
@@ -74,7 +74,7 @@ public:
     }
 
 private:
-    virtual Node* target() override { return &m_target.get(); }
+    virtual Node* target() override { return m_target.ptr(); }
     virtual String oldValue() override { return m_oldValue; }
     virtual NodeList* addedNodes() override { return lazilyInitializeEmptyNodeList(m_addedNodes); }
     virtual NodeList* removedNodes() override { return lazilyInitializeEmptyNodeList(m_removedNodes); }
@@ -145,19 +145,19 @@ private:
 
 const AtomicString& ChildListRecord::type()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, childList, ("childList", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, childList, ("childList", AtomicString::ConstructFromLiteral));
     return childList;
 }
 
 const AtomicString& AttributesRecord::type()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, attributes, ("attributes", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, attributes, ("attributes", AtomicString::ConstructFromLiteral));
     return attributes;
 }
 
 const AtomicString& CharacterDataRecord::type()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, characterData, ("characterData", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, characterData, ("characterData", AtomicString::ConstructFromLiteral));
     return characterData;
 }
 

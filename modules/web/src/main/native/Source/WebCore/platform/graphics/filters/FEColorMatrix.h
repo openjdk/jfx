@@ -22,7 +22,6 @@
 #ifndef FEColorMatrix_h
 #define FEColorMatrix_h
 
-#if ENABLE(FILTERS)
 #include "FilterEffect.h"
 
 #include "Filter.h"
@@ -40,7 +39,7 @@ enum ColorMatrixType {
 
 class FEColorMatrix : public FilterEffect {
 public:
-    static PassRefPtr<FEColorMatrix> create(Filter*, ColorMatrixType, const Vector<float>&);
+    static Ref<FEColorMatrix> create(Filter&, ColorMatrixType, const Vector<float>&);
 
     ColorMatrixType type() const;
     bool setType(ColorMatrixType);
@@ -60,7 +59,7 @@ public:
     static inline void calculateHueRotateComponents(float* components, float value);
 
 private:
-    FEColorMatrix(Filter*, ColorMatrixType, const Vector<float>&);
+    FEColorMatrix(Filter&, ColorMatrixType, const Vector<float>&);
 
     ColorMatrixType m_type;
     Vector<float> m_values;
@@ -96,7 +95,5 @@ inline void FEColorMatrix::calculateHueRotateComponents(float* components, float
 
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // FEColorMatrix_h

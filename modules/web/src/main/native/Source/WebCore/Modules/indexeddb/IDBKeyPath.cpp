@@ -45,8 +45,7 @@ public:
 
     explicit IDBKeyPathLexer(const String& s)
         : m_string(s)
-        , m_ptr(s.deprecatedCharacters())
-        , m_end(s.deprecatedCharacters() + s.length())
+        , m_remainingText(s)
         , m_currentTokenType(TokenError)
     {
     }
@@ -64,23 +63,23 @@ public:
 private:
     TokenType lex(String&);
     TokenType lexIdentifier(String&);
+
     String m_currentElement;
-    String m_string;
-    const UChar* m_ptr;
-    const UChar* m_end;
+    const String m_string;
+    StringView m_remainingText;
     TokenType m_currentTokenType;
 };
 
 IDBKeyPathLexer::TokenType IDBKeyPathLexer::lex(String& element)
 {
-    if (m_ptr >= m_end)
+    if (m_remainingText.isEmpty())
         return TokenEnd;
-    ASSERT_WITH_SECURITY_IMPLICATION(m_ptr < m_end);
 
-    if (*m_ptr == '.') {
-        ++m_ptr;
+    if (m_remainingText[0] == '.') {
+        m_remainingText = m_remainingText.substring(1);
         return TokenDot;
     }
+
     return lexIdentifier(element);
 }
 
@@ -108,16 +107,16 @@ static inline bool isIdentifierCharacter(UChar c)
 
 IDBKeyPathLexer::TokenType IDBKeyPathLexer::lexIdentifier(String& element)
 {
-    const UChar* start = m_ptr;
-    if (m_ptr < m_end && isIdentifierStartCharacter(*m_ptr))
-        ++m_ptr;
+    StringView start = m_remainingText;
+    if (!m_remainingText.isEmpty() && isIdentifierStartCharacter(m_remainingText[0]))
+        m_remainingText = m_remainingText.substring(1);
     else
         return TokenError;
 
-    while (m_ptr < m_end && isIdentifierCharacter(*m_ptr))
-        ++m_ptr;
+    while (!m_remainingText.isEmpty() && isIdentifierCharacter(m_remainingText[0]))
+        m_remainingText = m_remainingText.substring(1);
 
-    element = String(start, m_ptr - start);
+    element = start.substring(0, start.length() - m_remainingText.length()).toString();
     return TokenIdentifier;
 }
 
@@ -204,8 +203,8 @@ IDBKeyPath::IDBKeyPath(const Vector<String>& array)
     , m_array(array)
 {
 #ifndef NDEBUG
-    for (size_t i = 0; i < m_array.size(); ++i)
-        ASSERT(!m_array[i].isNull());
+    for (auto& key : array)
+        ASSERT(!key.isNull());
 #endif
 }
 
@@ -221,8 +220,8 @@ bool IDBKeyPath::isValid() const
     case ArrayType:
         if (m_array.isEmpty())
             return false;
-        for (size_t i = 0; i < m_array.size(); ++i) {
-            if (!IDBIsValidKeyPath(m_array[i]))
+        for (auto& key : m_array) {
+            if (!IDBIsValidKeyPath(key))
                 return false;
         }
         return true;
@@ -255,8 +254,8 @@ IDBKeyPath IDBKeyPath::isolatedCopy() const
     result.m_string = m_string.isolatedCopy();
 
     result.m_array.reserveInitialCapacity(m_array.size());
-    for (size_t i = 0; i < m_array.size(); ++i)
-        result.m_array.uncheckedAppend(m_array[i].isolatedCopy());
+    for (auto& key : m_array)
+        result.m_array.uncheckedAppend(key.isolatedCopy());
 
     return result;
 }
@@ -286,7 +285,7 @@ bool IDBKeyPath::decode(KeyedDecoder& decoder, IDBKeyPath& result)
         return value == NullType || value == StringType || value == ArrayType;
     };
 
-    if (!decoder.decodeVerifiedEnum("type", result.m_type, enumFunction))
+    if (!decoder.decodeEnum("type", result.m_type, enumFunction))
         return false;
 
     if (result.m_type == NullType)
@@ -301,6 +300,7 @@ bool IDBKeyPath::decode(KeyedDecoder& decoder, IDBKeyPath& result)
         return decoder.decodeString("string", result);
     };
 
+    result.m_array.clear();
     return decoder.decodeObjects("array", result.m_array, arrayFunction);
 }
 

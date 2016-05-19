@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2005 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,7 +31,7 @@
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
 #else
-#import <WebKit/WAKAppKitStubs.h>
+#import <WebKitLegacy/WAKAppKitStubs.h>
 #endif
 
 @class DOMCSSStyleDeclaration;
@@ -44,7 +44,12 @@ typedef NS_ENUM(NSInteger, WebViewInsertAction) {
     WebViewInsertActionDropped,
 };
 
-@interface NSObject (WebViewEditingDelegate)
+@protocol WebEditingDelegate <NSObject>
+
+@optional
+@end
+
+@interface NSObject (WebEditingDelegate)
 - (BOOL)webView:(WebView *)webView shouldBeginEditingInDOMRange:(DOMRange *)range;
 - (BOOL)webView:(WebView *)webView shouldEndEditingInDOMRange:(DOMRange *)range;
 - (BOOL)webView:(WebView *)webView shouldInsertNode:(DOMNode *)node replacingDOMRange:(DOMRange *)range givenAction:(WebViewInsertAction)action;

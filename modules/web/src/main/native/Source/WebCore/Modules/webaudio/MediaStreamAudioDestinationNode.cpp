@@ -37,9 +37,9 @@
 
 namespace WebCore {
 
-PassRefPtr<MediaStreamAudioDestinationNode> MediaStreamAudioDestinationNode::create(AudioContext* context, size_t numberOfChannels)
+Ref<MediaStreamAudioDestinationNode> MediaStreamAudioDestinationNode::create(AudioContext* context, size_t numberOfChannels)
 {
-    return adoptRef(new MediaStreamAudioDestinationNode(context, numberOfChannels));
+    return adoptRef(*new MediaStreamAudioDestinationNode(context, numberOfChannels));
 }
 
 MediaStreamAudioDestinationNode::MediaStreamAudioDestinationNode(AudioContext* context, size_t numberOfChannels)
@@ -49,16 +49,16 @@ MediaStreamAudioDestinationNode::MediaStreamAudioDestinationNode(AudioContext* c
     setNodeType(NodeTypeMediaStreamAudioDestination);
 
     m_source = MediaStreamAudioSource::create();
-    Vector<RefPtr<MediaStreamSource>> audioSources;
+    Vector<RefPtr<RealtimeMediaSource>> audioSources;
     audioSources.append(m_source);
-    m_stream = MediaStream::create(*context->scriptExecutionContext(), MediaStreamPrivate::create(audioSources, Vector<RefPtr<MediaStreamSource>>()));
+    m_stream = MediaStream::create(*context->scriptExecutionContext(), MediaStreamPrivate::create(audioSources, Vector<RefPtr<RealtimeMediaSource>>()));
 
     m_source->setAudioFormat(numberOfChannels, context->sampleRate());
 
     initialize();
 }
 
-MediaStreamSource* MediaStreamAudioDestinationNode::mediaStreamSource()
+RealtimeMediaSource* MediaStreamAudioDestinationNode::mediaStreamSource()
 {
     return m_source.get();
 }

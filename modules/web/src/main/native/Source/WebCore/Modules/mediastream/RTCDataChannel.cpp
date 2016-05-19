@@ -54,37 +54,48 @@ static const AtomicString& arraybufferKeyword()
     return arraybuffer;
 }
 
-PassRefPtr<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext* context, RTCPeerConnectionHandler* peerConnectionHandler, const String& label, const Dictionary& options, ExceptionCode& ec)
+RefPtr<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext* context, RTCPeerConnectionHandler* peerConnectionHandler, const String& label, const Dictionary& options, ExceptionCode& ec)
 {
     RTCDataChannelInit initData;
+    String maxRetransmitsStr;
+    String maxRetransmitTimeStr;
     options.get("ordered", initData.ordered);
     options.get("negotiated", initData.negotiated);
     options.get("id", initData.id);
-    options.get("maxRetransmits", initData.maxRetransmits);
-    options.get("maxRetransmitTime", initData.maxRetransmitTime);
+    options.get("maxRetransmits", maxRetransmitsStr);
+    options.get("maxRetransmitTime", maxRetransmitTimeStr);
     options.get("protocol", initData.protocol);
+
+    bool maxRetransmitsConversion;
+    bool maxRetransmitTimeConversion;
+    initData.maxRetransmits = maxRetransmitsStr.toUIntStrict(&maxRetransmitsConversion);
+    initData.maxRetransmitTime = maxRetransmitTimeStr.toUIntStrict(&maxRetransmitTimeConversion);
+    if (maxRetransmitsConversion && maxRetransmitTimeConversion) {
+        ec = SYNTAX_ERR;
+        return nullptr;
+    }
 
     std::unique_ptr<RTCDataChannelHandler> handler = peerConnectionHandler->createDataChannel(label, initData);
     if (!handler) {
         ec = NOT_SUPPORTED_ERR;
         return nullptr;
     }
-    return adoptRef(new RTCDataChannel(context, std::move(handler)));
+    return adoptRef(*new RTCDataChannel(context, WTF::move(handler)));
 }
 
-PassRefPtr<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext* context, std::unique_ptr<RTCDataChannelHandler> handler)
+Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext* context, std::unique_ptr<RTCDataChannelHandler> handler)
 {
     ASSERT(handler);
-    return adoptRef(new RTCDataChannel(context, std::move(handler)));
+    return adoptRef(*new RTCDataChannel(context, WTF::move(handler)));
 }
 
 RTCDataChannel::RTCDataChannel(ScriptExecutionContext* context, std::unique_ptr<RTCDataChannelHandler> handler)
     : m_scriptExecutionContext(context)
-    , m_handler(std::move(handler))
+    , m_handler(WTF::move(handler))
     , m_stopped(false)
     , m_readyState(ReadyStateConnecting)
     , m_binaryType(BinaryTypeArrayBuffer)
-    , m_scheduledEventTimer(this, &RTCDataChannel::scheduledEventTimerFired)
+    , m_scheduledEventTimer(*this, &RTCDataChannel::scheduledEventTimerFired)
 {
     m_handler->setClient(this);
 }
@@ -289,8 +300,8 @@ void RTCDataChannel::stop()
 {
     m_stopped = true;
     m_readyState = ReadyStateClosed;
-    m_handler->setClient(0);
-    m_scriptExecutionContext = 0;
+    m_handler->setClient(nullptr);
+    m_scriptExecutionContext = nullptr;
 }
 
 void RTCDataChannel::scheduleDispatchEvent(PassRefPtr<Event> event)
@@ -301,7 +312,7 @@ void RTCDataChannel::scheduleDispatchEvent(PassRefPtr<Event> event)
         m_scheduledEventTimer.startOneShot(0);
 }
 
-void RTCDataChannel::scheduledEventTimerFired(Timer<RTCDataChannel>*)
+void RTCDataChannel::scheduledEventTimerFired()
 {
     if (m_stopped)
         return;
@@ -309,11 +320,8 @@ void RTCDataChannel::scheduledEventTimerFired(Timer<RTCDataChannel>*)
     Vector<RefPtr<Event>> events;
     events.swap(m_scheduledEvents);
 
-    Vector<RefPtr<Event>>::iterator it = events.begin();
-    for (; it != events.end(); ++it)
-        dispatchEvent((*it).release());
-
-    events.clear();
+    for (auto& event : events)
+        dispatchEvent(event.release());
 }
 
 } // namespace WebCore

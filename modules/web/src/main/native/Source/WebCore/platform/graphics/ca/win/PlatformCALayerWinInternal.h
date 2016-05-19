@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -37,6 +37,8 @@ namespace WebCore {
 
 class FloatRect;
 class PlatformCALayer;
+class TileController;
+class TiledBacking;
 
 typedef Vector<RefPtr<PlatformCALayer> > PlatformCALayerList;
 
@@ -46,18 +48,22 @@ public:
     ~PlatformCALayerWinInternal();
 
     void displayCallback(CACFLayerRef, CGContextRef);
-    void setNeedsDisplay(const FloatRect*);
+    void setNeedsDisplayInRect(const FloatRect&);
+    void setNeedsDisplay();
     PlatformCALayer* owner() const { return m_owner; }
 
     void setSublayers(const PlatformCALayerList&);
     void getSublayers(PlatformCALayerList&) const;
     void removeAllSublayers();
-    void insertSublayer(PlatformCALayer*, size_t);
+    void insertSublayer(PlatformCALayer&, size_t);
     size_t sublayerCount() const;
     int indexOfSublayer(const PlatformCALayer* reference);
 
     void setBounds(const FloatRect&);
     void setFrame(const FloatRect&);
+
+    TileController* createTileController(PlatformCALayer* rootLayer);
+    TiledBacking* tiledBacking();
 
 private:
     void internalSetNeedsDisplay(const FloatRect*);
@@ -78,6 +84,7 @@ private:
     CGSize m_tileSize;
     CGSize m_constrainedSize;
     RetainPtr<CACFLayerRef> m_tileParent;
+    std::unique_ptr<TileController> m_tileController;
 };
 
 }

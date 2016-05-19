@@ -20,13 +20,18 @@
 #include "WebKitDOMCustom.h"
 
 #include "JSMainThreadExecState.h"
+#include "SerializedScriptValue.h"
+#include "WebKitDOMDOMSettableTokenListPrivate.h"
+#include "WebKitDOMDOMWindowPrivate.h"
 #include "WebKitDOMHTMLInputElement.h"
 #include "WebKitDOMHTMLInputElementPrivate.h"
-#include "WebKitDOMHTMLMediaElementPrivate.h"
+#include "WebKitDOMHTMLLinkElementPrivate.h"
 #include "WebKitDOMHTMLTextAreaElement.h"
 #include "WebKitDOMHTMLTextAreaElementPrivate.h"
 #include "WebKitDOMPrivate.h"
-#include "gobject/ConvertToUTF8String.h"
+#include "WebKitDOMUserMessageHandlerPrivate.h"
+#include "WebKitDOMUserMessageHandlersNamespacePrivate.h"
+#include "WebKitDOMWebKitNamespacePrivate.h"
 
 using namespace WebKit;
 
@@ -44,16 +49,55 @@ gboolean webkit_dom_html_input_element_is_edited(WebKitDOMHTMLInputElement* inpu
     return core(input)->lastChangeWasUserEdit();
 }
 
-void webkit_dom_html_media_element_set_current_time(WebKitDOMHTMLMediaElement* self, gdouble value, GError**)
+WebKitDOMWebKitNamespace* webkit_dom_dom_window_get_webkit_namespace(WebKitDOMDOMWindow* window)
 {
-#if ENABLE(VIDEO)
-    WebCore::JSMainThreadNullState state;
-    g_return_if_fail(WEBKIT_DOM_IS_HTML_MEDIA_ELEMENT(self));
-    WebCore::HTMLMediaElement* item = WebKit::core(self);
-    item->setCurrentTime(value);
-#else
-    WEBKIT_WARN_FEATURE_NOT_PRESENT("Video")
-#endif /* ENABLE(VIDEO) */
+    g_return_val_if_fail(WEBKIT_DOM_IS_DOM_WINDOW(window), nullptr);
+
+    WebCore::DOMWindow* domWindow = core(window);
+    if (!domWindow->shouldHaveWebKitNamespaceForWorld(WebCore::mainThreadNormalWorld()))
+        return nullptr;
+    return kit(domWindow->webkitNamespace());
 }
 
+WebKitDOMUserMessageHandler* webkit_dom_user_message_handlers_namespace_get_handler(WebKitDOMUserMessageHandlersNamespace* handlersNamespace, const gchar* name)
+{
+    g_return_val_if_fail(WEBKIT_DOM_IS_USER_MESSAGE_HANDLERS_NAMESPACE(handlersNamespace), nullptr);
+    g_return_val_if_fail(name, nullptr);
 
+    return kit(core(handlersNamespace)->handler(String::fromUTF8(name), WebCore::mainThreadNormalWorld()));
+}
+
+gboolean webkit_dom_dom_window_webkit_message_handlers_post_message(WebKitDOMDOMWindow* window, const gchar* handlerName, const gchar* message)
+{
+    g_return_val_if_fail(WEBKIT_DOM_IS_DOM_WINDOW(window), FALSE);
+    g_return_val_if_fail(handlerName, FALSE);
+    g_return_val_if_fail(message, FALSE);
+
+    WebCore::DOMWindow* domWindow = core(window);
+    if (!domWindow->shouldHaveWebKitNamespaceForWorld(WebCore::mainThreadNormalWorld()))
+        return FALSE;
+
+    auto webkitNamespace = domWindow->webkitNamespace();
+    if (!webkitNamespace)
+        return FALSE;
+
+    auto handler = webkitNamespace->messageHandlers()->handler(String::fromUTF8(handlerName), WebCore::mainThreadNormalWorld());
+    if (!handler)
+        return FALSE;
+
+    WebCore::JSMainThreadNullState state;
+    WebCore::ExceptionCode ec = 0;
+    handler->postMessage(WebCore::SerializedScriptValue::create(String::fromUTF8(message)), ec);
+    if (ec)
+        return FALSE;
+
+    return TRUE;
+}
+
+void webkit_dom_html_link_element_set_sizes(WebKitDOMHTMLLinkElement* linkElement, const gchar* value)
+{
+    g_return_if_fail(WEBKIT_DOM_IS_HTML_LINK_ELEMENT(linkElement));
+    g_return_if_fail(value);
+
+    core(linkElement)->setSizes(String::fromUTF8(value));
+}

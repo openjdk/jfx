@@ -25,7 +25,6 @@
 #include "BatteryController.h"
 #include "BatteryManager.h"
 #include "Navigator.h"
-#include "ScriptExecutionContext.h"
 
 namespace WebCore {
 
@@ -40,7 +39,7 @@ NavigatorBattery::~NavigatorBattery()
 BatteryManager* NavigatorBattery::webkitBattery(Navigator* navigator)
 {
     if (!navigator->frame())
-        return 0;
+        return nullptr;
 
     NavigatorBattery* navigatorBattery = NavigatorBattery::from(navigator);
     if (!navigatorBattery->m_batteryManager)
@@ -57,19 +56,13 @@ NavigatorBattery* NavigatorBattery::from(Navigator* navigator)
 {
     NavigatorBattery* supplement = static_cast<NavigatorBattery*>(Supplement<Navigator>::from(navigator, supplementName()));
     if (!supplement) {
-        supplement = new NavigatorBattery();
-        provideTo(navigator, supplementName(), adoptPtr(supplement));
+        auto newSupplement = std::make_unique<NavigatorBattery>();
+        supplement = newSupplement.get();
+        provideTo(navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
-}
-
-BatteryManager* NavigatorBattery::batteryManager()
-{
-    return m_batteryManager.get();
 }
 
 } // namespace WebCore
 
 #endif // ENABLE(BATTERY_STATUS)
-
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2009, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  *
@@ -33,7 +33,7 @@ class SearchPopupMenu;
 
 class RenderSearchField final : public RenderTextControlSingleLine, private PopupMenuClient {
 public:
-    RenderSearchField(HTMLInputElement&, PassRef<RenderStyle>);
+    RenderSearchField(HTMLInputElement&, Ref<RenderStyle>&&);
     virtual ~RenderSearchField();
 
     void updateCancelButtonVisibility() const;
@@ -80,7 +80,7 @@ private:
     virtual void setTextFromItem(unsigned listIndex) override;
     virtual FontSelector* fontSelector() const override;
     virtual HostWindow* hostWindow() const override;
-    virtual PassRefPtr<Scrollbar> createScrollbar(ScrollableArea*, ScrollbarOrientation, ScrollbarControlSize) override;
+    virtual PassRefPtr<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarControlSize) override;
 
     HTMLElement* resultsButtonElement() const;
     HTMLElement* cancelButtonElement() const;
@@ -90,8 +90,8 @@ private:
     Vector<String> m_recentSearches;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSearchField, isTextField())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSearchField, isTextField())
 
 #endif

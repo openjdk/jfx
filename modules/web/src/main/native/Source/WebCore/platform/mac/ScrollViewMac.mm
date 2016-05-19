@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,6 +33,11 @@
 #import "Logging.h"
 #import "NotImplemented.h"
 #import "WebCoreFrameView.h"
+
+@interface NSScrollView (Details)
+- (NSEdgeInsets)contentInsets;
+@property BOOL automaticallyAdjustsContentInsets;
+@end
 
 @interface NSWindow (WebWindowDetails)
 - (BOOL)_needsToResetDragMargins;
@@ -104,26 +109,75 @@ bool ScrollView::platformCanBlitOnScroll() const
     return [[scrollView() contentView] copiesOnScroll];
 }
 
+float ScrollView::platformTopContentInset() const
+{
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    return scrollView().contentInsets.top;
+#endif
+    END_BLOCK_OBJC_EXCEPTIONS;
+
+    return 0;
+}
+
+void ScrollView::platformSetTopContentInset(float topContentInset)
+{
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    if (topContentInset)
+        scrollView().automaticallyAdjustsContentInsets = NO;
+    else
+        scrollView().automaticallyAdjustsContentInsets = YES;
+
+    NSEdgeInsets contentInsets = scrollView().contentInsets;
+    contentInsets.top = topContentInset;
+    scrollView().contentInsets = contentInsets;
+#else
+    UNUSED_PARAM(topContentInset);
+#endif
+    END_BLOCK_OBJC_EXCEPTIONS;
+}
+
 IntRect ScrollView::platformVisibleContentRect(bool includeScrollbars) const
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    IntRect result = enclosingIntRect([scrollView() documentVisibleRect]);
-    if (includeScrollbars)
-        result.setSize(IntSize([scrollView() frame].size));
-    return result;
+    IntRect visibleContentRect = platformVisibleContentRectIncludingObscuredArea(includeScrollbars);
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    visibleContentRect.move(scrollView().contentInsets.left, scrollView().contentInsets.top);
+    visibleContentRect.contract(scrollView().contentInsets.left + scrollView().contentInsets.right, scrollView().contentInsets.top + scrollView().contentInsets.bottom);
+#endif
+
+    return visibleContentRect;
     END_BLOCK_OBJC_EXCEPTIONS;
+
     return IntRect();
 }
 
 IntSize ScrollView::platformVisibleContentSize(bool includeScrollbars) const
 {
-    BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    if (includeScrollbars)
-        return IntSize([scrollView() frame].size);
+    return platformVisibleContentRect(includeScrollbars).size();
+}
 
-    return expandedIntSize(FloatSize([scrollView() documentVisibleRect].size));
+IntRect ScrollView::platformVisibleContentRectIncludingObscuredArea(bool includeScrollbars) const
+{
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+    IntRect visibleContentRectIncludingObscuredArea = enclosingIntRect([scrollView() documentVisibleRect]);
+
+    if (includeScrollbars) {
+        IntSize frameSize = IntSize([scrollView() frame].size);
+        visibleContentRectIncludingObscuredArea.setSize(frameSize);
+    }
+
+    return visibleContentRectIncludingObscuredArea;
     END_BLOCK_OBJC_EXCEPTIONS;
-    return IntSize();
+
+    return IntRect();
+}
+
+IntSize ScrollView::platformVisibleContentSizeIncludingObscuredArea(bool includeScrollbars) const
+{
+    return platformVisibleContentRectIncludingObscuredArea(includeScrollbars).size();
 }
 
 void ScrollView::platformSetContentsSize()
@@ -149,6 +203,14 @@ void ScrollView::platformSetScrollPosition(const IntPoint& scrollPoint)
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     NSPoint floatPoint = scrollPoint;
     NSPoint tempPoint = { std::max(-[scrollView() scrollOrigin].x, floatPoint.x), std::max(-[scrollView() scrollOrigin].y, floatPoint.y) };  // Don't use NSMakePoint to work around 4213314.
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    // AppKit has the inset factored into all of its scroll positions. In WebCore, we use positions that ignore
+    // the insets so that they are equivalent whether or not there is an inset.
+    tempPoint.x = tempPoint.x - scrollView().contentInsets.left;
+    tempPoint.y = tempPoint.y - scrollView().contentInsets.top;
+#endif
+
     [documentView() scrollPoint:tempPoint];
     END_BLOCK_OBJC_EXCEPTIONS;
 }
@@ -160,15 +222,12 @@ bool ScrollView::platformScroll(ScrollDirection, ScrollGranularity)
     return false;
 }
 
-void ScrollView::platformRepaintContentRectangle(const IntRect& rect, bool now)
+void ScrollView::platformRepaintContentRectangle(const IntRect& rect)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     NSView *view = documentView();
     [view setNeedsDisplayInRect:rect];
-    if (now) {
-        [[view window] displayIfNeeded];
-        [[view window] flushWindowIfNeeded];
-    }
+
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 

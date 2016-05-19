@@ -26,7 +26,7 @@
 #ifndef InjectedBundleController_h
 #define InjectedBundleController_h
 
-#include <WebKit2/WKBundle.h>
+#include <WebKit/WKBundle.h>
 #include <map>
 #include <string>
 
@@ -36,7 +36,7 @@ class InjectedBundleTest;
 
 class InjectedBundleController {
 public:
-    static InjectedBundleController& shared();
+    static InjectedBundleController& singleton();
 
     void initialize(WKBundleRef, WKTypeRef);
 

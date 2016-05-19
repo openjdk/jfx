@@ -32,35 +32,69 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
+#if ENABLE(USER_MESSAGE_HANDLERS)
+#include "UserMessageHandlerDescriptorTypes.h"
+#endif
+
 namespace WebCore {
 
 class DOMWrapperWorld;
+class DocumentLoader;
 class Page;
+class ResourceRequest;
+class StyleSheetContents;
 class URL;
 class UserScript;
 class UserStyleSheet;
+class UserMessageHandlerDescriptor;
+
+enum class ResourceType : uint16_t;
+
+struct ResourceLoadInfo;
+
+namespace ContentExtensions {
+class CompiledContentExtension;
+class ContentExtensionsBackend;
+struct Action;
+}
 
 class UserContentController : public RefCounted<UserContentController> {
 public:
-    static RefPtr<UserContentController> create();
-    ~UserContentController();
+    WEBCORE_EXPORT static Ref<UserContentController> create();
+    WEBCORE_EXPORT ~UserContentController();
 
     void addPage(Page&);
     void removePage(Page&);
 
     const UserScriptMap* userScripts() const { return m_userScripts.get(); }
 
-    void addUserScript(DOMWrapperWorld&, std::unique_ptr<UserScript>);
-    void removeUserScript(DOMWrapperWorld&, const URL&);
-    void removeUserScripts(DOMWrapperWorld&);
+    WEBCORE_EXPORT void addUserScript(DOMWrapperWorld&, std::unique_ptr<UserScript>);
+    WEBCORE_EXPORT void removeUserScript(DOMWrapperWorld&, const URL&);
+    WEBCORE_EXPORT void removeUserScripts(DOMWrapperWorld&);
 
     const UserStyleSheetMap* userStyleSheets() const { return m_userStyleSheets.get(); }
 
-    void addUserStyleSheet(DOMWrapperWorld&, std::unique_ptr<UserStyleSheet>, UserStyleInjectionTime);
-    void removeUserStyleSheet(DOMWrapperWorld&, const URL&);
-    void removeUserStyleSheets(DOMWrapperWorld&);
+    WEBCORE_EXPORT void addUserStyleSheet(DOMWrapperWorld&, std::unique_ptr<UserStyleSheet>, UserStyleInjectionTime);
+    WEBCORE_EXPORT void removeUserStyleSheet(DOMWrapperWorld&, const URL&);
+    WEBCORE_EXPORT void removeUserStyleSheets(DOMWrapperWorld&);
 
-    void removeAllUserContent();
+    WEBCORE_EXPORT void removeAllUserContent();
+
+#if ENABLE(USER_MESSAGE_HANDLERS)
+    const UserMessageHandlerDescriptorMap* userMessageHandlerDescriptors() const { return m_userMessageHandlerDescriptors.get(); }
+
+    WEBCORE_EXPORT void addUserMessageHandlerDescriptor(UserMessageHandlerDescriptor&);
+    WEBCORE_EXPORT void removeUserMessageHandlerDescriptor(UserMessageHandlerDescriptor&);
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT void addUserContentExtension(const String& name, RefPtr<ContentExtensions::CompiledContentExtension>);
+    WEBCORE_EXPORT void removeUserContentExtension(const String& name);
+    WEBCORE_EXPORT void removeAllUserContentExtensions();
+
+    void processContentExtensionRulesForLoad(Page&, ResourceRequest&, ResourceType, DocumentLoader& initiatingDocumentLoader);
+    Vector<ContentExtensions::Action> actionsForResourceLoad(Page&, const ResourceLoadInfo&);
+#endif
 
 private:
     UserContentController();
@@ -71,6 +105,12 @@ private:
 
     std::unique_ptr<UserScriptMap> m_userScripts;
     std::unique_ptr<UserStyleSheetMap> m_userStyleSheets;
+#if ENABLE(USER_MESSAGE_HANDLERS)
+    std::unique_ptr<UserMessageHandlerDescriptorMap> m_userMessageHandlerDescriptors;
+#endif
+#if ENABLE(CONTENT_EXTENSIONS)
+    std::unique_ptr<ContentExtensions::ContentExtensionsBackend> m_contentExtensionBackend;
+#endif
 };
 
 } // namespace WebCore

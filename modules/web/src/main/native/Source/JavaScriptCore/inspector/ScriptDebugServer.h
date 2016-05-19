@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -58,7 +58,7 @@ public:
 
     virtual void recompileAllJSFunctions() = 0;
 
-    const Vector<ScriptBreakpointAction>& getActionsForBreakpoint(JSC::BreakpointID);
+    const BreakpointActions& getActionsForBreakpoint(JSC::BreakpointID);
 
     class Task {
         WTF_MAKE_FAST_ALLOCATED;
@@ -74,16 +74,16 @@ protected:
     ScriptDebugServer(bool isInWorkerThread = false);
     ~ScriptDebugServer();
 
-    virtual ListenerSet* getListenersForGlobalObject(JSC::JSGlobalObject*) = 0;
+    virtual ListenerSet& getListeners() = 0;
     virtual void didPause(JSC::JSGlobalObject*) = 0;
     virtual void didContinue(JSC::JSGlobalObject*) = 0;
     virtual void runEventLoopWhilePaused() = 0;
     virtual bool isContentScript(JSC::ExecState*) const = 0;
-    virtual void reportException(JSC::ExecState*, JSC::JSValue) const = 0;
+    virtual void reportException(JSC::ExecState*, JSC::Exception*) const = 0;
 
     bool evaluateBreakpointAction(const ScriptBreakpointAction&);
 
-    void dispatchFunctionToListeners(JavaScriptExecutionCallback, JSC::JSGlobalObject*);
+    void dispatchFunctionToListeners(JavaScriptExecutionCallback);
     void dispatchFunctionToListeners(const ListenerSet& listeners, JavaScriptExecutionCallback);
     void dispatchDidPause(ScriptDebugListener*);
     void dispatchDidContinue(ScriptDebugListener*);
@@ -93,22 +93,26 @@ protected:
     void dispatchBreakpointActionSound(JSC::ExecState*, int breakpointActionIdentifier);
     void dispatchBreakpointActionProbe(JSC::ExecState*, const ScriptBreakpointAction&, const Deprecated::ScriptValue& sample);
 
-    bool m_doneProcessingDebuggerEvents;
+    bool m_doneProcessingDebuggerEvents {true};
 
 private:
-    typedef Vector<ScriptBreakpointAction> BreakpointActions;
     typedef HashMap<JSC::BreakpointID, BreakpointActions> BreakpointIDToActionsMap;
 
     virtual void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int errorLine, const String& errorMsg) override final;
-    virtual bool needPauseHandling(JSC::JSGlobalObject*) override final;
-    virtual void handleBreakpointHit(const JSC::Breakpoint&) override final;
-    virtual void handleExceptionInBreakpointCondition(JSC::ExecState*, JSC::JSValue exception) const override final;
-    virtual void handlePause(JSC::Debugger::ReasonForPause, JSC::JSGlobalObject*) override final;
+    virtual bool needPauseHandling(JSC::JSGlobalObject*) override final { return true; }
+    virtual void handleBreakpointHit(JSC::JSGlobalObject*, const JSC::Breakpoint&) override final;
+    virtual void handleExceptionInBreakpointCondition(JSC::ExecState*, JSC::Exception*) const override final;
+    virtual void handlePause(JSC::JSGlobalObject*, JSC::Debugger::ReasonForPause) override final;
     virtual void notifyDoneProcessingDebuggerEvents() override final;
 
-    unsigned m_hitCount;
-    bool m_callingListeners;
+    Deprecated::ScriptValue exceptionOrCaughtValue(JSC::ExecState*);
+
+    bool m_callingListeners {false};
+
     BreakpointIDToActionsMap m_breakpointIDToActions;
+
+    unsigned m_nextProbeSampleId {1};
+    unsigned m_currentProbeBatchId {0};
 };
 
 } // namespace Inspector

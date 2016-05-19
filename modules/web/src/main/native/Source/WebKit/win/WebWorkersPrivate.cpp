@@ -28,7 +28,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebWorkersPrivate.h"
 
@@ -90,11 +89,11 @@ WebWorkersPrivate::WebWorkersPrivate()
     : m_refCount(0)
 {
     gClassCount++;
-    gClassNameCount.add("WebWorkersPrivate");
+    gClassNameCount().add("WebWorkersPrivate");
 }
 
 WebWorkersPrivate::~WebWorkersPrivate()
 {
     gClassCount--;
-    gClassNameCount.remove("WebWorkersPrivate");
+    gClassNameCount().remove("WebWorkersPrivate");
 }

@@ -21,7 +21,6 @@
 #ifndef SVGFEComponentTransferElement_h
 #define SVGFEComponentTransferElement_h
 
-#if ENABLE(FILTERS)
 #include "FEComponentTransfer.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
@@ -29,15 +28,14 @@ namespace WebCore {
 
 class SVGFEComponentTransferElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFEComponentTransferElement> create(const QualifiedName&, Document&);
+    static Ref<SVGFEComponentTransferElement> create(const QualifiedName&, Document&);
 
 private:
     SVGFEComponentTransferElement(const QualifiedName&, Document&);
 
     // FIXME: svgAttributeChanged missing.
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
+    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFEComponentTransferElement)
         DECLARE_ANIMATED_STRING(In1, in1)
@@ -46,5 +44,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
 #endif

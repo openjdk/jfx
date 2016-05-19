@@ -22,7 +22,6 @@
 #ifndef SVGFELightElement_h
 #define SVGFELightElement_h
 
-#if ENABLE(FILTERS)
 #include "LightSource.h"
 #include "SVGAnimatedNumber.h"
 #include "SVGElement.h"
@@ -31,9 +30,9 @@ namespace WebCore {
 
 class SVGFELightElement : public SVGElement {
 public:
-    virtual PassRefPtr<LightSource> lightSource() const = 0;
+    virtual Ref<LightSource> lightSource() const = 0;
     static SVGFELightElement* findLightElement(const SVGElement*);
-    static PassRefPtr<LightSource> findLightSource(const SVGElement*);
+    static RefPtr<LightSource> findLightSource(const SVGElement*);
 
 protected:
     SVGFELightElement(const QualifiedName&, Document&);
@@ -41,7 +40,6 @@ protected:
     virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
 private:
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
     virtual void childrenChanged(const ChildChange&) override;
@@ -62,5 +60,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
 #endif

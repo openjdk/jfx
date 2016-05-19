@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,8 +27,6 @@
 #import "Pasteboard.h"
 
 #import "CachedImage.h"
-#import "Clipboard.h"
-#import "DOMRangeInternal.h"
 #import "Document.h"
 #import "DocumentFragment.h"
 #import "DocumentLoader.h"
@@ -41,7 +39,6 @@
 #import "FrameLoaderClient.h"
 #import "HitTestResult.h"
 #import "HTMLAnchorElement.h"
-#import "HTMLConverter.h"
 #import "htmlediting.h"
 #import "HTMLNames.h"
 #import "Image.h"
@@ -53,7 +50,6 @@
 #import "PasteboardStrategy.h"
 #import "PlatformStrategies.h"
 #import "RenderImage.h"
-#import "ResourceBuffer.h"
 #import "Text.h"
 #import "WebCoreNSStringExtras.h"
 #import "WebNSAttributedStringExtras.h"
@@ -126,30 +122,27 @@ Pasteboard::Pasteboard(const String& pasteboardName)
     ASSERT(pasteboardName);
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::create(const String& pasteboardName)
+std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
 {
-    return adoptPtr(new Pasteboard(pasteboardName));
+    return std::make_unique<Pasteboard>(NSGeneralPboard);
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
+std::unique_ptr<Pasteboard> Pasteboard::createPrivate()
 {
-    return create(NSGeneralPboard);
+    return std::make_unique<Pasteboard>(platformStrategies()->pasteboardStrategy()->uniqueName());
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createPrivate()
+#if ENABLE(DRAG_SUPPORT)
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop()
 {
-    return create(platformStrategies()->pasteboardStrategy()->uniqueName());
+    return std::make_unique<Pasteboard>(NSDragPboard);
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop()
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
 {
-    return create(NSDragPboard);
+    return std::make_unique<Pasteboard>(dragData.pasteboardName());
 }
-
-PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
-{
-    return create(dragData.pasteboardName());
-}
+#endif
 
 void Pasteboard::clear()
 {
@@ -253,7 +246,7 @@ static void writeFileWrapperAsRTFDAttachment(NSFileWrapper *wrapper, const Strin
     NSAttributedString *string = [NSAttributedString attributedStringWithAttachment:attachment];
     [attachment release];
 
-    NSData *RTFDData = [string RTFDFromRange:NSMakeRange(0, [string length]) documentAttributes:nil];
+    NSData *RTFDData = [string RTFDFromRange:NSMakeRange(0, [string length]) documentAttributes:@{ }];
     if (!RTFDData)
         return;
 
@@ -572,7 +565,7 @@ static void addHTMLClipboardTypesForCocoaType(ListHashSet<String>& resultTypes, 
     resultTypes.add(cocoaType);
 }
 
-bool Pasteboard::writeString(const String& type, const String& data)
+void Pasteboard::writeString(const String& type, const String& data)
 {
     const String& cocoaType = cocoaTypeFromHTMLClipboardType(type);
     String cocoaData = data;
@@ -580,14 +573,14 @@ bool Pasteboard::writeString(const String& type, const String& data)
     if (cocoaType == String(NSURLPboardType) || cocoaType == String(kUTTypeFileURL)) {
         NSURL *url = [NSURL URLWithString:cocoaData];
         if ([url isFileURL])
-            return false;
+            return;
 
         Vector<String> types;
         types.append(cocoaType);
         platformStrategies()->pasteboardStrategy()->setTypes(types, m_pasteboardName);
         m_changeCount = platformStrategies()->pasteboardStrategy()->setStringForType(cocoaData, cocoaType, m_pasteboardName);
 
-        return true;
+        return;
     }
 
     if (!cocoaType.isEmpty()) {
@@ -596,10 +589,7 @@ bool Pasteboard::writeString(const String& type, const String& data)
         types.append(cocoaType);
         platformStrategies()->pasteboardStrategy()->addTypes(types, m_pasteboardName);
         m_changeCount = platformStrategies()->pasteboardStrategy()->setStringForType(cocoaData, cocoaType, m_pasteboardName);
-        return true;
     }
-
-    return false;
 }
 
 Vector<String> Pasteboard::types()
@@ -640,6 +630,7 @@ Vector<String> Pasteboard::readFilenames()
     return paths;
 }
 
+#if ENABLE(DRAG_SUPPORT)
 void Pasteboard::setDragImage(DragImageRef image, const IntPoint& location)
 {
     // Don't allow setting the drag image if someone kept a pasteboard and is trying to set the image too late.
@@ -657,5 +648,6 @@ void Pasteboard::setDragImage(DragImageRef image, const IntPoint& location)
         modifierFlags:0 timestamp:0 windowNumber:0 context:nil eventNumber:0 clickCount:0 pressure:0];
     [NSApp postEvent:event atStart:YES];
 }
+#endif
 
 }

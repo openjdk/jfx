@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -38,6 +38,16 @@
 using namespace WebCore;
 
 @implementation WebSecurityOrigin
+
++ (id)webSecurityOriginFromDatabaseIdentifier:(NSString *)databaseIdentifier
+{
+    RefPtr<SecurityOrigin> origin = SecurityOrigin::maybeCreateFromDatabaseIdentifier(databaseIdentifier);
+    if (!origin)
+        return nil;
+
+    return [[[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin.get()] autorelease];
+}
+
 - (id)initWithURL:(NSURL *)url
 {
     self = [super init];
@@ -45,8 +55,8 @@ using namespace WebCore;
         return nil;
 
     RefPtr<SecurityOrigin> origin = SecurityOrigin::create(URL([url absoluteURL]));
-    origin->ref();
-    _private = reinterpret_cast<WebSecurityOriginPrivate *>(origin.get());
+    SecurityOrigin* rawOrigin = origin.release().leakRef();
+    _private = reinterpret_cast<WebSecurityOriginPrivate *>(rawOrigin);
 
     return self;
 }
@@ -76,12 +86,6 @@ using namespace WebCore;
 - (NSString *)stringValue
 {
     return reinterpret_cast<SecurityOrigin*>(_private)->toString();
-}
-
-// Deprecated. Use host instead. This needs to stay here until we ship a new Safari.
-- (NSString *)domain
-{
-    return [self host];
 }
 
 - (unsigned short)port
@@ -175,27 +179,17 @@ using namespace WebCore;
 
 - (unsigned long long)usage
 {
-#if ENABLE(SQL_DATABASE)
-    return DatabaseManager::manager().usageForOrigin(reinterpret_cast<SecurityOrigin*>(_private));
-#else
-    return 0;
-#endif
+    return DatabaseManager::singleton().usageForOrigin(reinterpret_cast<SecurityOrigin*>(_private));
 }
 
 - (unsigned long long)quota
 {
-#if ENABLE(SQL_DATABASE)
-    return DatabaseManager::manager().quotaForOrigin(reinterpret_cast<SecurityOrigin*>(_private));
-#else
-    return 0;
-#endif
+    return DatabaseManager::singleton().quotaForOrigin(reinterpret_cast<SecurityOrigin*>(_private));
 }
 
 - (void)setQuota:(unsigned long long)quota
 {
-#if ENABLE(SQL_DATABASE)
-    DatabaseManager::manager().setQuota(reinterpret_cast<SecurityOrigin*>(_private), quota);
-#endif
+    DatabaseManager::singleton().setQuota(reinterpret_cast<SecurityOrigin*>(_private), quota);
 }
 
 @end

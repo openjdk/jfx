@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,11 +54,18 @@ public:
         return JSValueRegs(gpr);
     }
 
+    static JSValueRegs withTwoAvailableRegs(GPRReg gpr, GPRReg)
+    {
+        return JSValueRegs(gpr);
+    }
+
     bool operator!() const { return m_gpr == InvalidGPRReg; }
 
     GPRReg gpr() const { return m_gpr; }
     GPRReg tagGPR() const { return InvalidGPRReg; }
     GPRReg payloadGPR() const { return m_gpr; }
+
+    bool uses(GPRReg gpr) const { return m_gpr == gpr; }
 
 private:
     GPRReg m_gpr;
@@ -144,6 +151,11 @@ public:
     {
     }
 
+    static JSValueRegs withTwoAvailableRegs(GPRReg gpr1, GPRReg gpr2)
+    {
+        return JSValueRegs(gpr1, gpr2);
+    }
+
     static JSValueRegs payloadOnly(GPRReg gpr)
     {
         return JSValueRegs(InvalidGPRReg, gpr);
@@ -168,6 +180,8 @@ public:
         ASSERT_NOT_REACHED();
         return tagGPR();
     }
+
+    bool uses(GPRReg gpr) const { return m_tagGPR == gpr || m_payloadGPR == gpr; }
 
 private:
     int8_t m_tagGPR;
@@ -321,13 +335,18 @@ public:
         return registerForIndex[index];
     }
 
+    static GPRReg toArgumentRegister(unsigned)
+    {
+        UNREACHABLE_FOR_PLATFORM();
+        return InvalidGPRReg;
+    }
+
     static unsigned toIndex(GPRReg reg)
     {
         ASSERT(reg != InvalidGPRReg);
         ASSERT(static_cast<int>(reg) < 8);
         static const unsigned indexForRegister[8] = { 0, 2, 1, 3, InvalidIndex, InvalidIndex, 5, 4 };
         unsigned result = indexForRegister[reg];
-        ASSERT(result != InvalidIndex);
         return result;
     }
 
@@ -399,6 +418,7 @@ public:
     static const GPRReg returnValueGPR = X86Registers::eax; // regT0
     static const GPRReg returnValueGPR2 = X86Registers::edx; // regT1
     static const GPRReg nonPreservedNonReturnGPR = X86Registers::esi;
+    static const GPRReg nonPreservedNonArgumentGPR = X86Registers::r10;
     static const GPRReg patchpointScratchRegister = MacroAssembler::scratchRegister;
 
     static GPRReg toRegister(unsigned index)
@@ -493,6 +513,13 @@ public:
         return registerForIndex[index];
     }
 
+    static GPRReg toArgumentRegister(unsigned index)
+    {
+        ASSERT(index < numberOfArgumentRegisters);
+        static const GPRReg registerForIndex[numberOfArgumentRegisters] = { argumentGPR0, argumentGPR1, argumentGPR2, argumentGPR3 };
+        return registerForIndex[index];
+    }
+
     static unsigned toIndex(GPRReg reg)
     {
         ASSERT(reg != InvalidGPRReg);
@@ -504,7 +531,6 @@ public:
             { 0, 1, 2, 8, 3, 9, InvalidIndex, 7, 4, 5, 6, InvalidIndex, InvalidIndex, InvalidIndex, InvalidIndex, InvalidIndex };
 #endif
         unsigned result = indexForRegister[reg];
-        ASSERT(result != InvalidIndex);
         return result;
     }
 
@@ -548,8 +574,8 @@ public:
     static const GPRReg regT1 = ARM64Registers::x1;
     static const GPRReg regT2 = ARM64Registers::x2;
     static const GPRReg regT3 = ARM64Registers::x23;
-    static const GPRReg regT4 = ARM64Registers::x24;
-    static const GPRReg regT5 = ARM64Registers::x5;
+    static const GPRReg regT4 = ARM64Registers::x5;
+    static const GPRReg regT5 = ARM64Registers::x24;
     static const GPRReg regT6 = ARM64Registers::x6;
     static const GPRReg regT7 = ARM64Registers::x7;
     static const GPRReg regT8 = ARM64Registers::x8;
@@ -564,9 +590,9 @@ public:
     static const GPRReg argumentGPR0 = ARM64Registers::x0; // regT0
     static const GPRReg argumentGPR1 = ARM64Registers::x1; // regT1
     static const GPRReg argumentGPR2 = ARM64Registers::x2; // regT2
-    static const GPRReg argumentGPR3 = ARM64Registers::x3; // regT3
-    static const GPRReg argumentGPR4 = ARM64Registers::x4; // regT4
-    static const GPRReg argumentGPR5 = ARM64Registers::x5; // regT5
+    static const GPRReg argumentGPR3 = ARM64Registers::x3;
+    static const GPRReg argumentGPR4 = ARM64Registers::x4;
+    static const GPRReg argumentGPR5 = ARM64Registers::x5; // regT4
     static const GPRReg argumentGPR6 = ARM64Registers::x6; // regT6
     static const GPRReg argumentGPR7 = ARM64Registers::x7; // regT7
     static const GPRReg nonArgGPR0 = ARM64Registers::x8; // regT8
@@ -575,6 +601,7 @@ public:
     static const GPRReg returnValueGPR = ARM64Registers::x0; // regT0
     static const GPRReg returnValueGPR2 = ARM64Registers::x1; // regT1
     static const GPRReg nonPreservedNonReturnGPR = ARM64Registers::x2;
+    static const GPRReg nonPreservedNonArgumentGPR = ARM64Registers::x8;
     static const GPRReg patchpointScratchRegister = ARM64Registers::ip0;
 
     // GPRReg mapping is direct, the machine regsiter numbers can
@@ -601,6 +628,8 @@ public:
     }
     static unsigned toIndex(GPRReg reg)
     {
+        if (reg > regT15)
+            return InvalidIndex;
         return (unsigned)reg;
     }
 
@@ -612,7 +641,7 @@ public:
 
     static const char* debugName(GPRReg reg)
     {
-        ASSERT(static_cast<unsigned>(reg) != InvalidGPRReg);
+        ASSERT(reg != InvalidGPRReg);
         ASSERT(static_cast<unsigned>(reg) < 32);
         static const char* nameForRegister[32] = {
             "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
@@ -682,7 +711,6 @@ public:
             6, InvalidIndex, 3, InvalidIndex, InvalidIndex, InvalidIndex, InvalidIndex, InvalidIndex
         };
         unsigned result = indexForRegister[reg];
-        ASSERT(result != InvalidIndex);
         return result;
     }
 
@@ -754,7 +782,6 @@ public:
         ASSERT(reg < 14);
         static const unsigned indexForRegister[14] = { 0, 1, 2, InvalidIndex, 4, 5, 6, 7, 8, 9, 3, InvalidIndex, InvalidIndex, InvalidIndex };
         unsigned result = indexForRegister[reg];
-        ASSERT(result != InvalidIndex);
         return result;
     }
 

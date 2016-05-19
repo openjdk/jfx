@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE, INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -42,7 +42,7 @@ class MediaTrackConstraints : public RefCounted<MediaTrackConstraints>, public S
 public:
     virtual ~MediaTrackConstraints() { }
 
-    static RefPtr<MediaTrackConstraints> create(PassRefPtr<MediaConstraintsImpl>);
+    static Ref<MediaTrackConstraints> create(PassRefPtr<MediaConstraintsImpl>);
 
     Vector<PassRefPtr<MediaTrackConstraint>> optional(bool) const;
     RefPtr<MediaTrackConstraintSet> mandatory(bool) const;

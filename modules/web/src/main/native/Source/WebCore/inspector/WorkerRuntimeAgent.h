@@ -31,8 +31,6 @@
 #ifndef WorkerRuntimeAgent_h
 #define WorkerRuntimeAgent_h
 
-#if ENABLE(INSPECTOR)
-
 #include <inspector/agents/InspectorRuntimeAgent.h>
 
 namespace WebCore {
@@ -45,25 +43,23 @@ public:
     WorkerRuntimeAgent(Inspector::InjectedScriptManager*, WorkerGlobalScope*);
     virtual ~WorkerRuntimeAgent() { }
 
-    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
-    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
+    virtual void didCreateFrontendAndBackend(Inspector::FrontendChannel*, Inspector::BackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
 
-    virtual void run(ErrorString*) override;
+    virtual void run(ErrorString&) override;
 
     void pauseWorkerGlobalScope(WorkerGlobalScope*);
 
 private:
-    virtual JSC::VM* globalVM() override;
-    virtual Inspector::InjectedScript injectedScriptForEval(ErrorString*, const int* executionContextId) override;
+    virtual JSC::VM& globalVM() override;
+    virtual Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
     virtual void muteConsole() override;
     virtual void unmuteConsole() override;
     WorkerGlobalScope* m_workerGlobalScope;
-    RefPtr<Inspector::InspectorRuntimeBackendDispatcher> m_backendDispatcher;
+    RefPtr<Inspector::RuntimeBackendDispatcher> m_backendDispatcher;
     bool m_paused;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(InspectorPagerAgent_h)

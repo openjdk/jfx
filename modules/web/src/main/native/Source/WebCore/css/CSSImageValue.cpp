@@ -54,8 +54,8 @@ CSSImageValue::CSSImageValue(const String& url, StyleImage* image)
 
 inline void CSSImageValue::detachPendingImage()
 {
-    if (m_image && m_image->isPendingImage())
-        toStylePendingImage(*m_image).detachFromCSSValue();
+    if (is<StylePendingImage>(m_image.get()))
+        downcast<StylePendingImage>(*m_image).detachFromCSSValue();
 }
 
 CSSImageValue::~CSSImageValue()
@@ -71,44 +71,36 @@ StyleImage* CSSImageValue::cachedOrPendingImage()
     return m_image.get();
 }
 
-StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader* loader, const ResourceLoaderOptions& options)
+StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader& loader, const ResourceLoaderOptions& options)
 {
-    ASSERT(loader);
-
     if (!m_accessedImage) {
         m_accessedImage = true;
 
-        CachedResourceRequest request(ResourceRequest(loader->document()->completeURL(m_url)), options);
+        CachedResourceRequest request(ResourceRequest(loader.document()->completeURL(m_url)), options);
         if (m_initiatorName.isEmpty())
             request.setInitiator(cachedResourceRequestInitiators().css);
         else
             request.setInitiator(m_initiatorName);
 
-        if (options.requestOriginPolicy == PotentiallyCrossOriginEnabled)
-            updateRequestForAccessControl(request.mutableResourceRequest(), loader->document()->securityOrigin(), options.allowCredentials);
+        if (options.requestOriginPolicy() == PotentiallyCrossOriginEnabled)
+            updateRequestForAccessControl(request.mutableResourceRequest(), loader.document()->securityOrigin(), options.allowCredentials());
 
-        if (CachedResourceHandle<CachedImage> cachedImage = loader->requestImage(request)) {
+        if (CachedResourceHandle<CachedImage> cachedImage = loader.requestImage(request)) {
             detachPendingImage();
             m_image = StyleCachedImage::create(cachedImage.get());
         }
     }
 
-    return (m_image && m_image->isCachedImage()) ? toStyleCachedImage(m_image.get()) : nullptr;
+    return is<StyleCachedImage>(m_image.get()) ? downcast<StyleCachedImage>(m_image.get()) : nullptr;
 }
 
-StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader* loader)
+bool CSSImageValue::traverseSubresources(const std::function<bool (const CachedResource&)>& handler) const
 {
-    return cachedImage(loader, CachedResourceLoader::defaultCachedResourceOptions());
-}
-
-bool CSSImageValue::hasFailedOrCanceledSubresources() const
-{
-    if (!m_image || !m_image->isCachedImage())
+    if (!is<StyleCachedImage>(m_image.get()))
         return false;
-    CachedResource* cachedResource = toStyleCachedImage(*m_image).cachedImage();
-    if (!cachedResource)
-        return true;
-    return cachedResource->loadFailedOrCanceled();
+    CachedResource* cachedResource = downcast<StyleCachedImage>(*m_image).cachedImage();
+    ASSERT(cachedResource);
+    return handler(*cachedResource);
 }
 
 bool CSSImageValue::equals(const CSSImageValue& other) const

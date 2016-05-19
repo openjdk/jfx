@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -49,13 +49,13 @@
 
 #if USE(CF)
 #include <CoreFoundation/CFString.h>
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
-#define WTF_USE_APPLE_SYSTEM_LOG 1
+#if PLATFORM(COCOA)
+#define USE_APPLE_SYSTEM_LOG 1
 #include <asl.h>
 #endif
 #endif // USE(CF)
 
-#if COMPILER(MSVC) && !OS(WINCE)
+#if COMPILER(MSVC)
 #include <crtdbg.h>
 #endif
 
@@ -64,6 +64,11 @@
 #if PLATFORM(JAVA) && defined(_DEBUG)
 #pragma comment(lib, "user32.lib")
 #endif
+#endif
+
+#if OS(DARWIN)
+#include <sys/sysctl.h>
+#include <unistd.h>
 #endif
 
 #if OS(DARWIN) || (OS(LINUX) && !defined(__UCLIBC__))
@@ -124,21 +129,8 @@ static void vprintf_stderr_common(const char* format, va_list args)
             if (buffer == NULL)
                 break;
 
-            if (_vsnprintf(buffer, size, format, args) != -1) {
-#if OS(WINCE)
-                // WinCE only supports wide chars
-                wchar_t* wideBuffer = (wchar_t*)malloc(size * sizeof(wchar_t));
-                if (wideBuffer == NULL)
-                    break;
-                for (unsigned int i = 0; i < size; ++i) {
-                    if (!(wideBuffer[i] = buffer[i]))
-                        break;
-                }
-                OutputDebugStringW(wideBuffer);
-                free(wideBuffer);
-#else
+            if (vsnprintf(buffer, size, format, args) != -1) {
                 OutputDebugStringA(buffer);
-#endif
                 free(buffer);
                 break;
             }
@@ -199,7 +191,7 @@ static void printf_stderr_common(const char* format, ...)
 
 static void printCallSite(const char* file, int line, const char* function)
 {
-#if OS(WINDOWS) && !OS(WINCE) && defined(_DEBUG)
+#if OS(WINDOWS) && defined(_DEBUG)
     _CrtDbgReport(_CRT_WARN, file, line, NULL, "%s\n", function);
 #else
     // By using this format, which matches the format used by MSVC for compiler errors, developers
@@ -238,7 +230,7 @@ void WTFGetBacktrace(void** stack, int* size)
 {
 #if OS(DARWIN) || (OS(LINUX) && !defined(__UCLIBC__))
     *size = backtrace(stack, *size);
-#elif OS(WINDOWS) && !OS(WINCE)
+#elif OS(WINDOWS)
     // The CaptureStackBackTrace function is available in XP, but it is not defined
     // in the Windows Server 2003 R2 Platform SDK. So, we'll grab the function
     // through GetProcAddress.
@@ -273,10 +265,10 @@ void WTFReportBacktrace()
 #if OS(DARWIN) || OS(LINUX)
 #  if PLATFORM(GTK)
 #    if defined(__GLIBC__) && !defined(__UCLIBC__)
-#      define WTF_USE_BACKTRACE_SYMBOLS 1
+#      define USE_BACKTRACE_SYMBOLS 1
 #    endif
 #  else
-#    define WTF_USE_DLADDR 1
+#    define USE_DLADDR 1
 #  endif
 #endif
 
@@ -313,18 +305,14 @@ void WTFPrintBacktrace(void** stack, int size)
 #endif
 }
 
-#undef WTF_USE_BACKTRACE_SYMBOLS
-#undef WTF_USE_DLADDR
+#undef USE_BACKTRACE_SYMBOLS
+#undef USE_DLADDR
 
 static WTFCrashHookFunction globalHook = 0;
 
 void WTFSetCrashHook(WTFCrashHookFunction function)
 {
     globalHook = function;
-}
-
-void WTFInvokeCrashHook()
-{
 }
 
 void WTFCrash()
@@ -338,7 +326,7 @@ void WTFCrash()
 #else
     *(int *)(uintptr_t)0xbbadbeef = 0;
     // More reliable, but doesn't say BBADBEEF.
-#if COMPILER(CLANG)
+#if COMPILER(CLANG) || COMPILER(GCC)
     __builtin_trap();
 #else
     ((void(*)())0)();
@@ -353,7 +341,7 @@ void WTFCrashWithSecurityImplication()
     WTFReportBacktrace();
     *(int *)(uintptr_t)0xfbadbeef = 0;
     // More reliable, but doesn't say fbadbeef.
-#if COMPILER(CLANG)
+#if COMPILER(CLANG) || COMPILER(GCC)
     __builtin_trap();
 #else
     ((void(*)())0)();
@@ -393,6 +381,20 @@ void WTFInstallReportBacktraceOnCrashHook()
     // in case we hit an assertion.
     WTFSetCrashHook(&resetSignalHandlersForFatalErrors);
     installSignalHandlersForFatalErrors(&dumpBacktraceSignalHandler);
+#endif
+}
+
+bool WTFIsDebuggerAttached()
+{
+#if OS(DARWIN)
+    struct kinfo_proc info;
+    int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
+    size_t size = sizeof(info);
+    if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &info, &size, nullptr, 0) == -1)
+        return false;
+    return info.kp_proc.p_flag & P_TRACED;
+#else
+    return false;
 #endif
 }
 

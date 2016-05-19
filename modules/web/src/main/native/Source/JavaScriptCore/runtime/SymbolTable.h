@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,30 +30,20 @@
 #define SymbolTable_h
 
 #include "ConcurrentJITLock.h"
+#include "ConstantMode.h"
+#include "InferredValue.h"
 #include "JSObject.h"
-#include "VariableWatchpointSet.h"
+#include "ScopedArgumentsTable.h"
+#include "TypeLocation.h"
+#include "VarOffset.h"
+#include "Watchpoint.h"
 #include <memory>
 #include <wtf/HashTraits.h>
-#include <wtf/text/StringImpl.h>
+#include <wtf/text/UniquedStringImpl.h>
 
 namespace JSC {
 
-struct SlowArgument {
-    enum Status {
-        Normal = 0,
-        Captured = 1,
-        Deleted = 2
-    };
-
-    SlowArgument()
-        : status(Normal)
-        , index(0)
-    {
-    }
-
-    Status status;
-    int index; // If status is 'Deleted', index is bogus.
-};
+class SymbolTable;
 
 static ALWAYS_INLINE int missingSymbolMarker() { return std::numeric_limits<int>::max(); }
 
@@ -76,14 +66,36 @@ static ALWAYS_INLINE int missingSymbolMarker() { return std::numeric_limits<int>
 // counted pointer to a shared WatchpointSet. Thus, in-place edits of the
 // WatchpointSet will manifest in all copies. Here's a picture:
 //
-// SymbolTableEntry --> FatEntry --> VariableWatchpointSet
+// SymbolTableEntry --> FatEntry --> WatchpointSet
 //
 // If you make a copy of a SymbolTableEntry, you will have:
 //
-// original: SymbolTableEntry --> FatEntry --> VariableWatchpointSet
+// original: SymbolTableEntry --> FatEntry --> WatchpointSet
 // copy:     SymbolTableEntry --> FatEntry -----^
 
 struct SymbolTableEntry {
+private:
+    static VarOffset varOffsetFromBits(intptr_t bits)
+    {
+        VarKind kind;
+        intptr_t kindBits = bits & KindBitsMask;
+        if (kindBits <= UnwatchableScopeKindBits)
+            kind = VarKind::Scope;
+        else if (kindBits == StackKindBits)
+            kind = VarKind::Stack;
+        else
+            kind = VarKind::DirectArgument;
+        return VarOffset::assemble(kind, static_cast<int>(bits >> FlagBits));
+    }
+
+    static ScopeOffset scopeOffsetFromBits(intptr_t bits)
+    {
+        ASSERT((bits & KindBitsMask) <= UnwatchableScopeKindBits);
+        return ScopeOffset(static_cast<int>(bits >> FlagBits));
+    }
+
+public:
+
     // Use the SymbolTableEntry::Fast class, either via implicit cast or by calling
     // getFast(), when you (1) only care about isNull(), getIndex(), and isReadOnly(),
     // and (2) you are in a hot path where you need to minimize the number of times
@@ -105,9 +117,17 @@ struct SymbolTableEntry {
             return !(m_bits & ~SlimFlag);
         }
 
-        int getIndex() const
+        VarOffset varOffset() const
         {
-            return static_cast<int>(m_bits >> FlagBits);
+            return varOffsetFromBits(m_bits);
+        }
+
+        // Asserts if the offset is anything but a scope offset. This structures the assertions
+        // in a way that may result in better code, even in release, than doing
+        // varOffset().scopeOffset().
+        ScopeOffset scopeOffset() const
+        {
+            return scopeOffsetFromBits(m_bits);
         }
 
         bool isReadOnly() const
@@ -115,12 +135,17 @@ struct SymbolTableEntry {
             return m_bits & ReadOnlyFlag;
         }
 
+        bool isDontEnum() const
+        {
+            return m_bits & DontEnumFlag;
+        }
+
         unsigned getAttributes() const
         {
             unsigned attributes = 0;
-            if (m_bits & ReadOnlyFlag)
+            if (isReadOnly())
                 attributes |= ReadOnly;
-            if (m_bits & DontEnumFlag)
+            if (isDontEnum())
                 attributes |= DontEnum;
             return attributes;
         }
@@ -140,18 +165,18 @@ struct SymbolTableEntry {
     {
     }
 
-    SymbolTableEntry(int index)
+    SymbolTableEntry(VarOffset offset)
         : m_bits(SlimFlag)
     {
-        ASSERT(isValidIndex(index));
-        pack(index, false, false);
+        ASSERT(isValidVarOffset(offset));
+        pack(offset, true, false, false);
     }
 
-    SymbolTableEntry(int index, unsigned attributes)
+    SymbolTableEntry(VarOffset offset, unsigned attributes)
         : m_bits(SlimFlag)
     {
-        ASSERT(isValidIndex(index));
-        pack(index, attributes & ReadOnly, attributes & DontEnum);
+        ASSERT(isValidVarOffset(offset));
+        pack(offset, true, attributes & ReadOnly, attributes & DontEnum);
     }
 
     ~SymbolTableEntry()
@@ -179,9 +204,22 @@ struct SymbolTableEntry {
         return !(bits() & ~SlimFlag);
     }
 
-    int getIndex() const
+    VarOffset varOffset() const
     {
-        return static_cast<int>(bits() >> FlagBits);
+        return varOffsetFromBits(bits());
+    }
+
+    bool isWatchable() const
+    {
+        return (m_bits & KindBitsMask) == ScopeKindBits;
+    }
+
+    // Asserts if the offset is anything but a scope offset. This structures the assertions
+    // in a way that may result in better code, even in release, than doing
+    // varOffset().scopeOffset().
+    ScopeOffset scopeOffset() const
+    {
+        return scopeOffsetFromBits(bits());
     }
 
     ALWAYS_INLINE Fast getFast() const
@@ -207,7 +245,7 @@ struct SymbolTableEntry {
 
     void setAttributes(unsigned attributes)
     {
-        pack(getIndex(), attributes & ReadOnly, attributes & DontEnum);
+        pack(varOffset(), isWatchable(), attributes & ReadOnly, attributes & DontEnum);
     }
 
     bool isReadOnly() const
@@ -215,24 +253,52 @@ struct SymbolTableEntry {
         return bits() & ReadOnlyFlag;
     }
 
-    JSValue inferredValue();
+    ConstantMode constantMode() const
+    {
+        return modeForIsConstant(isReadOnly());
+    }
+
+    bool isDontEnum() const
+    {
+        return bits() & DontEnumFlag;
+    }
+
+    void disableWatching()
+    {
+        if (WatchpointSet* set = watchpointSet())
+            set->invalidate("Disabling watching in symbol table");
+        if (varOffset().isScope())
+            pack(varOffset(), false, isReadOnly(), isDontEnum());
+    }
 
     void prepareToWatch();
 
     void addWatchpoint(Watchpoint*);
 
-    VariableWatchpointSet* watchpointSet()
+    // This watchpoint set is initialized clear, and goes through the following state transitions:
+    //
+    // First write to this var, in any scope that has this symbol table: Clear->IsWatched.
+    //
+    // Second write to this var, in any scope that has this symbol table: IsWatched->IsInvalidated.
+    //
+    // We ensure that we touch the set (i.e. trigger its state transition) after we do the write. This
+    // means that if you're in the compiler thread, and you:
+    //
+    // 1) Observe that the set IsWatched and commit to adding your watchpoint.
+    // 2) Load a value from any scope that has this watchpoint set.
+    //
+    // Then you can be sure that that value is either going to be the correct value for that var forever,
+    // or the watchpoint set will invalidate and you'll get fired.
+    //
+    // It's possible to write a program that first creates multiple scopes with the same var, and then
+    // initializes that var in just one of them. This means that a compilation could constant-fold to one
+    // of the scopes that still has an undefined value for this variable. That's fine, because at that
+    // point any write to any of the instances of that variable would fire the watchpoint.
+    WatchpointSet* watchpointSet()
     {
         if (!isFat())
             return 0;
         return fatEntry()->m_watchpoints.get();
-    }
-
-    ALWAYS_INLINE void notifyWrite(JSValue value)
-    {
-        if (LIKELY(!isFat()))
-            return;
-        notifyWriteSlow(value);
     }
 
 private:
@@ -240,7 +306,12 @@ private:
     static const intptr_t ReadOnlyFlag = 0x2;
     static const intptr_t DontEnumFlag = 0x4;
     static const intptr_t NotNullFlag = 0x8;
-    static const intptr_t FlagBits = 4;
+    static const intptr_t KindBitsMask = 0x30;
+    static const intptr_t ScopeKindBits = 0x00;
+    static const intptr_t UnwatchableScopeKindBits = 0x10;
+    static const intptr_t StackKindBits = 0x20;
+    static const intptr_t DirectArgumentKindBits = 0x30;
+    static const intptr_t FlagBits = 6;
 
     class FatEntry {
         WTF_MAKE_FAST_ALLOCATED;
@@ -252,11 +323,11 @@ private:
 
         intptr_t m_bits; // always has FatFlag set and exactly matches what the bits would have been if this wasn't fat.
 
-        RefPtr<VariableWatchpointSet> m_watchpoints;
+        RefPtr<WatchpointSet> m_watchpoints;
     };
 
     SymbolTableEntry& copySlow(const SymbolTableEntry&);
-    JS_EXPORT_PRIVATE void notifyWriteSlow(JSValue);
+    JS_EXPORT_PRIVATE void notifyWriteSlow(VM&, JSValue, const FireDetail&);
 
     bool isFat() const
     {
@@ -307,20 +378,38 @@ private:
 
     JS_EXPORT_PRIVATE void freeFatEntrySlow();
 
-    void pack(int index, bool readOnly, bool dontEnum)
+    void pack(VarOffset offset, bool isWatchable, bool readOnly, bool dontEnum)
     {
         ASSERT(!isFat());
         intptr_t& bitsRef = bits();
-        bitsRef = (static_cast<intptr_t>(index) << FlagBits) | NotNullFlag | SlimFlag;
+        bitsRef =
+            (static_cast<intptr_t>(offset.rawOffset()) << FlagBits) | NotNullFlag | SlimFlag;
         if (readOnly)
             bitsRef |= ReadOnlyFlag;
         if (dontEnum)
             bitsRef |= DontEnumFlag;
+        switch (offset.kind()) {
+        case VarKind::Scope:
+            if (isWatchable)
+                bitsRef |= ScopeKindBits;
+            else
+                bitsRef |= UnwatchableScopeKindBits;
+            break;
+        case VarKind::Stack:
+            bitsRef |= StackKindBits;
+            break;
+        case VarKind::DirectArgument:
+            bitsRef |= DirectArgumentKindBits;
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+        }
     }
 
-    bool isValidIndex(int index)
+    static bool isValidVarOffset(VarOffset offset)
     {
-        return ((static_cast<intptr_t>(index) << FlagBits) >> FlagBits) == static_cast<intptr_t>(index);
+        return ((static_cast<intptr_t>(offset.rawOffset()) << FlagBits) >> FlagBits) == static_cast<intptr_t>(offset.rawOffset());
     }
 
     intptr_t m_bits;
@@ -330,11 +419,16 @@ struct SymbolTableIndexHashTraits : HashTraits<SymbolTableEntry> {
     static const bool needsDestruction = true;
 };
 
-class SymbolTable : public JSCell {
+class SymbolTable final : public JSCell {
 public:
     typedef JSCell Base;
+    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    typedef HashMap<RefPtr<StringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<StringImpl>>, SymbolTableIndexHashTraits> Map;
+    typedef HashMap<RefPtr<UniquedStringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, SymbolTableIndexHashTraits> Map;
+    typedef HashMap<RefPtr<UniquedStringImpl>, GlobalVariableID, IdentifierRepHash> UniqueIDMap;
+    typedef HashMap<RefPtr<UniquedStringImpl>, RefPtr<TypeSet>, IdentifierRepHash> UniqueTypeSetMap;
+    typedef HashMap<VarOffset, RefPtr<UniquedStringImpl>> OffsetToVariableMap;
+    typedef Vector<SymbolTableEntry*> LocalToEntryVec;
 
     static SymbolTable* create(VM& vm)
     {
@@ -342,43 +436,50 @@ public:
         symbolTable->finishCreation(vm);
         return symbolTable;
     }
+
+    static SymbolTable* createNameScopeTable(VM& vm, const Identifier& ident, unsigned attributes)
+    {
+        SymbolTable* result = create(vm);
+        result->add(ident.impl(), SymbolTableEntry(VarOffset(ScopeOffset(0)), attributes));
+        return result;
+    }
+
     static const bool needsDestruction = true;
-    static const bool hasImmortalStructure = true;
     static void destroy(JSCell*);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(LeafType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
     }
 
     // You must hold the lock until after you're done with the iterator.
-    Map::iterator find(const ConcurrentJITLocker&, StringImpl* key)
+    Map::iterator find(const ConcurrentJITLocker&, UniquedStringImpl* key)
     {
         return m_map.find(key);
     }
 
-    Map::iterator find(const GCSafeConcurrentJITLocker&, StringImpl* key)
+    Map::iterator find(const GCSafeConcurrentJITLocker&, UniquedStringImpl* key)
     {
         return m_map.find(key);
     }
 
-    SymbolTableEntry get(const ConcurrentJITLocker&, StringImpl* key)
+    SymbolTableEntry get(const ConcurrentJITLocker&, UniquedStringImpl* key)
     {
         return m_map.get(key);
     }
 
-    SymbolTableEntry get(StringImpl* key)
+    SymbolTableEntry get(UniquedStringImpl* key)
     {
         ConcurrentJITLocker locker(m_lock);
         return get(locker, key);
     }
 
-    SymbolTableEntry inlineGet(const ConcurrentJITLocker&, StringImpl* key)
+    SymbolTableEntry inlineGet(const ConcurrentJITLocker&, UniquedStringImpl* key)
     {
         return m_map.inlineGet(key);
     }
 
-    SymbolTableEntry inlineGet(StringImpl* key)
+    SymbolTableEntry inlineGet(UniquedStringImpl* key)
     {
         ConcurrentJITLocker locker(m_lock);
         return inlineGet(locker, key);
@@ -410,100 +511,181 @@ public:
         return size(locker);
     }
 
-    Map::AddResult add(const ConcurrentJITLocker&, StringImpl* key, const SymbolTableEntry& entry)
+    ScopeOffset maxScopeOffset() const
     {
-        return m_map.add(key, entry);
+        return m_maxScopeOffset;
     }
 
-    void add(StringImpl* key, const SymbolTableEntry& entry)
+    void didUseScopeOffset(ScopeOffset offset)
+    {
+        if (!m_maxScopeOffset || m_maxScopeOffset < offset)
+            m_maxScopeOffset = offset;
+    }
+
+    void didUseVarOffset(VarOffset offset)
+    {
+        if (offset.isScope())
+            didUseScopeOffset(offset.scopeOffset());
+    }
+
+    unsigned scopeSize() const
+    {
+        ScopeOffset maxScopeOffset = this->maxScopeOffset();
+
+        // Do some calculation that relies on invalid scope offset plus one being zero.
+        unsigned fastResult = maxScopeOffset.offsetUnchecked() + 1;
+
+        // Assert that this works.
+        ASSERT(fastResult == (!maxScopeOffset ? 0 : maxScopeOffset.offset() + 1));
+
+        return fastResult;
+    }
+
+    ScopeOffset nextScopeOffset() const
+    {
+        return ScopeOffset(scopeSize());
+    }
+
+    ScopeOffset takeNextScopeOffset(const ConcurrentJITLocker&)
+    {
+        ScopeOffset result = nextScopeOffset();
+        m_maxScopeOffset = result;
+        return result;
+    }
+
+    ScopeOffset takeNextScopeOffset()
+    {
+        ConcurrentJITLocker locker(m_lock);
+        return takeNextScopeOffset(locker);
+    }
+
+    void add(const ConcurrentJITLocker&, UniquedStringImpl* key, const SymbolTableEntry& entry)
+    {
+        RELEASE_ASSERT(!m_localToEntry);
+        didUseVarOffset(entry.varOffset());
+        Map::AddResult result = m_map.add(key, entry);
+        ASSERT_UNUSED(result, result.isNewEntry);
+    }
+
+    void add(UniquedStringImpl* key, const SymbolTableEntry& entry)
     {
         ConcurrentJITLocker locker(m_lock);
         add(locker, key, entry);
     }
 
-    Map::AddResult set(const ConcurrentJITLocker&, StringImpl* key, const SymbolTableEntry& entry)
+    void set(const ConcurrentJITLocker&, UniquedStringImpl* key, const SymbolTableEntry& entry)
     {
-        return m_map.set(key, entry);
+        RELEASE_ASSERT(!m_localToEntry);
+        didUseVarOffset(entry.varOffset());
+        m_map.set(key, entry);
     }
 
-    void set(StringImpl* key, const SymbolTableEntry& entry)
+    void set(UniquedStringImpl* key, const SymbolTableEntry& entry)
     {
         ConcurrentJITLocker locker(m_lock);
         set(locker, key, entry);
     }
 
-    bool contains(const ConcurrentJITLocker&, StringImpl* key)
+    bool contains(const ConcurrentJITLocker&, UniquedStringImpl* key)
     {
         return m_map.contains(key);
     }
 
-    bool contains(StringImpl* key)
+    bool contains(UniquedStringImpl* key)
     {
         ConcurrentJITLocker locker(m_lock);
         return contains(locker, key);
     }
 
-    bool usesNonStrictEval() { return m_usesNonStrictEval; }
-    void setUsesNonStrictEval(bool usesNonStrictEval) { m_usesNonStrictEval = usesNonStrictEval; }
+    // The principle behind ScopedArgumentsTable modifications is that we will create one and
+    // leave it unlocked - thereby allowing in-place changes - until someone asks for a pointer to
+    // the table. Then, we will lock it. Then both our future changes and their future changes
+    // will first have to make a copy. This discipline means that usually when we create a
+    // ScopedArguments object, we don't have to make a copy of the ScopedArgumentsTable - instead
+    // we just take a reference to one that we already have.
 
-    int captureStart() const { return m_captureStart; }
-    void setCaptureStart(int captureStart) { m_captureStart = captureStart; }
-
-    int captureEnd() const { return m_captureEnd; }
-    void setCaptureEnd(int captureEnd) { m_captureEnd = captureEnd; }
-
-    int captureCount() const { return -(m_captureEnd - m_captureStart); }
-
-    bool isCaptured(int operand)
+    uint32_t argumentsLength() const
     {
-        return operand <= captureStart() && operand > captureEnd();
+        if (!m_arguments)
+            return 0;
+        return m_arguments->length();
     }
 
-    int parameterCount() { return m_parameterCountIncludingThis - 1; }
-    int parameterCountIncludingThis() { return m_parameterCountIncludingThis; }
-    void setParameterCountIncludingThis(int parameterCountIncludingThis) { m_parameterCountIncludingThis = parameterCountIncludingThis; }
+    void setArgumentsLength(VM& vm, uint32_t length)
+    {
+        if (UNLIKELY(!m_arguments))
+            m_arguments.set(vm, this, ScopedArgumentsTable::create(vm));
+        m_arguments.set(vm, this, m_arguments->setLength(vm, length));
+    }
 
-    // 0 if we don't capture any arguments; parameterCount() in length if we do.
-    const SlowArgument* slowArguments() { return m_slowArguments.get(); }
-    void setSlowArguments(std::unique_ptr<SlowArgument[]> slowArguments) { m_slowArguments = std::move(slowArguments); }
+    ScopeOffset argumentOffset(uint32_t i) const
+    {
+        ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);
+        return m_arguments->get(i);
+    }
 
-    SymbolTable* cloneCapturedNames(VM&);
+    void setArgumentOffset(VM& vm, uint32_t i, ScopeOffset offset)
+    {
+        ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);
+        m_arguments.set(vm, this, m_arguments->set(vm, i, offset));
+    }
+
+    ScopedArgumentsTable* arguments() const
+    {
+        if (!m_arguments)
+            return nullptr;
+        m_arguments->lock();
+        return m_arguments.get();
+    }
+
+    const LocalToEntryVec& localToEntry(const ConcurrentJITLocker&);
+    SymbolTableEntry* entryFor(const ConcurrentJITLocker&, ScopeOffset);
+
+    GlobalVariableID uniqueIDForVariable(const ConcurrentJITLocker&, UniquedStringImpl* key, VM&);
+    GlobalVariableID uniqueIDForOffset(const ConcurrentJITLocker&, VarOffset, VM&);
+    RefPtr<TypeSet> globalTypeSetForOffset(const ConcurrentJITLocker&, VarOffset, VM&);
+    RefPtr<TypeSet> globalTypeSetForVariable(const ConcurrentJITLocker&, UniquedStringImpl* key, VM&);
+
+    bool usesNonStrictEval() { return m_usesNonStrictEval; }
+    void setUsesNonStrictEval(bool usesNonStrictEval) { m_usesNonStrictEval = usesNonStrictEval; }
+    ALWAYS_INLINE bool correspondsToLexicalScope() { return m_correspondsToLexicalScope; }
+    void setDoesCorrespondToLexicalScope() { m_correspondsToLexicalScope = true; }
+
+    SymbolTable* cloneScopePart(VM&);
+
+    void prepareForTypeProfiling(const ConcurrentJITLocker&);
+
+    InferredValue* singletonScope() { return m_singletonScope.get(); }
 
     static void visitChildren(JSCell*, SlotVisitor&);
 
     DECLARE_EXPORT_INFO;
 
 private:
-    class WatchpointCleanup : public UnconditionalFinalizer {
-    public:
-        WatchpointCleanup(SymbolTable*);
-        virtual ~WatchpointCleanup();
-
-    protected:
-        virtual void finalizeUnconditionally() override;
-
-    private:
-        SymbolTable* m_symbolTable;
-    };
-
     JS_EXPORT_PRIVATE SymbolTable(VM&);
     ~SymbolTable();
 
+    JS_EXPORT_PRIVATE void finishCreation(VM&);
+
     Map m_map;
+    ScopeOffset m_maxScopeOffset;
 
-    int m_parameterCountIncludingThis;
-    bool m_usesNonStrictEval;
+    struct TypeProfilingRareData {
+        UniqueIDMap m_uniqueIDMap;
+        OffsetToVariableMap m_offsetToVariableMap;
+        UniqueTypeSetMap m_uniqueTypeSetMap;
+    };
+    std::unique_ptr<TypeProfilingRareData> m_typeProfilingRareData;
 
-    int m_captureStart;
-    int m_captureEnd;
+    bool m_usesNonStrictEval : 1;
+    bool m_correspondsToLexicalScope : 1;
 
-    std::unique_ptr<SlowArgument[]> m_slowArguments;
+    WriteBarrier<ScopedArgumentsTable> m_arguments;
+    WriteBarrier<InferredValue> m_singletonScope;
 
-    std::unique_ptr<WatchpointCleanup> m_watchpointCleanup;
+    std::unique_ptr<LocalToEntryVec> m_localToEntry;
 
 public:
-    InlineWatchpointSet m_functionEnteredOnce;
-
     mutable ConcurrentJITLock m_lock;
 };
 

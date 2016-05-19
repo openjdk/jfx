@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,43 +28,45 @@
 #include "TextEvent.h"
 
 #include "DocumentFragment.h"
+#include "Editor.h"
 
 namespace WebCore {
 
-PassRefPtr<TextEvent> TextEvent::create()
+Ref<TextEvent> TextEvent::create()
 {
-    return adoptRef(new TextEvent);
+    return adoptRef(*new TextEvent);
 }
 
-PassRefPtr<TextEvent> TextEvent::create(PassRefPtr<AbstractView> view, const String& data, TextEventInputType inputType)
+Ref<TextEvent> TextEvent::create(PassRefPtr<AbstractView> view, const String& data, TextEventInputType inputType)
 {
-    return adoptRef(new TextEvent(view, data, inputType));
+    return adoptRef(*new TextEvent(view, data, inputType));
 }
 
-PassRefPtr<TextEvent> TextEvent::createForPlainTextPaste(PassRefPtr<AbstractView> view, const String& data, bool shouldSmartReplace)
+Ref<TextEvent> TextEvent::createForPlainTextPaste(PassRefPtr<AbstractView> view, const String& data, bool shouldSmartReplace)
 {
-    return adoptRef(new TextEvent(view, data, 0, shouldSmartReplace, false));
+    return adoptRef(*new TextEvent(view, data, 0, shouldSmartReplace, false, MailBlockquoteHandling::RespectBlockquote));
 }
 
-PassRefPtr<TextEvent> TextEvent::createForFragmentPaste(PassRefPtr<AbstractView> view, PassRefPtr<DocumentFragment> data, bool shouldSmartReplace, bool shouldMatchStyle)
+Ref<TextEvent> TextEvent::createForFragmentPaste(PassRefPtr<AbstractView> view, PassRefPtr<DocumentFragment> data, bool shouldSmartReplace, bool shouldMatchStyle, MailBlockquoteHandling mailBlockquoteHandling)
 {
-    return adoptRef(new TextEvent(view, "", data, shouldSmartReplace, shouldMatchStyle));
+    return adoptRef(*new TextEvent(view, "", data, shouldSmartReplace, shouldMatchStyle, mailBlockquoteHandling));
 }
 
-PassRefPtr<TextEvent> TextEvent::createForDrop(PassRefPtr<AbstractView> view, const String& data)
+Ref<TextEvent> TextEvent::createForDrop(PassRefPtr<AbstractView> view, const String& data)
 {
-    return adoptRef(new TextEvent(view, data, TextEventInputDrop));
+    return adoptRef(*new TextEvent(view, data, TextEventInputDrop));
 }
 
-PassRefPtr<TextEvent> TextEvent::createForDictation(PassRefPtr<AbstractView> view, const String& data, const Vector<DictationAlternative>& dictationAlternatives)
+Ref<TextEvent> TextEvent::createForDictation(PassRefPtr<AbstractView> view, const String& data, const Vector<DictationAlternative>& dictationAlternatives)
 {
-    return adoptRef(new TextEvent(view, data, dictationAlternatives));
+    return adoptRef(*new TextEvent(view, data, dictationAlternatives));
 }
 
 TextEvent::TextEvent()
     : m_inputType(TextEventInputKeyboard)
     , m_shouldSmartReplace(false)
     , m_shouldMatchStyle(false)
+    , m_mailBlockquoteHandling(MailBlockquoteHandling::RespectBlockquote)
 {
 }
 
@@ -75,17 +77,18 @@ TextEvent::TextEvent(PassRefPtr<AbstractView> view, const String& data, TextEven
     , m_pastingFragment(0)
     , m_shouldSmartReplace(false)
     , m_shouldMatchStyle(false)
+    , m_mailBlockquoteHandling(MailBlockquoteHandling::RespectBlockquote)
 {
 }
 
-TextEvent::TextEvent(PassRefPtr<AbstractView> view, const String& data, PassRefPtr<DocumentFragment> pastingFragment,
-                     bool shouldSmartReplace, bool shouldMatchStyle)
+TextEvent::TextEvent(PassRefPtr<AbstractView> view, const String& data, PassRefPtr<DocumentFragment> pastingFragment, bool shouldSmartReplace, bool shouldMatchStyle, MailBlockquoteHandling mailBlockquoteHandling)
     : UIEvent(eventNames().textInputEvent, true, true, view, 0)
     , m_inputType(TextEventInputPaste)
     , m_data(data)
     , m_pastingFragment(pastingFragment)
     , m_shouldSmartReplace(shouldSmartReplace)
     , m_shouldMatchStyle(shouldMatchStyle)
+    , m_mailBlockquoteHandling(mailBlockquoteHandling)
 {
 }
 
@@ -95,6 +98,7 @@ TextEvent::TextEvent(PassRefPtr<AbstractView> view, const String& data, const Ve
     , m_data(data)
     , m_shouldSmartReplace(false)
     , m_shouldMatchStyle(false)
+    , m_mailBlockquoteHandling(MailBlockquoteHandling::RespectBlockquote)
     , m_dictationAlternatives(dictationAlternatives)
 {
 }

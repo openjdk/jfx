@@ -29,9 +29,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INSPECTOR)
-
 #include "WorkerConsoleAgent.h"
 
 using namespace Inspector;
@@ -43,11 +40,9 @@ WorkerConsoleAgent::WorkerConsoleAgent(WebInjectedScriptManager* injectedScriptM
 {
 }
 
-void WorkerConsoleAgent::addInspectedNode(ErrorString* error, int)
+void WorkerConsoleAgent::addInspectedNode(ErrorString& error, int)
 {
-    *error = ASCIILiteral("addInspectedNode is not supported for workers");
+    error = ASCIILiteral("addInspectedNode is not supported for workers");
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

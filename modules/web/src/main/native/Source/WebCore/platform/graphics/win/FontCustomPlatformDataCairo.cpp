@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2013 Apple Computer, Inc.
+ * Copyright (C) 2007, 2008, 2013 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -63,7 +63,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, b
 
     cairo_font_face_t* fontFace = cairo_win32_font_face_create_for_hfont(hfont.get());
 
-    FontPlatformData fontPlatformData(std::move(hfont), fontFace, size, bold, italic);
+    FontPlatformData fontPlatformData(WTF::move(hfont), fontFace, size, bold, italic);
 
     cairo_font_face_destroy(fontFace);
 

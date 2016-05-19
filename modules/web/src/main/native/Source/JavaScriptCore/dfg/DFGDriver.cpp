@@ -30,15 +30,16 @@
 #include "JSString.h"
 
 #include "CodeBlock.h"
+#include "DFGFunctionWhitelist.h"
 #include "DFGJITCode.h"
 #include "DFGPlan.h"
 #include "DFGThunks.h"
 #include "DFGWorklist.h"
-#include "Debugger.h"
 #include "JITCode.h"
 #include "JSCInlines.h"
 #include "Options.h"
 #include "SamplingTool.h"
+#include "TypeProfilerLog.h"
 #include <wtf/Atomics.h>
 
 #if ENABLE(FTL_JIT)
@@ -62,25 +63,16 @@ static CompilationResult compileImpl(
 {
     SamplingRegion samplingRegion("DFG Compilation (Driver)");
 
+    if (!Options::bytecodeRangeToDFGCompile().isInRange(codeBlock->instructionCount())
+        || !FunctionWhitelist::ensureGlobalWhitelist().contains(codeBlock))
+        return CompilationFailed;
+
     numCompilations++;
 
     ASSERT(codeBlock);
     ASSERT(codeBlock->alternative());
     ASSERT(codeBlock->alternative()->jitType() == JITCode::BaselineJIT);
     ASSERT(!profiledDFGCodeBlock || profiledDFGCodeBlock->jitType() == JITCode::DFGJIT);
-
-    if (!Options::useDFGJIT() || !MacroAssembler::supportsFloatingPoint())
-        return CompilationFailed;
-
-    if (!Options::bytecodeRangeToDFGCompile().isInRange(codeBlock->instructionCount()))
-        return CompilationFailed;
-
-    if (vm.enabledProfiler())
-        return CompilationInvalidated;
-
-    Debugger* debugger = codeBlock->globalObject()->debugger();
-    if (debugger && (debugger->isStepping() || codeBlock->baselineAlternative()->hasDebuggerRequests()))
-        return CompilationInvalidated;
 
     if (logCompilationChanges(mode))
         dataLog("DFG(Driver) compiling ", *codeBlock, " with ", mode, ", number of instructions = ", codeBlock->instructionCount(), "\n");
@@ -92,29 +84,26 @@ static CompilationResult compileImpl(
     if (mode == DFGMode) {
         vm.getCTIStub(linkCallThunkGenerator);
         vm.getCTIStub(linkConstructThunkGenerator);
-        vm.getCTIStub(linkClosureCallThunkGenerator);
+        vm.getCTIStub(linkPolymorphicCallThunkGenerator);
         vm.getCTIStub(virtualCallThunkGenerator);
         vm.getCTIStub(virtualConstructThunkGenerator);
     } else {
         vm.getCTIStub(linkCallThatPreservesRegsThunkGenerator);
         vm.getCTIStub(linkConstructThatPreservesRegsThunkGenerator);
-        vm.getCTIStub(linkClosureCallThatPreservesRegsThunkGenerator);
+        vm.getCTIStub(linkPolymorphicCallThatPreservesRegsThunkGenerator);
         vm.getCTIStub(virtualCallThatPreservesRegsThunkGenerator);
         vm.getCTIStub(virtualConstructThatPreservesRegsThunkGenerator);
     }
 
+    if (vm.typeProfiler())
+        vm.typeProfilerLog()->processLogEntries(ASCIILiteral("Preparing for DFG compilation."));
+
     RefPtr<Plan> plan = adoptRef(
         new Plan(codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, mustHandleValues));
 
-    bool enableConcurrentJIT;
-#if ENABLE(CONCURRENT_JIT)
-    enableConcurrentJIT = Options::enableConcurrentJIT();
-#else // ENABLE(CONCURRENT_JIT)
-    enableConcurrentJIT = false;
-#endif // ENABLE(CONCURRENT_JIT)
-    if (enableConcurrentJIT) {
+    plan->callback = callback;
+    if (Options::enableConcurrentJIT()) {
         Worklist* worklist = ensureGlobalWorklistFor(mode);
-        plan->callback = callback;
         if (logCompilationChanges(mode))
             dataLog("Deferring DFG compilation of ", *codeBlock, " with queue length ", worklist->queueLength(), ".\n");
         worklist->enqueue(plan);

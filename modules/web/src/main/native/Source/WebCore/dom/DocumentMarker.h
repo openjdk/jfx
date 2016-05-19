@@ -1,7 +1,7 @@
 /*
  * This file is part of the DOM implementation for WebCore.
  *
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -71,10 +71,13 @@ public:
         // This marker indicates that the range of text spanned by the marker is entered by voice dictation,
         // and it has alternative text.
         DictationAlternatives = 1 << 9,
+#if ENABLE(TELEPHONE_NUMBER_DETECTION)
+        TelephoneNumber = 1 << 10,
+#endif
 #if PLATFORM(IOS)
-        // FIXME: iOS has its own dictation marks. iOS should use OpenSource's.
-        DictationPhraseWithAlternatives = 1 << 10,
-        DictationResult = 1 << 11,
+        // FIXME: iOS should share the same Dictation marks as everyone else.
+        DictationPhraseWithAlternatives = 1 << 11,
+        DictationResult = 1 << 12,
 #endif
     };
 
@@ -98,9 +101,13 @@ public:
     public:
         AllMarkers()
 #if !PLATFORM(IOS)
+#if !ENABLE(TELEPHONE_NUMBER_DETECTION)
             : MarkerTypes(Spelling | Grammar | TextMatch | Replacement | CorrectionIndicator | RejectedCorrection | Autocorrected | SpellCheckingExemption | DeletedAutocorrection | DictationAlternatives)
 #else
-            : MarkerTypes(Spelling | Grammar | TextMatch | Replacement | CorrectionIndicator | RejectedCorrection | Autocorrected | SpellCheckingExemption | DeletedAutocorrection | DictationAlternatives | DictationPhraseWithAlternatives | DictationResult)
+            : MarkerTypes(Spelling | Grammar | TextMatch | Replacement | CorrectionIndicator | RejectedCorrection | Autocorrected | SpellCheckingExemption | DeletedAutocorrection | DictationAlternatives | TelephoneNumber)
+#endif // !ENABLE(TELEPHONE_NUMBER_DETECTION)
+#else
+            : MarkerTypes(Spelling | Grammar | TextMatch | Replacement | CorrectionIndicator | RejectedCorrection | Autocorrected | SpellCheckingExemption | DeletedAutocorrection | DictationAlternatives | TelephoneNumber | DictationPhraseWithAlternatives | DictationResult)
 #endif // !PLATFORM(IOS)
         {
         }
@@ -119,12 +126,12 @@ public:
     unsigned startOffset() const { return m_startOffset; }
     unsigned endOffset() const { return m_endOffset; }
 
-    const String& description() const;
+    WEBCORE_EXPORT const String& description() const;
     bool activeMatch() const;
     DocumentMarkerDetails* details() const;
 
     void setActiveMatch(bool);
-    void clearDetails() { m_details.clear(); }
+    void clearDetails() { m_details = nullptr; }
 
     // Offset modifications are done by DocumentMarkerController.
     // Other classes should not call following setters.

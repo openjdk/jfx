@@ -31,18 +31,18 @@ struct LinearGradientAttributes;
 
 class SVGLinearGradientElement final : public SVGGradientElement {
 public:
-    static PassRefPtr<SVGLinearGradientElement> create(const QualifiedName&, Document&);
+    static Ref<SVGLinearGradientElement> create(const QualifiedName&, Document&);
 
     bool collectGradientAttributes(LinearGradientAttributes&);
 
 private:
     SVGLinearGradientElement(const QualifiedName&, Document&);
 
-    bool isSupportedAttribute(const QualifiedName&);
+    static bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
 
     virtual bool selfHasRelativeLengths() const override;
 
@@ -53,8 +53,6 @@ private:
         DECLARE_ANIMATED_LENGTH(Y2, y2)
     END_DECLARE_ANIMATED_PROPERTIES
 };
-
-NODE_TYPE_CASTS(SVGLinearGradientElement)
 
 } // namespace WebCore
 

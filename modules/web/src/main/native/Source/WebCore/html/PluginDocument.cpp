@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
@@ -46,9 +46,9 @@ using namespace HTMLNames;
 // FIXME: Share more code with MediaDocumentParser.
 class PluginDocumentParser final : public RawDataDocumentParser {
 public:
-    static PassRefPtr<PluginDocumentParser> create(PluginDocument& document)
+    static Ref<PluginDocumentParser> create(PluginDocument& document)
     {
-        return adoptRef(new PluginDocumentParser(document));
+        return adoptRef(*new PluginDocumentParser(document));
     }
 
 private:
@@ -69,7 +69,7 @@ void PluginDocumentParser::createDocumentStructure()
 {
     RefPtr<Element> rootElement = document()->createElement(htmlTag, false);
     document()->appendChild(rootElement, IGNORE_EXCEPTION);
-    toHTMLHtmlElement(rootElement.get())->insertedByParser();
+    downcast<HTMLHtmlElement>(*rootElement).insertedByParser();
 
     if (document()->frame())
         document()->frame()->injectUserScripts(InjectAtDocumentStart);
@@ -92,7 +92,7 @@ void PluginDocumentParser::createDocumentStructure()
 
     RefPtr<Element> embedElement = document()->createElement(embedTag, false);
 
-    m_embedElement = toHTMLEmbedElement(embedElement.get());
+    m_embedElement = downcast<HTMLEmbedElement>(embedElement.get());
     m_embedElement->setAttribute(widthAttr, "100%");
     m_embedElement->setAttribute(heightAttr, "100%");
 
@@ -104,7 +104,7 @@ void PluginDocumentParser::createDocumentStructure()
     if (loader)
         m_embedElement->setAttribute(typeAttr, loader->writer().mimeType());
 
-    toPluginDocument(document())->setPluginElement(m_embedElement);
+    downcast<PluginDocument>(*document()).setPluginElement(m_embedElement);
 
     body->appendChild(embedElement, IGNORE_EXCEPTION);
 }
@@ -144,22 +144,20 @@ PluginDocument::PluginDocument(Frame* frame, const URL& url)
     : HTMLDocument(frame, url, PluginDocumentClass)
     , m_shouldLoadPluginManually(true)
 {
-    setCompatibilityMode(QuirksMode);
+    setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
     lockCompatibilityMode();
 }
 
-PassRefPtr<DocumentParser> PluginDocument::createParser()
+Ref<DocumentParser> PluginDocument::createParser()
 {
     return PluginDocumentParser::create(*this);
 }
 
 Widget* PluginDocument::pluginWidget()
 {
-    if (m_pluginElement && m_pluginElement->renderer()) {
-        ASSERT(m_pluginElement->renderer()->isEmbeddedObject());
-        return toRenderEmbeddedObject(m_pluginElement->renderer())->widget();
-    }
-    return 0;
+    if (m_pluginElement && m_pluginElement->renderer())
+        return downcast<RenderEmbeddedObject>(*m_pluginElement->renderer()).widget();
+    return nullptr;
 }
 
 void PluginDocument::setPluginElement(PassRefPtr<HTMLPlugInElement> element)
@@ -170,8 +168,8 @@ void PluginDocument::setPluginElement(PassRefPtr<HTMLPlugInElement> element)
 void PluginDocument::detachFromPluginElement()
 {
     // Release the plugin Element so that we don't have a circular reference.
-    m_pluginElement = 0;
-    frame()->loader().client().redirectDataToPlugin(0);
+    m_pluginElement = nullptr;
+    frame()->loader().client().redirectDataToPlugin(nullptr);
 }
 
 void PluginDocument::cancelManualPluginLoad()

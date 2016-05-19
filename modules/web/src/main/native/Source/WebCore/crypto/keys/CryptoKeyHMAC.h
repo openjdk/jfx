@@ -35,9 +35,9 @@ namespace WebCore {
 
 class CryptoKeyHMAC final : public CryptoKey {
 public:
-    static PassRefPtr<CryptoKeyHMAC> create(const Vector<uint8_t>& key, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsage usage)
+    static Ref<CryptoKeyHMAC> create(const Vector<uint8_t>& key, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsage usage)
     {
-        return adoptRef(new CryptoKeyHMAC(key, hash, extractable, usage));
+        return adoptRef(*new CryptoKeyHMAC(key, hash, extractable, usage));
     }
     virtual ~CryptoKeyHMAC();
 
@@ -60,14 +60,9 @@ private:
     Vector<uint8_t> m_key;
 };
 
-inline bool isCryptoKeyHMAC(const CryptoKey& key)
-{
-    return key.keyClass() == CryptoKeyClass::HMAC;
-}
-
-CRYPTO_KEY_TYPE_CASTS(CryptoKeyHMAC)
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CRYPTO_KEY(CryptoKeyHMAC, CryptoKeyClass::HMAC)
 
 #endif // ENABLE(SUBTLE_CRYPTO)
 #endif // CryptoKeyHMAC_h

@@ -23,7 +23,6 @@
 #ifndef FEConvolveMatrix_h
 #define FEConvolveMatrix_h
 
-#if ENABLE(FILTERS)
 #include "FilterEffect.h"
 #include "FloatPoint.h"
 #include "FloatSize.h"
@@ -41,7 +40,7 @@ enum EdgeModeType {
 
 class FEConvolveMatrix : public FilterEffect {
 public:
-    static PassRefPtr<FEConvolveMatrix> create(Filter*, const IntSize&,
+    static Ref<FEConvolveMatrix> create(Filter&, const IntSize&,
             float, float, const IntPoint&, EdgeModeType, const FloatPoint&,
             bool, const Vector<float>&);
 
@@ -86,7 +85,7 @@ private:
         float bias;
     };
 
-    FEConvolveMatrix(Filter*, const IntSize&, float, float,
+    FEConvolveMatrix(Filter&, const IntSize&, float, float,
             const IntPoint&, EdgeModeType, const FloatPoint&, bool, const Vector<float>&);
 
     template<bool preserveAlphaValues>
@@ -129,7 +128,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)
 
 #endif // FEConvolveMatrix_h

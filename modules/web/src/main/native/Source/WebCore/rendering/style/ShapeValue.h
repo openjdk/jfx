@@ -32,7 +32,6 @@
 
 #include "BasicShapes.h"
 #include "CSSValueKeywords.h"
-#include "CachedImage.h"
 #include "StyleImage.h"
 #include <wtf/PassRefPtr.h>
 
@@ -40,43 +39,39 @@ namespace WebCore {
 
 class ShapeValue : public RefCounted<ShapeValue> {
 public:
-    enum ShapeValueType {
+    enum class Type {
         // The None value is defined by a null ShapeValue*
         Shape,
         Box,
-        Outside,
         Image
     };
 
-    static PassRefPtr<ShapeValue> createShapeValue(PassRefPtr<BasicShape> shape, LayoutBox layoutBox)
+    static Ref<ShapeValue> createShapeValue(PassRefPtr<BasicShape> shape, CSSBoxType cssBox)
     {
-        return adoptRef(new ShapeValue(shape, layoutBox));
+        return adoptRef(*new ShapeValue(shape, cssBox));
     }
 
-    static PassRefPtr<ShapeValue> createLayoutBoxValue(LayoutBox layoutBox)
+    static Ref<ShapeValue> createBoxShapeValue(CSSBoxType boxShape)
     {
-        return adoptRef(new ShapeValue(layoutBox));
+        return adoptRef(*new ShapeValue(boxShape));
     }
 
-    static PassRefPtr<ShapeValue> createOutsideValue()
+    static Ref<ShapeValue> createImageValue(PassRefPtr<StyleImage> image)
     {
-        return adoptRef(new ShapeValue(Outside));
+        return adoptRef(*new ShapeValue(image));
     }
 
-    static PassRefPtr<ShapeValue> createImageValue(PassRefPtr<StyleImage> image)
-    {
-        return adoptRef(new ShapeValue(image));
-    }
-
-    ShapeValueType type() const { return m_type; }
+    Type type() const { return m_type; }
     BasicShape* shape() const { return m_shape.get(); }
-    LayoutBox layoutBox() const { return m_layoutBox; }
+    CSSBoxType cssBox() const { return m_cssBox; }
 
     StyleImage* image() const { return m_image.get(); }
-    bool isImageValid() const { return image() && image()->cachedImage() && image()->cachedImage()->hasImage(); }
+
+    bool isImageValid() const;
+
     void setImage(PassRefPtr<StyleImage> image)
     {
-        ASSERT(type() == Image);
+        ASSERT(type() == Type::Image);
         if (m_image != image)
             m_image = image;
     }
@@ -84,33 +79,34 @@ public:
     bool operator==(const ShapeValue& other) const { return type() == other.type(); }
 
 private:
-    ShapeValue(PassRefPtr<BasicShape> shape, LayoutBox layoutBox)
-        : m_type(Shape)
+    ShapeValue(PassRefPtr<BasicShape> shape, CSSBoxType cssBox)
+        : m_type(Type::Shape)
         , m_shape(shape)
-        , m_layoutBox(layoutBox)
+        , m_cssBox(cssBox)
     {
     }
-    ShapeValue(ShapeValueType type)
+    ShapeValue(Type type)
         : m_type(type)
-        , m_layoutBox(BoxMissing)
+        , m_cssBox(BoxMissing)
     {
     }
     ShapeValue(PassRefPtr<StyleImage> image)
-        : m_type(Image)
+        : m_type(Type::Image)
         , m_image(image)
-        , m_layoutBox(BoxMissing)
-    {
-    }
-    ShapeValue(LayoutBox layoutBox)
-        : m_type(Box)
-        , m_layoutBox(layoutBox)
+        , m_cssBox(BoxMissing)
     {
     }
 
-    ShapeValueType m_type;
+    ShapeValue(CSSBoxType cssBox)
+        : m_type(Type::Box)
+        , m_cssBox(cssBox)
+    {
+    }
+
+    Type m_type;
     RefPtr<BasicShape> m_shape;
     RefPtr<StyleImage> m_image;
-    LayoutBox m_layoutBox;
+    CSSBoxType m_cssBox;
 };
 
 }

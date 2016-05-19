@@ -31,6 +31,7 @@ import StringIO
 
 from webkitpy.common.checkout.scm import CheckoutNeedsUpdate
 from webkitpy.common.checkout.scm.scm_mock import MockSCM
+from webkitpy.common.net.layouttestresults import LayoutTestResults
 from webkitpy.common.net.bugzilla import Attachment
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.layout_tests.models import test_results
@@ -128,6 +129,7 @@ class AbstractQueueTest(CommandsTest):
 
 class FeederQueueTest(QueuesTest):
     def test_feeder_queue(self):
+        self.maxDiff = None
         queue = TestFeederQueue()
         tool = MockTool(log_executive=True)
         expected_logs = {
@@ -139,8 +141,8 @@ MOCK setting flag 'commit-queue' to '-' on attachment '10001' with comment 'Reje
 - If you do not have committer rights please read http://webkit.org/coding/contributing.html for instructions on how to use bugzilla flags.
 
 - If you have committer rights please correct the error in Tools/Scripts/webkitpy/common/config/contributors.json by adding yourself to the file (no review needed).  The commit-queue restarts itself every 2 hours.  After restart the commit-queue will correctly respect your committer rights.'
+Feeding commit-queue high priority items [10005], regular items [10000]
 MOCK: update_work_items: commit-queue [10005, 10000]
-Feeding commit-queue items [10005, 10000]
 Feeding EWS (1 r? patch, 1 new)
 MOCK: submit_to_ews: 10002
 """,
@@ -294,7 +296,6 @@ MOCK: update_status: commit-queue Updated working directory
 MOCK: update_status: commit-queue Patch does not apply
 MOCK setting flag 'commit-queue' to '-' on attachment '10000' with comment 'Rejecting attachment 10000 from commit-queue.\n\nNew failing tests:
 mock_test_name.html
-another_test_name.html
 Full output: http://dummy_url'
 MOCK: update_status: commit-queue Fail
 MOCK: release_work_item: commit-queue 10000
@@ -302,14 +303,18 @@ MOCK: release_work_item: commit-queue 10000
             "handle_script_error": "ScriptError error message\n\nMOCK output\n",
             "handle_unexpected_error": "MOCK setting flag 'commit-queue' to '-' on attachment '10000' with comment 'Rejecting attachment 10000 from commit-queue.\n\nMock error message'\n",
         }
-        queue = CommitQueue()
+
+        class MockCommitQueueTask(CommitQueueTask):
+            def results_from_patch_test_run(self, patch):
+                return LayoutTestResults([test_results.TestResult("mock_test_name.html", failures=[test_failures.FailureTextMismatch()])], did_exceed_test_failure_limit=False)
+
+        queue = CommitQueue(MockCommitQueueTask)
 
         def mock_run_webkit_patch(command):
             if command[0] == 'clean' or command[0] == 'update':
                 # We want cleaning to succeed so we can error out on a step
                 # that causes the commit-queue to reject the patch.
                 return
-            queue._expected_failures.unexpected_failures_observed = lambda results: ["mock_test_name.html", "another_test_name.html"]
             raise ScriptError('MOCK script error')
 
         queue.run_webkit_patch = mock_run_webkit_patch
@@ -369,6 +374,18 @@ MOCK: release_work_item: commit-queue 10005
         }
         self.assert_queue_outputs(CommitQueue(), tool=tool, work_item=rollout_patch, expected_logs=expected_logs)
 
+    def test_non_valid_patch(self):
+        tool = MockTool()
+        patch = tool.bugs.fetch_attachment(10007)  # _patch8, resolved bug, without review flag, not marked obsolete (maybe already landed)
+        expected_logs = {
+            "begin_work_queue": self._default_begin_work_queue_logs("commit-queue"),
+            "process_work_item": """MOCK: update_status: commit-queue Error: commit-queue did not process patch.
+MOCK: release_work_item: commit-queue 10007
+""",
+        }
+        self.assert_queue_outputs(CommitQueue(), tool=tool, work_item=patch, expected_logs=expected_logs)
+
+
     def test_auto_retry(self):
         queue = CommitQueue()
         options = Mock()
@@ -405,7 +422,7 @@ Running: webkit-patch --status-host=example.com build --no-clean --no-update --b
 MOCK: update_status: commit-queue Built patch
 Running: webkit-patch --status-host=example.com build-and-test --no-clean --no-update --test --non-interactive --port=mac
 MOCK: update_status: commit-queue Passed tests
-MOCK: update_status: commit-queue Retry
+MOCK: update_status: commit-queue Error: commit-queue did not process patch.
 MOCK: release_work_item: commit-queue 10000
 """
         self.maxDiff = None

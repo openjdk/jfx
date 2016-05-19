@@ -188,15 +188,16 @@ class ChangeLogEntry(object):
 
     @classmethod
     def _parse_bug_description(cls, text):
-        # If line 4 is a bug url, line 3 is the bug description.
-        # It's too hard to guess in other cases, so we return None.
+        # Line 3 is the bug description in most cases.
         lines = text.splitlines()
-        if len(lines) < 4:
+        if len(lines) < 3:
             return None
-        for bug_url in (config_urls.bug_url_short, config_urls.bug_url_long):
-            if re.match("^\s*" + bug_url + "$", lines[3]):
-                return lines[2].strip()
-        return None
+        found_reviewed = re.search(ChangeLogEntry.reviewed_by_regexp, lines[2], re.IGNORECASE)
+        found_reviewed_byless = re.search(ChangeLogEntry.reviewed_byless_regexp, lines[2], re.IGNORECASE)
+        found_url = parse_bug_id_from_changelog(lines[2])
+        if found_reviewed or found_reviewed_byless or found_url:
+            return None
+        return lines[2].strip()
 
     def _parse_entry(self):
         match = re.match(self.date_line_regexp, self._contents, re.MULTILINE)
@@ -257,7 +258,7 @@ class ChangeLogEntry(object):
     def has_valid_reviewer(self):
         if self._reviewers_text_list:
             for reviewer in self._reviewers_text_list:
-                reviewer = self._committer_list.committer_by_name(reviewer)
+                reviewer = self._committer_list.reviewer_by_name(reviewer)
                 if reviewer:
                     return True
         return bool(re.search("unreviewed", self._contents, re.IGNORECASE))
@@ -391,11 +392,10 @@ class ChangeLog(object):
                 if first_boilerplate_line_regexp.search(line):
                     message_lines = self._wrap_lines(message)
                     result.write(first_boilerplate_line_regexp.sub(message_lines, line))
-                    # Remove all the ChangeLog boilerplate before the first changed
-                    # file.
+                    # Remove all the ChangeLog boilerplate, except the first line (date, name, e-mail).
                     removing_boilerplate = True
                 elif removing_boilerplate:
-                    if line.find('*') >= 0:  # each changed file is preceded by a *
+                    if re.search("^[1-9]", line):  # each changelog entry is preceded by a date
                         removing_boilerplate = False
 
                 if not removing_boilerplate:
@@ -407,8 +407,8 @@ class ChangeLog(object):
         latest_entry_contents = latest_entry.contents()
         reviewer_text = latest_entry.reviewer()
         found_nobody = re.search("NOBODY\s*\(OOPS!\)", latest_entry_contents, re.MULTILINE)
-
-        if not found_nobody and not reviewer_text:
+        found_reviewer_or_unreviewed = latest_entry.has_valid_reviewer()
+        if not found_nobody and not found_reviewer_or_unreviewed and not reviewer_text:
             bug_url_number_of_items = len(re.findall(config_urls.bug_url_long, latest_entry_contents, re.MULTILINE))
             bug_url_number_of_items += len(re.findall(config_urls.bug_url_short, latest_entry_contents, re.MULTILINE))
             result = StringIO()

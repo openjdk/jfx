@@ -1,6 +1,6 @@
 /**
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.
+ * Copyright (C) 2004, 2005, 2006 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,6 +25,7 @@
 #include "RenderStyleConstants.h"
 #include "StylePropertyShorthand.h"
 
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -48,117 +49,14 @@ CSSPropertyID StylePropertyMetadata::shorthandID() const
 
 void CSSProperty::wrapValueInCommaSeparatedList()
 {
-    RefPtr<CSSValue> value = m_value.release();
-    m_value = CSSValueList::createCommaSeparated();
-    toCSSValueList(m_value.get())->append(value.release());
+    auto list = CSSValueList::createCommaSeparated();
+    list.get().append(m_value.releaseNonNull());
+    m_value = WTF::move(list);
 }
-
-enum LogicalBoxSide { BeforeSide, EndSide, AfterSide, StartSide };
-enum PhysicalBoxSide { TopSide, RightSide, BottomSide, LeftSide };
 
 static CSSPropertyID resolveToPhysicalProperty(TextDirection direction, WritingMode writingMode, LogicalBoxSide logicalSide, const StylePropertyShorthand& shorthand)
 {
-    if (direction == LTR) {
-        if (writingMode == TopToBottomWritingMode) {
-            // The common case. The logical and physical box sides match.
-            // Left = Start, Right = End, Before = Top, After = Bottom
-            return shorthand.properties()[logicalSide];
-        }
-
-        if (writingMode == BottomToTopWritingMode) {
-            // Start = Left, End = Right, Before = Bottom, After = Top.
-            switch (logicalSide) {
-            case StartSide:
-                return shorthand.properties()[LeftSide];
-            case EndSide:
-                return shorthand.properties()[RightSide];
-            case BeforeSide:
-                return shorthand.properties()[BottomSide];
-            default:
-                return shorthand.properties()[TopSide];
-            }
-        }
-
-        if (writingMode == LeftToRightWritingMode) {
-            // Start = Top, End = Bottom, Before = Left, After = Right.
-            switch (logicalSide) {
-            case StartSide:
-                return shorthand.properties()[TopSide];
-            case EndSide:
-                return shorthand.properties()[BottomSide];
-            case BeforeSide:
-                return shorthand.properties()[LeftSide];
-            default:
-                return shorthand.properties()[RightSide];
-            }
-        }
-
-        // Start = Top, End = Bottom, Before = Right, After = Left
-        switch (logicalSide) {
-        case StartSide:
-            return shorthand.properties()[TopSide];
-        case EndSide:
-            return shorthand.properties()[BottomSide];
-        case BeforeSide:
-            return shorthand.properties()[RightSide];
-        default:
-            return shorthand.properties()[LeftSide];
-        }
-    }
-
-    if (writingMode == TopToBottomWritingMode) {
-        // Start = Right, End = Left, Before = Top, After = Bottom
-        switch (logicalSide) {
-        case StartSide:
-            return shorthand.properties()[RightSide];
-        case EndSide:
-            return shorthand.properties()[LeftSide];
-        case BeforeSide:
-            return shorthand.properties()[TopSide];
-        default:
-            return shorthand.properties()[BottomSide];
-        }
-    }
-
-    if (writingMode == BottomToTopWritingMode) {
-        // Start = Right, End = Left, Before = Bottom, After = Top
-        switch (logicalSide) {
-        case StartSide:
-            return shorthand.properties()[RightSide];
-        case EndSide:
-            return shorthand.properties()[LeftSide];
-        case BeforeSide:
-            return shorthand.properties()[BottomSide];
-        default:
-            return shorthand.properties()[TopSide];
-        }
-    }
-
-    if (writingMode == LeftToRightWritingMode) {
-        // Start = Bottom, End = Top, Before = Left, After = Right
-        switch (logicalSide) {
-        case StartSide:
-            return shorthand.properties()[BottomSide];
-        case EndSide:
-            return shorthand.properties()[TopSide];
-        case BeforeSide:
-            return shorthand.properties()[LeftSide];
-        default:
-            return shorthand.properties()[RightSide];
-        }
-    }
-
-    // Start = Bottom, End = Top, Before = Right, After = Left
-    switch (logicalSide) {
-    case StartSide:
-        return shorthand.properties()[BottomSide];
-    case EndSide:
-        return shorthand.properties()[TopSide];
-    case BeforeSide:
-        return shorthand.properties()[RightSide];
-    default:
-        return shorthand.properties()[LeftSide];
-    }
+    return shorthand.properties()[mapLogicalSideToPhysicalSide(makeTextFlow(writingMode, direction), logicalSide)];
 }
 
 enum _LogicalExtent { _LogicalWidth, _LogicalHeight };
@@ -173,7 +71,7 @@ static CSSPropertyID resolveToPhysicalProperty(WritingMode writingMode, _Logical
 static const StylePropertyShorthand& borderDirections()
 {
     static const CSSPropertyID properties[4] = { CSSPropertyBorderTop, CSSPropertyBorderRight, CSSPropertyBorderBottom, CSSPropertyBorderLeft };
-    DEFINE_STATIC_LOCAL(StylePropertyShorthand, borderDirections, (CSSPropertyBorder, properties, WTF_ARRAY_LENGTH(properties)));
+    static NeverDestroyed<StylePropertyShorthand> borderDirections(CSSPropertyBorder, properties);
     return borderDirections;
 }
 

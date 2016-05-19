@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -44,8 +44,8 @@
 #include "ThreadFunctionInvocation.h"
 #include "ThreadIdentifierDataPthreads.h"
 #include "ThreadSpecific.h"
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
+#include <wtf/DataLog.h>
+#include <wtf/RawPointer.h>
 #include <wtf/WTFThreadData.h>
 #include <errno.h>
 
@@ -55,7 +55,7 @@
 #include <sys/time.h>
 #endif
 
-#if OS(MAC_OS_X)
+#if PLATFORM(MAC)
 #include <objc/objc-auto.h>
 #endif
 
@@ -104,7 +104,7 @@ void threadWasJoined(ThreadIdentifier);
 
 static Mutex& threadMapMutex()
 {
-    DEFINE_STATIC_LOCAL(Mutex, mutex, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(Mutex, mutex, ());
     return mutex;
 }
 
@@ -132,7 +132,7 @@ void initializeThreading()
 
 static ThreadMap& threadMap()
 {
-    DEFINE_STATIC_LOCAL(ThreadMap, map, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(ThreadMap, map, ());
     return map;
 }
 
@@ -175,7 +175,14 @@ ThreadIdentifier createThreadInternal(ThreadFunction entryPoint, void* data, con
 {
     auto invocation = std::make_unique<ThreadFunctionInvocation>(entryPoint, data);
     pthread_t threadHandle;
-    if (pthread_create(&threadHandle, 0, wtfThreadEntryPoint, invocation.get())) {
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+#if HAVE(QOS_CLASSES)
+    pthread_attr_set_qos_class_np(&attr, QOS_CLASS_USER_INITIATED, 0);
+#endif
+    int error = pthread_create(&threadHandle, &attr, wtfThreadEntryPoint, invocation.get());
+    pthread_attr_destroy(&attr);
+    if (error) {
         LOG_ERROR("Failed to create pthread at entry point %p with data %p", wtfThreadEntryPoint, invocation.get());
         return 0;
     }
@@ -195,7 +202,7 @@ void initializeCurrentThreadInternal(const char* threadName)
     UNUSED_PARAM(threadName);
 #endif
 
-#if OS(MAC_OS_X)
+#if PLATFORM(MAC)
     // All threads that potentially use APIs above the BSD layer must be registered with the Objective-C
     // garbage collector in case API implementations use garbage-collected memory.
     objc_registerThreadWithCollector();
@@ -204,6 +211,28 @@ void initializeCurrentThreadInternal(const char* threadName)
     ThreadIdentifier id = identifierByPthreadHandle(pthread_self());
     ASSERT(id);
     ThreadIdentifierData::initialize(id);
+}
+
+void changeThreadPriority(ThreadIdentifier threadID, int delta)
+{
+    pthread_t pthreadHandle;
+    ASSERT(threadID);
+
+    {
+        MutexLocker locker(threadMapMutex());
+        pthreadHandle = pthreadHandleForIdentifierWithLockAlreadyHeld(threadID);
+        ASSERT(pthreadHandle);
+    }
+
+    int policy;
+    struct sched_param param;
+
+    if (pthread_getschedparam(pthreadHandle, &policy, &param))
+        return;
+
+    param.sched_priority += delta;
+
+    pthread_setschedparam(pthreadHandle, policy, &param);
 }
 
 int waitForThreadCompletion(ThreadIdentifier threadID)

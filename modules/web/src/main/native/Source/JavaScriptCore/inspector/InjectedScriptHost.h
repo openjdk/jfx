@@ -26,8 +26,6 @@
 #ifndef InjectedScriptHost_h
 #define InjectedScriptHost_h
 
-#if ENABLE(INSPECTOR)
-
 #include "JSCJSValueInlines.h"
 #include "Strong.h"
 #include "StrongInlines.h"
@@ -38,10 +36,10 @@ namespace Inspector {
 
 class JS_EXPORT_PRIVATE InjectedScriptHost : public RefCounted<InjectedScriptHost> {
 public:
-    static PassRefPtr<InjectedScriptHost> create() { return adoptRef(new InjectedScriptHost); }
+    static Ref<InjectedScriptHost> create() { return adoptRef(*new InjectedScriptHost); }
     virtual ~InjectedScriptHost();
 
-    virtual JSC::JSValue type(JSC::ExecState*, JSC::JSValue) { return JSC::jsUndefined(); }
+    virtual JSC::JSValue subtype(JSC::ExecState*, JSC::JSValue) { return JSC::jsUndefined(); }
     virtual bool isHTMLAllCollection(JSC::JSValue) { return false; }
 
     JSC::JSValue jsWrapper(JSC::ExecState*, JSC::JSGlobalObject*);
@@ -53,7 +51,5 @@ private:
 };
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(InjectedScriptHost_h)

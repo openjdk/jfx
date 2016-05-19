@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,10 +32,11 @@
 #include "JSDestructibleObject.h"
 #include "JSCInlines.h"
 #include "SlotVisitorInlines.h"
+#include "TypeProfiler.h"
 
 namespace JSC {
 
-const ClassInfo SymbolTable::s_info = { "SymbolTable", 0, 0, 0, CREATE_METHOD_TABLE(SymbolTable) };
+const ClassInfo SymbolTable::s_info = { "SymbolTable", 0, 0, CREATE_METHOD_TABLE(SymbolTable) };
 
 SymbolTableEntry& SymbolTableEntry::copySlow(const SymbolTableEntry& other)
 {
@@ -58,33 +59,19 @@ void SymbolTableEntry::freeFatEntrySlow()
     delete fatEntry();
 }
 
-JSValue SymbolTableEntry::inferredValue()
-{
-    if (!isFat())
-        return JSValue();
-    return fatEntry()->m_watchpoints->inferredValue();
-}
-
 void SymbolTableEntry::prepareToWatch()
 {
+    if (!isWatchable())
+        return;
     FatEntry* entry = inflate();
     if (entry->m_watchpoints)
         return;
-    entry->m_watchpoints = adoptRef(new VariableWatchpointSet());
+    entry->m_watchpoints = adoptRef(new WatchpointSet(ClearWatchpoint));
 }
 
 void SymbolTableEntry::addWatchpoint(Watchpoint* watchpoint)
 {
     fatEntry()->m_watchpoints->add(watchpoint);
-}
-
-void SymbolTableEntry::notifyWriteSlow(JSValue value)
-{
-    VariableWatchpointSet* watchpoints = fatEntry()->m_watchpoints.get();
-    if (!watchpoints)
-        return;
-
-    watchpoints->notifyWrite(value);
 }
 
 SymbolTableEntry::FatEntry* SymbolTableEntry::inflateSlow()
@@ -96,68 +83,178 @@ SymbolTableEntry::FatEntry* SymbolTableEntry::inflateSlow()
 
 SymbolTable::SymbolTable(VM& vm)
     : JSCell(vm, vm.symbolTableStructure.get())
-    , m_parameterCountIncludingThis(0)
     , m_usesNonStrictEval(false)
-    , m_captureStart(0)
-    , m_captureEnd(0)
-    , m_functionEnteredOnce(ClearWatchpoint)
+    , m_correspondsToLexicalScope(false)
 {
 }
 
 SymbolTable::~SymbolTable() { }
 
+void SymbolTable::finishCreation(VM& vm)
+{
+    Base::finishCreation(vm);
+    m_singletonScope.set(vm, this, InferredValue::create(vm));
+}
+
 void SymbolTable::visitChildren(JSCell* thisCell, SlotVisitor& visitor)
 {
     SymbolTable* thisSymbolTable = jsCast<SymbolTable*>(thisCell);
-    if (!thisSymbolTable->m_watchpointCleanup) {
-        thisSymbolTable->m_watchpointCleanup =
-            std::make_unique<WatchpointCleanup>(thisSymbolTable);
+
+    visitor.append(&thisSymbolTable->m_arguments);
+    visitor.append(&thisSymbolTable->m_singletonScope);
+
+    // Save some memory. This is O(n) to rebuild and we do so on the fly.
+    ConcurrentJITLocker locker(thisSymbolTable->m_lock);
+    thisSymbolTable->m_localToEntry = nullptr;
+}
+
+const SymbolTable::LocalToEntryVec& SymbolTable::localToEntry(const ConcurrentJITLocker&)
+{
+    if (UNLIKELY(!m_localToEntry)) {
+        unsigned size = 0;
+        for (auto& entry : m_map) {
+            VarOffset offset = entry.value.varOffset();
+            if (offset.isScope())
+                size = std::max(size, offset.scopeOffset().offset() + 1);
+        }
+
+        m_localToEntry = std::make_unique<LocalToEntryVec>(size, nullptr);
+        for (auto& entry : m_map) {
+            VarOffset offset = entry.value.varOffset();
+            if (offset.isScope())
+                m_localToEntry->at(offset.scopeOffset().offset()) = &entry.value;
+        }
     }
 
-    visitor.addUnconditionalFinalizer(thisSymbolTable->m_watchpointCleanup.get());
+    return *m_localToEntry;
 }
 
-SymbolTable::WatchpointCleanup::WatchpointCleanup(SymbolTable* symbolTable)
-    : m_symbolTable(symbolTable)
+SymbolTableEntry* SymbolTable::entryFor(const ConcurrentJITLocker& locker, ScopeOffset offset)
 {
+    auto& toEntryVector = localToEntry(locker);
+    if (offset.offset() >= toEntryVector.size())
+        return nullptr;
+    return toEntryVector[offset.offset()];
 }
 
-SymbolTable::WatchpointCleanup::~WatchpointCleanup() { }
-
-void SymbolTable::WatchpointCleanup::finalizeUnconditionally()
-{
-    Map::iterator iter = m_symbolTable->m_map.begin();
-    Map::iterator end = m_symbolTable->m_map.end();
-    for (; iter != end; ++iter) {
-        if (VariableWatchpointSet* set = iter->value.watchpointSet())
-            set->finalizeUnconditionally();
-    }
-}
-
-SymbolTable* SymbolTable::cloneCapturedNames(VM& vm)
+SymbolTable* SymbolTable::cloneScopePart(VM& vm)
 {
     SymbolTable* result = SymbolTable::create(vm);
 
-    result->m_parameterCountIncludingThis = m_parameterCountIncludingThis;
     result->m_usesNonStrictEval = m_usesNonStrictEval;
-    result->m_captureStart = m_captureStart;
-    result->m_captureEnd = m_captureEnd;
+    result->m_correspondsToLexicalScope = m_correspondsToLexicalScope;
 
     for (auto iter = m_map.begin(), end = m_map.end(); iter != end; ++iter) {
-        if (!isCaptured(iter->value.getIndex()))
+        if (!iter->value.varOffset().isScope())
             continue;
         result->m_map.add(
             iter->key,
-            SymbolTableEntry(iter->value.getIndex(), iter->value.getAttributes()));
+            SymbolTableEntry(iter->value.varOffset(), iter->value.getAttributes()));
     }
 
-    if (m_slowArguments) {
-        result->m_slowArguments = std::make_unique<SlowArgument[]>(parameterCount());
-        for (unsigned i = parameterCount(); i--;)
-            result->m_slowArguments[i] = m_slowArguments[i];
+    result->m_maxScopeOffset = m_maxScopeOffset;
+
+    if (ScopedArgumentsTable* arguments = this->arguments())
+        result->m_arguments.set(vm, result, arguments);
+
+    if (m_typeProfilingRareData) {
+        result->m_typeProfilingRareData = std::make_unique<TypeProfilingRareData>();
+
+        {
+            auto iter = m_typeProfilingRareData->m_uniqueIDMap.begin();
+            auto end = m_typeProfilingRareData->m_uniqueIDMap.end();
+            for (; iter != end; ++iter)
+                result->m_typeProfilingRareData->m_uniqueIDMap.set(iter->key, iter->value);
+        }
+
+        {
+            auto iter = m_typeProfilingRareData->m_offsetToVariableMap.begin();
+            auto end = m_typeProfilingRareData->m_offsetToVariableMap.end();
+            for (; iter != end; ++iter)
+                result->m_typeProfilingRareData->m_offsetToVariableMap.set(iter->key, iter->value);
+        }
+
+        {
+            auto iter = m_typeProfilingRareData->m_uniqueTypeSetMap.begin();
+            auto end = m_typeProfilingRareData->m_uniqueTypeSetMap.end();
+            for (; iter != end; ++iter)
+                result->m_typeProfilingRareData->m_uniqueTypeSetMap.set(iter->key, iter->value);
+        }
     }
 
     return result;
+}
+
+void SymbolTable::prepareForTypeProfiling(const ConcurrentJITLocker&)
+{
+    if (m_typeProfilingRareData)
+        return;
+
+    m_typeProfilingRareData = std::make_unique<TypeProfilingRareData>();
+
+    for (auto iter = m_map.begin(), end = m_map.end(); iter != end; ++iter) {
+        m_typeProfilingRareData->m_uniqueIDMap.set(iter->key, TypeProfilerNeedsUniqueIDGeneration);
+        m_typeProfilingRareData->m_offsetToVariableMap.set(iter->value.varOffset(), iter->key);
+    }
+}
+
+GlobalVariableID SymbolTable::uniqueIDForVariable(const ConcurrentJITLocker&, UniquedStringImpl* key, VM& vm)
+{
+    RELEASE_ASSERT(m_typeProfilingRareData);
+
+    auto iter = m_typeProfilingRareData->m_uniqueIDMap.find(key);
+    auto end = m_typeProfilingRareData->m_uniqueIDMap.end();
+    if (iter == end)
+        return TypeProfilerNoGlobalIDExists;
+
+    GlobalVariableID id = iter->value;
+    if (id == TypeProfilerNeedsUniqueIDGeneration) {
+        id = vm.typeProfiler()->getNextUniqueVariableID();
+        m_typeProfilingRareData->m_uniqueIDMap.set(key, id);
+        m_typeProfilingRareData->m_uniqueTypeSetMap.set(key, TypeSet::create()); // Make a new global typeset for this corresponding ID.
+    }
+
+    return id;
+}
+
+GlobalVariableID SymbolTable::uniqueIDForOffset(const ConcurrentJITLocker& locker, VarOffset offset, VM& vm)
+{
+    RELEASE_ASSERT(m_typeProfilingRareData);
+
+    auto iter = m_typeProfilingRareData->m_offsetToVariableMap.find(offset);
+    auto end = m_typeProfilingRareData->m_offsetToVariableMap.end();
+    if (iter == end)
+        return TypeProfilerNoGlobalIDExists;
+
+    return uniqueIDForVariable(locker, iter->value.get(), vm);
+}
+
+RefPtr<TypeSet> SymbolTable::globalTypeSetForOffset(const ConcurrentJITLocker& locker, VarOffset offset, VM& vm)
+{
+    RELEASE_ASSERT(m_typeProfilingRareData);
+
+    uniqueIDForOffset(locker, offset, vm); // Lazily create the TypeSet if necessary.
+
+    auto iter = m_typeProfilingRareData->m_offsetToVariableMap.find(offset);
+    auto end = m_typeProfilingRareData->m_offsetToVariableMap.end();
+    if (iter == end)
+        return nullptr;
+
+    return globalTypeSetForVariable(locker, iter->value.get(), vm);
+}
+
+RefPtr<TypeSet> SymbolTable::globalTypeSetForVariable(const ConcurrentJITLocker& locker, UniquedStringImpl* key, VM& vm)
+{
+    RELEASE_ASSERT(m_typeProfilingRareData);
+
+    uniqueIDForVariable(locker, key, vm); // Lazily create the TypeSet if necessary.
+
+    auto iter = m_typeProfilingRareData->m_uniqueTypeSetMap.find(key);
+    auto end = m_typeProfilingRareData->m_uniqueTypeSetMap.end();
+    if (iter == end)
+        return nullptr;
+
+    return iter->value;
 }
 
 } // namespace JSC

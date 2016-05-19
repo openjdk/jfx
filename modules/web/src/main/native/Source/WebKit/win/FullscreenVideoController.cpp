@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,9 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 
-#if ENABLE(VIDEO) && !USE(GSTREAMER)
+#if ENABLE(VIDEO) && !USE(GSTREAMER) && !USE(MEDIA_FOUNDATION)
 
 #include "FullscreenVideoController.h"
 
@@ -34,7 +33,8 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <WebCore/BitmapInfo.h>
 #include <WebCore/Chrome.h>
-#include <WebCore/Font.h>
+#include <WebCore/FloatRoundedRect.h>
+#include <WebCore/FontCascade.h>
 #include <WebCore/FontSelector.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/HWndDC.h>
@@ -43,8 +43,6 @@
 #include <WebCore/TextRun.h>
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #include <windowsx.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/StdLibExtras.h>
 
 using namespace std;
@@ -135,7 +133,7 @@ void HUDSlider::draw(GraphicsContext& context)
 {
     // Draw gutter
     IntSize radius(m_rect.height() / 2, m_rect.height() / 2);
-    context.fillRoundedRect(m_rect, radius, radius, radius, radius, Color(sliderGutterColor), ColorSpaceDeviceRGB);
+    context.fillRoundedRect(FloatRoundedRect(m_rect, radius, radius, radius, radius), Color(sliderGutterColor), ColorSpaceDeviceRGB);
 
     // Draw button
     context.setStrokeColor(Color(sliderButtonColor), ColorSpaceDeviceRGB);
@@ -186,7 +184,7 @@ private:
 
     virtual void platformCALayerAnimationStarted(CFTimeInterval beginTime) { }
     virtual GraphicsLayer::CompositingCoordinatesOrientation platformCALayerContentsOrientation() const { return GraphicsLayer::CompositingCoordinatesBottomUp; }
-    virtual void platformCALayerPaintContents(PlatformCALayer*, GraphicsContext&, const IntRect& inClip) { }
+    virtual void platformCALayerPaintContents(PlatformCALayer*, GraphicsContext&, const FloatRect&) { }
     virtual bool platformCALayerShowDebugBorders() const { return false; }
     virtual bool platformCALayerShowRepaintCounter(PlatformCALayer*) const { return false; }
     virtual int platformCALayerIncrementRepaintCount(PlatformCALayer*) { return 0; }
@@ -204,18 +202,18 @@ void FullscreenVideoController::LayerClient::platformCALayerLayoutSublayersOfLay
 {
     ASSERT_ARG(layer, layer == m_parent->m_rootChild);
 
-    HTMLMediaElement* mediaElement = m_parent->m_mediaElement.get();
-    if (!mediaElement)
+    HTMLVideoElement* videoElement = m_parent->m_videoElement.get();
+    if (!videoElement)
         return;
 
 
-    PlatformCALayer* videoLayer = PlatformCALayer::platformCALayer(mediaElement->platformLayer());
+    PlatformCALayer* videoLayer = PlatformCALayer::platformCALayer(videoElement->platformLayer());
     if (!videoLayer || videoLayer->superlayer() != layer)
         return;
 
     FloatRect layerBounds = layer->bounds();
 
-    FloatSize videoSize = mediaElement->player()->naturalSize();
+    FloatSize videoSize = videoElement->player()->naturalSize();
     float scaleFactor;
     if (videoSize.aspectRatio() > layerBounds.size().aspectRatio())
         scaleFactor = layerBounds.width() / videoSize.width();
@@ -244,10 +242,10 @@ FullscreenVideoController::FullscreenVideoController()
     , m_timeSlider(HUDSlider::DiamondButton, timeSliderButtonSize, IntRect(IntPoint(windowWidth / 2 - timeSliderWidth / 2, windowHeight - margin - sliderHeight), IntSize(timeSliderWidth, sliderHeight)))
     , m_hitWidget(0)
     , m_movingWindow(false)
-    , m_timer(this, &FullscreenVideoController::timerFired)
-    , m_layerClient(adoptPtr(new LayerClient(this)))
+    , m_timer(*this, &FullscreenVideoController::timerFired)
+    , m_layerClient(std::make_unique<LayerClient>(this))
     , m_rootChild(PlatformCALayerWin::create(PlatformCALayer::LayerTypeLayer, m_layerClient.get()))
-    , m_fullscreenWindow(adoptPtr(new MediaPlayerPrivateFullscreenWindow(this)))
+    , m_fullscreenWindow(std::make_unique<MediaPlayerPrivateFullscreenWindow>(static_cast<MediaPlayerPrivateFullscreenClient*>(this)))
 {
 }
 
@@ -256,13 +254,13 @@ FullscreenVideoController::~FullscreenVideoController()
     m_rootChild->setOwner(0);
 }
 
-void FullscreenVideoController::setMediaElement(HTMLMediaElement* mediaElement)
+void FullscreenVideoController::setVideoElement(HTMLVideoElement* videoElement)
 {
-    if (mediaElement == m_mediaElement)
+    if (videoElement == m_videoElement)
         return;
 
-    m_mediaElement = mediaElement;
-    if (!m_mediaElement) {
+    m_videoElement = videoElement;
+    if (!m_videoElement) {
         // Can't do full-screen, just get out
         exitFullscreen();
     }
@@ -270,18 +268,19 @@ void FullscreenVideoController::setMediaElement(HTMLMediaElement* mediaElement)
 
 void FullscreenVideoController::enterFullscreen()
 {
-    if (!m_mediaElement)
+    if (!m_videoElement)
         return;
 
-    WebView* webView = kit(m_mediaElement->document().page());
+    WebView* webView = kit(m_videoElement->document().page());
     HWND parentHwnd = webView ? webView->viewWindow() : 0;
 
     m_fullscreenWindow->createWindow(parentHwnd);
     ::ShowWindow(m_fullscreenWindow->hwnd(), SW_SHOW);
     m_fullscreenWindow->setRootChildLayer(m_rootChild);
 
-    PlatformCALayer* videoLayer = PlatformCALayer::platformCALayer(m_mediaElement->platformLayer());
-    m_rootChild->appendSublayer(videoLayer);
+    PlatformCALayer* videoLayer = PlatformCALayer::platformCALayer(m_videoElement->platformLayer());
+    ASSERT(videoLayer);
+    m_rootChild->appendSublayer(*videoLayer);
     m_rootChild->setNeedsLayout();
     m_rootChild->setGeometryFlipped(1);
 
@@ -297,13 +296,12 @@ void FullscreenVideoController::exitFullscreen()
 {
     SetWindowLongPtr(m_hudWindow, 0, 0);
 
-    if (m_fullscreenWindow)
-        m_fullscreenWindow = nullptr;
+    m_fullscreenWindow = nullptr;
 
     ASSERT(!IsWindow(m_hudWindow));
     m_hudWindow = 0;
 
-    // We previously ripped the mediaElement's platform layer out
+    // We previously ripped the videoElement's platform layer out
     // of its orginial layer tree to display it in our fullscreen
     // window.  Now, we need to get the layer back in its original
     // tree.
@@ -311,66 +309,66 @@ void FullscreenVideoController::exitFullscreen()
     // As a side effect of setting the player to invisible/visible,
     // the player's layer will be recreated, and will be picked up
     // the next time the layer tree is synched.
-    m_mediaElement->player()->setVisible(0);
-    m_mediaElement->player()->setVisible(1);
+    m_videoElement->player()->setVisible(0);
+    m_videoElement->player()->setVisible(1);
 }
 
 bool FullscreenVideoController::canPlay() const
 {
-    return m_mediaElement && m_mediaElement->canPlay();
+    return m_videoElement && m_videoElement->canPlay();
 }
 
 void FullscreenVideoController::play()
 {
-    if (m_mediaElement)
-        m_mediaElement->play();
+    if (m_videoElement)
+        m_videoElement->play();
 }
 
 void FullscreenVideoController::pause()
 {
-    if (m_mediaElement)
-        m_mediaElement->pause();
+    if (m_videoElement)
+        m_videoElement->pause();
 }
 
 float FullscreenVideoController::volume() const
 {
-    return m_mediaElement ? m_mediaElement->volume() : 0;
+    return m_videoElement ? m_videoElement->volume() : 0;
 }
 
 void FullscreenVideoController::setVolume(float volume)
 {
-    if (m_mediaElement) {
+    if (m_videoElement) {
         ExceptionCode ec;
-        m_mediaElement->setVolume(volume, ec);
+        m_videoElement->setVolume(volume, ec);
     }
 }
 
 float FullscreenVideoController::currentTime() const
 {
-    return m_mediaElement ? m_mediaElement->currentTime() : 0;
+    return m_videoElement ? m_videoElement->currentTime() : 0;
 }
 
 void FullscreenVideoController::setCurrentTime(float value)
 {
-    if (m_mediaElement)
-        m_mediaElement->setCurrentTime(value);
+    if (m_videoElement)
+        m_videoElement->setCurrentTime(value);
 }
 
 float FullscreenVideoController::duration() const
 {
-    return m_mediaElement ? m_mediaElement->duration() : 0;
+    return m_videoElement ? m_videoElement->duration() : 0;
 }
 
 void FullscreenVideoController::beginScrubbing()
 {
-    if (m_mediaElement)
-        m_mediaElement->beginScrubbing();
+    if (m_videoElement)
+        m_videoElement->beginScrubbing();
 }
 
 void FullscreenVideoController::endScrubbing()
 {
-    if (m_mediaElement)
-        m_mediaElement->endScrubbing();
+    if (m_videoElement)
+        m_videoElement->endScrubbing();
 }
 
 LRESULT FullscreenVideoController::fullscreenClientWndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -491,9 +489,9 @@ void FullscreenVideoController::draw()
     IntSize innerRadius(borderRadius - borderThickness, borderRadius - borderThickness);
     IntRect innerRect(borderThickness, borderThickness, windowWidth - borderThickness * 2, windowHeight - borderThickness * 2);
 
-    context.fillRoundedRect(outerRect, outerRadius, outerRadius, outerRadius, outerRadius, Color(borderColor), ColorSpaceDeviceRGB);
+    context.fillRoundedRect(FloatRoundedRect(outerRect, outerRadius, outerRadius, outerRadius, outerRadius), Color(borderColor), ColorSpaceDeviceRGB);
     context.setCompositeOperation(CompositeCopy);
-    context.fillRoundedRect(innerRect, innerRadius, innerRadius, innerRadius, innerRadius, Color(backgroundColor), ColorSpaceDeviceRGB);
+    context.fillRoundedRect(FloatRoundedRect(innerRect, innerRadius, innerRadius, innerRadius, innerRadius), Color(backgroundColor), ColorSpaceDeviceRGB);
 
     // Draw the widgets
     m_playPauseButton.draw(context);
@@ -514,7 +512,7 @@ void FullscreenVideoController::draw()
     desc.setOneFamily(metrics.lfSmCaptionFont.lfFaceName);
 
     desc.setComputedSize(textSize);
-    Font font = Font(desc, 0, 0);
+    FontCascade font = FontCascade(desc, 0, 0);
     font.update(0);
 
     String s;
@@ -579,8 +577,8 @@ LRESULT FullscreenVideoController::hudWndProc(HWND wnd, UINT message, WPARAM wPa
 void FullscreenVideoController::onChar(int c)
 {
     if (c == VK_ESCAPE) {
-        if (m_mediaElement)
-            m_mediaElement->exitFullscreen();
+        if (m_videoElement)
+            m_videoElement->exitFullscreen();
     } else if (c == VK_SPACE)
         togglePlay();
 }
@@ -588,12 +586,12 @@ void FullscreenVideoController::onChar(int c)
 void FullscreenVideoController::onKeyDown(int virtualKey)
 {
     if (virtualKey == VK_ESCAPE) {
-        if (m_mediaElement)
-            m_mediaElement->exitFullscreen();
+        if (m_videoElement)
+            m_videoElement->exitFullscreen();
     }
 }
 
-void FullscreenVideoController::timerFired(Timer<FullscreenVideoController>*)
+void FullscreenVideoController::timerFired()
 {
     // Update the time slider
     m_timeSlider.setValue(currentTime() / duration());
@@ -672,8 +670,8 @@ void FullscreenVideoController::onMouseUp(const IntPoint& point)
             endScrubbing();
         else if (m_hitWidget == &m_exitFullscreenButton && m_exitFullscreenButton.hitTest(convertedPoint)) {
             m_hitWidget = 0;
-            if (m_mediaElement)
-                m_mediaElement->exitFullscreen();
+            if (m_videoElement)
+                m_videoElement->exitFullscreen();
             return;
         }
     }

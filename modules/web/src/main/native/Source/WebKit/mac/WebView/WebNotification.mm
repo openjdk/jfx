@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2012 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -39,8 +39,6 @@
 using namespace WebCore;
 #endif
 
-OBJC_CLASS WebNotificationInternal;
-
 @interface WebNotificationPrivate : NSObject
 {
 @public
@@ -67,7 +65,7 @@ Notification* core(WebNotification *notification)
 {
     if (!(self = [super init]))
         return nil;
-    _private = [[WebNotificationPrivate alloc] init];
+    _private = adoptNS([[WebNotificationPrivate alloc] init]);
     _private->_internal = coreNotification;
     _private->_notificationID = notificationID;
     return self;

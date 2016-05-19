@@ -26,8 +26,6 @@
 #ifndef DatabaseManager_h
 #define DatabaseManager_h
 
-#if ENABLE(SQL_DATABASE)
-
 #include "DatabaseBasicTypes.h"
 #include "DatabaseDetails.h"
 #include "DatabaseError.h"
@@ -53,20 +51,21 @@ class ScriptExecutionContext;
 
 class DatabaseManager {
     WTF_MAKE_NONCOPYABLE(DatabaseManager); WTF_MAKE_FAST_ALLOCATED;
+    friend class WTF::NeverDestroyed<DatabaseManager>;
 public:
-    static DatabaseManager& manager();
+    WEBCORE_EXPORT static DatabaseManager& singleton();
 
-    void initialize(const String& databasePath);
-    void setClient(DatabaseManagerClient*);
+    WEBCORE_EXPORT void initialize(const String& databasePath);
+    WEBCORE_EXPORT void setClient(DatabaseManagerClient*);
     String databaseDirectoryPath() const;
     void setDatabaseDirectoryPath(const String&);
 
     bool isAvailable();
-    void setIsAvailable(bool);
+    WEBCORE_EXPORT void setIsAvailable(bool);
 
     // This gets a DatabaseContext for the specified ScriptExecutionContext.
     // If one doesn't already exist, it will create a new one.
-    PassRefPtr<DatabaseContext> databaseContextFor(ScriptExecutionContext*);
+    RefPtr<DatabaseContext> databaseContextFor(ScriptExecutionContext*);
 
     // These 2 methods are for DatabaseContext (un)registration, and should only
     // be called by the DatabaseContext constructor and destructor.
@@ -83,27 +82,29 @@ public:
 
     static ExceptionCode exceptionCodeForDatabaseError(DatabaseError);
 
-    PassRefPtr<Database> openDatabase(ScriptExecutionContext*, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback>, DatabaseError&);
-    PassRefPtr<DatabaseSync> openDatabaseSync(ScriptExecutionContext*, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback>, DatabaseError&);
+    RefPtr<Database> openDatabase(ScriptExecutionContext*, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback>, DatabaseError&);
 
-    bool hasOpenDatabases(ScriptExecutionContext*);
+    WEBCORE_EXPORT bool hasOpenDatabases(ScriptExecutionContext*);
+
+    WEBCORE_EXPORT void closeAllDatabases();
+
     void stopDatabases(ScriptExecutionContext*, DatabaseTaskSynchronizer*);
 
     String fullPathForDatabase(SecurityOrigin*, const String& name, bool createIfDoesNotExist = true);
 
     bool hasEntryForOrigin(SecurityOrigin*);
-    void origins(Vector<RefPtr<SecurityOrigin>>& result);
-    bool databaseNamesForOrigin(SecurityOrigin*, Vector<String>& result);
-    DatabaseDetails detailsForNameAndOrigin(const String&, SecurityOrigin*);
+    WEBCORE_EXPORT void origins(Vector<RefPtr<SecurityOrigin>>& result);
+    WEBCORE_EXPORT bool databaseNamesForOrigin(SecurityOrigin*, Vector<String>& result);
+    WEBCORE_EXPORT DatabaseDetails detailsForNameAndOrigin(const String&, SecurityOrigin*);
 
-    unsigned long long usageForOrigin(SecurityOrigin*);
-    unsigned long long quotaForOrigin(SecurityOrigin*);
+    WEBCORE_EXPORT unsigned long long usageForOrigin(SecurityOrigin*);
+    WEBCORE_EXPORT unsigned long long quotaForOrigin(SecurityOrigin*);
 
-    void setQuota(SecurityOrigin*, unsigned long long);
+    WEBCORE_EXPORT void setQuota(SecurityOrigin*, unsigned long long);
 
-    void deleteAllDatabases();
-    bool deleteOrigin(SecurityOrigin*);
-    bool deleteDatabase(SecurityOrigin*, const String& name);
+    WEBCORE_EXPORT void deleteAllDatabases();
+    WEBCORE_EXPORT bool deleteOrigin(SecurityOrigin*);
+    WEBCORE_EXPORT bool deleteDatabase(SecurityOrigin*, const String& name);
 
     void interruptAllDatabasesForContext(ScriptExecutionContext*);
 
@@ -124,15 +125,13 @@ private:
     };
 
     DatabaseManager();
-    ~DatabaseManager() { }
+    ~DatabaseManager() = delete;
 
     // This gets a DatabaseContext for the specified ScriptExecutionContext if
     // it already exist previously. Otherwise, it returns 0.
-    PassRefPtr<DatabaseContext> existingDatabaseContextFor(ScriptExecutionContext*);
+    RefPtr<DatabaseContext> existingDatabaseContextFor(ScriptExecutionContext*);
 
-    PassRefPtr<DatabaseBackendBase> openDatabaseBackend(ScriptExecutionContext*,
-        DatabaseType, const String& name, const String& expectedVersion, const String& displayName,
-        unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError&, String& errorMessage);
+    PassRefPtr<DatabaseBackendBase> openDatabaseBackend(ScriptExecutionContext*, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError&, String& errorMessage);
 
     void addProposedDatabase(ProposedDatabase*);
     void removeProposedDatabase(ProposedDatabase*);
@@ -157,7 +156,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)
 
 #endif // DatabaseManager_h

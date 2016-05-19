@@ -102,15 +102,13 @@
                         r"|Source/WebCore/dom/Element\.(cpp|h|idl)",
         },
         "EFL": {
-            "filename": r"Source/WebKit/efl/"
-                        r"|Source/WebCore/platform/efl/"
+            "filename": r"Source/WebCore/platform/efl/"
                         r"|Source/WTF/wtf/efl/"
-                        r"|Tools/EWebLauncher"
-                        r"|Tools/DumpRenderTree/efl/"
                         r"|LayoutTests/platform/efl/",
         },
         "EFLWebKit2PublicAPI": {
-            "filename": r"Source/WebKit2/UIProcess/API/efl/"
+            "filename": r"Source/WebKit2/WebProcess/InjectedBundle/API/efl/"
+                        r"|Source/WebKit2/UIProcess/API/efl/"
                         r"|Source/WebKit2/UIProcess/API/C/efl/",
         },
         "EFLWebKit2PlatformSpecific": {
@@ -145,7 +143,7 @@
             "filename": r"Source/WebCore/page/scrolling/",
         },
         "WebKitGTKTranslations": {
-            "filename": r"Source/WebKit/gtk/po/",
+            "filename": r"Source/WebCore/platform/gtk/po/",
         },
         "Media": {
             "filename": r"(Source|LayoutTests)/.*([Mm]edia|[Aa]udio|[Vv]ideo)",
@@ -164,9 +162,6 @@
         },
         "Editing": {
             "filename": r"Source/WebCore/editing/",
-        },
-        "NetworkInfo": {
-            "filename": r"Source/WebCore/Modules/networkinfo",
         },
         "Battery": {
             "filename": r"Source/WebCore/Modules/battery",
@@ -205,6 +200,18 @@
                         r"|Source/WebCore/inspector/.+\.idl"
                         r"|Source/WebCore/page/Console.idl",
         },
+        "WebInspectorGenerator": {
+            "filename": r"Source/JavaScriptCore/inspector/scripts/codegen"
+                        r"|Tools/Scripts/generate-inspector-protocol-bindings.py"
+                        r"|Tools/Scripts/webkitpy/inspector",
+        },
+        "WebInspectorUIImages": {
+            "filename": r"Source/WebInspectorUI/UserInterface/Images",
+        },
+        "WebReplayGenerator": {
+            "filename": r"Source/JavaScriptCore/replay/scripts"
+                        r"|Tools/Scripts/webkitpy/replay",
+        },
         "WebSocket": {
             "filename": r"Source/WebCore/Modules/websockets"
                         r"|Source/WebCore/platform/network/(|.+/)SocketStream.*",
@@ -218,19 +225,9 @@
             "filename": r"Source/WebCore/accessibility"
                         r"|LayoutTests/.*accessibility",
         },
-        "Cairo": {
-            "filename": r"Source/WebCore/platform/graphics/cairo",
-        },
-        "Harfbuzz": {
-            "filename": r"Source/WebCore/platform/graphics/harfbuzz",
-        },
         "PerformanceTests": {
             "filename": r"PerformanceTests"
                         r"|Tools/Scripts/webkitpy/performance_tests",
-        },
-        "GtkBuildSystem": {
-            "filename": r"configure.ac"
-                        r"|.*GNUmakefile.(am|features.am.in)",
         },
         "ConsoleUsage": {
             "more": r"[Aa]ddConsoleMessage|reportException|logExceptionToConsole|addMessage|printErrorMessage"
@@ -269,7 +266,6 @@
             "filename": r"Source/WebCore/Modules/indexeddb"
                         r"|Source/WebCore/bindings/.*IDB.*\.(h|cpp)"
                         r"|Source/WebCore/bindings/.*SerializedScriptValue.*\.(h|cpp)"
-                        r"|Source/WebCore/platform/leveldb"
                         r"|LayoutTests/storage/indexeddb"
                         r"|LayoutTests/platform/.*/storage/indexeddb",
         },
@@ -290,6 +286,44 @@
                         r"|LayoutTests/platform/.*/fast/css-grid-layout/"
                         r"|LayoutTests/platform/.*/ietestcenter/css3/grid/",
         },
+        "MSEEME": {
+            "filename": r"Source/WebCore/Modules/encryptedmedia/"
+                        r"|Source/WebCore/Modules/mediasource/"
+                        r"|LayoutTests/media/encrypted-media/"
+                        r"|LayoutTests/media/media-source/",
+        },
+        "StreamsAPI": {
+            "filename": r"Source/WebCore/Modules/streams/"
+                        r"|Source/WebCore/bindings/js/ReadableStreamJSSource\.(h|cpp)"
+                        r"|Source/WebCore/bindings/js/JSReadableStreamCustom.cpp"
+                        r"|LayoutTests/streams/",
+        },
+        "MacAndIOSTextLayoutAndRendering": {
+            "filename": r"Source/WebCore/loader/cache/CachedFont\.(h|cpp)"
+                        r"|Source/WebCore/rendering/.*Inline.*Box\.(h|cpp)"
+                        r"|Source/WebCore/rendering/InlineIterator\.h"
+                        r"|Source/WebCore/rendering/InlineBlockLineLayout\.cpp"
+                        r"|Source/WebCore/rendering/RenderCombineText\.(h|cpp)"
+                        r"|Source/WebCore/rendering/RenderText.*\.(h|cpp)"
+                        r"|Source/WebCore/rendering/SimpleLineLayout\.(h|cpp)"
+                        r"|Source/WebCore/rendering/TextPainter\.(h|cpp)"
+                        r"|Source/WebCore/rendering/line/BreakingContextInlineHeaders\.(h|cpp)"
+                        r"|Source/WebCore/rendering/line/TrailingObjects\.(h|cpp)"
+                        r"|Source/WebCore/style/InlineTextBoxStyle\.(h|cpp)"
+                        r"|Source/WebCore/platform/graphics/.*Font.*"
+                        r"|Source/WebCore/platform/graphics/mac/.*Font.*"
+                        r"|Source/WebCore/platform/graphics/mac/.*Text.*"
+                        r"|Source/WebCore/platform/graphics/ios/.*Font.*"
+                        r"|Source/WebCore/platform/graphics/cocoa/.*Font.*"
+                        r"|Source/WebCore/platform/graphics/GlyphBuffer\.h"
+                        r"|Source/WebCore/platform/graphics/.*TextIterator\.(h|cpp)"
+                        r"|Source/WebCore/platform/graphics/TextRun\.(h|cpp)"
+                        r"|Source/WebCore/platform/graphics/WidthIterator\.(h|cpp)"
+                        r"|Source/WebCore/platform/text/BidiResolver.h",
+        },
+        "NetworkCache": {
+            "filename": r"Source/WebKit2/NetworkProcess/cache/",
+        },
     },
     "CC_RULES": {
         # Note: All email addresses listed must be registered with bugzilla.
@@ -300,9 +334,8 @@
         "AppleMacPublicApi": [ "timothy@apple.com" ],
         "Battery": [ "gyuyoung.kim@webkit.org", "dchris@gmail.com" ],
         "BindingsScripts": [ "dchris@gmail.com", "cgarcia@igalia.com" ],
-        "Cairo": [ "dominik.rottsches@intel.com" ],
-        "CMake": [ "rakuco@webkit.org", "gyuyoung.kim@webkit.org", "ryuan.choi@gmail.com", "sergio.correia@openbossa.org" ],
-        "CoordinatedGraphics" : [ "noam@webkit.org", "zeno@webkit.org", "cmarcelo@webkit.org", "luiz@webkit.org", "ryuan.choi@gmail.com", "sergio.correia@openbossa.org" ],
+        "CMake": [ "rakuco@webkit.org", "gyuyoung.kim@webkit.org", "ryuan.choi@gmail.com", "sergio.correia@openbossa.org", "mcatanzaro@igalia.com" ],
+        "CoordinatedGraphics" : [ "noam@webkit.org", "zeno@webkit.org", "cmarcelo@webkit.org", "luiz@webkit.org", "ryuan.choi@gmail.com", "sergio.correia@openbossa.org", "gyuyoung.kim@webkit.org" ],
         "ConsoleUsage" : [ "mkwst@chromium.org" ],
         "ContentSecurityPolicyFiles|ContentSecurityPolicyUsage" : [ "mkwst@chromium.org" ],
         "CoreAnimation" : [ "simon.fraser@apple.com" ],
@@ -320,36 +353,40 @@
         "FrameLoader": [ "japhet@chromium.org" ],
         "Geolocation": [ "benjamin@webkit.org" ],
         "GraphicsLayer": [ "simon.fraser@apple.com", "kondapallykalyan@gmail.com", "sergio.correia@openbossa.org" ],
-        "GStreamerGraphics": [ "alexis@webkit.org", "pnormand@igalia.com", "gns@gnome.org", "mrobinson@webkit.org", "cgarcia@igalia.com" ],
-        "GStreamerAudio": [ "pnormand@igalia.com", "dchris@gmail.com", "sergio.correia@openbossa.org" ],
-        "GtkBuildSystem": [ "zandobersek@gmail.com", "berto@igalia.com" ],
-        "GtkWebKit2PublicAPI": [ "cgarcia@igalia.com", "gns@gnome.org", "mrobinson@webkit.org", "berto@igalia.com" ],
-        "Harfbuzz": [ "dominik.rottsches@intel.com" ],
+        "GStreamerGraphics": [ "alexis@webkit.org", "pnormand@igalia.com", "gns@gnome.org", "mrobinson@webkit.org", "cgarcia@igalia.com", "calvaris@igalia.com", "vjaquez@igalia.com", "agomez@igalia.com" ],
+        "GStreamerAudio": [ "pnormand@igalia.com", "dchris@gmail.com", "sergio.correia@openbossa.org", "calvaris@igalia.com", "vjaquez@igalia.com", "agomez@igalia.com" ],
+        "GtkWebKit2PublicAPI": [ "cgarcia@igalia.com", "gns@gnome.org", "mrobinson@webkit.org", "berto@igalia.com", "mcatanzaro@igalia.com" ],
         "HTML": [ "esprehn+autocc@chromium.org", "gyuyoung.kim@webkit.org" ],
         "IndexedDB": [ "alecflett@chromium.org", "jsbell@chromium.org" ],
         "Loader": [ "japhet@chromium.org" ],
+        "MacAndIOSTextLayoutAndRendering": [ "mmaxfield@apple.com" ],
         "MathML": [ "dbarton@mathscribe.com", "mrobinson@webkit.org", "fred.wang@free.fr" ],
         "Media": [ "eric.carlson@apple.com", "jer.noble@apple.com", "glenn@skynav.com", "philipj@opera.com", "sergio.correia@openbossa.org" ],
-        "Track": [ "eric.carlson@apple.com", "philipj@opera.com" ],
+        "MSEEME": [ "eric.carlson@apple.com", "calvaris@igalia.com" ],
+        "NetworkCache": [ "cgarcia@igalia.com" ],
+        "StreamsAPI": [ "benjamin@webkit.org", "calvaris@igalia.com", "youennf@gmail.com" ],
+        "Track": [ "eric.carlson@apple.com", "philipj@opera.com", "calvaris@igalia.com" ],
         "MediaStream": [ "tommyw@google.com", "hta@google.com", "sergio.correia@openbossa.org" ],
-        "NetworkInfo": [ "gyuyoung.kim@webkit.org", "dchris@gmail.com" ],
         "OpenGL" : [ "noam@webkit.org", "dino@apple.com", "kondapallykalyan@gmail.com", "roger_fong@apple.com" ],
         "PerformanceTests": [ "rniwa@webkit.org" ],
         "RegionsDevelopment|RegionsExpectationsMore|RegionsExpectationsLess|RegionsUsage": [ "WebkitBugTracker@adobe.com" ],
         "Rendering": [ "esprehn+autocc@chromium.org", "glenn@skynav.com", "kondapallykalyan@gmail.com" ],
         "RenderLayers" : [ "simon.fraser@apple.com", "kondapallykalyan@gmail.com" ],
-        "SVG": ["schenney@chromium.org", "pdr@google.com", "fmalita@chromium.org", "dominik.rottsches@intel.com", "gyuyoung.kim@webkit.org", "sergio.correia@openbossa.org" ],
+        "SVG": ["schenney@chromium.org", "pdr@google.com", "fmalita@chromium.org", "gyuyoung.kim@webkit.org", "sergio.correia@openbossa.org" ],
         "SVNScripts": [ "dbates@webkit.org" ],
-        "ScrollingCoordinator": [ "andersca@apple.com", "jamesr@chromium.org", "tonikitoo@webkit.org", "cmarcelo@webkit.org", "luiz@webkit.org" ],
+        "ScrollingCoordinator": [ "jamesr@chromium.org", "tonikitoo@webkit.org", "cmarcelo@webkit.org", "luiz@webkit.org" ],
         "Selectors": [ "allan.jensen@digia.com" ],
-        "SoupNetwork": [ "gns@gnome.org", "mrobinson@webkit.org", "danw@gnome.org", "dchris@gmail.com", "cgarcia@igalia.com", "berto@igalia.com" ],
+        "SoupNetwork": [ "gns@gnome.org", "mrobinson@webkit.org", "danw@gnome.org", "dchris@gmail.com", "cgarcia@igalia.com", "berto@igalia.com", "mcatanzaro@igalia.com" ],
         "TextureMapper" : [ "noam@webkit.org", "cmarcelo@webkit.org", "luiz@webkit.org", "kondapallykalyan@gmail.com" ],
         "TouchAdjustment" : [ "allan.jensen@digia.com" ],
         "WTF": [ "benjamin@webkit.org", "cmarcelo@webkit.org" ],
         "WebGL": [ "dino@apple.com", "kondapallykalyan@gmail.com" , "roger_fong@apple.com" ],
         "WebIDL": [ "esprehn+autocc@chromium.org", "dchris@gmail.com", "kondapallykalyan@gmail.com" ],
         "WebInspectorAPI": [ "timothy@apple.com", "joepeck@webkit.org", "graouts@webkit.org" ],
-        "WebKitGTKTranslations": [ "gns@gnome.org", "mrobinson@webkit.org" ],
+        "WebInspectorGenerator": [ "burg@cs.washington.edu", "joepeck@webkit.org" ],
+        "WebInspectorUIImages": [ "agomez@igalia.com" ],
+        "WebReplayGenerator": [ "burg@cs.washington.edu" ],
+        "WebKitGTKTranslations": [ "gns@gnome.org", "mrobinson@webkit.org", "berto@igalia.com", "cgarcia@igalia.com", "mcatanzaro@igalia.com" ],
         "WebSocket": [ "yutak@chromium.org", "toyoshim+watchlist@chromium.org" ],
         "XSS": [ "dbates@webkit.org" ],
         "webkitperl": [ "dbates@webkit.org" ],
@@ -365,5 +402,7 @@
                                  "See http://trac.webkit.org/wiki/WebKitGTK/AddingNewWebKit2API", ],
         "ANGLE": [ "Note that there are important steps to take when updating ANGLE. "
                    "See http://trac.webkit.org/wiki/UpdatingANGLE", ],
+        "WebInspectorGenerator": [ "This patch modifies the inspector protocol generator. Please ensure that you have rebaselined any generator test results (i.e., by running `Tools/Scripts/run-inspector-generator-tests --reset-results`)" ],
+        "WebReplayGenerator": [ "This patch modifies the WEB_REPLAY inputs generator. Please ensure that you have rebaselined any generator test results (i.e., by running `Tools/Scripts/run-input-generator-tests --reset-results`)" ],
     },
 }

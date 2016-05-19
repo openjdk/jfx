@@ -1324,6 +1324,7 @@ defineTest(prependEach) {
 
 !contains(TEMPLATE, lib) {
     CONFIG -= debug_and_release
+    message("#############=========== LLLLL")
     for(generator, GENERATORS) {
         eval($${generator}.CONFIG = target_predeps no_link)
         eval($${generator}.dependency_type = TYPE_C)
@@ -1348,6 +1349,8 @@ defineTest(prependEach) {
     }
 } else {
     for(generator, GENERATORS) {
+        message("#############===========")
+        message($${generator})
         isEmpty($${generator}.output_function) {
             prependEach($${generator}.extra_sources, $${GENERATED_SOURCES_DIR}/)
         }

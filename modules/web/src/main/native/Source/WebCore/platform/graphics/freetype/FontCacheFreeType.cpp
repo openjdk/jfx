@@ -23,9 +23,7 @@
 #include "FontCache.h"
 
 #include "Font.h"
-#include "OwnPtrCairo.h"
 #include "RefPtrCairo.h"
-#include "SimpleFontData.h"
 #include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
@@ -81,7 +79,7 @@ FcPattern* findBestFontGivenFallbacks(const FontPlatformData& fontData, FcPatter
     return FcFontSetMatch(0, sets, 1, pattern, &fontConfigResult);
 }
 
-PassRefPtr<SimpleFontData> FontCache::systemFallbackForCharacters(const FontDescription& description, const SimpleFontData* originalFontData, bool, const UChar* characters, int length)
+RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& description, const Font* originalFontData, bool, const UChar* characters, unsigned length)
 {
     RefPtr<FcPattern> pattern = adoptRef(createFontConfigPatternForCharacters(characters, length));
     const FontPlatformData& fontData = originalFontData->platformData();
@@ -89,7 +87,7 @@ PassRefPtr<SimpleFontData> FontCache::systemFallbackForCharacters(const FontDesc
     RefPtr<FcPattern> fallbackPattern = adoptRef(findBestFontGivenFallbacks(fontData, pattern.get()));
     if (fallbackPattern) {
         FontPlatformData alternateFontData(fallbackPattern.get(), description);
-        return getCachedFontData(&alternateFontData, DoNotRetain);
+        return fontForPlatformData(alternateFontData);
     }
 
     FcResult fontConfigResult;
@@ -97,44 +95,46 @@ PassRefPtr<SimpleFontData> FontCache::systemFallbackForCharacters(const FontDesc
     if (!resultPattern)
         return 0;
     FontPlatformData alternateFontData(resultPattern.get(), description);
-    return getCachedFontData(&alternateFontData, DoNotRetain);
+    return fontForPlatformData(alternateFontData);
 }
 
-PassRefPtr<SimpleFontData> FontCache::getLastResortFallbackFont(const FontDescription& fontDescription, ShouldRetain shouldRetain)
+Vector<String> FontCache::systemFontFamilies()
+{
+    // FIXME: <https://webkit.org/b/147018> Web Inspector: [Freetype] Allow inspector to retrieve a list of system fonts
+    Vector<String> fontFamilies;
+    return fontFamilies;
+}
+
+Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
 {
     // We want to return a fallback font here, otherwise the logic preventing FontConfig
     // matches for non-fallback fonts might return 0. See isFallbackFontAllowed.
     static AtomicString timesStr("serif");
-    return getCachedFontData(fontDescription, timesStr, false, shouldRetain);
+    return *fontForFamily(fontDescription, timesStr, false);
 }
 
 void FontCache::getTraitsInFamily(const AtomicString&, Vector<unsigned>&)
 {
 }
 
-static String getFamilyNameStringFromFontDescriptionAndFamily(const FontDescription& fontDescription, const AtomicString& family)
+static String getFamilyNameStringFromFamily(const AtomicString& family)
 {
     // If we're creating a fallback font (e.g. "-webkit-monospace"), convert the name into
     // the fallback name (like "monospace") that fontconfig understands.
     if (family.length() && !family.startsWith("-webkit-"))
         return family.string();
 
-    switch (fontDescription.genericFamily()) {
-    case FontDescription::StandardFamily:
-    case FontDescription::SerifFamily:
+    if (family == standardFamily || family == serifFamily)
         return "serif";
-    case FontDescription::SansSerifFamily:
+    if (family == sansSerifFamily)
         return "sans-serif";
-    case FontDescription::MonospaceFamily:
+    if (family == monospaceFamily)
         return "monospace";
-    case FontDescription::CursiveFamily:
+    if (family == cursiveFamily)
         return "cursive";
-    case FontDescription::FantasyFamily:
+    if (family == fantasyFamily)
         return "fantasy";
-    case FontDescription::NoFamily:
-    default:
-        return "";
-    }
+    return "";
 }
 
 int fontWeightToFontconfigWeight(FontWeight weight)
@@ -164,13 +164,15 @@ int fontWeightToFontconfigWeight(FontWeight weight)
     }
 }
 
-PassOwnPtr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
 {
     // The CSS font matching algorithm (http://www.w3.org/TR/css3-fonts/#font-matching-algorithm)
     // says that we must find an exact match for font family, slant (italic or oblique can be used)
     // and font weight (we only match bold/non-bold here).
     RefPtr<FcPattern> pattern = adoptRef(FcPatternCreate());
-    String familyNameString(getFamilyNameStringFromFontDescriptionAndFamily(fontDescription, family));
+    // Never choose unscalable fonts, as they pixelate when displayed at different sizes.
+    FcPatternAddBool(pattern.get(), FC_SCALABLE, FcTrue);
+    String familyNameString(getFamilyNameStringFromFamily(family));
     if (!FcPatternAddString(pattern.get(), FC_FAMILY, reinterpret_cast<const FcChar8*>(familyNameString.utf8().data())))
         return nullptr;
 
@@ -215,11 +217,11 @@ PassOwnPtr<FontPlatformData> FontCache::createFontPlatformData(const FontDescrip
     // Verify that this font has an encoding compatible with Fontconfig. Fontconfig currently
     // supports three encodings in FcFreeTypeCharIndex: Unicode, Symbol and AppleRoman.
     // If this font doesn't have one of these three encodings, don't select it.
-    OwnPtr<FontPlatformData> platformData = adoptPtr(new FontPlatformData(resultPattern.get(), fontDescription));
+    auto platformData = std::make_unique<FontPlatformData>(resultPattern.get(), fontDescription);
     if (!platformData->hasCompatibleCharmap())
         return nullptr;
 
-    return platformData.release();
+    return platformData;
 }
 
 }

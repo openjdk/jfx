@@ -37,11 +37,9 @@
 #include "StyleRule.h"
 #include <wtf/text/StringBuilder.h>
 
-#if ENABLE(CSS3_CONDITIONAL_RULES)
-
 namespace WebCore {
 
-CSSSupportsRule::CSSSupportsRule(StyleRuleSupports* supportsRule, CSSStyleSheet* parent)
+CSSSupportsRule::CSSSupportsRule(StyleRuleSupports& supportsRule, CSSStyleSheet* parent)
     : CSSGroupingRule(supportsRule, parent)
 {
 }
@@ -50,9 +48,9 @@ String CSSSupportsRule::cssText() const
 {
     StringBuilder result;
 
-    result.append("@supports ");
+    result.appendLiteral("@supports ");
     result.append(conditionText());
-    result.append(" {\n");
+    result.appendLiteral(" {\n");
     appendCssTextForItems(result);
     result.append('}');
 
@@ -61,9 +59,7 @@ String CSSSupportsRule::cssText() const
 
 String CSSSupportsRule::conditionText() const
 {
-    return toStyleRuleSupports(m_groupRule.get())->conditionText();
+    return downcast<StyleRuleSupports>(m_groupRule.get()).conditionText();
 }
 
 } // namespace WebCore
-
-#endif

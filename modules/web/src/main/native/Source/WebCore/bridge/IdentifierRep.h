@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -36,10 +36,10 @@ namespace WebCore {
 class IdentifierRep {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static IdentifierRep* get(int);
-    static IdentifierRep* get(const char*);
+    WEBCORE_EXPORT static IdentifierRep* get(int);
+    WEBCORE_EXPORT static IdentifierRep* get(const char*);
 
-    static bool isValid(IdentifierRep*);
+    WEBCORE_EXPORT static bool isValid(IdentifierRep*);
 
     bool isString() const { return m_isString; }
 

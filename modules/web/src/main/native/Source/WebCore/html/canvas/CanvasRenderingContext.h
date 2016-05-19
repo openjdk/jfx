@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -52,7 +52,9 @@ public:
     HTMLCanvasElement* canvas() const { return m_canvas; }
 
     virtual bool is2d() const { return false; }
-    virtual bool is3d() const { return false; }
+    virtual bool isWebGL1() const { return false; }
+    virtual bool isWebGL2() const { return false; }
+    bool is3d() const { return isWebGL1() || isWebGL1(); }
     virtual bool isAccelerated() const { return false; }
 
     virtual void paintRenderingResultsToCanvas() {}
@@ -75,7 +77,6 @@ protected:
 
 private:
     HTMLCanvasElement* m_canvas;
-    HashSet<String> m_cleanURLs;
 };
 
 } // namespace WebCore

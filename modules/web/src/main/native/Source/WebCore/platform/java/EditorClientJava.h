@@ -41,15 +41,19 @@ public:
     virtual bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) override;
 
     virtual bool shouldApplyStyle(StyleProperties*, Range*) override;
+    virtual void didApplyStyle() override;
     virtual bool shouldMoveRangeAfterDelete(Range*, Range*) override;
 
     virtual void didBeginEditing() override;
     virtual void respondToChangedContents() override;
     virtual void respondToChangedSelection(Frame*) override;
+    virtual void didChangeSelectionAndUpdateLayout() override;
     virtual void didEndEditing() override;
     virtual void willWriteSelectionToPasteboard(Range*) override;
     virtual void didWriteSelectionToPasteboard() override;
     virtual void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
+
+    virtual void discardedComposition(Frame*) override;
 
     virtual void registerUndoStep(PassRefPtr<UndoStep>) override;
     virtual void registerRedoStep(PassRefPtr<UndoStep>) override;
@@ -72,6 +76,7 @@ public:
     virtual bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) override;
     virtual void textWillBeDeletedInTextField(Element*) override;
     virtual void textDidChangeInTextArea(Element*) override;
+    virtual void overflowScrollPositionChanged() override;
 
 #if USE(APPKIT)
     virtual void uppercaseWord() override;

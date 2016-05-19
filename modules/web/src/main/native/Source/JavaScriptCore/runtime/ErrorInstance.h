@@ -22,45 +22,58 @@
 #define ErrorInstance_h
 
 #include "Interpreter.h"
-#include "JSObject.h"
+#include "RuntimeType.h"
 #include "SourceProvider.h"
+#include <wtf/Vector.h>
 
 namespace JSC {
 
-    class ErrorInstance : public JSNonFinalObject {
-    public:
-        typedef JSNonFinalObject Base;
+class ErrorInstance : public JSNonFinalObject {
+public:
+    typedef JSNonFinalObject Base;
 
-        DECLARE_INFO;
+    enum SourceTextWhereErrorOccurred { FoundExactSource, FoundApproximateSource };
+    typedef String (*SourceAppender) (const String& originalMessage, const String& sourceText, RuntimeType, SourceTextWhereErrorOccurred);
 
-        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-        {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
-        }
+    DECLARE_INFO;
 
-        static ErrorInstance* create(VM& vm, Structure* structure, const String& message, Vector<StackFrame> stackTrace = Vector<StackFrame>())
-        {
-            ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(vm.heap)) ErrorInstance(vm, structure);
-            instance->finishCreation(vm, message, stackTrace);
-            return instance;
-        }
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
+    }
 
-        static ErrorInstance* create(ExecState* exec, Structure* structure, JSValue message, Vector<StackFrame> stackTrace = Vector<StackFrame>())
-        {
-            return create(exec->vm(), structure, message.isUndefined() ? String() : message.toString(exec)->value(exec), stackTrace);
-        }
+    static ErrorInstance* create(ExecState* exec, VM& vm, Structure* structure, const String& message, SourceAppender appender = nullptr, RuntimeType type = TypeNothing, bool useCurrentFrame = true)
+    {
+        ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(vm.heap)) ErrorInstance(vm, structure);
+        instance->m_sourceAppender = appender;
+        instance->m_runtimeTypeForCause = type;
+        instance->finishCreation(exec, vm, message, useCurrentFrame);
+        return instance;
+    }
 
-        bool appendSourceToMessage() { return m_appendSourceToMessage; }
-        void setAppendSourceToMessage() { m_appendSourceToMessage = true; }
-        void clearAppendSourceToMessage() { m_appendSourceToMessage = false; }
+    static ErrorInstance* create(ExecState* exec, Structure* structure, JSValue message, SourceAppender appender = nullptr, RuntimeType type = TypeNothing, bool useCurrentFrame = true)
+    {
+        return create(exec, exec->vm(), structure, message.isUndefined() ? String() : message.toString(exec)->value(exec), appender, type, useCurrentFrame);
+    }
 
-    protected:
-        explicit ErrorInstance(VM&, Structure*);
+    static void addErrorInfo(ExecState*, VM&, JSObject*, bool = true);
 
-        void finishCreation(VM&, const String&, Vector<StackFrame> = Vector<StackFrame>());
+    bool hasSourceAppender() const { return !!m_sourceAppender; }
+    SourceAppender sourceAppender() const { return m_sourceAppender; }
+    void setSourceAppender(SourceAppender appender) { m_sourceAppender = appender; }
+    void clearSourceAppender() { m_sourceAppender = nullptr; }
+    void setRuntimeTypeForCause(RuntimeType type) { m_runtimeTypeForCause = type; }
+    RuntimeType runtimeTypeForCause() const { return m_runtimeTypeForCause; }
+    void clearRuntimeTypeForCause() { m_runtimeTypeForCause = TypeNothing; }
 
-        bool m_appendSourceToMessage;
-    };
+protected:
+    explicit ErrorInstance(VM&, Structure*);
+
+    void finishCreation(ExecState*, VM&, const String&, bool useCurrentFrame = true);
+
+    SourceAppender m_sourceAppender { nullptr };
+    RuntimeType m_runtimeTypeForCause { TypeNothing };
+};
 
 } // namespace JSC
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2008 Apple Inc.  All rights reserved.
  * Copyright (C) 2009, 2012 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,6 +27,8 @@
 #include "config.h"
 #include "DNS.h"
 #include "DNSResolveQueue.h"
+
+#if USE(SOUP)
 
 #include "SoupNetworkSession.h"
 #include <libsoup/soup.h>
@@ -45,7 +47,7 @@ bool DNSResolveQueue::platformProxyIsEnabledInSystemPreferences()
 
 static void resolvedCallback(SoupAddress*, guint, void*)
 {
-    DNSResolveQueue::shared().decrementRequestCount();
+    DNSResolveQueue::singleton().decrementRequestCount();
 }
 
 void DNSResolveQueue::platformResolve(const String& hostname)
@@ -61,7 +63,9 @@ void prefetchDNS(const String& hostname)
     if (hostname.isEmpty())
         return;
 
-    DNSResolveQueue::shared().add(hostname);
+    DNSResolveQueue::singleton().add(hostname);
 }
 
 }
+
+#endif

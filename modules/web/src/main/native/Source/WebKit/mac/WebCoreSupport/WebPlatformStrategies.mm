@@ -38,6 +38,7 @@
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/SubframeLoader.h>
 #import <WebKitSystemInterface.h>
+#import <wtf/NeverDestroyed.h>
 
 using namespace WebCore;
 
@@ -59,11 +60,6 @@ CookiesStrategy* WebPlatformStrategies::createCookiesStrategy()
     return this;
 }
 
-DatabaseStrategy* WebPlatformStrategies::createDatabaseStrategy()
-{
-    return this;
-}
-
 LoaderStrategy* WebPlatformStrategies::createLoaderStrategy()
 {
     return this;
@@ -75,21 +71,6 @@ PasteboardStrategy* WebPlatformStrategies::createPasteboardStrategy()
 }
 
 PluginStrategy* WebPlatformStrategies::createPluginStrategy()
-{
-    return this;
-}
-
-SharedWorkerStrategy* WebPlatformStrategies::createSharedWorkerStrategy()
-{
-    return this;
-}
-
-StorageStrategy* WebPlatformStrategies::createStorageStrategy()
-{
-    return this;
-}
-
-VisitedLinkStrategy* WebPlatformStrategies::createVisitedLinkStrategy()
 {
     return this;
 }
@@ -147,15 +128,20 @@ void WebPlatformStrategies::getPluginInfo(const Page* page, Vector<PluginInfo>& 
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
-bool WebPlatformStrategies::isLinkVisited(Page* page, LinkHash hash, const URL&, const AtomicString&)
+void WebPlatformStrategies::getWebVisiblePluginInfo(const Page* page, Vector<PluginInfo>& plugins)
 {
-    return page->group().isLinkVisited(hash);
+    getPluginInfo(page, plugins);
 }
 
-void WebPlatformStrategies::addVisitedLink(Page* page, LinkHash hash)
+#if PLATFORM(MAC)
+void WebPlatformStrategies::setPluginLoadClientPolicy(PluginLoadClientPolicy, const String&, const String&, const String&)
 {
-    return page->group().addVisitedLinkHash(hash);
 }
+
+void WebPlatformStrategies::clearPluginClientPolicies()
+{
+}
+#endif
 
 void WebPlatformStrategies::getTypes(Vector<String>& types, const String& pasteboardName)
 {
@@ -267,5 +253,4 @@ long WebPlatformStrategies::changeCount()
 {
     return PlatformPasteboard().changeCount();
 }
-
-#endif
+#endif // PLATFORM(IOS)

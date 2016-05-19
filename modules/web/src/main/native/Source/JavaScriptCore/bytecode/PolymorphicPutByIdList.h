@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,13 @@
 #ifndef PolymorphicPutByIdList_h
 #define PolymorphicPutByIdList_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(JIT)
 
 #include "CodeOrigin.h"
 #include "MacroAssembler.h"
 #include "Opcode.h"
 #include "PutKind.h"
+#include "PutPropertySlot.h"
 #include "Structure.h"
 #include <wtf/Vector.h>
 
@@ -47,11 +46,14 @@ public:
     enum AccessType {
         Invalid,
         Transition,
-        Replace
+        Replace,
+        Setter,
+        CustomSetter
     };
 
     PutByIdAccess()
         : m_type(Invalid)
+        , m_chainCount(UINT_MAX)
     {
     }
 
@@ -68,6 +70,7 @@ public:
         result.m_oldStructure.set(vm, owner, oldStructure);
         result.m_newStructure.set(vm, owner, newStructure);
         result.m_chain.set(vm, owner, chain);
+        result.m_customSetter = 0;
         result.m_stubRoutine = stubRoutine;
         return result;
     }
@@ -81,13 +84,36 @@ public:
         PutByIdAccess result;
         result.m_type = Replace;
         result.m_oldStructure.set(vm, owner, structure);
+        result.m_customSetter = 0;
         result.m_stubRoutine = stubRoutine;
         return result;
     }
 
-    static PutByIdAccess fromStructureStubInfo(
-        StructureStubInfo&,
-        MacroAssemblerCodePtr initialSlowPath);
+
+    static PutByIdAccess setter(
+        VM& vm,
+        JSCell* owner,
+        AccessType accessType,
+        Structure* structure,
+        StructureChain* chain,
+        unsigned chainCount,
+        PutPropertySlot::PutValueFunc customSetter,
+        PassRefPtr<JITStubRoutine> stubRoutine)
+    {
+        RELEASE_ASSERT(accessType == Setter || accessType == CustomSetter);
+        PutByIdAccess result;
+        result.m_oldStructure.set(vm, owner, structure);
+        result.m_type = accessType;
+        if (chain) {
+            result.m_chain.set(vm, owner, chain);
+            result.m_chainCount = chainCount;
+        }
+        result.m_customSetter = customSetter;
+        result.m_stubRoutine = stubRoutine;
+        return result;
+    }
+
+    static PutByIdAccess fromStructureStubInfo(StructureStubInfo&);
 
     bool isSet() const { return m_type != Invalid; }
     bool operator!() const { return !isSet(); }
@@ -96,19 +122,21 @@ public:
 
     bool isTransition() const { return m_type == Transition; }
     bool isReplace() const { return m_type == Replace; }
+    bool isSetter() const { return m_type == Setter; }
+    bool isCustom() const { return m_type == CustomSetter; }
 
     Structure* oldStructure() const
     {
         // Using this instead of isSet() to make this assertion robust against the possibility
         // of additional access types being added.
-        ASSERT(isTransition() || isReplace());
+        ASSERT(isTransition() || isReplace() || isSetter() || isCustom());
 
         return m_oldStructure.get();
     }
 
     Structure* structure() const
     {
-        ASSERT(isReplace());
+        ASSERT(isReplace() || isSetter() || isCustom());
         return m_oldStructure.get();
     }
 
@@ -120,17 +148,29 @@ public:
 
     StructureChain* chain() const
     {
-        ASSERT(isTransition());
+        ASSERT(isTransition() || isSetter() || isCustom());
         return m_chain.get();
     }
 
-    PassRefPtr<JITStubRoutine> stubRoutine() const
+    unsigned chainCount() const
     {
-        ASSERT(isTransition() || isReplace());
-        return m_stubRoutine;
+        ASSERT(isSetter() || isCustom());
+        return m_chainCount;
     }
 
-    bool visitWeak() const;
+    JITStubRoutine* stubRoutine() const
+    {
+        ASSERT(isTransition() || isReplace() || isSetter() || isCustom());
+        return m_stubRoutine.get();
+    }
+
+    PutPropertySlot::PutValueFunc customSetter() const
+    {
+        ASSERT(isCustom());
+        return m_customSetter;
+    }
+
+    bool visitWeak(RepatchBuffer&) const;
 
 private:
     friend class CodeBlock;
@@ -139,26 +179,17 @@ private:
     WriteBarrier<Structure> m_oldStructure;
     WriteBarrier<Structure> m_newStructure;
     WriteBarrier<StructureChain> m_chain;
+    unsigned m_chainCount;
+    PutPropertySlot::PutValueFunc m_customSetter;
     RefPtr<JITStubRoutine> m_stubRoutine;
 };
 
 class PolymorphicPutByIdList {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    // Initialize from a stub info; this will place one element in the list and it will
-    // be created by converting the stub info's put by id access information into our
-    // PutByIdAccess.
-    PolymorphicPutByIdList(
-        PutKind,
-        StructureStubInfo&,
-        MacroAssemblerCodePtr initialSlowPath);
-
     // Either creates a new polymorphic put list, or returns the one that is already
     // in place.
-    static PolymorphicPutByIdList* from(
-        PutKind,
-        StructureStubInfo&,
-        MacroAssemblerCodePtr initialSlowPath);
+    static PolymorphicPutByIdList* from(PutKind, StructureStubInfo&);
 
     ~PolymorphicPutByIdList();
 
@@ -178,10 +209,15 @@ public:
 
     PutKind kind() const { return m_kind; }
 
-    bool visitWeak() const;
+    bool visitWeak(RepatchBuffer&) const;
 
 private:
     friend class CodeBlock;
+
+    // Initialize from a stub info; this will place one element in the list and it will
+    // be created by converting the stub info's put by id access information into our
+    // PutByIdAccess.
+    PolymorphicPutByIdList(PutKind, StructureStubInfo&);
 
     Vector<PutByIdAccess, 2> m_list;
     PutKind m_kind;

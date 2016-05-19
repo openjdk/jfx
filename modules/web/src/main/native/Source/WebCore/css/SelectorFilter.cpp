@@ -39,7 +39,9 @@ enum { TagNameSalt = 13, IdAttributeSalt = 17, ClassAttributeSalt = 19 };
 
 static inline void collectElementIdentifierHashes(const Element* element, Vector<unsigned, 4>& identifierHashes)
 {
-    identifierHashes.append(element->localName().impl()->existingHash() * TagNameSalt);
+    AtomicString tagLowercaseLocalName = element->localName().convertToASCIILowercase();
+    identifierHashes.append(tagLowercaseLocalName.impl()->existingHash() * TagNameSalt);
+
     if (element->hasID())
         identifierHashes.append(element->idForStyleResolution().impl()->existingHash() * IdAttributeSalt);
     const StyledElement* styledElement = element->isStyledElement() ? static_cast<const StyledElement*>(element) : 0;
@@ -86,7 +88,7 @@ void SelectorFilter::setupParentStack(Element* parent)
     ASSERT(m_parentStack.isEmpty() == !m_ancestorIdentifierFilter);
     // Kill whatever we stored before.
     m_parentStack.shrink(0);
-    m_ancestorIdentifierFilter = std::make_unique<BloomFilter<bloomFilterKeyBits>>();
+    m_ancestorIdentifierFilter = std::make_unique<CountingBloomFilter<bloomFilterKeyBits>>();
     // Fast version if parent is a root element:
     if (!parent->parentNode() && !parent->isShadowRoot()) {
         pushParentStackFrame(parent);
@@ -112,7 +114,7 @@ void SelectorFilter::pushParent(Element* parent)
 
 static inline void collectDescendantSelectorIdentifierHashes(const CSSSelector* selector, unsigned*& hash)
 {
-    switch (selector->m_match) {
+    switch (selector->match()) {
     case CSSSelector::Id:
         if (!selector->value().isEmpty())
             (*hash++) = selector->value().impl()->existingHash() * IdAttributeSalt;
@@ -121,10 +123,12 @@ static inline void collectDescendantSelectorIdentifierHashes(const CSSSelector* 
         if (!selector->value().isEmpty())
             (*hash++) = selector->value().impl()->existingHash() * ClassAttributeSalt;
         break;
-    case CSSSelector::Tag:
-        if (selector->tagQName().localName() != starAtom)
-            (*hash++) = selector->tagQName().localName().impl()->existingHash() * TagNameSalt;
+    case CSSSelector::Tag: {
+        const AtomicString& tagLowercaseLocalName = selector->tagLowercaseLocalName();
+        if (tagLowercaseLocalName != starAtom)
+            (*hash++) = tagLowercaseLocalName.impl()->existingHash() * TagNameSalt;
         break;
+    }
     default:
         break;
     }

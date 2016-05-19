@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,6 +28,7 @@
 
 #if USE(CFNETWORK)
 
+#include "CFNetworkSPI.h"
 #include "Cookie.h"
 #include "URL.h"
 #include "NetworkStorageSession.h"
@@ -41,7 +42,7 @@
 #include <windows.h>
 #endif
 
-#if PLATFORM(WIN) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1090)
+#if PLATFORM(WIN) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1090) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED < 80000)
 enum {
     CFHTTPCookieStorageAcceptPolicyExclusivelyFromMainDocumentDomain = 3
 };
@@ -103,12 +104,21 @@ static RetainPtr<CFArrayRef> copyCookiesForURLWithFirstPartyURL(const NetworkSto
 {
     bool secure = url.protocolIs("https");
 
-#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100)
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 80000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000)
     return adoptCF(_CFHTTPCookieStorageCopyCookiesForURLWithMainDocumentURL(session.cookieStorage().get(), url.createCFURL().get(), firstParty.createCFURL().get(), secure));
 #else
     // _CFHTTPCookieStorageCopyCookiesForURLWithMainDocumentURL is not available on other platforms.
     UNUSED_PARAM(firstParty);
     return adoptCF(CFHTTPCookieStorageCopyCookiesForURL(session.cookieStorage().get(), url.createCFURL().get(), secure));
+#endif
+}
+
+static CFArrayRef createCookies(CFDictionaryRef headerFields, CFURLRef url)
+{
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 90000)
+    return _CFHTTPParsedCookiesWithResponseHeaderFields(kCFAllocatorDefault, headerFields, url);
+#else
+    return CFHTTPCookieCreateWithResponseHeaderFields(kCFAllocatorDefault, headerFields, url);
 #endif
 }
 
@@ -130,10 +140,8 @@ void setCookiesFromDOM(const NetworkStorageSession& session, const URL& firstPar
         (const void**)&s_setCookieKeyCF, (const void**)&cookieStringCF, 1,
         &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
-    RetainPtr<CFArrayRef> cookiesCF = adoptCF(CFHTTPCookieCreateWithResponseHeaderFields(kCFAllocatorDefault,
-        headerFieldsCF.get(), urlCF.get()));
-
-    CFHTTPCookieStorageSetCookies(session.cookieStorage().get(), filterCookies(cookiesCF.get()).get(), urlCF.get(), firstPartyForCookiesCF.get());
+    RetainPtr<CFArrayRef> unfilteredCookies = adoptCF(createCookies(headerFieldsCF.get(), urlCF.get()));
+    CFHTTPCookieStorageSetCookies(session.cookieStorage().get(), filterCookies(unfilteredCookies.get()).get(), urlCF.get(), firstPartyForCookiesCF.get());
 }
 
 String cookiesForDOM(const NetworkStorageSession& session, const URL& firstParty, const URL& url)
@@ -217,31 +225,20 @@ void getHostnamesWithCookies(const NetworkStorageSession& session, HashSet<Strin
     }
 }
 
-void deleteCookiesForHostname(const NetworkStorageSession& session, const String& hostname)
-{
-    RetainPtr<CFHTTPCookieStorageRef> cookieStorage = session.cookieStorage();
-
-    RetainPtr<CFArrayRef> cookiesCF = adoptCF(CFHTTPCookieStorageCopyCookies(cookieStorage.get()));
-    if (!cookiesCF)
-        return;
-
-    CFIndex count = CFArrayGetCount(cookiesCF.get());
-    for (CFIndex i = count - 1; i >=0; i--) {
-        CFHTTPCookieRef cookie = static_cast<CFHTTPCookieRef>(const_cast<void *>(CFArrayGetValueAtIndex(cookiesCF.get(), i)));
-        RetainPtr<CFStringRef> domain = cookieDomain(cookie);
-        if (String(domain.get()) == hostname)
-            CFHTTPCookieStorageDeleteCookie(cookieStorage.get(), cookie);
-    }
-}
-
 void deleteAllCookies(const NetworkStorageSession& session)
 {
     CFHTTPCookieStorageDeleteAllCookies(session.cookieStorage().get());
 }
 
-void deleteAllCookiesModifiedAfterDate(const NetworkStorageSession&, double)
+#if PLATFORM(WIN)
+void deleteCookiesForHostnames(const NetworkStorageSession& session, const Vector<String>& hostnames)
 {
 }
+
+void deleteAllCookiesModifiedSince(const NetworkStorageSession&, std::chrono::system_clock::time_point)
+{
+}
+#endif
 
 } // namespace WebCore
 

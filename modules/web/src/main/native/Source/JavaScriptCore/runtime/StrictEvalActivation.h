@@ -33,12 +33,13 @@ namespace JSC {
 class StrictEvalActivation : public JSScope {
 public:
     typedef JSScope Base;
+    static const unsigned StructureFlags = Base::StructureFlags | IsEnvironmentRecord;
 
-    static StrictEvalActivation* create(ExecState* exec)
+    static StrictEvalActivation* create(ExecState* exec, JSScope* currentScope)
     {
-        StrictEvalActivation* activation = new (NotNull, allocateCell<StrictEvalActivation>(*exec->heap())) StrictEvalActivation(exec);
-        activation->finishCreation(exec->vm());
-        return activation;
+        StrictEvalActivation* lexicalEnvironment = new (NotNull, allocateCell<StrictEvalActivation>(*exec->heap())) StrictEvalActivation(exec, currentScope);
+        lexicalEnvironment->finishCreation(exec->vm());
+        return lexicalEnvironment;
     }
 
     static bool deleteProperty(JSCell*, ExecState*, PropertyName);
@@ -51,11 +52,8 @@ public:
 
     DECLARE_INFO;
 
-protected:
-    static const unsigned StructureFlags = IsEnvironmentRecord | Base::StructureFlags;
-
 private:
-    StrictEvalActivation(ExecState*);
+    StrictEvalActivation(ExecState*, JSScope*);
 };
 
 } // namespace JSC

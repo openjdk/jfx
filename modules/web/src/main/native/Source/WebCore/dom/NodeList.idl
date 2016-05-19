@@ -20,8 +20,11 @@
 
 [
     CustomIsReachable,
+    CustomToJSObject,
     JSCustomGetOwnPropertySlotAndDescriptor,
+    JSCustomHeader,
     SkipVTableValidation,
+    ReportExtraMemoryCost,
 ] interface NodeList {
 
     getter Node item(unsigned long index);

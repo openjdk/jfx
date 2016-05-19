@@ -153,7 +153,7 @@ void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
 
     JSStringRef absUrlRef = jstring_to_JSStringRef((jstring)jAbsUrl, env);
 
-    WorkQueue::shared()->queue(new LoadItem(absUrlRef, target));
+    WorkQueue::singleton().queue(new LoadItem(absUrlRef, target));
 }
 
 void TestRunner::setAcceptsEditing(bool newAcceptsEditing)
@@ -329,7 +329,7 @@ void TestRunner::closeWebInspector()
 }
 
 
-void TestRunner::evaluateInWebInspector(long callId, JSStringRef script)
+void TestRunner::evaluateInWebInspector(JSStringRef script)
 {
     // FIXME: implement
 }
@@ -423,12 +423,6 @@ void TestRunner::setSerializeHTTPLoads(bool)
     // FIXME: Implement if needed for https://bugs.webkit.org/show_bug.cgi?id=50758.
 }
 
-void TestRunner::addMockSpeechInputResult(JSStringRef result, double confidence, JSStringRef language)
-{
-    // FIXME: Implement for speech input layout tests.
-    // See https://bugs.webkit.org/show_bug.cgi?id=39485.
-}
-
 void TestRunner::clearAllApplicationCaches()
 {
     // FIXME: implement to support Application Cache quotas.
@@ -462,40 +456,14 @@ JSValueRef TestRunner::originsWithApplicationCache(JSContextRef context)
     return JSValueMakeUndefined(context);
 }
 
-JSValueRef TestRunner::originsWithLocalStorage(JSContextRef context)
-{
-    // FIXME: implement
-    return JSValueMakeUndefined(context);
-}
-
 void TestRunner::clearApplicationCacheForOrigin(JSStringRef origin)
 {
     // FIXME: Implement to support deleting all application cache for an origin.
 }
 
-void TestRunner::deleteAllLocalStorage()
-{
-    // FIXME: Implement.
-}
-
-void TestRunner::deleteLocalStorageForOrigin(JSStringRef URL)
-{
-    // FIXME: Implement.
-}
-
-void TestRunner::observeStorageTrackerNotifications(unsigned number)
-{
-    // FIXME: Implement.
-}
-
 void TestRunner::setValueForUser(JSContextRef context, JSValueRef element, JSStringRef value)
 {
     // FIXME: implement
-}
-
-void TestRunner::syncLocalStorage()
-{
-    // FIXME: Implement.
 }
 
 void TestRunner::addChromeInputField()
@@ -531,12 +499,6 @@ long long TestRunner::applicationCacheDiskUsageForOrigin(JSStringRef)
     return 0;
 }
 
-long long TestRunner::localStorageDiskUsageForOrigin(JSStringRef)
-{
-    // FIXME: Implement to support getting disk usage in bytes for an origin.
-    return 0;
-}
-
 void TestRunner::evaluateScriptInIsolatedWorldAndReturnValue(unsigned int,OpaqueJSValue *,OpaqueJSString *)
 {
 }
@@ -546,10 +508,6 @@ void TestRunner::resetPageVisibility()
 }
 
 void TestRunner::setAutomaticLinkDetectionEnabled(bool)
-{
-}
-
-void TestRunner::setMockSpeechInputDumpRect(bool)
 {
 }
 

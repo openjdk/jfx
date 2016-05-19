@@ -31,25 +31,26 @@ class CSSStyleSheet;
 class StyleRulePage;
 class StyleRuleCSSStyleDeclaration;
 
-class CSSPageRule : public CSSRule {
+class CSSPageRule final : public CSSRule {
 public:
-    static PassRefPtr<CSSPageRule> create(StyleRulePage* rule, CSSStyleSheet* sheet) { return adoptRef(new CSSPageRule(rule, sheet)); }
+    static Ref<CSSPageRule> create(StyleRulePage& rule, CSSStyleSheet* sheet) { return adoptRef(*new CSSPageRule(rule, sheet)); }
 
     virtual ~CSSPageRule();
 
-    virtual CSSRule::Type type() const override { return PAGE_RULE; }
     virtual String cssText() const override;
-    virtual void reattach(StyleRuleBase*) override;
+    virtual void reattach(StyleRuleBase&) override;
 
-    CSSStyleDeclaration* style();
+    CSSStyleDeclaration& style();
 
     String selectorText() const;
     void setSelectorText(const String&);
 
 private:
-    CSSPageRule(StyleRulePage*, CSSStyleSheet*);
+    CSSPageRule(StyleRulePage&, CSSStyleSheet*);
 
-    RefPtr<StyleRulePage> m_pageRule;
+    virtual CSSRule::Type type() const override { return PAGE_RULE; }
+
+    Ref<StyleRulePage> m_pageRule;
     mutable RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;
 };
 

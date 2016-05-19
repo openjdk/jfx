@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -27,11 +27,10 @@
  */
 
 #include "config.h"
-#include "SimpleFontData.h"
+#include "Font.h"
 
 #include <windows.h>
 
-#include "Font.h"
 #include "FontCache.h"
 #include "FontDescription.h"
 #include "HWndDC.h"
@@ -42,7 +41,7 @@
 
 namespace WebCore {
 
-void SimpleFontData::platformInit()
+void Font::platformInit()
 {
     m_syntheticBoldOffset = m_platformData.syntheticBold() ? 1.0f : 0.f;
     m_scriptCache = 0;
@@ -104,7 +103,7 @@ void SimpleFontData::platformInit()
     RestoreDC(dc, -1);
 }
 
-FloatRect SimpleFontData::platformBoundsForGlyph(Glyph glyph) const
+FloatRect Font::platformBoundsForGlyph(Glyph glyph) const
 {
     if (m_platformData.useGDI())
         return boundsForGDIGlyph(glyph);
@@ -112,7 +111,7 @@ FloatRect SimpleFontData::platformBoundsForGlyph(Glyph glyph) const
     return FloatRect();
 }
 
-float SimpleFontData::platformWidthForGlyph(Glyph glyph) const
+float Font::platformWidthForGlyph(Glyph glyph) const
 {
     if (m_platformData.useGDI())
        return widthForGDIGlyph(glyph);

@@ -40,15 +40,17 @@
 
 namespace JSC {
 
-void genericUnwind(VM* vm, ExecState* callFrame, JSValue exceptionValue)
+void genericUnwind(VM* vm, ExecState* callFrame)
 {
     if (Options::breakOnThrow()) {
         dataLog("In call frame ", RawPointer(callFrame), " for code block ", *callFrame->codeBlock(), "\n");
         CRASH();
     }
 
-    RELEASE_ASSERT(exceptionValue);
-    HandlerInfo* handler = vm->interpreter->unwind(callFrame, exceptionValue); // This may update callFrame.
+    Exception* exception = vm->exception();
+    RELEASE_ASSERT(exception);
+    VMEntryFrame* vmEntryFrame = vm->topVMEntryFrame;
+    HandlerInfo* handler = vm->interpreter->unwind(vmEntryFrame, callFrame, exception); // This may update vmEntryFrame and callFrame.
 
     void* catchRoutine;
     Instruction* catchPCForInterpreter = 0;
@@ -62,6 +64,7 @@ void genericUnwind(VM* vm, ExecState* callFrame, JSValue exceptionValue)
     } else
         catchRoutine = LLInt::getCodePtr(handleUncaughtException);
 
+    vm->vmEntryFrameForThrow = vmEntryFrame;
     vm->callFrameForThrow = callFrame;
     vm->targetMachinePCForThrow = catchRoutine;
     vm->targetInterpreterPCForThrow = catchPCForInterpreter;

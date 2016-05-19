@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,28 +27,51 @@
 #include "JSValueRef.h"
 
 #include "APICast.h"
-#include "APIShims.h"
+#include "DateInstance.h"
+#include "Exception.h"
 #include "JSAPIWrapperObject.h"
+#include "JSCInlines.h"
 #include "JSCJSValue.h"
 #include "JSCallbackObject.h"
 #include "JSGlobalObject.h"
 #include "JSONObject.h"
 #include "JSString.h"
 #include "LiteralParser.h"
-#include "JSCInlines.h"
 #include "Protect.h"
-
+#include <algorithm>
 #include <wtf/Assertions.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
-
-#include <algorithm> // for std::min
 
 #if PLATFORM(MAC)
 #include <mach-o/dyld.h>
 #endif
 
+#if ENABLE(REMOTE_INSPECTOR)
+#include "JSGlobalObjectInspectorController.h"
+#endif
+
 using namespace JSC;
+
+enum class ExceptionStatus {
+    DidThrow,
+    DidNotThrow
+};
+
+static ExceptionStatus handleExceptionIfNeeded(ExecState* exec, JSValueRef* returnedExceptionRef)
+{
+    if (exec->hadException()) {
+        Exception* exception = exec->exception();
+        if (returnedExceptionRef)
+            *returnedExceptionRef = toRef(exec, exception->value());
+        exec->clearException();
+#if ENABLE(REMOTE_INSPECTOR)
+        exec->vmEntryGlobalObject()->inspectorController().reportAPIException(exec, exception);
+#endif
+        return ExceptionStatus::DidThrow;
+    }
+    return ExceptionStatus::DidNotThrow;
+}
 
 #if PLATFORM(MAC)
 static bool evernoteHackNeeded()
@@ -68,7 +91,7 @@ static bool evernoteHackNeeded()
         return kJSTypeUndefined;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsValue = toJS(exec, value);
 
@@ -93,10 +116,9 @@ bool JSValueIsUndefined(JSContextRef ctx, JSValueRef value)
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
-    JSValue jsValue = toJS(exec, value);
-    return jsValue.isUndefined();
+    return toJS(exec, value).isUndefined();
 }
 
 bool JSValueIsNull(JSContextRef ctx, JSValueRef value)
@@ -106,10 +128,9 @@ bool JSValueIsNull(JSContextRef ctx, JSValueRef value)
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
-    JSValue jsValue = toJS(exec, value);
-    return jsValue.isNull();
+    return toJS(exec, value).isNull();
 }
 
 bool JSValueIsBoolean(JSContextRef ctx, JSValueRef value)
@@ -119,10 +140,9 @@ bool JSValueIsBoolean(JSContextRef ctx, JSValueRef value)
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
-    JSValue jsValue = toJS(exec, value);
-    return jsValue.isBoolean();
+    return toJS(exec, value).isBoolean();
 }
 
 bool JSValueIsNumber(JSContextRef ctx, JSValueRef value)
@@ -132,10 +152,9 @@ bool JSValueIsNumber(JSContextRef ctx, JSValueRef value)
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
-    JSValue jsValue = toJS(exec, value);
-    return jsValue.isNumber();
+    return toJS(exec, value).isNumber();
 }
 
 bool JSValueIsString(JSContextRef ctx, JSValueRef value)
@@ -145,10 +164,9 @@ bool JSValueIsString(JSContextRef ctx, JSValueRef value)
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
-    JSValue jsValue = toJS(exec, value);
-    return jsValue.isString();
+    return toJS(exec, value).isString();
 }
 
 bool JSValueIsObject(JSContextRef ctx, JSValueRef value)
@@ -158,10 +176,33 @@ bool JSValueIsObject(JSContextRef ctx, JSValueRef value)
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
-    JSValue jsValue = toJS(exec, value);
-    return jsValue.isObject();
+    return toJS(exec, value).isObject();
+}
+
+bool JSValueIsArray(JSContextRef ctx, JSValueRef value)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+    ExecState* exec = toJS(ctx);
+    JSLockHolder locker(exec);
+
+    return toJS(exec, value).inherits(JSArray::info());
+}
+
+bool JSValueIsDate(JSContextRef ctx, JSValueRef value)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+    ExecState* exec = toJS(ctx);
+    JSLockHolder locker(exec);
+
+    return toJS(exec, value).inherits(DateInstance::info());
 }
 
 bool JSValueIsObjectOfClass(JSContextRef ctx, JSValueRef value, JSClassRef jsClass)
@@ -171,11 +212,14 @@ bool JSValueIsObjectOfClass(JSContextRef ctx, JSValueRef value, JSClassRef jsCla
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsValue = toJS(exec, value);
 
     if (JSObject* o = jsValue.getObject()) {
+        if (o->inherits(JSProxy::info()))
+            o = jsCast<JSProxy*>(o)->target();
+
         if (o->inherits(JSCallbackObject<JSGlobalObject>::info()))
             return jsCast<JSCallbackObject<JSGlobalObject>*>(o)->inherits(jsClass);
         if (o->inherits(JSCallbackObject<JSDestructibleObject>::info()))
@@ -195,17 +239,14 @@ bool JSValueIsEqual(JSContextRef ctx, JSValueRef a, JSValueRef b, JSValueRef* ex
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsA = toJS(exec, a);
     JSValue jsB = toJS(exec, b);
 
     bool result = JSValue::equal(exec, jsA, jsB); // false if an exception is thrown
-    if (exec->hadException()) {
-        if (exception)
-            *exception = toRef(exec, exec->exception());
-        exec->clearException();
-    }
+    handleExceptionIfNeeded(exec, exception);
+
     return result;
 }
 
@@ -216,7 +257,7 @@ bool JSValueIsStrictEqual(JSContextRef ctx, JSValueRef a, JSValueRef b)
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsA = toJS(exec, a);
     JSValue jsB = toJS(exec, b);
@@ -231,7 +272,7 @@ bool JSValueIsInstanceOfConstructor(JSContextRef ctx, JSValueRef value, JSObject
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsValue = toJS(exec, value);
 
@@ -239,11 +280,7 @@ bool JSValueIsInstanceOfConstructor(JSContextRef ctx, JSValueRef value, JSObject
     if (!jsConstructor->structure()->typeInfo().implementsHasInstance())
         return false;
     bool result = jsConstructor->hasInstance(exec, jsValue); // false if an exception is thrown
-    if (exec->hadException()) {
-        if (exception)
-            *exception = toRef(exec, exec->exception());
-        exec->clearException();
-    }
+    handleExceptionIfNeeded(exec, exception);
     return result;
 }
 
@@ -254,7 +291,7 @@ JSValueRef JSValueMakeUndefined(JSContextRef ctx)
         return 0;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     return toRef(exec, jsUndefined());
 }
@@ -266,7 +303,7 @@ JSValueRef JSValueMakeNull(JSContextRef ctx)
         return 0;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     return toRef(exec, jsNull());
 }
@@ -278,7 +315,7 @@ JSValueRef JSValueMakeBoolean(JSContextRef ctx, bool value)
         return 0;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     return toRef(exec, jsBoolean(value));
 }
@@ -290,15 +327,9 @@ JSValueRef JSValueMakeNumber(JSContextRef ctx, double value)
         return 0;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
-    // Our JSValue representation relies on a standard bit pattern for NaN. NaNs
-    // generated internally to JavaScriptCore naturally have that representation,
-    // but an external NaN might not.
-    if (std::isnan(value))
-        value = QNaN;
-
-    return toRef(exec, jsNumber(value));
+    return toRef(exec, jsNumber(purifyNaN(value)));
 }
 
 JSValueRef JSValueMakeString(JSContextRef ctx, JSStringRef string)
@@ -308,9 +339,9 @@ JSValueRef JSValueMakeString(JSContextRef ctx, JSStringRef string)
         return 0;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
-    return toRef(exec, jsString(exec, string->string()));
+    return toRef(exec, jsString(exec, string ? string->string() : String()));
 }
 
 JSValueRef JSValueMakeFromJSONString(JSContextRef ctx, JSStringRef string)
@@ -320,14 +351,14 @@ JSValueRef JSValueMakeFromJSONString(JSContextRef ctx, JSStringRef string)
         return 0;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
     String str = string->string();
     unsigned length = str.length();
-    if (length && str.is8Bit()) {
+    if (!length || str.is8Bit()) {
         LiteralParser<LChar> parser(exec, str.characters8(), length, StrictJSON);
         return toRef(exec, parser.tryLiteralParse());
     }
-    LiteralParser<UChar> parser(exec, str.deprecatedCharacters(), length, StrictJSON);
+    LiteralParser<UChar> parser(exec, str.characters16(), length, StrictJSON);
     return toRef(exec, parser.tryLiteralParse());
 }
 
@@ -338,17 +369,13 @@ JSStringRef JSValueCreateJSONString(JSContextRef ctx, JSValueRef apiValue, unsig
         return 0;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
     JSValue value = toJS(exec, apiValue);
     String result = JSONStringify(exec, value, indent);
     if (exception)
         *exception = 0;
-    if (exec->hadException()) {
-        if (exception)
-            *exception = toRef(exec, exec->exception());
-        exec->clearException();
+    if (handleExceptionIfNeeded(exec, exception) == ExceptionStatus::DidThrow)
         return 0;
-    }
     return OpaqueJSString::create(result).leakRef();
 }
 
@@ -359,7 +386,7 @@ bool JSValueToBoolean(JSContextRef ctx, JSValueRef value)
         return false;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsValue = toJS(exec, value);
     return jsValue.toBoolean(exec);
@@ -369,20 +396,16 @@ double JSValueToNumber(JSContextRef ctx, JSValueRef value, JSValueRef* exception
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return QNaN;
+        return PNaN;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsValue = toJS(exec, value);
 
     double number = jsValue.toNumber(exec);
-    if (exec->hadException()) {
-        if (exception)
-            *exception = toRef(exec, exec->exception());
-        exec->clearException();
-        number = QNaN;
-    }
+    if (handleExceptionIfNeeded(exec, exception) == ExceptionStatus::DidThrow)
+        number = PNaN;
     return number;
 }
 
@@ -393,17 +416,13 @@ JSStringRef JSValueToStringCopy(JSContextRef ctx, JSValueRef value, JSValueRef* 
         return 0;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsValue = toJS(exec, value);
 
     RefPtr<OpaqueJSString> stringRef(OpaqueJSString::create(jsValue.toString(exec)->value(exec)));
-    if (exec->hadException()) {
-        if (exception)
-            *exception = toRef(exec, exec->exception());
-        exec->clearException();
-        stringRef.clear();
-    }
+    if (handleExceptionIfNeeded(exec, exception) == ExceptionStatus::DidThrow)
+        stringRef = nullptr;
     return stringRef.release().leakRef();
 }
 
@@ -414,17 +433,13 @@ JSObjectRef JSValueToObject(JSContextRef ctx, JSValueRef value, JSValueRef* exce
         return 0;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsValue = toJS(exec, value);
 
     JSObjectRef objectRef = toRef(jsValue.toObject(exec));
-    if (exec->hadException()) {
-        if (exception)
-            *exception = toRef(exec, exec->exception());
-        exec->clearException();
+    if (handleExceptionIfNeeded(exec, exception) == ExceptionStatus::DidThrow)
         objectRef = 0;
-    }
     return objectRef;
 }
 
@@ -435,7 +450,7 @@ void JSValueProtect(JSContextRef ctx, JSValueRef value)
         return;
     }
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsValue = toJSForGC(exec, value);
     gcProtect(jsValue);
@@ -449,7 +464,7 @@ void JSValueUnprotect(JSContextRef ctx, JSValueRef value)
 #endif
 
     ExecState* exec = toJS(ctx);
-    APIEntryShim entryShim(exec);
+    JSLockHolder locker(exec);
 
     JSValue jsValue = toJSForGC(exec, value);
     gcUnprotect(jsValue);

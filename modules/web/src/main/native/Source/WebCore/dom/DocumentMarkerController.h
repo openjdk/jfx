@@ -29,6 +29,7 @@
 
 #include "DocumentMarker.h"
 #include "IntRect.h"
+#include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
@@ -52,9 +53,9 @@ public:
     void addMarker(Range*, DocumentMarker::MarkerType, const String& description);
     void addMarkerToNode(Node*, unsigned startOffset, unsigned length, DocumentMarker::MarkerType);
     void addMarkerToNode(Node*, unsigned startOffset, unsigned length, DocumentMarker::MarkerType, PassRefPtr<DocumentMarkerDetails>);
-    void addTextMatchMarker(const Range*, bool activeMatch);
+    WEBCORE_EXPORT void addTextMatchMarker(const Range*, bool activeMatch);
 #if PLATFORM(IOS)
-    void addMarker(Range*, DocumentMarker::MarkerType, String description, const Vector<String>& interpretations, const RetainPtr<id>& metadata);
+    void addMarker(Range*, DocumentMarker::MarkerType, const String& description, const Vector<String>& interpretations, const RetainPtr<id>& metadata);
     void addDictationPhraseWithAlternativesMarker(Range*, const Vector<String>& interpretations);
     void addDictationResultMarker(Range*, const RetainPtr<id>& metadata);
 #endif
@@ -74,7 +75,7 @@ public:
     void removeMarkers(Range*, DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers(), RemovePartiallyOverlappingMarkerOrNot = DoNotRemovePartiallyOverlappingMarker);
     void removeMarkers(Node*, unsigned startOffset, int length, DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers(),  RemovePartiallyOverlappingMarkerOrNot = DoNotRemovePartiallyOverlappingMarker);
 
-    void removeMarkers(DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers());
+    WEBCORE_EXPORT void removeMarkers(DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers());
     void removeMarkers(Node*, DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers());
     void repaintMarkers(DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers());
     void invalidateRenderedRectsForMarkersInRect(const LayoutRect&);
@@ -83,12 +84,12 @@ public:
     void setMarkersActive(Node*, unsigned startOffset, unsigned endOffset, bool);
 
     DocumentMarker* markerContainingPoint(const LayoutPoint&, DocumentMarker::MarkerType);
-    Vector<DocumentMarker*> markersFor(Node*, DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers());
-    Vector<DocumentMarker*> markersInRange(Range*, DocumentMarker::MarkerTypes);
-    Vector<IntRect> renderedRectsForMarkers(DocumentMarker::MarkerType);
+    WEBCORE_EXPORT Vector<RenderedDocumentMarker*> markersFor(Node*, DocumentMarker::MarkerTypes = DocumentMarker::AllMarkers());
+    WEBCORE_EXPORT Vector<RenderedDocumentMarker*> markersInRange(Range*, DocumentMarker::MarkerTypes);
+    WEBCORE_EXPORT Vector<IntRect> renderedRectsForMarkers(DocumentMarker::MarkerType);
     void clearDescriptionOnMarkersIntersectingRange(Range*, DocumentMarker::MarkerTypes);
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
     void showMarkers() const;
 #endif
 
@@ -96,7 +97,7 @@ private:
     void addMarker(Node*, const DocumentMarker&);
 
     typedef Vector<RenderedDocumentMarker> MarkerList;
-    typedef HashMap<RefPtr<Node>, OwnPtr<MarkerList>> MarkerMap;
+    typedef HashMap<RefPtr<Node>, std::unique_ptr<MarkerList>> MarkerMap;
     bool possiblyHasMarkers(DocumentMarker::MarkerTypes);
     void removeMarkersFromList(MarkerMap::iterator, DocumentMarker::MarkerTypes);
 
@@ -107,7 +108,7 @@ private:
 
 } // namespace WebCore
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 void showDocumentMarkers(const WebCore::DocumentMarkerController*);
 #endif
 

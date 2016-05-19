@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -157,11 +157,6 @@ inline void ThreadSpecific<T>::set(T* ptr)
 }
 
 #elif OS(WINDOWS)
-
-// TLS_OUT_OF_INDEXES is not defined on WinCE.
-#ifndef TLS_OUT_OF_INDEXES
-#define TLS_OUT_OF_INDEXES 0xffffffff
-#endif
 
 // The maximum number of TLS keys that can be created. For simplification, we assume that:
 // 1) Once the instance of ThreadSpecific<> is created, it will not be destructed until the program dies.

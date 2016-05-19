@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,18 +29,13 @@
 #if ENABLE(NETSCAPE_PLUGIN_API)
 
 #import "WebBaseNetscapePluginView.h"
-
 #import "WebNetscapeContainerCheckPrivate.h"
-#import <WebKit/npfunctions.h>
-#import <WebKit/npapi.h>
+#import <WebKitLegacy/npfunctions.h>
+#import <WebKitLegacy/npapi.h>
 #import <wtf/HashMap.h>
 #import <wtf/HashSet.h>
-#import <wtf/OwnPtr.h>
 
-@class WebDataSource;
-@class WebFrame;
 @class WebNetscapePluginPackage;
-@class WebView;
 
 class PluginTimer;
 class WebNetscapePluginStream;
@@ -60,6 +55,7 @@ typedef union PluginPort {
 
 @interface WebNetscapePluginView : WebBaseNetscapePluginView<WebPluginManualLoader, WebPluginContainerCheckController>
 {
+@package
     RefPtr<WebNetscapePluginStream> _manualStream;
     RetainPtr<CALayer> _pluginLayer;
     unsigned _dataLengthReceived;
@@ -82,7 +78,7 @@ typedef union PluginPort {
     GWorldPtr offscreenGWorld;
 #endif
 
-    OwnPtr<WebNetscapePluginEventHandler> _eventHandler;
+    std::unique_ptr<WebNetscapePluginEventHandler> _eventHandler;
 
     BOOL inSetWindow;
     BOOL shouldStopSoon;

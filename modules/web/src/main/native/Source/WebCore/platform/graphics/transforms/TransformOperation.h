@@ -27,8 +27,9 @@
 
 #include "FloatSize.h"
 #include "TransformationMatrix.h"
-#include <wtf/PassRefPtr.h>
+#include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
@@ -53,6 +54,8 @@ public:
 
     virtual ~TransformOperation() { }
 
+    virtual Ref<TransformOperation> clone() const = 0;
+
     virtual bool operator==(const TransformOperation&) const = 0;
     bool operator!=(const TransformOperation& o) const { return !(*this == o); }
 
@@ -61,10 +64,12 @@ public:
     // Return true if the borderBoxSize was used in the computation, false otherwise.
     virtual bool apply(TransformationMatrix&, const FloatSize& borderBoxSize) const = 0;
 
-    virtual PassRefPtr<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) = 0;
+    virtual Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) = 0;
 
     virtual OperationType type() const = 0;
     virtual bool isSameType(const TransformOperation&) const { return false; }
+
+    virtual bool isAffectedByTransformOrigin() const { return false; }
 
     bool is3DOperation() const
     {
@@ -79,8 +84,33 @@ public:
                opType == MATRIX_3D ||
                opType == PERSPECTIVE;
     }
+
+    bool isRotateTransformOperationType() const
+    {
+        return type() == ROTATE_X || type() == ROTATE_Y || type() == ROTATE_Z || type() == ROTATE || type() == ROTATE_3D;
+    }
+
+    bool isScaleTransformOperationType() const
+    {
+        return type() == SCALE_X || type() == SCALE_Y || type() == SCALE_Z || type() == SCALE || type() == SCALE_3D;
+    }
+
+    bool isSkewTransformOperationType() const
+    {
+        return type() == SKEW_X || type() == SKEW_Y || type() == SKEW;
+    }
+
+    bool isTranslateTransformOperationType() const
+    {
+        return type() == TRANSLATE_X || type() == TRANSLATE_Y || type() == TRANSLATE_Z || type() == TRANSLATE || type() == TRANSLATE_3D;
+    }
 };
 
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(ToValueTypeName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(ToValueTypeName) \
+    static bool isType(const WebCore::TransformOperation& operation) { return operation.predicate; } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // TransformOperation_h

@@ -148,7 +148,7 @@ class TestExpectationParser(object):
             elif modifier.startswith(self.BUG_MODIFIER_PREFIX):
                 has_bugid = True
                 if re.match(self.BUG_MODIFIER_REGEX, modifier):
-                    expectation_line.warnings.append('BUG\d+ is not allowed, must be one of BUGCR\d+, BUGWK\d+, BUGV8_\d+, or a non-numeric bug identifier.')
+                    expectation_line.warnings.append('BUG\d+ is not allowed, must be one of BUGWK\d+, or a non-numeric bug identifier.')
                 else:
                     expectation_line.parsed_bug_modifiers.append(modifier)
             else:
@@ -209,7 +209,7 @@ class TestExpectationParser(object):
 
     # FIXME: Update the original modifiers and remove this once the old syntax is gone.
     _configuration_tokens_list = [
-        'Mac', 'SnowLeopard', 'Lion', 'MountainLion', 'Mavericks',
+        'Mac', 'SnowLeopard', 'Lion', 'MountainLion', 'Mavericks', 'Yosemite', 'ElCapitan'
         'Win', 'XP', 'Vista', 'Win7',
         'Linux',
         'Android',
@@ -447,8 +447,6 @@ class TestExpectationLine(object):
             modifier = modifier.upper()
             if modifier.startswith('BUGWK'):
                 bugs.append('webkit.org/b/' + modifier.replace('BUGWK', ''))
-            elif modifier.startswith('BUGCR'):
-                bugs.append('crbug.com/' + modifier.replace('BUGCR', ''))
             elif modifier.startswith('BUG'):
                 # FIXME: we should preserve case once we can drop the old syntax.
                 bugs.append('Bug(' + modifier[3:].lower() + ')')

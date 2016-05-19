@@ -33,9 +33,9 @@ class SVGElement;
 
 class CSSCursorImageValue : public CSSValue {
 public:
-    static PassRef<CSSCursorImageValue> create(PassRef<CSSValue> imageValue, bool hasHotSpot, const IntPoint& hotSpot)
+    static Ref<CSSCursorImageValue> create(Ref<CSSValue>&& imageValue, bool hasHotSpot, const IntPoint& hotSpot)
     {
-        return adoptRef(*new CSSCursorImageValue(std::move(imageValue), hasHotSpot, hotSpot));
+        return adoptRef(*new CSSCursorImageValue(WTF::move(imageValue), hasHotSpot, hotSpot));
     }
 
     ~CSSCursorImageValue();
@@ -52,7 +52,7 @@ public:
     String customCSSText() const;
 
     bool updateIfSVGCursorIsUsed(Element*);
-    StyleImage* cachedImage(CachedResourceLoader*);
+    StyleImage* cachedImage(CachedResourceLoader&, const ResourceLoaderOptions&);
     StyleImage* cachedOrPendingImage(Document&);
 
     void removeReferencedElement(SVGElement*);
@@ -60,7 +60,7 @@ public:
     bool equals(const CSSCursorImageValue&) const;
 
 private:
-    CSSCursorImageValue(PassRef<CSSValue> imageValue, bool hasHotSpot, const IntPoint& hotSpot);
+    CSSCursorImageValue(Ref<CSSValue>&& imageValue, bool hasHotSpot, const IntPoint& hotSpot);
 
     void detachPendingImage();
 
@@ -78,8 +78,8 @@ private:
     HashSet<SVGElement*> m_referencedElements;
 };
 
-CSS_VALUE_TYPE_CASTS(CSSCursorImageValue, isCursorImageValue())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSCursorImageValue, isCursorImageValue())
 
 #endif // CSSCursorImageValue_h

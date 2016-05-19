@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -43,7 +43,6 @@ MetaAllocator::~MetaAllocator()
         freeFreeSpaceNode(node);
         node = next;
     }
-    m_lock.Finalize();
 #ifndef NDEBUG
     ASSERT(!m_mallocBalance);
 #endif
@@ -129,8 +128,6 @@ MetaAllocator::MetaAllocator(size_t allocationGranule, size_t pageSize)
     , m_numFrees(0)
 #endif
 {
-    m_lock.Init();
-
     for (m_logPageSize = 0; m_logPageSize < 32; ++m_logPageSize) {
         if (static_cast<size_t>(1) << m_logPageSize == m_pageSize)
             break;

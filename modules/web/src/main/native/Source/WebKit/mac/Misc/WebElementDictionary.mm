@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -36,12 +36,13 @@
 #import "WebTypesInternal.h"
 #import "WebView.h"
 #import "WebViewPrivate.h"
+#import <WebCore/DragController.h>
 #import <WebCore/Frame.h>
 #import <WebCore/HitTestResult.h>
 #import <WebCore/Image.h>
 #import <WebCore/WebCoreObjCExtras.h>
-#import <WebKit/DOMCore.h>
-#import <WebKit/DOMExtensions.h>
+#import <WebKitLegacy/DOMCore.h>
+#import <WebKitLegacy/DOMExtensions.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/MainThread.h>
 #import <wtf/RunLoop.h>
@@ -124,7 +125,6 @@ static void cacheValueForKey(const void *key, const void *value, void *self)
 
 - (void)finalize
 {
-    ASSERT_MAIN_THREAD();
     delete _result;
     [super finalize];
 }
@@ -160,7 +160,7 @@ static void cacheValueForKey(const void *key, const void *value, void *self)
         return nil;
     value = [self performSelector:selector];
 
-    unsigned lookupTableCount = CFDictionaryGetCount(lookupTable);
+    NSUInteger lookupTableCount = CFDictionaryGetCount(lookupTable);
     if (value) {
         if (!_cache)
             _cache = [[NSMutableDictionary alloc] initWithCapacity:lookupTableCount];
@@ -265,7 +265,8 @@ static NSString* NSStringOrNil(String coreString)
 
 - (NSNumber *)_isLiveLink
 {
-    return [NSNumber numberWithBool:_result->isLiveLink()];
+    Element* urlElement = _result->URLElement();
+    return [NSNumber numberWithBool:(urlElement && isDraggableLink(*urlElement))];
 }
 
 - (NSNumber *)_isContentEditable

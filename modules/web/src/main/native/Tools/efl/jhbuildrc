@@ -16,65 +16,24 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-import multiprocessing
 import sys
+import platform
 
-__efl_tools_directory = os.path.abspath(os.path.dirname(__file__))
-sys.path = [__efl_tools_directory] + sys.path
-import common
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../jhbuild") )
+import jhbuildrc_common
 
-build_policy = 'updated'
+# Setting use_lib64 to False is necessary, otherwise CMake will not find
+# the lib64/cmake/<name> folder that contains the <Name>Config.cmake files.
+use_lib64 = False
 
-# FIXME: move shared parts into ../jhbuild folder.
-
-__moduleset_file_uri = 'file://' + os.path.join(__efl_tools_directory, 'jhbuild.modules')
-__extra_modulesets = os.environ.get("WEBKIT_EXTRA_MODULESETS", "").split(",")
-moduleset = [ __moduleset_file_uri, ]
-if __extra_modulesets != ['']:
-    moduleset.extend(__extra_modulesets)
-
-__extra_modules = os.environ.get("WEBKIT_EXTRA_MODULES", "").split(",")
-modules = [ 'webkitefl-testing-dependencies', ]
-if __extra_modules != ['']:
-    modules.extend(__extra_modules)
-
-if os.environ.has_key('WEBKIT_OUTPUTDIR'):
-    checkoutroot = os.path.abspath(os.path.join(os.environ['WEBKIT_OUTPUTDIR'], 'Dependencies', 'Source'))
-    prefix = os.path.abspath(os.path.join(os.environ['WEBKIT_OUTPUTDIR'], 'Dependencies', 'Root'))
-else:
-    checkoutroot = os.path.abspath(common.top_level_path('WebKitBuild','Dependencies', 'Source'))
-    prefix = os.path.abspath(common.top_level_path('WebKitBuild','Dependencies', 'Root'))
-
-nonotify = True
-notrayicon = True
-
-if 'NUMBER_OF_PROCESSORS' in os.environ:
-    jobs = os.environ['NUMBER_OF_PROCESSORS']
-
-# Use system libraries while building.
-if use_lib64:
-    _libdir = 'lib64'
-else:
-    _libdir = 'lib'
-addpath('PKG_CONFIG_PATH', os.path.join(os.sep, 'usr', _libdir, 'pkgconfig'))
-addpath('PKG_CONFIG_PATH', os.path.join(os.sep, 'usr', 'share', 'pkgconfig'))
+jhbuildrc_common.init(globals(), "efl") 
 
 addpath('XDG_DATA_DIRS', '/usr/share')
 addpath('XDG_CONFIG_DIRS', '/etc/xdg')
 
-addpath('CMAKE_PREFIX_PATH', prefix)
-
-# jhbuild installs libraries into lib64/ by default when building on
-# 64-bit Linux installations, while CMake does not look for libraries
-# in lib64/ if /etc/debian_version exists. For now we just pass the
-# lib64/ directory to the CMAKE_LIBRARY_PATH environment variable to
-# make sure the libraries installed by jhbuild are found by CMake on
-# Debian-based systems as well.
-if use_lib64:
-    addpath('CMAKE_LIBRARY_PATH', os.path.join(prefix, _libdir))
+if not 'ACCESSIBILITY_EAIL_LIBRARY_PATH' in os.environ:
+    _libeail_path = os.path.join(os.environ['CMAKE_LIBRARY_PATH'], 'libeail.so')
+    if os.path.isfile(_libeail_path):
+        os.environ['ACCESSIBILITY_EAIL_LIBRARY_PATH'] = _libeail_path
 
 partial_build = False
-
-# Avoid runtime conflicts with GStreamer system-wide plugins. We want
-# to use only the plugins we build in JHBuild.
-os.environ['GST_PLUGIN_SYSTEM_PATH'] = ''

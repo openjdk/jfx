@@ -31,27 +31,37 @@
 #ifndef BlobRegistry_h
 #define BlobRegistry_h
 
-#include <wtf/PassOwnPtr.h>
+#include <wtf/Forward.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
-class BlobData;
-class BlobStorageData;
+class BlobDataFileReference;
+class BlobPart;
 class BlobRegistry;
 class URL;
 
-BlobRegistry& blobRegistry();
+WEBCORE_EXPORT BlobRegistry& blobRegistry();
 
 // BlobRegistry is not thread-safe. It should only be called from main thread.
-class BlobRegistry {
+class WEBCORE_EXPORT BlobRegistry {
 public:
+
+    // Registers a blob URL referring to the specified file.
+    virtual void registerFileBlobURL(const URL&, PassRefPtr<BlobDataFileReference>, const String& contentType) = 0;
+
     // Registers a blob URL referring to the specified blob data.
-    virtual void registerBlobURL(const URL&, std::unique_ptr<BlobData>) = 0;
+    virtual void registerBlobURL(const URL&, Vector<BlobPart>, const String& contentType) = 0;
 
     // Registers a new blob URL referring to the blob data identified by the specified srcURL.
     virtual void registerBlobURL(const URL&, const URL& srcURL) = 0;
 
+    // Negative start and end values select from the end.
+    virtual void registerBlobURLForSlice(const URL&, const URL& srcURL, long long start, long long end) = 0;
+
     virtual void unregisterBlobURL(const URL&) = 0;
+
+    virtual unsigned long long blobSize(const URL&) = 0;
 
     virtual bool isBlobRegistryImpl() const { return false; }
 

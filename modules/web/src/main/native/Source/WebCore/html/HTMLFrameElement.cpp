@@ -24,7 +24,6 @@
 #include "config.h"
 #include "HTMLFrameElement.h"
 
-#include "Attribute.h"
 #include "Frame.h"
 #include "HTMLFrameSetElement.h"
 #include "HTMLNames.h"
@@ -43,9 +42,9 @@ inline HTMLFrameElement::HTMLFrameElement(const QualifiedName& tagName, Document
     setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<HTMLFrameElement> HTMLFrameElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLFrameElement> HTMLFrameElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLFrameElement(tagName, document));
+    return adoptRef(*new HTMLFrameElement(tagName, document));
 }
 
 bool HTMLFrameElement::rendererIsNeeded(const RenderStyle&)
@@ -54,14 +53,14 @@ bool HTMLFrameElement::rendererIsNeeded(const RenderStyle&)
     return isURLAllowed();
 }
 
-RenderPtr<RenderElement> HTMLFrameElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> HTMLFrameElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderFrame>(*this, std::move(style));
+    return createRenderer<RenderFrame>(*this, WTF::move(style));
 }
 
 bool HTMLFrameElement::noResize() const
 {
-    return hasAttribute(noresizeAttr);
+    return fastHasAttribute(noresizeAttr);
 }
 
 void HTMLFrameElement::didAttachRenderers()

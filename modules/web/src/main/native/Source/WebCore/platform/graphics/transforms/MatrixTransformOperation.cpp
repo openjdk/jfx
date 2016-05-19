@@ -26,25 +26,36 @@
 
 namespace WebCore {
 
-PassRefPtr<TransformOperation> MatrixTransformOperation::blend(const TransformOperation* from, double progress, bool blendToIdentity)
+bool MatrixTransformOperation::operator==(const TransformOperation& other) const
+{
+    if (!isSameType(other))
+        return false;
+    const MatrixTransformOperation& m = downcast<MatrixTransformOperation>(other);
+    return m_a == m.m_a && m_b == m.m_b && m_c == m.m_c && m_d == m.m_d && m_e == m.m_e && m_f == m.m_f;
+}
+
+static Ref<TransformOperation> createOperation(TransformationMatrix& to, TransformationMatrix& from, double progress)
+{
+    to.blend(from, progress);
+    return MatrixTransformOperation::create(to);
+}
+
+Ref<TransformOperation> MatrixTransformOperation::blend(const TransformOperation* from, double progress, bool blendToIdentity)
 {
     if (from && !from->isSameType(*this))
-        return this;
+        return *this;
 
     // convert the TransformOperations into matrices
-    FloatSize size;
     TransformationMatrix fromT;
     TransformationMatrix toT(m_a, m_b, m_c, m_d, m_e, m_f);
     if (from) {
-        const MatrixTransformOperation* m = static_cast<const MatrixTransformOperation*>(from);
-        fromT.setMatrix(m->m_a, m->m_b, m->m_c, m->m_d, m->m_e, m->m_f);
+        const MatrixTransformOperation& m = downcast<MatrixTransformOperation>(*from);
+        fromT.setMatrix(m.m_a, m.m_b, m.m_c, m.m_d, m.m_e, m.m_f);
     }
 
     if (blendToIdentity)
-        std::swap(fromT, toT);
-
-    toT.blend(fromT, progress);
-    return MatrixTransformOperation::create(toT.a(), toT.b(), toT.c(), toT.d(), toT.e(), toT.f());
+        return createOperation(fromT, toT, progress);
+    return createOperation(toT, fromT, progress);
 }
 
 } // namespace WebCore

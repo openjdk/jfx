@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,13 +29,9 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SQL_DATABASE) && ENABLE(INSPECTOR)
-
 #include "InspectorDatabaseResource.h"
 
 #include "Database.h"
-#include "InspectorWebFrontendDispatchers.h"
 #include <inspector/InspectorValues.h>
 
 using namespace Inspector;
@@ -44,12 +40,12 @@ namespace WebCore {
 
 static int nextUnusedId = 1;
 
-PassRefPtr<InspectorDatabaseResource> InspectorDatabaseResource::create(PassRefPtr<Database> database, const String& domain, const String& name, const String& version)
+Ref<InspectorDatabaseResource> InspectorDatabaseResource::create(RefPtr<Database>&& database, const String& domain, const String& name, const String& version)
 {
-    return adoptRef(new InspectorDatabaseResource(database, domain, name, version));
+    return adoptRef(*new InspectorDatabaseResource(WTF::move(database), domain, name, version));
 }
 
-InspectorDatabaseResource::InspectorDatabaseResource(PassRefPtr<Database> database, const String& domain, const String& name, const String& version)
+InspectorDatabaseResource::InspectorDatabaseResource(RefPtr<Database>&& database, const String& domain, const String& name, const String& version)
     : m_database(database)
     , m_id(String::number(nextUnusedId++))
     , m_domain(domain)
@@ -58,16 +54,15 @@ InspectorDatabaseResource::InspectorDatabaseResource(PassRefPtr<Database> databa
 {
 }
 
-void InspectorDatabaseResource::bind(InspectorDatabaseFrontendDispatcher* databaseFrontendDispatcher)
+void InspectorDatabaseResource::bind(Inspector::DatabaseFrontendDispatcher* databaseFrontendDispatcher)
 {
-    RefPtr<Inspector::TypeBuilder::Database::Database> jsonObject = Inspector::TypeBuilder::Database::Database::create()
+    auto jsonObject = Inspector::Protocol::Database::Database::create()
         .setId(m_id)
         .setDomain(m_domain)
         .setName(m_name)
-        .setVersion(m_version);
-    databaseFrontendDispatcher->addDatabase(jsonObject);
+        .setVersion(m_version)
+        .release();
+    databaseFrontendDispatcher->addDatabase(WTF::move(jsonObject));
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE) && ENABLE(INSPECTOR)

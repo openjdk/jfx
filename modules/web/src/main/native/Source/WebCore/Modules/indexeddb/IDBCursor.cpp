@@ -43,32 +43,32 @@
 
 namespace WebCore {
 
-PassRefPtr<IDBCursor> IDBCursor::create(PassRefPtr<IDBCursorBackend> backend, IndexedDB::CursorDirection direction, IDBRequest* request, IDBAny* source, IDBTransaction* transaction)
+Ref<IDBCursor> IDBCursor::create(PassRefPtr<IDBCursorBackend> backend, IndexedDB::CursorDirection direction, IDBRequest* request, IDBAny* source, IDBTransaction* transaction)
 {
-    return adoptRef(new IDBCursor(backend, direction, request, source, transaction));
+    return adoptRef(*new IDBCursor(backend, direction, request, source, transaction));
 }
 
 const AtomicString& IDBCursor::directionNext()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, next, ("next", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, next, ("next", AtomicString::ConstructFromLiteral));
     return next;
 }
 
 const AtomicString& IDBCursor::directionNextUnique()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, nextunique, ("nextunique", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, nextunique, ("nextunique", AtomicString::ConstructFromLiteral));
     return nextunique;
 }
 
 const AtomicString& IDBCursor::directionPrev()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, prev, ("prev", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, prev, ("prev", AtomicString::ConstructFromLiteral));
     return prev;
 }
 
 const AtomicString& IDBCursor::directionPrevUnique()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, prevunique, ("prevunique", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, prevunique, ("prevunique", AtomicString::ConstructFromLiteral));
     return prevunique;
 }
 
@@ -259,7 +259,7 @@ void IDBCursor::close()
     m_transactionNotifier.cursorFinished();
     if (m_request) {
         m_request->finishCursor();
-        m_request.clear();
+        m_request = nullptr;
     }
 }
 

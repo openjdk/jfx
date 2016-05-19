@@ -41,7 +41,7 @@ template<typename T> struct EncodingTraits;
 
 class EncodedValue final {
 public:
-    explicit EncodedValue(PassRefPtr<Inspector::InspectorValue> value)
+    explicit EncodedValue(RefPtr<Inspector::InspectorValue>&& value)
         : m_value(value) { }
 
     EncodedValue()
@@ -78,8 +78,8 @@ public:
 
     template<typename T> T convertTo();
 
-    JS_EXPORT_PRIVATE PassRefPtr<Inspector::InspectorObject> asObject();
-    JS_EXPORT_PRIVATE PassRefPtr<Inspector::InspectorArray> asArray();
+    JS_EXPORT_PRIVATE RefPtr<Inspector::InspectorObject> asObject();
+    JS_EXPORT_PRIVATE RefPtr<Inspector::InspectorArray> asArray();
 
 private:
     RefPtr<Inspector::InspectorValue> m_value;
@@ -98,7 +98,6 @@ template<typename T>
 struct EncodingTraits {
     typedef T DecodedType;
 
-    static EncodedValue encodeValue(DecodedType);
     static EncodedValue encodeValue(const DecodedType&);
 
     static bool decodeValue(EncodedValue&, DecodedType&);
@@ -113,9 +112,9 @@ struct EncodingTraits<Vector<T, inlineCapacity, OverflowHandler>> {
     {
         EncodedValue encodedVector = EncodedValue::createArray();
         for (const typename EncodingTraits<T>::DecodedType& value : vectorOfValues)
-            encodedVector.append<typename EncodingTraits<T>::DecodedType>(value);
+            encodedVector.append<T>(value);
 
-        return std::move(encodedVector);
+        return WTF::move(encodedVector);
     }
 
     static bool decodeValue(EncodedValue& encodedVector, DecodedType& decodedValue)
@@ -135,6 +134,13 @@ template<> struct EncodingTraits<EncodedValue> {
     typedef EncodedValue DecodedType;
     // We should never attempt to decode or encode an encoded value,
     // so encodeValue and decodeValue are intentionally omitted here.
+};
+
+// Specialize byte vectors to use base64 encoding.
+template<> struct EncodingTraits<Vector<char>> {
+    typedef Vector<char> DecodedType;
+    static EncodedValue encodeValue(const DecodedType&);
+    static bool decodeValue(EncodedValue&, DecodedType&);
 };
 
 template<typename T>

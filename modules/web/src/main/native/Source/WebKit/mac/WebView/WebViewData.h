@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -34,7 +34,6 @@
 #import <WebCore/LayerFlushSchedulerClient.h>
 #import <WebCore/WebCoreKeyboardUIMode.h>
 #import <wtf/HashMap.h>
-#import <wtf/PassOwnPtr.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/ThreadingPrimitives.h>
 #import <wtf/text/WTFString.h>
@@ -47,8 +46,10 @@ namespace WebCore {
 class AlternativeTextUIController;
 class HistoryItem;
 class Page;
+class TextIndicatorWindow;
 }
 
+@class WebImmediateActionController;
 @class WebInspector;
 @class WebNodeHighlight;
 @class WebPluginDatabase;
@@ -77,10 +78,23 @@ class Page;
 @class WebFixedPositionContent;
 #endif
 
+#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
+class WebMediaPlaybackTargetPicker;
+#endif
+
+#if PLATFORM(MAC)
+@class WebWindowVisibilityObserver;
+#endif
+
 extern BOOL applicationIsTerminating;
 extern int pluginDatabaseClientCount;
 
 class LayerFlushController;
+class WebViewGroup;
+
+#if ENABLE(SERVICE_CONTROLS)
+class WebSelectionServiceController;
+#endif
 
 class WebViewLayerFlushScheduler : public WebCore::LayerFlushScheduler {
 public:
@@ -88,10 +102,10 @@ public:
     virtual ~WebViewLayerFlushScheduler() { }
 
 private:
-    virtual void runLoopObserverCallback() override
+    virtual void layerFlushCallback() override
     {
         RefPtr<LayerFlushController> protector = m_flushController;
-        WebCore::LayerFlushScheduler::runLoopObserverCallback();
+        WebCore::LayerFlushScheduler::layerFlushCallback();
     }
 
     LayerFlushController* m_flushController;
@@ -116,10 +130,20 @@ private:
     WebViewLayerFlushScheduler m_layerFlushScheduler;
 };
 
+@interface WebWindowVisibilityObserver : NSObject {
+    WebView *_view;
+}
+
+- (instancetype)initWithView:(WebView *)view;
+- (void)startObserving:(NSWindow *)window;
+- (void)stopObserving:(NSWindow *)window;
+@end
+
 // FIXME: This should be renamed to WebViewData.
 @interface WebViewPrivate : NSObject {
 @public
     WebCore::Page* page;
+    RefPtr<WebViewGroup> group;
 
     id UIDelegate;
     id UIDelegateForwarder;
@@ -141,6 +165,18 @@ private:
 
     WebInspector *inspector;
     WebNodeHighlight *currentNodeHighlight;
+
+#if PLATFORM(MAC)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    WebImmediateActionController *immediateActionController;
+#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    std::unique_ptr<WebCore::TextIndicatorWindow> textIndicatorWindow;
+    BOOL hasInitializedLookupObserver;
+    RetainPtr<WebWindowVisibilityObserver> windowVisibilityObserver;
+    RetainPtr<NSEvent> pressureEvent;
+#endif // PLATFORM(MAC)
+
+    BOOL shouldMaintainInactiveSelection;
 
     BOOL allowsUndo;
 
@@ -254,20 +290,19 @@ private:
 #if ENABLE(REMOTE_INSPECTOR)
 #if PLATFORM(IOS)
     WebIndicateLayer *indicateLayer;
-    NSString *hostApplicationBundleId;
-    NSString *hostApplicationName;
 #endif
 #endif
 
-#if USE(GLIB)
-    CFRunLoopObserverRef glibRunLoopObserver;
-#endif
     id<WebGeolocationProvider> _geolocationProvider;
     id<WebDeviceOrientationProvider> m_deviceOrientationProvider;
     id<WebNotificationProvider> _notificationProvider;
 
 #if ENABLE(MEDIA_STREAM)
     id<WebUserMediaClient> m_userMediaClient;
+#endif
+
+#if ENABLE(SERVICE_CONTROLS)
+    std::unique_ptr<WebSelectionServiceController> _selectionServiceController;
 #endif
 
     RefPtr<WebCore::HistoryItem> _globalHistoryItem;
@@ -281,11 +316,15 @@ private:
 #endif
 
 #if USE(DICTATION_ALTERNATIVES)
-    OwnPtr<WebCore::AlternativeTextUIController> m_alternativeTextUIController;
+    std::unique_ptr<WebCore::AlternativeTextUIController> m_alternativeTextUIController;
 #endif
 
     RetainPtr<NSData> sourceApplicationAuditData;
 
     BOOL _didPerformFirstNavigation;
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
+    std::unique_ptr<WebMediaPlaybackTargetPicker> m_playbackTargetPicker;
+#endif
 }
 @end

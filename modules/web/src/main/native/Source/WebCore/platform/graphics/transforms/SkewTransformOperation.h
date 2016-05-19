@@ -26,45 +26,48 @@
 #define SkewTransformOperation_h
 
 #include "TransformOperation.h"
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
-class SkewTransformOperation : public TransformOperation {
+class SkewTransformOperation final : public TransformOperation {
 public:
-    static PassRefPtr<SkewTransformOperation> create(double angleX, double angleY, OperationType type)
+    static Ref<SkewTransformOperation> create(double angleX, double angleY, OperationType type)
     {
-        return adoptRef(new SkewTransformOperation(angleX, angleY, type));
+        return adoptRef(*new SkewTransformOperation(angleX, angleY, type));
+    }
+
+    virtual Ref<TransformOperation> clone() const override
+    {
+        return adoptRef(*new SkewTransformOperation(m_angleX, m_angleY, m_type));
     }
 
     double angleX() const { return m_angleX; }
     double angleY() const { return m_angleY; }
 
 private:
-    virtual bool isIdentity() const { return m_angleX == 0 && m_angleY == 0; }
-    virtual OperationType type() const { return m_type; }
-    virtual bool isSameType(const TransformOperation& o) const { return o.type() == m_type; }
+    virtual bool isIdentity() const override { return m_angleX == 0 && m_angleY == 0; }
+    virtual bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
 
-    virtual bool operator==(const TransformOperation& o) const
-    {
-        if (!isSameType(o))
-            return false;
-        const SkewTransformOperation* s = static_cast<const SkewTransformOperation*>(&o);
-        return m_angleX == s->m_angleX && m_angleY == s->m_angleY;
-    }
+    virtual OperationType type() const override { return m_type; }
+    virtual bool isSameType(const TransformOperation& o) const override { return o.type() == m_type; }
 
-    virtual bool apply(TransformationMatrix& transform, const FloatSize&) const
+    virtual bool operator==(const TransformOperation&) const override;
+
+    virtual bool apply(TransformationMatrix& transform, const FloatSize&) const override
     {
         transform.skew(m_angleX, m_angleY);
         return false;
     }
 
-    virtual PassRefPtr<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false);
+    virtual Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) override;
 
     SkewTransformOperation(double angleX, double angleY, OperationType type)
         : m_angleX(angleX)
         , m_angleY(angleY)
         , m_type(type)
     {
+        ASSERT(isSkewTransformOperationType());
     }
 
     double m_angleX;
@@ -73,5 +76,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::SkewTransformOperation, isSkewTransformOperationType())
 
 #endif // SkewTransformOperation_h

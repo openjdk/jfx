@@ -39,6 +39,7 @@ import sys
 import tempfile
 import time
 
+
 class FileSystem(object):
     """FileSystem interface for webkitpy.
 
@@ -75,6 +76,24 @@ class FileSystem(object):
 
     def exists(self, path):
         return os.path.exists(path)
+
+    def dirs_under(self, path, dir_filter=None):
+        """Return the list of all directories under the given path in topdown order.
+
+        Args:
+            dir_filter: if not None, the filter will be invoked
+                with the filesystem object and the path of each dirfound.
+                The dir is included in the result if the callback returns True.
+        """
+        def filter_all(fs, dirpath):
+            return True
+        dir_filter = dir_filter or filter_all
+
+        dirs = []
+        for (dirpath, dirnames, filenames) in os.walk(path):
+            if dir_filter(self, dirpath):
+                dirs.append(dirpath)
+        return dirs
 
     def files_under(self, path, dirs_to_skip=[], file_filter=None):
         """Return the list of all files under the given path in topdown order.
@@ -121,6 +140,9 @@ class FileSystem(object):
 
     def isfile(self, path):
         return os.path.isfile(path)
+
+    def getsize(self, path):
+        return os.path.getsize(path)
 
     def isdir(self, path):
         return os.path.isdir(path)
@@ -223,8 +245,8 @@ class FileSystem(object):
         """Write the contents to the file at the given location.
 
         The file is written encoded as UTF-8 with no BOM."""
-        with codecs.open(path, 'w', 'utf8') as f:
-            f.write(contents)
+        with codecs.open(path, 'w', 'utf-8') as f:
+            f.write(contents.decode('utf-8') if type(contents) == str else contents)
 
     def sha1(self, path):
         contents = self.read_binary_file(path)

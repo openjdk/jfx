@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -59,7 +59,7 @@ const unsigned TestRunner::viewHeight = 600;
 const unsigned TestRunner::w3cSVGViewWidth = 480;
 const unsigned TestRunner::w3cSVGViewHeight = 360;
 
-TestRunner::TestRunner(const std::string& testPathOrURL, const std::string& expectedPixelHash)
+TestRunner::TestRunner(const std::string& testURL, const std::string& expectedPixelHash)
     : m_disallowIncreaseForApplicationCacheQuota(false)
     , m_dumpApplicationCacheDelegateCallbacks(false)
     , m_dumpAsAudio(false)
@@ -112,15 +112,16 @@ TestRunner::TestRunner(const std::string& testPathOrURL, const std::string& expe
     , m_hasPendingWebNotificationClick(false)
     , m_databaseDefaultQuota(-1)
     , m_databaseMaxQuota(-1)
-    , m_testPathOrURL(testPathOrURL)
+    , m_testURL(testURL)
     , m_expectedPixelHash(expectedPixelHash)
     , m_titleTextDirection("ltr")
+    , m_timeout(0)
 {
 }
 
-PassRefPtr<TestRunner> TestRunner::create(const std::string& testPathOrURL, const std::string& expectedPixelHash)
+PassRefPtr<TestRunner> TestRunner::create(const std::string& testURL, const std::string& expectedPixelHash)
 {
-    return adoptRef(new TestRunner(testPathOrURL, expectedPixelHash));
+    return adoptRef(new TestRunner(testURL, expectedPixelHash));
 }
 
 // Static Functions
@@ -466,73 +467,6 @@ static JSValueRef clearAllDatabasesCallback(JSContextRef context, JSObjectRef fu
     controller->clearAllDatabases();
 
     return JSValueMakeUndefined(context);
-}
-
-static JSValueRef syncLocalStorageCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-
-    controller->syncLocalStorage();
-
-    return JSValueMakeUndefined(context);
-}
-
-static JSValueRef observeStorageTrackerNotificationsCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-
-    if (argumentCount < 1)
-        return JSValueMakeUndefined(context);
-
-    unsigned numNotifications = JSValueToNumber(context, arguments[0], exception);
-
-    ASSERT(!*exception);
-
-    controller->observeStorageTrackerNotifications(numNotifications);
-
-    return JSValueMakeUndefined(context);
-}
-
-static JSValueRef deleteAllLocalStorageCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    controller->deleteAllLocalStorage();
-
-    return JSValueMakeUndefined(context);
-}
-
-static JSValueRef deleteLocalStorageForOriginCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-
-    if (argumentCount < 1)
-        return JSValueMakeUndefined(context);
-
-    JSRetainPtr<JSStringRef> url(Adopt, JSValueToStringCopy(context, arguments[0], exception));
-    ASSERT(!*exception);
-
-    controller->deleteLocalStorageForOrigin(url.get());
-
-    return JSValueMakeUndefined(context);
-}
-
-static JSValueRef localStorageDiskUsageForOriginCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-
-    if (argumentCount < 1)
-        return JSValueMakeUndefined(context);
-
-    JSRetainPtr<JSStringRef> originURL(Adopt, JSValueToStringCopy(context, arguments[0], exception));
-    ASSERT(!*exception);
-
-    return JSValueMakeNumber(context, controller->localStorageDiskUsageForOrigin(originURL.get()));
-}
-
-static JSValueRef originsWithLocalStorageCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    return controller->originsWithLocalStorage(context);
 }
 
 static JSValueRef clearBackForwardListCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
@@ -1106,38 +1040,6 @@ static JSValueRef setMockGeolocationPositionUnavailableErrorCallback(JSContextRe
     return JSValueMakeUndefined(context);
 }
 
-static JSValueRef addMockSpeechInputResultCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    if (argumentCount < 3)
-        return JSValueMakeUndefined(context);
-
-    JSRetainPtr<JSStringRef> result(Adopt, JSValueToStringCopy(context, arguments[0], exception));
-    ASSERT(!*exception);
-
-    double confidence = JSValueToNumber(context, arguments[1], exception);
-
-    JSRetainPtr<JSStringRef> language(Adopt, JSValueToStringCopy(context, arguments[2], exception));
-    ASSERT(!*exception);
-
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    controller->addMockSpeechInputResult(result.get(), confidence, language.get());
-
-    return JSValueMakeUndefined(context);
-}
-
-static JSValueRef setMockSpeechInputDumpRectCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    if (argumentCount < 1)
-        return JSValueMakeUndefined(context);
-
-    bool dumpRect = JSValueToBoolean(context, arguments[0]);
-
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    controller->setMockSpeechInputDumpRect(dumpRect);
-
-    return JSValueMakeUndefined(context);
-}
-
 static JSValueRef setNewWindowsCopyBackForwardListCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     // Has mac implementation
@@ -1581,12 +1483,10 @@ static JSValueRef closeWebInspectorCallback(JSContextRef context, JSObjectRef fu
 static JSValueRef evaluateInWebInspectorCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    double callId = JSValueToNumber(context, arguments[0], exception);
-    ASSERT(!*exception);
-    JSRetainPtr<JSStringRef> script(Adopt, JSValueToStringCopy(context, arguments[1], exception));
+    JSRetainPtr<JSStringRef> script(Adopt, JSValueToStringCopy(context, arguments[0], exception));
     ASSERT(!*exception);
 
-    controller->evaluateInWebInspector(static_cast<long>(callId), script.get());
+    controller->evaluateInWebInspector(script.get());
     return JSValueMakeUndefined(context);
 }
 
@@ -2180,8 +2080,6 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setMockDeviceOrientation", setMockDeviceOrientationCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setMockGeolocationPositionUnavailableError", setMockGeolocationPositionUnavailableErrorCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setMockGeolocationPosition", setMockGeolocationPositionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "addMockSpeechInputResult", addMockSpeechInputResultCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "setMockSpeechInputDumpRect", setMockSpeechInputDumpRectCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setNewWindowsCopyBackForwardList", setNewWindowsCopyBackForwardListCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setPageVisibility", setPageVisibilityCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setPOSIXLocale", setPOSIXLocaleCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2223,12 +2121,6 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "addOriginAccessWhitelistEntry", addOriginAccessWhitelistEntryCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setScrollbarPolicy", setScrollbarPolicyCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "authenticateSession", authenticateSessionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "deleteAllLocalStorage", deleteAllLocalStorageCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "syncLocalStorage", syncLocalStorageCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "observeStorageTrackerNotifications", observeStorageTrackerNotificationsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "deleteLocalStorageForOrigin", deleteLocalStorageForOriginCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "localStorageDiskUsageForOrigin", localStorageDiskUsageForOriginCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "originsWithLocalStorage", originsWithLocalStorageCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setShouldPaintBrokenImage", setShouldPaintBrokenImageCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setTextDirection", setTextDirectionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setShouldStayOnPageAfterHandlingBeforeUnload", setShouldStayOnPageAfterHandlingBeforeUnloadCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2254,37 +2146,37 @@ JSStaticFunction* TestRunner::staticFunctions()
 
 void TestRunner::queueLoadHTMLString(JSStringRef content, JSStringRef baseURL)
 {
-    WorkQueue::shared()->queue(new LoadHTMLStringItem(content, baseURL));
+    WorkQueue::singleton().queue(new LoadHTMLStringItem(content, baseURL));
 }
 
 void TestRunner::queueLoadAlternateHTMLString(JSStringRef content, JSStringRef baseURL, JSStringRef unreachableURL)
 {
-    WorkQueue::shared()->queue(new LoadHTMLStringItem(content, baseURL, unreachableURL));
+    WorkQueue::singleton().queue(new LoadHTMLStringItem(content, baseURL, unreachableURL));
 }
 
 void TestRunner::queueBackNavigation(int howFarBack)
 {
-    WorkQueue::shared()->queue(new BackItem(howFarBack));
+    WorkQueue::singleton().queue(new BackItem(howFarBack));
 }
 
 void TestRunner::queueForwardNavigation(int howFarForward)
 {
-    WorkQueue::shared()->queue(new ForwardItem(howFarForward));
+    WorkQueue::singleton().queue(new ForwardItem(howFarForward));
 }
 
 void TestRunner::queueLoadingScript(JSStringRef script)
 {
-    WorkQueue::shared()->queue(new LoadingScriptItem(script));
+    WorkQueue::singleton().queue(new LoadingScriptItem(script));
 }
 
 void TestRunner::queueNonLoadingScript(JSStringRef script)
 {
-    WorkQueue::shared()->queue(new NonLoadingScriptItem(script));
+    WorkQueue::singleton().queue(new NonLoadingScriptItem(script));
 }
 
 void TestRunner::queueReload()
 {
-    WorkQueue::shared()->queue(new ReloadItem);
+    WorkQueue::singleton().queue(new ReloadItem);
 }
 
 void TestRunner::ignoreLegacyWebNotificationPermissionRequests()
@@ -2295,7 +2187,6 @@ void TestRunner::ignoreLegacyWebNotificationPermissionRequests()
 void TestRunner::waitToDumpWatchdogTimerFired()
 {
     const char* message = "FAIL: Timed out waiting for notifyDone to be called\n";
-    fprintf(stderr, "%s", message);
     fprintf(stdout, "%s", message);
     notifyDone();
 }

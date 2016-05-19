@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,8 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WebNSDataExtras.h>
-#import <WebKit/WebNSDataExtrasPrivate.h>
+#import <WebKitLegacy/WebNSDataExtras.h>
+#import <WebKitLegacy/WebNSDataExtrasPrivate.h>
 
 #import <wtf/Assertions.h>
 
@@ -111,7 +111,7 @@
 
 -(NSString *)_webkit_guessedMIMETypeForXML
 {
-    int length = [self length];
+    NSUInteger length = [self length];
     const UInt8 *bytes = [self bytes];
 
 #define CHANNEL_TAG_LENGTH 7
@@ -171,7 +171,7 @@
     if ([MIMEType length])
         return MIMEType;
 
-    int length = [self length];
+    NSUInteger length = [self length];
     const char *bytes = [self bytes];
 
     const char *p = bytes;
@@ -236,8 +236,8 @@
     }
 
     // Test for plain text.
-    int i;
-    for(i=0; i<length; i++){
+    NSUInteger i;
+    for (i = 0; i < length; ++i) {
         char c = bytes[i];
         if ((c < 0x20 || c > 0x7E) && (c != '\t' && c != '\r' && c != '\n')) {
             break;
@@ -311,7 +311,7 @@ static const UInt8 *_findEOL(const UInt8 *bytes, CFIndex len) {
     NSMutableDictionary *headerFields = [NSMutableDictionary dictionary];
 
     const UInt8 *bytes = [self bytes];
-    unsigned length = [self length];
+    NSUInteger length = [self length];
     NSString *lastKey = nil;
     const UInt8 *eol;
 
@@ -400,7 +400,7 @@ static const UInt8 *_findEOL(const UInt8 *bytes, CFIndex len) {
 - (NSInteger)_web_locationAfterFirstBlankLine
 {
     const char *bytes = (const char *)[self bytes];
-    unsigned length = [self length];
+    NSUInteger length = [self length];
 
     unsigned i;
     for (i = 0; i < length - 4; i++) {

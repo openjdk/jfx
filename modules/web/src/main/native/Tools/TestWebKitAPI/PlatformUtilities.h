@@ -26,7 +26,8 @@
 #ifndef PlatformUtilities_h
 #define PlatformUtilities_h
 
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKNativeEvent.h>
+#include <WebKit/WKRetainPtr.h>
 #include <string>
 
 #if USE(FOUNDATION)
@@ -38,12 +39,14 @@ namespace Util {
 
 // Runs a platform runloop until the 'done' is true.
 void run(bool* done);
+void sleep(double seconds);
 
-#if PLATFORM(WIN)
-bool shouldTranslateMessage(const MSG&);
+std::string toSTD(const char*);
+#if USE(FOUNDATION)
+std::string toSTD(NSString *);
 #endif
 
-void sleep(double seconds);
+#if WK_HAVE_C_SPI
 
 WKContextRef createContextWithInjectedBundle();
 WKContextRef createContextForInjectedBundleTest(const std::string&, WKTypeRef userData = 0);
@@ -58,12 +61,10 @@ bool isKeyDown(WKNativeEventPtr);
 
 std::string toSTD(WKStringRef);
 std::string toSTD(WKRetainPtr<WKStringRef>);
-std::string toSTD(const char*);
-#if USE(FOUNDATION)
-std::string toSTD(NSString *);
-#endif
 
 WKRetainPtr<WKStringRef> toWK(const char* utf8String);
+
+#endif // WK_HAVE_C_SPI
 
 template<typename T, typename U>
 static inline ::testing::AssertionResult assertWKStringEqual(const char* expected_expression, const char* actual_expression, T expected, U actual)

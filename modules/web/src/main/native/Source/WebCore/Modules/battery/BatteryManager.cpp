@@ -32,11 +32,11 @@
 
 namespace WebCore {
 
-PassRefPtr<BatteryManager> BatteryManager::create(Navigator* navigator)
+Ref<BatteryManager> BatteryManager::create(Navigator* navigator)
 {
-    RefPtr<BatteryManager> batteryManager(adoptRef(new BatteryManager(navigator)));
-    batteryManager->suspendIfNeeded();
-    return batteryManager.release();
+    auto batteryManager = adoptRef(*new BatteryManager(navigator));
+    batteryManager.get().suspendIfNeeded();
+    return batteryManager;
 }
 
 BatteryManager::~BatteryManager()
@@ -46,7 +46,7 @@ BatteryManager::~BatteryManager()
 BatteryManager::BatteryManager(Navigator* navigator)
     : ActiveDOMObject(navigator->frame()->document())
     , m_batteryController(BatteryController::from(navigator->frame()->page()))
-    , m_batteryStatus(0)
+    , m_batteryStatus(nullptr)
 {
     m_batteryController->addListener(this);
 }
@@ -88,6 +88,11 @@ void BatteryManager::updateBatteryStatus(PassRefPtr<BatteryStatus> batteryStatus
     m_batteryStatus = batteryStatus;
 }
 
+bool BatteryManager::canSuspendForPageCache() const
+{
+    return true;
+}
+
 void BatteryManager::suspend(ReasonForSuspension)
 {
     if (m_batteryController)
@@ -109,4 +114,3 @@ void BatteryManager::stop()
 } // namespace WebCore
 
 #endif // BATTERY_STATUS
-

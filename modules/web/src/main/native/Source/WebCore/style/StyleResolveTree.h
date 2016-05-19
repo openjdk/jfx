@@ -26,6 +26,8 @@
 #ifndef StyleResolveTree_h
 #define StyleResolveTree_h
 
+#include <functional>
+
 namespace WebCore {
 
 class Document;
@@ -45,7 +47,16 @@ void detachTextRenderer(Text&);
 
 void updateTextRendererAfterContentChange(Text&, unsigned offsetOfReplacedData, unsigned lengthOfReplacedData);
 
-Change determineChange(const RenderStyle*, const RenderStyle*);
+Change determineChange(const RenderStyle&, const RenderStyle&);
+
+void queuePostResolutionCallback(std::function<void ()>);
+bool postResolutionCallbacksAreSuspended();
+
+class PostResolutionCallbackDisabler {
+public:
+    explicit PostResolutionCallbackDisabler(Document&);
+    ~PostResolutionCallbackDisabler();
+};
 
 }
 

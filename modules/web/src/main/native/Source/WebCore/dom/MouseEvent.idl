@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2015 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,7 +20,13 @@
 [
     ConstructorConditional=DOM4_EVENTS_CONSTRUCTOR,
     ConstructorTemplate=Event,
+    DoNotCheckConstants,
 ] interface MouseEvent : UIEvent {
+#if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
+    [Conditional=MOUSE_FORCE_EVENTS] const double WEBKIT_FORCE_AT_MOUSE_DOWN        = 1;
+    [Conditional=MOUSE_FORCE_EVENTS] const double WEBKIT_FORCE_AT_FORCE_MOUSE_DOWN  = 2;
+#endif
+
     [InitializedByEventConstructor] readonly attribute long             screenX;
     [InitializedByEventConstructor] readonly attribute long             screenY;
     [InitializedByEventConstructor] readonly attribute long             clientX;
@@ -31,8 +37,11 @@
     [InitializedByEventConstructor] readonly attribute boolean          metaKey;
     [InitializedByEventConstructor] readonly attribute unsigned short   button;
     [InitializedByEventConstructor] readonly attribute EventTarget      relatedTarget;
-    [Conditional=POINTER_LOCK]      readonly attribute long             webkitMovementX;
-    [Conditional=POINTER_LOCK]      readonly attribute long             webkitMovementY;
+    [Conditional=POINTER_LOCK]      readonly attribute long             movementX;
+    [Conditional=POINTER_LOCK]      readonly attribute long             movementY;
+#if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
+    [Conditional=MOUSE_FORCE_EVENTS, ImplementedAs=force]readonly attribute double  webkitForce;
+#endif
     
     [ObjCLegacyUnnamedParameters] void initMouseEvent([Default=Undefined] optional DOMString type, 
                                        [Default=Undefined] optional boolean canBubble, 
@@ -59,7 +68,7 @@
     readonly attribute Node             toElement;
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-    readonly attribute Clipboard        dataTransfer;
+    readonly attribute DataTransfer     dataTransfer;
 #endif
 };
 

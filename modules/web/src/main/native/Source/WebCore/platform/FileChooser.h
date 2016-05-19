@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -77,17 +77,17 @@ public:
 
 class FileChooser : public RefCounted<FileChooser> {
 public:
-    static PassRefPtr<FileChooser> create(FileChooserClient*, const FileChooserSettings&);
-    ~FileChooser();
+    static Ref<FileChooser> create(FileChooserClient*, const FileChooserSettings&);
+    WEBCORE_EXPORT ~FileChooser();
 
     void invalidate();
 
-    void chooseFile(const String& path);
-    void chooseFiles(const Vector<String>& paths);
+    WEBCORE_EXPORT void chooseFile(const String& path);
+    WEBCORE_EXPORT void chooseFiles(const Vector<String>& paths);
 #if PLATFORM(IOS)
     // FIXME: This function is almost identical to FileChooser::chooseFiles(). We should merge this
     // function with FileChooser::chooseFiles() and hence remove the PLATFORM(IOS)-guard.
-    void chooseMediaFiles(const Vector<String>& paths, const String& displayString, Icon*);
+    WEBCORE_EXPORT void chooseMediaFiles(const Vector<String>& paths, const String& displayString, Icon*);
 #endif
 
     // FIXME: We should probably just pass file paths that could be virtual paths with proper display names rather than passing structs.

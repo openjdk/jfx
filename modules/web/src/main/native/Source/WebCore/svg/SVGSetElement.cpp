@@ -26,15 +26,15 @@
 namespace WebCore {
 
 inline SVGSetElement::SVGSetElement(const QualifiedName& tagName, Document& document)
-    : SVGAnimateElement(tagName, document)
+    : SVGAnimateElementBase(tagName, document)
 {
     setAnimationMode(ToAnimation);
     ASSERT(hasTagName(SVGNames::setTag));
 }
 
-PassRefPtr<SVGSetElement> SVGSetElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGSetElement> SVGSetElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGSetElement(tagName, document));
+    return adoptRef(*new SVGSetElement(tagName, document));
 }
 
 void SVGSetElement::updateAnimationMode()

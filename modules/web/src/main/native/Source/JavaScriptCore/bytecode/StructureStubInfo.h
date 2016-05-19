@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2012, 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #ifndef StructureStubInfo_h
 #define StructureStubInfo_h
 
-#include <wtf/Platform.h>
-
 #include "CodeOrigin.h"
 #include "Instruction.h"
 #include "JITStubRoutine.h"
@@ -35,29 +33,25 @@
 #include "Opcode.h"
 #include "PolymorphicAccessStructureList.h"
 #include "RegisterSet.h"
+#include "SpillRegistersMode.h"
 #include "Structure.h"
 #include "StructureStubClearingWatchpoint.h"
-#include <wtf/OwnPtr.h>
 
 namespace JSC {
 
 #if ENABLE(JIT)
 
+class PolymorphicGetByIdList;
 class PolymorphicPutByIdList;
 
 enum AccessType {
     access_get_by_id_self,
-    access_get_by_id_chain,
-    access_get_by_id_self_list,
+    access_get_by_id_list,
     access_put_by_id_transition_normal,
     access_put_by_id_transition_direct,
     access_put_by_id_replace,
     access_put_by_id_list,
     access_unset,
-    access_get_by_id_generic,
-    access_put_by_id_generic,
-    access_get_array_length,
-    access_get_string_length,
     access_in_list
 };
 
@@ -65,11 +59,7 @@ inline bool isGetByIdAccess(AccessType accessType)
 {
     switch (accessType) {
     case access_get_by_id_self:
-    case access_get_by_id_chain:
-    case access_get_by_id_self_list:
-    case access_get_by_id_generic:
-    case access_get_array_length:
-    case access_get_string_length:
+    case access_get_by_id_list:
         return true;
     default:
         return false;
@@ -83,7 +73,6 @@ inline bool isPutByIdAccess(AccessType accessType)
     case access_put_by_id_transition_direct:
     case access_put_by_id_replace:
     case access_put_by_id_list:
-    case access_put_by_id_generic:
         return true;
     default:
         return false;
@@ -105,6 +94,7 @@ struct StructureStubInfo {
         : accessType(access_unset)
         , seen(false)
         , resetByGC(false)
+        , tookSlowPath(false)
     {
     }
 
@@ -115,23 +105,10 @@ struct StructureStubInfo {
         u.getByIdSelf.baseObjectStructure.set(vm, owner, baseObjectStructure);
     }
 
-    void initGetByIdChain(VM& vm, JSCell* owner, Structure* baseObjectStructure, StructureChain* chain, unsigned count, bool isDirect)
+    void initGetByIdList(PolymorphicGetByIdList* list)
     {
-        accessType = access_get_by_id_chain;
-
-        u.getByIdChain.baseObjectStructure.set(vm, owner, baseObjectStructure);
-        u.getByIdChain.chain.set(vm, owner, chain);
-        u.getByIdChain.count = count;
-        u.getByIdChain.isDirect = isDirect;
-    }
-
-    void initGetByIdSelfList(PolymorphicAccessStructureList* structureList, int listSize, bool didSelfPatching = false)
-    {
-        accessType = access_get_by_id_self_list;
-
-        u.getByIdSelfList.structureList = structureList;
-        u.getByIdSelfList.listSize = listSize;
-        u.getByIdSelfList.didSelfPatching = didSelfPatching;
+        accessType = access_get_by_id_list;
+        u.getByIdList.list = list;
     }
 
     // PutById*
@@ -172,13 +149,21 @@ struct StructureStubInfo {
     {
         deref();
         accessType = access_unset;
-        stubRoutine.clear();
-        watchpoints.clear();
+        stubRoutine = nullptr;
+        watchpoints = nullptr;
     }
 
     void deref();
 
-    bool visitWeakReferences();
+    // Check if the stub has weak references that are dead. If there are dead ones that imply
+    // that the stub should be entirely reset, this should return false. If there are dead ones
+    // that can be handled internally by the stub and don't require a full reset, then this
+    // should reset them and return true. If there are no dead weak references, return true.
+    // If this method returns true it means that it has left the stub in a state where all
+    // outgoing GC pointers are known to point to currently marked objects; this method is
+    // allowed to accomplish this by either clearing those pointers somehow or by proving that
+    // they have already been marked. It is not allowed to mark new objects.
+    bool visitWeakReferences(RepatchBuffer&);
 
     bool seenOnce()
     {
@@ -199,11 +184,12 @@ struct StructureStubInfo {
     int8_t accessType;
     bool seen : 1;
     bool resetByGC : 1;
+    bool tookSlowPath : 1;
 
     CodeOrigin codeOrigin;
 
     struct {
-        int8_t registersFlushed;
+        unsigned spillMode : 8;
         int8_t baseGPR;
 #if USE(JSVALUE32_64)
         int8_t valueTagGPR;
@@ -242,14 +228,8 @@ struct StructureStubInfo {
             bool isDirect : 1;
         } getByIdChain;
         struct {
-            PolymorphicAccessStructureList* structureList;
-            int listSize : 31;
-            bool didSelfPatching : 1;
-        } getByIdSelfList;
-        struct {
-            PolymorphicAccessStructureList* structureList;
-            int listSize;
-        } getByIdProtoList;
+            PolymorphicGetByIdList* list;
+        } getByIdList;
         struct {
             WriteBarrierBase<Structure> previousStructure;
             WriteBarrierBase<Structure> structure;

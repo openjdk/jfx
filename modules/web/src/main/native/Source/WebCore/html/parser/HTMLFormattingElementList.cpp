@@ -26,8 +26,6 @@
 #include "config.h"
 #include "HTMLFormattingElementList.h"
 
-#include "NotImplemented.h"
-
 #ifndef NDEBUG
 #include <stdio.h>
 #endif
@@ -52,11 +50,11 @@ Element* HTMLFormattingElementList::closestElementInScopeWithName(const AtomicSt
     for (unsigned i = 1; i <= m_entries.size(); ++i) {
         const Entry& entry = m_entries[m_entries.size() - i];
         if (entry.isMarker())
-            return 0;
+            return nullptr;
         if (entry.stackItem()->matchesHTMLTag(targetName))
-            return entry.element();
+            return &entry.element();
     }
-    return 0;
+    return nullptr;
 }
 
 bool HTMLFormattingElementList::contains(Element* element)
@@ -84,9 +82,9 @@ HTMLFormattingElementList::Bookmark HTMLFormattingElementList::bookmarkFor(Eleme
 void HTMLFormattingElementList::swapTo(Element* oldElement, PassRefPtr<HTMLStackItem> newItem, const Bookmark& bookmark)
 {
     ASSERT(contains(oldElement));
-    ASSERT(!contains(newItem->element()));
+    ASSERT(!contains(&newItem->element()));
     if (!bookmark.hasBeenMoved()) {
-        ASSERT(bookmark.mark()->element() == oldElement);
+        ASSERT(&bookmark.mark()->element() == oldElement);
         bookmark.mark()->replaceElement(newItem);
         return;
     }
@@ -145,7 +143,7 @@ void HTMLFormattingElementList::tryToEnsureNoahsArkConditionQuickly(HTMLStackIte
             break;
 
         // Quickly reject obviously non-matching candidates.
-        HTMLStackItem* candidate = entry.stackItem().get();
+        HTMLStackItem* candidate = entry.stackItem();
         if (newItem->localName() != candidate->localName() || newItem->namespaceURI() != candidate->namespaceURI())
             continue;
         if (candidate->attributes().size() != newItemAttributeCount)
@@ -183,7 +181,7 @@ void HTMLFormattingElementList::ensureNoahsArkCondition(HTMLStackItem* newItem)
             ASSERT(newItem->attributes().size() == candidate->attributes().size());
             ASSERT(newItem->localName() == candidate->localName() && newItem->namespaceURI() == candidate->namespaceURI());
 
-            Attribute* candidateAttribute = candidate->getAttributeItem(attribute.name());
+            const Attribute* candidateAttribute = candidate->findAttribute(attribute.name());
             if (candidateAttribute && candidateAttribute->value() == attribute.value())
                 remainingCandidates.append(candidate);
         }
@@ -199,10 +197,10 @@ void HTMLFormattingElementList::ensureNoahsArkCondition(HTMLStackItem* newItem)
     // however, that we wil spin the loop more than once because of how the
     // formatting element list gets permuted.
     for (size_t i = kNoahsArkCapacity - 1; i < candidates.size(); ++i)
-        remove(candidates[i]->element());
+        remove(&candidates[i]->element());
 }
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 
 void HTMLFormattingElementList::show()
 {
@@ -211,7 +209,7 @@ void HTMLFormattingElementList::show()
         if (entry.isMarker())
             fprintf(stderr, "marker\n");
         else
-            entry.element()->showNode();
+            entry.element().showNode();
     }
 }
 

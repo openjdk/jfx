@@ -37,7 +37,7 @@ class SVGViewElement final : public SVGElement,
                              public SVGFitToViewBox,
                              public SVGZoomAndPan {
 public:
-    static PassRefPtr<SVGViewElement> create(const QualifiedName&, Document&);
+    static Ref<SVGViewElement> create(const QualifiedName&, Document&);
 
     using SVGElement::ref;
     using SVGElement::deref;
@@ -50,13 +50,12 @@ private:
     SVGViewElement(const QualifiedName&, Document&);
 
     // FIXME: svgAttributeChanged missing.
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
     virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGViewElement)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
+        DECLARE_ANIMATED_BOOLEAN_OVERRIDE(ExternalResourcesRequired, externalResourcesRequired)
         DECLARE_ANIMATED_RECT(ViewBox, viewBox)
         DECLARE_ANIMATED_PRESERVEASPECTRATIO(PreserveAspectRatio, preserveAspectRatio)
     END_DECLARE_ANIMATED_PROPERTIES
@@ -64,8 +63,6 @@ private:
     SVGZoomAndPanType m_zoomAndPan;
     SVGStringList m_viewTarget;
 };
-
-NODE_TYPE_CASTS(SVGViewElement)
 
 } // namespace WebCore
 

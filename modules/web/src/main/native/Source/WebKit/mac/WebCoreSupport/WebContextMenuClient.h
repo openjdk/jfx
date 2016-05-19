@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,13 +26,27 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebCore/ContextMenuClient.h>
+#if ENABLE(CONTEXT_MENUS)
 
+#import "WebSharingServicePickerController.h"
+#import <WebCore/ContextMenuClient.h>
+#import <WebCore/IntRect.h>
+
+@class WebSharingServicePickerController;
 @class WebView;
 
-class WebContextMenuClient : public WebCore::ContextMenuClient {
+namespace WebCore {
+class Node;
+}
+
+class WebContextMenuClient : public WebCore::ContextMenuClient
+#if ENABLE(SERVICE_CONTROLS)
+    , public WebSharingServicePickerClient
+#endif
+{
 public:
     WebContextMenuClient(WebView *webView);
+    virtual ~WebContextMenuClient();
 
     virtual void contextMenuDestroyed() override;
 
@@ -45,11 +59,28 @@ public:
     virtual bool isSpeaking() override;
     virtual void speak(const WTF::String&) override;
     virtual void stopSpeaking() override;
+    virtual WebCore::ContextMenuItem shareMenuItem(const WebCore::HitTestResult&) override;
     virtual void searchWithSpotlight() override;
     virtual void showContextMenu() override;
 
-    WebView *webView() { return m_webView; }
+#if ENABLE(SERVICE_CONTROLS)
+    // WebSharingServicePickerClient
+    virtual void sharingServicePickerWillBeDestroyed(WebSharingServicePickerController &) override;
+    virtual WebCore::FloatRect screenRectForCurrentSharingServicePickerItem(WebSharingServicePickerController &) override;
+    virtual RetainPtr<NSImage> imageForCurrentSharingServicePickerItem(WebSharingServicePickerController &) override;
+#endif
 
 private:
-    WebView *m_webView;
+    NSMenu *contextMenuForEvent(NSEvent *, NSView *, bool& isServicesMenu);
+
+    bool clientFloatRectForNode(WebCore::Node&, WebCore::FloatRect&) const;
+
+#if ENABLE(SERVICE_CONTROLS)
+    RetainPtr<WebSharingServicePickerController> m_sharingServicePickerController;
+#else
+    WebView* m_webView;
+#endif
 };
+
+#endif // ENABLE(CONTEXT_MENUS)
+

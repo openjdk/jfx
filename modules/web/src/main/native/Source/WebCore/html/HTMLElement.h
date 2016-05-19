@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2009, 2015 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -40,19 +40,12 @@ enum TranslateAttributeMode {
 
 class HTMLElement : public StyledElement {
 public:
-    static PassRefPtr<HTMLElement> create(const QualifiedName& tagName, Document&);
+    static Ref<HTMLElement> create(const QualifiedName& tagName, Document&);
 
-    PassRefPtr<HTMLCollection> children();
-
-    virtual String title() const override final;
+    WEBCORE_EXPORT virtual String title() const override final;
 
     virtual short tabIndex() const override;
-    void setTabIndex(int);
 
-    String innerHTML() const;
-    String outerHTML() const;
-    void setInnerHTML(const String&, ExceptionCode&);
-    void setOuterHTML(const String&, ExceptionCode&);
     void setInnerText(const String&, ExceptionCode&);
     void setOuterText(const String&, ExceptionCode&);
 
@@ -65,6 +58,8 @@ public:
 
     String contentEditable() const;
     void setContentEditable(const String&, ExceptionCode&);
+
+    static Editability editabilityFromContentEditableAttr(const Node&);
 
     virtual bool draggable() const;
     void setDraggable(bool);
@@ -82,9 +77,12 @@ public:
     bool ieForbidsInsertHTML() const;
 
     virtual bool rendererIsNeeded(const RenderStyle&) override;
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
 
     HTMLFormElement* form() const { return virtualForm(); }
+
+    const AtomicString& dir() const;
+    void setDir(const AtomicString&);
 
     bool hasDirectionAuto() const;
     TextDirection directionalityIfhasDirAutoAttribute(bool& isAuto) const;
@@ -99,6 +97,10 @@ public:
     virtual bool isLabelable() const { return false; }
     virtual FormNamedItem* asFormNamedItem() { return 0; }
 
+    bool hasTagName(const HTMLQualifiedName& name) const { return hasLocalName(name.localName()); }
+
+    static const AtomicString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName);
+
 protected:
     HTMLElement(const QualifiedName& tagName, Document&, ConstructionType);
 
@@ -108,6 +110,7 @@ protected:
     void applyAlignmentAttributeToStyle(const AtomicString&, MutableStyleProperties&);
     void applyBorderAttributeToStyle(const AtomicString&, MutableStyleProperties&);
 
+    virtual bool matchesReadWritePseudoClass() const override;
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual bool isPresentationAttribute(const QualifiedName&) const override;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
@@ -116,7 +119,9 @@ protected:
     virtual void childrenChanged(const ChildChange&) override;
     void calculateAndAdjustDirectionality();
 
-    virtual bool isURLAttribute(const Attribute&) const override;
+    typedef HashMap<AtomicStringImpl*, AtomicString> EventHandlerNameMap;
+    template<size_t tableSize> static void populateEventHandlerNameMap(EventHandlerNameMap&, const QualifiedName* const (&table)[tableSize]);
+    static const AtomicString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap&);
 
 private:
     virtual String nodeName() const override final;
@@ -126,7 +131,7 @@ private:
     virtual HTMLFormElement* virtualForm() const;
 
     Node* insertAdjacent(const String& where, Node* newChild, ExceptionCode&);
-    PassRefPtr<DocumentFragment> textToFragment(const String&, ExceptionCode&);
+    Ref<DocumentFragment> textToFragment(const String&, ExceptionCode&);
 
     void dirAttributeChanged(const AtomicString&);
     void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
@@ -134,6 +139,9 @@ private:
     TextDirection directionality(Node** strongDirectionalityTextNode= 0) const;
 
     TranslateAttributeMode translateAttributeMode() const;
+
+    static void populateEventHandlerNameMap(EventHandlerNameMap&, const QualifiedName* const table[], size_t tableSize);
+    static EventHandlerNameMap createEventHandlerNameMap();
 };
 
 inline HTMLElement::HTMLElement(const QualifiedName& tagName, Document& document, ConstructionType type = CreateHTMLElement)
@@ -142,16 +150,21 @@ inline HTMLElement::HTMLElement(const QualifiedName& tagName, Document& document
     ASSERT(tagName.localName().impl());
 }
 
-template <typename Type> bool isElementOfType(const HTMLElement&);
+template<size_t tableSize> inline void HTMLElement::populateEventHandlerNameMap(EventHandlerNameMap& map, const QualifiedName* const (&table)[tableSize])
+{
+    populateEventHandlerNameMap(map, table, tableSize);
+}
 
-void isHTMLElement(const HTMLElement&); // Catch unnecessary runtime check of type known at compile time.
-inline bool isHTMLElement(const Node& node) { return node.isHTMLElement(); }
-template <> inline bool isElementOfType<const HTMLElement>(const HTMLElement&) { return true; }
-template <> inline bool isElementOfType<const HTMLElement>(const Element& element) { return element.isHTMLElement(); }
-
-NODE_TYPE_CASTS(HTMLElement)
+inline bool Node::hasTagName(const HTMLQualifiedName& name) const
+{
+    return is<HTMLElement>(*this) && downcast<HTMLElement>(*this).hasTagName(name);
+}
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLElement)
+    static bool isType(const WebCore::Node& node) { return node.isHTMLElement(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #include "HTMLElementTypeHelpers.h"
 

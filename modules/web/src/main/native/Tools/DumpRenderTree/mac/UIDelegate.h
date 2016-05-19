@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,14 +32,16 @@
 #import <WebKit/WAKView.h>
 #endif
 
-@interface UIDelegate : NSObject {
+#import <WebKit/WebUIDelegate.h>
 
+@interface UIDelegate : NSObject <WebUIDelegate> {
 @private
-    NSRect m_frame;
+    NSPoint windowOrigin;
     NSMutableSet *m_pendingGeolocationPermissionListeners;
     NSTimer *m_timer;
 }
 
+- (void)resetWindowOrigin;
 - (void)didSetMockGeolocationPermission;
 - (int)numberOfPendingGeolocationPermissionRequests;
 

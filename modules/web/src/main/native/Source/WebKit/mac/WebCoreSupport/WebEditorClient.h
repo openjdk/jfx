@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -33,6 +33,10 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/Vector.h>
 #import <wtf/text/StringView.h>
+
+#if PLATFORM(IOS)
+#import <WebCore/WAKAppKitStubs.h>
+#endif
 
 @class WebView;
 @class WebEditorUndoTarget;
@@ -65,6 +69,7 @@ private:
     virtual bool shouldChangeSelectedRange(WebCore::Range* fromRange, WebCore::Range* toRange, WebCore::EAffinity, bool stillSelecting) override;
 
     virtual bool shouldApplyStyle(WebCore::StyleProperties*, WebCore::Range*) override;
+    virtual void didApplyStyle() override;
 
     virtual bool shouldMoveRangeAfterDelete(WebCore::Range*, WebCore::Range* rangeToBeReplaced) override;
 
@@ -102,14 +107,12 @@ private:
     virtual void toggleAutomaticSpellingCorrection() override;
 #endif
 
-#if ENABLE(DELETION_UI)
-    virtual bool shouldShowDeleteInterface(WebCore::HTMLElement*) override;
-#endif
-
     virtual TextCheckerClient* textChecker() override { return this; }
 
     virtual void respondToChangedContents() override;
     virtual void respondToChangedSelection(WebCore::Frame*) override;
+    virtual void didChangeSelectionAndUpdateLayout() override { }
+    virtual void discardedComposition(WebCore::Frame*) override;
 
     virtual void registerUndoStep(PassRefPtr<WebCore::UndoStep>) override;
     virtual void registerRedoStep(PassRefPtr<WebCore::UndoStep>) override;
@@ -132,6 +135,7 @@ private:
     virtual bool doTextFieldCommandFromEvent(WebCore::Element*, WebCore::KeyboardEvent*) override;
     virtual void textWillBeDeletedInTextField(WebCore::Element*) override;
     virtual void textDidChangeInTextArea(WebCore::Element*) override;
+    virtual void overflowScrollPositionChanged() override { };
 
 #if PLATFORM(IOS)
     virtual void startDelayingAndCoalescingContentChangeNotifications() override;
@@ -174,6 +178,32 @@ private:
     bool m_hasDelayedContentChangeNotification;
 #endif
 };
+
+#if PLATFORM(COCOA)
+inline NSSelectionAffinity kit(WebCore::EAffinity affinity)
+{
+    switch (affinity) {
+        case WebCore::EAffinity::UPSTREAM:
+            return NSSelectionAffinityUpstream;
+        case WebCore::EAffinity::DOWNSTREAM:
+            return NSSelectionAffinityDownstream;
+    }
+    ASSERT_NOT_REACHED();
+    return NSSelectionAffinityUpstream;
+}
+
+inline WebCore::EAffinity core(NSSelectionAffinity affinity)
+{
+    switch (affinity) {
+    case NSSelectionAffinityUpstream:
+        return WebCore::EAffinity::UPSTREAM;
+    case NSSelectionAffinityDownstream:
+        return WebCore::EAffinity::DOWNSTREAM;
+    }
+    ASSERT_NOT_REACHED();
+    return WebCore::EAffinity::UPSTREAM;
+}
+#endif
 
 #if PLATFORM(IOS)
 

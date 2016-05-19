@@ -24,9 +24,12 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "PlatformUtilities.h"
 #include "PlatformWebView.h"
-#include <WebKit2/WKContextPrivate.h>
+#include <WebKit/WKContextPrivate.h>
 
 namespace TestWebKitAPI {
 
@@ -71,3 +74,5 @@ TEST(WebKit2, CanHandleRequest)
 }
 
 } // namespace TestWebKitAPI
+
+#endif

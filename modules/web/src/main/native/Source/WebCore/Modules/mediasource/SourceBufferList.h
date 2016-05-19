@@ -45,9 +45,9 @@ class SourceBuffer;
 
 class SourceBufferList final : public RefCounted<SourceBufferList>, public ScriptWrappable, public EventTargetWithInlineData {
 public:
-    static PassRefPtr<SourceBufferList> create(ScriptExecutionContext* context)
+    static Ref<SourceBufferList> create(ScriptExecutionContext* context)
     {
-        return adoptRef(new SourceBufferList(context));
+        return adoptRef(*new SourceBufferList(context));
     }
     virtual ~SourceBufferList();
 
@@ -58,6 +58,7 @@ public:
     void remove(SourceBuffer*);
     bool contains(SourceBuffer* buffer) { return m_list.find(buffer) != notFound; }
     void clear();
+    void swap(Vector<RefPtr<SourceBuffer>>&);
 
     Vector<RefPtr<SourceBuffer>>::iterator begin() { return m_list.begin(); }
     Vector<RefPtr<SourceBuffer>>::iterator end() { return m_list.end(); }

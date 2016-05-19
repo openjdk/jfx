@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -25,12 +25,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#if !defined(ENABLE_SQL_DATABASE)
-#define ENABLE_SQL_DATABASE 1
-#endif
-
-#if ENABLE_SQL_DATABASE
 
 extern NSString *WebDatabaseDirectoryDefaultsKey;
 
@@ -49,7 +43,7 @@ extern NSString *WebDatabaseDidModifyDatabaseNotification;
 extern NSString *WebDatabaseIdentifierKey;
 
 #if TARGET_OS_IPHONE
-#import <WebKit/WebUIKitSupport.h>
+#import <WebKitLegacy/WebUIKitSupport.h>
 
 // Posted when origins have changed.
 extern CFStringRef WebDatabaseOriginsDidChangeNotification;
@@ -78,5 +72,3 @@ extern CFStringRef WebDatabaseOriginsDidChangeNotification;
 + (void)scheduleEmptyDatabaseRemoval;
 #endif
 @end
-
-#endif // ENABLE_SQL_DATABASE

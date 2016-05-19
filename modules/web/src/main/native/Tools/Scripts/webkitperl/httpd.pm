@@ -1,4 +1,4 @@
-# Copyright (C) 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2015 Apple Inc. All rights reserved
 # Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
 # Copyright (C) 2010 Andras Becsi (abecsi@inf.u-szeged.hu), University of Szeged
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
@@ -12,7 +12,7 @@
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
 #     documentation and/or other materials provided with the distribution.
-# 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+# 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
 #     from this software without specific prior written permission.
 #
@@ -36,7 +36,7 @@ use File::Copy;
 use File::Path;
 use File::Spec;
 use File::Spec::Functions;
-use Fcntl ':flock';
+use File::Temp qw(tempdir);
 use IPC::Open2;
 
 use webkitdirs;
@@ -52,17 +52,17 @@ BEGIN {
                      &getDefaultConfigForTestDirectory
                      &openHTTPD
                      &closeHTTPD
-                     &setShouldWaitForUserInterrupt
-                     &waitForHTTPDLock
-                     &getWaitTime);
+                     &setShouldWaitForUserInterrupt);
    %EXPORT_TAGS = ( );
    @EXPORT_OK   = ();
 }
 
 my $tmpDir = "/tmp";
-my $httpdLockPrefix = "WebKitHttpd.lock.";
-my $myLockFile;
-my $exclusiveLockFile = File::Spec->catfile($tmpDir, "WebKit.lock");
+if (isAnyWindows()) {
+   $tmpDir = tempdir(CLEANUP => 0);
+   $tmpDir = `cygpath -w $tmpDir`;
+   chomp($tmpDir);
+}
 my $httpdPidDir = File::Spec->catfile($tmpDir, "WebKit");
 my $httpdPidFile = File::Spec->catfile($httpdPidDir, "httpd.pid");
 my $httpdPid;
@@ -78,6 +78,8 @@ sub getHTTPDPath
     my $httpdPath;
     if (isDebianBased()) {
         $httpdPath = "/usr/sbin/apache2";
+    } elsif (isAnyWindows()) {
+        $httpdPath = "httpd";
     } else {
         $httpdPath = "/usr/sbin/httpd";
     }
@@ -103,11 +105,16 @@ sub getDefaultConfigForTestDirectory
     my ($testDirectory) = @_;
     die "No test directory has been specified." unless ($testDirectory);
 
+    if (isAnyWindows()) {
+        $testDirectory = `cygpath -w \"$testDirectory\"`;
+        chomp($testDirectory);
+    }
+
     my $httpdConfig = getHTTPDConfigPathForTestDirectory($testDirectory);
-    my $documentRoot = "$testDirectory/http/tests";
-    my $jsTestResourcesDirectory = $testDirectory . "/resources";
-    my $mediaResourcesDirectory = $testDirectory . "/media";
-    my $typesConfig = "$testDirectory/http/conf/mime.types";
+    my $documentRoot = File::Spec->catfile($testDirectory, "http", "tests");
+    my $jsTestResourcesDirectory = File::Spec->catfile($testDirectory, "resources");
+    my $mediaResourcesDirectory = File::Spec->catfile($testDirectory, "media");
+    my $typesConfig = File::Spec->catfile($testDirectory, "http", "conf", "mime.types");
     my $httpdLockFile = File::Spec->catfile($httpdPidDir, "httpd.lock");
     my $httpdScoreBoardFile = File::Spec->catfile($httpdPidDir, "httpd.scoreboard");
 
@@ -119,19 +126,20 @@ sub getDefaultConfigForTestDirectory
         "-c", "Alias /media-resources \"$mediaResourcesDirectory\"",
         "-c", "TypesConfig \"$typesConfig\"",
         # Apache wouldn't run CGIs with permissions==700 otherwise
-        "-c", "User \"#$<\"",
         "-c", "PidFile \"$httpdPidFile\"",
         "-c", "ScoreBoardFile \"$httpdScoreBoardFile\"",
     );
+
+    if (!isAnyWindows()) {
+        push(@httpdArgs, "-c", "User \"#$<\"");
+    }
 
     if (getApacheVersion() eq "2.2") {
         push(@httpdArgs, "-c", "LockFile \"$httpdLockFile\"");
     }
 
-    # FIXME: Enable this on Windows once <rdar://problem/5345985> is fixed
-    # The version of Apache we use with Cygwin does not support SSL
-    my $sslCertificate = "$testDirectory/http/conf/webkit-httpd.pem";
-    push(@httpdArgs, "-c", "SSLCertificateFile \"$sslCertificate\"") unless isCygwin();
+    my $sslCertificate = File::Spec->catfile($testDirectory, "http", "conf", "webkit-httpd.pem");
+    push(@httpdArgs, "-c", "SSLCertificateFile \"$sslCertificate\"");
 
     return @httpdArgs;
 
@@ -148,20 +156,14 @@ sub getHTTPDConfigPathForTestDirectory
     my $apacheVersion = getApacheVersion();
 
     if (isCygwin()) {
-        my $libPHP4DllPath = "/usr/lib/apache/libphp4.dll";
-        # FIXME: run-webkit-tests should not modify the user's system, especially not in this method!
-        unless (-x $libPHP4DllPath) {
-            copy("$httpdConfDirectory/libphp4.dll", $libPHP4DllPath);
-            chmod(0755, $libPHP4DllPath);
-        }
-        $httpdConfig = "cygwin-httpd.conf";  # This is an apache 1.3 config.
+        $httpdConfig = "apache$apacheVersion-httpd-win.conf";
     } elsif (isDebianBased()) {
         $httpdConfig = "debian-httpd-$apacheVersion.conf";
     } elsif (isFedoraBased()) {
         $httpdConfig = "fedora-httpd-$apacheVersion.conf";
     } else {
         # All other ports use apache2, so just use our default apache2 config.
-        $httpdConfig = "apache2-httpd.conf";
+        $httpdConfig = "apache$apacheVersion-httpd.conf";
     }
     return "$httpdConfDirectory/$httpdConfig";
 }
@@ -264,84 +266,4 @@ sub handleInterrupt
 sub cleanUp
 {
     rmdir $httpdPidDir;
-    unlink $exclusiveLockFile;
-    unlink $myLockFile if $myLockFile;
-}
-
-sub extractLockNumber
-{
-    my ($lockFile) = @_;
-    return -1 unless $lockFile;
-    return substr($lockFile, length($httpdLockPrefix));
-}
-
-sub getLockFiles
-{
-    opendir(TMPDIR, $tmpDir) or die "Could not open " . $tmpDir . ".";
-    my @lockFiles = grep {m/^$httpdLockPrefix\d+$/} readdir(TMPDIR);
-    @lockFiles = sort { extractLockNumber($a) <=> extractLockNumber($b) } @lockFiles;
-    closedir(TMPDIR);
-    return @lockFiles;
-}
-
-sub getNextAvailableLockNumber
-{
-    my @lockFiles = getLockFiles();
-    return 0 unless @lockFiles;
-    return extractLockNumber($lockFiles[-1]) + 1;
-}
-
-sub getLockNumberForCurrentRunning
-{
-    my @lockFiles = getLockFiles();
-    return 0 unless @lockFiles;
-    return extractLockNumber($lockFiles[0]);
-}
-
-sub waitForHTTPDLock
-{
-    $waitBeginTime = time;
-    scheduleHttpTesting();
-    # If we are the only one waiting for Apache just run the tests without any further checking
-    if (scalar getLockFiles() > 1) {
-        my $currentLockFile = File::Spec->catfile($tmpDir, "$httpdLockPrefix" . getLockNumberForCurrentRunning());
-        my $currentLockPid = <SCHEDULER_LOCK> if (-f $currentLockFile && open(SCHEDULER_LOCK, "<$currentLockFile"));
-        # Wait until we are allowed to run the http tests
-        while ($currentLockPid && $currentLockPid != $$) {
-            $currentLockFile = File::Spec->catfile($tmpDir, "$httpdLockPrefix" . getLockNumberForCurrentRunning());
-            if ($currentLockFile eq $myLockFile) {
-                $currentLockPid = <SCHEDULER_LOCK> if open(SCHEDULER_LOCK, "<$currentLockFile");
-                if ($currentLockPid != $$) {
-                    print STDERR "\nPID mismatch.\n";
-                    last;
-                }
-            } else {
-                sleep 1;
-            }
-        }
-    }
-    $waitEndTime = time;
-}
-
-sub scheduleHttpTesting
-{
-    # We need an exclusive lock file to avoid deadlocks and starvation and ensure that the scheduler lock numbers are sequential.
-    # The scheduler locks are used to schedule the running test sessions in first come first served order.
-    while (!(open(SEQUENTIAL_GUARD_LOCK, ">$exclusiveLockFile") && flock(SEQUENTIAL_GUARD_LOCK, LOCK_EX|LOCK_NB))) {}
-    $myLockFile = File::Spec->catfile($tmpDir, "$httpdLockPrefix" . getNextAvailableLockNumber());
-    open(SCHEDULER_LOCK, ">$myLockFile");
-    print SCHEDULER_LOCK "$$";
-    print SEQUENTIAL_GUARD_LOCK "$$";
-    close(SCHEDULER_LOCK);
-    close(SEQUENTIAL_GUARD_LOCK);
-    unlink $exclusiveLockFile;
-}
-
-sub getWaitTime
-{
-    my $waitTime = 0;
-    if ($waitBeginTime && $waitEndTime) {
-        $waitTime = $waitEndTime - $waitBeginTime;
-    }
-    return $waitTime;
 }

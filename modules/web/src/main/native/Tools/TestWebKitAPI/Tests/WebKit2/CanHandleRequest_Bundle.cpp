@@ -24,10 +24,13 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "InjectedBundleTest.h"
 
 #include "PlatformUtilities.h"
-#include <WebKit2/WKBundlePage.h>
+#include <WebKit/WKBundlePage.h>
 
 namespace TestWebKitAPI {
 
@@ -65,3 +68,5 @@ void CanHandleRequestTest::didReceiveMessage(WKBundleRef bundle, WKStringRef mes
 }
 
 } // namespace TestWebKitAPI
+
+#endif

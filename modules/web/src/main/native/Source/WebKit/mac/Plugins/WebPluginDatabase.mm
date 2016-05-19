@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -42,6 +42,7 @@
 #import "WebPluginPackage.h"
 #import "WebViewPrivate.h"
 #import "WebViewInternal.h"
+#import <WebCore/NSURLFileTypeMappingsSPI.h>
 #import <WebKitSystemInterface.h>
 #import <wtf/Assertions.h>
 
@@ -175,7 +176,7 @@ struct PluginPackageCandidates {
         // If no plug-in was found from the extension, attempt to map from the extension to a MIME type
         // and find the a plug-in from the MIME type. This is done in case the plug-in has not fully specified
         // an extension <-> MIME type mapping.
-        NSString *MIMEType = WKGetMIMETypeForExtension(extension);
+        NSString *MIMEType = [[NSURLFileTypeMappings sharedMappings] MIMETypeForExtension:extension];
         if ([MIMEType length] > 0)
             plugin = [self pluginForMIMEType:MIMEType];
     }
@@ -347,12 +348,7 @@ static NSArray *additionalWebPlugInPaths;
 
     NSView <WebDocumentView> *documentView = [[webFrame frameView] documentView];
     if ([documentView isKindOfClass:[WebHTMLView class]]) {
-        NSArray *subviews = [documentView subviews];
-        unsigned int subviewCount = [subviews count];
-        unsigned int subviewIndex;
-
-        for (subviewIndex = 0; subviewIndex < subviewCount; subviewIndex++) {
-            NSView *subview = [subviews objectAtIndex:subviewIndex];
+        for (NSView *subview in [documentView subviews]) {
 #if ENABLE(NETSCAPE_PLUGIN_API)
             if ([subview isKindOfClass:[WebBaseNetscapePluginView class]] || [WebPluginController isPlugInView:subview])
 #else

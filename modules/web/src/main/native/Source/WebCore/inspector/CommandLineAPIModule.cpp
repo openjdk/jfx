@@ -26,9 +26,8 @@
 #include "config.h"
 #include "CommandLineAPIModule.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "CommandLineAPIModuleSource.h"
+#include "DOMWrapperWorld.h"
 #include "JSCommandLineAPIHost.h"
 #include "WebInjectedScriptManager.h"
 #include <inspector/InjectedScript.h>
@@ -51,7 +50,7 @@ void CommandLineAPIModule::injectIfNeeded(InjectedScriptManager* injectedScriptM
 
 String CommandLineAPIModule::source() const
 {
-    return String(reinterpret_cast<const char*>(CommandLineAPIModuleSource_js), sizeof(CommandLineAPIModuleSource_js));
+    return StringImpl::createWithoutCopying(CommandLineAPIModuleSource_js, sizeof(CommandLineAPIModuleSource_js));
 }
 
 JSC::JSValue CommandLineAPIModule::host(InjectedScriptManager* injectedScriptManager, JSC::ExecState* exec) const
@@ -64,5 +63,3 @@ JSC::JSValue CommandLineAPIModule::host(InjectedScriptManager* injectedScriptMan
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

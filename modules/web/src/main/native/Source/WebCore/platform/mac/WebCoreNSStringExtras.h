@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2007 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2005, 2007 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -39,14 +39,14 @@ typedef struct NSString NSString;
 extern "C" {
 #endif
 
-BOOL stringIsCaseInsensitiveEqualToString(NSString *first, NSString *second);
-BOOL hasCaseInsensitiveSuffix(NSString *, NSString *suffix);
-BOOL hasCaseInsensitivePrefix(NSString *, NSString *prefix);
-BOOL hasCaseInsensitiveSubstring(NSString *, NSString *substring);
-NSString *filenameByFixingIllegalCharacters(NSString *);
-#if !PLATFORM(IOS)
-CFStringEncoding stringEncodingForResource(Handle resource);
-#endif
+WEBCORE_EXPORT BOOL stringIsCaseInsensitiveEqualToString(NSString *first, NSString *second);
+WEBCORE_EXPORT BOOL hasCaseInsensitiveSuffix(NSString *, NSString *suffix);
+WEBCORE_EXPORT BOOL hasCaseInsensitivePrefix(NSString *, NSString *prefix);
+WEBCORE_EXPORT BOOL hasCaseInsensitiveSubstring(NSString *, NSString *substring);
+WEBCORE_EXPORT NSString *filenameByFixingIllegalCharacters(NSString *);
+
+WEBCORE_EXPORT NSString *preferredBundleLocalizationName();
+NSString *canonicalLocaleName(NSString *);
 
 #ifdef __cplusplus
 }

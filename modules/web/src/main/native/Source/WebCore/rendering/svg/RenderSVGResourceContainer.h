@@ -37,7 +37,7 @@ public:
 
     virtual bool isSVGResourceContainer() const override final { return true; }
 
-    static bool shouldTransformOnTextPainting(RenderObject*, AffineTransform&);
+    static bool shouldTransformOnTextPainting(const RenderElement&, AffineTransform&);
     static AffineTransform transformOnNonScalingStroke(RenderObject*, const AffineTransform& resourceTransform);
 
     void idChanged();
@@ -45,7 +45,7 @@ public:
     void removeClientRenderLayer(RenderLayer*);
 
 protected:
-    RenderSVGResourceContainer(SVGElement&, PassRef<RenderStyle>);
+    RenderSVGResourceContainer(SVGElement&, Ref<RenderStyle>&&);
 
     enum InvalidationMode {
         LayoutAndBoundariesInvalidation,
@@ -55,6 +55,8 @@ protected:
     };
 
     // Used from the invalidateClient/invalidateClients methods from classes, inheriting from us.
+    virtual bool selfNeedsClientInvalidation() const { return everHadLayout() && selfNeedsLayout(); }
+
     void markAllClientsForInvalidation(InvalidationMode);
     void markAllClientLayersForInvalidation();
     void markClientForInvalidation(RenderObject&, InvalidationMode);
@@ -75,28 +77,31 @@ private:
     HashSet<RenderLayer*> m_clientLayers;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSVGResourceContainer, isSVGResourceContainer())
-
 inline RenderSVGResourceContainer* getRenderSVGResourceContainerById(Document& document, const AtomicString& id)
 {
     if (id.isEmpty())
-        return 0;
+        return nullptr;
 
-    if (RenderSVGResourceContainer* renderResource = document.accessSVGExtensions()->resourceById(id))
+    if (RenderSVGResourceContainer* renderResource = document.accessSVGExtensions().resourceById(id))
         return renderResource;
 
-    return 0;
+    return nullptr;
 }
 
 template<typename Renderer>
 Renderer* getRenderSVGResourceById(Document& document, const AtomicString& id)
 {
-    if (RenderSVGResourceContainer* container = getRenderSVGResourceContainerById(document, id))
-        return container->cast<Renderer>();
+    // Using the RenderSVGResource type here avoids ambiguous casts for types that
+    // descend from both RenderObject and RenderSVGResourceContainer.
+    RenderSVGResource* container = getRenderSVGResourceContainerById(document, id);
+    if (is<Renderer>(container))
+        return downcast<Renderer>(container);
 
-    return 0;
+    return nullptr;
 }
 
-}
+} // namespace WebCore
 
-#endif
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGResourceContainer, isSVGResourceContainer())
+
+#endif // RenderSVGResourceContainer_h

@@ -33,60 +33,113 @@
 #if ENABLE(CSS_SHAPES)
 
 #include "LayoutSize.h"
-#include "ShapeInfo.h"
+#include "Shape.h"
+#include <wtf/HashMap.h>
 
 namespace WebCore {
 
 class RenderBlockFlow;
 class RenderBox;
+class StyleImage;
 class FloatingObject;
 
-class ShapeOutsideInfo final : public ShapeInfo<RenderBox>, public MappedInfo<RenderBox, ShapeOutsideInfo> {
+class ShapeOutsideDeltas final {
+public:
+    ShapeOutsideDeltas()
+        : m_lineOverlapsShape(false)
+        , m_isValid(false)
+    {
+    }
+
+    ShapeOutsideDeltas(LayoutUnit leftMarginBoxDelta, LayoutUnit rightMarginBoxDelta, bool lineOverlapsShape, LayoutUnit borderBoxLineTop, LayoutUnit lineHeight)
+        : m_leftMarginBoxDelta(leftMarginBoxDelta)
+        , m_rightMarginBoxDelta(rightMarginBoxDelta)
+        , m_borderBoxLineTop(borderBoxLineTop)
+        , m_lineHeight(lineHeight)
+        , m_lineOverlapsShape(lineOverlapsShape)
+        , m_isValid(true)
+    {
+    }
+
+    bool isForLine(LayoutUnit borderBoxLineTop, LayoutUnit lineHeight)
+    {
+        return m_isValid && m_borderBoxLineTop == borderBoxLineTop && m_lineHeight == lineHeight;
+    }
+
+    bool isValid() { return m_isValid; }
+    LayoutUnit leftMarginBoxDelta() { ASSERT(m_isValid); return m_leftMarginBoxDelta; }
+    LayoutUnit rightMarginBoxDelta() { ASSERT(m_isValid); return m_rightMarginBoxDelta; }
+    bool lineOverlapsShape() { ASSERT(m_isValid); return m_lineOverlapsShape; }
+
+private:
+    LayoutUnit m_leftMarginBoxDelta;
+    LayoutUnit m_rightMarginBoxDelta;
+    LayoutUnit m_borderBoxLineTop;
+    LayoutUnit m_lineHeight;
+    unsigned m_lineOverlapsShape : 1;
+    unsigned m_isValid : 1;
+};
+
+class ShapeOutsideInfo final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ShapeOutsideInfo(const RenderBox& renderer)
-        : ShapeInfo<RenderBox>(renderer)
-        , m_lineOverlapsShape(false)
+        : m_renderer(renderer)
     {
     }
 
     static bool isEnabledFor(const RenderBox&);
 
-    LayoutUnit leftMarginBoxDelta() const { return m_leftMarginBoxDelta; }
-    LayoutUnit rightMarginBoxDelta() const { return m_rightMarginBoxDelta; }
-    bool lineOverlapsShape() const { return m_lineOverlapsShape; }
+    ShapeOutsideDeltas computeDeltasForContainingBlockLine(const RenderBlockFlow&, const FloatingObject&, LayoutUnit lineTop, LayoutUnit lineHeight);
 
-    void updateDeltasForContainingBlockLine(const RenderBlockFlow&, const FloatingObject&, LayoutUnit lineTop, LayoutUnit lineHeight);
+    void setReferenceBoxLogicalSize(LayoutSize);
 
-    virtual bool lineOverlapsShapeBounds() const override
+    LayoutUnit shapeLogicalTop() const { return computedShape().shapeMarginLogicalBoundingBox().y() + logicalTopOffset(); }
+    LayoutUnit shapeLogicalBottom() const { return computedShape().shapeMarginLogicalBoundingBox().maxY() + logicalTopOffset(); }
+    LayoutUnit shapeLogicalLeft() const { return computedShape().shapeMarginLogicalBoundingBox().x() + logicalLeftOffset(); }
+    LayoutUnit shapeLogicalRight() const { return computedShape().shapeMarginLogicalBoundingBox().maxX() + logicalLeftOffset(); }
+    LayoutUnit shapeLogicalWidth() const { return computedShape().shapeMarginLogicalBoundingBox().width(); }
+    LayoutUnit shapeLogicalHeight() const { return computedShape().shapeMarginLogicalBoundingBox().height(); }
+
+    void markShapeAsDirty() { m_shape = nullptr; }
+    bool isShapeDirty() { return !m_shape; }
+
+    LayoutRect computedShapePhysicalBoundingBox() const;
+    FloatPoint shapeToRendererPoint(const FloatPoint&) const;
+    FloatSize shapeToRendererSize(const FloatSize&) const;
+
+    const Shape& computedShape() const;
+
+    static ShapeOutsideInfo& ensureInfo(const RenderBox& key)
     {
-        return computedShape().lineOverlapsShapeMarginBounds(m_referenceBoxLineTop, m_lineHeight);
+        InfoMap& infoMap = ShapeOutsideInfo::infoMap();
+        if (ShapeOutsideInfo* info = infoMap.get(&key))
+            return *info;
+        auto result = infoMap.add(&key, std::make_unique<ShapeOutsideInfo>(key));
+        return *result.iterator->value;
     }
-
-protected:
-    virtual LayoutBox referenceBox() const override
-    {
-        if (shapeValue()->layoutBox() == BoxMissing) {
-            if (shapeValue()->type() == ShapeValue::Image)
-                return ContentBox;
-            return MarginBox;
-        }
-        return shapeValue()->layoutBox();
-    }
+    static void removeInfo(const RenderBox& key) { infoMap().remove(&key); }
+    static ShapeOutsideInfo* info(const RenderBox& key) { return infoMap().get(&key); }
 
 private:
-    virtual LayoutRect computedShapeLogicalBoundingBox() const override { return computedShape().shapeMarginLogicalBoundingBox(); }
-    virtual ShapeValue* shapeValue() const override;
-    virtual void getIntervals(LayoutUnit lineTop, LayoutUnit lineHeight, SegmentList& segments) const override
+    std::unique_ptr<Shape> createShapeForImage(StyleImage*, float shapeImageThreshold, WritingMode, float margin) const;
+
+    LayoutUnit logicalTopOffset() const;
+    LayoutUnit logicalLeftOffset() const;
+
+    typedef HashMap<const RenderBox*, std::unique_ptr<ShapeOutsideInfo>> InfoMap;
+    static InfoMap& infoMap()
     {
-        return computedShape().getExcludedIntervals(lineTop, lineHeight, segments);
+        DEPRECATED_DEFINE_STATIC_LOCAL(InfoMap, staticInfoMap, ());
+        return staticInfoMap;
     }
 
-    virtual WritingMode writingMode() const;
+    const RenderBox& m_renderer;
 
-    LayoutUnit m_leftMarginBoxDelta;
-    LayoutUnit m_rightMarginBoxDelta;
-    LayoutUnit m_borderBoxLineTop;
-    bool m_lineOverlapsShape;
+    mutable std::unique_ptr<Shape> m_shape;
+    LayoutSize m_referenceBoxLogicalSize;
+
+    ShapeOutsideDeltas m_shapeOutsideDeltas;
 };
 
 }

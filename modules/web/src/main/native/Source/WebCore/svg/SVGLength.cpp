@@ -29,9 +29,9 @@
 #include "FloatConversion.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
-
 #include <wtf/MathExtras.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/text/StringView.h>
 
 namespace WebCore {
 
@@ -54,7 +54,7 @@ static inline SVGLengthType extractType(unsigned int unit)
     return static_cast<SVGLengthType>(type);
 }
 
-static inline String lengthTypeToString(SVGLengthType type)
+static inline const char* lengthTypeToString(SVGLengthType type)
 {
     switch (type) {
     case LengthTypeUnknown:
@@ -81,7 +81,7 @@ static inline String lengthTypeToString(SVGLengthType type)
     }
 
     ASSERT_NOT_REACHED();
-    return String();
+    return "";
 }
 
 inline SVGLengthType stringToLengthType(const UChar*& ptr, const UChar* end)
@@ -224,7 +224,8 @@ void SVGLength::setValueAsString(const String& string, ExceptionCode& ec)
         return;
 
     float convertedNumber = 0;
-    const UChar* ptr = string.deprecatedCharacters();
+    auto upconvertedCharacters = StringView(string).upconvertedCharacters();
+    const UChar* ptr = upconvertedCharacters;
     const UChar* end = ptr + string.length();
 
     if (!parseNumber(ptr, end, convertedNumber, false)) {
@@ -280,12 +281,10 @@ void SVGLength::convertToSpecifiedUnits(unsigned short type, const SVGLengthCont
     m_unit = originalUnitAndType;
 }
 
-SVGLength SVGLength::fromCSSPrimitiveValue(CSSPrimitiveValue* value)
+SVGLength SVGLength::fromCSSPrimitiveValue(CSSPrimitiveValue& value)
 {
-    ASSERT(value);
-
     SVGLengthType svgType;
-    switch (value->primitiveType()) {
+    switch (value.primitiveType()) {
     case CSSPrimitiveValue::CSS_NUMBER:
         svgType = LengthTypeNumber;
         break;
@@ -327,14 +326,14 @@ SVGLength SVGLength::fromCSSPrimitiveValue(CSSPrimitiveValue* value)
 
     ExceptionCode ec = 0;
     SVGLength length;
-    length.newValueSpecifiedUnits(svgType, value->getFloatValue(), ec);
+    length.newValueSpecifiedUnits(svgType, value.getFloatValue(), ec);
     if (ec)
         return SVGLength();
 
     return length;
 }
 
-PassRefPtr<CSSPrimitiveValue> SVGLength::toCSSPrimitiveValue(const SVGLength& length)
+Ref<CSSPrimitiveValue> SVGLength::toCSSPrimitiveValue(const SVGLength& length)
 {
     CSSPrimitiveValue::UnitTypes cssType = CSSPrimitiveValue::CSS_UNKNOWN;
     switch (length.unitType()) {
@@ -378,34 +377,34 @@ PassRefPtr<CSSPrimitiveValue> SVGLength::toCSSPrimitiveValue(const SVGLength& le
 SVGLengthMode SVGLength::lengthModeForAnimatedLengthAttribute(const QualifiedName& attrName)
 {
     typedef HashMap<QualifiedName, SVGLengthMode> LengthModeForLengthAttributeMap;
-    DEFINE_STATIC_LOCAL(LengthModeForLengthAttributeMap, s_lengthModeMap, ());
+    static NeverDestroyed<LengthModeForLengthAttributeMap> s_lengthModeMap;
 
-    if (s_lengthModeMap.isEmpty()) {
-        s_lengthModeMap.set(SVGNames::xAttr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::yAttr, LengthModeHeight);
-        s_lengthModeMap.set(SVGNames::cxAttr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::cyAttr, LengthModeHeight);
-        s_lengthModeMap.set(SVGNames::dxAttr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::dyAttr, LengthModeHeight);
-        s_lengthModeMap.set(SVGNames::fxAttr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::fyAttr, LengthModeHeight);
-        s_lengthModeMap.set(SVGNames::rAttr, LengthModeOther);
-        s_lengthModeMap.set(SVGNames::widthAttr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::heightAttr, LengthModeHeight);
-        s_lengthModeMap.set(SVGNames::x1Attr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::x2Attr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::y1Attr, LengthModeHeight);
-        s_lengthModeMap.set(SVGNames::y2Attr, LengthModeHeight);
-        s_lengthModeMap.set(SVGNames::refXAttr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::refYAttr, LengthModeHeight);
-        s_lengthModeMap.set(SVGNames::markerWidthAttr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::markerHeightAttr, LengthModeHeight);
-        s_lengthModeMap.set(SVGNames::textLengthAttr, LengthModeWidth);
-        s_lengthModeMap.set(SVGNames::startOffsetAttr, LengthModeWidth);
+    if (s_lengthModeMap.get().isEmpty()) {
+        s_lengthModeMap.get().set(SVGNames::xAttr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::yAttr, LengthModeHeight);
+        s_lengthModeMap.get().set(SVGNames::cxAttr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::cyAttr, LengthModeHeight);
+        s_lengthModeMap.get().set(SVGNames::dxAttr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::dyAttr, LengthModeHeight);
+        s_lengthModeMap.get().set(SVGNames::fxAttr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::fyAttr, LengthModeHeight);
+        s_lengthModeMap.get().set(SVGNames::rAttr, LengthModeOther);
+        s_lengthModeMap.get().set(SVGNames::widthAttr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::heightAttr, LengthModeHeight);
+        s_lengthModeMap.get().set(SVGNames::x1Attr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::x2Attr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::y1Attr, LengthModeHeight);
+        s_lengthModeMap.get().set(SVGNames::y2Attr, LengthModeHeight);
+        s_lengthModeMap.get().set(SVGNames::refXAttr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::refYAttr, LengthModeHeight);
+        s_lengthModeMap.get().set(SVGNames::markerWidthAttr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::markerHeightAttr, LengthModeHeight);
+        s_lengthModeMap.get().set(SVGNames::textLengthAttr, LengthModeWidth);
+        s_lengthModeMap.get().set(SVGNames::startOffsetAttr, LengthModeWidth);
     }
 
-    if (s_lengthModeMap.contains(attrName))
-        return s_lengthModeMap.get(attrName);
+    if (s_lengthModeMap.get().contains(attrName))
+        return s_lengthModeMap.get().get(attrName);
 
     return LengthModeOther;
 }

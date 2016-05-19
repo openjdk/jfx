@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,8 +32,6 @@
 #include "config.h"
 #include "InstrumentingAgents.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "InspectorController.h"
 #include "Page.h"
 #include "WorkerGlobalScope.h"
@@ -55,17 +54,17 @@ InstrumentingAgents::InstrumentingAgents(InspectorEnvironment& environment)
     , m_pageRuntimeAgent(nullptr)
     , m_workerRuntimeAgent(nullptr)
     , m_inspectorTimelineAgent(nullptr)
+    , m_persistentInspectorTimelineAgent(nullptr)
     , m_inspectorDOMStorageAgent(nullptr)
-#if ENABLE(SQL_DATABASE)
-    , m_inspectorDatabaseAgent(nullptr)
+#if ENABLE(WEB_REPLAY)
+    , m_inspectorReplayAgent(nullptr)
 #endif
+    , m_inspectorDatabaseAgent(nullptr)
     , m_inspectorApplicationCacheAgent(nullptr)
     , m_inspectorDebuggerAgent(nullptr)
     , m_pageDebuggerAgent(nullptr)
     , m_inspectorDOMDebuggerAgent(nullptr)
-    , m_inspectorProfilerAgent(nullptr)
     , m_inspectorWorkerAgent(nullptr)
-    , m_inspectorCanvasAgent(nullptr)
 {
 }
 
@@ -81,30 +80,17 @@ void InstrumentingAgents::reset()
     m_pageRuntimeAgent = nullptr;
     m_workerRuntimeAgent = nullptr;
     m_inspectorTimelineAgent = nullptr;
+    m_persistentInspectorTimelineAgent = nullptr;
     m_inspectorDOMStorageAgent = nullptr;
-#if ENABLE(SQL_DATABASE)
-    m_inspectorDatabaseAgent = nullptr;
+#if ENABLE(WEB_REPLAY)
+    m_inspectorReplayAgent = nullptr;
 #endif
+    m_inspectorDatabaseAgent = nullptr;
     m_inspectorApplicationCacheAgent = nullptr;
     m_inspectorDebuggerAgent = nullptr;
     m_pageDebuggerAgent = nullptr;
     m_inspectorDOMDebuggerAgent = nullptr;
-    m_inspectorProfilerAgent = nullptr;
     m_inspectorWorkerAgent = nullptr;
-    m_inspectorCanvasAgent = nullptr;
-}
-
-InstrumentingAgents* instrumentationForPage(Page* page)
-{
-    ASSERT(isMainThread());
-    return page ? page->inspectorController().m_instrumentingAgents.get() : nullptr;
-}
-
-InstrumentingAgents* instrumentationForWorkerGlobalScope(WorkerGlobalScope* workerGlobalScope)
-{
-    return workerGlobalScope ? workerGlobalScope->workerInspectorController().m_instrumentingAgents.get() : nullptr;
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

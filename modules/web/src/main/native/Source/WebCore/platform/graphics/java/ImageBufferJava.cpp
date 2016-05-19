@@ -13,12 +13,15 @@
 
 #include "PlatformContextJava.h"
 #include "GraphicsContext.h"
+#include "IntRect.h" //XXX: recheck
 #include "ImageBufferData.h"
+
+
 
 namespace WebCore {
 
 ImageBufferData::ImageBufferData(
-    const IntSize& size,
+    const FloatSize& size,
     ImageBuffer &rq_holder
 ) : m_rq_holder(rq_holder)
 {
@@ -33,8 +36,8 @@ ImageBufferData::ImageBufferData(
     m_image = RQRef::create(JLObject(env->CallObjectMethod(
         PL_GetGraphicsManager(env),
         midCreateImage,
-        size.width(),
-        size.height()
+        (jint) size.width(),
+        (jint) size.height()
     )));
     CheckAndClearException(env);
 }
@@ -81,15 +84,13 @@ void ImageBufferData::update()
 }
 
 ImageBuffer::ImageBuffer(
-    const IntSize& size,
+    const FloatSize& size,
     float resolutionScale,
     ColorSpace,
     RenderingMode,
     bool& success
 )
     : m_data(size, *this)
-    , m_size(size)
-    , m_logicalSize(size)
     , m_resolutionScale(1)
 {
     // RT-10059: ImageBufferData construction may fail if the requested
@@ -98,6 +99,16 @@ ImageBuffer::ImageBuffer(
     if (!m_data.m_image) {
         return;
     }
+
+    float scaledWidth = ceilf(resolutionScale * size.width());
+    float scaledHeight = ceilf(resolutionScale * size.height());
+
+    // FIXME: Should we automatically use a lower resolution? //XXX: copy-paste from ImageBufferCG.cpp
+    if (!FloatSize(scaledWidth, scaledHeight).isExpressibleAsIntSize())
+        return;
+
+    m_size = IntSize(scaledWidth, scaledHeight);
+    m_logicalSize = IntSize(scaledWidth, scaledHeight);
 
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID midCreateBufferedContextRQ = env->GetMethodID(
@@ -113,9 +124,7 @@ ImageBuffer::ImageBuffer(
     ASSERT(wcRenderQueue);
     CheckAndClearException(env);
 
-    m_context = adoptPtr(
-        new GraphicsContext(
-            new PlatformContextJava(wcRenderQueue, true)));
+    m_data.m_context = std::make_unique<GraphicsContext>(new PlatformContextJava(wcRenderQueue, true));
     success = true;
 }
 
@@ -132,15 +141,15 @@ size_t ImageBuffer::dataSize() const
 
 GraphicsContext* ImageBuffer::context() const
 {
-    return m_context.get();
+    return m_data.m_context.get();
 }
 
-PassRefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, ScaleBehavior scaleBehavior) const
+RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, ScaleBehavior scaleBehavior) const
 {
     //utatodo: seems [copyBehavior] is the rest of [drawsUsingCopy]
     return BufferImage::create(
         m_data.m_image,
-        m_context->platformContext()->rq_ref(),
+        m_data.m_context->platformContext()->rq_ref(),
         m_size.width(), m_size.height());
 }
 
@@ -358,10 +367,12 @@ void ImageBuffer::draw(
         styleColorSpace,
         destRect,
         srcRect,
-        op,
-        bm,
-        DoNotRespectImageOrientation,
-        useLowQualityScale);
+        ImagePaintingOptions(
+            op,
+            bm,
+            DoNotRespectImageOrientation,
+            useLowQualityScale)
+        );
 }
 
 void ImageBuffer::drawPattern(

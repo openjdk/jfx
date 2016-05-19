@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,146 +26,201 @@
 #ifndef CollectionIndexCache_h
 #define CollectionIndexCache_h
 
+#include <wtf/Vector.h>
+
 namespace WebCore {
 
-template <class Collection, class NodeType>
+void reportExtraMemoryAllocatedForCollectionIndexCache(size_t);
+
+template <class Collection, class Iterator>
 class CollectionIndexCache {
 public:
-    CollectionIndexCache();
+    explicit CollectionIndexCache(const Collection&);
+
+    typedef typename std::iterator_traits<Iterator>::value_type NodeType;
 
     unsigned nodeCount(const Collection&);
     NodeType* nodeAt(const Collection&, unsigned index);
 
-    void invalidate();
+    bool hasValidCache(const Collection& collection) const { return m_current != collection.collectionEnd() || m_nodeCountValid || m_listValid; }
+    void invalidate(const Collection&);
+    size_t memoryCost() { return m_cachedList.capacity() * sizeof(NodeType*); }
 
 private:
-    NodeType* nodeBeforeCached(const Collection&, unsigned);
-    NodeType* nodeAfterCached(const Collection&, unsigned);
+    unsigned computeNodeCountUpdatingListCache(const Collection&);
+    NodeType* traverseBackwardTo(const Collection&, unsigned);
+    NodeType* traverseForwardTo(const Collection&, unsigned);
 
-    NodeType* m_currentNode;
+    Iterator m_current;
     unsigned m_currentIndex;
     unsigned m_nodeCount;
-    bool m_nodeCountValid;
+    Vector<NodeType*> m_cachedList;
+    bool m_nodeCountValid : 1;
+    bool m_listValid : 1;
 };
 
-template <class Collection, class NodeType>
-inline CollectionIndexCache<Collection, NodeType>::CollectionIndexCache()
-    : m_currentNode(nullptr)
+template <class Collection, class Iterator>
+inline CollectionIndexCache<Collection, Iterator>::CollectionIndexCache(const Collection& collection)
+    : m_current(collection.collectionEnd())
     , m_currentIndex(0)
     , m_nodeCount(0)
     , m_nodeCountValid(false)
+    , m_listValid(false)
 {
 }
 
-template <class Collection, class NodeType>
-inline unsigned CollectionIndexCache<Collection, NodeType>::nodeCount(const Collection& collection)
+template <class Collection, class Iterator>
+inline unsigned CollectionIndexCache<Collection, Iterator>::nodeCount(const Collection& collection)
 {
     if (!m_nodeCountValid) {
-        if (auto first = collection.collectionFirst()) {
-            unsigned count;
-            collection.collectionTraverseForward(*first, std::numeric_limits<unsigned>::max(), count);
-            m_nodeCount = count + 1;
-        } else
-            m_nodeCount = 0;
+        if (!hasValidCache(collection))
+            collection.willValidateIndexCache();
+        m_nodeCount = computeNodeCountUpdatingListCache(collection);
         m_nodeCountValid = true;
     }
 
     return m_nodeCount;
 }
 
-template <class Collection, class NodeType>
-inline NodeType* CollectionIndexCache<Collection, NodeType>::nodeBeforeCached(const Collection& collection, unsigned index)
+template <class Collection, class Iterator>
+unsigned CollectionIndexCache<Collection, Iterator>::computeNodeCountUpdatingListCache(const Collection& collection)
 {
-    ASSERT(m_currentNode);
+    auto current = collection.collectionBegin();
+    auto end = collection.collectionEnd();
+    if (current == end)
+        return 0;
+
+    unsigned oldCapacity = m_cachedList.capacity();
+    while (current != end) {
+        m_cachedList.append(&*current);
+        unsigned traversed;
+        collection.collectionTraverseForward(current, 1, traversed);
+        ASSERT(traversed == (current != end ? 1 : 0));
+    }
+    m_listValid = true;
+
+    if (unsigned capacityDifference = m_cachedList.capacity() - oldCapacity)
+        reportExtraMemoryAllocatedForCollectionIndexCache(capacityDifference * sizeof(NodeType*));
+
+    return m_cachedList.size();
+}
+
+template <class Collection, class Iterator>
+inline typename CollectionIndexCache<Collection, Iterator>::NodeType* CollectionIndexCache<Collection, Iterator>::traverseBackwardTo(const Collection& collection, unsigned index)
+{
+    ASSERT(m_current != collection.collectionEnd());
     ASSERT(index < m_currentIndex);
 
     bool firstIsCloser = index < m_currentIndex - index;
     if (firstIsCloser || !collection.collectionCanTraverseBackward()) {
-        m_currentNode = collection.collectionFirst();
+        m_current = collection.collectionBegin();
         m_currentIndex = 0;
         if (index)
-            m_currentNode = collection.collectionTraverseForward(*m_currentNode, index, m_currentIndex);
-        ASSERT(m_currentNode);
-        return m_currentNode;
+            collection.collectionTraverseForward(m_current, index, m_currentIndex);
+        ASSERT(m_current != collection.collectionEnd());
+        return &*m_current;
     }
 
-    m_currentNode = collection.collectionTraverseBackward(*m_currentNode, m_currentIndex - index);
+    collection.collectionTraverseBackward(m_current, m_currentIndex - index);
     m_currentIndex = index;
 
-    ASSERT(m_currentNode);
-    return m_currentNode;
+    ASSERT(m_current != collection.collectionEnd());
+    return &*m_current;
 }
 
-template <class Collection, class NodeType>
-inline NodeType* CollectionIndexCache<Collection, NodeType>::nodeAfterCached(const Collection& collection, unsigned index)
+template <class Collection, class Iterator>
+inline typename CollectionIndexCache<Collection, Iterator>::NodeType* CollectionIndexCache<Collection, Iterator>::traverseForwardTo(const Collection& collection, unsigned index)
 {
-    ASSERT(m_currentNode);
+    ASSERT(m_current != collection.collectionEnd());
     ASSERT(index > m_currentIndex);
     ASSERT(!m_nodeCountValid || index < m_nodeCount);
 
     bool lastIsCloser = m_nodeCountValid && m_nodeCount - index < index - m_currentIndex;
     if (lastIsCloser && collection.collectionCanTraverseBackward()) {
-        m_currentNode = collection.collectionLast();
+        ASSERT(hasValidCache(collection));
+        m_current = collection.collectionLast();
         if (index < m_nodeCount - 1)
-            m_currentNode = collection.collectionTraverseBackward(*m_currentNode, m_nodeCount - index - 1);
+            collection.collectionTraverseBackward(m_current, m_nodeCount - index - 1);
         m_currentIndex = index;
-        ASSERT(m_currentNode);
-        return m_currentNode;
+        ASSERT(m_current != collection.collectionEnd());
+        return &*m_current;
     }
 
+    if (!hasValidCache(collection))
+        collection.willValidateIndexCache();
+
     unsigned traversedCount;
-    m_currentNode = collection.collectionTraverseForward(*m_currentNode, index - m_currentIndex, traversedCount);
+    collection.collectionTraverseForward(m_current, index - m_currentIndex, traversedCount);
     m_currentIndex = m_currentIndex + traversedCount;
 
-    ASSERT(m_currentNode ||  m_currentIndex < index);
-
-    if (!m_currentNode && !m_nodeCountValid) {
+    if (m_current == collection.collectionEnd()) {
+        ASSERT(m_currentIndex < index);
         // Failed to find the index but at least we now know the size.
         m_nodeCount = m_currentIndex + 1;
         m_nodeCountValid = true;
+        return nullptr;
     }
-    return m_currentNode;
+    ASSERT(hasValidCache(collection));
+    return &*m_current;
 }
 
-template <class Collection, class NodeType>
-inline NodeType* CollectionIndexCache<Collection, NodeType>::nodeAt(const Collection& collection, unsigned index)
+template <class Collection, class Iterator>
+inline typename CollectionIndexCache<Collection, Iterator>::NodeType* CollectionIndexCache<Collection, Iterator>::nodeAt(const Collection& collection, unsigned index)
 {
     if (m_nodeCountValid && index >= m_nodeCount)
         return nullptr;
 
-    if (m_currentNode) {
+    if (m_listValid)
+        return m_cachedList[index];
+
+    auto end = collection.collectionEnd();
+    if (m_current != end) {
         if (index > m_currentIndex)
-            return nodeAfterCached(collection, index);
+            return traverseForwardTo(collection, index);
         if (index < m_currentIndex)
-            return nodeBeforeCached(collection, index);
-        return m_currentNode;
+            return traverseBackwardTo(collection, index);
+        return &*m_current;
     }
 
     bool lastIsCloser = m_nodeCountValid && m_nodeCount - index < index;
     if (lastIsCloser && collection.collectionCanTraverseBackward()) {
-        m_currentNode = collection.collectionLast();
+        ASSERT(hasValidCache(collection));
+        m_current = collection.collectionLast();
         if (index < m_nodeCount - 1)
-            m_currentNode = collection.collectionTraverseBackward(*m_currentNode, m_nodeCount - index - 1);
+            collection.collectionTraverseBackward(m_current, m_nodeCount - index - 1);
         m_currentIndex = index;
-        ASSERT(m_currentNode);
-        return m_currentNode;
+        ASSERT(m_current != end);
+        return &*m_current;
     }
 
-    m_currentNode = collection.collectionFirst();
+    if (!hasValidCache(collection))
+        collection.willValidateIndexCache();
+
+    m_current = collection.collectionBegin();
     m_currentIndex = 0;
-    if (index && m_currentNode) {
-        m_currentNode = collection.collectionTraverseForward(*m_currentNode, index, m_currentIndex);
-        ASSERT(m_currentNode || m_currentIndex < index);
+    if (index && m_current != end) {
+        collection.collectionTraverseForward(m_current, index, m_currentIndex);
+        ASSERT(m_current != end || m_currentIndex < index);
     }
-    return m_currentNode;
+    if (m_current == end) {
+        // Failed to find the index but at least we now know the size.
+        m_nodeCount = index ? m_currentIndex + 1 : 0;
+        m_nodeCountValid = true;
+        return nullptr;
+    }
+    ASSERT(hasValidCache(collection));
+    return &*m_current;
 }
 
-template <class Collection, class NodeType>
-void CollectionIndexCache<Collection, NodeType>::invalidate()
+template <class Collection, class Iterator>
+void CollectionIndexCache<Collection, Iterator>::invalidate(const Collection& collection)
 {
-    m_currentNode = nullptr;
+    m_current = collection.collectionEnd();
     m_nodeCountValid = false;
+    m_listValid = false;
+    m_cachedList.shrink(0);
 }
+
 
 }
 

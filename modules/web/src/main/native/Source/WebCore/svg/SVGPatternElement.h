@@ -45,7 +45,7 @@ class SVGPatternElement final : public SVGElement,
                                 public SVGExternalResourcesRequired,
                                 public SVGFitToViewBox {
 public:
-    static PassRefPtr<SVGPatternElement> create(const QualifiedName&, Document&);
+    static Ref<SVGPatternElement> create(const QualifiedName&, Document&);
 
     void collectPatternAttributes(PatternAttributes&) const;
 
@@ -57,14 +57,14 @@ private:
     virtual bool isValid() const override { return SVGTests::isValid(); }
     virtual bool needsPendingResourceHandling() const override { return false; }
 
-    bool isSupportedAttribute(const QualifiedName&);
+    static bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
     virtual void childrenChanged(const ChildChange&) override;
 
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
 
-    virtual bool selfHasRelativeLengths() const override;
+    virtual bool selfHasRelativeLengths() const override { return true; }
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGPatternElement)
         DECLARE_ANIMATED_LENGTH(X, x)
@@ -74,8 +74,8 @@ private:
         DECLARE_ANIMATED_ENUMERATION(PatternUnits, patternUnits, SVGUnitTypes::SVGUnitType)
         DECLARE_ANIMATED_ENUMERATION(PatternContentUnits, patternContentUnits, SVGUnitTypes::SVGUnitType)
         DECLARE_ANIMATED_TRANSFORM_LIST(PatternTransform, patternTransform)
-        DECLARE_ANIMATED_STRING(Href, href)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
+        DECLARE_ANIMATED_STRING_OVERRIDE(Href, href)
+        DECLARE_ANIMATED_BOOLEAN_OVERRIDE(ExternalResourcesRequired, externalResourcesRequired)
         DECLARE_ANIMATED_RECT(ViewBox, viewBox)
         DECLARE_ANIMATED_PRESERVEASPECTRATIO(PreserveAspectRatio, preserveAspectRatio)
     END_DECLARE_ANIMATED_PROPERTIES
@@ -85,8 +85,6 @@ private:
     virtual void synchronizeRequiredExtensions() override { SVGTests::synchronizeRequiredExtensions(this); }
     virtual void synchronizeSystemLanguage() override { SVGTests::synchronizeSystemLanguage(this); }
 };
-
-NODE_TYPE_CASTS(SVGPatternElement)
 
 } // namespace WebCore
 

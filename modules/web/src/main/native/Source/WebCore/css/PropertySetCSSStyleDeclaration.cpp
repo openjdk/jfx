@@ -88,7 +88,7 @@ public:
         s_currentDecl = 0;
         s_shouldNotifyInspector = false;
         if (localCopyStyleDecl->parentElement())
-            InspectorInstrumentation::didInvalidateStyleAttr(&localCopyStyleDecl->parentElement()->document(), localCopyStyleDecl->parentElement());
+            InspectorInstrumentation::didInvalidateStyleAttr(localCopyStyleDecl->parentElement()->document(), *localCopyStyleDecl->parentElement());
     }
 
     void enqueueMutationRecord()
@@ -148,7 +148,8 @@ String PropertySetCSSStyleDeclaration::cssText() const
 void PropertySetCSSStyleDeclaration::setCssText(const String& text, ExceptionCode& ec)
 {
     StyleAttributeMutationScope mutationScope(this);
-    willMutate();
+    if (!willMutate())
+        return;
 
     ec = 0;
     // FIXME: Detect syntax errors and set ec.
@@ -167,7 +168,7 @@ PassRefPtr<CSSValue> PropertySetCSSStyleDeclaration::getPropertyCSSValue(const S
     return cloneAndCacheForCSSOM(m_propertySet->getPropertyCSSValue(propertyID).get());
 }
 
-String PropertySetCSSStyleDeclaration::getPropertyValue(const String &propertyName)
+String PropertySetCSSStyleDeclaration::getPropertyValue(const String& propertyName)
 {
     CSSPropertyID propertyID = cssPropertyID(propertyName);
     if (!propertyID)
@@ -206,9 +207,10 @@ void PropertySetCSSStyleDeclaration::setProperty(const String& propertyName, con
     if (!propertyID)
         return;
 
-    bool important = priority.find("important", 0, false) != notFound;
+    if (!willMutate())
+        return;
 
-    willMutate();
+    bool important = priority.find("important", 0, false) != notFound;
 
     ec = 0;
     bool changed = m_propertySet->setProperty(propertyID, value, important, contextStyleSheet());
@@ -229,7 +231,8 @@ String PropertySetCSSStyleDeclaration::removeProperty(const String& propertyName
     if (!propertyID)
         return String();
 
-    willMutate();
+    if (!willMutate())
+        return String();
 
     ec = 0;
     String result;
@@ -252,10 +255,11 @@ String PropertySetCSSStyleDeclaration::getPropertyValueInternal(CSSPropertyID pr
     return m_propertySet->getPropertyValue(propertyID);
 }
 
-void PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropertyID propertyID, const String& value, bool important, ExceptionCode& ec)
+bool PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropertyID propertyID, const String& value, bool important, ExceptionCode& ec)
 {
     StyleAttributeMutationScope mutationScope(this);
-    willMutate();
+    if (!willMutate())
+        return false;
 
     ec = 0;
     bool changed = m_propertySet->setProperty(propertyID, value, important, contextStyleSheet());
@@ -264,6 +268,7 @@ void PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropertyID propertyI
 
     if (changed)
         mutationScope.enqueueMutationRecord();
+    return changed;
 }
 
 CSSValue* PropertySetCSSStyleDeclaration::cloneAndCacheForCSSOM(CSSValue* internalValue)
@@ -288,7 +293,7 @@ StyleSheetContents* PropertySetCSSStyleDeclaration::contextStyleSheet() const
     return cssStyleSheet ? &cssStyleSheet->contents() : 0;
 }
 
-PassRef<MutableStyleProperties> PropertySetCSSStyleDeclaration::copyProperties() const
+Ref<MutableStyleProperties> PropertySetCSSStyleDeclaration::copyProperties() const
 {
     return m_propertySet->mutableCopy();
 }
@@ -318,20 +323,24 @@ void StyleRuleCSSStyleDeclaration::deref()
         delete this;
 }
 
-void StyleRuleCSSStyleDeclaration::willMutate()
+bool StyleRuleCSSStyleDeclaration::willMutate()
 {
-    if (m_parentRule && m_parentRule->parentStyleSheet())
-        m_parentRule->parentStyleSheet()->willMutateRules();
+    if (!m_parentRule || !m_parentRule->parentStyleSheet())
+        return false;
+    m_parentRule->parentStyleSheet()->willMutateRules();
+    return true;
 }
 
 void StyleRuleCSSStyleDeclaration::didMutate(MutationType type)
 {
+    ASSERT(m_parentRule);
+    ASSERT(m_parentRule->parentStyleSheet());
+
     if (type == PropertyChanged)
         m_cssomCSSValueClones = nullptr;
 
     // Style sheet mutation needs to be signaled even if the change failed. willMutate*/didMutate* must pair.
-    if (m_parentRule && m_parentRule->parentStyleSheet())
-        m_parentRule->parentStyleSheet()->didMutateRuleFromCSSStyleDeclaration();
+    m_parentRule->parentStyleSheet()->didMutateRuleFromCSSStyleDeclaration();
 }
 
 CSSStyleSheet* StyleRuleCSSStyleDeclaration::parentStyleSheet() const

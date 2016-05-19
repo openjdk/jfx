@@ -33,33 +33,18 @@
 #include "InjectedBundle.h"
 #include "InjectedBundlePage.h"
 
-#include <WebKit2/WKBundlePagePrivate.h>
+#include <WebKit/WKBundlePagePrivate.h>
 #include <atk/atk.h>
 #include <cstdio>
-#include <wtf/gobject/GUniquePtr.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WTR {
 
 void AccessibilityController::logAccessibilityEvents()
 {
-    // Ensure no callbacks are connected before.
-    resetToConsistentState();
-
-    // Ensure that accessibility is initialized for the WebView by querying for
-    // the root accessible object, which will create the full hierarchy.
-    rootElement();
-
-    if (!m_globalNotificationHandler)
-        m_globalNotificationHandler = AccessibilityNotificationHandler::create();
-    m_globalNotificationHandler->logAccessibilityEvents();
-
-    // Ensure the Atk interface types are registered, otherwise
-    // the AtkDocument signal handlers below won't get registered.
-    GObject* dummyAxObject = G_OBJECT(g_object_new(ATK_TYPE_OBJECT, nullptr));
-    AtkObject* dummyNoOpAxObject = atk_no_op_object_new(dummyAxObject);
-    g_object_unref(G_OBJECT(dummyNoOpAxObject));
-    g_object_unref(dummyAxObject);
+    // No longer implemented for ATK. Use addNotificationListener() instead to
+    // check that relevant ATK signals are being emmitted in response to events.
 }
 
 void AccessibilityController::resetToConsistentState()
@@ -99,7 +84,7 @@ static AtkObject* childElementById(AtkObject* parent, const char* id)
 
 PassRefPtr<AccessibilityUIElement> AccessibilityController::accessibleElementById(JSStringRef id)
 {
-    AtkObject* root = ATK_OBJECT(WKAccessibilityRootObject(InjectedBundle::shared().page()->page()));
+    AtkObject* root = ATK_OBJECT(WKAccessibilityRootObject(InjectedBundle::singleton().page()->page()));
     if (!root)
         return nullptr;
 
@@ -122,7 +107,7 @@ JSRetainPtr<JSStringRef> AccessibilityController::platformName()
 
 PassRefPtr<AccessibilityUIElement> AccessibilityController::rootElement()
 {
-    WKBundlePageRef page = InjectedBundle::shared().page()->page();
+    WKBundlePageRef page = InjectedBundle::singleton().page()->page();
     void* root = WKAccessibilityRootObject(page);
 
     return AccessibilityUIElement::create(static_cast<AtkObject*>(root));
@@ -130,7 +115,7 @@ PassRefPtr<AccessibilityUIElement> AccessibilityController::rootElement()
 
 PassRefPtr<AccessibilityUIElement> AccessibilityController::focusedElement()
 {
-    WKBundlePageRef page = InjectedBundle::shared().page()->page();
+    WKBundlePageRef page = InjectedBundle::singleton().page()->page();
     void* root = WKAccessibilityFocusedObject(page);
 
     return AccessibilityUIElement::create(static_cast<AtkObject*>(root));

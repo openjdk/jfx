@@ -29,17 +29,15 @@ class CSSFontFaceSrcValue;
 
 class SVGFontFaceNameElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGFontFaceNameElement> create(const QualifiedName&, Document&);
+    static Ref<SVGFontFaceNameElement> create(const QualifiedName&, Document&);
 
-    PassRef<CSSFontFaceSrcValue> srcValue() const;
+    Ref<CSSFontFaceSrcValue> srcValue() const;
 
 private:
     SVGFontFaceNameElement(const QualifiedName&, Document&);
 
     virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 };
-
-NODE_TYPE_CASTS(SVGFontFaceNameElement)
 
 } // namespace WebCore
 

@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLBaseElement.h"
 
-#include "Attribute.h"
 #include "Document.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
@@ -39,9 +38,9 @@ inline HTMLBaseElement::HTMLBaseElement(const QualifiedName& tagName, Document& 
     ASSERT(hasTagName(baseTag));
 }
 
-PassRefPtr<HTMLBaseElement> HTMLBaseElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLBaseElement> HTMLBaseElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLBaseElement(tagName, document));
+    return adoptRef(*new HTMLBaseElement(tagName, document));
 }
 
 void HTMLBaseElement::parseAttribute(const QualifiedName& name, const AtomicString& value)

@@ -13,10 +13,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,6 +29,8 @@
 #include "config.h"
 #include "ImageBuffer.h"
 
+#if USE(CAIRO)
+
 #include "BitmapImage.h"
 #include "CairoUtilities.h"
 #include "Color.h"
@@ -39,6 +41,8 @@
 #include "PlatformContextCairo.h"
 #include "RefPtrCairo.h"
 #include <cairo.h>
+#include <runtime/JSCInlines.h>
+#include <runtime/TypedArrayInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/WTFString.h>
@@ -64,7 +68,7 @@ ImageBufferData::ImageBufferData(const IntSize& size)
 }
 
 #if ENABLE(ACCELERATED_2D_CANVAS)
-PassRefPtr<cairo_surface_t> createCairoGLSurface(const IntSize& size, uint32_t& texture)
+PassRefPtr<cairo_surface_t> createCairoGLSurface(const FloatSize& size, uint32_t& texture)
 {
     GLContext::sharingContext()->makeContextCurrent();
 
@@ -91,12 +95,14 @@ PassRefPtr<cairo_surface_t> createCairoGLSurface(const IntSize& size, uint32_t& 
 }
 #endif
 
-ImageBuffer::ImageBuffer(const IntSize& size, float /* resolutionScale */, ColorSpace, RenderingMode renderingMode, bool& success)
-    : m_data(size)
+ImageBuffer::ImageBuffer(const FloatSize& size, float /* resolutionScale */, ColorSpace, RenderingMode renderingMode, bool& success)
+    : m_data(IntSize(size))
     , m_size(size)
     , m_logicalSize(size)
 {
     success = false;  // Make early return mean error.
+    if (m_size.isEmpty())
+        return;
 
 #if ENABLE(ACCELERATED_2D_CANVAS)
     if (renderingMode == Accelerated)
@@ -112,7 +118,7 @@ ImageBuffer::ImageBuffer(const IntSize& size, float /* resolutionScale */, Color
 
     RefPtr<cairo_t> cr = adoptRef(cairo_create(m_data.m_surface.get()));
     m_data.m_platformContext.setCr(cr.get());
-    m_context = adoptPtr(new GraphicsContext(&m_data.m_platformContext));
+    m_data.m_context = std::make_unique<GraphicsContext>(&m_data.m_platformContext);
     success = true;
 }
 
@@ -122,10 +128,10 @@ ImageBuffer::~ImageBuffer()
 
 GraphicsContext* ImageBuffer::context() const
 {
-    return m_context.get();
+    return m_data.m_context.get();
 }
 
-PassRefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, ScaleBehavior) const
+RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, ScaleBehavior) const
 {
     if (copyBehavior == CopyBackingStore)
         return BitmapImage::create(copyCairoImageSurface(m_data.m_surface.get()));
@@ -149,14 +155,14 @@ void ImageBuffer::draw(GraphicsContext* destinationContext, ColorSpace styleColo
 {
     BackingStoreCopy copyMode = destinationContext == context() ? CopyBackingStore : DontCopyBackingStore;
     RefPtr<Image> image = copyImage(copyMode);
-    destinationContext->drawImage(image.get(), styleColorSpace, destRect, srcRect, op, blendMode, ImageOrientationDescription(), useLowQualityScale);
+    destinationContext->drawImage(image.get(), styleColorSpace, destRect, srcRect, ImagePaintingOptions(op, blendMode, ImageOrientationDescription(), useLowQualityScale));
 }
 
 void ImageBuffer::drawPattern(GraphicsContext* context, const FloatRect& srcRect, const AffineTransform& patternTransform,
     const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator op, const FloatRect& destRect, BlendMode)
 {
-    RefPtr<Image> image = copyImage(DontCopyBackingStore);
-    image->drawPattern(context, srcRect, patternTransform, phase, styleColorSpace, op, destRect);
+    if (RefPtr<Image> image = copyImage(DontCopyBackingStore))
+        image->drawPattern(context, srcRect, patternTransform, phase, styleColorSpace, op, destRect);
 }
 
 void ImageBuffer::platformTransformColorSpace(const Vector<int>& lookUpTable)
@@ -355,7 +361,7 @@ void ImageBuffer::putByteArray(Multiply multiplied, Uint8ClampedArray* source, c
         copyRectFromOneSurfaceToAnother(imageSurface.get(), m_data.m_surface.get(), IntSize(), IntRect(0, 0, numColumns, numRows), IntSize(destPoint.x() + sourceRect.x(), destPoint.y() + sourceRect.y()), CAIRO_OPERATOR_SOURCE);
 }
 
-#if !PLATFORM(GTK)
+#if !PLATFORM(GTK) && !PLATFORM(EFL)
 static cairo_status_t writeFunction(void* output, const unsigned char* data, unsigned int length)
 {
     if (!reinterpret_cast<Vector<unsigned char>*>(output)->tryAppend(data, length))
@@ -390,11 +396,6 @@ String ImageBuffer::toDataURL(const String& mimeType, const double*, CoordinateS
 #if ENABLE(ACCELERATED_2D_CANVAS)
 void ImageBufferData::paintToTextureMapper(TextureMapper* textureMapper, const FloatRect& targetRect, const TransformationMatrix& matrix, float opacity)
 {
-    if (textureMapper->accelerationMode() != TextureMapper::OpenGLMode) {
-        notImplemented();
-        return;
-    }
-
     ASSERT(m_texture);
 
     // Cairo may change the active context, so we make sure to change it back after flushing.
@@ -416,3 +417,5 @@ PlatformLayer* ImageBuffer::platformLayer() const
 }
 
 } // namespace WebCore
+
+#endif // USE(CAIRO)

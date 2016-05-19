@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -39,7 +39,7 @@ namespace WebCore {
 
 class SpeechSynthesisUtterance final : public PlatformSpeechSynthesisUtteranceClient, public RefCounted<SpeechSynthesisUtterance>, public ContextDestructionObserver, public EventTargetWithInlineData {
 public:
-    static PassRefPtr<SpeechSynthesisUtterance> create(ScriptExecutionContext&, const String&);
+    static Ref<SpeechSynthesisUtterance> create(ScriptExecutionContext&, const String&);
 
     ~SpeechSynthesisUtterance();
 
@@ -63,14 +63,6 @@ public:
 
     double startTime() const { return m_platformUtterance->startTime(); }
     void setStartTime(double startTime) { m_platformUtterance->setStartTime(startTime); }
-
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(start);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(end);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(pause);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(resume);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(mark);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(boundary);
 
     using RefCounted<SpeechSynthesisUtterance>::ref;
     using RefCounted<SpeechSynthesisUtterance>::deref;

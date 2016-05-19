@@ -1639,16 +1639,14 @@ class YarrGenerator : private MacroAssembler {
                 const RegisterID indexTemporary = regT0;
                 ASSERT(term->quantityCount == 1);
 
-#ifndef NDEBUG
                 // Runtime ASSERT to make sure that the nested alternative handled the
                 // "no input consumed" check.
-                if (term->quantityType != QuantifierFixedCount && !term->parentheses.disjunction->m_minimumSize) {
+                if (!ASSERT_DISABLED && term->quantityType != QuantifierFixedCount && !term->parentheses.disjunction->m_minimumSize) {
                     Jump pastBreakpoint;
                     pastBreakpoint = branch32(NotEqual, index, Address(stackPointerRegister, term->frameLocation * sizeof(void*)));
-                    breakpoint();
+                    abortWithReason(YARRNoInputConsumed);
                     pastBreakpoint.link(this);
                 }
-#endif
 
                 // If the parenthese are capturing, store the ending index value to the
                 // captures array, offsetting as necessary.
@@ -1695,16 +1693,16 @@ class YarrGenerator : private MacroAssembler {
             }
             case OpParenthesesSubpatternTerminalEnd: {
                 YarrOp& beginOp = m_ops[op.m_previousOp];
-#ifndef NDEBUG
-                PatternTerm* term = op.m_term;
+                if (!ASSERT_DISABLED) {
+                    PatternTerm* term = op.m_term;
 
-                // Runtime ASSERT to make sure that the nested alternative handled the
-                // "no input consumed" check.
-                Jump pastBreakpoint;
-                pastBreakpoint = branch32(NotEqual, index, Address(stackPointerRegister, term->frameLocation * sizeof(void*)));
-                breakpoint();
-                pastBreakpoint.link(this);
-#endif
+                    // Runtime ASSERT to make sure that the nested alternative handled the
+                    // "no input consumed" check.
+                    Jump pastBreakpoint;
+                    pastBreakpoint = branch32(NotEqual, index, Address(stackPointerRegister, term->frameLocation * sizeof(void*)));
+                    abortWithReason(YARRNoInputConsumed);
+                    pastBreakpoint.link(this);
+                }
 
                 // We know that the match is non-zero, we can accept it  and
                 // loop back up to the head of the subpattern.
@@ -2346,7 +2344,7 @@ class YarrGenerator : private MacroAssembler {
         m_ops.append(alternativeBeginOpCode);
         m_ops.last().m_previousOp = notFound;
         m_ops.last().m_term = term;
-        Vector<OwnPtr<PatternAlternative>>& alternatives =  term->parentheses.disjunction->m_alternatives;
+        Vector<std::unique_ptr<PatternAlternative>>& alternatives = term->parentheses.disjunction->m_alternatives;
         for (unsigned i = 0; i < alternatives.size(); ++i) {
             size_t lastOpIndex = m_ops.size() - 1;
 
@@ -2397,7 +2395,7 @@ class YarrGenerator : private MacroAssembler {
         m_ops.append(OpSimpleNestedAlternativeBegin);
         m_ops.last().m_previousOp = notFound;
         m_ops.last().m_term = term;
-        Vector<OwnPtr<PatternAlternative>>& alternatives =  term->parentheses.disjunction->m_alternatives;
+        Vector<std::unique_ptr<PatternAlternative>>& alternatives =  term->parentheses.disjunction->m_alternatives;
         for (unsigned i = 0; i < alternatives.size(); ++i) {
             size_t lastOpIndex = m_ops.size() - 1;
 
@@ -2471,7 +2469,7 @@ class YarrGenerator : private MacroAssembler {
     // to return the failing result.
     void opCompileBody(PatternDisjunction* disjunction)
     {
-        Vector<OwnPtr<PatternAlternative>>& alternatives = disjunction->m_alternatives;
+        Vector<std::unique_ptr<PatternAlternative>>& alternatives = disjunction->m_alternatives;
         size_t currentAlternativeIndex = 0;
 
         // Emit the 'once through' alternatives.
@@ -2645,11 +2643,8 @@ public:
 
         initCallFrame();
 
-        // Compile the pattern to the internal 'YarrOp' representation.
         opCompileBody(m_pattern.m_body);
 
-        // If we encountered anything we can't handle in the JIT code
-        // (e.g. backreferences) then return early.
         if (m_shouldFallBack) {
             jitObject.setFallBack(true);
             return;
@@ -2658,8 +2653,12 @@ public:
         generate();
         backtrack();
 
-        // Link & finalize the code.
-        LinkBuffer linkBuffer(*vm, this, REGEXP_CODE_ID);
+        LinkBuffer linkBuffer(*vm, *this, REGEXP_CODE_ID, JITCompilationCanFail);
+        if (linkBuffer.didFailToAllocate()) {
+            jitObject.setFallBack(true);
+            return;
+        }
+
         m_backtrackingState.linkDataLabels(linkBuffer);
 
         if (compileMode == MatchOnly) {

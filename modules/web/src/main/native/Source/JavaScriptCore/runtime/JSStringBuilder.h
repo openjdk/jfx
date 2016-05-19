@@ -32,6 +32,7 @@
 
 namespace JSC {
 
+// FIXME: Should move the last few callers over from this to WTF::StringBuilder.
 class JSStringBuilder {
 public:
     JSStringBuilder()
@@ -40,84 +41,32 @@ public:
     {
     }
 
-    void append(const UChar u)
+    void append(LChar character)
     {
         if (m_is8Bit) {
-            if (u < 0xff) {
-                LChar c = u;
-                m_okay &= buffer8.tryAppend(&c, 1);
+            m_okay &= buffer8.tryAppend(&character, 1);
+            return;
+        }
+        UChar upconvertedCharacter = character;
+        m_okay &= buffer16.tryAppend(&upconvertedCharacter, 1);
+    }
+
+    void append(UChar character)
+    {
+        if (m_is8Bit) {
+            if (character < 0x100) {
+                LChar narrowedCharacter = character;
+                m_okay &= buffer8.tryAppend(&narrowedCharacter, 1);
                 return;
             }
             upConvert();
         }
-        m_okay &= buffer16.tryAppend(&u, 1);
+        m_okay &= buffer16.tryAppend(&character, 1);
     }
 
     void append(const char* str)
     {
-        append(str, strlen(str));
-    }
-
-    void append(const char* str, size_t len)
-    {
-        if (m_is8Bit) {
-            m_okay &= buffer8.tryAppend(reinterpret_cast<const LChar*>(str), len);
-            return;
-        }
-        m_okay &= buffer8.tryReserveCapacity(buffer16.size() + len);
-        for (size_t i = 0; i < len; i++) {
-            UChar u = static_cast<unsigned char>(str[i]);
-            m_okay &= buffer16.tryAppend(&u, 1);
-        }
-    }
-
-    void append(const LChar* str, size_t len)
-    {
-        if (m_is8Bit) {
-            m_okay &= buffer8.tryAppend(str, len);
-            return;
-        }
-        m_okay &= buffer8.tryReserveCapacity(buffer16.size() + len);
-        for (size_t i = 0; i < len; i++) {
-            UChar u = str[i];
-            m_okay &= buffer16.tryAppend(&u, 1);
-        }
-    }
-
-    void append(const UChar* str, size_t len)
-    {
-        if (m_is8Bit)
-            upConvert(); // FIXME: We could check character by character its size.
-        m_okay &= buffer16.tryAppend(str, len);
-    }
-
-    void append(const String& str)
-    {
-        unsigned length = str.length();
-
-        if (!length)
-            return;
-
-        if (m_is8Bit) {
-            if (str.is8Bit()) {
-                m_okay &= buffer8.tryAppend(str.characters8(), length);
-                return;
-            }
-            upConvert();
-        }
-        m_okay &= buffer16.tryAppend(str.deprecatedCharacters(), length);
-    }
-
-    void upConvert()
-    {
-        ASSERT(m_is8Bit);
-        size_t len = buffer8.size();
-
-        for (size_t i = 0; i < len; i++)
-            buffer16.append(buffer8[i]);
-
-        buffer8.clear();
-        m_is8Bit = false;
+        append(reinterpret_cast<const LChar*>(str), strlen(str));
     }
 
     JSValue build(ExecState* exec)
@@ -136,56 +85,52 @@ public:
         return jsString(exec, String::adopt(buffer16));
     }
 
-protected:
+private:
+    void append(const LChar* characters, size_t length)
+    {
+        if (m_is8Bit) {
+            m_okay &= buffer8.tryAppend(characters, length);
+            return;
+        }
+        // FIXME: There must be a more efficient way of doing this.
+        m_okay &= buffer16.tryReserveCapacity(buffer16.size() + length);
+        for (size_t i = 0; i < length; i++) {
+            UChar upconvertedCharacter = characters[i];
+            m_okay &= buffer16.tryAppend(&upconvertedCharacter, 1);
+        }
+    }
+
+    void upConvert()
+    {
+        ASSERT(m_is8Bit);
+        size_t len = buffer8.size();
+
+        for (size_t i = 0; i < len; i++)
+            buffer16.append(buffer8[i]);
+
+        buffer8.clear();
+        m_is8Bit = false;
+    }
+
     Vector<LChar, 64, UnsafeVectorOverflow> buffer8;
     Vector<UChar, 64, UnsafeVectorOverflow> buffer16;
     bool m_okay;
     bool m_is8Bit;
 };
 
-template<typename StringType1, typename StringType2>
-inline JSValue jsMakeNontrivialString(ExecState* exec, StringType1 string1, StringType2 string2)
+template<typename StringType>
+inline JSValue jsMakeNontrivialString(ExecState* exec, StringType&& string)
 {
-    PassRefPtr<StringImpl> result = WTF::tryMakeString(string1, string2);
-    if (!result)
-        return throwOutOfMemoryError(exec);
-    return jsNontrivialString(exec, result);
+    return jsNontrivialString(exec, std::forward<StringType>(string));
 }
 
-template<typename StringType1, typename StringType2, typename StringType3>
-inline JSValue jsMakeNontrivialString(ExecState* exec, StringType1 string1, StringType2 string2, StringType3 string3)
+template<typename StringType, typename... StringTypes>
+inline JSValue jsMakeNontrivialString(ExecState* exec, const StringType& string, const StringTypes&... strings)
 {
-    PassRefPtr<StringImpl> result = WTF::tryMakeString(string1, string2, string3);
+    RefPtr<StringImpl> result = WTF::tryMakeString(string, strings...);
     if (!result)
         return throwOutOfMemoryError(exec);
-    return jsNontrivialString(exec, result);
-}
-
-template<typename StringType1, typename StringType2, typename StringType3, typename StringType4>
-inline JSValue jsMakeNontrivialString(ExecState* exec, StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4)
-{
-    PassRefPtr<StringImpl> result = WTF::tryMakeString(string1, string2, string3, string4);
-    if (!result)
-        return throwOutOfMemoryError(exec);
-    return jsNontrivialString(exec, result);
-}
-
-template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5>
-inline JSValue jsMakeNontrivialString(ExecState* exec, StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5)
-{
-    PassRefPtr<StringImpl> result = WTF::tryMakeString(string1, string2, string3, string4, string5);
-    if (!result)
-        return throwOutOfMemoryError(exec);
-    return jsNontrivialString(exec, result);
-}
-
-template<typename StringType1, typename StringType2, typename StringType3, typename StringType4, typename StringType5, typename StringType6>
-inline JSValue jsMakeNontrivialString(ExecState* exec, StringType1 string1, StringType2 string2, StringType3 string3, StringType4 string4, StringType5 string5, StringType6 string6)
-{
-    PassRefPtr<StringImpl> result = WTF::tryMakeString(string1, string2, string3, string4, string5, string6);
-    if (!result)
-        return throwOutOfMemoryError(exec);
-    return jsNontrivialString(exec, result);
+    return jsNontrivialString(exec, result.release());
 }
 
 }

@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,6 +29,7 @@
 @class DOMDictionary;
 @class DOMDocument;
 @class DOMNode;
+@class DOMPromise;
 @class DOMSVGDocument;
 @class DOMSVGPoint;
 @class DOMTestEnumType;
@@ -50,17 +51,16 @@ enum {
     DOM_CONST_VALUE_4 = 4,
     DOM_CONST_VALUE_8 = 8,
     DOM_CONST_VALUE_9 = -1,
-    DOM_CONST_VALUE_10 = "my constant string",
     DOM_CONST_VALUE_11 = 0xffffffff,
     DOM_CONST_VALUE_12 = 0x01,
     DOM_CONST_VALUE_13 = 0X20,
     DOM_CONST_VALUE_14 = 0x1abc,
     DOM_CONST_JAVASCRIPT = 15,
     DOM_readonly = 0
-} WEBKIT_ENUM_AVAILABLE_MAC(TBD);
+} WEBKIT_ENUM_AVAILABLE_MAC(9876_5);
 
-WEBKIT_CLASS_AVAILABLE_MAC(TBD)
-@interface DOMTestObj : DOMObject
+WEBKIT_CLASS_AVAILABLE_MAC(9876_5)
+WEBCORE_EXPORT @interface DOMTestObj : DOMObject
 @property (readonly) int readOnlyLongAttr;
 @property (readonly, copy) NSString *readOnlyStringAttr;
 @property (readonly, strong) DOMTestObj *readOnlyTestObjAttr;
@@ -121,6 +121,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(TBD)
 @property int nullableLongSettableAttribute;
 @property int nullableStringValue;
 @property (readonly, copy) NSString *attribute;
+@property (readonly, strong) DOMPromise *testPromiseAttr;
 
 - (void)voidMethod;
 - (void)voidMethodWithArgs:(int)longArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg;

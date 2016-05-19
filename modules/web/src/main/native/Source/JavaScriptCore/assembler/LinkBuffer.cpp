@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,34 +59,55 @@ LinkBuffer::CodeRef LinkBuffer::finalizeCodeWithDisassembly(const char* format, 
 {
     CodeRef result = finalizeCodeWithoutDisassembly();
 
-#if ENABLE(DISASSEMBLER)
-    dataLogF("Generated JIT code for ");
+    if (m_alreadyDisassembled)
+        return result;
+
+    StringPrintStream out;
+    out.printf("Generated JIT code for ");
     va_list argList;
     va_start(argList, format);
-    WTF::dataLogFV(format, argList);
+    out.vprintf(format, argList);
     va_end(argList);
-    dataLogF(":\n");
+    out.printf(":\n");
 
-    dataLogF("    Code at [%p, %p):\n", result.code().executableAddress(), static_cast<char*>(result.code().executableAddress()) + result.size());
+    out.printf("    Code at [%p, %p):\n", result.code().executableAddress(), static_cast<char*>(result.code().executableAddress()) + result.size());
+
+    CString header = out.toCString();
+
+    if (Options::asyncDisassembly()) {
+        disassembleAsynchronously(header, result, m_size, "    ");
+        return result;
+    }
+
+    dataLog(header);
     disassemble(result.code(), m_size, "    ", WTF::dataFile());
-#else
-    UNUSED_PARAM(format);
-#endif // ENABLE(DISASSEMBLER)
 
     return result;
 }
 
 #if ENABLE(BRANCH_COMPACTION)
-template <typename InstructionType>
-void LinkBuffer::copyCompactAndLinkCode(void* ownerUID, JITCompilationEffort effort)
+static ALWAYS_INLINE void recordLinkOffsets(AssemblerData& assemblerData, int32_t regionStart, int32_t regionEnd, int32_t offset)
 {
-    m_initialSize = m_assembler->m_assembler.codeSize();
+    int32_t ptr = regionStart / sizeof(int32_t);
+    const int32_t end = regionEnd / sizeof(int32_t);
+    int32_t* offsets = reinterpret_cast<int32_t*>(assemblerData.buffer());
+    while (ptr < end)
+        offsets[ptr++] = offset;
+}
+
+template <typename InstructionType>
+void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ownerUID, JITCompilationEffort effort)
+{
+    m_initialSize = macroAssembler.m_assembler.codeSize();
     allocate(m_initialSize, ownerUID, effort);
-    uint8_t* inData = (uint8_t*)m_assembler->unlinkedCode();
+    if (didFailToAllocate())
+        return;
+    Vector<LinkRecord, 0, UnsafeVectorOverflow>& jumpsToLink = macroAssembler.jumpsToLink();
+    m_assemblerStorage = macroAssembler.m_assembler.buffer().releaseAssemblerData();
+    uint8_t* inData = reinterpret_cast<uint8_t*>(m_assemblerStorage.buffer());
     uint8_t* outData = reinterpret_cast<uint8_t*>(m_code);
     int readPtr = 0;
     int writePtr = 0;
-    Vector<LinkRecord, 0, UnsafeVectorOverflow>& jumpsToLink = m_assembler->jumpsToLink();
     unsigned jumpCount = jumpsToLink.size();
     for (unsigned i = 0; i < jumpCount; ++i) {
         int offset = readPtr - writePtr;
@@ -102,7 +123,7 @@ void LinkBuffer::copyCompactAndLinkCode(void* ownerUID, JITCompilationEffort eff
         ASSERT(!(writePtr % 2));
         while (copySource != copyEnd)
             *copyDst++ = *copySource++;
-        m_assembler->recordLinkOffsets(readPtr, jumpsToLink[i].from(), offset);
+        recordLinkOffsets(m_assemblerStorage, readPtr, jumpsToLink[i].from(), offset);
         readPtr += regionSize;
         writePtr += regionSize;
 
@@ -112,28 +133,28 @@ void LinkBuffer::copyCompactAndLinkCode(void* ownerUID, JITCompilationEffort eff
         if (jumpsToLink[i].to() >= jumpsToLink[i].from())
             target = outData + jumpsToLink[i].to() - offset; // Compensate for what we have collapsed so far
         else
-            target = outData + jumpsToLink[i].to() - m_assembler->executableOffsetFor(jumpsToLink[i].to());
+            target = outData + jumpsToLink[i].to() - executableOffsetFor(jumpsToLink[i].to());
 
-        JumpLinkType jumpLinkType = m_assembler->computeJumpType(jumpsToLink[i], outData + writePtr, target);
+        JumpLinkType jumpLinkType = MacroAssembler::computeJumpType(jumpsToLink[i], outData + writePtr, target);
         // Compact branch if we can...
-        if (m_assembler->canCompact(jumpsToLink[i].type())) {
+        if (MacroAssembler::canCompact(jumpsToLink[i].type())) {
             // Step back in the write stream
-            int32_t delta = m_assembler->jumpSizeDelta(jumpsToLink[i].type(), jumpLinkType);
+            int32_t delta = MacroAssembler::jumpSizeDelta(jumpsToLink[i].type(), jumpLinkType);
             if (delta) {
                 writePtr -= delta;
-                m_assembler->recordLinkOffsets(jumpsToLink[i].from() - delta, readPtr, readPtr - writePtr);
+                recordLinkOffsets(m_assemblerStorage, jumpsToLink[i].from() - delta, readPtr, readPtr - writePtr);
             }
         }
         jumpsToLink[i].setFrom(writePtr);
     }
     // Copy everything after the last jump
     memcpy(outData + writePtr, inData + readPtr, m_initialSize - readPtr);
-    m_assembler->recordLinkOffsets(readPtr, m_initialSize, readPtr - writePtr);
+    recordLinkOffsets(m_assemblerStorage, readPtr, m_initialSize, readPtr - writePtr);
 
     for (unsigned i = 0; i < jumpCount; ++i) {
         uint8_t* location = outData + jumpsToLink[i].from();
-        uint8_t* target = outData + jumpsToLink[i].to() - m_assembler->executableOffsetFor(jumpsToLink[i].to());
-        m_assembler->link(jumpsToLink[i], location, target);
+        uint8_t* target = outData + jumpsToLink[i].to() - executableOffsetFor(jumpsToLink[i].to());
+        MacroAssembler::link(jumpsToLink[i], location, target);
     }
 
     jumpsToLink.clear();
@@ -149,28 +170,28 @@ void LinkBuffer::copyCompactAndLinkCode(void* ownerUID, JITCompilationEffort eff
 #endif
 
 
-void LinkBuffer::linkCode(void* ownerUID, JITCompilationEffort effort)
+void LinkBuffer::linkCode(MacroAssembler& macroAssembler, void* ownerUID, JITCompilationEffort effort)
 {
 #if !ENABLE(BRANCH_COMPACTION)
 #if defined(ASSEMBLER_HAS_CONSTANT_POOL) && ASSEMBLER_HAS_CONSTANT_POOL
-    m_assembler->m_assembler.buffer().flushConstantPool(false);
+    macroAssembler.m_assembler.buffer().flushConstantPool(false);
 #endif
-    AssemblerBuffer& buffer = m_assembler->m_assembler.buffer();
+    AssemblerBuffer& buffer = macroAssembler.m_assembler.buffer();
     allocate(buffer.codeSize(), ownerUID, effort);
     if (!m_didAllocate)
         return;
     ASSERT(m_code);
 #if CPU(ARM_TRADITIONAL)
-    m_assembler->m_assembler.prepareExecutableCopy(m_code);
+    macroAssembler.m_assembler.prepareExecutableCopy(m_code);
 #endif
     memcpy(m_code, buffer.data(), buffer.codeSize());
 #if CPU(MIPS)
-    m_assembler->m_assembler.relocateJumps(buffer.data(), m_code);
+    macroAssembler.m_assembler.relocateJumps(buffer.data(), m_code);
 #endif
 #elif CPU(ARM_THUMB2)
-    copyCompactAndLinkCode<uint16_t>(ownerUID, effort);
+    copyCompactAndLinkCode<uint16_t>(macroAssembler, ownerUID, effort);
 #elif CPU(ARM64)
-    copyCompactAndLinkCode<uint32_t>(ownerUID, effort);
+    copyCompactAndLinkCode<uint32_t>(macroAssembler, ownerUID, effort);
 #endif
 }
 
@@ -196,6 +217,8 @@ void LinkBuffer::allocate(size_t initialSize, void* ownerUID, JITCompilationEffo
 
 void LinkBuffer::shrink(size_t newSize)
 {
+    if (!m_executableMemory)
+        return;
     m_size = newSize;
     m_executableMemory->shrink(m_size);
 }

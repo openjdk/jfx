@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-OESStandardDerivatives::OESStandardDerivatives(WebGLRenderingContext* context)
+OESStandardDerivatives::OESStandardDerivatives(WebGLRenderingContextBase* context)
     : WebGLExtension(context)
 {
 }
@@ -43,11 +43,6 @@ OESStandardDerivatives::~OESStandardDerivatives()
 WebGLExtension::ExtensionName OESStandardDerivatives::getName() const
 {
     return OESStandardDerivativesName;
-}
-
-OwnPtr<OESStandardDerivatives> OESStandardDerivatives::create(WebGLRenderingContext* context)
-{
-    return adoptPtr(new OESStandardDerivatives(context));
 }
 
 } // namespace WebCore

@@ -19,6 +19,7 @@
 #
 
 ActiveDOMObject
+AtomicString
 CPPPureInterface
 CachedAttribute
 CallbackNeedsOperatorEqual
@@ -28,7 +29,7 @@ CheckSecurityForNode
 Clamp
 Conditional=*
 Constructor
-ConstructorCallWith=ScriptExecutionContext
+ConstructorCallWith=Document|ScriptExecutionContext|ScriptState
 ConstructorConditional=*
 ConstructorRaisesException
 ConstructorTemplate=Event|TypedArray
@@ -43,6 +44,7 @@ CustomIndexedSetter
 CustomIsReachable
 CustomNamedGetter
 CustomNamedSetter
+CustomProxyToJSObject
 CustomPutFunction
 CustomReturn
 CustomSetter
@@ -53,13 +55,15 @@ DoNotCheckConstants
 DoNotCheckSecurity
 DoNotCheckSecurityOnGetter
 DoNotCheckSecurityOnSetter
+DocumentEventHandler
 EnabledAtRuntime=*
 EnabledBySetting=*
 EnforceRange
 EventTarget
+ForwardDeclareInHeader
 GenerateIsReachable=|Impl|ImplWebGLRenderingContext|ImplDocument|ImplElementRoot|ImplFrame|ImplOwnerNodeRoot
 GetterRaisesException
-GlobalContext=DOMWindow|WorkerGlobalScope|SharedWorkerGlobalScope|DedicatedWorkerGlobalScope
+GlobalContext=DOMWindow|WorkerGlobalScope|DedicatedWorkerGlobalScope
 Immutable
 ImplementationLacksVTable
 ImplementationNamespace=*
@@ -79,34 +83,40 @@ JSCustomToNativeObject
 JSGenerateToJSObject
 JSGenerateToNativeObject
 JSLegacyParent=*
-JSNoStaticTables
-JSWindowEventListener
 MasqueradesAsUndefined
 NamedConstructor=*
 NewImpurePropertyFiresWatchpoints
 NoInterfaceObject
+Nondeterministic
 NotEnumerable
 NotDeletable
 ObjCCustomImplementation
+ObjCExplicitAtomicString
+ObjCImplementedAsUnsignedLong
 ObjCLegacyUnnamedParameters
 ObjCPolymorphic
 ObjCProtocol
+ObjCUseDefaultView
 OperationsNotDeletable
 PassContext
 RaisesException
 Reflect=*
 Replaceable
 ReplaceableConstructor
+ReportExtraMemoryCost
+RequiresExistingAtomicString
 ReturnNewObject
 SetterRaisesException
 SkipVTableValidation
 StrictTypeChecking
 SuppressToJSObject
 TreatNullAs=NullString
+TreatReturnedNaNDateAs=Null|NaN
 TreatReturnedNullStringAs=Null|Undefined
 TreatUndefinedAs=NullString
 TypedArray=*
 URL
+WindowEventHandler
 
 # PLATFORM(IOS)
 AppleCopyright

@@ -46,8 +46,12 @@ namespace WebCore {
 
 JSValue JSMessageEvent::data(ExecState* exec) const
 {
-    if (JSValue cachedValue = m_data.get())
-        return cachedValue;
+    if (JSValue cachedValue = m_data.get()) {
+        // We cannot use a cached object if we are in a different world than the one it was created in.
+        if (!cachedValue.isObject() || &worldForDOMObject(cachedValue.getObject()) == &currentWorld(exec))
+            return cachedValue;
+        ASSERT_NOT_REACHED();
+    }
 
     MessageEvent& event = impl();
     JSValue result;
@@ -56,8 +60,19 @@ JSValue JSMessageEvent::data(ExecState* exec) const
         Deprecated::ScriptValue scriptValue = event.dataAsScriptValue();
         if (scriptValue.hasNoValue())
             result = jsNull();
-        else
-            result = scriptValue.jsValue();
+        else {
+            JSValue dataValue = scriptValue.jsValue();
+            // We need to make sure MessageEvents do not leak objects in their state property across isolated DOM worlds.
+            // Ideally, we would check that the worlds have different privileges but that's not possible yet.
+            if (dataValue.isObject() && &worldForDOMObject(dataValue.getObject()) != &currentWorld(exec)) {
+                RefPtr<SerializedScriptValue> serializedValue = event.trySerializeData(exec);
+                if (serializedValue)
+                    result = serializedValue->deserialize(exec, globalObject(), nullptr);
+                else
+                    result = jsNull();
+            } else
+                result = dataValue;
+        }
         break;
     }
 
@@ -95,12 +110,12 @@ static JSC::JSValue handleInitMessageEvent(JSMessageEvent* jsEvent, JSC::ExecSta
     bool cancelableArg = exec->argument(2).toBoolean(exec);
     const String originArg = exec->argument(4).toString(exec)->value(exec);
     const String lastEventIdArg = exec->argument(5).toString(exec)->value(exec);
-    DOMWindow* sourceArg = toDOMWindow(exec->argument(6));
+    DOMWindow* sourceArg = JSDOMWindow::toWrapped(exec->argument(6));
     std::unique_ptr<MessagePortArray> messagePorts;
-    OwnPtr<ArrayBufferArray> arrayBuffers;
+    std::unique_ptr<ArrayBufferArray> arrayBuffers;
     if (!exec->argument(7).isUndefinedOrNull()) {
         messagePorts = std::make_unique<MessagePortArray>();
-        arrayBuffers = adoptPtr(new ArrayBufferArray);
+        arrayBuffers = std::make_unique<ArrayBufferArray>();
         fillMessagePortArray(exec, exec->argument(7), *messagePorts, *arrayBuffers);
         if (exec->hadException())
             return jsUndefined();
@@ -110,7 +125,7 @@ static JSC::JSValue handleInitMessageEvent(JSMessageEvent* jsEvent, JSC::ExecSta
         return jsUndefined();
 
     MessageEvent& event = jsEvent->impl();
-    event.initMessageEvent(typeArg, canBubbleArg, cancelableArg, dataArg, originArg, lastEventIdArg, sourceArg, std::move(messagePorts));
+    event.initMessageEvent(typeArg, canBubbleArg, cancelableArg, dataArg, originArg, lastEventIdArg, sourceArg, WTF::move(messagePorts));
     jsEvent->m_data.set(exec->vm(), jsEvent, dataArg.jsValue());
     return jsUndefined();
 }

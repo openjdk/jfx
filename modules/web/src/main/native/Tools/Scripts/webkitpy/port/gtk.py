@@ -30,16 +30,20 @@
 import os
 import subprocess
 import uuid
+import logging
 
+from webkitpy.common.system import path
 from webkitpy.common.memoized import memoized
 from webkitpy.layout_tests.models.test_configuration import TestConfiguration
 from webkitpy.port.base import Port
 from webkitpy.port.pulseaudio_sanitizer import PulseAudioSanitizer
 from webkitpy.port.xvfbdriver import XvfbDriver
 from webkitpy.port.westondriver import WestonDriver
+from webkitpy.port.xorgdriver import XorgDriver
 from webkitpy.port.linux_get_crash_log import GDBCrashLogGenerator
 from webkitpy.port.leakdetector_valgrind import LeakDetectorValgrind
 
+_log = logging.getLogger(__name__)
 
 class GtkPort(Port):
     port_name = "gtk"
@@ -53,35 +57,32 @@ class GtkPort(Port):
             if not self.get_option("wrapper"):
                 raise ValueError('use --wrapper=\"valgrind\" for memory leak detection on GTK')
 
-    def _is_cmake_build(self):
-        return os.path.exists(self._build_path('CMakeCache.txt'))
+        if self._should_use_jhbuild():
+            self._jhbuild_wrapper = [self.path_from_webkit_base('Tools', 'jhbuild', 'jhbuild-wrapper'), '--gtk', 'run']
+            if self.get_option('wrapper'):
+                self.set_option('wrapper', ' '.join(self._jhbuild_wrapper) + ' ' + self.get_option('wrapper'))
+            else:
+                self.set_option_default('wrapper', ' '.join(self._jhbuild_wrapper))
 
     def _built_executables_path(self, *path):
-        if self._is_cmake_build():
-            return self._build_path(*(('bin',) + path))
-        else:
-            return self._build_path(*(('Programs',) + path))
+        return self._build_path(*(('bin',) + path))
 
     def _built_libraries_path(self, *path):
-        if self._is_cmake_build():
-            return self._build_path(*(('lib',) + path))
-        else:
-            return self._build_path(*(('.libs',) + path))
-
-    def warn_if_bug_missing_in_test_expectations(self):
-        return not self.get_option('webkit_test_runner')
+        return self._build_path(*(('lib',) + path))
 
     def _port_flag_for_scripts(self):
-        if self._is_cmake_build():
-            return "--gtkcmake"
-        else:
-            return "--gtk"
+        return "--gtk"
 
     @memoized
     def _driver_class(self):
         if os.environ.get("WAYLAND_DISPLAY"):
             return WestonDriver
+        if os.environ.get("USE_NATIVE_XDISPLAY"):
+            return XorgDriver
         return XvfbDriver
+
+    def supports_per_test_timeout(self):
+        return True
 
     def default_timeout_ms(self):
         # Starting an application under Valgrind takes a lot longer than normal
@@ -112,14 +113,19 @@ class GtkPort(Port):
         environment = super(GtkPort, self).setup_environ_for_server(server_name)
         environment['GSETTINGS_BACKEND'] = 'memory'
         environment['LIBOVERLAY_SCROLLBAR'] = '0'
-        if self._is_cmake_build():
-            environment['TEST_RUNNER_INJECTED_BUNDLE_FILENAME'] = self._build_path('lib', 'libTestRunnerInjectedBundle.so')
-            environment['TEST_RUNNER_TEST_PLUGIN_PATH'] = self._build_path('lib')
-        else:
-            environment['TEST_RUNNER_INJECTED_BUNDLE_FILENAME'] = self._build_path('Libraries', 'libTestRunnerInjectedBundle.la')
-            environment['TEST_RUNNER_TEST_PLUGIN_PATH'] = self._build_path('TestNetscapePlugin', '.libs')
-        environment['AUDIO_RESOURCES_PATH'] = self.path_from_webkit_base('Source', 'WebCore', 'platform', 'audio', 'resources')
+        environment['TEST_RUNNER_INJECTED_BUNDLE_FILENAME'] = self._build_path('lib', 'libTestRunnerInjectedBundle.so')
+        environment['TEST_RUNNER_TEST_PLUGIN_PATH'] = self._build_path('lib', 'plugins')
         self._copy_value_from_environ_if_set(environment, 'WEBKIT_OUTPUTDIR')
+        if self._driver_class() == XvfbDriver and self._should_use_jhbuild():
+            llvmpipe_libgl_path = self.host.executive.run_command(self._jhbuild_wrapper + ['printenv', 'LLVMPIPE_LIBGL_PATH'],
+                                                                  error_handler=self.host.executive.ignore_error).strip()
+            if os.path.exists(os.path.join(llvmpipe_libgl_path, "libGL.so")):
+                    # Force the Gallium llvmpipe software rasterizer
+                    environment['LD_LIBRARY_PATH'] = llvmpipe_libgl_path
+                    if os.environ.get('LD_LIBRARY_PATH'):
+                            environment['LD_LIBRARY_PATH'] += ':%s' % os.environ.get('LD_LIBRARY_PATH')
+            else:
+                    _log.warning("Can't find Gallium llvmpipe driver. Try to run update-webkitgtk-libs")
         if self.get_option("leaks"):
             #  Turn off GLib memory optimisations https://wiki.gnome.org/Valgrind.
             environment['G_SLICE'] = 'always-malloc'
@@ -172,11 +178,8 @@ class GtkPort(Port):
 
     def _search_paths(self):
         search_paths = []
-        if self.get_option('webkit_test_runner'):
-            search_paths.extend([self.port_name + '-wk2', 'wk2'])
-        else:
-            search_paths.append(self.port_name + '-wk1')
         search_paths.append(self.port_name)
+        search_paths.append('wk2')
         search_paths.extend(self.get_option("additional_platform_directory", []))
         return search_paths
 
@@ -196,40 +199,27 @@ class GtkPort(Port):
             return
         self._leakdetector.parse_and_print_leaks_detail(leaks_files)
 
-    # FIXME: We should find a way to share this implmentation with Gtk,
-    # or teach run-launcher how to call run-safari and move this down to Port.
     def show_results_html_file(self, results_filename):
-        run_launcher_args = ["file://%s" % results_filename]
-        if self.get_option('webkit_test_runner'):
-            run_launcher_args.append('-2')
-        # FIXME: old-run-webkit-tests also added ["-graphicssystem", "raster", "-style", "windows"]
-        # FIXME: old-run-webkit-tests converted results_filename path for cygwin.
-        self._run_script("run-launcher", run_launcher_args)
+        self._run_script("run-minibrowser", [path.abspath_to_uri(self.host.platform, results_filename)])
 
     def check_sys_deps(self, needs_http):
         return super(GtkPort, self).check_sys_deps(needs_http) and self._driver_class().check_driver(self)
 
     def _get_crash_log(self, name, pid, stdout, stderr, newer_than):
+        name = "WebKitWebProcess" if name == "WebProcess" else name
         return GDBCrashLogGenerator(name, pid, newer_than, self._filesystem, self._path_to_driver).generate_crash_log(stdout, stderr)
+
+    def test_expectations_file_position(self):
+        # GTK port baseline search path is gtk -> wk2 -> generic (as gtk-wk2 and gtk baselines are merged), so port test expectations file is at third to last position.
+        return 2
 
     def build_webkit_command(self, build_style=None):
         command = super(GtkPort, self).build_webkit_command(build_style)
-        if self._is_cmake_build():
-            command.extend(["--gtkcmake", "--update-gtk"])
-        else:
-            command.extend(["--gtk", "--update-gtk"])
-
-        if self.get_option('webkit_test_runner'):
-            command.append("--no-webkit1")
-        else:
-            command.append("--no-webkit2")
-
+        command.extend(["--gtk", "--update-gtk"])
         command.append(super(GtkPort, self).make_args())
         return command
 
     def run_webkit_tests_command(self):
         command = super(GtkPort, self).run_webkit_tests_command()
         command.append("--gtk")
-        if self.get_option('webkit_test_runner'):
-            command.append("-2")
         return command

@@ -27,7 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import sys
-import unittest2 as unittest
+import unittest
 
 from webkitpy.thirdparty import AutoinstallImportHook
 
@@ -61,8 +61,6 @@ class ThirdpartyTest(unittest.TestCase):
         import webkitpy.thirdparty.autoinstalled.buildbot
         import webkitpy.thirdparty.autoinstalled.coverage
         import webkitpy.thirdparty.autoinstalled.eliza
-        import webkitpy.thirdparty.autoinstalled.irc.ircbot
-        import webkitpy.thirdparty.autoinstalled.irc.irclib
         import webkitpy.thirdparty.autoinstalled.mechanize
         import webkitpy.thirdparty.autoinstalled.pylint
         import webkitpy.thirdparty.autoinstalled.pep8

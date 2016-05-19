@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,6 @@
 
 #ifndef DFGAdjacencyList_h
 #define DFGAdjacencyList_h
-
-#include <wtf/Platform.h>
 
 #if ENABLE(DFG_JIT)
 
@@ -54,7 +52,7 @@ public:
         }
     }
 
-    AdjacencyList(Kind kind, Edge child1, Edge child2, Edge child3)
+    AdjacencyList(Kind kind, Edge child1, Edge child2 = Edge(), Edge child3 = Edge())
     {
         ASSERT_UNUSED(kind, kind == Fixed);
         initialize(child1, child2, child3);
@@ -66,6 +64,8 @@ public:
         setFirstChild(firstChild);
         setNumChildren(numChildren);
     }
+
+    bool isEmpty() const { return !child1(); }
 
     const Edge& child(unsigned i) const
     {
@@ -149,6 +149,56 @@ public:
     void setNumChildren(unsigned numChildren)
     {
         m_words[1].m_encodedWord = numChildren;
+    }
+
+    AdjacencyList sanitized() const
+    {
+        return AdjacencyList(Fixed, child1().sanitized(), child2().sanitized(), child3().sanitized());
+    }
+
+    AdjacencyList justChecks() const
+    {
+        AdjacencyList result(Fixed);
+        unsigned sourceIndex = 0;
+        unsigned targetIndex = 0;
+        while (sourceIndex < AdjacencyList::Size) {
+            Edge edge = child(sourceIndex++);
+            if (!edge)
+                break;
+            if (edge.willHaveCheck())
+                result.child(targetIndex++) = edge;
+        }
+        return result;
+    }
+
+    unsigned hash() const
+    {
+        unsigned result = 0;
+        if (!child1())
+            return result;
+
+        result += child1().hash();
+
+        if (!child2())
+            return result;
+
+        result *= 3;
+        result += child2().hash();
+
+        if (!child3())
+            return result;
+
+        result *= 3;
+        result += child3().hash();
+
+        return result;
+    }
+
+    bool operator==(const AdjacencyList& other) const
+    {
+        return child1() == other.child1()
+            && child2() == other.child2()
+            && child3() == other.child3();
     }
 
 private:

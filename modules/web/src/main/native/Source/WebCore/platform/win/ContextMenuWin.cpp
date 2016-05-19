@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -52,9 +52,6 @@ ContextMenu::ContextMenu(HMENU menu)
 
 void ContextMenu::getContextMenuItems(HMENU menu, Vector<ContextMenuItem>& items)
 {
-#if OS(WINCE)
-    notImplemented();
-#else
     int count = ::GetMenuItemCount(menu);
     if (count <= 0)
         return;
@@ -80,7 +77,6 @@ void ContextMenu::getContextMenuItems(HMENU menu, Vector<ContextMenuItem>& items
         if (::GetMenuItemInfo(menu, i, TRUE, &info))
            items.append(ContextMenuItem(info));
     }
-#endif
 }
 
 HMENU ContextMenu::createPlatformContextMenuFromItems(const Vector<ContextMenuItem>& items)
@@ -92,31 +88,6 @@ HMENU ContextMenu::createPlatformContextMenuFromItems(const Vector<ContextMenuIt
 
         MENUITEMINFO menuItem = item.platformContextMenuItem();
 
-#if OS(WINCE)
-        UINT flags = MF_BYPOSITION;
-        UINT newItem = 0;
-        LPCWSTR title = 0;
-
-        if (item.type() == SeparatorType)
-            flags |= MF_SEPARATOR;
-        else {
-            flags |= MF_STRING;
-            flags |= item.checked() ? MF_CHECKED : MF_UNCHECKED;
-            flags |= item.enabled() ? MF_ENABLED : MF_GRAYED;
-
-            title = menuItem.dwTypeData;
-            menuItem.dwTypeData = 0;
-
-            if (menuItem.hSubMenu) {
-                flags |= MF_POPUP;
-                newItem = reinterpret_cast<UINT>(menuItem.hSubMenu);
-                menuItem.hSubMenu = 0;
-            } else
-                newItem = menuItem.wID;
-        }
-
-        ::InsertMenuW(menu, i, flags, newItem, title);
-#else
         // ContextMenuItem::platformContextMenuItem doesn't set the title of the MENUITEMINFO to make the
         // lifetime handling easier for callers.
         Vector<UChar> wideCharTitle; // Retain buffer for long enough to make the InsertMenuItem call
@@ -130,7 +101,6 @@ HMENU ContextMenu::createPlatformContextMenuFromItems(const Vector<ContextMenuIt
         }
 
         ::InsertMenuItem(menu, i, TRUE, &menuItem);
-#endif
     }
 
     return menu;

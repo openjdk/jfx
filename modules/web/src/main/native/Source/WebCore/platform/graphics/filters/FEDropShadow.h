@@ -20,7 +20,6 @@
 #ifndef FEDropShadow_h
 #define FEDropShadow_h
 
-#if ENABLE(FILTERS)
 #include "Color.h"
 #include "Filter.h"
 #include "FilterEffect.h"
@@ -29,7 +28,7 @@ namespace WebCore {
 
 class FEDropShadow : public FilterEffect {
 public:
-    static PassRefPtr<FEDropShadow> create(Filter*, float, float, float, float, const Color&, float);
+    static Ref<FEDropShadow> create(Filter&, float, float, float, float, const Color&, float);
 
     float stdDeviationX() const { return m_stdX; }
     void setStdDeviationX(float stdX) { m_stdX = stdX; }
@@ -49,8 +48,6 @@ public:
     float shadowOpacity() const { return m_shadowOpacity; }
     void setShadowOpacity(float shadowOpacity) { m_shadowOpacity = shadowOpacity; }
 
-    static float calculateStdDeviation(float);
-
     virtual void platformApplySoftware();
     virtual void dump();
 
@@ -59,7 +56,7 @@ public:
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;
 
 private:
-    FEDropShadow(Filter*, float, float, float, float, const Color&, float);
+    FEDropShadow(Filter&, float, float, float, float, const Color&, float);
 
     float m_stdX;
     float m_stdY;
@@ -71,5 +68,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
 #endif // FEDropShadow_h

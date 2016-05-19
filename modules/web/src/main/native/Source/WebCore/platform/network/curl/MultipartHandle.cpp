@@ -26,6 +26,9 @@
 #include "config.h"
 #include "MultipartHandle.h"
 
+#if USE(CURL)
+
+#include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
 #include "ResourceHandleClient.h"
 #include "ResourceHandleInternal.h"
@@ -33,11 +36,6 @@
 #include <wtf/StringExtras.h>
 
 namespace WebCore {
-
-PassOwnPtr<MultipartHandle> MultipartHandle::create(ResourceHandle* handle, const String& boundary)
-{
-    return adoptPtr(new MultipartHandle(handle, boundary));
-}
 
 bool MultipartHandle::extractBoundary(const String& contentType, String& boundary)
 {
@@ -140,7 +138,7 @@ bool MultipartHandle::parseHeadersIfPossible()
 
     // Parse the HTTP headers.
     String value;
-    AtomicString name;
+    String name;
     char* p = const_cast<char*>(content);
     const char* end = content + contentLength;
     size_t totalConsumedLength = 0;
@@ -339,18 +337,17 @@ void MultipartHandle::didReceiveResponse()
 {
     ResourceHandleInternal* d = m_resourceHandle->getInternal();
     if (d->client()) {
-        OwnPtr<ResourceResponse> response = ResourceResponseBase::adopt(d->m_response.copyData());
+        std::unique_ptr<ResourceResponse> response = ResourceResponseBase::adopt(d->m_response.copyData());
 
         HTTPHeaderMap::const_iterator end = m_headers.end();
         for (HTTPHeaderMap::const_iterator it = m_headers.begin(); it != end; ++it)
             response->setHTTPHeaderField(it->key, it->value);
 
-        String contentType = m_headers.get("Content-Type");
+        String contentType = m_headers.get(HTTPHeaderName::ContentType);
         String mimeType = extractMIMETypeFromMediaType(contentType);
 
         response->setMimeType(mimeType.lower());
         response->setTextEncodingName(extractCharsetFromMediaType(contentType));
-        response->setSuggestedFilename(filenameFromHTTPContentDisposition(response->httpHeaderField("Content-Disposition")));
 
         d->client()->didReceiveResponse(m_resourceHandle, *response);
         response->setResponseFired(true);
@@ -359,3 +356,4 @@ void MultipartHandle::didReceiveResponse()
 
 } // namespace WebCore
 
+#endif

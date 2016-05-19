@@ -38,6 +38,11 @@ class RuleData;
 class RuleSet;
 class SelectorFilter;
 
+struct MatchedRule {
+    const RuleData* ruleData;
+    unsigned specificity;
+};
+
 class ElementRuleCollector {
 public:
     ElementRuleCollector(Element& element, RenderStyle* style, const DocumentRuleSets& ruleSets, const SelectorFilter& selectorFilter)
@@ -46,10 +51,10 @@ public:
         , m_ruleSets(ruleSets)
         , m_selectorFilter(selectorFilter)
         , m_isPrintStyle(false)
-        , m_regionForStyling(0)
+        , m_regionForStyling(nullptr)
         , m_pseudoStyleRequest(NOPSEUDO)
         , m_sameOriginOnly(false)
-        , m_mode(SelectorChecker::ResolvingStyle)
+        , m_mode(SelectorChecker::Mode::ResolvingStyle)
         , m_canUseFastReject(m_selectorFilter.parentStackIsConsistent(element.parentNode()))
     {
     }
@@ -62,13 +67,13 @@ public:
     void setMode(SelectorChecker::Mode mode) { m_mode = mode; }
     void setPseudoStyleRequest(const PseudoStyleRequest& request) { m_pseudoStyleRequest = request; }
     void setSameOriginOnly(bool f) { m_sameOriginOnly = f; }
-    void setRegionForStyling(RenderRegion* regionForStyling) { m_regionForStyling = regionForStyling; }
+    void setRegionForStyling(const RenderRegion* regionForStyling) { m_regionForStyling = regionForStyling; }
     void setMedium(const MediaQueryEvaluator* medium) { m_isPrintStyle = medium->mediaTypeMatchSpecific("print"); }
 
     bool hasAnyMatchingRules(RuleSet*);
 
     StyleResolver::MatchResult& matchedResult();
-    const Vector<RefPtr<StyleRuleBase>>& matchedRuleList() const;
+    const Vector<RefPtr<StyleRule>>& matchedRuleList() const;
 
     bool hasMatchedRules() const { return m_matchedRules && !m_matchedRules->isEmpty(); }
     void clearMatchedRules();
@@ -80,13 +85,13 @@ private:
 
     void collectMatchingRules(const MatchRequest&, StyleResolver::RuleRange&);
     void collectMatchingRulesForRegion(const MatchRequest&, StyleResolver::RuleRange&);
-    void collectMatchingRulesForList(const Vector<RuleData>*, const MatchRequest&, StyleResolver::RuleRange&);
-    bool ruleMatches(const RuleData&, PseudoId&);
+    void collectMatchingRulesForList(const RuleSet::RuleDataVector*, const MatchRequest&, StyleResolver::RuleRange&);
+    bool ruleMatches(const RuleData&, unsigned &specificity);
 
     void sortMatchedRules();
     void sortAndTransferMatchedRules();
 
-    void addMatchedRule(const RuleData*);
+    void addMatchedRule(const MatchedRule&);
 
     Element& m_element;
     RenderStyle* m_style;
@@ -94,16 +99,16 @@ private:
     const SelectorFilter& m_selectorFilter;
 
     bool m_isPrintStyle;
-    RenderRegion* m_regionForStyling;
+    const RenderRegion* m_regionForStyling;
     PseudoStyleRequest m_pseudoStyleRequest;
     bool m_sameOriginOnly;
     SelectorChecker::Mode m_mode;
     bool m_canUseFastReject;
 
-    std::unique_ptr<Vector<const RuleData*, 32>> m_matchedRules;
+    std::unique_ptr<Vector<MatchedRule, 32>> m_matchedRules;
 
     // Output.
-    Vector<RefPtr<StyleRuleBase>> m_matchedRuleList;
+    Vector<RefPtr<StyleRule>> m_matchedRuleList;
     StyleResolver::MatchResult m_result;
 };
 

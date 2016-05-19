@@ -24,11 +24,14 @@
  */
 
 #include "config.h"
+
+#if WK_HAVE_C_SPI
+
 #include "JavaScriptTest.h"
 #include "PlatformUtilities.h"
 #include "PlatformWebView.h"
-#include <WebKit2/WKRetainPtr.h>
-#include <WebKit2/WKPreferencesPrivate.h>
+#include <WebKit/WKRetainPtr.h>
+#include <WebKit/WKPreferencesPrivate.h>
 
 namespace TestWebKitAPI {
 
@@ -86,13 +89,11 @@ TEST(WebKit2, SpacebarScrolling)
     EXPECT_JS_FALSE(webView.page(), "isDocumentScrolled()");
     EXPECT_JS_TRUE(webView.page(), "textFieldContainsSpace()");
 
-    // On Mac, a key down event represents both a raw key down and a key press. On Windows, a key
-    // down event only represents a raw key down. We expect the key press to be handled (because it
-    // inserts text into the text field). But the raw key down should not be handled.
+    // On Mac, a key down event represents both a raw key down and a key press.
+    // We expect the key press to be handled (because it inserts text into the text field),
+    // but the raw key down should not be handled.
 #if PLATFORM(COCOA)
     EXPECT_FALSE(didNotHandleKeyDownEvent);
-#elif PLATFORM(WIN)
-    EXPECT_TRUE(didNotHandleKeyDownEvent);
 #endif
 
     EXPECT_JS_EQ(webView.page(), "blurTextField()", "undefined");
@@ -100,18 +101,14 @@ TEST(WebKit2, SpacebarScrolling)
     didNotHandleKeyDownEvent = false;
     webView.simulateSpacebarKeyPress();
 
-    // This EXPECT_JS_TRUE test fails on Windows port
-    // https://bugs.webkit.org/show_bug.cgi?id=84961
-#if !PLATFORM(WIN)
     EXPECT_JS_TRUE(webView.page(), "isDocumentScrolled()");
-#endif
     EXPECT_JS_TRUE(webView.page(), "textFieldContainsSpace()");
 
 #if PLATFORM(COCOA)
     EXPECT_FALSE(didNotHandleKeyDownEvent);
-#elif PLATFORM(WIN)
-    EXPECT_TRUE(didNotHandleKeyDownEvent);
 #endif
 }
 
 } // namespace TestWebKitAPI
+
+#endif

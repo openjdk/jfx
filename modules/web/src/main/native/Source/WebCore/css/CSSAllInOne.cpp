@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,17 +32,22 @@
 #include "CSSCanvasValue.cpp"
 #include "CSSCharsetRule.cpp"
 #include "CSSComputedStyleDeclaration.cpp"
+#include "CSSContentDistributionValue.cpp"
 #include "CSSCrossfadeValue.cpp"
 #include "CSSCursorImageValue.cpp"
 #include "CSSDefaultStyleSheets.cpp"
 #include "CSSFilterImageValue.cpp"
 #include "CSSFontFace.cpp"
+#include "CSSFontFaceLoadEvent.cpp"
 #include "CSSFontFaceRule.cpp"
 #include "CSSFontFaceSource.cpp"
 #include "CSSFontFaceSrcValue.cpp"
 #include "CSSFontSelector.cpp"
 #include "CSSFunctionValue.cpp"
 #include "CSSGradientValue.cpp"
+#if ENABLE(CSS_GRID_LAYOUT)
+#include "CSSGridLineNamesValue.cpp"
+#endif
 #include "CSSGroupingRule.cpp"
 #include "CSSImageGeneratorValue.cpp"
 #include "CSSImageSetValue.cpp"
@@ -52,6 +57,7 @@
 #include "CSSInitialValue.cpp"
 #include "CSSLineBoxContainValue.cpp"
 #include "CSSMediaRule.cpp"
+#include "CSSNamedImageValue.cpp"
 #include "CSSOMUtils.cpp"
 #include "CSSPageRule.cpp"
 #include "CSSParser.cpp"
@@ -63,6 +69,7 @@
 #include "CSSSegmentedFontFace.cpp"
 #include "CSSSelector.cpp"
 #include "CSSSelectorList.cpp"
+#include "CSSSupportsRule.cpp"
 #include "CSSStyleRule.cpp"
 #include "CSSStyleSheet.cpp"
 #include "CSSTimingFunctionValue.cpp"
@@ -71,14 +78,12 @@
 #include "CSSValueList.cpp"
 #include "CSSValuePool.cpp"
 #include "DOMWindowCSS.cpp"
-#include "DeprecatedStyleBuilder.cpp"
 #include "DocumentRuleSets.cpp"
 #include "ElementRuleCollector.cpp"
 #include "InspectorCSSOMWrappers.cpp"
 #include "PageRuleCollector.cpp"
 #include "RuleFeature.cpp"
 #include "RuleSet.cpp"
-#include "SelectorCheckerFastPath.cpp"
 #include "SelectorFilter.cpp"
 #include "StyleProperties.cpp"
 #include "StylePropertyShorthand.cpp"

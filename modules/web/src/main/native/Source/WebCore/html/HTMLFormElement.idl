@@ -46,4 +46,6 @@
 #endif
     void reset();
     boolean checkValidity();
+
+    [Conditional=REQUEST_AUTOCOMPLETE] void requestAutocomplete();
 };

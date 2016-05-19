@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2012, 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,9 @@
 
 #include "MacroAssemblerX86Common.h"
 
-#if USE(MASM_PROBE)
-#include <wtf/StdLibExtras.h>
-#endif
-
 #define REPTACH_OFFSET_CALL_R11 3
+
+inline bool CAN_SIGN_EXTEND_32_64(int64_t value) { return value == (int64_t)(int32_t)value; }
 
 namespace JSC {
 
@@ -127,6 +125,16 @@ public:
         store32(imm, scratchRegister);
     }
 
+    void store32(RegisterID source, void* address)
+    {
+        if (source == X86Registers::eax)
+            m_assembler.movl_EAXm(address);
+        else {
+            move(TrustedImmPtr(address), scratchRegister);
+            store32(source, scratchRegister);
+        }
+    }
+
     void store8(TrustedImm32 imm, void* address)
     {
         move(TrustedImmPtr(address), scratchRegister);
@@ -139,10 +147,74 @@ public:
         store8(reg, Address(scratchRegister));
     }
 
-    Call call()
+#if OS(WINDOWS)
+    Call callWithSlowPathReturnType()
     {
+        // On Win64, when the return type is larger than 8 bytes, we need to allocate space on the stack for the return value.
+        // On entry, rcx should contain a pointer to this stack space. The other parameters are shifted to the right,
+        // rdx should contain the first argument, r8 should contain the second argument, and r9 should contain the third argument.
+        // On return, rax contains a pointer to this stack value. See http://msdn.microsoft.com/en-us/library/7572ztz4.aspx.
+        // We then need to copy the 16 byte return value into rax and rdx, since JIT expects the return value to be split between the two.
+        // It is assumed that the parameters are already shifted to the right, when entering this method.
+        // Note: this implementation supports up to 3 parameters.
+
+        // JIT relies on the CallerFrame (frame pointer) being put on the stack,
+        // On Win64 we need to manually copy the frame pointer to the stack, since MSVC may not maintain a frame pointer on 64-bit.
+        // See http://msdn.microsoft.com/en-us/library/9z1stfyw.aspx where it's stated that rbp MAY be used as a frame pointer.
+        store64(X86Registers::ebp, Address(X86Registers::esp, -16));
+
+        // We also need to allocate the shadow space on the stack for the 4 parameter registers.
+        // In addition, we need to allocate 16 bytes for the return value.
+        // Also, we should allocate 16 bytes for the frame pointer, and return address (not populated).
+        sub64(TrustedImm32(8 * sizeof(int64_t)), X86Registers::esp);
+
+        // The first parameter register should contain a pointer to the stack allocated space for the return value.
+        move(X86Registers::esp, X86Registers::ecx);
+        add64(TrustedImm32(4 * sizeof(int64_t)), X86Registers::ecx);
+
         DataLabelPtr label = moveWithPatch(TrustedImmPtr(0), scratchRegister);
         Call result = Call(m_assembler.call(scratchRegister), Call::Linkable);
+
+        add64(TrustedImm32(8 * sizeof(int64_t)), X86Registers::esp);
+
+        // Copy the return value into rax and rdx.
+        load64(Address(X86Registers::eax, sizeof(int64_t)), X86Registers::edx);
+        load64(Address(X86Registers::eax), X86Registers::eax);
+
+        ASSERT_UNUSED(label, differenceBetween(label, result) == REPTACH_OFFSET_CALL_R11);
+        return result;
+    }
+#endif
+
+    Call call()
+    {
+#if OS(WINDOWS)
+        // JIT relies on the CallerFrame (frame pointer) being put on the stack,
+        // On Win64 we need to manually copy the frame pointer to the stack, since MSVC may not maintain a frame pointer on 64-bit.
+        // See http://msdn.microsoft.com/en-us/library/9z1stfyw.aspx where it's stated that rbp MAY be used as a frame pointer.
+        store64(X86Registers::ebp, Address(X86Registers::esp, -16));
+
+        // On Windows we need to copy the arguments that don't fit in registers to the stack location where the callee expects to find them.
+        // We don't know the number of arguments at this point, so the arguments (5, 6, ...) should always be copied.
+
+        // Copy argument 5
+        load64(Address(X86Registers::esp, 4 * sizeof(int64_t)), scratchRegister);
+        store64(scratchRegister, Address(X86Registers::esp, -4 * static_cast<int32_t>(sizeof(int64_t))));
+
+        // Copy argument 6
+        load64(Address(X86Registers::esp, 5 * sizeof(int64_t)), scratchRegister);
+        store64(scratchRegister, Address(X86Registers::esp, -3 * static_cast<int32_t>(sizeof(int64_t))));
+
+        // We also need to allocate the shadow space on the stack for the 4 parameter registers.
+        // Also, we should allocate 16 bytes for the frame pointer, and return address (not populated).
+        // In addition, we need to allocate 16 bytes for two more parameters, since the call can have up to 6 parameters.
+        sub64(TrustedImm32(8 * sizeof(int64_t)), X86Registers::esp);
+#endif
+        DataLabelPtr label = moveWithPatch(TrustedImmPtr(0), scratchRegister);
+        Call result = Call(m_assembler.call(scratchRegister), Call::Linkable);
+#if OS(WINDOWS)
+        add64(TrustedImm32(8 * sizeof(int64_t)), X86Registers::esp);
+#endif
         ASSERT_UNUSED(label, differenceBetween(label, result) == REPTACH_OFFSET_CALL_R11);
         return result;
     }
@@ -219,7 +291,10 @@ public:
 
     void add64(TrustedImm32 imm, Address address)
     {
-        m_assembler.addq_im(imm.m_value, address.offset, address.base);
+        if (imm.m_value == 1)
+            m_assembler.incq_m(address.offset, address.base);
+        else
+            m_assembler.addq_im(imm.m_value, address.offset, address.base);
     }
 
     void add64(TrustedImm32 imm, AbsoluteAddress address)
@@ -257,6 +332,11 @@ public:
     void rshift64(TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.sarq_i8r(imm.m_value, dest);
+    }
+
+    void urshift64(TrustedImm32 imm, RegisterID dest)
+    {
+        m_assembler.shrq_i8r(imm.m_value, dest);
     }
 
     void mul64(RegisterID src, RegisterID dest)
@@ -402,8 +482,12 @@ public:
 
     void store64(TrustedImm64 imm, ImplicitAddress address)
     {
-        move(imm, scratchRegister);
-        store64(scratchRegister, address);
+        if (CAN_SIGN_EXTEND_32_64(imm.m_value))
+            m_assembler.movq_i32m(static_cast<int>(imm.m_value), address.offset, address.base);
+        else {
+            move(imm, scratchRegister);
+            store64(scratchRegister, address);
+        }
     }
 
     void store64(TrustedImm64 imm, BaseIndex address)
@@ -613,6 +697,18 @@ public:
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
+    void abortWithReason(AbortReason reason)
+    {
+        move(TrustedImm32(reason), X86Registers::r11);
+        breakpoint();
+    }
+
+    void abortWithReason(AbortReason reason, intptr_t misc)
+    {
+        move(TrustedImm64(misc), X86Registers::r10);
+        abortWithReason(reason);
+    }
+
     ConvertibleLoadLabel convertibleLoadPtr(Address address, RegisterID dest)
     {
         ConvertibleLoadLabel result = ConvertibleLoadLabel(this);
@@ -627,6 +723,13 @@ public:
         return DataLabelPtr(this);
     }
 
+    DataLabelPtr moveWithPatch(TrustedImm32 initialValue, RegisterID dest)
+    {
+        padBeforePatch();
+        m_assembler.movq_i64r(initialValue.m_value, dest);
+        return DataLabelPtr(this);
+    }
+
     Jump branchPtrWithPatch(RelationalCondition cond, RegisterID left, DataLabelPtr& dataLabel, TrustedImmPtr initialRightValue = TrustedImmPtr(0))
     {
         dataLabel = moveWithPatch(initialRightValue, scratchRegister);
@@ -637,6 +740,14 @@ public:
     {
         dataLabel = moveWithPatch(initialRightValue, scratchRegister);
         return branch64(cond, left, scratchRegister);
+    }
+
+    Jump branch32WithPatch(RelationalCondition cond, Address left, DataLabel32& dataLabel, TrustedImm32 initialRightValue = TrustedImm32(0))
+    {
+        padBeforePatch();
+        m_assembler.movl_i32r(initialRightValue.m_value, scratchRegister);
+        dataLabel = DataLabel32(this);
+        return branch32(cond, left, scratchRegister);
     }
 
     DataLabelPtr storePtrWithPatch(TrustedImmPtr initialValue, ImplicitAddress address)
@@ -673,7 +784,6 @@ public:
     }
 
     static bool supportsFloatingPoint() { return true; }
-    // See comment on MacroAssemblerARMv7::supportsFloatingPointTruncate()
     static bool supportsFloatingPointTruncate() { return true; }
     static bool supportsFloatingPointSqrt() { return true; }
     static bool supportsFloatingPointAbs() { return true; }
@@ -687,6 +797,7 @@ public:
     static RegisterID scratchRegisterForBlinding() { return scratchRegister; }
 
     static bool canJumpReplacePatchableBranchPtrWithPatch() { return true; }
+    static bool canJumpReplacePatchableBranch32WithPatch() { return true; }
 
     static CodeLocationLabel startOfBranchPtrWithPatchOnRegister(CodeLocationDataLabelPtr label)
     {
@@ -698,9 +809,24 @@ public:
         return label.labelAtOffset(-totalBytes);
     }
 
+    static CodeLocationLabel startOfBranch32WithPatchOnRegister(CodeLocationDataLabel32 label)
+    {
+        const int rexBytes = 1;
+        const int opcodeBytes = 1;
+        const int immediateBytes = 4;
+        const int totalBytes = rexBytes + opcodeBytes + immediateBytes;
+        ASSERT(totalBytes >= maxJumpReplacementSize());
+        return label.labelAtOffset(-totalBytes);
+    }
+
     static CodeLocationLabel startOfPatchableBranchPtrWithPatchOnAddress(CodeLocationDataLabelPtr label)
     {
         return startOfBranchPtrWithPatchOnRegister(label);
+    }
+
+    static CodeLocationLabel startOfPatchableBranch32WithPatchOnAddress(CodeLocationDataLabel32 label)
+    {
+        return startOfBranch32WithPatchOnRegister(label);
     }
 
     static void revertJumpReplacementToPatchableBranchPtrWithPatch(CodeLocationLabel instructionStart, Address, void* initialValue)
@@ -708,30 +834,15 @@ public:
         X86Assembler::revertJumpTo_movq_i64r(instructionStart.executableAddress(), reinterpret_cast<intptr_t>(initialValue), scratchRegister);
     }
 
+    static void revertJumpReplacementToPatchableBranch32WithPatch(CodeLocationLabel instructionStart, Address, int32_t initialValue)
+    {
+        X86Assembler::revertJumpTo_movl_i32r(instructionStart.executableAddress(), initialValue, scratchRegister);
+    }
+
     static void revertJumpReplacementToBranchPtrWithPatch(CodeLocationLabel instructionStart, RegisterID, void* initialValue)
     {
         X86Assembler::revertJumpTo_movq_i64r(instructionStart.executableAddress(), reinterpret_cast<intptr_t>(initialValue), scratchRegister);
     }
-
-#if USE(MASM_PROBE)
-    // This function emits code to preserve the CPUState (e.g. registers),
-    // call a user supplied probe function, and restore the CPUState before
-    // continuing with other JIT generated code.
-    //
-    // The user supplied probe function will be called with a single pointer to
-    // a ProbeContext struct (defined above) which contains, among other things,
-    // the preserved CPUState. This allows the user probe function to inspect
-    // the CPUState at that point in the JIT generated code.
-    //
-    // If the user probe function alters the register values in the ProbeContext,
-    // the altered values will be loaded into the CPU registers when the probe
-    // returns.
-    //
-    // The ProbeContext is stack allocated and is only valid for the duration
-    // of the call to the user probe function.
-
-    void probe(ProbeFunction, void* arg1 = 0, void* arg2 = 0);
-#endif // USE(MASM_PROBE)
 
 private:
     friend class LinkBuffer;
@@ -754,68 +865,7 @@ private:
     {
         X86Assembler::repatchPointer(call.dataLabelPtrAtOffset(-REPTACH_OFFSET_CALL_R11).dataLocation(), destination.executableAddress());
     }
-
-#if USE(MASM_PROBE)
-    inline TrustedImm64 trustedImm64FromPtr(void* ptr)
-    {
-        return TrustedImm64(TrustedImmPtr(ptr));
-    }
-
-    inline TrustedImm64 trustedImm64FromPtr(ProbeFunction function)
-    {
-        return TrustedImm64(TrustedImmPtr(reinterpret_cast<void*>(function)));
-    }
-
-    inline TrustedImm64 trustedImm64FromPtr(void (*function)())
-    {
-        return TrustedImm64(TrustedImmPtr(reinterpret_cast<void*>(function)));
-    }
-#endif
 };
-
-#if USE(MASM_PROBE)
-
-extern "C" void ctiMasmProbeTrampoline();
-
-// What code is emitted for the probe?
-// ==================================
-// We want to keep the size of the emitted probe invocation code as compact as
-// possible to minimize the perturbation to the JIT generated code. However,
-// we also need to preserve the CPU registers and set up the ProbeContext to be
-// passed to the user probe function.
-//
-// Hence, we do only the minimum here to preserve a scratch register (i.e. rax
-// in this case) and the stack pointer (i.e. rsp), and pass the probe arguments.
-// We'll let the ctiMasmProbeTrampoline handle the rest of the probe invocation
-// work i.e. saving the CPUState (and setting up the ProbeContext), calling the
-// user probe function, and restoring the CPUState before returning to JIT
-// generated code.
-//
-// What values are in the saved registers?
-// ======================================
-// Conceptually, the saved registers should contain values as if the probe
-// is not present in the JIT generated code. Hence, they should contain values
-// that are expected at the start of the instruction immediately following the
-// probe.
-//
-// Specifcally, the saved stack pointer register will point to the stack
-// position before we push the ProbeContext frame. The saved rip will point to
-// the address of the instruction immediately following the probe.
-
-inline void MacroAssemblerX86_64::probe(MacroAssemblerX86_64::ProbeFunction function, void* arg1, void* arg2)
-{
-    push(RegisterID::esp);
-    push(RegisterID::eax);
-    move(trustedImm64FromPtr(arg2), RegisterID::eax);
-    push(RegisterID::eax);
-    move(trustedImm64FromPtr(arg1), RegisterID::eax);
-    push(RegisterID::eax);
-    move(trustedImm64FromPtr(function), RegisterID::eax);
-    push(RegisterID::eax);
-    move(trustedImm64FromPtr(ctiMasmProbeTrampoline), RegisterID::eax);
-    call(RegisterID::eax);
-}
-#endif // USE(MASM_PROBE)
 
 } // namespace JSC
 

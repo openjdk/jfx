@@ -26,7 +26,7 @@
 
 #include "config.h"
 
-#if USE(3D_GRAPHICS)
+#if ENABLE(GRAPHICS_CONTEXT_3D)
 #include "Extensions3DOpenGLCommon.h"
 
 #include "ANGLEWebKitBridge.h"
@@ -57,10 +57,13 @@ Extensions3DOpenGLCommon::Extensions3DOpenGLCommon(GraphicsContext3D* context)
     , m_isNVIDIA(false)
     , m_isAMD(false)
     , m_isIntel(false)
+    , m_isImagination(false)
     , m_maySupportMultisampling(true)
     , m_requiresBuiltInFunctionEmulation(false)
+    , m_requiresRestrictedMaximumTextureSize(false)
 {
     m_vendor = String(reinterpret_cast<const char*>(::glGetString(GL_VENDOR)));
+    m_renderer = String(reinterpret_cast<const char*>(::glGetString(GL_RENDERER)));
 
     Vector<String> vendorComponents;
     m_vendor.lower().split(' ', vendorComponents);
@@ -70,6 +73,8 @@ Extensions3DOpenGLCommon::Extensions3DOpenGLCommon(GraphicsContext3D* context)
         m_isAMD = true;
     if (vendorComponents.contains("intel"))
         m_isIntel = true;
+    if (vendorComponents.contains("imagination"))
+        m_isImagination = true;
 
 #if PLATFORM(MAC)
     if (m_isAMD || m_isIntel)
@@ -79,20 +84,13 @@ Extensions3DOpenGLCommon::Extensions3DOpenGLCommon(GraphicsContext3D* context)
     // or if the vendor is AMD/ATI and the system is 10.7.2 and above.
 
     bool systemSupportsMultisampling = true;
-#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED < 1080
-    ASSERT(isMainThread());
-    static SInt32 version;
-    if (!version) {
-        if (Gestalt(gestaltSystemVersion, &version) != noErr)
-            systemSupportsMultisampling = false;
-    }
-    // See https://bugs.webkit.org/show_bug.cgi?id=77922 for more details
-    if (systemSupportsMultisampling)
-        systemSupportsMultisampling = version >= 0x1072;
-#endif // SNOW_LEOPARD and LION
 
     if (m_isAMD && !systemSupportsMultisampling)
         m_maySupportMultisampling = false;
+
+    // Intel HD 3000 devices have problems with large textures. <rdar://problem/16649140>
+    if (m_isIntel)
+        m_requiresRestrictedMaximumTextureSize = m_renderer.startsWith("Intel HD Graphics 3000");
 #endif
 }
 
@@ -125,6 +123,22 @@ void Extensions3DOpenGLCommon::ensureEnabled(const String& name)
         if (!ANGLEResources.EXT_draw_buffers) {
             ANGLEResources.EXT_draw_buffers = 1;
             m_context->getIntegerv(Extensions3D::MAX_DRAW_BUFFERS_EXT, &ANGLEResources.MaxDrawBuffers);
+            compiler.setResources(ANGLEResources);
+        }
+    } else if (name == "GL_EXT_shader_texture_lod") {
+        // Enable support in ANGLE (if not enabled already)
+        ANGLEWebKitBridge& compiler = m_context->m_compiler;
+        ShBuiltInResources ANGLEResources = compiler.getResources();
+        if (!ANGLEResources.EXT_shader_texture_lod) {
+            ANGLEResources.EXT_shader_texture_lod = 1;
+            compiler.setResources(ANGLEResources);
+        }
+    } else if (name == "GL_EXT_frag_depth") {
+        // Enable support in ANGLE (if not enabled already)
+        ANGLEWebKitBridge& compiler = m_context->m_compiler;
+        ShBuiltInResources ANGLEResources = compiler.getResources();
+        if (!ANGLEResources.EXT_frag_depth) {
+            ANGLEResources.EXT_frag_depth = 1;
             compiler.setResources(ANGLEResources);
         }
     }
@@ -170,7 +184,7 @@ String Extensions3DOpenGLCommon::getTranslatedShaderSourceANGLE(Platform3DObject
 
     String translatedShaderSource;
     String shaderInfoLog;
-    int extraCompileOptions = SH_MAP_LONG_VARIABLE_NAMES | SH_CLAMP_INDIRECT_ARRAY_BOUNDS | SH_UNFOLD_SHORT_CIRCUIT | SH_ENFORCE_PACKING_RESTRICTIONS;
+    int extraCompileOptions = SH_CLAMP_INDIRECT_ARRAY_BOUNDS | SH_UNFOLD_SHORT_CIRCUIT | SH_ENFORCE_PACKING_RESTRICTIONS | SH_INIT_VARYINGS_WITHOUT_STATIC_USE | SH_LIMIT_EXPRESSION_COMPLEXITY | SH_LIMIT_CALL_STACK_DEPTH;
 
     if (m_requiresBuiltInFunctionEmulation)
         extraCompileOptions |= SH_EMULATE_BUILT_IN_FUNCTIONS;
@@ -198,7 +212,7 @@ void Extensions3DOpenGLCommon::initializeAvailableExtensions()
 {
     String extensionsString = getExtensions();
     Vector<String> availableExtensions;
-    extensionsString.split(" ", availableExtensions);
+    extensionsString.split(' ', availableExtensions);
     for (size_t i = 0; i < availableExtensions.size(); ++i)
         m_availableExtensions.add(availableExtensions[i]);
     m_initializedAvailableExtensions = true;
@@ -221,4 +235,4 @@ void Extensions3DOpenGLCommon::getnUniformivEXT(GC3Duint, int, GC3Dsizei, int *)
 
 } // namespace WebCore
 
-#endif // USE(3D_GRAPHICS)
+#endif // ENABLE(GRAPHICS_CONTEXT_3D)

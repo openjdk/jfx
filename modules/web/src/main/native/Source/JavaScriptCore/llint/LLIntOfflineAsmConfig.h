@@ -29,29 +29,42 @@
 #include "LLIntCommon.h"
 #include <wtf/Assertions.h>
 #include <wtf/InlineASM.h>
-#include <wtf/Platform.h>
 
-
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
 #define OFFLINE_ASM_C_LOOP 1
 #define OFFLINE_ASM_X86 0
+#define OFFLINE_ASM_X86_WIN 0
 #define OFFLINE_ASM_ARM 0
 #define OFFLINE_ASM_ARMv7 0
 #define OFFLINE_ASM_ARMv7_TRADITIONAL 0
 #define OFFLINE_ASM_ARM64 0
 #define OFFLINE_ASM_X86_64 0
+#define OFFLINE_ASM_X86_64_WIN 0
+#define OFFLINE_ASM_ARMv7k 0
 #define OFFLINE_ASM_ARMv7s 0
 #define OFFLINE_ASM_MIPS 0
 #define OFFLINE_ASM_SH4 0
 
-#else // !ENABLE(LLINT_C_LOOP)
+#else // ENABLE(JIT)
 
 #define OFFLINE_ASM_C_LOOP 0
 
-#if CPU(X86)
+#if CPU(X86) && !PLATFORM(WIN)
 #define OFFLINE_ASM_X86 1
 #else
 #define OFFLINE_ASM_X86 0
+#endif
+
+#if CPU(X86) && (PLATFORM(WIN) || OS(WINDOWS) && PLATFORM(JAVA))
+#define OFFLINE_ASM_X86_WIN 1
+#else
+#define OFFLINE_ASM_X86_WIN 0
+#endif
+
+#ifdef __ARM_ARCH_7K__
+#define OFFLINE_ASM_ARMv7k 1
+#else
+#define OFFLINE_ASM_ARMv7k 0
 #endif
 
 #ifdef __ARM_ARCH_7S__
@@ -79,10 +92,16 @@
 #define OFFLINE_ASM_ARM 0
 #endif
 
-#if CPU(X86_64)
+#if CPU(X86_64) && !PLATFORM(WIN)
 #define OFFLINE_ASM_X86_64 1
 #else
 #define OFFLINE_ASM_X86_64 0
+#endif
+
+#if CPU(X86_64) && (PLATFORM(WIN) || OS(WINDOWS) && PLATFORM(JAVA))
+#define OFFLINE_ASM_X86_64_WIN 1
+#else
+#define OFFLINE_ASM_X86_64_WIN 0
 #endif
 
 #if CPU(MIPS)
@@ -116,7 +135,7 @@
 #endif
 #endif
 
-#endif // !ENABLE(LLINT_C_LOOP)
+#endif // ENABLE(JIT)
 
 #if USE(JSVALUE64)
 #define OFFLINE_ASM_JSVALUE64 1
@@ -140,12 +159,6 @@
 #define OFFLINE_ASM_EXECUTION_TRACING 1
 #else
 #define OFFLINE_ASM_EXECUTION_TRACING 0
-#endif
-
-#if LLINT_ALWAYS_ALLOCATE_SLOW
-#define OFFLINE_ASM_ALWAYS_ALLOCATE_SLOW 1
-#else
-#define OFFLINE_ASM_ALWAYS_ALLOCATE_SLOW 0
 #endif
 
 #if ENABLE(GGC)

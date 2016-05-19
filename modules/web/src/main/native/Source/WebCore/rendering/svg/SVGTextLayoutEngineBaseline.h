@@ -25,7 +25,7 @@
 
 namespace WebCore {
 
-class Font;
+class FontCascade;
 class RenderObject;
 class SVGElement;
 class SVGRenderStyle;
@@ -35,17 +35,17 @@ class SVGTextMetrics;
 class SVGTextLayoutEngineBaseline {
     WTF_MAKE_NONCOPYABLE(SVGTextLayoutEngineBaseline);
 public:
-    SVGTextLayoutEngineBaseline(const Font&);
+    SVGTextLayoutEngineBaseline(const FontCascade&);
 
-    float calculateBaselineShift(const SVGRenderStyle*, SVGElement* lengthContext) const;
-    float calculateAlignmentBaselineShift(bool isVerticalText, const RenderObject* textRenderer) const;
-    float calculateGlyphOrientationAngle(bool isVerticalText, const SVGRenderStyle*, const UChar& character) const;
+    float calculateBaselineShift(const SVGRenderStyle&, SVGElement* context) const;
+    float calculateAlignmentBaselineShift(bool isVerticalText, const RenderObject& textRenderer) const;
+    float calculateGlyphOrientationAngle(bool isVerticalText, const SVGRenderStyle&, const UChar& character) const;
     float calculateGlyphAdvanceAndOrientation(bool isVerticalText, SVGTextMetrics&, float angle, float& xOrientationShift, float& yOrientationShift) const;
 
 private:
     EAlignmentBaseline dominantBaselineToAlignmentBaseline(bool isVerticalText, const RenderObject* textRenderer) const;
 
-    const Font& m_font;
+    const FontCascade& m_font;
 };
 
 } // namespace WebCore

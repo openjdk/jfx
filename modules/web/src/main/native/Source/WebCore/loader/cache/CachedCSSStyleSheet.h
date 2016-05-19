@@ -38,24 +38,23 @@ namespace WebCore {
 
     class CachedCSSStyleSheet final : public CachedResource {
     public:
-        CachedCSSStyleSheet(const ResourceRequest&, const String& charset);
+        CachedCSSStyleSheet(const ResourceRequest&, const String& charset, SessionID);
         virtual ~CachedCSSStyleSheet();
 
-        const String sheetText(bool enforceMIMEType = true, bool* hasValidMIMEType = 0) const;
+        const String sheetText(bool* hasValidMIMEType = nullptr) const;
 
-        PassRefPtr<StyleSheetContents> restoreParsedStyleSheet(const CSSParserContext&);
-        void saveParsedStyleSheet(PassRef<StyleSheetContents>);
+        PassRefPtr<StyleSheetContents> restoreParsedStyleSheet(const CSSParserContext&, CachePolicy);
+        void saveParsedStyleSheet(Ref<StyleSheetContents>&&);
 
     private:
-        bool canUseSheet(bool enforceMIMEType, bool* hasValidMIMEType) const;
-        virtual PurgePriority purgePriority() const override { return PurgeLast; }
+        bool canUseSheet(bool* hasValidMIMEType) const;
         virtual bool mayTryReplaceEncodedData() const override { return true; }
 
         virtual void didAddClient(CachedResourceClient*) override;
 
         virtual void setEncoding(const String&) override;
         virtual String encoding() const override;
-        virtual void finishLoading(ResourceBuffer*) override;
+        virtual void finishLoading(SharedBuffer*) override;
         virtual void destroyDecodedData() override;
 
     protected:
@@ -67,8 +66,8 @@ namespace WebCore {
         RefPtr<StyleSheetContents> m_parsedStyleSheetCache;
     };
 
-CACHED_RESOURCE_TYPE_CASTS(CachedCSSStyleSheet, CachedResource, CachedResource::CSSStyleSheet)
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE(CachedCSSStyleSheet, CachedResource::CSSStyleSheet)
 
-#endif
+#endif // CachedCSSStyleSheet_h

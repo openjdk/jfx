@@ -30,12 +30,12 @@
 #include "WebGLDebugShaders.h"
 
 #include "Extensions3D.h"
-#include "WebGLRenderingContext.h"
+#include "WebGLRenderingContextBase.h"
 #include "WebGLShader.h"
 
 namespace WebCore {
 
-WebGLDebugShaders::WebGLDebugShaders(WebGLRenderingContext* context)
+WebGLDebugShaders::WebGLDebugShaders(WebGLRenderingContextBase* context)
     : WebGLExtension(context)
 {
 }
@@ -47,11 +47,6 @@ WebGLDebugShaders::~WebGLDebugShaders()
 WebGLExtension::ExtensionName WebGLDebugShaders::getName() const
 {
     return WebGLDebugShadersName;
-}
-
-OwnPtr<WebGLDebugShaders> WebGLDebugShaders::create(WebGLRenderingContext* context)
-{
-    return adoptPtr(new WebGLDebugShaders(context));
 }
 
 String WebGLDebugShaders::getTranslatedShaderSource(WebGLShader* shader, ExceptionCode& ec)

@@ -42,16 +42,16 @@ inline HTMLMarqueeElement::HTMLMarqueeElement(const QualifiedName& tagName, Docu
     ASSERT(hasTagName(marqueeTag));
 }
 
-PassRefPtr<HTMLMarqueeElement> HTMLMarqueeElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLMarqueeElement> HTMLMarqueeElement::create(const QualifiedName& tagName, Document& document)
 {
-    RefPtr<HTMLMarqueeElement> marqueeElement(adoptRef(new HTMLMarqueeElement(tagName, document)));
+    Ref<HTMLMarqueeElement> marqueeElement = adoptRef(*new HTMLMarqueeElement(tagName, document));
     marqueeElement->suspendIfNeeded();
-    return marqueeElement.release();
+    return marqueeElement;
 }
 
 int HTMLMarqueeElement::minimumDelay() const
 {
-    if (fastGetAttribute(truespeedAttr).isEmpty()) {
+    if (!fastHasAttribute(truespeedAttr)) {
         // WinIE uses 60ms as the minimum delay by default.
         return 60;
     }
@@ -166,7 +166,7 @@ void HTMLMarqueeElement::setLoop(int loop, ExceptionCode& ec)
         setIntegralAttribute(loopAttr, loop);
 }
 
-bool HTMLMarqueeElement::canSuspend() const
+bool HTMLMarqueeElement::canSuspendForPageCache() const
 {
     return true;
 }

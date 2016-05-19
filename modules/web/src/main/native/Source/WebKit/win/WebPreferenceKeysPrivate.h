@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple" nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple" nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -48,6 +48,7 @@
 #define WebKitTextAreasAreResizablePreferenceKey "WebKitTextAreasAreResizable"
 #define WebKitJavaEnabledPreferenceKey "WebKitJavaEnabled"
 #define WebKitJavaScriptEnabledPreferenceKey "WebKitJavaScriptEnabled"
+#define WebKitJavaScriptRuntimeFlagsPreferenceKey "WebKitJavaScriptRuntimeFlags"
 #define WebKitWebSecurityEnabledPreferenceKey "WebKitWebSecurityEnabled"
 #define WebKitAllowUniversalAccessFromFileURLsPreferenceKey "WebKitAllowUniversalAccessFromFileURLs"
 #define WebKitAllowFileAccessFromFileURLsPreferenceKey "WebKitAllowFileAccessFromFileURLs"
@@ -94,10 +95,6 @@
 // to NO, or has no value.  For compatibility with Mac OS X 10.4.6, deferred updates are OFF by
 // default.
 #define WebKitEnableDeferredUpdatesPreferenceKey "WebKitEnableDeferredUpdates"
-
-// For debugging only.  Don't use these.
-#define WebKitPageCacheSizePreferenceKey "WebKitPageCacheSizePreferenceKey"
-#define WebKitObjectCacheSizePreferenceKey "WebKitObjectCacheSizePreferenceKey"
 
 // From WebHistory.h
 #define WebKitHistoryItemLimitKey "WebKitHistoryItemLimit" // default: "1000"
@@ -165,4 +162,4 @@
 
 #define WebKitMockScrollbarsEnabledPreferenceKey "WebKitMockScrollbarsEnabled"
 
-#define WebKitScreenFontSubstitutionEnabledPreferenceKey "WebKitScreenFontSubstitutionEnabledPreferenceKey"
+#define WebKitEnableInheritURIQueryComponentPreferenceKey "WebKitEnableInheritURIQueryComponent"

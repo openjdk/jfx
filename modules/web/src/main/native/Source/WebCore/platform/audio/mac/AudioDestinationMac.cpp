@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -38,7 +38,7 @@
 #include "AudioSession.h"
 #include "FloatConversion.h"
 #include "Logging.h"
-#include "MediaSessionManager.h"
+#include "PlatformMediaSessionManager.h"
 #include "VectorMath.h"
 #include <CoreAudio/AudioHardware.h>
 
@@ -85,7 +85,6 @@ AudioDestinationMac::AudioDestinationMac(AudioIOCallback& callback, float sample
     , m_renderBus(AudioBus::create(2, kBufferSize, false))
     , m_sampleRate(sampleRate)
     , m_isPlaying(false)
-    , m_mediaSession(MediaSession::create(*this))
 {
     // Open and initialize DefaultOutputUnit
     AudioComponent comp;
@@ -144,7 +143,7 @@ void AudioDestinationMac::start()
     OSStatus result = AudioOutputUnitStart(m_outputUnit);
 
     if (!result)
-        m_isPlaying = true;
+        setIsPlaying(true);
 }
 
 void AudioDestinationMac::stop()
@@ -152,7 +151,7 @@ void AudioDestinationMac::stop()
     OSStatus result = AudioOutputUnitStop(m_outputUnit);
 
     if (!result)
-        m_isPlaying = false;
+        setIsPlaying(false);
 }
 
 // Pulls on our provider to get rendered audio stream.
@@ -172,6 +171,15 @@ OSStatus AudioDestinationMac::render(UInt32 numberOfFrames, AudioBufferList* ioD
     }
 
     return noErr;
+}
+
+void AudioDestinationMac::setIsPlaying(bool isPlaying)
+{
+    if (m_isPlaying == isPlaying)
+        return;
+
+    m_isPlaying = isPlaying;
+    m_callback.isPlayingDidChange();
 }
 
 // DefaultOutputUnit callback

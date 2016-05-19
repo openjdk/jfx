@@ -30,7 +30,7 @@ public:
     //utatodo: callback to Java
     virtual bool currentFrameKnownToBeOpaque() { return false; /*!m_data->m_bitmap->hasAlpha() ;*/}
 
-    virtual IntSize size() const { return IntSize(m_width, m_height); }
+    virtual FloatSize size() const override { return FloatSize(m_width, m_height); }
 
     virtual void draw(GraphicsContext* gc, const FloatRect& dstRect,
                       const FloatRect& srcRect, ColorSpace styleColorSpace,
@@ -47,8 +47,8 @@ private:
     void flushImageRQ(GraphicsContext *gc);
 
     int m_width, m_height;
-    RefPtr<RQRef> m_rqoImage;
     RefPtr<RenderingQueue> m_rq;
+    RefPtr<RQRef> m_rqoImage;
 };
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007, 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -35,6 +35,7 @@
 #include <comutil.h>
 #include <sstream>
 #include <tchar.h>
+#include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 
 using namespace std;
@@ -74,28 +75,23 @@ wstring ResourceLoadDelegate::descriptionSuitableForTestResult(IWebURLRequest* r
     if (!request)
         return L"(null)";
 
-    BSTR urlBSTR;
-    if (FAILED(request->URL(&urlBSTR)))
+    _bstr_t urlBSTR;
+    if (FAILED(request->URL(&urlBSTR.GetBSTR())))
         return wstring();
 
     wstring url = urlSuitableForTestResult(wstringFromBSTR(urlBSTR));
-    ::SysFreeString(urlBSTR);
 
-    BSTR mainDocumentURLBSTR;
-    if (FAILED(request->mainDocumentURL(&mainDocumentURLBSTR)))
+    _bstr_t mainDocumentURLBSTR;
+    if (FAILED(request->mainDocumentURL(&mainDocumentURLBSTR.GetBSTR())))
         return wstring();
 
     wstring mainDocumentURL = urlSuitableForTestResult(wstringFromBSTR(mainDocumentURLBSTR));
-    ::SysFreeString(mainDocumentURLBSTR);
 
-    BSTR httpMethodBSTR;
-    if (FAILED(request->HTTPMethod(&httpMethodBSTR)))
+    _bstr_t httpMethodBSTR;
+    if (FAILED(request->HTTPMethod(&httpMethodBSTR.GetBSTR())))
         return wstring();
 
-    wstring httpMethod = wstringFromBSTR(httpMethodBSTR);
-    ::SysFreeString(httpMethodBSTR);
-
-    return L"<NSURLRequest URL " + url + L", main document URL " + mainDocumentURL + L", http method " + httpMethod + L">";
+    return L"<NSURLRequest URL " + url + L", main document URL " + mainDocumentURL + L", http method " + static_cast<wchar_t*>(httpMethodBSTR) + L">";
 }
 
 wstring ResourceLoadDelegate::descriptionSuitableForTestResult(IWebURLResponse* response)
@@ -103,12 +99,11 @@ wstring ResourceLoadDelegate::descriptionSuitableForTestResult(IWebURLResponse* 
     if (!response)
         return L"(null)";
 
-    BSTR urlBSTR;
-    if (FAILED(response->URL(&urlBSTR)))
+    _bstr_t urlBSTR;
+    if (FAILED(response->URL(&urlBSTR.GetBSTR())))
         return wstring();
 
     wstring url = urlSuitableForTestResult(wstringFromBSTR(urlBSTR));
-    ::SysFreeString(urlBSTR);
 
     int statusCode = 0;
     COMPtr<IWebHTTPURLResponse> httpResponse;
@@ -122,12 +117,11 @@ wstring ResourceLoadDelegate::descriptionSuitableForTestResult(IWebError* error,
 {
     wstring result = L"<NSError ";
 
-    BSTR domainSTR;
-    if (FAILED(error->domain(&domainSTR)))
+    _bstr_t domainSTR;
+    if (FAILED(error->domain(&domainSTR.GetBSTR())))
         return wstring();
 
     wstring domain = wstringFromBSTR(domainSTR);
-    ::SysFreeString(domainSTR);
 
     int code;
     if (FAILED(error->code(&code)))
@@ -150,14 +144,12 @@ wstring ResourceLoadDelegate::descriptionSuitableForTestResult(IWebError* error,
     result += L"domain " + domain;
     result += L", code " + wstringFromInt(code);
 
-    BSTR failingURLSTR;
-    if (FAILED(error->failingURL(&failingURLSTR)))
+    _bstr_t failingURLSTR;
+    if (FAILED(error->failingURL(&failingURLSTR.GetBSTR())))
         return wstring();
 
-    if (failingURLSTR) {
+    if (failingURLSTR.length())
         result += L", failing URL \"" + urlSuitableForTestResult(wstringFromBSTR(failingURLSTR)) + L"\"";
-        ::SysFreeString(failingURLSTR);
-    }
 
     result += L">";
 
@@ -173,7 +165,7 @@ ResourceLoadDelegate::~ResourceLoadDelegate()
 {
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::QueryInterface(REFIID riid, void** ppvObject)
+HRESULT ResourceLoadDelegate::QueryInterface(REFIID riid, void** ppvObject)
 {
     *ppvObject = 0;
     if (IsEqualGUID(riid, IID_IUnknown))
@@ -189,12 +181,12 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::QueryInterface(REFIID riid, void
     return S_OK;
 }
 
-ULONG STDMETHODCALLTYPE ResourceLoadDelegate::AddRef(void)
+ULONG ResourceLoadDelegate::AddRef(void)
 {
     return ++m_refCount;
 }
 
-ULONG STDMETHODCALLTYPE ResourceLoadDelegate::Release(void)
+ULONG ResourceLoadDelegate::Release(void)
 {
     ULONG newRef = --m_refCount;
     if (!newRef)
@@ -203,15 +195,11 @@ ULONG STDMETHODCALLTYPE ResourceLoadDelegate::Release(void)
     return newRef;
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::identifierForInitialRequest(
-    /* [in] */ IWebView* webView,
-    /* [in] */ IWebURLRequest* request,
-    /* [in] */ IWebDataSource* dataSource,
-    /* [in] */ unsigned long identifier)
+HRESULT ResourceLoadDelegate::identifierForInitialRequest(IWebView* webView, IWebURLRequest* request, IWebDataSource* dataSource, unsigned long identifier)
 {
     if (!done && gTestRunner->dumpResourceLoadCallbacks()) {
-        BSTR urlStr;
-        if (FAILED(request->URL(&urlStr)))
+        _bstr_t urlStr;
+        if (FAILED(request->URL(&urlStr.GetBSTR())))
             return E_FAIL;
 
         ASSERT(!urlMap().contains(identifier));
@@ -221,7 +209,7 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::identifierForInitialRequest(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::removeIdentifierForRequest(
+HRESULT ResourceLoadDelegate::removeIdentifierForRequest(
     /* [in] */ IWebView* webView,
     /* [in] */ unsigned long identifier)
 {
@@ -230,13 +218,19 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::removeIdentifierForRequest(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::willSendRequest(
-    /* [in] */ IWebView* webView,
-    /* [in] */ unsigned long identifier,
-    /* [in] */ IWebURLRequest* request,
-    /* [in] */ IWebURLResponse* redirectResponse,
-    /* [in] */ IWebDataSource* dataSource,
-    /* [retval][out] */ IWebURLRequest **newRequest)
+static bool isLocalhost(CFStringRef host)
+{
+    return kCFCompareEqualTo == CFStringCompare(host, CFSTR("127.0.0.1"), 0)
+        || kCFCompareEqualTo == CFStringCompare(host, CFSTR("localhost"), 0);
+}
+
+static bool hostIsUsedBySomeTestsToGenerateError(CFStringRef host)
+{
+    return kCFCompareEqualTo == CFStringCompare(host, CFSTR("255.255.255.255"), 0);
+}
+
+HRESULT ResourceLoadDelegate::willSendRequest(IWebView* webView, unsigned long identifier, IWebURLRequest* request,
+    IWebURLResponse* redirectResponse, IWebDataSource* dataSource, IWebURLRequest** newRequest)
 {
     if (!done && gTestRunner->dumpResourceLoadCallbacks()) {
         printf("%S - willSendRequest %S redirectResponse %S\n",
@@ -247,40 +241,69 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::willSendRequest(
 
     if (!done && !gTestRunner->deferMainResourceDataLoad()) {
         COMPtr<IWebDataSourcePrivate> dataSourcePrivate(Query, dataSource);
-        if (!dataSourcePrivate)
+        if (!dataSourcePrivate) {
+            *newRequest = nullptr;
             return E_FAIL;
+        }
         dataSourcePrivate->setDeferMainResourceDataLoad(FALSE);
     }
 
     if (!done && gTestRunner->willSendRequestReturnsNull()) {
-        *newRequest = 0;
+        *newRequest = nullptr;
         return S_OK;
     }
 
     if (!done && gTestRunner->willSendRequestReturnsNullOnRedirect() && redirectResponse) {
         printf("Returning null for this redirect\n");
-        *newRequest = 0;
+        *newRequest = nullptr;
         return S_OK;
+    }
+
+    _bstr_t urlBstr;
+    if (FAILED(request->URL(&urlBstr.GetBSTR()))) {
+        printf("Request has no URL\n");
+        *newRequest = nullptr;
+        return E_FAIL;
+    }
+
+    RetainPtr<CFStringRef> str = adoptCF(CFStringCreateWithCString(0, static_cast<const char*>(urlBstr), kCFStringEncodingWindowsLatin1));
+    RetainPtr<CFURLRef> url = adoptCF(CFURLCreateWithString(kCFAllocatorDefault, str.get(), nullptr));
+    if (url) {
+        RetainPtr<CFStringRef> host = adoptCF(CFURLCopyHostName(url.get()));
+        RetainPtr<CFStringRef> scheme = adoptCF(CFURLCopyScheme(url.get()));
+
+        if (host && ((kCFCompareEqualTo == CFStringCompare(scheme.get(), CFSTR("http"), kCFCompareCaseInsensitive))
+            || (kCFCompareEqualTo == CFStringCompare(scheme.get(), CFSTR("https"), kCFCompareCaseInsensitive)))) {
+            RetainPtr<CFStringRef> testURL = adoptCF(CFStringCreateWithCString(kCFAllocatorDefault, gTestRunner->testURL().c_str(), kCFStringEncodingWindowsLatin1));
+            RetainPtr<CFMutableStringRef> lowercaseTestURL = adoptCF(CFStringCreateMutableCopy(kCFAllocatorDefault, CFStringGetLength(testURL.get()), testURL.get()));
+            RetainPtr<CFLocaleRef> locale = CFLocaleCopyCurrent();
+            CFStringLowercase(lowercaseTestURL.get(), locale.get());
+            RetainPtr<CFStringRef> testHost;
+            if (CFStringHasPrefix(lowercaseTestURL.get(), CFSTR("http:")) || CFStringHasPrefix(lowercaseTestURL.get(), CFSTR("https:"))) {
+                RetainPtr<CFURLRef> testPathURL = adoptCF(CFURLCreateWithString(kCFAllocatorDefault, lowercaseTestURL.get(), nullptr));
+                testHost = adoptCF(CFURLCopyHostName(testPathURL.get()));
+            }
+            if (!isLocalhost(host.get()) && !hostIsUsedBySomeTestsToGenerateError(host.get()) && (!testHost || isLocalhost(testHost.get()))) {
+                printf("Blocked access to external URL %s\n", static_cast<const char*>(urlBstr));
+                *newRequest = nullptr;
+                return S_OK;
+            }
+        }
     }
 
     IWebMutableURLRequest* requestCopy = 0;
     request->mutableCopy(&requestCopy);
     const set<string>& clearHeaders = gTestRunner->willSendRequestClearHeaders();
     for (set<string>::const_iterator header = clearHeaders.begin(); header != clearHeaders.end(); ++header) {
-      BSTR bstrHeader = BSTRFromString(*header);
-      requestCopy->setValue(0, bstrHeader);
-      SysFreeString(bstrHeader);
+        _bstr_t bstrHeader(header->data());
+        requestCopy->setValue(0, bstrHeader);
     }
 
     *newRequest = requestCopy;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveAuthenticationChallenge(
-    /* [in] */ IWebView *webView,
-    /* [in] */ unsigned long identifier,
-    /* [in] */ IWebURLAuthenticationChallenge *challenge,
-    /* [in] */ IWebDataSource *dataSource)
+HRESULT ResourceLoadDelegate::didReceiveAuthenticationChallenge(IWebView* webView, unsigned long identifier, IWebURLAuthenticationChallenge* challenge, IWebDataSource* dataSource)
 {
     COMPtr<IWebURLAuthenticationChallengeSender> sender;
     if (!challenge || FAILED(challenge->sender(&sender)))
@@ -306,7 +329,7 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveAuthenticationChalleng
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveResponse(
+HRESULT ResourceLoadDelegate::didReceiveResponse(
     /* [in] */ IWebView* webView,
     /* [in] */ unsigned long identifier,
     /* [in] */ IWebURLResponse* response,
@@ -318,31 +341,24 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveResponse(
             descriptionSuitableForTestResult(response).c_str());
     }
     if (!done && gTestRunner->dumpResourceResponseMIMETypes()) {
-        BSTR mimeTypeBSTR;
-        if (FAILED(response->MIMEType(&mimeTypeBSTR)))
+        _bstr_t mimeTypeBSTR;
+        if (FAILED(response->MIMEType(&mimeTypeBSTR.GetBSTR())))
             E_FAIL;
 
-        wstring mimeType = wstringFromBSTR(mimeTypeBSTR);
-        ::SysFreeString(mimeTypeBSTR);
-
-        BSTR urlBSTR;
-        if (FAILED(response->URL(&urlBSTR)))
+        _bstr_t urlBSTR;
+        if (FAILED(response->URL(&urlBSTR.GetBSTR())))
             E_FAIL;
 
         wstring url = wstringFromBSTR(urlBSTR);
-        ::SysFreeString(urlBSTR);
 
-        printf("%S has MIME type %S\n", lastPathComponent(url).c_str(), mimeType.c_str());
+        printf("%S has MIME type %S\n", lastPathComponent(url).c_str(), static_cast<wchar_t*>(mimeTypeBSTR));
     }
 
     return S_OK;
 }
 
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didFinishLoadingFromDataSource(
-    /* [in] */ IWebView* webView,
-    /* [in] */ unsigned long identifier,
-    /* [in] */ IWebDataSource* dataSource)
+HRESULT ResourceLoadDelegate::didFinishLoadingFromDataSource(IWebView* webView, unsigned long identifier, IWebDataSource* dataSource)
 {
     if (!done && gTestRunner->dumpResourceLoadCallbacks()) {
         printf("%S - didFinishLoading\n",
@@ -354,11 +370,7 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didFinishLoadingFromDataSource(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didFailLoadingWithError(
-    /* [in] */ IWebView* webView,
-    /* [in] */ unsigned long identifier,
-    /* [in] */ IWebError* error,
-    /* [in] */ IWebDataSource* dataSource)
+HRESULT ResourceLoadDelegate::didFailLoadingWithError(IWebView* webView, unsigned long identifier, IWebError* error, IWebDataSource* dataSource)
 {
     if (!done && gTestRunner->dumpResourceLoadCallbacks()) {
         printf("%S - didFailLoadingWithError: %S\n",

@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,30 +31,16 @@ OBJC_CLASS CALayer;
 typedef CALayer PlatformLayer;
 #elif PLATFORM(WIN) && USE(CA)
 typedef struct _CACFLayer PlatformLayer;
-#elif PLATFORM(WIN) && USE(TEXTURE_MAPPER)
-namespace WebCore {
-class TextureMapperPlatformLayer;
-typedef TextureMapperPlatformLayer PlatformLayer;
-};
-#elif PLATFORM(GTK)
-#if USE(TEXTURE_MAPPER_GL)
-namespace WebCore {
-class TextureMapperPlatformLayer;
-typedef TextureMapperPlatformLayer PlatformLayer;
-};
-#endif
 #elif PLATFORM(JAVA)
 namespace WebCore {
 class TextureMapperPlatformLayer;
 typedef TextureMapperPlatformLayer PlatformLayer;
 };
-#elif PLATFORM(EFL)
-#if USE(TEXTURE_MAPPER)
+#elif USE(TEXTURE_MAPPER)
 namespace WebCore {
 class TextureMapperPlatformLayer;
 typedef TextureMapperPlatformLayer PlatformLayer;
 };
-#endif // USE(TEXTURE_MAPPER)
 #else
 typedef void* PlatformLayer;
 #endif

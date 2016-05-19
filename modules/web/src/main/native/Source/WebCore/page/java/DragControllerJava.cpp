@@ -4,7 +4,7 @@
 #include "config.h"
 
 #include "NotImplemented.h"
-#include "Clipboard.h"
+#include "DataTransfer.h"
 #include "Pasteboard.h"
 #include "DragController.h"
 #include "DragData.h"
@@ -27,7 +27,7 @@ namespace WebCore {
     DragOperation DragController::dragOperation(DragData& dragData)
     {
         //Protects the page from opening URL by fake anchor drag.
-        return dragData.containsURL(0) && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
+        return dragData.containsURL() && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
     }
 
     //uta: need to be fixed with usage of DragData pointer
@@ -38,7 +38,7 @@ namespace WebCore {
         return copyKeyIsDown;
     }
 
-    void DragController::declareAndWriteDragImage(Clipboard& clipboard, Element& element, const URL& url, const String& label)
+    void DragController::declareAndWriteDragImage(DataTransfer& clipboard, Element& element, const URL& url, const String& label)
     {
         clipboard.pasteboard().writeImage(element, url, label);
     }
@@ -52,5 +52,9 @@ namespace WebCore {
     void DragController::cleanupAfterSystemDrag()
     {
     }
+
+    // PassRefPtr<DocumentFragment> DragController::createFragmentFromDragData(DragData& dragData, Frame& frame, Range&, bool /*allowPlainText*/, bool& /*chosePlainText*/)
+    // {
+    // }
 
 } // namespace WebCore

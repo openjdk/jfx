@@ -39,7 +39,7 @@ static EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(ExecState*);
 
 namespace JSC {
 
-const ClassInfo BooleanPrototype::s_info = { "Boolean", &BooleanObject::s_info, 0, ExecState::booleanPrototypeTable, CREATE_METHOD_TABLE(BooleanPrototype) };
+const ClassInfo BooleanPrototype::s_info = { "Boolean", &BooleanObject::s_info, &booleanPrototypeTable, CREATE_METHOD_TABLE(BooleanPrototype) };
 
 /* Source for BooleanPrototype.lut.h
 @begin booleanPrototypeTable
@@ -65,7 +65,7 @@ void BooleanPrototype::finishCreation(VM& vm, JSGlobalObject*)
 
 bool BooleanPrototype::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    return getStaticFunctionSlot<BooleanObject>(exec, ExecState::booleanPrototypeTable(exec->vm()), jsCast<BooleanPrototype*>(object), propertyName, slot);
+    return getStaticFunctionSlot<BooleanObject>(exec, booleanPrototypeTable, jsCast<BooleanPrototype*>(object), propertyName, slot);
 }
 
 // ------------------------------ Functions ---------------------------
@@ -73,7 +73,7 @@ bool BooleanPrototype::getOwnPropertySlot(JSObject* object, ExecState* exec, Pro
 EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(ExecState* exec)
 {
     VM* vm = &exec->vm();
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     if (thisValue == jsBoolean(false))
         return JSValue::encode(vm->smallStrings.falseString());
 
@@ -92,7 +92,7 @@ EncodedJSValue JSC_HOST_CALL booleanProtoFuncToString(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL booleanProtoFuncValueOf(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
     if (thisValue.isBoolean())
         return JSValue::encode(thisValue);
 

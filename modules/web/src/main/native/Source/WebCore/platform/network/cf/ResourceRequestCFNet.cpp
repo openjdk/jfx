@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ResourceRequestCFNet.h"
 
+#include "HTTPHeaderNames.h"
 #include "ResourceRequest.h"
 
 #if ENABLE(PUBLIC_SUFFIX_LIST)
@@ -36,9 +37,10 @@
 #include "FormDataStreamCFNet.h"
 #include <CFNetwork/CFURLRequestPriv.h>
 #include <wtf/text/CString.h>
-#if PLATFORM(IOS)
-#include <CFNetwork/CFNetworkConnectionCachePriv.h>
 #endif
+
+#if PLATFORM(IOS)
+#include "CFNetworkConnectionCacheSPI.h"
 #endif
 
 #if PLATFORM(COCOA)
@@ -131,7 +133,7 @@ static inline void setHeaderFields(CFMutableURLRequestRef request, const HTTPHea
     }
 
     for (const auto& header : requestHeaders)
-        CFURLRequestSetHTTPHeaderFieldValue(request, header.key.string().createCFString().get(), header.value.createCFString().get());
+        CFURLRequestSetHTTPHeaderFieldValue(request, header.key.createCFString().get(), header.value.createCFString().get());
 }
 
 void ResourceRequest::doUpdatePlatformRequest()
@@ -154,7 +156,8 @@ void ResourceRequest::doUpdatePlatformRequest()
     if (httpPipeliningEnabled())
         wkHTTPRequestEnablePipelining(cfRequest);
 
-    wkSetHTTPRequestPriority(cfRequest, toPlatformRequestPriority(m_priority));
+    if (resourcePrioritiesEnabled())
+        wkSetHTTPRequestPriority(cfRequest, toPlatformRequestPriority(priority()));
 
 #if !PLATFORM(WIN)
     wkCFURLRequestAllowAllPostCaching(cfRequest);
@@ -174,14 +177,6 @@ void ResourceRequest::doUpdatePlatformRequest()
     }
     setContentDispositionEncodingFallbackArray(cfRequest, encodingFallbacks.get());
 
-    if (m_cfRequest) {
-        RetainPtr<CFHTTPCookieStorageRef> cookieStorage = adoptCF(CFURLRequestCopyHTTPCookieStorage(m_cfRequest.get()));
-        if (cookieStorage)
-            CFURLRequestSetHTTPCookieStorage(cfRequest, cookieStorage.get());
-        CFURLRequestSetHTTPCookieStorageAcceptPolicy(cfRequest, CFURLRequestGetHTTPCookieStorageAcceptPolicy(m_cfRequest.get()));
-        CFURLRequestSetSSLProperties(cfRequest, CFURLRequestGetSSLProperties(m_cfRequest.get()));
-    }
-
 #if ENABLE(CACHE_PARTITIONING)
     String partition = cachePartition();
     if (!partition.isNull() && !partition.isEmpty()) {
@@ -193,7 +188,7 @@ void ResourceRequest::doUpdatePlatformRequest()
 
     m_cfRequest = adoptCF(cfRequest);
 #if PLATFORM(COCOA)
-    updateNSURLRequest();
+    clearOrUpdateNSURLRequest();
 #endif
 }
 
@@ -218,27 +213,18 @@ void ResourceRequest::doUpdatePlatformHTTPBody()
 
     if (RetainPtr<CFReadStreamRef> bodyStream = adoptCF(CFURLRequestCopyHTTPRequestBodyStream(cfRequest))) {
         // For streams, provide a Content-Length to avoid using chunked encoding, and to get accurate total length in callbacks.
-        RetainPtr<CFStringRef> lengthString = adoptCF(static_cast<CFStringRef>(CFReadStreamCopyProperty(bodyStream.get(), formDataStreamLengthPropertyName())));
-        if (lengthString) {
+        if (RetainPtr<CFStringRef> lengthString = adoptCF(static_cast<CFStringRef>(CFReadStreamCopyProperty(bodyStream.get(), formDataStreamLengthPropertyName())))) {
             CFURLRequestSetHTTPHeaderFieldValue(cfRequest, CFSTR("Content-Length"), lengthString.get());
             // Since resource request is already marked updated, we need to keep it up to date too.
             ASSERT(m_resourceRequestUpdated);
-            m_httpHeaderFields.set("Content-Length", lengthString.get());
+            m_httpHeaderFields.set(HTTPHeaderName::ContentLength, lengthString.get());
         }
     }
 
     m_cfRequest = adoptCF(cfRequest);
 #if PLATFORM(COCOA)
-    updateNSURLRequest();
+    clearOrUpdateNSURLRequest();
 #endif
-}
-
-void ResourceRequest::updateFromDelegatePreservingOldHTTPBody(const ResourceRequest& delegateProvidedRequest)
-{
-    RefPtr<FormData> oldHTTPBody = httpBody();
-
-    *this = delegateProvidedRequest;
-    setHTTPBody(oldHTTPBody.release());
 }
 
 void ResourceRequest::doUpdateResourceRequest()
@@ -274,7 +260,8 @@ void ResourceRequest::doUpdateResourceRequest()
     }
     m_allowCookies = CFURLRequestShouldHandleHTTPCookies(m_cfRequest.get());
 
-    m_priority = toResourceLoadPriority(wkGetHTTPRequestPriority(m_cfRequest.get()));
+    if (resourcePrioritiesEnabled())
+        m_priority = toResourceLoadPriority(wkGetHTTPRequestPriority(m_cfRequest.get()));
 
     m_httpHeaderFields.clear();
     if (CFDictionaryRef headers = CFURLRequestCopyAllHTTPHeaderFields(m_cfRequest.get())) {
@@ -308,7 +295,7 @@ void ResourceRequest::doUpdateResourceRequest()
 void ResourceRequest::doUpdateResourceHTTPBody()
 {
     if (!m_cfRequest) {
-        m_httpBody = 0;
+        m_httpBody = nullptr;
         return;
     }
 
@@ -333,19 +320,27 @@ void ResourceRequest::setStorageSession(CFURLStorageSessionRef storageSession)
     wkSetRequestStorageSession(storageSession, cfRequest);
     m_cfRequest = adoptCF(cfRequest);
 #if PLATFORM(COCOA)
-    updateNSURLRequest();
+    clearOrUpdateNSURLRequest();
 #endif
 }
-
-#if PLATFORM(MAC)
-void ResourceRequest::applyWebArchiveHackForMail()
-{
-    // Hack because Mail checks for this property to detect data / archive loads
-    _CFURLRequestSetProtocolProperty(cfURLRequest(DoNotUpdateHTTPBody), CFSTR("WebDataRequest"), CFSTR(""));
-}
-#endif
 
 #endif // USE(CFNETWORK)
+
+void ResourceRequest::updateFromDelegatePreservingOldProperties(const ResourceRequest& delegateProvidedRequest)
+{
+    // These are things we don't want willSendRequest delegate to mutate or reset.
+    ResourceLoadPriority oldPriority = priority();
+    RefPtr<FormData> oldHTTPBody = httpBody();
+    bool isHiddenFromInspector = hiddenFromInspector();
+    auto oldRequester = requester();
+
+    *this = delegateProvidedRequest;
+
+    setPriority(oldPriority);
+    setHTTPBody(oldHTTPBody.release());
+    setHiddenFromInspector(isHiddenFromInspector);
+    setRequester(oldRequester);
+}
 
 bool ResourceRequest::httpPipeliningEnabled()
 {
@@ -373,7 +368,7 @@ String ResourceRequest::partitionName(const String& domain)
 }
 #endif
 
-PassOwnPtr<CrossThreadResourceRequestData> ResourceRequest::doPlatformCopyData(PassOwnPtr<CrossThreadResourceRequestData> data) const
+std::unique_ptr<CrossThreadResourceRequestData> ResourceRequest::doPlatformCopyData(std::unique_ptr<CrossThreadResourceRequestData> data) const
 {
 #if ENABLE(CACHE_PARTITIONING)
     data->m_cachePartition = m_cachePartition;
@@ -381,7 +376,7 @@ PassOwnPtr<CrossThreadResourceRequestData> ResourceRequest::doPlatformCopyData(P
     return data;
 }
 
-void ResourceRequest::doPlatformAdopt(PassOwnPtr<CrossThreadResourceRequestData> data)
+void ResourceRequest::doPlatformAdopt(std::unique_ptr<CrossThreadResourceRequestData> data)
 {
 #if ENABLE(CACHE_PARTITIONING)
     m_cachePartition = data->m_cachePartition;
@@ -390,25 +385,30 @@ void ResourceRequest::doPlatformAdopt(PassOwnPtr<CrossThreadResourceRequestData>
 #endif
 }
 
+// FIXME: It is confusing that this function both sets connection count and determines maximum request count at network layer. This can and should be done separately.
 unsigned initializeMaximumHTTPConnectionCountPerHost()
 {
     static const unsigned preferredConnectionCount = 6;
-    static const unsigned unlimitedConnectionCount = 10000;
+    static const unsigned unlimitedRequestCount = 10000;
 
-    wkInitializeMaximumHTTPConnectionCountPerHost(preferredConnectionCount);
+    unsigned maximumHTTPConnectionCountPerHost = wkInitializeMaximumHTTPConnectionCountPerHost(preferredConnectionCount);
 
     Boolean keyExistsAndHasValidFormat = false;
     Boolean prefValue = CFPreferencesGetAppBooleanValue(CFSTR("WebKitEnableHTTPPipelining"), kCFPreferencesCurrentApplication, &keyExistsAndHasValidFormat);
     if (keyExistsAndHasValidFormat)
         ResourceRequest::setHTTPPipeliningEnabled(prefValue);
 
-    wkSetHTTPRequestMaximumPriority(toPlatformRequestPriority(ResourceLoadPriorityHighest));
+    // Use WebCore scheduler when we can't use request priorities with CFNetwork.
+    if (!ResourceRequest::resourcePrioritiesEnabled())
+        return maximumHTTPConnectionCountPerHost;
+
+    wkSetHTTPRequestMaximumPriority(toPlatformRequestPriority(ResourceLoadPriority::Highest));
 #if !PLATFORM(WIN)
     // FIXME: <rdar://problem/9375609> Implement minimum fast lane priority setting on Windows
-    wkSetHTTPRequestMinimumFastLanePriority(toPlatformRequestPriority(ResourceLoadPriorityMedium));
+    wkSetHTTPRequestMinimumFastLanePriority(toPlatformRequestPriority(ResourceLoadPriority::Medium));
 #endif
 
-    return unlimitedConnectionCount;
+    return unlimitedRequestCount;
 }
 
 #if PLATFORM(IOS)
@@ -421,9 +421,17 @@ void initializeHTTPConnectionSettingsOnStartup()
     static const unsigned preferredConnectionCount = 6;
     static const unsigned fastLaneConnectionCount = 1;
     wkInitializeMaximumHTTPConnectionCountPerHost(preferredConnectionCount);
-    wkSetHTTPRequestMaximumPriority(ResourceLoadPriorityHighest);
-    wkSetHTTPRequestMinimumFastLanePriority(ResourceLoadPriorityMedium);
+    wkSetHTTPRequestMaximumPriority(toPlatformRequestPriority(ResourceLoadPriority::Highest));
+    wkSetHTTPRequestMinimumFastLanePriority(toPlatformRequestPriority(ResourceLoadPriority::Medium));
     _CFNetworkHTTPConnectionCacheSetLimit(kHTTPNumFastLanes, fastLaneConnectionCount);
+}
+#endif
+
+#if PLATFORM(COCOA)
+CFStringRef ResourceRequest::isUserInitiatedKey()
+{
+    static CFStringRef key = CFSTR("ResourceRequestIsUserInitiatedKey");
+    return key;
 }
 #endif
 

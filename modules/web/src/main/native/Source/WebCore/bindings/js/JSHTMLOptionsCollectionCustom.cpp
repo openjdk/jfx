@@ -60,28 +60,11 @@ void JSHTMLOptionsCollection::indexSetter(ExecState* exec, unsigned index, JSVal
     selectIndexSetter(&impl().selectElement(), exec, index, value);
 }
 
-JSValue JSHTMLOptionsCollection::add(ExecState* exec)
-{
-    HTMLOptionsCollection& imp = impl();
-    HTMLOptionElement* option = toHTMLOptionElement(exec->argument(0));
-    ExceptionCode ec = 0;
-    if (exec->argumentCount() < 2)
-        imp.add(option, ec);
-    else {
-        int index = exec->argument(1).toInt32(exec);
-        if (exec->hadException())
-            return jsUndefined();
-        imp.add(option, index, ec);
-    }
-    setDOMException(exec, ec);
-    return jsUndefined();
-}
-
 JSValue JSHTMLOptionsCollection::remove(ExecState* exec)
 {
     // The argument can be an HTMLOptionElement or an index.
     JSValue argument = exec->argument(0);
-    if (HTMLOptionElement* option = toHTMLOptionElement(argument))
+    if (HTMLOptionElement* option = JSHTMLOptionElement::toWrapped(argument))
         impl().remove(option);
     else
         impl().remove(argument.toInt32(exec));

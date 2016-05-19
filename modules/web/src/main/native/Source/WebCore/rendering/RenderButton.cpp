@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2005 Apple Computer, Inc.
+ * Copyright (C) 2005 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -37,8 +37,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderButton::RenderButton(HTMLFormControlElement& element, PassRef<RenderStyle> style)
-    : RenderFlexibleBox(element, std::move(style))
+RenderButton::RenderButton(HTMLFormControlElement& element, Ref<RenderStyle>&& style)
+    : RenderFlexibleBox(element, WTF::move(style))
     , m_buttonText(0)
     , m_inner(0)
     , m_default(false)
@@ -51,7 +51,7 @@ RenderButton::~RenderButton()
 
 HTMLFormControlElement& RenderButton::formControlElement() const
 {
-    return toHTMLFormControlElement(nodeForNonAnonymous());
+    return downcast<HTMLFormControlElement>(nodeForNonAnonymous());
 }
 
 bool RenderButton::canBeSelectionLeaf() const
@@ -112,20 +112,22 @@ void RenderButton::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
     if (m_inner) // RenderBlock handled updating the anonymous block's style.
         setupInnerStyle(&m_inner->style());
 
-    if (!m_default && theme().isDefault(this)) {
-        if (!m_timer)
-            m_timer = adoptPtr(new Timer<RenderButton>(this, &RenderButton::timerFired));
-        m_timer->startRepeating(0.03);
+    if (!m_default && theme().isDefault(*this)) {
+        if (theme().defaultButtonHasAnimation()) {
+            if (!m_timer)
+                m_timer = std::make_unique<Timer>(*this, &RenderButton::timerFired);
+            m_timer->startRepeating(0.03);
+        }
         m_default = true;
-    } else if (m_default && !theme().isDefault(this)) {
+    } else if (m_default && !theme().isDefault(*this)) {
         m_default = false;
-        m_timer.clear();
+        m_timer = nullptr;
     }
 }
 
 void RenderButton::setupInnerStyle(RenderStyle* innerStyle)
 {
-    ASSERT(innerStyle->refCount() == 1);
+    ASSERT(style().hasPseudoStyle(FIRST_LETTER) || innerStyle->refCount() == 1);
     // RenderBlock::createAnonymousBlock creates a new RenderStyle, so this is
     // safe to modify.
     // FIXME: I don't see how the comment above is accurate when this is called
@@ -141,8 +143,8 @@ void RenderButton::setupInnerStyle(RenderStyle* innerStyle)
 void RenderButton::updateFromElement()
 {
     // If we're an input element, we may need to change our button text.
-    if (isHTMLInputElement(formControlElement())) {
-        HTMLInputElement& input = toHTMLInputElement(formControlElement());
+    if (is<HTMLInputElement>(formControlElement())) {
+        HTMLInputElement& input = downcast<HTMLInputElement>(formControlElement());
         String value = input.valueWithDefault();
         setText(value);
     }
@@ -175,7 +177,7 @@ bool RenderButton::canHaveGeneratedChildren() const
     // Input elements can't have generated children, but button elements can. We'll
     // write the code assuming any other button types that might emerge in the future
     // can also have children.
-    return !isHTMLInputElement(formControlElement());
+    return !is<HTMLInputElement>(formControlElement());
 }
 
 LayoutRect RenderButton::controlClipRect(const LayoutPoint& additionalOffset) const
@@ -184,7 +186,7 @@ LayoutRect RenderButton::controlClipRect(const LayoutPoint& additionalOffset) co
     return LayoutRect(additionalOffset.x() + borderLeft(), additionalOffset.y() + borderTop(), width() - borderLeft() - borderRight(), height() - borderTop() - borderBottom());
 }
 
-void RenderButton::timerFired(Timer<RenderButton>&)
+void RenderButton::timerFired()
 {
     // FIXME Bug 25110: Ideally we would stop our timer when our Document
     // enters the page cache. But we currently have no way of being notified
@@ -202,7 +204,7 @@ void RenderButton::layout()
     RenderFlexibleBox::layout();
 
     // FIXME: We should not be adjusting styles during layout. See <rdar://problem/7675493>.
-    RenderThemeIOS::adjustRoundBorderRadius(style(), this);
+    RenderThemeIOS::adjustRoundBorderRadius(style(), *this);
 }
 #endif
 

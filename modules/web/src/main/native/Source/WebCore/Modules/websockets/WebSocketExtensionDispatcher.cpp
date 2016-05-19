@@ -48,16 +48,16 @@ void WebSocketExtensionDispatcher::reset()
     m_processors.clear();
 }
 
-void WebSocketExtensionDispatcher::addProcessor(PassOwnPtr<WebSocketExtensionProcessor> processor)
+void WebSocketExtensionDispatcher::addProcessor(std::unique_ptr<WebSocketExtensionProcessor> processor)
 {
-    for (size_t i = 0; i < m_processors.size(); ++i) {
-        if (m_processors[i]->extensionToken() == processor->extensionToken())
+    for (auto& extensionProcessor : m_processors) {
+        if (extensionProcessor->extensionToken() == processor->extensionToken())
             return;
     }
     ASSERT(processor->handshakeString().length());
     ASSERT(!processor->handshakeString().contains('\n'));
     ASSERT(!processor->handshakeString().contains(static_cast<UChar>('\0')));
-    m_processors.append(processor);
+    m_processors.append(WTF::move(processor));
 }
 
 const String WebSocketExtensionDispatcher::createHeaderValue() const
@@ -69,7 +69,7 @@ const String WebSocketExtensionDispatcher::createHeaderValue() const
     StringBuilder builder;
     builder.append(m_processors[0]->handshakeString());
     for (size_t i = 1; i < numProcessors; ++i) {
-        builder.append(", ");
+        builder.appendLiteral(", ");
         builder.append(m_processors[i]->handshakeString());
     }
     return builder.toString();
@@ -78,15 +78,15 @@ const String WebSocketExtensionDispatcher::createHeaderValue() const
 void WebSocketExtensionDispatcher::appendAcceptedExtension(const String& extensionToken, HashMap<String, String>& extensionParameters)
 {
     if (!m_acceptedExtensionsBuilder.isEmpty())
-        m_acceptedExtensionsBuilder.append(", ");
+        m_acceptedExtensionsBuilder.appendLiteral(", ");
     m_acceptedExtensionsBuilder.append(extensionToken);
     // FIXME: Should use ListHashSet to keep the order of the parameters.
-    for (HashMap<String, String>::const_iterator iterator = extensionParameters.begin(); iterator != extensionParameters.end(); ++iterator) {
-        m_acceptedExtensionsBuilder.append("; ");
-        m_acceptedExtensionsBuilder.append(iterator->key);
-        if (!iterator->value.isNull()) {
-            m_acceptedExtensionsBuilder.append("=");
-            m_acceptedExtensionsBuilder.append(iterator->value);
+    for (auto& parameter : extensionParameters) {
+        m_acceptedExtensionsBuilder.appendLiteral("; ");
+        m_acceptedExtensionsBuilder.append(parameter.key);
+        if (!parameter.value.isNull()) {
+            m_acceptedExtensionsBuilder.append('=');
+            m_acceptedExtensionsBuilder.append(parameter.value);
         }
     }
 }
@@ -118,9 +118,8 @@ bool WebSocketExtensionDispatcher::processHeaderValue(const String& headerValue)
             return false;
         }
 
-        size_t index;
-        for (index = 0; index < m_processors.size(); ++index) {
-            WebSocketExtensionProcessor* processor = m_processors[index].get();
+        size_t index = 0;
+        for (auto& processor : m_processors) {
             if (extensionToken == processor->extensionToken()) {
                 if (processor->processResponse(extensionParameters)) {
                     appendAcceptedExtension(extensionToken, extensionParameters);
@@ -129,6 +128,7 @@ bool WebSocketExtensionDispatcher::processHeaderValue(const String& headerValue)
                 fail(processor->failureReason());
                 return false;
             }
+            ++index;
         }
         // There is no extension which can process the response.
         if (index == m_processors.size()) {

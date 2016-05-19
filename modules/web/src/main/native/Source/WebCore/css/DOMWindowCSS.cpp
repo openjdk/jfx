@@ -30,17 +30,15 @@
 #include "config.h"
 #include "DOMWindowCSS.h"
 
-#if ENABLE(CSS3_CONDITIONAL_RULES)
-
 #include "CSSParser.h"
 #include "StyleProperties.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-PassRefPtr<DOMWindowCSS> DOMWindowCSS::create()
+Ref<DOMWindowCSS> DOMWindowCSS::create()
 {
-    return adoptRef(new DOMWindowCSS());
+    return adoptRef(*new DOMWindowCSS);
 }
 
 static String valueWithoutImportant(const String& value)
@@ -74,7 +72,7 @@ bool DOMWindowCSS::supports(const String& property, const String& value) const
         return false;
 
     RefPtr<MutableStyleProperties> dummyStyle = MutableStyleProperties::create();
-    return CSSParser::parseValue(dummyStyle.get(), propertyID, normalizedValue, false, CSSStrictMode, 0);
+    return CSSParser::parseValue(dummyStyle.get(), propertyID, normalizedValue, false, CSSStrictMode, nullptr) != CSSParser::ParseResult::Error;
 }
 
 bool DOMWindowCSS::supports(const String& conditionText) const
@@ -85,5 +83,3 @@ bool DOMWindowCSS::supports(const String& conditionText) const
 }
 
 }
-
-#endif

@@ -25,9 +25,6 @@
 
 #include "config.h"
 #include "LLIntData.h"
-
-#if ENABLE(LLINT)
-
 #include "BytecodeConventions.h"
 #include "CodeType.h"
 #include "Instruction.h"
@@ -40,25 +37,26 @@
 namespace JSC { namespace LLInt {
 
 Instruction* Data::s_exceptionInstructions = 0;
-Opcode* Data::s_opcodeMap = 0;
+Opcode Data::s_opcodeMap[numOpcodeIDs] = { };
+
+#if ENABLE(JIT)
+extern "C" void llint_entry(void*);
+#endif
 
 void initialize()
 {
     Data::s_exceptionInstructions = new Instruction[maxOpcodeLength + 1];
-    Data::s_opcodeMap = new Opcode[numOpcodeIDs];
 
-    #if ENABLE(LLINT_C_LOOP)
-        CLoop::initialize();
+#if !ENABLE(JIT)
+    CLoop::initialize();
 
-    #else // !ENABLE(LLINT_C_LOOP)
+#else // ENABLE(JIT)
+    llint_entry(&Data::s_opcodeMap);
+
     for (int i = 0; i < maxOpcodeLength + 1; ++i)
         Data::s_exceptionInstructions[i].u.pointer =
             LLInt::getCodePtr(llint_throw_from_slow_path_trampoline);
-    #define OPCODE_ENTRY(opcode, length) \
-        Data::s_opcodeMap[opcode] = static_cast<Opcode>(LLInt::getCodePtr(llint_##opcode));
-    FOR_EACH_OPCODE_ID(OPCODE_ENTRY);
-    #undef OPCODE_ENTRY
-    #endif // !ENABLE(LLINT_C_LOOP)
+#endif // ENABLE(JIT)
 }
 
 #if COMPILER(CLANG)
@@ -75,10 +73,10 @@ void Data::performAssertions(VM& vm)
 #ifndef NDEBUG
 #if USE(JSVALUE64)
     const ptrdiff_t PtrSize = 8;
-    const ptrdiff_t CallFrameHeaderSlots = 6;
+    const ptrdiff_t CallFrameHeaderSlots = 5;
 #else // USE(JSVALUE64) // i.e. 32-bit version
     const ptrdiff_t PtrSize = 4;
-    const ptrdiff_t CallFrameHeaderSlots = 5;
+    const ptrdiff_t CallFrameHeaderSlots = 4;
 #endif
     const ptrdiff_t SlotSize = 8;
 #endif
@@ -91,8 +89,7 @@ void Data::performAssertions(VM& vm)
     ASSERT(JSStack::CallerFrameAndPCSize == (PtrSize * 2) / SlotSize);
     ASSERT(CallFrame::returnPCOffset() == CallFrame::callerFrameOffset() + PtrSize);
     ASSERT(JSStack::CodeBlock * sizeof(Register) == CallFrame::returnPCOffset() + PtrSize);
-    ASSERT(JSStack::ScopeChain * sizeof(Register) == JSStack::CodeBlock * sizeof(Register) + SlotSize);
-    ASSERT(JSStack::Callee * sizeof(Register) == JSStack::ScopeChain * sizeof(Register) + SlotSize);
+    ASSERT(JSStack::Callee * sizeof(Register) == JSStack::CodeBlock * sizeof(Register) + SlotSize);
     ASSERT(JSStack::ArgumentCount * sizeof(Register) == JSStack::Callee * sizeof(Register) + SlotSize);
     ASSERT(JSStack::ThisArgument * sizeof(Register) == JSStack::ArgumentCount * sizeof(Register) + SlotSize);
     ASSERT(JSStack::CallFrameHeaderSize == JSStack::ThisArgument);
@@ -125,16 +122,18 @@ void Data::performAssertions(VM& vm)
     ASSERT(ValueUndefined == (TagBitTypeOther | TagBitUndefined));
     ASSERT(ValueNull == TagBitTypeOther);
 #endif
-#if CPU(X86_64) || CPU(ARM64) || ENABLE(LLINT_C_LOOP)
+#if (CPU(X86_64) && !OS(WINDOWS)) || CPU(ARM64) || !ENABLE(JIT)
     ASSERT(!maxFrameExtentForSlowPathCall);
 #elif CPU(ARM) || CPU(SH4)
     ASSERT(maxFrameExtentForSlowPathCall == 24);
 #elif CPU(X86) || CPU(MIPS)
     ASSERT(maxFrameExtentForSlowPathCall == 40);
+#elif CPU(X86_64) && OS(WINDOWS)
+    ASSERT(maxFrameExtentForSlowPathCall == 64);
 #endif
-    ASSERT(StringType == 5);
-    ASSERT(ObjectType == 17);
-    ASSERT(FinalObjectType == 18);
+    ASSERT(StringType == 6);
+    ASSERT(ObjectType == 18);
+    ASSERT(FinalObjectType == 19);
     ASSERT(MasqueradesAsUndefined == 1);
     ASSERT(ImplementsHasInstance == 2);
     ASSERT(ImplementsDefaultHasInstance == 8);
@@ -143,17 +142,18 @@ void Data::performAssertions(VM& vm)
     ASSERT(EvalCode == 1);
     ASSERT(FunctionCode == 2);
 
-    ASSERT(GlobalProperty == 0);
-    ASSERT(GlobalVar == 1);
-    ASSERT(ClosureVar == 2);
-    ASSERT(GlobalPropertyWithVarInjectionChecks == 3);
-    ASSERT(GlobalVarWithVarInjectionChecks == 4);
-    ASSERT(ClosureVarWithVarInjectionChecks == 5);
-    ASSERT(Dynamic == 6);
+    static_assert(GlobalProperty == 0, "LLInt assumes GlobalProperty ResultType is == 0");
+    static_assert(GlobalVar == 1, "LLInt assumes GlobalVar ResultType is == 1");
+    static_assert(ClosureVar == 2, "LLInt assumes ClosureVar ResultType is == 2");
+    static_assert(LocalClosureVar == 3, "LLInt assumes LocalClosureVar ResultType is == 3");
+    static_assert(GlobalPropertyWithVarInjectionChecks == 4, "LLInt assumes GlobalPropertyWithVarInjectionChecks ResultType is == 4");
+    static_assert(GlobalVarWithVarInjectionChecks == 5, "LLInt assumes GlobalVarWithVarInjectionChecks ResultType is == 5");
+    static_assert(ClosureVarWithVarInjectionChecks == 6, "LLInt assumes ClosureVarWithVarInjectionChecks ResultType is == 6");
+    static_assert(Dynamic == 7, "LLInt assumes Dynamic ResultType is == 7");
 
     ASSERT(ResolveModeAndType::mask == 0xffff);
 
-    ASSERT(MarkedBlock::blockMask == ~static_cast<decltype(MarkedBlock::blockMask)>(0xffff));
+    ASSERT(MarkedBlock::blockMask == ~static_cast<decltype(MarkedBlock::blockMask)>(0x3fff));
 
     // FIXME: make these assertions less horrible.
 #if !ASSERT_DISABLED
@@ -163,12 +163,10 @@ void Data::performAssertions(VM& vm)
     ASSERT(bitwise_cast<int**>(&testVector)[0] == testVector.begin());
 #endif
 
-    ASSERT(StringImpl::s_hashFlag8BitBuffer == 32);
+    ASSERT(StringImpl::s_hashFlag8BitBuffer == 8);
 }
 #if COMPILER(CLANG)
 #pragma clang diagnostic pop
 #endif
 
 } } // namespace JSC::LLInt
-
-#endif // ENABLE(LLINT)

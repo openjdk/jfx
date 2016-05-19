@@ -28,8 +28,8 @@
 
 #include "JSWrappable.h"
 #include <JavaScriptCore/JSRetainPtr.h>
-#include <WebKit2/WKBundleScriptWorld.h>
-#include <WebKit2/WKRetainPtr.h>
+#include <WebKit/WKBundleScriptWorld.h>
+#include <WebKit/WKRetainPtr.h>
 #include <string>
 #include <wtf/PassRefPtr.h>
 
@@ -38,13 +38,9 @@
 #include <CoreFoundation/CFRunLoop.h>
 typedef RetainPtr<CFRunLoopTimerRef> PlatformTimerRef;
 #elif PLATFORM(GTK)
-typedef unsigned int PlatformTimerRef;
+#include <wtf/glib/GMainLoopSource.h>
+typedef GMainLoopSource PlatformTimerRef;
 #elif PLATFORM(EFL)
-#if USE(EO)
-typedef struct _Eo_Opaque Ecore_Timer;
-#else
-typedef struct _Ecore_Timer Ecore_Timer;
-#endif
 typedef Ecore_Timer* PlatformTimerRef;
 #endif
 
@@ -61,6 +57,8 @@ public:
     void makeWindowObject(JSContextRef, JSObjectRef windowObject, JSValueRef* exception);
 
     // The basics.
+    WKURLRef testURL() const { return m_testURL.get(); }
+    void setTestURL(WKURLRef url) { m_testURL = url; }
     void dumpAsText(bool dumpPixels);
     void waitForPolicyDelegate();
     void dumpChildFramesAsText() { m_whatToDump = AllFramesText; }
@@ -84,6 +82,7 @@ public:
     void dumpApplicationCacheDelegateCallbacks() { m_dumpApplicationCacheDelegateCallbacks = true; }
     void dumpDatabaseCallbacks() { m_dumpDatabaseCallbacks = true; }
     void dumpDOMAsWebArchive() { m_whatToDump = DOMAsWebArchive; }
+    void dumpPolicyDelegateCallbacks() { m_dumpPolicyCallbacks = true; }
 
     void setShouldDumpFrameLoadCallbacks(bool value) { m_dumpFrameLoadCallbacks = value; }
     void setShouldDumpProgressFinishedCallback(bool value) { m_dumpProgressFinishedCallback = value; }
@@ -181,6 +180,7 @@ public:
     bool shouldDumpApplicationCacheDelegateCallbacks() const { return m_dumpApplicationCacheDelegateCallbacks; }
     bool shouldDumpDatabaseCallbacks() const { return m_dumpDatabaseCallbacks; }
     bool shouldDumpSelectionRect() const { return m_dumpSelectionRect; }
+    bool shouldDumpPolicyCallbacks() const { return m_dumpPolicyCallbacks; }
 
     bool isPolicyDelegateEnabled() const { return m_policyDelegateEnabled; }
     bool isPolicyDelegatePermissive() const { return m_policyDelegatePermissive; }
@@ -198,7 +198,7 @@ public:
 
     void showWebInspector();
     void closeWebInspector();
-    void evaluateInWebInspector(long callId, JSStringRef script);
+    void evaluateInWebInspector(JSStringRef script);
 
     void setPOSIXLocale(JSStringRef);
 
@@ -257,17 +257,20 @@ public:
     void setMockGeolocationPosition(double latitude, double longitude, double accuracy, JSValueRef altitude, JSValueRef altitudeAccuracy, JSValueRef heading, JSValueRef speed);
     void setMockGeolocationPositionUnavailableError(JSStringRef message);
 
+    // MediaStream
+    void setUserMediaPermission(bool);
+
     void setPageVisibility(JSStringRef state);
     void resetPageVisibility();
 
     bool callShouldCloseOnWebView();
 
-    void setCustomTimeout(int duration);
+    void setCustomTimeout(int duration) { m_timeout = duration; }
 
     // Work queue.
     void queueBackNavigation(unsigned howFarBackward);
     void queueForwardNavigation(unsigned howFarForward);
-    void queueLoad(JSStringRef url, JSStringRef target);
+    void queueLoad(JSStringRef url, JSStringRef target, bool shouldOpenExternalURLs);
     void queueLoadHTMLString(JSStringRef content, JSStringRef baseURL, JSStringRef unreachableURL);
     void queueReload();
     void queueLoadingScript(JSStringRef script);
@@ -279,12 +282,12 @@ public:
     JSValueRef neverInlineFunction(JSValueRef theFunction);
 
 private:
-    static const double waitToDumpWatchdogTimerInterval;
-
     TestRunner();
 
     void platformInitialize();
     void initializeWaitToDumpWatchdogTimerIfNeeded();
+
+    WKRetainPtr<WKURLRef> m_testURL; // Set by InjectedBundlePage once provisional load starts.
 
     WhatToDump m_whatToDump;
     bool m_shouldDumpAllFrameScrollPositions;
@@ -306,6 +309,7 @@ private:
     bool m_dumpWillCacheResponse;
     bool m_dumpApplicationCacheDelegateCallbacks;
     bool m_dumpDatabaseCallbacks;
+    bool m_dumpPolicyCallbacks { false };
     bool m_disallowIncreaseForApplicationCacheQuota;
     bool m_waitToDump; // True if waitUntilDone() has been called, but notifyDone() has not yet been called.
     bool m_testRepaint;
@@ -329,6 +333,8 @@ private:
 
     bool m_userStyleSheetEnabled;
     WKRetainPtr<WKStringRef> m_userStyleSheetLocation;
+
+    WKRetainPtr<WKArrayRef> m_allowedHosts;
 
     PlatformTimerRef m_waitToDumpWatchdogTimer;
 };

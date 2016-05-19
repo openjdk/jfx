@@ -37,12 +37,12 @@
 #include "LinkBuffer.h"
 #include "LowLevelInterpreter.h"
 #include "ProtoCallFrame.h"
+#include "StackAlignment.h"
 #include "VM.h"
 
 namespace JSC {
 
 #if ENABLE(JIT)
-#if ENABLE(LLINT)
 
 namespace LLInt {
 
@@ -54,58 +54,66 @@ static MacroAssemblerCodeRef generateThunkWithJumpTo(VM* vm, void (*target)(), c
     jit.move(JSInterfaceJIT::TrustedImmPtr(bitwise_cast<void*>(target)), JSInterfaceJIT::regT0);
     jit.jump(JSInterfaceJIT::regT0);
 
-    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    LinkBuffer patchBuffer(*vm, jit, GLOBAL_THUNK_ID);
     return FINALIZE_CODE(patchBuffer, ("LLInt %s prologue thunk", thunkKind));
 }
 
 MacroAssemblerCodeRef functionForCallEntryThunkGenerator(VM* vm)
 {
-    return generateThunkWithJumpTo(vm, llint_function_for_call_prologue, "function for call");
+    return generateThunkWithJumpTo(vm, LLInt::getCodeFunctionPtr(llint_function_for_call_prologue), "function for call");
 }
 
 MacroAssemblerCodeRef functionForConstructEntryThunkGenerator(VM* vm)
 {
-    return generateThunkWithJumpTo(vm, llint_function_for_construct_prologue, "function for construct");
+    return generateThunkWithJumpTo(vm, LLInt::getCodeFunctionPtr(llint_function_for_construct_prologue), "function for construct");
 }
 
 MacroAssemblerCodeRef functionForCallArityCheckThunkGenerator(VM* vm)
 {
-    return generateThunkWithJumpTo(vm, llint_function_for_call_arity_check, "function for call with arity check");
+    return generateThunkWithJumpTo(vm, LLInt::getCodeFunctionPtr(llint_function_for_call_arity_check), "function for call with arity check");
 }
 
 MacroAssemblerCodeRef functionForConstructArityCheckThunkGenerator(VM* vm)
 {
-    return generateThunkWithJumpTo(vm, llint_function_for_construct_arity_check, "function for construct with arity check");
+    return generateThunkWithJumpTo(vm, LLInt::getCodeFunctionPtr(llint_function_for_construct_arity_check), "function for construct with arity check");
 }
 
 MacroAssemblerCodeRef evalEntryThunkGenerator(VM* vm)
 {
-    return generateThunkWithJumpTo(vm, llint_eval_prologue, "eval");
+    return generateThunkWithJumpTo(vm, LLInt::getCodeFunctionPtr(llint_eval_prologue), "eval");
 }
 
 MacroAssemblerCodeRef programEntryThunkGenerator(VM* vm)
 {
-    return generateThunkWithJumpTo(vm, llint_program_prologue, "program");
+    return generateThunkWithJumpTo(vm, LLInt::getCodeFunctionPtr(llint_program_prologue), "program");
 }
 
 } // namespace LLInt
 
-#endif // ENABLE(LLINT)
 #else // ENABLE(JIT)
 
 // Non-JIT (i.e. C Loop LLINT) case:
 
-EncodedJSValue callToJavaScript(void* executableAddress, VM* vm, ProtoCallFrame* protoCallFrame)
+EncodedJSValue vmEntryToJavaScript(void* executableAddress, VM* vm, ProtoCallFrame* protoCallFrame)
 {
-    JSValue result = CLoop::execute(llint_call_to_javascript, executableAddress, vm, protoCallFrame);
+    JSValue result = CLoop::execute(llint_vm_entry_to_javascript, executableAddress, vm, protoCallFrame);
     return JSValue::encode(result);
 }
 
-EncodedJSValue callToNativeFunction(void* executableAddress, VM* vm, ProtoCallFrame* protoCallFrame)
+EncodedJSValue vmEntryToNative(void* executableAddress, VM* vm, ProtoCallFrame* protoCallFrame)
 {
-    JSValue result = CLoop::execute(llint_call_to_native_function, executableAddress, vm, protoCallFrame);
+    JSValue result = CLoop::execute(llint_vm_entry_to_native, executableAddress, vm, protoCallFrame);
     return JSValue::encode(result);
 }
+
+extern "C" VMEntryRecord* vmEntryRecord(VMEntryFrame* entryFrame)
+{
+    // The C Loop doesn't have any callee save registers, so the VMEntryRecord is allocated at the base of the frame.
+    intptr_t stackAlignment = stackAlignmentBytes();
+    intptr_t VMEntryTotalFrameSize = (sizeof(VMEntryRecord) + (stackAlignment - 1)) & ~(stackAlignment - 1);
+    return reinterpret_cast<VMEntryRecord*>(static_cast<char*>(entryFrame) - VMEntryTotalFrameSize);
+}
+
 
 #endif // ENABLE(JIT)
 

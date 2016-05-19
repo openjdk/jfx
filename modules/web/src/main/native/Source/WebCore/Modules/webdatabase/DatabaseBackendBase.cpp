@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,11 +30,8 @@
 #include "config.h"
 #include "DatabaseBackendBase.h"
 
-#if ENABLE(SQL_DATABASE)
-
+#include "Database.h"
 #include "DatabaseAuthorizer.h"
-#include "DatabaseBackendContext.h"
-#include "DatabaseBase.h"
 #include "DatabaseContext.h"
 #include "DatabaseManager.h"
 #include "DatabaseTracker.h"
@@ -57,7 +54,7 @@
 // =======================================================
 // The DatabaseTracker maintains a list of databases that have been
 // "opened" so that the client can call interrupt or delete on every database
-// associated with a DatabaseBackendContext.
+// associated with a DatabaseContext.
 //
 // We will only call DatabaseTracker::addOpenDatabase() to add the database
 // to the tracker as opened when we've succeeded in opening the database,
@@ -85,7 +82,26 @@
 namespace WebCore {
 
 static const char versionKey[] = "WebKitDatabaseVersionKey";
-static const char infoTableName[] = "__WebKitDatabaseInfoTable__";
+static const char unqualifiedInfoTableName[] = "__WebKitDatabaseInfoTable__";
+
+const char* DatabaseBackendBase::databaseInfoTableName()
+{
+    return unqualifiedInfoTableName;
+}
+
+static const char* fullyQualifiedInfoTableName()
+{
+    static const char qualifier[] = "main.";
+    static char qualifiedName[sizeof(qualifier) + sizeof(unqualifiedInfoTableName) - 1];
+
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, []{
+        strcpy(qualifiedName, qualifier);
+        strcpy(qualifiedName + sizeof(qualifier) - 1, unqualifiedInfoTableName);
+    });
+
+    return qualifiedName;
+}
 
 static String formatErrorMessage(const char* message, int sqliteErrorCode, const char* sqliteErrorMessage)
 {
@@ -97,17 +113,17 @@ static bool retrieveTextResultFromDatabase(SQLiteDatabase& db, const String& que
     SQLiteStatement statement(db, query);
     int result = statement.prepare();
 
-    if (result != SQLResultOk) {
+    if (result != SQLITE_OK) {
         LOG_ERROR("Error (%i) preparing statement to read text result from database (%s)", result, query.ascii().data());
         return false;
     }
 
     result = statement.step();
-    if (result == SQLResultRow) {
+    if (result == SQLITE_ROW) {
         resultString = statement.getColumnText(0);
         return true;
     }
-    if (result == SQLResultDone) {
+    if (result == SQLITE_DONE) {
         resultString = String();
         return true;
     }
@@ -121,7 +137,7 @@ static bool setTextValueInDatabase(SQLiteDatabase& db, const String& query, cons
     SQLiteStatement statement(db, query);
     int result = statement.prepare();
 
-    if (result != SQLResultOk) {
+    if (result != SQLITE_OK) {
         LOG_ERROR("Failed to prepare statement to set value in database (%s)", query.ascii().data());
         return false;
     }
@@ -129,7 +145,7 @@ static bool setTextValueInDatabase(SQLiteDatabase& db, const String& query, cons
     statement.bindText(1, value);
 
     result = statement.step();
-    if (result != SQLResultDone) {
+    if (result != SQLITE_DONE) {
         LOG_ERROR("Failed to step statement to set value in database (%s)", query.ascii().data());
         return false;
     }
@@ -141,21 +157,18 @@ static bool setTextValueInDatabase(SQLiteDatabase& db, const String& query, cons
 static std::mutex& guidMutex()
 {
     static std::once_flag onceFlag;
-    static std::mutex* mutex;
+    static LazyNeverDestroyed<std::mutex> mutex;
 
     std::call_once(onceFlag, []{
-        mutex = std::make_unique<std::mutex>().release();
+        mutex.construct();
     });
 
-    return *mutex;
+    return mutex;
 }
 
 typedef HashMap<DatabaseGuid, String> GuidVersionMap;
 static GuidVersionMap& guidToVersionMap()
 {
-    // Ensure the the mutex is locked.
-    ASSERT(!guidMutex().try_lock());
-
     static NeverDestroyed<GuidVersionMap> map;
     return map;
 }
@@ -163,9 +176,6 @@ static GuidVersionMap& guidToVersionMap()
 // NOTE: Caller must lock guidMutex().
 static inline void updateGuidVersionMap(DatabaseGuid guid, String newVersion)
 {
-    // Ensure the the mutex is locked.
-    ASSERT(!guidMutex().try_lock());
-
     // Note: It is not safe to put an empty string into the guidToVersionMap() map.
     // That's because the map is cross-thread, but empty strings are per-thread.
     // The copy() function makes a version of the string you can use on the current
@@ -180,21 +190,14 @@ typedef HashMap<DatabaseGuid, std::unique_ptr<HashSet<DatabaseBackendBase*>>> Gu
 
 static GuidDatabaseMap& guidToDatabaseMap()
 {
-    // Ensure the the mutex is locked.
-    ASSERT(!guidMutex().try_lock());
-
     static NeverDestroyed<GuidDatabaseMap> map;
     return map;
 }
 
 static DatabaseGuid guidForOriginAndName(const String& origin, const String& name)
 {
-    // Ensure the the mutex is locked.
-    ASSERT(!guidMutex().try_lock());
-
     String stringID = origin + "/" + name;
 
-    typedef HashMap<String, int> IDGuidMap;
     static NeverDestroyed<HashMap<String, int>> map;
     DatabaseGuid guid = map.get().get(stringID);
     if (!guid) {
@@ -206,12 +209,6 @@ static DatabaseGuid guidForOriginAndName(const String& origin, const String& nam
     return guid;
 }
 
-// static
-const char* DatabaseBackendBase::databaseInfoTableName()
-{
-    return infoTableName;
-}
-
 #if !LOG_DISABLED || !ERROR_DISABLED
 String DatabaseBackendBase::databaseDebugName() const
 {
@@ -219,8 +216,7 @@ String DatabaseBackendBase::databaseDebugName() const
 }
 #endif
 
-DatabaseBackendBase::DatabaseBackendBase(PassRefPtr<DatabaseBackendContext> databaseContext, const String& name,
-    const String& expectedVersion, const String& displayName, unsigned long estimatedSize, DatabaseType databaseType)
+DatabaseBackendBase::DatabaseBackendBase(PassRefPtr<DatabaseContext> databaseContext, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize)
     : m_databaseContext(databaseContext)
     , m_name(name.isolatedCopy())
     , m_expectedVersion(expectedVersion.isolatedCopy())
@@ -228,11 +224,10 @@ DatabaseBackendBase::DatabaseBackendBase(PassRefPtr<DatabaseBackendContext> data
     , m_estimatedSize(estimatedSize)
     , m_opened(false)
     , m_new(false)
-    , m_isSyncDatabase(databaseType == DatabaseType::Sync)
 {
     m_contextThreadSecurityOrigin = m_databaseContext->securityOrigin()->isolatedCopy();
 
-    m_databaseAuthorizer = DatabaseAuthorizer::create(infoTableName);
+    m_databaseAuthorizer = DatabaseAuthorizer::create(unqualifiedInfoTableName);
 
     if (m_name.isNull())
         m_name = emptyString();
@@ -247,7 +242,7 @@ DatabaseBackendBase::DatabaseBackendBase(PassRefPtr<DatabaseBackendContext> data
         hashSet->add(this);
     }
 
-    m_filename = DatabaseManager::manager().fullPathForDatabase(securityOrigin(), m_name);
+    m_filename = DatabaseManager::singleton().fullPathForDatabase(securityOrigin(), m_name);
 }
 
 DatabaseBackendBase::~DatabaseBackendBase()
@@ -272,7 +267,7 @@ void DatabaseBackendBase::closeDatabase()
     m_sqliteDatabase.close();
     m_opened = false;
     // See comment at the top this file regarding calling removeOpenDatabase().
-    DatabaseTracker::tracker().removeOpenDatabase(this);
+    DatabaseTracker::tracker().removeOpenDatabase(static_cast<Database*>(this));
     {
         std::lock_guard<std::mutex> locker(guidMutex());
 
@@ -305,7 +300,7 @@ public:
     }
     ~DoneCreatingDatabaseOnExitCaller()
     {
-        DatabaseTracker::tracker().doneCreatingDatabase(m_database);
+        DatabaseTracker::tracker().doneCreatingDatabase(static_cast<Database*>(m_database));
     }
 
     void setOpenSucceeded() { m_openSucceeded = true; }
@@ -362,7 +357,7 @@ bool DatabaseBackendBase::performOpenAndVerify(bool shouldSetVersionInNewDatabas
                 return false;
             }
 
-            String tableName(infoTableName);
+            String tableName(unqualifiedInfoTableName);
             if (!m_sqliteDatabase.tableExists(tableName)) {
                 m_new = true;
 
@@ -413,7 +408,7 @@ bool DatabaseBackendBase::performOpenAndVerify(bool shouldSetVersionInNewDatabas
     m_sqliteDatabase.setAuthorizer(m_databaseAuthorizer);
 
     // See comment at the top this file regarding calling addOpenDatabase().
-    DatabaseTracker::tracker().addOpenDatabase(this);
+    DatabaseTracker::tracker().addOpenDatabase(static_cast<Database*>(this));
     m_opened = true;
 
     // Declare success:
@@ -461,7 +456,7 @@ DatabaseDetails DatabaseBackendBase::details() const
 
 bool DatabaseBackendBase::getVersionFromDatabase(String& version, bool shouldCacheVersion)
 {
-    String query(String("SELECT value FROM ") + infoTableName +  " WHERE key = '" + versionKey + "';");
+    String query(String("SELECT value FROM ") + fullyQualifiedInfoTableName() +  " WHERE key = '" + versionKey + "';");
 
     m_databaseAuthorizer->disable();
 
@@ -481,7 +476,7 @@ bool DatabaseBackendBase::setVersionInDatabase(const String& version, bool shoul
 {
     // The INSERT will replace an existing entry for the database with the new version number, due to the UNIQUE ON CONFLICT REPLACE
     // clause in the CREATE statement (see Database::performOpenAndVerify()).
-    String query(String("INSERT INTO ") + infoTableName +  " (key, value) VALUES ('" + versionKey + "', ?);");
+    String query(String("INSERT INTO ") + fullyQualifiedInfoTableName() +  " (key, value) VALUES ('" + versionKey + "', ?);");
 
     m_databaseAuthorizer->disable();
 
@@ -537,12 +532,6 @@ void DatabaseBackendBase::enableAuthorizer()
     m_databaseAuthorizer->enable();
 }
 
-void DatabaseBackendBase::setAuthorizerReadOnly()
-{
-    ASSERT(m_databaseAuthorizer);
-    m_databaseAuthorizer->setReadOnly();
-}
-
 void DatabaseBackendBase::setAuthorizerPermissions(int permissions)
 {
     ASSERT(m_databaseAuthorizer);
@@ -581,7 +570,7 @@ void DatabaseBackendBase::resetAuthorizer()
 
 unsigned long long DatabaseBackendBase::maximumSize() const
 {
-    return DatabaseTracker::tracker().getMaxSizeForDatabase(this);
+    return DatabaseTracker::tracker().getMaxSizeForDatabase(static_cast<const Database*>(this));
 }
 
 void DatabaseBackendBase::incrementalVacuumIfNeeded()
@@ -592,7 +581,7 @@ void DatabaseBackendBase::incrementalVacuumIfNeeded()
     int64_t totalSize = m_sqliteDatabase.totalSize();
     if (totalSize <= 10 * freeSpaceSize) {
         int result = m_sqliteDatabase.runIncrementalVacuumCommand();
-        if (result != SQLResultOk)
+        if (result != SQLITE_OK)
             m_frontend->logErrorMessage(formatErrorMessage("error vacuuming database", result, m_sqliteDatabase.lastErrorMsg()));
     }
 }
@@ -609,5 +598,3 @@ bool DatabaseBackendBase::isInterrupted()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)

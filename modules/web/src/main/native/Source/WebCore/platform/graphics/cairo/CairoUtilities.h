@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,9 +27,14 @@
 #ifndef CairoUtilities_h
 #define CairoUtilities_h
 
+#if USE(CAIRO)
+
 #include "GraphicsTypes.h"
 #include "IntSize.h"
 #include <cairo.h>
+
+// This function was added pretty much simultaneous to when 1.13 was branched.
+#define HAVE_CAIRO_SURFACE_SET_DEVICE_SCALE CAIRO_VERSION_MAJOR > 1 || (CAIRO_VERSION_MAJOR == 1 && CAIRO_VERSION_MINOR >= 13)
 
 namespace WebCore {
 class AffineTransform;
@@ -56,7 +61,12 @@ void copyRectFromCairoSurfaceToContext(cairo_surface_t* from, cairo_t* to, const
 void copyRectFromOneSurfaceToAnother(cairo_surface_t* from, cairo_surface_t* to, const IntSize& offset, const IntRect&, const IntSize& = IntSize(), cairo_operator_t = CAIRO_OPERATOR_OVER);
 
 IntSize cairoSurfaceSize(cairo_surface_t*);
+void flipImageSurfaceVertically(cairo_surface_t*);
+void cairoSurfaceSetDeviceScale(cairo_surface_t*, double xScale, double yScale);
+void cairoSurfaceGetDeviceScale(cairo_surface_t*, double& xScale, double& yScale);
 
 } // namespace WebCore
+
+#endif // USE(CAIRO)
 
 #endif // CairoUtilities_h

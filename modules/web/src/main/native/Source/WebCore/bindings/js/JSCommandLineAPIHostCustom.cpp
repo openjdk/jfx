@@ -31,13 +31,12 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INSPECTOR)
-
 #include "JSCommandLineAPIHost.h"
 
 #include "CommandLineAPIHost.h"
+#include "Database.h"
 #include "InspectorDOMAgent.h"
+#include "JSDatabase.h"
 #include "JSEventListener.h"
 #include "JSNode.h"
 #include "JSStorage.h"
@@ -45,15 +44,12 @@
 #include <bindings/ScriptValue.h>
 #include <inspector/InspectorValues.h>
 #include <parser/SourceCode.h>
+#include <runtime/IdentifierInlines.h>
 #include <runtime/JSArray.h>
 #include <runtime/JSFunction.h>
 #include <runtime/JSLock.h>
 #include <runtime/ObjectConstructor.h>
 
-#if ENABLE(SQL_DATABASE)
-#include "Database.h"
-#include "JSDatabase.h"
-#endif
 
 using namespace JSC;
 
@@ -61,10 +57,7 @@ namespace WebCore {
 
 JSValue JSCommandLineAPIHost::inspectedObject(ExecState* exec)
 {
-    if (exec->argumentCount() < 1)
-        return jsUndefined();
-
-    CommandLineAPIHost::InspectableObject* object = impl().inspectedObject(exec->uncheckedArgument(0).toInt32(exec));
+    CommandLineAPIHost::InspectableObject* object = impl().inspectedObject();
     if (!object)
         return jsUndefined();
 
@@ -96,8 +89,8 @@ static JSArray* getJSListenerFunctions(ExecState* exec, Document* document, cons
             continue;
 
         JSObject* listenerEntry = constructEmptyObject(exec);
-        listenerEntry->putDirect(exec->vm(), Identifier(exec, "listener"), function);
-        listenerEntry->putDirect(exec->vm(), Identifier(exec, "useCapture"), jsBoolean(listenerInfo.eventListenerVector[i].useCapture));
+        listenerEntry->putDirect(exec->vm(), Identifier::fromString(exec, "listener"), function);
+        listenerEntry->putDirect(exec->vm(), Identifier::fromString(exec, "useCapture"), jsBoolean(listenerInfo.eventListenerVector[i].useCapture));
         result->putDirectIndex(exec, outputIndex++, JSValue(listenerEntry));
     }
     return result;
@@ -112,7 +105,7 @@ JSValue JSCommandLineAPIHost::getEventListeners(ExecState* exec)
     if (!value.isObject() || value.isNull())
         return jsUndefined();
 
-    Node* node = toNode(value);
+    Node* node = JSNode::toWrapped(value);
     if (!node)
         return jsUndefined();
 
@@ -125,7 +118,7 @@ JSValue JSCommandLineAPIHost::getEventListeners(ExecState* exec)
         if (!listeners->length())
             continue;
         AtomicString eventType = listenersArray[i].eventType;
-        result->putDirect(exec->vm(), Identifier(exec, eventType.impl()), JSValue(listeners));
+        result->putDirect(exec->vm(), Identifier::fromString(exec, eventType.impl()), JSValue(listeners));
     }
 
     return result;
@@ -147,11 +140,9 @@ JSValue JSCommandLineAPIHost::databaseId(ExecState* exec)
     if (exec->argumentCount() < 1)
         return jsUndefined();
 
-#if ENABLE(SQL_DATABASE)
-    Database* database = toDatabase(exec->uncheckedArgument(0));
+    Database* database = JSDatabase::toWrapped(exec->uncheckedArgument(0));
     if (database)
         return jsStringWithCache(exec, impl().databaseIdImpl(database));
-#endif
 
     return jsUndefined();
 }
@@ -161,7 +152,7 @@ JSValue JSCommandLineAPIHost::storageId(ExecState* exec)
     if (exec->argumentCount() < 1)
         return jsUndefined();
 
-    Storage* storage = toStorage(exec->uncheckedArgument(0));
+    Storage* storage = JSStorage::toWrapped(exec->uncheckedArgument(0));
     if (storage)
         return jsStringWithCache(exec, impl().storageIdImpl(storage));
 
@@ -169,5 +160,3 @@ JSValue JSCommandLineAPIHost::storageId(ExecState* exec)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

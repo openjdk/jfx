@@ -27,34 +27,41 @@
 #include "config.h"
 #include "InspectorAgentRegistry.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "InspectorAgentBase.h"
 
 namespace Inspector {
 
-InspectorAgentRegistry::InspectorAgentRegistry()
+AgentRegistry::AgentRegistry()
 {
 }
 
-void InspectorAgentRegistry::append(std::unique_ptr<InspectorAgentBase> agent)
+void AgentRegistry::append(std::unique_ptr<InspectorAgentBase> agent)
 {
-    m_agents.append(std::move(agent));
+    m_agents.append(WTF::move(agent));
 }
 
-void InspectorAgentRegistry::didCreateFrontendAndBackend(InspectorFrontendChannel* frontendChannel, InspectorBackendDispatcher* backendDispatcher)
+#if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
+void AgentRegistry::appendExtraAgent(std::unique_ptr<InspectorAgentBase> agent)
+{
+    m_extraDomains.append(agent->domainName());
+
+    append(WTF::move(agent));
+}
+#endif
+
+void AgentRegistry::didCreateFrontendAndBackend(FrontendChannel* frontendChannel, BackendDispatcher* backendDispatcher)
 {
     for (size_t i = 0; i < m_agents.size(); i++)
         m_agents[i]->didCreateFrontendAndBackend(frontendChannel, backendDispatcher);
 }
 
-void InspectorAgentRegistry::willDestroyFrontendAndBackend(InspectorDisconnectReason reason)
+void AgentRegistry::willDestroyFrontendAndBackend(DisconnectReason reason)
 {
     for (size_t i = 0; i < m_agents.size(); i++)
         m_agents[i]->willDestroyFrontendAndBackend(reason);
 }
 
-void InspectorAgentRegistry::discardAgents()
+void AgentRegistry::discardAgents()
 {
     for (size_t i = 0; i < m_agents.size(); i++)
         m_agents[i]->discardAgent();
@@ -62,4 +69,3 @@ void InspectorAgentRegistry::discardAgents()
 
 } // namespace Inspector
 
-#endif // ENABLE(INSPECTOR)

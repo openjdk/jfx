@@ -44,23 +44,23 @@ using namespace HTMLNames;
 
 class KeygenSelectElement final : public HTMLSelectElement {
 public:
-    static PassRefPtr<KeygenSelectElement> create(Document& document)
+    static Ref<KeygenSelectElement> create(Document& document)
     {
-        return adoptRef(new KeygenSelectElement(document));
+        return adoptRef(*new KeygenSelectElement(document));
     }
 
 protected:
     KeygenSelectElement(Document& document)
         : HTMLSelectElement(selectTag, document, 0)
     {
-        DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-keygen-select", AtomicString::ConstructFromLiteral));
+        DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-keygen-select", AtomicString::ConstructFromLiteral));
         setPseudo(pseudoId);
     }
 
 private:
-    virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren() override
+    virtual RefPtr<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) override
     {
-        return create(document());
+        return create(targetDocument);
     }
 };
 
@@ -83,9 +83,9 @@ inline HTMLKeygenElement::HTMLKeygenElement(const QualifiedName& tagName, Docume
     ensureUserAgentShadowRoot().appendChild(select, IGNORE_EXCEPTION);
 }
 
-PassRefPtr<HTMLKeygenElement> HTMLKeygenElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
+Ref<HTMLKeygenElement> HTMLKeygenElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
-    return adoptRef(new HTMLKeygenElement(tagName, document, form));
+    return adoptRef(*new HTMLKeygenElement(tagName, document, form));
 }
 
 void HTMLKeygenElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -112,7 +112,7 @@ bool HTMLKeygenElement::appendFormData(FormDataList& encoded_values, bool)
 
 const AtomicString& HTMLKeygenElement::formControlType() const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, keygen, ("keygen", AtomicString::ConstructFromLiteral));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, keygen, ("keygen", AtomicString::ConstructFromLiteral));
     return keygen;
 }
 
@@ -129,7 +129,7 @@ bool HTMLKeygenElement::shouldSaveAndRestoreFormControlState() const
 HTMLSelectElement* HTMLKeygenElement::shadowSelect() const
 {
     ShadowRoot* root = userAgentShadowRoot();
-    return root ? toHTMLSelectElement(root->firstChild()) : 0;
+    return root ? downcast<HTMLSelectElement>(root->firstChild()) : nullptr;
 }
 
 } // namespace

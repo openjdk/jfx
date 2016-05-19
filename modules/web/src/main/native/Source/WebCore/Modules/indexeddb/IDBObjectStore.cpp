@@ -61,8 +61,8 @@ PassRefPtr<DOMStringList> IDBObjectStore::indexNames() const
 {
     LOG(StorageAPI, "IDBObjectStore::indexNames");
     RefPtr<DOMStringList> indexNames = DOMStringList::create();
-    for (IDBObjectStoreMetadata::IndexMap::const_iterator it = m_metadata.indexes.begin(); it != m_metadata.indexes.end(); ++it)
-        indexNames->append(it->value.name);
+    for (auto& index : m_metadata.indexes.values())
+        indexNames->append(index.name);
     indexNames->sort();
     return indexNames.release();
 }
@@ -104,7 +104,7 @@ PassRefPtr<IDBRequest> IDBObjectStore::add(JSC::ExecState* state, Deprecated::Sc
 PassRefPtr<IDBRequest> IDBObjectStore::add(JSC::ExecState* state, Deprecated::ScriptValue& value, ExceptionCode& ec)
 {
     LOG(StorageAPI, "IDBObjectStore::add");
-    return put(IDBDatabaseBackend::AddOnly, IDBAny::create(this), state, value, static_cast<IDBKey*>(0), ec);
+    return put(IDBDatabaseBackend::AddOnly, IDBAny::create(this), state, value, static_cast<IDBKey*>(nullptr), ec);
 }
 
 PassRefPtr<IDBRequest> IDBObjectStore::put(JSC::ExecState* state, Deprecated::ScriptValue& value, const Deprecated::ScriptValue& key, ExceptionCode& ec)
@@ -116,7 +116,7 @@ PassRefPtr<IDBRequest> IDBObjectStore::put(JSC::ExecState* state, Deprecated::Sc
 PassRefPtr<IDBRequest> IDBObjectStore::put(JSC::ExecState* state, Deprecated::ScriptValue& value, ExceptionCode& ec)
 {
     LOG(StorageAPI, "IDBObjectStore::put");
-    return put(IDBDatabaseBackend::AddOrUpdate, IDBAny::create(this), state, value, static_cast<IDBKey*>(0), ec);
+    return put(IDBDatabaseBackend::AddOrUpdate, IDBAny::create(this), state, value, static_cast<IDBKey*>(nullptr), ec);
 }
 
 PassRefPtr<IDBRequest> IDBObjectStore::put(IDBDatabaseBackend::PutMode putMode, PassRefPtr<IDBAny> source, JSC::ExecState* state, Deprecated::ScriptValue& value, const Deprecated::ScriptValue& keyValue, ExceptionCode& ec)
@@ -147,7 +147,7 @@ PassRefPtr<IDBRequest> IDBObjectStore::put(IDBDatabaseBackend::PutMode putMode, 
     if (state->hadException())
         return nullptr;
 
-    if (serializedValue->blobURLs().size() > 0) {
+    if (serializedValue->hasBlobURLs()) {
         // FIXME: Add Blob/File/FileList support
         ec = IDBDatabaseException::DataCloneError;
         return nullptr;
@@ -194,15 +194,15 @@ PassRefPtr<IDBRequest> IDBObjectStore::put(IDBDatabaseBackend::PutMode putMode, 
 
     Vector<int64_t> indexIds;
     Vector<IndexKeys> indexKeys;
-    for (IDBObjectStoreMetadata::IndexMap::const_iterator it = m_metadata.indexes.begin(); it != m_metadata.indexes.end(); ++it) {
+    for (auto& index : m_metadata.indexes) {
         Vector<IDBKeyData> keyDatas;
-        generateIndexKeysForValue(requestState.exec(), it->value, value, keyDatas);
-        indexIds.append(it->key);
+        generateIndexKeysForValue(requestState.exec(), index.value, value, keyDatas);
+        indexIds.append(index.key);
 
         // FIXME: Much of the Indexed DB code needs to use IDBKeyData directly to avoid wasteful conversions like this.
         Vector<RefPtr<IDBKey>> keys;
-        for (auto& i : keyDatas) {
-            RefPtr<IDBKey> key = i.maybeCreateIDBKey();
+        for (auto& keyData : keyDatas) {
+            RefPtr<IDBKey> key = keyData.maybeCreateIDBKey();
             if (key)
                 keys.append(key.release());
         }
@@ -281,9 +281,9 @@ namespace {
 // cursor success handlers are kept alive.
 class IndexPopulator : public EventListener {
 public:
-    static PassRefPtr<IndexPopulator> create(PassRefPtr<IDBDatabaseBackend> backend, int64_t transactionId, int64_t objectStoreId, const IDBIndexMetadata& indexMetadata)
+    static Ref<IndexPopulator> create(PassRefPtr<IDBDatabaseBackend> backend, int64_t transactionId, int64_t objectStoreId, const IDBIndexMetadata& indexMetadata)
     {
-        return adoptRef(new IndexPopulator(backend, transactionId, objectStoreId, indexMetadata));
+        return adoptRef(*new IndexPopulator(backend, transactionId, objectStoreId, indexMetadata));
     }
 
     virtual bool operator==(const EventListener& other)
@@ -315,7 +315,7 @@ private:
         Vector<int64_t, 1> indexIds;
         indexIds.append(m_indexMetadata.id);
         if (cursor) {
-            cursor->continueFunction(static_cast<IDBKey*>(0), ASSERT_NO_EXCEPTION);
+            cursor->continueFunction(static_cast<IDBKey*>(nullptr), ASSERT_NO_EXCEPTION);
 
             RefPtr<IDBKey> primaryKey = cursor->idbPrimaryKey();
             Deprecated::ScriptValue value = cursor->value();
@@ -324,8 +324,8 @@ private:
             generateIndexKeysForValue(request->requestState()->exec(), m_indexMetadata, value, indexKeyDatas);
 
             Vector<RefPtr<IDBKey>> indexKeys;
-            for (auto& i : indexKeyDatas) {
-                RefPtr<IDBKey> key = i.maybeCreateIDBKey();
+            for (auto& indexKeyData : indexKeyDatas) {
+                RefPtr<IDBKey> key = indexKeyData.maybeCreateIDBKey();
                 if (key)
                     indexKeys.append(key.release());
             }
@@ -337,7 +337,7 @@ private:
             // Now that we are done indexing, tell the backend to go
             // back to processing tasks of type NormalTask.
             m_databaseBackend->setIndexesReady(m_transactionId, m_objectStoreId, indexIds);
-            m_databaseBackend.clear();
+            m_databaseBackend = nullptr;
         }
 
     }
@@ -403,20 +403,7 @@ PassRefPtr<IDBIndex> IDBObjectStore::createIndex(ScriptExecutionContext* context
     if (ec)
         return 0;
 
-#if USE(LEVELDB)
-    RefPtr<IDBRequest> indexRequest = openCursor(context, static_cast<IDBKeyRange*>(0), IDBCursor::directionNext(), IDBDatabaseBackend::PreemptiveTask, ec);
-    ASSERT(!ec);
-    if (ec)
-        return 0;
-    indexRequest->preventPropagation();
-
-    // This is kept alive by being the success handler of the request, which is in turn kept alive by the owning transaction.
-    RefPtr<IndexPopulator> indexPopulator = IndexPopulator::create(backendDB(), m_transaction->id(), id(), metadata);
-    indexRequest->setOnsuccess(indexPopulator);
-#else
     ASSERT_UNUSED(context, context);
-#endif
-
     return index.release();
 }
 
@@ -442,10 +429,10 @@ PassRefPtr<IDBIndex> IDBObjectStore::index(const String& name, ExceptionCode& ec
         return 0;
     }
 
-    const IDBIndexMetadata* indexMetadata(0);
-    for (IDBObjectStoreMetadata::IndexMap::const_iterator it = m_metadata.indexes.begin(); it != m_metadata.indexes.end(); ++it) {
-        if (it->value.name == name) {
-            indexMetadata = &it->value;
+    const IDBIndexMetadata* indexMetadata(nullptr);
+    for (auto& index : m_metadata.indexes.values()) {
+        if (index.name == name) {
+            indexMetadata = &index;
             break;
         }
     }
@@ -486,7 +473,7 @@ void IDBObjectStore::deleteIndex(const String& name, ExceptionCode& ec)
 
 PassRefPtr<IDBRequest> IDBObjectStore::openCursor(ScriptExecutionContext* context, ExceptionCode& ec)
 {
-    return openCursor(context, static_cast<IDBKeyRange*>(0), ec);
+    return openCursor(context, static_cast<IDBKeyRange*>(nullptr), ec);
 }
 
 PassRefPtr<IDBRequest> IDBObjectStore::openCursor(ScriptExecutionContext* context, PassRefPtr<IDBKeyRange> keyRange, ExceptionCode& ec)
@@ -568,10 +555,10 @@ void IDBObjectStore::transactionFinished()
 
 int64_t IDBObjectStore::findIndexId(const String& name) const
 {
-    for (IDBObjectStoreMetadata::IndexMap::const_iterator it = m_metadata.indexes.begin(); it != m_metadata.indexes.end(); ++it) {
-        if (it->value.name == name) {
-            ASSERT(it->key != IDBIndexMetadata::InvalidId);
-            return it->key;
+    for (auto& index : m_metadata.indexes) {
+        if (index.value.name == name) {
+            ASSERT(index.key != IDBIndexMetadata::InvalidId);
+            return index.key;
         }
     }
     return IDBIndexMetadata::InvalidId;

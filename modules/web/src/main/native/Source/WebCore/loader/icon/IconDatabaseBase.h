@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,12 +26,11 @@
 #ifndef IconDatabaseBase_h
 #define IconDatabaseBase_h
 
-#include "ImageSource.h"
-#include "SharedBuffer.h"
-
+#include "NativeImagePtr.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PassRefPtr.h>
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
@@ -39,6 +38,7 @@ class DocumentLoader;
 class IconDatabaseClient;
 class Image;
 class IntSize;
+class SharedBuffer;
 
 enum IconLoadDecision {
     IconLoadYes,
@@ -79,9 +79,9 @@ class EnumCallback : public CallbackBase {
 public:
     typedef void (*CallbackFunction)(EnumType, void*);
 
-    static PassRefPtr<EnumCallback> create(void* context, CallbackFunction callback)
+    static Ref<EnumCallback> create(void* context, CallbackFunction callback)
     {
-        return adoptRef(new EnumCallback(context, callback));
+        return adoptRef(*new EnumCallback(context, callback));
     }
 
     virtual ~EnumCallback()
@@ -118,9 +118,9 @@ class ObjectCallback : public CallbackBase {
 public:
     typedef void (*CallbackFunction)(ObjectType, void*);
 
-    static PassRefPtr<ObjectCallback> create(void* context, CallbackFunction callback)
+    static Ref<ObjectCallback> create(void* context, CallbackFunction callback)
     {
-        return adoptRef(new ObjectCallback(context, callback));
+        return adoptRef(*new ObjectCallback(context, callback));
     }
 
     virtual ~ObjectCallback()
@@ -155,7 +155,7 @@ private:
 typedef EnumCallback<IconLoadDecision> IconLoadDecisionCallback;
 typedef ObjectCallback<SharedBuffer*> IconDataCallback;
 
-class IconDatabaseBase {
+class WEBCORE_EXPORT IconDatabaseBase {
     WTF_MAKE_NONCOPYABLE(IconDatabaseBase);
 
 protected:
@@ -213,8 +213,8 @@ public:
 };
 
 // Functions to get/set the global icon database.
-IconDatabaseBase& iconDatabase();
-void setGlobalIconDatabase(IconDatabaseBase*);
+WEBCORE_EXPORT IconDatabaseBase& iconDatabase();
+WEBCORE_EXPORT void setGlobalIconDatabase(IconDatabaseBase*);
 bool documentCanHaveIcon(const String&);
 
 } // namespace WebCore

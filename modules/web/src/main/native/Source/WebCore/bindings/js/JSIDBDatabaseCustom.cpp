@@ -35,6 +35,7 @@
 #include "IDBDatabase.h"
 #include "IDBKeyPath.h"
 #include "IDBObjectStore.h"
+#include "JSDOMBinding.h"
 #include "JSIDBObjectStore.h"
 #include <runtime/Error.h>
 #include <runtime/JSString.h>
@@ -59,7 +60,7 @@ JSValue JSIDBDatabase::createObjectStore(ExecState* exec)
     IDBKeyPath keyPath;
     bool autoIncrement = false;
     if (!optionsValue.isUndefinedOrNull()) {
-        JSValue keyPathValue = optionsValue.get(exec, Identifier(exec, "keyPath"));
+        JSValue keyPathValue = optionsValue.get(exec, Identifier::fromString(exec, "keyPath"));
         if (exec->hadException())
             return jsUndefined();
 
@@ -69,7 +70,7 @@ JSValue JSIDBDatabase::createObjectStore(ExecState* exec)
                 return jsUndefined();
         }
 
-        autoIncrement = optionsValue.get(exec, Identifier(exec, "autoIncrement")).toBoolean(exec);
+        autoIncrement = optionsValue.get(exec, Identifier::fromString(exec, "autoIncrement")).toBoolean(exec);
         if (exec->hadException())
             return jsUndefined();
     }

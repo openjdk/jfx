@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,6 +30,7 @@
     CustomDeleteProperty,
     CustomGetOwnPropertySlot,
     CustomEnumerateProperty,
+    CustomProxyToJSObject,
     JSCustomMarkFunction,
     JSCustomToNativeObject,
     CustomPutFunction,
@@ -58,9 +59,9 @@
 
     [CheckSecurityForNode] readonly attribute Element frameElement;
 
-    [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void focus();
-    [DoNotCheckSecurity] void blur();
-    [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void close();
+    [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ForwardDeclareInHeader] void focus();
+    [DoNotCheckSecurity, ForwardDeclareInHeader] void blur();
+    [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ForwardDeclareInHeader] void close();
 
     void print();
     void stop();
@@ -104,12 +105,12 @@
     void scrollBy([Default=Undefined] optional long x, [Default=Undefined] optional long y);
     void scrollTo([Default=Undefined] optional long x, [Default=Undefined] optional long y);
     void scroll([Default=Undefined] optional long x, [Default=Undefined] optional long y);
-    void moveBy([Default=Undefined] optional float x, [Default=Undefined] optional float y); // FIXME: this should take longs not floats.
-    void moveTo([Default=Undefined] optional float x, [Default=Undefined] optional float y); // FIXME: this should take longs not floats.
-    void resizeBy([Default=Undefined] optional float x, [Default=Undefined] optional float y); // FIXME: this should take longs not floats.
-    void resizeTo([Default=Undefined] optional float width, [Default=Undefined] optional float height); // FIXME: this should take longs not floats.
+    void moveBy([Default=Undefined] optional unrestricted float x, [Default=Undefined] optional unrestricted float y); // FIXME: this should take longs not floats.
+    void moveTo([Default=Undefined] optional unrestricted float x, [Default=Undefined] optional unrestricted float y); // FIXME: this should take longs not floats.
+    void resizeBy([Default=Undefined] optional unrestricted float x, [Default=Undefined] optional unrestricted float y); // FIXME: this should take longs not floats.
+    void resizeTo([Default=Undefined] optional unrestricted float width, [Default=Undefined] optional unrestricted float height); // FIXME: this should take longs not floats.
 
-    [DoNotCheckSecurity] readonly attribute boolean closed;
+    [DoNotCheckSecurity, ForwardDeclareInHeader] readonly attribute boolean closed;
 
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute unsigned long length;
 
@@ -150,7 +151,7 @@
                                    [TreatNullAs=NullString, TreatUndefinedAs=NullString,Default=Undefined] optional DOMString pseudoElement);
 #endif
 
-    [Replaceable] readonly attribute double devicePixelRatio;
+    [Replaceable] readonly attribute unrestricted double devicePixelRatio;
     
     WebKitPoint webkitConvertPointFromPageToNode([Default=Undefined] optional Node node, 
                                                  [Default=Undefined] optional WebKitPoint p);
@@ -162,149 +163,33 @@
     [GetterRaisesException] readonly attribute Storage sessionStorage;
     [GetterRaisesException] readonly attribute Storage localStorage;
 
-#if defined(ENABLE_ORIENTATION_EVENTS) && ENABLE_ORIENTATION_EVENTS
     // This is the interface orientation in degrees. Some examples are:
     //  0 is straight up; -90 is when the device is rotated 90 clockwise;
     //  90 is when rotated counter clockwise.
-    readonly attribute long orientation;
-#endif
-
-    [Replaceable] readonly attribute Console console;
+    [Conditional=ORIENTATION_EVENTS] readonly attribute long orientation;
 
     // cross-document messaging
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-    [DoNotCheckSecurity, Custom, RaisesException] void postMessage(SerializedScriptValue message, DOMString targetOrigin, optional Array messagePorts);
+    [DoNotCheckSecurity, Custom, RaisesException, ForwardDeclareInHeader] void postMessage(SerializedScriptValue message, DOMString targetOrigin, optional Array messagePorts);
 #else
     // There's no good way to expose an array via the ObjC bindings, so for now just allow passing in a single port.
-    [DoNotCheckSecurity, Custom, RaisesException] void postMessage(SerializedScriptValue message, optional MessagePort messagePort, DOMString targetOrigin);
+    [DoNotCheckSecurity, Custom, RaisesException, ForwardDeclareInHeader] void postMessage(SerializedScriptValue message, optional MessagePort messagePort, DOMString targetOrigin);
 #endif
 
-#if defined(ENABLE_WEB_TIMING) && ENABLE_WEB_TIMING
-    [Replaceable] readonly attribute Performance performance;
-#endif
+    [Conditional=WEB_TIMING, Replaceable] readonly attribute Performance performance;
 
-#if defined(ENABLE_REQUEST_ANIMATION_FRAME) && ENABLE_REQUEST_ANIMATION_FRAME
-    long requestAnimationFrame(RequestAnimationFrameCallback callback);
-    void cancelAnimationFrame(long id);
-    long webkitRequestAnimationFrame(RequestAnimationFrameCallback callback);
-    [ImplementedAs=cancelAnimationFrame] void webkitCancelAnimationFrame(long id);
-    [ImplementedAs=cancelAnimationFrame] void webkitCancelRequestAnimationFrame(long id); // This is a deprecated alias for webkitCancelAnimationFrame(). Remove this when removing vendor prefix.
-#endif
+    [Conditional=REQUEST_ANIMATION_FRAME] long requestAnimationFrame(RequestAnimationFrameCallback callback);
+    [Conditional=REQUEST_ANIMATION_FRAME] void cancelAnimationFrame(long id);
+    [Conditional=REQUEST_ANIMATION_FRAME] long webkitRequestAnimationFrame(RequestAnimationFrameCallback callback);
+    [Conditional=REQUEST_ANIMATION_FRAME, ImplementedAs=cancelAnimationFrame] void webkitCancelAnimationFrame(long id);
+    [Conditional=REQUEST_ANIMATION_FRAME, ImplementedAs=cancelAnimationFrame] void webkitCancelRequestAnimationFrame(long id); // This is a deprecated alias for webkitCancelAnimationFrame(). Remove this when removing vendor prefix.
 
-    [Replaceable,Conditional=CSS3_CONDITIONAL_RULES] readonly attribute DOMWindowCSS CSS;
-
-    // Events
-    attribute EventListener onabort;
-    attribute EventListener onbeforeunload;
-    attribute EventListener onblur;
-    attribute EventListener oncanplay;
-    attribute EventListener oncanplaythrough;
-    attribute EventListener onchange;
-    attribute EventListener onclick;
-    attribute EventListener oncontextmenu;
-    attribute EventListener ondblclick;
-    attribute EventListener ondrag;
-    attribute EventListener ondragend;
-    attribute EventListener ondragenter;
-    attribute EventListener ondragleave;
-    attribute EventListener ondragover;
-    attribute EventListener ondragstart;
-    attribute EventListener ondrop;
-    attribute EventListener ondurationchange;
-    attribute EventListener onemptied;
-    attribute EventListener onended;
-    attribute EventListener onerror;
-    attribute EventListener onfocus;
-    attribute EventListener onhashchange;
-    attribute EventListener oninput;
-    attribute EventListener oninvalid;
-    attribute EventListener onkeydown;
-    attribute EventListener onkeypress;
-    attribute EventListener onkeyup;
-    attribute EventListener onload;
-    attribute EventListener onloadeddata;
-    attribute EventListener onloadedmetadata;
-    attribute EventListener onloadstart;
-    attribute EventListener onmessage;
-    attribute EventListener onmousedown;
-    attribute EventListener onmouseenter;
-    attribute EventListener onmouseleave;
-    attribute EventListener onmousemove;
-    attribute EventListener onmouseout;
-    attribute EventListener onmouseover;
-    attribute EventListener onmouseup;
-    attribute EventListener onmousewheel;
-    attribute EventListener onoffline;
-    attribute EventListener ononline;
-    attribute EventListener onpagehide;
-    attribute EventListener onpageshow;
-    attribute EventListener onpause;
-    attribute EventListener onplay;
-    attribute EventListener onplaying;
-    attribute EventListener onpopstate;
-    attribute EventListener onprogress;
-    attribute EventListener onratechange;
-    attribute EventListener onresize;
-    attribute EventListener onscroll;
-    attribute EventListener onseeked;
-    attribute EventListener onseeking;
-    attribute EventListener onselect;
-    attribute EventListener onstalled;
-    attribute EventListener onstorage;
-    attribute EventListener onsubmit;
-    attribute EventListener onsuspend;
-    attribute EventListener ontimeupdate;
-    attribute EventListener onunload;
-    attribute EventListener onvolumechange;
-    attribute EventListener onwaiting;
-    attribute EventListener onwheel;
-
-    // Not implemented yet.
-    // attribute EventListener onafterprint;
-    // attribute EventListener onbeforeprint;
-    // attribute EventListener onreadystatechange;
-    // attribute EventListener onredo;
-    // attribute EventListener onshow;
-    // attribute EventListener onundo;
-
-    // Webkit extensions
-    attribute EventListener onreset;
-    attribute EventListener onsearch;
-    attribute EventListener onwebkitanimationend;
-    attribute EventListener onwebkitanimationiteration;
-    attribute EventListener onwebkitanimationstart;
-    attribute EventListener onwebkittransitionend;
-    attribute EventListener ontransitionend;
-#if defined(ENABLE_ORIENTATION_EVENTS) && ENABLE_ORIENTATION_EVENTS
-    attribute EventListener onorientationchange;
-#endif
-    [Conditional=TOUCH_EVENTS] attribute EventListener ontouchstart;
-    [Conditional=TOUCH_EVENTS] attribute EventListener ontouchmove;
-    [Conditional=TOUCH_EVENTS] attribute EventListener ontouchend;
-    [Conditional=TOUCH_EVENTS] attribute EventListener ontouchcancel;
-
-    [Conditional=IOS_GESTURE_EVENTS] attribute EventListener ongesturestart;
-    [Conditional=IOS_GESTURE_EVENTS] attribute EventListener ongesturechange;
-    [Conditional=IOS_GESTURE_EVENTS] attribute EventListener ongestureend;
-
-    [Conditional=DEVICE_ORIENTATION] attribute EventListener ondevicemotion;
-    [Conditional=DEVICE_ORIENTATION] attribute EventListener ondeviceorientation;
-
-    [Conditional=PROXIMITY_EVENTS] attribute EventListener onwebkitdeviceproximity;
-
-    [Conditional=WILL_REVEAL_EDGE_EVENTS] attribute EventListener onwebkitwillrevealbottom;
-    [Conditional=WILL_REVEAL_EDGE_EVENTS] attribute EventListener onwebkitwillrevealleft;
-    [Conditional=WILL_REVEAL_EDGE_EVENTS] attribute EventListener onwebkitwillrevealright;
-    [Conditional=WILL_REVEAL_EDGE_EVENTS] attribute EventListener onwebkitwillrevealtop;
+    [Replaceable] readonly attribute DOMWindowCSS CSS;
 
     // EventTarget interface
-    [Custom] void addEventListener(DOMString type,
-                                  EventListener listener,
-                                  optional boolean useCapture);
-    [Custom] void removeEventListener(DOMString type,
-                                      EventListener listener,
-                                      optional boolean useCapture);
-    [RaisesException] boolean dispatchEvent(Event evt);
+    [Custom] void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    [Custom] void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    [RaisesException] boolean dispatchEvent(Event event);
 
     void captureEvents(/*in long eventFlags*/);
     void releaseEvents(/*in long eventFlags*/);
@@ -312,6 +197,7 @@
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
     // Additional constructors.
     [CustomGetter, CustomConstructor] attribute HTMLImageElementNamedConstructor Image; // Usable with new operator
+
     // Mozilla has a separate XMLDocument object for XML documents.
     // We just use Document for this.
     attribute DocumentConstructor XMLDocument;
@@ -319,18 +205,45 @@
     [Conditional=IOS_TOUCH_EVENTS, CustomGetter] attribute TouchConstructor Touch; // Usable with the new operator
     [Conditional=IOS_TOUCH_EVENTS, CustomGetter] attribute TouchListConstructor TouchList; // Usable with the new operator
 
-    [Conditional=BLOB] attribute DOMURLConstructor webkitURL; // FIXME: deprecate this.
+    attribute DOMURLConstructor webkitURL; // FIXME: deprecate this.
     attribute MutationObserverConstructor WebKitMutationObserver; // FIXME: Add metrics to determine when we can remove this.
-    [Conditional=INDEXED_DATABASE] attribute IDBCursorConstructor webkitIDBCursor;
-    [Conditional=INDEXED_DATABASE] attribute IDBDatabaseConstructor webkitIDBDatabase;
-    [Conditional=INDEXED_DATABASE] attribute IDBFactoryConstructor webkitIDBFactory;
-    [Conditional=INDEXED_DATABASE] attribute IDBIndexConstructor webkitIDBIndex;
-    [Conditional=INDEXED_DATABASE] attribute IDBKeyRangeConstructor webkitIDBKeyRange;
-    [Conditional=INDEXED_DATABASE] attribute IDBObjectStoreConstructor webkitIDBObjectStore;
-    [Conditional=INDEXED_DATABASE] attribute IDBRequestConstructor webkitIDBRequest;
-    [Conditional=INDEXED_DATABASE] attribute IDBTransactionConstructor webkitIDBTransaction;
+    [Conditional=INDEXED_DATABASE, EnabledAtRuntime=IndexedDB] attribute IDBCursorConstructor webkitIDBCursor;
+    [Conditional=INDEXED_DATABASE, EnabledAtRuntime=IndexedDB] attribute IDBDatabaseConstructor webkitIDBDatabase;
+    [Conditional=INDEXED_DATABASE, EnabledAtRuntime=IndexedDB] attribute IDBFactoryConstructor webkitIDBFactory;
+    [Conditional=INDEXED_DATABASE, EnabledAtRuntime=IndexedDB] attribute IDBIndexConstructor webkitIDBIndex;
+    [Conditional=INDEXED_DATABASE, EnabledAtRuntime=IndexedDB] attribute IDBKeyRangeConstructor webkitIDBKeyRange;
+    [Conditional=INDEXED_DATABASE, EnabledAtRuntime=IndexedDB] attribute IDBObjectStoreConstructor webkitIDBObjectStore;
+    [Conditional=INDEXED_DATABASE, EnabledAtRuntime=IndexedDB] attribute IDBRequestConstructor webkitIDBRequest;
+    [Conditional=INDEXED_DATABASE, EnabledAtRuntime=IndexedDB] attribute IDBTransactionConstructor webkitIDBTransaction;
 #endif // defined(LANGUAGE_JAVASCRIPT)
+
+
+    // Event Handlers
+
+    // FIXME: This should be in GlobalEventHandlers.idl according to HTML5 - https://html.spec.whatwg.org/multipage/webappapis.html#globaleventhandlers
+    [NotEnumerable] attribute EventHandler onresize;
+
+    // Unique to Element and DOMWindow
+    // FIXME: Should these be exposed on Document as well (and therefore moved to GlobalEventHandlers.idl)?
+    [NotEnumerable] attribute EventHandler onanimationend;
+    [NotEnumerable] attribute EventHandler onanimationiteration;
+    [NotEnumerable] attribute EventHandler onanimationstart;
+    [NotEnumerable] attribute EventHandler ontransitionend;
+    [NotEnumerable] attribute EventHandler onwebkitanimationend;
+    [NotEnumerable] attribute EventHandler onwebkitanimationiteration;
+    [NotEnumerable] attribute EventHandler onwebkitanimationstart;
+    [NotEnumerable] attribute EventHandler onwebkittransitionend;
+    [NotEnumerable, Conditional=IOS_GESTURE_EVENTS] attribute EventHandler ongesturechange;
+    [NotEnumerable, Conditional=IOS_GESTURE_EVENTS] attribute EventHandler ongestureend;
+    [NotEnumerable, Conditional=IOS_GESTURE_EVENTS] attribute EventHandler ongesturestart;
+
+    // Unique to DOMWindow
+    [NotEnumerable, Conditional=DEVICE_ORIENTATION] attribute EventHandler ondevicemotion;
+    [NotEnumerable, Conditional=DEVICE_ORIENTATION] attribute EventHandler ondeviceorientation;
+    [NotEnumerable, Conditional=PROXIMITY_EVENTS] attribute EventHandler onwebkitdeviceproximity;
 };
 
-DOMWindow implements WindowTimers;
+DOMWindow implements GlobalEventHandlers;
 DOMWindow implements WindowBase64;
+DOMWindow implements WindowEventHandlers;
+DOMWindow implements WindowTimers;

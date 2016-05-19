@@ -128,12 +128,6 @@ mode
 name
 numOctaves
 offset
-onactivate
-onbegin
-onend
-onfocusin
-onfocusout
-onrepeat
 onzoom
 opacity
 operator
@@ -144,6 +138,7 @@ origin
 overflow
 overline-position
 overline-thickness
+paint-order
 panose-1
 path
 pathLength

@@ -154,7 +154,7 @@ void ContextMenu::show(ContextMenuController* ctrl, const IntPoint& loc)
         env->CallVoidMethod(
                 m_platformDescription,
                 mid,
-                (jobject) WebPage::jobjectFromPage(ctrl->page()),
+                (jobject) WebPage::jobjectFromPage(&ctrl->page()),
                 ptr_to_jlong(ctrl),
                 loc.x(),
                 loc.y());

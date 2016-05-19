@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2013 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2008, 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,9 +26,9 @@
 #ifndef GeneratedImage_h
 #define GeneratedImage_h
 
+#include "FloatSize.h"
 #include "Image.h"
 
-#include "IntSize.h"
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -37,13 +37,13 @@ class GeneratedImage : public Image {
 public:
     virtual bool hasSingleSecurityOrigin() const override { return true; }
 
-    virtual void setContainerSize(const IntSize& size) override { m_size = size; }
+    virtual void setContainerSize(const FloatSize& size) override { m_size = size; }
     virtual bool usesContainerSize() const override { return true; }
     virtual bool hasRelativeWidth() const override { return true; }
     virtual bool hasRelativeHeight() const override { return true; }
     virtual void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) override;
 
-    virtual IntSize size() const override { return m_size; }
+    virtual FloatSize size() const override { return m_size; }
 
     // Assume that generated content has no decoded data we need to worry about
     virtual void destroyDecodedData(bool /*destroyAll*/ = true) override { }
@@ -59,7 +59,7 @@ protected:
     GeneratedImage() { }
 
 private:
-    IntSize m_size;
+    FloatSize m_size;
 };
 
 }

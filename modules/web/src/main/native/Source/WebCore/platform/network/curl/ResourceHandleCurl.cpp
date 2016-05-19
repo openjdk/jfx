@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2005, 2006 Michael Emmel mike.emmel@gmail.com
  * All rights reserved.
  *
@@ -12,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,6 +27,8 @@
 
 #include "config.h"
 #include "ResourceHandle.h"
+
+#if USE(CURL)
 
 #include "CachedResourceLoader.h"
 #include "CredentialStorage.h"
@@ -164,12 +166,6 @@ void ResourceHandle::platformSetDefersLoading(bool defers)
     }
 }
 
-bool ResourceHandle::loadsBlocked()
-{
-    notImplemented();
-    return false;
-}
-
 bool ResourceHandle::shouldUseCredentialStorage()
 {
     return (!client() || client()->shouldUseCredentialStorage(this)) && firstRequest().url().protocolIsInHTTPFamily();
@@ -197,7 +193,7 @@ void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChall
         URL urlToStore;
         if (challenge.failureResponse().httpStatusCode() == 401)
             urlToStore = challenge.failureResponse().url();
-        CredentialStorage::set(credential, challenge.protectionSpace(), urlToStore);
+        CredentialStorage::defaultCredentialStorage().set(credential, challenge.protectionSpace(), urlToStore);
 
         String userpass = credential.user() + ":" + credential.password();
         curl_easy_setopt(d->m_handle, CURLOPT_USERPWD, userpass.utf8().data());
@@ -213,16 +209,16 @@ void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChall
             // The stored credential wasn't accepted, stop using it.
             // There is a race condition here, since a different credential might have already been stored by another ResourceHandle,
             // but the observable effect should be very minor, if any.
-            CredentialStorage::remove(challenge.protectionSpace());
+            CredentialStorage::defaultCredentialStorage().remove(challenge.protectionSpace());
         }
 
         if (!challenge.previousFailureCount()) {
-            Credential credential = CredentialStorage::get(challenge.protectionSpace());
+            Credential credential = CredentialStorage::defaultCredentialStorage().get(challenge.protectionSpace());
             if (!credential.isEmpty() && credential != d->m_initialCredential) {
                 ASSERT(credential.persistence() == CredentialPersistenceNone);
                 if (challenge.failureResponse().httpStatusCode() == 401) {
                     // Store the credential back, possibly adding it as a default for this directory.
-                    CredentialStorage::set(credential, challenge.protectionSpace(), challenge.failureResponse().url());
+                    CredentialStorage::defaultCredentialStorage().set(credential, challenge.protectionSpace(), challenge.failureResponse().url());
                 }
                 String userpass = credential.user() + ":" + credential.password();
                 curl_easy_setopt(d->m_handle, CURLOPT_USERPWD, userpass.utf8().data());
@@ -250,7 +246,7 @@ void ResourceHandle::receivedCredential(const AuthenticationChallenge& challenge
     if (shouldUseCredentialStorage()) {
         if (challenge.failureResponse().httpStatusCode() == 401) {
             URL urlToStore = challenge.failureResponse().url();
-            CredentialStorage::set(credential, challenge.protectionSpace(), urlToStore);
+            CredentialStorage::defaultCredentialStorage().set(credential, challenge.protectionSpace(), urlToStore);
         }
     }
 
@@ -280,4 +276,16 @@ void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challen
         client()->receivedCancellation(this, challenge);
 }
 
+void ResourceHandle::receivedRequestToPerformDefaultHandling(const AuthenticationChallenge&)
+{
+    ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::receivedChallengeRejection(const AuthenticationChallenge&)
+{
+    ASSERT_NOT_REACHED();
+}
+
 } // namespace WebCore
+
+#endif

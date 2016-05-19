@@ -2713,7 +2713,7 @@ project(":web") {
                    version: "1.3", classifier: "$classifier", ext: "zip"
         }
 
-        def webkitOutputDir = "$buildDir/${t.name}"
+        def webkitOutputDir = cygpath("$buildDir/${t.name}")
         def webkitConfig = IS_DEBUG_NATIVE ? "Debug" : "Release"
 
         def compileNativeTask = task("compileNative${t.capital}", dependsOn: generateHeaders) << {
@@ -2733,13 +2733,11 @@ project(":web") {
 
             exec {
                 workingDir("$projectDir/src/main/native")
+                def cmakeArgs = "-DENABLE_TOOLS=1"
                 if (t.name == "win") {
-                    String qtDir = cygpath(System.getenv().get("QTSDK_DIR"))
                     String parfaitPath = IS_COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
                     Map environmentSettings = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                    environmentSettings["PATH"] = parfaitPath + "$WINDOWS_VS_PATH;$qtDir/bin;$qtDir/qt/bin"
-                    environmentSettings["QMAKESPEC"] = "win32-msvc2013"
-                    environment(environmentSettings)
+                    environmentSettings["PATH"] = parfaitPath + "$WINDOWS_VS_PATH"
                     /* To build with ICU:
                     1. Download http://javaweb.us.oracle.com/jcg/fx-webrevs/RT-17164/WebKitLibrariesICU.zip
                     and unzip it to WebKitLibraries folder.
@@ -2750,64 +2748,37 @@ project(":web") {
                      */
                     // args("--icu-unicode")
                 } else if (t.name == "mac") {
-                    environment([
-                        "QMAKESPEC"      : "macx-clang",
-                        "QMAKE_CFLAGS"   : "-m64",
-                        "QMAKE_LFLAGS"   : "-m64",
-                    ])
+                    // Add any osx specific flags.
                 } else if (t.name == "linux") {
-                    if (IS_64) {
-                        environment([
-                            "QMAKESPEC"      : "linux-g++-64",
-                        ])
-                    } else {
-                        environment([
-                            "QMAKESPEC"      : "linux-g++-32",
-                            "QMAKE_CFLAGS"   : "-m32",
-                            "QMAKE_LFLAGS"   : "-m32",
-                        ])
+                    if (!IS_64) {
+                        cmakeArgs = "-DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32"
                     }
                 } else if (t.name.startsWith("arm")) {
-                    // ARM cross build
-                    def webkitProperties = project.rootProject.ext[t.upper].webkit
-                    def qmakeSpecDir = "$webkitOutputDir/qws/linux-cross-${t.name}-g++"
-                    mkdir qmakeSpecDir
-                    File qmakeSpec = new File("$qmakeSpecDir/qmake.conf")
-                    qmakeSpec.append(
-"""TARGET_PLATFORM         = unix
-include(/usr/share/qt4/mkspecs/common/linux.conf)
-include(/usr/share/qt4/mkspecs/common/g++.conf)
-include(/usr/share/qt4/mkspecs/common/qws.conf)
-QMAKE_CC                = $webkitProperties.compiler
-QMAKE_CXX               = $webkitProperties.linker
-QMAKE_LINK              = $webkitProperties.linker
-QMAKE_LINK_SHLIB        = $webkitProperties.linker
-QMAKE_AR                = $webkitProperties.ar cqs
-QMAKE_OBJCOPY           = $webkitProperties.objcopy
-QMAKE_STRIP             = $webkitProperties.strip
-QMAKE_CXXFLAGS          = $webkitProperties.ccFlags
-QMAKE_LFLAGS            = $webkitProperties.linkFlags
-load(qt_config)""")
-                    environment([
-                        "QMAKESPEC" : file(qmakeSpecDir).getAbsolutePath(),
-                        "PATH"      : "$System.env.PATH:$webkitProperties.binDir",
-                    ])
-                    args("--nocache")
+                    fail("ARM target is not supported as of now.")
                 }
+
+                if (IS_COMPILE_PARFAIT) {
+                    environment([
+                        "COMPILE_PARFAIT" : "true"
+                    ])
+                    cmakeArgs = "-DCMAKE_C_COMPILER=parfait-gcc -DCMAKE_CXX_COMPILER=parfait-g++"
+                }
+
                 environment([
                     "JAVA_HOME"       : JDK_HOME,
                     "WEBKIT_OUTPUTDIR" : webkitOutputDir,
                 ])
 
-                if (IS_COMPILE_PARFAIT) {
-                    environment([
-                        "COMPILE_PARFAIT" : "true",
-                        "QMAKE_CC"        : "parfait-gcc",
-                        "QMAKE_CXX"       : "parfait-g++",
-                        "QMAKE_LINK"      : "parfait-g++",
-                    ])
+                def targetCpuBitDepthSwitch = ""
+                if (IS_64) {
+                    targetCpuBitDepthSwitch = "--64-bit"
+                } else {
+                    targetCpuBitDepthSwitch = "--32-bit"
                 }
-                commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio", "--icu-unicode")
+
+                commandLine("perl", "Tools/Scripts/build-webkit",
+                    "--java", "--icu-unicode", targetCpuBitDepthSwitch,
+                    "--cmakeargs=${cmakeArgs}")
             }
 
             def library = rootProject.ext[t.upper].library
@@ -2835,7 +2806,7 @@ load(qt_config)""")
         }
 
         def compileGeneratedTask = task("compileGenerated${t.capital}", type: JavaCompile, dependsOn: compileNativeTask) {
-            def gensrcDir = "$webkitOutputDir/$webkitConfig/WebCore/generated/java"
+            def gensrcDir = "$webkitOutputDir/$webkitConfig/DerivedSources/WebCore/nativeJava/java"
             doFirst {
                 copy {
                     from "$projectDir/src/main/java-wrappers/com/sun/webkit/dom/EventListenerImpl.java"

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004, 2005, 2006, 2013 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,15 +29,16 @@
 
 #include "Color.h"
 #include "ColorSpace.h"
+#include "FloatRect.h"
 #include "FloatSize.h"
 #include "GraphicsTypes.h"
 #include "ImageOrientation.h"
-#include "IntRect.h"
 #include "NativeImagePtr.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
 #if USE(APPKIT)
@@ -58,21 +59,10 @@ typedef struct HBITMAP__ *HBITMAP;
 typedef struct _GdkPixbuf GdkPixbuf;
 #endif
 
-#if PLATFORM(EFL)
-#if USE(EO)
-typedef struct _Eo_Opaque Evas;
-typedef struct _Eo_Opaque Evas_Object;
-#else
-typedef struct _Evas Evas;
-typedef struct _Evas_Object Evas_Object;
-#endif
-#endif
-
 namespace WebCore {
 
 class AffineTransform;
 class FloatPoint;
-class FloatRect;
 class FloatSize;
 class GraphicsContext;
 class SharedBuffer;
@@ -82,54 +72,58 @@ struct Length;
 class ImageObserver;
 
 class Image : public RefCounted<Image> {
-    friend class GeneratedImage;
-    friend class CrossfadeGeneratedImage;
-    friend class GradientImage;
     friend class GraphicsContext;
-
 public:
     virtual ~Image();
 
-    static PassRefPtr<Image> create(ImageObserver* = 0);
-    static PassRefPtr<Image> loadPlatformResource(const char* name);
-    static bool supportsType(const String&);
+    static PassRefPtr<Image> create(ImageObserver* = nullptr);
+    WEBCORE_EXPORT static PassRefPtr<Image> loadPlatformResource(const char* name);
+    WEBCORE_EXPORT static bool supportsType(const String&);
 
     virtual bool isSVGImage() const { return false; }
     virtual bool isBitmapImage() const { return false; }
     virtual bool isPDFDocumentImage() const { return false; }
     virtual bool currentFrameKnownToBeOpaque() = 0;
 
+    virtual bool isAnimated() { return false; }
+
     // Derived classes should override this if they can assure that
     // the image contains only resources from its own security origin.
     virtual bool hasSingleSecurityOrigin() const { return false; }
 
-    static Image* nullImage();
+    WEBCORE_EXPORT static Image* nullImage();
     bool isNull() const { return size().isEmpty(); }
 
-    virtual void setContainerSize(const IntSize&) { }
+    virtual void setContainerSize(const FloatSize&) { }
     virtual bool usesContainerSize() const { return false; }
     virtual bool hasRelativeWidth() const { return false; }
     virtual bool hasRelativeHeight() const { return false; }
     virtual void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
 
-    virtual IntSize size() const = 0;
-    IntRect rect() const { return IntRect(IntPoint(), size()); }
-    int width() const { return size().width(); }
-    int height() const { return size().height(); }
+    virtual FloatSize size() const = 0;
+    FloatRect rect() const { return FloatRect(FloatPoint(), size()); }
+    float width() const { return size().width(); }
+    float height() const { return size().height(); }
     virtual bool getHotSpot(IntPoint&) const { return false; }
 
-    bool setData(PassRefPtr<SharedBuffer> data, bool allDataReceived);
+#if PLATFORM(IOS)
+    virtual FloatSize originalSize() const { return size(); }
+#endif
+
+    WEBCORE_EXPORT bool setData(PassRefPtr<SharedBuffer> data, bool allDataReceived);
     virtual bool dataChanged(bool /*allDataReceived*/) { return false; }
 
     virtual String filenameExtension() const { return String(); } // null string if unknown
 
     virtual void destroyDecodedData(bool destroyAll = true) = 0;
+    virtual bool decodedDataIsPurgeable() const { return false; }
 
     SharedBuffer* data() { return m_encodedImageData.get(); }
 
     // Animation begins whenever someone draws the image, so startAnimation() is not normally called.
     // It will automatically pause once all observers no longer want to render the image anywhere.
-    virtual void startAnimation(bool /*catchUpIfNecessary*/ = true) { }
+    enum CatchUpAnimation { DoNotCatchUp, CatchUp };
+    virtual void startAnimation(CatchUpAnimation = CatchUp) { }
     virtual void stopAnimation() {}
     virtual void resetAnimation() {}
 
@@ -166,7 +160,6 @@ public:
 
 #if PLATFORM(GTK)
     virtual GdkPixbuf* getGdkPixbuf() { return 0; }
-    static PassRefPtr<Image> loadPlatformThemeIcon(const char* name, int size);
 #endif
 
 #if PLATFORM(JAVA)
@@ -195,7 +188,7 @@ public:
         m_space = space;
     }
 protected:
-    Image(ImageObserver* = 0);
+    Image(ImageObserver* = nullptr);
 
     static void fillWithSolidColor(GraphicsContext*, const FloatRect& dstRect, const Color&, ColorSpace styleColorSpace, CompositeOperator);
 
@@ -218,9 +211,11 @@ private:
     FloatSize m_space;
 };
 
-#define IMAGE_TYPE_CASTS(ToClassName) \
-    TYPE_CASTS_BASE(ToClassName, Image, image, image->is##ToClassName(), image.is##ToClassName())
+} // namespace WebCore
 
-}
+#define SPECIALIZE_TYPE_TRAITS_IMAGE(ToClassName) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToClassName) \
+    static bool isType(const WebCore::Image& image) { return image.is##ToClassName(); } \
+SPECIALIZE_TYPE_TRAITS_END()
 
-#endif
+#endif // Image_h

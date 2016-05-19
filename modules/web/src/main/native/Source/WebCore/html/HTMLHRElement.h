@@ -29,16 +29,15 @@ namespace WebCore {
 
 class HTMLHRElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLHRElement> create(Document&);
-    static PassRefPtr<HTMLHRElement> create(const QualifiedName&, Document&);
-
-    virtual bool canContainRangeEndPoint() const override { return hasChildNodes(); }
+    static Ref<HTMLHRElement> create(Document&);
+    static Ref<HTMLHRElement> create(const QualifiedName&, Document&);
 
 private:
     HTMLHRElement(const QualifiedName&, Document&);
 
     virtual bool isPresentationAttribute(const QualifiedName&) const override;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
+    virtual bool canContainRangeEndPoint() const override;
 };
 
 } // namespace WebCore

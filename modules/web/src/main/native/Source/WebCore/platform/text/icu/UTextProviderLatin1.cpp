@@ -41,7 +41,7 @@ static int64_t uTextLatin1MapOffsetToNative(const UText*);
 static int32_t uTextLatin1MapNativeIndexToUTF16(const UText*, int64_t);
 static void uTextLatin1Close(UText*);
 
-static struct UTextFuncs uTextLatin1Funcs = {
+static const struct UTextFuncs uTextLatin1Funcs = {
     sizeof(UTextFuncs),
     0,
     0,
@@ -104,7 +104,7 @@ static UBool uTextLatin1Access(UText* uText, int64_t index, UBool forward)
         }
         if (index >= length && uText->chunkNativeLimit == length) {
             // Off the end of the buffer, but we can't get it.
-            uText->chunkOffset = uText->chunkLength;
+            uText->chunkOffset = static_cast<int32_t>(index - uText->chunkNativeStart);
             return FALSE;
         }
     } else {
@@ -136,7 +136,7 @@ static UBool uTextLatin1Access(UText* uText, int64_t index, UBool forward)
         if (uText->chunkNativeStart < 0)
             uText->chunkNativeStart = 0;
 
-        uText->chunkOffset = uText->chunkLength;
+        uText->chunkOffset = static_cast<int32_t>(index - uText->chunkNativeStart);
     }
     uText->chunkLength = static_cast<int32_t>(uText->chunkNativeLimit - uText->chunkNativeStart);
 

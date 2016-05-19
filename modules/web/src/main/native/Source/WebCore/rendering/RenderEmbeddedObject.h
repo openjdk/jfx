@@ -35,10 +35,10 @@ class TextRun;
 // For example, <embed src="foo.html"> does not invoke a plug-in.
 class RenderEmbeddedObject : public RenderWidget {
 public:
-    RenderEmbeddedObject(HTMLFrameOwnerElement&, PassRef<RenderStyle>);
+    RenderEmbeddedObject(HTMLFrameOwnerElement&, Ref<RenderStyle>&&);
     virtual ~RenderEmbeddedObject();
 
-    static RenderPtr<RenderEmbeddedObject> createForApplet(HTMLAppletElement&, PassRef<RenderStyle>);
+    static RenderPtr<RenderEmbeddedObject> createForApplet(HTMLAppletElement&, Ref<RenderStyle>&&);
 
     enum PluginUnavailabilityReason {
         PluginMissing,
@@ -46,17 +46,17 @@ public:
         PluginBlockedByContentSecurityPolicy,
         InsecurePluginVersion,
     };
-    void setPluginUnavailabilityReason(PluginUnavailabilityReason);
-    void setPluginUnavailabilityReasonWithDescription(PluginUnavailabilityReason, const String& description);
+    WEBCORE_EXPORT void setPluginUnavailabilityReason(PluginUnavailabilityReason);
+    WEBCORE_EXPORT void setPluginUnavailabilityReasonWithDescription(PluginUnavailabilityReason, const String& description);
 
     bool isPluginUnavailable() const { return m_isPluginUnavailable; }
     bool showsUnavailablePluginIndicator() const { return isPluginUnavailable() && !m_isUnavailablePluginIndicatorHidden; }
 
-    void setUnavailablePluginIndicatorIsHidden(bool);
+    WEBCORE_EXPORT void setUnavailablePluginIndicatorIsHidden(bool);
 
     void handleUnavailablePluginIndicatorEvent(Event*);
 
-    bool isReplacementObscured() const;
+    WEBCORE_EXPORT bool isReplacementObscured() const;
 
     bool allowsAcceleratedCompositing() const;
 
@@ -84,9 +84,9 @@ private:
     virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier, Element** stopElement) override final;
 
     void setUnavailablePluginIndicatorIsPressed(bool);
-    bool isInUnavailablePluginIndicator(MouseEvent*) const;
-    bool isInUnavailablePluginIndicator(const LayoutPoint&) const;
-    bool getReplacementTextGeometry(const LayoutPoint& accumulatedOffset, FloatRect& contentRect, FloatRect& indicatorRect, FloatRect& replacementTextRect, FloatRect& arrowRect, Font&, TextRun&, float& textWidth) const;
+    bool isInUnavailablePluginIndicator(const MouseEvent&) const;
+    bool isInUnavailablePluginIndicator(const FloatPoint&) const;
+    bool getReplacementTextGeometry(const LayoutPoint& accumulatedOffset, FloatRect& contentRect, FloatRect& indicatorRect, FloatRect& replacementTextRect, FloatRect& arrowRect, FontCascade&, TextRun&, float& textWidth) const;
     LayoutRect unavailablePluginIndicatorBounds(const LayoutPoint&) const;
 
     virtual bool canHaveChildren() const override final;
@@ -101,8 +101,8 @@ private:
     String m_unavailabilityDescription;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderEmbeddedObject, isEmbeddedObject())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderEmbeddedObject, isEmbeddedObject())
 
 #endif // RenderEmbeddedObject_h

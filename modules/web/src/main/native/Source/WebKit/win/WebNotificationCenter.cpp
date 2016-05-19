@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebNotificationCenter.h"
 
@@ -34,7 +33,6 @@
 #include <wchar.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
@@ -56,16 +54,16 @@ IWebNotificationCenter* WebNotificationCenter::m_defaultCenter = 0;
 
 WebNotificationCenter::WebNotificationCenter()
     : m_refCount(0)
-    , d(adoptPtr(new WebNotificationCenterPrivate))
+    , d(std::make_unique<WebNotificationCenterPrivate>())
 {
     gClassCount++;
-    gClassNameCount.add("WebNotificationCenter");
+    gClassNameCount().add("WebNotificationCenter");
 }
 
 WebNotificationCenter::~WebNotificationCenter()
 {
     gClassCount--;
-    gClassNameCount.remove("WebNotificationCenter");
+    gClassNameCount().remove("WebNotificationCenter");
 }
 
 WebNotificationCenter* WebNotificationCenter::createInstance()
@@ -201,15 +199,11 @@ HRESULT STDMETHODCALLTYPE WebNotificationCenter::removeObserver(
     ObjectObserverList& observerList = it->value;
     ObserverListIterator end = observerList.end();
 
-    int i = 0;
-    for (ObserverListIterator it2 = observerList.begin(); it2 != end; ++it2, ++i) {
-        IUnknown* observedObject = it2->first.get();
-        IWebNotificationObserver* observer = it2->second.get();
-        if (observer == anObserver && (!anObject || anObject == observedObject)) {
-            observerList.remove(i);
-            break;
-        }
-    }
+    observerList.removeFirstMatching([anObject, anObserver] (const ObjectObserverPair& pair) {
+        IUnknown* observedObject = pair.first.get();
+        IWebNotificationObserver* observer = pair.second.get();
+        return observer == anObserver && (!anObject || anObject == observedObject);
+    });
 
     if (observerList.isEmpty())
         d->m_mappedObservers.remove(name);

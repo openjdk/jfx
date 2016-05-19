@@ -49,11 +49,6 @@ DateInputType::DateInputType(HTMLInputElement& element)
 {
 }
 
-void DateInputType::attach()
-{
-    observeFeatureIfVisible(FeatureObserver::InputTypeDate);
-}
-
 const AtomicString& DateInputType::formControlType() const
 {
     return InputTypeNames::date();
@@ -66,7 +61,7 @@ DateComponents::Type DateInputType::dateType() const
 
 StepRange DateInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
-    DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (dateDefaultStep, dateDefaultStepBase, dateStepScaleFactor, StepRange::ParsedStepValueShouldBeInteger));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (dateDefaultStep, dateDefaultStepBase, dateStepScaleFactor, StepRange::ParsedStepValueShouldBeInteger));
 
     const Decimal stepBase = parseToNumber(element().fastGetAttribute(minAttr), 0);
     const Decimal minimum = parseToNumber(element().fastGetAttribute(minAttr), Decimal::fromDouble(DateComponents::minimumDate()));

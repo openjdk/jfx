@@ -29,9 +29,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INSPECTOR)
-
 #include "InspectorHistory.h"
 
 #include "ExceptionCodePlaceholder.h"
@@ -93,10 +90,10 @@ bool InspectorHistory::perform(std::unique_ptr<Action> action, ExceptionCode& ec
         return false;
 
     if (!action->mergeId().isEmpty() && m_afterLastActionIndex > 0 && action->mergeId() == m_history[m_afterLastActionIndex - 1]->mergeId())
-        m_history[m_afterLastActionIndex - 1]->merge(std::move(action));
+        m_history[m_afterLastActionIndex - 1]->merge(WTF::move(action));
     else {
         m_history.resize(m_afterLastActionIndex);
-        m_history.append(std::move(action));
+        m_history.append(WTF::move(action));
         ++m_afterLastActionIndex;
     }
     return true;
@@ -151,5 +148,3 @@ void InspectorHistory::reset()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

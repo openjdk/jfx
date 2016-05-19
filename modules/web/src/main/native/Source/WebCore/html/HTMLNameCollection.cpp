@@ -49,46 +49,46 @@ HTMLNameCollection::~HTMLNameCollection()
     document().nodeLists()->removeCachedCollection(this, m_name);
 }
 
-bool WindowNameCollection::nodeMatchesIfNameAttributeMatch(Element* element)
+bool WindowNameCollection::elementMatchesIfNameAttributeMatch(const Element& element)
 {
-    return isHTMLImageElement(element) || isHTMLFormElement(element) || element->hasTagName(appletTag)
-        || element->hasTagName(embedTag) || element->hasTagName(objectTag);
+    return is<HTMLImageElement>(element) || is<HTMLFormElement>(element) || is<HTMLAppletElement>(element)
+        || is<HTMLEmbedElement>(element) || is<HTMLObjectElement>(element);
 }
 
-bool WindowNameCollection::nodeMatches(Element* element, const AtomicStringImpl* name)
+bool WindowNameCollection::elementMatches(const Element& element, const AtomicStringImpl* name)
 {
     // Find only images, forms, applets, embeds and objects by name, but anything by id
-    if (nodeMatchesIfNameAttributeMatch(element) && element->getNameAttribute().impl() == name)
+    if (elementMatchesIfNameAttributeMatch(element) && element.getNameAttribute().impl() == name)
         return true;
-    return element->getIdAttribute().impl() == name;
+    return element.getIdAttribute().impl() == name;
 }
 
-bool DocumentNameCollection::nodeMatchesIfIdAttributeMatch(Element* element)
+bool DocumentNameCollection::elementMatchesIfIdAttributeMatch(const Element& element)
 {
     // FIXME: we need to fix HTMLImageElement to update the hash map for us when name attribute has been removed.
-    return element->hasTagName(appletTag) || (element->hasTagName(objectTag) && toHTMLObjectElement(element)->isDocNamedItem())
-        || (isHTMLImageElement(element) && element->hasName());
+    return is<HTMLAppletElement>(element) || (is<HTMLObjectElement>(element) && downcast<HTMLObjectElement>(element).isDocNamedItem())
+        || (is<HTMLImageElement>(element) && element.hasName());
 }
 
-bool DocumentNameCollection::nodeMatchesIfNameAttributeMatch(Element* element)
+bool DocumentNameCollection::elementMatchesIfNameAttributeMatch(const Element& element)
 {
-    return isHTMLFormElement(element) || element->hasTagName(embedTag) || element->hasTagName(iframeTag)
-        || element->hasTagName(appletTag) || (element->hasTagName(objectTag) && toHTMLObjectElement(element)->isDocNamedItem())
-        || isHTMLImageElement(element);
+    return is<HTMLFormElement>(element) || is<HTMLEmbedElement>(element) || is<HTMLIFrameElement>(element)
+        || is<HTMLAppletElement>(element) || (is<HTMLObjectElement>(element) && downcast<HTMLObjectElement>(element).isDocNamedItem())
+        || is<HTMLImageElement>(element);
 }
 
-bool DocumentNameCollection::nodeMatches(Element* element, const AtomicStringImpl* name)
+bool DocumentNameCollection::elementMatches(const Element& element, const AtomicStringImpl* name)
 {
     // Find images, forms, applets, embeds, objects and iframes by name, applets and object by id, and images by id
     // but only if they have a name attribute (this very strange rule matches IE)
-    if (isHTMLFormElement(element) || element->hasTagName(embedTag) || element->hasTagName(iframeTag))
-        return element->getNameAttribute().impl() == name;
-    if (element->hasTagName(appletTag))
-        return element->getNameAttribute().impl() == name || element->getIdAttribute().impl() == name;
-    if (element->hasTagName(objectTag))
-        return (element->getNameAttribute().impl() == name || element->getIdAttribute().impl() == name) && toHTMLObjectElement(element)->isDocNamedItem();
-    if (isHTMLImageElement(element))
-        return element->getNameAttribute().impl() == name || (element->getIdAttribute().impl() == name && element->hasName());
+    if (is<HTMLFormElement>(element) || is<HTMLEmbedElement>(element) || is<HTMLIFrameElement>(element))
+        return element.getNameAttribute().impl() == name;
+    if (is<HTMLAppletElement>(element))
+        return element.getNameAttribute().impl() == name || element.getIdAttribute().impl() == name;
+    if (is<HTMLObjectElement>(element))
+        return (element.getNameAttribute().impl() == name || element.getIdAttribute().impl() == name) && downcast<HTMLObjectElement>(element).isDocNamedItem();
+    if (is<HTMLImageElement>(element))
+        return element.getNameAttribute().impl() == name || (element.getIdAttribute().impl() == name && element.hasName());
     return false;
 }
 

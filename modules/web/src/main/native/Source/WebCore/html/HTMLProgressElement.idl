@@ -17,12 +17,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
-[
-    Conditional=PROGRESS_ELEMENT
-] interface HTMLProgressElement : HTMLElement {
-    [SetterRaisesException] attribute  double value;
-    [SetterRaisesException] attribute  double max;
-    readonly attribute  double                position;
+interface HTMLProgressElement : HTMLElement {
+    [SetterRaisesException] attribute  unrestricted double value;
+    [SetterRaisesException] attribute  unrestricted double max;
+    readonly attribute  unrestricted double                position;
     readonly attribute  NodeList              labels;
 };
 

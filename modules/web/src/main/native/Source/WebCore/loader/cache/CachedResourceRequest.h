@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY GOOGLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,6 +26,7 @@
 #ifndef CachedResourceRequest_h
 #define CachedResourceRequest_h
 
+#include "DocumentLoader.h"
 #include "Element.h"
 #include "ResourceLoadPriority.h"
 #include "ResourceLoaderOptions.h"
@@ -40,9 +41,9 @@ class CachedResourceRequest {
 public:
     enum DeferOption { NoDefer, DeferredByClient };
 
-    explicit CachedResourceRequest(const ResourceRequest&, const String& charset = String(), ResourceLoadPriority = ResourceLoadPriorityUnresolved);
+    explicit CachedResourceRequest(const ResourceRequest&, const String& charset = String(), Optional<ResourceLoadPriority> = Nullopt);
     CachedResourceRequest(const ResourceRequest&, const ResourceLoaderOptions&);
-    CachedResourceRequest(const ResourceRequest&, ResourceLoadPriority);
+    CachedResourceRequest(const ResourceRequest&, Optional<ResourceLoadPriority>);
     ~CachedResourceRequest();
 
     ResourceRequest& mutableResourceRequest() { return m_resourceRequest; }
@@ -51,8 +52,7 @@ public:
     void setCharset(const String& charset) { m_charset = charset; }
     const ResourceLoaderOptions& options() const { return m_options; }
     void setOptions(const ResourceLoaderOptions& options) { m_options = options; }
-    void setPriority(ResourceLoadPriority priority) { m_priority = priority; }
-    ResourceLoadPriority priority() const { return m_priority; }
+    const Optional<ResourceLoadPriority>& priority() const { return m_priority; }
     bool forPreload() const { return m_forPreload; }
     void setForPreload(bool forPreload) { m_forPreload = forPreload; }
     DeferOption defer() const { return m_defer; }
@@ -61,15 +61,19 @@ public:
     void setInitiator(const AtomicString& name);
     const AtomicString& initiatorName() const;
 
+    void setInitiator(DocumentLoader&);
+    DocumentLoader* initiatingDocumentLoader() const { return m_initiatingDocumentLoader.get(); }
+
 private:
     ResourceRequest m_resourceRequest;
     String m_charset;
     ResourceLoaderOptions m_options;
-    ResourceLoadPriority m_priority;
+    Optional<ResourceLoadPriority> m_priority;
     bool m_forPreload;
     DeferOption m_defer;
     RefPtr<Element> m_initiatorElement;
     AtomicString m_initiatorName;
+    RefPtr<DocumentLoader> m_initiatingDocumentLoader;
 };
 
 } // namespace WebCore

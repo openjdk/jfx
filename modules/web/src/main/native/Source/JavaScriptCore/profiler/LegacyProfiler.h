@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,6 +32,7 @@
 #include "Profile.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/Stopwatch.h>
 #include <wtf/Vector.h>
 
 #if PLATFORM(JAVA) // tav todo temp
@@ -41,7 +42,6 @@
 namespace JSC {
 
 class ExecState;
-class VM;
 class JSGlobalObject;
 class JSObject;
 class JSValue;
@@ -54,9 +54,13 @@ public:
     JS_EXPORT_PRIVATE static LegacyProfiler* profiler();
     static CallIdentifier createCallIdentifier(ExecState*, JSValue, const WTF::String& sourceURL, unsigned defaultLineNumber, unsigned defaultColumnNumber);
 
-    JS_EXPORT_PRIVATE void startProfiling(ExecState*, const WTF::String& title);
-    JS_EXPORT_PRIVATE PassRefPtr<Profile> stopProfiling(ExecState*, const WTF::String& title);
+    JS_EXPORT_PRIVATE void startProfiling(ExecState*, const WTF::String& title, PassRefPtr<Stopwatch>);
+    JS_EXPORT_PRIVATE RefPtr<Profile> stopProfiling(ExecState*, const WTF::String& title);
     void stopProfiling(JSGlobalObject*);
+
+    // Used to ignore profile node subtrees rooted at InjectedScript calls.
+    JS_EXPORT_PRIVATE void suspendProfiling(ExecState*);
+    JS_EXPORT_PRIVATE void unsuspendProfiling(ExecState*);
 
     void willExecute(ExecState* callerCallFrame, JSValue function);
     void willExecute(ExecState* callerCallFrame, const WTF::String& sourceURL, unsigned startingLineNumber, unsigned startingColumnNumber);

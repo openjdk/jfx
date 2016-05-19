@@ -24,6 +24,7 @@
 #include "DocumentFragment.h"
 
 #include "Document.h"
+#include "ElementDescendantIterator.h"
 #include "HTMLDocumentParser.h"
 #include "Page.h"
 #include "Settings.h"
@@ -36,19 +37,14 @@ DocumentFragment::DocumentFragment(Document& document, ConstructionType construc
 {
 }
 
-PassRefPtr<DocumentFragment> DocumentFragment::create(Document& document)
+Ref<DocumentFragment> DocumentFragment::create(Document& document)
 {
-    return adoptRef(new DocumentFragment(document, Node::CreateDocumentFragment));
-}
-
-PassRefPtr<DocumentFragment> DocumentFragment::create(ScriptExecutionContext& context)
-{
-    return adoptRef(new DocumentFragment(toDocument(context), Node::CreateDocumentFragment));
+    return adoptRef(*new DocumentFragment(document, Node::CreateDocumentFragment));
 }
 
 String DocumentFragment::nodeName() const
 {
-    return "#document-fragment";
+    return ASCIILiteral("#document-fragment");
 }
 
 Node::NodeType DocumentFragment::nodeType() const
@@ -71,22 +67,44 @@ bool DocumentFragment::childTypeAllowed(NodeType type) const
     }
 }
 
-PassRefPtr<Node> DocumentFragment::cloneNode(bool deep)
+RefPtr<Node> DocumentFragment::cloneNodeInternal(Document& targetDocument, CloningOperation type)
 {
-    RefPtr<DocumentFragment> clone = create(document());
-    if (deep)
+    RefPtr<DocumentFragment> clone = create(targetDocument);
+    switch (type) {
+    case CloningOperation::OnlySelf:
+    case CloningOperation::SelfWithTemplateContent:
+        break;
+    case CloningOperation::Everything:
         cloneChildNodes(clone.get());
-    return clone.release();
+        break;
+    }
+    return clone;
 }
 
 void DocumentFragment::parseHTML(const String& source, Element* contextElement, ParserContentPolicy parserContentPolicy)
 {
-    HTMLDocumentParser::parseDocumentFragment(source, *this, contextElement, parserContentPolicy);
+    ASSERT(contextElement);
+    HTMLDocumentParser::parseDocumentFragment(source, *this, *contextElement, parserContentPolicy);
 }
 
 bool DocumentFragment::parseXML(const String& source, Element* contextElement, ParserContentPolicy parserContentPolicy)
 {
     return XMLDocumentParser::parseDocumentFragment(source, *this, contextElement, parserContentPolicy);
+}
+
+Element* DocumentFragment::getElementById(const AtomicString& id) const
+{
+    // Fast path for ShadowRoot, where we are both a DocumentFragment and a TreeScope.
+    if (isTreeScope())
+        return treeScope().getElementById(id);
+
+    // Otherwise, fall back to iterating all of the element descendants.
+    for (auto& element : elementDescendants(*this)) {
+        if (element.getIdAttribute() == id)
+            return const_cast<Element*>(&element);
+    }
+
+    return nullptr;
 }
 
 }

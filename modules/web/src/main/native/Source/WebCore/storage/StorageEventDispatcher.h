@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -42,11 +42,11 @@ class SecurityOrigin;
 
 class StorageEventDispatcher {
 public:
-    static void dispatchSessionStorageEvents(const String& key, const String& oldValue, const String& newValue, SecurityOrigin*, Frame* sourceFrame);
-    static void dispatchLocalStorageEvents(const String& key, const String& oldValue, const String& newValue, SecurityOrigin*, Frame* sourceFrame);
+    WEBCORE_EXPORT static void dispatchSessionStorageEvents(const String& key, const String& oldValue, const String& newValue, SecurityOrigin*, Frame* sourceFrame);
+    WEBCORE_EXPORT static void dispatchLocalStorageEvents(const String& key, const String& oldValue, const String& newValue, SecurityOrigin*, Frame* sourceFrame);
 
-    static void dispatchSessionStorageEventsToFrames(Page&, const Vector<RefPtr<Frame>>& frames, const String& key, const String& oldValue, const String& newValue, const String& url, SecurityOrigin*);
-    static void dispatchLocalStorageEventsToFrames(PageGroup&, const Vector<RefPtr<Frame>>& frames, const String& key, const String& oldValue, const String& newValue, const String& url, SecurityOrigin*);
+    WEBCORE_EXPORT static void dispatchSessionStorageEventsToFrames(Page&, const Vector<RefPtr<Frame>>& frames, const String& key, const String& oldValue, const String& newValue, const String& url, SecurityOrigin*);
+    WEBCORE_EXPORT static void dispatchLocalStorageEventsToFrames(PageGroup&, const Vector<RefPtr<Frame>>& frames, const String& key, const String& oldValue, const String& newValue, const String& url, SecurityOrigin*);
 private:
     // Do not instantiate.
     StorageEventDispatcher();

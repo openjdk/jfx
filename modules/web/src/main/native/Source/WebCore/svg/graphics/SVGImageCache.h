@@ -31,6 +31,7 @@ namespace WebCore {
 class CachedImage;
 class CachedImageClient;
 class ImageBuffer;
+class LayoutSize;
 class SVGImage;
 class SVGImageForContainer;
 class RenderObject;
@@ -43,12 +44,14 @@ public:
 
     void removeClientFromCache(const CachedImageClient*);
 
-    void setContainerSizeForRenderer(const CachedImageClient*, const IntSize&, float);
-    IntSize imageSizeForRenderer(const RenderObject*) const;
+    void setContainerSizeForRenderer(const CachedImageClient*, const LayoutSize&, float);
+    FloatSize imageSizeForRenderer(const RenderObject*) const;
 
-    Image* imageForRenderer(const RenderObject*);
+    Image* imageForRenderer(const RenderObject*) const;
 
 private:
+    Image* findImageForRenderer(const RenderObject*) const;
+
     typedef HashMap<const CachedImageClient*, RefPtr<SVGImageForContainer>> ImageForContainerMap;
 
     SVGImage* m_svgImage;

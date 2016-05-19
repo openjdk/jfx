@@ -1,5 +1,6 @@
 # Copyright (C) 2009, Google Inc. All rights reserved.
 # Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
+# Copyright (C) 2015 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -62,14 +63,11 @@ class DeprecatedPort(object):
     @staticmethod
     def port(port_name):
         ports = {
-            "gtk": GtkPort,
             "gtk-wk2": GtkWK2Port,
+            "ios": IOSPort,
             "mac": MacPort,
             "mac-wk2": MacWK2Port,
             "win": WinPort,
-            "qt": QtPort,
-            "qt-wk2": QtWK2Port,
-            "efl": EflPort,
             "efl-wk2": EflWK2Port,
         }
         default_port = {
@@ -122,17 +120,25 @@ class DeprecatedPort(object):
         return self.script_shell_command("run-bindings-tests")
 
 
+class IOSPort(DeprecatedPort):
+    port_flag_name = "ios"
+
+    def build_webkit_command(self, build_style=None):
+        command = super(IOSPort, self).build_webkit_command(build_style=build_style)
+        command.append("--sdk=iphoneos")
+        return command
+
+
 class MacPort(DeprecatedPort):
     port_flag_name = "mac"
 
+    def run_webkit_tests_command(self):
+        command = super(MacPort, self).run_webkit_tests_command()
+        command.append("--dump-render-tree")
+        return command
 
 class MacWK2Port(DeprecatedPort):
     port_flag_name = "mac-wk2"
-
-    def run_webkit_tests_command(self):
-        command = super(MacWK2Port, self).run_webkit_tests_command()
-        command.append("-2")
-        return command
 
 
 class WinPort(DeprecatedPort):
@@ -141,23 +147,9 @@ class WinPort(DeprecatedPort):
     def run_bindings_tests_command(self):
         return None
 
-
-class GtkPort(DeprecatedPort):
-    port_flag_name = "gtk"
-
-    def build_webkit_command(self, build_style=None):
-        command = super(GtkPort, self).build_webkit_command(build_style=build_style)
-        command.append("--gtk")
-        command.append("--update-gtk")
-        command.append("--no-webkit2")
-        # FIXME: Disable gtk-doc temporarily due to http://webkit.org/b/128369.
-        command.append("--disable-gtk-doc")
-        command.append(super(GtkPort, self).makeArgs())
-        return command
-
     def run_webkit_tests_command(self):
-        command = super(GtkPort, self).run_webkit_tests_command()
-        command.append("--gtk")
+        command = super(WinPort, self).run_webkit_tests_command()
+        command.append("--dump-render-tree")
         return command
 
 
@@ -168,60 +160,12 @@ class GtkWK2Port(DeprecatedPort):
         command = super(GtkWK2Port, self).build_webkit_command(build_style=build_style)
         command.append("--gtk")
         command.append("--update-gtk")
-        command.append("--no-webkit1")
-        # FIXME: Disable gtk-doc temporarily due to http://webkit.org/b/128369.
-        command.append("--disable-gtk-doc")
         command.append(super(GtkWK2Port, self).makeArgs())
         return command
 
     def run_webkit_tests_command(self):
         command = super(GtkWK2Port, self).run_webkit_tests_command()
         command.append("--gtk")
-        command.append("-2")
-        return command
-
-
-class QtPort(DeprecatedPort):
-    port_flag_name = "qt"
-
-    def build_webkit_command(self, build_style=None):
-        command = super(QtPort, self).build_webkit_command(build_style=build_style)
-        command.append("--qt")
-        command.append("--no-webkit2")
-        command.append(super(QtPort, self).makeArgs())
-        return command
-
-    def run_webkit_tests_command(self):
-        command = super(QtPort, self).run_webkit_tests_command()
-        command.append("--qt")
-        return command
-
-
-class QtWK2Port(DeprecatedPort):
-    port_flag_name = "qt-wk2"
-
-    def build_webkit_command(self, build_style=None):
-        command = super(QtWK2Port, self).build_webkit_command(build_style=build_style)
-        command.append("--qt")
-        command.append(super(QtWK2Port, self).makeArgs())
-        return command
-
-    def run_webkit_tests_command(self):
-        command = super(QtWK2Port, self).run_webkit_tests_command()
-        command.append("--qt")
-        command.append("-2")
-        return command
-
-
-class EflPort(DeprecatedPort):
-    port_flag_name = "efl"
-
-    def build_webkit_command(self, build_style=None):
-        command = super(EflPort, self).build_webkit_command(build_style=build_style)
-        command.append("--efl")
-        command.append("--update-efl")
-        command.append("--no-webkit2")
-        command.append(super(EflPort, self).makeArgs())
         return command
 
 
@@ -232,6 +176,5 @@ class EflWK2Port(DeprecatedPort):
         command = super(EflWK2Port, self).build_webkit_command(build_style=build_style)
         command.append("--efl")
         command.append("--update-efl")
-        command.append("--no-webkit1")
         command.append(super(EflWK2Port, self).makeArgs())
         return command

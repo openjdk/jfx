@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,9 +29,9 @@
  */
 
 #include "config.h"
-#include "GlyphPageTreeNode.h"
+#include "GlyphPage.h"
 
-#include "SimpleFontData.h"
+#include "Font.h"
 #include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-bool GlyphPage::fill(unsigned offset, unsigned length, UChar* buffer, unsigned bufferLength, const SimpleFontData* fontData)
+bool GlyphPage::fill(unsigned offset, unsigned length, UChar* buffer, unsigned bufferLength, const Font* fontData)
 {
     cairo_scaled_font_t* scaledFont = fontData->platformData().scaledFont();
     ASSERT(scaledFont);

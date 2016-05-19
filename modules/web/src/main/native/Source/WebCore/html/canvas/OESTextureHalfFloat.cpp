@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-OESTextureHalfFloat::OESTextureHalfFloat(WebGLRenderingContext* context)
+OESTextureHalfFloat::OESTextureHalfFloat(WebGLRenderingContextBase* context)
     : WebGLExtension(context)
 {
 }
@@ -43,11 +43,6 @@ OESTextureHalfFloat::~OESTextureHalfFloat()
 WebGLExtension::ExtensionName OESTextureHalfFloat::getName() const
 {
     return OESTextureHalfFloatName;
-}
-
-OwnPtr<OESTextureHalfFloat> OESTextureHalfFloat::create(WebGLRenderingContext* context)
-{
-    return adoptPtr(new OESTextureHalfFloat(context));
 }
 
 } // namespace WebCore

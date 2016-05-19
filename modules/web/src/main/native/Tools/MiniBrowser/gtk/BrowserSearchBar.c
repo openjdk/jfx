@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "cmakeconfig.h"
 #include "BrowserSearchBar.h"
-
 
 static const char *searchEntryFailedStyle = "GtkEntry#searchEntry {background-color: #ff6666;}";
 

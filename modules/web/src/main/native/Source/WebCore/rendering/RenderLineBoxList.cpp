@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -76,7 +76,7 @@ void RenderLineBoxList::deleteLineBoxTree()
         line->deleteLine();
         line = nextLine;
     }
-    m_firstLineBox = m_lastLineBox = 0;
+    m_firstLineBox = m_lastLineBox = nullptr;
 }
 
 void RenderLineBoxList::extractLineBox(InlineFlowBox* box)
@@ -87,8 +87,8 @@ void RenderLineBoxList::extractLineBox(InlineFlowBox* box)
     if (box == m_firstLineBox)
         m_firstLineBox = 0;
     if (box->prevLineBox())
-        box->prevLineBox()->setNextLineBox(0);
-    box->setPreviousLineBox(0);
+        box->prevLineBox()->setNextLineBox(nullptr);
+    box->setPreviousLineBox(nullptr);
     for (InlineFlowBox* curr = box; curr; curr = curr->nextLineBox())
         curr->setExtracted();
 
@@ -138,8 +138,8 @@ void RenderLineBoxList::deleteLineBoxes()
             next = curr->nextLineBox();
             delete curr;
         }
-        m_firstLineBox = 0;
-        m_lastLineBox = 0;
+        m_firstLineBox = nullptr;
+        m_lastLineBox = nullptr;
     }
 }
 
@@ -149,15 +149,21 @@ void RenderLineBoxList::dirtyLineBoxes()
         curr->dirtyLineBoxes();
 }
 
+// FIXME: This should take a RenderBoxModelObject&.
 bool RenderLineBoxList::rangeIntersectsRect(RenderBoxModelObject* renderer, LayoutUnit logicalTop, LayoutUnit logicalBottom, const LayoutRect& rect, const LayoutPoint& offset) const
 {
-    RenderBox* block;
-    if (renderer->isBox())
-        block = toRenderBox(renderer);
-    else
-        block = renderer->containingBlock();
-    LayoutUnit physicalStart = block->flipForWritingMode(logicalTop);
-    LayoutUnit physicalEnd = block->flipForWritingMode(logicalBottom);
+    LayoutUnit physicalStart = logicalTop;
+    LayoutUnit physicalEnd = logicalBottom;
+    if (renderer->view().frameView().hasFlippedBlockRenderers()) {
+        RenderBox* block;
+        if (is<RenderBox>(*renderer))
+            block = downcast<RenderBox>(renderer);
+        else
+            block = renderer->containingBlock();
+        physicalStart = block->flipForWritingMode(logicalTop);
+        physicalEnd = block->flipForWritingMode(logicalBottom);
+    }
+
     LayoutUnit physicalExtent = absoluteValue(physicalEnd - physicalStart);
     physicalStart = std::min(physicalStart, physicalEnd);
 
@@ -205,12 +211,6 @@ bool RenderLineBoxList::lineIntersectsDirtyRect(RenderBoxModelObject* renderer, 
 
 void RenderLineBoxList::paint(RenderBoxModelObject* renderer, PaintInfo& paintInfo, const LayoutPoint& paintOffset) const
 {
-    // Only paint during the foreground/selection phases.
-    if (paintInfo.phase != PaintPhaseForeground && paintInfo.phase != PaintPhaseSelection && paintInfo.phase != PaintPhaseOutline
-        && paintInfo.phase != PaintPhaseSelfOutline && paintInfo.phase != PaintPhaseChildOutlines && paintInfo.phase != PaintPhaseTextClip
-        && paintInfo.phase != PaintPhaseMask)
-        return;
-
     ASSERT(renderer->isRenderBlock() || (renderer->isRenderInline() && renderer->hasLayer())); // The only way an inline could paint like this is if it has a layer.
 
     // If we have no lines then we have no work to do.
@@ -278,9 +278,6 @@ void RenderLineBoxList::paint(RenderBoxModelObject* renderer, PaintInfo& paintIn
 
 bool RenderLineBoxList::hitTest(RenderBoxModelObject* renderer, const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction) const
 {
-    if (hitTestAction != HitTestForeground)
-        return false;
-
     ASSERT(renderer->isRenderBlock() || (renderer->isRenderInline() && renderer->hasLayer())); // The only way an inline could hit test like this is if it has a layer.
 
     // If we have no lines then we have no work to do.
@@ -301,7 +298,7 @@ bool RenderLineBoxList::hitTest(RenderBoxModelObject* renderer, const HitTestReq
     for (InlineFlowBox* curr = lastLineBox(); curr; curr = curr->prevLineBox()) {
         const RootInlineBox& rootBox = curr->root();
         if (rangeIntersectsRect(renderer, curr->logicalTopVisualOverflow(rootBox.lineTop()), curr->logicalBottomVisualOverflow(rootBox.lineBottom()), rect, accumulatedOffset)) {
-            bool inside = curr->nodeAtPoint(request, result, locationInContainer, accumulatedOffset, rootBox.lineTop(), rootBox.lineBottom());
+            bool inside = curr->nodeAtPoint(request, result, locationInContainer, accumulatedOffset, rootBox.lineTop(), rootBox.lineBottom(), hitTestAction);
             if (inside) {
                 renderer->updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
                 return true;
@@ -312,22 +309,21 @@ bool RenderLineBoxList::hitTest(RenderBoxModelObject* renderer, const HitTestReq
     return false;
 }
 
-void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject* container, RenderObject* child)
+void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject& container, RenderObject& child)
 {
-    ASSERT(container->isRenderInline() || container->isRenderBlockFlow());
-    if (!container->parent() || (container->isRenderBlockFlow() && container->selfNeedsLayout()))
+    ASSERT(is<RenderInline>(container) || is<RenderBlockFlow>(container));
+    if (!container.parent() || (is<RenderBlockFlow>(container) && container.selfNeedsLayout()))
         return;
 
-    RenderInline* inlineContainer = container->isRenderInline() ? toRenderInline(container) : 0;
+    RenderInline* inlineContainer = is<RenderInline>(container) ? &downcast<RenderInline>(container) : nullptr;
     InlineBox* firstBox = inlineContainer ? inlineContainer->firstLineBoxIncludingCulling() : firstLineBox();
 
     // If we have no first line box, then just bail early.
     if (!firstBox) {
-        // For an empty inline, go ahead and propagate the check up to our parent, unless the parent
-        // is already dirty.
-        if (container->isInline() && !container->ancestorLineBoxDirty()) {
-            container->parent()->dirtyLinesFromChangedChild(container);
-            container->setAncestorLineBoxDirty(); // Mark the container to avoid dirtying the same lines again across multiple destroy() calls of the same subtree.
+        // For an empty inline, propagate the check up to our parent, unless the parent is already dirty.
+        if (container.isInline() && !container.ancestorLineBoxDirty()) {
+            container.parent()->dirtyLinesFromChangedChild(container);
+            container.setAncestorLineBoxDirty(); // Mark the container to avoid dirtying the same lines again across multiple destroy() calls of the same subtree.
         }
         return;
     }
@@ -335,24 +331,23 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject* contain
     // Try to figure out which line box we belong in.  First try to find a previous
     // line box by examining our siblings.  If we didn't find a line box, then use our
     // parent's first line box.
-    RootInlineBox* box = 0;
-    RenderObject* curr = 0;
-    for (curr = child->previousSibling(); curr; curr = curr->previousSibling()) {
-        if (curr->isFloatingOrOutOfFlowPositioned())
+    RootInlineBox* box = nullptr;
+    RenderObject* current;
+    for (current = child.previousSibling(); current; current = current->previousSibling()) {
+        if (current->isFloatingOrOutOfFlowPositioned())
             continue;
 
-        if (curr->isReplaced()) {
-            if (auto wrapper = toRenderBox(curr)->inlineBoxWrapper())
+        if (current->isReplaced()) {
+            if (auto wrapper = downcast<RenderBox>(*current).inlineBoxWrapper())
                 box = &wrapper->root();
-        } if (curr->isLineBreak()) {
-            if (auto wrapper = toRenderLineBreak(curr)->inlineBoxWrapper())
+        } if (is<RenderLineBreak>(*current)) {
+            if (auto wrapper = downcast<RenderLineBreak>(*current).inlineBoxWrapper())
                 box = &wrapper->root();
-        } else if (curr->isText()) {
-            InlineTextBox* textBox = toRenderText(curr)->lastTextBox();
-            if (textBox)
+        } else if (is<RenderText>(*current)) {
+            if (InlineTextBox* textBox = downcast<RenderText>(*current).lastTextBox())
                 box = &textBox->root();
-        } else if (curr->isRenderInline()) {
-            InlineBox* lastSiblingBox = toRenderInline(curr)->lastLineBoxIncludingCulling();
+        } else if (is<RenderInline>(*current)) {
+            InlineBox* lastSiblingBox = downcast<RenderInline>(*current).lastLineBoxIncludingCulling();
             if (lastSiblingBox)
                 box = &lastSiblingBox->root();
         }
@@ -368,7 +363,7 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject* contain
             // This isn't good enough, since we won't locate the root line box that encloses the removed
             // <br>. We have to just over-invalidate a bit and go up to our parent.
             if (!inlineContainer->ancestorLineBoxDirty()) {
-                inlineContainer->parent()->dirtyLinesFromChangedChild(inlineContainer);
+                inlineContainer->parent()->dirtyLinesFromChangedChild(*inlineContainer);
                 inlineContainer->setAncestorLineBoxDirty(); // Mark the container to avoid dirtying the same lines again across multiple destroy() calls of the same subtree.
             }
             return;
@@ -378,7 +373,6 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject* contain
 
     // If we found a line box, then dirty it.
     if (box) {
-        RootInlineBox* adjacentBox;
         box->markDirty();
 
         // dirty the adjacent lines that might be affected
@@ -388,17 +382,13 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject* contain
         // calls setLineBreakInfo with the result of findNextLineBreak.  findNextLineBreak,
         // despite the name, actually returns the first RenderObject after the BR.
         // <rdar://problem/3849947> "Typing after pasting line does not appear until after window resize."
-        adjacentBox = box->prevRootBox();
-        if (adjacentBox)
-            adjacentBox->markDirty();
-        adjacentBox = box->nextRootBox();
-        // If |child| has been inserted before the first element in the linebox, but after collapsed leading
-        // space, the search for |child|'s linebox will go past the leading space to the previous linebox and select that
-        // one as |box|. If we hit that situation here, dirty the |box| actually containing the child too.
-        bool insertedAfterLeadingSpace = box->lineBreakObj() == child->previousSibling();
-        if (adjacentBox && (adjacentBox->lineBreakObj() == child || child->isBR() || (curr && curr->isBR())
-            || insertedAfterLeadingSpace || isIsolated(container->style().unicodeBidi())))
-            adjacentBox->markDirty();
+        if (RootInlineBox* prevBox = box->prevRootBox())
+            prevBox->markDirty();
+
+        // FIXME: We shouldn't need to always dirty the next line. This is only strictly
+        // necessary some of the time, in situations involving BRs.
+        if (RootInlineBox* nextBox = box->nextRootBox())
+            nextBox->markDirty();
     }
 }
 
@@ -407,8 +397,8 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject* contain
 void RenderLineBoxList::checkConsistency() const
 {
 #ifdef CHECK_CONSISTENCY
-    const InlineFlowBox* prev = 0;
-    for (const InlineFlowBox* child = m_firstLineBox; child != 0; child = child->nextLineBox()) {
+    const InlineFlowBox* prev = nullptr;
+    for (const InlineFlowBox* child = m_firstLineBox; child != nullptr; child = child->nextLineBox()) {
         ASSERT(child->prevLineBox() == prev);
         prev = child;
     }

@@ -32,12 +32,10 @@
 #include "ScriptGlobalObject.h"
 
 #include "JSDOMBinding.h"
-#include <bindings/ScriptObject.h>
-#include <runtime/JSLock.h>
-
-#if ENABLE(INSPECTOR)
 #include "JSInspectorFrontendHost.h"
-#endif
+#include <bindings/ScriptObject.h>
+#include <runtime/IdentifierInlines.h>
+#include <runtime/JSLock.h>
 
 using namespace JSC;
 
@@ -55,24 +53,22 @@ static bool handleException(JSC::ExecState* scriptState)
 bool ScriptGlobalObject::set(JSC::ExecState* scriptState, const char* name, const Deprecated::ScriptObject& value)
 {
     JSLockHolder lock(scriptState);
-    scriptState->lexicalGlobalObject()->putDirect(scriptState->vm(), Identifier(scriptState, name), value.jsObject());
+    scriptState->lexicalGlobalObject()->putDirect(scriptState->vm(), Identifier::fromString(scriptState, name), value.jsObject());
     return handleException(scriptState);
 }
 
-#if ENABLE(INSPECTOR)
 bool ScriptGlobalObject::set(JSC::ExecState* scriptState, const char* name, InspectorFrontendHost* value)
 {
     JSLockHolder lock(scriptState);
     JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(scriptState->lexicalGlobalObject());
-    globalObject->putDirect(scriptState->vm(), Identifier(scriptState, name), toJS(scriptState, globalObject, value));
+    globalObject->putDirect(scriptState->vm(), Identifier::fromString(scriptState, name), toJS(scriptState, globalObject, value));
     return handleException(scriptState);
 }
-#endif // ENABLE(INSPECTOR)
 
 bool ScriptGlobalObject::get(JSC::ExecState* scriptState, const char* name, Deprecated::ScriptObject& value)
 {
     JSLockHolder lock(scriptState);
-    JSValue jsValue = scriptState->lexicalGlobalObject()->get(scriptState, Identifier(scriptState, name));
+    JSValue jsValue = scriptState->lexicalGlobalObject()->get(scriptState, Identifier::fromString(scriptState, name));
     if (!jsValue)
         return false;
 
@@ -86,7 +82,7 @@ bool ScriptGlobalObject::get(JSC::ExecState* scriptState, const char* name, Depr
 bool ScriptGlobalObject::remove(JSC::ExecState* scriptState, const char* name)
 {
     JSLockHolder lock(scriptState);
-    scriptState->lexicalGlobalObject()->methodTable()->deleteProperty(scriptState->lexicalGlobalObject(), scriptState, Identifier(scriptState, name));
+    scriptState->lexicalGlobalObject()->methodTable()->deleteProperty(scriptState->lexicalGlobalObject(), scriptState, Identifier::fromString(scriptState, name));
     return handleException(scriptState);
 }
 

@@ -28,9 +28,20 @@
 
 #include "FloatRect.h"
 #include "GraphicsContext.h"
+#include "ImageBuffer.h"
 #include "Length.h"
 
 namespace WebCore {
+
+GradientImage::GradientImage(PassRefPtr<Gradient> generator, const FloatSize& size)
+    : m_gradient(generator)
+{
+    setContainerSize(size);
+}
+
+GradientImage::~GradientImage()
+{
+}
 
 void GradientImage::draw(GraphicsContext* destContext, const FloatRect& destRect, const FloatRect& srcRect, ColorSpace, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription)
 {
@@ -48,7 +59,7 @@ void GradientImage::drawPattern(GraphicsContext* destContext, const FloatRect& s
     const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator compositeOp, const FloatRect& destRect, BlendMode blendMode)
 {
     // Allow the generator to provide visually-equivalent tiling parameters for better performance.
-    IntSize adjustedSize = size();
+    FloatSize adjustedSize = size();
     FloatRect adjustedSrcRect = srcRect;
     m_gradient->adjustParametersForTiledDrawing(adjustedSize, adjustedSrcRect);
 

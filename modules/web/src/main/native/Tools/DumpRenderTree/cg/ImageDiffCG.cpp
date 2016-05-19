@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2005, 2007, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2005 Ben La Monica <ben.lamonica@gmail.com>.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,6 @@
 
 // FIXME: We need to be able to include these defines from a config.h somewhere.
 #define JS_EXPORT_PRIVATE
-#define WTF_EXPORT_PRIVATE
 
 #include <stdio.h>
 #include <wtf/Platform.h>
@@ -172,6 +171,15 @@ static inline bool imageHasAlpha(CGImageRef image)
 int main(int argc, const char* argv[])
 {
 #if PLATFORM(WIN)
+#if defined(_M_X64) || defined(__x86_64__)
+    // The VS2013 runtime has a bug where it mis-detects AVX-capable processors
+    // if the feature has been disabled in firmware. This causes us to crash
+    // in some of the math functions. For now, we disable those optimizations
+    // because Microsoft is not going to fix the problem in VS2013.
+    // FIXME: http://webkit.org/b/141449: Remove this workaround when we switch to VS2015+.
+    _set_FMA3_enable(0);
+#endif
+
     _setmode(0, _O_BINARY);
     _setmode(1, _O_BINARY);
 #endif
@@ -223,11 +231,15 @@ int main(int argc, const char* argv[])
                     difference = max(difference, 0.01f); // round to 2 decimal places
                 }
             } else {
-                if (CGImageGetWidth(actualImage.get()) != CGImageGetWidth(baselineImage.get()) || CGImageGetHeight(actualImage.get()) != CGImageGetHeight(baselineImage.get()))
-                    fprintf(stderr, "Error: test and reference images have different sizes. Test image is %lux%lu, reference image is %lux%lu\n",
+                if (CGImageGetWidth(actualImage.get()) != CGImageGetWidth(baselineImage.get()) || CGImageGetHeight(actualImage.get()) != CGImageGetHeight(baselineImage.get())) {
+#if OS(WINDOWS)
+                    fprintf(stderr, "Error: test and reference images have different sizes. Test image is %Iux%Iu, reference image is %Iux%Iu\n",
+#else
+                    fprintf(stderr, "Error: test and reference images have different sizes. Test image is %zux%zu, reference image is %zux%zu\n",
+#endif
                         CGImageGetWidth(actualImage.get()), CGImageGetHeight(actualImage.get()),
                         CGImageGetWidth(baselineImage.get()), CGImageGetHeight(baselineImage.get()));
-                else if (imageHasAlpha(actualImage.get()) != imageHasAlpha(baselineImage.get()))
+                } else if (imageHasAlpha(actualImage.get()) != imageHasAlpha(baselineImage.get()))
                     fprintf(stderr, "Error: test and reference images differ in alpha. Test image %s alpha, reference image %s alpha.\n",
                         imageHasAlpha(actualImage.get()) ? "has" : "does not have",
                         imageHasAlpha(baselineImage.get()) ? "has" : "does not have");
@@ -239,7 +251,11 @@ int main(int argc, const char* argv[])
                     RetainPtr<CGImageDestinationRef> imageDest = adoptCF(CGImageDestinationCreateWithData(imageData.get(), kUTTypePNG, 1, 0));
                     CGImageDestinationAddImage(imageDest.get(), diffImage.get(), 0);
                     CGImageDestinationFinalize(imageDest.get());
-                    printf("Content-Length: %lu\n", CFDataGetLength(imageData.get()));
+#if OS(WINDOWS)
+                    printf("Content-Length: %Iu\n", static_cast<size_t>(CFDataGetLength(imageData.get())));
+#else
+                    printf("Content-Length: %zu\n", static_cast<size_t>(CFDataGetLength(imageData.get())));
+#endif
                     fwrite(CFDataGetBytePtr(imageData.get()), 1, CFDataGetLength(imageData.get()), stdout);
                 }
 

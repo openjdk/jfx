@@ -11,7 +11,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/WTFString.h>
 
-#include <wtf/PassOwnPtr.h> // todo tav remove when building w/ pch
+// #include <wtf/PassOwnPtr.h> // todo tav remove when building w/ pch //XXX:
 
 namespace WebCore {
 
@@ -34,7 +34,7 @@ PassRefPtr<RQRef> FontPlatformData::getJavaFont(const String& family, float size
     return RQRef::create(wcFont);
 }
 
-PassOwnPtr<FontPlatformData> FontPlatformData::create(
+std::unique_ptr<FontPlatformData> FontPlatformData::create(
         const FontDescription& fontDescription, const AtomicString& family)
 {
     FontWeight weight = fontDescription.weight();
@@ -43,10 +43,10 @@ PassOwnPtr<FontPlatformData> FontPlatformData::create(
             fontDescription.computedSize(),
             fontDescription.italic(),
             (FontWeightBold <= weight) && (weight <= FontWeight900));
-    return !wcFont ? nullptr : adoptPtr(new FontPlatformData(wcFont, fontDescription.computedSize()));
+    return !wcFont ? nullptr : std::unique_ptr<FontPlatformData>(new FontPlatformData(wcFont, fontDescription.computedSize()));
 }
 
-PassOwnPtr<FontPlatformData> FontPlatformData::derive(float scaleFactor) const
+std::unique_ptr<FontPlatformData> FontPlatformData::derive(float scaleFactor) const
 {
     ASSERT(m_jFont);
     float size = m_size * scaleFactor;
@@ -59,7 +59,7 @@ PassOwnPtr<FontPlatformData> FontPlatformData::derive(float scaleFactor) const
     JLObject wcFont(env->CallObjectMethod(*m_jFont, createScaledMID, size));
     CheckAndClearException(env);
 
-    return adoptPtr(new FontPlatformData(RQRef::create(wcFont), size));
+    return std::unique_ptr<FontPlatformData>(new FontPlatformData(RQRef::create(wcFont), size));
 }
 
 jint FontPlatformData::getJavaFontID(const JLObject &font)

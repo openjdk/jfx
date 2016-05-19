@@ -175,17 +175,18 @@ Platform3DObject GraphicsContext3D::platformTexture() const
 
 PlatformLayer* GraphicsContext3D::platformLayer() const
 {
-#if USE(TEXTURE_MAPPER_GL)
     return m_private.get();
-#else
-    notImplemented();
-    return 0;
-#endif
 }
 
 bool GraphicsContext3D::makeContextCurrent()
 {
+    if (!m_private)
+        return false;
     return m_private->makeContextCurrent();
+}
+
+void GraphicsContext3D::checkGPUStatusIfNecessary()
+{
 }
 
 bool GraphicsContext3D::isGLES2Compliant() const
@@ -197,12 +198,12 @@ bool GraphicsContext3D::isGLES2Compliant() const
 #endif
 }
 
-void GraphicsContext3D::setContextLostCallback(PassOwnPtr<ContextLostCallback> callBack)
+void GraphicsContext3D::setContextLostCallback(std::unique_ptr<ContextLostCallback> callBack)
 {
-    m_private->setContextLostCallback(callBack);
+    m_private->setContextLostCallback(WTF::move(callBack));
 }
 
-void GraphicsContext3D::setErrorMessageCallback(PassOwnPtr<ErrorMessageCallback>)
+void GraphicsContext3D::setErrorMessageCallback(std::unique_ptr<ErrorMessageCallback>)
 {
     notImplemented();
 }
@@ -230,12 +231,10 @@ void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imag
     context->restore();
 }
 
-#if USE(GRAPHICS_SURFACE)
 void GraphicsContext3D::createGraphicsSurfaces(const IntSize& size)
 {
     m_private->didResizeCanvas(size);
 }
-#endif
 
 GraphicsContext3D::ImageExtractor::~ImageExtractor()
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,20 +26,27 @@
 #import "config.h"
 #import "CertificateInfo.h"
 
+#import "NotImplemented.h"
+#import "SecuritySPI.h"
+
 namespace WebCore {
 
-CertificateInfo::CertificateInfo()
+bool CertificateInfo::containsNonRootSHA1SignedCertificate() const
 {
-}
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 90000)
+    if (!m_certificateChain)
+        return false;
 
-CertificateInfo::CertificateInfo(const ResourceResponse& response)
-    : m_certificateChain(response.certificateChain())
-{
-}
-
-CertificateInfo::CertificateInfo(CFArrayRef certificateChain)
-    : m_certificateChain(certificateChain)
-{
+    for (CFIndex i = 0, size = CFArrayGetCount(m_certificateChain.get()) - 1; i < size; ++i) {
+        SecCertificateRef certificate = (SecCertificateRef)CFArrayGetValueAtIndex(m_certificateChain.get(), i);
+        if (SecCertificateGetSignatureHashAlgorithm(certificate) == kSecSignatureHashAlgorithmSHA1)
+            return true;
+    }
+    return false;
+#else
+    notImplemented();
+    return false;
+#endif
 }
 
 #ifndef NDEBUG

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,6 +79,59 @@ public:
             performForwardCFA();
         } while (m_changed);
 
+        if (m_graph.m_form != SSA) {
+            ASSERT(!m_changed);
+
+            // Widen the abstract values at the block that serves as the must-handle OSR entry.
+            for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
+                BasicBlock* block = m_graph.block(blockIndex);
+                if (!block)
+                    continue;
+
+                if (!block->isOSRTarget)
+                    continue;
+                if (block->bytecodeBegin != m_graph.m_plan.osrEntryBytecodeIndex)
+                    continue;
+
+                bool changed = false;
+                for (size_t i = m_graph.m_plan.mustHandleValues.size(); i--;) {
+                    int operand = m_graph.m_plan.mustHandleValues.operandForIndex(i);
+                    JSValue value = m_graph.m_plan.mustHandleValues[i];
+                    Node* node = block->variablesAtHead.operand(operand);
+                    if (!node)
+                        continue;
+
+                    AbstractValue& target = block->valuesAtHead.operand(operand);
+                    changed |= target.mergeOSREntryValue(m_graph, value);
+                    target.fixTypeForRepresentation(
+                        m_graph, resultFor(node->variableAccessData()->flushFormat()));
+                }
+
+                if (changed || !block->cfaHasVisited) {
+                    m_changed = true;
+                    block->cfaShouldRevisit = true;
+                }
+            }
+
+            // Propagate any of the changes we just introduced.
+            while (m_changed) {
+                m_changed = false;
+                performForwardCFA();
+            }
+
+            // Make sure we record the intersection of all proofs that we ever allowed the
+            // compiler to rely upon.
+            for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
+                BasicBlock* block = m_graph.block(blockIndex);
+                if (!block)
+                    continue;
+
+                block->intersectionOfCFAHasVisited &= block->cfaHasVisited;
+                for (unsigned i = block->intersectionOfPastValuesAtHead.size(); i--;)
+                    block->intersectionOfPastValuesAtHead[i].filter(block->valuesAtHead[i]);
+            }
+        }
+
         return true;
     }
 
@@ -92,8 +145,11 @@ private:
         if (m_verbose)
             dataLog("   Block ", *block, ":\n");
         m_state.beginBasicBlock(block);
-        if (m_verbose)
+        if (m_verbose) {
             dataLog("      head vars: ", block->valuesAtHead, "\n");
+            if (m_graph.m_form == SSA)
+                dataLog("      head regs: ", mapDump(block->ssa->valuesAtHead), "\n");
+        }
         for (unsigned i = 0; i < block->size(); ++i) {
             if (m_verbose) {
                 Node* node = block->at(i);
@@ -102,10 +158,8 @@ private:
                 if (!safeToExecute(m_state, m_graph, node))
                     dataLog("(UNSAFE) ");
 
-                m_interpreter.dump(WTF::dataFile());
+                dataLog(m_state.variables(), " ", m_interpreter);
 
-                if (m_state.haveStructures())
-                    dataLog(" (Have Structures)");
                 dataLogF("\n");
             }
             if (!m_interpreter.execute(i)) {
@@ -121,8 +175,11 @@ private:
         }
         m_changed |= m_state.endBasicBlock(MergeToSuccessors);
 
-        if (m_verbose)
+        if (m_verbose) {
             dataLog("      tail vars: ", block->valuesAtTail, "\n");
+            if (m_graph.m_form == SSA)
+                dataLog("      head regs: ", mapDump(block->ssa->valuesAtTail), "\n");
+        }
     }
 
     void performForwardCFA()

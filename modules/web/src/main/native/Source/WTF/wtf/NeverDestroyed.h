@@ -29,6 +29,7 @@
 #include <type_traits>
 #include <utility>
 #include <wtf/Noncopyable.h>
+#include <wtf/RefCounted.h>
 
 // NeverDestroyed is a smart pointer like class who ensures that the destructor
 // for the given object is never called, but doesn't use the heap to allocate it.
@@ -49,7 +50,7 @@ public:
     template<typename... Args>
     NeverDestroyed(Args&&... args)
     {
-        new (asPtr()) T(std::forward<Args>(args)...);
+        MaybeRelax<T>(new (asPtr()) T(std::forward<Args>(args)...));
     }
 
     operator T&() { return *asPtr(); }
@@ -63,10 +64,67 @@ private:
     // FIXME: Investigate whether we should allocate a hunk of virtual memory
     // and hand out chunks of it to NeverDestroyed instead, to reduce fragmentation.
     typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type m_storage;
+
+    template <typename PtrType, bool ShouldRelax = std::is_base_of<RefCounted<PtrType>, PtrType>::value> struct MaybeRelax {
+        explicit MaybeRelax(PtrType*) { }
+    };
+    template <typename PtrType> struct MaybeRelax<PtrType, true> {
+        explicit MaybeRelax(PtrType* ptr) { ptr->relaxAdoptionRequirement(); }
+    };
+};
+
+template<typename T> class LazyNeverDestroyed {
+    WTF_MAKE_NONCOPYABLE(LazyNeverDestroyed);
+
+public:
+    LazyNeverDestroyed() = default;
+
+    template<typename... Args>
+    void construct(Args&&... args)
+    {
+        ASSERT(!m_isConstructed);
+
+#if !ASSERT_DISABLED
+        m_isConstructed = true;
+#endif
+
+        MaybeRelax<T>(new (asPtr()) T(std::forward<Args>(args)...));
+    }
+
+    operator T&() { return *asPtr(); }
+    T& get() { return *asPtr(); }
+
+private:
+    typedef typename std::remove_const<T>::type* PointerType;
+
+    PointerType asPtr()
+    {
+        ASSERT(m_isConstructed);
+
+        return reinterpret_cast<PointerType>(&m_storage);
+    }
+
+    // FIXME: Investigate whether we should allocate a hunk of virtual memory
+    // and hand out chunks of it to NeverDestroyed instead, to reduce fragmentation.
+    typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type m_storage;
+
+    template <typename PtrType, bool ShouldRelax = std::is_base_of<RefCounted<PtrType>, PtrType>::value> struct MaybeRelax {
+        explicit MaybeRelax(PtrType*) { }
+    };
+    template <typename PtrType> struct MaybeRelax<PtrType, true> {
+        explicit MaybeRelax(PtrType* ptr) { ptr->relaxAdoptionRequirement(); }
+    };
+
+#if !ASSERT_DISABLED
+    // LazyNeverDestroyed objects are always static, so this variable is initialized to false.
+    // It must not be initialized dynamically, because that would not be thread safe.
+    bool m_isConstructed;
+#endif
 };
 
 } // namespace WTF;
 
+using WTF::LazyNeverDestroyed;
 using WTF::NeverDestroyed;
 
 #endif // NeverDestroyed_h

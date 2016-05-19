@@ -28,7 +28,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebDesktopNotificationsDelegate.h"
 #include "WebSecurityOrigin.h"
 #include "WebView.h"
@@ -169,7 +168,7 @@ void WebDesktopNotificationsDelegate::notificationControllerDestroyed()
 {
 }
 
-void WebDesktopNotificationsDelegate::requestPermission(SecurityOrigin* origin, PassRefPtr<VoidCallback> callback)
+void WebDesktopNotificationsDelegate::requestPermission(SecurityOrigin* origin, PassRefPtr<VoidCallback>)
 {
     BString org(origin->toString());
     if (hasNotificationDelegate())
@@ -182,6 +181,13 @@ void WebDesktopNotificationsDelegate::requestPermission(SecurityOrigin*, PassRef
 
 void WebDesktopNotificationsDelegate::cancelRequestsForPermission(ScriptExecutionContext* context)
 {
+}
+
+bool hasPendingPermissionRequests(ScriptExecutionContext*) const
+{
+    // We can safely return false here because our implementation for requestPermission() never calls
+    // the completion callback.
+    return false;
 }
 
 NotificationClient::Permission WebDesktopNotificationsDelegate::checkPermission(const URL& url)

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -34,7 +34,11 @@ using namespace JSC;
 
 void JSStartProfiling(JSContextRef ctx, JSStringRef title)
 {
-    LegacyProfiler::profiler()->startProfiling(toJS(ctx), title->string());
+    // Use an independent stopwatch for API-initiated profiling, since the user will expect it
+    // to be relative to when their command was issued.
+    RefPtr<Stopwatch> stopwatch = Stopwatch::create();
+    stopwatch->start();
+    LegacyProfiler::profiler()->startProfiling(toJS(ctx), title->string(), stopwatch.release());
 }
 
 void JSEndProfiling(JSContextRef ctx, JSStringRef title)

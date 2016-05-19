@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,6 +26,7 @@
 #ifndef CSSSegmentedFontFace_h
 #define CSSSegmentedFontFace_h
 
+#include "FontRanges.h"
 #include <wtf/HashMap.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
@@ -35,13 +36,11 @@ namespace WebCore {
 
 class CSSFontFace;
 class CSSFontSelector;
-class FontData;
 class FontDescription;
-class SegmentedFontData;
 
 class CSSSegmentedFontFace : public RefCounted<CSSSegmentedFontFace> {
 public:
-    static PassRefPtr<CSSSegmentedFontFace> create(CSSFontSelector* selector) { return adoptRef(new CSSSegmentedFontFace(selector)); }
+    static Ref<CSSSegmentedFontFace> create(CSSFontSelector* selector) { return adoptRef(*new CSSSegmentedFontFace(selector)); }
     ~CSSSegmentedFontFace();
 
     CSSFontSelector* fontSelector() const { return m_fontSelector; }
@@ -50,7 +49,7 @@ public:
 
     void appendFontFace(PassRefPtr<CSSFontFace>);
 
-    PassRefPtr<FontData> getFontData(const FontDescription&);
+    FontRanges fontRanges(const FontDescription&);
 
 #if ENABLE(FONT_LOAD_EVENTS)
     class LoadFontCallback : public RefCounted<LoadFontCallback> {
@@ -74,7 +73,7 @@ private:
 #endif
 
     CSSFontSelector* m_fontSelector;
-    HashMap<unsigned, RefPtr<SegmentedFontData>> m_fontDataTable;
+    HashMap<unsigned, FontRanges> m_descriptionToRangesMap;
     Vector<RefPtr<CSSFontFace>, 1> m_fontFaces;
 #if ENABLE(FONT_LOAD_EVENTS)
     Vector<RefPtr<LoadFontCallback>> m_callbacks;

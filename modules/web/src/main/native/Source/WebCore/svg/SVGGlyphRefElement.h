@@ -29,7 +29,7 @@ namespace WebCore {
 class SVGGlyphRefElement final : public SVGElement,
                                  public SVGURIReference {
 public:
-    static PassRefPtr<SVGGlyphRefElement> create(const QualifiedName&, Document&);
+    static Ref<SVGGlyphRefElement> create(const QualifiedName&, Document&);
 
     bool hasValidGlyphElement(String& glyphName) const;
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
@@ -52,7 +52,7 @@ private:
     virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGGlyphRefElement)
-        DECLARE_ANIMATED_STRING(Href, href)
+        DECLARE_ANIMATED_STRING_OVERRIDE(Href, href)
     END_DECLARE_ANIMATED_PROPERTIES
 
     float m_x;
@@ -60,8 +60,6 @@ private:
     float m_dx;
     float m_dy;
 };
-
-NODE_TYPE_CASTS(SVGGlyphRefElement)
 
 }
 

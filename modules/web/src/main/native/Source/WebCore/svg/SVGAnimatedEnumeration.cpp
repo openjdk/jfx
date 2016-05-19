@@ -62,7 +62,6 @@ static inline unsigned enumerationValueForTargetAttribute(SVGElement* targetElem
     if (attrName == SVGNames::spreadMethodAttr)
         return SVGPropertyTraits<SVGSpreadMethodType>::fromString(value);
 
-#if ENABLE(FILTERS)
     if (attrName == SVGNames::edgeModeAttr)
         return SVGPropertyTraits<EdgeModeType>::fromString(value);
 
@@ -86,15 +85,17 @@ static inline unsigned enumerationValueForTargetAttribute(SVGElement* targetElem
         return SVGPropertyTraits<ComponentTransferType>::fromString(value);
     }
 
-    if (attrName == SVGNames::modeAttr)
-        return SVGPropertyTraits<BlendModeType>::fromString(value);
+    if (attrName == SVGNames::modeAttr) {
+        BlendMode mode = BlendModeNormal;
+        parseBlendMode(value, mode);
+        return mode;
+    }
     if (attrName == SVGNames::stitchTilesAttr)
         return SVGPropertyTraits<SVGStitchOptions>::fromString(value);
     if (attrName == SVGNames::xChannelSelectorAttr)
         return SVGPropertyTraits<ChannelSelectorType>::fromString(value);
     if (attrName == SVGNames::yChannelSelectorAttr)
         return SVGPropertyTraits<ChannelSelectorType>::fromString(value);
-#endif
 
     ASSERT_NOT_REACHED();
     return 0;

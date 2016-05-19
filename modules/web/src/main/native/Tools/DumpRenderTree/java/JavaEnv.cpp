@@ -2,11 +2,8 @@
  * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
-#include "Threading.h"
-#include "ThreadingPrimitives.h"
 
 #include "JavaEnv.h"
-#include "runtime/InitializeThreading.h"
 
 JavaVM* jvm = 0;
 
@@ -25,24 +22,6 @@ bool CheckAndClearException(JNIEnv* env)
         return true;
     }
     return false;
-}
-
-namespace WTF {
-
-bool Mutex::tryLock()
-{
-    return true;
-}
-
-void Mutex::unlock()
-{
-}
-
-ThreadIdentifier currentThread()
-{
-    return static_cast<ThreadIdentifier>(-1);
-}
-
 }
 
 #ifdef __cplusplus

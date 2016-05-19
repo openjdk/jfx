@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,7 +26,7 @@
 # SUCH DAMAGE.
 
 import os
-import unittest2 as unittest
+import unittest
 
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.w3c.test_parser import TestParser
@@ -133,8 +131,8 @@ class TestParserTest(unittest.TestCase):
         self.assertTrue('test' in test_info.keys(), 'did not find a test file')
         self.assertTrue('reference' in test_info.keys(), 'did not find a reference file')
         self.assertTrue(test_info['reference'].startswith(test_path), 'reference path is not correct')
-        self.assertTrue('refsupport' in test_info.keys(), 'there should be refsupport files for this test')
-        self.assertEquals(len(test_info['refsupport']), 3, 'there should be 3 support files in this reference')
+        self.assertTrue('reference_support_info' in test_info.keys(), 'there should be reference_support_info for this test')
+        self.assertEquals(len(test_info['reference_support_info']['files']), 3, 'there should be 3 support files in this reference')
         self.assertFalse('jstest' in test_info.keys(), 'test should not have been analyzed as a jstest')
 
     def test_analyze_jstest(self):
@@ -154,6 +152,20 @@ class TestParserTest(unittest.TestCase):
         self.assertFalse('reference' in test_info.keys(), 'shold not have found a reference file')
         self.assertFalse('refsupport' in test_info.keys(), 'there should be no refsupport files for this test')
         self.assertTrue('jstest' in test_info.keys(), 'test should be a jstest')
+
+    def test_analyze_manual_wpt_test(self):
+        """ Tests analyze_test() using a manual jstest """
+
+        test_html = """<head>
+<link href="/resources/testharness.css" rel="stylesheet" type="text/css">
+<script src="/resources/testharness.js"></script>
+</head>
+"""
+        test_path = '/some/madeup/path/'
+        parser = TestParser(options, test_path + 'somefile-manual.html')
+        test_info = parser.analyze_test(test_contents=test_html)
+
+        self.assertEqual(test_info, None, 'test_info is None')
 
     def test_analyze_pixel_test_all_true(self):
         """ Tests analyze_test() using a test that is neither a reftest or jstest with all=False """

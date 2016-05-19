@@ -29,6 +29,7 @@
 #if ENABLE(INDEXED_DATABASE)
 
 #include "KeyedCoding.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -49,7 +50,7 @@ IDBKeyData::IDBKeyData(const IDBKey* key)
     case IDBKey::InvalidType:
         break;
     case IDBKey::ArrayType:
-        for (auto key2 : key->array())
+        for (auto& key2 : key->array())
             arrayValue.append(IDBKeyData(key2.get()));
         break;
     case IDBKey::StringType:
@@ -78,7 +79,7 @@ PassRefPtr<IDBKey> IDBKeyData::maybeCreateIDBKey() const
     case IDBKey::ArrayType:
         {
             IDBKey::KeyArray array;
-            for (auto keyData : arrayValue) {
+            for (auto& keyData : arrayValue) {
                 array.append(keyData.maybeCreateIDBKey());
                 ASSERT(array.last());
             }
@@ -110,7 +111,7 @@ IDBKeyData IDBKeyData::isolatedCopy() const
     case IDBKey::InvalidType:
         return result;
     case IDBKey::ArrayType:
-        for (auto key : arrayValue)
+        for (auto& key : arrayValue)
             result.arrayValue.append(key.isolatedCopy());
         return result;
     case IDBKey::StringType:
@@ -177,7 +178,7 @@ bool IDBKeyData::decode(KeyedDecoder& decoder, IDBKeyData& result)
             || value == IDBKey::NumberType
             || value == IDBKey::MinType;
     };
-    if (!decoder.decodeVerifiedEnum("type", result.type, enumFunction))
+    if (!decoder.decodeEnum("type", result.type, enumFunction))
         return false;
 
     if (result.type == IDBKey::InvalidType)
@@ -200,6 +201,8 @@ bool IDBKeyData::decode(KeyedDecoder& decoder, IDBKeyData& result)
     auto arrayFunction = [](KeyedDecoder& decoder, IDBKeyData& result) {
         return decode(decoder, result);
     };
+
+    result.arrayValue.clear();
     return decoder.decodeObjects("array", result.arrayValue, arrayFunction);
 }
 
@@ -260,17 +263,18 @@ String IDBKeyData::loggingString() const
         return "<invalid>";
     case IDBKey::ArrayType:
         {
-            String result = "<array> - { ";
+            StringBuilder result;
+            result.appendLiteral("<array> - { ");
             for (size_t i = 0; i < arrayValue.size(); ++i) {
                 result.append(arrayValue[i].loggingString());
                 if (i < arrayValue.size() - 1)
-                    result.append(", ");
+                    result.appendLiteral(", ");
             }
-            result.append(" }");
-            return result;
+            result.appendLiteral(" }");
+            return result.toString();
         }
     case IDBKey::StringType:
-        return String("<string> - ") + stringValue;
+        return "<string> - " + stringValue;
     case IDBKey::DateType:
         return String::format("Date type - %f", numberValue);
     case IDBKey::NumberType:

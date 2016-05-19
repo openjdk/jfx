@@ -26,7 +26,8 @@
 #include "config.h"
 #include "HeapTimer.h"
 
-#include "APIShims.h"
+#include "GCActivityCallback.h"
+#include "IncrementalSweeper.h"
 #include "JSObject.h"
 #include "JSString.h"
 #include "JSCInlines.h"
@@ -62,7 +63,7 @@ HeapTimer::HeapTimer(VM* vm, CFRunLoopRef runLoop)
     m_context.info = &vm->apiLock();
     m_context.retain = retainAPILock;
     m_context.release = releaseAPILock;
-    m_timer = adoptCF(CFRunLoopTimerCreate(0, s_decade, s_decade, 0, 0, HeapTimer::timerDidFire, &m_context));
+    m_timer = adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, s_decade, s_decade, 0, 0, HeapTimer::timerDidFire, &m_context));
     CFRunLoopAddTimer(m_runLoop.get(), m_timer.get(), kCFRunLoopCommonModes);
 }
 
@@ -85,15 +86,17 @@ void HeapTimer::timerDidFire(CFRunLoopTimerRef timer, void* context)
     }
 
     HeapTimer* heapTimer = 0;
-    if (vm->heap.activityCallback() && vm->heap.activityCallback()->m_timer.get() == timer)
-        heapTimer = vm->heap.activityCallback();
+    if (vm->heap.fullActivityCallback() && vm->heap.fullActivityCallback()->m_timer.get() == timer)
+        heapTimer = vm->heap.fullActivityCallback();
+    else if (vm->heap.edenActivityCallback() && vm->heap.edenActivityCallback()->m_timer.get() == timer)
+        heapTimer = vm->heap.edenActivityCallback();
     else if (vm->heap.sweeper()->m_timer.get() == timer)
         heapTimer = vm->heap.sweeper();
     else
         RELEASE_ASSERT_NOT_REACHED();
 
     {
-        APIEntryShim shim(vm);
+        JSLockHolder locker(vm);
         heapTimer->doWork();
     }
 
@@ -131,7 +134,7 @@ bool HeapTimer::timerEvent(void* info)
 {
     HeapTimer* agent = static_cast<HeapTimer*>(info);
 
-    APIEntryShim shim(agent->m_vm);
+    JSLockHolder locker(agent->m_vm);
     agent->doWork();
     agent->m_timer = 0;
 

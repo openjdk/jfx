@@ -25,78 +25,24 @@
 
 namespace WebCore {
 
-static inline bool isContainingBlockCandidateForAbsolutelyPositionedObject(RenderElement& object)
-{
-    return object.style().position() != StaticPosition
-        || (object.hasTransform() && object.isRenderBlock())
-        || object.isSVGForeignObject()
-        || object.isRenderView();
-}
-
-static inline bool isNonRenderBlockInline(RenderElement& object)
-{
-    return (object.isInline() && !object.isReplaced()) || !object.isRenderBlock();
-}
-
-static inline RenderBlock* containingBlockForFixedPosition(RenderElement* parent)
-{
-    RenderElement* object = parent;
-    while (object && !object->canContainFixedPositionObjects())
-        object = object->parent();
-    ASSERT(!object || !object->isAnonymousBlock());
-    return toRenderBlock(object);
-}
-
-static inline RenderBlock* containingBlockForAbsolutePosition(RenderElement* parent)
-{
-    RenderElement* object = parent;
-    while (object && !isContainingBlockCandidateForAbsolutelyPositionedObject(*object))
-        object = object->parent();
-
-    // For a relatively positioned inline, return its nearest non-anonymous containing block,
-    // not the inline itself, to avoid having a positioned objects list in all RenderInlines
-    // and use RenderBlock* as RenderElement::containingBlock's return type.
-    // Use RenderBlock::container() to obtain the inline.
-    if (object && !object->isRenderBlock())
-        object = object->containingBlock();
-
-    while (object && object->isAnonymousBlock())
-        object = object->containingBlock();
-
-    return toRenderBlock(object);
-}
-
-static inline RenderBlock* containingBlockForObjectInFlow(RenderElement* parent)
-{
-    RenderElement* object = parent;
-    while (object && isNonRenderBlockInline(*object))
-        object = object->parent();
-    return toRenderBlock(object);
-}
-
 class LogicalSelectionOffsetCaches {
 public:
     class ContainingBlockInfo {
     public:
         ContainingBlockInfo()
-            : m_block(0)
-            , m_cache(0)
-            , m_hasFloatsOrFlowThreads(false)
+            : m_hasFloatsOrFlowThreads(false)
             , m_cachedLogicalLeftSelectionOffset(false)
             , m_cachedLogicalRightSelectionOffset(false)
         { }
 
-        void setBlock(RenderBlock* block, const LogicalSelectionOffsetCaches* cache)
+        void setBlock(RenderBlock* block, const LogicalSelectionOffsetCaches* cache, bool parentCacheHasFloatsOrFlowThreads = false)
         {
             m_block = block;
-            m_hasFloatsOrFlowThreads = m_hasFloatsOrFlowThreads || m_block->containsFloats() || m_block->flowThreadContainingBlock();
+            m_hasFloatsOrFlowThreads = parentCacheHasFloatsOrFlowThreads || m_hasFloatsOrFlowThreads || m_block->containsFloats() || m_block->flowThreadContainingBlock();
             m_cache = cache;
             m_cachedLogicalLeftSelectionOffset = false;
             m_cachedLogicalRightSelectionOffset = false;
         }
-
-        RenderBlock* block() const { return m_block; }
-        const LogicalSelectionOffsetCaches* cache() const { return m_cache; }
 
         LayoutUnit logicalLeftSelectionOffset(RenderBlock& rootBlock, LayoutUnit position) const
         {
@@ -120,9 +66,13 @@ public:
             return m_logicalRightSelectionOffset;
         }
 
+        RenderBlock* block() const { return m_block; }
+        const LogicalSelectionOffsetCaches* cache() const { return m_cache; }
+        bool hasFloatsOrFlowThreads() const { return m_hasFloatsOrFlowThreads; }
+
     private:
-        RenderBlock* m_block;
-        const LogicalSelectionOffsetCaches* m_cache;
+        RenderBlock* m_block { nullptr };
+        const LogicalSelectionOffsetCaches* m_cache { nullptr };
         bool m_hasFloatsOrFlowThreads : 1;
         mutable bool m_cachedLogicalLeftSelectionOffset : 1;
         mutable bool m_cachedLogicalRightSelectionOffset : 1;
@@ -141,9 +91,9 @@ public:
         auto parent = rootBlock.parent();
 
         // LogicalSelectionOffsetCaches should not be used on an orphaned tree.
-        m_containingBlockForFixedPosition.setBlock(containingBlockForFixedPosition(parent), 0);
-        m_containingBlockForAbsolutePosition.setBlock(containingBlockForAbsolutePosition(parent), 0);
-        m_containingBlockForInflowPosition.setBlock(containingBlockForObjectInFlow(parent), 0);
+        m_containingBlockForFixedPosition.setBlock(parent->containingBlockForFixedPosition(), nullptr);
+        m_containingBlockForAbsolutePosition.setBlock(parent->containingBlockForAbsolutePosition(), nullptr);
+        m_containingBlockForInflowPosition.setBlock(parent->containingBlockForObjectInFlow(), nullptr);
     }
 
     LogicalSelectionOffsetCaches(RenderBlock& block, const LogicalSelectionOffsetCaches& cache)
@@ -151,12 +101,12 @@ public:
         , m_containingBlockForAbsolutePosition(cache.m_containingBlockForAbsolutePosition)
     {
         if (block.canContainFixedPositionObjects())
-            m_containingBlockForFixedPosition.setBlock(&block, &cache);
+            m_containingBlockForFixedPosition.setBlock(&block, &cache, cache.m_containingBlockForFixedPosition.hasFloatsOrFlowThreads());
 
-        if (isContainingBlockCandidateForAbsolutelyPositionedObject(block) && !block.isRenderInline() && !block.isAnonymousBlock())
-            m_containingBlockForFixedPosition.setBlock(&block, &cache);
+        if (block.canContainAbsolutelyPositionedObjects() && !block.isRenderInline() && !block.isAnonymousBlock())
+            m_containingBlockForAbsolutePosition.setBlock(&block, &cache, cache.m_containingBlockForAbsolutePosition.hasFloatsOrFlowThreads());
 
-        m_containingBlockForInflowPosition.setBlock(&block, &cache);
+        m_containingBlockForInflowPosition.setBlock(&block, &cache, cache.m_containingBlockForInflowPosition.hasFloatsOrFlowThreads());
     }
 
     const ContainingBlockInfo& containingBlockInfo(RenderBlock& block) const

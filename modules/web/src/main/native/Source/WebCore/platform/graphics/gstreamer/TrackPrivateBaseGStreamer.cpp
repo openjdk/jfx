@@ -34,7 +34,9 @@
 #include "TrackPrivateBase.h"
 #include <glib-object.h>
 #include <gst/gst.h>
-#include <wtf/gobject/GUniquePtr.h>
+#include <gst/tag/tag.h>
+#include <wtf/glib/GUniquePtr.h>
+#include <wtf/text/CString.h>
 
 GST_DEBUG_CATEGORY_EXTERN(webkit_media_player_debug);
 #define GST_CAT_DEFAULT webkit_media_player_debug
@@ -51,24 +53,10 @@ static void trackPrivateTagsChangedCallback(GObject*, GParamSpec*, TrackPrivateB
     track->tagsChanged();
 }
 
-static gboolean trackPrivateActiveChangeTimeoutCallback(TrackPrivateBaseGStreamer* track)
-{
-    track->notifyTrackOfActiveChanged();
-    return FALSE;
-}
-
-static gboolean trackPrivateTagsChangeTimeoutCallback(TrackPrivateBaseGStreamer* track)
-{
-    track->notifyTrackOfTagsChanged();
-    return FALSE;
-}
-
 TrackPrivateBaseGStreamer::TrackPrivateBaseGStreamer(TrackPrivateBase* owner, gint index, GRefPtr<GstPad> pad)
     : m_index(index)
     , m_pad(pad)
     , m_owner(owner)
-    , m_activeTimerHandler(0)
-    , m_tagTimerHandler(0)
 {
     ASSERT(m_pad);
 
@@ -95,11 +83,8 @@ void TrackPrivateBaseGStreamer::disconnect()
     g_signal_handlers_disconnect_by_func(m_pad.get(),
         reinterpret_cast<gpointer>(trackPrivateTagsChangedCallback), this);
 
-    if (m_activeTimerHandler)
-        g_source_remove(m_activeTimerHandler);
-
-    if (m_tagTimerHandler)
-        g_source_remove(m_tagTimerHandler);
+    m_activeTimerHandler.cancel();
+    m_tagTimerHandler.cancel();
 
     m_pad.clear();
     m_tags.clear();
@@ -107,16 +92,12 @@ void TrackPrivateBaseGStreamer::disconnect()
 
 void TrackPrivateBaseGStreamer::activeChanged()
 {
-    if (m_activeTimerHandler)
-        g_source_remove(m_activeTimerHandler);
-    m_activeTimerHandler = g_timeout_add(0,
-        reinterpret_cast<GSourceFunc>(trackPrivateActiveChangeTimeoutCallback), this);
+    m_activeTimerHandler.schedule("[WebKit] TrackPrivateBaseGStreamer::notifyTrackOfActiveChanged", std::function<void()>(std::bind(&TrackPrivateBaseGStreamer::notifyTrackOfActiveChanged, this)));
 }
 
 void TrackPrivateBaseGStreamer::tagsChanged()
 {
-    if (m_tagTimerHandler)
-        g_source_remove(m_tagTimerHandler);
+    m_tagTimerHandler.cancel();
 
     GRefPtr<GstTagList> tags;
     g_object_get(m_pad.get(), "tags", &tags.outPtr(), NULL);
@@ -125,8 +106,7 @@ void TrackPrivateBaseGStreamer::tagsChanged()
         m_tags.swap(tags);
     }
 
-    m_tagTimerHandler = g_timeout_add(0,
-        reinterpret_cast<GSourceFunc>(trackPrivateTagsChangeTimeoutCallback), this);
+    m_tagTimerHandler.schedule("[WebKit] TrackPrivateBaseGStreamer::notifyTrackOfTagsChanged", std::function<void()>(std::bind(&TrackPrivateBaseGStreamer::notifyTrackOfTagsChanged, this)));
 }
 
 void TrackPrivateBaseGStreamer::notifyTrackOfActiveChanged()
@@ -141,7 +121,22 @@ void TrackPrivateBaseGStreamer::notifyTrackOfActiveChanged()
     setActive(active);
 }
 
-bool TrackPrivateBaseGStreamer::getTag(GstTagList* tags, const gchar* tagName, String& value)
+bool TrackPrivateBaseGStreamer::getLanguageCode(GstTagList* tags, AtomicString& value)
+{
+    String language;
+    if (getTag(tags, GST_TAG_LANGUAGE_CODE, language)) {
+        language = gst_tag_get_language_code_iso_639_1(language.utf8().data());
+        INFO_MEDIA_MESSAGE("Converted track %d's language code to %s.", m_index, language.utf8().data());
+        if (language != value) {
+            value = language;
+            return true;
+        }
+    }
+    return false;
+}
+
+template<class StringType>
+bool TrackPrivateBaseGStreamer::getTag(GstTagList* tags, const gchar* tagName, StringType& value)
 {
     GUniqueOutPtr<gchar> tagValue;
     if (gst_tag_list_get_string(tags, tagName, &tagValue.outPtr())) {
@@ -154,11 +149,13 @@ bool TrackPrivateBaseGStreamer::getTag(GstTagList* tags, const gchar* tagName, S
 
 void TrackPrivateBaseGStreamer::notifyTrackOfTagsChanged()
 {
-    m_tagTimerHandler = 0;
     if (!m_pad)
         return;
 
     TrackPrivateBaseClient* client = m_owner->client();
+    if (!client)
+        return;
+
     GRefPtr<GstTagList> tags;
     {
         MutexLocker lock(m_tagMutex);
@@ -167,11 +164,18 @@ void TrackPrivateBaseGStreamer::notifyTrackOfTagsChanged()
     if (!tags)
         return;
 
-    if (getTag(tags.get(), GST_TAG_TITLE, m_label) && client)
+    if (getTag(tags.get(), GST_TAG_TITLE, m_label))
         client->labelChanged(m_owner, m_label);
 
-    if (getTag(tags.get(), GST_TAG_LANGUAGE_CODE, m_language) && client)
-        client->languageChanged(m_owner, m_language);
+    AtomicString language;
+    if (!getLanguageCode(tags.get(), language))
+        return;
+
+    if (language == m_language)
+        return;
+
+    m_language = language;
+    client->languageChanged(m_owner, m_language);
 }
 
 } // namespace WebCore

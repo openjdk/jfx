@@ -33,9 +33,9 @@ namespace WebCore {
 class AccessibilityMenuListPopup;
 class HTMLElement;
 
-class AccessibilityMenuListOption : public AccessibilityMockObject {
+class AccessibilityMenuListOption final : public AccessibilityMockObject {
 public:
-    static PassRefPtr<AccessibilityMenuListOption> create() { return adoptRef(new AccessibilityMenuListOption); }
+    static Ref<AccessibilityMenuListOption> create() { return adoptRef(*new AccessibilityMenuListOption); }
 
     void setElement(HTMLElement*);
 
@@ -62,8 +62,8 @@ private:
     RefPtr<HTMLElement> m_element;
 };
 
-ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityMenuListOption, isMenuListOption())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityMenuListOption, isMenuListOption())
 
 #endif // AccessibilityMenuListOption_h

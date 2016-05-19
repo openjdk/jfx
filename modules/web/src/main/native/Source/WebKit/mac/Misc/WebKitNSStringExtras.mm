@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,34 +28,24 @@
 
 #import "WebKitNSStringExtras.h"
 
-#import <WebCore/Font.h>
-#import <WebCore/FontCache.h>
+#import <WebCore/CoreGraphicsSPI.h>
+#import <WebCore/FontCascade.h>
 #import <WebCore/GraphicsContext.h>
 #import <WebCore/TextRun.h>
 #import <WebCore/WebCoreNSStringExtras.h>
-#import <WebKit/WebNSFileManagerExtras.h>
-#import <WebKit/WebNSObjectExtras.h>
+#import <WebKitLegacy/WebNSFileManagerExtras.h>
+#import <WebKitLegacy/WebNSObjectExtras.h>
 #import <unicode/uchar.h>
 #import <sys/param.h>
 
 #if PLATFORM(IOS)
-#import <WebCore/WAKViewPrivate.h>
-#import <WebKit/DOM.h>
-#import <WebKit/WebFrame.h>
-#import <WebKit/WebFrameView.h>
-#import <WebKit/WebViewPrivate.h>
+#import <WebKitLegacy/DOM.h>
+#import <WebKitLegacy/WebFrame.h>
+#import <WebKitLegacy/WebFrameView.h>
+#import <WebKitLegacy/WebViewPrivate.h>
 #endif
 
 NSString *WebKitLocalCacheDefaultsKey = @"WebKitLocalCache";
-
-#if !PLATFORM(IOS)
-static inline CGFloat webkit_CGCeiling(CGFloat value)
-{
-    if (sizeof(value) == sizeof(float))
-        return ceilf(value);
-    return ceil(value);
-}
-#endif
 
 using namespace WebCore;
 
@@ -90,7 +80,7 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
         // It's probably incorrect for high DPI.
         // If you change this, be sure to test all the text drawn this way in Safari, including
         // the status bar, bookmarks bar, tab bar, and activity window.
-        point.y = webkit_CGCeiling(point.y);
+        point.y = CGCeiling(point.y);
 
         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
         CGContextRef cgContext = static_cast<CGContextRef>([nsContext graphicsPort]);
@@ -101,10 +91,8 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
         if (!flipped)
             CGContextScaleCTM(cgContext, 1, -1);
 
-        FontCachePurgePreventer fontCachePurgePreventer;
-
-        Font webCoreFont(FontPlatformData(font, [font pointSize]), ![nsContext isDrawingToScreen], fontSmoothingIsAllowed ? AutoSmoothing : Antialiased);
-        TextRun run(buffer.data(), length);
+        FontCascade webCoreFont(FontPlatformData(reinterpret_cast<CTFontRef>(font), [font pointSize]), fontSmoothingIsAllowed ? AutoSmoothing : Antialiased);
+        TextRun run(StringView(buffer.data(), length));
         run.disableRoundingHacks();
 
         CGFloat red;
@@ -149,10 +137,8 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
     [self getCharacters:buffer.data()];
 
     if (canUseFastRenderer(buffer.data(), length)) {
-        FontCachePurgePreventer fontCachePurgePreventer;
-
-        Font webCoreFont(FontPlatformData(font, [font pointSize]), ![[NSGraphicsContext currentContext] isDrawingToScreen]);
-        TextRun run(buffer.data(), length);
+        FontCascade webCoreFont(FontPlatformData(reinterpret_cast<CTFontRef>(font), [font pointSize]));
+        TextRun run(StringView(buffer.data(), length));
         run.disableRoundingHacks();
         return webCoreFont.width(run);
     }
@@ -183,13 +169,6 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
     [newString replaceOccurrencesOfString:@"\n" withString:@"" options:NSLiteralSearch range:NSMakeRange(0, [newString length])];
     return newString;
 }
-
-#if !PLATFORM(IOS)
-+ (NSStringEncoding)_web_encodingForResource:(Handle)resource
-{
-    return CFStringConvertEncodingToNSStringEncoding(stringEncodingForResource(resource));
-}
-#endif
 
 - (BOOL)_webkit_isCaseInsensitiveEqualToString:(NSString *)string
 {
@@ -299,49 +278,13 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
     return [result autorelease];
 }
 
-#if !PLATFORM(IOS)
+#if PLATFORM(MAC)
+// FIXME: This is here only for binary compatibility with Safari 8 and earlier.
 -(NSString *)_webkit_fixedCarbonPOSIXPath
 {
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    if ([fileManager fileExistsAtPath:self]) {
-        // Files exists, no need to fix.
-        return self;
-    }
-
-    NSMutableArray *pathComponents = [[[self pathComponents] mutableCopy] autorelease];
-    NSString *volumeName = [pathComponents objectAtIndex:1];
-    if ([volumeName isEqualToString:@"Volumes"]) {
-        // Path starts with "/Volumes", so the volume name is the next path component.
-        volumeName = [pathComponents objectAtIndex:2];
-        // Remove "Volumes" from the path because it may incorrectly be part of the path (3163647).
-        // We'll add it back if we have to.
-        [pathComponents removeObjectAtIndex:1];
-    }
-
-    if (!volumeName) {
-        // Should only happen if self == "/", so this shouldn't happen because that always exists.
-        return self;
-    }
-
-    if ([[fileManager _webkit_startupVolumeName] isEqualToString:volumeName]) {
-        // Startup volume name is included in path, remove it.
-        [pathComponents removeObjectAtIndex:1];
-    } else if ([[fileManager contentsOfDirectoryAtPath:@"/Volumes" error:NULL] containsObject:volumeName]) {
-        // Path starts with other volume name, prepend "/Volumes".
-        [pathComponents insertObject:@"Volumes" atIndex:1];
-    } else
-        // It's valid.
-        return self;
-
-    NSString *path = [NSString pathWithComponents:pathComponents];
-
-    if (![fileManager fileExistsAtPath:path])
-        // File at canonicalized path doesn't exist, return original.
-        return self;
-
-    return path;
+    return self;
 }
-#endif // !PLATFORM(IOS)
+#endif
 
 #if PLATFORM(IOS)
 + (NSString *)_web_stringWithData:(NSData *)data textEncodingName:(NSString *)textEncodingName

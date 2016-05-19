@@ -21,7 +21,6 @@
 #ifndef SVGFilterBuilder_h
 #define SVGFilterBuilder_h
 
-#if ENABLE(FILTERS)
 #include "FilterEffect.h"
 
 #include <wtf/HashMap.h>
@@ -38,9 +37,9 @@ class SVGFilterBuilder {
 public:
     typedef HashSet<FilterEffect*> FilterEffectSet;
 
-    SVGFilterBuilder(PassRefPtr<FilterEffect> sourceGraphic, PassRefPtr<FilterEffect> sourceAlpha);
+    SVGFilterBuilder(RefPtr<FilterEffect> sourceGraphic);
 
-    void add(const AtomicString& id, PassRefPtr<FilterEffect>);
+    void add(const AtomicString& id, RefPtr<FilterEffect>);
 
     FilterEffect* getEffectById(const AtomicString& id) const;
     FilterEffect* lastEffect() const { return m_lastEffect.get(); }
@@ -63,9 +62,8 @@ public:
 private:
     inline void addBuiltinEffects()
     {
-        HashMap<AtomicString, RefPtr<FilterEffect>>::iterator end = m_builtinEffects.end();
-        for (HashMap<AtomicString, RefPtr<FilterEffect>>::iterator iterator = m_builtinEffects.begin(); iterator != end; ++iterator)
-             m_effectReferences.add(iterator->value, FilterEffectSet());
+        for (auto& effect : m_builtinEffects.values())
+            m_effectReferences.add(effect, FilterEffectSet());
     }
 
     HashMap<AtomicString, RefPtr<FilterEffect>> m_builtinEffects;
@@ -80,5 +78,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
 #endif // SVGFilterBuilder_h

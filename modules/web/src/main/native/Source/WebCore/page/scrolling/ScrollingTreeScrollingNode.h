@@ -32,11 +32,9 @@
 #include "ScrollTypes.h"
 #include "ScrollingCoordinator.h"
 #include "ScrollingTreeNode.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-class PlatformWheelEvent;
 class ScrollingTree;
 class ScrollingStateScrollingNode;
 
@@ -44,32 +42,48 @@ class ScrollingTreeScrollingNode : public ScrollingTreeNode {
 public:
     virtual ~ScrollingTreeScrollingNode();
 
-    virtual void updateBeforeChildren(const ScrollingStateNode&) override;
+    WEBCORE_EXPORT virtual void updateBeforeChildren(const ScrollingStateNode&) override;
+    WEBCORE_EXPORT virtual void updateAfterChildren(const ScrollingStateNode&) override;
 
-    // FIXME: We should implement this when we support ScrollingTreeScrollingNodes as children.
-    virtual void parentScrollPositionDidChange(const FloatRect& /*viewportRect*/, const FloatSize& /*cumulativeDelta*/) override { }
+    WEBCORE_EXPORT virtual void updateLayersAfterAncestorChange(const ScrollingTreeNode& changedNode, const FloatRect& fixedPositionRect, const FloatSize& cumulativeDelta) override;
 
     virtual void handleWheelEvent(const PlatformWheelEvent&) = 0;
-    virtual void setScrollPosition(const FloatPoint&) = 0;
+    WEBCORE_EXPORT virtual void setScrollPosition(const FloatPoint&);
+    WEBCORE_EXPORT virtual void setScrollPositionWithoutContentEdgeConstraints(const FloatPoint&);
 
-    SynchronousScrollingReasons synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
-    bool shouldUpdateScrollLayerPositionSynchronously() const { return m_synchronousScrollingReasons; }
+    virtual void updateLayersAfterViewportChange(const FloatRect& fixedPositionRect, double scale) = 0;
+    virtual void updateLayersAfterDelegatedScroll(const FloatPoint&) { }
+
+    virtual FloatPoint scrollPosition() const = 0;
+
+#if ENABLE(CSS_SCROLL_SNAP)
+    const Vector<float>& horizontalSnapOffsets() const { return m_horizontalSnapOffsets; }
+    const Vector<float>& verticalSnapOffsets() const { return m_verticalSnapOffsets; }
+    unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
+    unsigned currentVerticalSnapPointIndex() const { return m_currentVerticalSnapPointIndex; }
+    void setCurrentHorizontalSnapPointIndex(unsigned index) { m_currentHorizontalSnapPointIndex = index; }
+    void setCurrentVerticalSnapPointIndex(unsigned index) { m_currentVerticalSnapPointIndex = index; }
+#endif
 
 protected:
-    ScrollingTreeScrollingNode(ScrollingTree&, ScrollingNodeID);
+    ScrollingTreeScrollingNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
-    const FloatPoint& scrollPosition() const { return m_scrollPosition; }
-    const FloatRect& viewportConstrainedObjectRect() const { return m_viewportConstrainedObjectRect; }
-    const IntSize& totalContentsSize() const { return m_totalContentsSize; }
+    WEBCORE_EXPORT virtual FloatPoint minimumScrollPosition() const;
+    WEBCORE_EXPORT virtual FloatPoint maximumScrollPosition() const;
+
+    virtual void setScrollLayerPosition(const FloatPoint&) = 0;
+
+    FloatPoint lastCommittedScrollPosition() const { return m_lastCommittedScrollPosition; }
+    const FloatSize& scrollableAreaSize() const { return m_scrollableAreaSize; }
+    const FloatSize& totalContentsSize() const { return m_totalContentsSize; }
+    const FloatSize& reachableContentsSize() const { return m_reachableContentsSize; }
     const IntPoint& scrollOrigin() const { return m_scrollOrigin; }
 
     // If the totalContentsSize changes in the middle of a rubber-band, we still want to use the old totalContentsSize for the sake of
     // computing the stretchAmount(). Using the old value will keep the animation smooth. When there is no rubber-band in progress at
     // all, m_totalContentsSizeForRubberBand should be equivalent to m_totalContentsSize.
-    const IntSize& totalContentsSizeForRubberBand() const { return m_totalContentsSizeForRubberBand; }
-    void setTotalContentsSizeForRubberBand(const IntSize& totalContentsSizeForRubberBand) { m_totalContentsSizeForRubberBand = totalContentsSizeForRubberBand; }
-
-    float frameScaleFactor() const { return m_frameScaleFactor; }
+    const FloatSize& totalContentsSizeForRubberBand() const { return m_totalContentsSizeForRubberBand; }
+    void setTotalContentsSizeForRubberBand(const FloatSize& totalContentsSizeForRubberBand) { m_totalContentsSizeForRubberBand = totalContentsSizeForRubberBand; }
 
     ScrollElasticity horizontalScrollElasticity() const { return m_scrollableAreaParameters.horizontalScrollElasticity; }
     ScrollElasticity verticalScrollElasticity() const { return m_scrollableAreaParameters.verticalScrollElasticity; }
@@ -79,32 +93,25 @@ protected:
 
     bool canHaveScrollbars() const { return m_scrollableAreaParameters.horizontalScrollbarMode != ScrollbarAlwaysOff || m_scrollableAreaParameters.verticalScrollbarMode != ScrollbarAlwaysOff; }
 
-    int headerHeight() const { return m_headerHeight; }
-    int footerHeight() const { return m_footerHeight; }
-
-    ScrollBehaviorForFixedElements scrollBehaviorForFixedElements() const { return m_behaviorForFixed; }
-
 private:
-    FloatRect m_viewportConstrainedObjectRect;
-    IntSize m_totalContentsSize;
-    IntSize m_totalContentsSizeForRubberBand;
-    FloatPoint m_scrollPosition;
+    FloatSize m_scrollableAreaSize;
+    FloatSize m_totalContentsSize;
+    FloatSize m_totalContentsSizeForRubberBand;
+    FloatSize m_reachableContentsSize;
+    FloatPoint m_lastCommittedScrollPosition;
     IntPoint m_scrollOrigin;
-
+#if ENABLE(CSS_SCROLL_SNAP)
+    Vector<float> m_horizontalSnapOffsets;
+    Vector<float> m_verticalSnapOffsets;
+    unsigned m_currentHorizontalSnapPointIndex { 0 };
+    unsigned m_currentVerticalSnapPointIndex { 0 };
+#endif
     ScrollableAreaParameters m_scrollableAreaParameters;
-
-    float m_frameScaleFactor;
-
-    int m_headerHeight;
-    int m_footerHeight;
-
-    SynchronousScrollingReasons m_synchronousScrollingReasons;
-    ScrollBehaviorForFixedElements m_behaviorForFixed;
 };
 
-SCROLLING_NODE_TYPE_CASTS(ScrollingTreeScrollingNode, nodeType() == ScrollingNode);
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_SCROLLING_NODE(ScrollingTreeScrollingNode, isScrollingNode())
 
 #endif // ENABLE(ASYNC_SCROLLING)
 

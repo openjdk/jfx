@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -34,11 +34,11 @@
 #include <wtf/Assertions.h>
 #include <wtf/HashTraits.h>
 
-#if !OS(WINCE)
-#include <guiddef.h>
-#endif
-
-typedef long HRESULT;
+#ifdef __midl
+typedef LONG HRESULT;
+#else
+typedef _Return_type_success_(return >= 0) long HRESULT;
+#endif // __midl
 
 // FIXME: Should we put this into the WebCore namespace and use "using" on it
 // as we do with things in WTF?
@@ -49,6 +49,7 @@ enum CreateTag { Create };
 
 template<typename T> class COMPtr {
 public:
+    typedef T* PtrType;
     COMPtr() : m_ptr(0) { }
     COMPtr(T* ptr) : m_ptr(ptr) { if (m_ptr) m_ptr->AddRef(); }
     COMPtr(AdoptCOMTag, T* ptr) : m_ptr(ptr) { }
@@ -223,22 +224,22 @@ template<typename T, typename U> inline bool operator!=(T* a, const COMPtr<U>& b
 
 namespace WTF {
 
-    template<typename P> struct HashTraits<COMPtr<P> > : GenericHashTraits<COMPtr<P> > {
-        static const bool emptyValueIsZero = true;
-        static void constructDeletedValue(COMPtr<P>& slot) { new (&slot) COMPtr<P>(HashTableDeletedValue); }
-        static bool isDeletedValue(const COMPtr<P>& value) { return value.isHashTableDeletedValue(); }
-    };
+template<typename P> struct IsSmartPtr<COMPtr<P>> {
+    static const bool value = true;
+};
 
-    template<typename P> struct PtrHash<COMPtr<P> > : PtrHash<P*> {
-        using PtrHash<P*>::hash;
-        static unsigned hash(const COMPtr<P>& key) { return hash(key.get()); }
-        using PtrHash<P*>::equal;
-        static bool equal(const COMPtr<P>& a, const COMPtr<P>& b) { return a == b; }
-        static bool equal(P* a, const COMPtr<P>& b) { return a == b; }
-        static bool equal(const COMPtr<P>& a, P* b) { return a == b; }
-    };
+template<typename P> struct HashTraits<COMPtr<P> > : SimpleClassHashTraits<COMPtr<P>> {
+    static P* emptyValue() { return nullptr; }
 
-    template<typename P> struct DefaultHash<COMPtr<P> > { typedef PtrHash<COMPtr<P> > Hash; };
+    typedef P* PeekType;
+    static PeekType peek(const COMPtr<P>& value) { return value.get(); }
+    static PeekType peek(P* value) { return value; }
+};
+
+template<typename P> struct DefaultHash<COMPtr<P>> {
+    typedef PtrHash<COMPtr<P>> Hash;
+};
+
 }
 
 #endif

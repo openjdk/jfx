@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -37,9 +37,8 @@ namespace WebCore {
 class HTMLInputElement;
 
 class AccessibilitySlider : public AccessibilityRenderObject {
-
 public:
-    static PassRefPtr<AccessibilitySlider> create(RenderObject*);
+    static Ref<AccessibilitySlider> create(RenderObject*);
     virtual ~AccessibilitySlider() { }
 
 protected:
@@ -50,7 +49,7 @@ private:
     virtual AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const override;
 
     virtual AccessibilityRole roleValue() const override { return SliderRole; }
-    virtual bool isSlider() const override { return true; }
+    virtual bool isSlider() const override final { return true; }
     virtual bool isInputSlider() const override { return true; }
     virtual bool isControl() const override { return true; }
 
@@ -66,26 +65,23 @@ private:
     virtual AccessibilityOrientation orientation() const override;
 };
 
-class AccessibilitySliderThumb : public AccessibilityMockObject {
-
+class AccessibilitySliderThumb final : public AccessibilityMockObject {
 public:
-    static PassRefPtr<AccessibilitySliderThumb> create();
+    static Ref<AccessibilitySliderThumb> create();
     virtual ~AccessibilitySliderThumb() { }
 
-    virtual bool isSliderThumb() const override final { return true; }
-
     virtual AccessibilityRole roleValue() const override { return SliderThumbRole; }
-
     virtual LayoutRect elementRect() const override;
 
 private:
     AccessibilitySliderThumb();
 
+    virtual bool isSliderThumb() const override { return true; }
     virtual bool computeAccessibilityIsIgnored() const override;
 };
 
-ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilitySliderThumb, isSliderThumb())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilitySliderThumb, isSliderThumb())
 
 #endif // AccessibilitySlider_h

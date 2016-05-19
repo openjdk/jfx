@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -36,25 +36,25 @@
 
 namespace JSC {
 
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
 static size_t committedBytesCount = 0;
 
 static Mutex& stackStatisticsMutex()
 {
-    DEFINE_STATIC_LOCAL(Mutex, staticMutex, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(Mutex, staticMutex, ());
     return staticMutex;
 }
-#endif // ENABLE(LLINT_C_LOOP)
+#endif // !ENABLE(JIT)
 
 JSStack::JSStack(VM& vm)
     : m_vm(vm)
     , m_topCallFrame(vm.topCallFrame)
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
     , m_end(0)
     , m_reservedZoneSizeInRegisters(0)
 #endif
 {
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
     size_t capacity = Options::maxPerThreadStackUsage();
     ASSERT(capacity && isPageAligned(capacity));
 
@@ -63,12 +63,12 @@ JSStack::JSStack(VM& vm)
     m_commitTop = highAddress();
 
     m_lastStackTop = baseOfStack();
-#endif // ENABLE(LLINT_C_LOOP)
+#endif // !ENABLE(JIT)
 
     m_topCallFrame = 0;
 }
 
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
 JSStack::~JSStack()
 {
     ptrdiff_t sizeToDecommit = reinterpret_cast<char*>(highAddress()) - reinterpret_cast<char*>(m_commitTop);
@@ -97,8 +97,7 @@ bool JSStack::growSlowCase(Register* newTopOfStack)
     if (newCommitTop < reservationTop())
         return false;
 
-    // Otherwise, the growth is still within our budget. Go ahead and commit
-    // it and return true.
+    // Otherwise, the growth is still within our budget. Commit it and return true.
     m_reservation.commit(newCommitTop, delta);
     addToCommittedByteCount(delta);
     m_commitTop = newCommitTop;
@@ -118,7 +117,7 @@ void JSStack::gatherConservativeRoots(ConservativeRoots& conservativeRoots, JITS
 
 void JSStack::sanitizeStack()
 {
-#if !defined(ADDRESS_SANITIZER)
+#if !ASAN_ENABLED
     ASSERT(topOfStack() <= baseOfStack());
 
     if (m_lastStackTop < topOfStack()) {
@@ -158,9 +157,9 @@ void JSStack::setReservedZoneSize(size_t reservedZoneSize)
     if (m_commitTop >= (m_end + 1) - m_reservedZoneSizeInRegisters)
         growSlowCase(m_end + 1);
 }
-#endif // ENABLE(LLINT_C_LOOP)
+#endif // !ENABLE(JIT)
 
-#if !ENABLE(LLINT_C_LOOP)
+#if ENABLE(JIT)
 Register* JSStack::lowAddress() const
 {
     ASSERT(wtfThreadData().stack().isGrowingDownward());
@@ -172,11 +171,11 @@ Register* JSStack::highAddress() const
     ASSERT(wtfThreadData().stack().isGrowingDownward());
     return reinterpret_cast<Register*>(wtfThreadData().stack().origin());
 }
-#endif // !ENABLE(LLINT_C_LOOP)
+#endif // ENABLE(JIT)
 
 size_t JSStack::committedByteCount()
 {
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
     MutexLocker locker(stackStatisticsMutex());
     return committedBytesCount;
 #else

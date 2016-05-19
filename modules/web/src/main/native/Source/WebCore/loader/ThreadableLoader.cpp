@@ -51,27 +51,44 @@ ThreadableLoaderOptions::~ThreadableLoaderOptions()
 {
 }
 
+ThreadableLoaderOptions::ThreadableLoaderOptions(const ResourceLoaderOptions& baseOptions, PreflightPolicy preflightPolicy, CrossOriginRequestPolicy crossOriginRequestPolicy, RefPtr<SecurityOrigin>&& securityOrigin, String&& initiator)
+    : ResourceLoaderOptions(baseOptions)
+    , preflightPolicy(preflightPolicy)
+    , crossOriginRequestPolicy(crossOriginRequestPolicy)
+    , securityOrigin(WTF::move(securityOrigin))
+    , initiator(WTF::move(initiator))
+{
+}
+
+std::unique_ptr<ThreadableLoaderOptions> ThreadableLoaderOptions::isolatedCopy() const
+{
+    RefPtr<SecurityOrigin> securityOriginCopy;
+    if (securityOrigin)
+        securityOriginCopy = securityOrigin->isolatedCopy();
+    return std::make_unique<ThreadableLoaderOptions>(*this, preflightPolicy, crossOriginRequestPolicy,
+        WTF::move(securityOriginCopy), initiator.isolatedCopy());
+}
+
 PassRefPtr<ThreadableLoader> ThreadableLoader::create(ScriptExecutionContext* context, ThreadableLoaderClient* client, const ResourceRequest& request, const ThreadableLoaderOptions& options)
 {
     ASSERT(client);
     ASSERT(context);
 
-    if (context->isWorkerGlobalScope())
-        return WorkerThreadableLoader::create(toWorkerGlobalScope(context), client, WorkerRunLoop::defaultMode(), request, options);
+    if (is<WorkerGlobalScope>(*context))
+        return WorkerThreadableLoader::create(downcast<WorkerGlobalScope>(context), client, WorkerRunLoop::defaultMode(), request, options);
 
-    return DocumentThreadableLoader::create(toDocument(*context), *client, request, options);
+    return DocumentThreadableLoader::create(downcast<Document>(*context), *client, request, options);
 }
 
 void ThreadableLoader::loadResourceSynchronously(ScriptExecutionContext* context, const ResourceRequest& request, ThreadableLoaderClient& client, const ThreadableLoaderOptions& options)
 {
     ASSERT(context);
 
-    if (context->isWorkerGlobalScope()) {
-        WorkerThreadableLoader::loadResourceSynchronously(toWorkerGlobalScope(context), request, client, options);
-        return;
-    }
-
-    DocumentThreadableLoader::loadResourceSynchronously(*toDocument(context), request, client, options);
+    if (is<WorkerGlobalScope>(*context))
+        WorkerThreadableLoader::loadResourceSynchronously(downcast<WorkerGlobalScope>(context), request, client, options);
+    else
+        DocumentThreadableLoader::loadResourceSynchronously(downcast<Document>(*context), request, client, options);
+    context->didLoadResourceSynchronously(request);
 }
 
 } // namespace WebCore

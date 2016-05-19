@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Google Inc.  All rights reserved.
+ * Copyright (C) 2011, 2013 Google Inc.  All rights reserved.
+ * Copyright (C) 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,81 +36,19 @@
 
 #include "InputStreamPreprocessor.h"
 #include "WebVTTToken.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-class WebVTTTokenizerState {
-public:
-    enum State {
-        DataState,
-        EscapeState,
-        TagState,
-        StartTagState,
-        StartTagClassState,
-        StartTagAnnotationState,
-        EndTagState,
-        EndTagOpenState,
-        TimestampTagState,
-    };
-};
-
 class WebVTTTokenizer {
-    WTF_MAKE_NONCOPYABLE(WebVTTTokenizer);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static OwnPtr<WebVTTTokenizer> create() { return adoptPtr(new WebVTTTokenizer); }
+    explicit WebVTTTokenizer(const String&);
+    bool nextToken(WebVTTToken&);
 
-    typedef WebVTTTokenizerState State;
-
-    void reset();
-
-    bool nextToken(SegmentedString&, WebVTTToken&);
-
-    inline bool haveBufferedCharacterToken()
-    {
-        return m_token->type() == WebVTTToken::Type::Character;
-    }
-
-    inline void bufferCharacter(UChar character)
-    {
-        ASSERT(character != kEndOfFileMarker);
-        m_token->ensureIsCharacterToken();
-        m_token->appendToCharacter(character);
-    }
-
-    inline bool emitAndResumeIn(SegmentedString& source, State::State state)
-    {
-        m_state = state;
-        source.advanceAndUpdateLineNumber();
-        return true;
-    }
-
-    inline bool emitEndOfFile(SegmentedString& source)
-    {
-        if (haveBufferedCharacterToken())
-            return true;
-        m_state = State::DataState;
-        source.advanceAndUpdateLineNumber();
-        m_token->clear();
-        m_token->makeEndOfFile();
-        return true;
-    }
-
-    bool shouldSkipNullCharacters() const { return true; }
+    static bool neverSkipNullCharacters() { return false; }
 
 private:
-    WebVTTTokenizer();
-
-    // m_token is owned by the caller. If nextToken is not on the stack,
-    // this member might be pointing to unallocated memory.
-    WebVTTToken* m_token;
-    WebVTTTokenizerState::State m_state;
-
-    Vector<LChar, 32> m_buffer;
-
-    // ://www.whatwg.org/specs/web-apps/current-work/#preprocessing-the-input-stream
-    InputStreamPreprocessor<WebVTTTokenizer> m_inputStreamPreprocessor;
+    SegmentedString m_input;
+    InputStreamPreprocessor<WebVTTTokenizer> m_preprocessor;
 };
 
 }

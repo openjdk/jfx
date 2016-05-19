@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2007m 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2007-2008, 2014 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -31,23 +31,28 @@
 namespace WebCore {
 
 // NodeList which lists all Nodes in a Element with a given "name" attribute
-class NameNodeList : public LiveNodeList {
+class NameNodeList final : public CachedLiveNodeList<NameNodeList> {
 public:
-    static PassRefPtr<NameNodeList> create(ContainerNode& rootNode, Type type, const AtomicString& name)
+    static Ref<NameNodeList> create(ContainerNode& rootNode, const AtomicString& name)
     {
-        ASSERT_UNUSED(type, type == NameNodeListType);
-        return adoptRef(new NameNodeList(rootNode, name));
+        return adoptRef(*new NameNodeList(rootNode, name));
     }
 
     virtual ~NameNodeList();
 
+    virtual bool elementMatches(Element&) const override;
+    virtual bool isRootedAtDocument() const override { return false; }
+
 private:
     NameNodeList(ContainerNode& rootNode, const AtomicString& name);
 
-    virtual bool nodeMatches(Element*) const override;
-
     AtomicString m_name;
 };
+
+inline bool NameNodeList::elementMatches(Element& element) const
+{
+    return element.getNameAttribute() == m_name;
+}
 
 } // namespace WebCore
 

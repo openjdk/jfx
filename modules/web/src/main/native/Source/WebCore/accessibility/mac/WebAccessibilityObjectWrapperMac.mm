@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -48,6 +48,7 @@
 #import "ContextMenuController.h"
 #import "Editor.h"
 #import "Font.h"
+#import "FontCascade.h"
 #import "FrameLoaderClient.h"
 #import "FrameSelection.h"
 #import "HTMLAnchorElement.h"
@@ -64,7 +65,6 @@
 #import "RenderView.h"
 #import "RenderWidget.h"
 #import "ScrollView.h"
-#import "SimpleFontData.h"
 #import "TextCheckerClient.h"
 #import "TextCheckingHelper.h"
 #import "TextIterator.h"
@@ -116,6 +116,30 @@ using namespace HTMLNames;
 #define NSAccessibilityDescriptionListSubrole @"AXDescriptionList"
 #endif
 
+#ifndef NSAccessibilityContentSeparatorSubrole
+#define NSAccessibilityContentSeparatorSubrole @"AXContentSeparator"
+#endif
+
+#ifndef NSAccessibilityRubyBaseSubRole
+#define NSAccessibilityRubyBaseSubrole @"AXRubyBase"
+#endif
+
+#ifndef NSAccessibilityRubyBlockSubrole
+#define NSAccessibilityRubyBlockSubrole @"AXRubyBlock"
+#endif
+
+#ifndef NSAccessibilityRubyInlineSubrole
+#define NSAccessibilityRubyInlineSubrole @"AXRubyInline"
+#endif
+
+#ifndef NSAccessibilityRubyRunSubrole
+#define NSAccessibilityRubyRunSubrole @"AXRubyRun"
+#endif
+
+#ifndef NSAccessibilityRubyTextSubrole
+#define NSAccessibilityRubyTextSubrole @"AXRubyText"
+#endif
+
 // Miscellaneous
 #ifndef NSAccessibilityBlockQuoteLevelAttribute
 #define NSAccessibilityBlockQuoteLevelAttribute @"AXBlockQuoteLevel"
@@ -123,6 +147,10 @@ using namespace HTMLNames;
 
 #ifndef NSAccessibilityAccessKeyAttribute
 #define NSAccessibilityAccessKeyAttribute @"AXAccessKey"
+#endif
+
+#ifndef NSAccessibilityValueAutofilledAttribute
+#define NSAccessibilityValueAutofilledAttribute @"AXValueAutofilled"
 #endif
 
 #ifndef NSAccessibilityLanguageAttribute
@@ -195,6 +223,10 @@ using namespace HTMLNames;
 
 #ifndef NSAccessibilityPathAttribute
 #define NSAccessibilityPathAttribute @"AXPath"
+#endif
+
+#ifndef NSAccessibilityExpandedTextValueAttribute
+#define NSAccessibilityExpandedTextValueAttribute @"AXExpandedTextValue"
 #endif
 
 #define NSAccessibilityDOMIdentifierAttribute @"AXDOMIdentifier"
@@ -322,6 +354,10 @@ using namespace HTMLNames;
 #define NSAccessibilityMisspelledWordSearchKey @"AXMisspelledWordSearchKey"
 #endif
 
+#ifndef NSAccessibilityOutlineSearchKey
+#define NSAccessibilityOutlineSearchKey @"AXOutlineSearchKey"
+#endif
+
 #ifndef NSAccessibilityPlainTextSearchKey
 #define NSAccessibilityPlainTextSearchKey @"AXPlainTextSearchKey"
 #endif
@@ -375,6 +411,10 @@ using namespace HTMLNames;
 #define NSAccessibilityStartTextMarkerForBoundsParameterizedAttribute @"AXStartTextMarkerForBounds"
 #endif
 
+#ifndef NSAccessibilityLineTextMarkerRangeForTextMarkerParameterizedAttribute
+#define NSAccessibilityLineTextMarkerRangeForTextMarkerParameterizedAttribute @"AXLineTextMarkerRangeForTextMarker"
+#endif
+
 // Text selection
 #ifndef NSAccessibilitySelectTextActivity
 #define NSAccessibilitySelectTextActivity @"AXSelectTextActivity"
@@ -386,6 +426,18 @@ using namespace HTMLNames;
 
 #ifndef NSAccessibilitySelectTextActivityFindAndSelect
 #define NSAccessibilitySelectTextActivityFindAndSelect @"AXSelectTextActivityFindAndSelect"
+#endif
+
+#ifndef kAXSelectTextActivityFindAndCapitalize
+#define kAXSelectTextActivityFindAndCapitalize @"AXSelectTextActivityFindAndCapitalize"
+#endif
+
+#ifndef kAXSelectTextActivityFindAndLowercase
+#define kAXSelectTextActivityFindAndLowercase @"AXSelectTextActivityFindAndLowercase"
+#endif
+
+#ifndef kAXSelectTextActivityFindAndUppercase
+#define kAXSelectTextActivityFindAndUppercase @"AXSelectTextActivityFindAndUppercase"
 #endif
 
 #ifndef NSAccessibilitySelectTextAmbiguityResolution
@@ -431,6 +483,14 @@ using namespace HTMLNames;
 #define NSAccessibilityMathLineThicknessAttribute @"AXMathLineThickness"
 #define NSAccessibilityMathPrescriptsAttribute @"AXMathPrescripts"
 #define NSAccessibilityMathPostscriptsAttribute @"AXMathPostscripts"
+
+#ifndef NSAccessibilityPreventKeyboardDOMEventDispatchAttribute
+#define NSAccessibilityPreventKeyboardDOMEventDispatchAttribute @"AXPreventKeyboardDOMEventDispatch"
+#endif
+
+#ifndef NSAccessibilityCaretBrowsingEnabledAttribute
+#define NSAccessibilityCaretBrowsingEnabledAttribute @"AXCaretBrowsingEnabled"
+#endif
 
 @implementation WebAccessibilityObjectWrapper
 
@@ -549,6 +609,7 @@ static AccessibilitySearchKeyMap* createAccessibilitySearchKeyMap()
         { NSAccessibilityListSearchKey, ListSearchKey },
         { NSAccessibilityLiveRegionSearchKey, LiveRegionSearchKey },
         { NSAccessibilityMisspelledWordSearchKey, MisspelledWordSearchKey },
+        { NSAccessibilityOutlineSearchKey, OutlineSearchKey },
         { NSAccessibilityPlainTextSearchKey, PlainTextSearchKey },
         { NSAccessibilityRadioGroupSearchKey, RadioGroupSearchKey },
         { NSAccessibilitySameTypeSearchKey, SameTypeSearchKey },
@@ -645,6 +706,12 @@ static AccessibilitySelectTextCriteria accessibilitySelectTextCriteriaForCriteri
     if ([activityParameter isKindOfClass:[NSString class]]) {
         if ([activityParameter isEqualToString:NSAccessibilitySelectTextActivityFindAndReplace])
             activity = FindAndReplaceActivity;
+        else if ([activityParameter isEqualToString:kAXSelectTextActivityFindAndCapitalize])
+            activity = FindAndCapitalize;
+        else if ([activityParameter isEqualToString:kAXSelectTextActivityFindAndLowercase])
+            activity = FindAndLowercase;
+        else if ([activityParameter isEqualToString:kAXSelectTextActivityFindAndUppercase])
+            activity = FindAndUppercase;
     }
 
     AccessibilitySelectTextAmbiguityResolution ambiguityResolution = ClosestToSelectionAmbiguityResolution;
@@ -771,7 +838,7 @@ static CGColorRef CreateCGColorIfDifferent(NSColor* nsColor, CGColorRef existing
     // check for match with existing color
     if (existingColor && CGColorEqualToColor(cgColor, existingColor)) {
         CGColorRelease(cgColor);
-        cgColor = 0;
+        cgColor = nullptr;
     }
 
     return cgColor;
@@ -809,7 +876,7 @@ static void AXAttributeStringSetStyle(NSMutableAttributedString* attrString, Ren
     const RenderStyle& style = renderer->style();
 
     // set basic font info
-    AXAttributeStringSetFont(attrString, NSAccessibilityFontTextAttribute, style.font().primaryFont()->getNSFont(), range);
+    AXAttributeStringSetFont(attrString, NSAccessibilityFontTextAttribute, style.fontCascade().primaryFont().getNSFont(), range);
 
     // set basic colors
     AXAttributeStringSetColor(attrString, NSAccessibilityForegroundColorTextAttribute, nsColor(style.visitedDependentColor(CSSPropertyColor)), range);
@@ -843,19 +910,19 @@ static void AXAttributeStringSetStyle(NSMutableAttributedString* attrString, Ren
     }
 
     if ((decor & (TextDecorationUnderline | TextDecorationLineThrough)) != 0) {
-        // find colors using quirk mode approach (strict mode would use current
-        // color for all but the root line box, which would use getTextDecorationColors)
-        Color underline, overline, linethrough;
-        renderer->getTextDecorationColors(decor, underline, overline, linethrough);
+        // FIXME: Should the underline style be reported here?
+        Color underlineColor, overlineColor, linethroughColor;
+        TextDecorationStyle underlineStyle, overlineStyle, linethroughStyle;
+        renderer->getTextDecorationColorsAndStyles(decor, underlineColor, overlineColor, linethroughColor, underlineStyle, overlineStyle, linethroughStyle);
 
         if ((decor & TextDecorationUnderline) != 0) {
             AXAttributeStringSetNumber(attrString, NSAccessibilityUnderlineTextAttribute, [NSNumber numberWithBool:YES], range);
-            AXAttributeStringSetColor(attrString, NSAccessibilityUnderlineColorTextAttribute, nsColor(underline), range);
+            AXAttributeStringSetColor(attrString, NSAccessibilityUnderlineColorTextAttribute, nsColor(underlineColor), range);
         }
 
         if ((decor & TextDecorationLineThrough) != 0) {
             AXAttributeStringSetNumber(attrString, NSAccessibilityStrikethroughTextAttribute, [NSNumber numberWithBool:YES], range);
-            AXAttributeStringSetColor(attrString, NSAccessibilityStrikethroughColorTextAttribute, nsColor(linethrough), range);
+            AXAttributeStringSetColor(attrString, NSAccessibilityStrikethroughColorTextAttribute, nsColor(linethroughColor), range);
         }
     }
 
@@ -895,7 +962,7 @@ static void AXAttributeStringSetSpelling(NSMutableAttributedString* attrString, 
         for (unsigned i = 0; i < size; i++) {
             const TextCheckingResult& result = results[i];
             AXAttributeStringSetNumber(attrString, NSAccessibilityMisspelledTextAttribute, trueValue, NSMakeRange(result.location + range.location, result.length));
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if PLATFORM(MAC)
             AXAttributeStringSetNumber(attrString, NSAccessibilityMarkedMisspelledTextAttribute, trueValue, NSMakeRange(result.location + range.location, result.length));
 #endif
         }
@@ -911,12 +978,23 @@ static void AXAttributeStringSetSpelling(NSMutableAttributedString* attrString, 
 
         NSRange spellRange = NSMakeRange(range.location + currentPosition + misspellingLocation, misspellingLength);
         AXAttributeStringSetNumber(attrString, NSAccessibilityMisspelledTextAttribute, [NSNumber numberWithBool:YES], spellRange);
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if PLATFORM(MAC)
         AXAttributeStringSetNumber(attrString, NSAccessibilityMarkedMisspelledTextAttribute, [NSNumber numberWithBool:YES], spellRange);
 #endif
 
         currentPosition += misspellingLocation + misspellingLength;
     }
+}
+
+static void AXAttributeStringSetexpandedTextValue(NSMutableAttributedString *attrString, RenderObject* renderer, NSRange range)
+{
+    if (!renderer || !AXAttributedStringRangeIsValid(attrString, range))
+        return;
+    AccessibilityObject* axObject = renderer->document().axObjectCache()->getOrCreate(renderer);
+    if (axObject->supportsExpandedTextValue())
+        [attrString addAttribute:NSAccessibilityExpandedTextValueAttribute value:axObject->expandedTextValue() range:range];
+    else
+        [attrString removeAttribute:NSAccessibilityExpandedTextValueAttribute range:range];
 }
 
 static void AXAttributeStringSetHeadingLevel(NSMutableAttributedString* attrString, RenderObject* renderer, NSRange range)
@@ -948,10 +1026,10 @@ static void AXAttributeStringSetElement(NSMutableAttributedString* attrString, N
     if (!AXAttributedStringRangeIsValid(attrString, range))
         return;
 
-    if (object && object->isAccessibilityRenderObject()) {
+    if (is<AccessibilityRenderObject>(object)) {
         // make a serializable AX object
 
-        RenderObject* renderer = toAccessibilityRenderObject(object)->renderer();
+        RenderObject* renderer = downcast<AccessibilityRenderObject>(*object).renderer();
         if (!renderer)
             return;
 
@@ -971,7 +1049,8 @@ static void AXAttributeStringSetElement(NSMutableAttributedString* attrString, N
 static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, Node* node, StringView text)
 {
     // skip invisible text
-    if (!node->renderer())
+    RenderObject* renderer = node->renderer();
+    if (!renderer)
         return;
 
     // easier to calculate the range before appending the string
@@ -987,15 +1066,16 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
 
     // remove inherited attachment from prior AXAttributedStringAppendReplaced
     [attrString removeAttribute:NSAccessibilityAttachmentTextAttribute range:attrStringRange];
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if PLATFORM(MAC)
     [attrString removeAttribute:NSAccessibilityMarkedMisspelledTextAttribute range:attrStringRange];
 #endif
     [attrString removeAttribute:NSAccessibilityMisspelledTextAttribute range:attrStringRange];
 
     // set new attributes
-    AXAttributeStringSetStyle(attrString, node->renderer(), attrStringRange);
-    AXAttributeStringSetHeadingLevel(attrString, node->renderer(), attrStringRange);
-    AXAttributeStringSetBlockquoteLevel(attrString, node->renderer(), attrStringRange);
+    AXAttributeStringSetStyle(attrString, renderer, attrStringRange);
+    AXAttributeStringSetHeadingLevel(attrString, renderer, attrStringRange);
+    AXAttributeStringSetBlockquoteLevel(attrString, renderer, attrStringRange);
+    AXAttributeStringSetexpandedTextValue(attrString, renderer, attrStringRange);
     AXAttributeStringSetElement(attrString, NSAccessibilityLinkTextAttribute, AccessibilityObject::anchorElementForNode(node), attrStringRange);
 
     // do spelling last because it tends to break up the range
@@ -1047,14 +1127,14 @@ static NSString* nsStringForReplacedNode(Node* replacedNode)
         int offset = it.range()->startOffset(exception);
 
         // non-zero length means textual node, zero length means replaced node (AKA "attachments" in AX)
-        if (it.length() != 0) {
+        if (it.text().length()) {
             // Add the text of the list marker item if necessary.
             String listMarkerText = m_object->listMarkerTextForNodeAndPosition(node, VisiblePosition(it.range()->startPosition()));
             if (!listMarkerText.isEmpty())
                 AXAttributedStringAppendText(attrString, node, listMarkerText);
             AXAttributedStringAppendText(attrString, node, it.text());
         } else {
-            Node* replacedNode = node->childNode(offset);
+            Node* replacedNode = node->traverseToChildAt(offset);
             NSString *attachmentString = nsStringForReplacedNode(replacedNode);
             if (attachmentString) {
                 NSRange attrStringRange = NSMakeRange([attrString length], [attachmentString length]);
@@ -1076,14 +1156,14 @@ static NSString* nsStringForReplacedNode(Node* replacedNode)
     return [attrString autorelease];
 }
 
-static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosition startPosition, VisiblePosition endPosition)
+static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, const VisiblePosition& startPosition, const VisiblePosition& endPosition)
 {
     id startTextMarker = textMarkerForVisiblePosition(cache, startPosition);
     id endTextMarker = textMarkerForVisiblePosition(cache, endPosition);
     return textMarkerRangeFromMarkers(startTextMarker, endTextMarker);
 }
 
-- (id)textMarkerRangeFromVisiblePositions:(VisiblePosition)startPosition endPosition:(VisiblePosition)endPosition
+- (id)textMarkerRangeFromVisiblePositions:(const VisiblePosition&)startPosition endPosition:(const VisiblePosition&)endPosition
 {
     return textMarkerRangeFromVisiblePositions(m_object->axObjectCache(), startPosition, endPosition);
 }
@@ -1095,19 +1175,11 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
 
     // All elements should get ShowMenu and ScrollToVisible.
     // But certain earlier VoiceOver versions do not support scroll to visible, and it confuses them to see it in the list.
-#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1090
-    static NSArray *defaultElementActions = [[NSArray alloc] initWithObjects:NSAccessibilityShowMenuAction, nil];
-#else
     static NSArray *defaultElementActions = [[NSArray alloc] initWithObjects:NSAccessibilityShowMenuAction, NSAccessibilityScrollToVisibleAction, nil];
-#endif
 
     // Action elements allow Press.
     // The order is important to VoiceOver, which expects the 'default' action to be the first action. In this case the default action should be press.
-#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1090
-    static NSArray *actionElementActions = [[NSArray alloc] initWithObjects:NSAccessibilityPressAction, NSAccessibilityShowMenuAction, nil];
-#else
     static NSArray *actionElementActions = [[NSArray alloc] initWithObjects:NSAccessibilityPressAction, NSAccessibilityShowMenuAction, NSAccessibilityScrollToVisibleAction, nil];
-#endif
 
     // Menu elements allow Press and Cancel.
     static NSArray *menuElementActions = [[actionElementActions arrayByAddingObject:NSAccessibilityCancelAction] retain];
@@ -1116,7 +1188,7 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
     static NSArray *sliderActions = [[defaultElementActions arrayByAddingObjectsFromArray:[NSArray arrayWithObjects:NSAccessibilityIncrementAction, NSAccessibilityDecrementAction, nil]] retain];
 
     NSArray *actions;
-    if (m_object->actionElement() || m_object->isButton())
+    if (m_object->supportsPressAction())
         actions = actionElementActions;
     else if (m_object->isMenuRelated())
         actions = menuElementActions;
@@ -1139,7 +1211,10 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
     if (m_object->supportsARIAOwns())
         [additional addObject:NSAccessibilityOwnsAttribute];
 
-    if (m_object->supportsARIAExpanded())
+    if (m_object->isToggleButton())
+        [additional addObject:NSAccessibilityValueAttribute];
+
+    if (m_object->supportsExpanded())
         [additional addObject:NSAccessibilityExpandedAttribute];
 
     if (m_object->isScrollbar())
@@ -1151,7 +1226,7 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
     if (m_object->supportsARIADropping())
         [additional addObject:NSAccessibilityDropEffectsAttribute];
 
-    if (m_object->isAccessibilityTable() && toAccessibilityTable(m_object)->supportsSelectedRows())
+    if (is<AccessibilityTable>(*m_object) && downcast<AccessibilityTable>(*m_object).isExposableThroughAccessibility() && downcast<AccessibilityTable>(*m_object).supportsSelectedRows())
         [additional addObject:NSAccessibilitySelectedRowsAttribute];
 
     if (m_object->supportsARIALiveRegion()) {
@@ -1213,6 +1288,9 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
 
     if (m_object->supportsPath())
         [additional addObject:NSAccessibilityPathAttribute];
+
+    if (m_object->supportsExpandedTextValue())
+        [additional addObject:NSAccessibilityExpandedTextValueAttribute];
 
     return additional;
 }
@@ -1307,6 +1385,8 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
         [tempArray addObject:@"AXLayoutCount"];
         [tempArray addObject:NSAccessibilityLoadingProgressAttribute];
         [tempArray addObject:NSAccessibilityURLAttribute];
+        [tempArray addObject:NSAccessibilityCaretBrowsingEnabledAttribute];
+        [tempArray addObject:NSAccessibilityPreventKeyboardDOMEventDispatchAttribute];
         webAreaAttrs = [[NSArray alloc] initWithArray:tempArray];
         [tempArray release];
     }
@@ -1322,6 +1402,7 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
         [tempArray addObject:NSAccessibilityRequiredAttribute];
         [tempArray addObject:NSAccessibilityInvalidAttribute];
         [tempArray addObject:NSAccessibilityPlaceholderValueAttribute];
+        [tempArray addObject:NSAccessibilityValueAutofilledAttribute];
         textAttrs = [[NSArray alloc] initWithArray:tempArray];
         [tempArray release];
     }
@@ -1489,6 +1570,7 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
         [tempArray addObject:NSAccessibilityRequiredAttribute];
         [tempArray addObject:NSAccessibilityInvalidAttribute];
         [tempArray addObject:NSAccessibilityPlaceholderValueAttribute];
+        [tempArray addObject:NSAccessibilityValueAutofilledAttribute];
         passwordFieldAttrs = [[NSArray alloc] initWithArray:tempArray];
         [tempArray release];
     }
@@ -1536,10 +1618,10 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
     else if (m_object->isTextControl())
         objectAttributes = textAttrs;
 
-    else if (m_object->isAnchor() || m_object->isImage() || m_object->isLink())
+    else if (m_object->isLink() || m_object->isImage())
         objectAttributes = anchorAttrs;
 
-    else if (m_object->isAccessibilityTable())
+    else if (is<AccessibilityTable>(*m_object) && downcast<AccessibilityTable>(*m_object).isExposableThroughAccessibility())
         objectAttributes = tableAttrs;
     else if (m_object->isTableColumn())
         objectAttributes = tableColAttrs;
@@ -1698,11 +1780,11 @@ static NSMutableArray *convertStringsToNSArray(const Vector<String>& vector)
     } else {
 
         // Find the appropriate scroll view to use to convert the contents to the window.
-        ScrollView* scrollView = 0;
-        AccessibilityObject* parent = 0;
+        ScrollView* scrollView = nullptr;
+        AccessibilityObject* parent = nullptr;
         for (parent = m_object->parentObject(); parent; parent = parent->parentObject()) {
-            if (parent->isAccessibilityScrollView()) {
-                scrollView = toAccessibilityScrollView(parent)->scrollView();
+            if (is<AccessibilityScrollView>(*parent)) {
+                scrollView = downcast<AccessibilityScrollView>(*parent).scrollView();
                 break;
             }
         }
@@ -1767,7 +1849,7 @@ static void WebTransformCGPathToNSBezierPath(void *info, const CGPathElement *el
 
 - (NSValue *)position
 {
-    IntRect rect = pixelSnappedIntRect(m_object->elementRect());
+    IntRect rect = snappedIntRect(m_object->elementRect());
 
     // The Cocoa accessibility API wants the lower-left corner.
     FloatPoint floatPoint = FloatPoint(rect.x(), rect.maxY());
@@ -1846,8 +1928,10 @@ static const AccessibilityRoleMap& createAccessibilityRoleMap()
         { ListBoxRole, NSAccessibilityListRole },
         { ListBoxOptionRole, NSAccessibilityStaticTextRole },
         { CellRole, NSAccessibilityCellRole },
+        { GridCellRole, NSAccessibilityCellRole },
         { TableHeaderContainerRole, NSAccessibilityGroupRole },
-        { RowHeaderRole, NSAccessibilityGroupRole },
+        { ColumnHeaderRole, NSAccessibilityCellRole },
+        { RowHeaderRole, NSAccessibilityCellRole },
         { DefinitionRole, NSAccessibilityGroupRole },
         { DescriptionListDetailRole, NSAccessibilityGroupRole },
         { DescriptionListTermRole, NSAccessibilityGroupRole },
@@ -1885,13 +1969,25 @@ static const AccessibilityRoleMap& createAccessibilityRoleMap()
         { FormRole, NSAccessibilityGroupRole },
         { SpinButtonRole, NSAccessibilityIncrementorRole },
         { FooterRole, NSAccessibilityGroupRole },
-        { ToggleButtonRole, NSAccessibilityButtonRole },
+        { ToggleButtonRole, NSAccessibilityCheckBoxRole },
         { CanvasRole, NSAccessibilityImageRole },
         { SVGRootRole, NSAccessibilityGroupRole },
         { LegendRole, NSAccessibilityGroupRole },
         { MathElementRole, NSAccessibilityGroupRole },
         { AudioRole, NSAccessibilityGroupRole },
-        { VideoRole, NSAccessibilityGroupRole }
+        { VideoRole, NSAccessibilityGroupRole },
+        { HorizontalRuleRole, NSAccessibilitySplitterRole },
+        { BlockquoteRole, NSAccessibilityGroupRole },
+        { SwitchRole, NSAccessibilityCheckBoxRole },
+        { SearchFieldRole, NSAccessibilityTextFieldRole },
+        { PreRole, NSAccessibilityGroupRole },
+        { RubyBaseRole, NSAccessibilityGroupRole },
+        { RubyBlockRole, NSAccessibilityGroupRole },
+        { RubyInlineRole, NSAccessibilityGroupRole },
+        { RubyRunRole, NSAccessibilityGroupRole },
+        { RubyTextRole, NSAccessibilityGroupRole },
+        { DetailsRole, NSAccessibilityGroupRole },
+        { SummaryRole, NSAccessibilityGroupRole },
     };
     AccessibilityRoleMap& roleMap = *new AccessibilityRoleMap;
 
@@ -1910,8 +2006,11 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 
 - (NSString*)role
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (m_object->isAttachment())
         return [[self attachmentView] accessibilityAttributeValue:NSAccessibilityRoleAttribute];
+#pragma clang diagnostic pop
     AccessibilityRole role = m_object->roleValue();
     if (role == CanvasRole && m_object->canvasHasFallbackContent())
         role = GroupRole;
@@ -1932,13 +2031,18 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 
     if (m_object->isAttachment()) {
         NSView* attachView = [self attachmentView];
-        if ([[attachView accessibilityAttributeNames] containsObject:NSAccessibilitySubroleAttribute]) {
+        if ([[attachView accessibilityAttributeNames] containsObject:NSAccessibilitySubroleAttribute])
             return [attachView accessibilityAttributeValue:NSAccessibilitySubroleAttribute];
-        }
     }
 
-    if (m_object->isSpinButtonPart()) {
-        if (toAccessibilitySpinButtonPart(m_object)->isIncrementor())
+    AccessibilityRole role = m_object->roleValue();
+    if (role == HorizontalRuleRole)
+        return NSAccessibilityContentSeparatorSubrole;
+    if (role == ToggleButtonRole)
+        return NSAccessibilityToggleSubrole;
+
+    if (is<AccessibilitySpinButtonPart>(*m_object)) {
+        if (downcast<AccessibilitySpinButtonPart>(*m_object).isIncrementor())
             return NSAccessibilityIncrementArrowSubrole;
 
         return NSAccessibilityDecrementArrowSubrole;
@@ -1950,21 +2054,20 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if (m_object->isTreeItem())
         return NSAccessibilityOutlineRowSubrole;
 
-    if (m_object->isList()) {
-        AccessibilityList* listObject = toAccessibilityList(m_object);
-        if (listObject->isUnorderedList() || listObject->isOrderedList())
+    if (m_object->isFieldset())
+        return @"AXFieldset";
+
+    if (is<AccessibilityList>(*m_object)) {
+        auto& listObject = downcast<AccessibilityList>(*m_object);
+        if (listObject.isUnorderedList() || listObject.isOrderedList())
             return NSAccessibilityContentListSubrole;
-        if (listObject->isDescriptionList()) {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1090
-            return NSAccessibilityDefinitionListSubrole;
-#else
+        if (listObject.isDescriptionList()) {
             return NSAccessibilityDescriptionListSubrole;
-#endif
         }
     }
 
     // ARIA content subroles.
-    switch (m_object->roleValue()) {
+    switch (role) {
         case LandmarkApplicationRole:
             return @"AXLandmarkApplication";
         case LandmarkBannerRole:
@@ -2020,7 +2123,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             break;
     }
 
-    if (m_object->roleValue() == MathElementRole) {
+    if (role == MathElementRole) {
         if (m_object->isMathFraction())
             return @"AXMathFraction";
         if (m_object->isMathFenced())
@@ -2057,13 +2160,36 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             return @"AXMathMultiscript";
     }
 
-    if (m_object->roleValue() == VideoRole)
+    if (role == VideoRole)
         return @"AXVideo";
-    if (m_object->roleValue() == AudioRole)
+    if (role == AudioRole)
         return @"AXAudio";
+    if (role == DetailsRole)
+        return @"AXDetails";
+    if (role == SummaryRole)
+        return @"AXSummary";
 
     if (m_object->isMediaTimeline())
         return NSAccessibilityTimelineSubrole;
+
+    if (m_object->isSwitch())
+        return NSAccessibilitySwitchSubrole;
+
+    // Ruby subroles
+    switch (role) {
+    case RubyBaseRole:
+        return NSAccessibilityRubyBaseSubrole;
+    case RubyBlockRole:
+        return NSAccessibilityRubyBlockSubrole;
+    case RubyInlineRole:
+        return NSAccessibilityRubyInlineSubrole;
+    case RubyRunRole:
+        return NSAccessibilityRubyRunSubrole;
+    case RubyTextRole:
+        return NSAccessibilityRubyTextSubrole;
+    default:
+        break;
+    }
 
     return nil;
 }
@@ -2074,9 +2200,16 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if (!m_object)
         return nil;
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     // attachments have the AXImage role, but a different subrole
     if (m_object->isAttachment())
         return [[self attachmentView] accessibilityAttributeValue:NSAccessibilityRoleDescriptionAttribute];
+#pragma clang diagnostic pop
+
+    const AtomicString& overrideRoleDescription = m_object->roleDescription();
+    if (!overrideRoleDescription.isNull())
+        return overrideRoleDescription;
 
     NSString* axRole = [self role];
 
@@ -2124,11 +2257,13 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 
     // Only returning for DL (not UL or OL) because description changed with HTML5 from 'definition list' to
     // superset 'description list' and does not return the same values in AX API on some OS versions.
-    if (m_object->isList()) {
-        AccessibilityList* listObject = toAccessibilityList(m_object);
-        if (listObject->isDescriptionList())
+    if (is<AccessibilityList>(*m_object)) {
+        if (downcast<AccessibilityList>(*m_object).isDescriptionList())
             return AXDescriptionListText();
     }
+
+    if (m_object->roleValue() == HorizontalRuleRole)
+        return AXHorizontalRuleDescriptionText();
 
     // AppKit also returns AXTab for the role description for a tab item.
     if (m_object->isTabItem())
@@ -2159,7 +2294,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 
 - (id)scrollViewParent
 {
-    if (!m_object || !m_object->isAccessibilityScrollView())
+    if (!is<AccessibilityScrollView>(m_object))
         return nil;
 
     // If this scroll view provides it's parent object (because it's a sub-frame), then
@@ -2167,8 +2302,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if (m_object->parentObject())
         return nil;
 
-    AccessibilityScrollView* scrollView = toAccessibilityScrollView(m_object);
-    ScrollView* scroll = scrollView->scrollView();
+    ScrollView* scroll = downcast<AccessibilityScrollView>(*m_object).scrollView();
     if (!scroll)
         return nil;
 
@@ -2275,7 +2409,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if (m_object->isWebArea()) {
         if ([attributeName isEqualToString:@"AXLinkUIElements"]) {
             AccessibilityObject::AccessibilityChildrenVector links;
-            toAccessibilityRenderObject(m_object)->getDocumentLinks(links);
+            downcast<AccessibilityRenderObject>(*m_object).getDocumentLinks(links);
             return convertToNSArray(links);
         }
         if ([attributeName isEqualToString:@"AXLoaded"])
@@ -2334,11 +2468,11 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     }
 
     // Only native spin buttons have increment and decrement buttons.
-    if (m_object->isNativeSpinButton()) {
+    if (is<AccessibilitySpinButton>(*m_object)) {
         if ([attributeName isEqualToString:NSAccessibilityIncrementButtonAttribute])
-            return toAccessibilitySpinButton(m_object)->incrementButton()->wrapper();
+            return downcast<AccessibilitySpinButton>(*m_object).incrementButton()->wrapper();
         if ([attributeName isEqualToString:NSAccessibilityDecrementButtonAttribute])
-            return toAccessibilitySpinButton(m_object)->decrementButton()->wrapper();
+            return downcast<AccessibilitySpinButton>(*m_object).decrementButton()->wrapper();
     }
 
     if ([attributeName isEqualToString: @"AXVisited"])
@@ -2354,7 +2488,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         if (m_object->isMeter())
             return [NSString string];
 
-        return [self accessibilityTitle];
+        return [self baseAccessibilityTitle];
     }
 
     if ([attributeName isEqualToString: NSAccessibilityDescriptionAttribute]) {
@@ -2362,7 +2496,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             if ([[[self attachmentView] accessibilityAttributeNames] containsObject:NSAccessibilityDescriptionAttribute])
                 return [[self attachmentView] accessibilityAttributeValue:NSAccessibilityDescriptionAttribute];
         }
-        return [self accessibilityDescription];
+        return [self baseAccessibilityDescription];
     }
 
     if ([attributeName isEqualToString: NSAccessibilityValueAttribute]) {
@@ -2377,7 +2511,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         if (m_object->isHeading())
             return [NSNumber numberWithInt:m_object->headingLevel()];
 
-        if (m_object->isCheckboxOrRadio() || m_object->isMenuItem()) {
+        if (m_object->isCheckboxOrRadio() || m_object->isMenuItem() || m_object->isSwitch() || m_object->isToggleButton()) {
             switch (m_object->checkboxOrRadioValue()) {
                 case ButtonStateOff:
                     return [NSNumber numberWithInt:0];
@@ -2420,14 +2554,22 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         return (m_object->isChecked()) ? [NSString stringWithCharacters:&ch length:1] : nil;
     }
 
-    if ([attributeName isEqualToString: NSAccessibilityMinValueAttribute])
+    if ([attributeName isEqualToString: NSAccessibilityMinValueAttribute]) {
+        // Indeterminate progress indicator should return 0.
+        if (m_object->isProgressIndicator() && !m_object->hasAttribute(aria_valuenowAttr))
+            return @0;
         return [NSNumber numberWithFloat:m_object->minValueForRange()];
+    }
 
-    if ([attributeName isEqualToString: NSAccessibilityMaxValueAttribute])
+    if ([attributeName isEqualToString: NSAccessibilityMaxValueAttribute]) {
+        // Indeterminate progress indicator should return 0.
+        if (m_object->isProgressIndicator() && !m_object->hasAttribute(aria_valuenowAttr))
+            return @0;
         return [NSNumber numberWithFloat:m_object->maxValueForRange()];
+    }
 
     if ([attributeName isEqualToString: NSAccessibilityHelpAttribute])
-        return [self accessibilityHelpText];
+        return [self baseAccessibilityHelpText];
 
     if ([attributeName isEqualToString: NSAccessibilityFocusedAttribute])
         return [NSNumber numberWithBool: m_object->isFocused()];
@@ -2436,7 +2578,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         return [NSNumber numberWithBool: m_object->isEnabled()];
 
     if ([attributeName isEqualToString: NSAccessibilitySizeAttribute]) {
-        IntSize s = m_object->pixelSnappedSize();
+        IntSize s = m_object->elementRect().pixelSnappedSize();
         return [NSValue valueWithSize: NSMakeSize(s.width(), s.height())];
     }
 
@@ -2498,20 +2640,21 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         }
     }
 
-    if (m_object->isAccessibilityTable()) {
+    if (is<AccessibilityTable>(*m_object) && downcast<AccessibilityTable>(*m_object).isExposableThroughAccessibility()) {
+        auto& table = downcast<AccessibilityTable>(*m_object);
         if ([attributeName isEqualToString:NSAccessibilityRowsAttribute])
-            return convertToNSArray(toAccessibilityTable(m_object)->rows());
+            return convertToNSArray(table.rows());
 
         if ([attributeName isEqualToString:NSAccessibilityVisibleRowsAttribute]) {
             AccessibilityObject::AccessibilityChildrenVector visibleRows;
-            toAccessibilityTable(m_object)->visibleRows(visibleRows);
+            table.visibleRows(visibleRows);
             return convertToNSArray(visibleRows);
         }
 
         // TODO: distinguish between visible and non-visible columns
         if ([attributeName isEqualToString:NSAccessibilityColumnsAttribute] ||
             [attributeName isEqualToString:NSAccessibilityVisibleColumnsAttribute]) {
-            return convertToNSArray(toAccessibilityTable(m_object)->columns());
+            return convertToNSArray(table.columns());
         }
 
         if ([attributeName isEqualToString:NSAccessibilitySelectedRowsAttribute]) {
@@ -2527,12 +2670,12 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 
         if ([attributeName isEqualToString:NSAccessibilityColumnHeaderUIElementsAttribute]) {
             AccessibilityObject::AccessibilityChildrenVector columnHeaders;
-            toAccessibilityTable(m_object)->columnHeaders(columnHeaders);
+            table.columnHeaders(columnHeaders);
             return convertToNSArray(columnHeaders);
         }
 
         if ([attributeName isEqualToString:NSAccessibilityHeaderAttribute]) {
-            AccessibilityObject* headerContainer = toAccessibilityTable(m_object)->headerContainer();
+            AccessibilityObject* headerContainer = table.headerContainer();
             if (headerContainer)
                 return headerContainer->wrapper();
             return nil;
@@ -2540,59 +2683,61 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 
         if ([attributeName isEqualToString:NSAccessibilityRowHeaderUIElementsAttribute]) {
             AccessibilityObject::AccessibilityChildrenVector rowHeaders;
-            toAccessibilityTable(m_object)->rowHeaders(rowHeaders);
+            table.rowHeaders(rowHeaders);
             return convertToNSArray(rowHeaders);
         }
 
         if ([attributeName isEqualToString:NSAccessibilityVisibleCellsAttribute]) {
             AccessibilityObject::AccessibilityChildrenVector cells;
-            toAccessibilityTable(m_object)->cells(cells);
+            table.cells(cells);
             return convertToNSArray(cells);
         }
 
         if ([attributeName isEqualToString:NSAccessibilityColumnCountAttribute])
-            return @(toAccessibilityTable(m_object)->columnCount());
+            return @(table.columnCount());
 
         if ([attributeName isEqualToString:NSAccessibilityRowCountAttribute])
-            return @(toAccessibilityTable(m_object)->rowCount());
+            return @(table.rowCount());
     }
 
-    if (m_object->isTableColumn()) {
+    if (is<AccessibilityTableColumn>(*m_object)) {
+        auto& column = downcast<AccessibilityTableColumn>(*m_object);
         if ([attributeName isEqualToString:NSAccessibilityIndexAttribute])
-            return [NSNumber numberWithInt:toAccessibilityTableColumn(m_object)->columnIndex()];
+            return [NSNumber numberWithInt:column.columnIndex()];
 
         // rows attribute for a column is the list of all the elements in that column at each row
         if ([attributeName isEqualToString:NSAccessibilityRowsAttribute] ||
             [attributeName isEqualToString:NSAccessibilityVisibleRowsAttribute]) {
-            return convertToNSArray(toAccessibilityTableColumn(m_object)->children());
+            return convertToNSArray(column.children());
         }
         if ([attributeName isEqualToString:NSAccessibilityHeaderAttribute]) {
-            AccessibilityObject* header = toAccessibilityTableColumn(m_object)->headerObject();
+            AccessibilityObject* header = column.headerObject();
             if (!header)
                 return nil;
             return header->wrapper();
         }
     }
 
-    if (m_object->isTableCell()) {
+    if (is<AccessibilityTableCell>(*m_object)) {
+        auto& cell = downcast<AccessibilityTableCell>(*m_object);
         if ([attributeName isEqualToString:NSAccessibilityRowIndexRangeAttribute]) {
             std::pair<unsigned, unsigned> rowRange;
-            toAccessibilityTableCell(m_object)->rowIndexRange(rowRange);
+            cell.rowIndexRange(rowRange);
             return [NSValue valueWithRange:NSMakeRange(rowRange.first, rowRange.second)];
         }
         if ([attributeName isEqualToString:NSAccessibilityColumnIndexRangeAttribute]) {
             std::pair<unsigned, unsigned> columnRange;
-            toAccessibilityTableCell(m_object)->columnIndexRange(columnRange);
+            cell.columnIndexRange(columnRange);
             return [NSValue valueWithRange:NSMakeRange(columnRange.first, columnRange.second)];
         }
         if ([attributeName isEqualToString:NSAccessibilityColumnHeaderUIElementsAttribute]) {
             AccessibilityObject::AccessibilityChildrenVector columnHeaders;
-            toAccessibilityTableCell(m_object)->columnHeaders(columnHeaders);
+            cell.columnHeaders(columnHeaders);
             return convertToNSArray(columnHeaders);
         }
         if ([attributeName isEqualToString:NSAccessibilityRowHeaderUIElementsAttribute]) {
             AccessibilityObject::AccessibilityChildrenVector rowHeaders;
-            toAccessibilityTableCell(m_object)->rowHeaders(rowHeaders);
+            cell.rowHeaders(rowHeaders);
             return convertToNSArray(rowHeaders);
         }
     }
@@ -2633,9 +2778,9 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 
             return nil;
         }
-        if (m_object->isTableRow()) {
+        if (is<AccessibilityTableRow>(*m_object)) {
             if ([attributeName isEqualToString:NSAccessibilityIndexAttribute])
-                return [NSNumber numberWithInt:toAccessibilityTableRow(m_object)->rowIndex()];
+                return [NSNumber numberWithInt:downcast<AccessibilityTableRow>(*m_object).rowIndex()];
         }
     }
 
@@ -2645,9 +2790,9 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             AccessibilityObject::AccessibilityChildrenVector rowsCopy;
             m_object->ariaTreeItemDisclosedRows(rowsCopy);
             return convertToNSArray(rowsCopy);
-        } else if (m_object->isARIATreeGridRow()) {
+        } else if (is<AccessibilityARIAGridRow>(*m_object)) {
             AccessibilityObject::AccessibilityChildrenVector rowsCopy;
-            toAccessibilityARIAGridRow(m_object)->disclosedRows(rowsCopy);
+            downcast<AccessibilityARIAGridRow>(*m_object).disclosedRows(rowsCopy);
             return convertToNSArray(rowsCopy);
         }
     }
@@ -2665,8 +2810,8 @@ static NSString* roleValueToNSString(AccessibilityRole value)
                 parent = parent->parentObject();
             }
             return nil;
-        } else if (m_object->isARIATreeGridRow()) {
-            AccessibilityObject* row = toAccessibilityARIAGridRow(m_object)->disclosedByRow();
+        } else if (is<AccessibilityARIAGridRow>(*m_object)) {
+            AccessibilityObject* row = downcast<AccessibilityARIAGridRow>(*m_object).disclosedByRow();
             if (!row)
                 return nil;
             return row->wrapper();
@@ -2704,8 +2849,6 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if ([attributeName isEqualToString: NSAccessibilityLinkedUIElementsAttribute]) {
         AccessibilityObject::AccessibilityChildrenVector linkedUIElements;
         m_object->linkedUIElements(linkedUIElements);
-        if (linkedUIElements.size() == 0)
-            return nil;
         return convertToNSArray(linkedUIElements);
     }
 
@@ -2713,7 +2856,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         return [NSNumber numberWithBool:m_object->isSelected()];
 
     if ([attributeName isEqualToString: NSAccessibilityServesAsTitleForUIElementsAttribute] && m_object->isMenuButton()) {
-        AccessibilityObject* uiElement = toAccessibilityRenderObject(m_object)->menuForMenuButton();
+        AccessibilityObject* uiElement = downcast<AccessibilityRenderObject>(*m_object).menuForMenuButton();
         if (uiElement)
             return [NSArray arrayWithObject:uiElement->wrapper()];
     }
@@ -2730,7 +2873,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 
     if ([attributeName isEqualToString:NSAccessibilityValueDescriptionAttribute]) {
         if (m_object->isMeter())
-            return [self accessibilityTitle];
+            return [self baseAccessibilityTitle];
 
         return m_object->valueDescription();
     }
@@ -2803,6 +2946,9 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if ([attributeName isEqualToString:NSAccessibilityPlaceholderValueAttribute])
         return m_object->placeholderValue();
 
+    if ([attributeName isEqualToString:NSAccessibilityValueAutofilledAttribute])
+        return @(m_object->isValueAutofilled());
+
     if ([attributeName isEqualToString:NSAccessibilityHasPopupAttribute])
         return [NSNumber numberWithBool:m_object->ariaHasPopup()];
 
@@ -2848,6 +2994,9 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             return [self accessibilityMathPrescriptPairs];
     }
 
+    if ([attributeName isEqualToString:NSAccessibilityExpandedTextValueAttribute])
+        return m_object->expandedTextValue();
+
     if ([attributeName isEqualToString:NSAccessibilityDOMIdentifierAttribute])
         return m_object->identifierAttribute();
     if ([attributeName isEqualToString:NSAccessibilityDOMClassListAttribute]) {
@@ -2883,6 +3032,12 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     // Used by DRT to find an accessible node by its element id.
     if ([attributeName isEqualToString:@"AXDRTElementIdAttribute"])
         return m_object->getAttribute(idAttr);
+
+    if (m_object->isWebArea() && [attributeName isEqualToString:NSAccessibilityPreventKeyboardDOMEventDispatchAttribute])
+        return [NSNumber numberWithBool:m_object->preventKeyboardDOMEventDispatch()];
+
+    if (m_object->isWebArea() && [attributeName isEqualToString:NSAccessibilityCaretBrowsingEnabledAttribute])
+        return [NSNumber numberWithBool:m_object->caretBrowsingEnabled()];
 
     return nil;
 }
@@ -2925,7 +3080,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 - (BOOL)accessibilityIsAttributeSettable:(NSString*)attributeName
 {
     if (![self updateObjectBackingStore])
-        return nil;
+        return NO;
 
     if ([attributeName isEqualToString: @"AXSelectedTextMarkerRange"])
         return YES;
@@ -2942,7 +3097,8 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if ([attributeName isEqualToString: NSAccessibilitySelectedChildrenAttribute])
         return m_object->canSetSelectedChildrenAttribute();
 
-    if ([attributeName isEqualToString:NSAccessibilityDisclosingAttribute])
+    if ([attributeName isEqualToString:NSAccessibilityDisclosingAttribute]
+        || [attributeName isEqualToString:NSAccessibilityExpandedAttribute])
         return m_object->canSetExpandedAttribute();
 
     if ([attributeName isEqualToString:NSAccessibilitySelectedRowsAttribute])
@@ -2954,6 +3110,12 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         return m_object->canSetTextRangeAttributes();
 
     if ([attributeName isEqualToString:NSAccessibilityGrabbedAttribute])
+        return YES;
+
+    if (m_object->isWebArea() && [attributeName isEqualToString:NSAccessibilityPreventKeyboardDOMEventDispatchAttribute])
+        return YES;
+
+    if (m_object->isWebArea() && [attributeName isEqualToString:NSAccessibilityCaretBrowsingEnabledAttribute])
         return YES;
 
     return NO;
@@ -3025,6 +3187,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
                       NSAccessibilityUIElementsForSearchPredicateParameterizedAttribute,
                       NSAccessibilityEndTextMarkerForBoundsParameterizedAttribute,
                       NSAccessibilityStartTextMarkerForBoundsParameterizedAttribute,
+                      NSAccessibilityLineTextMarkerRangeForTextMarkerParameterizedAttribute,
                       NSAccessibilitySelectTextWithCriteriaParameterizedAttribute,
                       nil];
     }
@@ -3059,7 +3222,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     }
 
     if (m_object->isPasswordField())
-        return [NSArray array];
+        return @[ NSAccessibilityUIElementsForSearchPredicateParameterizedAttribute ];
 
     if (!m_object->isAccessibilityRenderObject())
         return paramAttrs;
@@ -3067,7 +3230,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if (m_object->isTextControl())
         return textParamAttrs;
 
-    if (m_object->isAccessibilityTable())
+    if (is<AccessibilityTable>(*m_object) && downcast<AccessibilityTable>(*m_object).isExposableThroughAccessibility())
         return tableParamAttrs;
 
     if (m_object->isMenuRelated())
@@ -3078,6 +3241,9 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 
     return paramAttrs;
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 - (void)accessibilityPerformPressAction
 {
@@ -3112,6 +3278,8 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         m_object->decrement();
 }
 
+#pragma clang diagnostic pop
+
 - (void)accessibilityPerformShowMenuAction
 {
     if (m_object->roleValue() == ComboBoxRole)
@@ -3129,7 +3297,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if (!page)
         return;
 
-    IntRect rect = pixelSnappedIntRect(m_object->elementRect());
+    IntRect rect = snappedIntRect(m_object->elementRect());
     FrameView* frameView = m_object->documentFrameView();
 
     // On WK2, we need to account for the scroll position.
@@ -3137,8 +3305,8 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     if (frameView && !frameView->platformWidget()) {
         // Find the appropriate scroll view to use to convert the contents to the window.
         for (AccessibilityObject* parent = m_object->parentObject(); parent; parent = parent->parentObject()) {
-            if (parent->isAccessibilityScrollView()) {
-                ScrollView* scrollView = toAccessibilityScrollView(parent)->scrollView();
+            if (is<AccessibilityScrollView>(*parent)) {
+                ScrollView* scrollView = downcast<AccessibilityScrollView>(*parent).scrollView();
                 rect = scrollView->contentsToRootView(rect);
                 break;
             }
@@ -3175,6 +3343,15 @@ static NSString* roleValueToNSString(AccessibilityRole value)
 }
 
 - (void)accessibilitySetValue:(id)value forAttribute:(NSString*)attributeName
+{
+    // In case anything we do by changing values causes an alert or other modal
+    // behaviors, we need to return now, so that VoiceOver doesn't hang indefinitely.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _accessibilitySetValue:value forAttribute:attributeName];
+    });
+}
+
+- (void)_accessibilitySetValue:(id)value forAttribute:(NSString*)attributeName
 {
     if (![self updateObjectBackingStore])
         return;
@@ -3239,7 +3416,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             return;
         AccessibilityObject::AccessibilityChildrenVector selectedChildren;
         convertToVector(array, selectedChildren);
-        toAccessibilityListBox(m_object)->setSelectedChildren(selectedChildren);
+        downcast<AccessibilityListBox>(*m_object).setSelectedChildren(selectedChildren);
     } else if (m_object->isTextControl()) {
         if ([attributeName isEqualToString: NSAccessibilitySelectedTextAttribute]) {
             m_object->setSelectedText(string);
@@ -3248,30 +3425,41 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         } else if ([attributeName isEqualToString: NSAccessibilityVisibleCharacterRangeAttribute]) {
             m_object->makeRangeVisible(PlainTextRange(range.location, range.length));
         }
-    } else if ([attributeName isEqualToString:NSAccessibilityDisclosingAttribute])
+    } else if ([attributeName isEqualToString:NSAccessibilityDisclosingAttribute] || [attributeName isEqualToString:NSAccessibilityExpandedAttribute])
         m_object->setIsExpanded([number boolValue]);
     else if ([attributeName isEqualToString:NSAccessibilitySelectedRowsAttribute]) {
         AccessibilityObject::AccessibilityChildrenVector selectedRows;
         convertToVector(array, selectedRows);
-        if (m_object->isTree() || m_object->isAccessibilityTable())
+        if (m_object->isTree() || (is<AccessibilityTable>(*m_object) && downcast<AccessibilityTable>(*m_object).isExposableThroughAccessibility()))
             m_object->setSelectedRows(selectedRows);
     } else if ([attributeName isEqualToString:NSAccessibilityGrabbedAttribute])
         m_object->setARIAGrabbed([number boolValue]);
+    else if (m_object->isWebArea() && [attributeName isEqualToString:NSAccessibilityPreventKeyboardDOMEventDispatchAttribute])
+        m_object->setPreventKeyboardDOMEventDispatch([number boolValue]);
+    else if (m_object->isWebArea() && [attributeName isEqualToString:NSAccessibilityCaretBrowsingEnabledAttribute])
+        m_object->setCaretBrowsingEnabled([number boolValue]);
+}
+
+// Used to set attributes synchronously on accessibility elements within tests.
+// For use with DumpRenderTree only.
+- (void)_accessibilitySetTestValue:(id)value forAttribute:(NSString*)attributeName
+{
+    [self _accessibilitySetValue:value forAttribute:attributeName];
 }
 
 static RenderObject* rendererForView(NSView* view)
 {
     if (![view conformsToProtocol:@protocol(WebCoreFrameView)])
-        return 0;
+        return nullptr;
 
     NSView<WebCoreFrameView>* frameView = (NSView<WebCoreFrameView>*)view;
     Frame* frame = [frameView _web_frame];
     if (!frame)
-        return 0;
+        return nullptr;
 
     Node* node = frame->document()->ownerElement();
     if (!node)
-        return 0;
+        return nullptr;
 
     return node->renderer();
 }
@@ -3350,8 +3538,64 @@ static RenderObject* rendererForView(NSView* view)
 - (NSData*)doAXRTFForRange:(NSRange)range
 {
     NSAttributedString* attrString = [self doAXAttributedStringForRange:range];
-    return [attrString RTFFromRange: NSMakeRange(0, [attrString length]) documentAttributes: nil];
+    return [attrString RTFFromRange: NSMakeRange(0, [attrString length]) documentAttributes:@{ }];
 }
+
+#if ENABLE(TREE_DEBUGGING)
+- (NSString *)debugDescriptionForTextMarker:(id)textMarker
+{
+    char description[1024];
+    [self visiblePositionForTextMarker:textMarker].formatForDebugger(description, sizeof(description));
+    return [NSString stringWithUTF8String:description];
+
+}
+
+- (NSString *)debugDescriptionForTextMarkerRange:(id)textMarkerRange
+{
+    VisiblePositionRange visiblePositionRange = [self visiblePositionRangeForTextMarkerRange:textMarkerRange];
+    if (visiblePositionRange.isNull())
+        return @"<null>";
+    char description[2048];
+    formatForDebugger(visiblePositionRange, description, sizeof(description));
+    return [NSString stringWithUTF8String:description];
+
+}
+
+- (void)showNodeForTextMarker:(id)textMarker
+{
+    VisiblePosition visiblePosition = [self visiblePositionForTextMarker:textMarker];
+    Node* node = visiblePosition.deepEquivalent().deprecatedNode();
+    if (!node)
+        return;
+    node->showNode();
+    node->showNodePathForThis();
+}
+
+- (void)showNodeTreeForTextMarker:(id)textMarker
+{
+    VisiblePosition visiblePosition = [self visiblePositionForTextMarker:textMarker];
+    Node* node = visiblePosition.deepEquivalent().deprecatedNode();
+    if (!node)
+        return;
+    node->showTreeForThis();
+}
+
+static void formatForDebugger(const VisiblePositionRange& range, char* buffer, unsigned length)
+{
+    StringBuilder result;
+
+    const int FormatBufferSize = 1024;
+    char format[FormatBufferSize];
+    result.appendLiteral("from ");
+    range.start.formatForDebugger(format, FormatBufferSize);
+    result.append(format);
+    result.appendLiteral(" to ");
+    range.end.formatForDebugger(format, FormatBufferSize);
+    result.append(format);
+
+    strlcpy(buffer, result.toString().utf8().data(), length);
+}
+#endif
 
 - (id)accessibilityAttributeValue:(NSString*)attribute forParameter:(id)parameter
 {
@@ -3360,13 +3604,12 @@ static RenderObject* rendererForView(NSView* view)
     NSNumber* number = nil;
     NSArray* array = nil;
     NSDictionary* dictionary = nil;
-    RefPtr<AccessibilityObject> uiElement = 0;
+    RefPtr<AccessibilityObject> uiElement = nullptr;
     NSPoint point = NSZeroPoint;
     bool pointSet = false;
     NSRange range = {0, 0};
     bool rangeSet = false;
     NSRect rect = NSZeroRect;
-    bool rectSet = false;
 
     // basic parameter validation
     if (!m_object || !attribute || !parameter)
@@ -3396,17 +3639,16 @@ static RenderObject* rendererForView(NSView* view)
     else if ([parameter isKindOfClass:[NSDictionary self]])
         dictionary = parameter;
 
-    else if ([parameter isKindOfClass:[NSValue self]] && strcmp([(NSValue*)parameter objCType], @encode(NSPoint)) == 0) {
+    else if ([parameter isKindOfClass:[NSValue self]] && !strcmp([(NSValue*)parameter objCType], @encode(NSPoint))) {
         pointSet = true;
         point = [(NSValue*)parameter pointValue];
 
-    } else if ([parameter isKindOfClass:[NSValue self]] && strcmp([(NSValue*)parameter objCType], @encode(NSRange)) == 0) {
+    } else if ([parameter isKindOfClass:[NSValue self]] && !strcmp([(NSValue*)parameter objCType], @encode(NSRange))) {
         rangeSet = true;
         range = [(NSValue*)parameter rangeValue];
-    } else if ([parameter isKindOfClass:[NSValue self]] && strcmp([(NSValue*)parameter objCType], @encode(NSRect)) == 0) {
-        rectSet = true;
+    } else if ([parameter isKindOfClass:[NSValue self]] && !strcmp([(NSValue*)parameter objCType], @encode(NSRect)))
         rect = [(NSValue*)parameter rectValue];
-    } else {
+    else {
         // Attribute type is not supported. Allow super to handle.
         return [super accessibilityAttributeValue:attribute forParameter:parameter];
     }
@@ -3438,6 +3680,12 @@ static RenderObject* rendererForView(NSView* view)
     if ([attribute isEqualToString:NSAccessibilityStartTextMarkerForBoundsParameterizedAttribute]) {
         IntRect webCoreRect = [self screenToContents:enclosingIntRect(rect)];
         return [self textMarkerForVisiblePosition:m_object->visiblePositionForBounds(webCoreRect, FirstVisiblePositionForBounds)];
+    }
+
+    if ([attribute isEqualToString:NSAccessibilityLineTextMarkerRangeForTextMarkerParameterizedAttribute]) {
+        VisiblePosition visiblePosition = [self visiblePositionForTextMarker:textMarker];
+        VisiblePositionRange visiblePositionRange = m_object->lineRangeForPosition(visiblePosition);
+        return [self textMarkerRangeFromVisiblePositions:visiblePositionRange.start endPosition:visiblePositionRange.end];
     }
 
     if ([attribute isEqualToString:NSAccessibilityTextMarkerIsValidParameterizedAttribute]) {
@@ -3636,11 +3884,29 @@ static RenderObject* rendererForView(NSView* view)
         return [self textMarkerForVisiblePosition:visiblePosRange.end];
     }
 
-    if (m_object->isAccessibilityTable()) {
+#if ENABLE(TREE_DEBUGGING)
+    if ([attribute isEqualToString:@"AXTextMarkerDebugDescription"])
+        return [self debugDescriptionForTextMarker:textMarker];
+
+    if ([attribute isEqualToString:@"AXTextMarkerRangeDebugDescription"])
+        return [self debugDescriptionForTextMarkerRange:textMarkerRange];
+
+    if ([attribute isEqualToString:@"AXTextMarkerNodeDebugDescription"]) {
+        [self showNodeForTextMarker:textMarker];
+        return nil;
+    }
+
+    if ([attribute isEqualToString:@"AXTextMarkerNodeTreeDebugDescription"]) {
+        [self showNodeTreeForTextMarker:textMarker];
+        return nil;
+    }
+#endif
+
+    if (is<AccessibilityTable>(*m_object) && downcast<AccessibilityTable>(*m_object).isExposableThroughAccessibility()) {
         if ([attribute isEqualToString:NSAccessibilityCellForColumnAndRowParameterizedAttribute]) {
             if (array == nil || [array count] != 2)
                 return nil;
-            AccessibilityTableCell* cell = toAccessibilityTable(m_object)->cellForColumnAndRow([[array objectAtIndex:0] unsignedIntValue], [[array objectAtIndex:1] unsignedIntValue]);
+            AccessibilityTableCell* cell = downcast<AccessibilityTable>(*m_object).cellForColumnAndRow([[array objectAtIndex:0] unsignedIntValue], [[array objectAtIndex:1] unsignedIntValue]);
             if (!cell)
                 return nil;
 

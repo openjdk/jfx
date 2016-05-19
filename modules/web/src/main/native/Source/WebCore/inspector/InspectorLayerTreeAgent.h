@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,12 +29,10 @@
 #ifndef InspectorLayerTreeAgent_h
 #define InspectorLayerTreeAgent_h
 
-#if ENABLE(INSPECTOR)
-
 #include "InspectorWebAgentBase.h"
-#include "InspectorWebBackendDispatchers.h"
-#include "InspectorWebFrontendDispatchers.h"
-#include "InspectorWebTypeBuilders.h"
+#include <inspector/InspectorBackendDispatchers.h>
+#include <inspector/InspectorFrontendDispatchers.h>
+#include <inspector/InspectorProtocolObjects.h>
 #include "RenderLayer.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
@@ -46,43 +44,45 @@ class InstrumentingAgents;
 
 typedef String ErrorString;
 
-class InspectorLayerTreeAgent : public InspectorAgentBase, public Inspector::InspectorLayerTreeBackendDispatcherHandler {
+class InspectorLayerTreeAgent final : public InspectorAgentBase, public Inspector::LayerTreeBackendDispatcherHandler {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit InspectorLayerTreeAgent(InstrumentingAgents*);
-    ~InspectorLayerTreeAgent();
+    virtual ~InspectorLayerTreeAgent();
 
-    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
-    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
+    virtual void didCreateFrontendAndBackend(Inspector::FrontendChannel*, Inspector::BackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
     void reset();
 
+    // InspectorInstrumentation callbacks.
     void layerTreeDidChange();
-    void renderLayerDestroyed(const RenderLayer*);
-    void pseudoElementDestroyed(PseudoElement*);
+    void renderLayerDestroyed(const RenderLayer&);
+    void pseudoElementDestroyed(PseudoElement&);
 
     // Called from the front-end.
-    virtual void enable(ErrorString*) override;
-    virtual void disable(ErrorString*) override;
-    virtual void layersForNode(ErrorString*, int nodeId, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::LayerTree::Layer>>&) override;
-    virtual void reasonsForCompositingLayer(ErrorString*, const String& layerId, RefPtr<Inspector::TypeBuilder::LayerTree::CompositingReasons>&) override;
+    virtual void enable(ErrorString&) override;
+    virtual void disable(ErrorString&) override;
+    virtual void layersForNode(ErrorString&, int nodeId, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::LayerTree::Layer>>&) override;
+    virtual void reasonsForCompositingLayer(ErrorString&, const String& layerId, RefPtr<Inspector::Protocol::LayerTree::CompositingReasons>&) override;
 
 private:
     // RenderLayer-related methods.
     String bind(const RenderLayer*);
     void unbind(const RenderLayer*);
 
-    void gatherLayersUsingRenderObjectHierarchy(ErrorString*, RenderObject*, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::LayerTree::Layer>>&);
-    void gatherLayersUsingRenderLayerHierarchy(ErrorString*, RenderLayer*, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::LayerTree::Layer>>&);
+    void gatherLayersUsingRenderObjectHierarchy(ErrorString&, RenderObject*, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::LayerTree::Layer>>&);
+    void gatherLayersUsingRenderLayerHierarchy(ErrorString&, RenderLayer*, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::LayerTree::Layer>>&);
 
-    PassRefPtr<Inspector::TypeBuilder::LayerTree::Layer> buildObjectForLayer(ErrorString*, RenderLayer*);
-    PassRefPtr<Inspector::TypeBuilder::LayerTree::IntRect> buildObjectForIntRect(const IntRect&);
+    Ref<Inspector::Protocol::LayerTree::Layer> buildObjectForLayer(ErrorString&, RenderLayer*);
+    Ref<Inspector::Protocol::LayerTree::IntRect> buildObjectForIntRect(const IntRect&);
 
-    int idForNode(ErrorString*, Node*);
+    int idForNode(ErrorString&, Node*);
 
     String bindPseudoElement(PseudoElement*);
     void unbindPseudoElement(PseudoElement*);
 
-    std::unique_ptr<Inspector::InspectorLayerTreeFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::InspectorLayerTreeBackendDispatcher> m_backendDispatcher;
+    std::unique_ptr<Inspector::LayerTreeFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<Inspector::LayerTreeBackendDispatcher> m_backendDispatcher;
 
     HashMap<const RenderLayer*, String> m_documentLayerToIdMap;
     HashMap<String, const RenderLayer*> m_idToLayer;
@@ -92,7 +92,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(InspectorLayerTreeAgent_h)

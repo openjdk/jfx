@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -53,7 +53,6 @@ extern "C" {
     M(FormDelegate) \
     M(History) \
     M(IconDatabase) \
-    M(LiveConnect) \
     M(Loading) \
     M(PageCache) \
     M(PluginEvents) \
@@ -74,19 +73,6 @@ WEBKIT_LOG_CHANNELS(DECLARE_LOG_CHANNEL)
 
 void WebKitInitializeLoggingChannelsIfNecessary(void);
 #endif // !LOG_DISABLED
-
-// FIXME: Why is this in the "logging" header file?
-// Use WebCoreThreadViolationCheck instead for checks that throw an exception even in production builds.
-#if !defined(NDEBUG) && !defined(DISABLE_THREAD_CHECK)
-#define ASSERT_MAIN_THREAD() do \
-    if (!pthread_main_np()) { \
-        WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "<not running on main thread>"); \
-        CRASH(); \
-    } \
-while (0)
-#else
-#define ASSERT_MAIN_THREAD() ((void)0)
-#endif
 
 void ReportDiscardedDelegateException(SEL delegateSelector, id exception);
 

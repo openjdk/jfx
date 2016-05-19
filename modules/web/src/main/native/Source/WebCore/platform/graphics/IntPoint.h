@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2005, 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,7 +27,11 @@
 #define IntPoint_h
 
 #include "IntSize.h"
-#include <wtf/MathExtras.h>
+#include <cmath>
+
+#if PLATFORM(MAC) && defined __OBJC__
+#import <Foundation/NSGeometry.h>
+#endif
 
 #if USE(CG)
 typedef struct CGPoint CGPoint;
@@ -47,19 +51,18 @@ typedef struct _NSPoint NSPoint;
 #if PLATFORM(WIN)
 typedef struct tagPOINT POINT;
 typedef struct tagPOINTS POINTS;
-#elif PLATFORM(GTK)
-typedef struct _GdkPoint GdkPoint;
-#elif PLATFORM(EFL)
-typedef struct _Evas_Point Evas_Point;
 #endif
 
 namespace WebCore {
+
+class FloatPoint;
 
 class IntPoint {
 public:
     IntPoint() : m_x(0), m_y(0) { }
     IntPoint(int x, int y) : m_x(x), m_y(y) { }
     explicit IntPoint(const IntSize& size) : m_x(size.width()), m_y(size.height()) { }
+    explicit IntPoint(const FloatPoint&); // don't do this implicitly since it's lossy
 
     static IntPoint zero() { return IntPoint(); }
 
@@ -103,14 +106,14 @@ public:
     }
 
 #if USE(CG)
-    explicit IntPoint(const CGPoint&); // don't do this implicitly since it's lossy
-    operator CGPoint() const;
+    WEBCORE_EXPORT explicit IntPoint(const CGPoint&); // don't do this implicitly since it's lossy
+    WEBCORE_EXPORT operator CGPoint() const;
 #endif
 
 #if !PLATFORM(IOS)
 #if OS(DARWIN) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
-    explicit IntPoint(const NSPoint&); // don't do this implicitly since it's lossy
-    operator NSPoint() const;
+    WEBCORE_EXPORT explicit IntPoint(const NSPoint&); // don't do this implicitly since it's lossy
+    WEBCORE_EXPORT operator NSPoint() const;
 #endif
 #endif // !PLATFORM(IOS)
 
@@ -119,15 +122,12 @@ public:
     operator POINT() const;
     IntPoint(const POINTS&);
     operator POINTS() const;
-#elif PLATFORM(GTK)
-    IntPoint(const GdkPoint&);
-    operator GdkPoint() const;
 #elif PLATFORM(EFL)
     explicit IntPoint(const Evas_Point&);
     operator Evas_Point() const;
 #endif
 
-    void dump(PrintStream& out) const;
+    void dump(WTF::PrintStream& out) const;
 
 private:
     int m_x, m_y;

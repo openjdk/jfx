@@ -32,25 +32,19 @@ class BatteryClient;
 
 class BatteryController : public Supplement<Page> {
 public:
+    explicit BatteryController(BatteryClient*);
     ~BatteryController();
-
-    static PassOwnPtr<BatteryController> create(BatteryClient*);
 
     void addListener(BatteryManager*);
     void removeListener(BatteryManager*);
     void updateBatteryStatus(PassRefPtr<BatteryStatus>);
     void didChangeBatteryStatus(const AtomicString& eventType, PassRefPtr<BatteryStatus>);
 
-    BatteryClient* client() const { return m_client; }
-
     static const char* supplementName();
     static BatteryController* from(Page* page) { return static_cast<BatteryController*>(Supplement<Page>::from(page, supplementName())); }
-    static bool isActive(Page*);
 
 private:
     typedef Vector<BatteryManager*> ListenerVector;
-
-    explicit BatteryController(BatteryClient*);
 
     BatteryClient* m_client;
     ListenerVector m_listeners;
@@ -62,4 +56,3 @@ private:
 
 #endif // BATTERY_STATUS
 #endif // BatteryController_h
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,63 +29,26 @@
 #if ENABLE(FTL_JIT)
 
 #include "DFGNode.h"
+#include "LinkBuffer.h"
 
 namespace JSC { namespace FTL {
 
+using namespace DFG;
+
 JSCall::JSCall()
     : m_stackmapID(UINT_MAX)
-    , m_node(0)
     , m_instructionOffset(UINT_MAX)
 {
 }
 
-JSCall::JSCall(unsigned stackmapID, DFG::Node* node)
-    : m_stackmapID(stackmapID)
-    , m_node(node)
+JSCall::JSCall(unsigned stackmapID, Node* node)
+    : JSCallBase(
+        node->op() == Construct ? CallLinkInfo::Construct : CallLinkInfo::Call,
+        node->origin.semantic)
+    , m_stackmapID(stackmapID)
     , m_instructionOffset(0)
 {
-}
-
-void JSCall::emit(CCallHelpers& jit)
-{
-    CCallHelpers::Jump slowPath = jit.branchPtrWithPatch(
-        CCallHelpers::NotEqual, GPRInfo::regT0, m_targetToCheck,
-        CCallHelpers::TrustedImmPtr(0));
-
-    jit.loadPtr(
-        CCallHelpers::Address(GPRInfo::regT0, JSFunction::offsetOfScopeChain()),
-        GPRInfo::regT1);
-    jit.store64(
-        GPRInfo::regT1,
-        CCallHelpers::Address(
-            CCallHelpers::stackPointerRegister,
-            sizeof(Register) * (JSStack::ScopeChain - JSStack::CallerFrameAndPCSize)));
-
-    m_fastCall = jit.nearCall();
-    CCallHelpers::Jump done = jit.jump();
-
-    slowPath.link(&jit);
-    m_slowCall = jit.nearCall();
-
-    done.link(&jit);
-}
-
-void JSCall::link(VM& vm, LinkBuffer& linkBuffer, CallLinkInfo& callInfo)
-{
-    ThunkGenerator generator = linkThunkGeneratorFor(
-        m_node->op() == DFG::Construct ? CodeForConstruct : CodeForCall,
-        MustPreserveRegisters);
-
-    linkBuffer.link(
-        m_slowCall, FunctionPtr(vm.getCTIStub(generator).code().executableAddress()));
-
-    callInfo.isFTL = true;
-    callInfo.callType = m_node->op() == DFG::Construct ? CallLinkInfo::Construct : CallLinkInfo::Call;
-    callInfo.codeOrigin = m_node->origin.semantic;
-    callInfo.callReturnLocation = linkBuffer.locationOfNearCall(m_slowCall);
-    callInfo.hotPathBegin = linkBuffer.locationOf(m_targetToCheck);
-    callInfo.hotPathOther = linkBuffer.locationOfNearCall(m_fastCall);
-    callInfo.calleeGPR = GPRInfo::regT0;
+    ASSERT(node->op() == Call || node->op() == Construct);
 }
 
 } } // namespace JSC::FTL

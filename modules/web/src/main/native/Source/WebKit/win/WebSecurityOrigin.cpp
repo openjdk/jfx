@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,12 +26,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebSecurityOrigin.h"
 #include "WebKitDLL.h"
 
+#include "MarshallingHelpers.h"
 #include <WebCore/BString.h>
 #include <WebCore/DatabaseManager.h>
+#include <WebCore/URL.h>
 
 using namespace WebCore;
 
@@ -48,23 +49,25 @@ WebSecurityOrigin::WebSecurityOrigin(SecurityOrigin* securityOrigin)
     , m_securityOrigin(securityOrigin)
 {
     gClassCount++;
-    gClassNameCount.add("WebSecurityOrigin");
+    gClassNameCount().add("WebSecurityOrigin");
 }
 
 WebSecurityOrigin::~WebSecurityOrigin()
 {
     gClassCount--;
-    gClassNameCount.remove("WebSecurityOrigin");
+    gClassNameCount().remove("WebSecurityOrigin");
 }
 
 // IUnknown ------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::QueryInterface(REFIID riid, void** ppvObject)
+HRESULT WebSecurityOrigin::QueryInterface(REFIID riid, void** ppvObject)
 {
     *ppvObject = 0;
     if (IsEqualGUID(riid, IID_IUnknown))
-        *ppvObject = static_cast<IWebSecurityOrigin*>(this);
+        *ppvObject = static_cast<IWebSecurityOrigin2*>(this);
     else if (IsEqualGUID(riid, IID_IWebSecurityOrigin))
         *ppvObject = static_cast<IWebSecurityOrigin*>(this);
+    else if (IsEqualGUID(riid, IID_IWebSecurityOrigin2))
+        *ppvObject = static_cast<IWebSecurityOrigin2*>(this);
     else if (IsEqualGUID(riid, __uuidof(this)))
         *ppvObject = this;
     else
@@ -74,12 +77,12 @@ HRESULT STDMETHODCALLTYPE WebSecurityOrigin::QueryInterface(REFIID riid, void** 
     return S_OK;
 }
 
-ULONG STDMETHODCALLTYPE WebSecurityOrigin::AddRef()
+ULONG WebSecurityOrigin::AddRef()
 {
     return ++m_refCount;
 }
 
-ULONG STDMETHODCALLTYPE WebSecurityOrigin::Release()
+ULONG WebSecurityOrigin::Release()
 {
     ULONG newRef = --m_refCount;
     if (!newRef)
@@ -90,8 +93,7 @@ ULONG STDMETHODCALLTYPE WebSecurityOrigin::Release()
 
 // IWebSecurityOrigin --------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::protocol(
-    /* [retval][out] */ BSTR* result)
+HRESULT WebSecurityOrigin::protocol(/* [retval][out] */ BSTR* result)
 {
     if (!result)
         return E_POINTER;
@@ -101,8 +103,7 @@ HRESULT STDMETHODCALLTYPE WebSecurityOrigin::protocol(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::host(
-    /* [retval][out] */ BSTR* result)
+HRESULT WebSecurityOrigin::host(/* [retval][out] */ BSTR* result)
 {
     if (!result)
         return E_POINTER;
@@ -112,8 +113,7 @@ HRESULT STDMETHODCALLTYPE WebSecurityOrigin::host(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::port(
-    /* [retval][out] */ unsigned short* result)
+HRESULT WebSecurityOrigin::port(/* [retval][out] */ unsigned short* result)
 {
     if (!result)
         return E_POINTER;
@@ -123,46 +123,37 @@ HRESULT STDMETHODCALLTYPE WebSecurityOrigin::port(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::usage(
-    /* [retval][out] */ unsigned long long* result)
+HRESULT WebSecurityOrigin::usage(/* [retval][out] */ unsigned long long* result)
 {
-#if ENABLE(SQL_DATABASE)
     if (!result)
         return E_POINTER;
 
-    *result = DatabaseManager::manager().usageForOrigin(m_securityOrigin.get());
+    *result = DatabaseManager::singleton().usageForOrigin(m_securityOrigin.get());
 
     return S_OK;
-#else
-    UNUSED_PARAM(result);
-    return E_NOTIMPL;
-#endif
 }
 
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::quota(
-    /* [retval][out] */ unsigned long long* result)
+HRESULT WebSecurityOrigin::quota(/* [retval][out] */ unsigned long long* result)
 {
-#if ENABLE(SQL_DATABASE)
     if (!result)
         return E_POINTER;
 
-    *result = DatabaseManager::manager().quotaForOrigin(m_securityOrigin.get());
+    *result = DatabaseManager::singleton().quotaForOrigin(m_securityOrigin.get());
     return S_OK;
-#else
-    UNUSED_PARAM(result);
-    return E_NOTIMPL;
-#endif
 }
 
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::setQuota(
-    /* [in] */ unsigned long long quota)
+HRESULT WebSecurityOrigin::setQuota(/* [in] */ unsigned long long quota)
 {
-#if ENABLE(SQL_DATABASE)
-    DatabaseManager::manager().setQuota(m_securityOrigin.get(), quota);
+    DatabaseManager::singleton().setQuota(m_securityOrigin.get(), quota);
 
     return S_OK;
-#else
-    UNUSED_PARAM(quota);
-    return E_NOTIMPL;
-#endif
+}
+
+// IWebSecurityOrigin2 --------------------------------------------------------------
+
+HRESULT WebSecurityOrigin::initWithURL(/* [in] */ BSTR urlBstr)
+{
+    m_securityOrigin = WebCore::SecurityOrigin::create(MarshallingHelpers::BSTRToKURL(urlBstr));
+
+    return S_OK;
 }

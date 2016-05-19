@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2013-2014 Apple Inc.  All rights reserved.
  * Copyright (C) 2013 Xueqing Huang <huangxueqing@baidu.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -51,6 +51,7 @@
 #include "markup.h"
 #include <wtf/WindowsExtras.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/StringView.h>
 #include <wtf/win/GDIObject.h>
 
 namespace WebCore {
@@ -78,12 +79,10 @@ static LRESULT CALLBACK PasteboardOwnerWndProc(HWND hWnd, UINT message, WPARAM w
         break;
     case WM_DESTROY:
         break;
-#if !OS(WINCE)
     case WM_DRAWCLIPBOARD:
         break;
     case WM_CHANGECBCHAIN:
         break;
-#endif
     default:
         lresult = DefWindowProc(hWnd, message, wParam, lParam);
         break;
@@ -91,39 +90,37 @@ static LRESULT CALLBACK PasteboardOwnerWndProc(HWND hWnd, UINT message, WPARAM w
     return lresult;
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
+std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
 {
-    OwnPtr<Pasteboard> pasteboard = adoptPtr(new Pasteboard);
+    auto pasteboard = std::make_unique<Pasteboard>();
     COMPtr<IDataObject> clipboardData;
-#if !OS(WINCE)
     if (!SUCCEEDED(OleGetClipboard(&clipboardData)))
         clipboardData = 0;
-#endif
     pasteboard->setExternalDataObject(clipboardData.get());
-    return pasteboard.release();
+    return pasteboard;
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createPrivate()
+std::unique_ptr<Pasteboard> Pasteboard::createPrivate()
 {
     // Windows has no "Private pasteboard" concept.
     return createForCopyAndPaste();
 }
 
 #if ENABLE(DRAG_SUPPORT)
-PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop()
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop()
 {
     COMPtr<WCDataObject> dataObject;
     WCDataObject::createInstance(&dataObject);
-    return adoptPtr(new Pasteboard(dataObject.get()));
+    return std::make_unique<Pasteboard>(dataObject.get());
 }
 
 // static
-PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
 {
     if (dragData.platformData())
-        return adoptPtr(new Pasteboard(dragData.platformData()));
+        return std::make_unique<Pasteboard>(dragData.platformData());
     // FIXME: Should add a const overload of dragDataMap so we don't need a const_cast here.
-    return adoptPtr(new Pasteboard(const_cast<DragData&>(dragData).dragDataMap()));
+    return std::make_unique<Pasteboard>(const_cast<DragData&>(dragData).dragDataMap());
 }
 #endif
 
@@ -388,31 +385,28 @@ static bool writeURL(WCDataObject *data, const URL& url, String title, bool with
     return success;
 }
 
-bool Pasteboard::writeString(const String& type, const String& data)
+void Pasteboard::writeString(const String& type, const String& data)
 {
     if (!m_writableDataObject)
-        return false;
+        return;
 
     ClipboardDataType winType = clipboardTypeFromMIMEType(type);
 
-    if (winType == ClipboardDataTypeURL)
-        return WebCore::writeURL(m_writableDataObject.get(), URL(URL(), data), String(), false, true);
+    if (winType == ClipboardDataTypeURL) {
+        WebCore::writeURL(m_writableDataObject.get(), URL(URL(), data), String(), false, true);
+        return;
+    }
 
     if (winType == ClipboardDataTypeText) {
         STGMEDIUM medium = {0};
         medium.tymed = TYMED_HGLOBAL;
         medium.hGlobal = createGlobalData(data);
         if (!medium.hGlobal)
-            return false;
+            return;
 
-        if (FAILED(m_writableDataObject->SetData(plainTextWFormat(), &medium, TRUE))) {
+        if (FAILED(m_writableDataObject->SetData(plainTextWFormat(), &medium, TRUE)))
             ::GlobalFree(medium.hGlobal);
-            return false;
-        }
-        return true;
     }
-
-    return false;
 }
 
 #if ENABLE(DRAG_SUPPORT)
@@ -437,7 +431,7 @@ void Pasteboard::writeRangeToDataObject(Range& selectedRange, Frame& frame)
     if (medium.hGlobal && FAILED(m_writableDataObject->SetData(htmlFormat(), &medium, TRUE)))
         ::GlobalFree(medium.hGlobal);
 
-    String str = frame.editor().selectedTextForClipboard();
+    String str = frame.editor().selectedTextForDataTransfer();
     replaceNewlinesWithWindowsStyleNewlines(str);
     replaceNBSPWithSpace(str);
     medium.hGlobal = createGlobalData(str);
@@ -449,7 +443,7 @@ void Pasteboard::writeRangeToDataObject(Range& selectedRange, Frame& frame)
         m_writableDataObject->SetData(smartPasteFormat(), &medium, TRUE);
 }
 
-void Pasteboard::writeSelection(Range& selectedRange, bool canSmartCopyOrDelete, Frame& frame, ShouldSerializeSelectedTextForClipboard shouldSerializeSelectedTextForClipboard)
+void Pasteboard::writeSelection(Range& selectedRange, bool canSmartCopyOrDelete, Frame& frame, ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
     clear();
 
@@ -465,7 +459,7 @@ void Pasteboard::writeSelection(Range& selectedRange, bool canSmartCopyOrDelete,
     }
 
     // Put plain string on the pasteboard. CF_UNICODETEXT covers CF_TEXT as well
-    String str = shouldSerializeSelectedTextForClipboard == IncludeImageAltTextForClipboard ? frame.editor().selectedTextForClipboard() : frame.editor().selectedText();
+    String str = shouldSerializeSelectedTextForDataTransfer == IncludeImageAltTextForDataTransfer ? frame.editor().selectedTextForDataTransfer() : frame.editor().selectedText();
     replaceNewlinesWithWindowsStyleNewlines(str);
     replaceNBSPWithSpace(str);
     if (::OpenClipboard(m_owner)) {
@@ -527,7 +521,6 @@ void Pasteboard::writePlainText(const String& text, SmartReplaceOption smartRepl
     writePlainTextToDataObject(text, smartReplaceOption);
 }
 
-#if !OS(WINCE)
 static inline void pathRemoveBadFSCharacters(PWSTR psz, size_t length)
 {
     size_t writeTo = 0;
@@ -541,14 +534,9 @@ static inline void pathRemoveBadFSCharacters(PWSTR psz, size_t length)
     }
     psz[writeTo] = 0;
 }
-#endif
 
 static String filesystemPathFromUrlOrTitle(const String& url, const String& title, const UChar* extension, bool isLink)
 {
-#if OS(WINCE)
-    notImplemented();
-    return String();
-#else
     static const size_t fsPathMaxLengthExcludingNullTerminator = MAX_PATH - 1;
     bool usedURL = false;
     WCHAR fsPathBuffer[MAX_PATH];
@@ -558,7 +546,7 @@ static String filesystemPathFromUrlOrTitle(const String& url, const String& titl
 
     if (!title.isEmpty()) {
         size_t len = std::min<size_t>(title.length(), fsPathMaxLengthExcludingExtension);
-        CopyMemory(fsPathBuffer, title.deprecatedCharacters(), len * sizeof(UChar));
+        StringView(title).substring(0, len).getCharactersWithUpconvert(fsPathBuffer);
         fsPathBuffer[len] = 0;
         pathRemoveBadFSCharacters(fsPathBuffer, len);
     }
@@ -573,10 +561,10 @@ static String filesystemPathFromUrlOrTitle(const String& url, const String& titl
         String lastComponent = kurl.lastPathComponent();
         if (kurl.isLocalFile() || (!isLink && !lastComponent.isEmpty())) {
             len = std::min<DWORD>(fsPathMaxLengthExcludingExtension, lastComponent.length());
-            CopyMemory(fsPathBuffer, lastComponent.deprecatedCharacters(), len * sizeof(UChar));
+            StringView(lastComponent).substring(0, len).getCharactersWithUpconvert(fsPathBuffer);
         } else {
             len = std::min<DWORD>(fsPathMaxLengthExcludingExtension, url.length());
-            CopyMemory(fsPathBuffer, url.deprecatedCharacters(), len * sizeof(UChar));
+            StringView(url).substring(0, len).getCharactersWithUpconvert(fsPathBuffer);
         }
         fsPathBuffer[len] = 0;
         pathRemoveBadFSCharacters(fsPathBuffer, len);
@@ -591,7 +579,6 @@ static String filesystemPathFromUrlOrTitle(const String& url, const String& titl
     }
 
     return makeString(static_cast<const UChar*>(fsPathBuffer), extension);
-#endif
 }
 
 // writeFileToDataObject takes ownership of fileDescriptor and fileContent
@@ -666,16 +653,26 @@ void Pasteboard::writeURLToDataObject(const URL& kurl, const String& titleStr)
     }
 
     FILEGROUPDESCRIPTOR* fgd = static_cast<FILEGROUPDESCRIPTOR*>(GlobalLock(urlFileDescriptor));
+    if (!fgd) {
+        GlobalFree(urlFileDescriptor);
+        return;
+    }
+
     ZeroMemory(fgd, sizeof(FILEGROUPDESCRIPTOR));
     fgd->cItems = 1;
     fgd->fgd[0].dwFlags = FD_FILESIZE;
     fgd->fgd[0].nFileSizeLow = content.length();
 
     unsigned maxSize = std::min<unsigned>(fsPath.length(), WTF_ARRAY_LENGTH(fgd->fgd[0].cFileName));
-    CopyMemory(fgd->fgd[0].cFileName, fsPath.deprecatedCharacters(), maxSize * sizeof(UChar));
+    StringView(fsPath).substring(0, maxSize).getCharactersWithUpconvert(fgd->fgd[0].cFileName);
     GlobalUnlock(urlFileDescriptor);
 
     char* fileContents = static_cast<char*>(GlobalLock(urlFileContent));
+    if (!fileContents) {
+        GlobalFree(urlFileDescriptor);
+        return;
+    }
+
     CopyMemory(fileContents, content.data(), content.length());
     GlobalUnlock(urlFileContent);
 
@@ -726,14 +723,14 @@ void Pasteboard::write(const PasteboardURL& pasteboardURL)
 
 void Pasteboard::writeImage(Element& element, const URL&, const String&)
 {
-    if (!(element.renderer() && element.renderer()->isRenderImage()))
+    if (!is<RenderImage>(element.renderer()))
         return;
 
-    RenderImage* renderer = toRenderImage(element.renderer());
-    CachedImage* cachedImage = renderer->cachedImage();
+    auto& renderer = downcast<RenderImage>(*element.renderer());
+    CachedImage* cachedImage = renderer.cachedImage();
     if (!cachedImage || cachedImage->errorOccurred())
         return;
-    Image* image = cachedImage->imageForRenderer(renderer);
+    Image* image = cachedImage->imageForRenderer(&renderer);
     ASSERT(image);
 
     clear();
@@ -744,7 +741,7 @@ void Pasteboard::writeImage(Element& element, const URL&, const String&)
     auto resultBitmap = adoptGDIObject(::CreateCompatibleBitmap(dc, image->width(), image->height()));
     HGDIOBJ oldBitmap = ::SelectObject(compatibleDC.get(), resultBitmap.get());
 
-    BitmapInfo bmInfo = BitmapInfo::create(image->size());
+    BitmapInfo bmInfo = BitmapInfo::create(IntSize(image->size()));
 
     auto coreBitmap = adoptGDIObject(::CreateDIBSection(dc, &bmInfo, DIB_RGB_COLORS, 0, 0, 0));
     HGDIOBJ oldSource = ::SelectObject(sourceDC.get(), coreBitmap.get());
@@ -862,14 +859,14 @@ static CachedImage* getCachedImage(Element& element)
 {
     // Attempt to pull CachedImage from element
     RenderObject* renderer = element.renderer();
-    if (!renderer || !renderer->isRenderImage())
-        return 0;
+    if (!is<RenderImage>(renderer))
+        return nullptr;
 
-    RenderImage* image = toRenderImage(renderer);
+    auto* image = downcast<RenderImage>(renderer);
     if (image->cachedImage() && !image->cachedImage()->errorOccurred())
         return image->cachedImage();
 
-    return 0;
+    return nullptr;
 }
 
 static HGLOBAL createGlobalImageFileDescriptor(const String& url, const String& title, CachedImage* image)
@@ -878,13 +875,17 @@ static HGLOBAL createGlobalImageFileDescriptor(const String& url, const String& 
     ASSERT(image->image()->data());
 
     HRESULT hr = S_OK;
-    HGLOBAL memObj = 0;
     String fsPath;
-    memObj = GlobalAlloc(GPTR, sizeof(FILEGROUPDESCRIPTOR));
+    HGLOBAL memObj = GlobalAlloc(GPTR, sizeof(FILEGROUPDESCRIPTOR));
     if (!memObj)
         return 0;
 
     FILEGROUPDESCRIPTOR* fgd = (FILEGROUPDESCRIPTOR*)GlobalLock(memObj);
+    if (!fgd) {
+        GlobalFree(memObj);
+        return 0;
+    }
+
     memset(fgd, 0, sizeof(FILEGROUPDESCRIPTOR));
     fgd->cItems = 1;
     fgd->fgd[0].dwFlags = FD_FILESIZE;
@@ -895,6 +896,8 @@ static HGLOBAL createGlobalImageFileDescriptor(const String& url, const String& 
     if (extension.isEmpty()) {
         // Do not continue processing in the rare and unusual case where a decoded image is not able
         // to provide a filename extension. Something tricky (like a bait-n-switch) is going on
+        GlobalUnlock(memObj);
+        GlobalFree(memObj);
         return 0;
     }
     extension.insert(".", 0);
@@ -907,7 +910,7 @@ static HGLOBAL createGlobalImageFileDescriptor(const String& url, const String& 
     }
 
     int maxSize = std::min<int>(fsPath.length(), WTF_ARRAY_LENGTH(fgd->fgd[0].cFileName));
-    CopyMemory(fgd->fgd[0].cFileName, (LPCWSTR)fsPath.deprecatedCharacters(), maxSize * sizeof(UChar));
+    StringView(fsPath).substring(0, maxSize).getCharactersWithUpconvert(fgd->fgd[0].cFileName);
     GlobalUnlock(memObj);
 
     return memObj;
@@ -920,8 +923,13 @@ static HGLOBAL createGlobalImageFileContent(SharedBuffer* data)
         return 0;
 
     char* fileContents = (PSTR)GlobalLock(memObj);
+    if (!fileContents) {
+        GlobalFree(memObj);
+        return 0;
+    }
 
-    CopyMemory(fileContents, data->data(), data->size());
+    if (data->data())
+        CopyMemory(fileContents, data->data(), data->size());
 
     GlobalUnlock(memObj);
 
@@ -942,15 +950,11 @@ static HGLOBAL createGlobalHDropContent(const URL& url, String& fileName, Shared
             localPath = localPath.substring(1);
         const Vector<UChar>& localPathWide = localPath.charactersWithNullTermination();
         LPCWSTR localPathStr = localPathWide.data();
-        if (wcslen(localPathStr) + 1 < MAX_PATH)
+        if (localPathStr && wcslen(localPathStr) + 1 < MAX_PATH)
             wcscpy_s(filePath, MAX_PATH, localPathStr);
         else
             return 0;
     } else {
-#if OS(WINCE)
-        notImplemented();
-        return 0;
-#else
         WCHAR tempPath[MAX_PATH];
         WCHAR extension[MAX_PATH];
         if (!::GetTempPath(WTF_ARRAY_LENGTH(tempPath), tempPath))
@@ -976,11 +980,12 @@ static HGLOBAL createGlobalHDropContent(const URL& url, String& fileName, Shared
 
         // Write the data to this temp file.
         DWORD written;
-        BOOL tempWriteSucceeded = WriteFile(tempFileHandle, data->data(), data->size(), &written, 0);
+        BOOL tempWriteSucceeded = FALSE;
+        if (data->data())
+            tempWriteSucceeded = WriteFile(tempFileHandle, data->data(), data->size(), &written, 0);
         CloseHandle(tempFileHandle);
         if (!tempWriteSucceeded)
             return 0;
-#endif
     }
 
     SIZE_T dropFilesSize = sizeof(DROPFILES) + (sizeof(WCHAR) * (wcslen(filePath) + 2));
@@ -989,6 +994,11 @@ static HGLOBAL createGlobalHDropContent(const URL& url, String& fileName, Shared
         return 0;
 
     DROPFILES* dropFiles = (DROPFILES*) GlobalLock(memObj);
+    if (!dropFiles) {
+        GlobalFree(memObj);
+        return 0;
+    }
+
     dropFiles->pFiles = sizeof(DROPFILES);
     dropFiles->fWide = TRUE;
     wcscpy((LPWSTR)(dropFiles + 1), filePath);
@@ -1008,7 +1018,7 @@ void Pasteboard::writeImageToDataObject(Element& element, const URL& url)
     if (!imageBuffer || !imageBuffer->size())
         return;
 
-    HGLOBAL imageFileDescriptor = createGlobalImageFileDescriptor(url.string(), element.getAttribute(HTMLNames::altAttr), cachedImage);
+    HGLOBAL imageFileDescriptor = createGlobalImageFileDescriptor(url.string(), element.fastGetAttribute(HTMLNames::altAttr), cachedImage);
     if (!imageFileDescriptor)
         return;
 
@@ -1021,7 +1031,8 @@ void Pasteboard::writeImageToDataObject(Element& element, const URL& url)
     String fileName = cachedImage->response().suggestedFilename();
     HGLOBAL hDropContent = createGlobalHDropContent(url, fileName, imageBuffer);
     if (!hDropContent) {
-        GlobalFree(hDropContent);
+        GlobalFree(imageFileDescriptor);
+        GlobalFree(imageFileContent);
         return;
     }
 

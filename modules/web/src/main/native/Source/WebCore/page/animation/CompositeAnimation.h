@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -45,22 +45,24 @@ class RenderStyle;
 // A CompositeAnimation represents a collection of animations that are running
 // on a single RenderElement, such as a number of properties transitioning at once.
 class CompositeAnimation : public RefCounted<CompositeAnimation> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassRefPtr<CompositeAnimation> create(AnimationControllerPrivate* animationController)
+    static Ref<CompositeAnimation> create(AnimationControllerPrivate& animationController)
     {
-        return adoptRef(new CompositeAnimation(animationController));
+        return adoptRef(*new CompositeAnimation(animationController));
     };
 
     ~CompositeAnimation();
 
     void clearRenderer();
 
-    PassRef<RenderStyle> animate(RenderElement&, RenderStyle* currentStyle, RenderStyle& targetStyle);
+    bool animate(RenderElement&, RenderStyle* currentStyle, RenderStyle& targetStyle, Ref<RenderStyle>& blendedStyle);
     PassRefPtr<RenderStyle> getAnimatedStyle() const;
+    bool computeExtentOfTransformAnimation(LayoutRect&) const;
 
     double timeToNextService() const;
 
-    AnimationControllerPrivate* animationController() const { return m_animationController; }
+    AnimationControllerPrivate& animationController() const { return m_animationController; }
 
     void suspendAnimations();
     void resumeAnimations();
@@ -68,7 +70,7 @@ public:
 
     bool hasAnimations() const  { return !m_transitions.isEmpty() || !m_keyframeAnimations.isEmpty(); }
 
-    bool isAnimatingProperty(CSSPropertyID, bool acceleratedOnly, bool isRunningNow) const;
+    bool isAnimatingProperty(CSSPropertyID, bool acceleratedOnly, AnimationBase::RunningState) const;
 
     PassRefPtr<KeyframeAnimation> getAnimationForProperty(CSSPropertyID) const;
 
@@ -79,20 +81,27 @@ public:
     bool pauseTransitionAtTime(CSSPropertyID, double);
     unsigned numberOfActiveAnimations() const;
 
+#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
+    bool hasScrollTriggeredAnimation() const { return m_hasScrollTriggeredAnimation; }
+#endif
+
 private:
-    CompositeAnimation(AnimationControllerPrivate*);
+    CompositeAnimation(AnimationControllerPrivate&);
 
     void updateTransitions(RenderElement*, RenderStyle* currentStyle, RenderStyle* targetStyle);
     void updateKeyframeAnimations(RenderElement*, RenderStyle* currentStyle, RenderStyle* targetStyle);
 
     typedef HashMap<int, RefPtr<ImplicitAnimation>> CSSPropertyTransitionsMap;
-    typedef HashMap<AtomicStringImpl*, RefPtr<KeyframeAnimation>>  AnimationNameMap;
+    typedef HashMap<AtomicStringImpl*, RefPtr<KeyframeAnimation>> AnimationNameMap;
 
-    AnimationControllerPrivate* m_animationController;
+    AnimationControllerPrivate& m_animationController;
     CSSPropertyTransitionsMap m_transitions;
     AnimationNameMap m_keyframeAnimations;
     Vector<AtomicStringImpl*> m_keyframeAnimationOrderMap;
     bool m_suspended;
+#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
+    bool m_hasScrollTriggeredAnimation { false };
+#endif
 };
 
 } // namespace WebCore

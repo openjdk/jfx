@@ -30,13 +30,12 @@
 
 #include "config.h"
 
-#if ENABLE(BLOB)
-
 #include "FileReaderLoader.h"
 
 #include "Blob.h"
 #include "BlobURL.h"
 #include "FileReaderLoaderClient.h"
+#include "HTTPHeaderNames.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
@@ -90,13 +89,14 @@ void FileReaderLoader::start(ScriptExecutionContext* scriptExecutionContext, Blo
     ResourceRequest request(m_urlForReading);
     request.setHTTPMethod("GET");
     if (m_hasRange)
-        request.setHTTPHeaderField("Range", String::format("bytes=%d-%d", m_rangeStart, m_rangeEnd));
+        request.setHTTPHeaderField(HTTPHeaderName::Range, String::format("bytes=%d-%d", m_rangeStart, m_rangeEnd));
 
     ThreadableLoaderOptions options;
-    options.sendLoadCallbacks = SendCallbacks;
-    options.sniffContent = DoNotSniffContent;
+    options.setSendLoadCallbacks(SendCallbacks);
+    options.setSniffContent(DoNotSniffContent);
+    options.setDataBufferingPolicy(DoNotBufferData);
     options.preflightPolicy = ConsiderPreflight;
-    options.allowCredentials = AllowStoredCredentials;
+    options.setAllowCredentials(AllowStoredCredentials);
     options.crossOriginRequestPolicy = DenyCrossOriginRequests;
 
     if (m_client)
@@ -121,11 +121,11 @@ void FileReaderLoader::terminate()
 
 void FileReaderLoader::cleanup()
 {
-    m_loader = 0;
+    m_loader = nullptr;
 
     // If we get any error, we do not need to keep a buffer around.
     if (m_errorCode) {
-        m_rawData = 0;
+        m_rawData = nullptr;
         m_stringResult = "";
     }
 }
@@ -137,11 +137,10 @@ void FileReaderLoader::didReceiveResponse(unsigned long, const ResourceResponse&
         return;
     }
 
-    unsigned long long length = response.expectedContentLength();
+    long long length = response.expectedContentLength();
 
-    // A value larger than INT_MAX means that the content length wasn't
-    // specified, so the buffer will need to be dynamically grown.
-    if (length > INT_MAX) {
+    // A negative value means that the content length wasn't specified, so the buffer will need to be dynamically grown.
+    if (length < 0) {
         m_variableLength = true;
         if (m_hasRange)
             length = 1 + m_rangeEnd - m_rangeStart;
@@ -189,17 +188,26 @@ void FileReaderLoader::didReceiveData(const char* data, int dataLength)
             return;
         }
         if (m_variableLength) {
-            unsigned long long newLength = m_totalBytes * 2;
-            if (newLength > std::numeric_limits<unsigned>::max())
-                newLength = std::numeric_limits<unsigned>::max();
-            RefPtr<ArrayBuffer> newData =
-                ArrayBuffer::create(static_cast<unsigned>(newLength), 1);
+            unsigned newLength = m_totalBytes + static_cast<unsigned>(dataLength);
+            if (newLength < m_totalBytes) {
+                failed(FileError::NOT_READABLE_ERR);
+                return;
+            }
+            newLength = std::max(newLength, m_totalBytes + m_totalBytes / 4 + 1);
+            RefPtr<ArrayBuffer> newData = ArrayBuffer::create(newLength, 1);
+            if (!newData) {
+                // Not enough memory.
+                failed(FileError::NOT_READABLE_ERR);
+                return;
+            }
             memcpy(static_cast<char*>(newData->data()), static_cast<char*>(m_rawData->data()), m_bytesLoaded);
 
             m_rawData = newData;
             m_totalBytes = static_cast<unsigned>(newLength);
-        } else
+        } else {
+            // This can only happen if we get more data than indicated in expected content length (i.e. never, unless the networking layer is buggy).
             length = remainingBufferSpace;
+        }
     }
 
     if (length <= 0)
@@ -316,21 +324,18 @@ void FileReaderLoader::convertToText()
     // requirement in order to be consistent with how WebKit decodes the web content: always has the BOM override the
     // provided encoding.
     // FIXME: consider supporting incremental decoding to improve the perf.
-    StringBuilder builder;
     if (!m_decoder)
         m_decoder = TextResourceDecoder::create("text/plain", m_encoding.isValid() ? m_encoding : UTF8Encoding());
-    builder.append(m_decoder->decode(static_cast<const char*>(m_rawData->data()), m_bytesLoaded));
-
     if (isCompleted())
-        builder.append(m_decoder->flush());
-
-    m_stringResult = builder.toString();
+        m_stringResult = m_decoder->decodeAndFlush(static_cast<const char*>(m_rawData->data()), m_bytesLoaded);
+    else
+        m_stringResult = m_decoder->decode(static_cast<const char*>(m_rawData->data()), m_bytesLoaded);
 }
 
 void FileReaderLoader::convertToDataURL()
 {
     StringBuilder builder;
-    builder.append("data:");
+    builder.appendLiteral("data:");
 
     if (!m_bytesLoaded) {
         m_stringResult = builder.toString();
@@ -338,7 +343,7 @@ void FileReaderLoader::convertToDataURL()
     }
 
     builder.append(m_dataType);
-    builder.append(";base64,");
+    builder.appendLiteral(";base64,");
 
     Vector<char> out;
     base64Encode(m_rawData->data(), m_bytesLoaded, out);
@@ -360,5 +365,3 @@ void FileReaderLoader::setEncoding(const String& encoding)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(BLOB)

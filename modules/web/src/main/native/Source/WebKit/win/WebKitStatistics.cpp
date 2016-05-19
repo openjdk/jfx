@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007, 2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,12 +26,12 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebKitStatistics.h"
 
 #include "WebKitStatisticsPrivate.h"
 #include <WebCore/BString.h>
+#include <wtf/text/StringBuilder.h>
 
 using namespace WebCore;
 
@@ -44,16 +44,16 @@ int WebFrameViewCount;
 // WebKitStatistics ---------------------------------------------------------------------------
 
 WebKitStatistics::WebKitStatistics()
-: m_refCount(0)
+    : m_refCount(0)
 {
     gClassCount++;
-    gClassNameCount.add("WebKitStatistics");
+    gClassNameCount().add("WebKitStatistics");
 }
 
 WebKitStatistics::~WebKitStatistics()
 {
     gClassCount--;
-    gClassNameCount.remove("WebKitStatistics");
+    gClassNameCount().remove("WebKitStatistics");
 }
 
 WebKitStatistics* WebKitStatistics::createInstance()
@@ -137,18 +137,15 @@ HRESULT STDMETHODCALLTYPE WebKitStatistics::comClassCount(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebKitStatistics::comClassNameCounts(
-    /* [retval][out] */ BSTR *output)
+HRESULT WebKitStatistics::comClassNameCounts(BSTR* output)
 {
-    typedef HashCountedSet<String>::const_iterator Iterator;
-    Iterator end = gClassNameCount.end();
-    Vector<UChar> vector;
-    for (Iterator current = gClassNameCount.begin(); current != end; ++current) {
-        append(vector, String::format("%4u", current->value));
-        vector.append('\t');
-        append(vector, static_cast<String>(current->key));
-        vector.append('\n');
+    StringBuilder builder;
+    for (auto& slot : gClassNameCount()) {
+        builder.appendNumber(slot.value);
+        builder.append('\t');
+        builder.append(slot.key);
+        builder.append('\n');
     }
-    *output = BString(String::adopt(vector)).release();
+    *output = BString(builder.toString()).release();
     return S_OK;
 }

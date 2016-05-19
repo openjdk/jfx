@@ -26,8 +26,6 @@
 #include "config.h"
 #include "WebInjectedScriptManager.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "CommandLineAPIModule.h"
 #include "ScriptState.h"
 
@@ -46,7 +44,7 @@ void WebInjectedScriptManager::disconnect()
     InjectedScriptManager::disconnect();
 
     m_commandLineAPIHost->disconnect();
-    m_commandLineAPIHost.clear();
+    m_commandLineAPIHost = nullptr;
 }
 
 void WebInjectedScriptManager::didCreateInjectedScript(InjectedScript injectedScript)
@@ -84,5 +82,3 @@ void WebInjectedScriptManager::discardInjectedScriptsFor(DOMWindow* window)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

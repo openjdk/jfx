@@ -37,14 +37,14 @@ namespace WebCore {
 
 const QualifiedName& pseudoElementTagName()
 {
-    DEFINE_STATIC_LOCAL(QualifiedName, name, (nullAtom, "<pseudo>", nullAtom));
+    DEPRECATED_DEFINE_STATIC_LOCAL(QualifiedName, name, (nullAtom, "<pseudo>", nullAtom));
     return name;
 }
 
 String PseudoElement::pseudoElementNameForEvents(PseudoId pseudoId)
 {
-    DEFINE_STATIC_LOCAL(const String, after, (ASCIILiteral("::after")));
-    DEFINE_STATIC_LOCAL(const String, before, (ASCIILiteral("::before")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, after, (ASCIILiteral("::after")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, before, (ASCIILiteral("::before")));
     switch (pseudoId) {
     case AFTER:
         return after;
@@ -67,10 +67,10 @@ PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
 PseudoElement::~PseudoElement()
 {
     ASSERT(!m_hostElement);
-    InspectorInstrumentation::pseudoElementDestroyed(document().page(), this);
+    InspectorInstrumentation::pseudoElementDestroyed(document().page(), *this);
 }
 
-PassRefPtr<RenderStyle> PseudoElement::customStyleForRenderer(RenderStyle& parentStyle)
+RefPtr<RenderStyle> PseudoElement::customStyleForRenderer(RenderStyle& parentStyle)
 {
     return m_hostElement->renderer()->getCachedPseudoStyle(m_pseudoId, &parentStyle);
 }
@@ -89,8 +89,8 @@ void PseudoElement::didAttachRenderers()
         if (renderer->isChildAllowed(*child, style)) {
             auto* childPtr = child.get();
             renderer->addChild(child.leakPtr());
-            if (childPtr->isQuote())
-                toRenderQuote(childPtr)->attachQuote();
+            if (is<RenderQuote>(*childPtr))
+                downcast<RenderQuote>(*childPtr).attachQuote();
         }
     }
 }
@@ -107,13 +107,13 @@ void PseudoElement::didRecalcStyle(Style::Change)
 
     // The renderers inside pseudo elements are anonymous so they don't get notified of recalcStyle and must have
     // the style propagated downward manually similar to RenderObject::propagateStyleToAnonymousChildren.
-    RenderObject* renderer = this->renderer();
-    for (RenderObject* child = renderer->nextInPreOrder(renderer); child; child = child->nextInPreOrder(renderer)) {
+    RenderElement& renderer = *this->renderer();
+    for (RenderObject* child = renderer.nextInPreOrder(&renderer); child; child = child->nextInPreOrder(&renderer)) {
         // We only manage the style for the generated content which must be images or text.
-        if (!child->isRenderImage() && !child->isQuote())
+        if (!is<RenderImage>(*child) && !is<RenderQuote>(*child))
             continue;
-        PassRef<RenderStyle> createdStyle = RenderStyle::createStyleInheritingFromPseudoStyle(renderer->style());
-        toRenderElement(*child).setStyle(std::move(createdStyle));
+        Ref<RenderStyle> createdStyle = RenderStyle::createStyleInheritingFromPseudoStyle(renderer.style());
+        downcast<RenderElement>(*child).setStyle(WTF::move(createdStyle));
     }
 }
 

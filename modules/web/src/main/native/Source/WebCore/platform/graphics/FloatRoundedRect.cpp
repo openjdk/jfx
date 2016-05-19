@@ -34,6 +34,12 @@
 
 namespace WebCore {
 
+FloatRoundedRect::FloatRoundedRect(const RoundedRect& rect)
+    : m_rect(rect.rect())
+    , m_radii(rect.radii())
+{
+}
+
 FloatRoundedRect::FloatRoundedRect(float x, float y, float width, float height)
     : m_rect(x, y, width, height)
 {
@@ -56,25 +62,37 @@ bool FloatRoundedRect::Radii::isZero() const
     return m_topLeft.isZero() && m_topRight.isZero() && m_bottomLeft.isZero() && m_bottomRight.isZero();
 }
 
+bool FloatRoundedRect::Radii::isUniformCornerRadius() const
+{
+    return WTF::areEssentiallyEqual(m_topLeft.width(), m_topLeft.height())
+        && areEssentiallyEqual(m_topLeft, m_topRight)
+        && areEssentiallyEqual(m_topLeft, m_bottomLeft)
+        && areEssentiallyEqual(m_topLeft, m_bottomRight);
+}
+
 void FloatRoundedRect::Radii::scale(float factor)
 {
-    if (factor == 1)
+    scale(factor, factor);
+}
+
+void FloatRoundedRect::Radii::scale(float horizontalFactor, float verticalFactor)
+{
+    if (horizontalFactor == 1 && verticalFactor == 1)
         return;
 
     // If either radius on a corner becomes zero, reset both radii on that corner.
-    m_topLeft.scale(factor);
+    m_topLeft.scale(horizontalFactor, verticalFactor);
     if (!m_topLeft.width() || !m_topLeft.height())
         m_topLeft = FloatSize();
-    m_topRight.scale(factor);
+    m_topRight.scale(horizontalFactor, verticalFactor);
     if (!m_topRight.width() || !m_topRight.height())
         m_topRight = FloatSize();
-    m_bottomLeft.scale(factor);
+    m_bottomLeft.scale(horizontalFactor, verticalFactor);
     if (!m_bottomLeft.width() || !m_bottomLeft.height())
         m_bottomLeft = FloatSize();
-    m_bottomRight.scale(factor);
+    m_bottomRight.scale(horizontalFactor, verticalFactor);
     if (!m_bottomRight.width() || !m_bottomRight.height())
         m_bottomRight = FloatSize();
-
 }
 
 void FloatRoundedRect::Radii::expand(float topWidth, float bottomWidth, float leftWidth, float rightWidth)
@@ -136,5 +154,47 @@ bool FloatRoundedRect::xInterceptsAtY(float y, float& minXIntercept, float& maxX
 
     return true;
 }
+
+bool FloatRoundedRect::isRenderable() const
+{
+    return m_radii.topLeft().width() >= 0 && m_radii.topLeft().height() >= 0
+        && m_radii.bottomLeft().width() >= 0 && m_radii.bottomLeft().height() >= 0
+        && m_radii.topRight().width() >= 0 && m_radii.topRight().height() >= 0
+        && m_radii.bottomRight().width() >= 0 && m_radii.bottomRight().height() >= 0
+        && m_radii.topLeft().width() + m_radii.topRight().width() <= m_rect.width()
+        && m_radii.bottomLeft().width() + m_radii.bottomRight().width() <= m_rect.width()
+        && m_radii.topLeft().height() + m_radii.bottomLeft().height() <= m_rect.height()
+        && m_radii.topRight().height() + m_radii.bottomRight().height() <= m_rect.height();
+}
+
+void FloatRoundedRect::inflateWithRadii(float size)
+{
+    FloatRect old = m_rect;
+
+    m_rect.inflate(size);
+    // Considering the inflation factor of shorter size to scale the radii seems appropriate here
+    float factor;
+    if (m_rect.width() < m_rect.height())
+        factor = old.width() ? m_rect.width() / old.width() : 0;
+    else
+        factor = old.height() ? m_rect.height() / old.height() : 0;
+
+    m_radii.scale(factor);
+}
+
+void FloatRoundedRect::adjustRadii()
+{
+    float maxRadiusWidth = std::max(m_radii.topLeft().width() + m_radii.topRight().width(), m_radii.bottomLeft().width() + m_radii.bottomRight().width());
+    float maxRadiusHeight = std::max(m_radii.topLeft().height() + m_radii.bottomLeft().height(), m_radii.topRight().height() + m_radii.bottomRight().height());
+
+    if (maxRadiusWidth <= 0 || maxRadiusHeight <= 0) {
+        m_radii.scale(0.0f);
+        return;
+    }
+    float widthRatio = m_rect.width() / maxRadiusWidth;
+    float heightRatio = m_rect.height() / maxRadiusHeight;
+    m_radii.scale(widthRatio < heightRatio ? widthRatio : heightRatio);
+}
+
 
 } // namespace WebCore

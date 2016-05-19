@@ -57,6 +57,7 @@
 #include "CookieJar.h"
 #include "DocumentLoader.h"
 #include "DocumentType.h"
+#include "ElementChildIterator.h"
 #include "ExceptionCode.h"
 #include "FocusController.h"
 #include "Frame.h"
@@ -69,6 +70,7 @@
 #include "HTMLElementFactory.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLFrameSetElement.h"
+#include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
 #include "JSDOMBinding.h"
 #include "Page.h"
@@ -105,19 +107,19 @@ int HTMLDocument::height()
     return frameView ? frameView->contentsHeight() : 0;
 }
 
-String HTMLDocument::dir()
+const AtomicString& HTMLDocument::dir() const
 {
-    HTMLElement* b = body();
-    if (!b)
-        return String();
-    return b->getAttribute(dirAttr);
+    auto* documentElement = this->documentElement();
+    if (!is<HTMLHtmlElement>(documentElement))
+        return nullAtom;
+    return downcast<HTMLHtmlElement>(*documentElement).dir();
 }
 
-void HTMLDocument::setDir(const String& value)
+void HTMLDocument::setDir(const AtomicString& value)
 {
-    HTMLElement* b = body();
-    if (b)
-        b->setAttribute(dirAttr, value);
+    auto* documentElement = this->documentElement();
+    if (is<HTMLHtmlElement>(documentElement))
+        downcast<HTMLHtmlElement>(*documentElement).setDir(value);
 }
 
 String HTMLDocument::designMode() const
@@ -137,106 +139,74 @@ void HTMLDocument::setDesignMode(const String& value)
     Document::setDesignMode(mode);
 }
 
-Element* HTMLDocument::activeElement()
-{
-    document().updateStyleIfNeeded();
-    if (Element* element = treeScope().focusedElement())
-        return element;
-    return body();
-}
-
-bool HTMLDocument::hasFocus()
-{
-    Page* page = this->page();
-    if (!page)
-        return false;
-    if (!page->focusController().isActive())
-        return false;
-    if (Frame* focusedFrame = page->focusController().focusedFrame()) {
-        if (focusedFrame->tree().isDescendantOf(frame()))
-            return true;
-    }
-    return false;
-}
-
 const AtomicString& HTMLDocument::bgColor() const
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
+    auto* bodyElement = body();
+    if (!bodyElement)
         return emptyAtom;
     return bodyElement->fastGetAttribute(bgcolorAttr);
 }
 
 void HTMLDocument::setBgColor(const String& value)
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
-        return;
-    bodyElement->setAttribute(bgcolorAttr, value);
+    if (auto* bodyElement = body())
+        bodyElement->setAttribute(bgcolorAttr, value);
 }
 
 const AtomicString& HTMLDocument::fgColor() const
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
+    auto* bodyElement = body();
+    if (!bodyElement)
         return emptyAtom;
     return bodyElement->fastGetAttribute(textAttr);
 }
 
 void HTMLDocument::setFgColor(const String& value)
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
-        return;
-    bodyElement->setAttribute(textAttr, value);
+    if (auto* bodyElement = body())
+        bodyElement->setAttribute(textAttr, value);
 }
 
 const AtomicString& HTMLDocument::alinkColor() const
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
+    auto* bodyElement = body();
+    if (!bodyElement)
         return emptyAtom;
     return bodyElement->fastGetAttribute(alinkAttr);
 }
 
 void HTMLDocument::setAlinkColor(const String& value)
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
-        return;
-    bodyElement->setAttribute(alinkAttr, value);
+    if (auto* bodyElement = body())
+        bodyElement->setAttribute(alinkAttr, value);
 }
 
 const AtomicString& HTMLDocument::linkColor() const
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
+    auto* bodyElement = body();
+    if (!bodyElement)
         return emptyAtom;
     return bodyElement->fastGetAttribute(linkAttr);
 }
 
 void HTMLDocument::setLinkColor(const String& value)
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
-        return;
-    return bodyElement->setAttribute(linkAttr, value);
+    if (auto* bodyElement = body())
+        bodyElement->setAttribute(linkAttr, value);
 }
 
 const AtomicString& HTMLDocument::vlinkColor() const
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
+    auto* bodyElement = body();
+    if (!bodyElement)
         return emptyAtom;
     return bodyElement->fastGetAttribute(vlinkAttr);
 }
 
 void HTMLDocument::setVlinkColor(const String& value)
 {
-    HTMLElement* bodyElement = body();
-    if (!bodyElement || !isHTMLBodyElement(bodyElement))
-        return;
-    return bodyElement->setAttribute(vlinkAttr, value);
+    if (auto* bodyElement = body())
+        bodyElement->setAttribute(vlinkAttr, value);
 }
 
 void HTMLDocument::captureEvents()
@@ -247,7 +217,7 @@ void HTMLDocument::releaseEvents()
 {
 }
 
-PassRefPtr<DocumentParser> HTMLDocument::createParser()
+Ref<DocumentParser> HTMLDocument::createParser()
 {
     return HTMLDocumentParser::create(*this);
 }
@@ -256,7 +226,7 @@ PassRefPtr<DocumentParser> HTMLDocument::createParser()
 // not part of the DOM
 // --------------------------------------------------------------------------
 
-PassRefPtr<Element> HTMLDocument::createElement(const AtomicString& name, ExceptionCode& ec)
+RefPtr<Element> HTMLDocument::createElement(const AtomicString& name, ExceptionCode& ec)
 {
     if (!isValidName(name)) {
         ec = INVALID_CHARACTER_ERR;
@@ -362,11 +332,12 @@ void HTMLDocument::clear()
 
 bool HTMLDocument::isFrameSet() const
 {
-    HTMLElement* bodyElement = body();
-    return bodyElement && isHTMLFrameSetElement(bodyElement);
+    if (!documentElement())
+        return false;
+    return !!childrenOfType<HTMLFrameSetElement>(*documentElement()).first();
 }
 
-PassRefPtr<Document> HTMLDocument::cloneDocumentWithoutChildren() const
+Ref<Document> HTMLDocument::cloneDocumentWithoutChildren() const
 {
     return create(nullptr, url());
 }

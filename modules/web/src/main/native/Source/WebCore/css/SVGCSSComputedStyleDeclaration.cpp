@@ -29,6 +29,41 @@
 
 namespace WebCore {
 
+static Ref<CSSValue> paintOrder(PaintOrder paintOrder)
+{
+    Ref<CSSValueList> paintOrderList = CSSValueList::createSpaceSeparated();
+    Ref<CSSValue> fill = CSSPrimitiveValue::createIdentifier(CSSValueFill);
+    Ref<CSSValue> stroke = CSSPrimitiveValue::createIdentifier(CSSValueStroke);
+    Ref<CSSValue> markers = CSSPrimitiveValue::createIdentifier(CSSValueMarkers);
+
+    switch (paintOrder) {
+    case PaintOrderNormal:
+        return CSSPrimitiveValue::createIdentifier(CSSValueNormal);
+    case PaintOrderFill:
+        paintOrderList->append(WTF::move(fill));
+        break;
+    case PaintOrderFillMarkers:
+        paintOrderList->append(WTF::move(fill));
+        paintOrderList->append(WTF::move(markers));
+        break;
+    case PaintOrderStroke:
+        paintOrderList->append(WTF::move(stroke));
+        break;
+    case PaintOrderStrokeMarkers:
+        paintOrderList->append(WTF::move(stroke));
+        paintOrderList->append(WTF::move(markers));
+        break;
+    case PaintOrderMarkers:
+        paintOrderList->append(WTF::move(markers));
+        break;
+    case PaintOrderMarkersStroke:
+        paintOrderList->append(WTF::move(markers));
+        paintOrderList->append(WTF::move(stroke));
+        break;
+    }
+    return WTF::move(paintOrderList);
+}
+
 static PassRefPtr<CSSPrimitiveValue> glyphOrientationToCSSPrimitiveValue(EGlyphOrientation orientation)
 {
     switch (orientation) {
@@ -155,10 +190,6 @@ PassRefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID prop
             return adjustSVGPaintForCurrentColor(SVGPaint::create(svgStyle.strokePaintType(), svgStyle.strokePaintUri(), svgStyle.strokePaintColor()), style);
         case CSSPropertyStrokeDasharray:
             return strokeDashArrayToCSSValueList(svgStyle.strokeDashArray());
-        case CSSPropertyStrokeDashoffset:
-            return SVGLength::toCSSPrimitiveValue(svgStyle.strokeDashOffset());
-        case CSSPropertyStrokeWidth:
-            return SVGLength::toCSSPrimitiveValue(svgStyle.strokeWidth());
         case CSSPropertyBaselineShift: {
             switch (svgStyle.baselineShift()) {
                 case BS_BASELINE:
@@ -187,11 +218,13 @@ PassRefPtr<CSSValue> ComputedStyleExtractor::svgPropertyValue(CSSPropertyID prop
             return 0;
         }
         case CSSPropertyWebkitSvgShadow:
-            return valueForShadow(svgStyle.shadow(), propertyID, style);
+            return valueForShadow(svgStyle.shadow(), propertyID, *style);
         case CSSPropertyVectorEffect:
             return CSSPrimitiveValue::create(svgStyle.vectorEffect());
         case CSSPropertyMaskType:
             return CSSPrimitiveValue::create(svgStyle.maskType());
+        case CSSPropertyPaintOrder:
+            return paintOrder(svgStyle.paintOrder());
         case CSSPropertyMarker:
         case CSSPropertyEnableBackground:
         case CSSPropertyColorProfile:

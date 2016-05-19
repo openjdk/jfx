@@ -27,77 +27,67 @@
 #define File_h
 
 #include "Blob.h"
-#include <wtf/PassRefPtr.h>
+#include <wtf/Ref.h>
+#include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-struct FileMetadata;
 class URL;
 
-class File : public Blob {
+class File final : public Blob {
 public:
-    // AllContentTypes should only be used when the full path/name are trusted; otherwise, it could
-    // allow arbitrary pages to determine what applications an user has installed.
-    enum ContentTypeLookupPolicy {
-        WellKnownContentTypes,
-        AllContentTypes,
-    };
-
-    static PassRefPtr<File> create(const String& path, ContentTypeLookupPolicy policy = WellKnownContentTypes)
+    static Ref<File> create(const String& path)
     {
-        return adoptRef(new File(path, policy));
+        return adoptRef(*new File(path));
     }
 
-    // For deserialization.
-    static PassRefPtr<File> create(const String& path, const URL& srcURL, const String& type)
+    static Ref<File> deserialize(const String& path, const URL& srcURL, const String& type, const String& name)
     {
-        return adoptRef(new File(path, srcURL, type));
+        return adoptRef(*new File(deserializationContructor, path, srcURL, type, name));
     }
 
     // Create a file with a name exposed to the author (via File.name and associated DOM properties) that differs from the one provided in the path.
-    static PassRefPtr<File> createWithName(const String& path, const String& name, ContentTypeLookupPolicy policy = WellKnownContentTypes)
+    static Ref<File> createWithName(const String& path, const String& nameOverride)
     {
-        if (name.isEmpty())
-            return adoptRef(new File(path, policy));
-        return adoptRef(new File(path, name, policy));
+        if (nameOverride.isEmpty())
+            return adoptRef(*new File(path));
+        return adoptRef(*new File(path, nameOverride));
     }
 
-    virtual unsigned long long size() const override;
     virtual bool isFile() const override { return true; }
 
     const String& path() const { return m_path; }
     const String& name() const { return m_name; }
 
-    // This returns the current date and time if the file's last modifiecation date is not known (per spec: http://www.w3.org/TR/FileAPI/#dfn-lastModifiedDate).
+    // This returns the current date and time if the file's last modification date is not known (per spec: http://www.w3.org/TR/FileAPI/#dfn-lastModifiedDate).
     double lastModifiedDate() const;
 
-    // Note that this involves synchronous file operation. Think twice before calling this function.
-    void captureSnapshot(long long& snapshotSize, double& snapshotModificationTime) const;
+    static String contentTypeForFile(const String& path);
+
+#if ENABLE(FILE_REPLACEMENT)
+    static bool shouldReplaceFile(const String& path);
+#endif
 
 private:
-    File(const String& path, ContentTypeLookupPolicy);
+    WEBCORE_EXPORT explicit File(const String& path);
+    File(const String& path, const String& nameOverride);
 
-    // For deserialization.
-    File(const String& path, const URL& srcURL, const String& type);
-    File(const String& path, const String& name, ContentTypeLookupPolicy);
+    File(DeserializationContructor, const String& path, const URL& srcURL, const String& type, const String& name);
+
+    static void computeNameAndContentType(const String& path, const String& nameOverride, String& effectiveName, String& effectiveContentType);
+#if ENABLE(FILE_REPLACEMENT)
+    static void computeNameAndContentTypeForReplacedFile(const String& path, const String& nameOverride, String& effectiveName, String& effectiveContentType);
+#endif
 
     String m_path;
     String m_name;
 };
 
-inline File* toFile(Blob* blob)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!blob || blob->isFile());
-    return static_cast<File*>(blob);
-}
-
-inline const File* toFile(const Blob* blob)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!blob || blob->isFile());
-    return static_cast<const File*>(blob);
-}
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::File)
+    static bool isType(const WebCore::Blob& blob) { return blob.isFile(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // File_h

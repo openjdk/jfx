@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -77,7 +77,7 @@ public:
 
     virtual void setResizable(bool);
 
-    virtual void addMessageToConsole(Inspector::MessageSource, Inspector::MessageLevel, const WTF::String& message, unsigned lineNumber, unsigned columnNumber, const WTF::String& url);
+    virtual void addMessageToConsole(JSC::MessageSource, JSC::MessageLevel, const WTF::String& message, unsigned lineNumber, unsigned columnNumber, const WTF::String& url);
 
     virtual bool canRunBeforeUnloadConfirmPanel();
     virtual bool runBeforeUnloadConfirmPanel(const WTF::String& message, WebCore::Frame* frame);
@@ -88,14 +88,12 @@ public:
     virtual bool runJavaScriptConfirm(WebCore::Frame*, const WTF::String&);
     virtual bool runJavaScriptPrompt(WebCore::Frame*, const WTF::String& message, const WTF::String& defaultValue, WTF::String& result);
     virtual void setStatusbarText(const WTF::String&);
-    virtual bool shouldInterruptJavaScript();
 
     virtual WebCore::KeyboardUIMode keyboardUIMode();
-    virtual WebCore::IntRect windowResizerRect() const;
 
-    virtual void invalidateRootView(const WebCore::IntRect&, bool);
-    virtual void invalidateContentsAndRootView(const WebCore::IntRect&, bool);
-    virtual void invalidateContentsForSlowScroll(const WebCore::IntRect&, bool);
+    virtual void invalidateRootView(const WebCore::IntRect&);
+    virtual void invalidateContentsAndRootView(const WebCore::IntRect&);
+    virtual void invalidateContentsForSlowScroll(const WebCore::IntRect&);
     virtual void scroll(const WebCore::IntSize& scrollDelta, const WebCore::IntRect& rectToScroll, const WebCore::IntRect& clipRect);
 
     virtual WebCore::IntPoint screenToRootView(const WebCore::IntPoint&) const;
@@ -112,14 +110,10 @@ public:
 
     virtual void print(WebCore::Frame*);
 
-#if ENABLE(SQL_DATABASE)
     virtual void exceededDatabaseQuota(WebCore::Frame*, const WTF::String&, WebCore::DatabaseDetails);
-#endif
 
     virtual void reachedMaxAppCacheSize(int64_t spaceNeeded);
     virtual void reachedApplicationCacheOriginQuota(WebCore::SecurityOrigin*, int64_t totalSpaceNeeded);
-
-    virtual void populateVisitedLinks();
 
     virtual void runOpenPanel(WebCore::Frame*, PassRefPtr<WebCore::FileChooser>);
     virtual void loadIconForFiles(const Vector<WTF::String>&, WebCore::FileIconLoader*);
@@ -130,16 +124,13 @@ public:
 
     // Pass 0 as the GraphicsLayer to detatch the root layer.
     virtual void attachRootGraphicsLayer(WebCore::Frame*, WebCore::GraphicsLayer*);
+    virtual void attachViewOverlayGraphicsLayer(WebCore::Frame*, WebCore::GraphicsLayer*) override;
     // Sets a flag to specify that the next time content is drawn to the window,
     // the changes appear on the screen in synchrony with updates to GraphicsLayers.
     virtual void setNeedsOneShotDrawingSynchronization() { }
     // Sets a flag to specify that the view needs to be updated, so we need
     // to do an eager layout before the drawing.
     virtual void scheduleCompositingLayerFlush();
-
-#if USE(TILED_BACKING_STORE)
-    virtual void delegatedScrollRequested(const WebCore::IntPoint&) { }
-#endif
 
 #if PLATFORM(WIN) && USE(AVFOUNDATION)
     virtual WebCore::GraphicsDeviceAdapter* graphicsDeviceAdapter() const override;
@@ -148,9 +139,9 @@ public:
     virtual void scrollRectIntoView(const WebCore::IntRect&) const { }
 
 #if ENABLE(VIDEO)
-    virtual bool supportsFullscreenForNode(const WebCore::Node*);
-    virtual void enterFullscreenForNode(WebCore::Node*);
-    virtual void exitFullscreenForNode(WebCore::Node*);
+    virtual bool supportsVideoFullscreen();
+    virtual void enterVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&);
+    virtual void exitVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&);
 #endif
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
@@ -160,8 +151,8 @@ public:
     virtual bool selectItemWritingDirectionIsNatural();
     virtual bool selectItemAlignmentFollowsMenuWritingDirection();
     virtual bool hasOpenedPopup() const;
-    virtual PassRefPtr<WebCore::PopupMenu> createPopupMenu(WebCore::PopupMenuClient*) const;
-    virtual PassRefPtr<WebCore::SearchPopupMenu> createSearchPopupMenu(WebCore::PopupMenuClient*) const;
+    virtual RefPtr<WebCore::PopupMenu> createPopupMenu(WebCore::PopupMenuClient*) const;
+    virtual RefPtr<WebCore::SearchPopupMenu> createSearchPopupMenu(WebCore::PopupMenuClient*) const;
 
 #if ENABLE(FULLSCREEN_API)
     virtual bool supportsFullScreenForElement(const WebCore::Element*, bool withKeyboard);
@@ -169,7 +160,11 @@ public:
     virtual void exitFullScreenForElement(WebCore::Element*);
 #endif
 
-    virtual void numWheelEventHandlersChanged(unsigned) { }
+#if ENABLE(TOUCH_EVENTS)
+    virtual void needTouchEvents(bool) override { }
+#endif
+
+    virtual void wheelEventHandlersChanged(bool) override { }
 
     WebView* webView() { return m_webView; }
 
@@ -182,6 +177,6 @@ private:
     WebView* m_webView;
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
-    OwnPtr<WebDesktopNotificationsDelegate> m_notificationsDelegate;
+    std::unique_ptr<WebDesktopNotificationsDelegate> m_notificationsDelegate;
 #endif
 };

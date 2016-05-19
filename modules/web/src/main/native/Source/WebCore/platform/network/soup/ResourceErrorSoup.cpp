@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY IGALIA S.L. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,9 +26,11 @@
 #include "config.h"
 #include "ResourceError.h"
 
+#if USE(SOUP)
+
 #include "LocalizedStrings.h"
 #include <libsoup/soup.h>
-#include <wtf/gobject/GUniquePtr.h>
+#include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -108,3 +110,5 @@ bool ResourceError::platformCompare(const ResourceError& a, const ResourceError&
 }
 
 } // namespace WebCore
+
+#endif

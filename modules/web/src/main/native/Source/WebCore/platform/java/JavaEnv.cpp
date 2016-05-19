@@ -4,7 +4,6 @@
 #include "config.h"
 #include "JavaEnv.h"
 
-#include "runtime/InitializeThreading.h"
 #include <wtf/Assertions.h>
 
 
@@ -19,6 +18,7 @@ bool CheckAndClearException(JNIEnv* env)
     }
     return false;
 }
+
 namespace WebCore {
 
 jclass PG_GetGraphicsManagerClass(JNIEnv* env)
@@ -227,7 +227,7 @@ extern "C" {
 
 
 #if PLATFORM(JAVA_WIN) && !defined(NDEBUG)
-    #include  <crtdbg.h>
+#include  <crtdbg.h>
 #endif
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
 {

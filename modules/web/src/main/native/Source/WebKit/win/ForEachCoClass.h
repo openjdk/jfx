@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,11 +31,7 @@
 
 #include "ProgIDMacros.h"
 
-#if ENABLE(SQL_DATABASE)
 #define WEB_DATABASE_MANAGER(macro) macro(WebDatabaseManager)
-#else
-#define WEB_DATABASE_MANAGER(macro)
-#endif
 
 // Items may only be added to the end of this macro. No items may be removed from it.
 #define FOR_EACH_COCLASS(macro) \
@@ -60,12 +56,12 @@
     macro(WebView) \
     macro(WebArchive) \
     macro(WebCoreStatistics) \
-    macro(WebCookieManager) \
     macro(WebWorkersPrivate) \
     macro(WebScriptWorld) \
     macro(WebGeolocationPosition) \
     macro(WebSerializedJSValue) \
     macro(WebUserContentURLPattern) \
+    macro(WebKitMessageLoop) \
     // end of macro
 
 // Everything below this point is deprecated. Please do not use.

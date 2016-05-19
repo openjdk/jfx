@@ -28,7 +28,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define ENABLE_SUBPIXEL_LAYOUT 1
 #define ENABLE_SATURATED_LAYOUT_ARITHMETIC 1
 #include "config.h"
 
@@ -77,6 +76,10 @@ TEST(WebCoreLayoutUnit, LayoutUnitFloat)
     ASSERT_NEAR(LayoutUnit(345634.12335f).toFloat(), 345634.12335f, tolerance);
     ASSERT_NEAR(LayoutUnit(-345634.12335f).toFloat(), -345634.12335f, tolerance);
     ASSERT_NEAR(LayoutUnit(-345634).toFloat(), -345634.0f, tolerance);
+    ASSERT_NEAR(LayoutUnit(33554432.f).toFloat(), 33554432.f, tolerance);
+    ASSERT_NEAR(LayoutUnit(-33554432.f).toFloat(), -33554432.f, tolerance);
+    ASSERT_NEAR(LayoutUnit(33554432.f).toDouble(), 33554432.f, tolerance);
+    ASSERT_NEAR(LayoutUnit(-33554432.f).toDouble(), -33554432.f, tolerance);
 }
 
 TEST(WebCoreLayoutUnit, LayoutUnitRounding)
@@ -102,28 +105,6 @@ TEST(WebCoreLayoutUnit, LayoutUnitRounding)
     ASSERT_EQ(LayoutUnit::fromFloatRound(1.49f).round(), 1);
     ASSERT_EQ(LayoutUnit::fromFloatRound(1.5f).round(), 2);
     ASSERT_EQ(LayoutUnit::fromFloatRound(1.51f).round(), 2);
-}
-
-TEST(WebCoreLayoutUnit, LayoutUnitSnapSizeToPixel)
-{
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1), LayoutUnit(0)), 1);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1), LayoutUnit(0.5)), 1);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(0)), 2);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(0.49)), 2);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(0.5)), 1);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(0.75)), 1);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(0.99)), 1);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(1)), 2);
-
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(0.5), LayoutUnit(1.5)), 0);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(0.99), LayoutUnit(1.5)), 0);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.0), LayoutUnit(1.5)), 1);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.49), LayoutUnit(1.5)), 1);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(1.5)), 1);
-
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(100.5), LayoutUnit(100)), 101);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(intMaxForLayoutUnit), LayoutUnit(0.3)), intMaxForLayoutUnit);
-    ASSERT_EQ(snapSizeToPixel(LayoutUnit(intMinForLayoutUnit), LayoutUnit(-0.3)), intMinForLayoutUnit);
 }
 
 TEST(WebCoreLayoutUnit, LayoutUnitMultiplication)
@@ -250,5 +231,19 @@ TEST(WebCoreLayoutUnit, LayoutUnitFloor)
     ASSERT_EQ((LayoutUnit(intMinForLayoutUnit) + LayoutUnit(1)).floor(), intMinForLayoutUnit + 1);
 }
 
+TEST(WebCoreLayoutUnit, LayoutUnitPixelSnapping)
+{
+    for (int i = -100000; i <= 100000; ++i) {
+        ASSERT_EQ(roundToDevicePixel(LayoutUnit(i), 1), i);
+        ASSERT_EQ(roundToDevicePixel(LayoutUnit(i), 2), i);
+        ASSERT_EQ(roundToDevicePixel(LayoutUnit(i), 3), i);
+    }
+
+    for (float i = -10000; i < 0; i = i + 0.5)
+        ASSERT_FLOAT_EQ(roundToDevicePixel(LayoutUnit(i), 2), i);
+
+    for (float i = -10000.25; i < 0; i = i + 0.5)
+        ASSERT_FLOAT_EQ(roundToDevicePixel(LayoutUnit(i), 2), i + 0.25);
+}
 
 } // namespace TestWebKitAPI

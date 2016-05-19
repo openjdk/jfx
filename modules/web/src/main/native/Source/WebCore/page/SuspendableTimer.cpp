@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,8 +31,8 @@
 
 namespace WebCore {
 
-SuspendableTimer::SuspendableTimer(ScriptExecutionContext* context)
-    : ActiveDOMObject(context)
+SuspendableTimer::SuspendableTimer(ScriptExecutionContext& context)
+    : ActiveDOMObject(&context)
     , m_suspended(false)
     , m_savedNextFireInterval(0)
     , m_savedRepeatInterval(0)
@@ -84,7 +84,7 @@ void SuspendableTimer::resume()
         start(m_savedNextFireInterval, m_savedRepeatInterval);
 }
 
-bool SuspendableTimer::canSuspend() const
+bool SuspendableTimer::canSuspendForPageCache() const
 {
     return true;
 }

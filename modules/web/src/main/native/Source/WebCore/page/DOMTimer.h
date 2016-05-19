@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,45 +28,68 @@
 #define DOMTimer_h
 
 #include "SuspendableTimer.h"
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
+#include <memory>
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
+    class DOMTimerFireState;
+    class Document;
+    class Element;
+    class HTMLPlugInElement;
+    class IntRect;
     class ScheduledAction;
 
-    class DOMTimer final : public SuspendableTimer {
+    class DOMTimer final : public RefCounted<DOMTimer>, public SuspendableTimer {
+        WTF_MAKE_NONCOPYABLE(DOMTimer);
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         virtual ~DOMTimer();
+
+        static double defaultMinimumInterval() { return 0.004; } // 4 milliseconds.
+        static double defaultAlignmentInterval() { return 0; }
+        static double hiddenPageAlignmentInterval() { return 1.0; } // 1 second.
+
         // Creates a new timer owned by specified ScriptExecutionContext, starts it
         // and returns its Id.
-        static int install(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int timeout, bool singleShot);
-        static void removeById(ScriptExecutionContext*, int timeoutId);
+        static int install(ScriptExecutionContext&, std::unique_ptr<ScheduledAction>, int timeout, bool singleShot);
+        static void removeById(ScriptExecutionContext&, int timeoutId);
 
-        // Adjust to a change in the ScriptExecutionContext's minimum timer interval.
-        // This allows the minimum allowable interval time to be changed in response
-        // to events like moving a tab to the background.
-        void adjustMinimumTimerInterval(double oldMinimumTimerInterval);
+        // Notify that the interval may need updating (e.g. because the minimum interval
+        // setting for the context has changed).
+        void updateTimerIntervalIfNecessary();
+
+        static void scriptDidInteractWithPlugin(HTMLPlugInElement&);
 
     private:
-        DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval, bool singleShot);
-        virtual void fired() override;
+        DOMTimer(ScriptExecutionContext&, std::unique_ptr<ScheduledAction>, int interval, bool singleShot);
+        friend class Internals;
 
-        // ActiveDOMObject
-        virtual void contextDestroyed() override;
+        double intervalClampedToMinimum() const;
+
+        bool isDOMTimersThrottlingEnabled(Document&) const;
+        void updateThrottlingStateIfNecessary(const DOMTimerFireState&);
 
         // SuspendableTimer
+        virtual void fired() override;
         virtual void didStop() override;
-
-        double intervalClampedToMinimum(int timeout, double minimumTimerInterval) const;
-
-        // Retuns timer fire time rounded to the next multiple of timer alignment interval.
         virtual double alignedFireTime(double) const override;
+
+        // ActiveDOMObject API.
+        const char* activeDOMObjectName() const override;
+
+        enum TimerThrottleState {
+            Undetermined,
+            ShouldThrottle,
+            ShouldNotThrottle
+        };
 
         int m_timeoutId;
         int m_nestingLevel;
-        OwnPtr<ScheduledAction> m_action;
+        std::unique_ptr<ScheduledAction> m_action;
         int m_originalInterval;
+        TimerThrottleState m_throttleState;
+        double m_currentTimerInterval;
         bool m_shouldForwardUserGesture;
     };
 

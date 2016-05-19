@@ -34,7 +34,6 @@
 
 #include "DatabaseManager.h"
 #include "MediaPlayer.h"
-#include "SharedWorkerRepository.h"
 #include "WebSocket.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -51,14 +50,14 @@ RuntimeEnabledFeatures::RuntimeEnabledFeatures()
     , m_isTouchEnabled(true)
     , m_isDeviceMotionEnabled(true)
     , m_isDeviceOrientationEnabled(true)
-    , m_isSpeechInputEnabled(true)
-    , m_isCSSExclusionsEnabled(true)
     , m_isCSSShapesEnabled(true)
     , m_isCSSRegionsEnabled(false)
     , m_isCSSCompositingEnabled(false)
     , m_isLangAttributeAwareFormControlUIEnabled(false)
-#if ENABLE(SCRIPTED_SPEECH)
-    , m_isScriptedSpeechEnabled(false)
+#if PLATFORM(IOS)
+    , m_isPluginReplacementEnabled(true)
+#else
+    , m_isPluginReplacementEnabled(false)
 #endif
 #if ENABLE(MEDIA_STREAM)
     , m_isMediaStreamEnabled(true)
@@ -95,7 +94,13 @@ RuntimeEnabledFeatures::RuntimeEnabledFeatures()
     , m_areExperimentalContentSecurityPolicyFeaturesEnabled(false)
 #endif
 #if ENABLE(FONT_LOAD_EVENTS)
-    , m_isFontLoadEventsEnabled(false)
+    , m_isFontLoadEventsEnabled(true)
+#endif
+#if ENABLE(GAMEPAD)
+    , m_areGamepadsEnabled(false)
+#endif
+#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
+    , m_areAnimationTriggersEnabled(false)
 #endif
 {
 }
@@ -153,13 +158,6 @@ bool RuntimeEnabledFeatures::mediaErrorEnabled() const
 bool RuntimeEnabledFeatures::timeRangesEnabled() const
 {
     return MediaPlayer::isAvailable();
-}
-#endif
-
-#if ENABLE(SHARED_WORKERS)
-bool RuntimeEnabledFeatures::sharedWorkerEnabled() const
-{
-    return SharedWorkerRepository::isAvailable();
 }
 #endif
 

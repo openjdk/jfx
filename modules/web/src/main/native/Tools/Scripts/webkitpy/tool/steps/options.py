@@ -29,6 +29,7 @@
 from optparse import make_option
 
 class Options(object):
+    architecture = make_option("--architecture", action="store", type="string", dest="architecture", default=None, help="Target architecture")
     blocks = make_option("--blocks", action="store", type="string", dest="blocks", default=None, help="Bug number which the created bug blocks.")
     build = make_option("--build", action="store_true", dest="build", default=False, help="Build and run run-webkit-tests before committing.")
     build_style = make_option("--build-style", action="store", dest="build_style", default=None, help="Whether to build debug, release, or both.")
@@ -50,7 +51,7 @@ class Options(object):
     open_bug = make_option("--open-bug", action="store_true", dest="open_bug", default=False, help="Opens the associated bug in a browser.")
     parent_command = make_option("--parent-command", action="store", dest="parent_command", default=None, help="(Internal) The command that spawned this instance.")
     quiet = make_option("--quiet", action="store_true", dest="quiet", default=False, help="Produce less console output.")
-    request_commit = make_option("--request-commit", action="store_true", dest="request_commit", default=False, help="Mark the patch as needing auto-commit after review.")
+    request_commit = make_option("--request-commit", action="store_true", dest="request_commit", default=False, help="Request that the patch be added to the commit queue after review.")
     review = make_option("--no-review", action="store_false", dest="review", default=True, help="Do not mark the patch for review.")
     reviewer = make_option("-r", "--reviewer", action="store", type="string", dest="reviewer", help="Update ChangeLogs to say Reviewed by REVIEWER.")
     suggest_reviewers = make_option("--suggest-reviewers", action="store_true", default=False, help="Offer to CC appropriate reviewers.")

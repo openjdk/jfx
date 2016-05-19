@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,12 +40,9 @@ class Element;
 class HTMLElement;
 class HTMLSelectElement;
 
-class AccessibilityListBoxOption : public AccessibilityObject {
-
-private:
-    AccessibilityListBoxOption();
+class AccessibilityListBoxOption final : public AccessibilityObject {
 public:
-    static PassRefPtr<AccessibilityListBoxOption> create();
+    static Ref<AccessibilityListBoxOption> create();
     virtual ~AccessibilityListBoxOption();
 
     void setHTMLElement(HTMLElement* element) { m_optionElement = element; }
@@ -62,21 +59,23 @@ public:
 
     virtual LayoutRect elementRect() const override;
     virtual AccessibilityObject* parentObject() const override;
-    virtual bool isListBoxOption() const override final { return true; }
 
 private:
-    HTMLElement* m_optionElement;
+    AccessibilityListBoxOption();
 
+    virtual bool isListBoxOption() const override { return true; }
     virtual bool canHaveChildren() const override { return false; }
     HTMLSelectElement* listBoxOptionParentNode() const;
     int listBoxOptionIndex() const;
     IntRect listBoxOptionRect() const;
     AccessibilityObject* listBoxOptionAccessibilityObject(HTMLElement*) const;
     virtual bool computeAccessibilityIsIgnored() const override;
+
+    HTMLElement* m_optionElement;
 };
 
-ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityListBoxOption, isListBoxOption())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityListBoxOption, isListBoxOption())
 
 #endif // AccessibilityListBoxOption_h

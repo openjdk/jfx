@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -35,7 +35,7 @@ namespace WebCore {
     public:
         TextEncoding() : m_name(0) { }
         TextEncoding(const char* name);
-        TextEncoding(const String& name);
+        WEBCORE_EXPORT TextEncoding(const String& name);
 
         bool isValid() const { return m_name; }
         const char* name() const { return m_name; }
@@ -68,8 +68,8 @@ namespace WebCore {
             bool ignored;
             return decode(str, length, false, ignored);
         }
-        String decode(const char*, size_t length, bool stopOnError, bool& sawError) const;
-        CString encode(const UChar*, size_t length, UnencodableHandling) const;
+        WEBCORE_EXPORT String decode(const char*, size_t length, bool stopOnError, bool& sawError) const;
+        CString encode(StringView, UnencodableHandling) const;
 
         UChar backslashAsCurrencySymbol() const;
 
@@ -90,8 +90,8 @@ namespace WebCore {
     const TextEncoding& UTF16LittleEndianEncoding();
     const TextEncoding& UTF32BigEndianEncoding();
     const TextEncoding& UTF32LittleEndianEncoding();
-    const TextEncoding& UTF8Encoding();
-    const TextEncoding& WindowsLatin1Encoding();
+    WEBCORE_EXPORT const TextEncoding& UTF8Encoding();
+    WEBCORE_EXPORT const TextEncoding& WindowsLatin1Encoding();
 
 } // namespace WebCore
 

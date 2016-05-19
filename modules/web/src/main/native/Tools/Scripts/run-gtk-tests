@@ -58,15 +58,12 @@ class TestTimeout(Exception):
     pass
 
 class TestRunner:
-    TEST_DIRS = [ "WebKit2Gtk", "WebKitGtk", "WebKit2", "JavaScriptCore", "WTF", "WebCore",  "WebCoreGtk" ]
+    TEST_DIRS = [ "WebKit2Gtk", "WebKit2", "JavaScriptCore", "WTF", "WebCore" ]
 
     SKIPPED = [
-        SkippedTest("WebKitGtk/testwebinspector", "/webkit/webinspector/close-and-inspect", "Test is flaky in GTK Linux 32-bit Release bot", 82869),
-        SkippedTest("WebKitGtk/testwebresource", "/webkit/webresource/loading", "Test fails", 104689),
-        SkippedTest("WebKitGtk/testwebresource", "/webkit/webresource/sub_resource_loading", "Test fails in GTK Linux 64-bit Release bot", 82330),
         SkippedTest("WebKit2Gtk/TestUIClient", "/webkit2/WebKitWebView/mouse-target", "Test times out after r150890", 117689),
         SkippedTest("WebKit2Gtk/TestContextMenu", SkippedTest.ENTIRE_SUITE, "Test times out after r150890", 117689),
-        SkippedTest("WebKit2Gtk/TestWebKitWebView", "/webkit2/WebKitWebView/snapshot", "Test fails", 120404),
+        SkippedTest("WebKit2Gtk/TestCookieManager", "/webkit2/WebKitCookieManager/persistent-storage", "Test is flaky", 134580),
         SkippedTest("WebKit2/TestWebKit2", "WebKit2.MouseMoveAfterCrash", "Test is flaky", 85066),
         SkippedTest("WebKit2/TestWebKit2", "WebKit2.NewFirstVisuallyNonEmptyLayoutForImages", "Test is flaky", 85066),
         SkippedTest("WebKit2/TestWebKit2", "WebKit2.NewFirstVisuallyNonEmptyLayoutFrames", "Test fails", 85037),
@@ -78,12 +75,9 @@ class TestRunner:
         SkippedTest("WebKit2/TestWebKit2", "WebKit2.ReloadPageAfterCrash", "Test flakily times out", 110129),
         SkippedTest("WebKit2/TestWebKit2", "WebKit2.DidAssociateFormControls", "Test times out", 120302),
         SkippedTest("WebKit2/TestWebKit2", "WebKit2.InjectedBundleFrameHitTest", "Test times out", 120303),
-        SkippedTest("WebKit2/TestWebKit2", "WebKit2.ResizeReversePaginatedWebView", "Test fails", 120305),
-        SkippedTest("WebKit2/TestWebKit2", "WebKit2.ScrollPinningBehaviors", "Test fails", 120306),
         SkippedTest("WebKit2/TestWebKit2", "WebKit2.TerminateTwice", "Test causes crash on the next test", 121970),
         SkippedTest("WebKit2/TestWebKit2", "WebKit2.GeolocationTransitionToHighAccuracy", "Test causes crash on the next test", 125068),
         SkippedTest("WebKit2/TestWebKit2", "WebKit2.GeolocationTransitionToLowAccuracy", "Test causes crash on the next test", 125068),
-        SkippedTest("WebKit2Gtk/TestInspectorServer", SkippedTest.ENTIRE_SUITE, "Timing out on the bot", 122571),
     ]
 
     def __init__(self, options, tests=[]):
@@ -96,8 +90,6 @@ class TestRunner:
         self._tests = self._get_tests(tests)
         self._skipped_tests = TestRunner.SKIPPED
         self._disabled_tests = []
-        if not sys.stdout.isatty():
-            self._tty_colors_pattern = re.compile("\033\[[0-9;]*m")
 
         # These SPI daemons need to be active for the accessibility tests to work.
         self._spi_registryd = None
@@ -196,7 +188,7 @@ class TestRunner:
         self._test_env = os.environ
         self._test_env['GSETTINGS_BACKEND'] = 'memory'
         self._test_env["TEST_WEBKIT_API_WEBKIT2_RESOURCES_PATH"] = common.top_level_path("Tools", "TestWebKitAPI", "Tests", "WebKit2")
-        self._test_env["TEST_WEBKIT_API_WEBKIT2_INJECTED_BUNDLE_PATH"] = common.tests_library_build_path()
+        self._test_env["TEST_WEBKIT_API_WEBKIT2_INJECTED_BUNDLE_PATH"] = common.library_build_path()
         self._test_env["WEBKIT_EXEC_PATH"] = self._programs_path
 
         if not self._run_xvfb():
@@ -263,10 +255,7 @@ class TestRunner:
             if child_pid[0] == -1:
                 child_pid[0] = self._get_child_pid_from_test_output(line)
 
-            if sys.stdout.isatty():
-                sys.stdout.write(line)
-            else:
-                sys.stdout.write(self._tty_colors_pattern.sub('', line.replace('\r', '')))
+            sys.stdout.write(line)
 
         def waitpid(pid):
             while True:

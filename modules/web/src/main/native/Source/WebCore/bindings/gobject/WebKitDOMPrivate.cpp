@@ -64,6 +64,14 @@
 #include "WebKitDOMUIEventPrivate.h"
 #include "WebKitDOMWheelEventPrivate.h"
 
+#if ENABLE(VIDEO_TRACK)
+#include "DataCue.h"
+#include "VTTCue.h"
+#include "WebKitDOMDataCuePrivate.h"
+#include "WebKitDOMTextTrackCuePrivate.h"
+#include "WebKitDOMVTTCuePrivate.h"
+#endif
+
 namespace WebKit {
 
 using namespace WebCore;
@@ -76,13 +84,13 @@ WebKitDOMNode* wrap(Node* node)
 
     switch (node->nodeType()) {
     case Node::ELEMENT_NODE:
-        if (node->isHTMLElement())
-            return WEBKIT_DOM_NODE(wrap(toHTMLElement(node)));
-        return WEBKIT_DOM_NODE(wrapElement(toElement(node)));
+        if (is<HTMLElement>(*node))
+            return WEBKIT_DOM_NODE(wrap(downcast<HTMLElement>(node)));
+        return WEBKIT_DOM_NODE(wrapElement(downcast<Element>(node)));
     case Node::ATTRIBUTE_NODE:
         return WEBKIT_DOM_NODE(wrapAttr(static_cast<Attr*>(node)));
     case Node::TEXT_NODE:
-        return WEBKIT_DOM_NODE(wrapText(toText(node)));
+        return WEBKIT_DOM_NODE(wrapText(downcast<Text>(node)));
     case Node::CDATA_SECTION_NODE:
         return WEBKIT_DOM_NODE(wrapCDATASection(static_cast<CDATASection*>(node)));
     case Node::ENTITY_REFERENCE_NODE:
@@ -92,15 +100,14 @@ WebKitDOMNode* wrap(Node* node)
     case Node::COMMENT_NODE:
         return WEBKIT_DOM_NODE(wrapComment(static_cast<Comment*>(node)));
     case Node::DOCUMENT_NODE:
-        if (static_cast<Document*>(node)->isHTMLDocument())
-            return WEBKIT_DOM_NODE(wrapHTMLDocument(static_cast<HTMLDocument*>(node)));
-        return WEBKIT_DOM_NODE(wrapDocument(static_cast<Document*>(node)));
+        if (is<HTMLDocument>(*node))
+            return WEBKIT_DOM_NODE(wrapHTMLDocument(downcast<HTMLDocument>(node)));
+        return WEBKIT_DOM_NODE(wrapDocument(downcast<Document>(node)));
     case Node::DOCUMENT_TYPE_NODE:
         return WEBKIT_DOM_NODE(wrapDocumentType(static_cast<DocumentType*>(node)));
     case Node::DOCUMENT_FRAGMENT_NODE:
         return WEBKIT_DOM_NODE(wrapDocumentFragment(static_cast<DocumentFragment*>(node)));
     case Node::ENTITY_NODE:
-    case Node::NOTATION_NODE:
     case Node::XPATH_NAMESPACE_NODE:
         break;
     }
@@ -132,8 +139,8 @@ WebKitDOMStyleSheet* wrap(StyleSheet* styleSheet)
 {
     ASSERT(styleSheet);
 
-    if (styleSheet->isCSSStyleSheet())
-        return WEBKIT_DOM_STYLE_SHEET(wrapCSSStyleSheet(static_cast<CSSStyleSheet*>(styleSheet)));
+    if (is<CSSStyleSheet>(*styleSheet))
+        return WEBKIT_DOM_STYLE_SHEET(wrapCSSStyleSheet(downcast<CSSStyleSheet>(styleSheet)));
     return wrapStyleSheet(styleSheet);
 }
 
@@ -141,8 +148,8 @@ WebKitDOMHTMLCollection* wrap(HTMLCollection* collection)
 {
     ASSERT(collection);
 
-    if (collection->type() == WebCore::SelectOptions)
-        return WEBKIT_DOM_HTML_COLLECTION(wrapHTMLOptionsCollection(static_cast<HTMLOptionsCollection*>(collection)));
+    if (is<HTMLOptionsCollection>(*collection))
+        return WEBKIT_DOM_HTML_COLLECTION(wrapHTMLOptionsCollection(downcast<HTMLOptionsCollection>(collection)));
     return wrapHTMLCollection(collection);
 }
 
@@ -167,5 +174,21 @@ WebKitDOMBlob* wrap(Blob* blob)
         return WEBKIT_DOM_BLOB(wrapFile(static_cast<File*>(blob)));
     return wrapBlob(blob);
 }
+
+#if ENABLE(VIDEO_TRACK)
+WebKitDOMTextTrackCue* wrap(TextTrackCue* cue)
+{
+    ASSERT(cue);
+
+    switch (cue->cueType()) {
+    case TextTrackCue::Data:
+        return WEBKIT_DOM_TEXT_TRACK_CUE(wrapDataCue(static_cast<DataCue*>(cue)));
+    case TextTrackCue::WebVTT:
+    case TextTrackCue::Generic:
+        return WEBKIT_DOM_TEXT_TRACK_CUE(wrapVTTCue(static_cast<VTTCue*>(cue)));
+    }
+    return wrapTextTrackCue(cue);
+}
+#endif
 
 } // namespace WebKit

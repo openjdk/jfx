@@ -66,8 +66,7 @@
 namespace WebCore {
 
 InternalSettings::Backup::Backup(Settings& settings)
-    : m_originalCSSExclusionsEnabled(RuntimeEnabledFeatures::sharedFeatures().cssExclusionsEnabled())
-    , m_originalCSSShapesEnabled(RuntimeEnabledFeatures::sharedFeatures().cssShapesEnabled())
+    : m_originalCSSShapesEnabled(RuntimeEnabledFeatures::sharedFeatures().cssShapesEnabled())
     , m_originalEditingBehavior(settings.editingBehaviorType())
 #if ENABLE(TEXT_AUTOSIZING)
     , m_originalTextAutosizingEnabled(settings.textAutosizingEnabled())
@@ -79,24 +78,34 @@ InternalSettings::Backup::Backup(Settings& settings)
     , m_originalMockScrollbarsEnabled(settings.mockScrollbarsEnabled())
     , m_langAttributeAwareFormControlUIEnabled(RuntimeEnabledFeatures::sharedFeatures().langAttributeAwareFormControlUIEnabled())
     , m_imagesEnabled(settings.areImagesEnabled())
-    , m_minimumTimerInterval(settings.minDOMTimerInterval())
+    , m_minimumTimerInterval(settings.minimumDOMTimerInterval())
 #if ENABLE(VIDEO_TRACK)
     , m_shouldDisplaySubtitles(settings.shouldDisplaySubtitles())
     , m_shouldDisplayCaptions(settings.shouldDisplayCaptions())
     , m_shouldDisplayTextDescriptions(settings.shouldDisplayTextDescriptions())
 #endif
     , m_defaultVideoPosterURL(settings.defaultVideoPosterURL())
+    , m_forcePendingWebGLPolicy(settings.isForcePendingWebGLPolicy())
     , m_originalTimeWithoutMouseMovementBeforeHidingControls(settings.timeWithoutMouseMovementBeforeHidingControls())
     , m_useLegacyBackgroundSizeShorthandBehavior(settings.useLegacyBackgroundSizeShorthandBehavior())
     , m_autoscrollForDragAndDropEnabled(settings.autoscrollForDragAndDropEnabled())
     , m_pluginReplacementEnabled(RuntimeEnabledFeatures::sharedFeatures().pluginReplacementEnabled())
     , m_shouldConvertPositionStyleOnCopy(settings.shouldConvertPositionStyleOnCopy())
+    , m_fontFallbackPrefersPictographs(settings.fontFallbackPrefersPictographs())
+    , m_backgroundShouldExtendBeyondPage(settings.backgroundShouldExtendBeyondPage())
+    , m_storageBlockingPolicy(settings.storageBlockingPolicy())
+    , m_scrollingTreeIncludesFrames(settings.scrollingTreeIncludesFrames())
+#if ENABLE(TOUCH_EVENTS)
+    , m_touchEventEmulationEnabled(settings.isTouchEventEmulationEnabled())
+#endif
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+    , m_allowsAirPlayForMediaPlayback(settings.allowsAirPlayForMediaPlayback())
+#endif
 {
 }
 
 void InternalSettings::Backup::restoreTo(Settings& settings)
 {
-    RuntimeEnabledFeatures::sharedFeatures().setCSSExclusionsEnabled(m_originalCSSExclusionsEnabled);
     RuntimeEnabledFeatures::sharedFeatures().setCSSShapesEnabled(m_originalCSSShapesEnabled);
     settings.setEditingBehaviorType(m_originalEditingBehavior);
 
@@ -135,26 +144,30 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #endif
     settings.setMediaTypeOverride(m_originalMediaTypeOverride);
     settings.setCanvasUsesAcceleratedDrawing(m_originalCanvasUsesAcceleratedDrawing);
-    settings.setMockScrollbarsEnabled(m_originalMockScrollbarsEnabled);
     RuntimeEnabledFeatures::sharedFeatures().setLangAttributeAwareFormControlUIEnabled(m_langAttributeAwareFormControlUIEnabled);
     settings.setImagesEnabled(m_imagesEnabled);
-    settings.setMinDOMTimerInterval(m_minimumTimerInterval);
+    settings.setMinimumDOMTimerInterval(m_minimumTimerInterval);
 #if ENABLE(VIDEO_TRACK)
     settings.setShouldDisplaySubtitles(m_shouldDisplaySubtitles);
     settings.setShouldDisplayCaptions(m_shouldDisplayCaptions);
     settings.setShouldDisplayTextDescriptions(m_shouldDisplayTextDescriptions);
 #endif
     settings.setDefaultVideoPosterURL(m_defaultVideoPosterURL);
+    settings.setForcePendingWebGLPolicy(m_forcePendingWebGLPolicy);
     settings.setTimeWithoutMouseMovementBeforeHidingControls(m_originalTimeWithoutMouseMovementBeforeHidingControls);
     settings.setUseLegacyBackgroundSizeShorthandBehavior(m_useLegacyBackgroundSizeShorthandBehavior);
     settings.setAutoscrollForDragAndDropEnabled(m_autoscrollForDragAndDropEnabled);
     settings.setShouldConvertPositionStyleOnCopy(m_shouldConvertPositionStyleOnCopy);
+    settings.setFontFallbackPrefersPictographs(m_fontFallbackPrefersPictographs);
+    settings.setBackgroundShouldExtendBeyondPage(m_backgroundShouldExtendBeyondPage);
+    settings.setStorageBlockingPolicy(m_storageBlockingPolicy);
+    settings.setScrollingTreeIncludesFrames(m_scrollingTreeIncludesFrames);
+#if ENABLE(TOUCH_EVENTS)
+    settings.setTouchEventEmulationEnabled(m_touchEventEmulationEnabled);
+#endif
     RuntimeEnabledFeatures::sharedFeatures().setPluginReplacementEnabled(m_pluginReplacementEnabled);
 }
 
-// We can't use RefCountedSupplement because that would try to make InternalSettings RefCounted
-// and InternalSettings is already RefCounted via its base class, InternalSettingsGenerated.
-// Instead, we manually make InternalSettings supplement Page.
 class InternalSettingsWrapper : public Supplement<Page> {
 public:
     explicit InternalSettingsWrapper(Page* page)
@@ -177,7 +190,7 @@ const char* InternalSettings::supplementName()
 InternalSettings* InternalSettings::from(Page* page)
 {
     if (!Supplement<Page>::from(page, supplementName()))
-        Supplement<Page>::provideTo(page, supplementName(), adoptPtr(new InternalSettingsWrapper(page)));
+        Supplement<Page>::provideTo(page, supplementName(), std::make_unique<InternalSettingsWrapper>(page));
     return static_cast<InternalSettingsWrapper*>(Supplement<Page>::from(page, supplementName()))->internalSettings();
 }
 
@@ -190,12 +203,19 @@ InternalSettings::InternalSettings(Page* page)
     , m_page(page)
     , m_backup(page->settings())
 {
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+    page->settings().setAllowsAirPlayForMediaPlayback(false);
+#endif
 }
 
 void InternalSettings::resetToConsistentState()
 {
     page()->setPageScaleFactor(1, IntPoint(0, 0));
     page()->setCanStartMedia(true);
+    page()->settings().setForcePendingWebGLPolicy(false);
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+    m_page->settings().setAllowsAirPlayForMediaPlayback(false);
+#endif
 
     m_backup.restoreTo(*settings());
     m_backup = Backup(*settings());
@@ -208,12 +228,6 @@ Settings* InternalSettings::settings() const
     if (!page())
         return 0;
     return &page()->settings();
-}
-
-void InternalSettings::setMockScrollbarsEnabled(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setMockScrollbarsEnabled(enabled);
 }
 
 void InternalSettings::setTouchEventEmulationEnabled(bool enabled, ExceptionCode& ec)
@@ -337,12 +351,6 @@ void InternalSettings::setTextAutosizingFontScaleFactor(float fontScaleFactor, E
 #endif
 }
 
-void InternalSettings::setCSSExclusionsEnabled(bool enabled, ExceptionCode& ec)
-{
-    UNUSED_PARAM(ec);
-    RuntimeEnabledFeatures::sharedFeatures().setCSSExclusionsEnabled(enabled);
-}
-
 void InternalSettings::setCSSShapesEnabled(bool enabled, ExceptionCode& ec)
 {
     UNUSED_PARAM(ec);
@@ -355,6 +363,15 @@ void InternalSettings::setCanStartMedia(bool enabled, ExceptionCode& ec)
     m_page->setCanStartMedia(enabled);
 }
 
+void InternalSettings::setWirelessPlaybackDisabled(bool available)
+{
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+    m_page->settings().setAllowsAirPlayForMediaPlayback(available);
+#else
+    UNUSED_PARAM(available);
+#endif
+}
+
 void InternalSettings::setEditingBehavior(const String& editingBehavior, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
@@ -364,6 +381,8 @@ void InternalSettings::setEditingBehavior(const String& editingBehavior, Excepti
         settings()->setEditingBehaviorType(EditingMacBehavior);
     else if (equalIgnoringCase(editingBehavior, "unix"))
         settings()->setEditingBehaviorType(EditingUnixBehavior);
+    else if (equalIgnoringCase(editingBehavior, "ios"))
+        settings()->setEditingBehaviorType(EditingIOSBehavior);
     else
         ec = SYNTAX_ERR;
 }
@@ -443,13 +462,19 @@ void InternalSettings::setImagesEnabled(bool enabled, ExceptionCode& ec)
 void InternalSettings::setMinimumTimerInterval(double intervalInSeconds, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
-    settings()->setMinDOMTimerInterval(intervalInSeconds);
+    settings()->setMinimumDOMTimerInterval(intervalInSeconds);
 }
 
 void InternalSettings::setDefaultVideoPosterURL(const String& url, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
     settings()->setDefaultVideoPosterURL(url);
+}
+
+void InternalSettings::setForcePendingWebGLPolicy(bool forced, ExceptionCode& ec)
+{
+    InternalSettingsGuardForSettings();
+    settings()->setForcePendingWebGLPolicy(forced);
 }
 
 void InternalSettings::setTimeWithoutMouseMovementBeforeHidingControls(double time, ExceptionCode& ec)
@@ -492,5 +517,13 @@ void InternalSettings::setShouldConvertPositionStyleOnCopy(bool convert, Excepti
     InternalSettingsGuardForSettings();
     settings()->setShouldConvertPositionStyleOnCopy(convert);
 }
+
+void InternalSettings::setScrollingTreeIncludesFrames(bool enabled, ExceptionCode& ec)
+{
+    InternalSettingsGuardForSettings();
+    settings()->setScrollingTreeIncludesFrames(enabled);
+}
+
+// If you add to this list, make sure that you update the Backup class for test reproducability!
 
 }

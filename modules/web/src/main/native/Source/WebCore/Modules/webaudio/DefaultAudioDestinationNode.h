@@ -35,9 +35,9 @@ class AudioContext;
 
 class DefaultAudioDestinationNode : public AudioDestinationNode {
 public:
-    static PassRefPtr<DefaultAudioDestinationNode> create(AudioContext* context)
+    static Ref<DefaultAudioDestinationNode> create(AudioContext* context)
     {
-        return adoptRef(new DefaultAudioDestinationNode(context));
+        return adoptRef(*new DefaultAudioDestinationNode(context));
     }
 
     virtual ~DefaultAudioDestinationNode();
@@ -50,7 +50,11 @@ public:
     // AudioDestinationNode
     virtual void enableInput(const String& inputDeviceId) override;
     virtual void startRendering() override;
+    virtual void resume(std::function<void()>) override;
+    virtual void suspend(std::function<void()>) override;
+    virtual void close(std::function<void()>) override;
     virtual unsigned long maxChannelCount() const override;
+    virtual bool isPlaying() override;
 
 private:
     explicit DefaultAudioDestinationNode(AudioContext*);

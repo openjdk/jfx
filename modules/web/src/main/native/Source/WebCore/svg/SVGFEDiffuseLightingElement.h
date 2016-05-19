@@ -22,7 +22,6 @@
 #ifndef SVGFEDiffuseLightingElement_h
 #define SVGFEDiffuseLightingElement_h
 
-#if ENABLE(FILTERS)
 #include "SVGFELightElement.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
@@ -33,17 +32,16 @@ class SVGColor;
 
 class SVGFEDiffuseLightingElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFEDiffuseLightingElement> create(const QualifiedName&, Document&);
+    static Ref<SVGFEDiffuseLightingElement> create(const QualifiedName&, Document&);
     void lightElementAttributeChanged(const SVGFELightElement*, const QualifiedName&);
 
 private:
     SVGFEDiffuseLightingElement(const QualifiedName&, Document&);
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
+    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
 
     static const AtomicString& kernelUnitLengthXIdentifier();
     static const AtomicString& kernelUnitLengthYIdentifier();
@@ -59,5 +57,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(FILTERS)
 #endif

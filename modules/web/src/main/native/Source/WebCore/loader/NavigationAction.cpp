@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,59 +31,82 @@
 
 #include "Event.h"
 #include "FrameLoader.h"
+#include "ScriptController.h"
 
 namespace WebCore {
 
 static NavigationType navigationType(FrameLoadType frameLoadType, bool isFormSubmission, bool haveEvent)
 {
     if (isFormSubmission)
-        return NavigationTypeFormSubmitted;
+        return NavigationType::FormSubmitted;
     if (haveEvent)
-        return NavigationTypeLinkClicked;
-    if (frameLoadType == FrameLoadTypeReload || frameLoadType == FrameLoadTypeReloadFromOrigin)
-        return NavigationTypeReload;
+        return NavigationType::LinkClicked;
+    if (frameLoadType == FrameLoadType::Reload || frameLoadType == FrameLoadType::ReloadFromOrigin)
+        return NavigationType::Reload;
     if (isBackForwardLoadType(frameLoadType))
-        return NavigationTypeBackForward;
-    return NavigationTypeOther;
+        return NavigationType::BackForward;
+    return NavigationType::Other;
+}
+
+NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, NavigationType type, Event* event, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy)
+    : m_resourceRequest(resourceRequest)
+    , m_type(type)
+    , m_event(event)
+    , m_processingUserGesture(ScriptController::processingUserGesture())
+    , m_shouldOpenExternalURLsPolicy(shouldOpenExternalURLsPolicy)
+{
 }
 
 NavigationAction::NavigationAction()
-    : m_type(NavigationTypeOther)
+    : NavigationAction(ResourceRequest(), NavigationType::Other, nullptr, ShouldOpenExternalURLsPolicy::ShouldNotAllow)
 {
 }
 
 NavigationAction::NavigationAction(const ResourceRequest& resourceRequest)
-    : m_resourceRequest(resourceRequest)
-    , m_type(NavigationTypeOther)
+    : NavigationAction(resourceRequest, NavigationType::Other, nullptr, ShouldOpenExternalURLsPolicy::ShouldNotAllow)
+{
+}
+
+NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy)
+    : NavigationAction(resourceRequest, NavigationType::Other, nullptr, shouldOpenExternalURLsPolicy)
 {
 }
 
 NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, NavigationType type)
-    : m_resourceRequest(resourceRequest)
-    , m_type(type)
+    : NavigationAction(resourceRequest, type, nullptr, ShouldOpenExternalURLsPolicy::ShouldNotAllow)
 {
 }
 
-NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, FrameLoadType frameLoadType,
-        bool isFormSubmission)
-    : m_resourceRequest(resourceRequest)
-    , m_type(navigationType(frameLoadType, isFormSubmission, 0))
+NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, FrameLoadType frameLoadType, bool isFormSubmission)
+    : NavigationAction(resourceRequest, navigationType(frameLoadType, isFormSubmission, 0), nullptr, ShouldOpenExternalURLsPolicy::ShouldNotAllow)
 {
 }
 
-NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, NavigationType type, PassRefPtr<Event> event)
-    : m_resourceRequest(resourceRequest)
-    , m_type(type)
-    , m_event(event)
+NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, NavigationType type, Event* event)
+    : NavigationAction(resourceRequest, type, event, ShouldOpenExternalURLsPolicy::ShouldNotAllow)
 {
 }
 
-NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, FrameLoadType frameLoadType,
-        bool isFormSubmission, PassRefPtr<Event> event)
-    : m_resourceRequest(resourceRequest)
-    , m_type(navigationType(frameLoadType, isFormSubmission, event))
-    , m_event(event)
+NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, NavigationType type, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy)
+    : NavigationAction(resourceRequest, type, nullptr, shouldOpenExternalURLsPolicy)
 {
+}
+
+NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, FrameLoadType frameLoadType, bool isFormSubmission, Event* event)
+    : NavigationAction(resourceRequest, navigationType(frameLoadType, isFormSubmission, event), event, ShouldOpenExternalURLsPolicy::ShouldNotAllow)
+{
+}
+
+NavigationAction::NavigationAction(const ResourceRequest& resourceRequest, FrameLoadType frameLoadType, bool isFormSubmission, Event* event, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy)
+    : NavigationAction(resourceRequest, navigationType(frameLoadType, isFormSubmission, event), event, shouldOpenExternalURLsPolicy)
+{
+}
+
+NavigationAction NavigationAction::copyWithShouldOpenExternalURLsPolicy(ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy) const
+{
+    NavigationAction result(*this);
+    result.m_shouldOpenExternalURLsPolicy = shouldOpenExternalURLsPolicy;
+    return WTF::move(result);
 }
 
 }

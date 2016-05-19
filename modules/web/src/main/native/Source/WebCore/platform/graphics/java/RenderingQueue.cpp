@@ -16,7 +16,7 @@ namespace WebCore {
 
     static Addr2ByteBuffer &getAddr2ByteBuffer()
     {
-        DEFINE_STATIC_LOCAL(Addr2ByteBuffer, container, ());
+        DEPRECATED_DEFINE_STATIC_LOCAL(Addr2ByteBuffer, container, ());
         return container;
     }
 
@@ -92,7 +92,7 @@ namespace WebCore {
             (jobject)(m_buffer->createDirectByteBuffer(env)));
         CheckAndClearException(env);
 
-        m_buffer = NULL;
+        m_buffer = nullptr;
 
         return *this;
     }

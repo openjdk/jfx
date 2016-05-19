@@ -27,10 +27,10 @@
 #include "OpenTypeVerticalData.h"
 
 #include "FloatRect.h"
+#include "Font.h"
 #include "GlyphPage.h"
 #include "OpenTypeTypes.h"
 #include "SharedBuffer.h"
-#include "SimpleFontData.h"
 #include <wtf/RefPtr.h>
 
 using namespace std;
@@ -110,24 +110,6 @@ struct VORGTable {
     } vertOriginYMetrics[1];
 
     size_t requiredSize() const { return sizeof(*this) + sizeof(VertOriginYMetrics) * (numVertOriginYMetrics - 1); }
-};
-
-struct CoverageTable : TableBase {
-    OpenType::UInt16 coverageFormat;
-};
-
-struct Coverage1Table : CoverageTable {
-    OpenType::UInt16 glyphCount;
-    OpenType::GlyphID glyphArray[1];
-};
-
-struct Coverage2Table : CoverageTable {
-    OpenType::UInt16 rangeCount;
-    struct RangeRecord {
-        OpenType::GlyphID start;
-        OpenType::GlyphID end;
-        OpenType::UInt16 startCoverageIndex;
-    } ranges[1];
 };
 
 struct SubstitutionSubTable : TableBase {
@@ -497,7 +479,7 @@ void OpenTypeVerticalData::loadVerticalGlyphSubstitutions(const FontPlatformData
         gsub->getVerticalGlyphSubstitutions(&m_verticalGlyphMap, *buffer.get());
 }
 
-float OpenTypeVerticalData::advanceHeight(const SimpleFontData* font, Glyph glyph) const
+float OpenTypeVerticalData::advanceHeight(const Font* font, Glyph glyph) const
 {
     size_t countHeights = m_advanceHeights.size();
     if (countHeights) {
@@ -510,7 +492,7 @@ float OpenTypeVerticalData::advanceHeight(const SimpleFontData* font, Glyph glyp
     return font->fontMetrics().height();
 }
 
-void OpenTypeVerticalData::getVerticalTranslationsForGlyphs(const SimpleFontData* font, const Glyph* glyphs, size_t count, float* outXYArray) const
+void OpenTypeVerticalData::getVerticalTranslationsForGlyphs(const Font* font, const Glyph* glyphs, size_t count, float* outXYArray) const
 {
     size_t countWidths = m_advanceWidths.size();
     ASSERT(countWidths > 0);
@@ -553,7 +535,7 @@ void OpenTypeVerticalData::getVerticalTranslationsForGlyphs(const SimpleFontData
     }
 }
 
-void OpenTypeVerticalData::substituteWithVerticalGlyphs(const SimpleFontData* font, GlyphPage* glyphPage, unsigned offset, unsigned length) const
+void OpenTypeVerticalData::substituteWithVerticalGlyphs(const Font* font, GlyphPage* glyphPage, unsigned offset, unsigned length) const
 {
     const HashMap<Glyph, Glyph>& map = m_verticalGlyphMap;
     if (map.isEmpty())
@@ -562,7 +544,7 @@ void OpenTypeVerticalData::substituteWithVerticalGlyphs(const SimpleFontData* fo
     for (unsigned index = offset, end = offset + length; index < end; ++index) {
         Glyph glyph = glyphPage->glyphAt(index);
         if (glyph) {
-            ASSERT(glyphPage->glyphDataForIndex(index).fontData == font);
+            ASSERT(glyphPage->glyphDataForIndex(index).font == font);
             Glyph to = map.get(glyph);
             if (to)
                 glyphPage->setGlyphDataForIndex(index, to, font);

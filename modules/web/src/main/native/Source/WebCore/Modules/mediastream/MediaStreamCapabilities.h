@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,7 +29,7 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "MediaStreamCapabilities.h"
-#include "MediaStreamSourceCapabilities.h"
+#include "RealtimeMediaSourceCapabilities.h"
 #include "ScriptWrappable.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -38,11 +38,11 @@
 namespace WebCore {
 
 class CapabilityRange;
-class MediaStreamSourceCapabilities;
+class RealtimeMediaSourceCapabilities;
 
 class MediaStreamCapabilities : public RefCounted<MediaStreamCapabilities>, public ScriptWrappable {
 public:
-    static RefPtr<MediaStreamCapabilities> create(PassRefPtr<MediaStreamSourceCapabilities>);
+    static RefPtr<MediaStreamCapabilities> create(PassRefPtr<RealtimeMediaSourceCapabilities>);
     virtual ~MediaStreamCapabilities() { }
 
     virtual Vector<String> sourceType() const;
@@ -57,9 +57,9 @@ public:
     bool hasVideoSource() { return m_SourceCapabilities->hasVideoSource(); }
 
 protected:
-    explicit MediaStreamCapabilities(PassRefPtr<MediaStreamSourceCapabilities>);
+    explicit MediaStreamCapabilities(PassRefPtr<RealtimeMediaSourceCapabilities>);
 
-    RefPtr<MediaStreamSourceCapabilities> m_SourceCapabilities;
+    RefPtr<RealtimeMediaSourceCapabilities> m_SourceCapabilities;
 };
 
 } // namespace WebCore

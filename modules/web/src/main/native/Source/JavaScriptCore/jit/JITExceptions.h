@@ -28,18 +28,14 @@
 
 #include "JSCJSValue.h"
 
-#if ENABLE(JIT) || ENABLE(LLINT)
-
 namespace JSC {
 
 class ExecState;
 class VM;
 
-void genericUnwind(VM*, ExecState*, JSValue exceptionValue);
+void genericUnwind(VM*, ExecState*);
 
 } // namespace JSC
-
-#endif // ENABLE(JIT) || ENABLE(LLINT)
 
 #endif // JITExceptions_h
 

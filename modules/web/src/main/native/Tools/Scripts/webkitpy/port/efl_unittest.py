@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import unittest2 as unittest
+import unittest
 
 from webkitpy.common.system.executive_mock import MockExecutive
 from webkitpy.common.system.outputcapture import OutputCapture
@@ -46,7 +46,7 @@ class EflPortTest(port_testcase.PortTestCase):
     def test_show_results_html_file(self):
         port = self.make_port()
         port._executive = MockExecutive(should_log=True)
-        expected_logs = "MOCK run_command: ['Tools/Scripts/run-launcher', '--release', '--efl', 'file://test.html'], cwd=/mock-checkout\n"
+        expected_logs = "MOCK run_command: ['Tools/Scripts/run-minibrowser', '--release', '--efl', 'file://test.html'], cwd=/mock-checkout\n"
         OutputCapture().assert_outputs(self, port.show_results_html_file, ["test.html"], expected_logs=expected_logs)
 
     def test_get_crash_log(self):

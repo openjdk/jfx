@@ -40,32 +40,31 @@ ScrollingThread::ScrollingThread()
 
 bool ScrollingThread::isCurrentThread()
 {
-    if (!shared().m_threadIdentifier)
-        return false;
-
-    return currentThread() == shared().m_threadIdentifier;
+    auto threadIdentifier = ScrollingThread::singleton().m_threadIdentifier;
+    return threadIdentifier && currentThread() == threadIdentifier;
 }
 
 void ScrollingThread::dispatch(std::function<void ()> function)
 {
-    shared().createThreadIfNeeded();
+    auto& scrollingThread = ScrollingThread::singleton();
+    scrollingThread.createThreadIfNeeded();
 
     {
-        std::lock_guard<std::mutex> lock(shared().m_functionsMutex);
-        shared().m_functions.append(function);
+        std::lock_guard<std::mutex> lock(singleton().m_functionsMutex);
+        scrollingThread.m_functions.append(function);
     }
 
-    shared().wakeUpRunLoop();
+    scrollingThread.wakeUpRunLoop();
 }
 
 void ScrollingThread::dispatchBarrier(std::function<void ()> function)
 {
-    dispatch([function]{
-        callOnMainThread(std::move(function));
+    dispatch([function]() mutable {
+        callOnMainThread(WTF::move(function));
     });
 }
 
-ScrollingThread& ScrollingThread::shared()
+ScrollingThread& ScrollingThread::singleton()
 {
     static NeverDestroyed<ScrollingThread> scrollingThread;
 
@@ -91,6 +90,7 @@ void ScrollingThread::createThreadIfNeeded()
 
 void ScrollingThread::threadCallback(void* scrollingThread)
 {
+    WTF::setCurrentThreadIsUserInteractive();
     static_cast<ScrollingThread*>(scrollingThread)->threadBody();
 }
 
@@ -107,7 +107,7 @@ void ScrollingThread::dispatchFunctionsFromScrollingThread()
 
     {
         std::lock_guard<std::mutex> lock(m_functionsMutex);
-        functions = std::move(m_functions);
+        functions = WTF::move(m_functions);
     }
 
     for (auto& function : functions)

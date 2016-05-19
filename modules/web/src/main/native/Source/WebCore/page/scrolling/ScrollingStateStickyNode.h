@@ -39,9 +39,9 @@ class StickyPositionViewportConstraints;
 
 class ScrollingStateStickyNode final : public ScrollingStateNode {
 public:
-    static PassOwnPtr<ScrollingStateStickyNode> create(ScrollingStateTree&, ScrollingNodeID);
+    static Ref<ScrollingStateStickyNode> create(ScrollingStateTree&, ScrollingNodeID);
 
-    virtual PassOwnPtr<ScrollingStateNode> clone(ScrollingStateTree&);
+    virtual Ref<ScrollingStateNode> clone(ScrollingStateTree&) override;
 
     virtual ~ScrollingStateStickyNode();
 
@@ -49,7 +49,7 @@ public:
         ViewportConstraints = NumStateNodeBits
     };
 
-    void updateConstraints(const StickyPositionViewportConstraints&);
+    WEBCORE_EXPORT void updateConstraints(const StickyPositionViewportConstraints&);
     const StickyPositionViewportConstraints& viewportConstraints() const { return m_constraints; }
 
 private:
@@ -63,9 +63,9 @@ private:
     StickyPositionViewportConstraints m_constraints;
 };
 
-SCROLLING_STATE_NODE_TYPE_CASTS(ScrollingStateStickyNode, nodeType() == StickyNode);
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_SCROLLING_STATE_NODE(ScrollingStateStickyNode, isStickyNode())
 
 #endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
 

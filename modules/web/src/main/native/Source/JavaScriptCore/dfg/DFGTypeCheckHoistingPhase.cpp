@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -115,7 +115,6 @@ public:
                 // from the node, before doing any appending.
                 switch (node->op()) {
                 case SetArgument: {
-                    ASSERT(!blockIndex);
                     // Insert a GetLocal and a CheckStructure immediately following this
                     // SetArgument, if the variable was a candidate for structure hoisting.
                     // If the basic block previously only had the SetArgument as its
@@ -126,6 +125,9 @@ public:
                         break;
                     if (!iter->value.m_structure && !iter->value.m_arrayModeIsValid)
                         break;
+
+                    // Currently we should only be doing this hoisting for SetArguments at the prologue.
+                    ASSERT(!blockIndex);
 
                     NodeOrigin origin = node->origin;
 
@@ -215,8 +217,7 @@ private:
             for (unsigned indexInBlock = 0; indexInBlock < block->size(); ++indexInBlock) {
                 Node* node = block->at(indexInBlock);
                 switch (node->op()) {
-                case CheckStructure:
-                case StructureTransitionWatchpoint: {
+                case CheckStructure: {
                     Node* child = node->child1().node();
                     if (child->op() != GetLocal)
                         break;
@@ -228,6 +229,8 @@ private:
                     break;
                 }
 
+                case ArrayifyToStructure:
+                case Arrayify:
                 case GetByOffset:
                 case PutByOffset:
                 case PutStructure:
@@ -243,26 +246,10 @@ private:
                 case GetIndexedPropertyStorage:
                 case GetTypedArrayByteOffset:
                 case Phantom:
-                case HardPhantom:
                 case MovHint:
                 case MultiGetByOffset:
+                case MultiPutByOffset:
                     // Don't count these uses.
-                    break;
-
-                case ArrayifyToStructure:
-                case Arrayify:
-                    if (node->arrayMode().conversion() == Array::RageConvert) {
-                        // Rage conversion changes structures. We should avoid tying to do
-                        // any kind of hoisting when rage conversion is in play.
-                        Node* child = node->child1().node();
-                        if (child->op() != GetLocal)
-                            break;
-                        VariableAccessData* variable = child->variableAccessData();
-                        variable->vote(VoteOther);
-                        if (!shouldConsiderForHoisting<StructureTypeCheck>(variable))
-                            break;
-                        noticeStructureCheck(variable, 0);
-                    }
                     break;
 
                 case SetLocal: {
@@ -282,13 +269,6 @@ private:
                                 break;
 
                             noticeStructureCheck(variable, subNode->structureSet());
-                            break;
-                        }
-                        case StructureTransitionWatchpoint: {
-                            if (subNode->child1() != source)
-                                break;
-
-                            noticeStructureCheck(variable, subNode->structure());
                             break;
                         }
                         default:
@@ -330,7 +310,6 @@ private:
                 }
 
                 case CheckStructure:
-                case StructureTransitionWatchpoint:
                 case GetByOffset:
                 case PutByOffset:
                 case PutStructure:
@@ -343,9 +322,9 @@ private:
                 case GetArrayLength:
                 case GetIndexedPropertyStorage:
                 case Phantom:
-                case HardPhantom:
                 case MovHint:
                 case MultiGetByOffset:
+                case MultiPutByOffset:
                     // Don't count these uses.
                     break;
 
@@ -382,13 +361,6 @@ private:
                                 break;
 
                             noticeStructureCheckAccountingForArrayMode(variable, subNode->structureSet());
-                            break;
-                        }
-                        case StructureTransitionWatchpoint: {
-                            if (subNode->child1() != source)
-                                break;
-
-                            noticeStructureCheckAccountingForArrayMode(variable, subNode->structure());
                             break;
                         }
                         case CheckArray: {
@@ -501,7 +473,7 @@ private:
             noticeStructureCheck(variable, 0);
             return;
         }
-        noticeStructureCheck(variable, set.singletonStructure());
+        noticeStructureCheck(variable, set.onlyStructure());
     }
 
     void noticeCheckArray(VariableAccessData* variable, ArrayMode arrayMode)

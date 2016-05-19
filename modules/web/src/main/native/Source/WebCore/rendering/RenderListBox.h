@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,7 +40,7 @@ class HTMLSelectElement;
 
 class RenderListBox final : public RenderBlockFlow, public ScrollableArea {
 public:
-    RenderListBox(HTMLSelectElement&, PassRef<RenderStyle>);
+    RenderListBox(HTMLSelectElement&, Ref<RenderStyle>&&);
     virtual ~RenderListBox();
 
     HTMLSelectElement& selectElement() const;
@@ -58,6 +58,8 @@ public:
     int scrollToward(const IntPoint&); // Returns the new index or -1 if no scroll occurred
 
     int size() const;
+
+    virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = nullptr, RenderBox* startBox = nullptr, const IntPoint& wheelEventAbsolutePoint = IntPoint()) override;
 
     virtual bool scrolledToTop() const override;
     virtual bool scrolledToBottom() const override;
@@ -78,8 +80,7 @@ private:
 
     virtual bool isPointInOverflowControl(HitTestResult&, const LayoutPoint& locationInContainer, const LayoutPoint& accumulatedOffset) override;
 
-    virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = nullptr, RenderBox* startBox = nullptr, const IntPoint& wheelEventAbsolutePoint = IntPoint()) override;
-    virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = 0) override;
+    virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = nullptr) override;
 
     virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     virtual void computePreferredLogicalWidths() override;
@@ -88,7 +89,7 @@ private:
 
     virtual void layout() override;
 
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) override;
+    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = nullptr) override;
 
     virtual bool canBeProgramaticallyScrolled() const override { return true; }
     virtual void autoscroll(const IntPoint&) override;
@@ -122,13 +123,16 @@ private:
     virtual IntPoint convertFromContainingViewToScrollbar(const Scrollbar*, const IntPoint&) const override;
     virtual Scrollbar* verticalScrollbar() const override { return m_vBar.get(); }
     virtual IntSize contentsSize() const override;
-    virtual IntSize visibleSize() const override { return IntSize(height(), width()); }
+    virtual IntSize visibleSize() const override { return IntSize(width(), height()); }
     virtual IntPoint lastKnownMousePosition() const override;
     virtual bool isHandlingWheelEvent() const override;
     virtual bool shouldSuspendScrollAnimations() const override;
     virtual bool updatesScrollLayerPositionOnMainThread() const override { return true; }
+    virtual bool forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const override;
 
     virtual ScrollableArea* enclosingScrollableArea() const override;
+    virtual bool isScrollableOrRubberbandable() override;
+    virtual bool hasScrollableOrRubberbandableAncestor() override;
     virtual IntRect scrollableAreaBoundingBox() const override;
 
     // NOTE: This should only be called by the overriden setScrollOffset from ScrollableArea.
@@ -157,8 +161,8 @@ private:
     RefPtr<Scrollbar> m_vBar;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderListBox, isListBox())
-
 } // namepace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderListBox, isListBox())
 
 #endif // RenderListBox_h

@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -55,13 +55,8 @@ static DEVMODE deviceInfoForWidget(Widget* widget)
     DEVMODE deviceInfo;
     deviceInfo.dmSize = sizeof(DEVMODE);
     deviceInfo.dmDriverExtra = 0;
-#if OS(WINCE)
-    if (!EnumDisplaySettings(0, ENUM_CURRENT_SETTINGS, &deviceInfo))
-        deviceInfo.dmBitsPerPel = 16;
-#else
     MONITORINFOEX monitorInfo = monitorInfoForWidget(widget);
     EnumDisplaySettings(monitorInfo.szDevice, ENUM_CURRENT_SETTINGS, &deviceInfo);
-#endif
 
     return deviceInfo;
 }
@@ -85,13 +80,13 @@ int screenDepthPerComponent(Widget* widget)
 
 bool screenIsMonochrome(Widget* widget)
 {
-#if OS(WINCE)
-    // EnumDisplaySettings doesn't set dmColor in DEVMODE.
-    return false;
-#else
     DEVMODE deviceInfo = deviceInfoForWidget(widget);
     return deviceInfo.dmColor == DMCOLOR_MONOCHROME;
-#endif
+}
+
+bool screenHasInvertedColors()
+{
+    return false;
 }
 
 FloatRect screenRect(Widget* widget)
@@ -104,11 +99,6 @@ FloatRect screenAvailableRect(Widget* widget)
 {
     MONITORINFOEX monitorInfo = monitorInfoForWidget(widget);
     return monitorInfo.rcWork;
-}
-
-void screenColorProfile(ColorProfile&)
-{
-    notImplemented();
 }
 
 } // namespace WebCore

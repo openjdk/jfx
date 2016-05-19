@@ -40,60 +40,65 @@
 #include "Dictionary.h"
 #include "Document.h"
 #include "ExceptionCode.h"
+#include "Frame.h"
+#include "JSMediaStream.h"
+#include "JSNavigatorUserMediaError.h"
 #include "MediaConstraintsImpl.h"
 #include "MediaStream.h"
-#include "MediaStreamCenter.h"
 #include "MediaStreamPrivate.h"
+#include "NavigatorUserMediaErrorCallback.h"
+#include "NavigatorUserMediaSuccessCallback.h"
+#include "RealtimeMediaSourceCenter.h"
 #include "SecurityOrigin.h"
 #include "UserMediaController.h"
-#include <wtf/Functional.h>
 #include <wtf/MainThread.h>
 
 namespace WebCore {
 
-static PassRefPtr<MediaConstraints> parseOptions(const Dictionary& options, const String& mediaType, ExceptionCode& ec)
+static RefPtr<MediaConstraints> parseOptions(const Dictionary& options, const String& mediaType)
 {
-    RefPtr<MediaConstraints> constraints;
-
     Dictionary constraintsDictionary;
-    bool ok = options.get(mediaType, constraintsDictionary);
-    if (ok && !constraintsDictionary.isUndefinedOrNull())
-        constraints = MediaConstraintsImpl::create(constraintsDictionary, ec);
-    else {
-        bool mediaRequested = false;
-        options.get(mediaType, mediaRequested);
-        if (mediaRequested)
-            constraints = MediaConstraintsImpl::create();
+    if (options.get(mediaType, constraintsDictionary) && !constraintsDictionary.isUndefinedOrNull())
+        return MediaConstraintsImpl::create(constraintsDictionary);
+
+    bool mediaRequested = false;
+    if (!options.get(mediaType, mediaRequested) || !mediaRequested)
+        return nullptr;
+
+    return MediaConstraintsImpl::create();
+}
+
+void UserMediaRequest::start(Document* document, const Dictionary& options, MediaDevices::Promise&& promise, ExceptionCode& ec)
+{
+    if (!options.isObject()) {
+        ec = TypeError;
+        return;
     }
 
-    return constraints.release();
+    UserMediaController* userMedia = UserMediaController::from(document ? document->page() : nullptr);
+    if (!userMedia) {
+        ec = NOT_SUPPORTED_ERR;
+        return;
+    }
+
+    RefPtr<MediaConstraints> audioConstraints = parseOptions(options, AtomicString("audio", AtomicString::ConstructFromLiteral));
+    RefPtr<MediaConstraints> videoConstraints = parseOptions(options, AtomicString("video", AtomicString::ConstructFromLiteral));
+
+    if (!audioConstraints && !videoConstraints) {
+        ec = NOT_SUPPORTED_ERR;
+        return;
+    }
+
+    Ref<UserMediaRequest> request = adoptRef(*new UserMediaRequest(document, userMedia, audioConstraints.release(), videoConstraints.release(), WTF::move(promise)));
+    request->start();
 }
 
-PassRefPtr<UserMediaRequest> UserMediaRequest::create(ScriptExecutionContext* context, UserMediaController* controller, const Dictionary& options, PassRefPtr<NavigatorUserMediaSuccessCallback> successCallback, PassRefPtr<NavigatorUserMediaErrorCallback> errorCallback, ExceptionCode& ec)
-{
-    ASSERT(successCallback);
-
-    RefPtr<MediaConstraints> audioConstraints = parseOptions(options, AtomicString("audio", AtomicString::ConstructFromLiteral), ec);
-    if (ec)
-        return nullptr;
-
-    RefPtr<MediaConstraints> videoConstraints = parseOptions(options, AtomicString("video", AtomicString::ConstructFromLiteral), ec);
-    if (ec)
-        return nullptr;
-
-    if (!audioConstraints && !videoConstraints)
-        return nullptr;
-
-    return adoptRef(new UserMediaRequest(context, controller, audioConstraints.release(), videoConstraints.release(), successCallback, errorCallback));
-}
-
-UserMediaRequest::UserMediaRequest(ScriptExecutionContext* context, UserMediaController* controller, PassRefPtr<MediaConstraints> audioConstraints, PassRefPtr<MediaConstraints> videoConstraints, PassRefPtr<NavigatorUserMediaSuccessCallback> successCallback, PassRefPtr<NavigatorUserMediaErrorCallback> errorCallback)
+UserMediaRequest::UserMediaRequest(ScriptExecutionContext* context, UserMediaController* controller, PassRefPtr<MediaConstraints> audioConstraints, PassRefPtr<MediaConstraints> videoConstraints, MediaDevices::Promise&& promise)
     : ContextDestructionObserver(context)
     , m_audioConstraints(audioConstraints)
     , m_videoConstraints(videoConstraints)
     , m_controller(controller)
-    , m_successCallback(successCallback)
-    , m_errorCallback(errorCallback)
+    , m_promise(WTF::move(promise))
 {
 }
 
@@ -113,32 +118,30 @@ void UserMediaRequest::start()
 {
     // 1 - make sure the system is capable of supporting the audio and video constraints. We don't want to ask for
     // user permission if the constraints can not be suported.
-    MediaStreamCenter::shared().validateRequestConstraints(this, m_audioConstraints, m_videoConstraints);
+    RealtimeMediaSourceCenter::singleton().validateRequestConstraints(this, m_audioConstraints, m_videoConstraints);
 }
 
-
-void UserMediaRequest::constraintsValidated()
+void UserMediaRequest::constraintsValidated(const Vector<RefPtr<RealtimeMediaSource>>& videoTracks, const Vector<RefPtr<RealtimeMediaSource>>& audioTracks)
 {
-    if (m_controller)
-        callOnMainThread(bind(&UserMediaRequest::requestPermission, this));
-}
-
-void UserMediaRequest::requestPermission()
-{
-    // 2 - The constraints are valid, ask the user for access to media.
-    if (m_controller)
-        m_controller->requestPermission(this);
+    for (auto& audioTrack : audioTracks)
+        m_audioDeviceUIDs.append(audioTrack->id());
+    for (auto& videoTrack : videoTracks)
+        m_videoDeviceUIDs.append(videoTrack->id());
+    RefPtr<UserMediaRequest> protectedThis(this);
+    callOnMainThread([protectedThis] {
+        // 2 - The constraints are valid, ask the user for access to media.
+        if (UserMediaController* controller = protectedThis->m_controller)
+            controller->requestPermission(*protectedThis.get());
+    });
 }
 
 void UserMediaRequest::userMediaAccessGranted()
 {
-    callOnMainThread(bind(&UserMediaRequest::createMediaStream, this));
-}
-
-void UserMediaRequest::createMediaStream()
-{
-    // 3 - the user granted access, ask platform to create the media stream descriptors.
-    MediaStreamCenter::shared().createMediaStream(this, m_audioConstraints, m_videoConstraints);
+    RefPtr<UserMediaRequest> protectedThis(this);
+    callOnMainThread([protectedThis] {
+        // 3 - the user granted access, ask platform to create the media stream descriptors.
+        RealtimeMediaSourceCenter::singleton().createMediaStream(protectedThis.get(), protectedThis->m_audioConstraints, protectedThis->m_videoConstraints);
+    });
 }
 
 void UserMediaRequest::userMediaAccessDenied()
@@ -153,28 +156,17 @@ void UserMediaRequest::constraintsInvalid(const String& constraintName)
 
 void UserMediaRequest::didCreateStream(PassRefPtr<MediaStreamPrivate> privateStream)
 {
-    if (!m_scriptExecutionContext || !m_successCallback)
+    if (!m_scriptExecutionContext)
         return;
 
-    callOnMainThread(bind(&UserMediaRequest::callSuccessHandler, this, privateStream));
-}
-
-void UserMediaRequest::callSuccessHandler(PassRefPtr<MediaStreamPrivate> privateStream)
-{
     // 4 - Create the MediaStream and pass it to the success callback.
-    ASSERT(m_successCallback);
-
     RefPtr<MediaStream> stream = MediaStream::create(*m_scriptExecutionContext, privateStream);
+    for (auto& track : stream->getAudioTracks())
+        track->applyConstraints(*m_audioConstraints);
+    for (auto& track : stream->getVideoTracks())
+        track->applyConstraints(*m_videoConstraints);
 
-    Vector<RefPtr<MediaStreamTrack>> tracks = stream->getAudioTracks();
-    for (auto iter = tracks.begin(); iter != tracks.end(); ++iter)
-        (*iter)->applyConstraints(m_audioConstraints);
-
-    tracks = stream->getVideoTracks();
-    for (auto iter = tracks.begin(); iter != tracks.end(); ++iter)
-        (*iter)->applyConstraints(m_videoConstraints);
-
-    m_successCallback->handleEvent(stream.get());
+    m_promise.resolve(stream);
 }
 
 void UserMediaRequest::failedToCreateStreamWithConstraintsError(const String& constraintName)
@@ -183,11 +175,7 @@ void UserMediaRequest::failedToCreateStreamWithConstraintsError(const String& co
     if (!m_scriptExecutionContext)
         return;
 
-    if (!m_errorCallback)
-        return;
-
-    RefPtr<NavigatorUserMediaError> error = NavigatorUserMediaError::create(NavigatorUserMediaError::constraintNotSatisfiedErrorName(), constraintName);
-    callOnMainThread(bind(&UserMediaRequest::callErrorHandler, this, error.release()));
+    m_promise.reject(NavigatorUserMediaError::create(NavigatorUserMediaError::constraintNotSatisfiedErrorName(), constraintName));
 }
 
 void UserMediaRequest::failedToCreateStreamWithPermissionError()
@@ -195,20 +183,8 @@ void UserMediaRequest::failedToCreateStreamWithPermissionError()
     if (!m_scriptExecutionContext)
         return;
 
-    if (!m_errorCallback)
-        return;
-
-    RefPtr<NavigatorUserMediaError> error = NavigatorUserMediaError::create(NavigatorUserMediaError::permissionDeniedErrorName(), emptyString());
-    callOnMainThread(bind(&UserMediaRequest::callErrorHandler, this, error.release()));
-}
-
-void UserMediaRequest::callErrorHandler(PassRefPtr<NavigatorUserMediaError> prpError)
-{
-    RefPtr<NavigatorUserMediaError> error = prpError;
-
-    ASSERT(error);
-
-    m_errorCallback->handleEvent(error.get());
+    // FIXME: Replace NavigatorUserMediaError with MediaStreamError (see bug 143335)
+    m_promise.reject(NavigatorUserMediaError::create(NavigatorUserMediaError::permissionDeniedErrorName(), emptyString()));
 }
 
 void UserMediaRequest::contextDestroyed()
@@ -216,8 +192,8 @@ void UserMediaRequest::contextDestroyed()
     Ref<UserMediaRequest> protect(*this);
 
     if (m_controller) {
-        m_controller->cancelRequest(this);
-        m_controller = 0;
+        m_controller->cancelRequest(*this);
+        m_controller = nullptr;
     }
 
     ContextDestructionObserver::contextDestroyed();

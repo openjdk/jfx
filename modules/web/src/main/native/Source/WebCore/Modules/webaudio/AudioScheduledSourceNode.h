@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -58,6 +58,8 @@ public:
     AudioScheduledSourceNode(AudioContext*, float sampleRate);
 
     // Scheduling.
+    void start(ExceptionCode&);
+    void stop(ExceptionCode&);
     void start(double when, ExceptionCode&);
     void stop(double when, ExceptionCode&);
 
@@ -69,9 +71,6 @@ public:
     unsigned short playbackState() const { return static_cast<unsigned short>(m_playbackState); }
     bool isPlayingOrScheduled() const { return m_playbackState == PLAYING_STATE || m_playbackState == SCHEDULED_STATE; }
     bool hasFinished() const { return m_playbackState == FINISHED_STATE; }
-
-    EventListener* onended() { return getAttributeEventListener(eventNames().endedEvent); }
-    void setOnended(PassRefPtr<EventListener> listener);
 
 protected:
     // Get frame information for the current time quantum.
@@ -89,9 +88,6 @@ protected:
     // Called when we have no more sound to play or the noteOff() time has been reached.
     virtual void finish();
 
-    static void notifyEndedDispatch(void*);
-    void notifyEnded();
-
     PlaybackState m_playbackState;
 
     // m_startTime is the time to start playing based on the context's timeline (0 or a time less than the context's current time means "now").
@@ -105,6 +101,11 @@ protected:
     bool m_hasEndedListener;
 
     static const double UnknownTime;
+
+private:
+    bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture) override;
+    bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture) override;
+    void removeAllEventListeners() override;
 };
 
 } // namespace WebCore

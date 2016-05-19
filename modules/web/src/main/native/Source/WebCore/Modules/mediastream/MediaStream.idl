@@ -29,32 +29,30 @@
     Constructor(MediaStream stream),
     Constructor(MediaStreamTrack[] tracks),
     ConstructorCallWith=ScriptExecutionContext,
-    InterfaceName=webkitMediaStream,
 ] interface MediaStream {
 
     readonly attribute DOMString id;
 
     sequence<MediaStreamTrack> getAudioTracks();
     sequence<MediaStreamTrack> getVideoTracks();
-
-    [RaisesException] void addTrack(MediaStreamTrack track);
-    [RaisesException] void removeTrack(MediaStreamTrack track);
+    sequence<MediaStreamTrack> getTracks();
     MediaStreamTrack getTrackById(DOMString trackId);
+
+    void addTrack(MediaStreamTrack track);
+    void removeTrack(MediaStreamTrack track);
+
     MediaStream clone();
 
-    readonly attribute boolean ended;
+    readonly attribute boolean active;
 
-    attribute EventListener onended;
-    attribute EventListener onaddtrack;
-    attribute EventListener onremovetrack;
+    attribute EventHandler onactive;
+    attribute EventHandler oninactive;
+    attribute EventHandler onaddtrack;
+    attribute EventHandler onremovetrack;
 
     // EventTarget interface
-    void addEventListener(DOMString type,
-                          EventListener listener,
-                          optional boolean useCapture);
-    void removeEventListener(DOMString type,
-                             EventListener listener,
-                             optional boolean useCapture);
+    void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
     [RaisesException] boolean dispatchEvent(Event event);
 };
 

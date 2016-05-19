@@ -66,14 +66,6 @@ public:
     bool webkitIndexedDBEnabled() const { return m_isIndexedDBEnabled; }
     bool indexedDBEnabled() const { return m_isIndexedDBEnabled; }
 
-#if ENABLE(CSS_EXCLUSIONS)
-    void setCSSExclusionsEnabled(bool isEnabled) { m_isCSSExclusionsEnabled = isEnabled; }
-    bool cssExclusionsEnabled() const { return m_isCSSExclusionsEnabled; }
-#else
-    void setCSSExclusionsEnabled(bool) { }
-    bool cssExclusionsEnabled() const { return false; }
-#endif
-
 #if ENABLE(CSS_SHAPES)
     void setCSSShapesEnabled(bool isEnabled) { m_isCSSShapesEnabled = isEnabled; }
     bool cssShapesEnabled() const { return m_isCSSShapesEnabled; }
@@ -112,10 +104,6 @@ public:
     bool timeRangesEnabled() const;
 #endif
 
-#if ENABLE(SHARED_WORKERS)
-    bool sharedWorkerEnabled() const;
-#endif
-
 #if ENABLE(WEB_SOCKETS)
     bool webSocketEnabled() const;
 #endif
@@ -134,21 +122,6 @@ public:
     bool deviceOrientationEnabled() const { return m_isDeviceOrientationEnabled; }
     bool deviceOrientationEventEnabled() const { return m_isDeviceOrientationEnabled; }
     bool ondeviceorientationEnabled() const { return m_isDeviceOrientationEnabled; }
-
-    void setSpeechInputEnabled(bool isEnabled) { m_isSpeechInputEnabled = isEnabled; }
-    bool speechInputEnabled() const { return m_isSpeechInputEnabled; }
-    bool webkitSpeechEnabled() const { return m_isSpeechInputEnabled; }
-    bool webkitGrammarEnabled() const { return m_isSpeechInputEnabled; }
-
-#if ENABLE(SCRIPTED_SPEECH)
-    void setScriptedSpeechEnabled(bool isEnabled) { m_isScriptedSpeechEnabled = isEnabled; }
-    bool scriptedSpeechEnabled() const { return m_isScriptedSpeechEnabled; }
-    bool webkitSpeechRecognitionEnabled() const { return m_isScriptedSpeechEnabled; }
-    bool webkitSpeechRecognitionErrorEnabled() const { return m_isScriptedSpeechEnabled; }
-    bool webkitSpeechRecognitionEventEnabled() const { return m_isScriptedSpeechEnabled; }
-    bool webkitSpeechGrammarEnabled() const { return m_isScriptedSpeechEnabled; }
-    bool webkitSpeechGrammarListEnabled() const { return m_isScriptedSpeechEnabled; }
-#endif
 
 #if ENABLE(JAVASCRIPT_I18N_API)
     bool javaScriptI18NAPIEnabled() const;
@@ -218,7 +191,17 @@ public:
     void setPluginReplacementEnabled(bool isEnabled) { m_isPluginReplacementEnabled = isEnabled; }
     bool pluginReplacementEnabled() const { return m_isPluginReplacementEnabled; }
 
-    static RuntimeEnabledFeatures& sharedFeatures();
+#if ENABLE(GAMEPAD)
+    void setGamepadsEnabled(bool areEnabled) { m_areGamepadsEnabled = areEnabled; }
+    bool gamepadsEnabled() const { return m_areGamepadsEnabled; }
+#endif
+
+#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
+    void setAnimationTriggersEnabled(bool areEnabled) { m_areAnimationTriggersEnabled = areEnabled; }
+    bool animationTriggersEnabled() const { return m_areAnimationTriggersEnabled; }
+#endif
+
+    WEBCORE_EXPORT static RuntimeEnabledFeatures& sharedFeatures();
 
 private:
     // Never instantiate.
@@ -234,17 +217,11 @@ private:
     bool m_isTouchEnabled;
     bool m_isDeviceMotionEnabled;
     bool m_isDeviceOrientationEnabled;
-    bool m_isSpeechInputEnabled;
-    bool m_isCSSExclusionsEnabled;
     bool m_isCSSShapesEnabled;
     bool m_isCSSRegionsEnabled;
     bool m_isCSSCompositingEnabled;
     bool m_isLangAttributeAwareFormControlUIEnabled;
     bool m_isPluginReplacementEnabled;
-
-#if ENABLE(SCRIPTED_SPEECH)
-    bool m_isScriptedSpeechEnabled;
-#endif
 
 #if ENABLE(JAVASCRIPT_I18N_API)
     bool m_isJavaScriptI18NAPIEnabled;
@@ -293,6 +270,14 @@ private:
 
 #if ENABLE(FONT_LOAD_EVENTS)
     bool m_isFontLoadEventsEnabled;
+#endif
+
+#if ENABLE(GAMEPAD)
+    bool m_areGamepadsEnabled;
+#endif
+
+#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
+    bool m_areAnimationTriggersEnabled;
 #endif
 
     friend class WTF::NeverDestroyed<RuntimeEnabledFeatures>;

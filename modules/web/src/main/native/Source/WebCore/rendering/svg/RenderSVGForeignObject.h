@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2009 Google, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -32,40 +32,41 @@ class SVGForeignObjectElement;
 
 class RenderSVGForeignObject final : public RenderSVGBlock {
 public:
-    RenderSVGForeignObject(SVGForeignObjectElement&, PassRef<RenderStyle>);
+    RenderSVGForeignObject(SVGForeignObjectElement&, Ref<RenderStyle>&&);
     virtual ~RenderSVGForeignObject();
 
     SVGForeignObjectElement& foreignObjectElement() const;
 
-    virtual void paint(PaintInfo&, const LayoutPoint&);
+    virtual void paint(PaintInfo&, const LayoutPoint&) override;
 
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
     virtual void computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed = false) const override;
+    virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const override;
 
-    virtual bool requiresLayer() const { return false; }
-    virtual void layout();
+    virtual bool requiresLayer() const override { return false; }
+    virtual void layout() override;
 
-    virtual FloatRect objectBoundingBox() const { return FloatRect(FloatPoint(), m_viewport.size()); }
-    virtual FloatRect strokeBoundingBox() const { return FloatRect(FloatPoint(), m_viewport.size()); }
-    virtual FloatRect repaintRectInLocalCoordinates() const { return FloatRect(FloatPoint(), m_viewport.size()); }
+    virtual FloatRect objectBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
+    virtual FloatRect strokeBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
+    virtual FloatRect repaintRectInLocalCoordinates() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
 
-    virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
+    virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override;
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
-    virtual bool isSVGForeignObject() const { return true; }
 
-    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const override;
+    virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
-    virtual void setNeedsTransformUpdate() { m_needsTransformUpdate = true; }
+    virtual void setNeedsTransformUpdate() override { m_needsTransformUpdate = true; }
 
 private:
+    virtual bool isSVGForeignObject() const override { return true; }
     void graphicsElement() const = delete;
     virtual const char* renderName() const override { return "RenderSVGForeignObject"; }
 
     virtual void updateLogicalWidth() override;
     virtual void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const override;
 
-    virtual const AffineTransform& localToParentTransform() const;
-    virtual AffineTransform localTransform() const { return m_localTransform; }
+    virtual const AffineTransform& localToParentTransform() const override;
+    virtual AffineTransform localTransform() const override { return m_localTransform; }
 
     bool m_needsTransformUpdate : 1;
     FloatRect m_viewport;

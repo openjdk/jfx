@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Computer
+ * Copyright (C) 2005 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,7 +23,7 @@
 
 #include "RenderFlexibleBox.h"
 #include "Timer.h"
-#include <wtf/OwnPtr.h>
+#include <memory>
 
 namespace WebCore {
 
@@ -35,7 +35,7 @@ class RenderTextFragment;
 // to date as the button changes.
 class RenderButton final : public RenderFlexibleBox {
 public:
-    RenderButton(HTMLFormControlElement&, PassRef<RenderStyle>);
+    RenderButton(HTMLFormControlElement&, Ref<RenderStyle>&&);
     virtual ~RenderButton();
 
     HTMLFormControlElement& formControlElement() const;
@@ -74,17 +74,17 @@ private:
 
     virtual bool requiresForcedStyleRecalcPropagation() const override { return true; }
 
-    void timerFired(Timer<RenderButton>&);
+    void timerFired();
 
     RenderTextFragment* m_buttonText;
     RenderBlock* m_inner;
 
-    OwnPtr<Timer<RenderButton>> m_timer;
+    std::unique_ptr<Timer> m_timer;
     bool m_default;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderButton, isRenderButton())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderButton, isRenderButton())
 
 #endif // RenderButton_h

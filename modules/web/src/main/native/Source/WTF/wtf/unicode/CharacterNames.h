@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -65,6 +65,7 @@ const UChar leftToRightEmbed = 0x202A;
 const UChar leftToRightMark = 0x200E;
 const UChar leftToRightOverride = 0x202D;
 const UChar minusSign = 0x2212;
+const UChar narrowNonBreakingSpace = 0x202F;
 const UChar newlineCharacter = 0x000A;
 const UChar noBreakSpace = 0x00A0;
 const UChar objectReplacementCharacter = 0xFFFC;
@@ -122,6 +123,7 @@ using WTF::Unicode::leftToRightEmbed;
 using WTF::Unicode::leftToRightMark;
 using WTF::Unicode::leftToRightOverride;
 using WTF::Unicode::minusSign;
+using WTF::Unicode::narrowNonBreakingSpace;
 using WTF::Unicode::newlineCharacter;
 using WTF::Unicode::noBreakSpace;
 using WTF::Unicode::objectReplacementCharacter;

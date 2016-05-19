@@ -27,7 +27,6 @@
 #define IncrementalSweeper_h
 
 #include "HeapTimer.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -36,19 +35,19 @@ class Heap;
 class MarkedBlock;
 
 class IncrementalSweeper : public HeapTimer {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<IncrementalSweeper> create(Heap*);
-    void startSweeping(Vector<MarkedBlock*>&);
-    JS_EXPORT_PRIVATE virtual void doWork() override;
-    void sweepNextBlock();
-    void willFinishSweeping();
-
-protected:
 #if USE(CF)
     JS_EXPORT_PRIVATE IncrementalSweeper(Heap*, CFRunLoopRef);
 #else
-    IncrementalSweeper(VM*);
+    explicit IncrementalSweeper(VM*);
 #endif
+
+    void startSweeping();
+
+    JS_EXPORT_PRIVATE virtual void doWork() override;
+    bool sweepNextBlock();
+    void willFinishSweeping();
 
 #if USE(CF)
 private:
@@ -56,7 +55,6 @@ private:
     void scheduleTimer();
     void cancelTimer();
 
-    unsigned m_currentBlockToSweepIndex;
     Vector<MarkedBlock*>& m_blocksToSweep;
 #endif
 };

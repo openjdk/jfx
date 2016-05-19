@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -78,7 +78,6 @@
 #import <WebCore/MainFrame.h>
 #import <WebCore/WAKClipView.h>
 #import <WebCore/WAKScrollView.h>
-#import <WebCore/WAKViewPrivate.h>
 #import <WebCore/WAKWindow.h>
 #import <WebCore/WKGraphics.h>
 #import <WebCore/WebEvent.h>
@@ -100,7 +99,7 @@ using namespace WebCore;
 - (BOOL)_scrollTo:(const NSPoint *)newOrigin animate:(BOOL)animate; // need the boolean result from this method
 @end
 
-#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if PLATFORM(MAC)
 @interface NSView (Details)
 - (void)setBackgroundColor:(NSColor *)color;
 @end
@@ -211,7 +210,7 @@ enum {
         if (dataSourceRepresentation && [dataSourceRepresentation class] == viewClass)
             documentView = (NSView <WebDocumentView> *)[dataSourceRepresentation retain];
         else
-            documentView = [[viewClass alloc] init];
+            documentView = [(NSView <WebDocumentView> *)[viewClass alloc] init];
     } else
         documentView = nil;
 
@@ -273,6 +272,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     if (!viewTypes) {
         viewTypes = [[NSMutableDictionary alloc] init];
         addTypesFromClass(viewTypes, [WebHTMLView class], [WebHTMLView supportedNonImageMIMETypes]);
+        addTypesFromClass(viewTypes, [WebHTMLView class], [WebHTMLView supportedMediaMIMETypes]);
 
         // Since this is a "secret default" we don't bother registering it.
         BOOL omitPDFSupport = [[NSUserDefaults standardUserDefaults] boolForKey:@"WebKitOmitPDFSupport"];
@@ -351,7 +351,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
         [[self _scrollView] setDrawsBackground:YES];
     if (Frame* coreFrame = [self _web_frame]) {
         if (FrameView* coreFrameView = coreFrame->view())
-            coreFrameView->setNeedsLayout();
+            coreFrameView->availableContentSizeChanged(ScrollableArea::AvailableSizeChangeReason::AreaSizeChanged);
     }
 }
 
@@ -375,14 +375,6 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
         WebCore::notifyHistoryItemChanged = WKNotifyHistoryItemChanged;
 
 #if !PLATFORM(IOS)
-// FIXME: Remove the NSAppKitVersionNumberWithDeferredWindowDisplaySupport check once
-// once AppKit's Deferred Window Display support is available.
-#if !defined(NSAppKitVersionNumberWithDeferredWindowDisplaySupport)
-        // CoreGraphics deferred updates are disabled if WebKitEnableCoalescedUpdatesPreferenceKey is NO
-        // or has no value. For compatibility with Mac OS X 10.5 and lower, deferred updates are off by default.
-        if (![[NSUserDefaults standardUserDefaults] boolForKey:WebKitEnableDeferredUpdatesPreferenceKey])
-            WKDisableCGDeferredUpdates();
-#endif
         if (!WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITH_MAIN_THREAD_EXCEPTIONS))
             setDefaultThreadViolationBehavior(LogOnFirstThreadViolation, ThreadViolationRoundOne);
 
@@ -534,7 +526,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
             NSRectFill(rect);
 #else
             CGContextRef cgContext = WKGetCurrentGraphicsContext();
-            setStrokeAndFillColor(cgContext, cachedCGColor(Color::white, ColorSpaceDeviceRGB));
+            CGContextSetFillColorWithColor(cgContext, cachedCGColor(Color::white, ColorSpaceDeviceRGB));
             WKRectFill(cgContext, rect);
 #endif
         }
@@ -546,7 +538,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
             NSRectFill(rect);
 #else
             CGContextRef cgContext = WKGetCurrentGraphicsContext();
-            setStrokeAndFillColor(cgContext, cachedCGColor(Color::cyan, ColorSpaceDeviceRGB));
+            CGContextSetFillColorWithColor(cgContext, cachedCGColor(Color::cyan, ColorSpaceDeviceRGB));
             WKRectFill(cgContext, rect);
 #endif
         }
@@ -554,7 +546,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     }
 }
 
-#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if PLATFORM(MAC)
 - (BOOL)wantsUpdateLayer
 {
     return YES;

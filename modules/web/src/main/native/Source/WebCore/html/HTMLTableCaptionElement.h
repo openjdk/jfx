@@ -32,7 +32,7 @@ namespace WebCore {
 
 class HTMLTableCaptionElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLTableCaptionElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLTableCaptionElement> create(const QualifiedName&, Document&);
 
 private:
     HTMLTableCaptionElement(const QualifiedName&, Document&);
@@ -40,8 +40,6 @@ private:
     virtual bool isPresentationAttribute(const QualifiedName&) const override;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 };
-
-NODE_TYPE_CASTS(HTMLTableCaptionElement)
 
 } // namespace
 

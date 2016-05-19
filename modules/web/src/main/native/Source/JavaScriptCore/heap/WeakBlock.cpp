@@ -34,14 +34,20 @@
 
 namespace JSC {
 
-WeakBlock* WeakBlock::create(DeadBlock* block)
+WeakBlock* WeakBlock::create(MarkedBlock& markedBlock)
 {
-    Region* region = block->region();
-    return new (NotNull, block) WeakBlock(region);
+    return new (NotNull, fastMalloc(blockSize)) WeakBlock(markedBlock);
 }
 
-WeakBlock::WeakBlock(Region* region)
-    : HeapBlock<WeakBlock>(region)
+void WeakBlock::destroy(WeakBlock* block)
+{
+    block->~WeakBlock();
+    fastFree(block);
+}
+
+WeakBlock::WeakBlock(MarkedBlock& markedBlock)
+    : DoublyLinkedListNode<WeakBlock>()
+    , m_markedBlock(&markedBlock)
 {
     for (size_t i = 0; i < weakImplCount(); ++i) {
         WeakImpl* weakImpl = &weakImpls()[i];
@@ -76,8 +82,11 @@ void WeakBlock::sweep()
             finalize(weakImpl);
         if (weakImpl->state() == WeakImpl::Deallocated)
             addToFreeList(&sweepResult.freeList, weakImpl);
-        else
+        else {
             sweepResult.blockIsFree = false;
+            if (weakImpl->state() == WeakImpl::Live)
+                sweepResult.blockIsLogicallyEmpty = false;
+        }
     }
 
     m_sweepResult = sweepResult;
@@ -90,6 +99,12 @@ void WeakBlock::visit(HeapRootVisitor& heapRootVisitor)
     if (isEmpty())
         return;
 
+    // If this WeakBlock doesn't belong to a MarkedBlock, we won't even be here.
+    ASSERT(m_markedBlock);
+
+    if (m_markedBlock->isAllocated())
+        return;
+
     SlotVisitor& visitor = heapRootVisitor.visitor();
 
     for (size_t i = 0; i < weakImplCount(); ++i) {
@@ -98,7 +113,7 @@ void WeakBlock::visit(HeapRootVisitor& heapRootVisitor)
             continue;
 
         const JSValue& jsValue = weakImpl->jsValue();
-        if (Heap::isLive(jsValue.asCell()))
+        if (m_markedBlock->isMarkedOrNewlyAllocated(jsValue.asCell()))
             continue;
 
         WeakHandleOwner* weakHandleOwner = weakImpl->weakHandleOwner();
@@ -118,12 +133,18 @@ void WeakBlock::reap()
     if (isEmpty())
         return;
 
+    // If this WeakBlock doesn't belong to a MarkedBlock, we won't even be here.
+    ASSERT(m_markedBlock);
+
+    if (m_markedBlock->isAllocated())
+        return;
+
     for (size_t i = 0; i < weakImplCount(); ++i) {
         WeakImpl* weakImpl = &weakImpls()[i];
         if (weakImpl->state() > WeakImpl::Dead)
             continue;
 
-        if (Heap::isLive(weakImpl->jsValue().asCell())) {
+        if (m_markedBlock->isMarkedOrNewlyAllocated(weakImpl->jsValue().asCell())) {
             ASSERT(weakImpl->state() == WeakImpl::Live);
             continue;
         }

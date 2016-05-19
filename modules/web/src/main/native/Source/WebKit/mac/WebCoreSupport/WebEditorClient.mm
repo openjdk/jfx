@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -142,8 +142,6 @@ static WebViewInsertAction kit(EditorInsertAction coreAction)
 
 - (void)finalize
 {
-    ASSERT_MAIN_THREAD();
-
     [super finalize];
 }
 
@@ -191,7 +189,7 @@ void WebEditorClient::pageDestroyed()
 
 WebEditorClient::WebEditorClient(WebView *webView)
     : m_webView(webView)
-    , m_undoTarget([[[WebEditorUndoTarget alloc] init] autorelease])
+    , m_undoTarget(adoptNS([[WebEditorUndoTarget alloc] init]))
     , m_haveUndoRedoOperations(false)
 #if PLATFORM(IOS)
     , m_delayingContentChangeNotifications(0)
@@ -237,14 +235,6 @@ bool WebEditorClient::shouldDeleteRange(Range* range)
         shouldDeleteDOMRange:kit(range)];
 }
 
-#if ENABLE(DELETION_UI)
-bool WebEditorClient::shouldShowDeleteInterface(HTMLElement* element)
-{
-    return [[m_webView _editingDelegateForwarder] webView:m_webView
-        shouldShowDeleteInterfaceForElement:kit(element)];
-}
-#endif
-
 bool WebEditorClient::smartInsertDeleteEnabled()
 {
     Page* page = [m_webView page];
@@ -263,9 +253,25 @@ bool WebEditorClient::isSelectTrailingWhitespaceEnabled()
 
 bool WebEditorClient::shouldApplyStyle(StyleProperties* style, Range* range)
 {
-    Ref<MutableStyleProperties> mutableStyle(style->isMutable() ? static_cast<MutableStyleProperties&>(*style) : style->mutableCopy());
+    Ref<MutableStyleProperties> mutableStyle(style->isMutable() ? Ref<MutableStyleProperties>(static_cast<MutableStyleProperties&>(*style)) : style->mutableCopy());
     return [[m_webView _editingDelegateForwarder] webView:m_webView
         shouldApplyStyle:kit(mutableStyle->ensureCSSStyleDeclaration()) toElementsInDOMRange:kit(range)];
+}
+
+static void updateFontPanel(WebView *webView)
+{
+#if !PLATFORM(IOS)
+    NSView <WebDocumentView> *view = [[[webView selectedFrame] frameView] documentView];
+    if ([view isKindOfClass:[WebHTMLView class]])
+        [(WebHTMLView *)view _updateFontPanel];
+#else
+    UNUSED_PARAM(webView);
+#endif
+}
+
+void WebEditorClient::didApplyStyle()
+{
+    updateFontPanel(m_webView);
 }
 
 bool WebEditorClient::shouldMoveRangeAfterDelete(Range* range, Range* rangeToBeReplaced)
@@ -327,10 +333,8 @@ void WebEditorClient::stopDelayingAndCoalescingContentChangeNotifications()
 
 void WebEditorClient::respondToChangedContents()
 {
+    updateFontPanel(m_webView);
 #if !PLATFORM(IOS)
-    NSView <WebDocumentView> *view = [[[m_webView selectedFrame] frameView] documentView];
-    if ([view isKindOfClass:[WebHTMLView class]])
-        [(WebHTMLView *)view _updateFontPanel];
     [[NSNotificationCenter defaultCenter] postNotificationName:WebViewDidChangeNotification object:m_webView];
 #else
     if (m_delayingContentChangeNotifications) {
@@ -359,6 +363,11 @@ void WebEditorClient::respondToChangedSelection(Frame* frame)
     if (![m_webView _isClosing])
         WebThreadPostNotification(WebViewDidChangeSelectionNotification, m_webView, nil);
 #endif
+}
+
+void WebEditorClient::discardedComposition(Frame*)
+{
+    // The effects of this function are currently achieved via -[WebHTMLView _updateSelectionForInputManager].
 }
 
 void WebEditorClient::didEndEditing()
@@ -546,8 +555,10 @@ bool WebEditorClient::shouldInsertNode(Node *node, Range* replacingRange, Editor
 
 static NSString* undoNameForEditAction(EditAction editAction)
 {
+    // FIXME: This is identical to code in WebKit2's WebEditCommandProxy class; would be nice to share the strings instead of having two copies.
     switch (editAction) {
         case EditActionUnspecified: return nil;
+        case EditActionInsert: return nil;
         case EditActionSetColor: return UI_STRING_KEY_INTERNAL("Set Color", "Set Color (Undo action name)", "Undo action name");
         case EditActionSetBackgroundColor: return UI_STRING_KEY_INTERNAL("Set Background Color", "Set Background Color (Undo action name)", "Undo action name");
         case EditActionTurnOffKerning: return UI_STRING_KEY_INTERNAL("Turn Off Kerning", "Turn Off Kerning (Undo action name)", "Undo action name");
@@ -586,10 +597,8 @@ static NSString* undoNameForEditAction(EditAction editAction)
         case EditActionOutdent: return UI_STRING_KEY_INTERNAL("Outdent", "Outdent (Undo action name)", "Undo action name");
         case EditActionBold: return UI_STRING_KEY_INTERNAL("Bold", "Bold (Undo action name)", "Undo action name");
         case EditActionItalics: return UI_STRING_KEY_INTERNAL("Italics", "Italics (Undo action name)", "Undo action name");
-#if PLATFORM(IOS)
-        case EditActionDelete: return UI_STRING_KEY_INTERNAL("Delete", "Delete (Undo action name)", "Undo action name (Used only by PLATFORM(IOS) code)");
-        case EditActionDictation: return UI_STRING_KEY_INTERNAL("Dictation", "Dictation (Undo action name)", "Undo action name (Used only by PLATFORM(IOS) code)");
-#endif
+        case EditActionDelete: return UI_STRING_KEY_INTERNAL("Delete", "Delete (Undo action name)", "Undo action name");
+        case EditActionDictation: return UI_STRING_KEY_INTERNAL("Dictation", "Dictation (Undo action name)", "Undo action name");
     }
     return nil;
 }
@@ -693,6 +702,7 @@ void WebEditorClient::handleKeyboardEvent(KeyboardEvent* event)
 void WebEditorClient::handleInputMethodKeydown(KeyboardEvent* event)
 {
 #if !PLATFORM(IOS)
+    // FIXME: Switch to WebKit2 model, interpreting the event before it's sent down to WebCore.
     Frame* frame = event->target()->toNode()->document().frame();
     WebHTMLView *webHTMLView = [[kit(frame) frameView] documentView];
     if ([webHTMLView _interpretKeyEvent:event savingCommands:YES])
@@ -706,27 +716,27 @@ void WebEditorClient::handleInputMethodKeydown(KeyboardEvent* event)
 
 void WebEditorClient::textFieldDidBeginEditing(Element* element)
 {
-    if (!isHTMLInputElement(element))
+    if (!is<HTMLInputElement>(*element))
         return;
 
-    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
+    DOMHTMLInputElement* inputElement = kit(downcast<HTMLInputElement>(element));
     FormDelegateLog(inputElement);
     CallFormDelegate(m_webView, @selector(textFieldDidBeginEditing:inFrame:), inputElement, kit(element->document().frame()));
 }
 
 void WebEditorClient::textFieldDidEndEditing(Element* element)
 {
-    if (!isHTMLInputElement(element))
+    if (!is<HTMLInputElement>(*element))
         return;
 
-    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
+    DOMHTMLInputElement* inputElement = kit(downcast<HTMLInputElement>(element));
     FormDelegateLog(inputElement);
     CallFormDelegate(m_webView, @selector(textFieldDidEndEditing:inFrame:), inputElement, kit(element->document().frame()));
 }
 
 void WebEditorClient::textDidChangeInTextField(Element* element)
 {
-    if (!isHTMLInputElement(element))
+    if (!is<HTMLInputElement>(*element))
         return;
 
 #if !PLATFORM(IOS)
@@ -734,7 +744,7 @@ void WebEditorClient::textDidChangeInTextField(Element* element)
         return;
 #endif
 
-    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
+    DOMHTMLInputElement* inputElement = kit(downcast<HTMLInputElement>(element));
     FormDelegateLog(inputElement);
     CallFormDelegate(m_webView, @selector(textDidChangeInTextField:inFrame:), inputElement, kit(element->document().frame()));
 }
@@ -764,10 +774,10 @@ static SEL selectorForKeyEvent(KeyboardEvent* event)
 
 bool WebEditorClient::doTextFieldCommandFromEvent(Element* element, KeyboardEvent* event)
 {
-    if (!isHTMLInputElement(element))
+    if (!is<HTMLInputElement>(*element))
         return NO;
 
-    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
+    DOMHTMLInputElement* inputElement = kit(downcast<HTMLInputElement>(element));
     FormDelegateLog(inputElement);
     if (SEL commandSelector = selectorForKeyEvent(event))
         return CallFormDelegateReturningBoolean(NO, m_webView, @selector(textField:doCommandBySelector:inFrame:), inputElement, commandSelector, kit(element->document().frame()));
@@ -776,10 +786,10 @@ bool WebEditorClient::doTextFieldCommandFromEvent(Element* element, KeyboardEven
 
 void WebEditorClient::textWillBeDeletedInTextField(Element* element)
 {
-    if (!isHTMLInputElement(element))
+    if (!is<HTMLInputElement>(*element))
         return;
 
-    DOMHTMLInputElement* inputElement = kit(toHTMLInputElement(element));
+    DOMHTMLInputElement* inputElement = kit(downcast<HTMLInputElement>(element));
     FormDelegateLog(inputElement);
     // We're using the deleteBackward selector for all deletion operations since the autofill code treats all deletions the same way.
     CallFormDelegateReturningBoolean(NO, m_webView, @selector(textField:doCommandBySelector:inFrame:), inputElement, @selector(deleteBackward:), kit(element->document().frame()));
@@ -787,10 +797,10 @@ void WebEditorClient::textWillBeDeletedInTextField(Element* element)
 
 void WebEditorClient::textDidChangeInTextArea(Element* element)
 {
-    if (!isHTMLTextAreaElement(element))
+    if (!is<HTMLTextAreaElement>(*element))
         return;
 
-    DOMHTMLTextAreaElement* textAreaElement = kit(toHTMLTextAreaElement(element));
+    DOMHTMLTextAreaElement* textAreaElement = kit(downcast<HTMLTextAreaElement>(element));
     FormDelegateLog(textAreaElement);
     CallFormDelegate(m_webView, @selector(textDidChangeInTextArea:inFrame:), textAreaElement, kit(element->document().frame()));
 }
@@ -1133,7 +1143,7 @@ void WebEditorClient::didCheckSucceed(int sequence, NSArray* results)
 {
     ASSERT_UNUSED(sequence, sequence == m_textCheckingRequest->data().sequence());
     m_textCheckingRequest->didSucceed(core(results, m_textCheckingRequest->data().mask()));
-    m_textCheckingRequest.clear();
+    m_textCheckingRequest = nullptr;
 }
 #endif
 

@@ -49,17 +49,20 @@ enum PaintPhase {
     PaintPhaseSelection,
     PaintPhaseCollapsedTableBorders,
     PaintPhaseTextClip,
-    PaintPhaseMask
+    PaintPhaseMask,
+    PaintPhaseClippingMask
 };
 
 enum PaintBehaviorFlags {
     PaintBehaviorNormal = 0,
     PaintBehaviorSelectionOnly = 1 << 0,
     PaintBehaviorForceBlackText = 1 << 1,
-    PaintBehaviorFlattenCompositingLayers = 1 << 2,
-    PaintBehaviorRenderingSVGMask = 1 << 3,
-    PaintBehaviorSkipRootBackground = 1 << 4,
-    PaintBehaviorRootBackgroundOnly = 1 << 5
+    PaintBehaviorForceWhiteText = 1 << 2,
+    PaintBehaviorFlattenCompositingLayers = 1 << 3,
+    PaintBehaviorRenderingSVGMask = 1 << 4,
+    PaintBehaviorSkipRootBackground = 1 << 5,
+    PaintBehaviorRootBackgroundOnly = 1 << 6,
+    PaintBehaviorSelectionAndBackgroundsOnly = 1 << 7,
 };
 
 typedef unsigned PaintBehavior;

@@ -34,7 +34,7 @@ class CSSStyleSheet;
 
 class ProcessingInstruction final : public CharacterData, private CachedStyleSheetClient {
 public:
-    static PassRefPtr<ProcessingInstruction> create(Document&, const String& target, const String& data);
+    static Ref<ProcessingInstruction> create(Document&, const String& target, const String& data);
     virtual ~ProcessingInstruction();
 
     const String& target() const { return m_target; }
@@ -58,7 +58,7 @@ private:
 
     virtual String nodeName() const override;
     virtual NodeType nodeType() const override;
-    virtual PassRefPtr<Node> cloneNode(bool deep) override;
+    virtual RefPtr<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
     virtual void removedFrom(ContainerNode&) override;
@@ -91,13 +91,10 @@ private:
 #endif
 };
 
-inline bool isProcessingInstruction(const Node& node)
-{
-    return node.nodeType() == Node::PROCESSING_INSTRUCTION_NODE;
-}
+} // namespace WebCore
 
-NODE_TYPE_CASTS(ProcessingInstruction)
-
-} //namespace
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ProcessingInstruction)
+    static bool isType(const WebCore::Node& node) { return node.nodeType() == WebCore::Node::PROCESSING_INSTRUCTION_NODE; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

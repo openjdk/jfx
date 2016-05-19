@@ -27,7 +27,7 @@
 #import "PlatformUtilities.h"
 #import <wtf/RetainPtr.h>
 
-@interface InspectorBarController : NSObject {
+@interface InspectorBarController : NSObject <WebFrameLoadDelegate> {
 }
 @end
 
@@ -65,7 +65,10 @@ TEST(WebKit1, InspectorBarTest)
 
     EXPECT_TRUE([webView.get() respondsToSelector:@selector(typingAttributes)]);
     NSDictionary *attributes = [(id)webView.get() typingAttributes];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
     [(id)[[[webView.get() mainFrame] frameView] documentView] doCommandBySelector:@selector(bold:)];
+#pragma clang diagnostic pop
     EXPECT_FALSE([attributes isEqual:[(id)webView.get() typingAttributes]]);
 
     [webView.get() selectAll:nil];

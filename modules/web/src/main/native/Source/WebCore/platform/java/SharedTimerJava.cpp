@@ -48,6 +48,11 @@ void stopSharedTimer()
     CheckAndClearException(env);
 }
 
+// JDK-8146958
+void invalidateSharedTimer()
+{
+}
+
 } // namespace WebCore
 
 using namespace WebCore;

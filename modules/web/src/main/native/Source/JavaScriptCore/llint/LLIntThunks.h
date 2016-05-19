@@ -26,10 +26,6 @@
 #ifndef LLIntThunks_h
 #define LLIntThunks_h
 
-#include <wtf/Platform.h>
-
-#if ENABLE(LLINT)
-
 #include "MacroAssemblerCodeRef.h"
 
 namespace JSC {
@@ -38,11 +34,8 @@ class VM;
 struct ProtoCallFrame;
 
 extern "C" {
-    EncodedJSValue callToJavaScript(void*, VM*, ProtoCallFrame*);
-    EncodedJSValue callToNativeFunction(void*, VM*, ProtoCallFrame*);
-#if ENABLE(JIT)
-    void handleUncaughtException();
-#endif
+    EncodedJSValue vmEntryToJavaScript(void*, VM*, ProtoCallFrame*);
+    EncodedJSValue vmEntryToNative(void*, VM*, ProtoCallFrame*);
 }
 
 namespace LLInt {
@@ -55,7 +48,5 @@ MacroAssemblerCodeRef evalEntryThunkGenerator(VM*);
 MacroAssemblerCodeRef programEntryThunkGenerator(VM*);
 
 } } // namespace JSC::LLInt
-
-#endif // ENABLE(LLINT)
 
 #endif // LLIntThunks_h

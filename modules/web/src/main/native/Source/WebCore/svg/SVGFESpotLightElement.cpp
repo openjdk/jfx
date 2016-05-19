@@ -18,11 +18,9 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "SVGFESpotLightElement.h"
-#include "SVGNames.h"
 
+#include "SVGNames.h"
 #include "SpotLightSource.h"
 
 namespace WebCore {
@@ -33,12 +31,12 @@ inline SVGFESpotLightElement::SVGFESpotLightElement(const QualifiedName& tagName
     ASSERT(hasTagName(SVGNames::feSpotLightTag));
 }
 
-PassRefPtr<SVGFESpotLightElement> SVGFESpotLightElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFESpotLightElement> SVGFESpotLightElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFESpotLightElement(tagName, document));
+    return adoptRef(*new SVGFESpotLightElement(tagName, document));
 }
 
-PassRefPtr<LightSource> SVGFESpotLightElement::lightSource() const
+Ref<LightSource> SVGFESpotLightElement::lightSource() const
 {
     FloatPoint3D pos(x(), y(), z());
     FloatPoint3D direction(pointsAtX(), pointsAtY(), pointsAtZ());
@@ -47,5 +45,3 @@ PassRefPtr<LightSource> SVGFESpotLightElement::lightSource() const
 }
 
 }
-
-#endif // ENABLE(FILTERS)

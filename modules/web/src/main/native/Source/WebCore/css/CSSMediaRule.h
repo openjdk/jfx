@@ -30,20 +30,21 @@ namespace WebCore {
 
 class StyleRuleMedia;
 
-class CSSMediaRule : public CSSGroupingRule {
+class CSSMediaRule final : public CSSGroupingRule {
 public:
-    static PassRefPtr<CSSMediaRule> create(StyleRuleMedia* rule, CSSStyleSheet* sheet) { return adoptRef(new CSSMediaRule(rule, sheet)); }
+    static Ref<CSSMediaRule> create(StyleRuleMedia& rule, CSSStyleSheet* sheet) { return adoptRef(*new CSSMediaRule(rule, sheet)); }
 
     virtual ~CSSMediaRule();
 
-    virtual CSSRule::Type type() const override { return MEDIA_RULE; }
-    virtual void reattach(StyleRuleBase*) override;
+    virtual void reattach(StyleRuleBase&) override;
     virtual String cssText() const override;
 
     MediaList* media() const;
 
 private:
-    CSSMediaRule(StyleRuleMedia*, CSSStyleSheet*);
+    CSSMediaRule(StyleRuleMedia&, CSSStyleSheet*);
+
+    virtual CSSRule::Type type() const override { return MEDIA_RULE; }
 
     MediaQuerySet* mediaQueries() const;
 
@@ -51,5 +52,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSMediaRule, CSSRule::MEDIA_RULE)
 
 #endif // CSSMediaRule_h

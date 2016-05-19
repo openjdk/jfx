@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -59,8 +59,8 @@ public:
 
     FullScreenController* m_controller;
     FullScreenControllerClient* m_client;
-    OwnPtr<MediaPlayerPrivateFullscreenWindow> m_fullScreenWindow;
-    OwnPtr<MediaPlayerPrivateFullscreenWindow> m_backgroundWindow;
+    std::unique_ptr<MediaPlayerPrivateFullscreenWindow> m_fullScreenWindow;
+    std::unique_ptr<MediaPlayerPrivateFullscreenWindow> m_backgroundWindow;
     IntRect m_fullScreenFrame;
     IntRect m_originalFrame;
     HWND m_originalHost;
@@ -103,7 +103,7 @@ LRESULT FullScreenController::Private::fullscreenClientWndProc(HWND hwnd, UINT m
 }
 
 FullScreenController::FullScreenController(FullScreenControllerClient* client)
-    : m_private(adoptPtr(new FullScreenController::Private(this, client)))
+    : m_private(std::make_unique<Private>(this, client))
 {
     ASSERT_ARG(client, client);
 }
@@ -133,13 +133,13 @@ void FullScreenController::enterFullScreen()
     m_private->m_originalFrame = originalFrame;
 
     ASSERT(!m_private->m_backgroundWindow);
-    m_private->m_backgroundWindow = adoptPtr(new MediaPlayerPrivateFullscreenWindow(m_private.get()));
+    m_private->m_backgroundWindow = std::make_unique<MediaPlayerPrivateFullscreenWindow>(m_private.get());
     m_private->m_backgroundWindow->createWindow(0);
     ::AnimateWindow(m_private->m_backgroundWindow->hwnd(), kFullScreenAnimationDuration, AW_BLEND | AW_ACTIVATE);
 
     m_private->m_client->fullScreenClientWillEnterFullScreen();
     ASSERT(!m_private->m_fullScreenWindow);
-    m_private->m_fullScreenWindow = adoptPtr(new MediaPlayerPrivateFullscreenWindow(m_private.get()));
+    m_private->m_fullScreenWindow = std::make_unique<MediaPlayerPrivateFullscreenWindow>(m_private.get());
     ASSERT(m_private->m_fullScreenWindow);
     m_private->m_fullScreenWindow->createWindow(0);
 

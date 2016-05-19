@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2013 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2013, 2014-2015 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "DumpRenderTree.h"
 #include "FrameLoadDelegate.h"
 #include <JavaScriptCore/JSStringRef.h>
+#include <JavaScriptCore/JSStringRefBSTR.h>
 #include <wtf/text/WTFString.h>
 #include <comutil.h>
 #include <tchar.h>
@@ -112,7 +113,9 @@ int AccessibilityUIElement::childrenCount()
         return 0;
 
     long childCount;
-    m_element->get_accChildCount(&childCount);
+    if (FAILED(m_element->get_accChildCount(&childCount)))
+        return 0;
+
     return childCount;
 }
 
@@ -142,16 +145,15 @@ AccessibilityUIElement AccessibilityUIElement::linkedUIElementAtIndex(unsigned i
 AccessibilityUIElement AccessibilityUIElement::getChildAtIndex(unsigned index)
 {
     if (!m_element)
-        return 0;
+        return nullptr;
 
     COMPtr<IDispatch> child;
-    VARIANT vChild;
-    ::VariantInit(&vChild);
+    _variant_t vChild;
     V_VT(&vChild) = VT_I4;
     // In MSAA, index 0 is the object itself.
     V_I4(&vChild) = index + 1;
-    if (FAILED(m_element->get_accChild(vChild, &child)))
-        return 0;
+    if (FAILED(m_element->get_accChild(vChild.GetVARIANT(), &child)))
+        return nullptr;
     return COMPtr<IAccessible>(Query, child);
 }
 
@@ -184,31 +186,22 @@ AccessibilityUIElement AccessibilityUIElement::titleUIElement()
     if (!comparable)
         return 0;
 
-    VARIANT value;
-    ::VariantInit(&value);
-
+    _variant_t value;
     _bstr_t titleUIElementAttributeKey(L"AXTitleUIElementAttribute");
-    if (FAILED(comparable->get_attribute(titleUIElementAttributeKey, &value))) {
-        ::VariantClear(&value);
-        return 0;
-    }
+    if (FAILED(comparable->get_attribute(titleUIElementAttributeKey, &value.GetVARIANT())))
+        return nullptr;
 
-    if (V_VT(&value) == VT_EMPTY) {
-        ::VariantClear(&value);
-        return 0;
-    }
+    if (V_VT(&value) == VT_EMPTY)
+        return nullptr;
 
     ASSERT(V_VT(&value) == VT_UNKNOWN);
 
-    if (V_VT(&value) != VT_UNKNOWN) {
-        ::VariantClear(&value);
-        return 0;
-    }
+    if (V_VT(&value) != VT_UNKNOWN)
+        return nullptr;
 
     COMPtr<IAccessible> titleElement(Query, value.punkVal);
     if (value.punkVal)
         value.punkVal->Release();
-    ::VariantClear(&value);
 
     return titleElement;
 }
@@ -216,7 +209,7 @@ AccessibilityUIElement AccessibilityUIElement::titleUIElement()
 AccessibilityUIElement AccessibilityUIElement::parentElement()
 {
     if (!m_element)
-        return 0;
+        return nullptr;
 
     COMPtr<IDispatch> parent;
     m_element->get_accParent(&parent);
@@ -237,31 +230,78 @@ JSStringRef AccessibilityUIElement::parameterizedAttributeNames()
 
 static VARIANT& self()
 {
-    static VARIANT vSelf;
+    static _variant_t vSelf;
     static bool haveInitialized;
 
     if (!haveInitialized) {
-        ::VariantInit(&vSelf);
         V_VT(&vSelf) = VT_I4;
         V_I4(&vSelf) = CHILDID_SELF;
     }
     return vSelf;
 }
 
+static _bstr_t convertToDRTLabel(const _bstr_t roleName)
+{
+    if (!wcscmp(roleName, L"cell"))
+        return _bstr_t(L"AXCell");
+    if (!wcscmp(roleName, L"check box"))
+        return _bstr_t(L"AXCheckBox");
+    if (!wcscmp(roleName, L"client"))
+        return _bstr_t(L"AXWebArea");
+    if (!wcscmp(roleName, L"column"))
+        return _bstr_t(L"AXColumn");
+    if (!wcscmp(roleName, L"column header"))
+        return _bstr_t(L"AXCell");
+    if (!wcscmp(roleName, L"combo box"))
+        return _bstr_t(L"AXComboBox");
+    if (!wcscmp(roleName, L"grouping"))
+        return _bstr_t(L"AXGroup");
+    if (!wcscmp(roleName, L"editable text"))
+        return _bstr_t(L"AXStaticText"); // Might be AXTextField, too.
+    if (!wcscmp(roleName, L"graphic"))
+        return _bstr_t(L"AXImage");
+    if (!wcscmp(roleName, L"link"))
+        return _bstr_t(L"AXLink");
+    if (!wcscmp(roleName, L"list item"))
+        return _bstr_t(L"AXTab");
+    if (!wcscmp(roleName, L"list"))
+        return _bstr_t(L"AXList");
+    if (!wcscmp(roleName, L"menu bar"))
+        return _bstr_t(L"AXMenuBar");
+    if (!wcscmp(roleName, L"page tab list"))
+        return _bstr_t(L"AXTabGroup");
+    if (!wcscmp(roleName, L"page tab"))
+        return _bstr_t(L"AXTab");
+    if (!wcscmp(roleName, L"push button"))
+        return _bstr_t(L"AXButton");
+    if (!wcscmp(roleName, L"progress bar"))
+        return _bstr_t(L"AXProgressIndicator");
+    if (!wcscmp(roleName, L"radio button"))
+        return _bstr_t(L"AXRadioButton");
+    if (!wcscmp(roleName, L"row"))
+        return _bstr_t(L"AXRow");
+    if (!wcscmp(roleName, L"table"))
+        return _bstr_t(L"AXTable");
+    if (!wcscmp(roleName, L"text"))
+        return _bstr_t(L"AXStaticText");
+
+    return roleName;
+}
+
 JSStringRef AccessibilityUIElement::role()
 {
     if (!m_element)
-        return JSStringCreateWithCharacters(0, 0);
+        return JSStringCreateWithBSTR(_bstr_t(L"AXRole: "));
 
-    VARIANT vRole;
-    if (FAILED(m_element->get_accRole(self(), &vRole)))
-        return JSStringCreateWithCharacters(0, 0);
+    _variant_t vRole;
+    if (FAILED(m_element->get_accRole(self(), &vRole.GetVARIANT())))
+        return JSStringCreateWithBSTR(_bstr_t(L"AXRole: "));
 
     ASSERT(V_VT(&vRole) == VT_I4 || V_VT(&vRole) == VT_BSTR);
 
-    wstring result;
+    _bstr_t result;
     if (V_VT(&vRole) == VT_I4) {
-        unsigned roleTextLength = ::GetRoleText(V_I4(&vRole), 0, 0) + 1;
+        unsigned roleTextLength = ::GetRoleText(V_I4(&vRole), nullptr, 0) + 1;
 
         Vector<TCHAR> roleText(roleTextLength);
 
@@ -269,11 +309,9 @@ JSStringRef AccessibilityUIElement::role()
 
         result = roleText.data();
     } else if (V_VT(&vRole) == VT_BSTR)
-        result = wstring(V_BSTR(&vRole), ::SysStringLen(V_BSTR(&vRole)));
+        result = V_BSTR(&vRole);
 
-    ::VariantClear(&vRole);
-
-    return JSStringCreateWithCharacters(result.data(), result.length());
+    return JSStringCreateWithBSTR(_bstr_t(L"AXRole: ") + convertToDRTLabel(result));
 }
 
 JSStringRef AccessibilityUIElement::subrole()
@@ -294,50 +332,74 @@ JSStringRef AccessibilityUIElement::computedRoleString()
 JSStringRef AccessibilityUIElement::title()
 {
     if (!m_element)
-        return JSStringCreateWithCharacters(0, 0);
+        return JSStringCreateWithBSTR(_bstr_t(L"AXTitle: "));
 
-    BSTR titleBSTR;
-    if (FAILED(m_element->get_accName(self(), &titleBSTR)) || !titleBSTR)
-        return JSStringCreateWithCharacters(0, 0);
-    wstring title(titleBSTR, SysStringLen(titleBSTR));
-    ::SysFreeString(titleBSTR);
-    return JSStringCreateWithCharacters(title.data(), title.length());
+    _bstr_t titleBSTR;
+    if (FAILED(m_element->get_accName(self(), &titleBSTR.GetBSTR())))
+        return JSStringCreateWithBSTR(_bstr_t(L"AXTitle: "));
+
+    return JSStringCreateWithBSTR(_bstr_t(L"AXTitle: ") + titleBSTR);
 }
 
 JSStringRef AccessibilityUIElement::description()
 {
     if (!m_element)
-        return JSStringCreateWithCharacters(0, 0);
+        return JSStringCreateWithBSTR(_bstr_t(L"AXDescription: "));
 
-    BSTR descriptionBSTR;
-    if (FAILED(m_element->get_accDescription(self(), &descriptionBSTR)) || !descriptionBSTR)
-        return JSStringCreateWithCharacters(0, 0);
-    wstring description(descriptionBSTR, SysStringLen(descriptionBSTR));
-    ::SysFreeString(descriptionBSTR);
-    return JSStringCreateWithCharacters(description.data(), description.length());
+    _bstr_t descriptionBSTR;
+    if (FAILED(m_element->get_accDescription(self(), &descriptionBSTR.GetBSTR())))
+        return JSStringCreateWithBSTR(_bstr_t(L"AXDescription: "));
+
+    if (!descriptionBSTR.length())
+        return JSStringCreateWithBSTR(_bstr_t(L"AXDescription: "));
+
+    if (wcsstr(static_cast<wchar_t*>(descriptionBSTR), L"Description: ") == static_cast<wchar_t*>(descriptionBSTR)) {
+        // The Mozilla MSAA implementation requires that the string returned to us be prefixed with "Description: "
+        // To match the Mac test results, we will just prefix with AX -> AXDescription:
+        return JSStringCreateWithBSTR(_bstr_t(L"AX") + descriptionBSTR);
+    }
+
+    return JSStringCreateWithBSTR(descriptionBSTR);
 }
 
 JSStringRef AccessibilityUIElement::stringValue()
 {
-    return JSStringCreateWithCharacters(0, 0);
+    if (!m_element)
+        return JSStringCreateWithBSTR(_bstr_t(L"AXValue: "));
+
+    _bstr_t valueBSTR;
+    if (FAILED(m_element->get_accValue(self(), &valueBSTR.GetBSTR())))
+        return JSStringCreateWithBSTR(_bstr_t(L"AXValue: "));
+
+    return JSStringCreateWithBSTR(_bstr_t(L"AXValue: ") + valueBSTR);
 }
 
 JSStringRef AccessibilityUIElement::language()
 {
-    return JSStringCreateWithCharacters(0, 0);
+    if (!m_element)
+        return JSStringCreateWithBSTR(_bstr_t(L"AXLanguage: "));
+
+    COMPtr<IAccessibleComparable> accessible2Element = comparableObject(m_element.get());
+    if (!accessible2Element)
+        return JSStringCreateWithBSTR(_bstr_t(L"AXLanguage: "));
+
+    IA2Locale locale;
+    if (FAILED(accessible2Element->get_locale(&locale)))
+        return JSStringCreateWithBSTR(_bstr_t(L"AXLanguage: "));
+
+    return JSStringCreateWithBSTR(_bstr_t(L"AXLanguage: ") + _bstr_t(locale.language, false));
 }
 
 JSStringRef AccessibilityUIElement::helpText() const
 {
     if (!m_element)
-        return JSStringCreateWithCharacters(0, 0);
+        return JSStringCreateWithBSTR(_bstr_t(L"AXHelp: "));
 
-    BSTR helpTextBSTR;
-    if (FAILED(m_element->get_accHelp(self(), &helpTextBSTR)) || !helpTextBSTR)
-        return JSStringCreateWithCharacters(0, 0);
-    wstring helpText(helpTextBSTR, SysStringLen(helpTextBSTR));
-    ::SysFreeString(helpTextBSTR);
-    return JSStringCreateWithCharacters(helpText.data(), helpText.length());
+    _bstr_t helpTextBSTR;
+    if (FAILED(m_element->get_accHelp(self(), &helpTextBSTR.GetBSTR())))
+        return JSStringCreateWithBSTR(_bstr_t(L"AXHelp: "));
+
+    return JSStringCreateWithBSTR(_bstr_t(L"AXHelp: ") + helpTextBSTR);
 }
 
 double AccessibilityUIElement::x()
@@ -396,26 +458,26 @@ double AccessibilityUIElement::clickPointY()
 
 JSStringRef AccessibilityUIElement::valueDescription()
 {
-    return 0;
+    return nullptr;
 }
 
 static DWORD accessibilityState(COMPtr<IAccessible> element)
 {
-    VARIANT state;
-    element->get_accState(self(), &state);
+    _variant_t state;
+    if (FAILED(element->get_accState(self(), &state.GetVARIANT())))
+        return 0;
 
     ASSERT(V_VT(&state) == VT_I4);
 
     DWORD result = state.lVal;
-    VariantClear(&state);
 
     return result;
 }
 
 bool AccessibilityUIElement::isFocused() const
 {
-    // FIXME: implement
-    return false;
+    DWORD state = accessibilityState(m_element);
+    return (state & STATE_SYSTEM_FOCUSED) == STATE_SYSTEM_FOCUSED;
 }
 
 bool AccessibilityUIElement::isSelected() const
@@ -449,8 +511,8 @@ bool AccessibilityUIElement::isChecked() const
     if (!m_element)
         return false;
 
-    VARIANT vState;
-    if (FAILED(m_element->get_accState(self(), &vState)))
+    _variant_t vState;
+    if (FAILED(m_element->get_accState(self(), &vState.GetVARIANT())))
         return false;
 
     return vState.lVal & STATE_SYSTEM_CHECKED;
@@ -472,13 +534,12 @@ double AccessibilityUIElement::intValue() const
     if (!m_element)
         return 0;
 
-    BSTR valueBSTR;
-    if (FAILED(m_element->get_accValue(self(), &valueBSTR)) || !valueBSTR)
+    _bstr_t valueBSTR;
+    if (FAILED(m_element->get_accValue(self(), &valueBSTR.GetBSTR())) || !valueBSTR.length())
         return 0;
-    wstring value(valueBSTR, SysStringLen(valueBSTR));
-    ::SysFreeString(valueBSTR);
+
     TCHAR* ignored;
-    return _tcstod(value.data(), &ignored);
+    return _tcstod(static_cast<TCHAR*>(valueBSTR), &ignored);
 }
 
 double AccessibilityUIElement::minValue()
@@ -496,11 +557,11 @@ bool AccessibilityUIElement::isPressActionSupported()
     if (!m_element)
         return 0;
 
-    BSTR valueBSTR;
-    if (FAILED(m_element->get_accDefaultAction(self(), &valueBSTR) || !valueBSTR))
+    _bstr_t valueBSTR;
+    if (FAILED(m_element->get_accDefaultAction(self(), &valueBSTR.GetBSTR())))
         return false;
 
-    if (!::SysStringLen(valueBSTR))
+    if (!valueBSTR.length())
         return false;
 
     return true;
@@ -613,7 +674,7 @@ AccessibilityUIElement AccessibilityUIElement::uiElementForSearchPredicate(JSCon
     return 0;
 }
 
-JSStringRef AccessibilityUIElement::selectTextWithCriteria(JSContextRef context, JSStringRef ambiguityResolution, JSValueRef searchStrings, JSStringRef replacementString)
+JSStringRef AccessibilityUIElement::selectTextWithCriteria(JSContextRef context, JSStringRef ambiguityResolution, JSValueRef searchStrings, JSStringRef replacementString, JSStringRef activity)
 {
     return 0;
 }
@@ -725,14 +786,11 @@ JSStringRef AccessibilityUIElement::accessibilityValue() const
     if (!m_element)
         return JSStringCreateWithCharacters(0, 0);
 
-    BSTR valueBSTR;
-    if (FAILED(m_element->get_accValue(self(), &valueBSTR)) || !valueBSTR)
+    _bstr_t valueBSTR;
+    if (FAILED(m_element->get_accValue(self(), &valueBSTR.GetBSTR())) || !valueBSTR.length())
         return JSStringCreateWithCharacters(0, 0);
 
-    wstring value(valueBSTR, SysStringLen(valueBSTR));
-    ::SysFreeString(valueBSTR);
-
-    return JSStringCreateWithCharacters(value.data(), value.length());
+    return JSStringCreateWithBSTR(valueBSTR);
 }
 
 
@@ -872,4 +930,26 @@ JSStringRef AccessibilityUIElement::classList() const
 {
     // FIXME: implement
     return 0;
+}
+
+unsigned AccessibilityUIElement::selectedChildrenCount() const
+{
+    // FIXME: implement
+    return 0;
+}
+
+AccessibilityUIElement AccessibilityUIElement::selectedChildAtIndex(unsigned) const
+{
+    // FIXME: implement
+    return 0;
+}
+
+void AccessibilityUIElement::columnHeaders(Vector<AccessibilityUIElement>&) const
+{
+    // FIXME: implement
+}
+
+void AccessibilityUIElement::rowHeaders(Vector<AccessibilityUIElement>&) const
+{
+    // FIXME: implement
 }

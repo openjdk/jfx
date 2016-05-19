@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -79,7 +79,7 @@ public:
 
     virtual void setResizable(bool) override;
 
-    virtual void addMessageToConsole(Inspector::MessageSource, Inspector::MessageLevel, const WTF::String& message, unsigned lineNumber, unsigned columnNumber, const WTF::String& sourceURL) override;
+    virtual void addMessageToConsole(JSC::MessageSource, JSC::MessageLevel, const WTF::String& message, unsigned lineNumber, unsigned columnNumber, const WTF::String& sourceURL) override;
 
     virtual bool canRunBeforeUnloadConfirmPanel() override;
     virtual bool runBeforeUnloadConfirmPanel(const WTF::String& message, WebCore::Frame*) override;
@@ -89,18 +89,19 @@ public:
     virtual void runJavaScriptAlert(WebCore::Frame*, const WTF::String&) override;
     virtual bool runJavaScriptConfirm(WebCore::Frame*, const WTF::String&) override;
     virtual bool runJavaScriptPrompt(WebCore::Frame*, const WTF::String& message, const WTF::String& defaultValue, WTF::String& result) override;
-    virtual bool shouldInterruptJavaScript() override;
-
-    virtual WebCore::IntRect windowResizerRect() const override;
 
     virtual bool supportsImmediateInvalidation() override;
-    virtual void invalidateRootView(const WebCore::IntRect&, bool) override;
-    virtual void invalidateContentsAndRootView(const WebCore::IntRect&, bool) override;
-    virtual void invalidateContentsForSlowScroll(const WebCore::IntRect&, bool) override;
+    virtual void invalidateRootView(const WebCore::IntRect&) override;
+    virtual void invalidateContentsAndRootView(const WebCore::IntRect&) override;
+    virtual void invalidateContentsForSlowScroll(const WebCore::IntRect&) override;
     virtual void scroll(const WebCore::IntSize& scrollDelta, const WebCore::IntRect& rectToScroll, const WebCore::IntRect& clipRect) override;
 
     virtual WebCore::IntPoint screenToRootView(const WebCore::IntPoint&) const override;
     virtual WebCore::IntRect rootViewToScreen(const WebCore::IntRect&) const override;
+#if PLATFORM(IOS)
+    virtual WebCore::IntPoint accessibilityScreenToRootView(const WebCore::IntPoint&) const override;
+    virtual WebCore::IntRect rootViewToAccessibilityScreen(const WebCore::IntRect&) const override;
+#endif
     virtual PlatformPageClient platformPageClient() const override;
     virtual void contentsSizeChanged(WebCore::Frame*, const WebCore::IntSize&) const override;
     virtual void scrollRectIntoView(const WebCore::IntRect&) const override;
@@ -115,12 +116,9 @@ public:
     virtual void setToolTip(const WTF::String&, WebCore::TextDirection) override;
 
     virtual void print(WebCore::Frame*) override;
-#if ENABLE(SQL_DATABASE)
     virtual void exceededDatabaseQuota(WebCore::Frame*, const WTF::String& databaseName, WebCore::DatabaseDetails) override;
-#endif
     virtual void reachedMaxAppCacheSize(int64_t spaceNeeded) override;
     virtual void reachedApplicationCacheOriginQuota(WebCore::SecurityOrigin*, int64_t totalSpaceNeeded) override;
-    virtual void populateVisitedLinks() override;
 
 #if ENABLE(DASHBOARD_SUPPORT)
     virtual void annotatedRegionsChanged() override;
@@ -135,7 +133,7 @@ public:
 #endif
 
 #if ENABLE(INPUT_TYPE_COLOR)
-    virtual PassOwnPtr<WebCore::ColorChooser> createColorChooser(WebCore::ColorChooserClient*, const WebCore::Color&) override;
+    virtual std::unique_ptr<WebCore::ColorChooser> createColorChooser(WebCore::ColorChooserClient*, const WebCore::Color&) override;
 #endif
 
     virtual WebCore::KeyboardUIMode keyboardUIMode() override;
@@ -159,10 +157,11 @@ public:
     virtual bool shouldPaintEntireContents() const override;
 
     virtual void attachRootGraphicsLayer(WebCore::Frame*, WebCore::GraphicsLayer*) override;
+    virtual void attachViewOverlayGraphicsLayer(WebCore::Frame*, WebCore::GraphicsLayer*) override;
     virtual void setNeedsOneShotDrawingSynchronization() override;
     virtual void scheduleCompositingLayerFlush() override;
 
-    virtual CompositingTriggerFlags allowedCompositingTriggers() const
+    virtual CompositingTriggerFlags allowedCompositingTriggers() const override
     {
         return static_cast<CompositingTriggerFlags>(
             ThreeDTransformTrigger |
@@ -176,9 +175,9 @@ public:
     }
 
 #if ENABLE(VIDEO)
-    virtual bool supportsFullscreenForNode(const WebCore::Node*) override;
-    virtual void enterFullscreenForNode(WebCore::Node*) override;
-    virtual void exitFullscreenForNode(WebCore::Node*) override;
+    virtual bool supportsVideoFullscreen() override;
+    virtual void enterVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&, WebCore::HTMLMediaElementEnums::VideoFullscreenMode) override;
+    virtual void exitVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&) override;
 #endif
 
 #if ENABLE(FULLSCREEN_API)
@@ -190,20 +189,32 @@ public:
     virtual bool selectItemWritingDirectionIsNatural() override;
     virtual bool selectItemAlignmentFollowsMenuWritingDirection() override;
     virtual bool hasOpenedPopup() const override;
-    virtual PassRefPtr<WebCore::PopupMenu> createPopupMenu(WebCore::PopupMenuClient*) const override;
-    virtual PassRefPtr<WebCore::SearchPopupMenu> createSearchPopupMenu(WebCore::PopupMenuClient*) const override;
+    virtual RefPtr<WebCore::PopupMenu> createPopupMenu(WebCore::PopupMenuClient*) const override;
+    virtual RefPtr<WebCore::SearchPopupMenu> createSearchPopupMenu(WebCore::PopupMenuClient*) const override;
 
-    virtual void numWheelEventHandlersChanged(unsigned) override { }
+    virtual void wheelEventHandlersChanged(bool) override { }
 
 #if ENABLE(SUBTLE_CRYPTO)
     virtual bool wrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) const override;
     virtual bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) const override;
 #endif
 
+#if ENABLE(SERVICE_CONTROLS)
+    virtual void handleSelectionServiceClick(WebCore::FrameSelection&, const Vector<String>& telephoneNumbers, const WebCore::IntPoint&) override;
+    virtual bool hasRelevantSelectionServices(bool isTextOnly) const override;
+#endif
+
 #if PLATFORM(IOS)
     WebView* webView() const { return m_webView; }
 #else
     WebView* webView() { return m_webView; }
+#endif
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
+    virtual void addPlaybackTargetPickerClient(uint64_t /*contextId*/) override;
+    virtual void removePlaybackTargetPickerClient(uint64_t /*contextId*/) override;
+    virtual void showPlaybackTargetPicker(uint64_t /*contextId*/, const WebCore::IntPoint&, bool /* hasVideo */) override;
+    virtual void playbackTargetPickerClientStateDidChange(uint64_t /*contextId*/, WebCore::MediaProducer::MediaStateFlags) override;
 #endif
 
 private:

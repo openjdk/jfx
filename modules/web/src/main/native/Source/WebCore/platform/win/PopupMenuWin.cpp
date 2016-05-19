@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2011, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile Inc.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  *
@@ -23,9 +23,11 @@
 #include "config.h"
 #include "PopupMenuWin.h"
 
+#include "BString.h"
 #include "BitmapInfo.h"
 #include "Document.h"
 #include "FloatRect.h"
+#include "Font.h"
 #include "FontSelector.h"
 #include "Frame.h"
 #include "FrameView.h"
@@ -42,17 +44,13 @@
 #include "RenderView.h"
 #include "Scrollbar.h"
 #include "ScrollbarTheme.h"
-#include "SimpleFontData.h"
+#include "ScrollbarThemeWin.h"
 #include "TextRun.h"
 #include "WebCoreInstanceHandle.h"
 #include <wtf/WindowsExtras.h>
 
 #include <windows.h>
 #include <windowsx.h>
-#if OS(WINCE)
-#include <ResDefCE.h>
-#define MAKEPOINTS(l) (*((POINTS FAR *)&(l)))
-#endif
 
 #define HIGH_BIT_MASK_SHORT 0x8000
 
@@ -146,7 +144,7 @@ void PopupMenuWin::show(const IntRect& r, FrameView* view, int index)
 
     if (!m_scrollbar && visibleItems() < client()->listSize()) {
         // We need a scroll bar
-        m_scrollbar = client()->createScrollbar(this, VerticalScrollbar, SmallScrollbar);
+        m_scrollbar = client()->createScrollbar(*this, VerticalScrollbar, SmallScrollbar);
         m_scrollbar->styleChanged();
     }
 
@@ -164,8 +162,8 @@ void PopupMenuWin::show(const IntRect& r, FrameView* view, int index)
             setFocusedIndex(index);
     }
 
-#if !OS(WINCE)
-    ::SystemParametersInfo(SPI_GETCOMBOBOXANIMATION, 0, &shouldAnimate, 0);
+    if (!::SystemParametersInfo(SPI_GETCOMBOBOXANIMATION, 0, &shouldAnimate, 0))
+        shouldAnimate = FALSE;
 
     if (shouldAnimate) {
         RECT viewRect = {0};
@@ -173,9 +171,7 @@ void PopupMenuWin::show(const IntRect& r, FrameView* view, int index)
         if (!::IsRectEmpty(&viewRect))
             ::AnimateWindow(m_popup, defaultAnimationDuration, AW_BLEND);
     } else
-#endif
-
-    ::ShowWindow(m_popup, SW_SHOWNOACTIVATE);
+        ::ShowWindow(m_popup, SW_SHOWNOACTIVATE);
 
     m_showPopup = true;
 
@@ -199,7 +195,6 @@ void PopupMenuWin::show(const IntRect& r, FrameView* view, int index)
                 break;
 
             // Steal mouse messages.
-#if !OS(WINCE)
             case WM_NCMOUSEMOVE:
             case WM_NCLBUTTONDOWN:
             case WM_NCLBUTTONUP:
@@ -210,7 +205,6 @@ void PopupMenuWin::show(const IntRect& r, FrameView* view, int index)
             case WM_NCMBUTTONDOWN:
             case WM_NCMBUTTONUP:
             case WM_NCMBUTTONDBLCLK:
-#endif
             case WM_MOUSEWHEEL:
                 msg.hwnd = m_popup;
                 break;
@@ -343,15 +337,15 @@ void PopupMenuWin::calculatePositionAndSize(const IntRect& r, FrameView* v)
         if (text.isEmpty())
             continue;
 
-        Font itemFont = client()->menuStyle().font();
+        FontCascade itemFont = client()->menuStyle().font();
         if (client()->itemIsLabel(i)) {
             FontDescription d = itemFont.fontDescription();
             d.setWeight(d.bolderWeight());
-            itemFont = Font(d, itemFont.letterSpacing(), itemFont.wordSpacing());
+            itemFont = FontCascade(d, itemFont.letterSpacing(), itemFont.wordSpacing());
             itemFont.update(m_popupClient->fontSelector());
         }
 
-        popupWidth = std::max(popupWidth, static_cast<int>(ceilf(itemFont.width(TextRun(text.deprecatedCharacters(), text.length())))));
+        popupWidth = std::max(popupWidth, static_cast<int>(ceilf(itemFont.width(TextRun(text)))));
     }
 
     if (naturalHeight > maxPopupHeight)
@@ -601,11 +595,7 @@ void PopupMenuWin::paint(const IntRect& damageRect, HDC hdc)
             m_bmp.clear();
     }
     if (!m_bmp) {
-#if OS(WINCE)
-        BitmapInfo bitmapInfo = BitmapInfo::createBottomUp(clientRect().size(), BitmapInfo::BitCount16);
-#else
         BitmapInfo bitmapInfo = BitmapInfo::createBottomUp(clientRect().size());
-#endif
         void* pixels = 0;
         m_bmp = adoptGDIObject(::CreateDIBSection(m_DC.get(), &bitmapInfo, DIB_RGB_COLORS, &pixels, 0, 0));
         if (!m_bmp)
@@ -650,14 +640,14 @@ void PopupMenuWin::paint(const IntRect& damageRect, HDC hdc)
 
         String itemText = client()->itemText(index);
 
-        TextRun textRun(itemText, 0, 0, TextRun::AllowTrailingExpansion, itemStyle.textDirection(), itemStyle.hasTextDirectionOverride());
+        TextRun textRun(itemText, 0, 0, AllowTrailingExpansion, itemStyle.textDirection(), itemStyle.hasTextDirectionOverride());
         context.setFillColor(optionTextColor, ColorSpaceDeviceRGB);
 
-        Font itemFont = client()->menuStyle().font();
+        FontCascade itemFont = client()->menuStyle().font();
         if (client()->itemIsLabel(index)) {
             FontDescription d = itemFont.fontDescription();
             d.setWeight(d.bolderWeight());
-            itemFont = Font(d, itemFont.letterSpacing(), itemFont.wordSpacing());
+            itemFont = FontCascade(d, itemFont.letterSpacing(), itemFont.wordSpacing());
             itemFont.update(m_popupClient->fontSelector());
         }
 
@@ -760,6 +750,32 @@ IntRect PopupMenuWin::scrollableAreaBoundingBox() const
     return m_windowRect;
 }
 
+bool PopupMenuWin::onGetObject(WPARAM wParam, LPARAM lParam, LRESULT& lResult)
+{
+    lResult = 0;
+
+    if (static_cast<LONG>(lParam) != OBJID_CLIENT)
+        return false;
+
+    if (!m_accessiblePopupMenu)
+        m_accessiblePopupMenu = new AccessiblePopupMenu(*this);
+
+    static HMODULE accessibilityLib = nullptr;
+    if (!accessibilityLib) {
+        if (!(accessibilityLib = ::LoadLibraryW(L"oleacc.dll")))
+            return false;
+    }
+
+    static LPFNLRESULTFROMOBJECT procPtr = reinterpret_cast<LPFNLRESULTFROMOBJECT>(::GetProcAddress(accessibilityLib, "LresultFromObject"));
+    if (!procPtr)
+        return false;
+
+    // LresultFromObject returns a reference to the accessible object, stored
+    // in an LRESULT. If this call is not successful, Windows will handle the
+    // request through DefWindowProc.
+    return SUCCEEDED(lResult = procPtr(__uuidof(IAccessible), wParam, m_accessiblePopupMenu.get()));
+}
+
 void PopupMenuWin::registerClass()
 {
     static bool haveRegisteredWindowClass = false;
@@ -767,14 +783,10 @@ void PopupMenuWin::registerClass()
     if (haveRegisteredWindowClass)
         return;
 
-#if OS(WINCE)
-    WNDCLASS wcex;
-#else
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.hIconSm        = 0;
     wcex.style          = CS_DROPSHADOW;
-#endif
 
     wcex.lpfnWndProc    = PopupMenuWndProc;
     wcex.cbClsExtra     = 0;
@@ -788,11 +800,7 @@ void PopupMenuWin::registerClass()
 
     haveRegisteredWindowClass = true;
 
-#if OS(WINCE)
-    RegisterClass(&wcex);
-#else
     RegisterClassEx(&wcex);
-#endif
 }
 
 
@@ -819,10 +827,8 @@ LRESULT PopupMenuWin::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
     LRESULT lResult = 0;
 
     switch (message) {
-#if !OS(WINCE)
         case WM_MOUSEACTIVATE:
             return MA_NOACTIVATE;
-#endif
         case WM_SIZE: {
             if (!scrollbar())
                 break;
@@ -966,9 +972,8 @@ LRESULT PopupMenuWin::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             }
 
             BOOL shouldHotTrack = FALSE;
-#if !OS(WINCE)
-            ::SystemParametersInfo(SPI_GETHOTTRACKING, 0, &shouldHotTrack, 0);
-#endif
+            if (!::SystemParametersInfo(SPI_GETHOTTRACKING, 0, &shouldHotTrack, 0))
+                shouldHotTrack = FALSE;
 
             RECT bounds;
             GetClientRect(popupHandle(), &bounds);
@@ -1070,16 +1075,330 @@ LRESULT PopupMenuWin::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             lResult = 0;
             break;
         }
-#if !OS(WINCE)
         case WM_PRINTCLIENT:
             paint(clientRect(), (HDC)wParam);
             break;
-#endif
+        case WM_GETOBJECT:
+            onGetObject(wParam, lParam, lResult);
+            break;
         default:
             lResult = DefWindowProc(hWnd, message, wParam, lParam);
     }
 
     return lResult;
+}
+
+AccessiblePopupMenu::AccessiblePopupMenu(const PopupMenuWin& popupMenu)
+    : m_refCount(0)
+    , m_popupMenu(popupMenu)
+{
+}
+
+AccessiblePopupMenu::~AccessiblePopupMenu()
+{
+}
+
+HRESULT AccessiblePopupMenu::QueryInterface(REFIID riid, __RPC__deref_out void __RPC_FAR *__RPC_FAR *ppvObject)
+{
+    if (IsEqualGUID(riid, __uuidof(IAccessible)))
+        *ppvObject = static_cast<IAccessible*>(this);
+    else if (IsEqualGUID(riid, __uuidof(IDispatch)))
+        *ppvObject = static_cast<IAccessible*>(this);
+    else if (IsEqualGUID(riid, __uuidof(IUnknown)))
+        *ppvObject = static_cast<IAccessible*>(this);
+    else {
+        *ppvObject = 0;
+        return E_NOINTERFACE;
+    }
+    AddRef();
+    return S_OK;
+}
+
+ULONG AccessiblePopupMenu::AddRef()
+{
+    return ++m_refCount;
+}
+
+ULONG AccessiblePopupMenu::Release()
+{
+    int refCount = --m_refCount;
+    if (!refCount)
+        delete this;
+    return refCount;
+}
+
+HRESULT AccessiblePopupMenu::GetTypeInfoCount(UINT* count)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::GetTypeInfo(UINT, LCID, ITypeInfo** ppTInfo)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::GetIDsOfNames(REFIID, LPOLESTR*, UINT, LCID, DISPID*)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::Invoke(DISPID, REFIID, LCID, WORD, DISPPARAMS*, VARIANT*, EXCEPINFO*, UINT*)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::get_accParent(IDispatch**)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::get_accChildCount(long* count)
+{
+    if (!count)
+        return E_POINTER;
+
+    *count = m_popupMenu.visibleItems();
+    return S_OK;
+}
+
+HRESULT AccessiblePopupMenu::get_accChild(VARIANT vChild, IDispatch** ppChild)
+{
+    if (!ppChild)
+        return E_POINTER;
+
+    if (vChild.vt != VT_I4) {
+        *ppChild = nullptr;
+        return E_INVALIDARG;
+    }
+    *ppChild = nullptr;
+    return S_FALSE;
+}
+
+HRESULT AccessiblePopupMenu::get_accName(VARIANT vChild, BSTR* name)
+{
+    return get_accValue(vChild, name);
+}
+
+HRESULT AccessiblePopupMenu::get_accValue(VARIANT vChild, BSTR* value)
+{
+    if (!value)
+        return E_POINTER;
+
+    if (vChild.vt != VT_I4)
+        return E_INVALIDARG;
+
+    int index = vChild.lVal - 1;
+
+    if (index < 0)
+        return E_INVALIDARG;
+
+    BString itemText(m_popupMenu.client()->itemText(index));
+    *value = itemText.release();
+
+    return S_OK;
+}
+
+HRESULT AccessiblePopupMenu::get_accDescription(VARIANT, BSTR*)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::get_accRole(VARIANT vChild, VARIANT* pvRole)
+{
+    if (!pvRole)
+        return E_POINTER;
+
+    if (vChild.vt != VT_I4)
+        return E_INVALIDARG;
+
+    // Scrollbar parts are encoded as negative values.
+    if (vChild.lVal < 0) {
+        V_VT(pvRole) = VT_I4;
+        V_I4(pvRole) = ROLE_SYSTEM_SCROLLBAR;
+    } else {
+        V_VT(pvRole) = VT_I4;
+        V_I4(pvRole) = ROLE_SYSTEM_LISTITEM;
+    }
+
+    return S_OK;
+}
+
+HRESULT AccessiblePopupMenu::get_accState(VARIANT vChild, VARIANT* pvState)
+{
+    if (!pvState)
+        return E_POINTER;
+
+    if (vChild.vt != VT_I4)
+        return E_INVALIDARG;
+
+    V_VT(pvState) = VT_I4;
+    V_I4(pvState) = 0; // STATE_SYSTEM_NORMAL
+
+    return S_OK;
+}
+
+HRESULT AccessiblePopupMenu::get_accHelp(VARIANT vChild, BSTR* helpText)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::get_accKeyboardShortcut(VARIANT vChild, BSTR*)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::get_accFocus(VARIANT* pvFocusedChild)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::get_accSelection(VARIANT* pvSelectedChild)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::get_accDefaultAction(VARIANT vChild, BSTR* actionDescription)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::accSelect(long selectionFlags, VARIANT vChild)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::accLocation(long* left, long* top, long* width, long* height, VARIANT vChild)
+{
+    if (!left || !top || !width || !height)
+        return E_POINTER;
+
+    if (vChild.vt != VT_I4)
+        return E_INVALIDARG;
+
+    const IntRect& windowRect = m_popupMenu.windowRect();
+
+    // Scrollbar parts are encoded as negative values.
+    if (vChild.lVal < 0) {
+        if (!m_popupMenu.scrollbar())
+            return E_FAIL;
+
+        Scrollbar& scrollbar = *m_popupMenu.scrollbar();
+        WebCore::ScrollbarPart part = static_cast<WebCore::ScrollbarPart>(-vChild.lVal);
+
+        ScrollbarThemeWin* theme = static_cast<ScrollbarThemeWin*>(scrollbar.theme());
+        if (!theme)
+            return E_FAIL;
+
+        IntRect partRect;
+
+        switch (part) {
+        case BackTrackPart:
+        case BackButtonStartPart:
+            partRect = theme->backButtonRect(scrollbar, WebCore::BackTrackPart);
+            break;
+        case ThumbPart:
+            partRect = theme->thumbRect(scrollbar);
+            break;
+        case ForwardTrackPart:
+        case ForwardButtonEndPart:
+            partRect = theme->forwardButtonRect(scrollbar, WebCore::ForwardTrackPart);
+            break;
+        case ScrollbarBGPart:
+            partRect = theme->trackRect(scrollbar);
+            break;
+        default:
+            return E_FAIL;
+        }
+
+        partRect.move(windowRect.x(), windowRect.y());
+
+        *left = partRect.x();
+        *top = partRect.y();
+        *width = partRect.width();
+        *height = partRect.height();
+
+        return S_OK;
+    }
+
+    int index = vChild.lVal - 1;
+
+    if (index < 0)
+        return E_INVALIDARG;
+
+    *left = windowRect.x();
+    *top = windowRect.y() + (index - m_popupMenu.m_scrollOffset) * m_popupMenu.itemHeight();
+    *width = windowRect.width();
+    *height = m_popupMenu.itemHeight();
+
+    return S_OK;
+}
+
+HRESULT AccessiblePopupMenu::accNavigate(long direction, VARIANT vFromChild, VARIANT* pvNavigatedTo)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::accHitTest(long x, long y, VARIANT* pvChildAtPoint)
+{
+    if (!pvChildAtPoint)
+        return E_POINTER;
+
+    ::VariantInit(pvChildAtPoint);
+
+    IntRect windowRect = m_popupMenu.windowRect();
+
+    IntPoint pt(x - windowRect.x(), y - windowRect.y());
+
+    IntRect scrollRect;
+
+    if (m_popupMenu.scrollbar())
+        scrollRect = m_popupMenu.scrollbar()->frameRect();
+
+    if (m_popupMenu.scrollbar() && scrollRect.contains(pt)) {
+        Scrollbar& scrollbar = *m_popupMenu.scrollbar();
+        if (!scrollbar.theme())
+            return E_FAIL;
+
+        pt.move(-scrollRect.x(), -scrollRect.y());
+
+        WebCore::ScrollbarPart part = scrollbar.theme()->hitTest(scrollbar, pt);
+
+        V_VT(pvChildAtPoint) = VT_I4;
+        V_I4(pvChildAtPoint) = -part; // Scrollbar parts are encoded as negative, to avoid mixup with item indexes.
+        return S_OK;
+    }
+
+    int index = m_popupMenu.listIndexAtPoint(pt);
+
+    if (index < 0) {
+        V_VT(pvChildAtPoint) = VT_EMPTY;
+        return S_OK;
+    }
+
+    V_VT(pvChildAtPoint) = VT_I4;
+    V_I4(pvChildAtPoint) = index + 1; // CHILDID_SELF is 0, need to add 1.
+
+    return S_OK;
+}
+
+HRESULT AccessiblePopupMenu::accDoDefaultAction(VARIANT vChild)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::put_accName(VARIANT, BSTR)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::put_accValue(VARIANT, BSTR)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT AccessiblePopupMenu::get_accHelpTopic(BSTR* helpFile, VARIANT, long* topicID)
+{
+    return E_NOTIMPL;
 }
 
 }

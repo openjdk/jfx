@@ -36,29 +36,32 @@ namespace WebCore {
 
 class RenderMathMLToken : public RenderMathMLBlock {
 public:
-    RenderMathMLToken(Element&, PassRef<RenderStyle>);
-    RenderMathMLToken(Document&, PassRef<RenderStyle>);
+    RenderMathMLToken(Element&, Ref<RenderStyle>&&);
+    RenderMathMLToken(Document&, Ref<RenderStyle>&&);
 
     MathMLTextElement& element() { return static_cast<MathMLTextElement&>(nodeForNonAnonymous()); }
 
-    virtual bool isRenderMathMLToken() const override final { return true; }
     virtual bool isChildAllowed(const RenderObject&, const RenderStyle&) const override { return true; };
     virtual void addChild(RenderObject* newChild, RenderObject* beforeChild) override;
     virtual void updateTokenContent();
+    virtual void updateFromElement() override;
 
 protected:
     void createWrapperIfNeeded();
 
 private:
+    virtual bool isRenderMathMLToken() const override final { return true; }
     virtual const char* renderName() const override { return isAnonymous() ? "RenderMathMLToken (anonymous)" : "RenderMathMLToken"; }
-    void updateFromElement() override;
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
     virtual void updateStyle();
+
+    // This boolean indicates whether the token element contains some RenderElement descendants, other than the anonymous renderers created for layout purpose.
+    bool m_containsElement;
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderMathMLToken, isRenderMathMLToken())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderMathMLToken, isRenderMathMLToken())
 
 #endif // ENABLE(MATHML)
 #endif // RenderMathMLToken_h

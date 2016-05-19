@@ -46,11 +46,10 @@ from webkitpy.common.net.statusserver import StatusServer
 from webkitpy.common.system.executive import ScriptError
 from webkitpy.tool.bot.botinfo import BotInfo
 from webkitpy.tool.bot.commitqueuetask import CommitQueueTask, CommitQueueTaskDelegate
-from webkitpy.tool.bot.expectedfailures import ExpectedFailures
 from webkitpy.tool.bot.feeders import CommitQueueFeeder, EWSFeeder
 from webkitpy.tool.bot.flakytestreporter import FlakyTestReporter
 from webkitpy.tool.bot.layouttestresultsreader import LayoutTestResultsReader
-from webkitpy.tool.bot.patchanalysistask import UnableToApplyPatch
+from webkitpy.tool.bot.patchanalysistask import UnableToApplyPatch, PatchIsNotValid
 from webkitpy.tool.bot.queueengine import QueueEngine, QueueEngineDelegate
 from webkitpy.tool.bot.stylequeuetask import StyleQueueTask, StyleQueueTaskDelegate
 from webkitpy.tool.commands.stepsequence import StepSequenceErrorHandler
@@ -65,7 +64,6 @@ class AbstractQueue(Command, QueueEngineDelegate):
 
     _pass_status = "Pass"
     _fail_status = "Fail"
-    _retry_status = "Retry"
     _error_status = "Error"
 
     def __init__(self, options=None): # Default values should never be collections (like []) as default values are shared between invocations
@@ -76,6 +74,8 @@ class AbstractQueue(Command, QueueEngineDelegate):
         self.help_text = "Run the %s" % self.name
         Command.__init__(self, options=options_list)
         self._iteration_count = 0
+        if not hasattr(self, 'architecture'):
+            self.architecture = None
 
     def _cc_watchers(self, bug_id):
         try:
@@ -239,14 +239,13 @@ class AbstractPatchQueue(AbstractQueue):
         self._update_status(self._fail_status, patch)
         self._release_work_item(patch)
 
-    def _did_retry(self, patch):
-        self._update_status(self._retry_status, patch)
-        self._release_work_item(patch)
-
     def _did_error(self, patch, reason):
         message = "%s: %s" % (self._error_status, reason)
         self._update_status(message, patch)
         self._release_work_item(patch)
+
+    def _unlock_patch(self, patch):
+        self._tool.status_server.release_lock(self.name, patch)
 
     def work_item_log_path(self, patch):
         return os.path.join(self._log_directory(), "%s.log" % patch.bug_id())
@@ -278,7 +277,10 @@ class PatchProcessingQueue(AbstractPatchQueue):
         self._deprecated_port = DeprecatedPort.port(self.port_name)
         # FIXME: This violates abstraction
         self._tool._deprecated_port = self._deprecated_port
+
         self._port = self._tool.port_factory.get(self._new_port_name_from_old(self.port_name, self._tool.platform))
+        if self.architecture:
+            self._port.set_architecture(self.architecture)
 
     def _upload_results_archive_for_patch(self, patch, results_archive_zip):
         if not self._port:
@@ -301,15 +303,18 @@ class PatchProcessingQueue(AbstractPatchQueue):
 
 
 class CommitQueue(PatchProcessingQueue, StepSequenceErrorHandler, CommitQueueTaskDelegate):
+    def __init__(self, commit_queue_task_class=CommitQueueTask):
+        self._commit_queue_task_class = commit_queue_task_class
+        PatchProcessingQueue.__init__(self)
+
     name = "commit-queue"
-    port_name = "mac-mountainlion"
+    port_name = "mac"
 
     # AbstractPatchQueue methods
 
     def begin_work_queue(self):
         PatchProcessingQueue.begin_work_queue(self)
         self.committer_validator = CommitterValidator(self._tool)
-        self._expected_failures = ExpectedFailures()
         self._layout_test_results_reader = LayoutTestResultsReader(self._tool, self._port.results_directory(), self._log_directory())
 
     def next_work_item(self):
@@ -317,12 +322,16 @@ class CommitQueue(PatchProcessingQueue, StepSequenceErrorHandler, CommitQueueTas
 
     def process_work_item(self, patch):
         self._cc_watchers(patch.bug_id())
-        task = CommitQueueTask(self, patch)
+        task = self._commit_queue_task_class(self, patch)
         try:
             if task.run():
                 self._did_pass(patch)
                 return True
-            self._did_retry(patch)
+            self._unlock_patch(patch)
+            return False
+        except PatchIsNotValid:
+            self._did_error(patch, "%s did not process patch." % self.name)
+            return False
         except ScriptError, e:
             validator = CommitterValidator(self._tool)
             validator.reject_patch_from_commit_queue(patch.id(), self._error_message_for_bug(task, patch, e))
@@ -330,13 +339,17 @@ class CommitQueue(PatchProcessingQueue, StepSequenceErrorHandler, CommitQueueTas
             if results_archive:
                 self._upload_results_archive_for_patch(patch, results_archive)
             self._did_fail(patch)
+            return False
 
     def _failing_tests_message(self, task, patch):
         results = task.results_from_patch_test_run(patch)
-        unexpected_failures = self._expected_failures.unexpected_failures_observed(results)
-        if not unexpected_failures:
+
+        if not results:
             return None
-        return "New failing tests:\n%s" % "\n".join(unexpected_failures)
+
+        if results.did_exceed_test_failure_limit():
+            return "Number of test failures exceeded the failure limit."
+        return "New failing tests:\n%s" % "\n".join(results.failing_tests())
 
     def _error_message_for_bug(self, task, patch, script_error):
         message = self._failing_tests_message(task, patch)
@@ -425,19 +438,10 @@ class AbstractReviewQueue(PatchProcessingQueue, StepSequenceErrorHandler):
         return self._next_patch()
 
     def process_work_item(self, patch):
-        try:
-            if not self.review_patch(patch):
-                return False
+        passed = self.review_patch(patch)
+        if passed:
             self._did_pass(patch)
-            return True
-        except ScriptError, e:
-            if e.exit_code != QueueEngine.handled_error_code:
-                self._did_fail(patch)
-            else:
-                # The subprocess handled the error, but won't have released the patch, so we do.
-                # FIXME: We need to simplify the rules by which _release_work_item is called.
-                self._release_work_item(patch)
-            raise e
+        return passed
 
     def handle_unexpected_error(self, patch, message):
         _log.error(message)
@@ -457,13 +461,17 @@ class StyleQueue(AbstractReviewQueue, StyleQueueTaskDelegate):
 
     def review_patch(self, patch):
         task = StyleQueueTask(self, patch)
-        if not task.validate():
-            self._did_error(patch, "%s did not process patch." % self.name)
-            return False
         try:
-            return task.run()
+            style_check_succeeded = task.run()
+            if not style_check_succeeded:
+                # Caller unlocks when review_patch returns True, so we only need to unlock on transient failure.
+                self._unlock_patch(patch)
+            return style_check_succeeded
         except UnableToApplyPatch, e:
             self._did_error(patch, "%s unable to apply patch." % self.name)
+            return False
+        except PatchIsNotValid:
+            self._did_error(patch, "%s did not process patch." % self.name)
             return False
         except ScriptError, e:
             output = re.sub(r'Failed to run .+ exit_code: 1', '', e.output)

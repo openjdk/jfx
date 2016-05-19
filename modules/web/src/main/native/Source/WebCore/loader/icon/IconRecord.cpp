@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -71,7 +71,7 @@ void IconRecord::setImageData(PassRefPtr<SharedBuffer> data)
     // Copy the provided data into the buffer of the new Image object.
     if (!m_image->setData(data, true)) {
         LOG(IconDatabase, "Manual image data for iconURL '%s' FAILED - it was probably invalid image data", m_iconURL.ascii().data());
-        m_image.clear();
+        m_image = nullptr;
     }
 
     m_dataSet = true;

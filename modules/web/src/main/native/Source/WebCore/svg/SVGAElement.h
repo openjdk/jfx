@@ -33,7 +33,7 @@ class SVGAElement final : public SVGGraphicsElement,
                           public SVGURIReference,
                           public SVGExternalResourcesRequired {
 public:
-    static PassRefPtr<SVGAElement> create(const QualifiedName&, Document&);
+    static Ref<SVGAElement> create(const QualifiedName&, Document&);
 
 private:
     SVGAElement(const QualifiedName&, Document&);
@@ -43,11 +43,10 @@ private:
     virtual String title() const override;
     virtual String target() const override { return svgTarget(); }
 
-    bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
     virtual bool childShouldCreateRenderer(const Node&) const override;
 
     virtual void defaultEventHandler(Event*) override;
@@ -57,6 +56,8 @@ private:
     virtual bool isKeyboardFocusable(KeyboardEvent*) const override;
     virtual bool isFocusable() const override;
     virtual bool isURLAttribute(const Attribute&) const override;
+    virtual bool canStartSelection() const override;
+    virtual short tabIndex() const override;
 
     virtual bool willRespondToMouseClickEvents() override;
 
@@ -64,8 +65,8 @@ private:
         // This declaration used to define a non-virtual "String& target() const" method, that clashes with "virtual String Element::target() const".
         // That's why it has been renamed to "svgTarget", the CodeGenerators take care of calling svgTargetAnimated() instead of targetAnimated(), see CodeGenerator.pm.
         DECLARE_ANIMATED_STRING(SVGTarget, svgTarget)
-        DECLARE_ANIMATED_STRING(Href, href)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
+        DECLARE_ANIMATED_STRING_OVERRIDE(Href, href)
+        DECLARE_ANIMATED_BOOLEAN_OVERRIDE(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 };
 

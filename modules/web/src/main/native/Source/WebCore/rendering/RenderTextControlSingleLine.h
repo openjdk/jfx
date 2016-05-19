@@ -32,13 +32,11 @@ class HTMLInputElement;
 
 class RenderTextControlSingleLine : public RenderTextControl {
 public:
-    RenderTextControlSingleLine(HTMLInputElement&, PassRef<RenderStyle>);
+    RenderTextControlSingleLine(HTMLInputElement&, Ref<RenderStyle>&&);
     virtual ~RenderTextControlSingleLine();
     // FIXME: Move create*Style() to their classes.
-    virtual PassRef<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const override;
-    PassRef<RenderStyle> createInnerBlockStyle(const RenderStyle* startStyle) const;
-
-    void capsLockStateMayHaveChanged();
+    virtual Ref<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const override;
+    Ref<RenderStyle> createInnerBlockStyle(const RenderStyle* startStyle) const;
 
 protected:
     virtual void centerContainerIfNeeded(RenderBox*) const { }
@@ -55,7 +53,6 @@ private:
     virtual LayoutRect controlClipRect(const LayoutPoint&) const override;
     virtual bool isTextField() const override final { return true; }
 
-    virtual void paint(PaintInfo&, const LayoutPoint&) override;
     virtual void layout() override;
 
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
@@ -73,7 +70,7 @@ private:
     virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = 0) override final;
 
     int textBlockWidth() const;
-    virtual float getAvgCharWidth(AtomicString family) override;
+    virtual float getAverageCharWidth() override;
     virtual LayoutUnit preferredContentLogicalWidth(float charWidth) const override;
     virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const override;
 
@@ -83,7 +80,6 @@ private:
 
     HTMLElement* innerSpinButtonElement() const;
 
-    bool m_shouldDrawCapsLockIndicator;
     LayoutUnit m_desiredInnerTextLogicalHeight;
 };
 
@@ -97,14 +93,12 @@ inline HTMLElement* RenderTextControlSingleLine::innerBlockElement() const
     return inputElement().innerBlockElement();
 }
 
-RENDER_OBJECT_TYPE_CASTS(RenderTextControlSingleLine, isTextField())
-
 // ----------------------------
 
 class RenderTextControlInnerBlock final : public RenderBlockFlow {
 public:
-    RenderTextControlInnerBlock(Element& element, PassRef<RenderStyle> style)
-        : RenderBlockFlow(element, std::move(style))
+    RenderTextControlInnerBlock(Element& element, Ref<RenderStyle>&& style)
+        : RenderBlockFlow(element, WTF::move(style))
     {
     }
 
@@ -113,8 +107,9 @@ private:
     virtual bool isTextControlInnerBlock() const override { return true; }
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderTextControlInnerBlock, isTextControlInnerBlock())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlSingleLine, isTextField())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlInnerBlock, isTextControlInnerBlock())
 
-#endif
+#endif // RenderTextControlSingleLine_h

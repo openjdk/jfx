@@ -51,7 +51,6 @@ public:
 
     void dispatchThrottledProgressEvent(bool lengthComputable, unsigned long long loaded, unsigned long long total);
     void dispatchReadyStateChangeEvent(PassRefPtr<Event>, ProgressEventAction = DoNotFlushProgressEvent);
-    void dispatchEvent(PassRefPtr<Event>);
     void dispatchProgressEvent(const AtomicString&);
 
     void suspend();
@@ -61,8 +60,9 @@ private:
     static const double minimumProgressEventDispatchingIntervalInSeconds;
 
     virtual void fired();
-    void dispatchDeferredEvents(Timer<XMLHttpRequestProgressEventThrottle>*);
+    void dispatchDeferredEvents();
     void flushProgressEvent();
+    void dispatchEvent(PassRefPtr<Event>);
 
     bool hasEventToDispatch() const;
 
@@ -77,7 +77,7 @@ private:
     bool m_deferEvents;
     RefPtr<Event> m_deferredProgressEvent;
     Vector<RefPtr<Event>> m_deferredEvents;
-    Timer<XMLHttpRequestProgressEventThrottle> m_dispatchDeferredEventsTimer;
+    Timer m_dispatchDeferredEventsTimer;
 };
 
 } // namespace WebCore

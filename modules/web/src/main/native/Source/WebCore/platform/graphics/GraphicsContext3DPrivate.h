@@ -22,7 +22,6 @@
 
 #include "GLContext.h"
 #include "GraphicsContext3D.h"
-#include <wtf/PassOwnPtr.h>
 
 #if USE(TEXTURE_MAPPER)
 #include "TextureMapperPlatformLayer.h"
@@ -36,7 +35,7 @@ class GraphicsContext3DPrivate
 #endif
 {
 public:
-    static PassOwnPtr<GraphicsContext3DPrivate> create(GraphicsContext3D*, GraphicsContext3D::RenderStyle);
+    GraphicsContext3DPrivate(GraphicsContext3D*, GraphicsContext3D::RenderStyle);
     ~GraphicsContext3DPrivate();
     bool makeContextCurrent();
     PlatformGraphicsContext3D platformContext();
@@ -48,10 +47,8 @@ public:
 #endif
 
 private:
-    GraphicsContext3DPrivate(GraphicsContext3D*, GraphicsContext3D::RenderStyle);
-
     GraphicsContext3D* m_context;
-    OwnPtr<GLContext> m_glContext;
+    std::unique_ptr<GLContext> m_glContext;
     GraphicsContext3D::RenderStyle m_renderStyle;
 };
 

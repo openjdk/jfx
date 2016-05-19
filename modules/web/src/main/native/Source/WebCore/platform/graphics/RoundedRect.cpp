@@ -28,6 +28,7 @@
 #include "config.h"
 #include "RoundedRect.h"
 
+#include "FloatRoundedRect.h"
 #include "LayoutRect.h"
 #include "LayoutUnit.h"
 
@@ -58,7 +59,6 @@ void RoundedRect::Radii::scale(float factor)
     m_bottomRight.scale(factor);
     if (!m_bottomRight.width() || !m_bottomRight.height())
         m_bottomRight = LayoutSize();
-
 }
 
 void RoundedRect::Radii::expand(const LayoutUnit& topWidth, const LayoutUnit& bottomWidth, const LayoutUnit& leftWidth, const LayoutUnit& rightWidth)
@@ -234,6 +234,30 @@ bool RoundedRect::intersectsQuad(const FloatQuad& quad) const
     }
 
     return true;
+}
+
+FloatRoundedRect RoundedRect::pixelSnappedRoundedRectForPainting(float deviceScaleFactor) const
+{
+    LayoutRect originalRect = rect();
+    if (originalRect.isEmpty())
+        return FloatRoundedRect(originalRect, radii());
+
+    FloatRect pixelSnappedRect = snapRectToDevicePixels(originalRect, deviceScaleFactor);
+
+    if (!isRenderable())
+        return FloatRoundedRect(pixelSnappedRect, radii());
+
+    // Snapping usually does not alter size, but when it does, we need to make sure that the final rect is still renderable by distributing the size delta proportionally.
+    FloatRoundedRect::Radii adjustedRadii = radii();
+    adjustedRadii.scale(pixelSnappedRect.width() / originalRect.width().toFloat(), pixelSnappedRect.height() / originalRect.height().toFloat());
+    FloatRoundedRect snappedRoundedRect = FloatRoundedRect(pixelSnappedRect, adjustedRadii);
+    if (!snappedRoundedRect.isRenderable()) {
+        // Floating point mantissa overflow can produce a non-renderable rounded rect.
+        adjustedRadii.shrink(1 / deviceScaleFactor);
+        snappedRoundedRect.setRadii(adjustedRadii);
+    }
+    ASSERT(snappedRoundedRect.isRenderable());
+    return snappedRoundedRect;
 }
 
 } // namespace WebCore

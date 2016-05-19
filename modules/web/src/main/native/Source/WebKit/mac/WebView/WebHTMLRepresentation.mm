@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -59,10 +59,11 @@
 #import <WebCore/Range.h>
 #import <WebCore/RenderElement.h>
 #import <WebCore/TextResourceDecoder.h>
-#import <WebKit/DOMHTMLInputElement.h>
+#import <WebKitLegacy/DOMHTMLInputElement.h>
 #import <yarr/RegularExpression.h>
 #import <wtf/Assertions.h>
 #import <wtf/StdLibExtras.h>
+#import <wtf/text/StringBuilder.h>
 
 using namespace WebCore;
 using namespace HTMLNames;
@@ -105,8 +106,15 @@ static NSMutableArray *newArrayByConcatenatingArrays(NSArray *first, NSArray *se
 
 + (NSArray *)supportedMIMETypes
 {
-    static __unsafe_unretained NSArray *staticSupportedMIMETypes = newArrayByConcatenatingArrays([self supportedNonImageMIMETypes], [self supportedImageMIMETypes]);
+    static __unsafe_unretained NSArray *staticSupportedMIMETypes = newArrayByConcatenatingArrays([self supportedNonImageMIMETypes],
+        newArrayByConcatenatingArrays([self supportedImageMIMETypes], [self supportedMediaMIMETypes]));
     return staticSupportedMIMETypes;
+}
+
++ (NSArray *)supportedMediaMIMETypes
+{
+    static __unsafe_unretained NSArray *staticSupportedMediaMIMETypes = newArrayWithStrings(MIMETypeRegistry::getSupportedMediaMIMETypes());
+    return staticSupportedMediaMIMETypes;
 }
 
 + (NSArray *)supportedNonImageMIMETypes
@@ -276,7 +284,7 @@ static NSMutableArray *newArrayByConcatenatingArrays(NSArray *first, NSArray *se
 
 - (NSAttributedString *)attributedStringFrom:(DOMNode *)startNode startOffset:(int)startOffset to:(DOMNode *)endNode endOffset:(int)endOffset
 {
-    return [WebHTMLConverter editingAttributedStringFromRange:Range::create(core(startNode)->document(), core(startNode), startOffset, core(endNode), endOffset).get()];
+    return editingAttributedStringFromRange(Range::create(core(startNode)->document(), core(startNode), startOffset, core(endNode), endOffset));
 }
 #endif
 
@@ -304,7 +312,7 @@ static HTMLFormElement* formElementFromDOMElement(DOMElement *element)
 static HTMLInputElement* inputElementFromDOMElement(DOMElement* element)
 {
     Element* node = core(element);
-    return node && isHTMLInputElement(node) ? toHTMLInputElement(node) : 0;
+    return is<HTMLInputElement>(node) ? downcast<HTMLInputElement>(node) : nullptr;
 }
 
 - (BOOL)elementDoesAutoComplete:(DOMElement *)element
@@ -363,8 +371,8 @@ static RegularExpression* regExpForLabels(NSArray *labels)
     // that the app will use is equal to the number of locales is used in searching.
     static const unsigned int regExpCacheSize = 4;
     static NSMutableArray* regExpLabels = nil;
-    DEFINE_STATIC_LOCAL(Vector<RegularExpression*>, regExps, ());
-    DEFINE_STATIC_LOCAL(RegularExpression, wordRegExp, ("\\w", TextCaseSensitive));
+    DEPRECATED_DEFINE_STATIC_LOCAL(Vector<RegularExpression*>, regExps, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(RegularExpression, wordRegExp, ("\\w", TextCaseSensitive));
 
     RegularExpression* result;
     if (!regExpLabels)
@@ -373,9 +381,10 @@ static RegularExpression* regExpForLabels(NSArray *labels)
     if (cacheHit != NSNotFound)
         result = regExps.at(cacheHit);
     else {
-        String pattern("(");
-        unsigned int numLabels = [labels count];
-        unsigned int i;
+        StringBuilder pattern;
+        pattern.append('(');
+        unsigned numLabels = [labels count];
+        unsigned i;
         for (i = 0; i < numLabels; i++) {
             String label = [labels objectAtIndex:i];
 
@@ -387,18 +396,18 @@ static RegularExpression* regExpForLabels(NSArray *labels)
             }
 
             if (i != 0)
-                pattern.append("|");
+                pattern.append('|');
             // Search for word boundaries only if label starts/ends with "word characters".
             // If we always searched for word boundaries, this wouldn't work for languages
             // such as Japanese.
             if (startsWithWordChar)
-                pattern.append("\\b");
+                pattern.appendLiteral("\\b");
             pattern.append(label);
             if (endsWithWordChar)
-                pattern.append("\\b");
+                pattern.appendLiteral("\\b");
         }
-        pattern.append(")");
-        result = new RegularExpression(pattern, TextCaseInsensitive);
+        pattern.append(')');
+        result = new RegularExpression(pattern.toString(), TextCaseInsensitive);
     }
 
     // add regexp to the cache, making sure it is at the front for LRU ordering
@@ -422,8 +431,10 @@ static RegularExpression* regExpForLabels(NSArray *labels)
     return result;
 }
 
+// FIXME: This should take an Element&.
 static NSString* searchForLabelsBeforeElement(Frame* frame, NSArray* labels, Element* element, size_t* resultDistance, bool* resultIsInCellAbove)
 {
+    ASSERT(element);
     RegularExpression* regExp = regExpForLabels(labels);
     // We stop searching after we've seen this many chars
     const unsigned int charsSearchedThreshold = 500;
@@ -442,19 +453,15 @@ static NSString* searchForLabelsBeforeElement(Frame* frame, NSArray* labels, Ele
     // walk backwards in the node tree, until another element, or form, or end of tree
     unsigned lengthSearched = 0;
     Node* n;
-    for (n = NodeTraversal::previous(element);
-         n && lengthSearched < charsSearchedThreshold;
-         n = NodeTraversal::previous(n))
-    {
-        if (n->hasTagName(formTag)
-            || (n->isHTMLElement() && toElement(n)->isFormControlElement()))
-        {
+    for (n = NodeTraversal::previous(*element); n && lengthSearched < charsSearchedThreshold; n = NodeTraversal::previous(*n)) {
+        if (is<HTMLFormElement>(*n) || is<HTMLFormControlElement>(*n)) {
             // We hit another form element or the start of the form - bail out
             break;
-        } else if (n->hasTagName(tdTag) && !startingTableCell) {
+        }
+        if (n->hasTagName(tdTag) && !startingTableCell) {
             startingTableCell = static_cast<HTMLTableCellElement*>(n);
         } else if (n->hasTagName(trTag) && startingTableCell) {
-            NSString* result = frame->searchForLabelsAboveCell(regExp, startingTableCell, resultDistance);
+            NSString* result = frame->searchForLabelsAboveCell(*regExp, startingTableCell, resultDistance);
             if (result && [result length] > 0) {
                 if (resultIsInCellAbove)
                     *resultIsInCellAbove = true;
@@ -480,7 +487,7 @@ static NSString* searchForLabelsBeforeElement(Frame* frame, NSArray* labels, Ele
     // If we started in a cell, but bailed because we found the start of the form or the
     // previous element, we still might need to search the row above us for a label.
     if (startingTableCell && !searchedCellAbove) {
-        NSString* result = frame->searchForLabelsAboveCell(regExp, startingTableCell, resultDistance);
+        NSString* result = frame->searchForLabelsAboveCell(*regExp, startingTableCell, resultDistance);
         if (result && [result length] > 0) {
             if (resultIsInCellAbove)
                 *resultIsInCellAbove = true;

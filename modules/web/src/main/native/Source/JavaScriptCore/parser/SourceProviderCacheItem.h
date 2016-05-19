@@ -27,22 +27,27 @@
 #define SourceProviderCacheItem_h
 
 #include "ParserTokens.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/text/UniquedStringImpl.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
 
 struct SourceProviderCacheItemCreationParameters {
     unsigned functionNameStart;
-    unsigned closeBraceLine;
-    unsigned closeBraceOffset;
-    unsigned closeBraceLineStartOffset;
+    unsigned lastTockenLine;
+    unsigned lastTockenStartOffset;
+    unsigned lastTockenEndOffset;
+    unsigned lastTockenLineStartOffset;
+    unsigned endFunctionOffset;
+    unsigned parameterCount;
     bool needsFullActivation;
     bool usesEval;
     bool strictMode;
-    Vector<RefPtr<StringImpl>> usedVariables;
-    Vector<RefPtr<StringImpl>> writtenVariables;
+    Vector<RefPtr<UniquedStringImpl>> usedVariables;
+    Vector<RefPtr<UniquedStringImpl>> writtenVariables;
+    bool isBodyArrowExpression { false };
+    JSTokenType tokenType { CLOSEBRACE };
 };
 
 #if COMPILER(MSVC)
@@ -56,15 +61,15 @@ public:
     static std::unique_ptr<SourceProviderCacheItem> create(const SourceProviderCacheItemCreationParameters&);
     ~SourceProviderCacheItem();
 
-    JSToken closeBraceToken() const
+    JSToken endFunctionToken() const
     {
         JSToken token;
-        token.m_type = CLOSEBRACE;
-        token.m_data.offset = closeBraceOffset;
-        token.m_location.startOffset = closeBraceOffset;
-        token.m_location.endOffset = closeBraceOffset + 1;
-        token.m_location.line = closeBraceLine;
-        token.m_location.lineStartOffset = closeBraceLineStartOffset;
+        token.m_type = isBodyArrowExpression ? tokenType : CLOSEBRACE;
+        token.m_data.offset = lastTockenStartOffset;
+        token.m_location.startOffset = lastTockenStartOffset;
+        token.m_location.endOffset = lastTockenEndOffset;
+        token.m_location.line = lastTockenLine;
+        token.m_location.lineStartOffset = lastTockenLineStartOffset;
         // token.m_location.sourceOffset is initialized once by the client. So,
         // we do not need to set it here.
         return token;
@@ -73,23 +78,29 @@ public:
     unsigned functionNameStart : 31;
     bool needsFullActivation : 1;
 
-    unsigned closeBraceLine : 31;
+    unsigned endFunctionOffset : 31;
+    unsigned lastTockenLine : 31;
+    unsigned lastTockenStartOffset : 31;
+    unsigned lastTockenEndOffset: 31;
+    unsigned parameterCount;
+
     bool usesEval : 1;
 
-    unsigned closeBraceOffset : 31;
     bool strictMode : 1;
 
-    unsigned closeBraceLineStartOffset;
+    unsigned lastTockenLineStartOffset;
     unsigned usedVariablesCount;
     unsigned writtenVariablesCount;
 
-    StringImpl** usedVariables() const { return const_cast<StringImpl**>(m_variables); }
-    StringImpl** writtenVariables() const { return const_cast<StringImpl**>(&m_variables[usedVariablesCount]); }
+    UniquedStringImpl** usedVariables() const { return const_cast<UniquedStringImpl**>(m_variables); }
+    UniquedStringImpl** writtenVariables() const { return const_cast<UniquedStringImpl**>(&m_variables[usedVariablesCount]); }
+    bool isBodyArrowExpression;
+    JSTokenType tokenType;
 
 private:
     SourceProviderCacheItem(const SourceProviderCacheItemCreationParameters&);
 
-    StringImpl* m_variables[0];
+    UniquedStringImpl* m_variables[0];
 };
 
 inline SourceProviderCacheItem::~SourceProviderCacheItem()
@@ -101,7 +112,7 @@ inline SourceProviderCacheItem::~SourceProviderCacheItem()
 inline std::unique_ptr<SourceProviderCacheItem> SourceProviderCacheItem::create(const SourceProviderCacheItemCreationParameters& parameters)
 {
     size_t variableCount = parameters.writtenVariables.size() + parameters.usedVariables.size();
-    size_t objectSize = sizeof(SourceProviderCacheItem) + sizeof(StringImpl*) * variableCount;
+    size_t objectSize = sizeof(SourceProviderCacheItem) + sizeof(UniquedStringImpl*) * variableCount;
     void* slot = fastMalloc(objectSize);
     return std::unique_ptr<SourceProviderCacheItem>(new (slot) SourceProviderCacheItem(parameters));
 }
@@ -109,13 +120,18 @@ inline std::unique_ptr<SourceProviderCacheItem> SourceProviderCacheItem::create(
 inline SourceProviderCacheItem::SourceProviderCacheItem(const SourceProviderCacheItemCreationParameters& parameters)
     : functionNameStart(parameters.functionNameStart)
     , needsFullActivation(parameters.needsFullActivation)
-    , closeBraceLine(parameters.closeBraceLine)
+    , endFunctionOffset(parameters.endFunctionOffset)
+    , lastTockenLine(parameters.lastTockenLine)
+    , lastTockenStartOffset(parameters.lastTockenStartOffset)
+    , lastTockenEndOffset(parameters.lastTockenEndOffset)
+    , parameterCount(parameters.parameterCount)
     , usesEval(parameters.usesEval)
-    , closeBraceOffset(parameters.closeBraceOffset)
     , strictMode(parameters.strictMode)
-    , closeBraceLineStartOffset(parameters.closeBraceLineStartOffset)
+    , lastTockenLineStartOffset(parameters.lastTockenLineStartOffset)
     , usedVariablesCount(parameters.usedVariables.size())
     , writtenVariablesCount(parameters.writtenVariables.size())
+    , isBodyArrowExpression(parameters.isBodyArrowExpression)
+    , tokenType(parameters.tokenType)
 {
     unsigned j = 0;
     for (unsigned i = 0; i < usedVariablesCount; ++i, ++j) {

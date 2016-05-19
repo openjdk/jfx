@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -26,19 +26,28 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef WebCoreObjCExtras_h
+#define WebCoreObjCExtras_h
+
 #include <CoreFoundation/CFBase.h>
-#include <objc/objc.h>
+#include <objc/objc-auto.h>
 
-#ifdef __cplusplus
-extern "C" {
+inline void WebCoreObjCFinalizeOnMainThread(Class cls)
+{
+#ifndef OBJC_NO_GC
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    // This method relies on threading being initialized by the caller, otherwise
+    // WebCoreObjCScheduleDeallocateOnMainThread will crash.
+    objc_finalizeOnMainThread(cls);
+#pragma clang diagnostic pop
+#else
+    UNUSED_PARAM(cls);
 #endif
-
-void WebCoreObjCFinalizeOnMainThread(Class cls);
+}
 
 // The 'Class' that should be passed in here is the class of the
 // object that implements the dealloc method that this function is called from.
-bool WebCoreObjCScheduleDeallocateOnMainThread(Class cls, id object);
+WEBCORE_EXPORT bool WebCoreObjCScheduleDeallocateOnMainThread(Class cls, id);
 
-#ifdef __cplusplus
-}
-#endif
+#endif // WebCoreObjCExtras_h

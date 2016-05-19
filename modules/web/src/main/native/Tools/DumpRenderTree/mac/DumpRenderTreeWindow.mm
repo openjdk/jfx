@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -74,14 +74,17 @@ static CFArrayCallBacks NonRetainingArrayCallbacks = {
 #if !PLATFORM(IOS)
 - (id)initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)styleMask backing:(NSBackingStoreType)bufferingType defer:(BOOL)deferCreation
 {
-    [self _addToOpenWindows];
-    return [super initWithContentRect:contentRect styleMask:styleMask backing:bufferingType defer:deferCreation];
+    if ((self = [super initWithContentRect:contentRect styleMask:styleMask backing:bufferingType defer:deferCreation]))
+        [self _addToOpenWindows];
+    return self;
 }
 #else
 - (id)initWithLayer:(CALayer *)layer
 {
-    if ((self = [super initWithLayer:layer]))
+    if ((self = [super initWithLayer:layer])) {
+        [self setEntireWindowVisibleForTesting:YES];
         [self _addToOpenWindows];
+    }
 
     return self;
 }

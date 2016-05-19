@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -36,20 +36,19 @@
 #include "FrameLoaderClient.h"
 #include "FrameLoaderStateMachine.h"
 #include "FrameView.h"
+#include "MIMETypeRegistry.h"
+#include "MainFrame.h"
 #include "PluginDocument.h"
 #include "RawDataDocumentParser.h"
 #include "ScriptController.h"
 #include "ScriptableDocumentParser.h"
 #include "SecurityOrigin.h"
+#include "SecurityOriginPolicy.h"
 #include "SegmentedString.h"
 #include "Settings.h"
 #include "SinkDocument.h"
 #include "TextResourceDecoder.h"
 #include <wtf/Ref.h>
-
-#if PLATFORM(IOS)
-#include "PDFDocument.h"
-#endif
 
 namespace WebCore {
 
@@ -77,7 +76,7 @@ void DocumentWriter::replaceDocument(const String& source, Document* ownerDocume
     if (!source.isNull()) {
         if (!m_hasReceivedSomeData) {
             m_hasReceivedSomeData = true;
-            m_frame->document()->setCompatibilityMode(Document::NoQuirksMode);
+            m_frame->document()->setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
         }
 
         // FIXME: This should call DocumentParser::appendBytes instead of append
@@ -91,7 +90,7 @@ void DocumentWriter::replaceDocument(const String& source, Document* ownerDocume
 
 void DocumentWriter::clear()
 {
-    m_decoder = 0;
+    m_decoder = nullptr;
     m_hasReceivedSomeData = false;
     if (!m_encodingWasChosenByUser)
         m_encoding = String();
@@ -107,8 +106,8 @@ PassRefPtr<Document> DocumentWriter::createDocument(const URL& url)
     if (!m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->loader().client().shouldAlwaysUsePluginDocument(m_mimeType))
         return PluginDocument::create(m_frame, url);
 #if PLATFORM(IOS)
-    if (equalIgnoringCase(m_mimeType, "application/pdf"))
-        return PDFDocument::create(m_frame, url);
+    if (MIMETypeRegistry::isPDFMIMEType(m_mimeType) && (m_frame->isMainFrame() || !m_frame->settings().useImageDocumentForSubframePDF()))
+        return SinkDocument::create(m_frame, url);
 #endif
     if (!m_frame->loader().client().hasHTMLView())
         return Document::createNonRenderedPlaceholder(m_frame, url);
@@ -146,13 +145,13 @@ void DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
         m_frame->script().updatePlatformScriptObjects();
 
     m_frame->loader().setOutgoingReferrer(url);
-    m_frame->setDocument(document);
+    m_frame->setDocument(document.copyRef());
 
     if (m_decoder)
         document->setDecoder(m_decoder.get());
     if (ownerDocument) {
         document->setCookieURL(ownerDocument->cookieURL());
-        document->setSecurityOrigin(ownerDocument->securityOrigin());
+        document->setSecurityOriginPolicy(ownerDocument->securityOriginPolicy());
     }
 
     m_frame->loader().didBeginDocument(dispatch);
@@ -246,7 +245,7 @@ void DocumentWriter::end()
     if (!m_parser)
         return;
     m_parser->finish();
-    m_parser = 0;
+    m_parser = nullptr;
 }
 
 void DocumentWriter::setEncoding(const String& name, bool userChosen)

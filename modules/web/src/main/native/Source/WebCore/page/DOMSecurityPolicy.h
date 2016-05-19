@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY GOOGLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -27,7 +27,6 @@
 #define DOMSecurityPolicy_h
 
 #include "ContextDestructionObserver.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -40,9 +39,9 @@ class Frame;
 
 class DOMSecurityPolicy : public RefCounted<DOMSecurityPolicy>, public ContextDestructionObserver {
 public:
-    static PassRefPtr<DOMSecurityPolicy> create(ScriptExecutionContext* context)
+    static Ref<DOMSecurityPolicy> create(ScriptExecutionContext* context)
     {
-        return adoptRef(new DOMSecurityPolicy(context));
+        return adoptRef(*new DOMSecurityPolicy(context));
     }
     ~DOMSecurityPolicy();
 

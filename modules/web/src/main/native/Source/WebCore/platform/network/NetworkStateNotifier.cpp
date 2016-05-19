@@ -26,32 +26,41 @@
 #include "config.h"
 #include "NetworkStateNotifier.h"
 
+#if PLATFORM(IOS)
+#include "Settings.h"
+#endif
+
 #include <mutex>
 #include <wtf/Assertions.h>
-#include <wtf/StdLibExtras.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
 NetworkStateNotifier& networkStateNotifier()
 {
     static std::once_flag onceFlag;
-    static NetworkStateNotifier* networkStateNotifier;
+    static LazyNeverDestroyed<NetworkStateNotifier> networkStateNotifier;
 
     std::call_once(onceFlag, []{
-        networkStateNotifier = std::make_unique<NetworkStateNotifier>().release();
+        networkStateNotifier.construct();
     });
 
-    return *networkStateNotifier;
+    return networkStateNotifier;
 }
 
 void NetworkStateNotifier::addNetworkStateChangeListener(std::function<void (bool)> listener)
 {
     ASSERT(listener);
+#if PLATFORM(IOS)
+    if (Settings::shouldOptOutOfNetworkStateObservation())
+        return;
+    registerObserverIfNecessary();
+#endif
 
-    m_listeners.append(std::move(listener));
+    m_listeners.append(WTF::move(listener));
 }
 
-void NetworkStateNotifier::notifyNetworkStateChange()
+void NetworkStateNotifier::notifyNetworkStateChange() const
 {
     for (const auto& listener : m_listeners)
         listener(m_isOnLine);

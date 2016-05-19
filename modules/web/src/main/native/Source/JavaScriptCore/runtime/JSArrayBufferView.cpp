@@ -33,7 +33,7 @@
 namespace JSC {
 
 const ClassInfo JSArrayBufferView::s_info = {
-    "ArrayBufferView", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSArrayBufferView)
+    "ArrayBufferView", &Base::s_info, 0, CREATE_METHOD_TABLE(JSArrayBufferView)
 };
 
 JSArrayBufferView::ConstructionContext::ConstructionContext(
@@ -78,7 +78,7 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
             return;
     }
 
-    vm.heap.reportExtraMemoryCost(static_cast<size_t>(length) * elementSize);
+    vm.heap.reportExtraMemoryAllocated(static_cast<size_t>(length) * elementSize);
 
     m_structure = structure;
     m_mode = OversizeTypedArray;
@@ -201,7 +201,7 @@ void JSArrayBufferView::getOwnNonIndexPropertyNames(
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(object);
 
     // length/byteOffset/byteLength are DontEnum, at least in Firefox.
-    if (mode == IncludeDontEnumProperties) {
+    if (mode.includeDontEnumProperties()) {
         array.add(exec->propertyNames().byteOffset);
         array.add(exec->propertyNames().byteLength);
         array.add(exec->propertyNames().buffer);

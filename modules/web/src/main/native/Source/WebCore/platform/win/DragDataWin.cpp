@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,10 +29,6 @@
 
 #include "COMPtr.h"
 #include "ClipboardUtilitiesWin.h"
-#include "Frame.h"
-#include "DocumentFragment.h"
-#include "Markup.h"
-#include "Range.h"
 #include "TextEncoding.h"
 #include <objidl.h>
 #include <shlwapi.h>
@@ -56,7 +52,7 @@ DragData::DragData(const DragDataMap& data, const IntPoint& clientPosition, cons
 {
 }
 
-bool DragData::containsURL(Frame*, FilenameConversionPolicy filenamePolicy) const
+bool DragData::containsURL(FilenameConversionPolicy filenamePolicy) const
 {
     if (m_platformDragData)
         return SUCCEEDED(m_platformDragData->QueryGetData(urlWFormat()))
@@ -101,7 +97,7 @@ void DragData::getDragFileContentData(int size, void* dataBlob)
         getFileContentData(m_platformDragData, size, dataBlob);
 }
 
-String DragData::asURL(Frame*, FilenameConversionPolicy filenamePolicy, String* title) const
+String DragData::asURL(FilenameConversionPolicy filenamePolicy, String* title) const
 {
     return (m_platformDragData) ? getURL(m_platformDragData, filenamePolicy, title) : getURL(&m_dragDataMap, filenamePolicy, title);
 }
@@ -181,7 +177,7 @@ bool DragData::containsPlainText() const
     return m_dragDataMap.contains(plainTextWFormat()->cfFormat) || m_dragDataMap.contains(plainTextFormat()->cfFormat);
 }
 
-String DragData::asPlainText(Frame*) const
+String DragData::asPlainText() const
 {
     return (m_platformDragData) ? getPlainText(m_platformDragData) : getPlainText(&m_dragDataMap);
 }
@@ -200,46 +196,10 @@ bool DragData::canSmartReplace() const
 
 bool DragData::containsCompatibleContent() const
 {
-    return containsPlainText() || containsURL(0)
+    return containsPlainText() || containsURL()
         || ((m_platformDragData) ? (containsHTML(m_platformDragData) || containsFilenames(m_platformDragData))
             : (containsHTML(&m_dragDataMap) || containsFilenames(&m_dragDataMap)))
         || containsColor();
-}
-
-PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range&, bool, bool&) const
-{
-    /*
-     * Order is richest format first. On OSX this is:
-     * * Web Archive
-     * * Filenames
-     * * HTML
-     * * RTF
-     * * TIFF
-     * * PICT
-     */
-
-    if (m_platformDragData) {
-        if (containsFilenames(m_platformDragData)) {
-            if (PassRefPtr<DocumentFragment> fragment = fragmentFromFilenames(frame->document(), m_platformDragData))
-                return fragment;
-        }
-
-        if (containsHTML(m_platformDragData)) {
-            if (PassRefPtr<DocumentFragment> fragment = fragmentFromHTML(frame->document(), m_platformDragData))
-                return fragment;
-        }
-    } else {
-        if (containsFilenames(&m_dragDataMap)) {
-            if (PassRefPtr<DocumentFragment> fragment = fragmentFromFilenames(frame->document(), &m_dragDataMap))
-                return fragment;
-        }
-
-        if (containsHTML(&m_dragDataMap)) {
-            if (PassRefPtr<DocumentFragment> fragment = fragmentFromHTML(frame->document(), &m_dragDataMap))
-                return fragment;
-        }
-    }
-    return 0;
 }
 
 Color DragData::asColor() const

@@ -37,8 +37,11 @@ class IDBFactory;
 class DOMWindow;
 
 class DOMWindowIndexedDatabase : public DOMWindowProperty, public Supplement<DOMWindow> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
+    explicit DOMWindowIndexedDatabase(DOMWindow*);
     virtual ~DOMWindowIndexedDatabase();
+
     static DOMWindowIndexedDatabase* from(DOMWindow*);
 
     static IDBFactory* indexedDB(DOMWindow*);
@@ -50,8 +53,6 @@ public:
     virtual void willDetachGlobalObjectFromFrame() override;
 
 private:
-    explicit DOMWindowIndexedDatabase(DOMWindow*);
-
     IDBFactory* indexedDB();
     static const char* supplementName();
 

@@ -32,10 +32,10 @@ class SVGGradientElement;
 // This class exists mostly so we can hear about gradient stop style changes
 class RenderSVGGradientStop final : public RenderElement {
 public:
-    RenderSVGGradientStop(SVGStopElement&, PassRef<RenderStyle>);
+    RenderSVGGradientStop(SVGStopElement&, Ref<RenderStyle>&&);
     virtual ~RenderSVGGradientStop();
 
-    SVGStopElement& element() const { return toSVGStopElement(RenderObject::nodeForNonAnonymous()); }
+    SVGStopElement& element() const { return downcast<SVGStopElement>(RenderObject::nodeForNonAnonymous()); }
 
 private:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -60,8 +60,8 @@ private:
     SVGGradientElement* gradientElement();
 };
 
-RENDER_OBJECT_TYPE_CASTS(RenderSVGGradientStop, isSVGGradientStop())
+} // namespace WebCore
 
-}
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGGradientStop, isSVGGradientStop())
 
 #endif // RenderSVGGradientStop_h

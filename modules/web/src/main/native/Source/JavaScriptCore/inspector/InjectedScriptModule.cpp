@@ -32,8 +32,6 @@
 #include "config.h"
 #include "InjectedScriptModule.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
 #include "ScriptFunctionCall.h"
@@ -63,6 +61,7 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
         return;
 
     // FIXME: Make the InjectedScript a module itself.
+    JSC::JSLockHolder locker(injectedScript.scriptState());
     Deprecated::ScriptFunctionCall function(injectedScript.injectedScriptObject(), ASCIILiteral("module"), injectedScriptManager->inspectorEnvironment().functionCallHandler());
     function.appendArgument(name());
     bool hadException = false;
@@ -87,5 +86,3 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
 }
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)

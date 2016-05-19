@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011 Google Inc.  All rights reserved.
- * Copyright (C) 2012, 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2011, 2013 Google Inc.  All rights reserved.
+ * Copyright (C) 2012-2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -37,46 +37,56 @@
 #include "EventTarget.h"
 #include "HTMLElement.h"
 #include "TextTrackCue.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
 class DocumentFragment;
+class HTMLDivElement;
 class HTMLSpanElement;
 class ScriptExecutionContext;
 class VTTCue;
+class VTTScanner;
+class WebVTTCueData;
 
 // ----------------------------
 
 class VTTCueBox : public HTMLElement {
 public:
-    static PassRefPtr<VTTCueBox> create(Document& document, VTTCue* cue)
-    {
-        return adoptRef(new VTTCueBox(document, cue));
-    }
+    static PassRefPtr<VTTCueBox> create(Document&, VTTCue&);
 
     VTTCue* getCue() const;
     virtual void applyCSSProperties(const IntSize& videoSize);
 
     static const AtomicString& vttCueBoxShadowPseudoId();
+    void setFontSizeFromCaptionUserPrefs(int fontSize) { m_fontSizeFromCaptionUserPrefs = fontSize; }
 
 protected:
-    VTTCueBox(Document&, VTTCue*);
+    VTTCueBox(Document&, VTTCue&);
 
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override final;
 
-    VTTCue* m_cue;
+    VTTCue& m_cue;
+    int m_fontSizeFromCaptionUserPrefs;
 };
 
 // ----------------------------
 
 class VTTCue : public TextTrackCue {
 public:
-    static PassRefPtr<VTTCue> create(ScriptExecutionContext& context, double start, double end, const String& content)
+    static Ref<VTTCue> create(ScriptExecutionContext& context, double start, double end, const String& content)
     {
-        return adoptRef(new VTTCue(context, start, end, content));
+        return create(context, MediaTime::createWithDouble(start), MediaTime::createWithDouble(end), content);
     }
+
+    static Ref<VTTCue> create(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, const String& content)
+    {
+        return adoptRef(*new VTTCue(context, start, end, content));
+    }
+
+    static Ref<VTTCue> create(ScriptExecutionContext&, const WebVTTCueData&);
+
+    static const AtomicString& cueBackdropShadowPseudoId();
 
     virtual ~VTTCue();
 
@@ -86,11 +96,11 @@ public:
     bool snapToLines() const { return m_snapToLines; }
     void setSnapToLines(bool);
 
-    int line() const { return m_linePosition; }
-    virtual void setLine(int, ExceptionCode&);
+    double line() const { return m_linePosition; }
+    virtual void setLine(double, ExceptionCode&);
 
-    int position() const { return m_textPosition; }
-    virtual void setPosition(int, ExceptionCode&);
+    double position() const { return m_textPosition; }
+    virtual void setPosition(double, ExceptionCode&);
 
     int size() const { return m_cueSize; }
     virtual void setSize(int, ExceptionCode&);
@@ -110,29 +120,31 @@ public:
 #if ENABLE(WEBVTT_REGIONS)
     const String& regionId() const { return m_regionId; }
     void setRegionId(const String&);
+    void notifyRegionWhenRemovingDisplayTree(bool);
 #endif
 
-    virtual void setIsActive(bool);
+    virtual void setIsActive(bool) override;
 
     bool hasDisplayTree() const { return m_displayTree; }
-    VTTCueBox* getDisplayTree(const IntSize& videoSize);
-    HTMLSpanElement* element() const { return m_cueBackgroundBox.get(); }
+    VTTCueBox* getDisplayTree(const IntSize& videoSize, int fontSize);
+    HTMLSpanElement* element() const { return m_cueHighlightBox.get(); }
 
-    void updateDisplayTree(double);
+    void updateDisplayTree(const MediaTime&);
     void removeDisplayTree();
-    void markFutureAndPastNodes(ContainerNode*, double, double);
+    void markFutureAndPastNodes(ContainerNode*, const MediaTime&, const MediaTime&);
 
     int calculateComputedLinePosition();
     std::pair<double, double> getPositionCoordinates() const;
 
     std::pair<double, double> getCSSPosition() const;
 
+    CSSValueID getCSSAlignment() const;
     int getCSSSize() const;
     CSSValueID getCSSWritingDirection() const;
     CSSValueID getCSSWritingMode() const;
 
     enum WritingDirection {
-        Horizontal,
+        Horizontal = 0,
         VerticalGrowingLeft,
         VerticalGrowingRight,
         NumberOfWritingDirections
@@ -140,32 +152,35 @@ public:
     WritingDirection getWritingDirection() const { return m_writingDirection; }
 
     enum CueAlignment {
-        Start,
+        Start = 0,
         Middle,
-        End
+        End,
+        Left,
+        Right,
+        NumberOfAlignments
     };
     CueAlignment getAlignment() const { return m_cueAlignment; }
 
     virtual void setFontSize(int, const IntSize&, bool important);
 
-    enum CueMatchRules {
-        MatchAllFields,
-        IgnoreDuration,
-    };
-    virtual bool isEqual(const VTTCue&, CueMatchRules) const;
+    virtual bool isEqual(const TextTrackCue&, CueMatchRules) const override;
+    virtual bool cueContentsMatch(const TextTrackCue&) const override;
+    virtual bool doesExtendCue(const TextTrackCue&) const override;
 
-    virtual CueType cueType() const { return WebVTT; }
+    virtual CueType cueType() const override { return WebVTT; }
     virtual bool isRenderable() const override final { return true; }
 
     virtual void didChange() override;
 
 protected:
-    VTTCue(ScriptExecutionContext&, double start, double end, const String& content);
+    VTTCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, const String& content);
+    VTTCue(ScriptExecutionContext&, const WebVTTCueData&);
 
     virtual PassRefPtr<VTTCueBox> createDisplayTree();
     VTTCueBox* displayTreeInternal();
 
 private:
+    void initialize(ScriptExecutionContext&);
     void createWebVTTNodeTree();
     void copyWebVTTNodeToDOMTree(ContainerNode* WebVTTNode, ContainerNode* root);
 
@@ -185,38 +200,35 @@ private:
         RegionId
 #endif
     };
-    CueSetting settingName(const String&);
+    CueSetting settingName(VTTScanner&);
 
     String m_content;
     String m_settings;
-    int m_linePosition;
-    int m_computedLinePosition;
-    int m_textPosition;
+    double m_linePosition;
+    double m_computedLinePosition;
+    double m_textPosition;
     int m_cueSize;
 
     WritingDirection m_writingDirection;
     CueAlignment m_cueAlignment;
-
-    RefPtr<DocumentFragment> m_webVTTNodeTree;
-
-    bool m_snapToLines;
-
-    RefPtr<HTMLSpanElement> m_cueBackgroundBox;
-
-    bool m_displayTreeShouldChange;
-    RefPtr<VTTCueBox> m_displayTree;
-
-    CSSValueID m_displayDirection;
-
-    CSSValueID m_displayWritingModeMap[NumberOfWritingDirections];
-    CSSValueID m_displayWritingMode;
-
-    int m_displaySize;
-
-    std::pair<float, float> m_displayPosition;
 #if ENABLE(WEBVTT_REGIONS)
     String m_regionId;
 #endif
+
+    RefPtr<DocumentFragment> m_webVTTNodeTree;
+    RefPtr<HTMLSpanElement> m_cueHighlightBox;
+    RefPtr<HTMLDivElement> m_cueBackdropBox;
+    RefPtr<VTTCueBox> m_displayTree;
+
+    CSSValueID m_displayDirection;
+    int m_displaySize;
+    std::pair<float, float> m_displayPosition;
+
+    MediaTime m_originalStartTime;
+
+    bool m_snapToLines : 1;
+    bool m_displayTreeShouldChange : 1;
+    bool m_notifyRegion : 1;
 };
 
 VTTCue* toVTTCue(TextTrackCue*);

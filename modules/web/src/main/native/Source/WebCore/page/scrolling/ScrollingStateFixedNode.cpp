@@ -29,15 +29,14 @@
 #include "GraphicsLayer.h"
 #include "ScrollingStateTree.h"
 #include "TextStream.h"
-#include <wtf/OwnPtr.h>
 
 #if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
 
 namespace WebCore {
 
-PassOwnPtr<ScrollingStateFixedNode> ScrollingStateFixedNode::create(ScrollingStateTree& stateTree, ScrollingNodeID nodeID)
+Ref<ScrollingStateFixedNode> ScrollingStateFixedNode::create(ScrollingStateTree& stateTree, ScrollingNodeID nodeID)
 {
-    return adoptPtr(new ScrollingStateFixedNode(stateTree, nodeID));
+    return adoptRef(*new ScrollingStateFixedNode(stateTree, nodeID));
 }
 
 ScrollingStateFixedNode::ScrollingStateFixedNode(ScrollingStateTree& tree, ScrollingNodeID nodeID)
@@ -55,9 +54,9 @@ ScrollingStateFixedNode::~ScrollingStateFixedNode()
 {
 }
 
-PassOwnPtr<ScrollingStateNode> ScrollingStateFixedNode::clone(ScrollingStateTree& adoptiveTree)
+Ref<ScrollingStateNode> ScrollingStateFixedNode::clone(ScrollingStateTree& adoptiveTree)
 {
-    return adoptPtr(new ScrollingStateFixedNode(*this, adoptiveTree));
+    return adoptRef(*new ScrollingStateFixedNode(*this, adoptiveTree));
 }
 
 void ScrollingStateFixedNode::updateConstraints(const FixedPositionViewportConstraints& constraints)

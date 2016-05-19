@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,94 +31,67 @@
 
 namespace JSC {
 
-const ClassInfo RegExpMatchesArray::s_info = {"Array", &JSArray::s_info, 0, 0, CREATE_METHOD_TABLE(RegExpMatchesArray)};
+static const PropertyOffset indexPropertyOffset = 100;
+static const PropertyOffset inputPropertyOffset = 101;
 
-RegExpMatchesArray::RegExpMatchesArray(VM& vm, Butterfly* butterfly, JSGlobalObject* globalObject, JSString* input, RegExp* regExp, MatchResult result)
-    : JSArray(vm, globalObject->regExpMatchesArrayStructure(), butterfly)
-    , m_result(result)
-    , m_state(ReifiedNone)
+static JSArray* tryCreateUninitializedRegExpMatchesArray(VM& vm, Structure* structure, unsigned initialLength)
 {
-    m_input.set(vm, this, input);
-    m_regExp.set(vm, this, regExp);
+    unsigned vectorLength = std::max(BASE_VECTOR_LEN, initialLength);
+    if (vectorLength > MAX_STORAGE_VECTOR_LENGTH)
+        return 0;
+
+    void* temp;
+    if (!vm.heap.tryAllocateStorage(0, Butterfly::totalSize(0, structure->outOfLineCapacity(), true, vectorLength * sizeof(EncodedJSValue)), &temp))
+        return 0;
+    Butterfly* butterfly = Butterfly::fromBase(temp, 0, structure->outOfLineCapacity());
+    butterfly->setVectorLength(vectorLength);
+    butterfly->setPublicLength(initialLength);
+
+    return JSArray::createWithButterfly(vm, structure, butterfly);
 }
 
-RegExpMatchesArray* RegExpMatchesArray::create(ExecState* exec, JSString* input, RegExp* regExp, MatchResult result)
+JSArray* createRegExpMatchesArray(ExecState* exec, JSString* input, RegExp* regExp, MatchResult result)
 {
     ASSERT(result);
     VM& vm = exec->vm();
-    Butterfly* butterfly = createArrayButterfly(vm, 0, regExp->numSubpatterns() + 1);
-    RegExpMatchesArray* array = new (NotNull, allocateCell<RegExpMatchesArray>(vm.heap)) RegExpMatchesArray(vm, butterfly, exec->lexicalGlobalObject(), input, regExp, result);
-    array->finishCreation(vm);
-    return array;
-}
+    JSArray* array = tryCreateUninitializedRegExpMatchesArray(vm, exec->lexicalGlobalObject()->regExpMatchesArrayStructure(), regExp->numSubpatterns() + 1);
+    RELEASE_ASSERT(array);
 
-void RegExpMatchesArray::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-}
+    SamplingRegion samplingRegion("Reifying substring properties");
 
-void RegExpMatchesArray::visitChildren(JSCell* cell, SlotVisitor& visitor)
-{
-    RegExpMatchesArray* thisObject = jsCast<RegExpMatchesArray*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
+    array->initializeIndex(vm, 0, jsSubstring(exec, input, result.start, result.end - result.start), ArrayWithContiguous);
 
-    Base::visitChildren(thisObject, visitor);
-    visitor.append(&thisObject->m_input);
-    visitor.append(&thisObject->m_regExp);
-}
-
-void RegExpMatchesArray::reifyAllProperties(ExecState* exec)
-{
-    ASSERT(m_state != ReifiedAll);
-    ASSERT(m_result);
-
-    reifyMatchPropertyIfNecessary(exec);
-
-    if (unsigned numSubpatterns = m_regExp->numSubpatterns()) {
+    if (unsigned numSubpatterns = regExp->numSubpatterns()) {
         Vector<int, 32> subpatternResults;
-        int position = m_regExp->match(exec->vm(), m_input->value(exec), m_result.start, subpatternResults);
-        ASSERT_UNUSED(position, position >= 0 && static_cast<size_t>(position) == m_result.start);
-        ASSERT(m_result.start == static_cast<size_t>(subpatternResults[0]));
-        ASSERT(m_result.end == static_cast<size_t>(subpatternResults[1]));
+        int position = regExp->match(vm, input->value(exec), result.start, subpatternResults);
+        ASSERT_UNUSED(position, position >= 0 && static_cast<size_t>(position) == result.start);
+        ASSERT(result.start == static_cast<size_t>(subpatternResults[0]));
+        ASSERT(result.end == static_cast<size_t>(subpatternResults[1]));
 
         for (unsigned i = 1; i <= numSubpatterns; ++i) {
             int start = subpatternResults[2 * i];
             if (start >= 0)
-                putDirectIndex(exec, i, jsSubstring(exec, m_input.get(), start, subpatternResults[2 * i + 1] - start));
+                array->initializeIndex(vm, i, jsSubstring(exec, input, start, subpatternResults[2 * i + 1] - start), ArrayWithContiguous);
             else
-                putDirectIndex(exec, i, jsUndefined());
+                array->initializeIndex(vm, i, jsUndefined(), ArrayWithContiguous);
         }
     }
 
-    putDirect(exec->vm(), exec->propertyNames().index, jsNumber(m_result.start));
-    putDirect(exec->vm(), exec->propertyNames().input, m_input.get());
+    array->putDirect(vm, indexPropertyOffset, jsNumber(result.start));
+    array->putDirect(vm, inputPropertyOffset, input);
 
-    m_state = ReifiedAll;
+    return array;
 }
 
-void RegExpMatchesArray::reifyMatchProperty(ExecState* exec)
+Structure* createRegExpMatchesArrayStructure(VM& vm, JSGlobalObject& globalObject)
 {
-    ASSERT(m_state == ReifiedNone);
-    ASSERT(m_result);
-    putDirectIndex(exec, 0, jsSubstring(exec, m_input.get(), m_result.start, m_result.end - m_result.start));
-    m_state = ReifiedMatch;
-}
-
-JSString* RegExpMatchesArray::leftContext(ExecState* exec)
-{
-    if (!m_result.start)
-        return jsEmptyString(exec);
-    return jsSubstring(exec, m_input.get(), 0, m_result.start);
-}
-
-JSString* RegExpMatchesArray::rightContext(ExecState* exec)
-{
-    unsigned length = m_input->length();
-    if (m_result.end == length)
-        return jsEmptyString(exec);
-    return jsSubstring(exec, m_input.get(), m_result.end, length - m_result.end);
+    Structure* structure = globalObject.arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
+    PropertyOffset offset;
+    structure = structure->addPropertyTransition(vm, structure, vm.propertyNames->index, 0, offset);
+    ASSERT(offset == indexPropertyOffset);
+    structure = structure->addPropertyTransition(vm, structure, vm.propertyNames->input, 0, offset);
+    ASSERT(offset == inputPropertyOffset);
+    return structure;
 }
 
 } // namespace JSC

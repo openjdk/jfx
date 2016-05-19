@@ -28,17 +28,57 @@
 
 #if ENABLE(CSS_SELECTOR_JIT)
 
-#include <MacroAssembler.h>
-#include <StackAllocator.h>
-#include <wtf/HashSet.h>
+#include <MacroAssembler.h> //XXX #include <JavaScriptCore/MacroAssembler.h>
+#include <wtf/Deque.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-#if CPU(X86_64)
+#if CPU(ARM64)
+static const JSC::MacroAssembler::RegisterID callerSavedRegisters[] = {
+    JSC::ARM64Registers::x0,
+    JSC::ARM64Registers::x1,
+    JSC::ARM64Registers::x2,
+    JSC::ARM64Registers::x3,
+    JSC::ARM64Registers::x4,
+    JSC::ARM64Registers::x5,
+    JSC::ARM64Registers::x6,
+    JSC::ARM64Registers::x7,
+    JSC::ARM64Registers::x8,
+    JSC::ARM64Registers::x9,
+    JSC::ARM64Registers::x10,
+    JSC::ARM64Registers::x11,
+    JSC::ARM64Registers::x12,
+    JSC::ARM64Registers::x13,
+    JSC::ARM64Registers::x14,
+};
+static const JSC::MacroAssembler::RegisterID calleeSavedRegisters[] = {
+    JSC::ARM64Registers::x19
+};
+static const JSC::MacroAssembler::RegisterID tempRegister = JSC::ARM64Registers::x15;
+#elif CPU(ARM_THUMB2)
+static const JSC::MacroAssembler::RegisterID callerSavedRegisters[] {
+    JSC::ARMRegisters::r0,
+    JSC::ARMRegisters::r1,
+    JSC::ARMRegisters::r2,
+    JSC::ARMRegisters::r3,
+    JSC::ARMRegisters::r9,
+};
+static const JSC::MacroAssembler::RegisterID calleeSavedRegisters[] = {
+    JSC::ARMRegisters::r4,
+    JSC::ARMRegisters::r5,
+    JSC::ARMRegisters::r7,
+    JSC::ARMRegisters::r8,
+    JSC::ARMRegisters::r10,
+    JSC::ARMRegisters::r11,
+};
+// r6 is also used as addressTempRegister in the macro assembler. It is saved in the prologue and restored in the epilogue.
+static const JSC::MacroAssembler::RegisterID tempRegister = JSC::ARMRegisters::r6;
+#elif CPU(X86_64)
 static const JSC::MacroAssembler::RegisterID callerSavedRegisters[] = {
     JSC::X86Registers::eax,
     JSC::X86Registers::ecx,
+    JSC::X86Registers::edx,
     JSC::X86Registers::esi,
     JSC::X86Registers::edi,
     JSC::X86Registers::r8,
@@ -52,23 +92,26 @@ static const JSC::MacroAssembler::RegisterID calleeSavedRegisters[] = {
     JSC::X86Registers::r14,
     JSC::X86Registers::r15
 };
-static const unsigned registerCount = WTF_ARRAY_LENGTH(callerSavedRegisters) + WTF_ARRAY_LENGTH(calleeSavedRegisters);
 #else
 #error RegisterAllocator has no defined registers for the architecture.
 #endif
+static const unsigned calleeSavedRegisterCount = WTF_ARRAY_LENGTH(calleeSavedRegisters);
+static const unsigned maximumRegisterCount = calleeSavedRegisterCount + WTF_ARRAY_LENGTH(callerSavedRegisters);
+
+typedef Vector<JSC::MacroAssembler::RegisterID, maximumRegisterCount> RegisterVector;
 
 class RegisterAllocator {
 public:
-    RegisterAllocator();
+    RegisterAllocator() { }
     ~RegisterAllocator();
 
     unsigned availableRegisterCount() const { return m_registers.size(); }
 
     JSC::MacroAssembler::RegisterID allocateRegister()
     {
-        auto first = m_registers.begin();
-        JSC::MacroAssembler::RegisterID registerID = static_cast<JSC::MacroAssembler::RegisterID>(*first);
-        RELEASE_ASSERT(m_registers.remove(first));
+        RELEASE_ASSERT(m_registers.size());
+        JSC::MacroAssembler::RegisterID registerID = m_registers.first();
+        m_registers.removeFirst();
         ASSERT(!m_allocatedRegisters.contains(registerID));
         m_allocatedRegisters.append(registerID);
         return registerID;
@@ -76,9 +119,28 @@ public:
 
     void allocateRegister(JSC::MacroAssembler::RegisterID registerID)
     {
-        RELEASE_ASSERT(m_registers.remove(registerID));
-        ASSERT(!m_allocatedRegisters.contains(registerID));
-        m_allocatedRegisters.append(registerID);
+        for (auto it = m_registers.begin(); it != m_registers.end(); ++it) {
+            if (*it == registerID) {
+                m_registers.remove(it);
+                ASSERT(!m_allocatedRegisters.contains(registerID));
+                m_allocatedRegisters.append(registerID);
+                return;
+            }
+        }
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    JSC::MacroAssembler::RegisterID allocateRegisterWithPreference(JSC::MacroAssembler::RegisterID preferredRegister)
+    {
+        for (auto it = m_registers.begin(); it != m_registers.end(); ++it) {
+            if (*it == preferredRegister) {
+                m_registers.remove(it);
+                ASSERT(!m_allocatedRegisters.contains(preferredRegister));
+                m_allocatedRegisters.append(preferredRegister);
+                return preferredRegister;
+            }
+        }
+        return allocateRegister();
     }
 
     void deallocateRegister(JSC::MacroAssembler::RegisterID registerID)
@@ -87,36 +149,80 @@ public:
         // Most allocation/deallocation happen in stack-like order. In the common case, this
         // just removes the last item.
         m_allocatedRegisters.remove(m_allocatedRegisters.reverseFind(registerID));
-        RELEASE_ASSERT(m_registers.add(registerID).isNewEntry);
+        for (auto unallocatedRegister : m_registers)
+            RELEASE_ASSERT(unallocatedRegister != registerID);
+        m_registers.append(registerID);
     }
 
-    void reserveCalleeSavedRegisters(StackAllocator& stack, unsigned count)
+    unsigned reserveCallerSavedRegisters(unsigned count)
     {
-        unsigned finalSize = m_calleeSavedRegisters.size() + count;
-        RELEASE_ASSERT(finalSize <= WTF_ARRAY_LENGTH(calleeSavedRegisters));
-        for (unsigned i = m_calleeSavedRegisters.size(); i < finalSize; ++i) {
+#ifdef NDEBUG
+        UNUSED_PARAM(count);
+        unsigned numberToAllocate = WTF_ARRAY_LENGTH(callerSavedRegisters);
+#else
+        unsigned numberToAllocate = std::min<unsigned>(WTF_ARRAY_LENGTH(callerSavedRegisters), count);
+#endif
+        for (unsigned i = 0; i < numberToAllocate; ++i)
+            m_registers.append(callerSavedRegisters[i]);
+        return numberToAllocate;
+    }
+
+    const Vector<JSC::MacroAssembler::RegisterID, calleeSavedRegisterCount>& reserveCalleeSavedRegisters(unsigned count)
+    {
+        RELEASE_ASSERT(count <= WTF_ARRAY_LENGTH(calleeSavedRegisters));
+        RELEASE_ASSERT(!m_reservedCalleeSavedRegisters.size());
+        for (unsigned i = 0; i < count; ++i) {
             JSC::MacroAssembler::RegisterID registerId = calleeSavedRegisters[i];
-            m_calleeSavedRegisters.append(stack.push(registerId));
-            m_registers.add(registerId);
+            m_reservedCalleeSavedRegisters.append(registerId);
+            m_registers.append(registerId);
         }
+        return m_reservedCalleeSavedRegisters;
     }
 
-    void restoreCalleeSavedRegisters(StackAllocator& stack)
+    Vector<JSC::MacroAssembler::RegisterID, calleeSavedRegisterCount> restoreCalleeSavedRegisters()
     {
-        for (unsigned i = m_calleeSavedRegisters.size(); i > 0 ; --i) {
-            JSC::MacroAssembler::RegisterID registerId = calleeSavedRegisters[i - 1];
-            stack.pop(m_calleeSavedRegisters[i - 1], registerId);
-            RELEASE_ASSERT(m_registers.remove(registerId));
-        }
-        m_calleeSavedRegisters.clear();
+        Vector<JSC::MacroAssembler::RegisterID, calleeSavedRegisterCount> registers(m_reservedCalleeSavedRegisters);
+        m_reservedCalleeSavedRegisters.clear();
+        return registers;
     }
 
-    const Vector<JSC::MacroAssembler::RegisterID, registerCount>& allocatedRegisters() const { return m_allocatedRegisters; }
+    const RegisterVector& allocatedRegisters() const { return m_allocatedRegisters; }
+
+    static bool isValidRegister(JSC::MacroAssembler::RegisterID registerID)
+    {
+#if CPU(ARM64)
+        return (registerID >= JSC::ARM64Registers::x0 && registerID <= JSC::ARM64Registers::x14)
+            || registerID == JSC::ARM64Registers::x19;
+#elif CPU(ARM_THUMB2)
+        return registerID >= JSC::ARMRegisters::r0 && registerID <= JSC::ARMRegisters::r11 && registerID != JSC::ARMRegisters::r6;
+#elif CPU(X86_64)
+        return (registerID >= JSC::X86Registers::eax && registerID <= JSC::X86Registers::edx)
+            || (registerID >= JSC::X86Registers::esi && registerID <= JSC::X86Registers::r15);
+#else
+#error RegisterAllocator does not define the valid register range for the current architecture.
+#endif
+    }
+
+    static bool isCallerSavedRegister(JSC::MacroAssembler::RegisterID registerID)
+    {
+        ASSERT(isValidRegister(registerID));
+#if CPU(ARM64)
+        return registerID >= JSC::ARM64Registers::x0 && registerID <= JSC::ARM64Registers::x14;
+#elif CPU(ARM_THUMB2)
+        return (registerID >= JSC::ARMRegisters::r0 && registerID <= JSC::ARMRegisters::r3)
+            || registerID == JSC::ARMRegisters::r9;
+#elif CPU(X86_64)
+        return (registerID >= JSC::X86Registers::eax && registerID <= JSC::X86Registers::edx)
+            || (registerID >= JSC::X86Registers::esi && registerID <= JSC::X86Registers::r11);
+#else
+#error RegisterAllocator does not define the valid caller saved register range for the current architecture.
+#endif
+    }
 
 private:
-    HashSet<unsigned, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_registers;
-    Vector<JSC::MacroAssembler::RegisterID, registerCount> m_allocatedRegisters;
-    Vector<StackAllocator::StackReference, WTF_ARRAY_LENGTH(calleeSavedRegisters)> m_calleeSavedRegisters;
+    Deque<JSC::MacroAssembler::RegisterID, maximumRegisterCount> m_registers;
+    RegisterVector m_allocatedRegisters;
+    Vector<JSC::MacroAssembler::RegisterID, calleeSavedRegisterCount> m_reservedCalleeSavedRegisters;
 };
 
 class LocalRegister {
@@ -137,20 +243,27 @@ public:
         return m_register;
     }
 
-private:
+protected:
+    explicit LocalRegister(RegisterAllocator& allocator, JSC::MacroAssembler::RegisterID registerID)
+        : m_allocator(allocator)
+        , m_register(registerID)
+    {
+    }
     RegisterAllocator& m_allocator;
     JSC::MacroAssembler::RegisterID m_register;
 };
 
-inline RegisterAllocator::RegisterAllocator()
-{
-    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(callerSavedRegisters); ++i)
-        m_registers.add(callerSavedRegisters[i]);
-}
+class LocalRegisterWithPreference : public LocalRegister {
+public:
+    explicit LocalRegisterWithPreference(RegisterAllocator& allocator, JSC::MacroAssembler::RegisterID preferredRegister)
+        : LocalRegister(allocator, allocator.allocateRegisterWithPreference(preferredRegister))
+    {
+    }
+};
 
 inline RegisterAllocator::~RegisterAllocator()
 {
-    RELEASE_ASSERT(m_calleeSavedRegisters.isEmpty());
+    RELEASE_ASSERT(m_reservedCalleeSavedRegisters.isEmpty());
 }
 
 } // namespace WebCore

@@ -45,8 +45,7 @@ void InjectedBundle::platformInitialize(WKTypeRef)
     NSDictionary *dict = @{
         @"AppleAntiAliasingThreshold": @4,
         // FIXME: Setting AppleFontSmoothing is likely unnecessary and ineffective. WebKit2 has its own preference for font smoothing, which is
-        // applied to each context via CGContextSetShouldSmoothFonts, presumably overriding the default. And it's too late to do this here,
-        // see <https://bugs.webkit.org/show_bug.cgi?id=123488>
+        // applied to each context via CGContextSetShouldSmoothFonts, presumably overriding the default.
         @"AppleFontSmoothing": @(NoFontSmoothing),
         @"AppleAquaColorVariant": @(BlueTintedAppearance),
         @"AppleHighlightColor": @"0.709800 0.835300 1.000000",
@@ -54,16 +53,28 @@ void InjectedBundle::platformInitialize(WKTypeRef)
         @"NSScrollAnimationEnabled": @NO,
         @"NSOverlayScrollersEnabled": @NO,
         @"AppleShowScrollBars": @"Always",
+        @"NSButtonAnimationsEnabled": @NO, // Ideally, we should find a way to test animations, but for now, make sure that the dumped snapshot matches actual state.
         // FIXME (<rdar://problem/13396515>): It is too late to set AppleLanguages here, as loaded frameworks localizations cannot be changed.
         // This breaks some accessibility tests on machines with non-English user language.
         @"AppleLanguages": @[ @"en" ],
-        // FIXME: Why does this dictionary not match the one in DumpRenderTree?
+        @"NSPreferredSpellServerLanguage": @"en_US",
+        @"NSUserDictionaryReplacementItems": @[],
         @"NSTestCorrectionDictionary": @{
-            @"notationl": @"notational"
-        }
+            @"notationl": @"notational",
+            @"mesage": @"message",
+            @"wouldn": @"would",
+            @"wellcome": @"welcome",
+            @"hellolfworld": @"hello\nworld"
+        },
+#if __MAC_OS_X_VERSION_MIN_REQUIRED > 101000
+        @"AppleSystemFontOSSubversion": @(10),
+#endif
     };
 
     [[NSUserDefaults standardUserDefaults] setVolatileDomain:dict forName:NSArgumentDomain];
+
+    // Make NSFont use the new defaults.
+    [NSFont initialize];
 
     // Underlying frameworks have already read AppleAntiAliasingThreshold default before we changed it.
     // A distributed notification is delivered to all applications, but it should be harmless, and it's the only way to update all underlying frameworks anyway.

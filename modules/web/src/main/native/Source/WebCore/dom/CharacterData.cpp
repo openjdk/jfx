@@ -87,9 +87,9 @@ unsigned CharacterData::parserAppendData(const String& string, unsigned offset, 
     else
         m_data.append(string.characters16() + offset, characterLengthLimit);
 
-    ASSERT(!renderer() || isTextNode());
-    if (isTextNode())
-        Style::updateTextRendererAfterContentChange(*toText(this), oldLength, 0);
+    ASSERT(!renderer() || is<Text>(*this));
+    if (is<Text>(*this))
+        Style::updateTextRendererAfterContentChange(downcast<Text>(*this), oldLength, 0);
 
     document().incDOMTreeVersion();
     // We don't call dispatchModifiedEvent here because we don't want the
@@ -97,8 +97,8 @@ unsigned CharacterData::parserAppendData(const String& string, unsigned offset, 
     if (parentNode()) {
         ContainerNode::ChildChange change = {
             ContainerNode::TextChanged,
-            ElementTraversal::previousSibling(this),
-            ElementTraversal::nextSibling(this),
+            ElementTraversal::previousSibling(*this),
+            ElementTraversal::nextSibling(*this),
             ContainerNode::ChildChangeSourceParser
         };
         parentNode()->childrenChanged(change);
@@ -194,12 +194,12 @@ void CharacterData::setDataAndUpdate(const String& newData, unsigned offsetOfRep
     String oldData = m_data;
     m_data = newData;
 
-    ASSERT(!renderer() || isTextNode());
-    if (isTextNode())
-        Style::updateTextRendererAfterContentChange(*toText(this), offsetOfReplacedData, oldLength);
+    ASSERT(!renderer() || is<Text>(*this));
+    if (is<Text>(*this))
+        Style::updateTextRendererAfterContentChange(downcast<Text>(*this), offsetOfReplacedData, oldLength);
 
-    if (nodeType() == PROCESSING_INSTRUCTION_NODE)
-        toProcessingInstruction(this)->checkStyleSheet();
+    if (is<ProcessingInstruction>(*this))
+        downcast<ProcessingInstruction>(*this).checkStyleSheet();
 
     if (document().frame())
         document().frame()->selection().textWasReplaced(this, offsetOfReplacedData, oldLength, newLength);
@@ -217,19 +217,18 @@ void CharacterData::dispatchModifiedEvent(const String& oldData)
         if (parentNode()) {
             ContainerNode::ChildChange change = {
                 ContainerNode::TextChanged,
-                ElementTraversal::previousSibling(this),
-                ElementTraversal::nextSibling(this),
+                ElementTraversal::previousSibling(*this),
+                ElementTraversal::nextSibling(*this),
                 ContainerNode::ChildChangeSourceAPI
             };
             parentNode()->childrenChanged(change);
         }
         if (document().hasListenerType(Document::DOMCHARACTERDATAMODIFIED_LISTENER))
-            dispatchScopedEvent(MutationEvent::create(eventNames().DOMCharacterDataModifiedEvent, true, 0, oldData, m_data));
+            dispatchScopedEvent(MutationEvent::create(eventNames().DOMCharacterDataModifiedEvent, true, nullptr, oldData, m_data));
         dispatchSubtreeModifiedEvent();
     }
-#if ENABLE(INSPECTOR)
-    InspectorInstrumentation::characterDataModified(&document(), this);
-#endif
+
+    InspectorInstrumentation::characterDataModified(document(), *this);
 }
 
 void CharacterData::checkCharDataOperation(unsigned offset, ExceptionCode& ec)

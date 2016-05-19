@@ -43,7 +43,7 @@ class IDBDatabaseCallbacks;
 
 class IDBTransactionBackend : public RefCounted<IDBTransactionBackend> {
 public:
-    static PassRefPtr<IDBTransactionBackend> create(IDBDatabaseBackend*, int64_t transactionId, PassRefPtr<IDBDatabaseCallbacks>, const Vector<int64_t>& objectStoreIds, IndexedDB::TransactionMode);
+    static Ref<IDBTransactionBackend> create(IDBDatabaseBackend*, int64_t transactionId, PassRefPtr<IDBDatabaseCallbacks>, const Vector<int64_t>& objectStoreIds, IndexedDB::TransactionMode);
     ~IDBTransactionBackend();
 
     void commit();
@@ -96,7 +96,7 @@ private:
     bool isTaskQueueEmpty() const;
     bool hasPendingTasks() const;
 
-    void taskTimerFired(Timer<IDBTransactionBackend>&);
+    void taskTimerFired();
     void closeOpenCursors();
 
     const HashSet<int64_t> m_objectStoreIds;
@@ -113,7 +113,7 @@ private:
     Deque<RefPtr<IDBSynchronousOperation>> m_abortTaskQueue;
 
     // FIXME: delete the timer once we have threads instead.
-    Timer<IDBTransactionBackend> m_taskTimer;
+    Timer m_taskTimer;
     int m_pendingPreemptiveEvents;
 
     HashSet<IDBCursorBackend*> m_openCursors;

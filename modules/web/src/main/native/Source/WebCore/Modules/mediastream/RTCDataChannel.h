@@ -47,8 +47,8 @@ class RTCPeerConnectionHandler;
 
 class RTCDataChannel final : public RefCounted<RTCDataChannel>, public ScriptWrappable, public EventTargetWithInlineData, public RTCDataChannelHandlerClient {
 public:
-    static PassRefPtr<RTCDataChannel> create(ScriptExecutionContext*, std::unique_ptr<RTCDataChannelHandler>);
-    static PassRefPtr<RTCDataChannel> create(ScriptExecutionContext*, RTCPeerConnectionHandler*, const String& , const Dictionary&, ExceptionCode&);
+    static Ref<RTCDataChannel> create(ScriptExecutionContext*, std::unique_ptr<RTCDataChannelHandler>);
+    static RefPtr<RTCDataChannel> create(ScriptExecutionContext*, RTCPeerConnectionHandler*, const String& label, const Dictionary& options, ExceptionCode&);
     ~RTCDataChannel();
 
     String label() const;
@@ -71,11 +71,6 @@ public:
 
     void close();
 
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(open);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(close);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(message);
-
     void stop();
 
     // EventTarget
@@ -89,7 +84,7 @@ private:
     RTCDataChannel(ScriptExecutionContext*, std::unique_ptr<RTCDataChannelHandler>);
 
     void scheduleDispatchEvent(PassRefPtr<Event>);
-    void scheduledEventTimerFired(Timer<RTCDataChannel>*);
+    void scheduledEventTimerFired();
 
     // EventTarget
     virtual void refEventTarget() override { ref(); }
@@ -114,7 +109,7 @@ private:
     };
     BinaryType m_binaryType;
 
-    Timer<RTCDataChannel> m_scheduledEventTimer;
+    Timer m_scheduledEventTimer;
     Vector<RefPtr<Event>> m_scheduledEvents;
 };
 

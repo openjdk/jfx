@@ -28,7 +28,7 @@
 #include "CounterContent.h"
 #include "StyleImage.h"
 #include "RenderPtr.h"
-#include <wtf/OwnPtr.h>
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
@@ -59,7 +59,7 @@ public:
     std::unique_ptr<ContentData> clone() const;
 
     ContentData* next() const { return m_next.get(); }
-    void setNext(std::unique_ptr<ContentData> next) { m_next = std::move(next); }
+    void setNext(std::unique_ptr<ContentData> next) { m_next = WTF::move(next); }
 
     void setAltText(const String& alt) { m_altText = alt; }
     const String& altText() const { return m_altText; }
@@ -77,9 +77,6 @@ private:
     String m_altText;
     Type m_type;
 };
-
-#define CONTENT_DATA_TYPE_CASTS(ToClassName, FromClassName, ContentDataName) \
-    TYPE_CASTS_BASE(ToClassName, FromClassName, resource, resource->is##ContentDataName(), resource.is##ContentDataName())
 
 class ImageContentData final : public ContentData {
 public:
@@ -102,13 +99,14 @@ public:
 private:
     virtual std::unique_ptr<ContentData> cloneInternal() const override
     {
-        return std::make_unique<ImageContentData>(m_image.get());
+        std::unique_ptr<ContentData> image = std::make_unique<ImageContentData>(m_image.get());
+        image->setAltText(altText());
+
+        return image;
     }
 
     RefPtr<StyleImage> m_image;
 };
-
-CONTENT_DATA_TYPE_CASTS(ImageContentData, ContentData, Image)
 
 inline bool operator==(const ImageContentData& a, const ImageContentData& b)
 {
@@ -139,8 +137,6 @@ private:
     String m_text;
 };
 
-CONTENT_DATA_TYPE_CASTS(TextContentData, ContentData, Text)
-
 inline bool operator==(const TextContentData& a, const TextContentData& b)
 {
     return a.text() == b.text();
@@ -155,7 +151,7 @@ class CounterContentData final : public ContentData {
 public:
     explicit CounterContentData(std::unique_ptr<CounterContent> counter)
         : ContentData(CounterDataType)
-        , m_counter(std::move(counter))
+        , m_counter(WTF::move(counter))
     {
         ASSERT(m_counter);
     }
@@ -164,7 +160,7 @@ public:
     void setCounter(std::unique_ptr<CounterContent> counter)
     {
         ASSERT(counter);
-        m_counter = std::move(counter);
+        m_counter = WTF::move(counter);
     }
 
     virtual RenderPtr<RenderObject> createContentRenderer(Document&, const RenderStyle&) const override;
@@ -173,13 +169,11 @@ private:
     virtual std::unique_ptr<ContentData> cloneInternal() const override
     {
         auto counterData = std::make_unique<CounterContent>(counter());
-        return std::make_unique<CounterContentData>(std::move(counterData));
+        return std::make_unique<CounterContentData>(WTF::move(counterData));
     }
 
     std::unique_ptr<CounterContent> m_counter;
 };
-
-CONTENT_DATA_TYPE_CASTS(CounterContentData, ContentData, Counter)
 
 inline bool operator==(const CounterContentData& a, const CounterContentData& b)
 {
@@ -210,8 +204,6 @@ private:
     QuoteType m_quote;
 };
 
-CONTENT_DATA_TYPE_CASTS(QuoteContentData, ContentData, Quote)
-
 inline bool operator==(const QuoteContentData& a, const QuoteContentData& b)
 {
     return a.quote() == b.quote();
@@ -229,13 +221,13 @@ inline bool operator==(const ContentData& a, const ContentData& b)
 
     switch (a.type()) {
     case ContentData::CounterDataType:
-        return toCounterContentData(a) == toCounterContentData(b);
+        return downcast<CounterContentData>(a) == downcast<CounterContentData>(b);
     case ContentData::ImageDataType:
-        return toImageContentData(a) == toImageContentData(b);
+        return downcast<ImageContentData>(a) == downcast<ImageContentData>(b);
     case ContentData::QuoteDataType:
-        return toQuoteContentData(a) == toQuoteContentData(b);
+        return downcast<QuoteContentData>(a) == downcast<QuoteContentData>(b);
     case ContentData::TextDataType:
-        return toTextContentData(a) == toTextContentData(b);
+        return downcast<TextContentData>(a) == downcast<TextContentData>(b);
     }
 
     ASSERT_NOT_REACHED();
@@ -248,5 +240,15 @@ inline bool operator!=(const ContentData& a, const ContentData& b)
 }
 
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_CONTENT_DATA(ToClassName, ContentDataName) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToClassName) \
+    static bool isType(const WebCore::ContentData& contentData) { return contentData.is##ContentDataName(); } \
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_CONTENT_DATA(ImageContentData, Image)
+SPECIALIZE_TYPE_TRAITS_CONTENT_DATA(TextContentData, Text)
+SPECIALIZE_TYPE_TRAITS_CONTENT_DATA(CounterContentData, Counter)
+SPECIALIZE_TYPE_TRAITS_CONTENT_DATA(QuoteContentData, Quote)
 
 #endif // ContentData_h

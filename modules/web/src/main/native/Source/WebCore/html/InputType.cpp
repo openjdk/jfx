@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2013, 2014 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2007 Samuel Weinig (sam@webkit.org)
  * Copyright (C) 2009, 2010, 2011, 2012 Google Inc. All rights reserved.
@@ -64,6 +64,7 @@
 #include "RenderTheme.h"
 #include "ResetInputType.h"
 #include "RuntimeEnabledFeatures.h"
+#include "ScopedEventQueue.h"
 #include "SearchInputType.h"
 #include "ShadowRoot.h"
 #include "SubmitInputType.h"
@@ -470,7 +471,7 @@ void InputType::forwardEvent(Event*)
 
 bool InputType::shouldSubmitImplicitly(Event* event)
 {
-    return event->isKeyboardEvent() && event->type() == eventNames().keypressEvent && toKeyboardEvent(event)->charCode() == '\r';
+    return is<KeyboardEvent>(*event) && event->type() == eventNames().keypressEvent && downcast<KeyboardEvent>(*event).charCode() == '\r';
 }
 
 PassRefPtr<HTMLFormElement> InputType::formForSubmission() const
@@ -478,9 +479,9 @@ PassRefPtr<HTMLFormElement> InputType::formForSubmission() const
     return element().form();
 }
 
-RenderPtr<RenderElement> InputType::createInputRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> InputType::createInputRenderer(Ref<RenderStyle>&& style)
 {
-    return RenderPtr<RenderElement>(RenderElement::createFor(element(), std::move(style)));
+    return RenderPtr<RenderElement>(RenderElement::createFor(element(), WTF::move(style)));
 }
 
 void InputType::blur()
@@ -603,6 +604,10 @@ void InputType::srcAttributeChanged()
 {
 }
 
+void InputType::maxResultsAttributeChanged()
+{
+}
+
 bool InputType::shouldRespectAlignAttribute()
 {
     return false;
@@ -660,11 +665,6 @@ String InputType::defaultValue() const
     return String();
 }
 
-bool InputType::canSetSuggestedValue()
-{
-    return false;
-}
-
 bool InputType::shouldSendChangeEventAfterCheckedChanged()
 {
     return true;
@@ -717,6 +717,11 @@ String InputType::visibleValue() const
     return element().value();
 }
 
+bool InputType::isEmptyValue() const
+{
+    return true;
+}
+
 String InputType::sanitizeValue(const String& proposedValue) const
 {
     return proposedValue;
@@ -750,11 +755,6 @@ bool InputType::shouldResetOnDocumentActivation()
 }
 
 bool InputType::shouldRespectListAttribute()
-{
-    return false;
-}
-
-bool InputType::shouldRespectSpeechAttribute()
 {
     return false;
 }
@@ -924,7 +924,11 @@ void InputType::requiredAttributeChanged()
 {
 }
 
-void InputType::valueAttributeChanged()
+void InputType::capsLockStateMayHaveChanged()
+{
+}
+
+void InputType::updateAutoFillButton()
 {
 }
 
@@ -956,10 +960,6 @@ Decimal InputType::findClosestTickMarkValue(const Decimal&)
     return Decimal::nan();
 }
 #endif
-
-void InputType::updateClearButtonVisibility()
-{
-}
 
 bool InputType::supportsIndeterminateAppearance() const
 {
@@ -1098,6 +1098,7 @@ void InputType::stepUpFromRenderer(int n)
     if (!stepRange.hasStep())
       return;
 
+    EventQueueScope scope;
     const Decimal step = stepRange.step();
 
     int sign;
@@ -1117,7 +1118,7 @@ void InputType::stepUpFromRenderer(int n)
             current = stepRange.minimum() - nextDiff;
         if (current > stepRange.maximum() - nextDiff)
             current = stepRange.maximum() - nextDiff;
-        setValueAsDecimal(current, DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
+        setValueAsDecimal(current, DispatchNoEvent, IGNORE_EXCEPTION);
     }
     if ((sign > 0 && current < stepRange.minimum()) || (sign < 0 && current > stepRange.maximum()))
         setValueAsDecimal(sign > 0 ? stepRange.minimum() : stepRange.maximum(), DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
@@ -1145,14 +1146,6 @@ void InputType::stepUpFromRenderer(int n)
                 applyStep(n + 1, AnyIsDefaultStep, DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
         } else
             applyStep(n, AnyIsDefaultStep, DispatchInputAndChangeEvent, IGNORE_EXCEPTION);
-    }
-}
-
-void InputType::observeFeatureIfVisible(FeatureObserver::Feature feature) const
-{
-    if (RenderStyle* style = element().renderStyle()) {
-        if (style->visibility() != HIDDEN)
-            FeatureObserver::observe(&element().document(), feature);
     }
 }
 

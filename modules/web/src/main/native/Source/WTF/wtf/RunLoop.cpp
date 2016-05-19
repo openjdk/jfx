@@ -37,39 +37,39 @@ static RunLoop* s_mainRunLoop;
 class RunLoop::Holder {
 public:
     Holder()
-        : m_runLoop(adoptRef(new RunLoop))
+        : m_runLoop(adoptRef(*new RunLoop))
     {
     }
 
-    RunLoop* runLoop() const { return m_runLoop.get(); }
+    RunLoop& runLoop() { return m_runLoop; }
 
 private:
-    RefPtr<RunLoop> m_runLoop;
+    Ref<RunLoop> m_runLoop;
 };
 
 void RunLoop::initializeMainRunLoop()
 {
     if (s_mainRunLoop)
         return;
-    s_mainRunLoop = RunLoop::current();
+    s_mainRunLoop = &RunLoop::current();
 }
 
-RunLoop* RunLoop::current()
+RunLoop& RunLoop::current()
 {
-    DEFINE_STATIC_LOCAL(WTF::ThreadSpecific<RunLoop::Holder>, runLoopHolder, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(WTF::ThreadSpecific<RunLoop::Holder>, runLoopHolder, ());
     return runLoopHolder->runLoop();
 }
 
-RunLoop* RunLoop::main()
+RunLoop& RunLoop::main()
 {
     ASSERT(s_mainRunLoop);
-    return s_mainRunLoop;
+    return *s_mainRunLoop;
 }
 
 bool RunLoop::isMain()
 {
     ASSERT(s_mainRunLoop);
-    return s_mainRunLoop == RunLoop::current();
+    return s_mainRunLoop == &RunLoop::current();
 }
 
 void RunLoop::performWork()
@@ -88,22 +88,24 @@ void RunLoop::performWork()
     // By only handling up to the number of functions that were in the queue when performWork() is called
     // we guarantee to occasionally return from the run loop so other event sources will be allowed to spin.
 
-    std::function<void()> function;
     size_t functionsToHandle = 0;
-
     {
-        MutexLocker locker(m_functionQueueLock);
-        functionsToHandle = m_functionQueue.size();
+        std::function<void()> function;
+        {
+            MutexLocker locker(m_functionQueueLock);
+            functionsToHandle = m_functionQueue.size();
 
-        if (m_functionQueue.isEmpty())
-            return;
+            if (m_functionQueue.isEmpty())
+                return;
 
-        function = m_functionQueue.takeFirst();
+            function = m_functionQueue.takeFirst();
+        }
+
+        function();
     }
 
-    function();
-
     for (size_t functionsHandled = 1; functionsHandled < functionsToHandle; ++functionsHandled) {
+        std::function<void()> function;
         {
             MutexLocker locker(m_functionQueueLock);
 
@@ -122,8 +124,10 @@ void RunLoop::performWork()
 
 void RunLoop::dispatch(std::function<void ()> function)
 {
-    MutexLocker locker(m_functionQueueLock);
-    m_functionQueue.append(std::move(function));
+    {
+        MutexLocker locker(m_functionQueueLock);
+        m_functionQueue.append(WTF::move(function));
+    }
 
     wakeUp();
 }

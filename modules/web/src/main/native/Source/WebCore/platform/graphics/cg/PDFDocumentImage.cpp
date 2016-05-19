@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2013 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,15 +30,14 @@
 #if USE(CG)
 
 #if PLATFORM(IOS)
-#import <CoreGraphics/CGContextPrivate.h>
-#import <CoreGraphics/CGContextGState.h>
-#import <CoreGraphics/CoreGraphics.h>
-#import <ImageIO/ImageIO.h>
+#include <CoreGraphics/CoreGraphics.h>
+#include <ImageIO/ImageIO.h>
 #endif
 
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "ImageObserver.h"
+#include "IntRect.h"
 #include "Length.h"
 #include "SharedBuffer.h"
 #include <CoreGraphics/CGContext.h>
@@ -69,9 +68,9 @@ String PDFDocumentImage::filenameExtension() const
     return "pdf";
 }
 
-IntSize PDFDocumentImage::size() const
+FloatSize PDFDocumentImage::size() const
 {
-    IntSize expandedCropBoxSize = expandedIntSize(m_cropBox.size());
+    FloatSize expandedCropBoxSize = FloatSize(expandedIntSize(m_cropBox.size()));
 
     if (m_rotationDegrees == 90 || m_rotationDegrees == 270)
         return expandedCropBoxSize.transposedSize();
@@ -143,13 +142,22 @@ static void transformContextForPainting(GraphicsContext* context, const FloatRec
 
 void PDFDocumentImage::updateCachedImageIfNeeded(GraphicsContext* context, const FloatRect& dstRect, const FloatRect& srcRect)
 {
+#if PLATFORM(IOS)
+    // On iOS, some clients use low-quality image interpolation always, which throws off this optimization,
+    // as we never get the subsequent high-quality paint. Since live resize is rare on iOS, disable the optimization.
+    // FIXME (136593): It's also possible to do the wrong thing here if CSS specifies low-quality interpolation via the "image-rendering"
+    // property, on all platforms. We should only do this optimization if we're actually in a ImageQualityController live resize,
+    // and are guaranteed to do a high-quality paint later.
+    bool repaintIfNecessary = true;
+#else
     // If we have an existing image, reuse it if we're doing a low-quality paint, even if cache parameters don't match;
     // we'll rerender when we do the subsequent high-quality paint.
     InterpolationQuality interpolationQuality = context->imageInterpolationQuality();
-    bool useLowQualityInterpolation = interpolationQuality == InterpolationNone || interpolationQuality == InterpolationLow;
+    bool repaintIfNecessary = interpolationQuality != InterpolationNone && interpolationQuality != InterpolationLow;
+#endif
 
-    if (!m_cachedImageBuffer || (!cacheParametersMatch(context, dstRect, srcRect) && !useLowQualityInterpolation)) {
-        m_cachedImageBuffer = context->createCompatibleBuffer(enclosingIntRect(dstRect).size());
+    if (!m_cachedImageBuffer || (!cacheParametersMatch(context, dstRect, srcRect) && repaintIfNecessary)) {
+        m_cachedImageBuffer = context->createCompatibleBuffer(FloatRect(enclosingIntRect(dstRect)).size());
         if (!m_cachedImageBuffer)
             return;
         GraphicsContext* bufferContext = m_cachedImageBuffer->context();
@@ -208,14 +216,16 @@ void PDFDocumentImage::destroyDecodedData(bool)
 }
 
 #if !USE(PDFKIT_FOR_PDFDOCUMENTIMAGE)
+
 void PDFDocumentImage::createPDFDocument()
 {
     RetainPtr<CGDataProviderRef> dataProvider = adoptCF(CGDataProviderCreateWithCFData(data()->createCFData().get()));
-    m_document = CGPDFDocumentCreateWithProvider(dataProvider.get());
+    m_document = adoptCF(CGPDFDocumentCreateWithProvider(dataProvider.get()));
 }
 
 void PDFDocumentImage::computeBoundsForCurrentPage()
 {
+    ASSERT(pageCount() > 0);
     CGPDFPageRef cgPage = CGPDFDocumentGetPage(m_document.get(), 1);
     CGRect mediaBox = CGPDFPageGetBoxRect(cgPage, kCGPDFMediaBox);
 
@@ -234,7 +244,7 @@ unsigned PDFDocumentImage::pageCount() const
     return CGPDFDocumentGetNumberOfPages(m_document.get());
 }
 
-static void applyRotationForPainting(GraphicsContext* context, IntSize size, int rotationDegrees)
+static void applyRotationForPainting(GraphicsContext* context, FloatSize size, int rotationDegrees)
 {
     if (rotationDegrees == 90)
         context->translate(0, size.height());
@@ -255,6 +265,7 @@ void PDFDocumentImage::drawPDFPage(GraphicsContext* context)
     // CGPDF pages are indexed from 1.
     CGContextDrawPDFPage(context->platformContext(), CGPDFDocumentGetPage(m_document.get(), 1));
 }
+
 #endif // !USE(PDFKIT_FOR_PDFDOCUMENTIMAGE)
 
 }

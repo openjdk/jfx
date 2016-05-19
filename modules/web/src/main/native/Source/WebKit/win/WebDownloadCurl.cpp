@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebDownload.h"
 
@@ -37,7 +36,6 @@
 #include "WebURLCredential.h"
 #include "WebURLResponse.h"
 
-#include <wtf/platform.h>
 #include <wtf/text/CString.h>
 
 #include <io.h>
@@ -65,7 +63,8 @@ void WebDownload::init(ResourceHandle* handle, const ResourceRequest& request, c
 
     m_delegate = delegate;
 
-    m_download.init(this, handle, request, response);
+    m_download = adoptRef(new CurlDownload());
+    m_download->init(this, handle, request, response);
 
     start();
 }
@@ -74,7 +73,8 @@ void WebDownload::init(const URL& url, IWebDownloadDelegate* delegate)
 {
     m_delegate = delegate;
 
-    m_download.init(this, url);
+    m_download = adoptRef(new CurlDownload());
+    m_download->init(this, url);
 }
 
 // IWebDownload -------------------------------------------------------------------
@@ -83,8 +83,14 @@ HRESULT STDMETHODCALLTYPE WebDownload::initWithRequest(
         /* [in] */ IWebURLRequest* request,
         /* [in] */ IWebDownloadDelegate* delegate)
 {
-   notImplemented();
-   return E_FAIL;
+    BString url;
+
+    if (!SUCCEEDED(request->URL(&url)))
+        return E_FAIL;
+
+    init(URL(ParsedURLString, String(url)), delegate);
+
+    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE WebDownload::initToResumeWithBundle(
@@ -97,7 +103,10 @@ HRESULT STDMETHODCALLTYPE WebDownload::initToResumeWithBundle(
 
 HRESULT STDMETHODCALLTYPE WebDownload::start()
 {
-    if (!m_download.start())
+    if (!m_download)
+        return E_FAIL;
+
+    if (!m_download->start())
         return E_FAIL;
 
     if (m_delegate)
@@ -108,8 +117,14 @@ HRESULT STDMETHODCALLTYPE WebDownload::start()
 
 HRESULT STDMETHODCALLTYPE WebDownload::cancel()
 {
-    if (!m_download.cancel())
+    if (!m_download)
         return E_FAIL;
+
+    if (!m_download->cancel())
+        return E_FAIL;
+
+    m_download->setListener(nullptr);
+    m_download = nullptr;
 
     return S_OK;
 }
@@ -123,14 +138,20 @@ HRESULT STDMETHODCALLTYPE WebDownload::cancelForResume()
 HRESULT STDMETHODCALLTYPE WebDownload::deletesFileUponFailure(
         /* [out, retval] */ BOOL* result)
 {
-    *result = m_download.deletesFileUponFailure() ? TRUE : FALSE;
+    if (!m_download)
+        return E_FAIL;
+
+    *result = m_download->deletesFileUponFailure() ? TRUE : FALSE;
     return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE WebDownload::setDeletesFileUponFailure(
         /* [in] */ BOOL deletesFileUponFailure)
 {
-    m_download.setDeletesFileUponFailure(deletesFileUponFailure);
+    if (!m_download)
+        return E_FAIL;
+
+    m_download->setDeletesFileUponFailure(deletesFileUponFailure);
     return S_OK;
 }
 
@@ -138,9 +159,12 @@ HRESULT STDMETHODCALLTYPE WebDownload::setDestination(
         /* [in] */ BSTR path,
         /* [in] */ BOOL allowOverwrite)
 {
+    if (!m_download)
+        return E_FAIL;
+
     size_t len = wcslen(path);
     m_destination = String(path, len);
-    m_download.setDestination(m_destination);
+    m_download->setDestination(m_destination);
     return S_OK;
 }
 
@@ -173,7 +197,7 @@ void WebDownload::didReceiveResponse()
     COMPtr<WebDownload> protect = this;
 
     if (m_delegate) {
-        ResourceResponse response = m_download.getResponse();
+        ResourceResponse response = m_download->getResponse();
         COMPtr<WebURLResponse> webResponse(AdoptCOM, WebURLResponse::createInstance(response));
         m_delegate->didReceiveResponse(this, webResponse.get());
 
@@ -181,7 +205,7 @@ void WebDownload::didReceiveResponse()
         if (suggestedFilename.isEmpty())
             suggestedFilename = pathGetFileName(response.url().string());
         suggestedFilename = decodeURLEscapeSequences(suggestedFilename);
-        BString suggestedFilenameBSTR(suggestedFilename.deprecatedCharacters(), suggestedFilename.length());
+        BString suggestedFilenameBSTR(suggestedFilename);
         m_delegate->decideDestinationWithSuggestedFilename(this, suggestedFilenameBSTR);
     }
 }

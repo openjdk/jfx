@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,13 +31,13 @@
 #import "Chrome.h"
 #import "Cursor.h"
 #import "Document.h"
-#import "Font.h"
+#import "FontCascade.h"
 #import "Frame.h"
+#import "FrameView.h"
 #import "GraphicsContext.h"
-#import "NotImplemented.h"
 #import "Page.h"
 #import "PlatformMouseEvent.h"
-#import "ScrollView.h"
+#import "RuntimeApplicationChecks.h"
 #import "WebCoreFrameView.h"
 #import "WebCoreView.h"
 #import <wtf/Ref.h>
@@ -106,7 +106,7 @@ void Widget::setFocus(bool focused)
 
 void Widget::setCursor(const Cursor& cursor)
 {
-    ScrollView* view = root();
+    FrameView* view = root();
     if (!view)
         return;
     view->hostWindow()->setCursor(cursor);
@@ -159,7 +159,7 @@ void Widget::setFrameRect(const IntRect& rect)
         return;
 
     // Take a reference to this Widget, because sending messages to outerView can invoke arbitrary
-    // code, which can deref it.
+    // code including recalc style/layout, which can deref it.
     Ref<Widget> protect(*this);
 
     NSRect frame = rect;
@@ -194,7 +194,8 @@ void Widget::paint(GraphicsContext* p, const IntRect& r)
     // We don't want to paint the view at all if it's layer backed, because then we'll end up
     // with multiple copies of the view contents, one in the view's layer itself and one in the
     // WebHTMLView's backing store (either a layer or the window backing store).
-    if (view.layer)
+    // However, Quicken Essentials has a plug-in that depends on drawing to update the layer (see <rdar://problem/15221231>).
+    if (view.layer && !applicationIsQuickenEssentials())
         return;
 
     // Take a reference to this Widget, because sending messages to the views can invoke arbitrary

@@ -23,7 +23,6 @@
 #include "CSSImportRule.h"
 #include "CSSParser.h"
 #include "CSSStyleSheet.h"
-#include "Console.h"
 #include "DOMWindow.h"
 #include "Document.h"
 #include "ExceptionCode.h"
@@ -144,7 +143,7 @@ bool MediaQuerySet::parse(const String& mediaString)
                 continue;
             mediaQuery = std::make_unique<MediaQuery>(MediaQuery::None, mediaDescriptor, nullptr);
         }
-        result.append(std::move(mediaQuery));
+        result.append(WTF::move(mediaQuery));
     }
     // ",,,," falls straight through, but is not valid unless fallback
     if (!m_fallbackToDescriptor && list.isEmpty()) {
@@ -152,7 +151,7 @@ bool MediaQuerySet::parse(const String& mediaString)
         if (!strippedMediaString.isEmpty())
             return false;
     }
-    m_queries = std::move(result);
+    m_queries = WTF::move(result);
     return true;
 }
 
@@ -169,7 +168,7 @@ bool MediaQuerySet::add(const String& queryString)
     if (!parsedQuery)
         return false;
 
-    m_queries.append(std::move(parsedQuery));
+    m_queries.append(WTF::move(parsedQuery));
     return true;
 }
 
@@ -186,19 +185,14 @@ bool MediaQuerySet::remove(const String& queryStringToRemove)
     if (!parsedQuery)
         return false;
 
-    for (size_t i = 0; i < m_queries.size(); ++i) {
-        MediaQuery* query = m_queries[i].get();
-        if (*query == *parsedQuery) {
-            m_queries.remove(i);
-            return true;
-        }
-    }
-    return false;
+    return m_queries.removeFirstMatching([&parsedQuery] (const std::unique_ptr<MediaQuery>& query) {
+        return *query == *parsedQuery;
+    });
 }
 
 void MediaQuerySet::addMediaQuery(std::unique_ptr<MediaQuery> mediaQuery)
 {
-    m_queries.append(std::move(mediaQuery));
+    m_queries.append(WTF::move(mediaQuery));
 }
 
 String MediaQuerySet::mediaText() const
@@ -294,11 +288,11 @@ static void addResolutionWarningMessageToConsole(Document* document, const Strin
     ASSERT(document);
     ASSERT(value);
 
-    DEFINE_STATIC_LOCAL(String, mediaQueryMessage, (ASCIILiteral("Consider using 'dppx' units instead of '%replacementUnits%', as in CSS '%replacementUnits%' means dots-per-CSS-%lengthUnit%, not dots-per-physical-%lengthUnit%, so does not correspond to the actual '%replacementUnits%' of a screen. In media query expression: ")));
-    DEFINE_STATIC_LOCAL(String, mediaValueDPI, (ASCIILiteral("dpi")));
-    DEFINE_STATIC_LOCAL(String, mediaValueDPCM, (ASCIILiteral("dpcm")));
-    DEFINE_STATIC_LOCAL(String, lengthUnitInch, (ASCIILiteral("inch")));
-    DEFINE_STATIC_LOCAL(String, lengthUnitCentimeter, (ASCIILiteral("centimeter")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, mediaQueryMessage, (ASCIILiteral("Consider using 'dppx' units instead of '%replacementUnits%', as in CSS '%replacementUnits%' means dots-per-CSS-%lengthUnit%, not dots-per-physical-%lengthUnit%, so does not correspond to the actual '%replacementUnits%' of a screen. In media query expression: ")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, mediaValueDPI, (ASCIILiteral("dpi")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, mediaValueDPCM, (ASCIILiteral("dpcm")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, lengthUnitInch, (ASCIILiteral("inch")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, lengthUnitCentimeter, (ASCIILiteral("centimeter")));
 
     String message;
     if (value->isDotsPerInch())
@@ -333,10 +327,10 @@ void reportMediaQueryWarningIfNeeded(Document* document, const MediaQuerySet* me
                 const MediaQueryExp* exp = expressions.at(j).get();
                 if (exp->mediaFeature() == MediaFeatureNames::resolutionMediaFeature || exp->mediaFeature() == MediaFeatureNames::max_resolutionMediaFeature || exp->mediaFeature() == MediaFeatureNames::min_resolutionMediaFeature) {
                     CSSValue* cssValue =  exp->value();
-                    if (cssValue && cssValue->isPrimitiveValue()) {
-                        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(cssValue);
-                        if (primitiveValue->isDotsPerInch() || primitiveValue->isDotsPerCentimeter())
-                            addResolutionWarningMessageToConsole(document, mediaQuerySet->mediaText(), primitiveValue);
+                    if (is<CSSPrimitiveValue>(cssValue)) {
+                        CSSPrimitiveValue& primitiveValue = downcast<CSSPrimitiveValue>(*cssValue);
+                        if (primitiveValue.isDotsPerInch() || primitiveValue.isDotsPerCentimeter())
+                            addResolutionWarningMessageToConsole(document, mediaQuerySet->mediaText(), &primitiveValue);
                     }
                 }
             }

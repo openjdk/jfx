@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@
 #include "CachedResourceHandle.h"
 #include "Timer.h"
 #include "WebVTTParser.h"
-#include <wtf/OwnPtr.h>
+#include <memory>
 
 namespace WebCore {
 
@@ -56,17 +56,14 @@ class TextTrackLoader : public CachedResourceClient, private WebVTTParserClient 
     WTF_MAKE_NONCOPYABLE(TextTrackLoader);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<TextTrackLoader> create(TextTrackLoaderClient& client, ScriptExecutionContext* context)
-    {
-        return adoptPtr(new TextTrackLoader(client, context));
-    }
+    TextTrackLoader(TextTrackLoaderClient&, ScriptExecutionContext*);
     virtual ~TextTrackLoader();
 
-    bool load(const URL&, const String& crossOriginMode);
+    bool load(const URL&, const String& crossOriginMode, bool isInitiatingElementInUserAgentShadowTree);
     void cancelLoad();
     void getNewCues(Vector<RefPtr<TextTrackCue>>& outputCues);
 #if ENABLE(WEBVTT_REGIONS)
-    void getNewRegions(Vector<RefPtr<TextTrackRegion>>& outputRegions);
+    void getNewRegions(Vector<RefPtr<VTTRegion>>& outputRegions);
 #endif
 private:
 
@@ -81,19 +78,17 @@ private:
 #endif
     virtual void fileFailedToParse() override;
 
-    TextTrackLoader(TextTrackLoaderClient&, ScriptExecutionContext*);
-
     void processNewCueData(CachedResource*);
-    void cueLoadTimerFired(Timer<TextTrackLoader>*);
+    void cueLoadTimerFired();
     void corsPolicyPreventedLoad();
 
     enum State { Idle, Loading, Finished, Failed };
 
     TextTrackLoaderClient& m_client;
-    OwnPtr<WebVTTParser> m_cueParser;
+    std::unique_ptr<WebVTTParser> m_cueParser;
     CachedResourceHandle<CachedTextTrack> m_resource;
     ScriptExecutionContext* m_scriptExecutionContext;
-    Timer<TextTrackLoader> m_cueLoadTimer;
+    Timer m_cueLoadTimer;
     String m_crossOriginMode;
     State m_state;
     unsigned m_parseOffset;

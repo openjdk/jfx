@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -33,9 +33,9 @@
 
 namespace WebCore {
 
-LayerChangesFlusher& LayerChangesFlusher::shared()
+LayerChangesFlusher& LayerChangesFlusher::singleton()
 {
-    DEFINE_STATIC_LOCAL(LayerChangesFlusher, flusher, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(LayerChangesFlusher, flusher, ());
     return flusher;
 }
 
@@ -74,7 +74,7 @@ LRESULT LayerChangesFlusher::hookCallback(int code, WPARAM wParam, LPARAM lParam
     // crash for debugging purposes if an exception is hit.
     ExceptionRegistration registrationStruct; // Note: must be stack allocated.
     StructuredExceptionHandlerSuppressor supressor(registrationStruct);
-    return shared().hookFired(code, wParam, lParam);
+    return singleton().hookFired(code, wParam, lParam);
 }
 
 LRESULT LayerChangesFlusher::hookFired(int code, WPARAM wParam, LPARAM lParam)

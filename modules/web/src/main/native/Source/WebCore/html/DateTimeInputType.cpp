@@ -45,11 +45,6 @@ static const int dateTimeDefaultStep = 60;
 static const int dateTimeDefaultStepBase = 0;
 static const int dateTimeStepScaleFactor = 1000;
 
-void DateTimeInputType::attach()
-{
-    observeFeatureIfVisible(FeatureObserver::InputTypeDateTime);
-}
-
 const AtomicString& DateTimeInputType::formControlType() const
 {
     return InputTypeNames::datetime();
@@ -67,7 +62,7 @@ Decimal DateTimeInputType::defaultValueForStepUp() const
 
 StepRange DateTimeInputType::createStepRange(AnyStepHandling anyStepHandling) const
 {
-    DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (dateTimeDefaultStep, dateTimeDefaultStepBase, dateTimeStepScaleFactor, StepRange::ScaledStepValueShouldBeInteger));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const StepRange::StepDescription, stepDescription, (dateTimeDefaultStep, dateTimeDefaultStepBase, dateTimeStepScaleFactor, StepRange::ScaledStepValueShouldBeInteger));
 
     const Decimal stepBase = parseToNumber(element().fastGetAttribute(minAttr), 0);
     const Decimal minimum = parseToNumber(element().fastGetAttribute(minAttr), Decimal::fromDouble(DateComponents::minimumDateTime()));

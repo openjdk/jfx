@@ -13,7 +13,7 @@
 #include "PopupMenuJava.h"
 #include "PopupMenuClient.h"
 #include "RenderStyle.h"
-#include "SimpleFontData.h"
+#include "Font.h" //XXX: SimpleFontData.h -> Font.h
 #include "WebPage.h"
 
 #include <wtf/text/WTFString.h>
@@ -96,7 +96,7 @@ void PopupMenuJava::populate()
                             bool_to_jbool(client()->itemIsEnabled(i)),
                             style.backgroundColor().rgb(),
                             style.foregroundColor().rgb(),
-                            (jobject)*style.font().primaryFont()->platformData().nativeFontData());
+                            (jobject)*style.font().primaryFont().platformData().nativeFontData());
         CheckAndClearException(env);
     }
 }

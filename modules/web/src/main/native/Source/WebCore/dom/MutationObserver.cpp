@@ -45,10 +45,10 @@ namespace WebCore {
 
 static unsigned s_observerPriority = 0;
 
-PassRefPtr<MutationObserver> MutationObserver::create(PassRefPtr<MutationCallback> callback)
+Ref<MutationObserver> MutationObserver::create(PassRefPtr<MutationCallback> callback)
 {
     ASSERT(isMainThread());
-    return adoptRef(new MutationObserver(callback));
+    return adoptRef(*new MutationObserver(callback));
 }
 
 MutationObserver::MutationObserver(PassRefPtr<MutationCallback> callback)
@@ -118,8 +118,8 @@ void MutationObserver::disconnect()
 {
     m_records.clear();
     HashSet<MutationObserverRegistration*> registrations(m_registrations);
-    for (HashSet<MutationObserverRegistration*>::iterator iter = registrations.begin(); iter != registrations.end(); ++iter)
-        MutationObserverRegistration::unregisterAndDelete(*iter);
+    for (auto* registration : registrations)
+        MutationObserverRegistration::unregisterAndDelete(registration);
 }
 
 void MutationObserver::observationStarted(MutationObserverRegistration* registration)
@@ -138,13 +138,13 @@ typedef HashSet<RefPtr<MutationObserver>> MutationObserverSet;
 
 static MutationObserverSet& activeMutationObservers()
 {
-    DEFINE_STATIC_LOCAL(MutationObserverSet, activeObservers, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(MutationObserverSet, activeObservers, ());
     return activeObservers;
 }
 
 static MutationObserverSet& suspendedMutationObservers()
 {
-    DEFINE_STATIC_LOCAL(MutationObserverSet, suspendedObservers, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(MutationObserverSet, suspendedObservers, ());
     return suspendedObservers;
 }
 
@@ -164,8 +164,8 @@ void MutationObserver::setHasTransientRegistration()
 HashSet<Node*> MutationObserver::getObservedNodes() const
 {
     HashSet<Node*> observedNodes;
-    for (HashSet<MutationObserverRegistration*>::const_iterator iter = m_registrations.begin(); iter != m_registrations.end(); ++iter)
-        (*iter)->addRegistrationNodesToSet(observedNodes);
+    for (auto* registration : m_registrations)
+        registration->addRegistrationNodesToSet(observedNodes);
     return observedNodes;
 }
 
@@ -181,9 +181,9 @@ void MutationObserver::deliver()
     // Calling clearTransientRegistrations() can modify m_registrations, so it's necessary
     // to make a copy of the transient registrations before operating on them.
     Vector<MutationObserverRegistration*, 1> transientRegistrations;
-    for (HashSet<MutationObserverRegistration*>::iterator iter = m_registrations.begin(); iter != m_registrations.end(); ++iter) {
-        if ((*iter)->hasTransientRegistrations())
-            transientRegistrations.append(*iter);
+    for (auto* registration : m_registrations) {
+        if (registration->hasTransientRegistrations())
+            transientRegistrations.append(registration);
     }
     for (size_t i = 0; i < transientRegistrations.size(); ++i)
         transientRegistrations[i]->clearTransientRegistrations();

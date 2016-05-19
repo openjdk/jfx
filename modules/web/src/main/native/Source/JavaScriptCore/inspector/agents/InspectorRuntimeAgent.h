@@ -32,10 +32,8 @@
 #ifndef InspectorRuntimeAgent_h
 #define InspectorRuntimeAgent_h
 
-#if ENABLE(INSPECTOR)
-
-#include "InspectorJSBackendDispatchers.h"
-#include "InspectorJSFrontendDispatchers.h"
+#include "InspectorBackendDispatchers.h"
+#include "InspectorFrontendDispatchers.h"
 #include "inspector/InspectorAgentBase.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -52,20 +50,29 @@ class InspectorArray;
 class ScriptDebugServer;
 typedef String ErrorString;
 
-class JS_EXPORT_PRIVATE InspectorRuntimeAgent : public InspectorAgentBase, public InspectorRuntimeBackendDispatcherHandler {
+class JS_EXPORT_PRIVATE InspectorRuntimeAgent : public InspectorAgentBase, public RuntimeBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorRuntimeAgent);
 public:
     virtual ~InspectorRuntimeAgent();
 
-    virtual void enable(ErrorString*) override { m_enabled = true; }
-    virtual void disable(ErrorString*) override { m_enabled = false; }
-    virtual void parse(ErrorString*, const String& expression, Inspector::TypeBuilder::Runtime::SyntaxErrorType::Enum* result, Inspector::TypeBuilder::OptOutput<String>* message, RefPtr<Inspector::TypeBuilder::Runtime::ErrorRange>&) override final;
-    virtual void evaluate(ErrorString*, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const int* executionContextId, const bool* returnByValue, const bool* generatePreview, RefPtr<Inspector::TypeBuilder::Runtime::RemoteObject>& result, Inspector::TypeBuilder::OptOutput<bool>* wasThrown) override final;
-    virtual void callFunctionOn(ErrorString*, const String& objectId, const String& expression, const RefPtr<Inspector::InspectorArray>* optionalArguments, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, RefPtr<Inspector::TypeBuilder::Runtime::RemoteObject>& result, Inspector::TypeBuilder::OptOutput<bool>* wasThrown) override final;
-    virtual void releaseObject(ErrorString*, const ErrorString& objectId) override final;
-    virtual void getProperties(ErrorString*, const String& objectId, const bool* ownProperties, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Runtime::PropertyDescriptor>>& result, RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Runtime::InternalPropertyDescriptor>>& internalProperties) override final;
-    virtual void releaseObjectGroup(ErrorString*, const String& objectGroup) override final;
-    virtual void run(ErrorString*) override;
+    virtual void willDestroyFrontendAndBackend(DisconnectReason) override;
+
+    virtual void enable(ErrorString&) override { m_enabled = true; }
+    virtual void disable(ErrorString&) override { m_enabled = false; }
+    virtual void parse(ErrorString&, const String& expression, Inspector::Protocol::Runtime::SyntaxErrorType* result, Inspector::Protocol::OptOutput<String>* message, RefPtr<Inspector::Protocol::Runtime::ErrorRange>&) override final;
+    virtual void evaluate(ErrorString&, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const int* executionContextId, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Inspector::Protocol::OptOutput<bool>* wasThrown, Inspector::Protocol::OptOutput<int>* savedResultIndex) override final;
+    virtual void callFunctionOn(ErrorString&, const String& objectId, const String& expression, const Inspector::InspectorArray* optionalArguments, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Inspector::Protocol::OptOutput<bool>* wasThrown) override final;
+    virtual void releaseObject(ErrorString&, const ErrorString& objectId) override final;
+    virtual void getProperties(ErrorString&, const String& objectId, const bool* ownProperties, const bool* generatePreview, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::PropertyDescriptor>>& result, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::InternalPropertyDescriptor>>& internalProperties) override final;
+    virtual void getDisplayableProperties(ErrorString&, const String& objectId, const bool* generatePreview, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::PropertyDescriptor>>& result, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::InternalPropertyDescriptor>>& internalProperties) override final;
+    virtual void getCollectionEntries(ErrorString&, const String& objectId, const String* objectGroup, const int* startIndex, const int* numberToFetch, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::CollectionEntry>>& entries) override final;
+    virtual void saveResult(ErrorString&, const Inspector::InspectorObject& callArgument, const int* executionContextId, Inspector::Protocol::OptOutput<int>* savedResultIndex) override final;
+    virtual void releaseObjectGroup(ErrorString&, const String& objectGroup) override final;
+    virtual void run(ErrorString&) override;
+    virtual void getRuntimeTypesForVariablesAtOffsets(ErrorString&, const Inspector::InspectorArray& locations, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::TypeDescription>>&) override;
+    virtual void enableTypeProfiler(ErrorString&) override;
+    virtual void disableTypeProfiler(ErrorString&) override;
+    virtual void getBasicBlocks(ErrorString&, const String& in_sourceID, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::BasicBlock>>& out_basicBlocks) override;
 
     void setScriptDebugServer(ScriptDebugServer* scriptDebugServer) { m_scriptDebugServer = scriptDebugServer; }
 
@@ -76,19 +83,21 @@ protected:
 
     InjectedScriptManager* injectedScriptManager() { return m_injectedScriptManager; }
 
-    virtual JSC::VM* globalVM() = 0;
-    virtual InjectedScript injectedScriptForEval(ErrorString*, const int* executionContextId) = 0;
+    virtual JSC::VM& globalVM() = 0;
+    virtual InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) = 0;
 
     virtual void muteConsole() = 0;
     virtual void unmuteConsole() = 0;
 
 private:
+    void setTypeProfilerEnabledState(bool);
+
     InjectedScriptManager* m_injectedScriptManager;
     ScriptDebugServer* m_scriptDebugServer;
     bool m_enabled;
+    bool m_isTypeProfilingEnabled;
 };
 
 } // namespace Inspector
 
-#endif // ENABLE(INSPECTOR)
 #endif // InspectorRuntimeAgent_h

@@ -25,9 +25,9 @@
 
 #include "config.h"
 
-#import <WebKit2/WKNavigation.h>
-#import <WebKit2/WKNavigationDelegate.h>
-#import <WebKit2/WKWebView.h>
+#import <WebKit/WKNavigationPrivate.h>
+#import <WebKit/WKNavigationDelegate.h>
+#import <WebKit/WKWebView.h>
 #import <wtf/RetainPtr.h>
 #import "PlatformUtilities.h"
 #import "Test.h"
@@ -45,7 +45,7 @@ static RetainPtr<WKNavigation> currentNavigation;
 - (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation
 {
     EXPECT_EQ(currentNavigation, navigation);
-    EXPECT_NOT_NULL(navigation.request);
+    EXPECT_NOT_NULL(navigation._request);
 }
 
 - (void)webView:(WKWebView *)webView didCommitNavigation:(WKNavigation *)navigation
@@ -53,7 +53,7 @@ static RetainPtr<WKNavigation> currentNavigation;
     EXPECT_EQ(currentNavigation, navigation);
 }
 
-- (void)webView:(WKWebView *)webView didFinishLoadingNavigation:(WKNavigation *)navigation
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
 {
     EXPECT_EQ(currentNavigation, navigation);
 
@@ -88,8 +88,9 @@ TEST(WKNavigation, LoadRequest)
 
     currentNavigation = [webView loadRequest:request];
     ASSERT_NOT_NULL(currentNavigation);
-    ASSERT_TRUE([[currentNavigation request] isEqual:request]);
+    ASSERT_TRUE([[currentNavigation _request] isEqual:request]);
 
+    isDone = false;
     TestWebKitAPI::Util::run(&isDone);
 }
 
@@ -101,18 +102,23 @@ TEST(WKNavigation, LoadRequest)
 - (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation
 {
     EXPECT_EQ(currentNavigation, navigation);
-    EXPECT_NOT_NULL(navigation.request);
+    EXPECT_NOT_NULL(navigation._request);
 }
 
 - (void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error
 {
     EXPECT_EQ(currentNavigation, navigation);
-    EXPECT_NOT_NULL(navigation.request);
+    EXPECT_NOT_NULL(navigation._request);
 
     EXPECT_TRUE([error.domain isEqualToString:NSURLErrorDomain]);
     EXPECT_EQ(NSURLErrorUnsupportedURL, error.code);
 
     isDone = true;
+}
+
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
+{
+    decisionHandler(WKNavigationActionPolicyAllow);
 }
 
 @end
@@ -128,9 +134,57 @@ TEST(WKNavigation, DidFailProvisionalNavigation)
 
     currentNavigation = [webView loadRequest:request];
     ASSERT_NOT_NULL(currentNavigation);
-    ASSERT_TRUE([[currentNavigation request] isEqual:request]);
+    ASSERT_TRUE([[currentNavigation _request] isEqual:request]);
 
+    isDone = false;
     TestWebKitAPI::Util::run(&isDone);
+}
+
+@interface DecidePolicyForPageCacheNavigationDelegate : NSObject <WKNavigationDelegate>
+@property (nonatomic) BOOL decidedPolicyForBackForwardNavigation;
+@end
+
+@implementation DecidePolicyForPageCacheNavigationDelegate
+
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
+{
+    isDone = true;
+}
+
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
+{
+    if (navigationAction.navigationType == WKNavigationTypeBackForward)
+        _decidedPolicyForBackForwardNavigation = YES;
+
+    decisionHandler(WKNavigationActionPolicyAllow);
+}
+
+@end
+
+TEST(WKNavigation, DecidePolicyForPageCacheNavigation)
+{
+    RetainPtr<WKWebView> webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+
+    RetainPtr<DecidePolicyForPageCacheNavigationDelegate> delegate = adoptNS([[DecidePolicyForPageCacheNavigationDelegate alloc] init]);
+    [webView setNavigationDelegate:delegate.get()];
+
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"data:text/html,1"]];
+
+    isDone = false;
+    [webView loadRequest:request];
+    TestWebKitAPI::Util::run(&isDone);
+
+    request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"data:text/html,2"]];
+
+    isDone = false;
+    [webView loadRequest:request];
+    TestWebKitAPI::Util::run(&isDone);
+
+    isDone = false;
+    [webView goBack];
+    TestWebKitAPI::Util::run(&isDone);
+
+    ASSERT_TRUE([delegate decidedPolicyForBackForwardNavigation]);
 }
 
 #endif

@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -111,7 +111,7 @@ static void setDefaultMIMEType(CFURLResponseRef response)
 }
 #endif // !PLATFORM(COCOA)
 
-void SynchronousResourceHandleCFURLConnectionDelegate::didReceiveResponse(CFURLResponseRef cfResponse)
+void SynchronousResourceHandleCFURLConnectionDelegate::didReceiveResponse(CFURLConnectionRef connection, CFURLResponseRef cfResponse)
 {
     LOG(Network, "CFNet - SynchronousResourceHandleCFURLConnectionDelegate::didReceiveResponse(handle=%p) (%s)", m_handle, m_handle->firstRequest().url().string().utf8().data());
 
@@ -144,7 +144,14 @@ void SynchronousResourceHandleCFURLConnectionDelegate::didReceiveResponse(CFURLR
         cfResponse = m_handle->quickLookHandle()->cfResponse();
 #endif
 
-    m_handle->client()->didReceiveResponse(m_handle, cfResponse);
+    ResourceResponse resourceResponse(cfResponse);
+#if PLATFORM(COCOA) && ENABLE(WEB_TIMING)
+    ResourceHandle::getConnectionTimingData(connection, resourceResponse.resourceLoadTiming());
+#else
+    UNUSED_PARAM(connection);
+#endif
+
+    m_handle->client()->didReceiveResponse(m_handle, resourceResponse);
 }
 
 void SynchronousResourceHandleCFURLConnectionDelegate::didReceiveData(CFDataRef data, CFIndex originalLength)
@@ -245,7 +252,7 @@ Boolean SynchronousResourceHandleCFURLConnectionDelegate::canRespondToProtection
     LOG(Network, "CFNet - SynchronousResourceHandleCFURLConnectionDelegate::canRespondToProtectionSpace(handle=%p (%s)", m_handle, m_handle->firstRequest().url().string().utf8().data());
 
 #if PLATFORM(IOS)
-    ProtectionSpace coreProtectionSpace = core(protectionSpace);
+    ProtectionSpace coreProtectionSpace = ProtectionSpace(protectionSpace);
     if (coreProtectionSpace.authenticationScheme() == ProtectionSpaceAuthenticationSchemeUnknown)
         return false;
     return m_handle->canAuthenticateAgainstProtectionSpace(coreProtectionSpace);
@@ -268,7 +275,8 @@ void SynchronousResourceHandleCFURLConnectionDelegate::didReceiveDataArray(CFArr
         return;
 #endif
 
-    m_handle->handleDataArray(dataArray);
+    if (ResourceHandleClient* client = m_handle->client())
+        client->didReceiveBuffer(m_handle, SharedBuffer::wrapCFDataArray(dataArray), -1);
 }
 #endif // USE(NETWORK_CFDATA_ARRAY_CALLBACK)
 
@@ -278,11 +286,6 @@ void SynchronousResourceHandleCFURLConnectionDelegate::continueWillSendRequest(C
 }
 
 void SynchronousResourceHandleCFURLConnectionDelegate::continueDidReceiveResponse()
-{
-    ASSERT_NOT_REACHED();
-}
-
-void SynchronousResourceHandleCFURLConnectionDelegate::continueShouldUseCredentialStorage(bool)
 {
     ASSERT_NOT_REACHED();
 }

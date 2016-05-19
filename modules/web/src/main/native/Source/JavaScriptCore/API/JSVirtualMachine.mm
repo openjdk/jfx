@@ -30,7 +30,6 @@
 #if JSC_OBJC_API_ENABLED
 
 #import "APICast.h"
-#import "APIShims.h"
 #import "JSManagedValueInternal.h"
 #import "JSVirtualMachine.h"
 #import "JSVirtualMachineInternal.h"
@@ -38,6 +37,7 @@
 #import "SlotVisitorInlines.h"
 #import <mutex>
 #import <wtf/NeverDestroyed.h>
+#import <wtf/spi/cocoa/NSMapTableSPI.h>
 
 static NSMapTable *globalWrapperCache = 0;
 
@@ -88,6 +88,7 @@ static NSMapTable *wrapperCache()
     JSContextGroupRef m_group;
     NSMapTable *m_contextCache;
     NSMapTable *m_externalObjectGraph;
+    NSMapTable *m_externalRememberedSet;
 }
 
 - (instancetype)init
@@ -115,6 +116,9 @@ static NSMapTable *wrapperCache()
     NSPointerFunctionsOptions strongIDOptions = NSPointerFunctionsStrongMemory | NSPointerFunctionsObjectPersonality;
     m_externalObjectGraph = [[NSMapTable alloc] initWithKeyOptions:weakIDOptions valueOptions:strongIDOptions capacity:0];
 
+    NSPointerFunctionsOptions integerOptions = NSPointerFunctionsOpaqueMemory | NSPointerFunctionsIntegerPersonality;
+    m_externalRememberedSet = [[NSMapTable alloc] initWithKeyOptions:weakIDOptions valueOptions:integerOptions capacity:0];
+
     [JSVMWrapperCache addWrapper:self forJSContextGroupRef:group];
 
     return self;
@@ -125,6 +129,7 @@ static NSMapTable *wrapperCache()
     JSContextGroupRelease(m_group);
     [m_contextCache release];
     [m_externalObjectGraph release];
+    [m_externalRememberedSet release];
     [super dealloc];
 }
 
@@ -146,6 +151,18 @@ static id getInternalObjcObject(id object)
     return object;
 }
 
+- (bool)isOldExternalObject:(id)object
+{
+    JSC::VM* vm = toJS(m_group);
+    return vm->heap.slotVisitor().containsOpaqueRoot(object);
+}
+
+- (void)addExternalRememberedObject:(id)object
+{
+    ASSERT([self isOldExternalObject:object]);
+    [m_externalRememberedSet setObject:[NSNumber numberWithBool:true] forKey:object];
+}
+
 - (void)addManagedReference:(id)object withOwner:(id)owner
 {
     if ([object isKindOfClass:[JSManagedValue class]])
@@ -157,7 +174,9 @@ static id getInternalObjcObject(id object)
     if (!object || !owner)
         return;
 
-    JSC::APIEntryShim shim(toJS(m_group));
+    JSC::JSLockHolder locker(toJS(m_group));
+    if ([self isOldExternalObject:owner] && ![self isOldExternalObject:object])
+        [self addExternalRememberedObject:owner];
 
     NSMapTable *ownedObjects = [m_externalObjectGraph objectForKey:owner];
     if (!ownedObjects) {
@@ -184,7 +203,7 @@ static id getInternalObjcObject(id object)
     if (!object || !owner)
         return;
 
-    JSC::APIEntryShim shim(toJS(m_group));
+    JSC::JSLockHolder locker(toJS(m_group));
 
     NSMapTable *ownedObjects = [m_externalObjectGraph objectForKey:owner];
     if (!ownedObjects)
@@ -199,8 +218,10 @@ static id getInternalObjcObject(id object)
     if (count == 1)
         NSMapRemove(ownedObjects, object);
 
-    if (![ownedObjects count])
+    if (![ownedObjects count]) {
         [m_externalObjectGraph removeObjectForKey:owner];
+        [m_externalRememberedSet removeObjectForKey:owner];
+    }
 }
 
 @end
@@ -235,6 +256,11 @@ JSContextGroupRef getGroupFromVirtualMachine(JSVirtualMachine *virtualMachine)
     return m_externalObjectGraph;
 }
 
+- (NSMapTable *)externalRememberedSet
+{
+    return m_externalRememberedSet;
+}
+
 @end
 
 void scanExternalObjectGraph(JSC::VM& vm, JSC::SlotVisitor& visitor, void* root)
@@ -254,15 +280,27 @@ void scanExternalObjectGraph(JSC::VM& vm, JSC::SlotVisitor& visitor, void* root)
             visitor.addOpaqueRoot(nextRoot);
 
             NSMapTable *ownedObjects = [externalObjectGraph objectForKey:static_cast<id>(nextRoot)];
-            id ownedObject;
-            NSEnumerator *enumerator = [ownedObjects keyEnumerator];
-            while ((ownedObject = [enumerator nextObject])) {
-                ASSERT(reinterpret_cast<size_t>(NSMapGet(ownedObjects, ownedObject)) == 1);
+            for (id ownedObject in ownedObjects)
                 stack.append(static_cast<void*>(ownedObject));
-            }
         }
     }
 }
 
-#endif
+void scanExternalRememberedSet(JSC::VM& vm, JSC::SlotVisitor& visitor)
+{
+    @autoreleasepool {
+        JSVirtualMachine *virtualMachine = [JSVMWrapperCache wrapperForJSContextGroupRef:toRef(&vm)];
+        if (!virtualMachine)
+            return;
+        NSMapTable *externalObjectGraph = [virtualMachine externalObjectGraph];
+        NSMapTable *externalRememberedSet = [virtualMachine externalRememberedSet];
+        for (id key in externalRememberedSet) {
+            NSMapTable *ownedObjects = [externalObjectGraph objectForKey:key];
+            for (id ownedObject in ownedObjects)
+                scanExternalObjectGraph(vm, visitor, ownedObject);
+        }
+        [externalRememberedSet removeAllObjects];
+    }
+}
 
+#endif // JSC_OBJC_API_ENABLED

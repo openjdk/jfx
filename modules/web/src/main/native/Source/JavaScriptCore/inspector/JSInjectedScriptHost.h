@@ -26,9 +26,11 @@
 #ifndef JSInjectedScriptHost_h
 #define JSInjectedScriptHost_h
 
-#if ENABLE(INSPECTOR)
-
 #include "JSDestructibleObject.h"
+
+namespace JSC {
+class WeakMapData;
+}
 
 namespace Inspector {
 
@@ -37,6 +39,7 @@ class InjectedScriptHost;
 class JSInjectedScriptHost : public JSC::JSDestructibleObject {
 public:
     typedef JSC::JSDestructibleObject Base;
+    static const unsigned StructureFlags = Base::StructureFlags;
 
     DECLARE_INFO;
 
@@ -64,13 +67,16 @@ public:
     // Functions.
     JSC::JSValue internalConstructorName(JSC::ExecState*);
     JSC::JSValue isHTMLAllCollection(JSC::ExecState*);
-    JSC::JSValue type(JSC::ExecState*);
+    JSC::JSValue subtype(JSC::ExecState*);
     JSC::JSValue functionDetails(JSC::ExecState*);
     JSC::JSValue getInternalProperties(JSC::ExecState*);
+    JSC::JSValue weakMapSize(JSC::ExecState*);
+    JSC::JSValue weakMapEntries(JSC::ExecState*);
+    JSC::JSValue weakSetSize(JSC::ExecState*);
+    JSC::JSValue weakSetEntries(JSC::ExecState*);
+    JSC::JSValue iteratorEntries(JSC::ExecState*);
 
 protected:
-    static const unsigned StructureFlags = Base::StructureFlags;
-
     void finishCreation(JSC::VM&);
 
 private:
@@ -84,7 +90,5 @@ JSC::JSValue toJS(JSC::ExecState*, JSC::JSGlobalObject*, InjectedScriptHost*);
 JSInjectedScriptHost* toJSInjectedScriptHost(JSC::JSValue);
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(JSInjectedScriptHost_h)

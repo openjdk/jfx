@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,6 +30,7 @@
 
 #include "TextTrack.h"
 #include "TextTrackLoader.h"
+#include <wtf/TypeCasts.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -37,11 +38,11 @@ namespace WebCore {
 class HTMLTrackElement;
 class LoadableTextTrack;
 
-class LoadableTextTrack : public TextTrack, private TextTrackLoaderClient {
+class LoadableTextTrack final : public TextTrack, private TextTrackLoaderClient {
 public:
-    static PassRefPtr<LoadableTextTrack> create(HTMLTrackElement* track, const String& kind, const String& label, const String& language)
+    static Ref<LoadableTextTrack> create(HTMLTrackElement* track, const String& kind, const String& label, const String& language)
     {
-        return adoptRef(new LoadableTextTrack(track, kind, label, language));
+        return adoptRef(*new LoadableTextTrack(track, kind, label, language));
     }
     virtual ~LoadableTextTrack();
 
@@ -64,20 +65,25 @@ private:
     virtual void newCuesAvailable(TextTrackLoader*) override;
     virtual void cueLoadingCompleted(TextTrackLoader*, bool loadingFailed) override;
 #if ENABLE(WEBVTT_REGIONS)
-    virtual void newRegionsAvailable(TextTrackLoader*);
+    virtual void newRegionsAvailable(TextTrackLoader*) override;
 #endif
 
     LoadableTextTrack(HTMLTrackElement*, const String& kind, const String& label, const String& language);
 
-    void loadTimerFired(Timer<LoadableTextTrack>&);
+    void loadTimerFired();
 
     HTMLTrackElement* m_trackElement;
-    Timer<LoadableTextTrack> m_loadTimer;
-    OwnPtr<TextTrackLoader> m_loader;
+    Timer m_loadTimer;
+    std::unique_ptr<TextTrackLoader> m_loader;
     URL m_url;
     bool m_isDefault;
 };
 } // namespace WebCore
 
-#endif
-#endif
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LoadableTextTrack)
+    static bool isType(const WebCore::TextTrack& track) { return track.trackType() == WebCore::TextTrack::TrackElement; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // ENABLE(VIDEO_TRACK)
+
+#endif // LoadableTextTrack_h

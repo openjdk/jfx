@@ -26,8 +26,7 @@
 
 #include "Document.h"
 #include "ElementIterator.h"
-#include "Font.h"
-#include "GlyphPageTreeNode.h"
+#include "FontCascade.h"
 #include "SVGGlyphElement.h"
 #include "SVGHKernElement.h"
 #include "SVGMissingGlyphElement.h"
@@ -54,9 +53,9 @@ inline SVGFontElement::SVGFontElement(const QualifiedName& tagName, Document& do
     registerAnimatedPropertiesForSVGFontElement();
 }
 
-PassRefPtr<SVGFontElement> SVGFontElement::create(const QualifiedName& tagName, Document& document)
+Ref<SVGFontElement> SVGFontElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new SVGFontElement(tagName, document));
+    return adoptRef(*new SVGFontElement(tagName, document));
 }
 
 void SVGFontElement::invalidateGlyphCache()
@@ -87,16 +86,13 @@ void SVGFontElement::registerLigaturesInGlyphCache(Vector<String>& ligatures)
     // will not be able to find a glyph for "f", but handles the fallback
     // character substitution properly through glyphDataForCharacter().
     Vector<SVGGlyph> glyphs;
-    size_t ligaturesSize = ligatures.size();
-    for (size_t i = 0; i < ligaturesSize; ++i) {
-        const String& unicode = ligatures[i];
-
+    for (auto& unicode : ligatures) {
         unsigned unicodeLength = unicode.length();
         ASSERT(unicodeLength > 1);
 
-        const UChar* characters = unicode.deprecatedCharacters();
         for (unsigned i = 0; i < unicodeLength; ++i) {
-            String lookupString(characters + i, 1);
+            UChar character = unicode[i];
+            String lookupString(&character, 1);
             m_glyphMap.collectGlyphsForString(lookupString, glyphs);
             if (!glyphs.isEmpty()) {
                 glyphs.clear();
@@ -119,8 +115,8 @@ void SVGFontElement::ensureGlyphCache()
     const SVGMissingGlyphElement* firstMissingGlyphElement = nullptr;
     Vector<String> ligatures;
     for (auto& child : childrenOfType<SVGElement>(*this)) {
-        if (isSVGGlyphElement(child)) {
-            SVGGlyphElement& glyph = toSVGGlyphElement(child);
+        if (is<SVGGlyphElement>(child)) {
+            SVGGlyphElement& glyph = downcast<SVGGlyphElement>(child);
             AtomicString unicode = glyph.fastGetAttribute(SVGNames::unicodeAttr);
             AtomicString glyphId = glyph.getIdAttribute();
             if (glyphId.isEmpty() && unicode.isEmpty())
@@ -131,14 +127,18 @@ void SVGFontElement::ensureGlyphCache()
             // Register ligatures, if needed, don't mix up with surrogate pairs though!
             if (unicode.length() > 1 && !U16_IS_SURROGATE(unicode[0]))
                 ligatures.append(unicode.string());
-        } else if (isSVGHKernElement(child)) {
-            SVGHKernElement& hkern = toSVGHKernElement(child);
-            hkern.buildHorizontalKerningPair(m_horizontalKerningMap);
-        } else if (isSVGVKernElement(child)) {
-            SVGVKernElement& vkern = toSVGVKernElement(child);
-            vkern.buildVerticalKerningPair(m_verticalKerningMap);
-        } else if (isSVGMissingGlyphElement(child) && !firstMissingGlyphElement)
-            firstMissingGlyphElement = &toSVGMissingGlyphElement(child);
+        } else if (is<SVGHKernElement>(child)) {
+            SVGHKernElement& hkern = downcast<SVGHKernElement>(child);
+            SVGKerningPair kerningPair;
+            if (hkern.buildHorizontalKerningPair(kerningPair))
+                m_horizontalKerningMap.insert(kerningPair);
+        } else if (is<SVGVKernElement>(child)) {
+            SVGVKernElement& vkern = downcast<SVGVKernElement>(child);
+            SVGKerningPair kerningPair;
+            if (vkern.buildVerticalKerningPair(kerningPair))
+                m_verticalKerningMap.insert(kerningPair);
+        } else if (is<SVGMissingGlyphElement>(child) && !firstMissingGlyphElement)
+            firstMissingGlyphElement = &downcast<SVGMissingGlyphElement>(child);
     }
 
     // Register each character of each ligature, if needed.
@@ -171,27 +171,23 @@ void SVGKerningMap::insert(const SVGKerningPair& kerningPair)
     svgKerning.unicodeName2 = kerningPair.unicodeName2;
     svgKerning.glyphName2 = kerningPair.glyphName2;
 
-    HashSet<String>::const_iterator uIt = kerningPair.unicodeName1.begin();
-    const HashSet<String>::const_iterator uEnd = kerningPair.unicodeName1.end();
-    for (; uIt != uEnd; ++uIt) {
-        if (unicodeMap.contains(*uIt))
-            unicodeMap.get(*uIt)->append(svgKerning);
+    for (auto& name : kerningPair.unicodeName1) {
+        if (unicodeMap.contains(name))
+            unicodeMap.get(name)->append(svgKerning);
         else {
             auto newVector = std::make_unique<SVGKerningVector>();
             newVector->append(svgKerning);
-            unicodeMap.add(*uIt, std::move(newVector));
+            unicodeMap.add(name, WTF::move(newVector));
         }
     }
 
-    HashSet<String>::const_iterator gIt = kerningPair.glyphName1.begin();
-    const HashSet<String>::const_iterator gEnd = kerningPair.glyphName1.end();
-    for (; gIt != gEnd; ++gIt) {
-        if (glyphMap.contains(*gIt))
-            glyphMap.get(*gIt)->append(svgKerning);
+    for (auto& name : kerningPair.glyphName1) {
+        if (glyphMap.contains(name))
+            glyphMap.get(name)->append(svgKerning);
         else {
             auto newVector = std::make_unique<SVGKerningVector>();
             newVector->append(svgKerning);
-            glyphMap.add(*gIt, std::move(newVector));
+            glyphMap.add(name, WTF::move(newVector));
         }
     }
 
@@ -206,9 +202,8 @@ static inline bool stringMatchesUnicodeRange(const String& unicodeString, const 
 
     if (!ranges.isEmpty()) {
         UChar firstChar = unicodeString[0];
-        const UnicodeRanges::const_iterator end = ranges.end();
-        for (UnicodeRanges::const_iterator it = ranges.begin(); it != end; ++it) {
-            if (firstChar >= it->first && firstChar <= it->second)
+        for (auto& range : ranges) {
+            if (firstChar >= range.first && firstChar <= range.second)
                 return true;
         }
     }

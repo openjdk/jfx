@@ -44,14 +44,14 @@ class UserMediaClient {
 public:
     virtual void pageDestroyed() = 0;
 
-    virtual void requestPermission(PassRefPtr<UserMediaRequest>) = 0;
-    virtual void cancelRequest(UserMediaRequest*) = 0;
+    virtual void requestPermission(Ref<UserMediaRequest>&&) = 0;
+    virtual void cancelRequest(UserMediaRequest&) = 0;
 
 protected:
     virtual ~UserMediaClient() { }
 };
 
-void provideUserMediaTo(Page*, UserMediaClient*);
+WEBCORE_EXPORT void provideUserMediaTo(Page*, UserMediaClient*);
 
 } // namespace WebCore
 

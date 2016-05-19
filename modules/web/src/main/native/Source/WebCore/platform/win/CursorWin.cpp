@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -32,9 +32,6 @@
 #include "Image.h"
 #include "IntPoint.h"
 #include "SystemInfo.h"
-
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/win/GDIObject.h>
 
 #include <windows.h>
@@ -54,8 +51,9 @@ static PassRefPtr<SharedCursor> createSharedCursor(Image* img, const IntPoint& h
     HWndDC dc(0);
     auto workingDC = adoptGDIObject(::CreateCompatibleDC(dc));
     if (doAlpha) {
-        auto hCursor = adoptGDIObject(::CreateDIBSection(dc, (BITMAPINFO *)&cursorImage, DIB_RGB_COLORS, 0, 0, 0));
-        ASSERT(hCursor);
+        auto hCursor = adoptGDIObject(::CreateDIBSection(dc, &cursorImage, DIB_RGB_COLORS, nullptr, 0, 0));
+        if (!hCursor)
+            return nullptr;
 
         img->getHBITMAP(hCursor.get());
         HBITMAP hOldBitmap = (HBITMAP)SelectObject(workingDC.get(), hCursor.get());
@@ -79,8 +77,10 @@ static PassRefPtr<SharedCursor> createSharedCursor(Image* img, const IntPoint& h
         // to create the mask manually
         auto andMaskDC = adoptGDIObject(::CreateCompatibleDC(dc));
         auto xorMaskDC = adoptGDIObject(::CreateCompatibleDC(dc));
-        auto hCursor = adoptGDIObject(::CreateDIBSection(dc, &cursorImage, DIB_RGB_COLORS, 0, 0, 0));
-        ASSERT(hCursor);
+        auto hCursor = adoptGDIObject(::CreateDIBSection(dc, &cursorImage, DIB_RGB_COLORS, nullptr, 0, 0));
+        if (!hCursor)
+            return nullptr;
+
         img->getHBITMAP(hCursor.get());
         BITMAP cursor;
         GetObject(hCursor.get(), sizeof(BITMAP), &cursor);
@@ -251,6 +251,8 @@ void Cursor::ensurePlatformCursor() const
         break;
     case Cursor::Custom:
         m_platformCursor = createSharedCursor(m_image.get(), m_hotSpot);
+        if (!m_platformCursor)
+            m_platformCursor = loadSharedCursor(0, IDC_ARROW);
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -268,6 +270,9 @@ Cursor::Cursor(const Cursor& other)
     : m_type(other.m_type)
     , m_image(other.m_image)
     , m_hotSpot(other.m_hotSpot)
+#if ENABLE(MOUSE_CURSOR_SCALE)
+    , m_imageScaleFactor(other.m_imageScaleFactor)
+#endif
     , m_platformCursor(other.m_platformCursor)
 {
 }
@@ -277,6 +282,9 @@ Cursor& Cursor::operator=(const Cursor& other)
     m_type = other.m_type;
     m_image = other.m_image;
     m_hotSpot = other.m_hotSpot;
+#if ENABLE(MOUSE_CURSOR_SCALE)
+    m_imageScaleFactor = other.m_imageScaleFactor;
+#endif
     m_platformCursor = other.m_platformCursor;
     return *this;
 }

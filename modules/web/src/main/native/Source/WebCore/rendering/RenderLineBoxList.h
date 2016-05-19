@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,8 +40,8 @@ class RenderBlockFlow;
 class RenderLineBoxList {
 public:
     RenderLineBoxList()
-        : m_firstLineBox(0)
-        , m_lastLineBox(0)
+        : m_firstLineBox(nullptr)
+        , m_lastLineBox(nullptr)
     {
     }
 
@@ -64,7 +64,7 @@ public:
     void removeLineBox(InlineFlowBox*);
 
     void dirtyLineBoxes();
-    void dirtyLinesFromChangedChild(RenderBoxModelObject* parent, RenderObject* child);
+    void dirtyLinesFromChangedChild(RenderBoxModelObject& parent, RenderObject& child);
 
     void paint(RenderBoxModelObject*, PaintInfo&, const LayoutPoint&) const;
     bool hitTest(RenderBoxModelObject*, const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) const;

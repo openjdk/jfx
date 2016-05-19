@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2004 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -248,7 +248,7 @@ int main(int argc, char **argv)
 
         MyFirstInterface *myInterface = [[MyFirstInterface alloc] init];
 
-        global.put(exec, Identifier("myInterface"), Instance::createRuntimeObject(Instance::ObjectiveCLanguage, (void *)myInterface));
+        global.put(exec, Identifier::fromString(exec, "myInterface"), Instance::createRuntimeObject(Instance::ObjectiveCLanguage, (void *)myInterface));
 
         for (int i = 1; i < argc; i++) {
             const char *code = readJavaScriptFromFile(argv[i]);
@@ -262,7 +262,7 @@ int main(int argc, char **argv)
                     char *msg = exVal.toString(exec).ascii();
                     int lineno = -1;
                     if (exVal.type() == ObjectType) {
-                        Value lineVal = Object::dynamicCast(exVal).get(exec,Identifier("line"));
+                        Value lineVal = Object::dynamicCast(exVal).get(exec, Identifier::fromString(exec, "line"));
                         if (lineVal.type() == NumberType)
                             lineno = int(lineVal.toNumber(exec));
                     }

@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,6 +32,7 @@
 #import "DOMElementInternal.h"
 #import "DOMNodeInternal.h"
 #import "DOMRangeInternal.h"
+#import "DOMWheelEventInternal.h"
 #import "WebArchiveInternal.h"
 #import "WebDataSourcePrivate.h"
 #import "WebFrameInternal.h"
@@ -46,14 +47,16 @@
 #import <WebCore/HTMLParserIdioms.h>
 #import <WebCore/JSElement.h>
 #import <WebCore/LegacyWebArchive.h>
-#import <WebCore/markup.h>
+#import <WebCore/PlatformWheelEvent.h>
 #import <WebCore/RenderElement.h>
 #import <WebCore/RenderTreeAsText.h>
 #import <WebCore/ShadowRoot.h>
-#import <WebKit/DOMExtensions.h>
-#import <WebKit/DOMHTML.h>
-#import <runtime/JSLock.h>
+#import <WebCore/WheelEvent.h>
+#import <WebCore/markup.h>
+#import <WebKitLegacy/DOMExtensions.h>
+#import <WebKitLegacy/DOMHTML.h>
 #import <runtime/JSCJSValue.h>
+#import <runtime/JSLock.h>
 #import <wtf/Assertions.h>
 
 using namespace WebCore;
@@ -71,7 +74,7 @@ using namespace JSC;
 
     ExecState* exec = toJS(context);
     JSLockHolder lock(exec);
-    return kit(toElement(toJS(exec, value)));
+    return kit(JSElement::toWrapped(toJS(exec, value)));
 }
 
 @end
@@ -211,7 +214,7 @@ using namespace JSC;
 
 - (void)_setAutofilled:(BOOL)autofilled
 {
-    toHTMLInputElement(core((DOMElement *)self))->setAutofilled(autofilled);
+    downcast<HTMLInputElement>(core((DOMElement *)self))->setAutoFilled(autofilled);
 }
 
 @end
@@ -224,3 +227,38 @@ using namespace JSC;
 }
 
 @end
+
+#if !PLATFORM(IOS)
+static NSEventPhase toNSEventPhase(PlatformWheelEventPhase platformPhase)
+{
+    uint32_t phase = PlatformWheelEventPhaseNone;
+    if (platformPhase & PlatformWheelEventPhaseBegan)
+        phase |= NSEventPhaseBegan;
+    if (platformPhase & PlatformWheelEventPhaseStationary)
+        phase |= NSEventPhaseStationary;
+    if (platformPhase & PlatformWheelEventPhaseChanged)
+        phase |= NSEventPhaseChanged;
+    if (platformPhase & PlatformWheelEventPhaseEnded)
+        phase |= NSEventPhaseEnded;
+    if (platformPhase & PlatformWheelEventPhaseCancelled)
+        phase |= NSEventPhaseCancelled;
+    if (platformPhase & PlatformWheelEventPhaseMayBegin)
+        phase |= NSEventPhaseMayBegin;
+
+    return static_cast<NSEventPhase>(phase);
+}
+
+@implementation DOMWheelEvent (WebDOMWheelEventOperationsPrivate)
+
+- (NSEventPhase)_phase
+{
+    return toNSEventPhase(core(self)->phase());
+}
+
+- (NSEventPhase)_momentumPhase
+{
+    return toNSEventPhase(core(self)->momentumPhase());
+}
+
+@end
+#endif

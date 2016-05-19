@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -28,8 +28,8 @@
 #include "EventHandler.h"
 
 #include "COMPtr.h"
-#include "Clipboard.h"
 #include "Cursor.h"
+#include "DataTransfer.h"
 #include "FloatPoint.h"
 #include "FocusController.h"
 #include "FrameView.h"
@@ -73,12 +73,12 @@ bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&
     return true;
 }
 
-bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, Widget* widget)
+bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, Widget& widget)
 {
-    if (!widget->isFrameView())
+    if (!is<FrameView>(widget))
         return false;
 
-    return toFrameView(widget)->frame().eventHandler().handleWheelEvent(wheelEvent);
+    return downcast<FrameView>(widget).frame().eventHandler().handleWheelEvent(wheelEvent);
 }
 
 bool EventHandler::tabsToAllFormControls(KeyboardEvent*) const
@@ -92,13 +92,9 @@ bool EventHandler::eventActivatedView(const PlatformMouseEvent& event) const
 }
 
 #if ENABLE(DRAG_SUPPORT)
-PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
+PassRefPtr<DataTransfer> EventHandler::createDraggingDataTransfer() const
 {
-#if OS(WINCE)
-    return 0;
-#else
-    return Clipboard::createForDragAndDrop();
-#endif
+    return DataTransfer::createForDragAndDrop();
 }
 #endif
 

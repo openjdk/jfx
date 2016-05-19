@@ -21,7 +21,7 @@
 #ifndef JSTestCallback_h
 #define JSTestCallback_h
 
-#if ENABLE(SQL_DATABASE)
+#if ENABLE(SPEECH_SYNTHESIS)
 
 #include "ActiveDOMCallback.h"
 #include "JSCallbackData.h"
@@ -32,9 +32,9 @@ namespace WebCore {
 
 class JSTestCallback : public TestCallback, public ActiveDOMCallback {
 public:
-    static PassRefPtr<JSTestCallback> create(JSC::JSObject* callback, JSDOMGlobalObject* globalObject)
+    static Ref<JSTestCallback> create(JSC::JSObject* callback, JSDOMGlobalObject* globalObject)
     {
-        return adoptRef(new JSTestCallback(callback, globalObject));
+        return adoptRef(*new JSTestCallback(callback, globalObject));
     }
 
     virtual ScriptExecutionContext* scriptExecutionContext() const { return ContextDestructionObserver::scriptExecutionContext(); }
@@ -59,6 +59,6 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SQL_DATABASE)
+#endif // ENABLE(SPEECH_SYNTHESIS)
 
 #endif

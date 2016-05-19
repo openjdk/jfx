@@ -26,6 +26,7 @@
 #include "SVGPathBuilder.h"
 #include "SVGPathByteStreamBuilder.h"
 #include "SVGPathByteStreamSource.h"
+#include "SVGPathConsumer.h"
 #include "SVGPathElement.h"
 #include "SVGPathParser.h"
 #include "SVGPathSegListBuilder.h"
@@ -38,7 +39,7 @@ namespace WebCore {
 
 static SVGPathBuilder* globalSVGPathBuilder(Path& result)
 {
-    static SVGPathBuilder* s_builder = 0;
+    static SVGPathBuilder* s_builder = nullptr;
     if (!s_builder)
         s_builder = new SVGPathBuilder;
 
@@ -48,7 +49,7 @@ static SVGPathBuilder* globalSVGPathBuilder(Path& result)
 
 static SVGPathSegListBuilder* globalSVGPathSegListBuilder(SVGPathElement* element, SVGPathSegRole role, SVGPathSegList& result)
 {
-    static SVGPathSegListBuilder* s_builder = 0;
+    static SVGPathSegListBuilder* s_builder = nullptr;
     if (!s_builder)
         s_builder = new SVGPathSegListBuilder;
 
@@ -60,7 +61,7 @@ static SVGPathSegListBuilder* globalSVGPathSegListBuilder(SVGPathElement* elemen
 
 static SVGPathByteStreamBuilder* globalSVGPathByteStreamBuilder(SVGPathByteStream* result)
 {
-    static SVGPathByteStreamBuilder* s_builder = 0;
+    static SVGPathByteStreamBuilder* s_builder = nullptr;
     if (!s_builder)
         s_builder = new SVGPathByteStreamBuilder;
 
@@ -70,7 +71,7 @@ static SVGPathByteStreamBuilder* globalSVGPathByteStreamBuilder(SVGPathByteStrea
 
 static SVGPathStringBuilder* globalSVGPathStringBuilder()
 {
-    static SVGPathStringBuilder* s_builder = 0;
+    static SVGPathStringBuilder* s_builder = nullptr;
     if (!s_builder)
         s_builder = new SVGPathStringBuilder;
 
@@ -79,7 +80,7 @@ static SVGPathStringBuilder* globalSVGPathStringBuilder()
 
 static SVGPathTraversalStateBuilder* globalSVGPathTraversalStateBuilder(PathTraversalState& traversalState, float length)
 {
-    static SVGPathTraversalStateBuilder* s_builder = 0;
+    static SVGPathTraversalStateBuilder* s_builder = nullptr;
     if (!s_builder)
         s_builder = new SVGPathTraversalStateBuilder;
 
@@ -90,7 +91,7 @@ static SVGPathTraversalStateBuilder* globalSVGPathTraversalStateBuilder(PathTrav
 
 static SVGPathParser* globalSVGPathParser(SVGPathSource* source, SVGPathConsumer* consumer)
 {
-    static SVGPathParser* s_parser = 0;
+    static SVGPathParser* s_parser = nullptr;
     if (!s_parser)
         s_parser = new SVGPathParser;
 
@@ -101,7 +102,7 @@ static SVGPathParser* globalSVGPathParser(SVGPathSource* source, SVGPathConsumer
 
 static SVGPathBlender* globalSVGPathBlender()
 {
-    static SVGPathBlender* s_blender = 0;
+    static SVGPathBlender* s_blender = nullptr;
     if (!s_blender)
         s_blender = new SVGPathBlender;
 
@@ -155,7 +156,7 @@ bool appendSVGPathByteStreamFromSVGPathSeg(PassRefPtr<SVGPathSeg> pathSeg, SVGPa
     parser->cleanup();
 
     if (ok)
-        result->append(appendedByteStream.get());
+        result->append(*appendedByteStream);
 
     return ok;
 }
@@ -285,7 +286,7 @@ bool getSVGPathSegAtLengthFromSVGPathByteStream(SVGPathByteStream* stream, float
     if (stream->isEmpty())
         return false;
 
-    PathTraversalState traversalState(PathTraversalState::TraversalSegmentAtLength);
+    PathTraversalState traversalState(PathTraversalState::Action::SegmentAtLength);
     SVGPathTraversalStateBuilder* builder = globalSVGPathTraversalStateBuilder(traversalState, length);
 
     auto source = std::make_unique<SVGPathByteStreamSource>(stream);
@@ -302,7 +303,7 @@ bool getTotalLengthOfSVGPathByteStream(SVGPathByteStream* stream, float& totalLe
     if (stream->isEmpty())
         return false;
 
-    PathTraversalState traversalState(PathTraversalState::TraversalTotalLength);
+    PathTraversalState traversalState(PathTraversalState::Action::TotalLength);
     SVGPathTraversalStateBuilder* builder = globalSVGPathTraversalStateBuilder(traversalState, 0);
 
     auto source = std::make_unique<SVGPathByteStreamSource>(stream);
@@ -319,7 +320,7 @@ bool getPointAtLengthOfSVGPathByteStream(SVGPathByteStream* stream, float length
     if (stream->isEmpty())
         return false;
 
-    PathTraversalState traversalState(PathTraversalState::TraversalPointAtLength);
+    PathTraversalState traversalState(PathTraversalState::Action::VectorAtLength);
     SVGPathTraversalStateBuilder* builder = globalSVGPathTraversalStateBuilder(traversalState, length);
 
     auto source = std::make_unique<SVGPathByteStreamSource>(stream);
@@ -328,6 +329,46 @@ bool getPointAtLengthOfSVGPathByteStream(SVGPathByteStream* stream, float length
     point = builder->currentPoint();
     parser->cleanup();
     return ok;
+}
+
+static void pathIteratorForBuildingString(void* info, const PathElement* pathElement)
+{
+    SVGPathConsumer* consumer = static_cast<SVGPathConsumer*>(info);
+
+    switch (pathElement->type) {
+    case PathElementMoveToPoint:
+        consumer->moveTo(pathElement->points[0], false, AbsoluteCoordinates);
+        break;
+    case PathElementAddLineToPoint:
+        consumer->lineTo(pathElement->points[0], AbsoluteCoordinates);
+        break;
+    case PathElementAddQuadCurveToPoint:
+        consumer->curveToQuadratic(pathElement->points[0], pathElement->points[1], AbsoluteCoordinates);
+        break;
+    case PathElementAddCurveToPoint:
+        consumer->curveToCubic(pathElement->points[0], pathElement->points[1], pathElement->points[2], AbsoluteCoordinates);
+        break;
+    case PathElementCloseSubpath:
+        consumer->closePath();
+        break;
+
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+}
+
+bool buildStringFromPath(const Path& path, String& string)
+{
+    // Ideally we would have a SVGPathPlatformPathSource, but it's not possible to manually iterate
+    // a path, only apply a function to all path elements at once.
+
+    SVGPathStringBuilder* builder = globalSVGPathStringBuilder();
+    path.apply(builder, &pathIteratorForBuildingString);
+    string = builder->result();
+    static_cast<SVGPathConsumer*>(builder)->cleanup();
+
+    return true;
 }
 
 }

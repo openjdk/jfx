@@ -33,20 +33,12 @@
 
 #include "CSSParserValues.h"
 #include "CSSPrimitiveValue.h"
-#include "CSSValue.h"
 #include "CalculationValue.h"
-#include <memory>
-#include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-class CSSParserValueList;
-class CSSValueList;
-class CalculationValue;
-class CalcExpressionNode;
+class CSSToLengthConversionData;
 class RenderStyle;
-struct Length;
 
 enum CalculationCategory {
     CalcNumber = 0,
@@ -54,6 +46,9 @@ enum CalculationCategory {
     CalcPercent,
     CalcPercentNumber,
     CalcPercentLength,
+    CalcAngle,
+    CalcTime,
+    CalcFrequency,
     CalcOther
 };
 
@@ -64,17 +59,17 @@ public:
         CssCalcBinaryOperation
     };
 
-    virtual ~CSSCalcExpressionNode() = 0;
+    virtual ~CSSCalcExpressionNode() { }
     virtual bool isZero() const = 0;
-    virtual std::unique_ptr<CalcExpressionNode> toCalcValue(const RenderStyle*, const RenderStyle* rootStyle, double zoom = 1.0) const = 0;
+    virtual std::unique_ptr<CalcExpressionNode> createCalcExpression(const CSSToLengthConversionData&) const = 0;
     virtual double doubleValue() const = 0;
-    virtual double computeLengthPx(const RenderStyle* currentStyle, const RenderStyle* rootStyle, double multiplier = 1.0, bool computingFontSize = false) const = 0;
+    virtual double computeLengthPx(const CSSToLengthConversionData&) const = 0;
     virtual String customCSSText() const = 0;
     virtual bool equals(const CSSCalcExpressionNode& other) const { return m_category == other.m_category && m_isInteger == other.m_isInteger; }
     virtual Type type() const = 0;
+    virtual CSSPrimitiveValue::UnitTypes primitiveType() const = 0;
 
     CalculationCategory category() const { return m_category; }
-    virtual CSSPrimitiveValue::UnitTypes primitiveType() const = 0;
     bool isInteger() const { return m_isInteger; }
 
 protected:
@@ -84,58 +79,58 @@ protected:
     {
     }
 
+private:
     CalculationCategory m_category;
     bool m_isInteger;
 };
 
 class CSSCalcValue : public CSSValue {
 public:
-    static PassRefPtr<CSSCalcValue> create(CSSParserString name, CSSParserValueList*, CalculationPermittedValueRange);
-    static PassRef<CSSCalcValue> create(PassRefPtr<CSSCalcExpressionNode>, CalculationPermittedValueRange = CalculationRangeAll);
-    static PassRef<CSSCalcValue> create(const CalculationValue* value, const RenderStyle* style) { return adoptRef(*new CSSCalcValue(value, style)); }
+    static RefPtr<CSSCalcValue> create(CSSParserString name, CSSParserValueList& arguments, CalculationPermittedValueRange);
+    static RefPtr<CSSCalcValue> create(const CalculationValue&, const RenderStyle&);
 
-    static PassRefPtr<CSSCalcExpressionNode> createExpressionNode(PassRefPtr<CSSPrimitiveValue>, bool isInteger = false);
-    static PassRefPtr<CSSCalcExpressionNode> createExpressionNode(PassRefPtr<CSSCalcExpressionNode>, PassRefPtr<CSSCalcExpressionNode>, CalcOperator);
-    static PassRefPtr<CSSCalcExpressionNode> createExpressionNode(const CalcExpressionNode*, const RenderStyle*);
-    static PassRefPtr<CSSCalcExpressionNode> createExpressionNode(const Length&, const RenderStyle*);
-
-    PassRefPtr<CalculationValue> toCalcValue(const RenderStyle* style, const RenderStyle* rootStyle, double zoom = 1.0) const
-    {
-        return CalculationValue::create(m_expression->toCalcValue(style, rootStyle, zoom), m_nonNegative ? CalculationRangeNonNegative : CalculationRangeAll);
-    }
     CalculationCategory category() const { return m_expression->category(); }
     bool isInt() const { return m_expression->isInteger(); }
     double doubleValue() const;
-    bool isNegative() const { return m_expression->doubleValue() < 0; }
-    CalculationPermittedValueRange permittedValueRange() { return m_nonNegative ? CalculationRangeNonNegative : CalculationRangeAll; }
-    double computeLengthPx(const RenderStyle* currentStyle, const RenderStyle* rootStyle, double multiplier = 1.0, bool computingFontSize = false) const;
-    CSSCalcExpressionNode* expressionNode() const { return m_expression.get(); }
+    bool isPositive() const { return m_expression->doubleValue() > 0; }
+    double computeLengthPx(const CSSToLengthConversionData&) const;
+    unsigned short primitiveType() const { return m_expression->primitiveType(); }
+
+    Ref<CalculationValue> createCalculationValue(const CSSToLengthConversionData&) const;
+    void setPermittedValueRange(CalculationPermittedValueRange);
 
     String customCSSText() const;
     bool equals(const CSSCalcValue&) const;
 
 private:
-    CSSCalcValue(PassRefPtr<CSSCalcExpressionNode> expression, CalculationPermittedValueRange range)
-        : CSSValue(CalculationClass)
-        , m_expression(expression)
-        , m_nonNegative(range == CalculationRangeNonNegative)
-    {
-    }
-    CSSCalcValue(const CalculationValue* value, const RenderStyle* style)
-        : CSSValue(CalculationClass)
-        , m_expression(createExpressionNode(value->expression(), style))
-        , m_nonNegative(value->isNonNegative())
-    {
-    }
+    CSSCalcValue(Ref<CSSCalcExpressionNode>&&, bool shouldClampToNonNegative);
 
     double clampToPermittedRange(double) const;
 
-    const RefPtr<CSSCalcExpressionNode> m_expression;
-    const bool m_nonNegative;
+    const Ref<CSSCalcExpressionNode> m_expression;
+    bool m_shouldClampToNonNegative;
 };
 
-CSS_VALUE_TYPE_CASTS(CSSCalcValue, isCalcValue())
+inline CSSCalcValue::CSSCalcValue(Ref<CSSCalcExpressionNode>&& expression, bool shouldClampToNonNegative)
+    : CSSValue(CalculationClass)
+    , m_expression(WTF::move(expression))
+    , m_shouldClampToNonNegative(shouldClampToNonNegative)
+{
+}
+
+inline Ref<CalculationValue> CSSCalcValue::createCalculationValue(const CSSToLengthConversionData& conversionData) const
+{
+    return CalculationValue::create(m_expression->createCalcExpression(conversionData),
+        m_shouldClampToNonNegative ? CalculationRangeNonNegative : CalculationRangeAll);
+}
+
+inline void CSSCalcValue::setPermittedValueRange(CalculationPermittedValueRange range)
+{
+    m_shouldClampToNonNegative = range != CalculationRangeAll;
+}
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSCalcValue, isCalcValue())
 
 #endif // CSSCalculationValue_h

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2013-2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -65,15 +65,9 @@ public:
     virtual HRESULT STDMETHODCALLTYPE sharedIconDatabase(
         /* [retval][out] */ IWebIconDatabase **result);
 
-    virtual HRESULT STDMETHODCALLTYPE iconForURL(
-        /* [in] */ BSTR url,
-        /* [optional][in] */ LPSIZE size,
-        /* [optional][in] */ BOOL cache,
-        /* [retval][out] */ OLE_HANDLE *image);
+    virtual HRESULT STDMETHODCALLTYPE iconForURL(BSTR url, LPSIZE, BOOL cache, HBITMAP* image);
 
-    virtual HRESULT STDMETHODCALLTYPE defaultIconWithSize(
-        /* [in] */ LPSIZE size,
-        /* [retval][out] */ OLE_HANDLE *result);
+    virtual HRESULT STDMETHODCALLTYPE defaultIconWithSize(/* [in] */ LPSIZE size, /* [retval][out] */ HBITMAP* result);
 
     virtual HRESULT STDMETHODCALLTYPE retainIconForURL(
         /* [in] */ BSTR url);

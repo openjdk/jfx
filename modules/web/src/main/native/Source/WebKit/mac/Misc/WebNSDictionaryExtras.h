@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -44,7 +44,5 @@
 - (void)_webkit_setBool:(BOOL)value forKey:(id)key;
 - (void)_webkit_setLongLong:(long long)value forKey:(id)key;
 - (void)_webkit_setUnsignedLongLong:(unsigned long long)value forKey:(id)key;
-#if PLATFORM(IOS)
 - (void)_webkit_setUnsignedInt:(unsigned)value forKey:(id)key;
-#endif
 @end

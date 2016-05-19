@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 #ifndef DFGJITCode_h
 #define DFGJITCode_h
 
-#include <wtf/Platform.h>
-
 #if ENABLE(DFG_JIT)
 
 #include "CompilationResult.h"
@@ -40,7 +38,11 @@
 #include "JITCode.h"
 #include <wtf/SegmentedVector.h>
 
-namespace JSC { namespace DFG {
+namespace JSC {
+
+class TrackedReferences;
+
+namespace DFG {
 
 class JITCompiler;
 
@@ -109,6 +111,8 @@ public:
     void setOptimizationThresholdBasedOnCompilationResult(CodeBlock*, CompilationResult);
 #endif // ENABLE(FTL_JIT)
 
+    void validateReferences(const TrackedReferences&) override;
+
     void shrinkToFit();
 
 private:
@@ -119,11 +123,11 @@ public:
     Vector<DFG::OSREntryData> osrEntry;
     SegmentedVector<DFG::OSRExit, 8> osrExit;
     Vector<DFG::SpeculationRecovery> speculationRecovery;
-    Vector<unsigned> slowPathCalls;
     DFG::VariableEventStream variableEventStream;
     DFG::MinifiedGraph minifiedDFG;
 #if ENABLE(FTL_JIT)
-    ExecutionCounter tierUpCounter;
+    uint8_t nestedTriggerIsSet { 0 };
+    UpperTierExecutionCounter tierUpCounter;
     RefPtr<CodeBlock> osrEntryBlock;
     unsigned osrEntryRetry;
     bool abandonOSREntry;

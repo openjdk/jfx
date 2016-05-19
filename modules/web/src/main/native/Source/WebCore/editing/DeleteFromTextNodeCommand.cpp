@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005, 2008, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -25,16 +25,16 @@
 
 #include "config.h"
 #include "DeleteFromTextNodeCommand.h"
+
 #include "Document.h"
 #include "ExceptionCodePlaceholder.h"
-
-#include "AXObjectCache.h"
 #include "Text.h"
+#include "htmlediting.h"
 
 namespace WebCore {
 
-DeleteFromTextNodeCommand::DeleteFromTextNodeCommand(PassRefPtr<Text> node, unsigned offset, unsigned count)
-    : SimpleEditCommand(node->document())
+DeleteFromTextNodeCommand::DeleteFromTextNodeCommand(RefPtr<Text>&& node, unsigned offset, unsigned count, EditAction editingAction)
+    : SimpleEditCommand(node->document(), editingAction)
     , m_node(node)
     , m_offset(offset)
     , m_count(count)
@@ -48,7 +48,7 @@ void DeleteFromTextNodeCommand::doApply()
 {
     ASSERT(m_node);
 
-    if (!m_node->isContentEditable(Node::UserSelectAllIsAlwaysNonEditable))
+    if (!isEditableNode(*m_node))
         return;
 
     ExceptionCode ec = 0;
@@ -57,8 +57,8 @@ void DeleteFromTextNodeCommand::doApply()
         return;
 
     // Need to notify this before actually deleting the text
-    if (AXObjectCache* cache = document().existingAXObjectCache())
-        cache->nodeTextChangeNotification(m_node.get(), AXObjectCache::AXTextDeleted, m_offset, m_text);
+    if (shouldPostAccessibilityNotification())
+        notifyAccessibilityForTextChange(m_node.get(), applyEditType(), m_text, VisiblePosition(Position(m_node, m_offset)));
 
     m_node->deleteData(m_offset, m_count, ec);
 }
@@ -72,8 +72,8 @@ void DeleteFromTextNodeCommand::doUnapply()
 
     m_node->insertData(m_offset, m_text, IGNORE_EXCEPTION);
 
-    if (AXObjectCache* cache = document().existingAXObjectCache())
-        cache->nodeTextChangeNotification(m_node.get(), AXObjectCache::AXTextInserted, m_offset, m_text);
+    if (shouldPostAccessibilityNotification())
+        notifyAccessibilityForTextChange(m_node.get(), unapplyEditType(), m_text, VisiblePosition(Position(m_node, m_offset)));
 }
 
 #ifndef NDEBUG

@@ -32,28 +32,34 @@
 
 #if ENABLE(WEB_REPLAY)
 #include "InternalNamespaceHeaderIncludeDummy.h"
+#include <history/HistoryItem.h>
 #include <platform/ExternalNamespaceHeaderIncludeDummy.h>
 
 namespace WebCore {
-class WebThing;
-}
-
-namespace JSC {
-class JSThing;
+class HistoryItem;
 }
 
 
 namespace Test {
 class ArrayOfThings;
+class SavedHistory;
 } // namespace Test
 
 namespace JSC {
-template<> struct InputTraits<Test::ArrayOfThings> {
+template<> struct TEST_EXPORT_MACRO InputTraits<Test::ArrayOfThings> {
     static InputQueue queue() { return InputQueue::ScriptMemoizedData; }
-    static const AtomicString& type();
+    static const String& type();
 
     static void encode(JSC::EncodedValue&, const Test::ArrayOfThings&);
     static bool decode(JSC::EncodedValue&, std::unique_ptr<Test::ArrayOfThings>&);
+};
+
+template<> struct TEST_EXPORT_MACRO InputTraits<Test::SavedHistory> {
+    static InputQueue queue() { return InputQueue::ScriptMemoizedData; }
+    static const String& type();
+
+    static void encode(JSC::EncodedValue&, const Test::SavedHistory&);
+    static bool decode(JSC::EncodedValue&, std::unique_ptr<Test::SavedHistory>&);
 };
 
 } // namespace JSC
@@ -61,7 +67,7 @@ template<> struct InputTraits<Test::ArrayOfThings> {
 namespace Test {
 class ArrayOfThings : public NondeterministicInput<ArrayOfThings> {
 public:
-    ArrayOfThings(Vector<double>& doubles, Vector<JSThing>& jsthings, Vector<WebThing>& webthings);
+    TEST_EXPORT_MACRO ArrayOfThings(Vector<double>& doubles, Vector<JSThing>& jsthings, Vector<WebThing>& webthings);
     virtual ~ArrayOfThings();
 
     const Vector<double>& doubles() const { return m_doubles; }
@@ -72,10 +78,29 @@ private:
     Vector<JSThing> m_jsthings;
     Vector<WebThing> m_webthings;
 };
+
+class SavedHistory : public NondeterministicInput<SavedHistory> {
+public:
+    TEST_EXPORT_MACRO SavedHistory(Vector<RefPtr<HistoryItem>>& entries);
+    virtual ~SavedHistory();
+
+    const Vector<RefPtr<HistoryItem>>& entries() const { return m_entries; }
+private:
+    Vector<RefPtr<HistoryItem>> m_entries;
+};
 } // namespace Test
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(Test::ArrayOfThings)
+    static bool isType(const NondeterministicInputBase& input) { return input.type() == InputTraits<Test::ArrayOfThings>::type(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(Test::SavedHistory)
+    static bool isType(const NondeterministicInputBase& input) { return input.type() == InputTraits<Test::SavedHistory>::type(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #define TEST_REPLAY_INPUT_NAMES_FOR_EACH(macro) \
     macro(ArrayOfThings) \
+    macro(SavedHistory) \
     \
 // end of TEST_REPLAY_INPUT_NAMES_FOR_EACH
 

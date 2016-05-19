@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,15 @@
 
 namespace JSC { namespace DFG {
 
+DesiredIdentifiers::DesiredIdentifiers()
+    : m_codeBlock(nullptr)
+    , m_didProcessIdentifiers(false)
+{
+}
+
 DesiredIdentifiers::DesiredIdentifiers(CodeBlock* codeBlock)
     : m_codeBlock(codeBlock)
+    , m_didProcessIdentifiers(false)
 {
 }
 
@@ -47,14 +54,28 @@ unsigned DesiredIdentifiers::numberOfIdentifiers()
     return m_codeBlock->numberOfIdentifiers() + m_addedIdentifiers.size();
 }
 
-void DesiredIdentifiers::addLazily(StringImpl* rep)
+unsigned DesiredIdentifiers::ensure(UniquedStringImpl* rep)
 {
-    m_addedIdentifiers.append(rep);
+    if (!m_didProcessIdentifiers) {
+        // Do this now instead of the constructor so that we don't pay the price on the main
+        // thread. Also, not all compilations need to call ensure().
+        for (unsigned index = m_codeBlock->numberOfIdentifiers(); index--;)
+            m_identifierNumberForName.add(m_codeBlock->identifier(index).impl(), index);
+        m_didProcessIdentifiers = true;
+    }
+
+    auto addResult = m_identifierNumberForName.add(rep, numberOfIdentifiers());
+    unsigned result = addResult.iterator->value;
+    if (addResult.isNewEntry) {
+        m_addedIdentifiers.append(rep);
+        ASSERT(at(result) == rep);
+    }
+    return result;
 }
 
-StringImpl* DesiredIdentifiers::at(unsigned index) const
+UniquedStringImpl* DesiredIdentifiers::at(unsigned index) const
 {
-    StringImpl* result;
+    UniquedStringImpl* result;
     if (index < m_codeBlock->numberOfIdentifiers())
         result = m_codeBlock->identifier(index).impl();
     else
@@ -66,9 +87,9 @@ StringImpl* DesiredIdentifiers::at(unsigned index) const
 void DesiredIdentifiers::reallyAdd(VM& vm, CommonData* commonData)
 {
     for (unsigned i = 0; i < m_addedIdentifiers.size(); ++i) {
-        StringImpl* rep = m_addedIdentifiers[i];
+        auto rep = m_addedIdentifiers[i];
         ASSERT(rep->hasAtLeastOneRef());
-        commonData->dfgIdentifiers.append(Identifier(&vm, rep));
+        commonData->dfgIdentifiers.append(Identifier::fromUid(&vm, rep));
     }
 }
 

@@ -34,21 +34,24 @@ G_BEGIN_DECLS
 WEBKIT_API gboolean webkit_dom_html_text_area_element_is_edited(WebKitDOMHTMLTextAreaElement* input);
 
 /**
- * webkit_dom_html_media_element_set_current_time:
- * @self: A #WebKitDOMHTMLMediaElement
- * @value: A #gdouble
- * @error: #GError
- *
- */
-WEBKIT_API void webkit_dom_html_media_element_set_current_time(WebKitDOMHTMLMediaElement* self, gdouble value, GError** error);
-
-/**
  * webkit_dom_html_input_element_is_edited:
  * @input: A #WebKitDOMHTMLInputElement
  *
  * Returns: A #gboolean
  */
 WEBKIT_API gboolean webkit_dom_html_input_element_is_edited(WebKitDOMHTMLInputElement* input);
+
+/**
+ * webkit_dom_dom_window_post_user_message:
+ * @window: A #WebKitDOMDOMWindow
+ * @handler: Name of the user message handler.
+ * @message: JavaScript value to be sent.
+ *
+ * Returns: Whether the message was successfully sent.
+ *
+ * Since: 2.8
+ */
+gboolean webkit_dom_dom_window_webkit_message_handlers_post_message(WebKitDOMDOMWindow* window, const gchar* handler, const gchar* message);
 
 G_END_DECLS
 

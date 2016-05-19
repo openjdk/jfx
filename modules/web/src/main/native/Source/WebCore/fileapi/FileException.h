@@ -31,17 +31,15 @@
 #ifndef FileException_h
 #define FileException_h
 
-#if ENABLE(BLOB)
-
 #include "ExceptionBase.h"
 
 namespace WebCore {
 
 class FileException : public ExceptionBase {
 public:
-    static PassRefPtr<FileException> create(const ExceptionCodeDescription& description)
+    static Ref<FileException> create(const ExceptionCodeDescription& description)
     {
-        return adoptRef(new FileException(description));
+        return adoptRef(*new FileException(description));
     }
 
     static const int FileExceptionOffset = 1100;
@@ -79,7 +77,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(BLOB)
 
 #endif // FileException_h

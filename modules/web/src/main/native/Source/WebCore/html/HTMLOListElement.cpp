@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLOListElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "HTMLNames.h"
@@ -44,14 +43,14 @@ HTMLOListElement::HTMLOListElement(const QualifiedName& tagName, Document& docum
     ASSERT(hasTagName(olTag));
 }
 
-PassRefPtr<HTMLOListElement> HTMLOListElement::create(Document& document)
+Ref<HTMLOListElement> HTMLOListElement::create(Document& document)
 {
-    return adoptRef(new HTMLOListElement(olTag, document));
+    return adoptRef(*new HTMLOListElement(olTag, document));
 }
 
-PassRefPtr<HTMLOListElement> HTMLOListElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLOListElement> HTMLOListElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLOListElement(tagName, document));
+    return adoptRef(*new HTMLOListElement(tagName, document));
 }
 
 bool HTMLOListElement::isPresentationAttribute(const QualifiedName& name) const
@@ -106,12 +105,12 @@ void HTMLOListElement::setStart(int start)
 
 void HTMLOListElement::updateItemValues()
 {
-    RenderListItem::updateItemValuesForOrderedList(this);
+    RenderListItem::updateItemValuesForOrderedList(*this);
 }
 
 void HTMLOListElement::recalculateItemCount()
 {
-    m_itemCount = RenderListItem::itemCountForOrderedList(this);
+    m_itemCount = RenderListItem::itemCountForOrderedList(*this);
     m_shouldRecalculateItemCount = false;
 }
 

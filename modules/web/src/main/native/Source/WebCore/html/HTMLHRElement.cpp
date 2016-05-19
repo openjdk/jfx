@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLHRElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "CSSValuePool.h"
@@ -40,14 +39,14 @@ HTMLHRElement::HTMLHRElement(const QualifiedName& tagName, Document& document)
     ASSERT(hasTagName(hrTag));
 }
 
-PassRefPtr<HTMLHRElement> HTMLHRElement::create(Document& document)
+Ref<HTMLHRElement> HTMLHRElement::create(Document& document)
 {
-    return adoptRef(new HTMLHRElement(hrTag, document));
+    return adoptRef(*new HTMLHRElement(hrTag, document));
 }
 
-PassRefPtr<HTMLHRElement> HTMLHRElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLHRElement> HTMLHRElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLHRElement(tagName, document));
+    return adoptRef(*new HTMLHRElement(tagName, document));
 }
 
 bool HTMLHRElement::isPresentationAttribute(const QualifiedName& name) const
@@ -82,7 +81,7 @@ void HTMLHRElement::collectStyleForPresentationAttribute(const QualifiedName& na
         addHTMLColorToStyle(style, CSSPropertyBorderColor, value);
         addHTMLColorToStyle(style, CSSPropertyBackgroundColor, value);
     } else if (name == noshadeAttr) {
-        if (!hasAttribute(colorAttr)) {
+        if (!fastHasAttribute(colorAttr)) {
             addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
 
             RefPtr<CSSPrimitiveValue> darkGrayValue = cssValuePool().createColorValue(Color::darkGray);
@@ -98,6 +97,11 @@ void HTMLHRElement::collectStyleForPresentationAttribute(const QualifiedName& na
             addPropertyToPresentationAttributeStyle(style, CSSPropertyHeight, size - 2, CSSPrimitiveValue::CSS_PX);
     } else
         HTMLElement::collectStyleForPresentationAttribute(name, value, style);
+}
+
+bool HTMLHRElement::canContainRangeEndPoint() const
+{
+    return hasChildNodes() && HTMLElement::canContainRangeEndPoint();
 }
 
 }

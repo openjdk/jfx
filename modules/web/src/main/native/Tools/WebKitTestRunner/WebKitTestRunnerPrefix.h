@@ -27,13 +27,8 @@
 #import <Foundation/Foundation.h>
 #endif
 
-#if defined(BUILDING_GTK__)
-#include "autotoolsconfig.h"
-#endif /* defined (BUILDING_GTK__) */
-
+#include <WebKit/WebKit2_C.h>
 #include <wtf/Platform.h>
-#include <WebKit2/WebKit2_C.h>
-
 
 /* When C++ exceptions are disabled, the C++ library defines |try| and |catch|
 * to allow C++ code that expects exceptions to build. These definitions

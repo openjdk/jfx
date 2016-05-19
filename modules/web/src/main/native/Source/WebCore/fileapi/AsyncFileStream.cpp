@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc.  All rights reserved.
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,211 +30,185 @@
  */
 
 #include "config.h"
-
-#if ENABLE(BLOB)
-
 #include "AsyncFileStream.h"
 
-#include "Blob.h"
 #include "FileStream.h"
 #include "FileStreamClient.h"
-#include "FileThread.h"
-#include "FileThreadTask.h"
-#include "MainThreadTask.h"
+#include "URL.h"
+#include <wtf/AutodrainedPool.h>
 #include <wtf/MainThread.h>
-#include <wtf/text/WTFString.h>
-
-#if PLATFORM(IOS)
-#include "WebCoreThread.h"
-#endif
+#include <wtf/MessageQueue.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-static PassRefPtr<FileThread> createFileThread()
+struct AsyncFileStream::Internals {
+    explicit Internals(FileStreamClient&);
+
+    FileStream stream;
+    FileStreamClient& client;
+#if !COMPILER(MSVC)
+    std::atomic_bool destroyed { false };
+#else
+    std::atomic_bool destroyed;
+#endif
+};
+
+inline AsyncFileStream::Internals::Internals(FileStreamClient& client)
+    : client(client)
 {
-    RefPtr<FileThread> thread = FileThread::create();
-    if (!thread->start())
-        return 0;
-    return thread.release();
+#if COMPILER(MSVC)
+    // Work around a bug that prevents the default value above from compiling.
+    atomic_init(&destroyed, false);
+#endif
 }
 
-static FileThread* fileThread()
+static void callOnFileThread(std::function<void()>&& function)
 {
     ASSERT(isMainThread());
-    static FileThread* thread = createFileThread().leakRef();
-    return thread;
+    ASSERT(function);
+
+    static NeverDestroyed<MessageQueue<std::function<void()>>> queue;
+
+    static std::once_flag createFileThreadOnce;
+    std::call_once(createFileThreadOnce, [] {
+        createThread("WebCore: AsyncFileStream", [] {
+            for (;;) {
+                AutodrainedPool pool;
+
+                auto function = queue.get().waitForMessage();
+
+                // This can never be null because we never kill the MessageQueue.
+                ASSERT(function);
+
+                // This can bever be null because we never queue a function that is null.
+                ASSERT(*function);
+
+                (*function)();
+            }
+        });
+    });
+
+    queue.get().append(std::make_unique<std::function<void()>>(WTF::move(function)));
 }
 
-inline AsyncFileStream::AsyncFileStream(FileStreamClient* client)
-    : m_stream(FileStream::create())
-    , m_client(client)
+AsyncFileStream::AsyncFileStream(FileStreamClient& client)
+    : m_internals(std::make_unique<Internals>(client))
 {
     ASSERT(isMainThread());
-}
-
-PassRefPtr<AsyncFileStream> AsyncFileStream::create(FileStreamClient* client)
-{
-    RefPtr<AsyncFileStream> proxy = adoptRef(new AsyncFileStream(client));
-
-    // Hold a reference so that the instance will not get deleted while there are tasks on the file thread.
-    // This is balanced by the deref in derefProxyOnContext below.
-    proxy->ref();
-
-    fileThread()->postTask(createFileThreadTask(proxy.get(), &AsyncFileStream::startOnFileThread));
-
-    return proxy.release();
 }
 
 AsyncFileStream::~AsyncFileStream()
 {
+    ASSERT(isMainThread());
+
+    // Release so that we can control the timing of deletion below.
+    auto& internals = *m_internals.release();
+
+    // Set flag to prevent client callbacks and also prevent queued operations from starting.
+    internals.destroyed = true;
+
+    // Call through file thread and back to main thread to make sure deletion happens
+    // after all file thread functions and all main thread functions called from them.
+    callOnFileThread([&internals] {
+        callOnMainThread([&internals] {
+            delete &internals;
+        });
+    });
 }
 
-static void didStart(AsyncFileStream* proxy)
+void AsyncFileStream::perform(std::function<std::function<void(FileStreamClient&)>(FileStream&)> operation)
 {
-    if (proxy->client())
-        proxy->client()->didStart();
-}
-
-void AsyncFileStream::startOnFileThread()
-{
-    // FIXME: It is not correct to check m_client from a secondary thread - stop() could be racing with this check.
-    if (!m_client)
-        return;
-    m_stream->start();
-    callOnMainThread(didStart, AllowCrossThreadAccess(this));
-}
-
-void AsyncFileStream::stop()
-{
-    // Clear the client so that we won't be invoking callbacks on the client.
-    setClient(0);
-
-    fileThread()->unscheduleTasks(m_stream.get());
-    fileThread()->postTask(createFileThreadTask(this, &AsyncFileStream::stopOnFileThread));
-}
-
-static void derefProxyOnMainThread(AsyncFileStream* proxy)
-{
-    ASSERT(proxy->hasOneRef());
-    proxy->deref();
-}
-
-void AsyncFileStream::stopOnFileThread()
-{
-    m_stream->stop();
-    callOnMainThread(derefProxyOnMainThread, AllowCrossThreadAccess(this));
-}
-
-static void didGetSize(AsyncFileStream* proxy, long long size)
-{
-    if (proxy->client())
-        proxy->client()->didGetSize(size);
+    auto& internals = *m_internals;
+    callOnFileThread([&internals, operation] {
+        // Don't do the operation if stop was already called on the main thread. Note that there is
+        // a race here, but since skipping the operation is an optimization it's OK that we can't
+        // guarantee exactly which operations are skipped. Note that this is also the only reason
+        // we use an atomic_bool rather than just a bool for destroyed.
+        if (internals.destroyed)
+            return;
+        auto mainThreadWork = operation(internals.stream);
+        callOnMainThread([&internals, mainThreadWork] {
+            if (internals.destroyed)
+                return;
+            mainThreadWork(internals.client);
+        });
+    });
 }
 
 void AsyncFileStream::getSize(const String& path, double expectedModificationTime)
 {
-    fileThread()->postTask(createFileThreadTask(this, &AsyncFileStream::getSizeOnFileThread, path, expectedModificationTime));
-}
-
-void AsyncFileStream::getSizeOnFileThread(const String& path, double expectedModificationTime)
-{
-    long long size = m_stream->getSize(path, expectedModificationTime);
-    callOnMainThread(didGetSize, AllowCrossThreadAccess(this), size);
-}
-
-static void didOpen(AsyncFileStream* proxy, bool success)
-{
-    if (proxy->client())
-        proxy->client()->didOpen(success);
+    StringCapture capturedPath(path);
+    // FIXME: Explicit return type here and in all the other cases like this below is a workaround for a deficiency
+    // in the Windows compiler at the time of this writing. Could remove it if that is resolved.
+    perform([capturedPath, expectedModificationTime](FileStream& stream) -> std::function<void(FileStreamClient&)> {
+        long long size = stream.getSize(capturedPath.string(), expectedModificationTime);
+        return [size](FileStreamClient& client) {
+            client.didGetSize(size);
+        };
+    });
 }
 
 void AsyncFileStream::openForRead(const String& path, long long offset, long long length)
 {
-    fileThread()->postTask(createFileThreadTask(this, &AsyncFileStream::openForReadOnFileThread, path, offset, length));
-}
-
-void AsyncFileStream::openForReadOnFileThread(const String& path, long long offset, long long length)
-{
-    bool success = m_stream->openForRead(path, offset, length);
-    callOnMainThread(didOpen, AllowCrossThreadAccess(this), success);
+    StringCapture capturedPath(path);
+    // FIXME: Explicit return type here is a workaround for a deficiency in the Windows compiler at the time of this writing.
+    perform([capturedPath, offset, length](FileStream& stream) -> std::function<void(FileStreamClient&)> {
+        bool success = stream.openForRead(capturedPath.string(), offset, length);
+        return [success](FileStreamClient& client) {
+            client.didOpen(success);
+        };
+    });
 }
 
 void AsyncFileStream::openForWrite(const String& path)
 {
-    fileThread()->postTask(
-        createFileThreadTask(this,
-                             &AsyncFileStream::openForWriteOnFileThread, path));
-}
-
-void AsyncFileStream::openForWriteOnFileThread(const String& path)
-{
-    bool success = m_stream->openForWrite(path);
-    callOnMainThread(didOpen, AllowCrossThreadAccess(this), success);
+    StringCapture capturedPath(path);
+    perform([capturedPath](FileStream& stream) -> std::function<void(FileStreamClient&)> {
+        bool success = stream.openForWrite(capturedPath.string());
+        return [success](FileStreamClient& client) {
+            client.didOpen(success);
+        };
+    });
 }
 
 void AsyncFileStream::close()
 {
-    fileThread()->postTask(createFileThreadTask(this, &AsyncFileStream::closeOnFileThread));
-}
-
-void AsyncFileStream::closeOnFileThread()
-{
-    m_stream->close();
-}
-
-static void didRead(AsyncFileStream* proxy, int bytesRead)
-{
-    if (proxy->client())
-        proxy->client()->didRead(bytesRead);
+    auto& internals = *m_internals;
+    callOnFileThread([&internals] {
+        internals.stream.close();
+    });
 }
 
 void AsyncFileStream::read(char* buffer, int length)
 {
-    fileThread()->postTask(
-        createFileThreadTask(this, &AsyncFileStream::readOnFileThread,
-                             AllowCrossThreadAccess(buffer), length));
-}
-
-void AsyncFileStream::readOnFileThread(char* buffer, int length)
-{
-    int bytesRead = m_stream->read(buffer, length);
-    callOnMainThread(didRead, AllowCrossThreadAccess(this), bytesRead);
-}
-
-static void didWrite(AsyncFileStream* proxy, int bytesWritten)
-{
-    if (proxy->client())
-        proxy->client()->didWrite(bytesWritten);
+    perform([buffer, length](FileStream& stream) -> std::function<void(FileStreamClient&)> {
+        int bytesRead = stream.read(buffer, length);
+        return [bytesRead](FileStreamClient& client) {
+            client.didRead(bytesRead);
+        };
+    });
 }
 
 void AsyncFileStream::write(const URL& blobURL, long long position, int length)
 {
-    fileThread()->postTask(createFileThreadTask(this, &AsyncFileStream::writeOnFileThread, blobURL, position, length));
-}
-
-void AsyncFileStream::writeOnFileThread(const URL& blobURL, long long position, int length)
-{
-    int bytesWritten = m_stream->write(blobURL, position, length);
-    callOnMainThread(didWrite, AllowCrossThreadAccess(this), bytesWritten);
-}
-
-static void didTruncate(AsyncFileStream* proxy, bool success)
-{
-    if (proxy->client())
-        proxy->client()->didTruncate(success);
+    URLCapture capturedURL(blobURL);
+    perform([capturedURL, position, length](FileStream& stream) -> std::function<void(FileStreamClient&)> {
+        int bytesWritten = stream.write(capturedURL.url(), position, length);
+        return [bytesWritten](FileStreamClient& client) {
+            client.didWrite(bytesWritten);
+        };
+    });
 }
 
 void AsyncFileStream::truncate(long long position)
 {
-    fileThread()->postTask(createFileThreadTask(this, &AsyncFileStream::truncateOnFileThread, position));
-}
-
-void AsyncFileStream::truncateOnFileThread(long long position)
-{
-    bool success = m_stream->truncate(position);
-    callOnMainThread(didTruncate, AllowCrossThreadAccess(this), success);
+    perform([position](FileStream& stream) -> std::function<void(FileStreamClient&)> {
+        bool success = stream.truncate(position);
+        return [success](FileStreamClient& client) {
+            client.didTruncate(success);
+        };
+    });
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(BLOB)

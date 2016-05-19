@@ -30,12 +30,13 @@
 #include "JSRTCPeerConnection.h"
 
 #include "ExceptionCode.h"
+#include "JSDOMBinding.h"
 
 using namespace JSC;
 
 namespace WebCore {
 
-EncodedJSValue JSC_HOST_CALL JSRTCPeerConnectionConstructor::constructJSRTCPeerConnection(ExecState* exec)
+EncodedJSValue JSC_HOST_CALL constructJSRTCPeerConnection(ExecState* exec)
 {
     // Spec says that we must have at least one arument, the RTCConfiguration.
     if (exec->argumentCount() < 1)
@@ -47,24 +48,14 @@ EncodedJSValue JSC_HOST_CALL JSRTCPeerConnectionConstructor::constructJSRTCPeerC
         return JSValue::encode(jsUndefined());
 
     if (!rtcConfiguration.isObject())
-        return throwVMError(exec, createTypeError(exec, "First argument of RTCPeerConnection must be a valid Dictionary"));
+        return throwVMError(exec, createTypeError(exec, "RTCPeerConnection argument must be a valid Dictionary"));
 
-    Dictionary mediaConstraints;
-    if (exec->argumentCount() > 1) {
-        mediaConstraints = Dictionary(exec, exec->argument(1));
-        if (!mediaConstraints.isObject())
-            return throwVMError(exec, createTypeError(exec, "Optional constraints argument of RTCPeerConnection must be a valid Dictionary"));
-
-        if (exec->hadException())
-            return JSValue::encode(jsUndefined());
-    }
-
-    JSRTCPeerConnectionConstructor* jsConstructor = jsCast<JSRTCPeerConnectionConstructor*>(exec->callee());
+    DOMConstructorObject* jsConstructor = jsCast<DOMConstructorObject*>(exec->callee());
     ScriptExecutionContext* scriptExecutionContext = jsConstructor->scriptExecutionContext();
     if (!scriptExecutionContext)
         return throwVMError(exec, createReferenceError(exec, "RTCPeerConnection constructor associated document is unavailable"));
 
-    RefPtr<RTCPeerConnection> peerConnection = RTCPeerConnection::create(*scriptExecutionContext, rtcConfiguration, mediaConstraints, ec);
+    RefPtr<RTCPeerConnection> peerConnection = RTCPeerConnection::create(*scriptExecutionContext, rtcConfiguration, ec);
     if (ec == TYPE_MISMATCH_ERR) {
         setDOMException(exec, ec);
         return throwVMError(exec, createTypeError(exec, "Invalid RTCPeerConnection constructor arguments"));
@@ -75,7 +66,7 @@ EncodedJSValue JSC_HOST_CALL JSRTCPeerConnectionConstructor::constructJSRTCPeerC
         return throwVMError(exec, createTypeError(exec, "Error creating RTCPeerConnection"));
     }
 
-    return JSValue::encode(CREATE_DOM_WRAPPER(exec, jsConstructor->globalObject(), RTCPeerConnection, peerConnection.get()));
+    return JSValue::encode(CREATE_DOM_WRAPPER(jsConstructor->globalObject(), RTCPeerConnection, peerConnection.get()));
 }
 
 } // namespace WebCore

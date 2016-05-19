@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2012, 2013 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2008, 2012, 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,39 +26,36 @@
 #ifndef GradientImage_h
 #define GradientImage_h
 
+#include "FloatSize.h"
 #include "GeneratedImage.h"
 #include "Gradient.h"
 #include "Image.h"
-#include "ImageBuffer.h"
-#include "IntSize.h"
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
+class ImageBuffer;
+
 class GradientImage final : public GeneratedImage {
 public:
-    static PassRefPtr<GradientImage> create(PassRefPtr<Gradient> generator, const IntSize& size)
+    static PassRefPtr<GradientImage> create(PassRefPtr<Gradient> generator, const FloatSize& size)
     {
         return adoptRef(new GradientImage(generator, size));
     }
 
-    virtual ~GradientImage() { }
+    virtual ~GradientImage();
 
 protected:
     virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, ImageOrientationDescription) override;
     virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform,
         const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode) override;
 
-    GradientImage(PassRefPtr<Gradient> generator, const IntSize& size)
-        : m_gradient(generator)
-    {
-        setContainerSize(size);
-    }
+    GradientImage(PassRefPtr<Gradient>, const FloatSize&);
 
 private:
     RefPtr<Gradient> m_gradient;
     std::unique_ptr<ImageBuffer> m_cachedImageBuffer;
-    IntSize m_cachedAdjustedSize;
+    FloatSize m_cachedAdjustedSize;
     unsigned m_cachedGeneratorHash;
 };
 

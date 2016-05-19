@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -49,7 +49,7 @@ public:
         NoAccessMask = 1 << 2
     };
 
-    static PassRefPtr<DatabaseAuthorizer> create(const String& databaseInfoTableName);
+    static Ref<DatabaseAuthorizer> create(const String& databaseInfoTableName);
 
     int createTable(const String& tableName);
     int createTempTable(const String& tableName);
@@ -93,7 +93,6 @@ public:
 
     void disable();
     void enable();
-    void setReadOnly();
     void setPermissions(int permissions);
 
     void reset();

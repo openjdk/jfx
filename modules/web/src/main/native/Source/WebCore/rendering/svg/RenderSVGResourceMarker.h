@@ -32,10 +32,10 @@ class RenderObject;
 
 class RenderSVGResourceMarker final : public RenderSVGResourceContainer {
 public:
-    RenderSVGResourceMarker(SVGMarkerElement&, PassRef<RenderStyle>);
+    RenderSVGResourceMarker(SVGMarkerElement&, Ref<RenderStyle>&&);
     virtual ~RenderSVGResourceMarker();
 
-    SVGMarkerElement& markerElement() const { return toSVGMarkerElement(RenderSVGResourceContainer::element()); }
+    SVGMarkerElement& markerElement() const { return downcast<SVGMarkerElement>(RenderSVGResourceContainer::element()); }
 
     virtual void removeAllClientsFromCache(bool markForInvalidation = true) override;
     virtual void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
@@ -45,11 +45,11 @@ public:
     // Calculates marker boundaries, mapped to the target element's coordinate space
     FloatRect markerBoundaries(const AffineTransform& markerTransformation) const;
 
-    virtual void applyViewportClip(PaintInfo&);
-    virtual void layout();
-    virtual void calcViewport();
+    virtual void applyViewportClip(PaintInfo&) override;
+    virtual void layout() override;
+    virtual void calcViewport() override;
 
-    virtual const AffineTransform& localToParentTransform() const;
+    virtual const AffineTransform& localToParentTransform() const override;
     AffineTransform markerTransformation(const FloatPoint& origin, float angle, float strokeWidth) const;
 
     virtual bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, unsigned short) override { return false; }
@@ -59,8 +59,7 @@ public:
     float angle() const;
     SVGMarkerUnitsType markerUnits() const { return markerElement().markerUnits(); }
 
-    virtual RenderSVGResourceType resourceType() const { return s_resourceType; }
-    static RenderSVGResourceType s_resourceType;
+    virtual RenderSVGResourceType resourceType() const override { return MarkerResourceType; }
 
 private:
     void element() const = delete;
@@ -78,5 +77,7 @@ private:
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_RENDER_SVG_RESOURCE(RenderSVGResourceMarker, MarkerResourceType)
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -24,32 +24,31 @@
  */
 
 #include "config.h"
+#include "DisplayRefreshMonitor.h"
 
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
 
-#include "DisplayRefreshMonitor.h"
-#include <wtf/CurrentTime.h>
-#include <wtf/Ref.h>
+#include "DisplayRefreshMonitorClient.h"
+#include "DisplayRefreshMonitorIOS.h"
+#include "DisplayRefreshMonitorMac.h"
+#include "DisplayRefreshMonitorManager.h"
 
 namespace WebCore {
 
-DisplayRefreshMonitorClient::DisplayRefreshMonitorClient()
-    : m_scheduled(false)
-    , m_displayIDIsSet(false)
+RefPtr<DisplayRefreshMonitor> DisplayRefreshMonitor::createDefaultDisplayRefreshMonitor(PlatformDisplayID displayID)
 {
+#if PLATFORM(MAC)
+    return DisplayRefreshMonitorMac::create(displayID);
+#endif
+#if PLATFORM(IOS)
+    return DisplayRefreshMonitorIOS::create(displayID);
+#endif
+    return nullptr;
 }
 
-DisplayRefreshMonitorClient::~DisplayRefreshMonitorClient()
+RefPtr<DisplayRefreshMonitor> DisplayRefreshMonitor::create(DisplayRefreshMonitorClient& client)
 {
-    DisplayRefreshMonitorManager::sharedManager()->unregisterClient(this);
-}
-
-void DisplayRefreshMonitorClient::fireDisplayRefreshIfNeeded(double timestamp)
-{
-    if (m_scheduled) {
-        m_scheduled = false;
-        displayRefreshFired(timestamp);
-    }
+    return client.createDisplayRefreshMonitor(client.displayID());
 }
 
 DisplayRefreshMonitor::DisplayRefreshMonitor(PlatformDisplayID displayID)
@@ -60,9 +59,10 @@ DisplayRefreshMonitor::DisplayRefreshMonitor(PlatformDisplayID displayID)
     , m_unscheduledFireCount(0)
     , m_displayID(displayID)
     , m_clientsToBeNotified(nullptr)
-#if PLATFORM(COCOA)
-    , m_displayLink(0)
-#endif
+{
+}
+
+DisplayRefreshMonitor::~DisplayRefreshMonitor()
 {
 }
 
@@ -72,21 +72,22 @@ void DisplayRefreshMonitor::handleDisplayRefreshedNotificationOnMainThread(void*
     monitor->displayDidRefresh();
 }
 
-void DisplayRefreshMonitor::addClient(DisplayRefreshMonitorClient* client)
+void DisplayRefreshMonitor::addClient(DisplayRefreshMonitorClient& client)
 {
-    m_clients.add(client);
+    m_clients.add(&client);
 }
 
-bool DisplayRefreshMonitor::removeClient(DisplayRefreshMonitorClient* client)
+bool DisplayRefreshMonitor::removeClient(DisplayRefreshMonitorClient& client)
 {
     if (m_clientsToBeNotified)
-        m_clientsToBeNotified->remove(client);
-    return m_clients.remove(client);
+        m_clientsToBeNotified->remove(&client);
+    return m_clients.remove(&client);
 }
 
 void DisplayRefreshMonitor::displayDidRefresh()
 {
     double monotonicAnimationStartTime;
+
     {
         MutexLocker lock(m_mutex);
         if (!m_scheduled)
@@ -107,12 +108,7 @@ void DisplayRefreshMonitor::displayDidRefresh()
     HashSet<DisplayRefreshMonitorClient*> clientsToBeNotified = m_clients;
     m_clientsToBeNotified = &clientsToBeNotified;
     while (!clientsToBeNotified.isEmpty()) {
-        // Take a random client out of the set. Ordering doesn't matter.
-        // FIXME: Would read more cleanly if HashSet had a take function.
-        auto it = clientsToBeNotified.begin();
-        DisplayRefreshMonitorClient* client = *it;
-        clientsToBeNotified.remove(it);
-
+        DisplayRefreshMonitorClient* client = clientsToBeNotified.takeAny();
         client->fireDisplayRefreshIfNeeded(monotonicAnimationStartTime);
 
         // This checks if this function was reentered. In that case, stop iterating
@@ -120,6 +116,7 @@ void DisplayRefreshMonitor::displayDidRefresh()
         if (m_clientsToBeNotified != &clientsToBeNotified)
             break;
     }
+
     if (m_clientsToBeNotified == &clientsToBeNotified)
         m_clientsToBeNotified = nullptr;
 
@@ -128,82 +125,7 @@ void DisplayRefreshMonitor::displayDidRefresh()
         m_previousFrameDone = true;
     }
 
-    DisplayRefreshMonitorManager::sharedManager()->displayDidRefresh(this);
-}
-
-DisplayRefreshMonitorManager* DisplayRefreshMonitorManager::sharedManager()
-{
-    DEFINE_STATIC_LOCAL(DisplayRefreshMonitorManager, manager, ());
-    return &manager;
-}
-
-DisplayRefreshMonitor* DisplayRefreshMonitorManager::ensureMonitorForClient(DisplayRefreshMonitorClient* client)
-{
-    DisplayRefreshMonitorMap::iterator it = m_monitors.find(client->m_displayID);
-    if (it == m_monitors.end()) {
-        RefPtr<DisplayRefreshMonitor> monitor = DisplayRefreshMonitor::create(client->m_displayID);
-        monitor->addClient(client);
-        DisplayRefreshMonitor* result = monitor.get();
-        m_monitors.add(client->m_displayID, monitor.release());
-        return result;
-    }
-    it->value->addClient(client);
-    return it->value.get();
-}
-
-void DisplayRefreshMonitorManager::registerClient(DisplayRefreshMonitorClient* client)
-{
-    if (!client->m_displayIDIsSet)
-        return;
-
-    ensureMonitorForClient(client);
-}
-
-void DisplayRefreshMonitorManager::unregisterClient(DisplayRefreshMonitorClient* client)
-{
-    if (!client->m_displayIDIsSet)
-        return;
-
-    DisplayRefreshMonitorMap::iterator it = m_monitors.find(client->m_displayID);
-    if (it == m_monitors.end())
-        return;
-
-    DisplayRefreshMonitor* monitor = it->value.get();
-    if (monitor->removeClient(client)) {
-        if (!monitor->hasClients())
-            m_monitors.remove(it);
-    }
-}
-
-bool DisplayRefreshMonitorManager::scheduleAnimation(DisplayRefreshMonitorClient* client)
-{
-    if (!client->m_displayIDIsSet)
-        return false;
-
-    DisplayRefreshMonitor* monitor = ensureMonitorForClient(client);
-
-    client->m_scheduled = true;
-    return monitor->requestRefreshCallback();
-}
-
-void DisplayRefreshMonitorManager::displayDidRefresh(DisplayRefreshMonitor* monitor)
-{
-    if (monitor->shouldBeTerminated()) {
-        ASSERT(m_monitors.contains(monitor->displayID()));
-        m_monitors.remove(monitor->displayID());
-    }
-}
-
-void DisplayRefreshMonitorManager::windowScreenDidChange(PlatformDisplayID displayID, DisplayRefreshMonitorClient* client)
-{
-    if (client->m_displayIDIsSet && client->m_displayID == displayID)
-        return;
-
-    unregisterClient(client);
-    client->setDisplayID(displayID);
-    registerClient(client);
-    if (client->m_scheduled)
-        scheduleAnimation(client);
+    DisplayRefreshMonitorManager::sharedManager().displayDidRefresh(*this);
 }
 
 }

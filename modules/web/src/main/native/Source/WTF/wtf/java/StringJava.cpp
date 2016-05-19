@@ -3,6 +3,7 @@
  */
 #include "config.h"
 
+#include <vector>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -30,9 +31,11 @@ String::String(JNIEnv* env, const JLString &s)
 
 JLString String::toJavaString(JNIEnv *env) const
 {
-    return isNull()
-        ? NULL
-        : env->NewString((jchar*)(deprecatedCharacters()), length());
+    if (isNull()) {
+        return NULL;
+    } else {
+        return env->NewStringUTF(utf8().data());
+    }
 }
 
 } // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2012-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,6 @@
 
 #ifndef MacroAssembler_h
 #define MacroAssembler_h
-
-#include <wtf/Platform.h>
 
 #if ENABLE(ASSEMBLER)
 
@@ -71,30 +69,9 @@ namespace JSC {
 class MacroAssembler : public MacroAssemblerBase {
 public:
 
-    static bool isStackRelated(RegisterID reg)
-    {
-        return reg == stackPointerRegister || reg == framePointerRegister;
-    }
-
-    static RegisterID firstRealRegister()
-    {
-        RegisterID firstRegister = MacroAssembler::firstRegister();
-        while (MacroAssembler::isStackRelated(firstRegister))
-            firstRegister = static_cast<RegisterID>(firstRegister + 1);
-        return firstRegister;
-    }
-
     static RegisterID nextRegister(RegisterID reg)
     {
-        RegisterID result = static_cast<RegisterID>(reg + 1);
-        while (MacroAssembler::isStackRelated(result))
-            result = static_cast<RegisterID>(result + 1);
-        return result;
-    }
-
-    static RegisterID secondRealRegister()
-    {
-        return nextRegister(firstRealRegister());
+        return static_cast<RegisterID>(reg + 1);
     }
 
     static FPRegisterID nextFPRegister(FPRegisterID reg)
@@ -140,9 +117,9 @@ public:
     using MacroAssemblerBase::and32;
     using MacroAssemblerBase::branchAdd32;
     using MacroAssemblerBase::branchMul32;
-#if CPU(X86_64)
+#if CPU(ARM64) || CPU(ARM_THUMB2) || CPU(X86_64)
     using MacroAssemblerBase::branchPtr;
-#endif // CPU(X86_64)
+#endif
     using MacroAssemblerBase::branchSub32;
     using MacroAssemblerBase::lshift32;
     using MacroAssemblerBase::or32;
@@ -368,6 +345,11 @@ public:
         return PatchableJump(branchPtrWithPatch(cond, left, dataLabel, initialRightValue));
     }
 
+    PatchableJump patchableBranch32WithPatch(RelationalCondition cond, Address left, DataLabel32& dataLabel, TrustedImm32 initialRightValue = TrustedImm32(0))
+    {
+        return PatchableJump(branch32WithPatch(cond, left, dataLabel, initialRightValue));
+    }
+
 #if !CPU(ARM_TRADITIONAL)
     PatchableJump patchableJump()
     {
@@ -382,6 +364,11 @@ public:
     PatchableJump patchableBranch32(RelationalCondition cond, RegisterID reg, TrustedImm32 imm)
     {
         return PatchableJump(branch32(cond, reg, imm));
+    }
+
+    PatchableJump patchableBranch32(RelationalCondition cond, Address address, TrustedImm32 imm)
+    {
+        return PatchableJump(branch32(cond, address, imm));
     }
 #endif
 #endif
@@ -483,6 +470,16 @@ public:
     void lshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         lshift32(trustedImm32ForShift(imm), srcDest);
+    }
+
+    void rshiftPtr(Imm32 imm, RegisterID srcDest)
+    {
+        rshift32(trustedImm32ForShift(imm), srcDest);
+    }
+
+    void urshiftPtr(Imm32 imm, RegisterID srcDest)
+    {
+        urshift32(trustedImm32ForShift(imm), srcDest);
     }
 
     void negPtr(RegisterID dest)
@@ -763,6 +760,16 @@ public:
         lshift64(trustedImm32ForShift(imm), srcDest);
     }
 
+    void rshiftPtr(Imm32 imm, RegisterID srcDest)
+    {
+        rshift64(trustedImm32ForShift(imm), srcDest);
+    }
+
+    void urshiftPtr(Imm32 imm, RegisterID srcDest)
+    {
+        urshift64(trustedImm32ForShift(imm), srcDest);
+    }
+
     void negPtr(RegisterID dest)
     {
         neg64(dest);
@@ -1002,7 +1009,7 @@ public:
         if (bitwise_cast<uint64_t>(value * 1.0) != bitwise_cast<uint64_t>(value))
             return shouldConsiderBlinding();
 
-        value = abs(value);
+        value = fabs(value);
         // Only allow a limited set of fractional components
         double scaledValue = value * 8;
         if (scaledValue / 8 != value)
@@ -1153,7 +1160,7 @@ public:
 
     void convertInt32ToDouble(Imm32 imm, FPRegisterID dest)
     {
-        if (shouldBlind(imm)) {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
             RegisterID scratchRegister = scratchRegisterForBlinding();
             loadXorBlindedConstant(xorBlindConstant(imm), scratchRegister);
             convertInt32ToDouble(scratchRegister, dest);
@@ -1189,7 +1196,7 @@ public:
 
     Jump branchPtr(RelationalCondition cond, RegisterID left, ImmPtr right)
     {
-        if (shouldBlind(right)) {
+        if (shouldBlind(right) && haveScratchRegisterForBlinding()) {
             RegisterID scratchRegister = scratchRegisterForBlinding();
             loadRotationBlindedConstant(rotationBlindConstant(right), scratchRegister);
             return branchPtr(cond, left, scratchRegister);
@@ -1199,7 +1206,7 @@ public:
 
     void storePtr(ImmPtr imm, Address dest)
     {
-        if (shouldBlind(imm)) {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
             RegisterID scratchRegister = scratchRegisterForBlinding();
             loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
             storePtr(scratchRegister, dest);
@@ -1209,7 +1216,7 @@ public:
 
     void store64(Imm64 imm, Address dest)
     {
-        if (shouldBlind(imm)) {
+        if (shouldBlind(imm) && haveScratchRegisterForBlinding()) {
             RegisterID scratchRegister = scratchRegisterForBlinding();
             loadRotationBlindedConstant(rotationBlindConstant(imm), scratchRegister);
             store64(scratchRegister, dest);

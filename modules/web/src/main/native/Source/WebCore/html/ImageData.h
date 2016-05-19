@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -36,10 +36,14 @@
 
 namespace WebCore {
 
+typedef int ExceptionCode;
+
 class ImageData : public RefCounted<ImageData> {
 public:
+    static PassRefPtr<ImageData> create(unsigned sw, unsigned sh, ExceptionCode&);
     static PassRefPtr<ImageData> create(const IntSize&);
     static PassRefPtr<ImageData> create(const IntSize&, PassRefPtr<Uint8ClampedArray>);
+    static PassRefPtr<ImageData> create(PassRefPtr<Uint8ClampedArray>, unsigned sw, unsigned sh, ExceptionCode&);
 
     IntSize size() const { return m_size; }
     int width() const { return m_size.width(); }

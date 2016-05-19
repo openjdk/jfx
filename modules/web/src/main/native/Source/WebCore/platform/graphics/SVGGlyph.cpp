@@ -26,7 +26,7 @@
 namespace WebCore {
 
 // Helper functions to determine the arabic character forms (initial, medial, terminal, isolated)
-enum ArabicCharShapingMode {
+enum ArabicCharShapingMode : uint8_t {
     SNone = 0,
     SRight = 1,
     SDual = 2
@@ -112,11 +112,11 @@ static inline bool isCompatibleArabicForm(const SVGGlyph& identifier, const Vect
         return true;
 
     Vector<SVGGlyph::ArabicForm>::const_iterator realEnd = chars.end();
-    Vector<SVGGlyph::ArabicForm>::const_iterator it = chars.begin() + startPosition;
+    Vector<SVGGlyph::ArabicForm>::const_iterator it = chars.begin() + static_cast<int>(startPosition);
     if (it >= realEnd)
         return true;
 
-    Vector<SVGGlyph::ArabicForm>::const_iterator end = chars.begin() + endPosition;
+    Vector<SVGGlyph::ArabicForm>::const_iterator end = chars.begin() + static_cast<int>(endPosition);
     if (end >= realEnd)
         end = realEnd;
 

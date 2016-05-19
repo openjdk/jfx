@@ -26,8 +26,6 @@
 #ifndef JSJavaScriptCallFrame_h
 #define JSJavaScriptCallFrame_h
 
-#if ENABLE(INSPECTOR)
-
 #include "JSDestructibleObject.h"
 #include "JavaScriptCallFrame.h"
 
@@ -36,6 +34,7 @@ namespace Inspector {
 class JSJavaScriptCallFrame : public JSC::JSDestructibleObject {
 public:
     typedef JSC::JSDestructibleObject Base;
+    static const unsigned StructureFlags = Base::StructureFlags;
 
     DECLARE_INFO;
 
@@ -77,10 +76,9 @@ public:
     static const unsigned short WITH_SCOPE = 2;
     static const unsigned short CLOSURE_SCOPE = 3;
     static const unsigned short CATCH_SCOPE = 4;
+    static const unsigned short FUNCTION_NAME_SCOPE = 5;
 
 protected:
-    static const unsigned StructureFlags = Base::StructureFlags;
-
     void finishCreation(JSC::VM&);
 
 private:
@@ -94,7 +92,5 @@ JSC::JSValue toJS(JSC::ExecState*, JSC::JSGlobalObject*, JavaScriptCallFrame*);
 JSJavaScriptCallFrame* toJSJavaScriptCallFrame(JSC::JSValue);
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // !defined(JSJavaScriptCallFrame_h)

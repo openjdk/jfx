@@ -25,7 +25,6 @@
 #include "config.h"
 #include "HTMLIFrameElement.h"
 
-#include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "Frame.h"
 #include "HTMLDocument.h"
@@ -43,9 +42,9 @@ inline HTMLIFrameElement::HTMLIFrameElement(const QualifiedName& tagName, Docume
     ASSERT(hasTagName(iframeTag));
 }
 
-PassRefPtr<HTMLIFrameElement> HTMLIFrameElement::create(const QualifiedName& tagName, Document& document)
+Ref<HTMLIFrameElement> HTMLIFrameElement::create(const QualifiedName& tagName, Document& document)
 {
-    return adoptRef(new HTMLIFrameElement(tagName, document));
+    return adoptRef(*new HTMLIFrameElement(tagName, document));
 }
 
 bool HTMLIFrameElement::isPresentationAttribute(const QualifiedName& name) const
@@ -90,9 +89,9 @@ bool HTMLIFrameElement::rendererIsNeeded(const RenderStyle& style)
     return isURLAllowed() && style.display() != NONE;
 }
 
-RenderPtr<RenderElement> HTMLIFrameElement::createElementRenderer(PassRef<RenderStyle> style)
+RenderPtr<RenderElement> HTMLIFrameElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderIFrame>(*this, std::move(style));
+    return createRenderer<RenderIFrame>(*this, WTF::move(style));
 }
 
 }

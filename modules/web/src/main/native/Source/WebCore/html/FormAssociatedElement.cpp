@@ -96,10 +96,10 @@ HTMLFormElement* FormAssociatedElement::findAssociatedForm(const HTMLElement* el
         // the first element in the document to have an ID that equal to
         // the value of form attribute, so we put the result of
         // treeScope().getElementById() over the given element.
-        HTMLFormElement* newForm = 0;
+        HTMLFormElement* newForm = nullptr;
         Element* newFormCandidate = element->treeScope().getElementById(formId);
-        if (newFormCandidate && isHTMLFormElement(newFormCandidate))
-            newForm = toHTMLFormElement(newFormCandidate);
+        if (is<HTMLFormElement>(newFormCandidate))
+            newForm = downcast<HTMLFormElement>(newFormCandidate);
         return newForm;
     }
 
@@ -175,7 +175,7 @@ void FormAssociatedElement::formAttributeChanged()
 
 bool FormAssociatedElement::customError() const
 {
-    return asHTMLElement().willValidate() && !m_customValidationMessage.isEmpty();
+    return willValidate() && !m_customValidationMessage.isEmpty();
 }
 
 bool FormAssociatedElement::hasBadInput() const

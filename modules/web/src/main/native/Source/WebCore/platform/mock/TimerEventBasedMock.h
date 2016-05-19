@@ -60,7 +60,7 @@ class TimerEvent : public RefCounted<TimerEvent> {
 public:
     TimerEvent(TimerEventBasedMock* mock, PassRefPtr<MockNotifier> notifier)
         : m_mock(mock)
-        , m_timer(this, &TimerEvent::timerFired)
+        , m_timer(*this, &TimerEvent::timerFired)
         , m_notifier(notifier)
     {
         m_timer.startOneShot(0.5);
@@ -68,7 +68,7 @@ public:
 
     virtual ~TimerEvent() { }
 
-    void timerFired(Timer<TimerEvent>*)
+    void timerFired()
     {
         m_notifier->fire();
         m_mock->removeEvent(this);
@@ -76,7 +76,7 @@ public:
 
 private:
     TimerEventBasedMock* m_mock;
-    Timer<TimerEvent> m_timer;
+    Timer m_timer;
     RefPtr<MockNotifier> m_notifier;
 };
 

@@ -33,8 +33,6 @@
 #include "ScriptState.h"
 #include "WorkerGlobalScope.h"
 
-#include <JavaScriptCore/APIShims.h>
-
 namespace WebCore {
 
 class ScriptExecutionContext;
@@ -43,11 +41,11 @@ class DOMRequestState {
 public:
     explicit DOMRequestState(ScriptExecutionContext* scriptExecutionContext)
         : m_scriptExecutionContext(scriptExecutionContext)
-        , m_exec(0)
+        , m_exec(nullptr)
     {
-        if (m_scriptExecutionContext->isDocument()) {
-            Document* document = toDocument(m_scriptExecutionContext);
-            m_exec = execStateFromPage(mainThreadNormalWorld(), document->page());
+        if (is<Document>(*m_scriptExecutionContext)) {
+            Document& document = downcast<Document>(*m_scriptExecutionContext);
+            m_exec = execStateFromPage(mainThreadNormalWorld(), document.page());
         } else {
             WorkerGlobalScope* workerGlobalScope = static_cast<WorkerGlobalScope*>(m_scriptExecutionContext);
             m_exec = execStateFromWorkerGlobalScope(workerGlobalScope);
@@ -56,18 +54,18 @@ public:
 
     void clear()
     {
-        m_scriptExecutionContext = 0;
-        m_exec = 0;
+        m_scriptExecutionContext = nullptr;
+        m_exec = nullptr;
     }
 
     class Scope {
     public:
         explicit Scope(DOMRequestState& state)
-            : m_entryShim(state.exec())
+            : m_locker(state.exec())
         {
         }
     private:
-        JSC::APIEntryShim m_entryShim;
+        JSC::JSLockHolder m_locker;
     };
 
     JSC::ExecState* exec()

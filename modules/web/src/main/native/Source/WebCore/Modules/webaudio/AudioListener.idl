@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -30,10 +30,10 @@
     Conditional=WEB_AUDIO,
     ImplementationLacksVTable,
 ] interface AudioListener {
-    attribute float dopplerFactor;  // same as OpenAL (default 1.0)
-    attribute float speedOfSound;   // in meters / second (default 343.3)
+    attribute unrestricted float dopplerFactor;  // same as OpenAL (default 1.0)
+    attribute unrestricted float speedOfSound;   // in meters / second (default 343.3)
 
-    void setPosition(float x, float y, float z);
-    void setOrientation(float x, float y, float z, float xUp, float yUp, float zUp);
-    void setVelocity(float x, float y, float z);
+    void setPosition(unrestricted float x, unrestricted float y, unrestricted float z);
+    void setOrientation(unrestricted float x, unrestricted float y, unrestricted float z, unrestricted float xUp, unrestricted float yUp, unrestricted float zUp);
+    void setVelocity(unrestricted float x, unrestricted float y, unrestricted float z);
 };

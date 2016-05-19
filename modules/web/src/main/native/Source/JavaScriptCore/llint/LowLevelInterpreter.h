@@ -26,13 +26,9 @@
 #ifndef LowLevelInterpreter_h
 #define LowLevelInterpreter_h
 
-#include <wtf/Platform.h>
-
-#if ENABLE(LLINT)
-
 #include "Opcode.h"
 
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
 
 namespace JSC {
 
@@ -49,18 +45,6 @@ FOR_EACH_CORE_OPCODE_ID(LLINT_OPCODE_ALIAS)
 
 } // namespace JSC
 
-#else // !ENABLE(LLINT_C_LOOP)
-
-#define LLINT_INSTRUCTION_DECL(opcode, length) extern "C" void llint_##opcode();
-    FOR_EACH_OPCODE_ID(LLINT_INSTRUCTION_DECL);
-#undef LLINT_INSTRUCTION_DECL
-
-#define DECLARE_LLINT_NATIVE_HELPER(name, length) extern "C" void name();
-    FOR_EACH_LLINT_NATIVE_HELPER(DECLARE_LLINT_NATIVE_HELPER)
-#undef DECLARE_LLINT_NATIVE_HELPER
-
-#endif // !ENABLE(LLINT_C_LOOP)
-
-#endif // ENABLE(LLINT)
+#endif // !ENABLE(JIT)
 
 #endif // LowLevelInterpreter_h

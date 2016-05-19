@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -156,6 +156,7 @@ bool unlockFile(PlatformFileHandle handle)
 }
 #endif
 
+#if !PLATFORM(MAC)
 bool deleteEmptyDirectory(const String& path)
 {
     CString fsRep = fileSystemRepresentation(path);
@@ -166,6 +167,7 @@ bool deleteEmptyDirectory(const String& path)
     // rmdir(...) returns 0 on successful deletion of the path and non-zero in any other case (including invalid permissions or non-existent file)
     return !rmdir(fsRep.data());
 }
+#endif
 
 bool getFileSize(const String& path, long long& result)
 {
@@ -177,6 +179,16 @@ bool getFileSize(const String& path, long long& result)
     struct stat fileInfo;
 
     if (stat(fsRep.data(), &fileInfo))
+        return false;
+
+    result = fileInfo.st_size;
+    return true;
+}
+
+bool getFileSize(PlatformFileHandle handle, long long& result)
+{
+    struct stat fileInfo;
+    if (fstat(handle, &fileInfo))
         return false;
 
     result = fileInfo.st_size;
@@ -286,7 +298,6 @@ String directoryName(const String& path)
     return dirname(fsRep.mutableData());
 }
 
-#if !PLATFORM(EFL)
 Vector<String> listDirectory(const String& path, const String& filter)
 {
     Vector<String> entries;
@@ -310,7 +321,6 @@ Vector<String> listDirectory(const String& path, const String& filter)
     }
     return entries;
 }
-#endif
 
 #if !OS(DARWIN) || PLATFORM(EFL) || PLATFORM(GTK)
 String openTemporaryFile(const String& prefix, PlatformFileHandle& handle)

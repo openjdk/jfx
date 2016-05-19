@@ -34,13 +34,6 @@ class JSWithScope : public JSScope {
 public:
     typedef JSScope Base;
 
-    static JSWithScope* create(ExecState* exec, JSObject* object)
-    {
-        JSWithScope* withScope = new (NotNull, allocateCell<JSWithScope>(*exec->heap())) JSWithScope(exec, object);
-        withScope->finishCreation(exec->vm());
-        return withScope;
-    }
-
     static JSWithScope* create(ExecState* exec, JSObject* object, JSScope* next)
     {
         JSWithScope* withScope = new (NotNull, allocateCell<JSWithScope>(*exec->heap())) JSWithScope(exec, object, next);
@@ -59,20 +52,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-protected:
-    static const unsigned StructureFlags = OverridesVisitChildren | Base::StructureFlags;
-
 private:
-    JSWithScope(ExecState* exec, JSObject* object)
-        : Base(
-            exec->vm(),
-            exec->lexicalGlobalObject()->withScopeStructure(),
-            exec->scope()
-        )
-        , m_object(exec->vm(), this, object)
-    {
-    }
-
     JSWithScope(ExecState* exec, JSObject* object, JSScope* next)
         : Base(
             exec->vm(),

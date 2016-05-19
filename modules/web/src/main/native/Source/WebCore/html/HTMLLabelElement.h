@@ -31,7 +31,7 @@ namespace WebCore {
 
 class HTMLLabelElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLLabelElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLLabelElement> create(const QualifiedName&, Document&);
 
     LabelableElement* control();
     HTMLFormElement* form() const;
@@ -54,8 +54,6 @@ private:
 
     virtual void focus(bool restorePreviousSelection, FocusDirection) override;
 };
-
-NODE_TYPE_CASTS(HTMLLabelElement)
 
 } //namespace
 

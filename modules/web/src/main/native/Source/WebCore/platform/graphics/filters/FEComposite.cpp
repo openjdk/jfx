@@ -22,8 +22,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(FILTERS)
 #include "FEComposite.h"
 #if !PLATFORM(JAVA) || HAVE(ARM_NEON_INTRINSICS)
 #include "FECompositeArithmeticNEON.h"
@@ -36,7 +34,7 @@
 
 namespace WebCore {
 
-FEComposite::FEComposite(Filter* filter, const CompositeOperationType& type, float k1, float k2, float k3, float k4)
+FEComposite::FEComposite(Filter& filter, const CompositeOperationType& type, float k1, float k2, float k3, float k4)
     : FilterEffect(filter)
     , m_type(type)
     , m_k1(k1)
@@ -46,9 +44,9 @@ FEComposite::FEComposite(Filter* filter, const CompositeOperationType& type, flo
 {
 }
 
-PassRefPtr<FEComposite> FEComposite::create(Filter* filter, const CompositeOperationType& type, float k1, float k2, float k3, float k4)
+Ref<FEComposite> FEComposite::create(Filter& filter, const CompositeOperationType& type, float k1, float k2, float k3, float k4)
 {
-    return adoptRef(new FEComposite(filter, type, k1, k2, k3, k4));
+    return adoptRef(*new FEComposite(filter, type, k1, k2, k3, k4));
 }
 
 CompositeOperationType FEComposite::operation() const
@@ -238,6 +236,7 @@ void FEComposite::determineAbsolutePaintRect()
         // For In and Atop the first effect just influences the result of
         // the second effect. So just use the absolute paint rect of the second effect here.
         setAbsolutePaintRect(inputEffect(1)->absolutePaintRect());
+        clipAbsolutePaintRect();
         return;
     case FECOMPOSITE_OPERATOR_ARITHMETIC:
         // Arithmetic may influnce the compele filter primitive region. So we can't
@@ -293,13 +292,11 @@ void FEComposite::platformApplySoftware()
         destinationRect.intersect(absolutePaintRect());
         if (destinationRect.isEmpty())
             break;
-        IntPoint destinationPoint(destinationRect.x() - absolutePaintRect().x(), destinationRect.y() - absolutePaintRect().y());
-        IntRect sourceRect(IntPoint(destinationRect.x() - in->absolutePaintRect().x(),
-                                    destinationRect.y() - in->absolutePaintRect().y()), destinationRect.size());
-        IntRect source2Rect(IntPoint(destinationRect.x() - in2->absolutePaintRect().x(),
-                                     destinationRect.y() - in2->absolutePaintRect().y()), destinationRect.size());
-        filterContext->drawImageBuffer(imageBuffer2, ColorSpaceDeviceRGB, destinationPoint, source2Rect);
-        filterContext->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, destinationPoint, sourceRect, CompositeSourceIn);
+        IntRect adjustedDestinationRect = destinationRect - absolutePaintRect().location();
+        IntRect sourceRect = destinationRect - in->absolutePaintRect().location();
+        IntRect source2Rect = destinationRect - in2->absolutePaintRect().location();
+        filterContext->drawImageBuffer(imageBuffer2, ColorSpaceDeviceRGB, adjustedDestinationRect, source2Rect);
+        filterContext->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, adjustedDestinationRect, sourceRect, CompositeSourceIn);
         break;
     }
     case FECOMPOSITE_OPERATOR_OUT:
@@ -366,5 +363,3 @@ TextStream& FEComposite::externalRepresentation(TextStream& ts, int indent) cons
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(FILTERS)

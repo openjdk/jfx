@@ -14,7 +14,7 @@
 # THIS SOFTWARE IS PROVIDED BY GOOGLE, INC. `AS IS'' AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
 # CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
 # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
 # PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -239,12 +239,18 @@ sub printGetterAndSetter($$$$)
 {
     my ($file, $settingName, $type, $setNeedsStyleRecalcInAllFrames) = @_;
     my $setterFunctionName = setterFunctionName($settingName);
+    
+    my $webcoreExport = "";
+    if ($setNeedsStyleRecalcInAllFrames) {
+        $webcoreExport = "WEBCORE_EXPORT"; # Export is only needed if the definition is not in the header.
+    }
+    
     if (lc(substr($type, 0, 1)) eq substr($type, 0, 1)) {
         print $file "    $type $settingName() const { return m_$settingName; } \\\n";
-        print $file "    void $setterFunctionName($type $settingName)";
+        print $file "    $webcoreExport void $setterFunctionName($type $settingName)";
     } else {
         print $file "    const $type& $settingName() { return m_$settingName; } \\\n";
-        print $file "    void $setterFunctionName(const $type& $settingName)";
+        print $file "    $webcoreExport void $setterFunctionName(const $type& $settingName)";
     }
     if ($setNeedsStyleRecalcInAllFrames) {
         print $file "; \\\n";
@@ -383,8 +389,7 @@ sub generateInternalSettingsHeaderFile($)
 #ifndef InternalSettingsGenerated_h
 #define InternalSettingsGenerated_h
 
-#include "RefCountedSupplement.h"
-#include <wtf/PassRefPtr.h>
+#include "Supplementable.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 

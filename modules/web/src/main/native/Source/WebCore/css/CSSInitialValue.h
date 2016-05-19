@@ -28,11 +28,11 @@ namespace WebCore {
 
 class CSSInitialValue : public CSSValue {
 public:
-    static PassRef<CSSInitialValue> createExplicit()
+    static Ref<CSSInitialValue> createExplicit()
     {
         return adoptRef(*new CSSInitialValue(/* implicit */ false));
     }
-    static PassRef<CSSInitialValue> createImplicit()
+    static Ref<CSSInitialValue> createImplicit()
     {
         return adoptRef(*new CSSInitialValue(/* implicit */ true));
     }
@@ -53,8 +53,8 @@ private:
     bool m_isImplicit;
 };
 
-CSS_VALUE_TYPE_CASTS(CSSInitialValue, isInitialValue())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSInitialValue, isInitialValue())
 
 #endif // CSSInitialValue_h

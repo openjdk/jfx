@@ -26,7 +26,10 @@
 #include "config.h"
 #include "Hyphenation.h"
 
+#if !USE(LIBHYPHEN)
+
 #include "NotImplemented.h"
+#include <wtf/text/StringView.h>
 
 namespace WebCore {
 
@@ -35,10 +38,12 @@ bool canHyphenate(const AtomicString& /* localeIdentifier */)
     return false;
 }
 
-size_t lastHyphenLocation(const UChar* /* characters */, size_t /* length */, size_t /* beforeIndex */, const AtomicString& /* localeIdentifier */)
+size_t lastHyphenLocation(StringView, size_t /* beforeIndex */, const AtomicString& /* localeIdentifier */)
 {
     ASSERT_NOT_REACHED();
     return 0;
 }
 
 } // namespace WebCore
+
+#endif // !USE(LIBHYPHEN)

@@ -5,12 +5,11 @@
 
 
 #include "Font.h"
-#include "FontData.h"
+#include "FontRanges.h" //XXX: FontData.h -> FontRanges.h
 #include "FontDescription.h"
 #include "FontPlatformData.h"
 #include "GraphicsContextJava.h"
 #include "NotImplemented.h"
-#include "SimpleFontData.h"
 
 #include <wtf/Assertions.h>
 #include <wtf/text/WTFString.h>
@@ -18,7 +17,7 @@
 
 namespace WebCore {
 
-void SimpleFontData::platformInit()
+void Font::platformInit()
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -57,7 +56,7 @@ void SimpleFontData::platformInit()
     CheckAndClearException(env);
 }
 
-void SimpleFontData::determinePitch()
+void Font::determinePitch()
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -75,30 +74,30 @@ void SimpleFontData::determinePitch()
     CheckAndClearException(env);
 }
 
-void SimpleFontData::platformCharWidthInit()
+void Font::platformCharWidthInit()
 {
     m_avgCharWidth = 0.f;
     m_maxCharWidth = 0.f;
     initCharWidths();
 }
 
-void SimpleFontData::platformDestroy()
+void Font::platformDestroy()
 {
     notImplemented();
 }
 
-bool SimpleFontData::containsCharacters(const UChar *characters, int length) const
+// bool Font::containsCharacters(const UChar *characters, int length) const
+// {
+//     notImplemented();
+//     return true;
+// }
+
+PassRefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescription, float scaleFactor) const
 {
-    notImplemented();
-    return true;
+    return Font::create(*m_platformData.derive(scaleFactor), isCustomFont(), false);
 }
 
-PassRefPtr<SimpleFontData> SimpleFontData::platformCreateScaledFontData(const FontDescription& fontDescription, float scaleFactor) const
-{
-    return SimpleFontData::create(*m_platformData.derive(scaleFactor), isCustomFont(), false);
-}
-
-float SimpleFontData::platformWidthForGlyph(Glyph c) const
+float Font::platformWidthForGlyph(Glyph c) const
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -116,7 +115,7 @@ float SimpleFontData::platformWidthForGlyph(Glyph c) const
     return res;
 }
 
-FloatRect SimpleFontData::platformBoundsForGlyph(Glyph) const
+FloatRect Font::platformBoundsForGlyph(Glyph) const
 {
     return FloatRect(); //That is OK! platformWidthForGlyph impl is enough.
 }

@@ -34,6 +34,7 @@
 #include "ScriptCallStackFactory.h"
 
 #include "CallFrame.h"
+#include "Exception.h"
 #include "JSCJSValue.h"
 #include "JSCInlines.h"
 #include "ScriptArguments.h"
@@ -83,28 +84,25 @@ private:
     size_t m_remainingCapacityForFrameCapture;
 };
 
-PassRefPtr<ScriptCallStack> createScriptCallStack(JSC::ExecState* exec, size_t maxStackSize, bool emptyIsAllowed)
+Ref<ScriptCallStack> createScriptCallStack(JSC::ExecState* exec, size_t maxStackSize)
 {
+    if (!exec)
+        return ScriptCallStack::create();
+
     Vector<ScriptCallFrame> frames;
 
-    if (exec) {
-        CallFrame* frame = exec->vm().topCallFrame;
-        CreateScriptCallStackFunctor functor(false, frames, maxStackSize);
-        frame->iterate(functor);
-    }
-
-    if (frames.isEmpty() && !emptyIsAllowed) {
-        // No frames found. It may happen in the case where
-        // a bound function is called from native code for example.
-        // Fallback to setting lineNumber to 0, and source and function name to "undefined".
-        frames.append(ScriptCallFrame(ASCIILiteral("undefined"), ASCIILiteral("undefined"), 0, 0));
-    }
+    CallFrame* frame = exec->vm().topCallFrame;
+    CreateScriptCallStackFunctor functor(false, frames, maxStackSize);
+    frame->iterate(functor);
 
     return ScriptCallStack::create(frames);
 }
 
-PassRefPtr<ScriptCallStack> createScriptCallStack(JSC::ExecState* exec, size_t maxStackSize)
+Ref<ScriptCallStack> createScriptCallStackForConsole(JSC::ExecState* exec, size_t maxStackSize)
 {
+    if (!exec)
+        return ScriptCallStack::create();
+
     Vector<ScriptCallFrame> frames;
 
     CallFrame* frame = exec->vm().topCallFrame;
@@ -119,47 +117,52 @@ PassRefPtr<ScriptCallStack> createScriptCallStack(JSC::ExecState* exec, size_t m
     return ScriptCallStack::create(frames);
 }
 
-PassRefPtr<ScriptCallStack> createScriptCallStackForConsole(JSC::ExecState* exec)
+static void extractSourceInformationFromException(JSC::ExecState* exec, JSObject* exceptionObject, int* lineNumber, int* columnNumber, String* sourceURL)
 {
-    // FIXME: Caller should use createScriptCallStack alternative with the exec and appropriate max.
-    return createScriptCallStack(exec, ScriptCallStack::maxCallStackSizeToCapture);
+    // FIXME: <http://webkit.org/b/115087> Web Inspector: Should not need to evaluate JavaScript handling exceptions
+    JSValue lineValue = exceptionObject->getDirect(exec->vm(), Identifier::fromString(exec, "line"));
+    *lineNumber = lineValue && lineValue.isNumber() ? int(lineValue.toNumber(exec)) : 0;
+    JSValue columnValue = exceptionObject->getDirect(exec->vm(), Identifier::fromString(exec, "column"));
+    *columnNumber = columnValue && columnValue.isNumber() ? int(columnValue.toNumber(exec)) : 0;
+    JSValue sourceURLValue = exceptionObject->getDirect(exec->vm(), Identifier::fromString(exec, "sourceURL"));
+    *sourceURL = sourceURLValue && sourceURLValue.isString() ? sourceURLValue.toString(exec)->value(exec) : ASCIILiteral("undefined");
+    exec->clearException();
 }
 
-PassRefPtr<ScriptCallStack> createScriptCallStackFromException(JSC::ExecState* exec, JSC::JSValue& exception, size_t maxStackSize)
+Ref<ScriptCallStack> createScriptCallStackFromException(JSC::ExecState* exec, JSC::Exception* exception, size_t maxStackSize)
 {
     Vector<ScriptCallFrame> frames;
-    RefCountedArray<StackFrame> stackTrace = exec->vm().exceptionStack();
+    RefCountedArray<StackFrame> stackTrace = exception->stack();
     for (size_t i = 0; i < stackTrace.size() && i < maxStackSize; i++) {
-        if (!stackTrace[i].callee && frames.size())
-            break;
-
         unsigned line;
         unsigned column;
         stackTrace[i].computeLineAndColumn(line, column);
         String functionName = stackTrace[i].friendlyFunctionName(exec);
-        frames.append(ScriptCallFrame(functionName, stackTrace[i].sourceURL, line, column));
+        frames.append(ScriptCallFrame(functionName, stackTrace[i].friendlySourceURL(), line, column));
     }
 
-    // FIXME: <http://webkit.org/b/115087> Web Inspector: WebCore::reportException should not evaluate JavaScript handling exceptions
-    // Fallback to getting at least the line and sourceURL from the exception if it has values and the exceptionStack doesn't.
-    if (frames.size() > 0) {
-        const ScriptCallFrame& firstCallFrame = frames.first();
-        JSObject* exceptionObject = exception.toObject(exec);
-        if (exception.isObject() && firstCallFrame.sourceURL().isEmpty()) {
-            JSValue lineValue = exceptionObject->getDirect(exec->vm(), Identifier(exec, "line"));
-            int lineNumber = lineValue && lineValue.isNumber() ? int(lineValue.toNumber(exec)) : 0;
-            JSValue columnValue = exceptionObject->getDirect(exec->vm(), Identifier(exec, "column"));
-            int columnNumber = columnValue && columnValue.isNumber() ? int(columnValue.toNumber(exec)) : 0;
-            JSValue sourceURLValue = exceptionObject->getDirect(exec->vm(), Identifier(exec, "sourceURL"));
-            String exceptionSourceURL = sourceURLValue && sourceURLValue.isString() ? sourceURLValue.toString(exec)->value(exec) : ASCIILiteral("undefined");
-            frames[0] = ScriptCallFrame(firstCallFrame.functionName(), exceptionSourceURL, lineNumber, columnNumber);
+    // Fallback to getting at least the line and sourceURL from the exception object if it has values and the exceptionStack doesn't.
+    if (exception->value().isObject()) {
+        JSObject* exceptionObject = exception->value().toObject(exec);
+        int lineNumber;
+        int columnNumber;
+        String exceptionSourceURL;
+        if (!frames.size()) {
+            extractSourceInformationFromException(exec, exceptionObject, &lineNumber, &columnNumber, &exceptionSourceURL);
+            frames.append(ScriptCallFrame(String(), exceptionSourceURL, lineNumber, columnNumber));
+        } else {
+            if (stackTrace[0].sourceURL.isEmpty()) {
+                const ScriptCallFrame& firstCallFrame = frames.first();
+                extractSourceInformationFromException(exec, exceptionObject, &lineNumber, &columnNumber, &exceptionSourceURL);
+                frames[0] = ScriptCallFrame(firstCallFrame.functionName(), exceptionSourceURL, lineNumber, columnNumber);
+            }
         }
     }
 
     return ScriptCallStack::create(frames);
 }
 
-PassRefPtr<ScriptArguments> createScriptArguments(JSC::ExecState* exec, unsigned skipArgumentCount)
+Ref<ScriptArguments> createScriptArguments(JSC::ExecState* exec, unsigned skipArgumentCount)
 {
     Vector<Deprecated::ScriptValue> arguments;
     size_t argumentCount = exec->argumentCount();

@@ -80,7 +80,7 @@
             "id": "Scope",
             "type": "object",
             "properties": [
-                { "name": "type", "type": "string", "enum": ["global", "local", "with", "closure", "catch"], "description": "Scope type." },
+                { "name": "type", "type": "string", "enum": ["global", "local", "with", "closure", "catch", "functionName"], "description": "Scope type." },
                 { "name": "object", "$ref": "Runtime.RemoteObject", "description": "Object representing the scope. For <code>global</code> and <code>with</code> scopes it represents the actual object; for the rest of the scopes, it is artificial transient object enumerating scope variables as its properties." }
             ],
             "description": "Scope description."
@@ -95,6 +95,30 @@
                 { "name": "batchId", "type": "integer", "description": "A batch identifier which is the same for all samples taken at the same breakpoint hit." },
                 { "name": "timestamp", "type": "number", "description": "Timestamp of when the sample was taken." },
                 { "name": "payload", "$ref": "Runtime.RemoteObject", "description": "Contents of the sample." }
+            ]
+        },
+        {
+            "id": "AssertPauseReason",
+            "description": "The pause reason auxiliary data when paused because of an assertion.",
+            "type": "object",
+            "properties": [
+                { "name": "message", "type": "string", "optional": true, "description": "The console.assert message string if provided." }
+            ]
+        },
+        {
+            "id": "BreakpointPauseReason",
+            "description": "The pause reason auxiliary data when paused because of hitting a breakpoint.",
+            "type": "object",
+            "properties": [
+                { "name": "breakpointId", "type": "string", "description": "The identifier of the breakpoint causing the pause." }
+            ]
+        },
+        {
+            "id": "CSPViolationPauseReason",
+            "description": "The pause reason auxiliary data when paused because of a Content Security Policy directive.",
+            "type": "object",
+            "properties": [
+                { "name": "directive", "type": "string", "description": "The CSP directive that blocked script execution." }
             ]
         }
     ],
@@ -177,16 +201,16 @@
         },
         {
             "name": "searchInContent",
+            "description": "Searches for given string in script content.",
             "parameters": [
                 { "name": "scriptId", "$ref": "ScriptId", "description": "Id of the script to search in." },
-                { "name": "query", "type": "string", "description": "String to search for."  },
+                { "name": "query", "type": "string", "description": "String to search for." },
                 { "name": "caseSensitive", "type": "boolean", "optional": true, "description": "If true, search is case sensitive." },
                 { "name": "isRegex", "type": "boolean", "optional": true, "description": "If true, treats string parameter as regex." }
             ],
             "returns": [
                 { "name": "result", "type": "array", "items": { "$ref": "GenericTypes.SearchMatch" }, "description": "List of search matches." }
-            ],
-            "description": "Searches for given string in script content."
+            ]
         },
         {
             "name": "getScriptSource",
@@ -206,7 +230,7 @@
             "returns": [
                 { "name": "details", "$ref": "FunctionDetails", "description": "Information about the function." }
             ],
-            "description": "Returns detailed informtation on given function."
+            "description": "Returns detailed information on given function."
         },
         {
             "name": "setPauseOnExceptions",
@@ -224,11 +248,13 @@
                 { "name": "includeCommandLineAPI", "type": "boolean", "optional": true, "description": "Specifies whether command line API should be available to the evaluated expression, defaults to false." },
                 { "name": "doNotPauseOnExceptionsAndMuteConsole", "type": "boolean", "optional": true, "description": "Specifies whether evaluation should stop on exceptions and mute console. Overrides setPauseOnException state." },
                 { "name": "returnByValue", "type": "boolean", "optional": true, "description": "Whether the result is expected to be a JSON object that should be sent by value." },
-                { "name": "generatePreview", "type": "boolean", "optional": true, "description": "Whether preview should be generated for the result." }
+                { "name": "generatePreview", "type": "boolean", "optional": true, "description": "Whether preview should be generated for the result." },
+                { "name": "saveResult", "type": "boolean", "optional": true, "description": "Whether the resulting value should be considered for saving in the $n history." }
             ],
             "returns": [
                 { "name": "result", "$ref": "Runtime.RemoteObject", "description": "Object wrapper for the evaluation result." },
-                { "name": "wasThrown", "type": "boolean", "optional": true, "description": "True if the result was thrown during the evaluation." }
+                { "name": "wasThrown", "type": "boolean", "optional": true, "description": "True if the result was thrown during the evaluation." },
+                { "name": "savedResultIndex", "type": "integer", "optional": true, "description": "If the result was saved, this is the $n index that can be used to access the value." }
             ],
             "description": "Evaluates expression on a given call frame."
         },
@@ -283,7 +309,7 @@
             "name": "paused",
             "parameters": [
                 { "name": "callFrames", "type": "array", "items": { "$ref": "CallFrame" }, "description": "Call stack the virtual machine stopped on." },
-                { "name": "reason", "type": "string", "enum": [ "XHR", "DOM", "EventListener", "exception", "assert", "CSPViolation", "other" ], "description": "Pause reason." },
+                { "name": "reason", "type": "string", "enum": ["XHR", "DOM", "EventListener", "exception", "assert", "CSPViolation", "DebuggerStatement", "Breakpoint", "PauseOnNextStatement", "other"], "description": "Pause reason." },
                 { "name": "data", "type": "object", "optional": true, "description": "Object containing break-specific auxiliary properties." }
             ],
             "description": "Fired when the virtual machine stopped on breakpoint or exception or any other stop criteria."

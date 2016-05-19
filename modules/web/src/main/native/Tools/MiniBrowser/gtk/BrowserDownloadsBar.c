@@ -23,6 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "cmakeconfig.h"
 #include "BrowserDownloadsBar.h"
 
 #include <glib/gi18n.h>

@@ -25,7 +25,6 @@ validationMessageTimerMagnification type=int, initial=50
 minimumAccelerated2dCanvasSize type=int, initial=257*256
 
 layoutFallbackWidth type=int, initial=980
-maximumDecodedImageSize type=size_t, initial=std::numeric_limits<size_t>::max()
 deviceWidth type=int, initial=0
 deviceHeight type=int, initial=0
 
@@ -35,7 +34,7 @@ sessionStorageQuota type=unsigned, initial=StorageMap::noQuota
 
 minimumFontSize type=int, initial=0, setNeedsStyleRecalcInAllFrames=1
 minimumLogicalFontSize type=int, initial=0, setNeedsStyleRecalcInAllFrames=1
-defaultFontSize type=int, initial=0, setNeedsStyleRecalcInAllFrames=1
+defaultFontSize type=int, initial=16, setNeedsStyleRecalcInAllFrames=1
 defaultFixedFontSize type=int, initial=0, setNeedsStyleRecalcInAllFrames=1
 
 editingBehaviorType type=EditingBehaviorType, initial=editingBehaviorTypeForPlatform()
@@ -46,6 +45,7 @@ maximumHTMLParserDOMTreeDepth type=unsigned, initial=defaultMaximumHTMLParserDOM
 loadsSiteIconsIgnoringImageLoadingSetting initial=false
 
 caretBrowsingEnabled initial=false
+preventKeyboardDOMEventDispatch initial=false
 localStorageEnabled initial=false
 allowUniversalAccessFromFileURLs initial=true
 allowFileAccessFromFileURLs initial=true
@@ -60,6 +60,7 @@ acceleratedCompositingEnabled initial=true, setNeedsStyleRecalcInAllFrames=1
 acceleratedCompositedAnimationsEnabled initial=true, setNeedsStyleRecalcInAllFrames=1
 showDebugBorders initial=false, setNeedsStyleRecalcInAllFrames=1
 showRepaintCounter initial=false, setNeedsStyleRecalcInAllFrames=1
+visibleDebugOverlayRegions type=DebugOverlayRegions, initial=0
 
 # This is a quirk we are pro-actively applying to old applications. It changes keyboard event dispatching,
 # making keyIdentifier available on keypress events, making charCode available on keydown/keyup events,
@@ -73,9 +74,9 @@ showsURLsInToolTips initial=false
 showsToolTipOverTruncatedText initial=false
 forceFTPDirectoryListings initial=false
 developerExtrasEnabled initial=false
-javaScriptExperimentsEnabled initial=false
 scriptMarkupEnabled initial=true
 needsSiteSpecificQuirks initial=false
+domTimersThrottlingEnabled initial=true
 webArchiveDebugModeEnabled initial=false, conditional=WEB_ARCHIVE
 localFileContentSniffingEnabled initial=false
 offlineWebApplicationCacheEnabled initial=false
@@ -85,9 +86,8 @@ allowScriptsToCloseWindows initial=false
 canvasUsesAcceleratedDrawing initial=false
 acceleratedDrawingEnabled initial=false
 acceleratedFiltersEnabled initial=false
-regionBasedColumnsEnabled initial=false
-cssGridLayoutEnabled initial=false
 useLegacyTextAlignPositionedElementBehavior initial=false
+javaScriptRuntimeFlags type=JSC::RuntimeFlags
 
 # FIXME: This should really be disabled by default as it makes platforms that don't support the feature download files
 # they can't use by. Leaving enabled for now to not change existing behavior.
@@ -97,15 +97,12 @@ xssAuditorEnabled initial=false
 unsafePluginPastingEnabled initial=true
 acceleratedCompositingForFixedPositionEnabled initial=defaultAcceleratedCompositingForFixedPositionEnabled
 acceleratedCompositingForOverflowScrollEnabled initial=false
-
-# Works only in conjunction with forceCompositingMode.
-compositedScrollingForFramesEnabled initial=false
+rubberBandingForSubScrollableRegionsEnabled initial=true, conditional=RUBBER_BANDING
 
 experimentalNotificationsEnabled initial=false
 webGLEnabled initial=false
 webGLErrorsToConsoleEnabled initial=true
 openGLMultisamplingEnabled initial=true
-multithreadedWebGLEnabled initial=false
 privilegedWebGLExtensionsEnabled initial=false
 forceSoftwareWebGLRendering initial=false
 accelerated2dCanvasEnabled initial=false
@@ -126,10 +123,13 @@ crossOriginCheckInGetMatchedCSSRulesDisabled initial=false
 forceCompositingMode initial=false
 shouldInjectUserScriptsInInitialEmptyDocument initial=false
 fixedElementsLayoutRelativeToFrame initial=false
-allowDisplayOfInsecureContent initial=true
-allowRunningOfInsecureContent initial=true
-mediaPlaybackRequiresUserGesture initial=defaultMediaPlaybackRequiresUserGesture
-mediaPlaybackAllowsInline initial=defaultMediaPlaybackAllowsInline
+allowDisplayOfInsecureContent initial=false
+allowRunningOfInsecureContent initial=false
+requiresUserGestureForMediaPlayback initial=defaultRequiresUserGestureForMediaPlayback
+audioPlaybackRequiresUserGesture initial=defaultAudioPlaybackRequiresUserGesture
+allowsInlineMediaPlayback initial=defaultAllowsInlineMediaPlayback
+allowsPictureInPictureMediaPlayback initial=defaultAllowsPictureInPictureMediaPlayback
+mediaControlsScaleWithPageZoom initial=defaultMediaControlsScaleWithPageZoom
 passwordEchoEnabled initial=false
 suppressesIncrementalRendering initial=false
 incrementalRenderingSuppressionTimeoutInSeconds type=double, initial=defaultIncrementalRenderingSuppressionTimeoutInSeconds
@@ -138,23 +138,23 @@ shouldDisplaySubtitles initial=false, conditional=VIDEO_TRACK
 shouldDisplayCaptions initial=false, conditional=VIDEO_TRACK
 shouldDisplayTextDescriptions initial=false, conditional=VIDEO_TRACK
 scrollingCoordinatorEnabled initial=false
+scrollingTreeIncludesFrames initial=defaultScrollingTreeIncludesFrames
 scrollAnimatorEnabled initial=true, conditional=SMOOTH_SCROLLING
+forceUpdateScrollbarsOnMainThreadForPerformanceTesting initial=false
 notificationsEnabled initial=true
 
 # Some apps needs isLoadingInAPISense to account for active subresource loaders.
 needsIsLoadingInAPISenseQuirk initial=false
 
 shouldRespectImageOrientation initial=defaultShouldRespectImageOrientation
+imageSubsamplingEnabled initial=defaultImageSubsamplingEnabled
 wantsBalancedSetDefersLoadingBehavior initial=false
 requestAnimationFrameEnabled initial=true
-deviceSupportsTouch initial=false
-deviceSupportsMouse initial=true
 
 fixedPositionCreatesStackingContext initial=defaultFixedPositionCreatesStackingContext
 syncXHRInDocumentsEnabled initial=true
 cookieEnabled initial=true
 mediaEnabled initial=true
-applicationChromeMode initial=false
 DOMPasteAllowed initial=false
 
 # When enabled, window.blur() does not change focus, and
@@ -192,18 +192,21 @@ selectTrailingWhitespaceEnabled initial=defaultSelectTrailingWhitespaceEnabled
 
 selectionIncludesAltImageText initial=true
 useLegacyBackgroundSizeShorthandBehavior initial=false
+fixedBackgroundsPaintRelativeToDocument initial=defaultFixedBackgroundsPaintRelativeToDocument
 
 minimumZoomFontSize type=float, initial=15, conditional=IOS_TEXT_AUTOSIZING
 
 simpleLineLayoutEnabled initial=true, setNeedsStyleRecalcInAllFrames=1
 simpleLineLayoutDebugBordersEnabled initial=false, setNeedsStyleRecalcInAllFrames=1
 
-mediaSourceEnabled initial=false
+subpixelCSSOMElementMetricsEnabled initial=false
+
+mediaSourceEnabled initial=true, conditional=MEDIA_SOURCE
 
 # FIXME: Rename to allowMultiElementImplicitFormSubmission once we upstream the iOS changes to WebView.mm.
 allowMultiElementImplicitSubmission initial=false
 
-mediaPlaybackAllowsAirPlay initial=true, conditional=IOS_AIRPLAY
+allowsAirPlayForMediaPlayback initial=true, conditional=WIRELESS_PLAYBACK_TARGET
 
 shouldConvertPositionStyleOnCopy initial=false
 
@@ -214,6 +217,35 @@ mediaDataLoadsAutomatically initial=false
 shouldTransformsAffectOverflow initial=true
 shouldDispatchJavaScriptWindowOnErrorEvents initial=false
 alwaysUseAcceleratedOverflowScroll initial=false
+imageControlsEnabled initial=false, conditional=SERVICE_CONTROLS
 
-# FIXME: This is unneeded and should be removed.
-alwaysUseBaselineOfPrimaryFont initial=false
+enableInheritURIQueryComponent initial=false
+
+aggressiveTileRetentionEnabled initial=false
+temporaryTileCohortRetentionEnabled initial=true
+
+useImageDocumentForSubframePDF initial=false
+
+# Allow SourceBuffers to store up to 304MB each, enough for approximately five minutes
+# of 1080p video and stereo audio.
+maximumSourceBufferSize type=int, initial=318767104, conditional=MEDIA_SOURCE
+
+longMousePressEnabled initial=false
+
+serviceControlsEnabled initial=false, conditional=SERVICE_CONTROLS
+
+ignoreViewportScalingConstraints initial=false
+
+appleMailPaginationQuirkEnabled initial=false
+
+attachmentElementEnabled initial=true, conditional=ATTACHMENT_ELEMENT
+
+newBlockInsideInlineModelEnabled initial=false, setNeedsStyleRecalcInAllFrames=1
+
+httpEquivEnabled initial=true
+
+# Some ports (e.g. iOS) might choose to display attachments inline, regardless of whether the response includes the
+# HTTP header "Content-Disposition: attachment". This setting enables a sandbox around these attachments. The sandbox
+# enforces all frame sandbox flags (see enum SandboxFlag in SecurityContext.h), and also disables <meta http-equiv>
+# processing and subframe loading.
+contentDispositionAttachmentSandboxEnabled initial=false

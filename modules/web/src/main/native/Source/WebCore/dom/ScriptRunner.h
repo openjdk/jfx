@@ -30,7 +30,6 @@
 #include "Timer.h"
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
 
@@ -55,13 +54,13 @@ public:
     void notifyScriptReady(ScriptElement*, ExecutionType);
 
 private:
-    void timerFired(Timer<ScriptRunner>&);
+    void timerFired();
 
     Document& m_document;
     Vector<PendingScript> m_scriptsToExecuteInOrder;
     Vector<PendingScript> m_scriptsToExecuteSoon; // http://www.whatwg.org/specs/web-apps/current-work/#set-of-scripts-that-will-execute-as-soon-as-possible
     HashMap<ScriptElement*, PendingScript> m_pendingAsyncScripts;
-    Timer<ScriptRunner> m_timer;
+    Timer m_timer;
 };
 
 }

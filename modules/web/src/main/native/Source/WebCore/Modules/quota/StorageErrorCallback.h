@@ -34,7 +34,6 @@
 #if ENABLE(QUOTA)
 
 #include "ScriptExecutionContext.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -50,16 +49,9 @@ public:
 
     class CallbackTask : public ScriptExecutionContext::Task {
     public:
-        static PassOwnPtr<CallbackTask> create(PassRefPtr<StorageErrorCallback> callback, ExceptionCode ec)
-        {
-            return adoptPtr(new CallbackTask(callback, ec));
-        }
-
-        virtual void performTask(ScriptExecutionContext*);
-
-    private:
         CallbackTask(PassRefPtr<StorageErrorCallback>, ExceptionCode);
 
+    private:
         RefPtr<StorageErrorCallback> m_callback;
         ExceptionCode m_ec;
     };

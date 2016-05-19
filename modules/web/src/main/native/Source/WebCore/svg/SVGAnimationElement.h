@@ -87,7 +87,8 @@ public:
     enum ShouldApplyAnimation {
         DontApplyAnimation,
         ApplyCSSAnimation,
-        ApplyXMLAnimation
+        ApplyXMLAnimation,
+        ApplyXMLandCSSAnimation // For presentation attributes with SVG DOM properties.
     };
 
     ShouldApplyAnimation shouldApplyAnimation(SVGElement* targetElement, const QualifiedName& attributeName);
@@ -167,8 +168,9 @@ protected:
 
     void computeCSSPropertyValue(SVGElement*, CSSPropertyID, String& value);
     virtual void determinePropertyValueTypes(const String& from, const String& to);
+    virtual void resetAnimatedPropertyType();
 
-    bool isSupportedAttribute(const QualifiedName&);
+    static bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
@@ -193,8 +195,9 @@ protected:
     AnimatedPropertyValueType m_toPropertyValueType;
 
     virtual void setTargetElement(SVGElement*) override;
-    virtual void setAttributeName(const QualifiedName&) override;
+    virtual void setAttributeName(const QualifiedName&) override { }
     bool hasInvalidCSSAttributeType() const { return m_hasInvalidCSSAttributeType; }
+    void checkInvalidCSSAttributeType(SVGElement*);
 
     virtual void updateAnimationMode();
     void setAnimationMode(AnimationMode animationMode) { m_animationMode = animationMode; }
@@ -203,8 +206,6 @@ protected:
 private:
     virtual void animationAttributeChanged() override;
     void setAttributeType(const AtomicString&);
-
-    void checkInvalidCSSAttributeType(SVGElement*);
 
     virtual bool calculateToAtEndOfDurationValue(const String& toAtEndOfDurationString) = 0;
     virtual bool calculateFromAndToValues(const String& fromString, const String& toString) = 0;
@@ -224,7 +225,7 @@ private:
     void adjustForInheritance(SVGElement* targetElement, const QualifiedName& attributeName, String&);
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGAnimationElement)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
+        DECLARE_ANIMATED_BOOLEAN_OVERRIDE(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 
     // SVGTests

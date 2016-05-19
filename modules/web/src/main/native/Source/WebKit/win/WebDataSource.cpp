@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "WebKitDLL.h"
 #include "WebDataSource.h"
 
@@ -45,7 +44,6 @@
 #include <WebCore/Frame.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/URL.h>
-#include <WebCore/ResourceBuffer.h>
 
 using namespace WebCore;
 
@@ -61,7 +59,7 @@ WebDataSource::WebDataSource(WebDocumentLoader* loader)
 {
     WebDataSourceCount++;
     gClassCount++;
-    gClassNameCount.add("WebDataSource");
+    gClassNameCount().add("WebDataSource");
 }
 
 WebDataSource::~WebDataSource()
@@ -70,7 +68,7 @@ WebDataSource::~WebDataSource()
         m_loader->detachDataSource();
     WebDataSourceCount--;
     gClassCount--;
-    gClassNameCount.remove("WebDataSource");
+    gClassNameCount().remove("WebDataSource");
 }
 
 WebDataSource* WebDataSource::createInstance(WebDocumentLoader* loader)
@@ -181,8 +179,7 @@ HRESULT STDMETHODCALLTYPE WebDataSource::data(
     if (!m_loader)
         return E_FAIL;
 
-    RefPtr<ResourceBuffer> buffer = m_loader->mainResourceData();
-    return MemoryStream::createInstance(buffer ? buffer->sharedBuffer() : 0).copyRefTo(stream);
+    return MemoryStream::createInstance(m_loader->mainResourceData()).copyRefTo(stream);
 }
 
 HRESULT WebDataSource::representation(/* [retval][out] */ IWebDocumentRepresentation** rep)
@@ -255,7 +252,7 @@ HRESULT STDMETHODCALLTYPE WebDataSource::unreachableURL(
     /* [retval][out] */ BSTR* url)
 {
     URL unreachableURL = m_loader->unreachableURL();
-    BString urlString((LPOLESTR)unreachableURL.string().deprecatedCharacters(), unreachableURL.string().length());
+    BString urlString(unreachableURL.string());
 
     *url = urlString.release();
     return S_OK;
@@ -291,20 +288,19 @@ HRESULT STDMETHODCALLTYPE WebDataSource::subresourceForURL(
         return E_POINTER;
     }
 
-    *resource = 0;
+    *resource = nullptr;
 
-    Document *doc = m_loader->frameLoader()->frame().document();
+    Document* doc = m_loader->frameLoader()->frame().document();
 
     if (!doc)
         return E_FAIL;
 
-    CachedResource *cachedResource = doc->cachedResourceLoader()->cachedResource(String(url));
+    CachedResource* cachedResource = doc->cachedResourceLoader().cachedResource(String(url));
 
     if (!cachedResource)
         return E_FAIL;
 
-    ResourceBuffer* buffer = cachedResource->resourceBuffer();
-    *resource = WebResource::createInstance(buffer ? buffer->sharedBuffer() : 0, cachedResource->response());
+    *resource = WebResource::createInstance(cachedResource->resourceBuffer(), cachedResource->response());
     return S_OK;
 }
 

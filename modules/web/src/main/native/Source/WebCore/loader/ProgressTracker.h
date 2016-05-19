@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -48,7 +48,7 @@ public:
 
     static unsigned long createUniqueIdentifier();
 
-    double estimatedProgress() const;
+    WEBCORE_EXPORT double estimatedProgress() const;
 
     void progressStarted(Frame&);
     void progressCompleted(Frame&);
@@ -66,7 +66,7 @@ private:
     void reset();
     void finalProgressComplete();
 
-    void progressHeartbeatTimerFired(Timer<ProgressTracker>&);
+    void progressHeartbeatTimerFired();
 
     static unsigned long s_uniqueIdentifier;
 
@@ -75,8 +75,6 @@ private:
     long long m_totalBytesReceived;
     double m_lastNotifiedProgressValue;
     std::chrono::steady_clock::time_point m_lastNotifiedProgressTime;
-    double m_progressNotificationInterval;
-    std::chrono::milliseconds m_progressNotificationTimeInterval;
     bool m_finalProgressChangedSent;
     double m_progressValue;
     RefPtr<Frame> m_originatingProgressFrame;
@@ -84,7 +82,7 @@ private:
     int m_numProgressTrackedFrames;
     HashMap<unsigned long, std::unique_ptr<ProgressItem>> m_progressItems;
 
-    Timer<ProgressTracker> m_progressHeartbeatTimer;
+    Timer m_progressHeartbeatTimer;
     unsigned m_heartbeatsWithNoProgress;
     long long m_totalBytesReceivedBeforePreviousHeartbeat;
     std::chrono::steady_clock::time_point m_mainLoadCompletionTime;

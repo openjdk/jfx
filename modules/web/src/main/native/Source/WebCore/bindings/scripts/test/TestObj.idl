@@ -11,12 +11,12 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
- * EXPRESS OR IMPLIED WARRANTIEstrArg, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL APPLE OR ITS CONTRIBUTORS BE LIABLE FOR ANY
  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
@@ -109,12 +109,9 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     [Custom] void customMethod();
     [Custom] void customMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
 
-    void addEventListener(DOMString type, 
-                          EventListener listener, 
-                          optional boolean useCapture);
-    void removeEventListener(DOMString type, 
-                             EventListener listener, 
-                             optional boolean useCapture);
+    void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
+    attribute EventHandler onfoo;
 
     // 'CallWith' extended attribute
     [CallWith=ScriptState] void withScriptStateVoid();
@@ -190,6 +187,12 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     void    overloadedMethod(DOMString[] arrayArg);
     void    overloadedMethod(sequence<unsigned long> arrayArg);
     void    overloadedMethod(DOMString strArg);
+
+    // FIXME: Implement support for overloaded functions with variadic arguments.
+    void    overloadedMethod(Blob... blobArgs);
+
+    void overloadedMethodWithOptionalParameter(TestObj? objArg1, optional TestObj? objArg2);
+    void overloadedMethodWithOptionalParameter(TestObj? objArg, optional long longArg);
 #endif
 
     // Class methods within JavaScript (like what's used for IDBKeyRange).
@@ -207,6 +210,9 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     void methodWithUnsignedLongSequence(sequence<unsigned long> unsignedLongSequence);
     [RaisesException] DOMString[] stringArrayFunction(DOMString[] values);
     [RaisesException] DOMStringList domStringListFunction(DOMStringList values);
+
+    void methodWithAndWithoutNullableSequence(sequence<unsigned long> arrayArg, sequence<unsigned long>? nullableArrayArg);
+    void methodWithAndWithoutNullableSequence2(unsigned long[] arrayArg, unsigned long[]? nullableArrayArg);
 #endif
 
     [CheckSecurityForNode] readonly attribute Document contentDocument;
@@ -225,13 +231,11 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     [ImplementedAs=banana] void orange();
     [ImplementedAs=blueberry] attribute long strawberry;
 
-    [StrictTypeChecking] attribute float strictFloat;
-    [StrictTypeChecking, RaisesException] bool strictFunction(DOMString str, float a, long b);
+    [StrictTypeChecking] attribute unrestricted float strictFloat;
+    [StrictTypeChecking, RaisesException] bool strictFunction(DOMString str, unrestricted float a, long b);
 
-#if defined(TESTING_JS)
     [StrictTypeChecking, RaisesException] bool strictFunctionWithSequence(TestObj objArg, sequence<unsigned long> a);
     [StrictTypeChecking, RaisesException] bool strictFunctionWithArray(TestObj objArg, long[] array);
-#endif
 
     // ObjectiveC reserved words.
     readonly attribute long      description;
@@ -245,7 +249,6 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     const unsigned short CONST_VALUE_4 = 4;
     const unsigned short CONST_VALUE_8 = 8;
     const short CONST_VALUE_9 = -1;
-    const DOMString CONST_VALUE_10 = "my constant string";
     const unsigned short CONST_VALUE_11 = 0xffffffff;
     const unsigned short CONST_VALUE_12 = 0x01;
     const unsigned short CONST_VALUE_13 = 0X20;
@@ -255,11 +258,11 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     [Replaceable] readonly attribute long replaceableAttribute;
 
     void variadicStringMethod(DOMString head, DOMString... tail);
-    void variadicDoubleMethod(double head, double... tail);
+    void variadicDoubleMethod(unrestricted double head, unrestricted double... tail);
     void variadicNodeMethod(Node head, Node... tail);
 
     // Nullable attributes.
-    readonly attribute double? nullableDoubleAttribute;
+    readonly attribute unrestricted double? nullableDoubleAttribute;
     readonly attribute long? nullableLongAttribute;
     readonly attribute boolean? nullableBooleanAttribute;
     readonly attribute DOMString? nullableStringAttribute;
@@ -272,7 +275,16 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     const unsigned short               _readonly = 0;
     readonly attribute DOMString       _attribute;
     attribute _optional                attributeWithReservedEnumType;
-    void _any(float a, long b);
+    void _any(unrestricted float a, long b);
+
+    // Promise attributes
+    [CustomGetter] readonly attribute Promise testPromiseAttr;
+
+    // Promise function
+    Promise testPromiseFunction();
+    Promise testPromiseFunctionWithFloatArgument(float a);
+    [RaisesException] Promise testPromiseFunctionWithException();
+    Promise testPromiseFunctionWithOptionalIntArgument(optional long a);
 };
 
 // The following comment should not generate any code.

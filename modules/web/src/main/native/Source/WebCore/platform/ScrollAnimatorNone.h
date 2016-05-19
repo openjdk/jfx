@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2015 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -40,7 +41,6 @@
 #include "FloatPoint.h"
 #include "ScrollAnimator.h"
 #include "Timer.h"
-#include <wtf/OwnPtr.h>
 
 class ScrollAnimatorNoneTest;
 
@@ -52,7 +52,7 @@ struct ScrollAnimatorParameters;
 
 class ScrollAnimatorNone : public ScrollAnimator {
 public:
-    explicit ScrollAnimatorNone(ScrollableArea*);
+    explicit ScrollAnimatorNone(ScrollableArea&);
     virtual ~ScrollAnimatorNone();
 
     virtual bool scroll(ScrollbarOrientation, ScrollGranularity, float step, float multiplier);
@@ -145,7 +145,7 @@ protected:
     };
 
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
-    void animationTimerFired(Timer<ScrollAnimatorNone>*);
+    void requestAnimationTimerFired();
     void startNextTimer(double delay);
 #else
     void startNextTimer();
@@ -161,7 +161,7 @@ protected:
 
     double m_startTime;
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
-    Timer<ScrollAnimatorNone> m_animationTimer;
+    Timer m_animationTimer;
 #else
     bool m_animationActive;
 #endif

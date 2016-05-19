@@ -48,10 +48,10 @@ public:
         commitChange();
     }
 
-    static PassRefPtr<SVGAnimatedStaticPropertyTearOff<PropertyType>> create(SVGElement* contextElement, const QualifiedName& attributeName, AnimatedPropertyType animatedPropertyType, PropertyType& property)
+    static Ref<SVGAnimatedStaticPropertyTearOff<PropertyType>> create(SVGElement* contextElement, const QualifiedName& attributeName, AnimatedPropertyType animatedPropertyType, PropertyType& property)
     {
         ASSERT(contextElement);
-        return adoptRef(new SVGAnimatedStaticPropertyTearOff<PropertyType>(contextElement, attributeName, animatedPropertyType, property));
+        return adoptRef(*new SVGAnimatedStaticPropertyTearOff<PropertyType>(contextElement, attributeName, animatedPropertyType, property));
     }
 
     PropertyType& currentAnimatedValue()
@@ -79,7 +79,7 @@ public:
     {
         ASSERT(m_isAnimating);
         ASSERT(m_animatedProperty);
-        m_animatedProperty = 0;
+        m_animatedProperty = nullptr;
         m_isAnimating = false;
     }
 
@@ -101,7 +101,7 @@ protected:
     SVGAnimatedStaticPropertyTearOff(SVGElement* contextElement, const QualifiedName& attributeName, AnimatedPropertyType animatedPropertyType, PropertyType& property)
         : SVGAnimatedProperty(contextElement, attributeName, animatedPropertyType)
         , m_property(property)
-        , m_animatedProperty(0)
+        , m_animatedProperty(nullptr)
     {
     }
 

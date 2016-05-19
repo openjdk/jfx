@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2014 Apple Inc. All rights reserved.
  * Copyright (C) 2009, 2010, 2011 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -50,25 +50,25 @@ public:
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
 
     // The derived class should return true if placeholder processing is needed.
+    bool isPlaceholderVisible() const { return m_isPlaceholderVisible; }
     virtual bool supportsPlaceholder() const = 0;
     String strippedPlaceholder() const;
-    bool placeholderShouldBeVisible() const;
     virtual HTMLElement* placeholderElement() const = 0;
-    void updatePlaceholderVisibility(bool);
+    void updatePlaceholderVisibility();
 
     int indexForVisiblePosition(const VisiblePosition&) const;
-    VisiblePosition visiblePositionForIndex(int index) const;
+    WEBCORE_EXPORT VisiblePosition visiblePositionForIndex(int index) const;
     int selectionStart() const;
     int selectionEnd() const;
     const AtomicString& selectionDirection() const;
     void setSelectionStart(int);
     void setSelectionEnd(int);
     void setSelectionDirection(const String&);
-    void select();
+    void select(const AXTextStateChangeIntent& = AXTextStateChangeIntent());
     virtual void setRangeText(const String& replacement, ExceptionCode&);
     virtual void setRangeText(const String& replacement, unsigned start, unsigned end, const String& selectionMode, ExceptionCode&);
-    void setSelectionRange(int start, int end, const String& direction);
-    void setSelectionRange(int start, int end, TextFieldSelectionDirection = SelectionHasNoDirection);
+    void setSelectionRange(int start, int end, const String& direction, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
+    void setSelectionRange(int start, int end, TextFieldSelectionDirection = SelectionHasNoDirection, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
     PassRefPtr<Range> selection() const;
     String selectedText() const;
 
@@ -80,7 +80,7 @@ public:
     virtual TextControlInnerTextElement* innerTextElement() const = 0;
 
     void selectionChanged(bool shouldFireSelectEvent);
-    bool lastChangeWasUserEdit() const;
+    WEBCORE_EXPORT bool lastChangeWasUserEdit() const;
     void setInnerTextValue(const String&);
     String innerTextValue() const;
 
@@ -88,8 +88,8 @@ public:
 
     void setTextAsOfLastFormControlChangeEvent(const String& text) { m_textAsOfLastFormControlChangeEvent = text; }
 #if PLATFORM(IOS)
-    void hidePlaceholder();
-    void showPlaceholderIfNecessary();
+    WEBCORE_EXPORT void hidePlaceholder();
+    WEBCORE_EXPORT void showPlaceholderIfNecessary();
 #endif
 
 protected:
@@ -99,6 +99,10 @@ protected:
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
+    virtual void disabledStateChanged() override;
+    virtual void readOnlyAttributeChanged() override;
+    void updateInnerTextElementEditability();
+
     void cacheSelection(int start, int end, TextFieldSelectionDirection direction)
     {
         m_cachedSelectionStart = start;
@@ -106,7 +110,7 @@ protected:
         m_cachedSelectionDirection = direction;
     }
 
-    void restoreCachedSelection();
+    void restoreCachedSelection(const AXTextStateChangeIntent& = AXTextStateChangeIntent());
     bool hasCachedSelection() const { return m_cachedSelectionStart >= 0; }
 
     virtual void subtreeHasChanged() = 0;
@@ -116,40 +120,44 @@ protected:
     String valueWithHardLineBreaks() const;
 
 private:
+    TextFieldSelectionDirection cachedSelectionDirection() const { return static_cast<TextFieldSelectionDirection>(m_cachedSelectionDirection); }
+
     int computeSelectionStart() const;
     int computeSelectionEnd() const;
     TextFieldSelectionDirection computeSelectionDirection() const;
 
-    virtual void dispatchFocusEvent(PassRefPtr<Element> oldFocusedElement, FocusDirection) override final;
-    virtual void dispatchBlurEvent(PassRefPtr<Element> newFocusedElement) override final;
+    virtual void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, FocusDirection) override final;
+    virtual void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) override final;
     virtual bool childShouldCreateRenderer(const Node&) const override;
 
     unsigned indexForPosition(const Position&) const;
 
     // Returns true if user-editable value is empty. Used to check placeholder visibility.
     virtual bool isEmptyValue() const = 0;
-    // Returns true if suggested value is empty. Used to check placeholder visibility.
-    virtual bool isEmptySuggestedValue() const { return true; }
     // Called in dispatchFocusEvent(), after placeholder process, before calling parent's dispatchFocusEvent().
     virtual void handleFocusEvent(Node* /* oldFocusedNode */, FocusDirection) { }
     // Called in dispatchBlurEvent(), after placeholder process, before calling parent's dispatchBlurEvent().
     virtual void handleBlurEvent() { }
 
+    bool placeholderShouldBeVisible() const;
+
     String m_textAsOfLastFormControlChangeEvent;
-    bool m_lastChangeWasUserEdit;
 
     int m_cachedSelectionStart;
     int m_cachedSelectionEnd;
-    TextFieldSelectionDirection m_cachedSelectionDirection;
-};
 
-void isHTMLTextFormControlElement(const HTMLTextFormControlElement&); // Catch unnecessary runtime check of type known at compile time.
-inline bool isHTMLTextFormControlElement(const Element& element) { return element.isTextFormControl(); }
-inline bool isHTMLTextFormControlElement(const Node& node) { return node.isElementNode() && toElement(node).isTextFormControl(); }
-NODE_TYPE_CASTS(HTMLTextFormControlElement)
+    unsigned char m_cachedSelectionDirection : 2;
+    unsigned char m_lastChangeWasUserEdit : 1;
+    unsigned char m_isPlaceholderVisible : 1;
+};
 
 HTMLTextFormControlElement* enclosingTextFormControl(const Position&);
 
-} // namespace
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLTextFormControlElement)
+    static bool isType(const WebCore::Element& element) { return element.isTextFormControl(); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

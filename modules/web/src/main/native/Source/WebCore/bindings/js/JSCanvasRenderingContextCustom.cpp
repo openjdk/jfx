@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,37 +30,38 @@
 #include "HTMLCanvasElement.h"
 #include "JSCanvasRenderingContext2D.h"
 #include "JSNode.h"
+
 #if ENABLE(WEBGL)
-#include "WebGLRenderingContext.h"
+#include "JSWebGL2RenderingContext.h"
 #include "JSWebGLRenderingContext.h"
+#include "WebGL2RenderingContext.h"
+#include "WebGLRenderingContext.h"
 #endif
 
 using namespace JSC;
 
 namespace WebCore {
 
-void JSCanvasRenderingContext::visitChildren(JSCell* cell, SlotVisitor& visitor)
+void JSCanvasRenderingContext::visitAdditionalChildren(SlotVisitor& visitor)
 {
-    JSCanvasRenderingContext* thisObject = jsCast<JSCanvasRenderingContext*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
-    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-    Base::visitChildren(thisObject, visitor);
-
-    visitor.addOpaqueRoot(root(thisObject->impl().canvas()));
+    visitor.addOpaqueRoot(root(impl().canvas()));
 }
 
-JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, CanvasRenderingContext* object)
+JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject* globalObject, CanvasRenderingContext* object)
 {
     if (!object)
         return jsNull();
 
 #if ENABLE(WEBGL)
-    if (object->is3d())
-        return wrap<JSWebGLRenderingContext>(exec, globalObject, static_cast<WebGLRenderingContext*>(object));
+    if (object->isWebGL1())
+        return wrap<JSWebGLRenderingContext>(globalObject, static_cast<WebGLRenderingContext*>(object));
+#if ENABLE(WEBGL2)
+    if (object->isWebGL2())
+        return wrap<JSWebGL2RenderingContext>(globalObject, static_cast<WebGL2RenderingContext*>(object));
+#endif
 #endif
     ASSERT_WITH_SECURITY_IMPLICATION(object->is2d());
-    return wrap<JSCanvasRenderingContext2D>(exec, globalObject, static_cast<CanvasRenderingContext2D*>(object));
+    return wrap<JSCanvasRenderingContext2D>(globalObject, static_cast<CanvasRenderingContext2D*>(object));
 }
 
 } // namespace WebCore

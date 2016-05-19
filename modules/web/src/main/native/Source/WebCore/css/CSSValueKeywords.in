@@ -45,6 +45,9 @@ small-caption
 -apple-system-short-footnote
 -apple-system-short-caption1
 -apple-system-tall-body
+-apple-system-title1
+-apple-system-title2
+-apple-system-title3
 #endif
 
 // This has to go after the -apple-system versions.
@@ -101,8 +104,10 @@ large
 x-large
 xx-large
 -webkit-xxx-large
+-webkit-ruby-text
 smaller
 larger
+
 //
 // CSS_PROP_FONT_STRETCH:
 //
@@ -160,6 +165,7 @@ buttonface
 buttonhighlight
 buttonshadow
 buttontext
+activebuttontext
 captiontext
 graytext
 highlight
@@ -180,6 +186,16 @@ threedshadow
 window
 windowframe
 windowtext
+-apple-wireless-playback-target-active
+-apple-system-blue
+-apple-system-brown
+-apple-system-gray
+-apple-system-green
+-apple-system-orange
+-apple-system-pink
+-apple-system-purple
+-apple-system-red
+-apple-system-yellow
 -webkit-focus-ring-color
 currentcolor
 //
@@ -244,10 +260,7 @@ justify
 //auto
 //none
 inter-word
-inter-ideograph
-inter-cluster
 distribute
-kashida
 //
 // CSS_PROP_LIST_STYLE_POSITION:
 //
@@ -359,7 +372,9 @@ table-cell
 table-caption
 -webkit-box
 -webkit-inline-box
+flex
 -webkit-flex
+inline-flex
 -webkit-inline-flex
 -webkit-grid
 -webkit-inline-grid
@@ -381,8 +396,8 @@ alias
 progress
 no-drop
 not-allowed
--webkit-zoom-in
--webkit-zoom-out
+zoom-in
+zoom-out
 e-resize
 ne-resize
 nw-resize
@@ -403,6 +418,8 @@ help
 all-scroll
 -webkit-grab
 -webkit-grabbing
+-webkit-zoom-in
+-webkit-zoom-out
 // none
 //
 // CSS_PROP_CURSOR_VISIBILITY:
@@ -451,6 +468,7 @@ hand
 hide
 higher
 invert
+inverted
 -webkit-isolate
 -webkit-isolate-override
 -webkit-plaintext
@@ -528,6 +546,7 @@ flex-end
 // center
 space-between
 space-around
+space-evenly
 // stretch
 
 // CSS_PROP_ALIGN_ITEMS / CSS_PROP_ALIGN_SELF
@@ -535,14 +554,37 @@ space-around
 // flex-end
 // center
 // baseline
+last-baseline
 // stretch
 
 // CSS_PROP_JUSTIFY_CONTENT
+// start
+// end
 // flex-start
 // flex-end
 // center
 // space-between
 // space-around
+// space-evenly
+// stretch
+
+// CSS_PROP_JUSTIFY_ITEMS / CSS_PROP_JUSTIFY_SELF
+// auto
+// stretch
+// baseline
+// last-baseline
+// center
+// start
+// end
+self-start
+self-end
+// flex-start
+// flex-end
+// left
+// right
+true
+safe
+legacy
 
 // CSS_PROP_FLEX_FLOW
 row
@@ -639,6 +681,7 @@ skip-white-space
 // CSS_PROP_WORD_BREAK
 //
 break-all
+keep-all
 
 //
 // CSS_PROP_WORD_WRAP
@@ -670,31 +713,32 @@ button
 button-bevel
 default-button
 inner-spin-button
--webkit-input-speech-button
 listbox
 listitem
+media-controls-background
+media-controls-dark-bar-background
+media-controls-fullscreen-background
+media-controls-light-bar-background
+media-current-time-display
 media-enter-fullscreen-button
 media-exit-fullscreen-button
 media-fullscreen-volume-slider
 media-fullscreen-volume-slider-thumb
 media-mute-button
-media-play-button
 media-overlay-play-button
+media-play-button
+media-return-to-realtime-button
+media-rewind-button
 media-seek-back-button
 media-seek-forward-button
-media-rewind-button
-media-return-to-realtime-button
-media-toggle-closed-captions-button
 media-slider
 media-sliderthumb
-media-volume-slider-container
-media-volume-slider
-media-volume-sliderthumb
-media-volume-slider-mute-button
-media-controls-background
-media-controls-fullscreen-background
-media-current-time-display
 media-time-remaining-display
+media-toggle-closed-captions-button
+media-volume-slider
+media-volume-slider-container
+media-volume-slider-mute-button
+media-volume-sliderthumb
 menulist
 menulist-button
 menulist-text
@@ -718,8 +762,13 @@ relevancy-level-indicator
 continuous-capacity-level-indicator
 discrete-capacity-level-indicator
 rating-level-indicator
+#if defined(ENABLE_SERVICE_CONTROLS) && ENABLE_SERVICE_CONTROLS
+image-controls-button
+#endif
 textarea
-// An appearance value that should not be accepted by the parser:
+#if defined(ENABLE_ATTACHMENT_ELEMENT) && ENABLE_ATTACHMENT_ELEMENT
+attachment
+#endif
 caps-lock-indicator
 
 //
@@ -919,6 +968,7 @@ horizontal-bt
 // -webkit-ruby-position
 after
 before
+inter-character
 
 // -webkit-text-emphasis-position
 over
@@ -953,6 +1003,7 @@ vertical-right
 font
 glyphs
 inline-box
+initial-letter
 replaced
 
 // -webkit-font-feature-settings
@@ -966,30 +1017,28 @@ optimizeQuality
 -webkit-crisp-edges
 -webkit-optimize-contrast
 
-// -webkit-shape-inside
 // -webkit-shape-outside
 nonzero
 evenodd
-outside-shape
 at
 // closest-side
 // farthest-side
+
+#if defined(ENABLE_CSS_SCROLL_SNAP)
+// -webkit-scroll-snap-points-x
+// -webkit-scroll-snap-points-y
+elements
+
+// -webkit-scroll-snap-type
+mandatory
+proximity
+#endif
 
 // -webkit-region-fragment
 // auto
 break
 
-// -webkit-wrap-flow
-// auto
-// both
-// left
-// right
-maximum
-// clear
-
-// -webkit-wrap-through
 wrap
-// none
 
 // -webkit-line-align
 edges
@@ -997,14 +1046,17 @@ edges
 alphabetic
 
 // position
-#if defined(ENABLE_CSS_STICKY_POSITION) && ENABLE_CSS_STICKY_POSITION
 -webkit-sticky
-#endif // CSS_STICKY_POSITION
 
 // (pointer:) media feature
 // none
 coarse
 fine
+
+// (hover:) media feature.
+// none
+hover
+on-demand
 
 // blend modes
 // normal
@@ -1023,6 +1075,12 @@ hue
 saturation
 color
 luminosity
+// plus-darker
+// plus-lighter
+
+// isolation
+// auto
+isolate
 
 // object-fit
 // fill
@@ -1040,8 +1098,17 @@ snap
 -webkit-paged-x
 -webkit-paged-y
 
+// paint-order
+// normal
+// fill
+// stroke
+markers
+
 // -webkit-grid-{column-start|column-end|row-start|row-end}
 span
+
+// -webkit-grid-auto-flow
+dense
 
 #if defined(ENABLE_CSS3_TEXT) && ENABLE_CSS3_TEXT
 // text-indent
@@ -1055,3 +1122,12 @@ balance
 // -webkit-aspect-ratio
 from-dimensions
 from-intrinsic
+
+#if defined(ENABLE_CSS_TRAILING_WORD) && ENABLE_CSS_TRAILING_WORD
+// -apple-trailing-word
+-webkit-partially-balanced
+#endif
+
+// font-synthesis
+weight
+style

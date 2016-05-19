@@ -13,7 +13,7 @@
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -34,7 +34,7 @@ namespace WebCore {
 
 class SuspendableTimer : private TimerBase, public ActiveDOMObject {
 public:
-    explicit SuspendableTimer(ScriptExecutionContext*);
+    explicit SuspendableTimer(ScriptExecutionContext&);
     virtual ~SuspendableTimer();
 
     // A hook for derived classes to perform cleanup.
@@ -55,14 +55,14 @@ public:
     void cancel(); // Equivalent to TimerBase::stop(), whose name conflicts with ActiveDOMObject::stop().
 
 private:
-    virtual void fired() = 0;
+    virtual void fired() override = 0;
 
-    // ActiveDOMObject
-    virtual bool hasPendingActivity() const final override;
-    virtual void stop() final override;
-    virtual bool canSuspend() const final override;
-    virtual void suspend(ReasonForSuspension) final override;
-    virtual void resume() final override;
+    // ActiveDOMObject API.
+    bool hasPendingActivity() const override final;
+    void stop() override final;
+    bool canSuspendForPageCache() const override final;
+    void suspend(ReasonForSuspension) override final;
+    void resume() override final;
 
     bool m_suspended;
 

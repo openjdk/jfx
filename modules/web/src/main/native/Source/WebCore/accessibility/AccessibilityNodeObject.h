@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -55,20 +55,20 @@ class RenderView;
 class VisibleSelection;
 class Widget;
 
+enum MouseButtonListenerResultFilter {
+    ExcludeBodyElement = 1,
+    IncludeBodyElement,
+};
+
 class AccessibilityNodeObject : public AccessibilityObject {
-protected:
-    explicit AccessibilityNodeObject(Node*);
 public:
-    static PassRefPtr<AccessibilityNodeObject> create(Node*);
+    static Ref<AccessibilityNodeObject> create(Node*);
     virtual ~AccessibilityNodeObject();
 
     virtual void init() override;
 
-    virtual bool isAccessibilityNodeObject() const override { return true; }
-
     virtual bool canvasHasFallbackContent() const override;
 
-    virtual bool isAnchor() const override;
     virtual bool isControl() const override;
     virtual bool isFieldset() const override;
     virtual bool isGroup() const override;
@@ -88,6 +88,7 @@ public:
     virtual bool isNativeImage() const override;
     virtual bool isNativeTextControl() const override;
     virtual bool isPasswordField() const override;
+    virtual AccessibilityObject* passwordFieldOrContainingPasswordField() override;
     virtual bool isProgressIndicator() const override;
     virtual bool isSearchField() const override;
     virtual bool isSlider() const override;
@@ -129,9 +130,10 @@ public:
     virtual void colorValue(int& r, int& g, int& b) const override;
     virtual String ariaLabeledByAttribute() const override;
     virtual bool hasAttributesRequiredForInclusion() const override final;
+    virtual void setIsExpanded(bool) override;
 
     virtual Element* actionElement() const override;
-    Element* mouseButtonListener() const;
+    Element* mouseButtonListener(MouseButtonListenerResultFilter = ExcludeBodyElement) const;
     virtual Element* anchorElement() const override;
     AccessibilityObject* menuForMenuButton() const;
 
@@ -154,6 +156,8 @@ public:
     virtual LayoutRect elementRect() const override;
 
 protected:
+    explicit AccessibilityNodeObject(Node*);
+
     AccessibilityRole m_ariaRole;
     bool m_childrenDirty;
     mutable AccessibilityRole m_roleForMSAA;
@@ -172,7 +176,6 @@ protected:
     virtual AccessibilityRole ariaRoleAttribute() const override;
     AccessibilityRole determineAriaRoleAttribute() const;
     AccessibilityRole remapAriaRoleDueToParent(AccessibilityRole) const;
-    bool hasContentEditableAttributeSet() const;
     virtual bool isDescendantOfBarrenParent() const override;
     void alterSliderValue(bool increase);
     void changeValueByStep(bool increase);
@@ -190,8 +193,7 @@ protected:
     AccessibilityObject* menuButtonForMenu() const;
 
 private:
-    Node* m_node;
-
+    virtual bool isAccessibilityNodeObject() const override final { return true; }
     virtual void accessibilityText(Vector<AccessibilityText>&) override;
     virtual void titleElementText(Vector<AccessibilityText>&) const;
     void alternativeText(Vector<AccessibilityText>&) const;
@@ -201,10 +203,12 @@ private:
     void ariaLabeledByText(Vector<AccessibilityText>&) const;
     virtual bool computeAccessibilityIsIgnored() const override;
     bool usesAltTagForTextComputation() const;
+
+    Node* m_node;
 };
 
-ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityNodeObject, isAccessibilityNodeObject())
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityNodeObject, isAccessibilityNodeObject())
 
 #endif // AccessibilityNodeObject_h

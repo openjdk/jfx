@@ -57,6 +57,9 @@ GLOBAL_CONFIG = {
         (["JavaScriptCore"],
             ("JavaScriptCore", "replay/NondeterministicInput.h")
         ),
+        (["JavaScriptCore", "WebCore"],
+            ("WTF", "wtf/TypeCasts.h")
+        ),
         (["WebCore"],
             ("WTF", "wtf/text/WTFString.h")
         ),
@@ -72,19 +75,13 @@ GLOBAL_CONFIG = {
 
     "implIncludes": [
         (["WebCore"],
-            ("WebCore", "replay/ReplayInputTypes.h")
-        ),
-        (["WebCore"],
             ("WebCore", "replay/SerializationMethods.h")
         ),
         (["WebCore", "JavaScriptCore"],
             ("JavaScriptCore", "inspector/InspectorValues.h")
         ),
-        (["JavaScriptCore"],
+        (["WebCore", "JavaScriptCore"],
             ("WTF", "wtf/NeverDestroyed.h")
-        ),
-        (["JavaScriptCore"],
-            ("WTF", "wtf/text/AtomicString.h")
         ),
 
         # Testing fixtures.
@@ -103,22 +100,25 @@ FRAMEWORK_CONFIG_MAP = {
         "namespace": ""
     },
 
+    "WTF": {
+        "prefix": "WTF",
+        "namespace": "WTF",
+    },
     "JavaScriptCore": {
         "prefix": "JS",
         "namespace": "JSC",
         "exportMacro": "JS_EXPORT_PRIVATE",
-        "inputTypeTemplate": Templates.InputTypeFromStaticLocal,
     },
     "WebCore": {
         "prefix": "Web",
         "namespace": "WebCore",
-        "inputTypeTemplate": Templates.InputTypeFromThreadLocal,
+        "exportMacro": "WEBCORE_EXPORT"
     },
     # Used for bindings tests.
     "Test": {
         "prefix": "Test",
         "namespace": "Test",
-        "inputTypeTemplate": Templates.InputTypeFromStaticLocal,
+        "exportMacro": "TEST_EXPORT_MACRO"
     }
 }
 
@@ -166,6 +166,9 @@ class Framework:
         if frameworkString == "Global":
             return Frameworks.Global
 
+        if frameworkString == "WTF":
+            return Frameworks.WTF
+
         if frameworkString == "JavaScriptCore":
             return Frameworks.JavaScriptCore
 
@@ -180,6 +183,7 @@ class Framework:
 
 class Frameworks:
     Global = Framework("Global")
+    WTF = Framework("WTF")
     JavaScriptCore = Framework("JavaScriptCore")
     WebCore = Framework("WebCore")
     Test = Framework("Test")
@@ -213,9 +217,10 @@ class InputQueues:
 
 
 class Input:
-    def __init__(self, name, description, queueString, flags, guard=None):
+    def __init__(self, name, description, framework, queueString, flags, guard=None):
         self.name = name
         self.description = description
+        self.framework = framework
         self.queue = InputQueue.fromString(queueString)
         self._flags = flags
         self.guard = guard
@@ -273,7 +278,7 @@ class TypeModes:
 
 
 class Type:
-    def __init__(self, name, mode, framework, header, enclosing_class, values, guard_values_map, underlying_storage, flags):
+    def __init__(self, name, mode, framework, header, enclosing_class, values, guard_values_map, underlying_storage, flags, guard=None):
         self._name = name
         self.mode = mode
         self.framework = framework
@@ -283,6 +288,7 @@ class Type:
         self.guard_values_map = guard_values_map
         self.underlying_storage = underlying_storage
         self._flags = flags
+        self.guard = guard
 
     def __eq__(self, other):
         return self.type_name() == other.type_name() and self.mode == other.mode
@@ -322,7 +328,12 @@ class Type:
         return "::".join(components)
 
     def type_name(self, qualified=False):
-        return "%s%s" % (self.qualified_prefix(), self._name) if qualified else self._name
+        if qualified:
+            return "%s%s" % (self.qualified_prefix(), self._name)
+        elif self.enclosing_class is not None:
+            return "%s::%s" % (self.enclosing_class, self._name)
+        else:
+            return self._name
 
     def storage_type(self, qualified=False):
         if self.mode == TypeModes.OWNED:
@@ -336,15 +347,18 @@ class Type:
         if self.mode == TypeModes.SCALAR:
             return self.type_name(qualified)
         elif self.mode == TypeModes.SHARED:
-            return "PassRefPtr<%s>" % self.type_name(qualified)
+            return "RefPtr<%s>" % self.type_name(qualified)
         else:
             return "const %s&" % self.type_name(qualified)
 
     def argument_type(self, qualified=False):
         if self.mode == TypeModes.SHARED:
-            return "PassRefPtr<%s>" % self.type_name(qualified)
+            return "RefPtr<%s>&&" % self.type_name(qualified)
         else:
             return self.storage_type()
+
+    def encoding_type_argument(self, qualified=False):
+        return self.type_name(qualified=qualified)
 
 
 def check_for_required_properties(props, obj, what):
@@ -376,6 +390,9 @@ class VectorType(Type):
         return ""
 
     def type_name(self, qualified=False):
+        return "Vector<%s>" % self._element_type.storage_type(qualified=qualified)
+
+    def encoding_type_argument(self, qualified=False):
         return "Vector<%s>" % self._element_type.type_name(qualified=qualified)
 
     def argument_type(self, qualified=False):
@@ -383,7 +400,7 @@ class VectorType(Type):
 
 
 class InputsModel:
-    def __init__(self, parsed_json):
+    def __init__(self):
         self.inputs = []
         self.types = []
 
@@ -391,8 +408,6 @@ class InputsModel:
         # file types are in a flat namespace. Types with the same name are not allowed.
         self.types_by_name = {}
         self.inputs_by_name = {}
-
-        self.parse_toplevel(parsed_json)
 
     def enum_types(self):
         _enums = filter(lambda x: x.is_enum() or x.is_enum_class(), self.types)
@@ -404,27 +419,33 @@ class InputsModel:
         else:
             return self.types_by_name.get(member.typeName)
 
-    def parse_toplevel(self, json):
-        check_for_required_properties(['types', 'inputs'], json, 'toplevel')
-        if not isinstance(json['types'], dict):
-            raise ParseException("Malformed specification: types is not a dict of framework->type list")
+    def parse_specification(self, json):
+        if 'types' in json:
+            if not isinstance(json['types'], dict):
+                raise ParseException("Malformed specification: types is not a dict of framework->type list")
 
-        if not isinstance(json['inputs'], list):
-            raise ParseException("Malformed specification: inputs is not an array")
+            for framework_name, type_list in json['types'].iteritems():
+                if not isinstance(type_list, list):
+                    raise ParseException("Malformed specification: type list for framework %s is not a list" % framework_name)
 
-        for type_framework_name, type_list in json['types'].iteritems():
-            if not isinstance(type_list, list):
-                raise ParseException("Malformed specification: type list for framework %s is not a list" % type_framework_name)
+                framework = Framework.fromString(framework_name)
+                for _type in type_list:
+                    self.parse_type_with_framework(_type, framework)
 
-            for _type in type_list:
-                self.parse_type_with_framework_name(_type, type_framework_name)
+        if 'inputs' in json:
+            if not isinstance(json['inputs'], dict):
+                raise ParseException("Malformed specification: inputs is not a dict of framework->input list")
 
-        for val in json['inputs']:
-            self.parse_input(val)
+            for framework_name, input_list in json['inputs'].iteritems():
+                if not isinstance(input_list, list):
+                    raise ParseException("Malformed specification: input list for framework %s is not a list" % framework_name)
 
-    def parse_type_with_framework_name(self, json, framework_name):
+                framework = Framework.fromString(framework_name)
+                for _input in input_list:
+                    self.parse_input_with_framework(_input, framework)
+
+    def parse_type_with_framework(self, json, framework):
         check_for_required_properties(['name', 'mode'], json, 'type')
-        framework = Framework.fromString(framework_name)
         if framework is not Frameworks.Global:
             check_for_required_properties(['header'], json, 'non-global type')
 
@@ -436,20 +457,21 @@ class InputsModel:
         guarded_enum_values = json.get('guarded_values', {})
         type_storage = json.get('storage')
         type_flags = json.get('flags', [])
-        _type = Type(type_name, type_mode, framework, header, enclosing_class, enum_values, guarded_enum_values, type_storage, type_flags)
+        guard = json.get('guard', None)
+        _type = Type(type_name, type_mode, framework, header, enclosing_class, enum_values, guarded_enum_values, type_storage, type_flags, guard)
         if _type.is_enum() or _type.is_enum_class():
             check_for_required_properties(['values'], json, 'enum')
             if not isinstance(json['values'], list) or len(_type.values) == 0:
                 raise ParseException("Malformed specification: enum %s does not supply a list of values" % type_name)
 
-            if _type.is_enum() and "storage" not in json:
-                raise ParseException("Could not parse enum %s: C-style enums must also specify their storage type so they can be forward declared." % type_name)
+            if _type.is_enum() and enclosing_class is None and type_storage is None:
+                raise ParseException("Could not parse enum %s: C-style enums not enclosed by a class must specify their storage type so they can be forward declared." % type_name)
 
         self.types.append(_type)
 
-    def parse_input(self, json):
+    def parse_input_with_framework(self, json, framework):
         check_for_required_properties(['name', 'description', 'queue', 'members'], json, 'input')
-        _input = Input(json['name'], json['description'], json['queue'], json.get('flags', []), json.get('guard'))
+        _input = Input(json['name'], json['description'], framework, json['queue'], json.get('flags', []), json.get('guard'))
         if isinstance(json['members'], list):
             for member in json['members']:
                 check_for_required_properties(['name', 'type'], member, 'member')
@@ -548,6 +570,9 @@ class Generator:
     def setting(self, key, default=''):
         return self.target_framework.setting(key, GLOBAL_CONFIG.get(key, default))
 
+    def should_generate_item(self, item):
+        return item.framework is self.target_framework
+
     # This does not account for any filename mangling performed on behalf of the test harness.
     def output_filename(self, extension=None):
         components = []
@@ -572,6 +597,9 @@ class Generator:
         implementation_file.close()
 
     def generate_header(self):
+        enums_to_generate = filter(self.should_generate_item, self._model.enum_types())
+        inputs_to_generate = filter(self.should_generate_item, self._model.inputs)
+
         template_arguments = {
             'licenseBlock': self.generate_license(),
             'headerGuard': re.sub('[-./]', '_', self.output_filename() + ".h"),
@@ -581,16 +609,20 @@ class Generator:
             'inputsNamespace': self.target_framework.setting('namespace'),
             'includes': self.generate_includes(defaults=self.setting('headerIncludes')),
             'typeForwardDeclarations': self.generate_type_forward_declarations(),
-            'inputForwardDeclarations': "\n".join([wrap_with_guard("class %s;", _input.guard) % _input.name for _input in self._model.inputs]),
-            'inputClassDeclarations': "\n\n".join([self.generate_class_declaration(_input) for _input in self._model.inputs]),
-            'inputTraitDeclarations': "\n\n".join([self.generate_input_trait_declaration(_input) for _input in self._model.inputs]),
-            'enumTraitDeclarations': "\n\n".join([self.generate_enum_trait_declaration(_type) for _type in self._model.enum_types()]),
+            'inputForwardDeclarations': "\n".join([wrap_with_guard("class %s;", _input.guard) % _input.name for _input in inputs_to_generate]),
+            'inputClassDeclarations': "\n\n".join([self.generate_class_declaration(_input) for _input in inputs_to_generate]),
+            'inputTraitDeclarations': "\n\n".join([self.generate_input_trait_declaration(_input) for _input in inputs_to_generate]),
+            'inputTypeTraitDeclarations': "\n\n".join([self.generate_input_type_trait_declaration(_input) for _input in inputs_to_generate]),
+            'enumTraitDeclarations': "\n\n".join([wrap_with_guard(self.generate_enum_trait_declaration(_type), _type.guard) for _type in enums_to_generate]),
             'forEachMacro': self.generate_for_each_macro(),
         }
 
         return Template(Templates.HeaderSkeleton).substitute(template_arguments)
 
     def generate_implementation(self):
+        enums_to_generate = filter(self.should_generate_item, self._model.enum_types())
+        inputs_to_generate = filter(self.should_generate_item, self._model.inputs)
+
         template_arguments = {
             'licenseBlock': self.generate_license(),
             'filename': self.output_filename(),
@@ -598,9 +630,9 @@ class Generator:
             'traitsNamespace': self.traits_framework.setting('namespace'),
             'inputsNamespace': self.target_framework.setting('namespace'),
             'includes': self.generate_includes(defaults=self.setting('implIncludes'), includes_for_types=True),
-            'inputClassImplementations': "\n\n".join([self.generate_class_implementation(_input) for _input in self._model.inputs]),
-            'inputTraitImplementations': "\n\n".join([self.generate_input_trait_implementation(_input) for _input in self._model.inputs]),
-            'enumTraitImplementations': "\n\n".join([self.generate_enum_trait_implementation(_type) for _type in self._model.enum_types()]),
+            'inputClassImplementations': "\n\n".join([self.generate_class_implementation(_input) for _input in inputs_to_generate]),
+            'inputTraitImplementations': "\n\n".join([self.generate_input_trait_implementation(_input) for _input in inputs_to_generate]),
+            'enumTraitImplementations': "\n\n".join([wrap_with_guard(self.generate_enum_trait_implementation(_type), _type.guard) for _type in enums_to_generate]),
         }
 
         return Template(Templates.ImplementationSkeleton).substitute(template_arguments)
@@ -616,11 +648,14 @@ class Generator:
             if _type.framework is Frameworks.Global:
                 continue
             # For RefCounted types, we reverse when to include the header so that the destructor can be
-            # used in the header file. Enums within classes cannot be forward declared, so we include
-            # headers with the relevant class declaration.
+            # used in the header file.
             include_for_destructor = _type.mode is TypeModes.SHARED
-            include_for_enclosing_class = _type.is_enum() and _type.enclosing_class is not None
-            if (not includes_for_types) ^ (include_for_destructor or include_for_enclosing_class):
+            # Enums within classes cannot be forward declared, so we include
+            # headers with the relevant class declaration.
+            include_for_enclosing_class = _type.enclosing_class is not None
+            # Include headers for types like URL and String which are copied, not owned or shared.
+            include_for_copyable_member = _type.mode is TypeModes.HEAVY_SCALAR
+            if (not includes_for_types) ^ (include_for_destructor or include_for_enclosing_class or include_for_copyable_member):
                 continue
 
             if self.target_framework != _type.framework:
@@ -653,6 +688,10 @@ class Generator:
             if _type.framework not in frameworks:
                 continue
             if _type.enclosing_class is not None:
+                continue
+            if _type.mode == TypeModes.HEAVY_SCALAR:
+                continue
+            if _type.mode == TypeModes.SCALAR and not (_type.is_enum() or _type.is_enum_class()):
                 continue
             if _type.is_enum():
                 declaration = "enum %s : %s;" % (_type.type_name(), _type.underlying_storage)
@@ -728,11 +767,11 @@ class Generator:
     def generate_input_member_tuples(self, _input):
         return [(_member, self._model.get_type_for_member(_member)) for _member in _input.members]
 
-    def qualified_input_name(self, _input):
-        if self.target_framework == self.traits_framework:
-            return _input.name
-        else:
+    def qualified_input_name(self, _input, forceQualified=False):
+        if forceQualified or self.target_framework != self.traits_framework:
             return "%s::%s" % (self.target_framework.setting('namespace'), _input.name)
+        else:
+            return _input.name
 
     def generate_input_trait_declaration(self, _input):
         decl_type = ['struct']
@@ -747,19 +786,34 @@ class Generator:
 
         return wrap_with_guard(Template(Templates.InputTraitsDeclaration).substitute(template_arguments), _input.guard)
 
+    def generate_input_type_trait_declaration(self, _input):
+        template_arguments = {
+            'qualifiedInputName': self.qualified_input_name(_input, forceQualified=True),
+        }
+
+        return wrap_with_guard(Template(Templates.InputTypeTraitsDeclaration).substitute(template_arguments), _input.guard)
+
     def generate_enum_trait_declaration(self, _type):
+        decl_type = ['struct']
+        if len(self.setting('exportMacro')) > 0:
+            decl_type.append(self.setting('exportMacro'))
+
         should_qualify_type = _type.framework != self.traits_framework
         template = Templates.EnumTraitDeclaration if _type.is_enum() else Templates.EnumClassTraitDeclaration
         template_arguments = {
-            'enumName': _type.type_name(qualified=should_qualify_type),
+            'encodingTypeArgument': _type.encoding_type_argument(qualified=should_qualify_type),
+            'enumType': _type.type_name(qualified=should_qualify_type),
+            'structOrClass': " ".join(decl_type)
         }
         return Template(template).substitute(template_arguments)
 
     def generate_for_each_macro(self):
+        inputs_to_generate = filter(self.should_generate_item, self._model.inputs)
+
         macro_name = "%s_REPLAY_INPUT_NAMES_FOR_EACH" % self.setting('prefix').upper()
         lines = []
         lines.append("#define %s(macro) \\" % macro_name)
-        lines.extend(["    macro(%s) \\" % _input.name for _input in self._model.inputs])
+        lines.extend(["    macro(%s) \\" % _input.name for _input in inputs_to_generate])
         lines.append("    \\")
         lines.append("// end of %s" % macro_name)
         return "\n".join(lines)
@@ -779,10 +833,10 @@ class Generator:
         prefix_components = []
         if should_qualify_type:
             prefix_components.append(_type.framework.setting('namespace'))
-        if _type.is_enum_class():
-            prefix_components.append(_type.type_name())
-        if _type.enclosing_class is not None:
+        if _type.is_enum() and _type.enclosing_class is not None:
             prefix_components.append(_type.enclosing_class)
+        elif _type.is_enum_class():
+            prefix_components.append(_type.type_name(qualified=False))
         prefix_components.append("")
         enum_prefix = "::".join(prefix_components)
         encodeLines = []
@@ -816,8 +870,10 @@ class Generator:
 
         # Generate body for decode.
         decodeLines = []
-        for _value in _type.values:
+        for i, _value in enumerate(_type.values):
+
             template_arguments = {
+                'branchKeyword': "else if" if i > 0 else "if",
                 'enumStringValue': _value,
                 'qualifiedEnumValue': "%s%s" % (enum_prefix, _value),
                 'qualifiedEnumName': _type.type_name(qualified=should_qualify_type)
@@ -826,8 +882,9 @@ class Generator:
 
         for guard, guard_values in _type.guard_values_map.iteritems():
             guardedLines = []
-            for guard_value in guard_values:
+            for i, guard_value in enumerate(guard_values):
                 template_arguments = {
+                    'branchKeyword': "else if" if i > 0 else "if",
                     'enumStringValue': guard_value,
                     'qualifiedEnumValue': "%s%s" % (enum_prefix, guard_value),
                     'qualifiedEnumName': _type.type_name(qualified=should_qualify_type)
@@ -836,7 +893,8 @@ class Generator:
             decodeLines.append(wrap_with_guard("\n".join(guardedLines), guard))
 
         template_arguments = {
-            'enumName': _type.type_name(qualified=should_qualify_type),
+            'encodingTypeArgument': _type.encoding_type_argument(qualified=should_qualify_type),
+            'enumType': _type.type_name(qualified=should_qualify_type),
             'encodeCases': "\n".join(encodeLines),
             'decodeCases': "\n".join(decodeLines)
         }
@@ -846,7 +904,7 @@ class Generator:
     def generate_input_trait_implementation(self, _input):
         template_arguments = {
             'inputsNamespace': self.target_framework.setting('namespace'),
-            'inputTypeImplementation': Template(self.setting('inputTypeTemplate')).substitute(None, inputName=_input.name),
+            'inputNameStringLiteral': '"%s"' % _input.name,
             'qualifiedInputName': self.qualified_input_name(_input),
             'constructorArguments': self.generate_constructor_arguments_list(_input),
             'constructorFormalsList': self.generate_constructor_formals_list(_input),
@@ -859,7 +917,7 @@ class Generator:
         steps = []
         for (_member, _type) in self.generate_input_member_tuples(_input):
             should_qualify_type = _type.framework != self.traits_framework
-            put_method = "put<%s>" % _type.type_name(qualified=should_qualify_type)
+            put_method = "put<%s>" % _type.encoding_type_argument(qualified=should_qualify_type)
 
             steps.extend([
                 "    encodedValue.%s(ASCIILiteral(\"%s\"), input.%s());" % (put_method, _member.memberName, _member.memberName)
@@ -877,7 +935,7 @@ class Generator:
         steps = []
         for (_member, _type) in self.generate_input_member_tuples(_input):
             should_qualify_type = _type.framework != self.traits_framework
-            get_method = "get<%s>" % _type.type_name(qualified=should_qualify_type)
+            get_method = "get<%s>" % _type.encoding_type_argument(qualified=should_qualify_type)
 
             lines = [
                 "    %s %s;" % (_type.storage_type(qualified=should_qualify_type), _member.memberName),
@@ -917,8 +975,8 @@ class Generator:
 
     def generate_member_move_expression(self, _member):
         _type = self._model.get_type_for_member(_member)
-        if _type.mode == TypeModes.OWNED:
-            return "std::move(%s)" % _member.memberName
+        if _type.mode in [TypeModes.OWNED, TypeModes.SHARED]:
+            return "WTF::move(%s)" % _member.memberName
         else:
             return _member.memberName
 
@@ -926,19 +984,29 @@ class Generator:
         return ", ".join([self.generate_member_move_expression(_member) for _member in _input.members])
 
 
-def generate_from_specification(input_filepath=None, output_prefix="", output_dirpath=None, framework_name=None, force_output=False):
-    try:
-        with open(input_filepath, "r") as input_file:
-            parsed_json = json.load(input_file)
-    except ValueError as e:
-        raise Exception("Error parsing valid JSON in file: " + input_filepath)
+def generate_from_specifications(input_filepaths=[], output_prefix="", output_dirpath=None, framework_name=None, force_output=False):
 
     if not framework_name in FRAMEWORK_CONFIG_MAP:
         raise ParseException("Unknown or unsupported framework name supplied: " + framework_name)
 
-    model = InputsModel(parsed_json)
+    if len(input_filepaths) == 0:
+        raise ParseException("Must provide at least one specification file, none were provided.")
+
+    def parse_json_from_file(input_filepath):
+        try:
+            with open(input_filepath, "r") as input_file:
+                return json.load(input_file)
+        except ValueError as e:
+            raise Exception("Error parsing valid JSON in file: " + input_filepath)
+
+    specifications = map(parse_json_from_file, input_filepaths)
+
+    model = InputsModel()
+    for spec in specifications:
+        model.parse_specification(spec)
+
     model.resolve_types()
-    generator = Generator(model, framework_name, input_filepath, output_prefix)
+    generator = Generator(model, framework_name, input_filepaths[0], output_prefix)
 
     generator.write_output_files(output_dirpath, force_output)
 
@@ -946,7 +1014,7 @@ def generate_from_specification(input_filepath=None, output_prefix="", output_di
 if __name__ == '__main__':
     allowed_framework_names = FRAMEWORK_CONFIG_MAP.keys()
 
-    cli_parser = optparse.OptionParser(usage="usage: %prog [options] <Inputs.json>")
+    cli_parser = optparse.OptionParser(usage="usage: %prog [options] <Inputs.json> [, <MoreInputs.json> ]")
     cli_parser.add_option("-o", "--outputDir", help="Directory where generated files should be written.")
     cli_parser.add_option("--framework", type="choice", choices=allowed_framework_names, help="The framework these inputs belong to.")  # JavaScriptCore, WebCore
     cli_parser.add_option("--force", action="store_true", help="Force output of generated scripts, even if nothing changed.")
@@ -956,8 +1024,6 @@ if __name__ == '__main__':
     options = None
 
     arg_options, arg_values = cli_parser.parse_args()
-    if (len(arg_values) < 1):
-        raise ParseException("At least one plain argument expected")
 
     if not arg_options.outputDir:
         raise ParseException("Missing output directory")
@@ -966,7 +1032,7 @@ if __name__ == '__main__':
         log.setLevel(logging.DEBUG)
 
     options = {
-        'input_filepath': arg_values[0],
+        'input_filepaths': arg_values,
         'output_dirpath': arg_options.outputDir,
         'output_prefix': os.path.basename(arg_values[0]) if arg_options.test else "",
         'framework_name': arg_options.framework,
@@ -974,7 +1040,7 @@ if __name__ == '__main__':
     }
 
     try:
-        generate_from_specification(**options)
+        generate_from_specifications(**options)
     except (ParseException, TypecheckException) as e:
         if arg_options.test:
             log.error(e.message)

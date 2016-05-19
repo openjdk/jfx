@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -27,8 +27,6 @@
  */
 #ifndef SQLCallbackWrapper_h
 #define SQLCallbackWrapper_h
-
-#if ENABLE(SQL_DATABASE)
 
 #include "ScriptExecutionContext.h"
 #include <wtf/ThreadingPrimitives.h>
@@ -57,7 +55,7 @@ public:
 
     void clear()
     {
-        ScriptExecutionContext* context;
+        ScriptExecutionContext* scriptExecutionContextPtr;
         T* callback;
         {
             MutexLocker locker(m_mutex);
@@ -66,21 +64,28 @@ public:
                 return;
             }
             if (m_scriptExecutionContext->isContextThread()) {
-                m_callback = 0;
-                m_scriptExecutionContext = 0;
+                m_callback = nullptr;
+                m_scriptExecutionContext = nullptr;
                 return;
             }
-            context = m_scriptExecutionContext.release().leakRef();
+            scriptExecutionContextPtr = m_scriptExecutionContext.release().leakRef();
             callback = m_callback.release().leakRef();
         }
-        context->postTask(SafeReleaseTask::create(callback));
+        scriptExecutionContextPtr->postTask({
+            ScriptExecutionContext::Task::CleanupTask,
+            [callback, scriptExecutionContextPtr] (ScriptExecutionContext& context) {
+                ASSERT_UNUSED(context, &context == scriptExecutionContextPtr && context.isContextThread());
+                callback->deref();
+                scriptExecutionContextPtr->deref();
+            }
+        });
     }
 
     PassRefPtr<T> unwrap()
     {
         MutexLocker locker(m_mutex);
         ASSERT(!m_callback || m_scriptExecutionContext->isContextThread());
-        m_scriptExecutionContext = 0;
+        m_scriptExecutionContext = nullptr;
         return m_callback.release();
     }
 
@@ -88,38 +93,11 @@ public:
     bool hasCallback() const { return m_callback; }
 
 private:
-    class SafeReleaseTask : public ScriptExecutionContext::Task {
-    public:
-        static PassOwnPtr<SafeReleaseTask> create(T* callbackToRelease)
-        {
-            return adoptPtr(new SafeReleaseTask(callbackToRelease));
-        }
-
-        virtual void performTask(ScriptExecutionContext* context)
-        {
-            ASSERT(m_callbackToRelease && context && context->isContextThread());
-            m_callbackToRelease->deref();
-            context->deref();
-        }
-
-        virtual bool isCleanupTask() const { return true; }
-
-    private:
-        explicit SafeReleaseTask(T* callbackToRelease)
-            : m_callbackToRelease(callbackToRelease)
-        {
-        }
-
-        T* m_callbackToRelease;
-    };
-
     Mutex m_mutex;
     RefPtr<T> m_callback;
     RefPtr<ScriptExecutionContext> m_scriptExecutionContext;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SQL_DATABASE)
 
 #endif // SQLCallbackWrapper_h

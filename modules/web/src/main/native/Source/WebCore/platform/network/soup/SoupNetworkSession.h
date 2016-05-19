@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -26,10 +26,9 @@
 #ifndef SoupNetworkSession_h
 #define SoupNetworkSession_h
 
-#include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
-#include <wtf/gobject/GRefPtr.h>
+#include <wtf/glib/GRefPtr.h>
 #include <wtf/text/WTFString.h>
 
 typedef struct _SoupCache SoupCache;
@@ -40,7 +39,6 @@ namespace WebCore {
 
 class SoupNetworkSession {
     WTF_MAKE_NONCOPYABLE(SoupNetworkSession); WTF_MAKE_FAST_ALLOCATED;
-    friend class NeverDestroyed<SoupNetworkSession>;
 public:
     ~SoupNetworkSession();
 
@@ -62,12 +60,11 @@ public:
 
     void setCache(SoupCache*);
     SoupCache* cache() const;
+    static void clearCache(const String& cacheDirectory);
 
     void setSSLPolicy(SSLPolicy);
     SSLPolicy sslPolicy() const;
 
-    void setHTTPProxy(const char* httpProxy, const char* httpProxyExceptions);
-    char* httpProxy() const;
     void setupHTTPProxyFromEnvironment();
 
     void setAcceptLanguages(const Vector<String>&);
@@ -75,6 +72,8 @@ public:
 private:
     SoupNetworkSession(SoupCookieJar*);
     SoupNetworkSession(SoupSession*);
+
+    void setHTTPProxy(const char* httpProxy, const char* httpProxyExceptions);
 
     void setupLogger();
 

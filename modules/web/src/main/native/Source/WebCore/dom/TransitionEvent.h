@@ -11,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -39,19 +39,19 @@ struct TransitionEventInit : public EventInit {
     String pseudoElement;
 };
 
-class TransitionEvent : public Event {
+class TransitionEvent final : public Event {
 public:
-    static PassRefPtr<TransitionEvent> create()
+    static Ref<TransitionEvent> create()
     {
-        return adoptRef(new TransitionEvent);
+        return adoptRef(*new TransitionEvent);
     }
-    static PassRefPtr<TransitionEvent> create(const AtomicString& type, const String& propertyName, double elapsedTime, const String& pseudoElement)
+    static Ref<TransitionEvent> create(const AtomicString& type, const String& propertyName, double elapsedTime, const String& pseudoElement)
     {
-        return adoptRef(new TransitionEvent(type, propertyName, elapsedTime, pseudoElement));
+        return adoptRef(*new TransitionEvent(type, propertyName, elapsedTime, pseudoElement));
     }
-    static PassRefPtr<TransitionEvent> create(const AtomicString& type, const TransitionEventInit& initializer)
+    static Ref<TransitionEvent> create(const AtomicString& type, const TransitionEventInit& initializer)
     {
-        return adoptRef(new TransitionEvent(type, initializer));
+        return adoptRef(*new TransitionEvent(type, initializer));
     }
 
     virtual ~TransitionEvent();

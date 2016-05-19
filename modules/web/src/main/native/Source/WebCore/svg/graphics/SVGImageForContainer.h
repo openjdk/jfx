@@ -31,19 +31,22 @@
 #include "FloatSize.h"
 #include "Image.h"
 #include "SVGImage.h"
+#include "URL.h"
 
 namespace WebCore {
 
 class SVGImageForContainer final : public Image {
 public:
-    static PassRefPtr<SVGImageForContainer> create(SVGImage* image, const FloatSize& containerSize, float zoom)
+    static Ref<SVGImageForContainer> create(SVGImage* image, const FloatSize& containerSize, float zoom)
     {
-        return adoptRef(new SVGImageForContainer(image, containerSize, zoom));
+        return adoptRef(*new SVGImageForContainer(image, containerSize, zoom));
     }
 
     virtual bool isSVGImage() const override { return true; }
 
-    virtual IntSize size() const override;
+    virtual FloatSize size() const override;
+
+    void setURL(const URL& url) { m_image->setURL(url); }
 
     virtual bool usesContainerSize() const override { return m_image->usesContainerSize(); }
     virtual bool hasRelativeWidth() const override { return m_image->hasRelativeWidth(); }

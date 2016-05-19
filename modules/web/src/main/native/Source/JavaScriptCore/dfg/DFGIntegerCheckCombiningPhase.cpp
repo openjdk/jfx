@@ -236,12 +236,12 @@ private:
                 switch (data.m_key.m_kind) {
                 case Addition: {
                     if (range.m_minBound < 0) {
-                        insertMustAdd(
+                        insertAdd(
                             nodeIndex, NodeOrigin(range.m_minOrigin, node->origin.forExit),
                             data.m_key.m_source, range.m_minBound);
                     }
                     if (range.m_maxBound > 0) {
-                        insertMustAdd(
+                        insertAdd(
                             nodeIndex, NodeOrigin(range.m_maxOrigin, node->origin.forExit),
                             data.m_key.m_source, range.m_maxBound);
                     }
@@ -292,7 +292,7 @@ private:
                 break;
 
             case ArrayBounds:
-                node->convertToPhantom();
+                node->remove();
                 m_changed = true;
                 break;
 
@@ -311,11 +311,11 @@ private:
             if (node->arithMode() != Arith::CheckOverflow
                 && node->arithMode() != Arith::CheckOverflowAndNegativeZero)
                 break;
-            if (!m_graph.isInt32Constant(node->child2().node()))
+            if (!node->child2()->isInt32Constant())
                 break;
             return RangeKeyAndAddend(
                 RangeKey::addition(node->child1()),
-                m_graph.valueOfInt32Constant(node->child2().node()));
+                node->child2()->asInt32());
         }
 
         case CheckInBounds: {
@@ -325,15 +325,15 @@ private:
 
             Edge index = node->child1();
 
-            if (m_graph.isInt32Constant(index.node())) {
+            if (index->isInt32Constant()) {
                 source = Edge();
-                addend = m_graph.valueOfInt32Constant(index.node());
+                addend = index->asInt32();
             } else if (
                 index->op() == ArithAdd
                 && index->isBinaryUseKind(Int32Use)
-                && m_graph.isInt32Constant(index->child2().node())) {
+                && index->child2()->isInt32Constant()) {
                 source = index->child1();
-                addend = m_graph.valueOfInt32Constant(index->child2().node());
+                addend = index->child2()->asInt32();
             } else {
                 source = index;
                 addend = 0;
@@ -355,8 +355,17 @@ private:
             return false;
 
         switch (key.m_kind) {
-        case ArrayBounds:
-            return (range.m_maxBound - range.m_minBound) >= 0;
+        case ArrayBounds: {
+            // Have to do this carefully because C++ compilers are too smart. But all we're really doing is detecting if
+            // the difference between the bounds is 2^31 or more. If it was, then we'd have to worry about wrap-around.
+            // The way we'd like to write this expression is (range.m_maxBound - range.m_minBound) >= 0, but that is a
+            // signed subtraction and compare, which allows the C++ compiler to do anything it wants in case of
+            // wrap-around.
+            uint32_t maxBound = range.m_maxBound;
+            uint32_t minBound = range.m_minBound;
+            uint32_t unsignedDifference = maxBound - minBound;
+            return !(unsignedDifference >> 31);
+        }
 
         default:
             return true;
@@ -370,19 +379,10 @@ private:
         if (!addend)
             return source.node();
         return m_insertionSet.insertNode(
-            nodeIndex, source->prediction(), ArithAdd, origin, OpInfo(arithMode),
-            source, Edge(
-                m_insertionSet.insertConstant(nodeIndex, origin, jsNumber(addend)),
-                source.useKind()));
-    }
-
-    Node* insertMustAdd(
-        unsigned nodeIndex, NodeOrigin origin, Edge source, int32_t addend)
-    {
-        Node* result = insertAdd(nodeIndex, origin, source, addend);
-        m_insertionSet.insertNode(
-            nodeIndex, SpecNone, HardPhantom, origin, Edge(result, UntypedUse));
-        return result;
+            nodeIndex, source->prediction(), source->result(),
+            ArithAdd, origin, OpInfo(arithMode), source,
+            m_insertionSet.insertConstantForUse(
+                nodeIndex, origin, jsNumber(addend), source.useKind()));
     }
 
     typedef std::unordered_map<RangeKey, Range, HashMethod<RangeKey>> RangeMap;

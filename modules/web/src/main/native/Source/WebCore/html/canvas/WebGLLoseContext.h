@@ -27,24 +27,20 @@
 #define WebGLLoseContext_h
 
 #include "WebGLExtension.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-class WebGLRenderingContext;
+class WebGLRenderingContextBase;
 
-class WebGLLoseContext : public WebGLExtension {
+class WebGLLoseContext final : public WebGLExtension {
 public:
-    static OwnPtr<WebGLLoseContext> create(WebGLRenderingContext*);
-
+    explicit WebGLLoseContext(WebGLRenderingContextBase*);
     virtual ~WebGLLoseContext();
+
     virtual ExtensionName getName() const override;
 
     void loseContext();
     void restoreContext();
-
-private:
-    WebGLLoseContext(WebGLRenderingContext*);
 };
 
 } // namespace WebCore

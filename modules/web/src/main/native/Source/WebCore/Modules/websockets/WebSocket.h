@@ -35,19 +35,18 @@
 
 #include "ActiveDOMObject.h"
 #include "EventListener.h"
-#include "EventNames.h"
 #include "EventTarget.h"
 #include "URL.h"
 #include "WebSocketChannel.h"
 #include "WebSocketChannelClient.h"
 #include <wtf/Forward.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomicStringHash.h>
 
 namespace WebCore {
 
 class Blob;
+class CloseEvent;
 class ThreadableWebSocketChannel;
 
 class WebSocket final : public RefCounted<WebSocket>, public EventTargetWithInlineData, public ActiveDOMObject, public WebSocketChannelClient {
@@ -55,10 +54,10 @@ public:
     static void setIsAvailable(bool);
     static bool isAvailable();
     static const char* subProtocolSeperator();
-    static PassRefPtr<WebSocket> create(ScriptExecutionContext&);
-    static PassRefPtr<WebSocket> create(ScriptExecutionContext&, const String& url, ExceptionCode&);
-    static PassRefPtr<WebSocket> create(ScriptExecutionContext&, const String& url, const String& protocol, ExceptionCode&);
-    static PassRefPtr<WebSocket> create(ScriptExecutionContext&, const String& url, const Vector<String>& protocols, ExceptionCode&);
+    static Ref<WebSocket> create(ScriptExecutionContext&);
+    static RefPtr<WebSocket> create(ScriptExecutionContext&, const String& url, ExceptionCode&);
+    static RefPtr<WebSocket> create(ScriptExecutionContext&, const String& url, const String& protocol, ExceptionCode&);
+    static RefPtr<WebSocket> create(ScriptExecutionContext&, const String& url, const Vector<String>& protocols, ExceptionCode&);
     virtual ~WebSocket();
 
     enum State {
@@ -91,11 +90,6 @@ public:
     String binaryType() const;
     void setBinaryType(const String&);
 
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(open);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(message);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(close);
-
     // EventTarget functions.
     virtual EventTargetInterface eventTargetInterface() const override;
     virtual ScriptExecutionContext* scriptExecutionContext() const override;
@@ -106,7 +100,7 @@ public:
     // WebSocketChannelClient functions.
     virtual void didConnect() override;
     virtual void didReceiveMessage(const String& message) override;
-    virtual void didReceiveBinaryData(PassOwnPtr<Vector<char>>) override;
+    virtual void didReceiveBinaryData(Vector<char>&&) override;
     virtual void didReceiveMessageError() override;
     virtual void didUpdateBufferedAmount(unsigned long bufferedAmount) override;
     virtual void didStartClosingHandshake() override;
@@ -115,12 +109,16 @@ public:
 private:
     explicit WebSocket(ScriptExecutionContext&);
 
-    // ActiveDOMObject functions.
-    virtual void contextDestroyed() override;
-    virtual bool canSuspend() const override;
-    virtual void suspend(ReasonForSuspension) override;
-    virtual void resume() override;
-    virtual void stop() override;
+    void resumeTimerFired();
+    void dispatchOrQueueEvent(Ref<Event>&&);
+
+    // ActiveDOMObject API.
+    void contextDestroyed() override;
+    bool canSuspendForPageCache() const override;
+    void suspend(ReasonForSuspension) override;
+    void resume() override;
+    void stop() override;
+    const char* activeDOMObjectName() const override;
 
     virtual void refEventTarget() override { ref(); }
     virtual void derefEventTarget() override { deref(); }
@@ -141,6 +139,10 @@ private:
     BinaryType m_binaryType;
     String m_subprotocol;
     String m_extensions;
+
+    Timer m_resumeTimer;
+    bool m_shouldDelayEventFiring { false };
+    Deque<Ref<Event>> m_pendingEvents;
 };
 
 } // namespace WebCore

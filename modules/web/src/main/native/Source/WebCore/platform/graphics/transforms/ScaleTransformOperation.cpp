@@ -26,17 +26,25 @@
 
 namespace WebCore {
 
-PassRefPtr<TransformOperation> ScaleTransformOperation::blend(const TransformOperation* from, double progress, bool blendToIdentity)
+bool ScaleTransformOperation::operator==(const TransformOperation& other) const
+{
+    if (!isSameType(other))
+        return false;
+    const ScaleTransformOperation& s = downcast<ScaleTransformOperation>(other);
+    return m_x == s.m_x && m_y == s.m_y && m_z == s.m_z;
+}
+
+Ref<TransformOperation> ScaleTransformOperation::blend(const TransformOperation* from, double progress, bool blendToIdentity)
 {
     if (from && !from->isSameType(*this))
-        return this;
+        return *this;
 
     if (blendToIdentity)
         return ScaleTransformOperation::create(WebCore::blend(m_x, 1.0, progress),
                                                WebCore::blend(m_y, 1.0, progress),
                                                WebCore::blend(m_z, 1.0, progress), m_type);
 
-    const ScaleTransformOperation* fromOp = static_cast<const ScaleTransformOperation*>(from);
+    const ScaleTransformOperation* fromOp = downcast<ScaleTransformOperation>(from);
     double fromX = fromOp ? fromOp->m_x : 1.0;
     double fromY = fromOp ? fromOp->m_y : 1.0;
     double fromZ = fromOp ? fromOp->m_z : 1.0;

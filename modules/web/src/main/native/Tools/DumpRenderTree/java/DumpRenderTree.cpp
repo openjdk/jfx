@@ -27,7 +27,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_init
     ASSERT(!gTestRunner);
     gTestRunner = TestRunner::create(testPathChars, pixelsHashChars);
 
-    WorkQueue::shared()->clear();
+    WorkQueue::singleton().clear();
 
     env->ReleaseStringUTFChars(testPath, testPathChars);
     env->ReleaseStringUTFChars(pixelsHash, pixelsHashChars);
@@ -62,7 +62,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dispose
     (JNIEnv* env, jclass cls)
 {
     ASSERT(gTestRunner);
-    gTestRunner.clear();
+    gTestRunner = nullptr;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dumpAsText
@@ -83,7 +83,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didFini
     (JNIEnv* env, jclass cls)
 {
     ASSERT(gTestRunner);
-    return bool_to_jbool(WorkQueue::shared()->processWork());
+    return bool_to_jbool(WorkQueue::singleton().processWork());
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dumpBackForwardList

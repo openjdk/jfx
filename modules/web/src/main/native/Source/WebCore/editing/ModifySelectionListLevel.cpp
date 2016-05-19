@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -178,7 +178,7 @@ void IncreaseSelectionListLevelCommand::doApply()
     Node* previousItem = startListChild->renderer()->previousSibling()->node();
     if (isListElement(previousItem)) {
         // move nodes up into preceding list
-        appendSiblingNodeRange(startListChild, endListChild, toElement(previousItem));
+        appendSiblingNodeRange(startListChild, endListChild, downcast<Element>(previousItem));
         m_listElement = previousItem;
     } else {
         // create a sublist for the preceding element and move nodes there
@@ -187,7 +187,7 @@ void IncreaseSelectionListLevelCommand::doApply()
             case InheritedListType:
                 newParent = startListChild->parentElement();
                 if (newParent)
-                    newParent = newParent->cloneElementWithoutChildren();
+                    newParent = newParent->cloneElementWithoutChildren(document());
                 break;
             case OrderedList:
                 newParent = createOrderedListElement(document());

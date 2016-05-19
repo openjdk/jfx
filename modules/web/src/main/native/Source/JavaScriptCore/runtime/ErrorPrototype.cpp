@@ -41,7 +41,7 @@ static EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState*);
 
 namespace JSC {
 
-const ClassInfo ErrorPrototype::s_info = { "Error", &ErrorInstance::s_info, 0, ExecState::errorPrototypeTable, CREATE_METHOD_TABLE(ErrorPrototype) };
+const ClassInfo ErrorPrototype::s_info = { "Error", &ErrorInstance::s_info, &errorPrototypeTable, CREATE_METHOD_TABLE(ErrorPrototype) };
 
 /* Source for ErrorPrototype.lut.h
 @begin errorPrototypeTable
@@ -54,16 +54,16 @@ ErrorPrototype::ErrorPrototype(VM& vm, Structure* structure)
 {
 }
 
-void ErrorPrototype::finishCreation(VM& vm, JSGlobalObject*)
+void ErrorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
-    Base::finishCreation(vm, "");
+    Base::finishCreation(globalObject->globalExec(), vm, "");
     ASSERT(inherits(info()));
     putDirect(vm, vm.propertyNames->name, jsNontrivialString(&vm, String(ASCIILiteral("Error"))), DontEnum);
 }
 
 bool ErrorPrototype::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    return getStaticFunctionSlot<ErrorInstance>(exec, ExecState::errorPrototypeTable(exec->vm()), jsCast<ErrorPrototype*>(object), propertyName, slot);
+    return getStaticFunctionSlot<ErrorInstance>(exec, errorPrototypeTable, jsCast<ErrorPrototype*>(object), propertyName, slot);
 }
 
 // ------------------------------ Functions ---------------------------
@@ -72,7 +72,7 @@ bool ErrorPrototype::getOwnPropertySlot(JSObject* object, ExecState* exec, Prope
 EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
 {
     // 1. Let O be the this value.
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->thisValue();
 
     // 2. If Type(O) is not Object, throw a TypeError exception.
     if (!thisValue.isObject())

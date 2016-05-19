@@ -29,9 +29,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(INSPECTOR)
-
 #include "DOMPatchSupport.h"
 
 #include "Attribute.h"
@@ -181,8 +178,8 @@ bool DOMPatchSupport::innerPatchNode(Digest* oldDigest, Digest* newDigest, Excep
         return true;
 
     // Patch attributes
-    Element* oldElement = toElement(oldNode);
-    Element* newElement = toElement(newNode);
+    Element* oldElement = downcast<Element>(oldNode);
+    Element* newElement = downcast<Element>(newNode);
     if (oldDigest->m_attrsSHA1 != newDigest->m_attrsSHA1) {
         // FIXME: Create a function in Element for removing all properties. Take in account whether did/willModifyAttribute are important.
         if (oldElement->hasAttributesWithoutUpdate()) {
@@ -377,10 +374,11 @@ bool DOMPatchSupport::innerPatchChildren(ContainerNode* parentNode, const Vector
     }
 
     // 3. Insert missing nodes.
-    for (size_t i = 0; i < newMap.size(); ++i) {
+    Node* node = parentNode->firstChild();
+    for (unsigned i = 0; node && i < newMap.size(); ++i, node = node->nextSibling()) {
         if (newMap[i].first || merges.contains(newList[i].get()))
             continue;
-        if (!insertBeforeAndMarkAsUsed(parentNode, newList[i].get(), parentNode->childNode(i), ec))
+        if (!insertBeforeAndMarkAsUsed(parentNode, newList[i].get(), node, ec))
             return false;
     }
 
@@ -389,7 +387,7 @@ bool DOMPatchSupport::innerPatchChildren(ContainerNode* parentNode, const Vector
         if (!oldMap[i].first)
             continue;
         RefPtr<Node> node = oldMap[i].first->m_node;
-        Node* anchorNode = parentNode->childNode(oldMap[i].second);
+        Node* anchorNode = parentNode->traverseToChildAt(oldMap[i].second);
         if (node.get() == anchorNode)
             continue;
         if (node->hasTagName(bodyTag) || node->hasTagName(headTag))
@@ -423,9 +421,9 @@ std::unique_ptr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node* nod
             std::unique_ptr<Digest> childInfo = createDigest(child, unusedNodesMap);
             addStringToSHA1(sha1, childInfo->m_sha1);
             child = child->nextSibling();
-            digest->m_children.append(std::move(childInfo));
+            digest->m_children.append(WTF::move(childInfo));
         }
-        Element* element = toElement(node);
+        Element* element = downcast<Element>(node);
 
         if (element->hasAttributesWithoutUpdate()) {
             SHA1 attrsSHA1;
@@ -514,5 +512,3 @@ void DOMPatchSupport::dumpMap(const ResultMap& map, const String& name)
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)

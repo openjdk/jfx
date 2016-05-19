@@ -75,10 +75,15 @@ class CrashOnOverflow {
 public:
     static NO_RETURN_DUE_TO_CRASH void overflowed()
     {
-        CRASH();
+        crash();
     }
 
     void clearOverflow() { }
+
+    static NO_RETURN_DUE_TO_CRASH void crash()
+    {
+        CRASH();
+    }
 
 public:
     bool hasOverflowed() const { return false; }
@@ -99,6 +104,11 @@ protected:
     void clearOverflow()
     {
         m_overflowed = false;
+    }
+
+    static NO_RETURN_DUE_TO_CRASH void crash()
+    {
+        CRASH();
     }
 
 public:
@@ -517,23 +527,22 @@ public:
     bool operator!() const
     {
         if (this->hasOverflowed())
-            CRASH();
+            this->crash();
         return !m_value;
     }
 
-    typedef void* (Checked::*UnspecifiedBoolType);
-    operator UnspecifiedBoolType*() const
+    explicit operator bool() const
     {
         if (this->hasOverflowed())
-            CRASH();
-        return (m_value) ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0;
+            this->crash();
+        return m_value;
     }
 
     // Value accessors. unsafeGet() will crash if there's been an overflow.
     T unsafeGet() const
     {
         if (this->hasOverflowed())
-            CRASH();
+            this->crash();
         return m_value;
     }
 
@@ -612,7 +621,7 @@ public:
     template <typename U> bool operator==(U rhs)
     {
         if (this->hasOverflowed())
-            this->overflowed();
+            this->crash();
         return safeEquals(m_value, rhs);
     }
 
@@ -624,6 +633,47 @@ public:
     template <typename U> bool operator!=(U rhs)
     {
         return !(*this == rhs);
+    }
+
+    // Other comparisons
+    template <typename V> bool operator<(Checked<T, V> rhs) const
+    {
+        return unsafeGet() < rhs.unsafeGet();
+    }
+
+    bool operator<(T rhs) const
+    {
+        return unsafeGet() < rhs;
+    }
+
+    template <typename V> bool operator<=(Checked<T, V> rhs) const
+    {
+        return unsafeGet() <= rhs.unsafeGet();
+    }
+
+    bool operator<=(T rhs) const
+    {
+        return unsafeGet() <= rhs;
+    }
+
+    template <typename V> bool operator>(Checked<T, V> rhs) const
+    {
+        return unsafeGet() > rhs.unsafeGet();
+    }
+
+    bool operator>(T rhs) const
+    {
+        return unsafeGet() > rhs;
+    }
+
+    template <typename V> bool operator>=(Checked<T, V> rhs) const
+    {
+        return unsafeGet() >= rhs.unsafeGet();
+    }
+
+    bool operator>=(T rhs) const
+    {
+        return unsafeGet() >= rhs;
     }
 
 private:
@@ -716,6 +766,25 @@ typedef Checked<int64_t, RecordOverflow> CheckedInt64;
 typedef Checked<uint64_t, RecordOverflow> CheckedUint64;
 typedef Checked<size_t, RecordOverflow> CheckedSize;
 
+template<typename T, typename U>
+Checked<T, RecordOverflow> checkedSum(U value)
+{
+    return Checked<T, RecordOverflow>(value);
+}
+template<typename T, typename U, typename... Args>
+Checked<T, RecordOverflow> checkedSum(U value, Args... args)
+{
+    return Checked<T, RecordOverflow>(value) + checkedSum<T>(args...);
+}
+
+// Sometimes, you just want to check if some math would overflow - the code to do the math is
+// already in place, and you want to guard it.
+
+template<typename T, typename... Args> bool sumOverflows(Args... args)
+{
+    return checkedSum<T>(args...).hasOverflowed();
+}
+
 }
 
 using WTF::Checked;
@@ -730,5 +799,7 @@ using WTF::CheckedUint32;
 using WTF::CheckedInt64;
 using WTF::CheckedUint64;
 using WTF::CheckedSize;
+using WTF::checkedSum;
+using WTF::sumOverflows;
 
 #endif

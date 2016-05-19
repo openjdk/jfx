@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -51,13 +51,24 @@ CustomEvent::~CustomEvent()
 
 void CustomEvent::initCustomEvent(const AtomicString& type, bool canBubble, bool cancelable, const Deprecated::ScriptValue& detail)
 {
-    ASSERT(!m_serializedScriptValue.get());
     if (dispatched())
         return;
 
     initEvent(type, canBubble, cancelable);
 
     m_detail = detail;
+    m_serializedDetail = nullptr;
+    m_triedToSerialize = false;
+}
+
+RefPtr<SerializedScriptValue> CustomEvent::trySerializeDetail(JSC::ExecState* exec)
+{
+    if (!m_serializedDetail && !m_triedToSerialize) {
+        m_serializedDetail = SerializedScriptValue::create(exec, m_detail.jsValue(), nullptr, nullptr, NonThrowing);
+        m_triedToSerialize = true;
+    }
+
+    return m_serializedDetail;
 }
 
 EventInterface CustomEvent::eventInterface() const

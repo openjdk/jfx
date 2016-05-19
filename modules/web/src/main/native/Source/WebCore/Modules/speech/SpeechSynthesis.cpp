@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -37,13 +37,13 @@
 
 namespace WebCore {
 
-PassRefPtr<SpeechSynthesis> SpeechSynthesis::create()
+Ref<SpeechSynthesis> SpeechSynthesis::create()
 {
-    return adoptRef(new SpeechSynthesis);
+    return adoptRef(*new SpeechSynthesis);
 }
 
 SpeechSynthesis::SpeechSynthesis()
-    : m_currentSpeechUtterance(0)
+    : m_currentSpeechUtterance(nullptr)
     , m_isPaused(false)
 #if PLATFORM(IOS)
     , m_restrictions(RequireUserGestureForSpeechStartRestriction)
@@ -51,11 +51,11 @@ SpeechSynthesis::SpeechSynthesis()
 {
 }
 
-void SpeechSynthesis::setPlatformSynthesizer(PassOwnPtr<PlatformSpeechSynthesizer> synthesizer)
+void SpeechSynthesis::setPlatformSynthesizer(std::unique_ptr<PlatformSpeechSynthesizer> synthesizer)
 {
-    m_platformSpeechSynthesizer = synthesizer;
+    m_platformSpeechSynthesizer = WTF::move(synthesizer);
     m_voiceList.clear();
-    m_currentSpeechUtterance = 0;
+    m_currentSpeechUtterance = nullptr;
     m_utteranceQueue.clear();
     m_isPaused = false;
 }
@@ -71,13 +71,11 @@ const Vector<RefPtr<SpeechSynthesisVoice>>& SpeechSynthesis::getVoices()
         return m_voiceList;
 
     if (!m_platformSpeechSynthesizer)
-        m_platformSpeechSynthesizer = PlatformSpeechSynthesizer::create(this);
+        m_platformSpeechSynthesizer = std::make_unique<PlatformSpeechSynthesizer>(this);
 
     // If the voiceList is empty, that's the cue to get the voices from the platform again.
-    const Vector<RefPtr<PlatformSpeechSynthesisVoice>>& platformVoices = m_platformSpeechSynthesizer->voiceList();
-    size_t voiceCount = platformVoices.size();
-    for (size_t k = 0; k < voiceCount; k++)
-        m_voiceList.append(SpeechSynthesisVoice::create(platformVoices[k]));
+    for (auto& voice : m_platformSpeechSynthesizer->voiceList())
+        m_voiceList.append(SpeechSynthesisVoice::create(voice));
 
     return m_voiceList;
 }
@@ -107,8 +105,15 @@ void SpeechSynthesis::startSpeakingImmediately(SpeechSynthesisUtterance* utteran
     utterance->setStartTime(monotonicallyIncreasingTime());
     m_currentSpeechUtterance = utterance;
     m_isPaused = false;
+
+    // Zero lengthed strings should immediately notify that the event is complete.
+    if (utterance->text().isEmpty()) {
+        handleSpeakingCompleted(utterance, false);
+        return;
+    }
+
     if (!m_platformSpeechSynthesizer)
-        m_platformSpeechSynthesizer = PlatformSpeechSynthesizer::create(this);
+        m_platformSpeechSynthesizer = std::make_unique<PlatformSpeechSynthesizer>(this);
     m_platformSpeechSynthesizer->speak(utterance->platformUtterance());
 }
 
@@ -140,7 +145,7 @@ void SpeechSynthesis::cancel()
     m_utteranceQueue.clear();
     if (m_platformSpeechSynthesizer)
         m_platformSpeechSynthesizer->cancel();
-    current = 0;
+    current = nullptr;
 
     // The platform should have called back immediately and cleared the current utterance.
     ASSERT(!m_currentSpeechUtterance);
@@ -167,7 +172,9 @@ void SpeechSynthesis::handleSpeakingCompleted(SpeechSynthesisUtterance* utteranc
 {
     ASSERT(utterance);
     ASSERT(m_currentSpeechUtterance);
-    m_currentSpeechUtterance = 0;
+    RefPtr<SpeechSynthesisUtterance> protect(utterance);
+
+    m_currentSpeechUtterance = nullptr;
 
     fireEvent(errorOccurred ? eventNames().errorEvent : eventNames().endEvent, utterance, 0, String());
 
@@ -185,8 +192,8 @@ void SpeechSynthesis::handleSpeakingCompleted(SpeechSynthesisUtterance* utteranc
 
 void SpeechSynthesis::boundaryEventOccurred(PassRefPtr<PlatformSpeechSynthesisUtterance> utterance, SpeechBoundary boundary, unsigned charIndex)
 {
-    DEFINE_STATIC_LOCAL(const String, wordBoundaryString, (ASCIILiteral("word")));
-    DEFINE_STATIC_LOCAL(const String, sentenceBoundaryString, (ASCIILiteral("sentence")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, wordBoundaryString, (ASCIILiteral("word")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(const String, sentenceBoundaryString, (ASCIILiteral("sentence")));
 
     switch (boundary) {
     case SpeechWordBoundary:
@@ -234,4 +241,4 @@ void SpeechSynthesis::speakingErrorOccurred(PassRefPtr<PlatformSpeechSynthesisUt
 
 } // namespace WebCore
 
-#endif // ENABLE(INPUT_SPEECH)
+#endif // ENABLE(SPEECH_SYNTHESIS)

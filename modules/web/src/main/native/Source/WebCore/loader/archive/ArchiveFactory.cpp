@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -40,6 +40,7 @@
 
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/WTFString.h>
 
@@ -57,7 +58,7 @@ template <typename ArchiveClass> static PassRefPtr<Archive> archiveFactoryCreate
 
 static ArchiveMIMETypesMap& archiveMIMETypes()
 {
-    DEFINE_STATIC_LOCAL(ArchiveMIMETypesMap, mimeTypes, ());
+    static NeverDestroyed<ArchiveMIMETypesMap> mimeTypes;
     static bool initialized = false;
 
     if (initialized)
@@ -66,11 +67,11 @@ static ArchiveMIMETypesMap& archiveMIMETypes()
     // FIXME: Remove unnecessary 'static_cast<RawDataCreationFunction*>' from the following 'mimeTypes.set' operations
     // once we switch to a non-broken Visual Studio compiler.  https://bugs.webkit.org/show_bug.cgi?id=121235
 #if ENABLE(WEB_ARCHIVE) && USE(CF)
-    mimeTypes.set("application/x-webarchive", static_cast<RawDataCreationFunction*>(&archiveFactoryCreate<LegacyWebArchive>));
+    mimeTypes.get().set("application/x-webarchive", static_cast<RawDataCreationFunction*>(&archiveFactoryCreate<LegacyWebArchive>));
 #endif
 #if ENABLE(MHTML)
-    mimeTypes.set("multipart/related", static_cast<RawDataCreationFunction*>(&archiveFactoryCreate<MHTMLArchive>));
-    mimeTypes.set("application/x-mimearchive", static_cast<RawDataCreationFunction*>(&archiveFactoryCreate<MHTMLArchive>));
+    mimeTypes.get().set("multipart/related", static_cast<RawDataCreationFunction*>(&archiveFactoryCreate<MHTMLArchive>));
+    mimeTypes.get().set("application/x-mimearchive", static_cast<RawDataCreationFunction*>(&archiveFactoryCreate<MHTMLArchive>));
 #endif
 
     initialized = true;

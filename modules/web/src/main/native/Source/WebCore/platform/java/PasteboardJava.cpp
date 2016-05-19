@@ -27,6 +27,8 @@
 #include "HTMLParserIdioms.h"
 #include "com_sun_webkit_WCPasteboard.h"
 
+#include "wtf/Ref.h"
+
 namespace WebCore {
 
 ///////////////////
@@ -160,7 +162,7 @@ String imageToMarkup(const String& url, const Element& element)
     markup.append("\"");
     // Copy over attributes.  If we are dragging an image, we expect things like
     // the id to be copied as well.
-    NamedNodeMap* attrs = element.attributes();
+    NamedNodeMap* attrs = &element.attributes();
     unsigned length = attrs->length();
     for (unsigned i = 0; i < length; ++i) {
         RefPtr<Attr> attr(static_cast<Attr*>(attrs->item(i).get()));
@@ -192,32 +194,32 @@ Pasteboard::Pasteboard(PassRefPtr<DataObjectJava> dataObject, bool copyPasteMode
     ASSERT(m_dataObject);
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::create(PassRefPtr<DataObjectJava> dataObject)
+std::unique_ptr<Pasteboard> Pasteboard::create(PassRefPtr<DataObjectJava> dataObject)
 {
-    return adoptPtr(new Pasteboard(dataObject));
+    return std::unique_ptr<Pasteboard>(new Pasteboard(dataObject));
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createPrivate()
+std::unique_ptr<Pasteboard> Pasteboard::createPrivate()
 {
-    return adoptPtr(new Pasteboard(DataObjectJava::create()));
+    return std::unique_ptr<Pasteboard>(new Pasteboard(DataObjectJava::create()));
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
+std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
 {
     // Use single shared data instance for all copy'n'paste pasteboards.
     static RefPtr<DataObjectJava> data = DataObjectJava::create();
     // TODO: setURL, setFiles, setData, setHtml (needs URL)
     data->setPlainText(jGetPlainText());
-    return adoptPtr(new Pasteboard(data, true));
+    return std::unique_ptr<Pasteboard>(new Pasteboard(data, true));
 }
 
 #if ENABLE(DRAG_SUPPORT)
-PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop()
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop()
 {
     return create(DataObjectJava::create());
 }
 
-PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
 {
     return create(dragData.platformData());
 }
@@ -231,11 +233,11 @@ void Pasteboard::writeSelection(
     Range& selectedRange,
     bool canSmartCopyOrDelete,
     Frame& frame,
-    ShouldSerializeSelectedTextForClipboard shouldSerializeSelectedTextForClipboard)
+    ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
     String markup = createMarkup(selectedRange, 0, AnnotateForInterchange, false, ResolveNonLocalURLs);
-    String plainText = shouldSerializeSelectedTextForClipboard == IncludeImageAltTextForClipboard
-        ? frame.editor().selectedTextForClipboard()
+    String plainText = shouldSerializeSelectedTextForDataTransfer == IncludeImageAltTextForDataTransfer
+        ? frame.editor().selectedTextForDataTransfer()
         : frame.editor().selectedText();
 
 #if OS(WINDOWS)
@@ -331,13 +333,12 @@ void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
     }
 }
 
-bool Pasteboard::writeString(const String& type, const String& data)
+void Pasteboard::writeString(const String& type, const String& data)
 {
     // DnD only mode
     if (m_dataObject) {
-        return m_dataObject->setData(type, data);
+        m_dataObject->setData(type, data);
     }
-    return false;
 }
 
 String Pasteboard::readString(const String& type)

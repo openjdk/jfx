@@ -97,7 +97,8 @@ CodeLocationLabel* ArityCheckFailReturnThunks::returnPCsFor(
         jit.jump(GPRInfo::regT2);
     }
 
-    LinkBuffer linkBuffer(vm, &jit, GLOBAL_THUNK_ID);
+    // Sadly, we cannot fail here because the LLInt may need us.
+    LinkBuffer linkBuffer(vm, jit, GLOBAL_THUNK_ID, JITCompilationMustSucceed);
 
     unsigned returnPCsSize = numExpectedArgumentsIncludingThis / stackAlignmentRegisters() + 1;
     std::unique_ptr<CodeLocationLabel[]> returnPCs =
@@ -115,7 +116,7 @@ CodeLocationLabel* ArityCheckFailReturnThunks::returnPCsFor(
 
     {
         ConcurrentJITLocker locker(m_lock);
-        m_returnPCArrays.append(std::move(returnPCs));
+        m_returnPCArrays.append(WTF::move(returnPCs));
         m_refs.append(FINALIZE_CODE(linkBuffer, ("Arity check fail return thunks for up to numArgs = %u", numExpectedArgumentsIncludingThis)));
         m_nextSize = numExpectedArgumentsIncludingThis + stackAlignmentRegisters();
     }

@@ -11,7 +11,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -49,13 +49,13 @@
 #import "WebPlugin.h"
 #import "WebQuotaManager.h"
 #import "WebSecurityOriginInternal.h"
+#import "WebSelectionServiceController.h"
 #import "WebUIDelegatePrivate.h"
 #import "WebView.h"
 #import "WebViewInternal.h"
 #import <Foundation/Foundation.h>
 #import <WebCore/BlockExceptions.h>
 #import <WebCore/ColorChooser.h>
-#import <WebCore/Console.h>
 #import <WebCore/ContextMenu.h>
 #import <WebCore/ContextMenuController.h>
 #import <WebCore/Cursor.h>
@@ -95,7 +95,6 @@
 #endif
 
 #if PLATFORM(IOS)
-#import <WebCore/Console.h>
 #import <WebCore/WAKClipView.h>
 #import <WebCore/WAKWindow.h>
 #import <WebCore/WebCoreThreadMessage.h>
@@ -110,10 +109,12 @@ NSString *WebConsoleMessageAppCacheMessageSource = @"AppCacheMessageSource";
 NSString *WebConsoleMessageRenderingMessageSource = @"RenderingMessageSource";
 NSString *WebConsoleMessageCSSMessageSource = @"CSSMessageSource";
 NSString *WebConsoleMessageSecurityMessageSource = @"SecurityMessageSource";
+NSString *WebConsoleMessageContentBlockerMessageSource = @"ContentBlockerMessageSource";
 NSString *WebConsoleMessageOtherMessageSource = @"OtherMessageSource";
 
 NSString *WebConsoleMessageDebugMessageLevel = @"DebugMessageLevel";
 NSString *WebConsoleMessageLogMessageLevel = @"LogMessageLevel";
+NSString *WebConsoleMessageInfoMessageLevel = @"InfoMessageLevel";
 NSString *WebConsoleMessageWarningMessageLevel = @"WarningMessageLevel";
 NSString *WebConsoleMessageErrorMessageLevel = @"ErrorMessageLevel";
 
@@ -132,12 +133,6 @@ NSString *WebConsoleMessageErrorMessageLevel = @"ErrorMessageLevel";
 @interface NSView (WebOldWebKitPlugInDetails)
 - (void)setIsSelected:(BOOL)isSelected;
 @end
-
-#if !PLATFORM(IOS)
-@interface NSWindow (AppKitSecretsIKnowAbout)
-- (NSRect)_growBoxRect;
-@end
-#endif
 
 using namespace WebCore;
 using namespace HTMLNames;
@@ -220,16 +215,14 @@ void WebChromeClient::takeFocus(FocusDirection direction)
 
 void WebChromeClient::focusedElementChanged(Element* element)
 {
-    if (!element)
-        return;
-    if (!isHTMLInputElement(element))
+    if (!is<HTMLInputElement>(element))
         return;
 
-    HTMLInputElement* inputElement = toHTMLInputElement(element);
-    if (!inputElement->isText())
+    HTMLInputElement& inputElement = downcast<HTMLInputElement>(*element);
+    if (!inputElement.isText())
         return;
 
-    CallFormDelegate(m_webView, @selector(didFocusTextField:inFrame:), kit(inputElement), kit(inputElement->document().frame()));
+    CallFormDelegate(m_webView, @selector(didFocusTextField:inFrame:), kit(&inputElement), kit(inputElement.document().frame()));
 }
 
 void WebChromeClient::focusedFrameChanged(Frame*)
@@ -300,7 +293,7 @@ Page* WebChromeClient::createWindow(Frame* frame, const FrameLoadRequest&, const
 
 #if USE(PLUGIN_HOST_PROCESS) && ENABLE(NETSCAPE_PLUGIN_API)
     if (newWebView)
-        WebKit::NetscapePluginHostManager::shared().didCreateWindow();
+        WebKit::NetscapePluginHostManager::singleton().didCreateWindow();
 #endif
 
     return core(newWebView);
@@ -389,6 +382,8 @@ inline static NSString *stringForMessageSource(MessageSource source)
         return WebConsoleMessageCSSMessageSource;
     case MessageSource::Security:
         return WebConsoleMessageSecurityMessageSource;
+    case MessageSource::ContentBlocker:
+        return WebConsoleMessageContentBlockerMessageSource;
     case MessageSource::Other:
         return WebConsoleMessageOtherMessageSource;
     }
@@ -403,6 +398,8 @@ inline static NSString *stringForMessageLevel(MessageLevel level)
         return WebConsoleMessageDebugMessageLevel;
     case MessageLevel::Log:
         return WebConsoleMessageLogMessageLevel;
+    case MessageLevel::Info:
+        return WebConsoleMessageInfoMessageLevel;
     case MessageLevel::Warning:
         return WebConsoleMessageWarningMessageLevel;
     case MessageLevel::Error:
@@ -545,11 +542,6 @@ bool WebChromeClient::runJavaScriptPrompt(Frame* frame, const String& prompt, co
     return !result.isNull();
 }
 
-bool WebChromeClient::shouldInterruptJavaScript()
-{
-    return CallUIDelegateReturningBoolean(NO, m_webView, @selector(webViewShouldInterruptJavaScript:));
-}
-
 void WebChromeClient::setStatusbarText(const String& status)
 {
     // We want the temporaries allocated here to be released even before returning to the
@@ -559,39 +551,22 @@ void WebChromeClient::setStatusbarText(const String& status)
     [localPool drain];
 }
 
-IntRect WebChromeClient::windowResizerRect() const
-{
-#if !PLATFORM(IOS)
-    return enclosingIntRect([[m_webView window] _growBoxRect]);
-#else
-    return IntRect();
-#endif
-}
-
 bool WebChromeClient::supportsImmediateInvalidation()
 {
     return true;
 }
 
-void WebChromeClient::invalidateRootView(const IntRect&, bool immediate)
-{
-#if !PLATFORM(IOS)
-    if (immediate) {
-        [[m_webView window] displayIfNeeded];
-        [[m_webView window] flushWindowIfNeeded];
-    }
-#else
-    UNUSED_PARAM(immediate);
-#endif
-}
-
-void WebChromeClient::invalidateContentsAndRootView(const IntRect& rect, bool immediate)
+void WebChromeClient::invalidateRootView(const IntRect&)
 {
 }
 
-void WebChromeClient::invalidateContentsForSlowScroll(const IntRect& rect, bool immediate)
+void WebChromeClient::invalidateContentsAndRootView(const IntRect& rect)
 {
-    invalidateContentsAndRootView(rect, immediate);
+}
+
+void WebChromeClient::invalidateContentsForSlowScroll(const IntRect& rect)
+{
+    invalidateContentsAndRootView(rect);
 }
 
 void WebChromeClient::scroll(const IntSize&, const IntRect&, const IntRect&)
@@ -609,6 +584,18 @@ IntRect WebChromeClient::rootViewToScreen(const IntRect& r) const
     // FIXME: Implement this.
     return r;
 }
+
+#if PLATFORM(IOS)
+IntPoint WebChromeClient::accessibilityScreenToRootView(const IntPoint& p) const
+{
+    return p;
+}
+
+IntRect WebChromeClient::rootViewToAccessibilityScreen(const IntRect& r) const
+{
+    return r;
+}
+#endif
 
 PlatformPageClient WebChromeClient::platformPageClient() const
 {
@@ -675,27 +662,16 @@ void WebChromeClient::print(Frame* frame)
         CallUIDelegate(m_webView, @selector(webView:printFrameView:), [webFrame frameView]);
 }
 
-#if ENABLE(SQL_DATABASE)
-
 void WebChromeClient::exceededDatabaseQuota(Frame* frame, const String& databaseName, DatabaseDetails)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
 
     WebSecurityOrigin *webOrigin = [[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:frame->document()->securityOrigin()];
-#if !PLATFORM(IOS)
-    // FIXME: remove this workaround once shipping Safari has the necessary delegate implemented.
-    if (WKAppVersionCheckLessThan(@"com.apple.Safari", -1, 3.1)) {
-        const unsigned long long defaultQuota = 5 * 1024 * 1024; // 5 megabytes should hopefully be enough to test storage support.
-        [[webOrigin databaseQuotaManager] setQuota:defaultQuota];
-    } else
-#endif
-        CallUIDelegate(m_webView, @selector(webView:frame:exceededDatabaseQuotaForSecurityOrigin:database:), kit(frame), webOrigin, (NSString *)databaseName);
+    CallUIDelegate(m_webView, @selector(webView:frame:exceededDatabaseQuotaForSecurityOrigin:database:), kit(frame), webOrigin, (NSString *)databaseName);
     [webOrigin release];
 
     END_BLOCK_OBJC_EXCEPTIONS;
 }
-
-#endif
 
 void WebChromeClient::reachedMaxAppCacheSize(int64_t spaceNeeded)
 {
@@ -713,22 +689,6 @@ void WebChromeClient::reachedApplicationCacheOriginQuota(SecurityOrigin* origin,
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
-void WebChromeClient::populateVisitedLinks()
-{
-    if ([m_webView historyDelegate]) {
-        WebHistoryDelegateImplementationCache* implementations = WebViewGetHistoryDelegateImplementations(m_webView);
-
-        if (implementations->populateVisitedLinksFunc)
-            CallHistoryDelegate(implementations->populateVisitedLinksFunc, m_webView, @selector(populateVisitedLinksForWebView:));
-
-        return;
-    }
-
-    BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    [[WebHistory optionalSharedHistory] _addVisitedLinksToPageGroup:[m_webView page]->group()];
-    END_BLOCK_OBJC_EXCEPTIONS;
-}
-
 #if ENABLE(DASHBOARD_SUPPORT)
 
 void WebChromeClient::annotatedRegionsChanged()
@@ -741,7 +701,7 @@ void WebChromeClient::annotatedRegionsChanged()
 #endif
 
 #if ENABLE(INPUT_TYPE_COLOR)
-PassOwnPtr<ColorChooser> WebChromeClient::createColorChooser(ColorChooserClient* client, const Color& initialColor)
+std::unique_ptr<ColorChooser> WebChromeClient::createColorChooser(ColorChooserClient* client, const Color& initialColor)
 {
     // FIXME: Implement <input type='color'> for WK1 (Bug 119094).
     ASSERT_NOT_REACHED();
@@ -771,14 +731,28 @@ void WebChromeClient::loadIconForFiles(const Vector<String>& filenames, FileIcon
 }
 
 #if !PLATFORM(IOS)
+
 void WebChromeClient::setCursor(const WebCore::Cursor& cursor)
 {
+    // FIXME: Would be nice to share this code with WebKit2's PageClientImpl.
+
     if ([NSApp _cursorRectCursor])
+        return;
+
+    if (!m_webView)
+        return;
+
+    NSWindow *window = [m_webView window];
+    if (!window)
+        return;
+
+    if ([window windowNumber] != [NSWindow windowNumberAtPoint:[NSEvent mouseLocation] belowWindowWithWindowNumber:0])
         return;
 
     NSCursor *platformCursor = cursor.platformCursor();
     if ([NSCursor currentCursor] == platformCursor)
         return;
+
     [platformCursor set];
 }
 
@@ -786,6 +760,7 @@ void WebChromeClient::setCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
 {
     [NSCursor setHiddenUntilMouseMoves:hiddenUntilMouseMoves];
 }
+
 #endif
 
 KeyboardUIMode WebChromeClient::keyboardUIMode()
@@ -867,7 +842,7 @@ bool WebChromeClient::hasOpenedPopup() const
     return false;
 }
 
-PassRefPtr<WebCore::PopupMenu> WebChromeClient::createPopupMenu(WebCore::PopupMenuClient* client) const
+RefPtr<WebCore::PopupMenu> WebChromeClient::createPopupMenu(WebCore::PopupMenuClient* client) const
 {
 #if !PLATFORM(IOS)
     return adoptRef(new PopupMenuMac(client));
@@ -876,7 +851,7 @@ PassRefPtr<WebCore::PopupMenu> WebChromeClient::createPopupMenu(WebCore::PopupMe
 #endif
 }
 
-PassRefPtr<WebCore::SearchPopupMenu> WebChromeClient::createSearchPopupMenu(WebCore::PopupMenuClient* client) const
+RefPtr<WebCore::SearchPopupMenu> WebChromeClient::createSearchPopupMenu(WebCore::PopupMenuClient* client) const
 {
 #if !PLATFORM(IOS)
     return adoptRef(new SearchPopupMenuMac(client));
@@ -914,6 +889,11 @@ void WebChromeClient::attachRootGraphicsLayer(Frame* frame, GraphicsLayer* graph
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
+void WebChromeClient::attachViewOverlayGraphicsLayer(Frame*, GraphicsLayer*)
+{
+    // FIXME: If we want view-relative page overlays in Legacy WebKit, this would be the place to hook them up.
+}
+
 void WebChromeClient::setNeedsOneShotDrawingSynchronization()
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -930,26 +910,27 @@ void WebChromeClient::scheduleCompositingLayerFlush()
 
 #if ENABLE(VIDEO)
 
-bool WebChromeClient::supportsFullscreenForNode(const Node* node)
+bool WebChromeClient::supportsVideoFullscreen()
 {
 #if PLATFORM(IOS)
     if (!Settings::avKitEnabled())
         return false;
 #endif
-    return isHTMLVideoElement(node);
+    return true;
 }
 
-void WebChromeClient::enterFullscreenForNode(Node* node)
+void WebChromeClient::enterVideoFullscreenForVideoElement(HTMLVideoElement& videoElement, HTMLMediaElementEnums::VideoFullscreenMode mode)
 {
+    ASSERT(mode != HTMLMediaElementEnums::VideoFullscreenModeNone);
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    [m_webView _enterFullscreenForNode:node];
+    [m_webView _enterVideoFullscreenForVideoElement:&videoElement mode:mode];
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
-void WebChromeClient::exitFullscreenForNode(Node*)
+void WebChromeClient::exitVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    [m_webView _exitFullscreen];
+    [m_webView _exitVideoFullscreen];
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
@@ -1024,5 +1005,40 @@ bool WebChromeClient::unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<
         return false;
 
     return unwrapSerializedCryptoKey(masterKey, wrappedKey, key);
+}
+#endif
+
+#if ENABLE(SERVICE_CONTROLS)
+void WebChromeClient::handleSelectionServiceClick(WebCore::FrameSelection& selection, const Vector<String>& telephoneNumbers, const WebCore::IntPoint& point)
+{
+    [m_webView _selectionServiceController].handleSelectionServiceClick(selection, telephoneNumbers, point);
+}
+
+bool WebChromeClient::hasRelevantSelectionServices(bool isTextOnly) const
+{
+    return [m_webView _selectionServiceController].hasRelevantSelectionServices(isTextOnly);
+}
+
+#endif
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
+void WebChromeClient::addPlaybackTargetPickerClient(uint64_t contextId)
+{
+    [m_webView _addPlaybackTargetPickerClient:contextId];
+}
+
+void WebChromeClient::removePlaybackTargetPickerClient(uint64_t contextId)
+{
+    [m_webView _removePlaybackTargetPickerClient:contextId];
+}
+
+void WebChromeClient::showPlaybackTargetPicker(uint64_t contextId, const WebCore::IntPoint& location, bool hasVideo)
+{
+    [m_webView _showPlaybackTargetPicker:contextId location:location hasVideo:hasVideo];
+}
+
+void WebChromeClient::playbackTargetPickerClientStateDidChange(uint64_t contextId, MediaProducer::MediaStateFlags state)
+{
+    [m_webView _playbackTargetPickerClientStateDidChange:contextId state:state];
 }
 #endif

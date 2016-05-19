@@ -30,17 +30,15 @@
 #ifndef DOMWindowCSS_h
 #define DOMWindowCSS_h
 
-#if ENABLE(CSS3_CONDITIONAL_RULES)
-
 #include <wtf/Forward.h>
-#include <wtf/PassRefPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
 class DOMWindowCSS : public RefCounted<DOMWindowCSS> {
 public:
-    static PassRefPtr<DOMWindowCSS> create();
+    WEBCORE_EXPORT static Ref<DOMWindowCSS> create();
 
     bool supports(const String& property, const String& value) const;
     bool supports(const String& conditionText) const;
@@ -52,7 +50,5 @@ private:
 };
 
 }
-
-#endif // ENABLE(CSS3_CONDITIONAL_RULES)
 
 #endif

@@ -52,16 +52,16 @@ CSSImageSetValue::CSSImageSetValue()
 
 inline void CSSImageSetValue::detachPendingImage()
 {
-    if (m_imageSet && m_imageSet->isPendingImage())
-        toStylePendingImage(*m_imageSet).detachFromCSSValue();
+    if (is<StylePendingImage>(m_imageSet.get()))
+        downcast<StylePendingImage>(*m_imageSet).detachFromCSSValue();
 }
 
 CSSImageSetValue::~CSSImageSetValue()
 {
     detachPendingImage();
 
-    if (m_imageSet && m_imageSet->isCachedImageSet())
-        toStyleCachedImageSet(*m_imageSet).clearImageSetValue();
+    if (is<StyleCachedImageSet>(m_imageSet.get()))
+        downcast<StyleCachedImageSet>(*m_imageSet).clearImageSetValue();
 }
 
 void CSSImageSetValue::fillImageSet()
@@ -70,13 +70,12 @@ void CSSImageSetValue::fillImageSet()
     size_t i = 0;
     while (i < length) {
         CSSValue* imageValue = item(i);
-        String imageURL = toCSSImageValue(imageValue)->url();
+        String imageURL = downcast<CSSImageValue>(*imageValue).url();
 
         ++i;
         ASSERT_WITH_SECURITY_IMPLICATION(i < length);
         CSSValue* scaleFactorValue = item(i);
-        ASSERT_WITH_SECURITY_IMPLICATION(scaleFactorValue->isPrimitiveValue());
-        float scaleFactor = toCSSPrimitiveValue(scaleFactorValue)->getFloatValue();
+        float scaleFactor = downcast<CSSPrimitiveValue>(*scaleFactorValue).getFloatValue();
 
         ImageWithScale image;
         image.imageURL = imageURL;
@@ -101,11 +100,9 @@ CSSImageSetValue::ImageWithScale CSSImageSetValue::bestImageForScaleFactor()
     return image;
 }
 
-StyleCachedImageSet* CSSImageSetValue::cachedImageSet(CachedResourceLoader* loader, const ResourceLoaderOptions& options)
+StyleCachedImageSet* CSSImageSetValue::cachedImageSet(CachedResourceLoader& loader, const ResourceLoaderOptions& options)
 {
-    ASSERT(loader);
-
-    Document* document = loader->document();
+    Document* document = loader.document();
     if (Page* page = document->page())
         m_scaleFactor = page->deviceScaleFactor();
     else
@@ -121,21 +118,16 @@ StyleCachedImageSet* CSSImageSetValue::cachedImageSet(CachedResourceLoader* load
         ImageWithScale image = bestImageForScaleFactor();
         CachedResourceRequest request(ResourceRequest(document->completeURL(image.imageURL)), options);
         request.setInitiator(cachedResourceRequestInitiators().css);
-        if (options.requestOriginPolicy == PotentiallyCrossOriginEnabled)
-            updateRequestForAccessControl(request.mutableResourceRequest(), document->securityOrigin(), options.allowCredentials);
-        if (CachedResourceHandle<CachedImage> cachedImage = loader->requestImage(request)) {
+        if (options.requestOriginPolicy() == PotentiallyCrossOriginEnabled)
+            updateRequestForAccessControl(request.mutableResourceRequest(), document->securityOrigin(), options.allowCredentials());
+        if (CachedResourceHandle<CachedImage> cachedImage = loader.requestImage(request)) {
             detachPendingImage();
             m_imageSet = StyleCachedImageSet::create(cachedImage.get(), image.scaleFactor, this);
             m_accessedBestFitImage = true;
         }
     }
 
-    return (m_imageSet && m_imageSet->isCachedImageSet()) ? toStyleCachedImageSet(m_imageSet.get()) : nullptr;
-}
-
-StyleCachedImageSet* CSSImageSetValue::cachedImageSet(CachedResourceLoader* loader)
-{
-    return cachedImageSet(loader, CachedResourceLoader::defaultCachedResourceOptions());
+    return is<StyleCachedImageSet>(m_imageSet.get()) ? downcast<StyleCachedImageSet>(m_imageSet.get()) : nullptr;
 }
 
 StyleImage* CSSImageSetValue::cachedOrPendingImageSet(Document& document)
@@ -187,14 +179,13 @@ String CSSImageSetValue::customCSSText() const
     return result.toString();
 }
 
-bool CSSImageSetValue::hasFailedOrCanceledSubresources() const
+bool CSSImageSetValue::traverseSubresources(const std::function<bool (const CachedResource&)>& handler) const
 {
-    if (!m_imageSet || !m_imageSet->isCachedImageSet())
+    if (!is<StyleCachedImageSet>(m_imageSet.get()))
         return false;
-    CachedResource* cachedResource = toStyleCachedImageSet(*m_imageSet).cachedImage();
-    if (!cachedResource)
-        return true;
-    return cachedResource->loadFailedOrCanceled();
+    CachedImage* cachedResource = downcast<StyleCachedImageSet>(*m_imageSet).cachedImage();
+    ASSERT(cachedResource);
+    return handler(*cachedResource);
 }
 
 CSSImageSetValue::CSSImageSetValue(const CSSImageSetValue& cloneFrom)

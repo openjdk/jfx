@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2014 Raspberry Pi Foundation. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +27,16 @@
 #ifndef MemoryPressureHandler_h
 #define MemoryPressureHandler_h
 
-#include <time.h>
+#include <atomic>
+#include <ctime>
+#include <functional>
 #include <wtf/FastMalloc.h>
+#include <wtf/Forward.h>
 
 #if PLATFORM(IOS)
 #include <wtf/ThreadingPrimitives.h>
+#elif OS(LINUX)
+#include "Timer.h"
 #endif
 
 namespace WebCore {
@@ -43,14 +49,18 @@ enum MemoryPressureReason {
 };
 #endif
 
-typedef void (*LowMemoryHandler)(bool critical);
+enum class Critical { No, Yes };
+enum class Synchronous { No, Yes };
+
+typedef std::function<void(Critical, Synchronous)> LowMemoryHandler;
 
 class MemoryPressureHandler {
     WTF_MAKE_FAST_ALLOCATED;
+    friend class WTF::NeverDestroyed<MemoryPressureHandler>;
 public:
-    friend MemoryPressureHandler& memoryPressureHandler();
+    WEBCORE_EXPORT static MemoryPressureHandler& singleton();
 
-    void install();
+    WEBCORE_EXPORT void install();
 
     void setLowMemoryHandler(LowMemoryHandler handler)
     {
@@ -58,43 +68,85 @@ public:
         m_lowMemoryHandler = handler;
     }
 
+    bool isUnderMemoryPressure() const { return m_underMemoryPressure; }
+    void setUnderMemoryPressure(bool b) { m_underMemoryPressure = b; }
+
 #if PLATFORM(IOS)
     // FIXME: Can we share more of this with OpenSource?
-    void installMemoryReleaseBlock(void (^releaseMemoryBlock)(), bool clearPressureOnMemoryRelease = true);
-    void setReceivedMemoryPressure(MemoryPressureReason);
-    bool hasReceivedMemoryPressure();
-    void clearMemoryPressure();
-    bool shouldWaitForMemoryClearMessage();
+    WEBCORE_EXPORT void installMemoryReleaseBlock(void (^releaseMemoryBlock)(), bool clearPressureOnMemoryRelease = true);
+    WEBCORE_EXPORT void setReceivedMemoryPressure(MemoryPressureReason);
+    WEBCORE_EXPORT void clearMemoryPressure();
+    WEBCORE_EXPORT bool shouldWaitForMemoryClearMessage();
     void respondToMemoryPressureIfNeeded();
+#elif OS(LINUX)
+    static void waitForMemoryPressureEvent(void*);
 #endif
 
+    class ReliefLogger {
+    public:
+        explicit ReliefLogger(const char *log)
+            : m_logString(log)
+            , m_initialMemory(s_loggingEnabled ? platformMemoryUsage() : 0)
+        {
+        }
+
+        ~ReliefLogger()
+        {
+            if (s_loggingEnabled)
+                platformLog();
+        }
+
+        const char* logString() const { return m_logString; }
+        static void setLoggingEnabled(bool enabled) { s_loggingEnabled = enabled; }
+        static bool loggingEnabled() { return s_loggingEnabled; }
+
+    private:
+        size_t platformMemoryUsage();
+        void platformLog();
+
+        const char* m_logString;
+        size_t m_initialMemory;
+
+        WEBCORE_EXPORT static bool s_loggingEnabled;
+    };
+
+    WEBCORE_EXPORT void releaseMemory(Critical, Synchronous = Synchronous::No);
+
 private:
+    void releaseNoncriticalMemory();
+    void releaseCriticalMemory(Synchronous);
+
     void uninstall();
 
     void holdOff(unsigned);
 
     MemoryPressureHandler();
-    ~MemoryPressureHandler();
+    ~MemoryPressureHandler() = delete;
 
-    void respondToMemoryPressure();
-    static void releaseMemory(bool critical);
+    void respondToMemoryPressure(Critical, Synchronous = Synchronous::No);
+    void platformReleaseMemory(Critical);
 
     bool m_installed;
     time_t m_lastRespondTime;
     LowMemoryHandler m_lowMemoryHandler;
 
+    std::atomic<bool> m_underMemoryPressure;
+
 #if PLATFORM(IOS)
-    uint32_t m_receivedMemoryPressure;
     uint32_t m_memoryPressureReason;
     bool m_clearPressureOnMemoryRelease;
     void (^m_releaseMemoryBlock)();
     CFRunLoopObserverRef m_observer;
     Mutex m_observerMutex;
+#elif OS(LINUX)
+    int m_eventFD;
+    int m_pressureLevelFD;
+    WTF::ThreadIdentifier m_threadID;
+    Timer m_holdOffTimer;
+    void holdOffTimerFired();
+    void logErrorAndCloseFDs(const char* error);
 #endif
 };
-
-// Function to obtain the global memory pressure object.
-MemoryPressureHandler& memoryPressureHandler();
 
 } // namespace WebCore
 

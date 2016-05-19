@@ -41,7 +41,7 @@ namespace {
 typedef HashMap<String, NavigationTimingFunction> RestrictedKeyMap;
 static RestrictedKeyMap restrictedKeyMap()
 {
-    DEFINE_STATIC_LOCAL(RestrictedKeyMap, map, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(RestrictedKeyMap, map, ());
     if (map.isEmpty()) {
         map.add("navigationStart", &PerformanceTiming::navigationStart);
         map.add("unloadEventStart", &PerformanceTiming::unloadEventStart);
@@ -81,11 +81,8 @@ static void insertPerformanceEntry(PerformanceEntryMap& performanceEntryMap, Pas
     PerformanceEntryMap::iterator it = performanceEntryMap.find(entry->name());
     if (it != performanceEntryMap.end())
         it->value.append(entry);
-    else {
-        Vector<RefPtr<PerformanceEntry> > v(1);
-        v[0] = entry;
-        performanceEntryMap.set(entry->name(), v);
-    }
+    else
+        performanceEntryMap.set(entry->name(), Vector<RefPtr<PerformanceEntry>>{ entry });
 }
 
 static void clearPeformanceEntries(PerformanceEntryMap& performanceEntryMap, const String& name)
@@ -168,8 +165,8 @@ static Vector<RefPtr<PerformanceEntry> > convertToEntrySequence(const Performanc
 {
     Vector<RefPtr<PerformanceEntry> > entries;
 
-    for (PerformanceEntryMap::const_iterator it = performanceEntryMap.begin(); it != performanceEntryMap.end(); ++it)
-        entries.appendVector(it->value);
+    for (auto& entry : performanceEntryMap.values())
+        entries.appendVector(entry);
 
     return entries;
 }

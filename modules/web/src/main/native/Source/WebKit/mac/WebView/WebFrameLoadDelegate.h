@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2004, 2005 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2003, 2004, 2005 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -28,7 +28,7 @@
 
 #import <Foundation/Foundation.h>
 #import <JavaScriptCore/JSBase.h>
-#import <WebKit/WebKitAvailability.h>
+#import <WebKitLegacy/WebKitAvailability.h>
 
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
@@ -50,7 +50,9 @@
     Once at least one byte is received, the data source is considered "committed". This is done
     so the contents of the frame will not be lost if the new data source fails to successfully load.
 */
-@interface NSObject (WebFrameLoadDelegate)
+@protocol WebFrameLoadDelegate <NSObject>
+
+@optional
 
 /*!
     @method webView:didStartProvisionalLoadForFrame:

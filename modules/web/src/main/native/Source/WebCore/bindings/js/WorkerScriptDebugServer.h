@@ -31,8 +31,6 @@
 #ifndef WorkerScriptDebugServer_h
 #define WorkerScriptDebugServer_h
 
-#if ENABLE(INSPECTOR)
-
 #include <inspector/ScriptDebugServer.h>
 
 namespace WebCore {
@@ -50,15 +48,15 @@ public:
     void addListener(Inspector::ScriptDebugListener*);
     void removeListener(Inspector::ScriptDebugListener*, bool skipRecompile);
 
-    void interruptAndRunTask(PassOwnPtr<ScriptDebugServer::Task>);
+    void interruptAndRunTask(std::unique_ptr<ScriptDebugServer::Task>);
 
 private:
-    virtual ListenerSet* getListenersForGlobalObject(JSC::JSGlobalObject*) override { return &m_listeners; }
+    virtual ListenerSet& getListeners() override { return m_listeners; }
     virtual void didPause(JSC::JSGlobalObject*) override { }
     virtual void didContinue(JSC::JSGlobalObject*) override { }
     virtual void runEventLoopWhilePaused() override;
     virtual bool isContentScript(JSC::ExecState*) const override { return false; }
-    virtual void reportException(JSC::ExecState*, JSC::JSValue) const override;
+    virtual void reportException(JSC::ExecState*, JSC::Exception*) const override;
 
     WorkerGlobalScope* m_workerGlobalScope;
     ListenerSet m_listeners;
@@ -66,7 +64,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INSPECTOR)
 
 #endif // WorkerScriptDebugServer_h

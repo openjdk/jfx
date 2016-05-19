@@ -27,11 +27,13 @@
 #define Breakpoint_h
 
 #include "DebuggerPrimitives.h"
+#include <wtf/DoublyLinkedList.h>
+#include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
 
-struct Breakpoint {
+struct Breakpoint : public DoublyLinkedListNode<Breakpoint> {
     Breakpoint()
         : id(noBreakpointID)
         , sourceID(noSourceID)
@@ -41,13 +43,23 @@ struct Breakpoint {
     {
     }
 
-    Breakpoint(SourceID sourceID, unsigned line, unsigned column, String condition, bool autoContinue)
+    Breakpoint(SourceID sourceID, unsigned line, unsigned column, const String& condition, bool autoContinue)
         : id(noBreakpointID)
         , sourceID(sourceID)
         , line(line)
         , column(column)
         , condition(condition)
         , autoContinue(autoContinue)
+    {
+    }
+
+    Breakpoint(const Breakpoint& other)
+        : id(other.id)
+        , sourceID(other.sourceID)
+        , line(other.line)
+        , column(other.column)
+        , condition(other.condition)
+        , autoContinue(other.autoContinue)
     {
     }
 
@@ -59,6 +71,24 @@ struct Breakpoint {
     bool autoContinue;
 
     static const unsigned unspecifiedColumn = UINT_MAX;
+
+private:
+    Breakpoint* m_prev;
+    Breakpoint* m_next;
+
+    friend class WTF::DoublyLinkedListNode<Breakpoint>;
+};
+
+class BreakpointsList : public DoublyLinkedList<Breakpoint>,
+    public RefCounted<BreakpointsList> {
+public:
+    ~BreakpointsList()
+    {
+        Breakpoint* breakpoint;
+        while ((breakpoint = removeHead()))
+            delete breakpoint;
+        ASSERT(isEmpty());
+    }
 };
 
 } // namespace JSC

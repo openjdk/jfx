@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -30,16 +30,16 @@
 #include "WebGLProgram.h"
 
 #include "WebGLContextGroup.h"
-#include "WebGLRenderingContext.h"
+#include "WebGLRenderingContextBase.h"
 
 namespace WebCore {
 
-PassRefPtr<WebGLProgram> WebGLProgram::create(WebGLRenderingContext* ctx)
+Ref<WebGLProgram> WebGLProgram::create(WebGLRenderingContextBase* ctx)
 {
-    return adoptRef(new WebGLProgram(ctx));
+    return adoptRef(*new WebGLProgram(ctx));
 }
 
-WebGLProgram::WebGLProgram(WebGLRenderingContext* ctx)
+WebGLProgram::WebGLProgram(WebGLRenderingContextBase* ctx)
     : WebGLSharedObject(ctx)
     , m_linkStatus(false)
     , m_linkCount(0)
@@ -58,11 +58,11 @@ void WebGLProgram::deleteObjectImpl(GraphicsContext3D* context3d, Platform3DObje
     context3d->deleteProgram(obj);
     if (m_vertexShader) {
         m_vertexShader->onDetached(context3d);
-        m_vertexShader = 0;
+        m_vertexShader = nullptr;
     }
     if (m_fragmentShader) {
         m_fragmentShader->onDetached(context3d);
-        m_fragmentShader = 0;
+        m_fragmentShader = nullptr;
     }
 }
 
@@ -148,12 +148,12 @@ bool WebGLProgram::detachShader(WebGLShader* shader)
     case GraphicsContext3D::VERTEX_SHADER:
         if (m_vertexShader != shader)
             return false;
-        m_vertexShader = 0;
+        m_vertexShader = nullptr;
         return true;
     case GraphicsContext3D::FRAGMENT_SHADER:
         if (m_fragmentShader != shader)
             return false;
-        m_fragmentShader = 0;
+        m_fragmentShader = nullptr;
         return true;
     default:
         return false;
@@ -169,7 +169,7 @@ void WebGLProgram::cacheActiveAttribLocations(GraphicsContext3D* context3d)
     m_activeAttribLocations.resize(static_cast<size_t>(numAttribs));
     for (int i = 0; i < numAttribs; ++i) {
         ActiveInfo info;
-        context3d->getActiveAttrib(object(), i, info);
+        context3d->getActiveAttribImpl(object(), i, info);
         m_activeAttribLocations[i] = context3d->getAttribLocation(object(), info.name);
     }
 }

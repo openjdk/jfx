@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2015 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,7 +31,7 @@
 #include <WebCore/BString.h>
 #include <wtf/RetainPtr.h>
 
-class WebPreferences : public IWebPreferences, public IWebPreferencesPrivate {
+class WebPreferences : public IWebPreferences, public IWebPreferencesPrivate2 {
 public:
     static WebPreferences* createInstance();
 protected:
@@ -371,11 +371,10 @@ public:
     virtual HRESULT STDMETHODCALLTYPE setExperimentalNotificationsEnabled(
         /* [in] */ BOOL enabled);
 
-    virtual HRESULT STDMETHODCALLTYPE setShouldPaintNativeControls(
-    /* [in] */ BOOL shouldPaint);
-
-    virtual HRESULT STDMETHODCALLTYPE shouldPaintNativeControls(
-    /* [retval][out] */ BOOL *shouldPaint);
+    // These two methods are no-ops, and only retained to keep
+    // the Interface consistent. DO NOT USE THEM.
+    virtual HRESULT STDMETHODCALLTYPE setShouldPaintNativeControls(BOOL);
+    virtual HRESULT STDMETHODCALLTYPE shouldPaintNativeControls(BOOL*);
 
     virtual HRESULT STDMETHODCALLTYPE setZoomsTextOnly(
     /* [retval][out] */ BOOL zoomsTextOnly);
@@ -480,8 +479,17 @@ public:
     virtual HRESULT STDMETHODCALLTYPE mockScrollbarsEnabled(BOOL*);
     virtual HRESULT STDMETHODCALLTYPE setMockScrollbarsEnabled(BOOL);
 
+    // These two methods are no-ops, and only retained to keep
+    // the Interface consistent. DO NOT USE THEM.
     virtual HRESULT STDMETHODCALLTYPE screenFontSubstitutionEnabled(BOOL*);
     virtual HRESULT STDMETHODCALLTYPE setScreenFontSubstitutionEnabled(BOOL);
+
+    virtual HRESULT STDMETHODCALLTYPE isInheritURIQueryComponentEnabled(BOOL*);
+    virtual HRESULT STDMETHODCALLTYPE setEnableInheritURIQueryComponent(BOOL);
+
+    // IWebPreferencesPrivate2
+    virtual HRESULT STDMETHODCALLTYPE javaScriptRuntimeFlags(unsigned*);
+    virtual HRESULT STDMETHODCALLTYPE setJavaScriptRuntimeFlags(unsigned);
 
     // WebPreferences
 

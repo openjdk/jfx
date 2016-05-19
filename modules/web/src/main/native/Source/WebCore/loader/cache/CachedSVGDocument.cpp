@@ -23,15 +23,12 @@
 #include "config.h"
 #include "CachedSVGDocument.h"
 
-#include "CachedResourceClient.h"
-#include "CachedResourceHandle.h"
-#include "ResourceBuffer.h"
-#include <wtf/text/StringBuilder.h>
+#include "SharedBuffer.h"
 
 namespace WebCore {
 
-CachedSVGDocument::CachedSVGDocument(const ResourceRequest& request)
-    : CachedResource(request, SVGDocumentResource)
+CachedSVGDocument::CachedSVGDocument(const ResourceRequest& request, SessionID sessionID)
+    : CachedResource(request, SVGDocumentResource, sessionID)
     , m_decoder(TextResourceDecoder::create("application/xml"))
 {
     setAccept("image/svg+xml");
@@ -51,15 +48,12 @@ String CachedSVGDocument::encoding() const
     return m_decoder->encoding().name();
 }
 
-void CachedSVGDocument::finishLoading(ResourceBuffer* data)
+void CachedSVGDocument::finishLoading(SharedBuffer* data)
 {
     if (data) {
-        StringBuilder decodedText;
-        decodedText.append(m_decoder->decode(data->data(), data->size()));
-        decodedText.append(m_decoder->flush());
         // We don't need to create a new frame because the new document belongs to the parent UseElement.
-        m_document = SVGDocument::create(0, response().url());
-        m_document->setContent(decodedText.toString());
+        m_document = SVGDocument::create(nullptr, response().url());
+        m_document->setContent(m_decoder->decodeAndFlush(data->data(), data->size()));
     }
     CachedResource::finishLoading(data);
 }

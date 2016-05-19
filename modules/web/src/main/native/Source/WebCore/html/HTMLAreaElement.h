@@ -35,7 +35,7 @@ class Path;
 
 class HTMLAreaElement final : public HTMLAnchorElement {
 public:
-    static PassRefPtr<HTMLAreaElement> create(const QualifiedName&, Document&);
+    static Ref<HTMLAreaElement> create(const QualifiedName&, Document&);
 
     bool isDefault() const { return m_shape == Default; }
 
@@ -64,14 +64,12 @@ private:
     Path getRegion(const LayoutSize&) const;
     void invalidateCachedRegion();
 
-    OwnPtr<Path> m_region;
+    std::unique_ptr<Path> m_region;
     std::unique_ptr<Length[]> m_coords;
     int m_coordsLen;
     LayoutSize m_lastSize;
     Shape m_shape;
 };
-
-NODE_TYPE_CASTS(HTMLAreaElement)
 
 } //namespace
 

@@ -38,22 +38,21 @@ namespace WebCore {
 
 class HTMLOutputElement final : public HTMLFormControlElement {
 public:
-    static PassRefPtr<HTMLOutputElement> create(const QualifiedName&, Document&, HTMLFormElement*);
-
-    virtual bool willValidate() const override { return false; }
+    static Ref<HTMLOutputElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
     String value() const;
     void setValue(const String&);
     String defaultValue() const;
     void setDefaultValue(const String&);
     void setFor(const String&);
-    DOMSettableTokenList* htmlFor() const;
+    DOMSettableTokenList& htmlFor() { return m_tokens.get(); }
 
     virtual bool canContainRangeEndPoint() const override { return false; }
 
 private:
     HTMLOutputElement(const QualifiedName&, Document&, HTMLFormElement*);
 
+    virtual bool computeWillValidate() const override { return false; }
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual const AtomicString& formControlType() const override;
     virtual bool isEnumeratable() const override { return true; }
@@ -67,7 +66,7 @@ private:
     bool m_isDefaultValueMode;
     bool m_isSetTextContentInProgress;
     String m_defaultValue;
-    RefPtr<DOMSettableTokenList> m_tokens;
+    Ref<DOMSettableTokenList> m_tokens;
 };
 
 } // namespace

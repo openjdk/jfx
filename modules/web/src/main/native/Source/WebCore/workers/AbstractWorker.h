@@ -33,7 +33,6 @@
 
 #include "ActiveDOMObject.h"
 #include "EventListener.h"
-#include "EventNames.h"
 #include "EventTarget.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
@@ -44,20 +43,15 @@ namespace WebCore {
 
     class URL;
 
-    class AbstractWorker : public RefCounted<AbstractWorker>, public ActiveDOMObject, public EventTargetWithInlineData {
+    class AbstractWorker : public RefCounted<AbstractWorker>, public EventTargetWithInlineData {
     public:
-        // EventTarget APIs
-        virtual ScriptExecutionContext* scriptExecutionContext() const override final { return ActiveDOMObject::scriptExecutionContext(); }
-
-        DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
-
         using RefCounted<AbstractWorker>::ref;
         using RefCounted<AbstractWorker>::deref;
 
         virtual ~AbstractWorker();
 
     protected:
-        explicit AbstractWorker(ScriptExecutionContext&);
+        AbstractWorker() = default;
 
         // Helper function that converts a URL to an absolute URL and checks the result for validity.
         URL resolveURL(const String& url, ExceptionCode& ec);

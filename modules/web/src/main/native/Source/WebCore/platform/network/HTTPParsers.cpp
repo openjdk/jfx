@@ -14,7 +14,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -102,21 +102,30 @@ static inline bool skipValue(const String& str, unsigned& pos)
     return pos != start;
 }
 
-bool isValidHTTPHeaderValue(const String& name)
+// See RFC 7230, Section 3.2.3.
+bool isValidHTTPHeaderValue(const String& value)
 {
-    // FIXME: This should really match name against
-    // field-value in section 4.2 of RFC 2616.
-
-    return !name.contains('\r') && !name.contains('\n');
+    UChar c = value[0];
+    if (c == ' ' || c == '\t')
+        return false;
+    c = value[value.length() - 1];
+    if (c == ' ' || c == '\t')
+        return false;
+    for (unsigned i = 0; i < value.length(); ++i) {
+        c = value[i];
+        if (c == 0x7F || c > 0xFF || (c < 0x20 && c != '\t'))
+            return false;
+    }
+    return true;
 }
 
-// See RFC 2616, Section 2.2.
-bool isValidHTTPToken(const String& characters)
+// See RFC 7230, Section 3.2.6.
+bool isValidHTTPToken(const String& value)
 {
-    if (characters.isEmpty())
+    if (value.isEmpty())
         return false;
-    for (unsigned i = 0; i < characters.length(); ++i) {
-        UChar c = characters[i];
+    for (unsigned i = 0; i < value.length(); ++i) {
+        UChar c = value[i];
         if (c <= 0x20 || c >= 0x7F
             || c == '(' || c == ')' || c == '<' || c == '>' || c == '@'
             || c == ',' || c == ';' || c == ':' || c == '\\' || c == '"'
@@ -214,7 +223,7 @@ bool parseHTTPRefresh(const String& refresh, bool fromHttpEquivMeta, double& del
 
             // https://bugs.webkit.org/show_bug.cgi?id=27868
             // Sometimes there is no closing quote for the end of the URL even though there was an opening quote.
-            // If we looped over the entire alleged URL string back to the opening quote, just go ahead and use everything
+            // If we looped over the entire alleged URL string back to the opening quote, just use everything
             // after the opening quote instead.
             if (urlEndPos == urlStartPos)
                 urlEndPos = len;
@@ -225,9 +234,14 @@ bool parseHTTPRefresh(const String& refresh, bool fromHttpEquivMeta, double& del
     }
 }
 
-double parseDate(const String& value)
+Optional<std::chrono::system_clock::time_point> parseHTTPDate(const String& value)
 {
-    return parseDateFromNullTerminatedCharacters(value.utf8().data());
+    double dateInMillisecondsSinceEpoch = parseDateFromNullTerminatedCharacters(value.utf8().data());
+    if (!std::isfinite(dateInMillisecondsSinceEpoch))
+        return { };
+    // This assumes system_clock epoch equals Unix epoch which is true for all implementations but unspecified.
+    // FIXME: The parsing function should be switched to std::chrono too.
+    return std::chrono::system_clock::time_point(std::chrono::milliseconds(static_cast<long long>(dateInMillisecondsSinceEpoch)));
 }
 
 // FIXME: This function doesn't comply with RFC 6266.
@@ -351,14 +365,14 @@ void findCharsetInMediaType(const String& mediaType, unsigned int& charsetPos, u
 
 ContentSecurityPolicy::ReflectedXSSDisposition parseXSSProtectionHeader(const String& header, String& failureReason, unsigned& failurePosition, String& reportURL)
 {
-    DEFINE_STATIC_LOCAL(String, failureReasonInvalidToggle, (ASCIILiteral("expected 0 or 1")));
-    DEFINE_STATIC_LOCAL(String, failureReasonInvalidSeparator, (ASCIILiteral("expected semicolon")));
-    DEFINE_STATIC_LOCAL(String, failureReasonInvalidEquals, (ASCIILiteral("expected equals sign")));
-    DEFINE_STATIC_LOCAL(String, failureReasonInvalidMode, (ASCIILiteral("invalid mode directive")));
-    DEFINE_STATIC_LOCAL(String, failureReasonInvalidReport, (ASCIILiteral("invalid report directive")));
-    DEFINE_STATIC_LOCAL(String, failureReasonDuplicateMode, (ASCIILiteral("duplicate mode directive")));
-    DEFINE_STATIC_LOCAL(String, failureReasonDuplicateReport, (ASCIILiteral("duplicate report directive")));
-    DEFINE_STATIC_LOCAL(String, failureReasonInvalidDirective, (ASCIILiteral("unrecognized directive")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, failureReasonInvalidToggle, (ASCIILiteral("expected 0 or 1")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, failureReasonInvalidSeparator, (ASCIILiteral("expected semicolon")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, failureReasonInvalidEquals, (ASCIILiteral("expected equals sign")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, failureReasonInvalidMode, (ASCIILiteral("invalid mode directive")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, failureReasonInvalidReport, (ASCIILiteral("invalid report directive")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, failureReasonDuplicateMode, (ASCIILiteral("duplicate mode directive")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, failureReasonDuplicateReport, (ASCIILiteral("duplicate report directive")));
+    DEPRECATED_DEFINE_STATIC_LOCAL(String, failureReasonInvalidDirective, (ASCIILiteral("unrecognized directive")));
 
     unsigned pos = 0;
 
@@ -605,14 +619,14 @@ size_t parseHTTPRequestLine(const char* data, size_t length, String& failureReas
     return end - data;
 }
 
-size_t parseHTTPHeader(const char* start, size_t length, String& failureReason, AtomicString& nameStr, String& valueStr, bool strict)
+size_t parseHTTPHeader(const char* start, size_t length, String& failureReason, String& nameStr, String& valueStr, bool strict)
 {
     const char* p = start;
     const char* end = start + length;
 
     Vector<char> name;
     Vector<char> value;
-    nameStr = AtomicString();
+    nameStr = String();
     valueStr = String();
 
     for (; p < end; p++) {
@@ -665,7 +679,7 @@ size_t parseHTTPHeader(const char* start, size_t length, String& failureReason, 
         failureReason = "CR doesn't follow LF after value at " + trimInputSample(p, end - p);
         return 0;
     }
-    nameStr = AtomicString::fromUTF8(name.data(), name.size());
+    nameStr = String::fromUTF8(name.data(), name.size());
     valueStr = String::fromUTF8(value.data(), value.size());
     if (nameStr.isNull()) {
         failureReason = "Invalid UTF-8 sequence in header name";

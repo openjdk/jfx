@@ -28,6 +28,8 @@
 
 #if ENABLE(JAVA_BRIDGE)
 
+#include <cstring>
+
 #if !ENABLE(JAVA_JSC)
 #include <dlfcn.h>
 #else

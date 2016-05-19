@@ -24,6 +24,7 @@
 #ifndef HTMLFrameElementBase_h
 #define HTMLFrameElementBase_h
 
+#include "FrameLoaderTypes.h"
 #include "HTMLFrameOwnerElement.h"
 #include "ScrollTypes.h"
 
@@ -34,7 +35,7 @@ public:
     URL location() const;
     void setLocation(const String&);
 
-    virtual ScrollbarMode scrollingMode() const override { return m_scrolling; }
+    virtual ScrollbarMode scrollingMode() const override final { return m_scrolling; }
 
     int marginWidth() const { return m_marginWidth; }
     int marginHeight() const { return m_marginHeight; }
@@ -42,7 +43,7 @@ public:
     int width();
     int height();
 
-    virtual bool canContainRangeEndPoint() const override { return false; }
+    virtual bool canContainRangeEndPoint() const override final { return false; }
 
 protected:
     HTMLFrameElementBase(const QualifiedName&, Document&);
@@ -50,21 +51,21 @@ protected:
     bool isURLAllowed() const;
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
-    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
-    virtual void didNotifySubtreeInsertions(ContainerNode*) override;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override final;
+    virtual void finishedInsertingSubtree() override final;
     virtual void didAttachRenderers() override;
 
 private:
-    virtual bool supportsFocus() const override;
-    virtual void setFocus(bool) override;
+    virtual bool supportsFocus() const override final;
+    virtual void setFocus(bool) override final;
 
-    virtual bool isURLAttribute(const Attribute&) const override;
-    virtual bool isHTMLContentAttribute(const Attribute&) const override;
+    virtual bool isURLAttribute(const Attribute&) const override final;
+    virtual bool isHTMLContentAttribute(const Attribute&) const override final;
 
-    virtual bool isFrameElementBase() const override { return true; }
+    virtual bool isFrameElementBase() const override final { return true; }
 
     void setNameAndOpenURL();
-    void openURL(bool lockHistory = true, bool lockBackForwardList = true);
+    void openURL(LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
 
     AtomicString m_URL;
     AtomicString m_frameName;
@@ -75,12 +76,11 @@ private:
     int m_marginHeight;
 };
 
-void isHTMLFrameElementBase(const HTMLFrameElementBase&); // Catch unnecessary runtime check of type known at compile time.
-inline bool isHTMLFrameElementBase(const Element& element) { return isHTMLFrameElement(element) || isHTMLIFrameElement(element); }
-inline bool isHTMLFrameElementBase(const Node& node) { return node.isElementNode() && isHTMLFrameElementBase(toElement(node)); }
-
-NODE_TYPE_CASTS(HTMLFrameElementBase)
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLFrameElementBase)
+    static bool isType(const WebCore::HTMLElement& element) { return is<WebCore::HTMLFrameElement>(element) || is<WebCore::HTMLIFrameElement>(element); }
+    static bool isType(const WebCore::Node& node) { return is<WebCore::HTMLElement>(node) && isType(downcast<WebCore::HTMLElement>(node)); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HTMLFrameElementBase_h

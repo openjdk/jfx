@@ -224,14 +224,14 @@ linux-*|solaris-* {
     }
 
     linux-*|solaris-g++* {
-        QMAKE_LFLAGS += -Xlinker -version-script=$$PWD/mapfile-vers -Xlinker --no-undefined
+        QMAKE_LFLAGS += -Xlinker -version-script=$$PWD/mapfile-vers
 
-        # just for build debug: force verboce output from linker
+        # just for build debug: force verboce output from linker 
         QMAKE_LFLAGS +=  -Wl,--verbose
 
         # statically link with icu libraries in order to avoid version conflict
         QMAKE_LFLAGS += `pkg-config --libs-only-L icu-uc`
-        LIBS += -Wl,-Bstatic -licui18n -licuuc -licudata -Wl,-Bdynamic -ldl
+        LIBS += -Wl,-Bstatic -licui18n -licuuc -licudata -Wl,-Bdynamic
     }
     solaris-cc {
         QMAKE_LFLAGS += -M$$PWD/mapfile-vers

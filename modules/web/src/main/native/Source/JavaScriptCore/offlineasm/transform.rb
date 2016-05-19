@@ -423,6 +423,11 @@ class Immediate
     end
 end
 
+class StringLiteral
+    def validate
+    end
+end
+
 class RegisterID
     def validate
     end
@@ -454,6 +459,13 @@ end
 class Instruction
     def validate
         validateChildren
+    end
+end
+
+class SubImmediates
+    def validate
+      raise "Invalid operand #{left.dump} to immediate subtraction" unless left.immediateOperand?
+      raise "Invalid operand #{right.dump} to immediate subtraction" unless right.immediateOperand?
     end
 end
 

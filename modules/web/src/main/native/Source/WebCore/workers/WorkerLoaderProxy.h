@@ -33,7 +33,6 @@
 
 #include "ScriptExecutionContext.h"
 #include <wtf/Forward.h>
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
@@ -47,12 +46,12 @@ namespace WebCore {
         virtual ~WorkerLoaderProxy() { }
 
         // Posts a task to the thread which runs the loading code (normally, the main thread).
-        virtual void postTaskToLoader(PassOwnPtr<ScriptExecutionContext::Task>) = 0;
+        virtual void postTaskToLoader(ScriptExecutionContext::Task) = 0;
 
         // Posts callbacks from loading code to the WorkerGlobalScope. The 'mode' is used to differentiate
         // specific synchronous loading requests so they can be 'nested', per spec.
         // Returns true if the task was posted successfully.
-        virtual bool postTaskForModeToWorkerGlobalScope(PassOwnPtr<ScriptExecutionContext::Task>, const String& mode) = 0;
+        virtual bool postTaskForModeToWorkerGlobalScope(ScriptExecutionContext::Task, const String& mode) = 0;
     };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,28 +26,19 @@
 #ifndef YouTubeEmbedShadowElement_h
 #define YouTubeEmbedShadowElement_h
 
-#if PLATFORM(IOS)
-
 #include "HTMLDivElement.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
-class HTMLPlugInImageElement;
-
 class YouTubeEmbedShadowElement final : public HTMLDivElement {
 public:
-    static PassRefPtr<YouTubeEmbedShadowElement> create(Document&);
-
-    virtual const AtomicString& shadowPseudoId() const override;
-    HTMLPlugInImageElement* pluginElement() const;
+    static Ref<YouTubeEmbedShadowElement> create(Document&);
 
 private:
     YouTubeEmbedShadowElement(Document&);
 };
 
 }
-
-#endif // PLATFORM(IOS)
 
 #endif // YouTubeEmbedShadowElement_h

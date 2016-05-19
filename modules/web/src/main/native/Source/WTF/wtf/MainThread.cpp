@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,8 +31,8 @@
 
 #include "CurrentTime.h"
 #include "Deque.h"
-#include "Functional.h"
 #include "StdLibExtras.h"
+#include "Threading.h"
 #include <mutex>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ThreadSpecific.h>
@@ -214,7 +214,7 @@ static void callFunctionObject(void* context)
 
 void callOnMainThread(std::function<void ()> function)
 {
-    callOnMainThread(callFunctionObject, std::make_unique<std::function<void ()>>(std::move(function)).release());
+    callOnMainThread(callFunctionObject, std::make_unique<std::function<void ()>>(WTF::move(function)).release());
 }
 
 void setMainThreadCallbacksPaused(bool paused)

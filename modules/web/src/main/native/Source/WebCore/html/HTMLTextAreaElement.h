@@ -33,15 +33,15 @@ class VisibleSelection;
 
 class HTMLTextAreaElement final : public HTMLTextFormControlElement {
 public:
-    static PassRefPtr<HTMLTextAreaElement> create(const QualifiedName&, Document&, HTMLFormElement*);
+    static Ref<HTMLTextAreaElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
     int cols() const { return m_cols; }
     int rows() const { return m_rows; }
 
     bool shouldWrapText() const { return m_wrap != NoWrap; }
 
-    virtual String value() const override;
-    void setValue(const String&);
+    WEBCORE_EXPORT virtual String value() const override;
+    WEBCORE_EXPORT void setValue(const String&);
     String defaultValue() const;
     void setDefaultValue(const String&);
     int textLength() const { return value().length(); }
@@ -101,7 +101,7 @@ private:
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual bool isPresentationAttribute(const QualifiedName&) const override;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
-    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
     virtual bool appendFormData(FormDataList&, bool) override;
     virtual void reset() override;
     virtual bool hasCustomFocusLogic() const override;
@@ -112,7 +112,6 @@ private:
     virtual void accessKeyAction(bool sendMouseEvents) override;
 
     virtual bool shouldUseInputMethod() override;
-    virtual bool matchesReadOnlyPseudoClass() const override;
     virtual bool matchesReadWritePseudoClass() const override;
 
     bool valueMissing(const String& value) const { return isRequiredFormControl() && !isDisabledOrReadOnly() && value.isEmpty(); }
@@ -126,8 +125,6 @@ private:
     mutable bool m_isDirty;
     mutable bool m_wasModifiedByUser;
 };
-
-NODE_TYPE_CASTS(HTMLTextAreaElement)
 
 } //namespace
 

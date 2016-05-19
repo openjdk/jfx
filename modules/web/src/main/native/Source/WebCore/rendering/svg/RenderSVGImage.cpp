@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Alexander Kellett <lypanov@kde.org>
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2007, 2008, 2009 Rob Buis <buis@kde.org>
  * Copyright (C) 2009 Google, Inc.
@@ -26,13 +26,13 @@
 #include "config.h"
 #include "RenderSVGImage.h"
 
-#include "Attr.h"
 #include "FloatQuad.h"
 #include "GraphicsContext.h"
 #include "LayoutRepainter.h"
 #include "PointerEventsHitRules.h"
 #include "RenderImageResource.h"
 #include "RenderLayer.h"
+#include "RenderSVGResource.h"
 #include "RenderSVGResourceFilter.h"
 #include "SVGImageElement.h"
 #include "SVGLength.h"
@@ -43,8 +43,8 @@
 
 namespace WebCore {
 
-RenderSVGImage::RenderSVGImage(SVGImageElement& element, PassRef<RenderStyle> style)
-    : RenderSVGModelObject(element, std::move(style))
+RenderSVGImage::RenderSVGImage(SVGImageElement& element, Ref<RenderStyle>&& style)
+    : RenderSVGModelObject(element, WTF::move(style))
     , m_needsBoundariesUpdate(true)
     , m_needsTransformUpdate(true)
     , m_imageResource(std::make_unique<RenderImageResource>())
@@ -59,7 +59,7 @@ RenderSVGImage::~RenderSVGImage()
 
 SVGImageElement& RenderSVGImage::imageElement() const
 {
-    return toSVGImageElement(RenderSVGModelObject::element());
+    return downcast<SVGImageElement>(RenderSVGModelObject::element());
 }
 
 bool RenderSVGImage::updateImageViewport()
@@ -131,7 +131,8 @@ void RenderSVGImage::layout()
 
 void RenderSVGImage::paint(PaintInfo& paintInfo, const LayoutPoint&)
 {
-    if (paintInfo.context->paintingDisabled() || style().visibility() == HIDDEN || !imageResource().hasImage())
+    if (paintInfo.context->paintingDisabled() || paintInfo.phase != PaintPhaseForeground
+        || style().visibility() == HIDDEN || !imageResource().hasImage())
         return;
 
     FloatRect boundingBox = repaintRectInLocalCoordinates();
@@ -139,25 +140,22 @@ void RenderSVGImage::paint(PaintInfo& paintInfo, const LayoutPoint&)
         return;
 
     PaintInfo childPaintInfo(paintInfo);
-    bool drawsOutline = style().outlineWidth() && (childPaintInfo.phase == PaintPhaseOutline || childPaintInfo.phase == PaintPhaseSelfOutline);
-    if (drawsOutline || childPaintInfo.phase == PaintPhaseForeground) {
-        GraphicsContextStateSaver stateSaver(*childPaintInfo.context);
-        childPaintInfo.applyTransform(m_localTransform);
+    GraphicsContextStateSaver stateSaver(*childPaintInfo.context);
+    childPaintInfo.applyTransform(m_localTransform);
 
-        if (childPaintInfo.phase == PaintPhaseForeground) {
-            SVGRenderingContext renderingContext(*this, childPaintInfo);
+    if (childPaintInfo.phase == PaintPhaseForeground) {
+        SVGRenderingContext renderingContext(*this, childPaintInfo);
 
-            if (renderingContext.isRenderingPrepared()) {
-                if (style().svgStyle().bufferedRendering() == BR_STATIC  && renderingContext.bufferForeground(m_bufferedForeground))
-                    return;
+        if (renderingContext.isRenderingPrepared()) {
+            if (style().svgStyle().bufferedRendering() == BR_STATIC  && renderingContext.bufferForeground(m_bufferedForeground))
+                return;
 
-                paintForeground(childPaintInfo);
-            }
+            paintForeground(childPaintInfo);
         }
-
-        if (drawsOutline)
-            paintOutline(childPaintInfo, IntRect(boundingBox));
     }
+
+    if (style().outlineWidth())
+        paintOutline(childPaintInfo, IntRect(boundingBox));
 }
 
 void RenderSVGImage::paintForeground(PaintInfo& paintInfo)
@@ -192,7 +190,7 @@ bool RenderSVGImage::nodeAtFloatPoint(const HitTestRequest& request, HitTestResu
 
         if (hitRules.canHitFill) {
             if (m_objectBoundingBox.contains(localPoint)) {
-                updateHitTestResult(result, roundedLayoutPoint(localPoint));
+                updateHitTestResult(result, LayoutPoint(localPoint));
                 return true;
             }
         }
@@ -205,7 +203,7 @@ void RenderSVGImage::imageChanged(WrappedImagePtr, const IntRect*)
 {
     // The image resource defaults to nullImage until the resource arrives.
     // This empty image may be cached by SVG resources which must be invalidated.
-    if (SVGResources* resources = SVGResourcesCache::cachedResourcesForRenderObject(*this))
+    if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*this))
         resources->removeClientFromCache(*this);
 
     // Eventually notify parent resources, that we've changed.

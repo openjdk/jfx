@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -29,6 +29,7 @@
 #if ENABLE(MEDIA_SOURCE) && USE(AVFOUNDATION)
 
 #include "MediaSourcePrivate.h"
+#include <wtf/Deque.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
@@ -42,46 +43,58 @@ typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 
 namespace WebCore {
 
+class CDMSession;
 class MediaPlayerPrivateMediaSourceAVFObjC;
+class MediaSourcePrivateClient;
 class SourceBufferPrivateAVFObjC;
 class TimeRanges;
 
 class MediaSourcePrivateAVFObjC final : public MediaSourcePrivate {
 public:
-    static RefPtr<MediaSourcePrivateAVFObjC> create(MediaPlayerPrivateMediaSourceAVFObjC*);
+    static RefPtr<MediaSourcePrivateAVFObjC> create(MediaPlayerPrivateMediaSourceAVFObjC*, MediaSourcePrivateClient*);
     virtual ~MediaSourcePrivateAVFObjC();
 
     MediaPlayerPrivateMediaSourceAVFObjC* player() const { return m_player; }
+    const Vector<RefPtr<SourceBufferPrivateAVFObjC>>& sourceBuffers() const { return m_sourceBuffers; }
     const Vector<SourceBufferPrivateAVFObjC*>& activeSourceBuffers() const { return m_activeSourceBuffers; }
 
     virtual AddStatus addSourceBuffer(const ContentType&, RefPtr<SourceBufferPrivate>&) override;
-    virtual double duration() override;
-    virtual void setDuration(double) override;
+    virtual void durationChanged() override;
     virtual void markEndOfStream(EndOfStreamStatus) override;
     virtual void unmarkEndOfStream() override;
     virtual MediaPlayer::ReadyState readyState() const override;
     virtual void setReadyState(MediaPlayer::ReadyState) override;
+    virtual void waitForSeekCompleted() override;
+    virtual void seekCompleted() override;
+
+    MediaTime duration();
+    std::unique_ptr<PlatformTimeRanges> buffered();
 
     bool hasAudio() const;
     bool hasVideo() const;
 
-    MediaTime seekToTime(MediaTime, MediaTime negativeThreshold, MediaTime positiveThreshold);
-    IntSize naturalSize() const;
+    void seekToTime(const MediaTime&);
+    MediaTime fastSeekTimeForMediaTime(const MediaTime&, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold);
+    FloatSize naturalSize() const;
 
 private:
-    MediaSourcePrivateAVFObjC(MediaPlayerPrivateMediaSourceAVFObjC*);
+    MediaSourcePrivateAVFObjC(MediaPlayerPrivateMediaSourceAVFObjC*, MediaSourcePrivateClient*);
 
     void sourceBufferPrivateDidChangeActiveState(SourceBufferPrivateAVFObjC*, bool active);
     void sourceBufferPrivateDidReceiveInitializationSegment(SourceBufferPrivateAVFObjC*);
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+    void sourceBufferKeyNeeded(SourceBufferPrivateAVFObjC*, Uint8Array*);
+#endif
     void monitorSourceBuffers();
     void removeSourceBuffer(SourceBufferPrivate*);
 
     friend class SourceBufferPrivateAVFObjC;
 
     MediaPlayerPrivateMediaSourceAVFObjC* m_player;
-    double m_duration;
+    RefPtr<MediaSourcePrivateClient> m_client;
     Vector<RefPtr<SourceBufferPrivateAVFObjC>> m_sourceBuffers;
     Vector<SourceBufferPrivateAVFObjC*> m_activeSourceBuffers;
+    Deque<SourceBufferPrivateAVFObjC*> m_sourceBuffersNeedingSessions;
     bool m_isEnded;
 };
 

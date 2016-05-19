@@ -12,7 +12,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,8 +31,6 @@
 #include "config.h"
 #include "ConsoleMessage.h"
 
-#if ENABLE(INSPECTOR)
-
 #include "IdentifiersFactory.h"
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
@@ -45,7 +43,7 @@
 
 namespace Inspector {
 
-ConsoleMessage::ConsoleMessage(bool canGenerateCallStack, MessageSource source, MessageType type, MessageLevel level, const String& message, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -56,10 +54,9 @@ ConsoleMessage::ConsoleMessage(bool canGenerateCallStack, MessageSource source, 
     , m_repeatCount(1)
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
-    autogenerateMetadata(canGenerateCallStack);
 }
 
-ConsoleMessage::ConsoleMessage(bool canGenerateCallStack, MessageSource source, MessageType type, MessageLevel level, const String& message, const String& url, unsigned line, unsigned column, JSC::ExecState* state, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& url, unsigned line, unsigned column, JSC::ExecState* state, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -70,30 +67,31 @@ ConsoleMessage::ConsoleMessage(bool canGenerateCallStack, MessageSource source, 
     , m_repeatCount(1)
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
-    autogenerateMetadata(canGenerateCallStack, state);
+    autogenerateMetadata(state);
 }
 
-ConsoleMessage::ConsoleMessage(bool, MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptCallStack> callStack, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptCallStack> callStack, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
     , m_level(level)
     , m_message(message)
-    , m_arguments(nullptr)
+    , m_url()
     , m_line(0)
     , m_column(0)
     , m_repeatCount(1)
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
-    if (callStack && callStack->size()) {
-        const ScriptCallFrame& frame = callStack->at(0);
-        m_url = frame.sourceURL();
-        m_line = frame.lineNumber();
-        m_column = frame.columnNumber();
-    }
     m_callStack = callStack;
+
+    const ScriptCallFrame* frame = m_callStack ? m_callStack->firstNonNativeCallFrame() : nullptr;
+    if (frame) {
+        m_url = frame->sourceURL();
+        m_line = frame->lineNumber();
+        m_column = frame->columnNumber();
+    }
 }
 
-ConsoleMessage::ConsoleMessage(bool canGenerateCallStack, MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptArguments> arguments, JSC::ExecState* state, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptArguments> arguments, JSC::ExecState* state, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -105,91 +103,89 @@ ConsoleMessage::ConsoleMessage(bool canGenerateCallStack, MessageSource source, 
     , m_repeatCount(1)
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
-    autogenerateMetadata(canGenerateCallStack, state);
+    autogenerateMetadata(state);
 }
 
 ConsoleMessage::~ConsoleMessage()
 {
 }
 
-// FIXME: Remove the generate without ExecState path. The caller should always provide an ExecState.
-void ConsoleMessage::autogenerateMetadata(bool /*canGenerateCallStack*/, JSC::ExecState* state)
+void ConsoleMessage::autogenerateMetadata(JSC::ExecState* state)
 {
+    if (!state)
+        return;
+
     if (m_type == MessageType::EndGroup)
         return;
 
-    if (state)
-        m_callStack = createScriptCallStackForConsole(state);
-    // else if (canGenerateCallStack)
-    //     m_callStack = createScriptCallStack(ScriptCallStack::maxCallStackSizeToCapture, true);
-    else
-        return;
+    // FIXME: Should this really be using "for console" in the generic ConsoleMessage autogeneration? This can skip the first frame.
+    m_callStack = createScriptCallStackForConsole(state, ScriptCallStack::maxCallStackSizeToCapture);
 
-    if (m_callStack && m_callStack->size()) {
-        const ScriptCallFrame& frame = m_callStack->at(0);
-        m_url = frame.sourceURL();
-        m_line = frame.lineNumber();
-        m_column = frame.columnNumber();
+    if (const ScriptCallFrame* frame = m_callStack->firstNonNativeCallFrame()) {
+        m_url = frame->sourceURL();
+        m_line = frame->lineNumber();
+        m_column = frame->columnNumber();
         return;
     }
-
-    m_callStack.clear();
 }
 
-static Inspector::TypeBuilder::Console::ConsoleMessage::Source::Enum messageSourceValue(MessageSource source)
+static Inspector::Protocol::Console::ConsoleMessage::Source messageSourceValue(MessageSource source)
 {
     switch (source) {
-    case MessageSource::XML: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::XML;
-    case MessageSource::JS: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::Javascript;
-    case MessageSource::Network: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::Network;
-    case MessageSource::ConsoleAPI: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::ConsoleAPI;
-    case MessageSource::Storage: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::Storage;
-    case MessageSource::AppCache: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::Appcache;
-    case MessageSource::Rendering: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::Rendering;
-    case MessageSource::CSS: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::CSS;
-    case MessageSource::Security: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::Security;
-    case MessageSource::Other: return Inspector::TypeBuilder::Console::ConsoleMessage::Source::Other;
+    case MessageSource::XML: return Inspector::Protocol::Console::ConsoleMessage::Source::XML;
+    case MessageSource::JS: return Inspector::Protocol::Console::ConsoleMessage::Source::Javascript;
+    case MessageSource::Network: return Inspector::Protocol::Console::ConsoleMessage::Source::Network;
+    case MessageSource::ConsoleAPI: return Inspector::Protocol::Console::ConsoleMessage::Source::ConsoleAPI;
+    case MessageSource::Storage: return Inspector::Protocol::Console::ConsoleMessage::Source::Storage;
+    case MessageSource::AppCache: return Inspector::Protocol::Console::ConsoleMessage::Source::Appcache;
+    case MessageSource::Rendering: return Inspector::Protocol::Console::ConsoleMessage::Source::Rendering;
+    case MessageSource::CSS: return Inspector::Protocol::Console::ConsoleMessage::Source::CSS;
+    case MessageSource::Security: return Inspector::Protocol::Console::ConsoleMessage::Source::Security;
+    case MessageSource::ContentBlocker: return Inspector::Protocol::Console::ConsoleMessage::Source::ContentBlocker;
+    case MessageSource::Other: return Inspector::Protocol::Console::ConsoleMessage::Source::Other;
     }
-    return Inspector::TypeBuilder::Console::ConsoleMessage::Source::Other;
+    return Inspector::Protocol::Console::ConsoleMessage::Source::Other;
 }
 
-static Inspector::TypeBuilder::Console::ConsoleMessage::Type::Enum messageTypeValue(MessageType type)
+static Inspector::Protocol::Console::ConsoleMessage::Type messageTypeValue(MessageType type)
 {
     switch (type) {
-    case MessageType::Log: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::Log;
-    case MessageType::Clear: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::Clear;
-    case MessageType::Dir: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::Dir;
-    case MessageType::DirXML: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::DirXML;
-    case MessageType::Table: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::Table;
-    case MessageType::Trace: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::Trace;
-    case MessageType::StartGroup: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::StartGroup;
-    case MessageType::StartGroupCollapsed: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::StartGroupCollapsed;
-    case MessageType::EndGroup: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::EndGroup;
-    case MessageType::Assert: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::Assert;
-    case MessageType::Timing: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::Timing;
-    case MessageType::Profile: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::Profile;
-    case MessageType::ProfileEnd: return Inspector::TypeBuilder::Console::ConsoleMessage::Type::ProfileEnd;
+    case MessageType::Log: return Inspector::Protocol::Console::ConsoleMessage::Type::Log;
+    case MessageType::Clear: return Inspector::Protocol::Console::ConsoleMessage::Type::Clear;
+    case MessageType::Dir: return Inspector::Protocol::Console::ConsoleMessage::Type::Dir;
+    case MessageType::DirXML: return Inspector::Protocol::Console::ConsoleMessage::Type::DirXML;
+    case MessageType::Table: return Inspector::Protocol::Console::ConsoleMessage::Type::Table;
+    case MessageType::Trace: return Inspector::Protocol::Console::ConsoleMessage::Type::Trace;
+    case MessageType::StartGroup: return Inspector::Protocol::Console::ConsoleMessage::Type::StartGroup;
+    case MessageType::StartGroupCollapsed: return Inspector::Protocol::Console::ConsoleMessage::Type::StartGroupCollapsed;
+    case MessageType::EndGroup: return Inspector::Protocol::Console::ConsoleMessage::Type::EndGroup;
+    case MessageType::Assert: return Inspector::Protocol::Console::ConsoleMessage::Type::Assert;
+    case MessageType::Timing: return Inspector::Protocol::Console::ConsoleMessage::Type::Timing;
+    case MessageType::Profile: return Inspector::Protocol::Console::ConsoleMessage::Type::Profile;
+    case MessageType::ProfileEnd: return Inspector::Protocol::Console::ConsoleMessage::Type::ProfileEnd;
     }
-    return Inspector::TypeBuilder::Console::ConsoleMessage::Type::Log;
+    return Inspector::Protocol::Console::ConsoleMessage::Type::Log;
 }
 
-static Inspector::TypeBuilder::Console::ConsoleMessage::Level::Enum messageLevelValue(MessageLevel level)
+static Inspector::Protocol::Console::ConsoleMessage::Level messageLevelValue(MessageLevel level)
 {
     switch (level) {
-    case MessageLevel::Log: return Inspector::TypeBuilder::Console::ConsoleMessage::Level::Log;
-    case MessageLevel::Warning: return Inspector::TypeBuilder::Console::ConsoleMessage::Level::Warning;
-    case MessageLevel::Error: return Inspector::TypeBuilder::Console::ConsoleMessage::Level::Error;
-    case MessageLevel::Debug: return Inspector::TypeBuilder::Console::ConsoleMessage::Level::Debug;
+    case MessageLevel::Log: return Inspector::Protocol::Console::ConsoleMessage::Level::Log;
+    case MessageLevel::Info: return Inspector::Protocol::Console::ConsoleMessage::Level::Info;
+    case MessageLevel::Warning: return Inspector::Protocol::Console::ConsoleMessage::Level::Warning;
+    case MessageLevel::Error: return Inspector::Protocol::Console::ConsoleMessage::Level::Error;
+    case MessageLevel::Debug: return Inspector::Protocol::Console::ConsoleMessage::Level::Debug;
     }
-    return Inspector::TypeBuilder::Console::ConsoleMessage::Level::Log;
+    return Inspector::Protocol::Console::ConsoleMessage::Level::Log;
 }
 
-void ConsoleMessage::addToFrontend(InspectorConsoleFrontendDispatcher* consoleFrontendDispatcher, Inspector::InjectedScriptManager* injectedScriptManager, bool generatePreview)
+void ConsoleMessage::addToFrontend(ConsoleFrontendDispatcher* consoleFrontendDispatcher, InjectedScriptManager* injectedScriptManager, bool generatePreview)
 {
-    RefPtr<Inspector::TypeBuilder::Console::ConsoleMessage> jsonObj = Inspector::TypeBuilder::Console::ConsoleMessage::create()
+    Ref<Inspector::Protocol::Console::ConsoleMessage> jsonObj = Inspector::Protocol::Console::ConsoleMessage::create()
         .setSource(messageSourceValue(m_source))
         .setLevel(messageLevelValue(m_level))
-        .setText(m_message);
+        .setText(m_message)
+        .release();
 
     // FIXME: only send out type for ConsoleAPI source messages.
     jsonObj->setType(messageTypeValue(m_type));
@@ -204,37 +200,39 @@ void ConsoleMessage::addToFrontend(InspectorConsoleFrontendDispatcher* consoleFr
     if (m_arguments && m_arguments->argumentCount()) {
         InjectedScript injectedScript = injectedScriptManager->injectedScriptFor(m_arguments->globalState());
         if (!injectedScript.hasNoValue()) {
-            RefPtr<Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Runtime::RemoteObject>> jsonArgs = Inspector::TypeBuilder::Array<Inspector::TypeBuilder::Runtime::RemoteObject>::create();
+            Ref<Inspector::Protocol::Array<Inspector::Protocol::Runtime::RemoteObject>> jsonArgs = Inspector::Protocol::Array<Inspector::Protocol::Runtime::RemoteObject>::create();
             if (m_type == MessageType::Table && generatePreview && m_arguments->argumentCount()) {
                 Deprecated::ScriptValue table = m_arguments->argumentAt(0);
                 Deprecated::ScriptValue columns = m_arguments->argumentCount() > 1 ? m_arguments->argumentAt(1) : Deprecated::ScriptValue();
-                RefPtr<Inspector::TypeBuilder::Runtime::RemoteObject> inspectorValue = injectedScript.wrapTable(table, columns);
+                RefPtr<Inspector::Protocol::Runtime::RemoteObject> inspectorValue = injectedScript.wrapTable(table, columns);
                 if (!inspectorValue) {
                     ASSERT_NOT_REACHED();
                     return;
                 }
-                jsonArgs->addItem(inspectorValue);
+                jsonArgs->addItem(inspectorValue.copyRef());
+                if (m_arguments->argumentCount() > 1)
+                    jsonArgs->addItem(injectedScript.wrapObject(columns, ASCIILiteral("console"), true));
             } else {
                 for (unsigned i = 0; i < m_arguments->argumentCount(); ++i) {
-                    RefPtr<Inspector::TypeBuilder::Runtime::RemoteObject> inspectorValue = injectedScript.wrapObject(m_arguments->argumentAt(i), "console", generatePreview);
+                    RefPtr<Inspector::Protocol::Runtime::RemoteObject> inspectorValue = injectedScript.wrapObject(m_arguments->argumentAt(i), ASCIILiteral("console"), generatePreview);
                     if (!inspectorValue) {
                         ASSERT_NOT_REACHED();
                         return;
                     }
-                    jsonArgs->addItem(inspectorValue);
+                    jsonArgs->addItem(inspectorValue.copyRef());
                 }
             }
-            jsonObj->setParameters(jsonArgs);
+            jsonObj->setParameters(WTF::move(jsonArgs));
         }
     }
 
     if (m_callStack)
         jsonObj->setStackTrace(m_callStack->buildInspectorArray());
 
-    consoleFrontendDispatcher->messageAdded(jsonObj);
+    consoleFrontendDispatcher->messageAdded(WTF::move(jsonObj));
 }
 
-void ConsoleMessage::updateRepeatCountInConsole(InspectorConsoleFrontendDispatcher* consoleFrontendDispatcher)
+void ConsoleMessage::updateRepeatCountInConsole(ConsoleFrontendDispatcher* consoleFrontendDispatcher)
 {
     consoleFrontendDispatcher->messageRepeatCountUpdated(m_repeatCount);
 }
@@ -275,7 +273,7 @@ void ConsoleMessage::clear()
         m_message = ASCIILiteral("<message collected>");
 
     if (m_arguments)
-        m_arguments.clear();
+        m_arguments = nullptr;
 }
 
 JSC::ExecState* ConsoleMessage::scriptState() const
@@ -295,5 +293,3 @@ unsigned ConsoleMessage::argumentCount() const
 }
 
 } // namespace Inspector
-
-#endif // ENABLE(INSPECTOR)

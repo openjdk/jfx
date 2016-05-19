@@ -33,7 +33,6 @@
 #include "LinkHash.h"
 #include "RenderStyleConstants.h"
 #include <wtf/HashSet.h>
-#include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
@@ -42,26 +41,24 @@ class Document;
 class VisitedLinkState {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<VisitedLinkState> create(Document&);
+    explicit VisitedLinkState(Document&);
 
     void invalidateStyleForAllLinks();
     void invalidateStyleForLink(LinkHash);
-    EInsideLink determineLinkState(Element*);
+    EInsideLink determineLinkState(Element&);
 
 private:
-    explicit VisitedLinkState(Document&);
-
     EInsideLink determineLinkStateSlowCase(Element&);
 
     Document& m_document;
     HashSet<LinkHash, LinkHashHash> m_linksCheckedForVisitedState;
 };
 
-inline EInsideLink VisitedLinkState::determineLinkState(Element* element)
+inline EInsideLink VisitedLinkState::determineLinkState(Element& element)
 {
-    if (!element || !element->isLink())
+    if (!element.isLink())
         return NotInsideLink;
-    return determineLinkStateSlowCase(*element);
+    return determineLinkStateSlowCase(element);
 }
 
 }

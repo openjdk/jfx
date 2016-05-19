@@ -2,6 +2,8 @@
 
 package CodeGeneratorJava;
 
+$| = 1;
+
 use File::Path;
 use constant FileNamePrefix => "Java";
 
@@ -44,7 +46,6 @@ my %class2pkg = (
     NameList => "org.w3c.dom",
     Node => "org.w3c.dom",
     NodeList => "org.w3c.dom",
-    Notation => "org.w3c.dom",
     ProcessingInstruction => "org.w3c.dom",
     Text => "org.w3c.dom",
     TypeInfo => "org.w3c.dom",
@@ -394,7 +395,6 @@ my %classData = (
                 "               return new DocumentImpl(peer);\n" .
                 "        case DOCUMENT_TYPE_NODE: return new DocumentTypeImpl(peer);\n" .
                 "        case DOCUMENT_FRAGMENT_NODE: return new DocumentFragmentImpl(peer);\n" .
-                "        case NOTATION_NODE: return new NotationImpl(peer);\n" .
                 "        }\n"
     },
     Range => {
@@ -494,6 +494,27 @@ my @contentCPP = ();
 
 my $module = "";
 
+
+my %nativeType = (
+    "unrestricted double" => "double",
+    "unrestricted float" => "float",
+);
+
+sub proxyPrinter {
+    my $fcaller = (caller(1))[3];
+    my ($ffile,$fname) = $fcaller =~ /(.*)::(.*)/s;
+    my $line = (caller(1))[2];
+    my $ev = "_$fname('" . join("','",@_) . "')";
+    my $retv = eval $ev; warn $@ if $@;
+    print " ===== //XXX: $ffile:$line call to $ev ";
+    if (defined $retv) {
+        print "returns $retv\n";
+    } else {
+        print "returns undef OUCH\n";
+    }
+    return $retv;
+}
+
 # Default constructor
 sub new
 {
@@ -543,6 +564,7 @@ sub GetTransferTypeName
     return "JSObject" if $name eq "DOMObject";
     return "long" if $name eq "DOMTimeStamp";
     return "boolean" if $name eq "boolean";
+    return "EventListener" if $name eq "EventHandler";
     return $name if $codeGenerator->IsPrimitiveType($name);
 
     return "${name}Impl";
@@ -565,6 +587,25 @@ sub GetCPPInterface
     return $interfaceName;
 }
 
+sub GetEventHandlerAttributeEventName
+{
+    my $attribute = shift;
+
+    # Remove the "on" prefix.
+    my $eventType = substr($attribute->signature->name, 2);
+
+    # FIXME: Consider adding a property in the IDL file instead of hard coding these names.
+
+    $eventType = "show" if $eventType eq "display";
+
+    # Note: These four names exist in HTMLElement.cpp.
+    $eventType = "webkitAnimationEnd" if $eventType eq "webkitanimationend";
+    $eventType = "webkitAnimationIteration" if $eventType eq "webkitanimationiteration";
+    $eventType = "webkitAnimationStart" if $eventType eq "webkitanimationstart";
+    $eventType = "webkitTransitionEnd" if $eventType eq "webkittransitionend";
+
+    return "eventNames().${eventType}Event";
+}
 
 sub ForbiddenTransferTypeName
 {
@@ -574,6 +615,7 @@ sub ForbiddenTransferTypeName
     return 0 if $codeGenerator->IsStringType($name) or $name eq "SerializedScriptValue";
     return 0 if $name eq "DOMTimeStamp";
     return 0 if $name eq "boolean";
+    return 0 if $name eq "EventHandler";
     return 0 if $codeGenerator->IsPrimitiveType($name);
     return 0 if $class2pkg{GetJavaInterface($name)};
     return 0 if $domExtension{$name};
@@ -595,11 +637,14 @@ sub IsJavaPimitive
     return 0;
 }
 
-sub GetJavaParamClassName
+sub GetJavaParamClassName { return proxyPrinter(@_);}
+sub _GetJavaParamClassName
 {
     my $name = shift;
 
     # special cases
+    $name = $nativeType{$name} if $nativeType{$name};
+
     $name = "boolean" if $name eq "boolean";
 
     $name = "short" if $name eq "unsigned short";
@@ -609,6 +654,7 @@ sub GetJavaParamClassName
     $name = "long"  if $name eq "unsigned int";
     $name = "long"  if $name eq "long long";
     $name = "long"  if $name eq "Date" or $name eq "DOMTimeStamp";
+    $name = "EventListener"  if $name eq "EventHandler";
 
     $name = "String" if $codeGenerator->IsStringType($name) or $name eq "SerializedScriptValue";
     $name = "JSObject" if $name eq "DOMObject";
@@ -675,7 +721,8 @@ sub ShouldSkipType
     return 0;
 }
 
-sub GetExceptionSuffix
+sub GetExceptionSuffix { return proxyPrinter(@_);}
+sub _GetExceptionSuffix
 {
     my $exceptionArray = shift;
     my $exceptionSuffix = "";
@@ -689,7 +736,8 @@ sub GetExceptionSuffix
     return $exceptionSuffix;
 }
 
-sub GetExceptionCPPParam
+sub GetExceptionCPPParam { return proxyPrinter(@_);}
+sub _GetExceptionCPPParam
 {
     my $exceptionArray = shift;
     my $exceptionSuffix = "";
@@ -705,19 +753,24 @@ sub GetExceptionCPPParam
     return $exceptionSuffix;
 }
 
-
-sub GetJavaToNativeType
+sub GetJavaToNativeType { return proxyPrinter(@_);}
+sub _GetJavaToNativeType
+# sub GetJavaToNativeType
 {
     my $argType = shift;
 
     # numbers + Strings
     return $argType if IsJavaPimitive($argType);
+    # if (IsJavaPimitive($argType)) {
+    #     return $nativeType{$argType} ? $nativeType{$argType} : $argType;
+    # }
 
     #interface
     return "long";
 }
 
-sub GetJavaToNativeArgValue
+sub GetJavaToNativeArgValue { return proxyPrinter(@_);}
+sub _GetJavaToNativeArgValue
 {
     my $argType = GetCPPInterface(shift);
     my $argValue = shift;
@@ -730,7 +783,8 @@ sub GetJavaToNativeArgValue
     return GetTransferTypeName($argType) . ".getPeer(${argValue})";
 }
 
-sub GetJavaToNativeReturnValue
+sub GetJavaToNativeReturnValue { return proxyPrinter(@_);}
+sub _GetJavaToNativeReturnValue
 {
     my $returnType = GetCPPInterface(shift);
     my $twkFunctionCall = shift;
@@ -760,19 +814,24 @@ sub isStringAttribute
     return 0;
 }
 
-sub GetJavaCPPNativeType
+sub GetJavaCPPNativeType { return proxyPrinter(@_);}
+sub _GetJavaCPPNativeType
 {
     my $argType = shift;
 
     return "void" if $argType eq "void";
     return "jstring" if $argType eq "String";
-    return "j${argType}" if IsJavaPimitive($argType);
+    # return "j${argType}" if IsJavaPimitive($argType);
+    if (IsJavaPimitive($argType)) {
+        return $nativeType{$argType} ? "j$nativeType{$argType}" : "j${argType}";
+    }
 
     # interface
     return "jlong";
 }
 
-sub GetJavaCPPNativeArgValue
+sub GetJavaCPPNativeArgValue { return proxyPrinter(@_);}
+sub _GetJavaCPPNativeArgValue
 {
     my $argType = shift;
     my $argValue = shift;
@@ -785,7 +844,8 @@ sub GetJavaCPPNativeArgValue
     return "static_cast<${argType}*>(jlong_to_ptr(${argValue}))";
 }
 
-sub GetJavaCPPNativeReturnValue
+sub GetJavaCPPNativeReturnValue { return proxyPrinter(@_);}
+sub _GetJavaCPPNativeReturnValue
 {
     my $returnType = shift;
     my $nativeFunctionCall = shift;
@@ -795,10 +855,12 @@ sub GetJavaCPPNativeReturnValue
 
     # interface
     $returnType = GetCPPInterface($returnType);
+    # return "0" if $returnType eq "EventListener";
     return "JavaReturn<$returnType>(env, " . $nativeFunctionCall . ")";
 }
 
-sub GetJavaTWKCallName
+sub GetJavaTWKCallName { return proxyPrinter(@_);}
+sub _GetJavaTWKCallName
 {
     my $interfaceCallName = shift;
 
@@ -821,18 +883,17 @@ sub IsDefinedInCommandLine
                     . '$hash_def{\"ENABLE_',
                     sort keys %conditions)
                 . '\"}';
-            print "eval: ${exeCond}";
             return eval($exeCond);
         }
         if (!$hash_def{"ENABLE_${conditional}"}) {
-            print "skip, ENABLE_${conditional} undefined\n";
         }
         return ($hash_def{"ENABLE_${conditional}"} ? 1 : 0);
     }
     return 1;
 }
 
-sub GetJavaMethodName
+sub GetJavaMethodName { return proxyPrinter(@_);}
+sub _GetJavaMethodName
 {
     my $interfaceName = shift;
     my $methodName = shift;
@@ -845,7 +906,8 @@ sub GetJavaMethodName
     return $methodName;
 }
 
-sub GetCustomCPPMethodBody
+sub GetCustomCPPMethodBody { return proxyPrinter(@_);}
+sub _GetCustomCPPMethodBody
 {
     my $interfaceName = shift;
     my $methodName = shift;
@@ -862,13 +924,15 @@ sub Generate
     my $object = shift;
     my $dataNode = shift;
     my $defines = shift;
-    %hash_def = map { split(/=/, $_) } split(/ +/, $defines);
-
-    # print the hash
-
-    # while ( my ($key, $val) = each %hash_def ) {
-    #   print "$key->$val\n";
-    # }
+    # %hash_def = map { split(/=/, $_) } split(/ +/, $defines);
+    for my $d (split(/ +/, $defines)) {
+        if ($d =~ /^ENABLE_(.*)/) { # ENABLE_FEATURE to FEATURE => 1
+            $hash_def{$1}="1";
+        } else {
+            @a = split(/=/, $d);
+            $hash_def{$a[0]} = $a[1];
+        }
+    }
 
     # with module name
     my $interfaceName = $dataNode->name;
@@ -888,8 +952,9 @@ sub Generate
     my $functionNamePrefix = "JNICALL Java_com_sun_webkit_dom_";
     my $functionExportPrefix = "JNIEXPORT";
     my $functionStdParams = "JNIEnv* env, jclass clazz, jlong peer";
-    my $functionStdSelfParams = "JNIEnv* env, jobject self, jlong peer";
-
+    my $unusedFunctionParams = "    UNUSED_PARAM(env);\n"
+                              . "    UNUSED_PARAM(clazz);\n"
+                              . "    UNUSED_PARAM(peer);\n";
     # imports
     my $isBaseClass = $javaParentClassName eq "";
     if ($isBaseClass) {
@@ -924,7 +989,7 @@ sub Generate
 
     # Common header
     my $instanceType = GetJavaParamClassName($interfaceName);
-    # adjust the inatnce type for know exceptions
+    # adjust the instance type for known exceptions
 
     if ($isBaseClass) {
         if ($isBaseEventTarget) {
@@ -1086,16 +1151,18 @@ sub Generate
         push(@contentJava, "    native private static void dispose(long peer);\n\n");
         # CPP native static dispose
         push(@contentCPP,  "${functionExportPrefix} void ${functionNamePrefix}${javaClassName}_dispose(${functionStdParams}) {\n");
+        push(@contentCPP, $unusedFunctionParams);
         push(@contentCPP,  "    static_cast<${interfaceName}*>(jlong_to_ptr(peer))->deref();\n");
         push(@contentCPP,  "}\n\n");
 
         # checkDynamicType implementation
         if ($classData{$interfaceName}->{checkDynamicType}) {
             push(@contentCPP,  "${functionExportPrefix} jint ${functionNamePrefix}${javaClassName}_getCPPTypeImpl(${functionStdParams}) {\n");
-
+            push(@contentCPP, $unusedFunctionParams);
             my $enumIndex = 1;
             foreach my $cppType (@{$classData{$interfaceName}->{checkDynamicType}}) {
-                push(@contentCPP,  "    if (dynamic_cast<${cppType}*>(static_cast<${interfaceName}*>(jlong_to_ptr(peer))))\n");
+                push(@contentCPP,  "    if ((static_cast<${interfaceName}*>(jlong_to_ptr(peer)))->is${cppType}())\n");
+                # push(@contentCPP,  "    if (dynamic_cast<${cppType}*>(static_cast<${interfaceName}*>(jlong_to_ptr(peer))))\n"); //XXX: RTTI is disbaled by default
                 push(@contentCPP,  "        return ${enumIndex};\n");
 
                 $includesCPP{$cppType . ".h"} = 1;
@@ -1116,7 +1183,7 @@ sub Generate
     }
 
     my $getImplType = $instanceType;
-    
+
     if ($javaClassName eq "CharacterDataImpl" || $javaClassName eq "ProcessingInstructionImpl") {
         $getImplType = "Node";
     }
@@ -1138,6 +1205,7 @@ sub Generate
 
         # CPP
         push(@contentCPP,  "${functionExportPrefix} jboolean ${functionNamePrefix}${javaClassName}_${funcName}(${functionStdParams}) {\n");
+        push(@contentCPP, $unusedFunctionParams);
         push(@contentCPP,  "    return static_cast<${interfaceName}*>(jlong_to_ptr(peer))->isHTML${javaInterfaceName}()");
         push(@contentCPP,         " || static_cast<${interfaceName}*>(jlong_to_ptr(peer))->isXHTML${javaInterfaceName}()") if $javaInterfaceName eq "Document";
         push(@contentCPP, ";\n}\n\n");
@@ -1185,12 +1253,12 @@ sub Generate
             my $getterName = "get" . $camelName;
 
             my $getterExceptionSuffix = "";
-	    if ($attribute->signature->extendedAttributes->{"GetterRaisesException"} ||
-                $attribute->signature->extendedAttributes->{"RaisesException"})
-	    {
+            if ($attribute->signature->extendedAttributes->{"GetterRaisesException"} ||
+                    $attribute->signature->extendedAttributes->{"RaisesException"})
+            {
                 GetJavaParamClassName("DOMExceptionJSC"); # call this just to have DOMException added to the list of imports
-		$getterExceptionSuffix = " throws DOMException";
-	    }
+                $getterExceptionSuffix = " throws DOMException";
+            }
 
             my $javaGetterName = GetJavaMethodName($interfaceName, $getterName);
             my $property
@@ -1210,41 +1278,45 @@ sub Generate
 
             # CPP getter
             my ($functionName, @arguments) = $codeGenerator->GetterExpression(\%includesCPP, $interfaceName, $attribute);
-	    if ($attribute->signature->extendedAttributes->{"GetterRaisesException"} ||
-		$attribute->signature->extendedAttributes->{"RaisesException"})
-	    {
-		push(@arguments, "JavaException(env, JavaDOMException)");
-	    }
+            if ($attribute->signature->extendedAttributes->{"GetterRaisesException"} ||
+                $attribute->signature->extendedAttributes->{"RaisesException"}) {
+                push(@arguments, "JavaException(env, JavaDOMException)");
+            }
 
             my $functionCPPAltName = $attribute->signature->extendedAttributes->{"ImplementedAs"};
-            my $functionCPPName = $functionCPPAltName ? $functionCPPAltName : $functionName;
+            my $cppMethodName = $functionCPPAltName ? $functionCPPAltName : $functionName;
+            # For EventHandler type, special case.
+            if ($attributeType eq "EventListener") {
+                $cppMethodName = "getAttributeEventListener";
+                push(@arguments, GetEventHandlerAttributeEventName($attribute));
+            }
 
+            # Generate code for c++ getter function.
             my $cppBody = "${functionExportPrefix} "
                 . GetJavaCPPNativeType($attributeType)
                 . " ${functionNamePrefix}${javaClassName}_"
                 . GetJavaTWKCallName($javaGetterName)
                 . "(${functionStdParams}) {\n"
+                . $unusedFunctionParams
                 . "    return "
                 . GetJavaCPPNativeReturnValue(
                     $attributeType,
                     GetJavaCPPNativeArgValue($interfaceName, "peer")
-                    . "->${functionCPPName}("
+                    . "->${cppMethodName}("
                     . join(", ", @arguments)
                     .")")
                 . ";\n";
             $cppBody .= "}\n";
             $methodSig{$javaGetterName} = 1;
-
             if (!$attributeIsReadonly and !$attribute->signature->extendedAttributes->{"Replaceable"}) {
                 my $setterName = "set" . $camelName;
                 my $javaSetterName = GetJavaMethodName($interfaceName, $setterName);
-		my $setterExceptionSuffix = "";
-		if ($attribute->signature->extendedAttributes->{"SetterRaisesException"} ||
-		    $attribute->signature->extendedAttributes->{"RaisesException"})
-		{
+                my $setterExceptionSuffix = "";
+                if ($attribute->signature->extendedAttributes->{"SetterRaisesException"} ||
+                    $attribute->signature->extendedAttributes->{"RaisesException"}) {
                     GetJavaParamClassName("DOMExceptionJSC"); # call this just to have DOMException added to the list of imports
-		    $setterExceptionSuffix = " throws DOMException";
-		}
+                    $setterExceptionSuffix = " throws DOMException";
+                }
 
                 $property .= "    public void ${javaSetterName}(";
                 $property .= $isStringAttr ? "String" : $attributeType;
@@ -1261,21 +1333,22 @@ sub Generate
 
                 # CPP setter
                 my ($functionName, @arguments) = $codeGenerator->SetterExpression(\%includesCPP, $interfaceName, $attribute);
-		my $setterExceptionCPPParam;
-		if ($attribute->signature->extendedAttributes->{"SetterRaisesException"} ||
-		    $attribute->signature->extendedAttributes->{"RaisesException"})
-		{
-		    $setterExceptionCPPParam = "JavaException(env, JavaDOMException)";
-		}
-
-                push(@arguments, GetJavaCPPNativeArgValue($attributeType, "value"));
-                push(@arguments, $setterExceptionCPPParam) if $setterExceptionCPPParam;
+                my $setterExceptionCPPParam;
+                if ($attribute->signature->extendedAttributes->{"SetterRaisesException"} ||
+                    $attribute->signature->extendedAttributes->{"RaisesException"}) {
+                    $setterExceptionCPPParam = "JavaException(env, JavaDOMException)";
+                }
 
                 my $functionCPPAltName = $attribute->signature->extendedAttributes->{"ImplementedAs"};
-		if (defined $functionCPPAltName) {
-		    $functionCPPAltName = "set" . ucfirst($functionCPPAltName);
-		}
-                my $functionCPPName = $functionCPPAltName ? $functionCPPAltName : $functionName;
+                $functionCPPAltName = "set" . ucfirst($functionCPPAltName) if defined $functionCPPAltName;
+                my $cppMethodName = $functionCPPAltName ? $functionCPPAltName : $functionName;
+                # For EventHandler type
+                if ($attributeType eq "EventListener") {
+                    $cppMethodName = "setAttributeEventListener";
+                    push(@arguments, GetEventHandlerAttributeEventName($attribute));
+                }
+                push(@arguments, GetJavaCPPNativeArgValue($attributeType, "value"));
+                push(@arguments, $setterExceptionCPPParam) if $setterExceptionCPPParam;
 
                 $cppBody .= "${functionExportPrefix} void "
                     . "${functionNamePrefix}${javaClassName}_"
@@ -1283,8 +1356,9 @@ sub Generate
                     . "(${functionStdParams}, "
                     . GetJavaCPPNativeType($attributeType)
                     . " value) {\n    "
+                    . $unusedFunctionParams
                     . GetJavaCPPNativeArgValue($interfaceName, "peer")
-                    . "->${functionCPPName}("
+                    . "->${cppMethodName}("
                     . join(", ", @arguments)
                     . ");\n";
                 $cppBody .= "}\n";
@@ -1315,13 +1389,12 @@ sub Generate
             my $javaFunctionName = GetJavaMethodName($interfaceName, $functionName);
             my $returnType = GetJavaParamClassName($function->signature->type);
             my $exceptionSuffix = "";
-	    if ($function->signature->extendedAttributes->{"RaisesException"}) {
+            if ($function->signature->extendedAttributes->{"RaisesException"}) {
                 GetJavaParamClassName("DOMExceptionJSC"); # call this just to have DOMException added to the list of imports
-		$exceptionSuffix = " throws DOMException";
-	    }
+                $exceptionSuffix = " throws DOMException";
+            }
 
             my $numberOfParameters = @{$function->parameters};
-
             my $javaInterface     = "    public $returnType $javaFunctionName(";
             my $javaTWKCall       = "    native static "
                 . GetJavaToNativeType($returnType) . " "
@@ -1330,9 +1403,9 @@ sub Generate
             my $javaTWKCallParams = "getPeer()";
 
             my $functionExceptionCPPParam = "";
-	    if ($function->signature->extendedAttributes->{"RaisesException"}) {
-		$functionExceptionCPPParam = "JavaException(env, JavaDOMException)";
-	    }
+            if ($function->signature->extendedAttributes->{"RaisesException"}) {
+                $functionExceptionCPPParam = "JavaException(env, JavaDOMException)";
+            }
             my $CPPTWKCall        = "${functionExportPrefix} "
                 . GetJavaCPPNativeType($returnType)
                 . " ${functionNamePrefix}${javaClassName}_"
@@ -1340,10 +1413,10 @@ sub Generate
                 ."(${functionStdParams}";
 
             my $functionCPPAltName = $function->signature->extendedAttributes->{"ImplementedAs"};
-            my $functionCPPName =$functionCPPAltName ? $functionCPPAltName : $functionName;
+            my $cppMethodName =$functionCPPAltName ? $functionCPPAltName : $functionName;
 
             my $CPPInterfaceCall  = GetJavaCPPNativeArgValue($interfaceName, "peer")
-                . "->\n        ${functionCPPName}(";
+                . "->\n        ${cppMethodName}(";
 
             my $parameterIndex = 0;
             foreach my $param (@{$function->parameters}) {
@@ -1382,6 +1455,7 @@ sub Generate
             $customCPPBody = undef if $customCPPBody and $customCPPBody eq "<ordinal>";
 
             $CPPTWKCall .= ")\n{\n"
+                . $unusedFunctionParams
                 . "    "
                 . ($customCPPBody
                     ? $customCPPBody
@@ -1424,9 +1498,9 @@ sub Generate
     }
     foreach my $incl (sort keys(%includesCPP)) {
         push(@headerCPP, "#include \"${incl}\"\n");
-	my $CPPtype = $incl;
-	$CPPtype =~ s{.*/}{};      # removes path  
-	$CPPtype =~ s{\.[^.]+$}{}; # removes extension
+        my $CPPtype = $incl;
+        $CPPtype =~ s{.*/}{};      # removes path
+        $CPPtype =~ s{\.[^.]+$}{}; # removes extension
         push(@headerCPP, "#define ${CPPtype} WebCore::${CPPtype}\n") if $ambiguousType{$CPPtype};
     }
 

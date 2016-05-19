@@ -34,13 +34,13 @@
 
 namespace WebCore {
 
-RenderMathMLSquareRoot::RenderMathMLSquareRoot(Element& element, PassRef<RenderStyle> style)
-    : RenderMathMLRoot(element, std::move(style))
+RenderMathMLSquareRoot::RenderMathMLSquareRoot(Element& element, Ref<RenderStyle>&& style)
+    : RenderMathMLRoot(element, WTF::move(style))
 {
 }
 
-RenderMathMLSquareRoot::RenderMathMLSquareRoot(Document& document, PassRef<RenderStyle> style)
-    : RenderMathMLRoot(document, std::move(style))
+RenderMathMLSquareRoot::RenderMathMLSquareRoot(Document& document, Ref<RenderStyle>&& style)
+    : RenderMathMLRoot(document, WTF::move(style))
 {
 }
 

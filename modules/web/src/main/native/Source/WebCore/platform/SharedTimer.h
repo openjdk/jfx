@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+ * Copyright (C) 2006 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -44,6 +44,8 @@ namespace WebCore {
         // The fire interval is in seconds relative to the current monotonic clock time.
         virtual void setFireInterval(double) = 0;
         virtual void stop() = 0;
+
+        virtual void invalidate() { }
     };
 
 
@@ -52,23 +54,29 @@ namespace WebCore {
     void setSharedTimerFiredFunction(void (*)());
     void setSharedTimerFireInterval(double);
     void stopSharedTimer();
+    void invalidateSharedTimer();
 
     // Implementation of SharedTimer for the main thread.
-    class MainThreadSharedTimer : public SharedTimer {
+    class MainThreadSharedTimer final : public SharedTimer {
     public:
-        virtual void setFiredFunction(void (*function)())
+        void setFiredFunction(void (*function)()) override
         {
             setSharedTimerFiredFunction(function);
         }
 
-        virtual void setFireInterval(double interval)
+        void setFireInterval(double interval) override
         {
             setSharedTimerFireInterval(interval);
         }
 
-        virtual void stop()
+        void stop() override
         {
             stopSharedTimer();
+        }
+
+        void invalidate() override
+        {
+            invalidateSharedTimer();
         }
     };
 

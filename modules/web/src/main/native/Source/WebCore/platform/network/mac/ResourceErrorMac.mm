@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -31,9 +31,8 @@
 #import <CoreFoundation/CFError.h>
 #import <Foundation/Foundation.h>
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) && USE(CFNETWORK)
 #import <CFNetwork/CFSocketStreamPriv.h>
-#import <Foundation/NSURLError.h>
 #endif
 
 @interface NSError (WebExtras)
@@ -183,9 +182,12 @@ static RetainPtr<NSError> createNSErrorFromResourceErrorBase(const ResourceError
         [userInfo.get() setValue:resourceError.localizedDescription() forKey:NSLocalizedDescriptionKey];
 
     if (!resourceError.failingURL().isEmpty()) {
+        // FIXEME: We normally create an NSURL from a string by using URL::createNSURL, which handles
+        // cases correctly that initWithString: handles incorrectly.
         RetainPtr<NSURL> cocoaURL = adoptNS([[NSURL alloc] initWithString:resourceError.failingURL()]);
         [userInfo.get() setValue:resourceError.failingURL() forKey:@"NSErrorFailingURLStringKey"];
-        [userInfo.get() setValue:cocoaURL.get() forKey:@"NSErrorFailingURLKey"];
+        if (cocoaURL)
+            [userInfo.get() setValue:cocoaURL.get() forKey:@"NSErrorFailingURLKey"];
     }
 
     return adoptNS([[NSError alloc] initWithDomain:resourceError.domain() code:resourceError.errorCode() userInfo:userInfo.get()]);
@@ -290,7 +292,7 @@ NSError *ResourceError::nsError() const
     }
 
     if (!m_platformError)
-        m_platformError = createNSErrorFromResourceErrorBase(*this);;
+        m_platformError = createNSErrorFromResourceErrorBase(*this);
 
     return m_platformError.get();
 }

@@ -37,7 +37,7 @@ namespace WebCore {
 
 class MathMLElement : public StyledElement {
 public:
-    static PassRefPtr<MathMLElement> create(const QualifiedName& tagName, Document&);
+    static Ref<MathMLElement> create(const QualifiedName& tagName, Document&);
 
     int colSpan() const;
     int rowSpan() const;
@@ -54,25 +54,37 @@ public:
 
     virtual bool isPresentationMathML() const;
 
+    bool hasTagName(const MathMLQualifiedName& name) const { return hasLocalName(name.localName()); }
+
 protected:
     MathMLElement(const QualifiedName& tagName, Document&);
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual bool childShouldCreateRenderer(const Node&) const override;
-    virtual void attributeChanged(const QualifiedName&, const AtomicString& newValue, AttributeModificationReason) override;
+    virtual void attributeChanged(const QualifiedName&, const AtomicString& oldValue, const AtomicString& newValue, AttributeModificationReason) override;
 
     virtual bool isPresentationAttribute(const QualifiedName&) const override;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
-private:
 
-    virtual void updateSelectedChild() { };
+    bool isPhrasingContent(const Node&) const;
+    bool isFlowContent(const Node&) const;
+
+private:
+    virtual void updateSelectedChild() { }
 };
 
-void isMathMLElement(const MathMLElement&); // Catch unnecessary runtime check of type known at compile time.
-inline bool isMathMLElement(const Node& node) { return node.isMathMLElement(); }
-NODE_TYPE_CASTS(MathMLElement)
-
+inline bool Node::hasTagName(const MathMLQualifiedName& name) const
+{
+    return isMathMLElement() && downcast<MathMLElement>(*this).hasTagName(name);
 }
+
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MathMLElement)
+    static bool isType(const WebCore::Node& node) { return node.isMathMLElement(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+#include "MathMLElementTypeHelpers.h"
 
 #endif // ENABLE(MATHML)
 

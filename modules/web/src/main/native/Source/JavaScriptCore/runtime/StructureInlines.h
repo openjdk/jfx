@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,10 +10,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
  * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
@@ -49,10 +49,10 @@ inline Structure* Structure::createStructure(VM& vm)
     return structure;
 }
 
-inline Structure* Structure::create(VM& vm, const Structure* structure)
+inline Structure* Structure::create(VM& vm, Structure* structure, DeferredStructureTransitionWatchpointFire* deferred)
 {
     ASSERT(vm.structureStructure);
-    Structure* newStructure = new (NotNull, allocateCell<Structure>(vm.heap)) Structure(vm, structure);
+    Structure* newStructure = new (NotNull, allocateCell<Structure>(vm.heap)) Structure(vm, structure, deferred);
     newStructure->finishCreation(vm);
     return newStructure;
 }
@@ -61,7 +61,7 @@ inline JSObject* Structure::storedPrototypeObject() const
 {
     JSValue value = m_prototype.get();
     if (value.isNull())
-        return 0;
+        return nullptr;
     return asObject(value);
 }
 
@@ -69,42 +69,74 @@ inline Structure* Structure::storedPrototypeStructure() const
 {
     JSObject* object = storedPrototypeObject();
     if (!object)
-        return 0;
+        return nullptr;
     return object->structure();
 }
 
-inline PropertyOffset Structure::get(VM& vm, PropertyName propertyName)
+ALWAYS_INLINE PropertyOffset Structure::get(VM& vm, PropertyName propertyName)
 {
     ASSERT(!isCompilationThread());
     ASSERT(structure()->classInfo() == info());
-    DeferGC deferGC(vm.heap);
-    materializePropertyMapIfNecessary(vm, deferGC);
-    if (!propertyTable())
+    PropertyTable* propertyTable;
+    materializePropertyMapIfNecessary(vm, propertyTable);
+    if (!propertyTable)
         return invalidOffset;
 
-    PropertyMapEntry* entry = propertyTable()->find(propertyName.uid()).first;
+    PropertyMapEntry* entry = propertyTable->get(propertyName.uid());
     return entry ? entry->offset : invalidOffset;
 }
 
-inline PropertyOffset Structure::get(VM& vm, const WTF::String& name)
+ALWAYS_INLINE PropertyOffset Structure::get(VM& vm, PropertyName propertyName, unsigned& attributes)
 {
     ASSERT(!isCompilationThread());
     ASSERT(structure()->classInfo() == info());
-    DeferGC deferGC(vm.heap);
-    materializePropertyMapIfNecessary(vm, deferGC);
-    if (!propertyTable())
+
+    PropertyTable* propertyTable;
+    materializePropertyMapIfNecessary(vm, propertyTable);
+    if (!propertyTable)
         return invalidOffset;
 
-    PropertyMapEntry* entry = propertyTable()->findWithString(name.impl()).first;
-    return entry ? entry->offset : invalidOffset;
+    PropertyMapEntry* entry = propertyTable->get(propertyName.uid());
+    if (!entry)
+        return invalidOffset;
+
+    attributes = entry->attributes;
+    return entry->offset;
 }
 
-inline PropertyOffset Structure::getConcurrently(VM& vm, StringImpl* uid)
+template<typename Functor>
+void Structure::forEachPropertyConcurrently(const Functor& functor)
+{
+    Vector<Structure*, 8> structures;
+    Structure* structure;
+    PropertyTable* table;
+
+    findStructuresAndMapForMaterialization(structures, structure, table);
+
+    if (table) {
+        for (auto& entry : *table) {
+            if (!functor(entry)) {
+                structure->m_lock.unlock();
+                return;
+            }
+        }
+        structure->m_lock.unlock();
+    }
+
+    for (unsigned i = structures.size(); i--;) {
+        structure = structures[i];
+        if (!structure->m_nameInPrevious)
+            continue;
+
+        if (!functor(PropertyMapEntry(structure->m_nameInPrevious.get(), structure->m_offset, structure->attributesInPrevious())))
+            return;
+    }
+}
+
+inline PropertyOffset Structure::getConcurrently(UniquedStringImpl* uid)
 {
     unsigned attributesIgnored;
-    JSCell* specificValueIgnored;
-    return getConcurrently(
-        vm, uid, attributesIgnored, specificValueIgnored);
+    return getConcurrently(uid, attributesIgnored);
 }
 
 inline bool Structure::hasIndexingHeader(const JSCell* cell) const
@@ -132,25 +164,12 @@ inline bool Structure::transitivelyTransitionedFrom(Structure* structureToFind)
     return false;
 }
 
-inline void Structure::setEnumerationCache(VM& vm, JSPropertyNameIterator* enumerationCache)
-{
-    ASSERT(!isDictionary());
-    if (!typeInfo().structureHasRareData())
-        allocateRareData(vm);
-    rareData()->setEnumerationCache(vm, this, enumerationCache);
-}
-
-inline JSPropertyNameIterator* Structure::enumerationCache()
-{
-    if (!typeInfo().structureHasRareData())
-        return 0;
-    return rareData()->enumerationCache();
-}
-
 inline JSValue Structure::prototypeForLookup(JSGlobalObject* globalObject) const
 {
     if (isObject())
         return m_prototype.get();
+    if (typeInfo().type() == SymbolType)
+        return globalObject->symbolPrototype();
 
     ASSERT(typeInfo().type() == StringType);
     return globalObject->stringPrototype();
@@ -223,12 +242,37 @@ ALWAYS_INLINE WriteBarrier<PropertyTable>& Structure::propertyTable()
     return m_propertyTableUnsafe;
 }
 
+inline void Structure::didReplaceProperty(PropertyOffset offset)
+{
+    if (LIKELY(!hasRareData()))
+        return;
+    StructureRareData::PropertyWatchpointMap* map = rareData()->m_replacementWatchpointSets.get();
+    if (LIKELY(!map))
+        return;
+    WatchpointSet* set = map->get(offset);
+    if (LIKELY(!set))
+        return;
+    set->fireAll("Property did get replaced");
+}
+
+inline WatchpointSet* Structure::propertyReplacementWatchpointSet(PropertyOffset offset)
+{
+    ConcurrentJITLocker locker(m_lock);
+    if (!hasRareData())
+        return nullptr;
+    WTF::loadLoadFence();
+    StructureRareData::PropertyWatchpointMap* map = rareData()->m_replacementWatchpointSets.get();
+    if (!map)
+        return nullptr;
+    return map->get(offset);
+}
+
 ALWAYS_INLINE bool Structure::checkOffsetConsistency() const
 {
     PropertyTable* propertyTable = m_propertyTableUnsafe.get();
 
     if (!propertyTable) {
-        ASSERT(!m_isPinnedPropertyTable);
+        ASSERT(!isPinnedPropertyTable());
         return true;
     }
 
@@ -244,6 +288,18 @@ ALWAYS_INLINE bool Structure::checkOffsetConsistency() const
     RELEASE_ASSERT((totalSize < inlineCapacity() ? 0 : totalSize - inlineCapacity()) == numberOfOutOfLineSlotsForLastOffset(m_offset));
 
     return true;
+}
+
+inline size_t nextOutOfLineStorageCapacity(size_t currentCapacity)
+{
+    if (!currentCapacity)
+        return initialOutOfLineCapacity;
+    return currentCapacity * outOfLineGrowthFactor;
+}
+
+inline size_t Structure::suggestedNewOutOfLineStorageCapacity()
+{
+    return nextOutOfLineStorageCapacity(outOfLineCapacity());
 }
 
 } // namespace JSC

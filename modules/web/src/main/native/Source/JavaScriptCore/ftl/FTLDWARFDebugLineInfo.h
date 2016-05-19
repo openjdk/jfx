@@ -26,6 +26,8 @@
 #ifndef FTLDWARFDebugLineInfo_h
 #define FTLDWARFDebugLineInfo_h
 
+#if ENABLE(FTL_JIT)
+
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -134,5 +136,7 @@ private:
 };
 
 } } // namespace JSC::FTL
+
+#endif // ENABLE(FTL_JIT)
 
 #endif // FTLDWARFDebugLineInfo_h

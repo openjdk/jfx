@@ -25,10 +25,8 @@
 
 #include "config.h"
 #include "LLIntEntrypoint.h"
-
-#if ENABLE(LLINT)
-
 #include "CodeBlock.h"
+#include "HeapInlines.h"
 #include "JITCode.h"
 #include "JSObject.h"
 #include "LLIntThunks.h"
@@ -123,5 +121,3 @@ unsigned frameRegisterCountFor(CodeBlock* codeBlock)
 }
 
 } } // namespace JSC::LLInt
-
-#endif // ENABLE(LLINT)
