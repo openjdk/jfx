@@ -276,9 +276,6 @@ public class TextField extends TextInputControl {
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * @treatAsPrivate implementation detail
-      */
     private static class StyleableProperties {
         private static final CssMetaData<TextField, Pos> ALIGNMENT =
             new CssMetaData<TextField, Pos>("-fx-alignment",

@@ -1692,7 +1692,6 @@ public class TableView<S> extends Control {
     private static final PseudoClass PSEUDO_CLASS_ROW_SELECTION =
             PseudoClass.getPseudoClass("row-selection");
 
-    /** @treatAsPrivate */
     private static class StyleableProperties {
         private static final CssMetaData<TableView<?>,Number> FIXED_CELL_SIZE =
                 new CssMetaData<TableView<?>,Number>("-fx-fixed-cell-size",

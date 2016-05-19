@@ -69,6 +69,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.web.NGWebView;
@@ -992,13 +993,13 @@ final public class WebView extends Parent {
 
         if (reallyVisible) {
             if (page.isDirty()) {
-                Scene.impl_setAllowPGAccess(true);
+                SceneHelper.setAllowPGAccess(true);
                 final NGWebView peer = impl_getPeer();
                 peer.update(); // creates new render queues
                 if (page.isRepaintPending()) {
                     impl_markDirty(DirtyBits.WEBVIEW_VIEW);
                 }
-                Scene.impl_setAllowPGAccess(false);
+                SceneHelper.setAllowPGAccess(false);
             }
         } else {
             page.dropRenderFrames();

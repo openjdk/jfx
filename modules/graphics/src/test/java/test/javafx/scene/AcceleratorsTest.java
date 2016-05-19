@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import javafx.collections.ObservableMap;
 import javafx.scene.input.KeyCode;
@@ -60,7 +61,7 @@ public class AcceleratorsTest {
     public void testAcceleratorExecuted() {
         AtomicBoolean executed = new AtomicBoolean();
         accelerators.put(KeyCombination.keyCombination("Alt + A"), () -> executed.set(true));
-        scene.impl_processKeyEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "A", "A", KeyCode.A, false, false, true, false));
+        SceneHelper.processKeyEvent(scene, new KeyEvent(KeyEvent.KEY_PRESSED, "A", "A", KeyCode.A, false, false, true, false));
         assertTrue(executed.get());
     }
 
@@ -72,10 +73,10 @@ public class AcceleratorsTest {
         accelerators.put(altA, () -> accelerators.remove(altA));
         accelerators.put(altB, () -> executed.set(true));
         assertEquals(2, accelerators.size());
-        scene.impl_processKeyEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "A", "A", KeyCode.A, false, false, true, false));
+        SceneHelper.processKeyEvent(scene, new KeyEvent(KeyEvent.KEY_PRESSED, "A", "A", KeyCode.A, false, false, true, false));
         assertEquals(1, accelerators.size());
         assertFalse(executed.get());
-        scene.impl_processKeyEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "B", "B", KeyCode.B, false, false, true, false));
+        SceneHelper.processKeyEvent(scene, new KeyEvent(KeyEvent.KEY_PRESSED, "B", "B", KeyCode.B, false, false, true, false));
         assertTrue(executed.get());
     }
 

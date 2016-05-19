@@ -39,6 +39,7 @@ import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.tk.*;
 import com.sun.prism.BasicStroke;
@@ -104,7 +105,7 @@ public class StubToolkit extends Toolkit {
 
         // allow tests to access PG scenegraph
         // so that they can run with assertion enabled
-        javafx.scene.Scene.impl_setAllowPGAccess(true);
+        SceneHelper.setAllowPGAccess(true);
     }
     private boolean pulseRequested;
 

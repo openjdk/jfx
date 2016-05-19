@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.com.sun.javafx.test.objects;
 
+import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.scene.Parent;
@@ -79,7 +80,7 @@ public class TestScene extends Scene {
         super(root);
         this.name = name;
         // init size for camera to work
-        impl_preferredSize();
+        SceneHelper.preferredSize(this);
     }
 
     public void set_window(final Window window) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.stage.WindowManager;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
+import com.sun.javafx.stage.StageHelper;
 
 public final class FxApplicationManager {
     private static FxApplicationManager instance;
@@ -142,7 +143,7 @@ public final class FxApplicationManager {
             try {
                 try {
                     final Stage appPrimaryStage = new Stage();
-                    appPrimaryStage.impl_setPrimary(true);
+                    StageHelper.setPrimary(appPrimaryStage, true);
                     application.start(appPrimaryStage);
                 } finally {
                     currentThread.setContextClassLoader(oldContextClassLoader);

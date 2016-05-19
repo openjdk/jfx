@@ -53,6 +53,7 @@ import java.util.jar.Manifest;
 import java.util.Base64;
 import com.sun.javafx.jmx.MXExtension;
 import com.sun.javafx.runtime.SystemProperties;
+import com.sun.javafx.stage.StageHelper;
 
 
 public class LauncherImpl {
@@ -760,7 +761,7 @@ public class LauncherImpl {
 
                         // Create primary stage and call preloader start method
                         final Stage primaryStage = new Stage();
-                        primaryStage.impl_setPrimary(true);
+                        StageHelper.setPrimary(primaryStage, true);
                         currentPreloader.start(primaryStage);
                     } catch (Throwable t) {
                         System.err.println("Exception in Preloader start method");
@@ -838,7 +839,7 @@ public class LauncherImpl {
 
                         // Create primary stage and call application start method
                         final Stage primaryStage = new Stage();
-                        primaryStage.impl_setPrimary(true);
+                        StageHelper.setPrimary(primaryStage, true);
                         theApp.start(primaryStage);
                     } catch (Throwable t) {
                         System.err.println("Exception in Application start method");

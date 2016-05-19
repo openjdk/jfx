@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -126,9 +127,9 @@ public class ContentBoundsTest {
     }
 
     public static BaseBounds getBounds(Node n, BaseTransform tx) {
-        Scene.impl_setAllowPGAccess(true);
+        SceneHelper.setAllowPGAccess(true);
         NGNode pgn = getValidatedPGNode(n);
-        Scene.impl_setAllowPGAccess(false);
+        SceneHelper.setAllowPGAccess(false);
         return pgn.getContentBounds(new RectBounds(), tx);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
@@ -78,10 +79,10 @@ public class ColorPickerSkinTest {
         Scene paletteScene = ColorPickerPaletteShim.getPopup(colorPicker).getScene();
         paletteScene.getWindow().requestFocus();
 
-        paletteScene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(paletteScene,
                 generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+85, yval+40));
 
-        paletteScene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(paletteScene,
                 generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+85, yval+40));
         tk.firePulse();
 

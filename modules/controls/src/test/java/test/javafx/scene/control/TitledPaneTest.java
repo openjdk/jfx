@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.SceneHelper;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
@@ -340,9 +341,9 @@ public class TitledPaneTest {
         double yval = (titledPane.localToScene(titledPane.getLayoutBounds())).getMinY();
 
         final MouseEventGenerator generator = new MouseEventGenerator();
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
 
         tk.firePulse();

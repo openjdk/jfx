@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.SceneHelper;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -198,7 +199,7 @@ public class PaginationTest {
         double xval = (pagination.localToScene(pagination.getLayoutBounds())).getMinX();
         double yval = (pagination.localToScene(pagination.getLayoutBounds())).getMinY();
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+170, yval+380));
         tk.firePulse();
 

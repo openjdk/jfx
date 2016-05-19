@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,10 +38,19 @@ import com.sun.javafx.tk.Toolkit;
  */
 public class EmbeddedWindow extends Window {
 
+     static {
+        EmbeddedWindowHelper.setEmbeddedWindowAccessor(new EmbeddedWindowHelper.EmbeddedWindowAccessor() {
+            @Override public void doVisibleChanging(Window window, boolean visible) {
+                ((EmbeddedWindow) window).doVisibleChanging(visible);
+            }
+        });
+     }
+
     private HostInterface host;
 
     public EmbeddedWindow(HostInterface host) {
         this.host = host;
+        EmbeddedWindowHelper.initHelper(this);
     }
 
     /**
@@ -58,14 +67,17 @@ public class EmbeddedWindow extends Window {
         super.show();
     }
 
-    @Override
-    protected void impl_visibleChanging(boolean visible) {
-        super.impl_visibleChanging(visible);
+    /*
+     * This can be replaced by listening for the onShowing/onHiding events
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private void doVisibleChanging(boolean visible) {
         Toolkit toolkit = Toolkit.getToolkit();
-        if (visible && (impl_peer == null)) {
+        if (visible && (WindowHelper.getPeer(this) == null)) {
             // Setup the peer
-            impl_peer = toolkit.createTKEmbeddedStage(host, WindowHelper.getAccessControlContext(this));
-            peerListener = new WindowPeerListener(this);
+            WindowHelper.setPeer(this, toolkit.createTKEmbeddedStage(host,
+                    WindowHelper.getAccessControlContext(this)));
+            WindowHelper.setPeerListener(this, new WindowPeerListener(this));
         }
     }
 

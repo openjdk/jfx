@@ -52,6 +52,7 @@ import java.util.function.Predicate;
 
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
+import com.sun.javafx.stage.WindowHelper;
 import static javafx.scene.control.skin.TextInputControlSkin.TextUnit;
 import static javafx.scene.control.skin.TextInputControlSkin.Direction;
 import static javafx.scene.input.KeyCode.*;
@@ -160,7 +161,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
                         // we need to display native text input component on the place where JFX component is drawn
                         // all parameters needed to do that are passed to native impl. here
-                        textArea.getScene().getWindow().impl_getPeer().requestInput(text, TextFieldBehavior.TextInputTypes.TEXT_AREA.ordinal(), w, h,
+                        WindowHelper.getPeer(textArea.getScene().getWindow()).requestInput(
+                                text, TextFieldBehavior.TextInputTypes.TEXT_AREA.ordinal(), w, h,
                                 trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
                                 trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
                                 trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
@@ -172,7 +174,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 //                    skin.hideCaret();
                     if (PlatformUtil.isIOS() && textArea.getScene() != null) {
                         // releasing the focus => we need to hide the native component and also native keyboard
-                        textArea.getScene().getWindow().impl_getPeer().releaseInput();
+                        WindowHelper.getPeer(textArea.getScene().getWindow()).releaseInput();
                     }
                     focusGainedByMouseClick = false;
                     setCaretAnimating(false);

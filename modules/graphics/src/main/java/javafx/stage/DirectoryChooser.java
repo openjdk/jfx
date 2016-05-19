@@ -101,7 +101,7 @@ public final class DirectoryChooser {
      */
     public File showDialog(final Window ownerWindow) {
         return Toolkit.getToolkit().showDirectoryChooser(
-                (ownerWindow != null) ? ownerWindow.impl_getPeer() : null,
+                (ownerWindow != null) ? ownerWindow.getPeer() : null,
                 getTitle(),
                 getInitialDirectory());
     }

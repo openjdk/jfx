@@ -25,6 +25,7 @@
 
 package test.javafx.stage;
 
+import com.sun.javafx.stage.WindowHelper;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import test.com.sun.javafx.pgstub.StubStage;
@@ -52,7 +53,7 @@ public class StageTest {
         toolkit = (StubToolkit) Toolkit.getToolkit();
         s = new Stage();
         s.show();
-        peer = (StubStage) s.impl_getPeer();
+        peer = (StubStage) WindowHelper.getPeer(s);
         initialNumTimesSetSizeAndLocation = peer.numTimesSetSizeAndLocation;
     }
 
@@ -447,7 +448,7 @@ public class StageTest {
 
         pulse();
 
-        peer = (StubStage) s.impl_getPeer();
+        peer = (StubStage) WindowHelper.getPeer(s);
         assertEquals(20.0, peer.x, 0.0001);
         assertEquals(50.0, peer.y, 0.0001);
         assertEquals(400.0, peer.width, 0.0001);

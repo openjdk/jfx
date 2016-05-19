@@ -618,9 +618,6 @@ public class TextArea extends TextInputControl {
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * @treatAsPrivate implementation detail
-      */
     private static class StyleableProperties {
         private static final CssMetaData<TextArea,Number> PREF_COLUMN_COUNT =
             new CssMetaData<TextArea,Number>("-fx-pref-column-count",

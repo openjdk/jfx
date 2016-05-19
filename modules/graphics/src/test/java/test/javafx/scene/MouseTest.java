@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import static org.junit.Assert.*;
 import javafx.event.EventHandler;
@@ -1582,11 +1583,11 @@ public class MouseTest {
         }
 
         public void processEvent(MouseEvent e) {
-            scene.impl_processMouseEvent(e);
+            SceneHelper.processMouseEvent(scene, e);
         }
 
         public Object getCursorFrame() {
-            return ((StubScene) scene.impl_getPeer()).getCursor();
+            return ((StubScene) SceneHelper.getPeer(scene)).getCursor();
         }
 
         public boolean wasMoused() {
@@ -1791,12 +1792,12 @@ public class MouseTest {
         }
 
         public void processEvent(EventType<MouseEvent> type, double x, double y) {
-            scene.impl_processMouseEvent(
+            SceneHelper.processMouseEvent(scene,
                     MouseEventGenerator.generateMouseEvent(type, x, y));
         }
 
         public Object getCursorFrame() {
-            return ((StubScene) scene.impl_getPeer()).getCursor();
+            return ((StubScene) SceneHelper.getPeer(scene)).getCursor();
         }
 
         public EventHandler<MouseEvent> handler(final EventTarget target,

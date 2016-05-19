@@ -657,9 +657,9 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // Returns the selected index at the given index.
         // e.g. if our selectedIndices are [1,3,5], then an index of 2 will return 5 here.
         @Override public Integer get(int index) {
-            final int itemCount = getItemCount();
+            final int itemCount = size();
             if (index < 0 || index >= itemCount)  {
-                return -1;
+                throw new IndexOutOfBoundsException(index + " >= " + itemCount);
             }
 
             if (index == (lastGetIndex + 1) && lastGetValue < itemCount) {

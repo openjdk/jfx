@@ -53,6 +53,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableStringProperty;
 import javafx.css.converter.StringConverter;
 import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.stage.PopupWindowHelper;
 import javafx.css.StyleableProperty;
 import javafx.stage.Window;
 import sun.util.logging.PlatformLogger;
@@ -111,7 +112,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         super();
         this.bridge = new CSSBridge();
         setAnchorLocation(AnchorLocation.CONTENT_TOP_LEFT);
-        getContent().add(bridge);
+        PopupWindowHelper.getContent(this).add(bridge);
     }
 
     // TODO the fact that PopupWindow uses a group for auto-moving things

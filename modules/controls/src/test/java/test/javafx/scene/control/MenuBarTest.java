@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.SceneHelper;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -134,9 +135,9 @@ public class MenuBarTest {
 
         MenuButton mb = MenuBarSkinShim.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         assertTrue(menu.isShowing());
 
@@ -169,9 +170,9 @@ public class MenuBarTest {
 
         MenuButton mb = MenuBarSkinShim.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         assertTrue(menu.isShowing());
          /* ------------------------------------------------------------------ */
@@ -239,9 +240,9 @@ public class MenuBarTest {
         double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
         double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         assertTrue(menu.isShowing());
          /* ------------------------------------------------------------------ */
@@ -339,9 +340,9 @@ public class MenuBarTest {
 
         MenuButton mb = MenuBarSkinShim.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         assertTrue(menu1.isShowing());
 
@@ -385,17 +386,17 @@ public class MenuBarTest {
         mb.requestFocus();
         assertTrue(mb.isFocused());
         // click on menu to show
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         tk.firePulse();
         assertEquals(menu.showingProperty().get(), true);
         click = false;
         // click on menu to hide
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         tk.firePulse();
         assertEquals(menu.showingProperty().get(), false);

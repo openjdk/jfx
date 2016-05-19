@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.input;
 
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.pgstub.StubScene;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import javafx.event.Event;
@@ -218,13 +219,13 @@ public class ScrollEventTest {
             scrolled = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                 50, 50, 50, 50, false, false, false, false, false, false);
 
         assertFalse(scrolled);
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                 150, 150, 150, 150, false, false, false, false, false, false);
 
@@ -246,7 +247,7 @@ public class ScrollEventTest {
             scrolled = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 1, 1,
                 150, 150, 150, 150, false, false, false, false, false, false);
 
@@ -267,7 +268,7 @@ public class ScrollEventTest {
             assertSame(ScrollEvent.VerticalTextScrollUnits.NONE, event.getTextDeltaYUnits());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 0, 0, 0, 0,
                 150, 150, 150, 150, false, false, false, false, false, false);
         assertTrue(scrolled);
@@ -280,7 +281,7 @@ public class ScrollEventTest {
             assertSame(ScrollEvent.VerticalTextScrollUnits.LINES, event.getTextDeltaYUnits());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 4, 5, 3, 3,
                 150, 150, 150, 150, false, false, false, false, false, false);
         assertTrue(scrolled);
@@ -293,7 +294,7 @@ public class ScrollEventTest {
             assertSame(ScrollEvent.VerticalTextScrollUnits.PAGES, event.getTextDeltaYUnits());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 5, -1, -1, 3, 3,
                 150, 150, 150, 150, false, false, false, false, false, false);
         assertTrue(scrolled);
@@ -314,7 +315,7 @@ public class ScrollEventTest {
             assertFalse(event.isMetaDown());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, false, false);
         assertTrue(scrolled);
@@ -327,7 +328,7 @@ public class ScrollEventTest {
             assertTrue(event.isMetaDown());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
                 150, 150, 150, 150, false, true, false, true, false, false);
         assertTrue(scrolled);
@@ -344,7 +345,7 @@ public class ScrollEventTest {
             assertTrue(event.isDirect());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -354,7 +355,7 @@ public class ScrollEventTest {
             assertFalse(event.isDirect());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
                 150, 150, 150, 150, false, true, false, true, false, false);
         assertTrue(scrolled);
@@ -371,7 +372,7 @@ public class ScrollEventTest {
             assertTrue(event.isInertia());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, false, true);
         assertTrue(scrolled);
@@ -381,7 +382,7 @@ public class ScrollEventTest {
             assertFalse(event.isInertia());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
                 150, 150, 150, 150, false, true, false, true, false, false);
         assertTrue(scrolled);
@@ -398,7 +399,7 @@ public class ScrollEventTest {
             Assert.assertEquals(0, event.getTouchCount());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -408,7 +409,7 @@ public class ScrollEventTest {
             Assert.assertEquals(5, event.getTouchCount());
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -424,7 +425,7 @@ public class ScrollEventTest {
         rect.setOnScrollStarted(event -> {
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -433,7 +434,7 @@ public class ScrollEventTest {
         rect.setOnScrollFinished(event -> {
             scrolled = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -450,19 +451,19 @@ public class ScrollEventTest {
         });
 
         scrolled = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
 
         scrolled = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
 
         scrolled = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -485,7 +486,7 @@ public class ScrollEventTest {
 
         scrolled = false;
         scrolled2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -493,7 +494,7 @@ public class ScrollEventTest {
 
         scrolled = false;
         scrolled2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -501,7 +502,7 @@ public class ScrollEventTest {
 
         scrolled = false;
         scrolled2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -510,7 +511,7 @@ public class ScrollEventTest {
         // inertia
         scrolled = false;
         scrolled2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, true);
         assertTrue(scrolled);
@@ -540,7 +541,7 @@ public class ScrollEventTest {
             scrolled2 = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                 150, 150, 150, 150, false, false, false, false, false, false);
 
@@ -568,7 +569,7 @@ public class ScrollEventTest {
         scrolled = false;
         scrolled2 = false;
         pickRes = null;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -582,7 +583,7 @@ public class ScrollEventTest {
         scrolled = false;
         scrolled2 = false;
         pickRes = null;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -596,7 +597,7 @@ public class ScrollEventTest {
         scrolled = false;
         scrolled2 = false;
         pickRes = null;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertTrue(scrolled);
@@ -611,7 +612,7 @@ public class ScrollEventTest {
         scrolled = false;
         scrolled2 = false;
         pickRes = null;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, true);
         assertTrue(scrolled);
@@ -638,20 +639,20 @@ public class ScrollEventTest {
             scrolled2 = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
 
         // inertia
         scrolled = false;
         scrolled2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, true);
         assertTrue(scrolled);
@@ -660,7 +661,7 @@ public class ScrollEventTest {
         // wheel
         scrolled = false;
         scrolled2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
         assertFalse(scrolled);
@@ -669,7 +670,7 @@ public class ScrollEventTest {
         // inertia
         scrolled = false;
         scrolled2 = false;
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, true);
         assertTrue(scrolled);
@@ -696,9 +697,9 @@ public class ScrollEventTest {
             Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
             scrolled2 = true;
         });
-        scene.impl_processMouseEvent(generator.generateMouseEvent(
+        SceneHelper.processMouseEvent(scene, generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
@@ -712,9 +713,9 @@ public class ScrollEventTest {
             Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
             scrolled2 = true;
         });
-        scene.impl_processMouseEvent(generator.generateMouseEvent(
+        SceneHelper.processMouseEvent(scene, generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 150, 150));
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
@@ -728,7 +729,7 @@ public class ScrollEventTest {
             Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
             scrolled2 = true;
         });
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
@@ -749,17 +750,17 @@ public class ScrollEventTest {
 
         scrolled = false;
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 150, 150, 150, 150, true, false, true, false, true, false);
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 250, 250, 250, 250, true, false, true, false, true, false);
 
         assertFalse(scrolled);
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
@@ -782,20 +783,20 @@ public class ScrollEventTest {
 
         scrolled = false;
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
                 gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);
 
         assertFalse(scrolled);
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
                 gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 150, 150));
 
-        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 true, false, true, false, true, false);

@@ -985,7 +985,6 @@ public class ListView<T> extends Control {
 
     private static final String DEFAULT_STYLE_CLASS = "list-view";
 
-    /** @treatAsPrivate */
     private static class StyleableProperties {
         private static final CssMetaData<ListView<?>,Orientation> ORIENTATION =
             new CssMetaData<ListView<?>,Orientation>("-fx-orientation",

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package test.javafx.scene.control.skin;
 import static org.junit.Assert.assertEquals;
 
 import com.sun.javafx.menu.MenuBase;
+import com.sun.javafx.stage.WindowHelper;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ObservableValue;
@@ -80,7 +81,7 @@ public class MenuBarSkinTest {
         stage.setScene(scene);
 
         // Stage has to be focused in order for system menus to work
-        stage.setFocused(true);
+        WindowHelper.setFocused(stage, true);
     }
 
     @Test public void maxHeightTracksPreferred() {

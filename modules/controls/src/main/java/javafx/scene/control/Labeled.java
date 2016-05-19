@@ -813,9 +813,6 @@ public abstract class Labeled extends Control {
         return Pos.CENTER_LEFT;
     }
 
-     /**
-      * @treatAsPrivate implementation detail
-      */
     private static class StyleableProperties {
         private static final FontCssMetaData<Labeled> FONT =
             new FontCssMetaData<Labeled>("-fx-font", Font.getDefault()) {

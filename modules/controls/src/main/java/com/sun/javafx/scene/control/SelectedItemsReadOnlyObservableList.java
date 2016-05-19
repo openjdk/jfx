@@ -78,7 +78,7 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
                 } else if (c.wasRemoved()) {
                     int removedSize = c.getRemovedSize();
                     if (removedSize == 1) {
-                        nextRemove(c.getFrom(), _getModelItem(c.getFrom()));
+                        nextRemove(c.getFrom(), getRemovedModelItem(c.getFrom()));
                     } else {
                         nextRemove(c.getFrom(), getRemovedElements(c));
                     }
@@ -138,10 +138,15 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
     private E _getModelItem(int index) {
         if (index >= modelSizeSupplier.get()) {
             // attempt to return from the itemsRefList instead
-            return index >= itemsRefList.size() ? null : itemsRefList.get(index).get();
+            return getRemovedModelItem(index);
         } else {
             return getModelItem(index);
         }
+    }
+
+    private E getRemovedModelItem(int index) {
+        // attempt to return from the itemsRefList instead
+        return index < 0 || index >= itemsRefList.size() ? null : itemsRefList.get(index).get();
     }
 
     private List<E> getRemovedElements(ListChangeListener.Change<? extends Integer> c) {

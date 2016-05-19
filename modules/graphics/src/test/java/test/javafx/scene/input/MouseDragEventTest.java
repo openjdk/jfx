@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.input;
 
+import com.sun.javafx.scene.SceneHelper;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Group;
@@ -828,7 +829,7 @@ public class MouseDragEventTest {
         }
 
         public void event(EventType<MouseEvent> type, double x, double y) {
-            sceneNode.impl_processMouseEvent(
+            SceneHelper.processMouseEvent(sceneNode,
                     generator.generateMouseEvent(type, x, y));
         }
 

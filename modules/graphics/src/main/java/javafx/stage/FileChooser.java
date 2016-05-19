@@ -414,7 +414,7 @@ public final class FileChooser {
     private List<File> showDialog(final Window ownerWindow,
                                   final FileChooserType fileChooserType) {
         FileChooserResult result = Toolkit.getToolkit().showFileChooser(
-                (ownerWindow != null) ? ownerWindow.impl_getPeer() : null,
+                (ownerWindow != null) ? ownerWindow.getPeer() : null,
                 getTitle(),
                 getInitialDirectory(),
                 getInitialFileName(),

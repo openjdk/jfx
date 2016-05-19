@@ -398,7 +398,6 @@ public class SplitPane extends Control {
 
     private static final String DEFAULT_STYLE_CLASS = "split-pane";
 
-    /** @treatAsPrivate */
     private static class StyleableProperties {
         private static final CssMetaData<SplitPane,Orientation> ORIENTATION =
             new CssMetaData<SplitPane,Orientation>("-fx-orientation",

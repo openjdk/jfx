@@ -785,9 +785,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
      *                                                                         *
      **************************************************************************/
 
-     /**
+     /*
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
          private static final CssMetaData<ToolBar,Number> SPACING =

@@ -368,7 +368,6 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
     private static class StyleableProperties {
 
         private static final CssMetaData<TreeCell<?>,Number> INDENT =

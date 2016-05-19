@@ -63,7 +63,16 @@ import javafx.stage.Stage;
  */
 public class PaginationApp extends Application {
 
-    private static Image[] images = new Image[7];
+    private static final Image[] images = new Image[7];
+    private static final String[] urls = {
+        "/ensemble/samples/shared-resources/Animal1.jpg",
+        "/ensemble/samples/shared-resources/Animal2.jpg",
+        "/ensemble/samples/shared-resources/Animal3.jpg",
+        "/ensemble/samples/shared-resources/Animal4.jpg",
+        "/ensemble/samples/shared-resources/Animal5.jpg",
+        "/ensemble/samples/shared-resources/Animal6.jpg",
+        "/ensemble/samples/shared-resources/Animal7.jpg"
+    };
     private Pagination pagination;
 
     public Parent createContent() {
@@ -71,10 +80,7 @@ public class PaginationApp extends Application {
         outerBox.setAlignment(Pos.CENTER);
         // Images for our pages
         for (int i = 0; i < images.length; i++) {
-            String str =
-                String.format("/ensemble/samples/shared-resources/Animal%d.jpg",
-                              (i + 1));
-            String url = getClass().getResource(str).toExternalForm();
+            String url = getClass().getResource(urls[i]).toExternalForm();
             images[i] = new Image(url, false);
         }
 
@@ -95,7 +101,7 @@ public class PaginationApp extends Application {
         outerBox.getChildren().addAll(pagination, styleButton);
         return outerBox;
     }
-    //Creates the content for a single page
+    // Creates the content for a single page
     private VBox createAnimalPage(int pageIndex) {
         VBox box = new VBox();
         ImageView iv = new ImageView(images[pageIndex]);

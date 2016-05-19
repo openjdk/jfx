@@ -528,12 +528,10 @@ public class Image {
         return exception;
     }
 
-    /**
+    /*
      * The underlying platform representation of this Image object.
      *
      * @defaultValue null
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     private ObjectPropertyImpl<PlatformImage> platformImage;
 
@@ -776,8 +774,8 @@ public class Image {
         }
     }
 
-    /**
-     * @treatAsPrivate used for testing
+    /*
+     * used for testing
      */
     void dispose() {
         cancel();

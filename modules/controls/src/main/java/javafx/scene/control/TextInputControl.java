@@ -1506,9 +1506,6 @@ public abstract class TextInputControl extends Control {
     private static final PseudoClass PSEUDO_CLASS_READONLY
             = PseudoClass.getPseudoClass("readonly");
 
-    /**
-     * @treatAsPrivate implementation detail
-     */
     private static class StyleableProperties {
         private static final FontCssMetaData<TextInputControl> FONT =
             new FontCssMetaData<TextInputControl>("-fx-font", Font.getDefault()) {

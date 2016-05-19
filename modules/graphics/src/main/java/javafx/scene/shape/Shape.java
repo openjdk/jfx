@@ -572,10 +572,9 @@ public abstract class Shape extends Node {
     }
 
 
-    /**
-      * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
-      */
+    /*
+     * Super-lazy instantiation pattern from Bill Pugh.
+     */
      private static class StyleableProperties {
 
         /**

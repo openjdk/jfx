@@ -1067,7 +1067,6 @@ public class TreeView<T> extends Control {
 
     private static final String DEFAULT_STYLE_CLASS = "tree-view";
 
-    /** @treatAsPrivate */
     private static class StyleableProperties {
         private static final CssMetaData<TreeView<?>,Number> FIXED_CELL_SIZE =
                 new CssMetaData<TreeView<?>,Number>("-fx-fixed-cell-size",
@@ -1317,26 +1316,29 @@ public class TreeView<T> extends Control {
 
                     boolean wasAnyChildSelected = false;
 
-                    startAtomic();
+                    selectedIndices._beginChange();
                     final int from = startRow + 1;
                     final int to = startRow + count;
                     final List<Integer> removed = new ArrayList<>();
                     for (int i = from; i < to; i++) {
                         if (isSelected(i)) {
                             wasAnyChildSelected = true;
-                            clearSelection(i);
+
+                            selectedIndices._nextRemove(i);
                             removed.add(i);
                         }
                     }
-                    stopAtomic();
+
+                    for (int index : removed) {
+                        startAtomic();
+                        clearSelection(index);
+                        stopAtomic();
+                    }
+                    selectedIndices._endChange();
 
                     // put selection onto the newly-collapsed tree item
                     if (wasPrimarySelectionInChild && wasAnyChildSelected) {
                         select(startRow);
-                    } else {
-                        selectedIndices._beginChange();
-                        selectedIndices._nextRemove(from, removed);
-                        selectedIndices._endChange();
                     }
 
                     shift += -count + 1;

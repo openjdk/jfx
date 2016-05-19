@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.input;
 
+import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.pgstub.StubScene;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import javafx.event.Event;
@@ -188,13 +189,13 @@ public class SwipeEventTest {
             swiped = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_LEFT, 1, 1, 1, 1, 1,
                 false, false, false, false, false);
 
         assertFalse(swiped);
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_LEFT, 1, 150, 150, 150, 150,
                 false, false, false, false, false);
 
@@ -214,7 +215,7 @@ public class SwipeEventTest {
             swiped = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_UP, 3, 150, 150, 150, 150,
                 false, false, false, false, false);
 
@@ -237,7 +238,7 @@ public class SwipeEventTest {
             swiped = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_UP, 3, 151, 152, 153, 154,
                 false, false, false, false, false);
 
@@ -257,13 +258,13 @@ public class SwipeEventTest {
             swiped = !swiped;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_DOWN, 3, 151, 152, 153, 154,
                 false, false, false, false, false);
 
         assertTrue(swiped);
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_DOWN, 3, 151, 152, 153, 154,
                 false, false, false, false, true);
 
@@ -293,7 +294,7 @@ public class SwipeEventTest {
             swiped2 = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_LEFT, 1, 150, 150, 150, 150,
                 false, false, false, false, false);
 
@@ -319,7 +320,7 @@ public class SwipeEventTest {
             swiped = true;
         });
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_UP, 3, 151, 152, 153, 154,
                 false, false, false, false, false);
 
@@ -337,25 +338,25 @@ public class SwipeEventTest {
         });
 
         swiped = false;
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_UP, 3, 151, 152, 153, 154,
                 false, false, false, false, false);
         assertTrue(swiped);
 
         swiped = false;
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_DOWN, 3, 151, 152, 153, 154,
                 false, false, false, false, false);
         assertTrue(swiped);
 
         swiped = false;
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_LEFT, 3, 151, 152, 153, 154,
                 false, false, false, false, false);
         assertTrue(swiped);
 
         swiped = false;
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_RIGHT, 3, 151, 152, 153, 154,
                 false, false, false, false, false);
         assertTrue(swiped);
@@ -376,20 +377,20 @@ public class SwipeEventTest {
 
         swiped = false;
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
                 gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_RIGHT, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 false, false, false, false, false);
 
         assertFalse(swiped);
 
-        scene.impl_processMouseEvent(
+        SceneHelper.processMouseEvent(scene,
                 gen.generateMouseEvent(MouseEvent.MOUSE_MOVED, 150, 150));
 
-        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+        ((StubScene) SceneHelper.getPeer(scene)).getListener().swipeEvent(
                 SwipeEvent.SWIPE_RIGHT, 3,
                 Double.NaN, Double.NaN, Double.NaN, Double.NaN,
                 false, false, false, false, false);

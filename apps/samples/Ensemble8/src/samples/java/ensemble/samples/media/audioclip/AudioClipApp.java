@@ -102,16 +102,24 @@ public class AudioClipApp extends Application {
         return root;
     }
 
+    private static final String[] urls = {
+        "/ensemble/samples/shared-resources/Note1.wav",
+        "/ensemble/samples/shared-resources/Note2.wav",
+        "/ensemble/samples/shared-resources/Note3.wav",
+        "/ensemble/samples/shared-resources/Note4.wav",
+        "/ensemble/samples/shared-resources/Note5.wav",
+        "/ensemble/samples/shared-resources/Note6.wav",
+        "/ensemble/samples/shared-resources/Note7.wav",
+        "/ensemble/samples/shared-resources/Note8.wav"
+    };
+
     public static Rectangle createKey(Color color, double x,
                                       double width, int note) {
-        String sound =
-            String.format("/ensemble/samples/shared-resources/Note%d.wav",
-                          note);
 
         double height = 100 - ((note - 1) * 5);
         // create a audio clip that this key will play
         final AudioClip barNote = new AudioClip(
-                AudioClipApp.class.getResource(sound).toExternalForm());
+                AudioClipApp.class.getResource(urls[note - 1]).toExternalForm());
         // create the rectangle that draws the key
         Rectangle rectangle = new Rectangle(x, -(height / 2), width, height);
         rectangle.setFill(color);

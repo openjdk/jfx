@@ -649,9 +649,6 @@ public class ScrollPane extends Control {
      */
     private static final String DEFAULT_STYLE_CLASS = "scroll-pane";
 
-    /**
-     * @treatAsPrivate
-     */
     private static class StyleableProperties {
         private static final CssMetaData<ScrollPane,ScrollBarPolicy> HBAR_POLICY =
             new CssMetaData<ScrollPane,ScrollBarPolicy>("-fx-hbar-policy",

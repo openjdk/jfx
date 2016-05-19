@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@ import javafx.scene.Scene;
 import com.sun.javafx.tk.Toolkit;
 
 public abstract class PerformanceTracker {
-    /**
+    /*
      * This class provides a way to track performance metrics such as first
      * paint, instant fps, average fps.<p>
      *
@@ -41,25 +41,20 @@ public abstract class PerformanceTracker {
      */
     private static SceneAccessor sceneAccessor;
 
-    /**
+    /*
      * Use method instead of def to avoid explicit initialization which could
      * be circular (this class may be referenced before the toolkit is initialized).
-     *
-     * @treatAsPrivate implementation detail
      */
     public static boolean isLoggingEnabled() {
         return Toolkit.getToolkit().getPerformanceTracker().perfLoggingEnabled;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     */
     public static abstract class SceneAccessor {
         public abstract void setPerfTracker(Scene scene, PerformanceTracker tracker);
         public abstract PerformanceTracker getPerfTracker(Scene scene);
     }
 
-    /**
+    /*
      * Creates a {@code PerformanceTracker} for this scene. There could be only one
      * performance tracker per scene so once a tracker is created for a scene it
      * will be returned for each {@code getSceneTracker} call until the tracker
@@ -80,7 +75,7 @@ public abstract class PerformanceTracker {
         return tracker;
     }
 
-    /**
+    /*
      * Removes the tracker from the scene.
      */
     public static void releaseSceneTracker(Scene scene) {
@@ -89,9 +84,6 @@ public abstract class PerformanceTracker {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     */
     public static void setSceneAccessor(SceneAccessor accessor) {
         sceneAccessor = accessor;
     }
@@ -101,27 +93,20 @@ public abstract class PerformanceTracker {
     //    null;
     //}
 
-    /**
+    /*
      * Log an event with given description.
-     *
-     * @treatAsPrivate implementation detail
      */
     public static void logEvent(String desc) {
         Toolkit.getToolkit().getPerformanceTracker().doLogEvent(desc);
     }
 
-    /**
+    /*
      * Output full log of events so far.
-     *
-     * @treatAsPrivate implementation detail
      */
     public static void outputLog() {
         Toolkit.getToolkit().getPerformanceTracker().doOutputLog();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     */
     private boolean perfLoggingEnabled;
     protected boolean isPerfLoggingEnabled() { return perfLoggingEnabled; }
     protected void setPerfLoggingEnabled(boolean value) { perfLoggingEnabled = value; }
@@ -139,21 +124,17 @@ public abstract class PerformanceTracker {
     private int avgPulsesTotal;
 
     protected abstract long nanoTime();
-    /**
-     * @treatAsPrivate implementation detail
-     */
+
     public abstract void doOutputLog();
-    /**
-     * @treatAsPrivate implementation detail
-     */
+
     public abstract void doLogEvent(String s);
 
-    /**
+    /*
      * Returns the number of frames rendered in the last second or so.
      */
     public synchronized float getInstantFPS() { return instantFPS; }
 
-    /**
+    /*
      * Returns the average FPS in the time period since the least call
      * to {@link #resetAverageFPS()}.
      */
@@ -170,12 +151,12 @@ public abstract class PerformanceTracker {
         avgFramesTotal = 0;
     }
 
-    /**
+    /*
      * Returns the number of pulses received in the last second or so.
      */
     public float getInstantPulses() { return instantPulses; }
 
-    /**
+    /*
      * Returns the average pulses per second in the time period since the least call
      * to {@link #resetAveragePulses()}.
      */
@@ -192,9 +173,6 @@ public abstract class PerformanceTracker {
         avgPulsesTotal = 0;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     */
     public void pulse() {
         calcPulses();
         updateInstantFps();
@@ -248,14 +226,14 @@ public abstract class PerformanceTracker {
         }
     }
 
-    /**
+    /*
      * Called on every rendering pulse.
      */
     private Runnable onPulse;
     public void setOnPulse(Runnable value) { onPulse = value; }
     public Runnable getOnPulse() { return onPulse; }
 
-    /**
+    /*
      * Called on the first rendering pulse since this tracker has been created.
      */
     private Runnable onFirstPulse;

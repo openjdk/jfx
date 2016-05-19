@@ -67,6 +67,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
+import com.sun.javafx.scene.SceneHelper;
 
 
 /**
@@ -86,10 +87,66 @@ public class Window implements EventTarget {
     private static ObservableList<Window> windows = FXCollections.observableArrayList();
     private static ObservableList<Window> unmodifiableWindows = FXCollections.unmodifiableObservableList(windows);
 
+    /*
+     * Store the singleton instance of the WindowHelper subclass corresponding
+     * to the subclass of this instance of Window
+     */
+    private WindowHelper windowHelper = null;
+
     static {
         WindowHelper.setWindowAccessor(
                 new WindowHelper.WindowAccessor() {
-                    /**
+                    @Override
+                    public WindowHelper getHelper(Window window) {
+                        return window.windowHelper;
+                    }
+
+                    @Override
+                    public void setHelper(Window window, WindowHelper windowHelper) {
+                        window.windowHelper = windowHelper;
+                    }
+
+                    @Override
+                    public String getMXWindowType(Window window) {
+                        return window.getMXWindowType();
+                    }
+
+                    @Override
+                    public void doVisibleChanging(Window window, boolean visible) {
+                        window.doVisibleChanging(visible);
+                    }
+
+                    @Override
+                    public void doVisibleChanged(Window window, boolean visible) {
+                        window.doVisibleChanged(visible);
+                    }
+
+                    @Override
+                    public TKStage getPeer(Window window) {
+                        return window.getPeer();
+                    }
+
+                    @Override
+                    public void setPeer(Window window, TKStage peer) {
+                        window.setPeer(peer);
+                    }
+
+                    @Override
+                    public WindowPeerListener getPeerListener(Window window) {
+                        return window.getPeerListener();
+                    }
+
+                    @Override
+                    public void  setPeerListener(Window window, WindowPeerListener peerListener) {
+                        window.setPeerListener(peerListener);
+                    }
+
+                    @Override
+                    public void setFocused(Window window, boolean value) {
+                        window.setFocused(value);
+                    }
+
+                    /*
                      * Allow window peer listeners to directly change reported
                      * window location and size without changing the xExplicit,
                      * yExplicit, widthExplicit and heightExplicit values.
@@ -123,13 +180,13 @@ public class Window implements EventTarget {
 
                     @Override
                     public float getPlatformScaleX(Window window) {
-                        TKStage peer = window.impl_peer;
+                        TKStage peer = window.getPeer();
                         return peer == null ? 1.0f : peer.getPlatformScaleX();
                     }
 
                     @Override
                     public float getPlatformScaleY(Window window) {
-                        TKStage peer = window.impl_peer;
+                        TKStage peer = window.getPeer();
                         return peer == null ? 1.0f : peer.getPlatformScaleY();
                     }
 
@@ -167,52 +224,48 @@ public class Window implements EventTarget {
     protected Window() {
         // necessary for WindowCloseRequestHandler
         initializeInternalEventDispatcher();
+        WindowHelper.initHelper(this);
     }
 
-    /**
+    /*
      * The listener that gets called by peer. It's also responsible for
      * window size/location synchronization with the window peer, which
      * occurs on every pulse.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected WindowPeerListener peerListener;
+    private WindowPeerListener peerListener;
 
-    /**
+    WindowPeerListener getPeerListener() {
+        return peerListener;
+    }
+
+    void setPeerListener(WindowPeerListener peerListener) {
+        this.peerListener = peerListener;
+    }
+
+    /*
      * The peer of this Stage. All external access should be
      * made though getPeer(). Implementors note: Please ensure that this
      * variable is defined *after* style and *before* the other variables so
      * that style has been initialized prior to this call, and so that
-     * impl_peer is initialized prior to subsequent initialization.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * peer is initialized prior to subsequent initialization.
      */
-    @Deprecated
-    protected volatile TKStage impl_peer;
+    private TKStage peer;
 
     private TKBoundsConfigurator peerBoundsConfigurator =
             new TKBoundsConfigurator();
 
-    /**
+    /*
      * Get Stage's peer
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public TKStage impl_getPeer() {
-        return impl_peer;
+    TKStage getPeer() {
+        return peer;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public String impl_getMXWindowType() {
+    void setPeer(TKStage peer) {
+        this.peer = peer;
+    }
+
+    String getMXWindowType() {
         return getClass().getSimpleName();
     }
 
@@ -226,8 +279,8 @@ public class Window implements EventTarget {
      * of this Window's Scene.
      */
     public void sizeToScene() {
-        if (getScene() != null && impl_peer != null) {
-            getScene().impl_preferredSize();
+        if (getScene() != null && peer != null) {
+            SceneHelper.preferredSize(getScene());
             adjustSize(false);
         } else {
             // Remember the request to reapply it later if needed
@@ -239,7 +292,7 @@ public class Window implements EventTarget {
         if (getScene() == null) {
             return;
         }
-        if (impl_peer != null) {
+        if (peer != null) {
             double sceneWidth = getScene().getWidth();
             double cw = (sceneWidth > 0) ? sceneWidth : -1;
             double w = -1;
@@ -278,7 +331,7 @@ public class Window implements EventTarget {
     public void centerOnScreen() {
         xExplicit = false;
         yExplicit = false;
-        if (impl_peer != null) {
+        if (peer != null) {
             Rectangle2D bounds = getWindowScreen().getVisualBounds();
             double centerX =
                     bounds.getMinX() + (bounds.getWidth() - getWidth())
@@ -609,19 +662,14 @@ public class Window implements EventTarget {
         }
     };
 
-    /**
-     * @treatAsPrivate
-     * @deprecated
-     */
-    @Deprecated
-    public final void setFocused(boolean value) { focused.set(value); }
+    final void setFocused(boolean value) { focused.set(value); }
 
     /**
      * Requests that this {@code Window} get the input focus.
      */
     public final void requestFocus() {
-        if (impl_peer != null) {
-            impl_peer.requestFocus();
+        if (peer != null) {
+            peer.requestFocus();
         }
     }
     public final boolean isFocused() { return focused.get(); }
@@ -717,14 +765,14 @@ public class Window implements EventTarget {
             if (oldScene == newScene) {
                 return;
             }
-            if (impl_peer != null) {
+            if (peer != null) {
                 Toolkit.getToolkit().checkFxUserThread();
             }
             // First, detach scene peer from this window
             updatePeerScene(null);
             // Second, dispose scene peer
             if (oldScene != null) {
-                oldScene.impl_setWindow(null);
+                SceneHelper.setWindow(oldScene, null);
                 StyleManager.getInstance().forget(oldScene);
             }
             if (newScene != null) {
@@ -738,18 +786,18 @@ public class Window implements EventTarget {
 
                 // Set the "window" on the new scene. This will also trigger
                 // scene's peer creation.
-                newScene.impl_setWindow(Window.this);
+                SceneHelper.setWindow(newScene, Window.this);
                 // Set scene impl on stage impl
-                updatePeerScene(newScene.impl_getPeer());
+                updatePeerScene(SceneHelper.getPeer(newScene));
 
                 // Fix for RT-15432: we should update new Scene's stylesheets, if the
                 // window is already showing. For not yet shown windows, the update is
-                // performed in Window.visibleChanging()
+                // performed in doVisibleChanging()
                 if (isShowing()) {
                     newScene.getRoot().impl_reapplyCSS();
 
                     if (!widthExplicit || !heightExplicit) {
-                        getScene().impl_preferredSize();
+                        SceneHelper.preferredSize(getScene());
                         adjustSize(true);
                     }
                 }
@@ -769,9 +817,9 @@ public class Window implements EventTarget {
         }
 
         private void updatePeerScene(final TKScene tkScene) {
-            if (impl_peer != null) {
+            if (peer != null) {
                 // Set scene impl on stage impl
-                impl_peer.setScene(tkScene);
+                peer.setScene(tkScene);
             }
         }
     }
@@ -803,8 +851,8 @@ public class Window implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                    if (impl_peer != null) {
-                        impl_peer.setOpacity((float) get());
+                    if (peer != null) {
+                        peer.setOpacity((float) get());
                     }
                 }
 
@@ -999,7 +1047,7 @@ public class Window implements EventTarget {
             }
 
             oldVisible = newVisible;
-            impl_visibleChanging(newVisible);
+            WindowHelper.visibleChanging(Window.this, newVisible);
             if (newVisible) {
                 hasBeenVisible = true;
                 windows.add(Window.this);
@@ -1007,24 +1055,24 @@ public class Window implements EventTarget {
                 windows.remove(Window.this);
             }
             Toolkit tk = Toolkit.getToolkit();
-            if (impl_peer != null) {
+            if (peer != null) {
                 if (newVisible) {
                     if (peerListener == null) {
                         peerListener = new WindowPeerListener(Window.this);
                     }
 
                     // Setup listener for changes coming back from peer
-                    impl_peer.setTKStageListener(peerListener);
+                    peer.setTKStageListener(peerListener);
                     // Register pulse listener
                     tk.addStageTkPulseListener(peerBoundsConfigurator);
 
                     if (getScene() != null) {
-                        getScene().impl_initPeer();
-                        impl_peer.setScene(getScene().impl_getPeer());
-                        getScene().impl_preferredSize();
+                        SceneHelper.initPeer(getScene());
+                        peer.setScene(SceneHelper.getPeer(getScene()));
+                        SceneHelper.preferredSize(getScene());
                     }
 
-                    updateOutputScales(impl_peer.getOutputScaleX(), impl_peer.getOutputScaleY());
+                    updateOutputScales(peer.getOutputScaleX(), peer.getOutputScaleY());
                     // updateOutputScales may cause an update to the render
                     // scales in many cases, but if the scale has not changed
                     // then the lazy render scale properties might think
@@ -1054,35 +1102,35 @@ public class Window implements EventTarget {
                     // set peer bounds before the window is shown
                     applyBounds();
 
-                    impl_peer.setOpacity((float)getOpacity());
+                    peer.setOpacity((float)getOpacity());
 
-                    impl_peer.setVisible(true);
+                    peer.setVisible(true);
                     fireEvent(new WindowEvent(Window.this, WindowEvent.WINDOW_SHOWN));
                 } else {
-                    impl_peer.setVisible(false);
+                    peer.setVisible(false);
 
                     // Call listener
                     fireEvent(new WindowEvent(Window.this, WindowEvent.WINDOW_HIDDEN));
 
                     if (getScene() != null) {
-                        impl_peer.setScene(null);
-                        getScene().impl_disposePeer();
+                        peer.setScene(null);
+                        SceneHelper.disposePeer(getScene());
                         StyleManager.getInstance().forget(getScene());
                     }
 
                     // Remove toolkit pulse listener
                     tk.removeStageTkPulseListener(peerBoundsConfigurator);
                     // Remove listener for changes coming back from peer
-                    impl_peer.setTKStageListener(null);
+                    peer.setTKStageListener(null);
 
                     // Notify peer
-                    impl_peer.close();
+                    peer.close();
                 }
             }
             if (newVisible) {
                 tk.requestNextPulse();
             }
-            impl_visibleChanged(newVisible);
+            WindowHelper.visibleChanged(Window.this, newVisible);
 
             if (sizeToScene) {
                 if (newVisible) {
@@ -1137,29 +1185,25 @@ public class Window implements EventTarget {
         setShowing(false);
     }
 
-    /**
+    /*
      * This can be replaced by listening for the onShowing/onHiding events
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected void impl_visibleChanging(boolean visible) {
+    private void doVisibleChanging(boolean visible) {
         if (visible && (getScene() != null)) {
             getScene().getRoot().impl_reapplyCSS();
         }
     }
 
-    /**
+    /*
      * This can be replaced by listening for the onShown/onHidden events
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected void impl_visibleChanged(boolean visible) {
-        assert impl_peer != null;
+    private void doVisibleChanged(boolean visible) {
+        assert peer != null;
         if (!visible) {
             peerListener = null;
-            impl_peer = null;
+            peer = null;
         }
     }
 
@@ -1333,20 +1377,20 @@ public class Window implements EventTarget {
     private int focusGrabCounter;
 
     void increaseFocusGrabCounter() {
-        if ((++focusGrabCounter == 1) && (impl_peer != null) && isFocused()) {
-            impl_peer.grabFocus();
+        if ((++focusGrabCounter == 1) && (peer != null) && isFocused()) {
+            peer.grabFocus();
         }
     }
 
     void decreaseFocusGrabCounter() {
-        if ((--focusGrabCounter == 0) && (impl_peer != null)) {
-            impl_peer.ungrabFocus();
+        if ((--focusGrabCounter == 0) && (peer != null)) {
+            peer.ungrabFocus();
         }
     }
 
     private void focusChanged(final boolean newIsFocused) {
-        if ((focusGrabCounter > 0) && (impl_peer != null) && newIsFocused) {
-            impl_peer.grabFocus();
+        if ((focusGrabCounter > 0) && (peer != null) && newIsFocused) {
+            peer.grabFocus();
         }
     }
 
@@ -1489,7 +1533,7 @@ public class Window implements EventTarget {
                 float newRX = (float) renderScaleX;
                 float newRY = (float) renderScaleY;
                 reset();
-                impl_peer.setBounds(newX, newY, xSet, ySet,
+                peer.setBounds(newX, newY, xSet, ySet,
                                     newWW, newWH, newCW, newCH,
                                     newXG, newYG,
                                     newRX, newRY);

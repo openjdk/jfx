@@ -1851,9 +1851,9 @@ public abstract class Node implements EventTarget, Styleable {
         doCSSPass();
         doLayoutPass();
         updateBounds();
-        Scene.impl_setAllowPGAccess(true);
+        Scene.setAllowPGAccess(true);
         syncAll(this);
-        Scene.impl_setAllowPGAccess(false);
+        Scene.setAllowPGAccess(false);
     }
 
     private WritableImage doSnapshot(SnapshotParameters params, WritableImage img) {
@@ -9763,8 +9763,8 @@ public abstract class Node implements EventTarget, Styleable {
                         /* This can happen during the release process of an accessible object. */
                         throw new RuntimeException("Accessbility requested for node not on a scene");
                     }
-                    if (scene.impl_getPeer() != null) {
-                        return scene.impl_getPeer().getAccessControlContext();
+                    if (scene.getPeer() != null) {
+                        return scene.getPeer().getAccessControlContext();
                     } else {
                         /* In some rare cases the accessible for a Node is needed
                          * before its scene is made visible. For example, the screen reader

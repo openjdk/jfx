@@ -93,6 +93,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import com.sun.javafx.logging.PulseLogger;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.scene.input.ClipboardHelper;
 import com.sun.javafx.scene.input.TouchPointHelper;
 
@@ -367,6 +368,56 @@ public class Scene implements EventTarget {
             SceneHelper.setSceneAccessor(
                     new SceneHelper.SceneAccessor() {
                         @Override
+                        public void enableInputMethodEvents(Scene scene, boolean enable) {
+                            scene.enableInputMethodEvents(enable);
+                        }
+
+                        @Override
+                        public void processKeyEvent(Scene scene, KeyEvent e) {
+                            scene.processKeyEvent(e);
+                        }
+
+                        @Override
+                        public void processMouseEvent(Scene scene, MouseEvent e) {
+                            scene.processMouseEvent(e);
+                        }
+
+                        @Override
+                        public void preferredSize(Scene scene) {
+                            scene.preferredSize();
+                        }
+
+                        @Override
+                        public void disposePeer(Scene scene) {
+                            scene.disposePeer();
+                        }
+
+                        @Override
+                        public void initPeer(Scene scene) {
+                            scene.initPeer();
+                        }
+
+                        @Override
+                        public void setWindow(Scene scene, Window window) {
+                            scene.setWindow(window);
+                        }
+
+                        @Override
+                        public TKPulseListener getScenePulseListener(Scene scene) {
+                            return scene.getScenePulseListener();
+                        }
+
+                        @Override
+                        public TKScene getPeer(Scene scene) {
+                            return scene.getPeer();
+                        }
+
+                        @Override
+                        public void setAllowPGAccess(boolean flag) {
+                            Scene.setAllowPGAccess(flag);
+                        }
+
+                        @Override
                         public void setPaused(boolean paused) {
                             Scene.paused = paused;
                         }
@@ -436,12 +487,7 @@ public class Scene implements EventTarget {
             return inSynchronizer || inMousePick || allowPGAccess;
         }
 
-        /**
-         * @treatAsPrivate implementation detail
-         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-         */
-        @Deprecated
-        public static void impl_setAllowPGAccess(boolean flag) {
+        static void setAllowPGAccess(boolean flag) {
             if (Utils.assertionEnabled()) {
                 if (flag) {
                     pgAccessCount++;
@@ -543,14 +589,10 @@ public class Scene implements EventTarget {
      */
     private TKScene peer;
 
-    /**
+    /*
      * Get Scene's peer
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public TKScene impl_getPeer() {
+    TKScene getPeer() {
         return peer;
     }
 
@@ -559,12 +601,7 @@ public class Scene implements EventTarget {
      */
     ScenePulseListener scenePulseListener = new ScenePulseListener();
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public TKPulseListener impl_getScenePulseListener() {
+    TKPulseListener getScenePulseListener() {
         if (SystemProperties.isDebug()) {
             return scenePulseListener;
         }
@@ -716,7 +753,7 @@ public class Scene implements EventTarget {
      */
     private ReadOnlyObjectWrapper<Window> window;
 
-    private void setWindow(Window value) {
+    void setWindow(Window value) {
         windowPropertyImpl().set(value);
     }
 
@@ -737,10 +774,10 @@ public class Scene implements EventTarget {
                     final Window newWindow = get();
                     getKeyHandler().windowForSceneChanged(oldWindow, newWindow);
                     if (oldWindow != null) {
-                        impl_disposePeer();
+                        disposePeer();
                     }
                     if (newWindow != null) {
-                        impl_initPeer();
+                        initPeer();
                     }
                     parentEffectiveOrientationInvalidated();
 
@@ -761,21 +798,7 @@ public class Scene implements EventTarget {
         return window;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_setWindow(Window value) {
-        setWindow(value);
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_initPeer() {
+    void initPeer() {
         assert peer == null;
 
         Window window = getWindow();
@@ -784,7 +807,7 @@ public class Scene implements EventTarget {
         // this scene's window cannot be null.
         assert window != null;
 
-        TKStage windowPeer = window.impl_getPeer();
+        TKStage windowPeer = WindowHelper.getPeer(window);
         if (windowPeer == null) {
             // This is fine, the window is not visible. impl_initPeer() will
             // be called again later, when the window is being shown.
@@ -798,7 +821,7 @@ public class Scene implements EventTarget {
 
         PerformanceTracker.logEvent("Scene.initPeer started");
 
-        impl_setAllowPGAccess(true);
+        setAllowPGAccess(true);
 
         Toolkit tk = Toolkit.getToolkit();
         peer = windowPeer.createTKScene(isDepthBufferInternal(), getAntiAliasingInternal(), acc);
@@ -813,7 +836,7 @@ public class Scene implements EventTarget {
         peer.markDirty();
         PerformanceTracker.logEvent("Scene.initPeer TKScene initialized");
 
-        impl_setAllowPGAccess(false);
+        setAllowPGAccess(false);
 
         tk.addSceneTkPulseListener(scenePulseListener);
         // listen to dnd gestures coming from the platform
@@ -829,12 +852,7 @@ public class Scene implements EventTarget {
         PerformanceTracker.logEvent("Scene.initPeer finished");
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_disposePeer() {
+    public void disposePeer() {
         if (peer == null) {
             // This is fine, the window is either not shown yet and there is no
             // need in disposing scene peer, or is hidden and impl_disposePeer()
@@ -1298,7 +1316,7 @@ public class Scene implements EventTarget {
             height = (int)wimg.getHeight();
         }
 
-        impl_setAllowPGAccess(true);
+        setAllowPGAccess(true);
         context.x = xMin;
         context.y = yMin;
         context.width = width;
@@ -1332,16 +1350,16 @@ public class Scene implements EventTarget {
 
         Toolkit.WritableImageAccessor accessor = Toolkit.getWritableImageAccessor();
         context.platformImage = accessor.getTkImageLoader(wimg);
-        impl_setAllowPGAccess(false);
+        setAllowPGAccess(false);
         Object tkImage = tk.renderToImage(context);
         accessor.loadTkImage(wimg, tkImage);
 
         if (camera != null) {
-            impl_setAllowPGAccess(true);
+            setAllowPGAccess(true);
             camera.setViewWidth(cameraViewWidth);
             camera.setViewHeight(cameraViewHeight);
             camera.impl_updatePeer();
-            impl_setAllowPGAccess(false);
+            setAllowPGAccess(false);
         }
 
         // if this scene belongs to some stage
@@ -1735,7 +1753,7 @@ public class Scene implements EventTarget {
         }
     }
 
-    private void preferredSize() {
+    void preferredSize() {
         final Parent root = getRoot();
 
         // one or the other isn't initialized, need to perform layout in
@@ -1812,15 +1830,6 @@ public class Scene implements EventTarget {
                                 root.maxHeight(normalizedWidth));
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_preferredSize() {
-        preferredSize();
-    }
-
     private PerformanceTracker tracker;
     private static final Object trackerMonitor = new Object();
 
@@ -1853,13 +1862,7 @@ public class Scene implements EventTarget {
     private Map<Integer, EventTarget> touchTargets =
             new HashMap<Integer, EventTarget>();
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: RT-22747 has been filed to track this
-    @Deprecated
-    public void impl_processMouseEvent(MouseEvent e) {
+    void processMouseEvent(MouseEvent e) {
         mouseHandler.process(e, false);
     }
 
@@ -2125,13 +2128,7 @@ public class Scene implements EventTarget {
         traverse(node, Direction.NEXT);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: RT-24668 has been filed to track this
-    @Deprecated
-    public void impl_processKeyEvent(KeyEvent e) {
+    public void processKeyEvent(KeyEvent e) {
         if (dndGesture != null) {
             if (!dndGesture.processKey(e)) {
                 dndGesture = null;
@@ -2164,7 +2161,7 @@ public class Scene implements EventTarget {
             if (value != null) {
                 ((Node.FocusedProperty) value.focusedProperty()).store(keyHandler.windowFocused);
                 if (value != oldFocusOwner) {
-                    value.getScene().impl_enableInputMethodEvents(
+                    value.getScene().enableInputMethodEvents(
                             value.getInputMethodRequests() != null
                             && value.getOnInputMethodTextChanged() != null);
                 }
@@ -2217,12 +2214,7 @@ public class Scene implements EventTarget {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_enableInputMethodEvents(boolean enable) {
+    public void enableInputMethodEvents(boolean enable) {
        if (peer != null) {
            peer.enableInputMethodEvents(enable);
        }
@@ -2608,14 +2600,14 @@ public class Scene implements EventTarget {
                     0, // click count will be adjusted by clickGenerator later anyway
                     shiftDown, controlDown, altDown, metaDown,
                     primaryDown, middleDown, secondaryDown, synthesized, popupTrigger, false, null);
-            impl_processMouseEvent(mouseEvent);
+            processMouseEvent(mouseEvent);
         }
 
 
         @Override
         public void keyEvent(KeyEvent keyEvent)
         {
-            impl_processKeyEvent(keyEvent);
+            processKeyEvent(keyEvent);
         }
 
         @Override
@@ -4032,7 +4024,7 @@ public class Scene implements EventTarget {
             if (oldFocusOwner != null) {
                 final Scene s = oldFocusOwner.getScene();
                 if (s != null) {
-                    final TKScene peer = s.impl_getPeer();
+                    final TKScene peer = s.getPeer();
                     if (peer != null) {
                         peer.finishInputMethodComposition();
                     }
@@ -6442,7 +6434,7 @@ public class Scene implements EventTarget {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
                 @Override public AccessControlContext getAccessControlContext() {
-                    return impl_getPeer().getAccessControlContext();
+                    return getPeer().getAccessControlContext();
                 }
 
                 @Override public Object getAttribute(AccessibleAttribute attribute,

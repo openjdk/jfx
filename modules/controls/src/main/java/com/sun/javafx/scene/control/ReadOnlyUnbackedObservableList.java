@@ -79,6 +79,11 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
         nextRemove(idx, removed);
     }
 
+    public void _nextRemove(E o) {
+        int indexOfObject = indexOf(o);
+        _nextRemove(indexOfObject, o);
+    }
+
     public void _nextRemove(int idx, E removed) {
         nextRemove(idx, removed);
     }

@@ -1215,10 +1215,9 @@ public class Text extends Shape {
     *                                                                         *
     **************************************************************************/
 
-     /**
-      * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
-      */
+    /*
+     * Super-lazy instantiation pattern from Bill Pugh.
+     */
      private static class StyleableProperties {
 
          private static final CssMetaData<Text,Font> FONT =

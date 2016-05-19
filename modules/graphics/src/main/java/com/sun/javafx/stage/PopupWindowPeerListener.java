@@ -45,7 +45,7 @@ public class PopupWindowPeerListener extends WindowPeerListener {
         // workaround is to emulate them from the peers (see PopupStage
         // for details), but the real fix would be to forward the focus
         // events from the owner window
-        popupWindow.setFocused(cf);
+        WindowHelper.setFocused(popupWindow, cf);
     }
 
     public void closing() {

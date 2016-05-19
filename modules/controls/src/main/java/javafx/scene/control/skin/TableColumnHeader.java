@@ -1021,10 +1021,9 @@ public class TableColumnHeader extends Region {
     private static final PseudoClass PSEUDO_CLASS_LAST_VISIBLE =
             PseudoClass.getPseudoClass("last-visible");
 
-    /**
-      * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
-      */
+    /*
+     * Super-lazy instantiation pattern from Bill Pugh.
+     */
      private static class StyleableProperties {
          private static final CssMetaData<TableColumnHeader,Number> SIZE =
             new CssMetaData<TableColumnHeader,Number>("-fx-size",

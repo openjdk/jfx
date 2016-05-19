@@ -63,6 +63,8 @@ import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
+import com.sun.javafx.stage.PopupWindowHelper;
+import com.sun.javafx.stage.WindowHelper;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -98,6 +100,24 @@ import javafx.scene.layout.Pane;
  * @since JavaFX 2.0
  */
 public abstract class PopupWindow extends Window {
+
+     static {
+        PopupWindowHelper.setPopupWindowAccessor(new PopupWindowHelper.PopupWindowAccessor() {
+            @Override public void doVisibleChanging(Window window, boolean visible) {
+                ((PopupWindow) window).doVisibleChanging(visible);
+            }
+
+            @Override public void doVisibleChanged(Window window, boolean visible) {
+                ((PopupWindow) window).doVisibleChanged(visible);
+            }
+
+            @Override
+            public ObservableList<Node> getContent(PopupWindow popupWindow) {
+                return popupWindow.getContent();
+            }
+        });
+    }
+
     /**
      * A private list of all child popups.
      */
@@ -173,18 +193,16 @@ public abstract class PopupWindow extends Window {
                         }
                     }
                 });
+        PopupWindowHelper.initHelper(this);
     }
 
-    /**
+    /*
      * Gets the observable, modifiable list of children which are placed in this
      * PopupWindow.
      *
      * @return the PopupWindow content
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected ObservableList<Node> getContent() {
+    ObservableList<Node> getContent() {
         final Parent rootNode = getScene().getRoot();
         if (rootNode instanceof Group) {
             return ((Group) rootNode).getChildren();
@@ -471,17 +489,15 @@ public abstract class PopupWindow extends Window {
         if (getOwnerNode() != null) getOwnerNode().visibleProperty().removeListener(weakOwnerNodeListener);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * This can be replaced by listening for the onShowing/onHiding events
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected void impl_visibleChanging(boolean visible) {
-        super.impl_visibleChanging(visible);
+    private void doVisibleChanging(boolean visible) {
         PerformanceTracker.logEvent("PopupWindow.storeVisible for [PopupWindow]");
 
         Toolkit toolkit = Toolkit.getToolkit();
-        if (visible && (impl_peer == null)) {
+        if (visible && (getPeer() == null)) {
             // Setup the peer
             StageStyle popupStyle;
             try {
@@ -494,21 +510,18 @@ public abstract class PopupWindow extends Window {
             } catch (final SecurityException e) {
                 popupStyle = StageStyle.UNDECORATED;
             }
-            impl_peer = toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().impl_getPeer(), acc);
-            peerListener = new PopupWindowPeerListener(PopupWindow.this);
+            setPeer(toolkit.createTKPopupStage(this, popupStyle, getOwnerWindow().getPeer(), acc));
+            setPeerListener(new PopupWindowPeerListener(PopupWindow.this));
         }
     }
 
     private Window rootWindow;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * This can be replaced by listening for the onShown/onHidden events
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected void impl_visibleChanged(boolean visible) {
-        super.impl_visibleChanged(visible);
-
+    private void doVisibleChanged(boolean visible) {
         final Window ownerWindowValue = getOwnerWindow();
         if (visible) {
             rootWindow = getRootWindow(ownerWindowValue);
@@ -520,13 +533,13 @@ public abstract class PopupWindow extends Window {
             // a better solution would require some focus manager, which can
             // track focus state across multiple windows
             bindOwnerFocusedProperty(ownerWindowValue);
-            setFocused(ownerWindowValue.isFocused());
+            WindowHelper.setFocused(this, ownerWindowValue.isFocused());
             handleAutofixActivation(true, isAutoFix());
             handleAutohideActivation(true, isAutoHide());
         } else {
             stopMonitorOwnerEvents(ownerWindowValue);
             unbindOwnerFocusedProperty(ownerWindowValue);
-            setFocused(false);
+            WindowHelper.setFocused(this, false);
             handleAutofixActivation(false, isAutoFix());
             handleAutohideActivation(false, isAutoHide());
             rootWindow = null;
@@ -873,7 +886,7 @@ public abstract class PopupWindow extends Window {
 
     private void bindOwnerFocusedProperty(final Window ownerWindowValue) {
         ownerFocusedListener =
-                (observable, oldValue, newValue) -> setFocused(newValue);
+                (observable, oldValue, newValue) -> WindowHelper.setFocused(this, newValue);
         ownerWindowValue.focusedProperty().addListener(ownerFocusedListener);
     }
 
