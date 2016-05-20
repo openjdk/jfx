@@ -87,16 +87,24 @@ public class PerformanceLogger {
     private static long baseTime;
 
     static {
-        String perfLoggingProp =
+        String perfLoggingProp = 
             java.security.AccessController.doPrivileged(
-            new sun.security.action.GetPropertyAction("sun.perflog"));
+                    new java.security.PrivilegedAction<String>() {
+                        public String run() {
+                            return System.getProperty("sun.perflog");
+                        }
+                    });
         if (perfLoggingProp != null) {
             perfLoggingOn = true;
 
             // Check if we should use nanoTime
-            String perfNanoProp =
+            String perfNanoProp = 
                 java.security.AccessController.doPrivileged(
-                new sun.security.action.GetPropertyAction("sun.perflog.nano"));
+                    new java.security.PrivilegedAction<String>() {
+                        public String run() {
+                            return System.getProperty("sun.perflog.nano");
+                        }
+                    });
             if (perfNanoProp != null) {
                 useNanoTime = true;
             }
