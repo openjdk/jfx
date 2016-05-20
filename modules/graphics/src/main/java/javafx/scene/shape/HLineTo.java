@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.scene.shape.HLineToHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -49,11 +50,20 @@ path.getElements().add(new HLineTo(80.0f));
  * @since JavaFX 2.0
  */
 public class HLineTo extends PathElement {
+    static {
+        HLineToHelper.setHLineToAccessor(new HLineToHelper.HLineToAccessor() {
+            @Override
+            public void doAddTo(PathElement pathElement, Path2D path) {
+                ((HLineTo) pathElement).doAddTo(path);
+            }
+        });
+    }
 
     /**
      * Creates an empty instance of HLineTo.
      */
     public HLineTo() {
+        HLineToHelper.initHelper(this);
     }
 
     /**
@@ -62,6 +72,7 @@ public class HLineTo extends PathElement {
      */
     public HLineTo(double x) {
         setX(x);
+        HLineToHelper.initHelper(this);
     }
 
     /**
@@ -109,13 +120,10 @@ public class HLineTo extends PathElement {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_addTo(Path2D path) {
+    private void doAddTo(Path2D path) {
         if (isAbsolute()) {
             path.lineTo((float)getX(), path.getCurrentY());
         } else {

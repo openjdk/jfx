@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,8 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.PolylineHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPolyline;
 import com.sun.javafx.sg.prism.NGShape;
@@ -56,6 +58,24 @@ polyline.getPoints().addAll(new Double[]{
  * @since JavaFX 2.0
  */
 public  class Polyline extends Shape {
+    static {
+        PolylineHelper.setPolylineAccessor(new PolylineHelper.PolylineAccessor() {
+            @Override
+            public Paint doCssGetFillInitialValue(Shape shape) {
+                return ((Polyline) shape).doCssGetFillInitialValue();
+            }
+
+            @Override
+            public Paint doCssGetStrokeInitialValue(Shape shape) {
+                return ((Polyline) shape).doCssGetStrokeInitialValue();
+            }
+
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((Polyline) shape).doConfigShape();
+            }
+        });
+    }
 
     private final Path2D shape = new Path2D();
 
@@ -71,6 +91,7 @@ public  class Polyline extends Shape {
      * Creates an empty instance of Polyline.
      */
     public Polyline() {
+        PolylineHelper.initHelper(this);
     }
 
     /**
@@ -83,6 +104,7 @@ public  class Polyline extends Shape {
                 this.getPoints().add(p);
             }
         }
+        PolylineHelper.initHelper(this);
     }
 
     /**
@@ -120,12 +142,12 @@ public  class Polyline extends Shape {
      */
     @Deprecated
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        if (impl_mode == NGShape.Mode.EMPTY || getPoints().size() <= 1) {
+        if (getMode() == NGShape.Mode.EMPTY || getPoints().size() <= 1) {
             return bounds.makeEmpty();
         }
 
         if (getPoints().size() == 2) {
-            if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+            if (getMode() == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
                 return bounds.makeEmpty();
             }
             double upad = getStrokeWidth();
@@ -135,17 +157,14 @@ public  class Polyline extends Shape {
             return computeBounds(bounds, tx, upad, 0.5f,
                 getPoints().get(0), getPoints().get(1), 0.0f, 0.0f);
         } else {
-            return computeShapeBounds(bounds, tx, impl_configShape());
+            return computeShapeBounds(bounds, tx, ShapeHelper.configShape(this));
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Path2D impl_configShape() {
+    private Path2D doConfigShape() {
         double p1 = getPoints().get(0);
         double p2 = getPoints().get(1);
         shape.reset();
@@ -183,27 +202,25 @@ public  class Polyline extends Shape {
      *                                                                         *
      **************************************************************************/
 
-    /**
+    /*
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#fill} property. This allows
      * CSS to get the correct initial value.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected Paint impl_cssGetFillInitialValue() {
+    private Paint doCssGetFillInitialValue() {
         return null;
     }
 
-    /**
+    /*
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#stroke} property. This allows
      * CSS to get the correct initial value.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected Paint impl_cssGetStrokeInitialValue() {
+    private Paint doCssGetStrokeInitialValue() {
         return Color.BLACK;
     }
 

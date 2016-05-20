@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package test.javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
+import com.sun.javafx.scene.shape.PathElementHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -47,7 +48,7 @@ public class VLineToTest {
         Path2D path = new Path2D();
         path.moveTo(0f, 0f);
         final VLineTo vLineTo = new VLineTo(1f);
-        vLineTo.impl_addTo(path);
+        PathElementHelper.addTo(vLineTo, path);
         assertEquals(0.0, path.getCurrentPoint().x, 0.0001f);
         assertEquals(1.0, path.getCurrentPoint().y, 0.0001f);
     }

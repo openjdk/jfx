@@ -171,8 +171,8 @@ public class Stage extends Window {
 
     static {
         StageHelper.setStageAccessor(new StageHelper.StageAccessor() {
-            @Override public String getMXWindowType(Window window) {
-                return ((Stage) window).getMXWindowType();
+            @Override public String doGetMXWindowType(Window window) {
+                return ((Stage) window).doGetMXWindowType();
             }
 
             @Override public void doVisibleChanging(Window window, boolean visible) {
@@ -327,7 +327,10 @@ public class Stage extends Window {
         return primary;
     }
 
-    String getMXWindowType() {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private String doGetMXWindowType() {
         return (primary) ? "PrimaryStage" : getClass().getSimpleName();
     }
 

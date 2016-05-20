@@ -26,6 +26,7 @@
 -XaddExports:javafx.graphics/com.sun.javafx.scene=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.input=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.layout.region=ALL-UNNAMED
+-XaddExports:javafx.graphics/com.sun.javafx.scene.shape=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.transform=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.javafx.scene.traversal=ALL-UNNAMED

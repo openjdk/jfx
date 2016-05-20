@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Line2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.LineHelper;
 import com.sun.javafx.sg.prism.NGLine;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
@@ -56,6 +57,24 @@ line.setEndY(100.0f);
  * @since JavaFX 2.0
  */
 public class Line extends Shape {
+    static {
+        LineHelper.setLineAccessor(new LineHelper.LineAccessor() {
+            @Override
+            public Paint doCssGetFillInitialValue(Shape shape) {
+                return ((Line) shape).doCssGetFillInitialValue();
+            }
+
+            @Override
+            public Paint doCssGetStrokeInitialValue(Shape shape) {
+                return ((Line) shape).doCssGetStrokeInitialValue();
+            }
+
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((Line) shape).doConfigShape();
+            }
+        });
+    }
 
     private final Line2D shape = new Line2D();
 
@@ -71,6 +90,7 @@ public class Line extends Shape {
      * Creates an empty instance of Line.
      */
     public Line() {
+        LineHelper.initHelper(this);
     }
 
     /**
@@ -85,6 +105,7 @@ public class Line extends Shape {
         setStartY(startY);
         setEndX(endX);
         setEndY(endY);
+        LineHelper.initHelper(this);
     }
 
     /**
@@ -255,7 +276,7 @@ public class Line extends Shape {
 
         // Since line's only draw with strokes, if the mode is FILL or EMPTY
         // then we simply return empty bounds
-        if (impl_mode == NGShape.Mode.FILL || impl_mode == NGShape.Mode.EMPTY ||
+        if (getMode() == NGShape.Mode.FILL || getMode() == NGShape.Mode.EMPTY ||
             getStrokeType() == StrokeType.INSIDE)
         {
             return bounds.makeEmpty();
@@ -348,13 +369,10 @@ public class Line extends Shape {
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Line2D impl_configShape() {
+    private Line2D doConfigShape() {
         shape.setLine((float)getStartX(), (float)getStartY(), (float)getEndX(), (float)getEndY());
         return shape;
     }
@@ -383,15 +401,14 @@ public class Line extends Shape {
      *                                                                         *
      **************************************************************************/
 
-    /**
+    /*
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#fill} property. This allows
      * CSS to get the correct initial value.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected Paint impl_cssGetFillInitialValue() {
+    private Paint doCssGetFillInitialValue() {
         return null;
     }
 
@@ -399,11 +416,10 @@ public class Line extends Shape {
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#stroke} property. This allows
      * CSS to get the correct initial value.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected Paint impl_cssGetStrokeInitialValue() {
+    private Paint doCssGetStrokeInitialValue() {
         return Color.BLACK;
     }
 

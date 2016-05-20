@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.shape.ArcToHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
@@ -90,12 +91,20 @@ path.getElements().add(arcTo);
  * @since JavaFX 2.0
  */
 public class ArcTo extends PathElement {
-
+    static {
+        ArcToHelper.setArcToAccessor(new ArcToHelper.ArcToAccessor() {
+            @Override
+            public void doAddTo(PathElement pathElement, Path2D path) {
+                ((ArcTo) pathElement).doAddTo(path);
+            }
+        });
+    }
 
     /**
      * Creates an empty instance of ArcTo.
      */
     public ArcTo() {
+        ArcToHelper.initHelper(this);
     }
 
     /**
@@ -118,6 +127,7 @@ public class ArcTo extends PathElement {
         setY(y);
         setLargeArcFlag(largeArcFlag);
         setSweepFlag(sweepFlag);
+        ArcToHelper.initHelper(this);
     }
 
     /**
@@ -411,12 +421,10 @@ public class ArcTo extends PathElement {
         addArcTo(pgPath, null, pgPath.getCurrentX(), pgPath.getCurrentY());
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_addTo(Path2D path) {
+    private void doAddTo(Path2D path) {
         addArcTo(null, path, path.getCurrentX(), path.getCurrentY());
     }
 

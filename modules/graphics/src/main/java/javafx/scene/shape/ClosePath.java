@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.scene.shape.ClosePathHelper;
 import com.sun.javafx.sg.prism.NGPath;
 
 /**
@@ -36,6 +37,21 @@ import com.sun.javafx.sg.prism.NGPath;
  * @since JavaFX 2.0
  */
 public class ClosePath extends PathElement {
+    static {
+        ClosePathHelper.setClosePathAccessor(new ClosePathHelper.ClosePathAccessor() {
+            @Override
+            public void doAddTo(PathElement pathElement, Path2D path) {
+                ((ClosePath) pathElement).doAddTo(path);
+            }
+        });
+    }
+
+    /**
+     * Creates an empty instance of ClosePath.
+     */
+    public ClosePath() {
+        ClosePathHelper.initHelper(this);
+    }
 
     /**
      * {@inheritDoc}
@@ -45,12 +61,10 @@ public class ClosePath extends PathElement {
         pgPath.addClosePath();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_addTo(Path2D path) {
+    private void doAddTo(Path2D path) {
         path.closePath();
     }
 

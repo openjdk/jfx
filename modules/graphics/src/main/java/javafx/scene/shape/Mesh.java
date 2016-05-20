@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,12 @@
 package javafx.scene.shape;
 
 import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.PickRay;
-import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.shape.MeshHelper;
 import com.sun.javafx.sg.prism.NGTriangleMesh;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.scene.Node;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -46,6 +44,28 @@ import sun.util.logging.PlatformLogger;
  * @since JavaFX 8.0
  */
 public abstract class Mesh {
+
+    /*
+     * Store the singleton instance of the MeshHelper subclass corresponding
+     * to the subclass of this instance of Mesh
+     */
+    private MeshHelper meshHelper = null;
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        MeshHelper.setMeshAccessor(new MeshHelper.MeshAccessor() {
+            @Override
+            public MeshHelper getHelper(Mesh mesh) {
+                return mesh.meshHelper;
+            }
+
+            @Override
+            public void setHelper(Mesh mesh, MeshHelper meshHelper) {
+                mesh.meshHelper = meshHelper;
+            }
+        });
+    }
 
     protected Mesh() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
@@ -78,26 +98,8 @@ public abstract class Mesh {
 
     // We only support one type of mesh for FX 8.
     abstract NGTriangleMesh getPGMesh();
-    abstract void impl_updatePG();
+    abstract void updatePG();
 
     abstract BaseBounds computeBounds(BaseBounds b);
 
-    /**
-     * Picking implementation.
-     * @param pickRay The pick ray
-     * @param pickResult The pick result to be updated (if a closer intersection is found)
-     * @param candidate The Node that owns this mesh to be filled in the pick
-     *                  result in case a closer intersection is found
-     * @param cullFace The cull face of the node that owns this mesh
-     * @param reportFace Whether to report the hit face
-     * @return true if the pickRay intersects this mesh (regardless of whether
-     *              the pickResult has been updated)
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    abstract protected boolean impl_computeIntersects(PickRay pickRay,
-            PickResultChooser pickResult, Node candidate, CullFace cullFace,
-            boolean reportFace);
 }

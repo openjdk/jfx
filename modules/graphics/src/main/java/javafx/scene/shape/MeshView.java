@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.shape.MeshHelper;
 import com.sun.javafx.sg.prism.NGMeshView;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.ObjectProperty;
@@ -118,7 +119,7 @@ public class MeshView extends Shape3D {
         super.impl_updatePeer();
         NGMeshView peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.MESH_GEOM) && getMesh() != null) {
-            getMesh().impl_updatePG();
+            getMesh().updatePG();
         }
         if (impl_isDirty(DirtyBits.MESH)) {
             peer.setMesh((getMesh() == null) ? null : getMesh().getPGMesh());
@@ -168,7 +169,7 @@ public class MeshView extends Shape3D {
     @Override
     @Deprecated
     protected boolean impl_computeIntersects(PickRay pickRay, PickResultChooser pickResult) {
-        return getMesh().impl_computeIntersects(pickRay, pickResult, this, getCullFace(), true);
+        return MeshHelper.computeIntersects(getMesh(), pickRay, pickResult, this, getCullFace(), true);
     }
 
 }

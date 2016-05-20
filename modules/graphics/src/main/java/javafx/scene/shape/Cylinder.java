@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.shape.MeshHelper;
 import com.sun.javafx.sg.prism.NGCylinder;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.DoubleProperty;
@@ -180,8 +181,8 @@ public class Cylinder extends Shape3D {
                     key = generateKey(h, r, divisions);
                 }
                 mesh = manager.getCylinderMesh(h, r, divisions, key);
-                mesh.impl_updatePG();
-                peer.updateMesh(mesh.impl_getPGTriangleMesh());
+                mesh.updatePG();
+                peer.updateMesh(mesh.getPGTriangleMesh());
             }
         }
     }
@@ -346,7 +347,7 @@ public class Cylinder extends Shape3D {
         }
 
         if (exactPicking) {
-            return mesh.impl_computeIntersects(pickRay, pickResult, this, cullFace, false);
+            return MeshHelper.computeIntersects(mesh, pickRay, pickResult, this, cullFace, false);
         }
 
         if (pickResult != null && pickResult.isCloser(t)) {

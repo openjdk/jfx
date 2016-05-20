@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ package javafx.scene.shape;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.SVGPathHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGSVGPath;
 import com.sun.javafx.tk.Toolkit;
@@ -49,7 +51,16 @@ svg.setContent("M40,60 C42,48 44,30 25,32");
 </PRE>
  * @since JavaFX 2.0
  */
-public  class SVGPath extends Shape {
+public class SVGPath extends Shape {
+    static {
+        SVGPathHelper.setSVGPathAccessor(new SVGPathHelper.SVGPathAccessor() {
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((SVGPath) shape).doConfigShape();
+            }
+        });
+    }
+
     /**
      * Defines the filling rule constant for determining the interior of the path.
      * The value must be one of the following constants:
@@ -61,6 +72,13 @@ public  class SVGPath extends Shape {
     private ObjectProperty<FillRule> fillRule;
 
     private Path2D path2d;
+
+    /**
+     * Creates an empty instance of SVGPath.
+     */
+    public SVGPath() {
+         SVGPathHelper.initHelper(this);
+    }
 
     public final void setFillRule(FillRule value) {
         if (fillRule != null || value != FillRule.NON_ZERO) {
@@ -150,13 +168,10 @@ public  class SVGPath extends Shape {
         return new NGSVGPath();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Path2D impl_configShape() {
+    private Path2D doConfigShape() {
         if (path2d == null) {
             path2d = createSVGPath2D();
         } else {
@@ -185,7 +200,7 @@ public  class SVGPath extends Shape {
                     svgPathObject = new Path2D();
                 }
                 Path2D tempPathObject = (Path2D) svgPathObject;
-                tempPathObject.setTo(impl_configShape());
+                tempPathObject.setTo((Path2D) ShapeHelper.configShape(this));
             } else {
                 svgPathObject = createSVGPathObject();
             }

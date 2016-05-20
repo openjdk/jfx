@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.CircleHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGCircle;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
@@ -55,6 +57,14 @@ circle.setRadius(50.0f);
  * @since JavaFX 2.0
  */
 public class Circle extends Shape {
+    static {
+        CircleHelper.setCircleAccessor(new CircleHelper.CircleAccessor() {
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((Circle) shape).doConfigShape();
+            }
+        });
+    }
 
     private final Ellipse2D shape = new Ellipse2D();
 
@@ -64,6 +74,7 @@ public class Circle extends Shape {
      */
     public Circle(double radius) {
         setRadius(radius);
+        CircleHelper.initHelper(this);
     }
 
     /**
@@ -74,12 +85,14 @@ public class Circle extends Shape {
     public Circle(double radius, Paint fill) {
         setRadius(radius);
         setFill(fill);
+        CircleHelper.initHelper(this);
     }
 
     /**
      * Creates an empty instance of Circle.
      */
     public Circle() {
+        CircleHelper.initHelper(this);
     }
 
     /**
@@ -92,6 +105,7 @@ public class Circle extends Shape {
         setCenterX(centerX);
         setCenterY(centerY);
         setRadius(radius);
+        CircleHelper.initHelper(this);
     }
 
     /**
@@ -106,6 +120,7 @@ public class Circle extends Shape {
         setCenterY(centerY);
         setRadius(radius);
         setFill(fill);
+        CircleHelper.initHelper(this);
     }
 
     /**
@@ -268,7 +283,7 @@ public class Circle extends Shape {
         // if there is no fill or stroke, then there are no bounds. The bounds
         // must be marked empty in this case to distinguish it from 0,0,0,0
         // which would actually contribute to the bounds of a group.
-        if (impl_mode == NGShape.Mode.EMPTY) {
+        if (getMode() == NGShape.Mode.EMPTY) {
             return bounds.makeEmpty();
         }
 
@@ -281,7 +296,7 @@ public class Circle extends Shape {
             double tCY = cX * tx.getMyx() + cY * tx.getMyy() + tx.getMyt();
             double r = getRadius();
 
-            if (impl_mode != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
+            if (getMode() != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
                 double upad = getStrokeWidth();
                 if (getStrokeType() == StrokeType.CENTERED) {
                     upad /= 2.0f;
@@ -298,7 +313,7 @@ public class Circle extends Shape {
             final double width = 2.0 * r;
             final double height = width;
             double upad;
-            if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+            if (getMode() == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
                 upad = 0.0f;
             } else {
                 upad = getStrokeWidth();
@@ -306,15 +321,13 @@ public class Circle extends Shape {
             return computeBounds(bounds, tx, upad, 0, x, y, width, height);
         }
 
-        return computeShapeBounds(bounds, tx, impl_configShape());
+        return computeShapeBounds(bounds, tx, ShapeHelper.configShape(this));
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public Ellipse2D impl_configShape() {
+    private Ellipse2D doConfigShape() {
         double r = getRadius();
         shape.setFrame(
             (float)(getCenterX() - r), // x

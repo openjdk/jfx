@@ -31,6 +31,7 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.shape.MeshHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGSphere;
 import javafx.beans.property.DoubleProperty;
@@ -155,8 +156,8 @@ public class Sphere extends Shape3D {
                     key = generateKey(r, divisions);
                 }
                 mesh = manager.getSphereMesh(r, divisions, key);
-                mesh.impl_updatePG();
-                pgSphere.updateMesh(mesh.impl_getPGTriangleMesh());
+                mesh.updatePG();
+                pgSphere.updateMesh(mesh.getPGTriangleMesh());
             }
         }
     }
@@ -264,7 +265,7 @@ public class Sphere extends Shape3D {
         }
 
         if (exactPicking) {
-            return mesh.impl_computeIntersects(pickRay, pickResult, this, cullFace, false);
+            return MeshHelper.computeIntersects(mesh, pickRay, pickResult, this, cullFace, false);
         }
 
         if (pickResult != null && pickResult.isCloser(t)) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPolygon;
 import javafx.collections.ObservableList;
@@ -114,7 +115,7 @@ public class PolygonTest {
     @Test public void testConfigShape() throws Exception {
         final StubPolygon polygon =
                 new StubPolygon(new double[] { 0, 0, 0, 1, 1, 1, 1, 0 });
-        final Path2D path = polygon.impl_configShape();
+        final Path2D path = (Path2D) ShapeHelper.configShape(polygon);
         assertTrue(path.contains(0.5f, 0.5f));
         assertFalse(path.contains(0, 2));
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.scene.shape;
 
 import com.sun.javafx.geom.CubicCurve2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.CubicCurveHelper;
 import com.sun.javafx.sg.prism.NGCubicCurve;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.DoubleProperty;
@@ -59,6 +60,14 @@ cubic.setEndY(50.0f);
  * @since JavaFX 2.0
  */
 public class CubicCurve extends Shape {
+    static {
+        CubicCurveHelper.setCubicCurveAccessor(new CubicCurveHelper.CubicCurveAccessor() {
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((CubicCurve) shape).doConfigShape();
+            }
+        });
+    }
 
     private final CubicCurve2D shape = new CubicCurve2D();
     /**
@@ -72,6 +81,7 @@ public class CubicCurve extends Shape {
      * Creates an empty instance of CubicCurve.
      */
     public CubicCurve() {
+        CubicCurveHelper.initHelper(this);
     }
 
     /**
@@ -97,6 +107,7 @@ public class CubicCurve extends Shape {
         setControlY2(controlY2);
         setEndX(endX);
         setEndY(endY);
+        CubicCurveHelper.initHelper(this);
     }
 
     public final void setStartX(double value) {
@@ -424,12 +435,10 @@ public class CubicCurve extends Shape {
         return endY;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public CubicCurve2D impl_configShape() {
+    private CubicCurve2D doConfigShape() {
         shape.x1 = (float)getStartX();
         shape.y1 = (float)getStartY();
         shape.ctrlx1 = (float)getControlX1();

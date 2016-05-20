@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.scene.shape.MoveToHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -50,11 +51,20 @@ path.getElements().add(new LineTo(100.0f, 100.0f));
  * @since JavaFX 2.0
  */
 public class MoveTo extends PathElement {
+    static {
+        MoveToHelper.setMoveToAccessor(new MoveToHelper.MoveToAccessor() {
+            @Override
+            public void doAddTo(PathElement pathElement, Path2D path) {
+                ((MoveTo) pathElement).doAddTo(path);
+            }
+        });
+    }
 
     /**
      * Creates an empty instance of MoveTo.
      */
     public MoveTo() {
+        MoveToHelper.initHelper(this);
     }
 
     /**
@@ -65,6 +75,7 @@ public class MoveTo extends PathElement {
     public MoveTo(double x, double y) {
         setX(x);
         setY(y);
+        MoveToHelper.initHelper(this);
     }
 
     /**
@@ -157,13 +168,10 @@ public class MoveTo extends PathElement {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_addTo(Path2D path) {
+    private void doAddTo(Path2D path) {
         if (isAbsolute()) {
             path.moveTo((float)getX(), (float)getY());
         } else {

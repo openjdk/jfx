@@ -35,6 +35,7 @@ import javafx.util.Duration;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import java.util.ArrayList;
 
 /**
@@ -377,7 +378,7 @@ public final class PathTransition extends Transition {
         Segment lastSeg = Segment.getZeroSegment();
 
         float[] coords = new float[6];
-        for (PathIterator i = p.impl_configShape().getPathIterator(p.impl_getLeafTransform(), 1.0f); !i.isDone(); i.next()) {
+        for (PathIterator i = ShapeHelper.configShape(p).getPathIterator(p.impl_getLeafTransform(), 1.0f); !i.isDone(); i.next()) {
             Segment newSeg = null;
             int segType = i.currentSegment(coords);
             double x = coords[0];

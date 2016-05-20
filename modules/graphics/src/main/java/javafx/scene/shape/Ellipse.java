@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.EllipseHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGEllipse;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
@@ -53,6 +55,14 @@ ellipse.setRadiusY(25.0f);
  * @since JavaFX 2.0
  */
 public class Ellipse extends Shape {
+    static {
+        EllipseHelper.setEllipseAccessor(new EllipseHelper.EllipseAccessor() {
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((Ellipse) shape).doConfigShape();
+            }
+        });
+    }
 
     private final Ellipse2D shape = new Ellipse2D();
 
@@ -67,6 +77,7 @@ public class Ellipse extends Shape {
      * Creates an empty instance of Ellipse.
      */
     public Ellipse() {
+        EllipseHelper.initHelper(this);
     }
 
     /**
@@ -77,6 +88,7 @@ public class Ellipse extends Shape {
     public Ellipse(double radiusX, double radiusY) {
         setRadiusX(radiusX);
         setRadiusY(radiusY);
+        EllipseHelper.initHelper(this);
     }
 
     /**
@@ -90,6 +102,7 @@ public class Ellipse extends Shape {
         this(radiusX, radiusY);
         setCenterX(centerX);
         setCenterY(centerY);
+        EllipseHelper.initHelper(this);
     }
 
     /**
@@ -282,11 +295,11 @@ public class Ellipse extends Shape {
         // if there is no fill or stroke, then there are no bounds. The bounds
         // must be marked empty in this case to distinguish it from 0,0,0,0
         // which would actually contribute to the bounds of a group.
-        if (impl_mode == NGShape.Mode.EMPTY) {
+        if (getMode() == NGShape.Mode.EMPTY) {
             return bounds.makeEmpty();
         }
         if ((tx.getType() & NON_RECTILINEAR_TYPE_MASK) != 0) {
-            return computeShapeBounds(bounds, tx, impl_configShape());
+            return computeShapeBounds(bounds, tx, ShapeHelper.configShape(this));
         }
 
         // compute the x, y, width and height of the ellipse
@@ -296,7 +309,7 @@ public class Ellipse extends Shape {
         final double height = 2.0f * getRadiusY();
         double upad;
         double dpad;
-        if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+        if (getMode() == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
             upad = dpad = 0.0f;
         } else {
             upad = getStrokeWidth();
@@ -308,13 +321,10 @@ public class Ellipse extends Shape {
         return computeBounds(bounds, tx, upad, dpad, x, y, width, height);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Ellipse2D impl_configShape() {
+    private Ellipse2D doConfigShape() {
         shape.setFrame(
             (float)(getCenterX() - getRadiusX()), // x
             (float)(getCenterY() - getRadiusY()), // y

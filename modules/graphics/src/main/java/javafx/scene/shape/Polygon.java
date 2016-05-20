@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,8 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.PolygonHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPolygon;
 import com.sun.javafx.sg.prism.NGShape;
@@ -54,6 +56,14 @@ polygon.getPoints().addAll(new Double[]{
  * @since JavaFX 2.0
  */
 public  class Polygon extends Shape {
+    static {
+        PolygonHelper.setPolygonAccessor(new PolygonHelper.PolygonAccessor() {
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((Polygon) shape).doConfigShape();
+            }
+        });
+    }
 
     private final Path2D shape = new Path2D();
 
@@ -61,6 +71,7 @@ public  class Polygon extends Shape {
      * Creates an empty instance of Polygon.
      */
     public Polygon() {
+        PolygonHelper.initHelper(this);
     }
 
     /**
@@ -73,6 +84,7 @@ public  class Polygon extends Shape {
                 this.getPoints().add(p);
             }
         }
+        PolygonHelper.initHelper(this);
     }
 
     /**
@@ -109,12 +121,12 @@ public  class Polygon extends Shape {
      */
     @Deprecated
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        if (impl_mode == NGShape.Mode.EMPTY || getPoints().size() <= 1) {
+        if (getMode() == NGShape.Mode.EMPTY || getPoints().size() <= 1) {
             return bounds.makeEmpty();
         }
 
         if (getPoints().size() == 2) {
-            if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+            if (getMode() == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
                 return bounds.makeEmpty();
             }
             double upad = getStrokeWidth();
@@ -124,17 +136,14 @@ public  class Polygon extends Shape {
             return computeBounds(bounds, tx, upad, 0.5f,
                 getPoints().get(0), getPoints().get(1), 0.0f, 0.0f);
         } else {
-            return computeShapeBounds(bounds, tx, impl_configShape());
+            return computeShapeBounds(bounds, tx, ShapeHelper.configShape(this));
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Path2D impl_configShape() {
+    private Path2D doConfigShape() {
         double p1 = getPoints().get(0);
         double p2 = getPoints().get(1);
         shape.reset();

@@ -86,7 +86,7 @@ public class WindowHelper {
      */
 
     protected String getMXWindowTypeImpl(Window window) {
-        return windowAccessor.getMXWindowType(window);
+        return windowAccessor.doGetMXWindowType(window);
     }
 
     protected void visibleChangingImpl(Window window, boolean visible) {
@@ -158,7 +158,7 @@ public class WindowHelper {
     public interface WindowAccessor {
         WindowHelper getHelper(Window window);
         void setHelper(Window window, WindowHelper windowHelper);
-        String getMXWindowType(Window window);
+        String doGetMXWindowType(Window window);
         void doVisibleChanging(Window window, boolean visible);
         void doVisibleChanged(Window window, boolean visible);
         TKStage getPeer(Window window);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.tk.Toolkit;
@@ -116,6 +117,60 @@ import java.lang.ref.WeakReference;
  * @since JavaFX 2.0
  */
 public abstract class Shape extends Node {
+
+    /*
+     * Store the singleton instance of the ShapeHelper subclass corresponding
+     * to the subclass of this instance of Shape
+     *
+     * TODO: This field will eventually be moved to Node and be renamed as nodeHelper
+     *       once all the impl_XXX encapsulation work is done
+     */
+    private ShapeHelper shapeHelper = null;
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        ShapeHelper.setShapeAccessor(new ShapeHelper.ShapeAccessor() {
+            // TODO: This method will eventually be moved to Node once all the
+            // impl_XXX encapsulation work is done
+            @Override
+            public ShapeHelper getHelper(Shape shape) {
+                return shape.shapeHelper;
+            }
+
+            // TODO: This method will eventually be moved to Node once all the
+            // impl_XXX encapsulation work is done
+            @Override
+            public void setHelper(Shape shape, ShapeHelper shapeHelper) {
+                shape.shapeHelper = shapeHelper;
+            }
+
+            @Override
+            public Paint doCssGetFillInitialValue(Shape shape) {
+                return shape.doCssGetFillInitialValue();
+            }
+
+            @Override
+            public Paint doCssGetStrokeInitialValue(Shape shape) {
+                return shape.doCssGetStrokeInitialValue();
+            }
+
+            @Override
+            public NGShape.Mode getMode(Shape shape) {
+                return shape.getMode();
+            }
+
+            @Override
+            public void setMode(Shape shape, NGShape.Mode mode) {
+                shape.setMode(mode);
+            }
+
+            @Override
+            public void setShapeChangeListener(Shape shape, Runnable listener) {
+                shape.setShapeChangeListener(listener);
+            }
+        });
+    }
 
     /**
      * @treatAsPrivate implementation detail
@@ -338,17 +393,20 @@ public abstract class Shape extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected NGShape.Mode impl_mode = NGShape.Mode.FILL;
+    NGShape.Mode getMode() {
+        return mode;
+    }
+
+    void setMode(NGShape.Mode mode) {
+        mode = mode;
+    }
+
+    private NGShape.Mode mode = NGShape.Mode.FILL;
 
     private void checkModeChanged() {
         NGShape.Mode newMode = computeMode();
-        if (impl_mode != newMode) {
-            impl_mode = newMode;
+        if (mode != newMode) {
+            mode = newMode;
 
             impl_markDirty(DirtyBits.SHAPE_MODE);
             impl_geomChanged();
@@ -547,27 +605,25 @@ public abstract class Shape extends Node {
      *                                                                         *
      **************************************************************************/
 
-    /**
+    /*
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#fill} property. This allows
      * CSS to get the correct initial value.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected Paint impl_cssGetFillInitialValue() {
+    private Paint doCssGetFillInitialValue() {
         return Color.BLACK;
     }
 
-    /**
+    /*
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#stroke} property. This allows
      * CSS to get the correct initial value.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected Paint impl_cssGetStrokeInitialValue() {
+    private Paint doCssGetStrokeInitialValue() {
         return null;
     }
 
@@ -599,7 +655,7 @@ public abstract class Shape extends Node {
             public Paint getInitialValue(Shape node) {
                 // Some shapes have a different initial value for fill.
                 // Give a way to have them return the correct initial value.
-                return node.impl_cssGetFillInitialValue();
+                return ShapeHelper.cssGetFillInitialValue(node);
             }
 
         };
@@ -646,7 +702,7 @@ public abstract class Shape extends Node {
             public Paint getInitialValue(Shape node) {
                 // Some shapes have a different initial value for stroke.
                 // Give a way to have them return the correct initial value.
-                return node.impl_cssGetStrokeInitialValue();
+                return ShapeHelper.cssGetStrokeInitialValue(node);
             }
 
 
@@ -860,7 +916,7 @@ public abstract class Shape extends Node {
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds,
                                              BaseTransform tx) {
-        return computeShapeBounds(bounds, tx, impl_configShape());
+        return computeShapeBounds(bounds, tx, ShapeHelper.configShape(this));
     }
 
     /**
@@ -870,15 +926,8 @@ public abstract class Shape extends Node {
     @Deprecated
     @Override
     protected boolean impl_computeContains(double localX, double localY) {
-        return computeShapeContains(localX, localY, impl_configShape());
+        return computeShapeContains(localX, localY, ShapeHelper.configShape(this));
     }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public abstract com.sun.javafx.geom.Shape impl_configShape();
 
     private static final double MIN_STROKE_WIDTH = 0.0f;
     private static final double MIN_STROKE_MITER_LIMIT = 1.0f;
@@ -906,7 +955,7 @@ public abstract class Shape extends Node {
         }
 
         if (impl_isDirty(DirtyBits.SHAPE_MODE)) {
-            peer.setMode(impl_mode);
+            peer.setMode(mode);
         }
 
         if (impl_isDirty(DirtyBits.SHAPE_FILL)) {
@@ -943,12 +992,7 @@ public abstract class Shape extends Node {
 
     private Reference<Runnable> shapeChangeListener;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_setShapeChangeListener(Runnable listener) {
+    void setShapeChangeListener(Runnable listener) {
         if (shapeChangeListener != null) shapeChangeListener.clear();
         shapeChangeListener = listener != null ? new WeakReference(listener) : null;
     }
@@ -1064,7 +1108,7 @@ public abstract class Shape extends Node {
                                 com.sun.javafx.geom.Shape s)
     {
         // empty mode means no bounds!
-        if (impl_mode == NGShape.Mode.EMPTY) {
+        if (mode == NGShape.Mode.EMPTY) {
             return bounds.makeEmpty();
         }
 
@@ -1072,8 +1116,8 @@ public abstract class Shape extends Node {
             Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
             Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY,
         };
-        boolean includeShape = (impl_mode != NGShape.Mode.STROKE);
-        boolean includeStroke = (impl_mode != NGShape.Mode.FILL);
+        boolean includeShape = (mode != NGShape.Mode.STROKE);
+        boolean includeStroke = (mode != NGShape.Mode.FILL);
         if (includeStroke && (getStrokeType() == StrokeType.INSIDE)) {
             includeShape = true;
             includeStroke = false;
@@ -1115,12 +1159,12 @@ public abstract class Shape extends Node {
 
     boolean computeShapeContains(double localX, double localY,
                                  com.sun.javafx.geom.Shape s) {
-        if (impl_mode == NGShape.Mode.EMPTY) {
+        if (mode == NGShape.Mode.EMPTY) {
             return false;
         }
 
-        boolean includeShape = (impl_mode != NGShape.Mode.STROKE);
-        boolean includeStroke = (impl_mode != NGShape.Mode.FILL);
+        boolean includeShape = (mode != NGShape.Mode.STROKE);
+        boolean includeStroke = (mode != NGShape.Mode.FILL);
         if (includeStroke && includeShape &&
             (getStrokeType() == StrokeType.INSIDE))
         {
@@ -1653,13 +1697,13 @@ public abstract class Shape extends Node {
     }
 
     private Area getTransformedArea(final BaseTransform transform) {
-        if (impl_mode == NGShape.Mode.EMPTY) {
+        if (mode == NGShape.Mode.EMPTY) {
             return new Area();
         }
 
-        final com.sun.javafx.geom.Shape fillShape = impl_configShape();
-        if ((impl_mode == NGShape.Mode.FILL)
-                || (impl_mode == NGShape.Mode.STROKE_FILL)
+        final com.sun.javafx.geom.Shape fillShape = ShapeHelper.configShape(this);
+        if ((mode == NGShape.Mode.FILL)
+                || (mode == NGShape.Mode.STROKE_FILL)
                        && (getStrokeType() == StrokeType.INSIDE)) {
             return createTransformedArea(fillShape, transform);
         }
@@ -1683,7 +1727,7 @@ public abstract class Shape extends Node {
                         strokeLineJoin, strokeMiterLimit,
                         dashArray, (float) getStrokeDashOffset());
 
-        if (impl_mode == NGShape.Mode.STROKE) {
+        if (mode == NGShape.Mode.STROKE) {
             return createTransformedArea(strokeShape, transform);
         }
 

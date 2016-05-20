@@ -107,8 +107,8 @@ public class Window implements EventTarget {
                     }
 
                     @Override
-                    public String getMXWindowType(Window window) {
-                        return window.getMXWindowType();
+                    public String doGetMXWindowType(Window window) {
+                        return window.doGetMXWindowType();
                     }
 
                     @Override
@@ -265,7 +265,10 @@ public class Window implements EventTarget {
         this.peer = peer;
     }
 
-    String getMXWindowType() {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private String doGetMXWindowType() {
         return getClass().getSimpleName();
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public final class PathUtils {
                 evenOddFillRule ? Path2D.WIND_EVEN_ODD : Path2D.WIND_NON_ZERO,
                 pathElements.size());
         for (final PathElement el: pathElements) {
-            el.impl_addTo(path);
+            PathElementHelper.addTo(el, path);
         }
         return path;
     }

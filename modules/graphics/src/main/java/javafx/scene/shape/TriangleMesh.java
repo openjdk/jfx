@@ -33,6 +33,7 @@ import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.shape.TriangleMeshHelper;
 import com.sun.javafx.sg.prism.NGTriangleMesh;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -120,6 +121,17 @@ import sun.util.logging.PlatformLogger;
  * @since JavaFX 8.0
  */
 public class TriangleMesh extends Mesh {
+    static {
+        TriangleMeshHelper.setTriangleMeshAccessor(new TriangleMeshHelper.TriangleMeshAccessor() {
+            @Override
+            public boolean doComputeIntersects(Mesh mesh, PickRay pickRay,
+                    PickResultChooser pickResult, Node candidate, CullFace cullFace,
+                    boolean reportFace) {
+                return ((TriangleMesh) mesh).doComputeIntersects(pickRay,
+                        pickResult, candidate, cullFace, reportFace);
+            }
+        });
+    }
 
     private final ObservableFloatArray points = FXCollections.observableFloatArray();
     private final ObservableFloatArray normals = FXCollections.observableFloatArray();
@@ -145,6 +157,7 @@ public class TriangleMesh extends Mesh {
      */
     public TriangleMesh() {
         this(false);
+        TriangleMeshHelper.initHelper(this);
     }
 
     /**
@@ -158,6 +171,7 @@ public class TriangleMesh extends Mesh {
     public TriangleMesh(VertexFormat vertexFormat) {
         this(false);
         this.setVertexFormat(vertexFormat);
+        TriangleMeshHelper.initHelper(this);
     }
 
     TriangleMesh(boolean isPredefinedShape) {
@@ -175,6 +189,7 @@ public class TriangleMesh extends Mesh {
             isFacesValid = false;
             isFaceSmoothingGroupValid = false;
         }
+        TriangleMeshHelper.initHelper(this);
     }
 
     /**
@@ -350,13 +365,8 @@ public class TriangleMesh extends Mesh {
 
     private NGTriangleMesh peer;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    /** The peer node created by the graphics Toolkit/Pipeline implementation */
-    NGTriangleMesh impl_getPGTriangleMesh() {
+    /* The peer node created by the graphics Toolkit/Pipeline implementation */
+    NGTriangleMesh getPGTriangleMesh() {
         if (peer == null) {
             peer = new NGTriangleMesh();
         }
@@ -365,7 +375,7 @@ public class TriangleMesh extends Mesh {
 
     @Override
     NGTriangleMesh getPGMesh() {
-        return impl_getPGTriangleMesh();
+        return getPGTriangleMesh();
     }
 
     private boolean validatePoints() {
@@ -510,18 +520,13 @@ public class TriangleMesh extends Mesh {
                 && isFaceSmoothingGroupValid && isFacesValid;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override
-    void impl_updatePG() {
+    void updatePG() {
         if (!isDirty()) {
             return;
         }
 
-        final NGTriangleMesh pgTriMesh = impl_getPGTriangleMesh();
+        final NGTriangleMesh pgTriMesh = getPGTriangleMesh();
         if (validate()) {
             pgTriMesh.setUserDefinedNormals(getVertexFormat() == VertexFormat.POINT_NORMAL_TEXCOORD);
             pgTriMesh.syncPoints(pointsSyncer);
@@ -813,14 +818,10 @@ public class TriangleMesh extends Mesh {
         return false;
     }
 
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Override
-    @Deprecated
-    protected boolean impl_computeIntersects(PickRay pickRay, PickResultChooser pickResult,
+    private boolean doComputeIntersects(PickRay pickRay, PickResultChooser pickResult,
             Node candidate, CullFace cullFace, boolean reportFace) {
 
         boolean found = false;

@@ -75,6 +75,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRegion;
 import com.sun.javafx.tk.Toolkit;
@@ -1313,8 +1314,8 @@ public class
             final Shape value = get();
             if (_shape != value) {
                 // The shape has changed. We need to add/remove listeners
-                if (_shape != null) _shape.impl_setShapeChangeListener(null);
-                if (value != null) value.impl_setShapeChangeListener(this);
+                if (_shape != null) ShapeHelper.setShapeChangeListener(_shape, null);
+                if (value != null) ShapeHelper.setShapeChangeListener(value, this);
                 // Invalidate the bounds and such
                 run();
                 if (_shape == null || value == null) {
@@ -2766,7 +2767,7 @@ public class
                     bottomO = Math.min(bottomO, bf.getInsets().getBottom());
                     rightO = Math.min(rightO, bf.getInsets().getRight());
                 }
-                return shapeContains(_shape.impl_configShape(), localX, localY, topO, leftO, bottomO, rightO);
+                return shapeContains(ShapeHelper.configShape(_shape), localX, localY, topO, leftO, bottomO, rightO);
             }
             return false;
         }
@@ -3145,7 +3146,7 @@ public class
 
     private BaseBounds computeShapeBounds(BaseBounds bounds)
     {
-        com.sun.javafx.geom.Shape s = _shape.impl_configShape();
+        com.sun.javafx.geom.Shape s = ShapeHelper.configShape(_shape);
 
         float[] bbox = {
                 Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,

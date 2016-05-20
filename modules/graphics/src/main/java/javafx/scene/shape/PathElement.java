@@ -27,6 +27,7 @@ package javafx.scene.shape;
 
 import com.sun.javafx.util.WeakReferenceQueue;
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.scene.shape.PathElementHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
@@ -42,6 +43,27 @@ import java.util.Iterator;
  * @since JavaFX 2.0
  */
 public abstract class PathElement {
+    /*
+     * Store the singleton instance of the PathElementHelper subclass corresponding
+     * to the subclass of this instance of PathElement
+     */
+    private PathElementHelper pathElementHelper = null;
+
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        PathElementHelper.setPathElementAccessor(new PathElementHelper.PathElementAccessor() {
+            @Override
+            public PathElementHelper getHelper(PathElement pathElement) {
+                return pathElement.pathElementHelper;
+            }
+
+            @Override
+            public void setHelper(PathElement pathElement, PathElementHelper pathElementHelper) {
+                pathElement.pathElementHelper = pathElementHelper;
+            }
+        });
+    }
 
     /**
      * Defines the sequence of {@code Path} objects this path element
@@ -66,12 +88,6 @@ public abstract class PathElement {
 
     abstract void addTo(NGPath pgPath);
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public abstract void impl_addTo(Path2D path);
     /**
      * A flag that indicates whether the path coordinates are absolute or
      * relative. A value of true indicates that the coordinates are absolute

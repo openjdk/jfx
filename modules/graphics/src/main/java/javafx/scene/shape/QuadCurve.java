@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package javafx.scene.shape;
 
 import com.sun.javafx.geom.QuadCurve2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.QuadCurveHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGQuadCurve;
 import javafx.beans.property.DoubleProperty;
@@ -56,6 +57,14 @@ quad.setControlY(0.0f);
  * @since JavaFX 2.0
  */
 public  class QuadCurve extends Shape {
+    static {
+        QuadCurveHelper.setQuadCurveAccessor(new QuadCurveHelper.QuadCurveAccessor() {
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((QuadCurve) shape).doConfigShape();
+            }
+        });
+    }
 
     private final QuadCurve2D shape = new QuadCurve2D();
 
@@ -63,6 +72,7 @@ public  class QuadCurve extends Shape {
      * Creates an empty instance of QuadCurve.
      */
     public QuadCurve() {
+        QuadCurveHelper.initHelper(this);
     }
 
     /**
@@ -81,6 +91,7 @@ public  class QuadCurve extends Shape {
         setControlY(controlY);
         setEndX(endX);
         setEndY(endY);
+        QuadCurveHelper.initHelper(this);
     }
 
     /**
@@ -337,13 +348,10 @@ public  class QuadCurve extends Shape {
         return new NGQuadCurve();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public QuadCurve2D impl_configShape() {
+    private QuadCurve2D doConfigShape() {
         shape.x1 = (float)getStartX();
         shape.y1 = (float)getStartY();
         shape.ctrlx = (float)getControlX();

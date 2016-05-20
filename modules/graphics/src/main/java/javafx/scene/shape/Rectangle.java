@@ -42,6 +42,8 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.RectangleHelper;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRectangle;
 import com.sun.javafx.sg.prism.NGShape;
@@ -70,6 +72,14 @@ r.setArcHeight(20);
  * @since JavaFX 2.0
  */
 public  class Rectangle extends Shape {
+    static {
+        RectangleHelper.setRectangleAccessor(new RectangleHelper.RectangleAccessor() {
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((Rectangle) shape).doConfigShape();
+            }
+        });
+    }
 
     private final RoundRectangle2D shape = new RoundRectangle2D();
 
@@ -83,6 +93,7 @@ public  class Rectangle extends Shape {
      * Creates an empty instance of Rectangle.
      */
     public Rectangle() {
+        RectangleHelper.initHelper(this);
     }
 
     /**
@@ -93,6 +104,7 @@ public  class Rectangle extends Shape {
     public Rectangle(double width, double height) {
         setWidth(width);
         setHeight(height);
+        RectangleHelper.initHelper(this);
     }
 
     /**
@@ -105,6 +117,7 @@ public  class Rectangle extends Shape {
         setWidth(width);
         setHeight(height);
         setFill(fill);
+        RectangleHelper.initHelper(this);
     }
 
     /**
@@ -118,6 +131,7 @@ public  class Rectangle extends Shape {
         this(width, height);
         setX(x);
         setY(y);
+        RectangleHelper.initHelper(this);
     }
 
     /**
@@ -490,16 +504,16 @@ public  class Rectangle extends Shape {
         // if there is no fill or stroke, then there are no bounds. The bounds
         // must be marked empty in this case to distinguish it from 0,0,0,0
         // which would actually contribute to the bounds of a group.
-        if (impl_mode == NGShape.Mode.EMPTY) {
+        if (getMode() == NGShape.Mode.EMPTY) {
             return bounds.makeEmpty();
         }
         if ((getArcWidth() > 0) && (getArcHeight() > 0)
                 && ((tx.getType() & NON_RECTILINEAR_TYPE_MASK) != 0)) {
-            return computeShapeBounds(bounds, tx, impl_configShape());
+            return computeShapeBounds(bounds, tx, ShapeHelper.configShape(this));
         }
         double upad;
         double dpad;
-        if ((impl_mode == NGShape.Mode.FILL) || (getStrokeType() == StrokeType.INSIDE)) {
+        if ((getMode() == NGShape.Mode.FILL) || (getStrokeType() == StrokeType.INSIDE)) {
             upad = dpad = 0;
         } else {
             upad = getStrokeWidth();
@@ -511,13 +525,10 @@ public  class Rectangle extends Shape {
         return computeBounds(bounds, tx, upad, dpad, getX(), getY(), getWidth(), getHeight());
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public RoundRectangle2D impl_configShape() {
+    private RoundRectangle2D doConfigShape() {
         if ((getArcWidth() > 0) && (getArcHeight() > 0)) {
             shape.setRoundRect((float)getX(), (float)getY(),
                     (float)getWidth(), (float)getHeight(),

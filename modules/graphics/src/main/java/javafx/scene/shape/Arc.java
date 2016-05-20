@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.scene.shape;
 
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.ArcHelper;
 import com.sun.javafx.sg.prism.NGArc;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.DoubleProperty;
@@ -61,6 +62,14 @@ arc.setType(ArcType.ROUND);
  * @since JavaFX 2.0
  */
 public class Arc extends Shape {
+    static {
+        ArcHelper.setArcAccessor(new ArcHelper.ArcAccessor() {
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((Arc) shape).doConfigShape();
+            }
+        });
+    }
 
     private final Arc2D shape = new Arc2D();
 
@@ -68,6 +77,7 @@ public class Arc extends Shape {
      * Creates an empty instance of Arc.
      */
     public Arc() {
+        ArcHelper.initHelper(this);
     }
 
     /**
@@ -88,6 +98,7 @@ public class Arc extends Shape {
         setRadiusY(radiusY);
         setStartAngle(startAngle);
         setLength(length);
+        ArcHelper.initHelper(this);
     }
 
     /**
@@ -376,12 +387,10 @@ public class Arc extends Shape {
         return new NGArc();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public Arc2D impl_configShape() {
+    private Arc2D doConfigShape() {
         short tmpType;
         switch (getTypeInternal()) {
         case OPEN:

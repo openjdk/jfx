@@ -34,6 +34,8 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.TransformedShape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.ShapeHelper;
+import com.sun.javafx.scene.shape.TextHelper;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
@@ -98,6 +100,14 @@ text.setText("The quick brown fox jumps over the lazy dog");
  */
 @DefaultProperty("text")
 public class Text extends Shape {
+    static {
+        TextHelper.setTextAccessor(new TextHelper.TextAccessor() {
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((Text) shape).doConfigShape();
+            }
+        });
+    }
 
     private TextLayout layout;
     private static final PathElement[] EMPTY_PATH_ELEMENT_ARRAY = new PathElement[0];
@@ -123,6 +133,7 @@ public class Text extends Shape {
         managedProperty().addListener(listener);
         effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
         setPickOnBounds(true);
+        TextHelper.initHelper(this);
     }
 
     /**
@@ -132,6 +143,7 @@ public class Text extends Shape {
     public Text(String text) {
         this();
         setText(text);
+        TextHelper.initHelper(this);
     }
 
     /**
@@ -145,6 +157,7 @@ public class Text extends Shape {
         this(text);
         setX(x);
         setY(y);
+        TextHelper.initHelper(this);
     }
 
     private boolean isSpan;
@@ -339,7 +352,7 @@ public class Text extends Shape {
         } else {
             /* Relative to baseline (first line)
              * This shape can be translate in the y axis according
-             * to text origin, see impl_configShape().
+             * to text origin, see ShapeHelper.configShape().
              */
             type |= TextLayout.TYPE_BASELINE;
         }
@@ -347,7 +360,7 @@ public class Text extends Shape {
     }
 
     private BaseBounds getVisualBounds() {
-        if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+        if (ShapeHelper.getMode(this) == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
             int type = TextLayout.TYPE_TEXT;
             if (isStrikethrough()) type |= TextLayout.TYPE_STRIKETHROUGH;
             if (isUnderline()) type |= TextLayout.TYPE_UNDERLINE;
@@ -991,17 +1004,6 @@ public class Text extends Shape {
         return getRange(start, end, TextLayout.TYPE_UNDERLINE);
     }
 
-    /**
-     * Shows/Hides on-screen keyboard if available (mobile platform)
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void impl_displaySoftwareKeyboard(boolean display) {
-    }
-
     private float getYAdjustment(BaseBounds bounds) {
         VPos origin = getTextOrigin();
         if (origin == null) origin = DEFAULT_TEXT_ORIGIN;
@@ -1084,7 +1086,7 @@ public class Text extends Shape {
     public final BaseBounds impl_computeGeomBounds(BaseBounds bounds,
                                                    BaseTransform tx) {
         if (isSpan()) {
-            if (impl_mode != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
+            if (ShapeHelper.getMode(this) != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
                 return super.impl_computeGeomBounds(bounds, tx);
             }
             TextLayout layout = getTextLayout();
@@ -1099,10 +1101,10 @@ public class Text extends Shape {
         }
 
         if (getBoundsType() == TextBoundsType.VISUAL) {
-            if (getTextInternal().length() == 0 || impl_mode == NGShape.Mode.EMPTY) {
+            if (getTextInternal().length() == 0 || ShapeHelper.getMode(this) == NGShape.Mode.EMPTY) {
                 return bounds.makeEmpty();
             }
-            if (impl_mode == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
+            if (ShapeHelper.getMode(this) == NGShape.Mode.FILL || getStrokeType() == StrokeType.INSIDE) {
                 /* Optimize for FILL and INNER STROKE: save the cost of shaping each glyph */
                 BaseBounds visualBounds = getVisualBounds();
                 float x = visualBounds.getMinX() + (float) getX();
@@ -1141,7 +1143,7 @@ public class Text extends Shape {
         textBounds = new RectBounds(x, y, x + width, y + height);
 
         /* handle stroked text */
-        if (impl_mode != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
+        if (ShapeHelper.getMode(this) != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
             bounds =
                 super.impl_computeGeomBounds(bounds,
                                              BaseTransform.IDENTITY_TRANSFORM);
@@ -1185,15 +1187,11 @@ public class Text extends Shape {
         return false;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public final com.sun.javafx.geom.Shape impl_configShape() {
-        if (impl_mode == NGShape.Mode.EMPTY || getTextInternal().length() == 0) {
+    private com.sun.javafx.geom.Shape doConfigShape() {
+        if (ShapeHelper.getMode(this) == NGShape.Mode.EMPTY || getTextInternal().length() == 0) {
             return new Path2D();
         }
         com.sun.javafx.geom.Shape shape = getShape();

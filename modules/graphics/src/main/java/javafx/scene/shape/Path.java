@@ -28,7 +28,10 @@ package javafx.scene.shape;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.shape.PathElementHelper;
+import com.sun.javafx.scene.shape.PathHelper;
 import com.sun.javafx.scene.shape.PathUtils;
+import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.ObjectProperty;
@@ -87,6 +90,24 @@ path.getElements().add(arcTo);
  * @since JavaFX 2.0
  */
 public class Path extends Shape {
+    static {
+        PathHelper.setPathAccessor(new PathHelper.PathAccessor() {
+            @Override
+            public Paint doCssGetFillInitialValue(Shape shape) {
+                return ((Path) shape).doCssGetFillInitialValue();
+            }
+
+            @Override
+            public Paint doCssGetStrokeInitialValue(Shape shape) {
+                return ((Path) shape).doCssGetStrokeInitialValue();
+            }
+
+            @Override
+            public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
+                return ((Path) shape).doConfigShape();
+            }
+        });
+    }
 
     private Path2D path2d = null;
 
@@ -94,6 +115,7 @@ public class Path extends Shape {
      * Creates an empty instance of Path.
      */
     public Path() {
+        PathHelper.initHelper(this);
     }
 
     /**
@@ -105,6 +127,7 @@ public class Path extends Shape {
         if (elements != null) {
             this.elements.addAll(elements);
         }
+        PathHelper.initHelper(this);
     }
 
     /**
@@ -116,6 +139,7 @@ public class Path extends Shape {
         if (elements != null) {
             this.elements.addAll(elements);
         }
+        PathHelper.initHelper(this);
     }
 
     {
@@ -208,7 +232,7 @@ public class Path extends Shape {
                 if (c.getFrom() == c.getList().size() && !c.wasRemoved() && c.wasAdded()) {
                     // some elements added
                     for (int i = c.getFrom(); i < c.getTo(); ++i) {
-                        list.get(i).impl_addTo(path2d);
+                        PathElementHelper.addTo(list.get(i), path2d);
                     }
                 } else {
                     path2d = null;
@@ -239,13 +263,10 @@ public class Path extends Shape {
         return new NGPath();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Path2D impl_configShape() {
+    private Path2D doConfigShape() {
         if (isPathValid) {
             if (path2d == null) {
                 path2d = PathUtils.configShape(getElements(), getFillRule() == FillRule.EVEN_ODD);
@@ -301,7 +322,7 @@ public class Path extends Shape {
         if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
             NGPath peer = impl_getPeer();
             if (peer.acceptsPath2dOnUpdate()) {
-                peer.updateWithPath2d(impl_configShape());
+                peer.updateWithPath2d((Path2D) ShapeHelper.configShape(this));
             } else {
                 peer.reset();
                 if (isPathValid) {
@@ -321,27 +342,25 @@ public class Path extends Shape {
      *                                                                         *
      **************************************************************************/
 
-    /**
+    /*
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#fill} property. This allows
      * CSS to get the correct initial value.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected Paint impl_cssGetFillInitialValue() {
+    private Paint doCssGetFillInitialValue() {
         return null;
     }
 
-    /**
+    /*
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#stroke} property. This allows
      * CSS to get the correct initial value.
-     * @treatAsPrivate Implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected Paint impl_cssGetStrokeInitialValue() {
+    private Paint doCssGetStrokeInitialValue() {
         return Color.BLACK;
     }
 
