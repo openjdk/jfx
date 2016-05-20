@@ -79,7 +79,7 @@ public class PrismFontLoader extends FontLoader {
                 if (p.startsWith("/")) {
                     p = p.substring(1);
                     try (InputStream in = loader.getResourceAsStream(p)) {
-                        fontFactory.loadEmbeddedFont(n, in, 0, true);
+                        fontFactory.loadEmbeddedFont(n, in, 0, true, false);
                     } catch (Exception e) {
                     }
                 }
@@ -88,18 +88,35 @@ public class PrismFontLoader extends FontLoader {
         }
     }
 
-    @Override public Font loadFont(InputStream in, double size) {
-        FontFactory factory = getFontFactoryFromPipeline();
-        PGFont font = factory.loadEmbeddedFont(null, in, (float)size, true);
-        if (font != null) return createFont(font);
-        return null;
+    private Font[] createFonts(PGFont[] fonts) {
+        if (fonts == null || fonts.length == 0) {
+            return null;
+        }
+        Font[] fxFonts = new Font[fonts.length];
+        for (int i=0; i<fonts.length; i++) {
+            fxFonts[i] = createFont(fonts[i]);
+        }
+        return fxFonts;
     }
 
-    @Override public Font loadFont(String path, double size) {
+    @Override public Font[] loadFont(InputStream in,
+                                     double size,
+                                     boolean loadAll) {
+
         FontFactory factory = getFontFactoryFromPipeline();
-        PGFont font = factory.loadEmbeddedFont(null, path, (float)size, true);
-        if (font != null) return createFont(font);
-        return null;
+        PGFont[] fonts =
+            factory.loadEmbeddedFont(null, in, (float)size, true, loadAll);
+        return createFonts(fonts);
+     }
+
+    @Override public Font[] loadFont(String path,
+                                     double size,
+                                     boolean loadAll) {
+
+        FontFactory factory = getFontFactoryFromPipeline();
+        PGFont[] fonts =
+            factory.loadEmbeddedFont(null, path, (float)size, true, loadAll);
+        return createFonts(fonts);
     }
 
     @SuppressWarnings("deprecation")

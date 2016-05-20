@@ -103,8 +103,9 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         init(name, fIndex);
     }
 
-    WeakReference<PrismFontFile> createFileDisposer(PrismFontFactory factory) {
-        FileDisposer disposer = new FileDisposer(filename, isTracked);
+    WeakReference<PrismFontFile> createFileDisposer(PrismFontFactory factory,
+                                                    FileRefCounter rc) {
+        FileDisposer disposer = new FileDisposer(filename, isTracked, rc);
         WeakReference<PrismFontFile> ref = Disposer.addRecord(this, disposer);
         disposer.setFactory(factory, ref);
         return ref;
@@ -121,6 +122,15 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             AccessController.doPrivileged(
                     (PrivilegedAction<Void>) () -> {
                         try {
+                            /* Although there is likely no harm in calling
+                             * delete on a file > once, we want to refrain
+                             * from deleting it until the shutdown hook
+                             * code in subclasses has had an opportunity
+                             * to clean up native accesses on the resource.
+                             */
+                            if (decFileRefCount() > 0) {
+                                return null;
+                            }
                             boolean delOK = (new File(filename)).delete();
                             if (!delOK && PrismFontFactory.debugFonts) {
                                  System.err.println("Temp file not deleted : "
@@ -153,15 +163,62 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return fontInstallationType > 0;
     }
 
+
+    /* A TTC file resource is shared, so reference count and delete
+     * only when no longer using the file from any PrismFontFile instance
+     */
+   static class FileRefCounter {
+       private int refCnt = 1; // start with 1.
+
+       synchronized int getRefCount() {
+           return refCnt;
+       }
+
+       synchronized int increment() {
+           return ++refCnt;
+       }
+
+       synchronized int decrement() {
+           return (refCnt == 0) ? 0 : --refCnt;
+       }
+    }
+
+    private FileRefCounter refCounter = null;
+
+    FileRefCounter getFileRefCounter() {
+        return refCounter;
+    }
+
+    FileRefCounter createFileRefCounter() {
+        refCounter = new FileRefCounter();
+        return refCounter;
+    }
+
+    void setAndIncFileRefCounter(FileRefCounter rc) {
+          this.refCounter = rc;
+          this.refCounter.increment();
+    }
+
+    int decFileRefCount() {
+        if (refCounter == null) {
+            return 0;
+         } else {
+            return refCounter.decrement();
+         }
+    }
+
     static class FileDisposer implements DisposerRecord {
         String fileName;
         boolean isTracked;
+        FileRefCounter refCounter;
         PrismFontFactory factory;
         WeakReference<PrismFontFile> refKey;
 
-        public FileDisposer(String fileName, boolean isTracked) {
+        public FileDisposer(String fileName, boolean isTracked,
+                            FileRefCounter rc) {
             this.fileName = fileName;
             this.isTracked = isTracked;
+            this.refCounter = rc;
         }
 
         public void setFactory(PrismFontFactory factory,
@@ -175,6 +232,11 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                 AccessController.doPrivileged(
                         (PrivilegedAction<Void>) () -> {
                             try {
+                                if (refCounter != null &&
+                                    refCounter.decrement() > 0)
+                                {
+                                    return null;
+                                }
                                 File file = new File(fileName);
                                 int size = (int)file.length();
                                 file.delete();

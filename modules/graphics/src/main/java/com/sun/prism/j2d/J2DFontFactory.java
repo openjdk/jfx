@@ -95,20 +95,27 @@ final class J2DFontFactory implements FontFactory {
      * input streams on it to both prism and 2D, then when they are done,
      * remove it.
      */
-    public PGFont loadEmbeddedFont(String name, InputStream fontStream,
-                                   float size, boolean register) {
+    public PGFont[] loadEmbeddedFont(String name, InputStream fontStream,
+                                     float size,
+                                     boolean register,
+                                     boolean loadAll) {
 
         if (!hasPermission()) {
-            return createFont(DEFAULT_FULLNAME, size);
+            PGFont[] fonts = new PGFont[1];
+            fonts[0] = createFont(DEFAULT_FULLNAME, size);
+            return fonts;
         }
 
-        PGFont font = prismFontFactory.loadEmbeddedFont(name, fontStream,
-                                                        size, register);
+        PGFont[] fonts =
+          prismFontFactory.loadEmbeddedFont(name, fontStream,
+                                            size, register, loadAll);
 
-        if (font == null) return null;
-        final FontResource fr = font.getFontResource();
-        registerFont(font.getFontResource());
-        return font;
+        if (fonts == null || fonts.length == 0) return null;
+        final FontResource fr = fonts[0].getFontResource();
+        // REMIND: this needs to be upgraded to use JDK9 createFont
+        // which can handle a collection.
+        registerFont(fonts[0].getFontResource());
+        return fonts;
     }
 
     /**
@@ -139,18 +146,25 @@ final class J2DFontFactory implements FontFactory {
         });
     }
 
-    public PGFont loadEmbeddedFont(String name, String path,
-                                   float size, boolean register) {
+    public PGFont[] loadEmbeddedFont(String name, String path,
+                                     float size,
+                                     boolean register,
+                                     boolean loadAll) {
 
         if (!hasPermission()) {
-            return createFont(DEFAULT_FULLNAME, size);
+            PGFont[] fonts = new PGFont[1];
+            fonts[0] = createFont(DEFAULT_FULLNAME, size);
+            return fonts;
         }
 
-        PGFont font = prismFontFactory.loadEmbeddedFont(name, path,
-                                                        size, register);
+        PGFont[] fonts =
+            prismFontFactory.loadEmbeddedFont(name, path,
+                                              size, register, loadAll);
 
-        if (font == null) return null;
-        final FontResource fr = font.getFontResource();
+        if (fonts == null || fonts.length == 0) return null;
+        // REMIND: this needs to be upgraded to use JDK9 createFont
+        // which can handle a collection.
+        final FontResource fr = fonts[0].getFontResource();
         AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 try {
@@ -163,7 +177,7 @@ final class J2DFontFactory implements FontFactory {
                 return null;
             }
         });
-        return font;
+        return fonts;
     }
 
     private static boolean compositeFontMethodsInitialized = false;

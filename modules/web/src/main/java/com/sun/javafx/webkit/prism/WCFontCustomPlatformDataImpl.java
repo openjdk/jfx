@@ -40,10 +40,12 @@ final class WCFontCustomPlatformDataImpl extends WCFontCustomPlatformData {
 
     WCFontCustomPlatformDataImpl(InputStream inputStream) throws IOException {
         FontFactory factory = GraphicsPipeline.getPipeline().getFontFactory();
-        font = factory.loadEmbeddedFont(null, inputStream, 10, false);
-        if (font == null) {
+        PGFont[] fa = factory.loadEmbeddedFont(null, inputStream,
+                                               10, false, false);
+        if (fa == null) {
             throw new IOException("Error loading font");
         }
+        font = fa[0];
     }
 
 

@@ -39,8 +39,8 @@ public abstract class FontLoader {
     public abstract List<String> getFontNames(String family);
     public abstract Font font(String family, FontWeight weight,
                               FontPosture posture, float size);
-    public abstract Font loadFont(InputStream in, double size);
-    public abstract Font loadFont(String path, double size);
+    public abstract Font[] loadFont(InputStream in, double size, boolean all);
+    public abstract Font[] loadFont(String path, double size, boolean all);
     public abstract FontMetrics getFontMetrics(Font font);
     public abstract float getCharWidth(char ch, Font font);
     public abstract float getSystemFontSize();

@@ -167,13 +167,17 @@ public class StubFontLoader extends FontLoader {
     }
 
     @Override
-    public Font loadFont(InputStream in, double size) {
-        return new Font("not implemented", size);
+    public Font[] loadFont(InputStream in, double size, boolean all) {
+        Font[] fonts = new Font[1];
+        fonts[0] = new Font("not implemented", size);
+        return fonts;
     }
 
     @Override
-    public Font loadFont(String urlPath, double size) {
-        return new Font("not implemented", size);
+    public Font[] loadFont(String urlPath, double size, boolean all) {
+        Font[] fonts = new Font[1];
+        fonts[0] = new Font("not implemented", size);
+        return fonts;
     }
 
     @Override

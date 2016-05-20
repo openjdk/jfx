@@ -89,10 +89,11 @@ public interface FontFactory {
      * @param stream the stream from which to load the font.
      * @param size the size for the font.
      * @param register whether the font should be register.
+     * @param all whether to load all fonts from a TTC
      * @return the Font, or null if the font cannot be created.
      */
-    public PGFont loadEmbeddedFont(String name, InputStream stream,
-                                   float size, boolean register);
+    public PGFont[] loadEmbeddedFont(String name, InputStream stream,
+                                   float size, boolean register, boolean all);
 
     /**
      * Loads a font from the specified path. If the load is successful
@@ -124,10 +125,11 @@ public interface FontFactory {
      * @param path the path from which to load the font.
      * @param size the size for the font.
      * @param register whether the font should be register.
+     * @param all whether to load all fonts from a TTC
      * @return the Font, or null if the font cannot be created.
      */
-    public PGFont loadEmbeddedFont(String name, String path,
-                                   float size, boolean register);
+    public PGFont[] loadEmbeddedFont(String name, String path,
+                                     float size, boolean register, boolean all);
 
     public boolean isPlatformFont(String name);
 }
