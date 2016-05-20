@@ -87,7 +87,7 @@ public class PerformanceLogger {
     private static long baseTime;
 
     static {
-        String perfLoggingProp = 
+        String perfLoggingProp =
             java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
                         public String run() {
@@ -98,7 +98,7 @@ public class PerformanceLogger {
             perfLoggingOn = true;
 
             // Check if we should use nanoTime
-            String perfNanoProp = 
+            String perfNanoProp =
                 java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
                         public String run() {
