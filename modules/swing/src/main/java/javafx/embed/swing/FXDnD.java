@@ -25,67 +25,39 @@
 
 package javafx.embed.swing;
 
-import javafx.event.EventHandler;
-import javafx.event.EventType;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.TransferMode;
-import javafx.application.Platform;
-import javafx.scene.input.DataFormat;
-
 import com.sun.javafx.tk.Toolkit;
-
 import java.awt.Component;
 import java.awt.Cursor;
-import java.awt.EventQueue;
-import java.awt.Image;
 import java.awt.Point;
 import java.awt.SecondaryLoop;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.FlavorTable;
-import java.awt.datatransfer.SystemFlavorMap;
 import java.awt.dnd.DnDConstants;
-import java.awt.dnd.DragSourceEvent;
-import java.awt.dnd.DragSourceDropEvent;
-import java.awt.dnd.DragSourceDragEvent;
 import java.awt.dnd.DragGestureEvent;
 import java.awt.dnd.DragGestureListener;
 import java.awt.dnd.DragGestureRecognizer;
 import java.awt.dnd.DragSource;
-import java.awt.dnd.DragSourceContext;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetContext;
-import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetListener;
-import java.awt.dnd.MouseDragGestureRecognizer;
 import java.awt.dnd.InvalidDnDOperationException;
+import java.awt.dnd.MouseDragGestureRecognizer;
 import java.awt.dnd.peer.DragSourceContextPeer;
 import java.awt.dnd.peer.DropTargetContextPeer;
-
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-
-import java.util.Collections;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import java.util.Map;
+import javafx.application.Platform;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
+import javafx.scene.input.DataFormat;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
 import sun.awt.AWTAccessor;
-import sun.awt.SunToolkit;
 import sun.awt.dnd.SunDragSourceContextPeer;
-import sun.awt.dnd.SunDropTargetEvent;
-import sun.awt.datatransfer.DataTransferer;
-import sun.awt.datatransfer.ToolkitThreadBlockedHandler;
-
 import sun.swing.JLightweightFrame;
 
 
