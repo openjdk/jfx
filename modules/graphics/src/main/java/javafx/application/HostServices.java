@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -150,7 +150,11 @@ public final class HostServices {
      *
      * @return handle of the enclosing DOM window of the web page containing
      * this application
+     *
+     * @deprecated This method is deprecated as of JDK 9 because the
+     * {@link java.applet.Applet Applet} API is deprecated.
      */
+    @Deprecated // FIXME: (since = "9")
     public final JSObject getWebContext() {
         return delegate.getWebContext();
     }
