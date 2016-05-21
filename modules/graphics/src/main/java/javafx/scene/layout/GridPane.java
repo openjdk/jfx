@@ -2700,13 +2700,12 @@ public class GridPane extends Pane {
     }
 
     /**
-     * Copied from GridPaneDesignInfo for SceneBuilder.
+     * Returns the number of rows in this GridPane.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return the row count
+     * @since 9
      */
-    @Deprecated // SB-dependency: RT-33381 has been filed to track this
-    public final int impl_getRowCount() {
+    public final int getRowCount() {
         int nRows = this.getRowConstraints().size();
         for (int i = 0; i < this.getChildren().size(); i++) {
             Node child = this.getChildren().get(i);
@@ -2720,13 +2719,12 @@ public class GridPane extends Pane {
     }
 
     /**
-     * Copied from GridPaneDesignInfo for SceneBuilder.
+     * Returns the number of columns in this GridPane.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @return the column count
+     * @since 9
      */
-    @Deprecated // SB-dependency: RT-33381 has been filed to track this
-    public final int impl_getColumnCount() {
+    public final int getColumnCount() {
         int nColumns = this.getColumnConstraints().size();
         for (int i = 0; i < this.getChildren().size(); i++) {
             Node child = this.getChildren().get(i);
@@ -2740,13 +2738,16 @@ public class GridPane extends Pane {
     }
 
     /**
-     * Copied from GridPaneDesignInfo for SceneBuilder.
+     * Returns the bounds of the cell at the specified column and row position.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * @param columnIndex the column index position for the cell within this
+     * GridPane, counting from 0
+     * @param rowIndex the row index position for the cell within this GridPane,
+     * counting from 0
+     * @return the bounds of the cell at columnIndex and rowIndex.
+     * @since 9
      */
-    @Deprecated // SB-dependency: RT-33381 has been filed to track this
-    public final Bounds impl_getCellBounds(int columnIndex, int rowIndex) {
+    public final Bounds getCellBounds(int columnIndex, int rowIndex) {
         final double snaphgap = this.snapSpaceX(this.getHgap());
         final double snapvgap = this.snapSpaceY(this.getVgap());
         final double top = this.snapSpaceY(this.getInsets().getTop());

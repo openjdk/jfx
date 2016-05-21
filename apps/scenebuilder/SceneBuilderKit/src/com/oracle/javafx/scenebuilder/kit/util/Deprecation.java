@@ -184,15 +184,15 @@ public class Deprecation {
 //    }
 
     public static int getGridPaneColumnCount(GridPane gridPane) {
-        return gridPane.impl_getColumnCount();
+        return gridPane.getColumnCount();
     }
 
     public static int getGridPaneRowCount(GridPane gridPane) {
-        return gridPane.impl_getRowCount();
+        return gridPane.getRowCount();
     }
 
     public static Bounds getGridPaneCellBounds(GridPane gridPane, int c, int r) {
-        return gridPane.impl_getCellBounds(c, r);
+        return gridPane.getCellBounds(c, r);
     }
 
     // Returns the corresponding text css (.css) from a binary css (.bss)
