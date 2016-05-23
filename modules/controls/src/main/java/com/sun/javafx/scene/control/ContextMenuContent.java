@@ -692,14 +692,14 @@ public class ContextMenuContent extends Region {
     private int findNext(int from) {
         for (int i = from; i < itemsContainer.getChildren().size(); i++) {
             Node n = itemsContainer.getChildren().get(i);
-            if (n instanceof MenuItemContainer) {
+            if (n instanceof MenuItemContainer && n.isVisible()) {
                 return i;
             }
         }
         // find from top
         for (int i = 0; i < from; i++) {
             Node n = itemsContainer.getChildren().get(i);
-            if (n instanceof MenuItemContainer) {
+            if (n instanceof MenuItemContainer && n.isVisible()) {
                 return i;
             }
         }
@@ -731,13 +731,13 @@ public class ContextMenuContent extends Region {
     private int findPrevious(int from) {
         for (int i = from; i >= 0; i--) {
             Node n = itemsContainer.getChildren().get(i);
-            if (n instanceof MenuItemContainer) {
+            if (n instanceof MenuItemContainer && n.isVisible()) {
                 return(i);
             }
         }
         for (int i = itemsContainer.getChildren().size() - 1 ; i > from; i--) {
             Node n = itemsContainer.getChildren().get(i);
-            if (n instanceof MenuItemContainer) {
+            if (n instanceof MenuItemContainer && n.isVisible()) {
                 return(i);
             }
         }

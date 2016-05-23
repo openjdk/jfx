@@ -118,10 +118,10 @@ public class ContextMenuTest {
 
     @Before public void setup() {
         // earlier test items
-        menuItem0 = new MenuItem();
-        menuItem1 = new MenuItem();
-        menuItem2 = new MenuItem();
-        menuItem3 = new MenuItem();
+        menuItem0 = new MenuItem("0");
+        menuItem1 = new MenuItem("1");
+        menuItem2 = new MenuItem("2");
+        menuItem3 = new MenuItem("3");
 
         contextMenu = new ContextMenu();
         contextMenuWithOneItem = new ContextMenu(menuItem0);
@@ -549,5 +549,30 @@ public class ContextMenuTest {
         pressRightKey(cm);
         assertEquals(subMenu, getShowingSubMenu(cm));
         assertEquals(subMenuItem1, getCurrentFocusedItem(cm));
+    }
+
+    @Test public void test_navigateMenu_withInvisibleItems_rt40689() {
+        ContextMenu cm = contextMenuWithManyItems;
+        cm.show(anchorBtn, Side.RIGHT, 0, 0);
+
+        menuItem2.setVisible(false);
+
+        assertNotNull(getShowingMenuContent(cm));
+        assertEquals(-1, getCurrentFocusedIndex(cm));
+
+        // press down once to go to menuItem
+        pressDownKey(cm);
+        MenuItem focusedItem = getCurrentFocusedItem(cm);
+        assertEquals("Expected " + menuItem1.getText() + ", found " + focusedItem.getText(), menuItem1, focusedItem);
+
+        // press down again should skip invisible menuItem2 and proceed to menuItem3
+        pressDownKey(cm);
+        focusedItem = getCurrentFocusedItem(cm);
+        assertEquals("Expected " + menuItem3.getText() + ", found " + focusedItem.getText(), menuItem3, focusedItem);
+
+        // press up should skip invisible menuItem2 and proceed to menuItem1
+        pressUpKey(cm);
+        focusedItem = getCurrentFocusedItem(cm);
+        assertEquals("Expected " + menuItem1.getText() + ", found " + focusedItem.getText(), menuItem1, focusedItem);
     }
 }
