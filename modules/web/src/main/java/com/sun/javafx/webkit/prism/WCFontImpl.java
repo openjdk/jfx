@@ -215,4 +215,8 @@ final class WCFontImpl extends WCFont {
     public Object getPlatformFont() {
         return font;
     }
+
+    @Override public float getCapHeight() {
+        return getFontStrike().getMetrics().getCapHeight();
+    }
 }

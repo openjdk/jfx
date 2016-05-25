@@ -89,4 +89,6 @@ public abstract class WCFont extends Ref {
     public abstract float getLineGap();
 
     public abstract boolean hasUniformLineMetrics();
+
+    public abstract float getCapHeight();
 }
