@@ -862,7 +862,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.dragClient = new DragClientJava(jlself);
     pc.inspectorClient = new InspectorClientJava(jlself);
     pc.databaseProvider = &WebDatabaseProvider::singleton();
-    pc.storageNamespaceProvider = new WebStorageNamespaceProviderJava();
+    pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
     pc.visitedLinkStore = VisitedLinkStoreJava::create();
 
     FrameLoaderClientJava* flc = new FrameLoaderClientJava(jlself);
