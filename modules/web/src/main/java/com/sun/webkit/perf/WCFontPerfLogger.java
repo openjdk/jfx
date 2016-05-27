@@ -155,4 +155,11 @@ public final class WCFontPerfLogger extends WCFont {
         logger.suspendCount("HASUNIFORMLINEMETRICS");
         return res;
     }
+
+    public float getCapHeight() {
+        logger.resumeCount("GETCAPHEIGHT");
+        float res = fnt.getCapHeight();
+        logger.suspendCount("GETCAPHEIGHT");
+        return res;
+    }
 }

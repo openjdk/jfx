@@ -3,8 +3,6 @@
   <component name="CompilerConfiguration">
     <option name="DEFAULT_COMPILER" value="Javac" />
     <excludeFromCompile>
-      <file url="file://$PROJECT_DIR$/../../deploy/javafx-deploy-samples/src/helloworld/HelloFullscreen.java" />
-      <file url="file://$PROJECT_DIR$/../../deploy/javafx-deploy-samples/src/helloworld/HelloFullscreenToggle.java" />
     </excludeFromCompile>
     <resourceExtensions />
     <wildcardResourcePatterns>

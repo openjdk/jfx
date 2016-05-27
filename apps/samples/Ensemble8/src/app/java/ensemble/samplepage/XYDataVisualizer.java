@@ -238,19 +238,12 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         insertSeriesMenuitem.setOnAction((ActionEvent t) -> {
             TreeItem<XYChartItem<X, Y>> selectedItem = getSelectionModel().getSelectedItem();
             if (selectedItem == null) {
+                insertSeries(-1, chart.getData());
                 return;
             }
             Object value = selectedItem.getValue().getValue();
-            if (value instanceof ObservableList) {
-                ObservableList parentList = (ObservableList) value;
-                insertSeries(parentList.size(), parentList);
-            } else {
-                Object parentValue = selectedItem.getParent().getValue().getValue();
-                if (parentValue instanceof ObservableList) {
-                    ObservableList parentList = (ObservableList) parentValue;
-
-                    insertSeries(parentList.indexOf(value), parentList);
-                }
+            if (value instanceof Series) {
+                insertSeries(chart.getData().indexOf(value), chart.getData());
             }
         });
 

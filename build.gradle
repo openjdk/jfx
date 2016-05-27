@@ -1819,6 +1819,10 @@ project(":swt") {
     tasks.all {
         if (!COMPILE_SWT) it.enabled = false
     }
+
+    // javafx.swt is an automatic module
+    project.ext.buildModule = false
+
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics")
         compile name: SWT_FILE_NAME
@@ -1860,7 +1864,7 @@ project(":fxml") {
 
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"),
-                project(":controls"), project(":swt"), project(":swing")
+                project(":controls")
         testCompile project(":graphics").sourceSets.test.output
     }
     test {
@@ -3180,29 +3184,27 @@ compileTargets { t ->
     }
     jfxrt.dependsOn(jfxrtIndexTask)
 
-    // FIXME: JIGSAW -- update this for modules
-    def jfxswtTask = task("jfxswt$t.capital", type: Jar) {
+    def javafxSwtTask = task("javafxSwt$t.capital", type: Jar) {
         enabled = COMPILE_SWT
         group = "Basic"
-        description = "Creates the jfxswt.jar for the $t.name target"
-        archiveName = "build/${sdkDirName}/lib/jfxswt.jar";
+        description = "Creates the javafx-swt.jar for the $t.name target"
+        archiveName = "modules/swt/build/libs/javafx-swt.jar";
         includeEmptyDirs = false
         from("modules/swt/build/classes/main");
         include("**/javafx/embed/swt/**")
-        exclude("**/*.java");  // Builder java files are in build/classes and should be excluded
 
         dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
     }
 
-    def jfxswtIndexTask = task("jfxswtIndex$t.capital") {
+    def javafxSwtIndexTask = task("javafxSwtIndex$t.capital") {
         //the following is a workaround for the lack of indexing in gradle 1.4 through 1.7
-        dependsOn(jfxswtTask)
+        dependsOn(javafxSwtTask)
 
         doLast() {
-            ant.jar (update: true, index: true, destfile: jfxswtTask.archiveName)
+            ant.jar (update: true, index: true, destfile: javafxSwtTask.archiveName)
         }
     }
-    jfxrt.dependsOn(jfxswtIndexTask)
+    jfxrt.dependsOn(javafxSwtIndexTask)
 
     def jmxTask = task ("jmx${t.capital}", type: Jar) {
         group = "Basic"
@@ -3264,7 +3266,7 @@ compileTargets { t ->
         }
         dependsOn(jmxTask);
         dependsOn(jfxrtIndexTask)
-        dependsOn(jfxswtIndexTask)
+        dependsOn(javafxSwtIndexTask)
         dependsOn(javadoc)
         dependsOn(src)
     }
@@ -3624,6 +3626,12 @@ compileTargets { t ->
         def webProject = project(":web");
         dependsOn(webProject.assemble)
 
+        def swtProject = project(":swt");
+        if (COMPILE_SWT) {
+            def javafxSwtIndexTask = tasks.getByName("javafxSwtIndex${t.capital}");
+            dependsOn(javafxSwtIndexTask)
+        }
+
         def packagerProject = project(":fxpackager");
         //dependsOn(packagerProject.assemble)
         dependsOn(packagerProject.jar)
@@ -3743,6 +3751,16 @@ compileTargets { t ->
                 }
             }
 
+            // FIXME: the following is a hack to workaround the fact that there
+            // is no way to deliver javafx-swt.jar other than in one of the
+            // existing runtime modules.
+            if (COMPILE_SWT) {
+                // Copy javafx-swt.jar to the javafx-graphics module lib dir
+                copy {
+                    from "${swtProject.buildDir}/libs/javafx-swt.jar"
+                    into "${graphicsProject.buildDir}/${platformPrefix}module-lib"
+                }
+            }
 
             // javafx.packager libraries and executable
 

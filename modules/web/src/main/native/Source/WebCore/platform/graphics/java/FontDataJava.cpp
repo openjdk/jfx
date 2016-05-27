@@ -31,6 +31,12 @@ void Font::platformInit()
     m_fontMetrics.setXHeight(env->CallFloatMethod(*jFont, getXHeight_mID));
     CheckAndClearException(env);
 
+    static jmethodID getCapHeight_mID = env->GetMethodID(PG_GetFontClass(env),
+        "getCapHeight", "()F");
+    ASSERT(getCapHeight_mID);
+    m_fontMetrics.setCapHeight(env->CallFloatMethod(*jFont, getCapHeight_mID));
+    CheckAndClearException(env);
+
     static jmethodID getAscent_mID = env->GetMethodID(PG_GetFontClass(env),
         "getAscent", "()F");
     ASSERT(getAscent_mID);

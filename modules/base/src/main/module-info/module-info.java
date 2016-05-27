@@ -41,6 +41,7 @@ module javafx.base {
     exports com.sun.javafx to
         javafx.controls,
         javafx.graphics,
+        javafx.fxml,
         javafx.swing;
     exports com.sun.javafx.beans to
         javafx.controls,
