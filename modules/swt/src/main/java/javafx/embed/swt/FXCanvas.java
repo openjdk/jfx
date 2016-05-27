@@ -25,39 +25,37 @@
 
 package javafx.embed.swt;
 
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Pixels;
+import com.sun.javafx.cursor.CursorFrame;
+import com.sun.javafx.cursor.CursorType;
+import com.sun.javafx.embed.AbstractEvents;
+import com.sun.javafx.embed.EmbeddedSceneDSInterface;
+import com.sun.javafx.embed.EmbeddedSceneDTInterface;
+import com.sun.javafx.embed.EmbeddedSceneInterface;
+import com.sun.javafx.embed.EmbeddedStageInterface;
+import com.sun.javafx.embed.HostInterface;
+import com.sun.javafx.stage.EmbeddedWindow;
+
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Pixels;
-import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.cursor.CursorType;
-
-import com.sun.javafx.embed.EmbeddedSceneDSInterface;
-import com.sun.javafx.embed.HostDragStartListener;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.scene.Scene;
 import javafx.scene.input.TransferMode;
+import javafx.util.FXPermission;
 
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.embed.AbstractEvents;
-import com.sun.javafx.embed.EmbeddedSceneDTInterface;
-import com.sun.javafx.embed.EmbeddedSceneInterface;
-import com.sun.javafx.embed.EmbeddedStageInterface;
-import com.sun.javafx.embed.HostInterface;
-import com.sun.javafx.stage.EmbeddedWindow;
-import java.lang.reflect.Method;
-
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
 import org.eclipse.swt.dnd.DragSourceListener;
@@ -73,38 +71,30 @@ import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.dnd.URLTransfer;
 import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.MenuDetectEvent;
-import org.eclipse.swt.events.MenuDetectListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
-import org.eclipse.swt.events.MouseMoveListener;
+import org.eclipse.swt.events.MouseTrackListener;
 import org.eclipse.swt.events.PaintEvent;
-import org.eclipse.swt.events.PaintListener;
-import org.eclipse.swt.widgets.Canvas;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.graphics.GCData;
-import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.RGB;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.ControlListener;
-import org.eclipse.swt.events.FocusListener;
-import org.eclipse.swt.events.MouseTrackListener;
-import org.eclipse.swt.events.MouseWheelListener;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Shell;
 
 /**
  * {@code FXCanvas} is a component to embed JavaFX content into
@@ -145,6 +135,10 @@ import org.eclipse.swt.events.MouseWheelListener;
  * @since JavaFX 2.0
  */
 public class FXCanvas extends Canvas {
+
+    // Internal permission used by FXCanvas (SWT interop)
+    private static final FXPermission FXCANVAS_PERMISSION =
+            new FXPermission("accessFXCanvasInternals");
 
     private HostContainer hostContainer;
     private volatile EmbeddedWindow stage;
@@ -249,6 +243,7 @@ public class FXCanvas extends Canvas {
                 //Fail silently.  If we can't get the methods, then the current version of SWT has no retina support
             }
         }
+        initFx();
     }
 
     /**
@@ -256,7 +251,7 @@ public class FXCanvas extends Canvas {
      */
     public FXCanvas(@NamedArg("parent") Composite parent, @NamedArg("style") int style) {
         super(parent, style | SWT.NO_BACKGROUND);
-        initFx();
+        setApplicationName(Display.getAppName());
         hostContainer = new HostContainer();
         registerEventListeners();
         Display display = parent.getDisplay();
@@ -264,37 +259,51 @@ public class FXCanvas extends Canvas {
     }
 
     private static void initFx() {
+        // NOTE: no internal "com.sun.*" packages can be accessed until after
+        // the JavaFX platform is initialized. The list of needed internal
+        // packages is kept in the PlatformImpl class.
+        long eventProc = 0;
+        try {
+            Field field = Display.class.getDeclaredField("eventProc");
+            field.setAccessible(true);
+            if (field.getType() == int.class) {
+                eventProc = field.getInt(Display.getDefault());
+            } else {
+                if (field.getType() == long.class) {
+                    eventProc = field.getLong(Display.getDefault());
+                }
+            }
+        } catch (Throwable th) {
+            //Fail silently
+        }
+        final String eventProcStr = String.valueOf(eventProc);
+
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            System.setProperty("com.sun.javafx.application.type", "FXCanvas");
             System.setProperty("javafx.embed.isEventThread", "true");
             System.setProperty("glass.win.uiScale", "100%");
             System.setProperty("glass.win.renderScale", "100%");
+            System.setProperty("javafx.embed.eventProc", eventProcStr);
             return null;
         });
-        Map map = Application.getDeviceDetails();
-        if (map == null) {
-            Application.setDeviceDetails(map = new HashMap());
+
+        final CountDownLatch startupLatch = new CountDownLatch(1);
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            Platform.startup(() -> {
+                startupLatch.countDown();
+            });
+            return null;
+        }, null, FXCANVAS_PERMISSION);
+
+        try {
+            startupLatch.await();
+        } catch (InterruptedException ex) {
+            throw new RuntimeException(ex);
         }
-        if (map.get("javafx.embed.eventProc") == null) {
-            long eventProc = 0;
-            try {
-                Field field = Display.class.getDeclaredField("eventProc");
-                field.setAccessible(true);
-                if (field.getType() == int.class) {
-                    eventProc = field.getLong(Display.getDefault());
-                } else {
-                    if (field.getType() == long.class) {
-                        eventProc = field.getLong(Display.getDefault());
-                    }
-                }
-            } catch (Throwable th) {
-                //Fail silently
-            }
-            map.put("javafx.embed.eventProc", eventProc);
-        }
-        // Note that calling PlatformImpl.startup more than once is OK
-        PlatformImpl.startup(() -> {
-            Application.GetApplication().setName(Display.getAppName());
-        });
+    }
+
+    private void setApplicationName(String name) {
+        Platform.runLater(()-> Application.GetApplication().setName(name));
     }
 
     static ArrayList<DropTarget> targets = new ArrayList<>();

@@ -25,34 +25,38 @@
 
 package com.sun.javafx.application;
 
+import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.runtime.SystemProperties;
-import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
+import com.sun.javafx.tk.TKListener;
+import com.sun.javafx.tk.TKStage;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.ModuleHelper;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 import javafx.application.Application;
 import javafx.application.ConditionalFeature;
-
-import com.sun.javafx.tk.TKListener;
-import com.sun.javafx.tk.TKStage;
-import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Scene;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import javafx.util.FXPermission;
 
 public class PlatformImpl {
 
@@ -86,7 +90,16 @@ public class PlatformImpl {
     private static Boolean hasMultiTouch;
     private static Boolean hasPointer;
     private static boolean isThreadMerged = false;
+    private static String applicationType = "";
     private static BooleanProperty accessibilityActive = new SimpleBooleanProperty();
+
+    private static final boolean DEBUG
+            = AccessController.doPrivileged((PrivilegedAction<Boolean>) ()
+                    -> Boolean.getBoolean("com.sun.javafx.application.debug"));
+
+    // Internal permission used by FXCanvas (SWT interop)
+    private static final FXPermission FXCANVAS_PERMISSION =
+            new FXPermission("accessFXCanvasInternals");
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -171,6 +184,9 @@ public class PlatformImpl {
         }
 
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            applicationType = System.getProperty("com.sun.javafx.application.type");
+            if (applicationType == null) applicationType = "";
+
             contextual2DNavigation = Boolean.getBoolean(
                     "com.sun.javafx.isContextual2DNavigation");
             String s = System.getProperty("com.sun.javafx.twoLevelFocus");
@@ -206,6 +222,14 @@ public class PlatformImpl {
             return null;
         });
 
+        if (DEBUG) {
+            System.err.println("PlatformImpl::startup : applicationType = "
+                    + applicationType);
+        }
+        if ("FXCanvas".equals(applicationType)) {
+            initFXCanvas();
+        }
+
         if (!taskbarApplication) {
             AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                 System.setProperty("glass.taskbarApplication", "false");
@@ -236,6 +260,88 @@ public class PlatformImpl {
         //Initialize the thread merging mechanism
         if (isThreadMerged) {
             installFwEventQueue();
+        }
+    }
+
+    // Pass certain system properties to glass via the device details Map
+    private static void initDeviceDetailsFXCanvas() {
+        // Read the javafx.embed.eventProc system property and store
+        // it in an entry in the glass Application device details map
+        final String eventProcProperty = "javafx.embed.eventProc";
+        final long eventProc = AccessController.doPrivileged((PrivilegedAction<Long>) () ->
+                Long.getLong(eventProcProperty, 0));
+        if (eventProc != 0L) {
+            // Set the value for the javafx.embed.eventProc
+            // key in the glass Application map
+            Map map = com.sun.glass.ui.Application.getDeviceDetails();
+            if (map == null) {
+                map = new HashMap();
+                com.sun.glass.ui.Application.setDeviceDetails(map);
+            }
+            if (map.get(eventProcProperty) == null) {
+                map.put(eventProcProperty, eventProc);
+            }
+        }
+    }
+
+    // Add the necessary qualified exports to the calling module
+    private static void addExportsToFXCanvas(Class<?> fxCanvasClass) {
+        final String[] swtNeededPackages = {
+            "com.sun.glass.ui",
+            "com.sun.javafx.cursor",
+            "com.sun.javafx.embed",
+            "com.sun.javafx.stage"
+        };
+
+        if (DEBUG) {
+            System.err.println("addExportsToFXCanvas: class = " + fxCanvasClass);
+        }
+        Object thisModule = ModuleHelper.getModule(PlatformImpl.class);
+        Object javafxSwtModule = ModuleHelper.getModule(fxCanvasClass);
+        for (String pkg : swtNeededPackages) {
+            if (DEBUG) {
+                System.err.println("add export of " + pkg + " from "
+                        + thisModule + " to " + javafxSwtModule);
+            }
+            ModuleHelper.addExports(thisModule, pkg, javafxSwtModule);
+        }
+    }
+
+    // FXCanvas-specific initialization
+    private static void initFXCanvas() {
+        // Verify that we have the appropriate permission
+        final SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            try {
+                sm.checkPermission(FXCANVAS_PERMISSION);
+            } catch (SecurityException ex) {
+                System.err.println("FXCanvas: no permission to access JavaFX internals");
+                ex.printStackTrace();
+                return;
+            }
+        }
+
+        // Find the calling class, ignoring any stack frames from FX application classes
+        Predicate<StackWalker.StackFrame> classFilter = f ->
+                !f.getClassName().startsWith("javafx.application.")
+                        && !f.getClassName().startsWith("com.sun.javafx.application.");
+
+        final StackWalker walker = AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
+                StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
+        Optional<StackWalker.StackFrame> frame = walker.walk(
+                s -> s.filter(classFilter).findFirst());
+
+        if (frame.isPresent()) {
+            Class<?> caller = frame.get().getDeclaringClass();
+            if (DEBUG) {
+                System.err.println("callerClassName = " + caller);
+            }
+
+            // Verify that the caller is javafx.embed.swt.FXCanvas
+            if ("javafx.embed.swt.FXCanvas".equals(caller.getName())) {
+                initDeviceDetailsFXCanvas();
+                addExportsToFXCanvas(caller);
+            }
         }
     }
 
