@@ -24,14 +24,11 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/base.iml" filepath="$PROJECT_DIR$/.idea/base.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/buildSrc.iml" filepath="$PROJECT_DIR$/.idea/buildSrc.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/controls.iml" filepath="$PROJECT_DIR$/.idea/controls.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/deploy.iml" filepath="$PROJECT_DIR$/.idea/deploy.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/fxml.iml" filepath="$PROJECT_DIR$/.idea/fxml.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/fxpackager.iml" filepath="$PROJECT_DIR$/.idea/fxpackager.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/fxpackagerServices.iml" filepath="$PROJECT_DIR$/.idea/fxpackagerServices.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/graphics.iml" filepath="$PROJECT_DIR$/.idea/graphics.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/media.iml" filepath="$PROJECT_DIR$/.idea/media.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/rt.iml" filepath="$PROJECT_DIR$/.idea/rt.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/rt-closed.iml" filepath="$PROJECT_DIR$/.idea/rt-closed.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/swing.iml" filepath="$PROJECT_DIR$/.idea/swing.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/swt.iml" filepath="$PROJECT_DIR$/.idea/swt.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/tests.iml" filepath="$PROJECT_DIR$/.idea/tests.iml" />
