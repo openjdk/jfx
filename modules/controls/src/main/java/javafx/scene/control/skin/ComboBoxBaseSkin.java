@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import javafx.event.EventHandler;
 import javafx.scene.control.SkinBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.geometry.HPos;
@@ -66,6 +67,11 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
     final ComboBoxMode getMode() { return mode; }
     final void setMode(ComboBoxMode value) { mode = value; }
 
+    private final EventHandler<MouseEvent> mouseEnteredEventHandler  = e ->   getBehavior().mouseEntered(e);
+    private final EventHandler<MouseEvent> mousePressedEventHandler  = e -> { getBehavior().mousePressed(e);  e.consume(); };
+    private final EventHandler<MouseEvent> mouseReleasedEventHandler = e -> { getBehavior().mouseReleased(e); e.consume(); };
+    private final EventHandler<MouseEvent> mouseExitedEventHandler   = e ->   getBehavior().mouseExited(e);
+
 
 
     /***************************************************************************
@@ -102,17 +108,6 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
         arrowButton.getStyleClass().setAll("arrow-button");
         arrowButton.getChildren().add(arrow);
 
-        if (control.isEditable()) {
-            //
-            // arrowButton behaves like a button.
-            // This is strongly tied to the implementation in ComboBoxBaseBehavior.
-            //
-            arrowButton.addEventHandler(MouseEvent.MOUSE_ENTERED,  (e) ->   getBehavior().mouseEntered(e));
-            arrowButton.addEventHandler(MouseEvent.MOUSE_PRESSED,  (e) -> { getBehavior().mousePressed(e);  e.consume(); });
-            arrowButton.addEventHandler(MouseEvent.MOUSE_RELEASED, (e) -> { getBehavior().mouseReleased(e); e.consume();});
-            arrowButton.addEventHandler(MouseEvent.MOUSE_EXITED,   (e) ->   getBehavior().mouseExited(e));
-
-        }
         getChildren().add(arrowButton);
 
         // When ComboBoxBase focus shifts to another node, it should hide.
@@ -123,7 +118,11 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
         });
 
         // Register listeners
-        registerChangeListener(control.editableProperty(), e -> updateDisplayArea());
+        updateArrowButtonListeners();
+        registerChangeListener(control.editableProperty(), e -> {
+            updateArrowButtonListeners();
+            updateDisplayArea();
+        });
         registerChangeListener(control.showingProperty(), e -> {
             if (getSkinnable().isShowing()) {
                 show();
@@ -263,6 +262,24 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
 
     private boolean isButton() {
         return getMode() == ComboBoxMode.BUTTON;
+    }
+
+    private void updateArrowButtonListeners() {
+        if (getSkinnable().isEditable()) {
+            //
+            // arrowButton behaves like a button.
+            // This is strongly tied to the implementation in ComboBoxBaseBehavior.
+            //
+            arrowButton.addEventHandler(MouseEvent.MOUSE_ENTERED,  mouseEnteredEventHandler);
+            arrowButton.addEventHandler(MouseEvent.MOUSE_PRESSED,  mousePressedEventHandler);
+            arrowButton.addEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
+            arrowButton.addEventHandler(MouseEvent.MOUSE_EXITED,   mouseExitedEventHandler);
+        } else {
+            arrowButton.removeEventHandler(MouseEvent.MOUSE_ENTERED,  mouseEnteredEventHandler);
+            arrowButton.removeEventHandler(MouseEvent.MOUSE_PRESSED,  mousePressedEventHandler);
+            arrowButton.removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
+            arrowButton.removeEventHandler(MouseEvent.MOUSE_EXITED,   mouseExitedEventHandler);
+        }
     }
 
     void updateDisplayArea() {
