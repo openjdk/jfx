@@ -44,6 +44,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.sg.prism.NGCamera;
 import sun.util.logging.PlatformLogger;
@@ -104,11 +105,47 @@ import sun.util.logging.PlatformLogger;
  * @since JavaFX 2.0
  */
 public abstract class Camera extends Node {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        CameraHelper.setCameraAccessor(new CameraHelper.CameraAccessor() {
+            @Override
+            public void doMarkDirty(Node node, DirtyBits dirtyBit) {
+                ((Camera) node).doMarkDirty(dirtyBit);
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Camera) node).doUpdatePeer();
+            }
+
+            @Override
+            public Point2D project(Camera camera, Point3D p) {
+                return camera.project(p);
+            }
+
+            @Override
+            public Point2D pickNodeXYPlane(Camera camera, Node node, double x, double y) {
+                return camera.pickNodeXYPlane(node, x, y);
+            }
+
+            @Override
+            public Point3D pickProjectPlane(Camera camera, double x, double y) {
+                return camera.pickProjectPlane(x, y);
+            }
+        });
+    }
 
     private Affine3D localToSceneTx = new Affine3D();
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        CameraHelper.initHelper(this);
+    }
+
     protected Camera() {
-        InvalidationListener dirtyTransformListener = observable -> impl_markDirty(DirtyBits.NODE_CAMERA_TRANSFORM);
+        InvalidationListener dirtyTransformListener = observable
+                -> NodeHelper.markDirty(this, DirtyBits.NODE_CAMERA_TRANSFORM);
 
         this.localToSceneTransformProperty().addListener(dirtyTransformListener);
         // if camera is removed from scene it needs to stop using its transforms
@@ -202,7 +239,7 @@ public abstract class Camera extends Node {
                 @Override
                 protected void invalidated() {
                     clipInSceneValid = false;
-                    impl_markDirty(DirtyBits.NODE_CAMERA);
+                    NodeHelper.markDirty(Camera.this, DirtyBits.NODE_CAMERA);
                 }
             };
         }
@@ -237,7 +274,7 @@ public abstract class Camera extends Node {
                 @Override
                 protected void invalidated() {
                     clipInSceneValid = false;
-                    impl_markDirty(DirtyBits.NODE_CAMERA);
+                    NodeHelper.markDirty(Camera.this, DirtyBits.NODE_CAMERA);
                 }
             };
         }
@@ -248,23 +285,19 @@ public abstract class Camera extends Node {
         return this;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        NGCamera peer = impl_getPeer();
-        if (!impl_isDirtyEmpty()) {
-            if (impl_isDirty(DirtyBits.NODE_CAMERA)) {
+    private void doUpdatePeer() {
+        NGCamera peer = getPeer();
+        if (!NodeHelper.isDirtyEmpty(this)) {
+            if (isDirty(DirtyBits.NODE_CAMERA)) {
                 peer.setNearClip((float) getNearClip());
                 peer.setFarClip((float) getFarClip());
                 peer.setViewWidth(getViewWidth());
                 peer.setViewHeight(getViewHeight());
             }
-            if (impl_isDirty(DirtyBits.NODE_CAMERA_TRANSFORM)) {
+            if (isDirty(DirtyBits.NODE_CAMERA_TRANSFORM)) {
                 // TODO: 3D - For now, we are treating the scene as world.
                 // This may need to change for the fixed eye position case.
                 peer.setWorldTransform(getCameraTransform());
@@ -280,7 +313,7 @@ public abstract class Camera extends Node {
 
     void setViewWidth(double width) {
         this.viewWidth = width;
-        impl_markDirty(DirtyBits.NODE_CAMERA);
+        NodeHelper.markDirty(this, DirtyBits.NODE_CAMERA);
     }
 
     double getViewWidth() {
@@ -289,7 +322,7 @@ public abstract class Camera extends Node {
 
     void setViewHeight(double height) {
         this.viewHeight = height;
-        impl_markDirty(DirtyBits.NODE_CAMERA);
+        NodeHelper.markDirty(this, DirtyBits.NODE_CAMERA);
     }
 
     double getViewHeight() {
@@ -322,14 +355,10 @@ public abstract class Camera extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected void impl_markDirty(DirtyBits dirtyBit) {
-        super.impl_markDirty(dirtyBit);
+    private void doMarkDirty(DirtyBits dirtyBit) {
         if (dirtyBit == DirtyBits.NODE_CAMERA_TRANSFORM) {
             localToSceneValid = false;
             sceneToLocalValid = false;
@@ -497,26 +526,4 @@ public abstract class Camera extends Node {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-
-    static {
-         // This is used by classes in different packages to get access to
-         // private and package private methods.
-        CameraHelper.setCameraAccessor(new CameraHelper.CameraAccessor() {
-
-            @Override
-            public Point2D project(Camera camera, Point3D p) {
-                return camera.project(p);
-            }
-
-            @Override
-            public Point2D pickNodeXYPlane(Camera camera, Node node, double x, double y) {
-                return camera.pickNodeXYPlane(node, x, y);
-            }
-
-            @Override
-            public Point3D pickProjectPlane(Camera camera, double x, double y) {
-                return camera.pickProjectPlane(x, y);
-            }
-        });
-    }
 }

@@ -33,6 +33,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.ImageViewHelper;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGImageView;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
@@ -139,7 +141,27 @@ import java.util.List;
  */
 @DefaultProperty("image")
 public class ImageView extends Node {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        ImageViewHelper.setImageViewAccessor(new ImageViewHelper.ImageViewAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((ImageView) node).doCreatePeer();
+            }
 
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((ImageView) node).doUpdatePeer();
+            }
+
+        });
+    }
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        ImageViewHelper.initHelper(this);
+    }
     /**
      * Allocates a new ImageView object.
      */
@@ -222,7 +244,7 @@ public class ImageView extends Node {
                         invalidateWidthHeight();
                         impl_geomChanged();
                     }
-                    impl_markDirty(DirtyBits.NODE_CONTENTS);
+                    NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_CONTENTS);
                 }
 
                 @Override
@@ -285,7 +307,7 @@ public class ImageView extends Node {
         @Override
         public void invalidated(Observable valueModel) {
             invalidateWidthHeight();
-            impl_markDirty(DirtyBits.NODE_CONTENTS);
+            NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_CONTENTS);
             impl_geomChanged();
         }
     };
@@ -311,7 +333,7 @@ public class ImageView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -351,7 +373,7 @@ public class ImageView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -398,7 +420,7 @@ public class ImageView extends Node {
                 @Override
                 protected void invalidated() {
                     invalidateWidthHeight();
-                    impl_markDirty(DirtyBits.NODE_VIEWPORT);
+                    NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
                 }
 
@@ -446,7 +468,7 @@ public class ImageView extends Node {
                 @Override
                 protected void invalidated() {
                     invalidateWidthHeight();
-                    impl_markDirty(DirtyBits.NODE_VIEWPORT);
+                    NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
                 }
 
@@ -511,7 +533,7 @@ public class ImageView extends Node {
                 @Override
                 protected void invalidated() {
                     invalidateWidthHeight();
-                    impl_markDirty(DirtyBits.NODE_VIEWPORT);
+                    NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
                 }
 
@@ -562,7 +584,7 @@ public class ImageView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_SMOOTH);
+                    NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_SMOOTH);
                 }
 
                 @Override
@@ -615,7 +637,7 @@ public class ImageView extends Node {
                 @Override
                 protected void invalidated() {
                     invalidateWidthHeight();
-                    impl_markDirty(DirtyBits.NODE_VIEWPORT);
+                    NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
                 }
 
@@ -645,12 +667,10 @@ public class ImageView extends Node {
 
     private double destWidth, destHeight;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGImageView();
     }
 
@@ -841,7 +861,7 @@ public class ImageView extends Node {
         }
 
         Rectangle2D localViewport = getViewport();
-        final NGImageView peer = impl_getPeer();
+        final NGImageView peer = NodeHelper.getPeer(this);
         if (localViewport != null) {
             peer.setViewport((float)localViewport.getMinX(), (float)localViewport.getMinY(),
                     (float)localViewport.getWidth(), (float)localViewport.getHeight(),
@@ -851,28 +871,24 @@ public class ImageView extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        final NGImageView peer = impl_getPeer();
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
+    private void doUpdatePeer() {
+        final NGImageView peer = NodeHelper.getPeer(this);
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
             peer.setX((float)getX());
             peer.setY((float)getY());
         }
-        if (impl_isDirty(DirtyBits.NODE_SMOOTH)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_SMOOTH)) {
             peer.setSmooth(isSmooth());
         }
-        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
             peer.setImage(getImage() != null
                     ? Toolkit.getImageAccessor().getPlatformImage(getImage()) : null);
         }
         // The NG part expects this to be called when image changes
-        if (impl_isDirty(DirtyBits.NODE_VIEWPORT) || impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_VIEWPORT) || NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
             updateViewport();
         }
     }

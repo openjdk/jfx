@@ -25,6 +25,7 @@
 
 package test.javafx.scene.shape;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.prism.paint.Color;
 import javafx.scene.Node;
@@ -108,7 +109,7 @@ public abstract class TestUtils {
         pgPropertyNameBuilder.setCharAt(0, Character.toUpperCase(pgPropertyName.charAt(0)));
         final String pgGetterName = new StringBuilder(isBool ? "is" : "get").append(pgPropertyNameBuilder).toString();
 
-        final NGNode peer = node.impl_getPeer();
+        final NGNode peer = NodeHelper.getPeer(node);
         final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 

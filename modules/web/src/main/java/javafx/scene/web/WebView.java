@@ -25,6 +25,7 @@
 
 package javafx.scene.web;
 
+import com.sun.java.scene.web.WebViewHelper;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -69,6 +70,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
@@ -263,6 +265,10 @@ final public class WebView extends Parent {
         return fontScale;
     }
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        WebViewHelper.initHelper(this);
+    }
     /**
      * Creates a {@code WebView} object.
      */
@@ -303,7 +309,7 @@ final public class WebView extends Parent {
         if ((width != this.width.get()) || (height != this.height.get())) {
             this.width.set(width);
             this.height.set(height);
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
     }
@@ -994,10 +1000,10 @@ final public class WebView extends Parent {
         if (reallyVisible) {
             if (page.isDirty()) {
                 SceneHelper.setAllowPGAccess(true);
-                final NGWebView peer = impl_getPeer();
+                final NGWebView peer = NodeHelper.getPeer(this);
                 peer.update(); // creates new render queues
                 if (page.isRepaintPending()) {
-                    impl_markDirty(DirtyBits.WEBVIEW_VIEW);
+                    NodeHelper.markDirty(this, DirtyBits.WEBVIEW_VIEW);
                 }
                 SceneHelper.setAllowPGAccess(false);
             }
@@ -1258,12 +1264,10 @@ final public class WebView extends Parent {
 
     // Node stuff
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGWebView();
     }
 
@@ -1288,27 +1292,36 @@ final public class WebView extends Parent {
         return true;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_updatePeer() {
-        super.impl_updatePeer();
-        final NGWebView peer = impl_getPeer();
+    private void doUpdatePeer() {
+        final NGWebView peer = NodeHelper.getPeer(this);
 
-        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
             peer.setPage(page);
         }
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
             peer.resize((float)getWidth(), (float)getHeight());
         }
-        if (impl_isDirty(DirtyBits.WEBVIEW_VIEW)) {
+        if (NodeHelper.isDirty(this, DirtyBits.WEBVIEW_VIEW)) {
             peer.requestRender();
         }
     }
 
     static {
+        WebViewHelper.setWebViewAccessor(new WebViewHelper.WebViewAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((WebView) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((WebView) node).doUpdatePeer();
+            }
+        });
+
         idMap.put(MouseButton.NONE, WCMouseEvent.NOBUTTON);
         idMap.put(MouseButton.PRIMARY, WCMouseEvent.BUTTON1);
         idMap.put(MouseButton.MIDDLE, WCMouseEvent.BUTTON2);

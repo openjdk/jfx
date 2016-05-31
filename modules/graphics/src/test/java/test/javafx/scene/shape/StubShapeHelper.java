@@ -26,7 +26,9 @@
 package test.javafx.scene.shape;
 
 import com.sun.javafx.scene.shape.ShapeHelper;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 import javafx.scene.shape.Shape;
 
 /**
@@ -51,6 +53,11 @@ public class StubShapeHelper extends ShapeHelper {
     }
 
     @Override
+    protected NGNode createPeerImpl(Node node) {
+        return stubShapeAccessor.doCreatePeer(node);
+    }
+
+    @Override
     protected  com.sun.javafx.geom.Shape configShapeImpl(Shape shape) {
         return stubShapeAccessor.doConfigShape(shape);
     }
@@ -64,6 +71,7 @@ public class StubShapeHelper extends ShapeHelper {
     }
 
     public interface StubShapeAccessor {
+        NGNode doCreatePeer(Node node);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);
     }
 

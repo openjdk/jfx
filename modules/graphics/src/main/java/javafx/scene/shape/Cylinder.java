@@ -30,7 +30,9 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.shape.CylinderHelper;
 import com.sun.javafx.scene.shape.MeshHelper;
 import com.sun.javafx.sg.prism.NGCylinder;
 import com.sun.javafx.sg.prism.NGNode;
@@ -38,6 +40,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
+import javafx.scene.Node;
 import javafx.scene.input.PickResult;
 import javafx.scene.transform.Rotate;
 
@@ -49,7 +52,22 @@ import javafx.scene.transform.Rotate;
  * @since JavaFX 8.0
  */
 public class Cylinder extends Shape3D {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        CylinderHelper.setCylinderAccessor(new CylinderHelper.CylinderAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Cylinder) node).doCreatePeer();
+            }
 
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Cylinder) node).doUpdatePeer();
+            }
+
+        });
+    }
     static final int DEFAULT_DIVISIONS = 64;
     static final double DEFAULT_RADIUS = 1;
     static final double DEFAULT_HEIGHT = 2;
@@ -57,6 +75,10 @@ public class Cylinder extends Shape3D {
     private int divisions = DEFAULT_DIVISIONS;
     private TriangleMesh mesh;
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        CylinderHelper.initHelper(this);
+    }
     /**
      * Creates a new instance of {@code Cylinder} of radius of 1.0 and height of 2.0.
      * Resolution defaults to 15 divisions along X and Z axis.
@@ -113,7 +135,7 @@ public class Cylinder extends Shape3D {
             height = new SimpleDoubleProperty(Cylinder.this, "height", DEFAULT_HEIGHT) {
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.MESH_GEOM);
+                    NodeHelper.markDirty(Cylinder.this, DirtyBits.MESH_GEOM);
                     manager.invalidateCylinderMesh(key);
                     key = 0;
                     impl_geomChanged();
@@ -143,7 +165,7 @@ public class Cylinder extends Shape3D {
             radius = new SimpleDoubleProperty(Cylinder.this, "radius", DEFAULT_RADIUS) {
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.MESH_GEOM);
+                    NodeHelper.markDirty(Cylinder.this, DirtyBits.MESH_GEOM);
                     manager.invalidateCylinderMesh(key);
                     key = 0;
                     impl_geomChanged();
@@ -162,16 +184,12 @@ public class Cylinder extends Shape3D {
         return divisions;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        if (impl_isDirty(DirtyBits.MESH_GEOM)) {
-            final NGCylinder peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.MESH_GEOM)) {
+            final NGCylinder peer = NodeHelper.getPeer(this);
             final float h = (float) getHeight();
             final float r = (float) getRadius();
             if (h < 0 || r < 0) {
@@ -187,13 +205,10 @@ public class Cylinder extends Shape3D {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGCylinder();
     }
 

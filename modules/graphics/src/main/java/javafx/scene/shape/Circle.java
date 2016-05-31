@@ -29,6 +29,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.CircleHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGCircle;
@@ -36,6 +37,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 
 /**
@@ -60,6 +62,16 @@ public class Circle extends Shape {
     static {
         CircleHelper.setCircleAccessor(new CircleHelper.CircleAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Circle) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Circle) node).doUpdatePeer();
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Circle) shape).doConfigShape();
             }
@@ -68,13 +80,17 @@ public class Circle extends Shape {
 
     private final Ellipse2D shape = new Ellipse2D();
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        CircleHelper.initHelper(this);
+    }
+
     /**
      * Creates a new instance of Circle with a specified radius.
      * @param radius the radius of the circle in pixels
      */
     public Circle(double radius) {
         setRadius(radius);
-        CircleHelper.initHelper(this);
     }
 
     /**
@@ -85,14 +101,12 @@ public class Circle extends Shape {
     public Circle(double radius, Paint fill) {
         setRadius(radius);
         setFill(fill);
-        CircleHelper.initHelper(this);
     }
 
     /**
      * Creates an empty instance of Circle.
      */
     public Circle() {
-        CircleHelper.initHelper(this);
     }
 
     /**
@@ -105,7 +119,6 @@ public class Circle extends Shape {
         setCenterX(centerX);
         setCenterY(centerY);
         setRadius(radius);
-        CircleHelper.initHelper(this);
     }
 
     /**
@@ -120,7 +133,6 @@ public class Circle extends Shape {
         setCenterY(centerY);
         setRadius(radius);
         setFill(fill);
-        CircleHelper.initHelper(this);
     }
 
     /**
@@ -148,7 +160,7 @@ public class Circle extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Circle.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -191,7 +203,7 @@ public class Circle extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Circle.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -218,7 +230,7 @@ public class Circle extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Circle.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -265,12 +277,10 @@ public class Circle extends Shape {
         return StrokeLineJoin.BEVEL;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected NGNode impl_createPeer() {
+    private  NGNode doCreatePeer() {
         return new NGCircle();
     }
 
@@ -337,16 +347,12 @@ public class Circle extends Shape {
         return shape;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            final NGCircle peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
+            final NGCircle peer = NodeHelper.getPeer(this);
             peer.updateCircle((float)getCenterX(),
                 (float)getCenterY(),
                 (float)getRadius());

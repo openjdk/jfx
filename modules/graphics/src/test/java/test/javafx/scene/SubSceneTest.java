@@ -24,6 +24,7 @@
  */
 package test.javafx.scene;
 
+import com.sun.javafx.scene.NodeHelper;
 import javafx.stage.Stage;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGSubScene;
@@ -246,7 +247,7 @@ public class SubSceneTest {
         // verify it has correct owner
         cam.setNearClip(20);
         Toolkit.getToolkit().firePulse();
-        NGSubScene peer = sub.impl_getPeer();
+        NGSubScene peer = NodeHelper.getPeer(sub);
         assertEquals(20, peer.getCamera().getNearClip(), 0.00001);
 
         sub.setCamera(null); // Sets the default camera, which is parallel camera
@@ -287,7 +288,7 @@ public class SubSceneTest {
 
         cam.setNearClip(20);
         Toolkit.getToolkit().firePulse();
-        NGSubScene peer = sub.impl_getPeer();
+        NGSubScene peer = NodeHelper.getPeer(sub);
         assertEquals(20, peer.getCamera().getNearClip(), 0.00001);
     }
 

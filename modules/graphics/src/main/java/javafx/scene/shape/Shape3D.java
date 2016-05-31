@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,9 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.paint.MaterialHelper;
+import com.sun.javafx.scene.shape.Shape3DHelper;
 import com.sun.javafx.sg.prism.NGShape3D;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
@@ -64,6 +66,17 @@ import sun.util.logging.PlatformLogger;
  * @since JavaFX 8.0
  */
 public abstract class Shape3D extends Node {
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        Shape3DHelper.setShape3DAccessor(new Shape3DHelper.Shape3DAccessor() {
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Shape3D) node).doUpdatePeer();
+            }
+        });
+    }
+
     // NOTE: Need a way to specify shape tessellation resolution, may use metric relate to window resolution
     // Will not support dynamic refinement in FX8
 
@@ -108,7 +121,7 @@ public abstract class Shape3D extends Node {
                 private final ChangeListener<Boolean> materialChangeListener =
                         (observable, oldValue, newValue) -> {
                             if (newValue) {
-                                impl_markDirty(DirtyBits.MATERIAL);
+                                NodeHelper.markDirty(Shape3D.this, DirtyBits.MATERIAL);
                             }
                         };
                 private final WeakChangeListener<Boolean> weakMaterialChangeListener =
@@ -122,7 +135,7 @@ public abstract class Shape3D extends Node {
                     if (newMaterial != null) {
                         MaterialHelper.dirtyProperty(newMaterial).addListener(weakMaterialChangeListener);
                     }
-                    impl_markDirty(DirtyBits.MATERIAL);
+                    NodeHelper.markDirty(Shape3D.this, DirtyBits.MATERIAL);
                     impl_geomChanged();
                     old = newMaterial;
                 }
@@ -156,7 +169,7 @@ public abstract class Shape3D extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_DRAWMODE);
+                    NodeHelper.markDirty(Shape3D.this, DirtyBits.NODE_DRAWMODE);
                 }
             };
         }
@@ -185,7 +198,7 @@ public abstract class Shape3D extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_CULLFACE);
+                    NodeHelper.markDirty(Shape3D.this, DirtyBits.NODE_CULLFACE);
                 }
             };
         }
@@ -213,24 +226,20 @@ public abstract class Shape3D extends Node {
         return false;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        final NGShape3D peer = impl_getPeer();
-        if (impl_isDirty(DirtyBits.MATERIAL)) {
+    private void doUpdatePeer() {
+        final NGShape3D peer = NodeHelper.getPeer(this);
+        if (NodeHelper.isDirty(this, DirtyBits.MATERIAL)) {
             Material mat = getMaterial() == null ? DEFAULT_MATERIAL : getMaterial();
             MaterialHelper.updatePG(mat); // new material should be updated
             peer.setMaterial(MaterialHelper.getNGMaterial(mat));
         }
-        if (impl_isDirty(DirtyBits.NODE_DRAWMODE)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_DRAWMODE)) {
             peer.setDrawMode(getDrawMode() == null ? DrawMode.FILL : getDrawMode());
         }
-        if (impl_isDirty(DirtyBits.NODE_CULLFACE)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CULLFACE)) {
             peer.setCullFace(getCullFace() == null ? CullFace.BACK : getCullFace());
         }
     }

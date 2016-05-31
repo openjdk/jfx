@@ -32,6 +32,7 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.cursor.CursorFrame;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.GraphicsPipeline;
@@ -163,9 +164,9 @@ class ViewScene extends GlassScene {
             if (warning == null) {
                 painter.setOverlayRoot(null);
             } else {
-                painter.setOverlayRoot(warning.impl_getPeer());
+                painter.setOverlayRoot(NodeHelper.getPeer(warning));
                 warning.updateBounds();
-                warning.impl_updatePeer();
+                NodeHelper.updatePeer(warning);
             }
         } finally {
             releaseSynchronization(true);

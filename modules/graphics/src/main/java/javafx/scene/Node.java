@@ -385,9 +385,84 @@ import sun.util.logging.PlatformLogger.Level;
 @IDProperty("id")
 public abstract class Node implements EventTarget, Styleable {
 
-     static {
-          PerformanceTracker.logEvent("Node class loaded");
-     }
+    /*
+     * Store the singleton instance of the NodeHelper subclass corresponding
+     * to the subclass of this instance of Node
+     */
+    private NodeHelper nodeHelper = null;
+
+    static {
+        PerformanceTracker.logEvent("Node class loaded");
+
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        NodeHelper.setNodeAccessor(new NodeHelper.NodeAccessor() {
+            @Override
+            public NodeHelper getHelper(Node node) {
+                return node.nodeHelper;
+            }
+
+            @Override
+            public void setHelper(Node node, NodeHelper nodeHelper) {
+                node.nodeHelper = nodeHelper;
+            }
+
+            @Override
+            public void doMarkDirty(Node node, DirtyBits dirtyBit) {
+                node.doMarkDirty(dirtyBit);
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                node.doUpdatePeer();
+            }
+
+            @Override
+            public boolean isDirty(Node node, DirtyBits dirtyBit) {
+                return node.isDirty(dirtyBit);
+            }
+
+            @Override
+            public boolean isDirtyEmpty(Node node) {
+                return node.isDirtyEmpty();
+            }
+
+            @Override
+            public void syncPeer(Node node) {
+                node.syncPeer();
+            }
+
+            @Override
+            public <P extends NGNode> P getPeer(Node node) {
+                return node.getPeer();
+            }
+
+            @Override
+            public void layoutNodeForPrinting(Node node) {
+                node.doCSSLayoutSyncForSnapshot();
+            }
+
+            @Override
+            public boolean isDerivedDepthTest(Node node) {
+                return node.isDerivedDepthTest();
+            }
+
+            @Override
+            public SubScene getSubScene(Node node) {
+                return node.getSubScene();
+            }
+
+            @Override
+            public void setLabeledBy(Node node, Node labeledBy) {
+                node.labeledBy = labeledBy;
+            }
+
+            @Override
+            public Accessible getAccessible(Node node) {
+                return node.getAccessible();
+            }
+        });
+    }
 
     /**************************************************************************
      *                                                                        *
@@ -400,21 +475,19 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                        *
      *************************************************************************/
 
-    /**
+    /*
      * Set of dirty bits that are set when state is invalidated and cleared by
      * the updateState method, which is called from the synchronizer.
      */
     private int dirtyBits;
 
-    /**
+    /*
      * Mark the specified bit as dirty, and add this node to the scene's dirty list.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected void impl_markDirty(DirtyBits dirtyBit) {
-        if (impl_isDirtyEmpty()) {
+    private void doMarkDirty(DirtyBits dirtyBit) {
+        if (isDirtyEmpty()) {
             addToSceneDirtyList();
         }
 
@@ -431,50 +504,38 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /**
+    /*
      * Test whether the specified dirty bit is set
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected final boolean impl_isDirty(DirtyBits dirtyBit) {
+    final boolean isDirty(DirtyBits dirtyBit) {
         return (dirtyBits & dirtyBit.getMask()) != 0;
     }
 
-    /**
+    /*
      * Clear the specified dirty bit
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected final void impl_clearDirty(DirtyBits dirtyBit) {
+    final void clearDirty(DirtyBits dirtyBit) {
         dirtyBits &= ~dirtyBit.getMask();
     }
 
-    /**
+    /*
      * Set all dirty bits
      */
     private void setDirty() {
         dirtyBits = ~0;
     }
 
-    /**
+    /*
      * Clear all dirty bits
      */
     private void clearDirty() {
         dirtyBits = 0;
     }
 
-    /**
+    /*
      * Test whether the set of dirty bits is empty
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected final boolean impl_isDirtyEmpty() {
+    final boolean isDirtyEmpty() {
         return dirtyBits == 0;
     }
 
@@ -487,22 +548,18 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                        *
      *************************************************************************/
 
-    /**
+    /*
      * Called by the synchronizer to update the state and
      * clear dirtybits of this node in the PG graph
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public final void impl_syncPeer() {
+    final void syncPeer() {
         // Do not synchronize invisible nodes unless their visibility has changed
         // or they have requested a forced synchronization
-        if (!impl_isDirtyEmpty() && (treeVisible
-                                     || impl_isDirty(DirtyBits.NODE_VISIBLE)
-                                     || impl_isDirty(DirtyBits.NODE_FORCE_SYNC)))
+        if (!isDirtyEmpty() && (treeVisible
+                                     || isDirty(DirtyBits.NODE_VISIBLE)
+                                     || isDirty(DirtyBits.NODE_FORCE_SYNC)))
         {
-            impl_updatePeer();
+            NodeHelper.updatePeer(this);
             clearDirty();
         }
     }
@@ -532,13 +589,13 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         // See impl_syncPeer()
-        if (!treeVisible && !impl_isDirty(DirtyBits.NODE_VISIBLE)) {
+        if (!treeVisible && !isDirty(DirtyBits.NODE_VISIBLE)) {
 
             // Need to save the dirty bits since they will be cleared even for the
             // case of short circuiting dirty bit processing.
-            if (impl_isDirty(DirtyBits.NODE_TRANSFORM)
-                    || impl_isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)
-                    || impl_isDirty(DirtyBits.NODE_BOUNDS)) {
+            if (isDirty(DirtyBits.NODE_TRANSFORM)
+                    || isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)
+                    || isDirty(DirtyBits.NODE_BOUNDS)) {
                 pendingUpdateBounds = true;
             }
 
@@ -547,39 +604,37 @@ public abstract class Node implements EventTarget, Styleable {
 
         // Set transform and bounds dirty bits when this node becomes visible
         if (pendingUpdateBounds) {
-            impl_markDirty(DirtyBits.NODE_TRANSFORM);
-            impl_markDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS);
-            impl_markDirty(DirtyBits.NODE_BOUNDS);
+            NodeHelper.markDirty(this, DirtyBits.NODE_TRANSFORM);
+            NodeHelper.markDirty(this, DirtyBits.NODE_TRANSFORMED_BOUNDS);
+            NodeHelper.markDirty(this, DirtyBits.NODE_BOUNDS);
 
             pendingUpdateBounds = false;
         }
 
-        if (impl_isDirty(DirtyBits.NODE_TRANSFORM) || impl_isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)) {
-            if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
+        if (isDirty(DirtyBits.NODE_TRANSFORM) || isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)) {
+            if (isDirty(DirtyBits.NODE_TRANSFORM)) {
                 updateLocalToParentTransform();
             }
             _txBounds = getTransformedBounds(_txBounds,
                                              BaseTransform.IDENTITY_TRANSFORM);
         }
 
-        if (impl_isDirty(DirtyBits.NODE_BOUNDS)) {
+        if (isDirty(DirtyBits.NODE_BOUNDS)) {
             _geomBounds = getGeomBounds(_geomBounds,
                     BaseTransform.IDENTITY_TRANSFORM);
         }
 
     }
 
-    /**
+    /*
      * This function is called during synchronization to update the state of the
-     * PG Node from the FX Node. Subclasses of Node should override this method
-     * and must call super.impl_updatePeer()
+     * NG Node from the FX Node. Subclasses of Node should override this method
+     * and must call NodeHelper.updatePeer(this)
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public void impl_updatePeer() {
-        final NGNode peer = impl_getPeer();
+    private void doUpdatePeer() {
+        final NGNode peer = getPeer();
 
         // For debug / diagnostic purposes, we will copy across a name for this node down to
         // the NG layer, where we can use the name to figure out what the NGNode represents.
@@ -588,7 +643,7 @@ public abstract class Node implements EventTarget, Styleable {
         // to the Node and possibly violate thread invariants. But of course, we only need to do this
         // if we're going to print the render graph (otherwise all the work we'd do to keep the name
         // properly updated would be a waste).
-        if (PrismSettings.printRenderGraph && impl_isDirty(DirtyBits.DEBUG)) {
+        if (PrismSettings.printRenderGraph && isDirty(DirtyBits.DEBUG)) {
             final String id = getId();
             String className = getClass().getSimpleName();
             if (className.isEmpty()) {
@@ -597,54 +652,54 @@ public abstract class Node implements EventTarget, Styleable {
             peer.setName(id == null ? className : id + "(" + className + ")");
         }
 
-        if (impl_isDirty(DirtyBits.NODE_TRANSFORM)) {
+        if (isDirty(DirtyBits.NODE_TRANSFORM)) {
             peer.setTransformMatrix(localToParentTx);
         }
 
-        if (impl_isDirty(DirtyBits.NODE_VIEW_ORDER)) {
+        if (isDirty(DirtyBits.NODE_VIEW_ORDER)) {
             peer.setViewOrder(getViewOrder());
         }
 
-        if (impl_isDirty(DirtyBits.NODE_BOUNDS)) {
+        if (isDirty(DirtyBits.NODE_BOUNDS)) {
             peer.setContentBounds(_geomBounds);
         }
 
-        if (impl_isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)) {
-            peer.setTransformedBounds(_txBounds, !impl_isDirty(DirtyBits.NODE_BOUNDS));
+        if (isDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS)) {
+            peer.setTransformedBounds(_txBounds, !isDirty(DirtyBits.NODE_BOUNDS));
         }
 
-        if (impl_isDirty(DirtyBits.NODE_OPACITY)) {
+        if (isDirty(DirtyBits.NODE_OPACITY)) {
             peer.setOpacity((float)Utils.clamp(0, getOpacity(), 1));
         }
 
-        if (impl_isDirty(DirtyBits.NODE_CACHE)) {
+        if (isDirty(DirtyBits.NODE_CACHE)) {
             peer.setCachedAsBitmap(isCache(), getCacheHint());
         }
 
-        if (impl_isDirty(DirtyBits.NODE_CLIP)) {
-            peer.setClipNode(getClip() != null ? getClip().impl_getPeer() : null);
+        if (isDirty(DirtyBits.NODE_CLIP)) {
+            peer.setClipNode(getClip() != null ? getClip().getPeer() : null);
         }
 
-        if (impl_isDirty(DirtyBits.EFFECT_EFFECT)) {
+        if (isDirty(DirtyBits.EFFECT_EFFECT)) {
             if (getEffect() != null) {
                 EffectHelper.sync(getEffect());
                 peer.effectChanged();
             }
         }
 
-        if (impl_isDirty(DirtyBits.NODE_EFFECT)) {
+        if (isDirty(DirtyBits.NODE_EFFECT)) {
             peer.setEffect(getEffect() != null ? EffectHelper.getPeer(getEffect()) : null);
         }
 
-        if (impl_isDirty(DirtyBits.NODE_VISIBLE)) {
+        if (isDirty(DirtyBits.NODE_VISIBLE)) {
             peer.setVisible(isVisible());
         }
 
-        if (impl_isDirty(DirtyBits.NODE_DEPTH_TEST)) {
+        if (isDirty(DirtyBits.NODE_DEPTH_TEST)) {
             peer.setDepthTest(isDerivedDepthTest());
         }
 
-        if (impl_isDirty(DirtyBits.NODE_BLENDMODE)) {
+        if (isDirty(DirtyBits.NODE_BLENDMODE)) {
             BlendMode mode = getBlendMode();
             peer.setNodeBlendMode((mode == null)
                                   ? null
@@ -861,7 +916,7 @@ public abstract class Node implements EventTarget, Styleable {
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
         if (sceneChanged && reapplyCSS) impl_reapplyCSS();
 
-        if (sceneChanged && !impl_isDirtyEmpty()) {
+        if (sceneChanged && !isDirtyEmpty()) {
             //Note: no need to remove from scene's dirty list
             //Scene's is checking if the node's scene is correct
             /* TODO: looks like an existing bug when a node is moved from one
@@ -997,7 +1052,7 @@ public abstract class Node implements EventTarget, Styleable {
                 protected void invalidated() {
                     impl_reapplyCSS();
                     if (PrismSettings.printRenderGraph) {
-                        impl_markDirty(DirtyBits.DEBUG);
+                        NodeHelper.markDirty(Node.this, DirtyBits.DEBUG);
                     }
                 }
 
@@ -1157,7 +1212,7 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     if (oldValue != get()) {
-                        impl_markDirty(DirtyBits.NODE_VISIBLE);
+                        NodeHelper.markDirty(Node.this, DirtyBits.NODE_VISIBLE);
                         impl_geomChanged();
                         updateTreeVisible(false);
                         if (getParent() != null) {
@@ -1254,7 +1309,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_OPACITY);
+                    NodeHelper.markDirty(Node.this, DirtyBits.NODE_OPACITY);
                 }
 
                 @Override
@@ -1301,7 +1356,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (blendMode == null) {
             blendMode = new StyleableObjectProperty<BlendMode>(null) {
                 @Override public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_BLENDMODE);
+                    NodeHelper.markDirty(Node.this, DirtyBits.NODE_BLENDMODE);
                 }
 
                 @Override
@@ -1552,7 +1607,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         if (isDerivedDepthTest() != newDDT) {
-            impl_markDirty(DirtyBits.NODE_DEPTH_TEST);
+            NodeHelper.markDirty(this, DirtyBits.NODE_DEPTH_TEST);
             setDerivedDepthTest(newDDT);
         }
     }
@@ -1809,7 +1864,7 @@ public abstract class Node implements EventTarget, Styleable {
             // Don't clear the dirty bit in case it will cause problems
             // with a full CSS pass on the scene.
             // TODO: is this the right thing to do?
-            // this.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+            // this.clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
 
             this.processCSS();
         }
@@ -1819,7 +1874,7 @@ public abstract class Node implements EventTarget, Styleable {
      * Recursive function for synchronizing a node and all descendents
      */
     private static void syncAll(Node node) {
-        node.impl_syncPeer();
+        node.syncPeer();
         if (node instanceof Parent) {
             Parent p = (Parent) node;
             final int childrenCount = p.getChildren().size();
@@ -2325,13 +2380,8 @@ public abstract class Node implements EventTarget, Styleable {
      */
     private NGNode peer;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @SuppressWarnings("CallToPrintStackTrace")
-    public <P extends NGNode> P impl_getPeer() {
+    <P extends NGNode> P getPeer() {
         if (Utils.assertionEnabled()) {
             // Assertion checking code
             if (getScene() != null && !Scene.isPGAccessAllowed()) {
@@ -2345,20 +2395,13 @@ public abstract class Node implements EventTarget, Styleable {
             //if (PerformanceTracker.isLoggingEnabled()) {
             //    PerformanceTracker.logEvent("Creating NGNode for [{this}, id=\"{id}\"]");
             //}
-            peer = impl_createPeer();
+            peer = NodeHelper.createPeer(this);
             //if (PerformanceTracker.isLoggingEnabled()) {
             //    PerformanceTracker.logEvent("NGNode created");
             //}
         }
         return (P) peer;
     }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected abstract NGNode impl_createPeer();
 
     /***************************************************************************
      *                                                                         *
@@ -3796,7 +3839,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
         geomBounds.makeEmpty();
         geomBoundsInvalid = true;
-        impl_markDirty(DirtyBits.NODE_BOUNDS);
+        NodeHelper.markDirty(this, DirtyBits.NODE_BOUNDS);
         impl_notifyLayoutBoundsChanged();
         localBoundsChanged();
     }
@@ -3827,7 +3870,7 @@ public abstract class Node implements EventTarget, Styleable {
             txBounds.makeEmpty();
             txBoundsInvalid = true;
             invalidateBoundsInParent();
-            impl_markDirty(DirtyBits.NODE_TRANSFORMED_BOUNDS);
+            NodeHelper.markDirty(this, DirtyBits.NODE_TRANSFORMED_BOUNDS);
         }
         if (isVisible()) {
             notifyParentOfBoundsChange();
@@ -4726,7 +4769,7 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated
     public void impl_transformsChanged() {
         if (!transformDirty) {
-            impl_markDirty(DirtyBits.NODE_TRANSFORM);
+            NodeHelper.markDirty(this, DirtyBits.NODE_TRANSFORM);
             transformDirty = true;
             transformedBoundsChanged();
         }
@@ -6512,7 +6555,7 @@ public abstract class Node implements EventTarget, Styleable {
                             // Parent will be responsible to update sorted children list
                             p.markViewOrderChildrenDirty();
                         }
-                        impl_markDirty(DirtyBits.NODE_VIEW_ORDER);
+                        NodeHelper.markDirty(Node.this, DirtyBits.NODE_VIEW_ORDER);
                     }
 
                     @Override
@@ -6635,7 +6678,7 @@ public abstract class Node implements EventTarget, Styleable {
                 cache = new BooleanPropertyBase(DEFAULT_CACHE) {
                     @Override
                     protected void invalidated() {
-                        impl_markDirty(DirtyBits.NODE_CACHE);
+                        NodeHelper.markDirty(Node.this, DirtyBits.NODE_CACHE);
                     }
 
                     @Override
@@ -6662,7 +6705,7 @@ public abstract class Node implements EventTarget, Styleable {
                 cacheHint = new ObjectPropertyBase<CacheHint>(DEFAULT_CACHE_HINT) {
                     @Override
                     protected void invalidated() {
-                        impl_markDirty(DirtyBits.NODE_CACHE);
+                        NodeHelper.markDirty(Node.this, DirtyBits.NODE_CACHE);
                     }
 
                     @Override
@@ -6739,7 +6782,7 @@ public abstract class Node implements EventTarget, Styleable {
                                 newClip.updateTreeVisible(true);
                             }
 
-                            impl_markDirty(DirtyBits.NODE_CLIP);
+                            NodeHelper.markDirty(Node.this, DirtyBits.NODE_CLIP);
 
                             // the local bounds have (probably) changed
                             localBoundsChanged();
@@ -6874,7 +6917,7 @@ public abstract class Node implements EventTarget, Styleable {
                                 && EffectDirtyBits.isSet(
                                        newBits,
                                        EffectDirtyBits.EFFECT_DIRTY)) {
-                                impl_markDirty(DirtyBits.EFFECT_EFFECT);
+                                NodeHelper.markDirty(Node.this, DirtyBits.EFFECT_EFFECT);
                             }
                             if (EffectDirtyBits.isSet(
                                     changedBits,
@@ -6897,12 +6940,12 @@ public abstract class Node implements EventTarget, Styleable {
                                    .addListener(
                                        effectChangeListener.getWeakListener());
                             if (EffectHelper.isEffectDirty(_effect)) {
-                                impl_markDirty(DirtyBits.EFFECT_EFFECT);
+                                NodeHelper.markDirty(Node.this, DirtyBits.EFFECT_EFFECT);
                             }
                             oldBits = EffectHelper.effectDirtyProperty(_effect).get();
                         }
 
-                        impl_markDirty(DirtyBits.NODE_EFFECT);
+                        NodeHelper.markDirty(Node.this, DirtyBits.NODE_EFFECT);
                         // bounds may have changed regardeless whether
                         // the dirty flag on efffect is set
                         localBoundsChanged();
@@ -8116,7 +8159,7 @@ public abstract class Node implements EventTarget, Styleable {
         // we have to synchronize, because the rendering will now pass throught the newly-visible parent
         // Otherwise an invisible Node might get rendered
         if (parentChanged && parentNode != null && parentNode.impl_isTreeVisible()
-                && impl_isDirty(DirtyBits.NODE_VISIBLE)) {
+                && isDirty(DirtyBits.NODE_VISIBLE)) {
             addToSceneDirtyList();
         }
         setTreeVisible(isTreeVisible);
@@ -8133,7 +8176,7 @@ public abstract class Node implements EventTarget, Styleable {
             if (getClip() != null) {
                 getClip().updateTreeVisible(true);
             }
-            if (treeVisible && !impl_isDirtyEmpty()) {
+            if (treeVisible && !isDirtyEmpty()) {
                 addToSceneDirtyList();
             }
             ((TreeVisiblePropertyReadOnly)impl_treeVisibleProperty()).invalidate();
@@ -9041,17 +9084,16 @@ public abstract class Node implements EventTarget, Styleable {
 
     // Walks up the tree telling each parent that the pseudo class state of
     // this node has changed.
-    /** @treatAsPrivate */
     final void notifyParentsOfInvalidatedCSS() {
         SubScene subScene = getSubScene();
         Parent root = (subScene != null) ?
                 subScene.getRoot() : getScene().getRoot();
 
-        if (!root.impl_isDirty(DirtyBits.NODE_CSS)) {
+        if (!root.isDirty(DirtyBits.NODE_CSS)) {
             // Ensure that Scene.root is marked as dirty. If the scene isn't
             // dirty, nothing will get repainted. This bit is cleared from
             // Scene in doCSSPass().
-            root.impl_markDirty(DirtyBits.NODE_CSS);
+            NodeHelper.markDirty(root, DirtyBits.NODE_CSS);
             if (subScene != null) {
                 // If the node is part of a subscene, then we must ensure that
                 // the we not only mark subScene.root dirty, but continue and
@@ -9265,7 +9307,7 @@ public abstract class Node implements EventTarget, Styleable {
         //
         Node topMost = this;
 
-        final boolean dirtyRoot = getScene().getRoot().impl_isDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+        final boolean dirtyRoot = getScene().getRoot().isDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
         if (dirtyRoot) {
 
             Node _parent = getParent();
@@ -9283,7 +9325,7 @@ public abstract class Node implements EventTarget, Styleable {
             // If we're at the root of the scene-graph, make sure the NODE_CSS
             // dirty bit is cleared (see Scene#doCSSPass())
             if (topMost == getScene().getRoot()) {
-                getScene().getRoot().impl_clearDirty(DirtyBits.NODE_CSS);
+                getScene().getRoot().clearDirty(DirtyBits.NODE_CSS);
             }
         }
 
@@ -9467,38 +9509,6 @@ public abstract class Node implements EventTarget, Styleable {
      */
     @Deprecated
     public abstract Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
-
-    static {
-        // This is used by classes in different packages to get access to
-        // private and package private methods.
-        NodeHelper.setNodeAccessor(new NodeHelper.NodeAccessor() {
-
-            @Override
-            public void layoutNodeForPrinting(Node node) {
-                node.doCSSLayoutSyncForSnapshot();
-            }
-
-            @Override
-            public boolean isDerivedDepthTest(Node node) {
-                return node.isDerivedDepthTest();
-            }
-
-            @Override
-            public SubScene getSubScene(Node node) {
-                return node.getSubScene();
-            }
-
-            @Override
-            public void setLabeledBy(Node node, Node labeledBy) {
-                node.labeledBy = labeledBy;
-            }
-
-            @Override
-            public Accessible getAccessible(Node node) {
-                return node.getAccessible();
-            }
-        });
-    }
 
     /**
      * The accessible role for this {@code Node}.

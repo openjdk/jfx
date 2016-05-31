@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,13 @@ package test.javafx.scene.shape;
 
 import com.sun.javafx.sg.prism.NGCubicCurve;
 import com.sun.javafx.sg.prism.NGNode;
+import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.CubicCurve;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import test.com.sun.javafx.scene.shape.StubCubicCurveHelper;
 
 public class CubicCurveTest {
 
@@ -148,7 +150,20 @@ public class CubicCurveTest {
         assertFalse(s.isEmpty());
     }
 
-    public class StubCubicCurve extends CubicCurve {
+    public static final class StubCubicCurve extends CubicCurve {
+        static {
+            StubCubicCurveHelper.setStubCubicCurveAccessor(new StubCubicCurveHelper.StubCubicCurveAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubCubicCurve) node).doCreatePeer();
+                }
+            });
+        }
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubCubicCurveHelper.initHelper(this);
+        }
         public StubCubicCurve() {
             super();
         }
@@ -157,13 +172,12 @@ public class CubicCurveTest {
             super(startX, startY, controlX1, controlY1, controlX2, controlY2, endX, endY);
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        private NGNode doCreatePeer() {
             return new StubNGCubicCurve();
         }
     }
 
-    public class StubNGCubicCurve extends NGCubicCurve {
+    public static final class StubNGCubicCurve extends NGCubicCurve {
         private float x1;
         private float y1;
         private float x2;

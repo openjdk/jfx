@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.GroupHelper;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
@@ -75,6 +76,17 @@ for (int i = 0; i < 5; i++) {
  */
 @DefaultProperty("children")
 public  class Group extends Parent {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        GroupHelper.setGroupAccessor(new GroupHelper.GroupAccessor() {
+        });
+    }
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        GroupHelper.initHelper(this);
+    }
 
     /**
      * Constructs a group.

@@ -27,6 +27,7 @@ package test.javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.PathElementHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;
@@ -66,7 +67,7 @@ public class VLineToTest {
         NodeTest.syncNode(path);
 
         //check
-        NGPath pgPath = path.impl_getPeer();
+        NGPath pgPath = NodeHelper.getPeer(path);
         Path2D geometry = pgPath.getGeometry();
         float[] coords = new float[6];
         PathIterator it = geometry.getPathIterator(null);

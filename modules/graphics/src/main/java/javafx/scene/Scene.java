@@ -93,6 +93,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import com.sun.javafx.logging.PulseLogger;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.scene.input.ClipboardHelper;
 import com.sun.javafx.scene.input.TouchPointHelper;
@@ -567,12 +568,12 @@ public class Scene implements EventTarget {
         // For the purpose of showing the change, the dirty bit
         // check code was commented out and not removed.
         //
-//        if (sceneRoot.impl_isDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS)) {
+//        if (sceneRoot.isDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS)) {
         if (sceneRoot.cssFlag != CssFlags.CLEAN) {
             // The dirty bit isn't checked but we must ensure it is cleared.
             // The cssFlag is set to clean in either Node.processCSS or
             // Node.impl_processCSS(boolean)
-            sceneRoot.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+            sceneRoot.clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
             sceneRoot.processCSS();
         }
     }
@@ -829,10 +830,10 @@ public class Scene implements EventTarget {
         peer.setTKSceneListener(new ScenePeerListener());
         peer.setTKScenePaintListener(new ScenePeerPaintListener());
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
-        peer.setRoot(getRoot().impl_getPeer());
+        peer.setRoot(getRoot().getPeer());
         peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
-        getEffectiveCamera().impl_updatePeer();
-        peer.setCamera((NGCamera) getEffectiveCamera().impl_getPeer());
+        NodeHelper.updatePeer(getEffectiveCamera());
+        peer.setCamera((NGCamera) getEffectiveCamera().getPeer());
         peer.markDirty();
         PerformanceTracker.logEvent("Scene.initPeer TKScene initialized");
 
@@ -1323,7 +1324,7 @@ public class Scene implements EventTarget {
         context.height = height;
         context.transform = transform;
         context.depthBuffer = depthBuffer;
-        context.root = root.impl_getPeer();
+        context.root = root.getPeer();
         context.platformPaint = fill == null ? null : tk.getPaint(fill);
         double cameraViewWidth = 1.0;
         double cameraViewHeight = 1.0;
@@ -1333,8 +1334,8 @@ public class Scene implements EventTarget {
             cameraViewHeight = camera.getViewHeight();
             camera.setViewWidth(width);
             camera.setViewHeight(height);
-            camera.impl_updatePeer();
-            context.camera = camera.impl_getPeer();
+            NodeHelper.updatePeer(camera);
+            context.camera = camera.getPeer();
         } else {
             context.camera = null;
         }
@@ -1344,7 +1345,7 @@ public class Scene implements EventTarget {
         if (scene != null && !scene.lights.isEmpty()) {
             context.lights = new NGLightBase[scene.lights.size()];
             for (int i = 0; i < scene.lights.size(); i++) {
-                context.lights[i] = scene.lights.get(i).impl_getPeer();
+                context.lights[i] = scene.lights.get(i).getPeer();
             }
         }
 
@@ -1358,7 +1359,7 @@ public class Scene implements EventTarget {
             setAllowPGAccess(true);
             camera.setViewWidth(cameraViewWidth);
             camera.setViewHeight(cameraViewHeight);
-            camera.impl_updatePeer();
+            NodeHelper.updatePeer(camera);
             setAllowPGAccess(false);
         }
 
@@ -2331,7 +2332,7 @@ public class Scene implements EventTarget {
                 }
                 int i = 0;
                 for (; i < lights.size(); i++) {
-                    peerLights[i] = lights.get(i).impl_getPeer();
+                    peerLights[i] = lights.get(i).getPeer();
                 }
                 // Clear the rest of the list
                 while (i < peerLights.length && peerLights[i] != null) {
@@ -2380,7 +2381,7 @@ public class Scene implements EventTarget {
                     Node node = dirtyNodes[i];
                     dirtyNodes[i] = null;
                     if (node.getScene() == Scene.this) {
-                            node.impl_syncPeer();
+                            node.syncPeer();
                         }
                     }
                 dirtyNodesSize = 0;
@@ -2394,7 +2395,7 @@ public class Scene implements EventTarget {
          * The return value is the number of nodes in the graph.
          */
         private int syncAll(Node node) {
-            node.impl_syncPeer();
+            node.syncPeer();
             int size = 1;
             if (node instanceof Parent) {
                 Parent p = (Parent) node;
@@ -2420,7 +2421,7 @@ public class Scene implements EventTarget {
         private void synchronizeSceneProperties() {
             inSynchronizer = true;
             if (isDirty(DirtyBits.ROOT_DIRTY)) {
-                peer.setRoot(getRoot().impl_getPeer());
+                peer.setRoot(getRoot().getPeer());
             }
 
             if (isDirty(DirtyBits.FILL_DIRTY)) {
@@ -2431,8 +2432,8 @@ public class Scene implements EventTarget {
             // new camera was set on the scene or old camera changed
             final Camera cam = getEffectiveCamera();
             if (isDirty(DirtyBits.CAMERA_DIRTY)) {
-                cam.impl_updatePeer();
-                peer.setCamera((NGCamera) cam.impl_getPeer());
+                NodeHelper.updatePeer(cam);
+                peer.setCamera((NGCamera) cam.getPeer());
             }
 
             if (isDirty(DirtyBits.CURSOR_DIRTY)) {
@@ -2541,7 +2542,8 @@ public class Scene implements EventTarget {
                 }
 
                 if (Scene.this.getRoot().cssFlag != CssFlags.CLEAN) {
-                    Scene.this.getRoot().impl_markDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+                    NodeHelper.markDirty(Scene.this.getRoot(),
+                            com.sun.javafx.scene.DirtyBits.NODE_CSS);
                 }
             }
 

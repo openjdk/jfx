@@ -27,6 +27,7 @@ package test.javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -66,7 +67,7 @@ public class MoveToTest {
         NodeTest.syncNode(path);
 
         //check
-        NGPath pgPath = path.impl_getPeer();
+        NGPath pgPath = NodeHelper.getPeer(path);
         Path2D geometry = pgPath.getGeometry();
         float[] coords = new float[6];
         int segType = geometry.getPathIterator(null).currentSegment(coords);
@@ -87,7 +88,7 @@ public class MoveToTest {
         NodeTest.syncNode(path);
 
         //check
-        NGPath pgPath = path.impl_getPeer();
+        NGPath pgPath = NodeHelper.getPeer(path);
         Path2D geometry = pgPath.getGeometry();
         float[] coords = new float[6];
         int segType = geometry.getPathIterator(null).currentSegment(coords);

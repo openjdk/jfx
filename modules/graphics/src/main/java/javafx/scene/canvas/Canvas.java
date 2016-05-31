@@ -35,6 +35,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.canvas.CanvasHelper;
 import com.sun.javafx.sg.prism.GrowableDataBuffer;
 import com.sun.javafx.sg.prism.NGCanvas;
 import com.sun.javafx.sg.prism.NGNode;
@@ -72,6 +74,19 @@ root.getChildren().add(canvas);
  * @since JavaFX 2.2
  */
 public class Canvas extends Node {
+    static {
+        CanvasHelper.setCanvasAccessor(new CanvasHelper.CanvasAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Canvas) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Canvas) node).doUpdatePeer();
+            }
+        });
+    }
     static final int DEFAULT_VAL_BUF_SIZE = 1024;
     static final int DEFAULT_OBJ_BUF_SIZE = 32;
     private static final int SIZE_HISTORY = 5;
@@ -83,6 +98,11 @@ public class Canvas extends Node {
     private int lastsizeindex;
 
     private GraphicsContext theContext;
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        CanvasHelper.initHelper(this);
+    }
 
     /**
      * Creates an empty instance of Canvas.
@@ -113,8 +133,8 @@ public class Canvas extends Node {
     }
 
     GrowableDataBuffer getBuffer() {
-        impl_markDirty(DirtyBits.NODE_CONTENTS);
-        impl_markDirty(DirtyBits.NODE_FORCE_SYNC);
+        NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
+        NodeHelper.markDirty(this, DirtyBits.NODE_FORCE_SYNC);
         if (current == null) {
             int vsize = max(recentvalsizes, DEFAULT_VAL_BUF_SIZE);
             int osize = max(recentobjsizes, DEFAULT_OBJ_BUF_SIZE);
@@ -160,7 +180,7 @@ public class Canvas extends Node {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Canvas.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                     if (theContext != null) {
                         theContext.updateDimensions();
@@ -203,7 +223,7 @@ public class Canvas extends Node {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Canvas.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                     if (theContext != null) {
                         theContext.updateDimensions();
@@ -224,30 +244,21 @@ public class Canvas extends Node {
         return height;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGCanvas();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            NGCanvas peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
+            NGCanvas peer = NodeHelper.getPeer(this);
             peer.updateBounds((float)getWidth(),
                               (float)getHeight());
         }
-        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
-            NGCanvas peer = impl_getPeer();
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
+            NGCanvas peer = NodeHelper.getPeer(this);
             if (current != null && !current.isEmpty()) {
                 if (--lastsizeindex < 0) {
                     lastsizeindex = SIZE_HISTORY - 1;

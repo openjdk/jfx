@@ -28,6 +28,7 @@ package javafx.scene.shape;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.PathElementHelper;
 import com.sun.javafx.scene.shape.PathHelper;
 import com.sun.javafx.scene.shape.PathUtils;
@@ -46,6 +47,7 @@ import javafx.scene.paint.Paint;
 
 import java.util.Collection;
 import java.util.List;
+import javafx.scene.Node;
 
 /**
  * The {@code Path} class represents a simple shape
@@ -93,6 +95,16 @@ public class Path extends Shape {
     static {
         PathHelper.setPathAccessor(new PathHelper.PathAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Path) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Path) node).doUpdatePeer();
+            }
+
+            @Override
             public Paint doCssGetFillInitialValue(Shape shape) {
                 return ((Path) shape).doCssGetFillInitialValue();
             }
@@ -106,16 +118,27 @@ public class Path extends Shape {
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Path) shape).doConfigShape();
             }
+
         });
     }
 
     private Path2D path2d = null;
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        PathHelper.initHelper(this);
+
+        // overriding default values for fill and stroke
+        // Set through CSS property so that it appears to be a UA style rather
+        // that a USER style so that fill and stroke can still be set from CSS.
+        ((StyleableProperty)fillProperty()).applyStyle(null, null);
+        ((StyleableProperty)strokeProperty()).applyStyle(null, Color.BLACK);
+    }
+
     /**
      * Creates an empty instance of Path.
      */
     public Path() {
-        PathHelper.initHelper(this);
     }
 
     /**
@@ -127,7 +150,6 @@ public class Path extends Shape {
         if (elements != null) {
             this.elements.addAll(elements);
         }
-        PathHelper.initHelper(this);
     }
 
     /**
@@ -139,20 +161,11 @@ public class Path extends Shape {
         if (elements != null) {
             this.elements.addAll(elements);
         }
-        PathHelper.initHelper(this);
-    }
-
-    {
-        // overriding default values for fill and stroke
-        // Set through CSS property so that it appears to be a UA style rather
-        // that a USER style so that fill and stroke can still be set from CSS.
-        ((StyleableProperty)fillProperty()).applyStyle(null, null);
-        ((StyleableProperty)strokeProperty()).applyStyle(null, Color.BLACK);
     }
 
     void markPathDirty() {
         path2d = null;
-        impl_markDirty(DirtyBits.NODE_CONTENTS);
+        NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
         impl_geomChanged();
     }
 
@@ -182,7 +195,7 @@ public class Path extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_CONTENTS);
+                    NodeHelper.markDirty(Path.this, DirtyBits.NODE_CONTENTS);
                     impl_geomChanged();
                 }
 
@@ -242,7 +255,7 @@ public class Path extends Shape {
                 isPathValid = isFirstPathElementValid();
             }
 
-            impl_markDirty(DirtyBits.NODE_CONTENTS);
+            NodeHelper.markDirty(Path.this, DirtyBits.NODE_CONTENTS);
             impl_geomChanged();
         }
     };
@@ -253,13 +266,10 @@ public class Path extends Shape {
      */
     public final ObservableList<PathElement> getElements() { return elements; }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGPath();
     }
 
@@ -310,17 +320,12 @@ public class Path extends Shape {
         return true;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
-            NGPath peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
+            NGPath peer = NodeHelper.getPeer(this);
             if (peer.acceptsPath2dOnUpdate()) {
                 peer.updateWithPath2d((Path2D) ShapeHelper.configShape(this));
             } else {

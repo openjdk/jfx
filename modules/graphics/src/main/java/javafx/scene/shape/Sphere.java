@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,14 +30,17 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.shape.MeshHelper;
+import com.sun.javafx.scene.shape.SphereHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGSphere;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
+import javafx.scene.Node;
 import javafx.scene.input.PickResult;
 import javafx.scene.transform.Rotate;
 
@@ -49,6 +52,21 @@ import javafx.scene.transform.Rotate;
  * @since JavaFX 8.0
  */
 public class Sphere extends Shape3D {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        SphereHelper.setSphereAccessor(new SphereHelper.SphereAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Sphere) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Sphere) node).doUpdatePeer();
+            }
+        });
+    }
 
     static final int DEFAULT_DIVISIONS = 64;
     static final double DEFAULT_RADIUS = 1;
@@ -86,6 +104,7 @@ public class Sphere extends Shape3D {
      * @param divisions Divisions
      */
     public Sphere(double radius, int divisions) {
+        SphereHelper.initHelper(this);
         this.divisions = divisions < 1 ? 1: divisions;
         setRadius(radius);
     }
@@ -110,7 +129,7 @@ public class Sphere extends Shape3D {
             radius = new SimpleDoubleProperty(Sphere.this, "radius", DEFAULT_RADIUS) {
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.MESH_GEOM);
+                    NodeHelper.markDirty(Sphere.this, DirtyBits.MESH_GEOM);
                     manager.invalidateSphereMesh(key);
                     key = 0;
                     impl_geomChanged();
@@ -129,25 +148,19 @@ public class Sphere extends Shape3D {
         return divisions;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGSphere();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        if (impl_isDirty(DirtyBits.MESH_GEOM)) {
-            final NGSphere pgSphere = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.MESH_GEOM)) {
+            final NGSphere pgSphere = NodeHelper.getPeer(this);
             final float r = (float) getRadius();
             if (r < 0) {
                 pgSphere.updateMesh(null);

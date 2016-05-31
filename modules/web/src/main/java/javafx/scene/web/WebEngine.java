@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.web.Debugger;
+import com.sun.javafx.scene.web.Printable;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
@@ -1600,53 +1601,9 @@ final public class WebEngine {
         int pageCount = page.beginPrinting(width, height);
 
         for (int i = 0; i < pageCount; i++) {
-            Node printable = new Printable(i, width);
+            Node printable = new Printable(page, i, width);
             job.printPage(printable);
         }
         page.endPrinting();
-    }
-
-    final class Printable extends Node {
-        private final NGNode peer;
-
-        Printable(int pageIndex, float width) {
-            peer = new Peer(pageIndex, width);
-        }
-
-        @Override protected NGNode impl_createPeer() {
-            return peer;
-        }
-
-        @Override public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-            return null;
-        }
-
-        @Override public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-            return bounds;
-        }
-
-        @Override protected boolean impl_computeContains(double d, double d1) {
-            return false;
-        }
-
-        private final class Peer extends NGNode {
-            private final int pageIndex;
-            private final float width;
-
-            Peer(int pageIndex, float width) {
-                this.pageIndex = pageIndex;
-                this.width = width;
-            }
-
-            @Override protected void renderContent(Graphics g) {
-                WCGraphicsContext gc = WCGraphicsManager.getGraphicsManager().
-                        createGraphicsContext(g);
-                page.print(gc, pageIndex, width);
-            }
-
-            @Override protected boolean hasOverlappingContents() {
-                return false;
-            }
-        }
     }
 }

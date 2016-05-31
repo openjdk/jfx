@@ -28,11 +28,13 @@ package javafx.scene.shape;
 
 import com.sun.javafx.geom.QuadCurve2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.QuadCurveHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGQuadCurve;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 
 
@@ -60,6 +62,16 @@ public  class QuadCurve extends Shape {
     static {
         QuadCurveHelper.setQuadCurveAccessor(new QuadCurveHelper.QuadCurveAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((QuadCurve) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((QuadCurve) node).doUpdatePeer();
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((QuadCurve) shape).doConfigShape();
             }
@@ -68,11 +80,15 @@ public  class QuadCurve extends Shape {
 
     private final QuadCurve2D shape = new QuadCurve2D();
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        QuadCurveHelper.initHelper(this);
+    }
+
     /**
      * Creates an empty instance of QuadCurve.
      */
     public QuadCurve() {
-        QuadCurveHelper.initHelper(this);
     }
 
     /**
@@ -91,7 +107,6 @@ public  class QuadCurve extends Shape {
         setControlY(controlY);
         setEndX(endX);
         setEndY(endY);
-        QuadCurveHelper.initHelper(this);
     }
 
     /**
@@ -118,7 +133,7 @@ public  class QuadCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -160,7 +175,7 @@ public  class QuadCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -188,7 +203,7 @@ public  class QuadCurve extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -225,7 +240,7 @@ public  class QuadCurve extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -278,7 +293,7 @@ public  class QuadCurve extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -320,7 +335,7 @@ public  class QuadCurve extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -338,13 +353,10 @@ public  class QuadCurve extends Shape {
         return endY;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGQuadCurve();
     }
 
@@ -361,17 +373,12 @@ public  class QuadCurve extends Shape {
         return shape;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            final NGQuadCurve peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
+            final NGQuadCurve peer = NodeHelper.getPeer(this);
             peer.updateQuadCurve((float)getStartX(),
                 (float)getStartY(),
                 (float)getEndX(),

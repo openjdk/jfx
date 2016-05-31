@@ -59,8 +59,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
-import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.tk.Toolkit;
 import java.lang.ref.Reference;
@@ -118,31 +118,18 @@ import java.lang.ref.WeakReference;
  */
 public abstract class Shape extends Node {
 
-    /*
-     * Store the singleton instance of the ShapeHelper subclass corresponding
-     * to the subclass of this instance of Shape
-     *
-     * TODO: This field will eventually be moved to Node and be renamed as nodeHelper
-     *       once all the impl_XXX encapsulation work is done
-     */
-    private ShapeHelper shapeHelper = null;
-
     static {
         // This is used by classes in different packages to get access to
         // private and package private methods.
         ShapeHelper.setShapeAccessor(new ShapeHelper.ShapeAccessor() {
-            // TODO: This method will eventually be moved to Node once all the
-            // impl_XXX encapsulation work is done
             @Override
-            public ShapeHelper getHelper(Shape shape) {
-                return shape.shapeHelper;
+            public void doUpdatePeer(Node node) {
+                ((Shape) node).doUpdatePeer();
             }
 
-            // TODO: This method will eventually be moved to Node once all the
-            // impl_XXX encapsulation work is done
             @Override
-            public void setHelper(Shape shape, ShapeHelper shapeHelper) {
-                shape.shapeHelper = shapeHelper;
+            public void doMarkDirty(Node node, DirtyBits dirtyBit) {
+                ((Shape) node).doMarkDirty(dirtyBit);
             }
 
             @Override
@@ -173,14 +160,9 @@ public abstract class Shape extends Node {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Creates an empty instance of Shape.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
-        throw new AssertionError(
-            "Subclasses of Shape must implement impl_createPGNode");
+    public Shape() {
     }
 
     StrokeLineJoin convertLineJoin(StrokeLineJoin t) {
@@ -408,7 +390,7 @@ public abstract class Shape extends Node {
         if (mode != newMode) {
             mode = newMode;
 
-            impl_markDirty(DirtyBits.SHAPE_MODE);
+            NodeHelper.markDirty(this, DirtyBits.SHAPE_MODE);
             impl_geomChanged();
         }
     }
@@ -455,7 +437,7 @@ public abstract class Shape extends Node {
                                 addListener(_fill, platformImageChangeListener);
                     }
 
-                    impl_markDirty(DirtyBits.SHAPE_FILL);
+                    NodeHelper.markDirty(Shape.this, DirtyBits.SHAPE_FILL);
                     checkModeChanged();
                 }
 
@@ -496,8 +478,8 @@ public abstract class Shape extends Node {
             new AbstractNotifyListener() {
         @Override
         public void invalidated(Observable valueModel) {
-            impl_markDirty(DirtyBits.SHAPE_FILL);
-            impl_markDirty(DirtyBits.SHAPE_STROKE);
+            NodeHelper.markDirty(Shape.this, DirtyBits.SHAPE_FILL);
+            NodeHelper.markDirty(Shape.this, DirtyBits.SHAPE_STROKE);
             impl_geomChanged();
             checkModeChanged();
         }
@@ -531,7 +513,7 @@ public abstract class Shape extends Node {
                                 addListener(_stroke, platformImageChangeListener);
                     }
 
-                    impl_markDirty(DirtyBits.SHAPE_STROKE);
+                    NodeHelper.markDirty(Shape.this, DirtyBits.SHAPE_STROKE);
                     checkModeChanged();
                 }
 
@@ -577,7 +559,7 @@ public abstract class Shape extends Node {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_SMOOTH);
+                    NodeHelper.markDirty(Shape.this, DirtyBits.NODE_SMOOTH);
                 }
 
                 @Override
@@ -933,7 +915,7 @@ public abstract class Shape extends Node {
     private static final double MIN_STROKE_MITER_LIMIT = 1.0f;
 
     private void updatePGShape() {
-        final NGShape peer = impl_getPeer();
+        final NGShape peer = NodeHelper.getPeer(this);
         if (strokeAttributesDirty && (getStroke() != null)) {
             // set attributes of stroke only when stroke paint is not null
             final float[] pgDashArray =
@@ -954,40 +936,35 @@ public abstract class Shape extends Node {
            strokeAttributesDirty = false;
         }
 
-        if (impl_isDirty(DirtyBits.SHAPE_MODE)) {
+        if (NodeHelper.isDirty(this, DirtyBits.SHAPE_MODE)) {
             peer.setMode(mode);
         }
 
-        if (impl_isDirty(DirtyBits.SHAPE_FILL)) {
+        if (NodeHelper.isDirty(this, DirtyBits.SHAPE_FILL)) {
             Paint localFill = getFill();
             peer.setFillPaint(localFill == null ? null :
                     Toolkit.getPaintAccessor().getPlatformPaint(localFill));
         }
 
-        if (impl_isDirty(DirtyBits.SHAPE_STROKE)) {
+        if (NodeHelper.isDirty(this, DirtyBits.SHAPE_STROKE)) {
             Paint localStroke = getStroke();
             peer.setDrawPaint(localStroke == null ? null :
                     Toolkit.getPaintAccessor().getPlatformPaint(localStroke));
         }
 
-        if (impl_isDirty(DirtyBits.NODE_SMOOTH)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_SMOOTH)) {
             peer.setSmooth(isSmooth());
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected void impl_markDirty(DirtyBits dirtyBits) {
+    private void doMarkDirty(DirtyBits dirtyBits) {
         final Runnable listener = shapeChangeListener != null ? shapeChangeListener.get() : null;
-        if (listener != null && impl_isDirtyEmpty()) {
+        if (listener != null && NodeHelper.isDirtyEmpty(this)) {
             listener.run();
         }
-
-        super.impl_markDirty(dirtyBits);
     }
 
     private Reference<Runnable> shapeChangeListener;
@@ -997,14 +974,10 @@ public abstract class Shape extends Node {
         shapeChangeListener = listener != null ? new WeakReference(listener) : null;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
+    private void doUpdatePeer() {
         updatePGShape();
     }
 
@@ -1537,7 +1510,7 @@ public abstract class Shape extends Node {
         }
 
         private void invalidated(final CssMetaData<Shape, ?> propertyCssKey) {
-            impl_markDirty(DirtyBits.SHAPE_STROKEATTRS);
+            NodeHelper.markDirty(Shape.this, DirtyBits.SHAPE_STROKEATTRS);
             strokeAttributesDirty = true;
             if (propertyCssKey != StyleableProperties.STROKE_DASH_OFFSET) {
                 // all stroke attributes change geometry except for the

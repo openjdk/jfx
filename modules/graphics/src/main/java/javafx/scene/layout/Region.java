@@ -73,8 +73,10 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.layout.RegionHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRegion;
@@ -144,8 +146,20 @@ import sun.util.logging.PlatformLogger.Level;
  * adjustments and animation.
  * @since JavaFX 2.0
  */
-public class
-        Region extends Parent {
+public class Region extends Parent {
+    static {
+        RegionHelper.setRegionAccessor(new RegionHelper.RegionAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Region) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Region) node).doUpdatePeer();
+            }
+        });
+    }
 
     /**
      * Sentinel value which can be passed to a region's
@@ -526,8 +540,13 @@ public class
             removeImageListener(image);
         }
         // Cause the region to repaint
-        impl_markDirty(DirtyBits.NODE_CONTENTS);
+        NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
     };
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        RegionHelper.initHelper(this);
+    }
 
     /**
      * Creates a new Region with an empty Background and and empty Border. The
@@ -691,7 +710,7 @@ public class
                 }
 
                 // No matter what, the fill has changed, so we have to update it
-                impl_markDirty(DirtyBits.SHAPE_FILL);
+                NodeHelper.markDirty(Region.this, DirtyBits.SHAPE_FILL);
                 cornersValid = false;
                 old = b;
             }
@@ -750,7 +769,7 @@ public class
                 }
 
                 // No matter what, the fill has changed, so we have to update it
-                impl_markDirty(DirtyBits.SHAPE_STROKE);
+                NodeHelper.markDirty(Region.this, DirtyBits.SHAPE_STROKE);
                 cornersValid = false;
                 old = b;
             }
@@ -806,7 +825,7 @@ public class
                     // is the code block where we also compute the opaque insets
                     // since updating the background is super fast even when
                     // nothing has changed.
-                    impl_markDirty(DirtyBits.SHAPE_FILL);
+                    NodeHelper.markDirty(Region.this, DirtyBits.SHAPE_FILL);
                 }
             };
         }
@@ -954,7 +973,7 @@ public class
             boundingBox = null;
             impl_layoutBoundsChanged();
             impl_geomChanged();
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
             setNeedsLayout(true);
             requestParentLayout();
         }
@@ -1018,7 +1037,7 @@ public class
             impl_layoutBoundsChanged();
             // We use "NODE_GEOMETRY" to mean that the bounds have changed and
             // need to be sync'd with the render tree
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
             // Change of the height (or width) won't change the preferred size.
             // So we don't need to flush the cache. We should however mark this node
             // as needs layout to be internally layouted.
@@ -1331,7 +1350,7 @@ public class
 
         @Override public void run() {
             impl_geomChanged();
-            impl_markDirty(DirtyBits.REGION_SHAPE);
+            NodeHelper.markDirty(Region.this, DirtyBits.REGION_SHAPE);
         }
     };
 
@@ -1358,7 +1377,7 @@ public class
                 }
                 @Override public void invalidated() {
                     impl_geomChanged();
-                    impl_markDirty(DirtyBits.REGION_SHAPE);
+                    NodeHelper.markDirty(Region.this, DirtyBits.REGION_SHAPE);
                 }
             };
         }
@@ -1387,7 +1406,7 @@ public class
                 }
                 @Override public void invalidated() {
                     impl_geomChanged();
-                    impl_markDirty(DirtyBits.REGION_SHAPE);
+                    NodeHelper.markDirty(Region.this, DirtyBits.REGION_SHAPE);
                 }
             };
         }
@@ -2541,21 +2560,22 @@ public class
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public void impl_updatePeer() {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private void doUpdatePeer() {
         // TODO I think we have a bug, where if you create a Region with an Image that hasn't
         // been loaded, we have no listeners on that image so as to cause a pulse & repaint
         // to happen once the image is loaded. We just assume the image has been loaded
         // (since when the image is created using new Image(url) or CSS it happens eagerly).
-        super.impl_updatePeer();
-        if (_shape != null) _shape.impl_syncPeer();
-        NGRegion pg = impl_getPeer();
+        if (_shape != null) NodeHelper.syncPeer(_shape);
+        NGRegion pg = NodeHelper.getPeer(this);
 
         if (!cornersValid) {
             validateCorners();
         }
 
-        final boolean sizeChanged = impl_isDirty(DirtyBits.NODE_GEOMETRY);
+        final boolean sizeChanged = NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY);
         if (sizeChanged) {
             pg.setSize((float)getWidth(), (float)getHeight());
         }
@@ -2563,7 +2583,7 @@ public class
         // NOTE: The order here is very important. There is logic in NGRegion which determines
         // whether we can cache an image representing this region, and for this to work correctly,
         // the shape must be specified before the background which is before the border.
-        final boolean shapeChanged = impl_isDirty(DirtyBits.REGION_SHAPE);
+        final boolean shapeChanged = NodeHelper.isDirty(this, DirtyBits.REGION_SHAPE);
         if (shapeChanged) {
             pg.updateShape(_shape, isScaleShape(), isCenterShape(), isCacheShape());
         }
@@ -2571,7 +2591,7 @@ public class
         // The normalized corners can always be updated since they require no
         // processing at the NG layer.
         pg.updateFillCorners(normalizedFillCorners);
-        final boolean backgroundChanged = impl_isDirty(DirtyBits.SHAPE_FILL);
+        final boolean backgroundChanged = NodeHelper.isDirty(this, DirtyBits.SHAPE_FILL);
         final Background bg = getBackground();
         if (backgroundChanged) {
             pg.updateBackground(bg);
@@ -2579,14 +2599,14 @@ public class
 
         // This will be true if an image that makes up the background or border of this
         // region has changed, such that we need to redraw the region.
-        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
             pg.imagesUpdated();
         }
 
         // The normalized corners can always be updated since they require no
         // processing at the NG layer.
         pg.updateStrokeCorners(normalizedStrokeCorners);
-        if (impl_isDirty(DirtyBits.SHAPE_STROKE)) {
+        if (NodeHelper.isDirty(this, DirtyBits.SHAPE_STROKE)) {
             pg.updateBorder(getBorder());
         }
 
@@ -2648,8 +2668,10 @@ public class
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public NGNode impl_createPeer() {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private NGNode doCreatePeer() {
         return new NGRegion();
     }
 

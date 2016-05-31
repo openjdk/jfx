@@ -49,6 +49,8 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.SubSceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGCamera;
@@ -101,7 +103,37 @@ import sun.util.logging.PlatformLogger;
  * @since JavaFX 8.0
  */
 public class SubScene extends Node {
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        SubSceneHelper.setSubSceneAccessor(new SubSceneHelper.SubSceneAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((SubScene) node).doCreatePeer();
+            }
 
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((SubScene) node).doUpdatePeer();
+            }
+
+            @Override
+            public boolean isDepthBuffer(SubScene subScene) {
+                return subScene.isDepthBufferInternal();
+            };
+
+            @Override
+            public Camera getEffectiveCamera(SubScene subScene) {
+                return subScene.getEffectiveCamera();
+            }
+
+        });
+    }
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        SubSceneHelper.initHelper(this);
+    }
     /**
      * Creates a {@code SubScene} for a specific root Node with a specific size.
      *
@@ -512,19 +544,15 @@ public class SubScene extends Node {
         return fill;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-
+    private void doUpdatePeer() {
         // TODO deal with clip node
 
         dirtyNodes = false;
         if (isDirty()) {
-            NGSubScene peer = impl_getPeer();
+            NGSubScene peer = getPeer();
             final Camera cam = getEffectiveCamera();
             boolean contentChanged = false;
             if (cam.getSubScene() == null &&
@@ -533,7 +561,7 @@ public class SubScene extends Node {
                 // owner(subscene) must take care of syncing it. And when a
                 // property on the camera changes it will mark subscenes
                 // CONTENT_DIRTY.
-                cam.impl_syncPeer();
+                cam.syncPeer();
             }
             if (isDirty(SubSceneDirtyBits.FILL_DIRTY)) {
                 Object platformPaint = getFill() == null ? null :
@@ -547,11 +575,11 @@ public class SubScene extends Node {
                 peer.setHeight((float)getHeight());
             }
             if (isDirty(SubSceneDirtyBits.CAMERA_DIRTY)) {
-                peer.setCamera((NGCamera) cam.impl_getPeer());
+                peer.setCamera((NGCamera) cam.getPeer());
                 contentChanged = true;
             }
             if (isDirty(SubSceneDirtyBits.ROOT_SG_DIRTY)) {
-                peer.setRoot(getRoot().impl_getPeer());
+                peer.setRoot(getRoot().getPeer());
                 contentChanged = true;
             }
             contentChanged |= syncLights();
@@ -591,8 +619,8 @@ public class SubScene extends Node {
     @Override
     void processCSS() {
         Parent root = getRoot();
-        if (root.impl_isDirty(DirtyBits.NODE_CSS)) {
-            root.impl_clearDirty(DirtyBits.NODE_CSS);
+        if (root.isDirty(DirtyBits.NODE_CSS)) {
+            root.clearDirty(DirtyBits.NODE_CSS);
             if (cssFlag == CssFlags.CLEAN) { cssFlag = CssFlags.UPDATE; }
         }
         super.processCSS();
@@ -655,12 +683,10 @@ public class SubScene extends Node {
         getRoot().updateBounds();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         if (!is3DSupported) {
             return new NGSubScene(false, false);
         }
@@ -753,7 +779,7 @@ public class SubScene extends Node {
     private void markDirty(SubSceneDirtyBits dirtyBit) {
         if (!isDirty()) {
             // Force SubScene to redraw
-            impl_markDirty(DirtyBits.NODE_CONTENTS);
+            NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
         }
         setDirty(dirtyBit);
     }
@@ -865,7 +891,7 @@ public class SubScene extends Node {
         if (!isDirty(SubSceneDirtyBits.LIGHTS_DIRTY)) {
             return lightOwnerChanged;
         }
-        NGSubScene pgSubScene = impl_getPeer();
+        NGSubScene pgSubScene = getPeer();
         NGLightBase peerLights[] = pgSubScene.getLights();
         if (!lights.isEmpty() || (peerLights != null)) {
             if (lights.isEmpty()) {
@@ -876,7 +902,7 @@ public class SubScene extends Node {
                 }
                 int i = 0;
                 for (; i < lights.size(); i++) {
-                    peerLights[i] = lights.get(i).impl_getPeer();
+                    peerLights[i] = lights.get(i).getPeer();
                 }
                 // Clear the rest of the list
                 while (i < peerLights.length && peerLights[i] != null) {
@@ -889,20 +915,4 @@ public class SubScene extends Node {
         return lightOwnerChanged;
     }
 
-    static {
-        // This is used by classes in different packages to get access to
-        // private and package private methods.
-        SubSceneHelper.setSubSceneAccessor(new SubSceneHelper.SubSceneAccessor() {
-
-            @Override
-            public boolean isDepthBuffer(SubScene subScene) {
-                return subScene.isDepthBufferInternal();
-            };
-
-            @Override
-            public Camera getEffectiveCamera(SubScene subScene) {
-                return subScene.getEffectiveCamera();
-            }
-        });
-    }
 }

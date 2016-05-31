@@ -34,6 +34,7 @@ import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGNode;
@@ -495,8 +496,8 @@ public class EffectDirtyRegionTest {
         } catch (Exception e) {
             throw new RuntimeException("Failed to update bounds", e);
         }
-        n.impl_updatePeer();
-        NGNode bn = n.impl_getPeer();
+        NodeHelper.updatePeer(n);
+        NGNode bn = NodeHelper.getPeer(n);
         SceneHelper.setAllowPGAccess(false);
         return bn;
     }

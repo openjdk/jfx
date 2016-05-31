@@ -25,7 +25,9 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Shape;
@@ -52,6 +54,16 @@ public class LineHelper extends ShapeHelper {
     }
 
     @Override
+    protected NGNode createPeerImpl(Node node) {
+        return lineAccessor.doCreatePeer(node);
+    }
+
+    @Override
+    protected void updatePeerImpl(Node node) {
+        super.updatePeerImpl(node);
+        lineAccessor.doUpdatePeer(node);
+    }
+    @Override
     protected Paint cssGetFillInitialValueImpl(Shape shape) {
         return lineAccessor.doCssGetFillInitialValue(shape);
     }
@@ -75,6 +87,8 @@ public class LineHelper extends ShapeHelper {
     }
 
     public interface LineAccessor {
+        NGNode doCreatePeer(Node node);
+        void doUpdatePeer(Node node);
         Paint doCssGetFillInitialValue(Shape shape);
         Paint doCssGetStrokeInitialValue(Shape shape);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);

@@ -41,6 +41,7 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGRegion;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.NodeShim;
@@ -1211,11 +1212,11 @@ public class RegionTest {
         }
 
         public boolean willBeRepainted() {
-            return NodeShim.impl_isDirty(this, DirtyBits.NODE_CONTENTS);
+            return NodeShim.isDirty(this, DirtyBits.NODE_CONTENTS);
         }
 
         public void clearDirty() {
-            NodeShim.impl_clearDirty(this, DirtyBits.NODE_CONTENTS);
+            NodeShim.clearDirty(this, DirtyBits.NODE_CONTENTS);
         }
     };
 
@@ -1235,16 +1236,16 @@ public class RegionTest {
         r.setCenterShape(true);
         r.setScaleShape(true);
         r.setShape(p);
-        r.impl_syncPeer();
+        NodeHelper.syncPeer(r);
 
-        NGRegion peer = r.impl_getPeer();
+        NGRegion peer = NodeHelper.getPeer(r);
         assertFalse(peer.isClean());
         peer.clearDirtyTree();
         assertTrue(peer.isClean());
 
         lineTo.setX(200);
-        p.impl_syncPeer();
-        r.impl_syncPeer();
+        NodeHelper.syncPeer(p);
+        NodeHelper.syncPeer(r);
         assertFalse(peer.isClean());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.animation.Animation.Status;
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
@@ -34,6 +35,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -42,6 +44,22 @@ import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 
 public class OverlayWarning extends Group {
+    static {
+        // This is used by classes in different packages to get access to
+        // private and package private methods.
+        OverlayWarningHelper.setOverlayWarningAccessor(
+                new OverlayWarningHelper.OverlayWarningAccessor() {
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((OverlayWarning) node).doUpdatePeer();
+            }
+
+            @Override
+            public void doMarkDirty(Node node, DirtyBits dirtyBit) {
+                ((OverlayWarning) node).doMarkDirty(dirtyBit);
+            }
+        });
+    }
 
     private static final float  PAD      = 40f;
     private static final float  RECTW    = 600f;
@@ -52,6 +70,11 @@ public class OverlayWarning extends Group {
     private ViewScene               view;
     private SequentialTransition    overlayTransition;
     private boolean                 warningTransition;
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        OverlayWarningHelper.initHelper(this);
+    }
 
     public OverlayWarning(final ViewScene vs) {
         view = vs;
@@ -150,11 +173,12 @@ public class OverlayWarning extends Group {
         return rectangle;
     }
 
-    @Override
-    public void impl_updatePeer() {
-        text.impl_updatePeer();
-        background.impl_updatePeer();
-        super.impl_updatePeer();
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private void doUpdatePeer() {
+        NodeHelper.updatePeer(text);
+        NodeHelper.updatePeer(background);
     }
 
     @Override
@@ -162,9 +186,10 @@ public class OverlayWarning extends Group {
         super.updateBounds();
     }
 
-    @Override
-    protected void impl_markDirty(DirtyBits dirtyBit) {
-        super.impl_markDirty(dirtyBit);
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private void doMarkDirty(DirtyBits dirtyBit) {
         view.synchroniseOverlayWarning();
     }
 }

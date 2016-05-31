@@ -27,6 +27,7 @@ package test.javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -86,7 +87,7 @@ public class PathTest {
         NodeTest.syncNode(path);
 
         //check
-        Path2D geometry = ((NGPath)path.impl_getPeer()).getGeometry();
+        Path2D geometry = ((NGPath)NodeHelper.getPeer(path)).getGeometry();
         assertEquals(geometry.getWindingRule(), FillRule.NON_ZERO.ordinal());
     }
 
@@ -96,7 +97,7 @@ public class PathTest {
         moveTo.setAbsolute(false);
         path.getElements().add(moveTo);
         path.getElements().add(new LineTo(100, 100));
-        Path2D geometry = ((NGPath)path.impl_getPeer()).getGeometry();
+        Path2D geometry = ((NGPath)NodeHelper.getPeer(path)).getGeometry();
         PathIterator piterator = geometry.getPathIterator(null);
         assertTrue(piterator.isDone());//path is empty
     }
@@ -114,7 +115,7 @@ public class PathTest {
         Path path = new Path();
         path.getElements().add(new LineTo(10, 10));
         path.getElements().add(new LineTo(100, 100));
-        Path2D geometry = ((NGPath)path.impl_getPeer()).getGeometry();
+        Path2D geometry = ((NGPath)NodeHelper.getPeer(path)).getGeometry();
         PathIterator piterator = geometry.getPathIterator(null);
         assertTrue(piterator.isDone());//path is empty
     }
@@ -133,13 +134,13 @@ public class PathTest {
         path.getElements().add(new LineTo(100, 100));
         path.setFillRule(FillRule.EVEN_ODD);
         NodeTest.syncNode(path);
-        Path2D geometry = ((NGPath)path.impl_getPeer()).getGeometry();
+        Path2D geometry = ((NGPath)NodeHelper.getPeer(path)).getGeometry();
         assertEquals(Path2D.WIND_EVEN_ODD, geometry.getWindingRule());
 
         path.setFillRule(FillRule.NON_ZERO);
         NodeTest.syncNode(path);
         // internal shape might have changed, getting it again
-        geometry = ((NGPath)path.impl_getPeer()).getGeometry();
+        geometry = ((NGPath)NodeHelper.getPeer(path)).getGeometry();
         assertEquals(Path2D.WIND_NON_ZERO, geometry.getWindingRule());
     }
 

@@ -25,11 +25,14 @@
 
 package test.javafx.scene.shape;
 
+import test.com.sun.javafx.scene.shape.StubPolygonHelper;
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPolygon;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Polygon;
 import org.junit.Test;
@@ -123,7 +126,7 @@ public class PolygonTest {
     private static void assertPGPolygonPointsEquals(
             final StubPolygon polygon,
             final double... expectedPoints) {
-        final StubNGPolygon stubPolygon = polygon.impl_getPeer();
+        final StubNGPolygon stubPolygon = NodeHelper.getPeer(polygon);
         final float[] pgPoints = stubPolygon.points;
 
         final int minLength = expectedPoints.length & ~1;
@@ -149,7 +152,20 @@ public class PolygonTest {
         assertFalse(s.isEmpty());
     }
 
-    private final class StubPolygon extends Polygon {
+    public static final class StubPolygon extends Polygon {
+        static {
+            StubPolygonHelper.setStubPolygonAccessor(new StubPolygonHelper.StubPolygonAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubPolygon) node).doCreatePeer();
+                }
+            });
+        }
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubPolygonHelper.initHelper(this);
+        }
         public StubPolygon(double... initialPoints) {
             super(initialPoints);
         }
@@ -158,13 +174,12 @@ public class PolygonTest {
             super();
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        private NGNode doCreatePeer() {
             return new StubNGPolygon();
         }
     }
 
-    private final class StubNGPolygon extends NGPolygon {
+    public static final class StubNGPolygon extends NGPolygon {
         private float[] points;
         @Override
         public void updatePolygon(float[] points) {

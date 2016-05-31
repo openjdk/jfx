@@ -1019,7 +1019,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         private void printNode(Node node, Graphics g, int w, int h) {
             PrismPrintGraphics ppg =
                     new PrismPrintGraphics((Graphics2D) g, w, h);
-            NGNode pgNode = node.impl_getPeer();
+            NGNode pgNode = NodeHelper.getPeer(node);
             boolean errored = false;
             try {
                 pgNode.render(ppg);

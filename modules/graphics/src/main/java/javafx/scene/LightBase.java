@@ -33,6 +33,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.LightBaseHelper;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.Toolkit;
@@ -65,8 +67,28 @@ import sun.util.logging.PlatformLogger;
  * @since JavaFX 8.0
  */
 public abstract class LightBase extends Node {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        LightBaseHelper.setLightBaseAccessor(new LightBaseHelper.LightBaseAccessor() {
+            @Override
+            public void doMarkDirty(Node node, DirtyBits dirtyBit) {
+                ((LightBase) node).doMarkDirty(dirtyBit);
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((LightBase) node).doUpdatePeer();
+            }
+        });
+    }
 
     private Affine3D localToSceneTx = new Affine3D();
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        LightBaseHelper.initHelper(this);
+    }
 
     /**
      * Creates a new instance of {@code LightBase} class with a default Color.WHITE light source.
@@ -88,7 +110,8 @@ public abstract class LightBase extends Node {
         }
 
         setColor(color);
-        this.localToSceneTransformProperty().addListener(observable -> impl_markDirty(DirtyBits.NODE_LIGHT_TRANSFORM));
+        this.localToSceneTransformProperty().addListener(observable ->
+                NodeHelper.markDirty(this, DirtyBits.NODE_LIGHT_TRANSFORM));
     }
 
     /**
@@ -111,7 +134,7 @@ public abstract class LightBase extends Node {
             color = new SimpleObjectProperty<Color>(LightBase.this, "color") {
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_LIGHT);
+                    NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT);
                 }
             };
         }
@@ -138,7 +161,7 @@ public abstract class LightBase extends Node {
             lightOn = new SimpleBooleanProperty(LightBase.this, "lightOn", true) {
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_LIGHT);
+                    NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT);
                 }
             };
         }
@@ -161,7 +184,7 @@ public abstract class LightBase extends Node {
 
                 @Override
                 protected void onChanged(Change<Node> c) {
-                    impl_markDirty(DirtyBits.NODE_LIGHT_SCOPE);
+                    NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT_SCOPE);
                     while (c.next()) {
                         for (Node node : c.getRemoved()) {
                             // Update the removed nodes
@@ -216,7 +239,7 @@ public abstract class LightBase extends Node {
     private void markChildrenDirty(Node node) {
         if (node instanceof Shape3D) {
             // Dirty using a lightweight DirtyBits.NODE_DRAWMODE bit
-            ((Shape3D) node).impl_markDirty(DirtyBits.NODE_DRAWMODE);
+            NodeHelper.markDirty(((Shape3D) node), DirtyBits.NODE_DRAWMODE);
         } else if (node instanceof Parent) {
             for (Node child : ((Parent) node).getChildren()) {
                 markChildrenDirty(child);
@@ -224,14 +247,10 @@ public abstract class LightBase extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected void impl_markDirty(DirtyBits dirtyBit) {
-        super.impl_markDirty(dirtyBit);
+    private void doMarkDirty(DirtyBits dirtyBit) {
         if ((scope == null) || getScope().isEmpty()) {
             // This light affect the entire scene/subScene
             markOwnerDirty();
@@ -244,23 +263,19 @@ public abstract class LightBase extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        NGLightBase peer = impl_getPeer();
-        if (impl_isDirty(DirtyBits.NODE_LIGHT)) {
+    private void doUpdatePeer() {
+        NGLightBase peer = getPeer();
+        if (isDirty(DirtyBits.NODE_LIGHT)) {
             peer.setColor((getColor() == null) ?
                     Toolkit.getPaintAccessor().getPlatformPaint(Color.WHITE)
                     : Toolkit.getPaintAccessor().getPlatformPaint(getColor()));
             peer.setLightOn(isLightOn());
         }
 
-        if (impl_isDirty(DirtyBits.NODE_LIGHT_SCOPE)) {
+        if (isDirty(DirtyBits.NODE_LIGHT_SCOPE)) {
             if (scope != null) {
                 ObservableList<Node> tmpScope = getScope();
                 if (tmpScope.isEmpty()) {
@@ -269,14 +284,14 @@ public abstract class LightBase extends Node {
                     Object ngList[] = new Object[tmpScope.size()];
                     for (int i = 0; i < tmpScope.size(); i++) {
                         Node n = tmpScope.get(i);
-                        ngList[i] = n.impl_getPeer();
+                        ngList[i] = n.getPeer();
                     }
                     peer.setScope(ngList);
                 }
             }
         }
 
-        if (impl_isDirty(DirtyBits.NODE_LIGHT_TRANSFORM)) {
+        if (isDirty(DirtyBits.NODE_LIGHT_TRANSFORM)) {
             localToSceneTx.setToIdentity();
             TransformHelper.apply(getLocalToSceneTransform(), localToSceneTx);
             // TODO: 3D - For now, we are treating the scene as world. This may need to change

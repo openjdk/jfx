@@ -29,6 +29,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.EllipseHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGEllipse;
@@ -36,6 +37,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 
 
@@ -58,6 +60,16 @@ public class Ellipse extends Shape {
     static {
         EllipseHelper.setEllipseAccessor(new EllipseHelper.EllipseAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Ellipse) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Ellipse) node).doUpdatePeer();
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Ellipse) shape).doConfigShape();
             }
@@ -72,12 +84,15 @@ public class Ellipse extends Shape {
             BaseTransform.TYPE_MASK_SCALE |
             BaseTransform.TYPE_FLIP);
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        EllipseHelper.initHelper(this);
+    }
 
     /**
      * Creates an empty instance of Ellipse.
      */
     public Ellipse() {
-        EllipseHelper.initHelper(this);
     }
 
     /**
@@ -88,7 +103,6 @@ public class Ellipse extends Shape {
     public Ellipse(double radiusX, double radiusY) {
         setRadiusX(radiusX);
         setRadiusY(radiusY);
-        EllipseHelper.initHelper(this);
     }
 
     /**
@@ -102,7 +116,6 @@ public class Ellipse extends Shape {
         this(radiusX, radiusY);
         setCenterX(centerX);
         setCenterY(centerY);
-        EllipseHelper.initHelper(this);
     }
 
     /**
@@ -128,7 +141,7 @@ public class Ellipse extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Ellipse.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -169,7 +182,7 @@ public class Ellipse extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Ellipse.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -196,7 +209,7 @@ public class Ellipse extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Ellipse.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -232,7 +245,7 @@ public class Ellipse extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Ellipse.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -259,13 +272,10 @@ public class Ellipse extends Shape {
         return radiusY;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGEllipse();
     }
 
@@ -333,17 +343,12 @@ public class Ellipse extends Shape {
         return shape;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            NGEllipse peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
+            NGEllipse peer = NodeHelper.getPeer(this);
             peer.updateEllipse((float)getCenterX(),
                 (float)getCenterY(),
                 (float)getRadiusX(),

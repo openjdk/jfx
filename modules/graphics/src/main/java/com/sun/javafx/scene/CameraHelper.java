@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene;
 
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.util.Utils;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.Camera;
@@ -33,14 +35,39 @@ import javafx.scene.Node;
 /**
  * Used to access internal methods of Camera.
  */
-public class CameraHelper {
+public class CameraHelper extends NodeHelper {
+
+    private static final CameraHelper theInstance;
     private static CameraAccessor cameraAccessor;
 
     static {
-        forceInit(Camera.class);
+        theInstance = new CameraHelper();
+        Utils.forceInit(Camera.class);
     }
 
-    private CameraHelper() {
+    private static CameraHelper getInstance() {
+        return theInstance;
+    }
+
+    public static void initHelper(Camera camera) {
+        setHelper(camera, getInstance());
+    }
+
+    @Override
+    protected NGNode createPeerImpl(Node node) {
+        throw new UnsupportedOperationException("Application should not extend Camera class directly.");
+    }
+
+    @Override
+    protected void updatePeerImpl(Node node) {
+        super.updatePeerImpl(node);
+        cameraAccessor.doUpdatePeer(node);
+    }
+
+    @Override
+    protected void markDirtyImpl(Node node, DirtyBits dirtyBit) {
+        super.markDirtyImpl(node, dirtyBit);
+        cameraAccessor.doMarkDirty(node, dirtyBit);
     }
 
     public static Point2D project(Camera camera, Point3D p) {
@@ -64,17 +91,11 @@ public class CameraHelper {
     }
 
     public interface CameraAccessor {
+        void doMarkDirty(Node node, DirtyBits dirtyBit);
+        void doUpdatePeer(Node node);
         Point2D project(Camera camera, Point3D p);
         Point2D pickNodeXYPlane(Camera camera, Node node, double x, double y);
         Point3D pickProjectPlane(Camera camera, double x, double y);
     }
 
-    private static void forceInit(final Class<?> classToInit) {
-        try {
-            Class.forName(classToInit.getName(), true,
-                          classToInit.getClassLoader());
-        } catch (final ClassNotFoundException e) {
-            throw new AssertionError(e);  // Can't happen
-        }
-    }
 }

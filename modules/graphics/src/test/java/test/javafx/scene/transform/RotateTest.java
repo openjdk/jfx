@@ -27,6 +27,7 @@ package test.javafx.scene.transform;
 
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.scene.NodeHelper;
 import test.com.sun.javafx.test.TransformHelper;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -239,7 +240,7 @@ public class RotateTest {
         NodeTest.syncNode(r);
 
         //check
-        RectangleTest.StubNGRectangle pgR = r.impl_getPeer();
+        RectangleTest.StubNGRectangle pgR = NodeHelper.getPeer(r);
         assertTx(r, pgR.getTransformMatrix());
     }
 }

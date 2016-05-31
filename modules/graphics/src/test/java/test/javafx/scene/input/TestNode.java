@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.input;
 
+import test.com.sun.javafx.scene.input.TestNodeHelper;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
@@ -39,9 +40,23 @@ import javafx.scene.Node;
  * Subclass of javafx.scene.Node used for input testing.
  */
 public class TestNode extends Node {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        TestNodeHelper.setTestNodeAccessor(new TestNodeHelper.TestNodeAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((TestNode) node).doCreatePeer();
+            }
+        });
+    }
 
     private float offsetInScene;
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        TestNodeHelper.initHelper(this);
+    }
     public TestNode() {
     }
 
@@ -79,8 +94,7 @@ public class TestNode extends Node {
         return null;
     }
 
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGGroup();
     }
 

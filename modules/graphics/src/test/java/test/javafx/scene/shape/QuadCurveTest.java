@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,10 @@
 
 package test.javafx.scene.shape;
 
+import test.com.sun.javafx.scene.shape.StubQuadCurveHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGQuadCurve;
+import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.QuadCurve;
 import org.junit.Test;
@@ -107,7 +109,20 @@ public class QuadCurveTest {
         assertFalse(s.isEmpty());
     }
 
-    public class StubQuadCurve extends QuadCurve {
+    public static final class StubQuadCurve extends QuadCurve {
+        static {
+            StubQuadCurveHelper.setStubQuadCurveAccessor(new StubQuadCurveHelper.StubQuadCurveAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubQuadCurve) node).doCreatePeer();
+                }
+            });
+        }
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubQuadCurveHelper.initHelper(this);
+        }
         public StubQuadCurve() {
             super();
         }
@@ -116,13 +131,12 @@ public class QuadCurveTest {
             super(startX, startY, controlX, controlY, endX, endY);
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        private NGNode doCreatePeer() {
             return new StubNGQuadCurve();
         }
     }
 
-    public class StubNGQuadCurve extends NGQuadCurve {
+    public static final class StubNGQuadCurve extends NGQuadCurve {
         private float x1, y1, x2, y2, ctrlX, ctrlY;
 
         public float getCtrlX() { return ctrlX; }

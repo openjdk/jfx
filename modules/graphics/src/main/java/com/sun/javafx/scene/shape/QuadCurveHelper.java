@@ -25,7 +25,9 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 import javafx.scene.shape.QuadCurve;
 import javafx.scene.shape.Shape;
 
@@ -51,6 +53,17 @@ public class QuadCurveHelper extends ShapeHelper {
     }
 
     @Override
+    protected NGNode createPeerImpl(Node node) {
+        return quadCurveAccessor.doCreatePeer(node);
+    }
+
+    @Override
+    protected void updatePeerImpl(Node node) {
+        super.updatePeerImpl(node);
+        quadCurveAccessor.doUpdatePeer(node);
+    }
+
+    @Override
     protected com.sun.javafx.geom.Shape configShapeImpl(Shape shape) {
         return quadCurveAccessor.doConfigShape(shape);
     }
@@ -64,6 +77,8 @@ public class QuadCurveHelper extends ShapeHelper {
     }
 
     public interface QuadCurveAccessor {
+        NGNode doCreatePeer(Node node);
+        void doUpdatePeer(Node node);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);
     }
 

@@ -28,20 +28,43 @@ package com.sun.javafx.scene;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 
-/**
+/*
  * Used to access internal methods of Parent.
+ * Note: ParentHelper needs to be a concrete class even though Parent is an
+ * abstract class since user is allowed to subclass Parent.
  */
-public class ParentHelper {
+public class ParentHelper extends NodeHelper {
 
+    private static final ParentHelper theInstance;
     private static ParentAccessor parentAccessor;
 
     static {
-        forceInit(Parent.class);
+        theInstance = new ParentHelper();
+        Utils.forceInit(Parent.class);
     }
 
-    private ParentHelper() {
+    private static ParentHelper getInstance() {
+        return theInstance;
+    }
+
+    public static void initHelper(Parent parent) {
+        setHelper(parent, getInstance());
+    }
+
+    @Override
+    protected NGNode createPeerImpl(Node node) {
+        return parentAccessor.doCreatePeer(node);
+    }
+
+    @Override
+    protected void updatePeerImpl(Node node) {
+        super.updatePeerImpl(node);
+        parentAccessor.doUpdatePeer(node);
     }
 
     public static boolean pickChildrenNode(Parent parent, PickRay pickRay,
@@ -66,17 +89,11 @@ public class ParentHelper {
     }
 
     public interface ParentAccessor {
+        NGNode doCreatePeer(Node node);
+        void doUpdatePeer(Node node);
         boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result);
         void setTraversalEngine(Parent parent, ParentTraversalEngine value);
         ParentTraversalEngine getTraversalEngine(Parent parent);
     }
 
-    private static void forceInit(final Class<?> classToInit) {
-        try {
-            Class.forName(classToInit.getName(), true,
-                    classToInit.getClassLoader());
-        } catch (final ClassNotFoundException e) {
-            throw new AssertionError(e);  // Can't happen
-        }
-    }
 }

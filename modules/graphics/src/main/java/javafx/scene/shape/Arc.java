@@ -27,6 +27,7 @@ package javafx.scene.shape;
 
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.ArcHelper;
 import com.sun.javafx.sg.prism.NGArc;
 import com.sun.javafx.sg.prism.NGNode;
@@ -34,6 +35,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 
 
@@ -65,6 +67,16 @@ public class Arc extends Shape {
     static {
         ArcHelper.setArcAccessor(new ArcHelper.ArcAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Arc) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Arc) node).doUpdatePeer();
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Arc) shape).doConfigShape();
             }
@@ -73,11 +85,15 @@ public class Arc extends Shape {
 
     private final Arc2D shape = new Arc2D();
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        ArcHelper.initHelper(this);
+    }
+
     /**
      * Creates an empty instance of Arc.
      */
     public Arc() {
-        ArcHelper.initHelper(this);
     }
 
     /**
@@ -98,7 +114,6 @@ public class Arc extends Shape {
         setRadiusY(radiusY);
         setStartAngle(startAngle);
         setLength(length);
-        ArcHelper.initHelper(this);
     }
 
     /**
@@ -124,7 +139,7 @@ public class Arc extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -165,7 +180,7 @@ public class Arc extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -193,7 +208,7 @@ public class Arc extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -230,7 +245,7 @@ public class Arc extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -280,7 +295,7 @@ public class Arc extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -307,7 +322,7 @@ public class Arc extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -360,7 +375,7 @@ public class Arc extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -378,12 +393,10 @@ public class Arc extends Shape {
         return type;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGArc();
     }
 
@@ -421,16 +434,12 @@ public class Arc extends Shape {
         return t == null ? ArcType.OPEN : t;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            final NGArc peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
+            final NGArc peer = NodeHelper.getPeer(this);
             peer.updateArc((float)getCenterX(),
                 (float)getCenterY(),
                 (float)getRadiusX(),

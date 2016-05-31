@@ -30,6 +30,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.PolylineHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
@@ -38,6 +39,7 @@ import com.sun.javafx.sg.prism.NGShape;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
@@ -61,6 +63,16 @@ public  class Polyline extends Shape {
     static {
         PolylineHelper.setPolylineAccessor(new PolylineHelper.PolylineAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Polyline) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Polyline) node).doUpdatePeer();
+            }
+
+            @Override
             public Paint doCssGetFillInitialValue(Shape shape) {
                 return ((Polyline) shape).doCssGetFillInitialValue();
             }
@@ -80,6 +92,9 @@ public  class Polyline extends Shape {
     private final Path2D shape = new Path2D();
 
     {
+        // To initialize the class helper at the begining each constructor of this class
+        PolylineHelper.initHelper(this);
+
         // overriding default values for fill and stroke
         // Set through CSS property so that it appears to be a UA style rather
         // that a USER style so that fill and stroke can still be set from CSS.
@@ -91,7 +106,6 @@ public  class Polyline extends Shape {
      * Creates an empty instance of Polyline.
      */
     public Polyline() {
-        PolylineHelper.initHelper(this);
     }
 
     /**
@@ -104,7 +118,6 @@ public  class Polyline extends Shape {
                 this.getPoints().add(p);
             }
         }
-        PolylineHelper.initHelper(this);
     }
 
     /**
@@ -115,7 +128,7 @@ public  class Polyline extends Shape {
     private final ObservableList<Double> points = new TrackableObservableList<Double>() {
         @Override
         protected void onChanged(Change<Double> c) {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Polyline.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
     };
@@ -127,12 +140,10 @@ public  class Polyline extends Shape {
      */
     public final ObservableList<Double> getPoints() { return points; }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGPolyline();
     }
 
@@ -177,21 +188,17 @@ public  class Polyline extends Shape {
         return shape;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
             final int numValidPoints = getPoints().size() & ~1;
             float points_array[] = new float[numValidPoints];
             for (int i = 0; i < numValidPoints; i++) {
                 points_array[i] = (float)getPoints().get(i).doubleValue();
             }
-            final NGPolyline peer = impl_getPeer();
+            final NGPolyline peer = NodeHelper.getPeer(this);
             peer.updatePolyline(points_array);
         }
     }

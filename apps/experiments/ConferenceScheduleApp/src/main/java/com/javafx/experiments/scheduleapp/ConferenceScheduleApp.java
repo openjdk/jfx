@@ -46,6 +46,7 @@ import com.javafx.experiments.scheduleapp.pages.TimelinePage;
 import com.javafx.experiments.scheduleapp.pages.TracksPage;
 import com.javafx.experiments.scheduleapp.pages.VenuesPage;
 import com.sun.glass.ui.Screen;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.quantum.GlassScene;
 import java.lang.reflect.Field;
@@ -206,7 +207,7 @@ public class ConferenceScheduleApp extends Application {
                 @Override public void handle(KeyEvent event) {
                     if (sceneListener == null) {
                         try {
-                            GlassScene peer = (GlassScene) scene.impl_getPeer();
+                            GlassScene peer = (GlassScene) SceneHelper.getPeer(scene);
                             Field f = GlassScene.class.getDeclaredField("sceneListener");
                             f.setAccessible(true);
                             sceneListener = (TKSceneListener) f.get(peer);

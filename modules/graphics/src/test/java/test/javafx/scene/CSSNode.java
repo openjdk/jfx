@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,22 @@ import javafx.scene.paint.Paint;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.Node;
+import test.com.sun.javafx.scene.CSSNodeHelper;
 
 public  class CSSNode extends Node {
+    static {
+        CSSNodeHelper.setCSSNodeAccessor(new CSSNodeHelper.CSSNodeAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((CSSNode) node).doCreatePeer();
+            }
+        });
+    }
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        CSSNodeHelper.initHelper(this);
+    }
 
     public CSSNode() {
         setContentSize(100);
@@ -237,8 +251,7 @@ public  class CSSNode extends Node {
         return false;
     }
 
-    @Override
-    public NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGGroup();
     }
 

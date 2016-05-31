@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.com.sun.javafx.sg.prism;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNodeShim;
 import com.sun.javafx.sg.prism.NGRegion;
 import javafx.geometry.Insets;
@@ -94,49 +95,49 @@ public class NGRegionTest {
 
     @Test public void updateBackgroundWithSameSizeButTransparentFillInvalidatesOpaqueInsets() {
         Region r = new Region();
-        NGRegion peer = r.impl_getPeer();
+        NGRegion peer = NodeHelper.getPeer(r);
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
-        r.impl_updatePeer();
+        NodeHelper.updatePeer(r);
         peer.getOpaqueRegion(); // Forces to validate the opaque region
         assertFalse(NGNodeShim.isOpaqueRegionInvalid(peer)); // sanity check
         r.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, null)));
-        r.impl_updatePeer();
+        NodeHelper.updatePeer(r);
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(peer));
     }
 
     @Test public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets() {
         Region r = new Region();
-        NGRegion peer = r.impl_getPeer();
+        NGRegion peer = NodeHelper.getPeer(r);
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
-        r.impl_updatePeer();
+        NodeHelper.updatePeer(r);
         peer.getOpaqueRegion(); // Forces to validate the opaque region
         assertFalse(NGNodeShim.isOpaqueRegionInvalid(peer)); // sanity check
         r.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, new Insets(10))));
-        r.impl_updatePeer();
+        NodeHelper.updatePeer(r);
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(peer));
     }
 
     @Test public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets2() {
         Region r = new Region();
-        NGRegion peer = r.impl_getPeer();
+        NGRegion peer = NodeHelper.getPeer(r);
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
-        r.impl_updatePeer();
+        NodeHelper.updatePeer(r);
         peer.getOpaqueRegion(); // Forces to validate the opaque region
         assertFalse(NGNodeShim.isOpaqueRegionInvalid(peer)); // sanity check
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, new Insets(10))));
-        r.impl_updatePeer();
+        NodeHelper.updatePeer(r);
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(peer));
     }
 
     @Test public void updateBackgroundWithDifferentSizeBackgroundInvalidatesOpaqueInsets3() {
         Region r = new Region();
-        NGRegion peer = r.impl_getPeer();
+        NGRegion peer = NodeHelper.getPeer(r);
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, null)));
-        r.impl_updatePeer();
+        NodeHelper.updatePeer(r);
         peer.getOpaqueRegion(); // Forces to validate the opaque region
         assertFalse(NGNodeShim.isOpaqueRegionInvalid(peer)); // sanity check
         r.setBackground(new Background(new BackgroundFill(Color.RED, null, new Insets(-10))));
-        r.impl_updatePeer();
+        NodeHelper.updatePeer(r);
         assertTrue(NGNodeShim.isOpaqueRegionInvalid(peer));
     }
 }

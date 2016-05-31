@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,12 @@
 
 package test.javafx.scene.shape;
 
+import test.com.sun.javafx.scene.shape.StubCircleHelper;
 import com.sun.javafx.sg.prism.NGCircle;
 import com.sun.javafx.sg.prism.NGNode;
 import test.com.sun.javafx.test.TestHelper;
 import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -143,6 +145,19 @@ public class CircleTest {
     }
 
     public static final class StubCircle extends Circle {
+        static {
+            StubCircleHelper.setStubCircleAccessor(new StubCircleHelper.StubCircleAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubCircle) node).doCreatePeer();
+                }
+            });
+        }
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubCircleHelper.initHelper(this);
+        }
         public StubCircle() {
             super();
         }
@@ -159,8 +174,7 @@ public class CircleTest {
             super(centerX, centerY, radius, fill);
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        private NGNode doCreatePeer() {
             return new StubNGCircle();
         }
     }

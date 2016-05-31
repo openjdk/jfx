@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,14 @@ package test.javafx.scene.shape;
 
 import com.sun.javafx.sg.prism.NGLine;
 import com.sun.javafx.sg.prism.NGNode;
+import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Line;
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import test.com.sun.javafx.scene.shape.StubLineHelper;
 
 public class LineTest {
 
@@ -96,7 +98,20 @@ public class LineTest {
         assertFalse(s.isEmpty());
     }
 
-    public class StubLine extends Line {
+    public static final class StubLine extends Line {
+        static {
+            StubLineHelper.setStubLineAccessor(new StubLineHelper.StubLineAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubLine) node).doCreatePeer();
+                }
+            });
+        }
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubLineHelper.initHelper(this);
+        }
         public StubLine() {
             super();
         }
@@ -105,13 +120,12 @@ public class LineTest {
             super(startX, startY, endX, endY);
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        private NGNode doCreatePeer() {
             return new StubNGLine();
         }
     }
 
-    public class StubNGLine extends NGLine {
+    public static final class StubNGLine extends NGLine {
         private float x1;
         private float y1;
         private float x2;

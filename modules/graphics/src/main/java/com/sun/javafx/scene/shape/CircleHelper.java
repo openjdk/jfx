@@ -25,7 +25,9 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Shape;
 
@@ -51,6 +53,17 @@ public class CircleHelper extends ShapeHelper {
     }
 
     @Override
+    protected NGNode createPeerImpl(Node node) {
+        return circleAccessor.doCreatePeer(node);
+    }
+
+    @Override
+    protected void updatePeerImpl(Node node) {
+        super.updatePeerImpl(node);
+        circleAccessor.doUpdatePeer(node);
+    }
+
+    @Override
     protected  com.sun.javafx.geom.Shape configShapeImpl(Shape shape) {
         return circleAccessor.doConfigShape(shape);
     }
@@ -64,9 +77,9 @@ public class CircleHelper extends ShapeHelper {
     }
 
     public interface CircleAccessor {
+        NGNode doCreatePeer(Node node);
+        void doUpdatePeer(Node node);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);
     }
 
 }
-
-

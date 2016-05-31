@@ -25,7 +25,9 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Polyline;
 import javafx.scene.shape.Shape;
@@ -52,6 +54,17 @@ public class PolylineHelper extends ShapeHelper {
     }
 
     @Override
+    protected NGNode createPeerImpl(Node node) {
+        return polylineAccessor.doCreatePeer(node);
+    }
+
+    @Override
+    protected void updatePeerImpl(Node node) {
+        super.updatePeerImpl(node);
+        polylineAccessor.doUpdatePeer(node);
+    }
+
+    @Override
     protected Paint cssGetFillInitialValueImpl(Shape shape) {
         return polylineAccessor.doCssGetFillInitialValue(shape);
     }
@@ -75,6 +88,8 @@ public class PolylineHelper extends ShapeHelper {
     }
 
     public interface PolylineAccessor {
+        NGNode doCreatePeer(Node node);
+        void doUpdatePeer(Node node);
         Paint doCssGetFillInitialValue(Shape shape);
         Paint doCssGetStrokeInitialValue(Shape shape);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);

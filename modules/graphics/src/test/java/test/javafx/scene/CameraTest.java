@@ -28,6 +28,7 @@ package test.javafx.scene;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGParallelCamera;
 import com.sun.javafx.sg.prism.NGPerspectiveCamera;
@@ -36,6 +37,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.scene.Camera;
 import javafx.scene.CameraShim;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.ParallelCamera;
 import javafx.scene.ParentShim;
 import javafx.scene.PerspectiveCamera;
@@ -48,6 +50,8 @@ import javafx.stage.Stage;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import test.com.sun.javafx.scene.StubParallelCameraHelper;
+import test.com.sun.javafx.scene.StubPerspectiveCameraHelper;
 
 public class CameraTest {
 
@@ -540,7 +544,7 @@ public class CameraTest {
 
         Toolkit.getToolkit().firePulse();
 
-        StubNGPerspectiveCamera pc = camera.impl_getPeer();
+        StubNGPerspectiveCamera pc = NodeHelper.getPeer(camera);
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -565,7 +569,7 @@ public class CameraTest {
 
         Toolkit.getToolkit().firePulse();
 
-        StubNGPerspectiveCamera pc = camera.impl_getPeer();
+        StubNGPerspectiveCamera pc = NodeHelper.getPeer(camera);
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -589,7 +593,7 @@ public class CameraTest {
 
         Toolkit.getToolkit().firePulse();
 
-        StubNGParallelCamera pc = camera.impl_getPeer();
+        StubNGParallelCamera pc = NodeHelper.getPeer(camera);
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -615,7 +619,7 @@ public class CameraTest {
 
         Toolkit.getToolkit().firePulse();
 
-        StubNGParallelCamera pc = camera.impl_getPeer();
+        StubNGParallelCamera pc = NodeHelper.getPeer(camera);
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -640,7 +644,7 @@ public class CameraTest {
 
         Toolkit.getToolkit().firePulse();
 
-        StubNGParallelCamera pc = SceneShim.getEffectiveCamera(scene).impl_getPeer();
+        StubNGParallelCamera pc = NodeHelper.getPeer(SceneShim.getEffectiveCamera(scene));
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -666,7 +670,7 @@ public class CameraTest {
 
         Toolkit.getToolkit().firePulse();
 
-        StubNGParallelCamera pc = SubSceneShim.getEffectiveCamera(sub).impl_getPeer();
+        StubNGParallelCamera pc = NodeHelper.getPeer(SubSceneShim.getEffectiveCamera(sub));
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -695,7 +699,7 @@ public class CameraTest {
         sub.setHeight(200);
         Toolkit.getToolkit().firePulse();
 
-        StubNGPerspectiveCamera pc = camera.impl_getPeer();
+        StubNGPerspectiveCamera pc = NodeHelper.getPeer(camera);
 
         assertEquals(300, pc.getViewWidth(), 0.00001);
         assertEquals(200, pc.getViewHeight(), 0.00001);
@@ -719,7 +723,7 @@ public class CameraTest {
         camera.setFarClip(250.0);
         Toolkit.getToolkit().firePulse();
 
-        StubNGPerspectiveCamera pc = camera.impl_getPeer();
+        StubNGPerspectiveCamera pc = NodeHelper.getPeer(camera);
 
         GeneralTransform3D expected = new GeneralTransform3D();
         expected.perspective(true, Math.toRadians(30), 1.5, 0.1, 250);
@@ -748,7 +752,7 @@ public class CameraTest {
         camera.setFieldOfView(45.0);
         Toolkit.getToolkit().firePulse();
 
-        StubNGPerspectiveCamera pc = camera.impl_getPeer();
+        StubNGPerspectiveCamera pc = NodeHelper.getPeer(camera);
 
         GeneralTransform3D expected = new GeneralTransform3D();
         expected.perspective(true, Math.toRadians(45), 1.5, 0.1, 100);
@@ -780,7 +784,7 @@ public class CameraTest {
         camera.setVerticalFieldOfView(false);
         Toolkit.getToolkit().firePulse();
 
-        StubNGPerspectiveCamera pc = camera.impl_getPeer();
+        StubNGPerspectiveCamera pc = NodeHelper.getPeer(camera);
 
         GeneralTransform3D expected = new GeneralTransform3D();
         expected.perspective(false, Math.toRadians(30), 1.5, 0.1, 100);
@@ -812,7 +816,7 @@ public class CameraTest {
         camera.getParent().setTranslateX(200);
         Toolkit.getToolkit().firePulse();
 
-        StubNGPerspectiveCamera pc = camera.impl_getPeer();
+        StubNGPerspectiveCamera pc = NodeHelper.getPeer(camera);
 
         GeneralTransform3D expected = new GeneralTransform3D();
         expected.set(DEFAULT_PROJVIEW_TX);
@@ -825,14 +829,27 @@ public class CameraTest {
         TransformHelper.assertMatrix(pc.getWorldTransform(), Affine3D.getTranslateInstance(200, 0));
     }
 
-    private class StubPerspectiveCamera extends PerspectiveCamera {
-        @Override
-        protected NGNode impl_createPeer() {
+    public static final class StubPerspectiveCamera extends PerspectiveCamera {
+        static {
+            StubPerspectiveCameraHelper.setStubPerspectiveCameraAccessor(new StubPerspectiveCameraHelper.StubPerspectiveCameraAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubPerspectiveCamera) node).doCreatePeer();
+                }
+            });
+        }
+
+        public StubPerspectiveCamera() {
+            super();
+            StubPerspectiveCameraHelper.initHelper(this);
+        }
+
+        private NGNode doCreatePeer() {
             return new StubNGPerspectiveCamera(isFixedEyeAtCameraZero());
         }
     }
 
-    private class StubNGPerspectiveCamera extends NGPerspectiveCamera {
+    public static final class StubNGPerspectiveCamera extends NGPerspectiveCamera {
         double viewWidth, viewHeight;
         Vec3d position;
         GeneralTransform3D projViewTx;
@@ -866,14 +883,27 @@ public class CameraTest {
         public boolean isVerticalFieldOfView() { return this.verticalFieldOfView; }
     }
 
-    private class StubParallelCamera extends ParallelCamera {
-        @Override
-        protected NGNode impl_createPeer() {
+    public static final class StubParallelCamera extends ParallelCamera {
+        static {
+            StubParallelCameraHelper.setStubParallelCameraAccessor(new StubParallelCameraHelper.StubParallelCameraAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubParallelCamera) node).doCreatePeer();
+                }
+            });
+        }
+
+        public StubParallelCamera() {
+            super();
+            StubParallelCameraHelper.initHelper(this);
+        }
+
+        private NGNode doCreatePeer() {
             return new StubNGParallelCamera();
         }
     }
 
-    private class StubNGParallelCamera extends NGParallelCamera {
+    public static final class StubNGParallelCamera extends NGParallelCamera {
         double viewWidth, viewHeight;
         Vec3d position;
         GeneralTransform3D projViewTx;

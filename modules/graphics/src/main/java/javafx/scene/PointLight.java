@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.PointLightHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPointLight;
 import javafx.scene.paint.Color;
@@ -37,6 +40,20 @@ import javafx.scene.paint.Color;
  * @since JavaFX 8.0
  */
 public class PointLight extends LightBase {
+    static {
+        PointLightHelper.setPointLightAccessor(new PointLightHelper.PointLightAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((PointLight) node).doCreatePeer();
+            }
+        });
+    }
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        PointLightHelper.initHelper(this);
+    }
+
     /**
      * Creates a new instance of {@code PointLight} class with a default Color.WHITE light source.
      */
@@ -53,13 +70,10 @@ public class PointLight extends LightBase {
         super(color);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGPointLight();
     }
 }
