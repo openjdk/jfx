@@ -1081,7 +1081,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 Toolkit.getToolkit().enterNestedEventLoop(elo);
                 elo = null;
             } else {
-                while (!pageDone) {
+                while (!pageDone && !jobDone && !jobError) {
                     synchronized (monitor) {
                         try {
                             monitor.wait(1000);
