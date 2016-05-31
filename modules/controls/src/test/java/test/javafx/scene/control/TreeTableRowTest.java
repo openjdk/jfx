@@ -30,6 +30,7 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.control.skin.TreeTableRowSkin;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -813,5 +814,10 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         tree.setRoot(null);
         cell.updateIndex(1);
+    }
+
+    @Test public void test_jdk_8151524() {
+        TreeTableRow cell = new TreeTableRow();
+        cell.setSkin(new TreeTableRowSkin(cell));
     }
 }

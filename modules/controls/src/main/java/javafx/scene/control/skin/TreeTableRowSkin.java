@@ -27,6 +27,7 @@ package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.scene.control.Control;
 import javafx.scene.control.TableColumnBase;
@@ -55,6 +56,7 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.control.TreeView;
 
 /**
  * Default skin implementation for the {@link TreeTableRow} control.
@@ -114,28 +116,43 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             // determined to be unnecessary and led to performance issues such as
             // those detailed in JDK-8143266
         });
-        registerChangeListener(control.getTreeTableView().treeColumnProperty(), e -> {
-            // Fix for RT-27782: Need to set isDirty to true, rather than the
-            // cheaper updateCells, as otherwise the text indentation will not
-            // be recalculated in TreeTableCellSkin.leftLabelPadding()
-            isDirty = true;
-            getSkinnable().requestLayout();
-        });
 
-        DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
-        if (fixedCellSizeProperty != null) {
-            registerChangeListener(fixedCellSizeProperty, e -> {
+        setupTreeTableViewListeners();
+    }
+
+    private void setupTreeTableViewListeners() {
+        TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
+        if (treeTableView == null) {
+            getSkinnable().treeTableViewProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    getSkinnable().treeTableViewProperty().removeListener(this);
+                    setupTreeTableViewListeners();
+                }
+            });
+        } else {
+            registerChangeListener(treeTableView.treeColumnProperty(), e -> {
+                // Fix for RT-27782: Need to set isDirty to true, rather than the
+                // cheaper updateCells, as otherwise the text indentation will not
+                // be recalculated in TreeTableCellSkin.leftLabelPadding()
+                isDirty = true;
+                getSkinnable().requestLayout();
+            });
+
+            DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
+            if (fixedCellSizeProperty != null) {
+                registerChangeListener(fixedCellSizeProperty, e -> {
+                    fixedCellSize = fixedCellSizeProperty.get();
+                    fixedCellSizeEnabled = fixedCellSize > 0;
+                });
                 fixedCellSize = fixedCellSizeProperty.get();
                 fixedCellSizeEnabled = fixedCellSize > 0;
-            });
-            fixedCellSize = fixedCellSizeProperty.get();
-            fixedCellSizeEnabled = fixedCellSize > 0;
 
-            // JDK-8144500:
-            // When in fixed cell size mode, we must listen to the width of the virtual flow, so
-            // that when it changes, we can appropriately add / remove cells that may or may not
-            // be required (because we remove all cells that are not visible).
-            registerChangeListener(getVirtualFlow().widthProperty(), e -> control.requestLayout());
+                // JDK-8144500:
+                // When in fixed cell size mode, we must listen to the width of the virtual flow, so
+                // that when it changes, we can appropriately add / remove cells that may or may not
+                // be required (because we remove all cells that are not visible).
+                registerChangeListener(getVirtualFlow().widthProperty(), e -> treeTableView.requestLayout());
+            }
         }
     }
 
@@ -299,7 +316,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     /** {@inheritDoc} */
     @Override protected ObservableList<TreeTableColumn<T, ?>> getVisibleLeafColumns() {
-        return getTreeTableView().getVisibleLeafColumns();
+        return getTreeTableView() == null ? FXCollections.emptyObservableList() : getTreeTableView().getVisibleLeafColumns();
     }
 
     /** {@inheritDoc} */
@@ -381,7 +398,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     private void updateTableViewSkin() {
         TreeTableView<T> tableView = getSkinnable().getTreeTableView();
-        if (tableView.getSkin() instanceof TreeTableViewSkin) {
+        if (tableView != null && tableView.getSkin() instanceof TreeTableViewSkin) {
             treeTableViewSkin = (TreeTableViewSkin)tableView.getSkin();
         }
     }

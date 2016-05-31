@@ -26,6 +26,8 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
@@ -76,13 +78,26 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>> {
         behavior = new ListCellBehavior<>(control);
 //        control.setInputMap(behavior.getInputMap());
 
-        this.fixedCellSize = control.getListView().getFixedCellSize();
-        this.fixedCellSizeEnabled = fixedCellSize > 0;
+        setupListeners();
+    }
 
-        registerChangeListener(control.getListView().fixedCellSizeProperty(), e -> {
-            this.fixedCellSize = getSkinnable().getListView().getFixedCellSize();
+    private void setupListeners() {
+        ListView listView = getSkinnable().getListView();
+        if (listView == null) {
+            getSkinnable().listViewProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    getSkinnable().listViewProperty().removeListener(this);
+                    setupListeners();
+                }
+            });
+        } else {
+            this.fixedCellSize = listView.getFixedCellSize();
             this.fixedCellSizeEnabled = fixedCellSize > 0;
-        });
+            registerChangeListener(listView.fixedCellSizeProperty(), e -> {
+                this.fixedCellSize = getSkinnable().getListView().getFixedCellSize();
+                this.fixedCellSizeEnabled = fixedCellSize > 0;
+            });
+        }
     }
 
 
