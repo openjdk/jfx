@@ -351,8 +351,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
     }
 
     private void updatePageLayout() {
-
-        PageLayout oldLayout = null;
         Media media = (Media)printReqAttrSet.get(Media.class);
         Paper paper = j2dPrinter.getPaperForMedia(media);
         OrientationRequested o = (OrientationRequested)
@@ -932,8 +930,8 @@ public class J2DPrinterJob implements PrinterJobImpl {
             currPageInfo = null;
             pageDone = true;
             synchronized (monitor) {
-                if (jobDone) {
-                    return false;
+                if (newPageInfo == null) {
+                    monitor.notify(); // page is printed and no new page to print
                 }
                 while (newPageInfo == null && !jobDone && !jobError) {
                     try {
@@ -1084,7 +1082,9 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 while (!pageDone && !jobDone && !jobError) {
                     synchronized (monitor) {
                         try {
-                            monitor.wait(1000);
+                            if (!pageDone) {
+                                monitor.wait(1000);
+                            }
                         } catch (InterruptedException e) {
                         }
                     }
