@@ -308,6 +308,15 @@ double monotonicallyIncreasingTime()
     return (mach_absolute_time() * timebaseInfo.numer) / (1.0e9 * timebaseInfo.denom);
 }
 
+#elif PLATFORM(JAVA) && OS(LINUX)
+
+double monotonicallyIncreasingTime()
+{
+    auto now = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::microseconds>
+          (now.time_since_epoch()).count() / (1000.0 * 1000.0);
+}
+
 #else
 
 double monotonicallyIncreasingTime()
