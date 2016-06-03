@@ -60,12 +60,41 @@ public class ComboBoxListViewSkinTest {
         assertEquals("Orange", listSm.getSelectedItem());
     }
 
-    @Test public void test_rt19431_ListViewSelectionIsNullWhenComBoxChangesEditableProperty() {
+    @Test public void test_rt19431_selectionRemainsWhileEditableChanges_true() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         sm.select("Orange");
         comboBox.setEditable(true);
-        assertNull(comboBox.getValue());
-        assertNull(sm.getSelectedItem());
+        assertEquals("Orange", comboBox.getValue());
+        assertEquals("Orange", sm.getSelectedItem());
+        assertEquals("Orange", listSm.getSelectedItem());
+    }
+
+    @Test public void test_rt19431_selectionRemainsWhileEditableChanges_false() {
+        comboBox.setEditable(true);
+        comboBox.getItems().addAll("Apple", "Orange", "Banana");
+        sm.select("Orange");
+        comboBox.setEditable(false);
+        assertEquals("Orange", comboBox.getValue());
+        assertEquals("Orange", sm.getSelectedItem());
+        assertEquals("Orange", listSm.getSelectedItem());
+    }
+
+    @Test public void test_rt19431_selectionRemainsWhileEditableChanges_true_notInList() {
+        comboBox.getItems().addAll("Apple", "Orange", "Banana");
+        sm.select("Kiwifruit");
+        comboBox.setEditable(true);
+        assertEquals("Kiwifruit", comboBox.getValue());
+        assertEquals("Kiwifruit", sm.getSelectedItem());
+        assertNull(listSm.getSelectedItem());
+    }
+
+    @Test public void test_rt19431_selectionRemainsWhileEditableChanges_false_notInList() {
+        comboBox.setEditable(true);
+        comboBox.getItems().addAll("Apple", "Orange", "Banana");
+        sm.select("Kiwifruit");
+        comboBox.setEditable(false);
+        assertEquals("Kiwifruit", comboBox.getValue());
+        assertEquals("Kiwifruit", sm.getSelectedItem());
         assertNull(listSm.getSelectedItem());
     }
 
