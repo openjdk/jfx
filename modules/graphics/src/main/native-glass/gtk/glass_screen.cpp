@@ -27,11 +27,11 @@
 
 #include "glass_screen.h"
 #include "glass_general.h"
+#include "glass_wrapper.h"
 
 #include <X11/Xatom.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
-#include <gio/gio.h>
 
 jfloat OverrideUIScale = -1.0f;
 
@@ -104,39 +104,6 @@ static GdkRectangle get_screen_workarea(GdkScreen *screen) {
 
 }
 
-#undef DEBUG_GSETTINGS
-
-static guint gsettings_get_guint(const gchar *schema_name,
-                                 const gchar *key_name,
-                                 int defval)
-{
-    GSettingsSchemaSource *default_schema_source =
-            g_settings_schema_source_get_default();
-    if (default_schema_source == NULL) {
-#ifdef DEBUG_GSETTINGS
-        fprintf(stderr, "No schema source dir found!\n");
-#endif
-        return defval;
-    }
-    GSettingsSchema *the_schema =
-            g_settings_schema_source_lookup(default_schema_source, schema_name, TRUE);
-    if (the_schema == NULL) {
-#ifdef DEBUG_GSETTINGS
-        fprintf(stderr, "schema '%s' not found!\n", schema_name);
-#endif
-        return defval;
-    }
-#ifdef DEBUG_GSETTINGS
-    fprintf(stderr, "found schema '%s'\n", schema_name);
-#endif
-    GSettings *gset = g_settings_new(schema_name);
-    guint val = g_settings_get_uint(gset, key_name);
-#ifdef DEBUG_GSETTINGS
-    fprintf(stderr, "...and key '%s'\n", key_name);
-#endif
-    return val;
-}
-
 static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx)
 {
     GdkRectangle workArea = get_screen_workarea(screen);
@@ -163,8 +130,8 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
         if (gdk_scale > 0) {
             uiScale = (jfloat) gdk_scale;
         } else {
-            uiScale = (jfloat) gsettings_get_guint("org.gnome.desktop.interface",
-                                                   "scaling-factor", 0);
+            uiScale = (jfloat) glass_settings_get_guint_opt("org.gnome.desktop.interface",
+                                                            "scaling-factor", 0);
             if (uiScale < 1) {
                 uiScale = 1;
             }

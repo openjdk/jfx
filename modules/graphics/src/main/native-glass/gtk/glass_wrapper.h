@@ -40,6 +40,7 @@ extern int wrapper_load_symbols(int version, int debug);
 extern int wrapper_load_symbols_gtk(int version, void *handle);
 extern int wrapper_load_symbols_gdk(int version, void *handle);
 extern int wrapper_load_symbols_pix(int version, void * handle);
+extern int wrapper_load_symbols_gio(void * handle);
 
 extern int wrapper_debug;
 extern int wrapper_loaded;
@@ -135,6 +136,11 @@ glass_window_reset_input_shape_mask(GdkWindow *window);
 
 GdkWindow *
 glass_gdk_drag_context_get_dest_window (GdkDragContext * context);
+
+guint
+glass_settings_get_guint_opt (const gchar *schema_name,
+                    const gchar *key_name,
+                    int defval);
 
 #ifdef __cplusplus
 }

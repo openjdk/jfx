@@ -189,6 +189,9 @@ int wrapper_load_symbols(int version, int verbose) {
         return -1;
     }
 
+    void *libgio = dlopen ("libgio-2.0.so", RTLD_LAZY | RTLD_GLOBAL);
+    wrapper_load_symbols_gio(libgio);
+
     wrapper_loaded = 1;
 
     return wrapper_gtk_version;

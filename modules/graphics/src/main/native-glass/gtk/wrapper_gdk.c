@@ -186,6 +186,12 @@ static void (*_gdk_screen_get_monitor_geometry) (GdkScreen * screen,
                          gint monitor_num,
                          GdkRectangle * dest);
 static gint (*_gdk_screen_get_n_monitors) (GdkScreen * screen);
+static gint (*_gdk_screen_get_monitor_width_mm) (GdkScreen *screen,
+                         gint monitor_num);
+static gint (*_gdk_screen_get_monitor_height_mm) (GdkScreen *screen,
+                         gint monitor_num);
+static gint (*_gdk_screen_get_width_mm) (GdkScreen *screen);
+static gint (*_gdk_screen_get_height_mm) (GdkScreen *screen);
 static gdouble (*_gdk_screen_get_resolution) (GdkScreen * screen);
 static GdkColormap *(*_gdk_screen_get_rgba_colormap) (GdkScreen * screen);
 static GdkColormap *(*_gdk_screen_get_rgb_colormap) (GdkScreen * screen);
@@ -403,6 +409,10 @@ int wrapper_load_symbols_gdk (int version, void * libgdk)
     PRELOAD_SYMBOL_GDK (gdk_screen_get_monitor_at_point);
     PRELOAD_SYMBOL_GDK (gdk_screen_get_monitor_geometry);
     PRELOAD_SYMBOL_GDK (gdk_screen_get_n_monitors);
+    PRELOAD_SYMBOL_GDK (gdk_screen_get_monitor_width_mm);
+    PRELOAD_SYMBOL_GDK (gdk_screen_get_monitor_height_mm);
+    PRELOAD_SYMBOL_GDK (gdk_screen_get_width_mm);
+    PRELOAD_SYMBOL_GDK (gdk_screen_get_height_mm);
     PRELOAD_SYMBOL_GDK (gdk_screen_get_resolution);
     PRELOAD_SYMBOL_GDK (gdk_screen_get_root_window);
     PRELOAD_SYMBOL_GDK (gdk_screen_get_system_visual);
@@ -896,6 +906,30 @@ gint gdk_screen_get_n_monitors (GdkScreen * screen)
 {
     CHECK_LOAD_SYMBOL_GDK (gdk_screen_get_n_monitors);
     return (*_gdk_screen_get_n_monitors) (screen);
+}
+
+gint gdk_screen_get_width_mm (GdkScreen * screen)
+{
+    CHECK_LOAD_SYMBOL_GDK (gdk_screen_get_width_mm);
+    return (*_gdk_screen_get_width_mm) (screen);
+}
+
+gint gdk_screen_get_height_mm (GdkScreen * screen)
+{
+    CHECK_LOAD_SYMBOL_GDK (gdk_screen_get_height_mm);
+    return (*_gdk_screen_get_height_mm) (screen);
+}
+
+gint gdk_screen_get_monitor_width_mm (GdkScreen * screen, gint monitor_num)
+{
+    CHECK_LOAD_SYMBOL_GDK (gdk_screen_get_monitor_width_mm);
+    return (*_gdk_screen_get_monitor_width_mm) (screen, monitor_num);
+}
+
+gint gdk_screen_get_monitor_height_mm (GdkScreen * screen, gint monitor_num)
+{
+    CHECK_LOAD_SYMBOL_GDK (gdk_screen_get_monitor_height_mm);
+    return (*_gdk_screen_get_monitor_height_mm) (screen, monitor_num);
 }
 
 gdouble gdk_screen_get_resolution (GdkScreen * screen)
