@@ -58,6 +58,7 @@ import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.stage.WindowHelper;
 import java.util.Collections;
@@ -101,6 +102,15 @@ public abstract class Parent extends Node {
         // This is used by classes in different packages to get access to
         // private and package private methods.
         ParentHelper.setParentAccessor(new ParentHelper.ParentAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Parent) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Parent) node).doUpdatePeer();
+            }
 
             @Override
             public boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result) {
@@ -119,14 +129,11 @@ public abstract class Parent extends Node {
         });
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_updatePeer() {
-        super.impl_updatePeer();
-        final NGGroup peer = impl_getPeer();
+    private void doUpdatePeer() {
+        final NGGroup peer = getPeer();
 
         if (Utils.assertionEnabled()) {
             List<NGNode> pgnodes = peer.getChildren();
@@ -135,7 +142,7 @@ public abstract class Parent extends Node {
             }
         }
 
-        if (impl_isDirty(DirtyBits.PARENT_CHILDREN)) {
+        if (isDirty(DirtyBits.PARENT_CHILDREN)) {
             // Whether a permutation, or children having been added or
             // removed, we'll want to clear out the PG side starting
             // from startIdx. We know that everything up to but not
@@ -143,7 +150,7 @@ public abstract class Parent extends Node {
             // sides, so we only need to update the remaining portion.
             peer.clearFrom(startIdx);
             for (int idx = startIdx; idx < children.size(); idx++) {
-                peer.add(idx, children.get(idx).impl_getPeer());
+                peer.add(idx, children.get(idx).getPeer());
             }
             if (removedChildrenOptimizationDisabled) {
                 peer.markDirty();
@@ -151,7 +158,7 @@ public abstract class Parent extends Node {
             } else {
                 if (removed != null && !removed.isEmpty()) {
                     for(int i = 0; i < removed.size(); i++) {
-                        peer.addToRemoved(removed.get(i).impl_getPeer());
+                        peer.addToRemoved(removed.get(i).getPeer());
                     }
                 }
             }
@@ -162,7 +169,7 @@ public abstract class Parent extends Node {
             startIdx = pgChildrenSize;
         }
 
-        if (impl_isDirty(DirtyBits.PARENT_CHILDREN_VIEW_ORDER)) {
+        if (isDirty(DirtyBits.PARENT_CHILDREN_VIEW_ORDER)) {
             computeViewOrderChidrenAndUpdatePeer();
         }
 
@@ -189,7 +196,7 @@ public abstract class Parent extends Node {
 
     void validatePG() {
         boolean assertionFailed = false;
-        final NGGroup peer = impl_getPeer();
+        final NGGroup peer = getPeer();
         List<NGNode> pgnodes = peer.getChildren();
         if (pgnodes.size() != children.size()) {
             java.lang.System.err.println("*** pgnodes.size validatePG() [" + pgnodes.size() + "] != children.size() [" + children.size() + "]");
@@ -201,7 +208,7 @@ public abstract class Parent extends Node {
                     java.lang.System.err.println("*** this=" + this + " validatePG children[" + idx + "].parent= " + n.getParent());
                     assertionFailed = true;
                 }
-                if (n.impl_getPeer() != pgnodes.get(idx)) {
+                if (n.getPeer() != pgnodes.get(idx)) {
                     java.lang.System.err.println("*** pgnodes[" + idx + "] validatePG != children[" + idx + "]");
                     assertionFailed = true;
                 }
@@ -231,7 +238,7 @@ public abstract class Parent extends Node {
     private final List<Node> viewOrderChildren = new ArrayList(1);
 
     void markViewOrderChildrenDirty() {
-        impl_markDirty(DirtyBits.PARENT_CHILDREN_VIEW_ORDER);
+        NodeHelper.markDirty(this, DirtyBits.PARENT_CHILDREN_VIEW_ORDER);
     }
 
     private void computeViewOrderChidrenAndUpdatePeer() {
@@ -254,7 +261,7 @@ public abstract class Parent extends Node {
                             : a.getViewOrder() == b.getViewOrder() ? 0 : -1);
         }
 
-        final NGGroup peer = impl_getPeer();
+        final NGGroup peer = getPeer();
         peer.setViewOrderChildren(viewOrderChildren);
     }
 
@@ -435,13 +442,13 @@ public abstract class Parent extends Node {
                 startIdx = c.getFrom();
             }
 
-            impl_markDirty(DirtyBits.PARENT_CHILDREN);
+            NodeHelper.markDirty(Parent.this, DirtyBits.PARENT_CHILDREN);
             // Force synchronization to include the handling of invisible node
             // so that removed list will get cleanup to prevent memory leak.
-            impl_markDirty(DirtyBits.NODE_FORCE_SYNC);
+            NodeHelper.markDirty(Parent.this, DirtyBits.NODE_FORCE_SYNC);
 
             if (viewOrderChildrenDirty) {
-                impl_markDirty(DirtyBits.PARENT_CHILDREN_VIEW_ORDER);
+                NodeHelper.markDirty(Parent.this, DirtyBits.PARENT_CHILDREN_VIEW_ORDER);
             }
         }
 
@@ -1391,7 +1398,10 @@ public abstract class Parent extends Node {
      *  Initialization and other functions                                 *
      *                                                                     *
      **********************************************************************/
-
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        ParentHelper.initHelper(this);
+    }
 
     /**
      * Constructs a new {@code Parent}.
@@ -1401,12 +1411,7 @@ public abstract class Parent extends Node {
         setAccessibleRole(AccessibleRole.PARENT);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGGroup();
     }
 

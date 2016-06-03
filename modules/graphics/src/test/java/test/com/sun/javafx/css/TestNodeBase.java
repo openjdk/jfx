@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,8 +51,19 @@ import javafx.css.StyleableProperty;
 
 /** Test Node with styleable properties and an getClassCssMetaData method */
 public class TestNodeBase extends Node {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        TestNodeBaseHelper.setTestNodeBaseAccessor(new TestNodeBaseHelper.TestNodeBaseAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((TestNodeBase) node).doCreatePeer();
+            }
+        });
+    }
 
     protected TestNodeBase() {
+        TestNodeBaseHelper.initHelper(this);
     }
 
     @Override
@@ -65,8 +76,7 @@ public class TestNodeBase extends Node {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

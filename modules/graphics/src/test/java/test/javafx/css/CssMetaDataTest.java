@@ -219,12 +219,6 @@ public class CssMetaDataTest {
     public void testEquals() {
         TestNode testNode = new TestNode();
         Node node = new Node() {
-
-            @Override
-            protected NGNode impl_createPeer() {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
             @Override
             public BaseBounds impl_computeGeomBounds(BaseBounds bb, BaseTransform bt) {
                 throw new UnsupportedOperationException("Not supported yet.");

@@ -30,6 +30,8 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.PerspectiveCameraHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPerspectiveCamera;
 import javafx.application.ConditionalFeature;
@@ -92,6 +94,18 @@ public class PerspectiveCamera extends Camera {
     private static final Affine3D LOOK_AT_TX_FIXED_EYE = new Affine3D();
 
     static {
+        PerspectiveCameraHelper.setPerspectiveCameraAccessor(new PerspectiveCameraHelper.PerspectiveCameraAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((PerspectiveCamera) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((PerspectiveCamera) node).doUpdatePeer();
+            }
+        });
+
         // Compute the legacy look at matrix such that the zero point ends up at
         // the z=-1 plane.
         LOOK_AT_TX.setToTranslation(0, 0, -1);
@@ -124,7 +138,7 @@ public class PerspectiveCamera extends Camera {
             fieldOfView = new SimpleDoubleProperty(PerspectiveCamera.this, "fieldOfView", 30) {
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_CAMERA);
+                    NodeHelper.markDirty(PerspectiveCamera.this, DirtyBits.NODE_CAMERA);
                 }
             };
         }
@@ -154,13 +168,21 @@ public class PerspectiveCamera extends Camera {
             verticalFieldOfView = new SimpleBooleanProperty(PerspectiveCamera.this, "verticalFieldOfView", true) {
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_CAMERA);
+                    NodeHelper.markDirty(PerspectiveCamera.this, DirtyBits.NODE_CAMERA);
                 }
             };
         }
         return verticalFieldOfView;
     }
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        PerspectiveCameraHelper.initHelper(this);
+    }
+
+    /**
+     * Creates an empty instance of PerspectiveCamera.
+     */
     public PerspectiveCamera() {
         this(false);
     }
@@ -224,13 +246,10 @@ public class PerspectiveCamera extends Camera {
         return c;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         NGPerspectiveCamera peer = new NGPerspectiveCamera(fixedEyeAtCameraZero);
         peer.setNearClip((float) getNearClip());
         peer.setFarClip((float) getFarClip());
@@ -238,16 +257,12 @@ public class PerspectiveCamera extends Camera {
         return peer;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        NGPerspectiveCamera pgPerspectiveCamera = impl_getPeer();
-        if (impl_isDirty(DirtyBits.NODE_CAMERA)) {
+    private void doUpdatePeer() {
+        NGPerspectiveCamera pgPerspectiveCamera = getPeer();
+        if (isDirty(DirtyBits.NODE_CAMERA)) {
             pgPerspectiveCamera.setVerticalFieldOfView(isVerticalFieldOfView());
             pgPerspectiveCamera.setFieldOfView((float) getFieldOfView());
         }

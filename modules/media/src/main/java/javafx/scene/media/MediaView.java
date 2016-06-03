@@ -31,6 +31,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.media.MediaViewHelper;
 import com.sun.javafx.sg.prism.MediaFrameTracker;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
@@ -88,6 +90,22 @@ import javafx.scene.Parent;
  * @since JavaFX 2.0
  */
 public class MediaView extends Node {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        MediaViewHelper.setMediaViewAccessor(new MediaViewHelper.MediaViewAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((MediaView) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((MediaView) node).doUpdatePeer();
+            }
+        });
+    }
+
     /**
      * The name of the property in the {@link ObservableMap} returned by
      * {@link #getProperties()}. This value must also be defined as a JVM
@@ -114,7 +132,7 @@ public class MediaView extends Node {
 
     /** Listener which causes the geometry to be updated when the media dimension changes. */
     private InvalidationListener mediaDimensionListener = value -> {
-        impl_markDirty(DirtyBits.NODE_VIEWPORT);
+        NodeHelper.markDirty(this, DirtyBits.NODE_VIEWPORT);
         impl_geomChanged();
     };
 
@@ -274,6 +292,11 @@ public class MediaView extends Node {
         return this;
     }
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        MediaViewHelper.initHelper(this);
+    }
+
     /**
      * Creates a <code>MediaView</code> instance with no associated
      * {@link MediaPlayer}.
@@ -374,7 +397,7 @@ public class MediaView extends Node {
                             media.heightProperty().addListener(mediaDimensionListener);
                         }
                     }
-                    impl_markDirty(DirtyBits.MEDIAVIEW_MEDIA);
+                    NodeHelper.markDirty(MediaView.this, DirtyBits.MEDIAVIEW_MEDIA);
                     impl_geomChanged();
                     oldValue = newValue;
                 }
@@ -471,7 +494,7 @@ public class MediaView extends Node {
                         updateOverlayPreserveRatio();
                     }
                     else {
-                        impl_markDirty(DirtyBits.NODE_VIEWPORT);
+                        NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_VIEWPORT);
                         impl_geomChanged();
                     }
                 }
@@ -524,7 +547,7 @@ public class MediaView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_SMOOTH);
+                    NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_SMOOTH);
                 }
 
                 @Override
@@ -572,7 +595,7 @@ public class MediaView extends Node {
                         updateOverlayX();
                     }
                     else {
-                        impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                        NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_GEOMETRY);
                         impl_geomChanged();
                     }
                 }
@@ -622,7 +645,7 @@ public class MediaView extends Node {
                         updateOverlayY();
                     }
                     else {
-                        impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                        NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_GEOMETRY);
                         impl_geomChanged();
                     }
                 }
@@ -679,7 +702,7 @@ public class MediaView extends Node {
                         updateOverlayWidth();
                     }
                     else {
-                        impl_markDirty(DirtyBits.NODE_VIEWPORT);
+                        NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_VIEWPORT);
                         impl_geomChanged();
                     }
                 }
@@ -736,7 +759,7 @@ public class MediaView extends Node {
                         updateOverlayHeight();
                     }
                     else {
-                        impl_markDirty(DirtyBits.NODE_VIEWPORT);
+                        NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_VIEWPORT);
                         impl_geomChanged();
                     }
                 }
@@ -788,7 +811,7 @@ public class MediaView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_VIEWPORT);
+                    NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_VIEWPORT);
                     impl_geomChanged();
                 }
 
@@ -809,31 +832,28 @@ public class MediaView extends Node {
     void notifyMediaChange() {
         MediaPlayer player = getMediaPlayer();
         if (player != null) {
-            final NGMediaView peer = impl_getPeer();
+            final NGMediaView peer = NodeHelper.getPeer(this);
             peer.setMediaProvider(player);
         }
 
-        impl_markDirty(DirtyBits.MEDIAVIEW_MEDIA);
+        NodeHelper.markDirty(this, DirtyBits.MEDIAVIEW_MEDIA);
         impl_geomChanged();
     }
 
     void notifyMediaSizeChange() {
-        impl_markDirty(DirtyBits.NODE_VIEWPORT);
+        NodeHelper.markDirty(this, DirtyBits.NODE_VIEWPORT);
         impl_geomChanged();
     }
 
     void notifyMediaFrameUpdated() {
         decodedFrameCount++;
-        impl_markDirty(DirtyBits.NODE_CONTENTS);
+        NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         NGMediaView peer = new NGMediaView();
         // this has to be done on the main toolkit thread...
         peer.setFrameTracker(new MediaViewFrameTracker());
@@ -923,7 +943,7 @@ public class MediaView extends Node {
             return;
         }
 
-        final NGMediaView peer = impl_getPeer();
+        final NGMediaView peer = NodeHelper.getPeer(this);
         if (getViewport() != null) {
             peer.setViewport((float)getFitWidth(), (float)getFitHeight(),
                              (float)getViewport().getMinX(), (float)getViewport().getMinY(),
@@ -937,30 +957,25 @@ public class MediaView extends Node {
     }
 
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        final NGMediaView peer = impl_getPeer();
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
+    private void doUpdatePeer() {
+        final NGMediaView peer = NodeHelper.getPeer(this);
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
             peer.setX((float)getX());
             peer.setY((float)getY());
         }
-        if (impl_isDirty(DirtyBits.NODE_SMOOTH)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_SMOOTH)) {
             peer.setSmooth(isSmooth());
         }
-        if (impl_isDirty(DirtyBits.NODE_VIEWPORT)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_VIEWPORT)) {
             updateViewport();
         }
-        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
             peer.renderNextFrame();
         }
-        if (impl_isDirty(DirtyBits.MEDIAVIEW_MEDIA)) {
+        if (NodeHelper.isDirty(this, DirtyBits.MEDIAVIEW_MEDIA)) {
             MediaPlayer player = getMediaPlayer();
             if (player != null) {
                 peer.setMediaProvider(player);

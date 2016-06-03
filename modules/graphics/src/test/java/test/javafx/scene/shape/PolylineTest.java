@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,12 @@
 
 package test.javafx.scene.shape;
 
+import com.sun.javafx.scene.NodeHelper;
+import test.com.sun.javafx.scene.shape.StubPolylineHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPolyline;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Polyline;
 import org.junit.Test;
@@ -117,7 +120,7 @@ public final class PolylineTest {
     private static void assertPGPolylinePointsEquals(
             final StubPolyline polyline,
             final double... expectedPoints) {
-        final StubNGPolyline stubPolyline = polyline.impl_getPeer();
+        final StubNGPolyline stubPolyline = NodeHelper.getPeer(polyline);
         final float[] pgPoints = stubPolyline.points;
 
         final int minLength = expectedPoints.length & ~1;
@@ -143,7 +146,20 @@ public final class PolylineTest {
         assertFalse(s.isEmpty());
     }
 
-    private final class StubPolyline extends Polyline {
+    public static final class StubPolyline extends Polyline {
+        static {
+            StubPolylineHelper.setStubPolylineAccessor(new StubPolylineHelper.StubPolylineAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubPolyline) node).doCreatePeer();
+                }
+            });
+        }
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubPolylineHelper.initHelper(this);
+        }
         public StubPolyline(double... initialPoints) {
             super(initialPoints);
         }
@@ -152,13 +168,12 @@ public final class PolylineTest {
             super();
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        private NGNode doCreatePeer() {
             return new StubNGPolyline();
         }
     }
 
-    private final class StubNGPolyline extends NGPolyline {
+    public static final class StubNGPolyline extends NGPolyline {
         private float[] points;
         @Override
         public void updatePolyline(float[] points) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,13 @@
 
 package test.javafx.scene.shape;
 
+import test.com.sun.javafx.scene.shape.StubRectangleHelper;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRectangle;
 import test.com.sun.javafx.test.TestHelper;
 import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
@@ -130,6 +132,19 @@ public class RectangleTest {
     }
 
     public static final class StubRectangle extends Rectangle {
+        static {
+            StubRectangleHelper.setStubRectangleAccessor(new StubRectangleHelper.StubRectangleAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubRectangle) node).doCreatePeer();
+                }
+            });
+        }
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubRectangleHelper.initHelper(this);
+        }
         public StubRectangle() {
             super();
         }
@@ -146,8 +161,7 @@ public class RectangleTest {
             super(x, y, width, height);
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        private NGNode doCreatePeer() {
             return new StubNGRectangle();
         }
     }

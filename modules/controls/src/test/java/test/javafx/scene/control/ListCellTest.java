@@ -25,20 +25,12 @@
 
 package test.javafx.scene.control;
 
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import com.sun.javafx.tk.Toolkit;
+import javafx.scene.control.skin.ListCellSkin;
 import javafx.beans.InvalidationListener;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
-import javafx.scene.image.ImageView;
-import javafx.util.Callback;
 
-import com.sun.javafx.stage.EmbeddedWindow;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListCellShim;
@@ -725,5 +717,10 @@ public class ListCellTest {
         cell.updateListView(list);
         list.setItems(null);
         cell.updateIndex(1);
+    }
+
+    @Test public void test_jdk_8151524() {
+        ListCell cell = new ListCell();
+        cell.setSkin(new ListCellSkin(cell));
     }
 }

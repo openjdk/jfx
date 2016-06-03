@@ -30,6 +30,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.PolygonHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
@@ -37,6 +38,7 @@ import com.sun.javafx.sg.prism.NGPolygon;
 import com.sun.javafx.sg.prism.NGShape;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 
 /**
@@ -59,6 +61,16 @@ public  class Polygon extends Shape {
     static {
         PolygonHelper.setPolygonAccessor(new PolygonHelper.PolygonAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Polygon) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Polygon) node).doUpdatePeer();
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Polygon) shape).doConfigShape();
             }
@@ -67,11 +79,15 @@ public  class Polygon extends Shape {
 
     private final Path2D shape = new Path2D();
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        PolygonHelper.initHelper(this);
+    }
+
     /**
      * Creates an empty instance of Polygon.
      */
     public Polygon() {
-        PolygonHelper.initHelper(this);
     }
 
     /**
@@ -84,7 +100,6 @@ public  class Polygon extends Shape {
                 this.getPoints().add(p);
             }
         }
-        PolygonHelper.initHelper(this);
     }
 
     /**
@@ -95,7 +110,7 @@ public  class Polygon extends Shape {
     private final ObservableList<Double> points = new TrackableObservableList<Double>() {
         @Override
         protected void onChanged(Change<Double> c) {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Polygon.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
     };
@@ -106,12 +121,10 @@ public  class Polygon extends Shape {
      */
     public final ObservableList<Double> getPoints() { return points; }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGPolygon();
     }
 
@@ -157,20 +170,17 @@ public  class Polygon extends Shape {
         return shape;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
             final int numValidPoints = getPoints().size() & ~1;
             float points_array[] = new float[numValidPoints];
             for (int i = 0; i < numValidPoints; i++) {
                 points_array[i] = (float)getPoints().get(i).doubleValue();
             }
-            final NGPolygon peer = impl_getPeer();
+            final NGPolygon peer = NodeHelper.getPeer(this);
             peer.updatePolygon(points_array);
         }
     }

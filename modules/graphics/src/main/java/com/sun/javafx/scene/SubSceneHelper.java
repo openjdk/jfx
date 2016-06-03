@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,42 @@
 
 package com.sun.javafx.scene;
 
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.util.Utils;
 import javafx.scene.Camera;
+import javafx.scene.Node;
 import javafx.scene.SubScene;
 
 /**
  * Used to access internal methods of SubScene.
  */
-public class SubSceneHelper {
+public class SubSceneHelper extends NodeHelper {
+
+    private static final SubSceneHelper theInstance;
     private static SubSceneAccessor subSceneAccessor;
 
     static {
-        forceInit(SubScene.class);
+        theInstance = new SubSceneHelper();
+        Utils.forceInit(SubScene.class);
     }
 
-    private SubSceneHelper() {
+    private static SubSceneHelper getInstance() {
+        return theInstance;
+    }
+
+    public static void initHelper(SubScene subScene) {
+        setHelper(subScene, getInstance());
+    }
+
+    @Override
+    protected NGNode createPeerImpl(Node node) {
+        return subSceneAccessor.doCreatePeer(node);
+    }
+
+    @Override
+    protected void updatePeerImpl(Node node) {
+        super.updatePeerImpl(node);
+        subSceneAccessor.doUpdatePeer(node);
     }
 
     public static boolean isDepthBuffer(SubScene subScene) {
@@ -58,16 +80,10 @@ public class SubSceneHelper {
     }
 
     public interface SubSceneAccessor {
+        NGNode doCreatePeer(Node node);
+        void doUpdatePeer(Node node);
         boolean isDepthBuffer(SubScene subScene);
         Camera getEffectiveCamera(SubScene subScene);
     }
 
-    private static void forceInit(final Class<?> classToInit) {
-        try {
-            Class.forName(classToInit.getName(), true,
-                          classToInit.getClassLoader());
-        } catch (final ClassNotFoundException e) {
-            throw new AssertionError(e);  // Can't happen
-        }
-    }
 }

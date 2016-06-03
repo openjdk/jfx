@@ -25,7 +25,9 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.Shape;
 
@@ -51,6 +53,17 @@ public class ArcHelper extends ShapeHelper {
     }
 
     @Override
+    protected NGNode createPeerImpl(Node node) {
+        return arcAccessor.doCreatePeer(node);
+    }
+
+    @Override
+    protected void updatePeerImpl(Node node) {
+        super.updatePeerImpl(node);
+        arcAccessor.doUpdatePeer(node);
+    }
+
+    @Override
     protected  com.sun.javafx.geom.Shape configShapeImpl(Shape shape) {
         return arcAccessor.doConfigShape(shape);
     }
@@ -64,6 +77,8 @@ public class ArcHelper extends ShapeHelper {
     }
 
     public interface ArcAccessor {
+        NGNode doCreatePeer(Node node);
+        void doUpdatePeer(Node node);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);
     }
 

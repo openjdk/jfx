@@ -62,6 +62,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
@@ -225,7 +226,7 @@ public class NGRegion extends NGGroup {
      * @param positionShape whether to center the shape
      */
     public void updateShape(Object shape, boolean scaleShape, boolean positionShape, boolean cacheShape) {
-        this.ngShape = shape == null ? null : ((javafx.scene.shape.Shape)shape).impl_getPeer();
+        this.ngShape = shape == null ? null : NodeHelper.getPeer(((javafx.scene.shape.Shape)shape));
         this.shape = shape == null ? null : ngShape.getShape();
         this.scaleShape = scaleShape;
         this.centerShape = positionShape;

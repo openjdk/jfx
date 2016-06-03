@@ -34,6 +34,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.TransformedShape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.scene.shape.TextHelper;
 import com.sun.javafx.scene.text.GlyphList;
@@ -65,6 +66,7 @@ import javafx.scene.shape.StrokeType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.scene.Node;
 
 /**
  * The {@code Text} class defines a node that displays a text.
@@ -103,6 +105,16 @@ public class Text extends Shape {
     static {
         TextHelper.setTextAccessor(new TextHelper.TextAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Text) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Text) node).doUpdatePeer();
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Text) shape).doConfigShape();
             }
@@ -112,15 +124,9 @@ public class Text extends Shape {
     private TextLayout layout;
     private static final PathElement[] EMPTY_PATH_ELEMENT_ARRAY = new PathElement[0];
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    protected final NGNode impl_createPeer() {
-        return new NGText();
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        TextHelper.initHelper(this);
     }
 
     /**
@@ -133,7 +139,6 @@ public class Text extends Shape {
         managedProperty().addListener(listener);
         effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
         setPickOnBounds(true);
-        TextHelper.initHelper(this);
     }
 
     /**
@@ -143,7 +148,6 @@ public class Text extends Shape {
     public Text(String text) {
         this();
         setText(text);
-        TextHelper.initHelper(this);
     }
 
     /**
@@ -157,7 +161,13 @@ public class Text extends Shape {
         this(text);
         setX(x);
         setY(y);
-        TextHelper.initHelper(this);
+    }
+
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private NGNode doCreatePeer() {
+        return new NGText();
     }
 
     private boolean isSpan;
@@ -210,7 +220,7 @@ public class Text extends Shape {
     private void needsTextLayout() {
         textRuns = null;
         impl_geomChanged();
-        impl_markDirty(DirtyBits.NODE_CONTENTS);
+        NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
     }
 
     private TextSpan textSpan;
@@ -285,7 +295,7 @@ public class Text extends Shape {
          * extra work is necessary. Other times the layout is caused by changes
          * in the text flow object (wrapping width and text alignment for example).
          * In the second case the dirty bits must be set here using
-         * impl_geomChanged() and impl_markDirty(). Note that impl_geomChanged()
+         * impl_geomChanged() and NodeHelper.markDirty(). Note that impl_geomChanged()
          * causes another (undesired) layout request in the parent.
          * In general this is not a problem because shapes are not resizable and
          * region objects do not propagate layout changes to the parent.
@@ -294,7 +304,7 @@ public class Text extends Shape {
          * text flow deals with this situation.
          */
         impl_geomChanged();
-        impl_markDirty(DirtyBits.NODE_CONTENTS);
+        NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
     }
 
     BaseBounds getSpanBounds() {
@@ -517,7 +527,7 @@ public class Text extends Shape {
                 }
                 @Override public void invalidated() {
                     needsFullTextLayout();
-                    impl_markDirty(DirtyBits.TEXT_FONT);
+                    NodeHelper.markDirty(Text.this, DirtyBits.TEXT_FONT);
                 }
             };
         }
@@ -765,7 +775,7 @@ public class Text extends Shape {
                     return StyleableProperties.FONT_SMOOTHING_TYPE;
                 }
                 @Override public void invalidated() {
-                    impl_markDirty(DirtyBits.TEXT_ATTRS);
+                    NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
                     impl_geomChanged();
                 }
             };
@@ -790,7 +800,7 @@ public class Text extends Shape {
                 attributes.selectionBinding.invalidate();
             }
         }
-        impl_markDirty(DirtyBits.NODE_GEOMETRY);
+        NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
     }
 
     /**
@@ -1399,21 +1409,21 @@ public class Text extends Shape {
 
     @SuppressWarnings("deprecation")
     private void updatePGText() {
-        final NGText peer = impl_getPeer();
-        if (impl_isDirty(DirtyBits.TEXT_ATTRS)) {
+        final NGText peer = NodeHelper.getPeer(this);
+        if (NodeHelper.isDirty(this, DirtyBits.TEXT_ATTRS)) {
             peer.setUnderline(isUnderline());
             peer.setStrikethrough(isStrikethrough());
             FontSmoothingType smoothing = getFontSmoothingType();
             if (smoothing == null) smoothing = FontSmoothingType.GRAY;
             peer.setFontSmoothingType(smoothing.ordinal());
         }
-        if (impl_isDirty(DirtyBits.TEXT_FONT)) {
+        if (NodeHelper.isDirty(this, DirtyBits.TEXT_FONT)) {
             peer.setFont(getFontInternal());
         }
-        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
             peer.setGlyphs(getRuns());
         }
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
             if (isSpan()) {
                 BaseBounds spanBounds = getSpanBounds();
                 peer.setLayoutLocation(spanBounds.getMinX(), spanBounds.getMinY());
@@ -1424,7 +1434,7 @@ public class Text extends Shape {
                 peer.setLayoutLocation(-x, yadj - y);
             }
         }
-        if (impl_isDirty(DirtyBits.TEXT_SELECTION)) {
+        if (NodeHelper.isDirty(this, DirtyBits.TEXT_SELECTION)) {
             Object fillObj = null;
             int start = getSelectionStart();
             int end = getSelectionEnd();
@@ -1437,15 +1447,10 @@ public class Text extends Shape {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public final void impl_updatePeer() {
-        super.impl_updatePeer();
+    private final void doUpdatePeer() {
         updatePGText();
     }
 
@@ -1515,7 +1520,7 @@ public class Text extends Shape {
                         return StyleableProperties.UNDERLINE;
                     }
                     @Override public void invalidated() {
-                        impl_markDirty(DirtyBits.TEXT_ATTRS);
+                        NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
                         if (getBoundsType() == TextBoundsType.VISUAL) {
                             impl_geomChanged();
                         }
@@ -1540,7 +1545,7 @@ public class Text extends Shape {
                         return StyleableProperties.STRIKETHROUGH;
                     }
                     @Override public void invalidated() {
-                        impl_markDirty(DirtyBits.TEXT_ATTRS);
+                        NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
                         if (getBoundsType() == TextBoundsType.VISUAL) {
                             impl_geomChanged();
                         }
@@ -1661,7 +1666,7 @@ public class Text extends Shape {
                         @Override public Object getBean() { return Text.this; }
                         @Override public String getName() { return "impl_selectionFill"; }
                         @Override protected void invalidated() {
-                            impl_markDirty(DirtyBits.TEXT_SELECTION);
+                            NodeHelper.markDirty(Text.this, DirtyBits.TEXT_SELECTION);
                         }
                     };
             }
@@ -1684,7 +1689,7 @@ public class Text extends Shape {
                         @Override public Object getBean() { return Text.this; }
                         @Override public String getName() { return "impl_selectionStart"; }
                         @Override protected void invalidated() {
-                            impl_markDirty(DirtyBits.TEXT_SELECTION);
+                            NodeHelper.markDirty(Text.this, DirtyBits.TEXT_SELECTION);
                             notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_START);
                         }
                 };
@@ -1708,7 +1713,7 @@ public class Text extends Shape {
                         @Override public Object getBean() { return Text.this; }
                         @Override public String getName() { return "impl_selectionEnd"; }
                         @Override protected void invalidated() {
-                            impl_markDirty(DirtyBits.TEXT_SELECTION);
+                            NodeHelper.markDirty(Text.this, DirtyBits.TEXT_SELECTION);
                             notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_END);
                         }
                     };

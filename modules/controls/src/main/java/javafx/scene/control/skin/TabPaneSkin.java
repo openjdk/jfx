@@ -897,7 +897,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             getChildren().addAll(headerBackground, headersRegion, controlButtons);
 
             // support for mouse scroll of header area (for when the tabs exceed
-            // the available space)
+            // the available space).
+            // Scrolling the mouse wheel downwards results in the tabs scrolling left (i.e. exposing the right-most tabs)
+            // Scrolling the mouse wheel upwards results in the tabs scrolling right (i.e. exposing th left-most tabs)
             addEventHandler(ScrollEvent.SCROLL, (ScrollEvent e) -> {
                 Side side = getSkinnable().getSide();
                 side = side == null ? Side.TOP : side;
@@ -905,11 +907,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     default:
                     case TOP:
                     case BOTTOM:
-                        setScrollOffset(scrollOffset - e.getDeltaY());
+                        setScrollOffset(scrollOffset + e.getDeltaY());
                         break;
                     case LEFT:
                     case RIGHT:
-                        setScrollOffset(scrollOffset + e.getDeltaY());
+                        setScrollOffset(scrollOffset - e.getDeltaY());
                         break;
                 }
 

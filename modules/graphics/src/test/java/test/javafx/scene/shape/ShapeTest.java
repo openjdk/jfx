@@ -26,6 +26,7 @@
 package test.javafx.scene.shape;
 
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
@@ -218,7 +219,7 @@ public class ShapeTest {
         ShapeHelper.setShapeChangeListener(shape, listener);
 
         // sync peer to clear out dirty bits
-        shape.impl_syncPeer();
+        NodeHelper.syncPeer(shape);
 
         // should trigger listener
         shape.setFill(Color.GREEN);
@@ -229,7 +230,7 @@ public class ShapeTest {
         System.gc();
 
         // sync peer to clear out dirty bits
-        shape.impl_syncPeer();
+        NodeHelper.syncPeer(shape);
 
         // this flag should remain false (listener should not be called)
         listenerCalled = false;

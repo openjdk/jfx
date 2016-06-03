@@ -42,11 +42,13 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.RectangleHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRectangle;
 import com.sun.javafx.sg.prism.NGShape;
+import javafx.scene.Node;
 
 
 /**
@@ -75,6 +77,16 @@ public  class Rectangle extends Shape {
     static {
         RectangleHelper.setRectangleAccessor(new RectangleHelper.RectangleAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Rectangle) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Rectangle) node).doUpdatePeer();
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Rectangle) shape).doConfigShape();
             }
@@ -89,11 +101,15 @@ public  class Rectangle extends Shape {
             BaseTransform.TYPE_QUADRANT_ROTATION |
             BaseTransform.TYPE_FLIP);
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        RectangleHelper.initHelper(this);
+    }
+
     /**
      * Creates an empty instance of Rectangle.
      */
     public Rectangle() {
-        RectangleHelper.initHelper(this);
     }
 
     /**
@@ -104,7 +120,6 @@ public  class Rectangle extends Shape {
     public Rectangle(double width, double height) {
         setWidth(width);
         setHeight(height);
-        RectangleHelper.initHelper(this);
     }
 
     /**
@@ -117,7 +132,6 @@ public  class Rectangle extends Shape {
         setWidth(width);
         setHeight(height);
         setFill(fill);
-        RectangleHelper.initHelper(this);
     }
 
     /**
@@ -131,7 +145,6 @@ public  class Rectangle extends Shape {
         this(width, height);
         setX(x);
         setY(y);
-        RectangleHelper.initHelper(this);
     }
 
     /**
@@ -158,7 +171,7 @@ public  class Rectangle extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Rectangle.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -199,7 +212,7 @@ public  class Rectangle extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Rectangle.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -226,7 +239,7 @@ public  class Rectangle extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Rectangle.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -262,7 +275,7 @@ public  class Rectangle extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Rectangle.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -317,7 +330,7 @@ public  class Rectangle extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Rectangle.this, DirtyBits.NODE_GEOMETRY);
                 }
 
                 @Override
@@ -366,7 +379,7 @@ public  class Rectangle extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Rectangle.this, DirtyBits.NODE_GEOMETRY);
                 }
 
                 @Override
@@ -388,13 +401,10 @@ public  class Rectangle extends Shape {
         return arcHeight;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGRectangle();
     }
 
@@ -541,16 +551,12 @@ public  class Rectangle extends Shape {
         return shape;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            final NGRectangle peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
+            final NGRectangle peer = NodeHelper.getPeer(this);
             peer.updateRectangle((float)getX(),
                 (float)getY(),
                 (float)getWidth(),

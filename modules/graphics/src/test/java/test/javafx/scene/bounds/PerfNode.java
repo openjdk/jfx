@@ -33,14 +33,28 @@ import javafx.scene.Node;
 
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import test.com.sun.javafx.scene.bounds.PerfNodeHelper;
 
 /**
  * A special node used for performance tests to make sure that the minimum
  * amount of bounds computation work happens as possible.
  */
 public class PerfNode extends Node {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        PerfNodeHelper.setPerfNodeAccessor(new PerfNodeHelper.PerfNodeAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((PerfNode) node).doCreatePeer();
+            }
+        });
+    }
 
-
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        PerfNodeHelper.initHelper(this);
+    }
     public PerfNode() {
     }
 
@@ -162,8 +176,7 @@ public class PerfNode extends Node {
         return false;
     }
 
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGRectangle();
     }
 

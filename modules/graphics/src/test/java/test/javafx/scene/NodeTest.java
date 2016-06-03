@@ -36,13 +36,16 @@ import com.sun.javafx.geom.transform.Translate2D;
 import test.com.sun.javafx.pgstub.StubStage;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.shape.RectangleHelper;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRectangle;
 import test.com.sun.javafx.test.objects.TestScene;
 import test.com.sun.javafx.test.objects.TestStage;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 import javafx.beans.property.*;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -311,7 +314,7 @@ public class NodeTest {
         final Method setter = nodeClass.getMethod(setterName, boolean.class);
         final Method getter = nodeClass.getMethod(getterName);
 
-        final NGNode peer = node.impl_getPeer();
+        final NGNode peer = NodeHelper.getPeer(node);
         final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(getterName);
 
@@ -322,7 +325,7 @@ public class NodeTest {
 
         // 2. Initial setup
         setter.invoke(node, initialValue);
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
         assertEquals(initialValue, getter.invoke(node));
         assertEquals(initialValue, impl_getter.invoke(peer));
 
@@ -334,7 +337,7 @@ public class NodeTest {
         assertEquals(initialValue, impl_getter.invoke(peer));
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
 
         // 6. Check that the value has been propagated to PGNode
         assertEquals(newValue, impl_getter.invoke(peer));
@@ -352,7 +355,7 @@ public class NodeTest {
 
     public static void syncNode(Node node) {
         NodeShim.updateBounds(node);
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
     }
 
     public static void assertBooleanPropertySynced(
@@ -603,7 +606,7 @@ public class NodeTest {
         final Method setter = nodeClass.getMethod(setterName, float.class);
         final Method getter = nodeClass.getMethod(getterName);
 
-        final NGNode peer = node.impl_getPeer();
+        final NGNode peer = NodeHelper.getPeer(node);
         final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 
@@ -614,7 +617,7 @@ public class NodeTest {
 
         // 2. Initial setup
         setter.invoke(node, initialValue);
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
         assertEquals(initialValue, (Float) getter.invoke(node), 1e-100);
         assertEquals(initialValue, (Float) impl_getter.invoke(peer), 1e-100);
 
@@ -626,7 +629,7 @@ public class NodeTest {
         assertEquals(initialValue, (Float) impl_getter.invoke(peer), 1e-100);
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
 
         // 6. Check that the value has been propagated to PGNode
         assertEquals(newValue, (Float) impl_getter.invoke(peer), 1e-100);
@@ -663,7 +666,7 @@ public class NodeTest {
         final Method setter = nodeClass.getMethod(setterName, double.class);
         final Method getter = nodeClass.getMethod(getterName);
 
-        final NGNode peer = node.impl_getPeer();
+        final NGNode peer = NodeHelper.getPeer(node);
         final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 
@@ -674,7 +677,7 @@ public class NodeTest {
 
         // 2. Initial setup
         setter.invoke(node, initialValue);
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
         assertEquals(initialValue, (Double) getter.invoke(node), 1e-100);
         assertEquals((float) initialValue, (Float) impl_getter.invoke(peer), 1e-100);
 
@@ -686,7 +689,7 @@ public class NodeTest {
         assertEquals((float) initialValue, (Float) impl_getter.invoke(peer), 1e-100);
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
 
         // 6. Check that the value has been propagated to PGNode
         assertEquals((float) newValue, (Float) impl_getter.invoke(peer), 1e-100);
@@ -759,7 +762,7 @@ public class NodeTest {
         final Method getter = nodeClass.getMethod(getterName);
         final Method setter = nodeClass.getMethod(setterName, getter.getReturnType());
 
-        final NGNode peer = node.impl_getPeer();
+        final NGNode peer = NodeHelper.getPeer(node);
         final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 
@@ -770,7 +773,7 @@ public class NodeTest {
 
         // 2. Initial setup
         setter.invoke(node, initialValue);
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
         assertEquals(initialValue, getter.invoke(node));
         assertEquals(0, comparator.compare(initialValue,
                                            impl_getter.invoke(peer)));
@@ -784,7 +787,7 @@ public class NodeTest {
                                            impl_getter.invoke(peer)));
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
 
         // 6. Check that the value has been propagated to PGNode
         assertEquals(0, comparator.compare(newValue,
@@ -823,7 +826,7 @@ public class NodeTest {
         final Method getter = nodeClass.getMethod(getterName);
         final Method setter = nodeClass.getMethod(setterName, getter.getReturnType());
 
-        final NGNode peer = node.impl_getPeer();
+        final NGNode peer = NodeHelper.getPeer(node);
         final Class<? extends NGNode> impl_class = peer.getClass();
         final Method impl_getter = impl_class.getMethod(pgGetterName);
 
@@ -835,7 +838,7 @@ public class NodeTest {
         // 2. Initial setup
         setter.invoke(node, initialValue);
         assertEquals(initialValue, getter.invoke(node));
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
         assertEquals(initialValue, ((Number) impl_getter.invoke(peer)).intValue());
 
         // 3. Change value of the property
@@ -846,14 +849,14 @@ public class NodeTest {
         assertEquals(initialValue, ((Number) impl_getter.invoke(peer)).intValue());
 
         // 5. Propagate the property value to PGNode
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
 
         // 6. Check that the value has been propagated to PGNode
         assertEquals(newValue, ((Number) impl_getter.invoke(peer)).intValue());
     }
 
     public static void callSyncPGNode(final Node node) {
-        node.impl_syncPeer();
+        NodeHelper.syncPeer(node);
     }
 
     @Test
@@ -939,7 +942,7 @@ public class NodeTest {
 
     public static boolean isDirty(Node node, DirtyBits[] dbs) {
         for(DirtyBits db:dbs) {
-            if (!NodeShim.impl_isDirty(node, db)) {
+            if (!NodeShim.isDirty(node, db)) {
                 System.out.printf("@NodeTest:check dirty: %s [%d]\n",db,db.ordinal());
                 return false;
             }
@@ -1045,8 +1048,8 @@ public class NodeTest {
     public void testSynchronizationOfInvisibleNodes() {
         final Group g = new Group();
         final Circle c = new CircleTest.StubCircle(50);
-        final NGGroup sg = g.impl_getPeer();
-        final CircleTest.StubNGCircle sc = c.impl_getPeer();
+        final NGGroup sg = NodeHelper.getPeer(g);
+        final CircleTest.StubNGCircle sc = NodeHelper.getPeer(c);
         ParentShim.getChildren(g).add(c);
 
         syncNode(g);
@@ -1089,8 +1092,8 @@ public class NodeTest {
         st.show();
         st.setScene(s);
 
-        final NGGroup sg = g.impl_getPeer();
-        final CircleTest.StubNGCircle sc = c.impl_getPeer();
+        final NGGroup sg = NodeHelper.getPeer(g);
+        final CircleTest.StubNGCircle sc = NodeHelper.getPeer(c);
 
         ParentShim.getChildren(g).add(c);
 
@@ -1134,8 +1137,8 @@ public class NodeTest {
         st.show();
         st.setScene(s);
 
-        final NGGroup sg = g.impl_getPeer();
-        final CircleTest.StubNGCircle sc = c.impl_getPeer();
+        final NGGroup sg = NodeHelper.getPeer(g);
+        final CircleTest.StubNGCircle sc = NodeHelper.getPeer(c);
 
         g.setClip(c);
 
@@ -1491,11 +1494,7 @@ public class NodeTest {
         final Circle circle = new Circle(100, 100, 100);
         ParentShim.getChildren(parent).add(circle);
 
-        final Rectangle clip = new Rectangle(100, 100) {
-            @Override protected NGNode impl_createPeer() {
-                return new MockNGRect();
-            }
-        };
+        final Rectangle clip = new StubRect(100, 100);
         circle.setClip(clip);
 
         ParentShim.getChildren(root).add(parent);
@@ -1511,7 +1510,7 @@ public class NodeTest {
 
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
 
-        assertEquals(300, ((MockNGRect) clip.impl_getPeer()).w, 1e-10);
+        assertEquals(300, ((MockNGRect) NodeHelper.getPeer(clip)).w, 1e-10);
     }
 
     @Test
@@ -1519,7 +1518,7 @@ public class NodeTest {
         final Node node = createTestRect();
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(BaseTransform.IDENTITY_TRANSFORM,
-                ((MockNGRect) node.impl_getPeer()).t);
+                ((MockNGRect) NodeHelper.getPeer(node)).t);
     }
 
     @Test
@@ -1532,7 +1531,7 @@ public class NodeTest {
         node.getTransforms().add(new Rotate(0, Rotate.Y_AXIS));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(BaseTransform.IDENTITY_TRANSFORM,
-                ((MockNGRect) node.impl_getPeer()).t);
+                ((MockNGRect) NodeHelper.getPeer(node)).t);
     }
 
     @Test
@@ -1541,7 +1540,7 @@ public class NodeTest {
         node.setTranslateX(30);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Translate2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1550,7 +1549,7 @@ public class NodeTest {
         node.getTransforms().add(new Translate(20, 10));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Translate2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1562,7 +1561,7 @@ public class NodeTest {
         node.getTransforms().add(new Translate(5, 5, 0));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Translate2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1571,7 +1570,7 @@ public class NodeTest {
         node.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1580,7 +1579,7 @@ public class NodeTest {
         node.setRotate(20);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1589,7 +1588,7 @@ public class NodeTest {
         node.getTransforms().add(new Rotate(20));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1600,7 +1599,7 @@ public class NodeTest {
         node.getTransforms().add(new Rotate(0, Rotate.X_AXIS));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1609,7 +1608,7 @@ public class NodeTest {
         node.setScaleX(2);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1618,7 +1617,7 @@ public class NodeTest {
         node.getTransforms().add(new Scale(2, 1));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1629,7 +1628,7 @@ public class NodeTest {
         node.getTransforms().add(new Scale(0.5, 2, 1));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1638,7 +1637,7 @@ public class NodeTest {
         node.getTransforms().add(new Shear(2, 1));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine2D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1647,7 +1646,7 @@ public class NodeTest {
         node.setTranslateZ(30);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine3D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1656,7 +1655,7 @@ public class NodeTest {
         node.getTransforms().add(new Translate(0, 0, 10));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine3D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1665,7 +1664,7 @@ public class NodeTest {
         node.setScaleZ(0.5);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine3D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1674,7 +1673,7 @@ public class NodeTest {
         node.getTransforms().add(new Scale(1, 1, 2));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine3D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1684,7 +1683,7 @@ public class NodeTest {
         node.setRotate(10);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine3D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1693,7 +1692,7 @@ public class NodeTest {
         node.getTransforms().add(new Rotate(10, Rotate.X_AXIS));
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
         assertSame(Affine3D.class,
-                ((MockNGRect) node.impl_getPeer()).t.getClass());
+                ((MockNGRect) NodeHelper.getPeer(node)).t.getClass());
     }
 
     @Test
@@ -1702,13 +1701,13 @@ public class NodeTest {
         node.setTranslateX(10);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
 
-        BaseTransform t = ((MockNGRect) node.impl_getPeer()).t;
+        BaseTransform t = ((MockNGRect) NodeHelper.getPeer(node)).t;
 
-        ((MockNGRect) node.impl_getPeer()).t = null;
+        ((MockNGRect) NodeHelper.getPeer(node)).t = null;
         node.setTranslateX(20);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
 
-        assertSame(t, ((MockNGRect) node.impl_getPeer()).t);
+        assertSame(t, ((MockNGRect) NodeHelper.getPeer(node)).t);
     }
 
     @Test
@@ -1717,13 +1716,13 @@ public class NodeTest {
         node.setScaleX(10);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
 
-        BaseTransform t = ((MockNGRect) node.impl_getPeer()).t;
+        BaseTransform t = ((MockNGRect) NodeHelper.getPeer(node)).t;
 
-        ((MockNGRect) node.impl_getPeer()).t = null;
+        ((MockNGRect) NodeHelper.getPeer(node)).t = null;
         node.setRotate(20);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
 
-        assertSame(t, ((MockNGRect) node.impl_getPeer()).t);
+        assertSame(t, ((MockNGRect) NodeHelper.getPeer(node)).t);
     }
 
     @Test
@@ -1732,13 +1731,13 @@ public class NodeTest {
         node.setScaleZ(10);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
 
-        BaseTransform t = ((MockNGRect) node.impl_getPeer()).t;
+        BaseTransform t = ((MockNGRect) NodeHelper.getPeer(node)).t;
 
-        ((MockNGRect) node.impl_getPeer()).t = null;
+        ((MockNGRect) NodeHelper.getPeer(node)).t = null;
         node.setRotate(20);
         ((StubToolkit) Toolkit.getToolkit()).firePulse();
 
-        assertSame(t, ((MockNGRect) node.impl_getPeer()).t);
+        assertSame(t, ((MockNGRect) NodeHelper.getPeer(node)).t);
     }
 
     @Test
@@ -1752,11 +1751,7 @@ public class NodeTest {
     }
 
     private Node createTestRect() {
-        final Rectangle rect = new Rectangle() {
-            @Override protected NGNode impl_createPeer() {
-                return new MockNGRect();
-            }
-        };
+        final Rectangle rect = new StubRect();
         Scene scene = new Scene(new Group(rect));
         Stage stage = new Stage();
         stage.setScene(scene);
@@ -1764,7 +1759,7 @@ public class NodeTest {
         return rect;
     }
 
-    private class MockNGRect extends NGRectangle {
+    private static class MockNGRect extends NGRectangle {
         double w = 0;
         BaseTransform t = null;
 
@@ -1777,5 +1772,67 @@ public class NodeTest {
         public void setTransformMatrix(BaseTransform tx) {
             t = tx;
         }
+    }
+
+    static class StubRect extends Rectangle {
+        static {
+            StubRectHelper.setStubRectAccessor(new StubRectHelper.StubRectAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubRect) node).doCreatePeer();
+                }
+            });
+        }
+
+        StubRect() {
+            super();
+            StubRectHelper.initHelper(this);
+        }
+
+        StubRect(double width, double height) {
+            super(width, height);
+            StubRectHelper.initHelper(this);
+        }
+
+        private NGNode doCreatePeer() {
+            return new MockNGRect();
+        }
+    }
+
+    public static class StubRectHelper extends RectangleHelper {
+
+        private static final StubRectHelper theInstance;
+        private static StubRectAccessor stubRectAccessor;
+
+        static {
+            theInstance = new StubRectHelper();
+            Utils.forceInit(StubRect.class);
+        }
+
+        private static StubRectHelper getInstance() {
+            return theInstance;
+        }
+
+        public static void initHelper(StubRect stubRect) {
+            setHelper(stubRect, getInstance());
+        }
+
+        public static void setStubRectAccessor(final StubRectAccessor newAccessor) {
+            if (stubRectAccessor != null) {
+                throw new IllegalStateException();
+            }
+
+            stubRectAccessor = newAccessor;
+        }
+
+        @Override
+        protected NGNode createPeerImpl(Node node) {
+            return stubRectAccessor.doCreatePeer(node);
+        }
+
+        public interface StubRectAccessor {
+            NGNode doCreatePeer(Node node);
+        }
+
     }
 }

@@ -36,15 +36,12 @@ import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.ScrollBar;
 
-import javafx.scene.control.skin.ScrollBarSkin;
 import com.sun.webkit.graphics.Ref;
 import com.sun.webkit.graphics.ScrollBarTheme;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.javafx.webkit.Accessor;
 import com.sun.javafx.webkit.theme.RenderThemeImpl.Pool;
 import com.sun.javafx.webkit.theme.RenderThemeImpl.ViewListener;
-import com.sun.javafx.webkit.theme.RenderThemeImpl.Widget;
-import com.sun.javafx.webkit.theme.RenderThemeImpl.WidgetType;
 import com.sun.webkit.graphics.WCSize;
 
 public final class ScrollBarThemeImpl extends ScrollBarTheme {
@@ -54,31 +51,9 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
     private WeakReference<ScrollBar> testSBRef = // used for hit testing
             new WeakReference<ScrollBar>(null);
 
-    private boolean thicknessInitialized = false;
-
     private final Accessor accessor;
 
     private final Pool<ScrollBarWidget> pool;
-
-    private final class ScrollBarWidget extends ScrollBar implements Widget {
-        private ScrollBarWidget() {
-            setOrientation(Orientation.VERTICAL);
-            setMin(0);
-            setManaged(false);
-        }
-
-        @Override public void impl_updatePeer() {
-            super.impl_updatePeer();
-            initializeThickness();
-        }
-
-        @Override public WidgetType getType() { return WidgetType.SCROLLBAR; }
-
-        @Override protected void layoutChildren() {
-            super.layoutChildren();
-            initializeThickness();
-        }
-    }
 
     private static final class ScrollBarRef extends Ref {
         private final WeakReference<ScrollBarWidget> sbRef;
@@ -106,13 +81,17 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         accessor.addViewListener(new ViewListener(pool, accessor) {
             @Override public void invalidated(Observable ov) {
                 super.invalidated(ov);
-                ScrollBar testSB = new ScrollBarWidget();
+                ScrollBar testSB = new ScrollBarWidget(ScrollBarThemeImpl.this);
                 // testSB should be added to the new WebView (if any)
                 accessor.addChild(testSB);
                 testSBRef = new WeakReference<ScrollBar>(testSB);
             }
         });
 
+    }
+
+    ScrollBar getTestSBRef() {
+        return testSBRef.get();
     }
 
     private static Orientation convertOrientation(int orientation) {
@@ -177,7 +156,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
     {
         ScrollBarWidget sb = pool.get(id);
         if (sb == null) {
-            sb = new ScrollBarWidget();
+            sb = new ScrollBarWidget(this);
             pool.put(id, sb, accessor.getPage().getUpdateContentCycleID());
             accessor.addChild(sb);
         }
@@ -389,20 +368,6 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         int pos = thumbPosition();
         log.log(Level.FINEST, "thumb position: {0}", pos);
         return pos;
-    }
-
-    private void initializeThickness() {
-        if (!thicknessInitialized) {
-            ScrollBar testSB = testSBRef.get();
-            if (testSB == null) {
-                return;
-            }
-            int thickness = (int) testSB.prefWidth(-1);
-            if (thickness != 0 && ScrollBarTheme.getThickness() != thickness) {
-                ScrollBarTheme.setThickness(thickness);
-            }
-            thicknessInitialized = true;
-        }
     }
 
     private static Node getThumb(ScrollBar scrollBar) {

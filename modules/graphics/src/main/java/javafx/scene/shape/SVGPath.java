@@ -28,6 +28,7 @@ package javafx.scene.shape;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.SVGPathHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
@@ -37,6 +38,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 
 /**
@@ -54,6 +56,16 @@ svg.setContent("M40,60 C42,48 44,30 25,32");
 public class SVGPath extends Shape {
     static {
         SVGPathHelper.setSVGPathAccessor(new SVGPathHelper.SVGPathAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((SVGPath) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((SVGPath) node).doUpdatePeer();
+            }
+
             @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((SVGPath) shape).doConfigShape();
@@ -73,11 +85,15 @@ public class SVGPath extends Shape {
 
     private Path2D path2d;
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        SVGPathHelper.initHelper(this);
+    }
+
     /**
      * Creates an empty instance of SVGPath.
      */
     public SVGPath() {
-         SVGPathHelper.initHelper(this);
     }
 
     public final void setFillRule(FillRule value) {
@@ -96,7 +112,7 @@ public class SVGPath extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.SHAPE_FILLRULE);
+                    NodeHelper.markDirty(SVGPath.this, DirtyBits.SHAPE_FILLRULE);
                     impl_geomChanged();
                 }
 
@@ -137,7 +153,7 @@ public class SVGPath extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_CONTENTS);
+                    NodeHelper.markDirty(SVGPath.this, DirtyBits.NODE_CONTENTS);
                     impl_geomChanged();
                     path2d = null;
                 }
@@ -158,13 +174,10 @@ public class SVGPath extends Shape {
 
     private Object svgPathObject;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGSVGPath();
     }
 
@@ -182,19 +195,14 @@ public class SVGPath extends Shape {
         return path2d;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.SHAPE_FILLRULE) ||
-            impl_isDirty(DirtyBits.NODE_CONTENTS))
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.SHAPE_FILLRULE) ||
+            NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS))
         {
-            final NGSVGPath peer = impl_getPeer();
+            final NGSVGPath peer = NodeHelper.getPeer(this);
             if (peer.acceptsPath2dOnUpdate()) {
                 if (svgPathObject == null) {
                     svgPathObject = new Path2D();

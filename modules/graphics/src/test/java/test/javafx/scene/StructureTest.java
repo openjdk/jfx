@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import test.com.sun.javafx.scene.StubNodeHelper;
+import test.com.sun.javafx.scene.StubParentHelper;
 
 
 /**
@@ -646,62 +648,80 @@ public class StructureTest {
 //        println("c.clipParent = {c.getClipParent()}");
 //    }
 
-}
+    ////////////////////
+    // Helper Classes //
+    ////////////////////
 
-
-////////////////////
-// Helper Classes //
-////////////////////
-
-//
-// * A stub node that contains as little functionality as possible.
-// *
-class StubNode extends Node {
-
-    // * Returning null from impl_createPGNode() causes crashes,
-    // * so return a PGGroup.
+    //
+    // * A stub node that contains as little functionality as possible.
     // *
-    @Override
-    protected NGNode impl_createPeer() {
-        return new NGGroup();
+    public static final class StubNode extends Node {
+        static {
+            StubNodeHelper.setStubNodeAccessor(new StubNodeHelper.StubNodeAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubNode) node).doCreatePeer();
+                }
+            });
+        }
+
+        public StubNode() {
+            super();
+            StubNodeHelper.initHelper(this);
+        }
+
+        // * Returning null causes crashes so return a NGGroup.
+        private NGNode doCreatePeer() {
+            return new NGGroup();
+        }
+
+        @Override
+        public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+            return bounds;
+        }
+
+        @Override
+        public boolean impl_computeContains(double localX, double localY) {
+            // TODO: Missing code.
+            return false;
+        }
+
+        @Override
+        public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+            return null;
+        }
     }
 
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        return bounds;
+    public static final class StubParent extends Parent {
+        static {
+            StubParentHelper.setStubParentAccessor(new StubParentHelper.StubParentAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubParent) node).doCreatePeer();
+                }
+            });
+        }
+
+        public StubParent() {
+            super();
+            StubParentHelper.initHelper(this);
+        }
+
+        // * Returning null causes crashes so return a PGGroup.
+        private NGNode doCreatePeer() {
+            return new NGGroup();
+        }
+
+        @Override
+        public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+            return bounds;
+        }
+
+        @Override
+        public boolean impl_computeContains(double localX, double localY) {
+            // TODO: Missing code.
+            return false;
+        }
     }
 
-    @Override
-    public boolean impl_computeContains(double localX, double localY) {
-        // TODO: Missing code.
-        return false;
-    }
-
-    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return null;
-    }
 }
-
-class StubParent extends Parent {
-
-    // * Returning null from impl_createPGNode() causes crashes,
-    // * so return a PGGroup.
-    // *
-    @Override
-    protected NGNode impl_createPeer() {
-        return new NGGroup();
-    }
-
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        return bounds;
-    }
-
-    @Override
-    public boolean impl_computeContains(double localX, double localY) {
-        // TODO: Missing code.
-        return false;
-    }
-}
-

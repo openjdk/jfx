@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,11 +32,28 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import test.com.sun.javafx.scene.layout.MockNodeHelper;
 
 
 public class MockNode extends Node {
-    public MockNode() {}
-    protected NGNode impl_createPeer() { return null; }
+    static {
+        MockNodeHelper.setMockNodeAccessor(new MockNodeHelper.MockNodeAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((MockNode) node).doCreatePeer();
+            }
+        });
+    }
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        MockNodeHelper.initHelper(this);
+    }
+
+    public MockNode() {
+    }
+
+    private NGNode doCreatePeer() { return null; }
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) { return null; }
     protected boolean impl_computeContains(double localX, double localY) { return false; }
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) { return null; }

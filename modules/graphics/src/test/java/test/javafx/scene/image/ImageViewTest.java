@@ -25,6 +25,7 @@
 
 package test.javafx.scene.image;
 
+import test.com.sun.javafx.scene.image.StubImageViewHelper;
 import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
 import test.com.sun.javafx.pgstub.StubPlatformImageInfo;
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -40,6 +41,7 @@ import org.junit.Test;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
@@ -187,18 +189,27 @@ public final class ImageViewTest {
     }
     */
 
-    public class StubImageView extends ImageView {
-        public StubImageView() {
-            super();
+    public static final class StubImageView extends ImageView {
+        static {
+            StubImageViewHelper.setStubImageViewAccessor(new StubImageViewHelper.StubImageViewAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubImageView) node).doCreatePeer();
+                }
+            });
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        public StubImageView() {
+            super();
+            StubImageViewHelper.initHelper(this);
+        }
+
+        private NGNode doCreatePeer() {
             return new StubNGImageView();
         }
     }
 
-    public class StubNGImageView extends NGImageView {
+    public static final class StubNGImageView extends NGImageView {
         // for tests
         private Object image;
         private float x;

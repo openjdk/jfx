@@ -30,13 +30,16 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.shape.BoxHelper;
 import com.sun.javafx.sg.prism.NGBox;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
+import javafx.scene.Node;
 import javafx.scene.input.PickResult;
 
 /**
@@ -47,6 +50,21 @@ import javafx.scene.input.PickResult;
  * @since JavaFX 8.0
  */
 public class Box extends Shape3D {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        BoxHelper.setBoxAccessor(new BoxHelper.BoxAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Box) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Box) node).doUpdatePeer();
+            }
+        });
+    }
 
     private TriangleMesh mesh;
 
@@ -55,6 +73,11 @@ public class Box extends Shape3D {
      */
 
     public static final double DEFAULT_SIZE = 2;
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        BoxHelper.initHelper(this);
+    }
 
     public Box() {
         this(DEFAULT_SIZE, DEFAULT_SIZE, DEFAULT_SIZE);
@@ -90,7 +113,7 @@ public class Box extends Shape3D {
             depth = new SimpleDoubleProperty(Box.this, "depth", DEFAULT_SIZE) {
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.MESH_GEOM);
+                    NodeHelper.markDirty(Box.this, DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
                     key = 0;
                     impl_geomChanged();
@@ -120,7 +143,7 @@ public class Box extends Shape3D {
             height = new SimpleDoubleProperty(Box.this, "height", DEFAULT_SIZE) {
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.MESH_GEOM);
+                    NodeHelper.markDirty(Box.this, DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
                     key = 0;
                     impl_geomChanged();
@@ -150,7 +173,7 @@ public class Box extends Shape3D {
             width = new SimpleDoubleProperty(Box.this, "width", DEFAULT_SIZE) {
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.MESH_GEOM);
+                    NodeHelper.markDirty(Box.this, DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
                     key = 0;
                     impl_geomChanged();
@@ -159,25 +182,20 @@ public class Box extends Shape3D {
         }
         return width;
     }
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGBox();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-        if (impl_isDirty(DirtyBits.MESH_GEOM)) {
-            NGBox peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.MESH_GEOM)) {
+            NGBox peer = NodeHelper.getPeer(this);
             final float w = (float) getWidth();
             final float h = (float) getHeight();
             final float d = (float) getDepth();

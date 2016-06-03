@@ -246,6 +246,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             int index = getItems().indexOf(t1);
 
             if (index == -1) {
+                sm.clearSelection();
                 sm.setSelectedItem(t1);
             } else {
                 // we must compare the value here with the currently selected
@@ -265,8 +266,15 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         });
 
         editableProperty().addListener(o -> {
-            // when editable changes, we reset the selection / value states
-            getSelectionModel().clearSelection();
+            // When we change from being editable to non-editable, we look for the
+            // current value in the items list. If it exists, we do not clear selection.
+            // When we change from being non-editable to editable, we do nothing
+            if (!isEditable()) {
+                // check if value is in items list
+                if (getItems() != null && !getItems().contains(getValue())) {
+                    getSelectionModel().clearSelection();
+                }
+            }
         });
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,14 @@ package test.javafx.scene.shape;
 
 import com.sun.javafx.sg.prism.NGArc;
 import com.sun.javafx.sg.prism.NGNode;
+import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
+import test.com.sun.javafx.scene.shape.StubArcHelper;
 
 public class ArcTest {
 
@@ -121,7 +123,20 @@ public class ArcTest {
         assertNull(arc.typeProperty().get());
     }
 
-    public final class StubArc extends Arc {
+    public static final class StubArc extends Arc {
+        static {
+            StubArcHelper.setStubArcAccessor(new StubArcHelper.StubArcAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubArc) node).doCreatePeer();
+                }
+            });
+        }
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubArcHelper.initHelper(this);
+        }
         public StubArc() {
             super();
         }
@@ -130,13 +145,12 @@ public class ArcTest {
             super(centerX, centerY, radiusX, radiusY, startAngle, length);
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        private NGNode doCreatePeer() {
             return new StubNGArc();
         }
     }
 
-    public final class StubNGArc extends NGArc {
+    public static final class StubNGArc extends NGArc {
         private float cx, cy, rx, ry, start, extent;
         private ArcType type;
 

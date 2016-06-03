@@ -50,12 +50,12 @@ public class NodeShim {
         return n.hasMirroring();
     }
 
-    public static void impl_clearDirty(Node n, DirtyBits dirtyBit) {
-        n.impl_clearDirty(dirtyBit);
+    public static void clearDirty(Node n, DirtyBits dirtyBit) {
+        n.clearDirty(dirtyBit);
     }
 
-    public static boolean impl_isDirty(Node n, DirtyBits dirtyBit) {
-        return n.impl_isDirty(dirtyBit);
+    public static boolean isDirty(Node n, DirtyBits dirtyBit) {
+        return n.isDirty(dirtyBit);
     }
 
     public static boolean isDerivedDepthTest(Node n) {

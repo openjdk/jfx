@@ -39,7 +39,9 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.java.scene.web.WebViewHelper;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;
@@ -69,6 +71,19 @@ import javafx.scene.text.FontSmoothingType;
  * @since JavaFX 2.0
  */
 final public class WebView extends Parent {
+    static {
+        WebViewHelper.setWebViewAccessor(new WebViewHelper.WebViewAccessor() {
+            @Override
+                public NGNode doCreatePeer(Node node) {
+                return ((WebView) node).doCreatePeer();
+            }
+
+            @Override
+                public void doUpdatePeer(Node node) {
+                ((WebView) node).doUpdatePeer();
+            }
+            });
+    }
 
     private static final boolean DEFAULT_CONTEXT_MENU_ENABLED = true;
     private static final FontSmoothingType DEFAULT_FONT_SMOOTHING_TYPE = FontSmoothingType.LCD;
@@ -316,7 +331,7 @@ final public class WebView extends Parent {
     @Override public void resize(double width, double height) {
         this.width.set(width);
         this.height.set(height);
-        impl_markDirty(DirtyBits.NODE_GEOMETRY);
+        NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
         impl_geomChanged();
         _setWidth(handle, width);
         _setHeight(handle, height);
@@ -989,7 +1004,7 @@ final public class WebView extends Parent {
                 && getScene().getWindow().isShowing();
 
         if (reallyVisible) {
-            if (impl_isDirty(DirtyBits.WEBVIEW_VIEW)) {
+            if (NodeHelper.isDirty(this, DirtyBits.WEBVIEW_VIEW)) {
                 Scene.impl_setAllowPGAccess(true);
                 //getPGWebView().update(); // creates new render queues
                 Scene.impl_setAllowPGAccess(false);
@@ -1014,6 +1029,14 @@ final public class WebView extends Parent {
 
     // Node stuff
 
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private NGNode doCreatePeer() {
+        // return new NGWebView();
+        return null; // iOS doesn't need this method.
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -1035,19 +1058,16 @@ final public class WebView extends Parent {
         return true;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_updatePeer() {
-        super.impl_updatePeer();
+    private void doUpdatePeer() {
         //PGWebView peer = getPGWebView();
 
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
             //peer.resize((float)getWidth(), (float)getHeight());
         }
-        if (impl_isDirty(DirtyBits.WEBVIEW_VIEW)) {
+        if (NodeHelper.isDirty(this, DirtyBits.WEBVIEW_VIEW)) {
             //peer.requestRender();
         }
     }

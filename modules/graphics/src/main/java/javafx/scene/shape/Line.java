@@ -29,6 +29,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Line2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.LineHelper;
 import com.sun.javafx.sg.prism.NGLine;
 import com.sun.javafx.sg.prism.NGNode;
@@ -36,6 +37,7 @@ import com.sun.javafx.sg.prism.NGShape;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
@@ -60,6 +62,16 @@ public class Line extends Shape {
     static {
         LineHelper.setLineAccessor(new LineHelper.LineAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((Line) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((Line) node).doUpdatePeer();
+            }
+
+            @Override
             public Paint doCssGetFillInitialValue(Shape shape) {
                 return ((Line) shape).doCssGetFillInitialValue();
             }
@@ -79,6 +91,9 @@ public class Line extends Shape {
     private final Line2D shape = new Line2D();
 
     {
+        // To initialize the class helper at the begining each constructor of this class
+        LineHelper.initHelper(this);
+
         // overriding default values for fill and stroke
         // Set through CSS property so that it appears to be a UA style rather
         // that a USER style so that fill and stroke can still be set from CSS.
@@ -90,7 +105,6 @@ public class Line extends Shape {
      * Creates an empty instance of Line.
      */
     public Line() {
-        LineHelper.initHelper(this);
     }
 
     /**
@@ -105,7 +119,6 @@ public class Line extends Shape {
         setStartY(startY);
         setEndX(endX);
         setEndY(endY);
-        LineHelper.initHelper(this);
     }
 
     /**
@@ -117,7 +130,7 @@ public class Line extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Line.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -154,7 +167,7 @@ public class Line extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(Line.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -191,7 +204,7 @@ public class Line extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Line.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -229,7 +242,7 @@ public class Line extends Shape {
 
         @Override
         public void invalidated() {
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(Line.this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
 
@@ -256,13 +269,10 @@ public class Line extends Shape {
         return endY;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGLine();
     }
 
@@ -377,17 +387,12 @@ public class Line extends Shape {
         return shape;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            NGLine peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
+            NGLine peer = NodeHelper.getPeer(this);
             peer.updateLine((float)getStartX(),
                 (float)getStartY(),
                 (float)getEndX(),

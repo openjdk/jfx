@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import javafx.scene.control.skin.TableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import javafx.collections.FXCollections;
@@ -299,5 +300,10 @@ public class TableCellTest {
         }
 
         sl.dispose();
+    }
+
+    @Test public void test_jdk_8151524() {
+        TableCell cell = new TableCell();
+        cell.setSkin(new TableCellSkin(cell));
     }
 }

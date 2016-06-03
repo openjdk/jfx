@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
@@ -49,6 +51,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView.TableViewFocusModel;
+import javafx.scene.control.TreeTableView;
 
 /**
  * Default skin implementation for the {@link TableRow} control.
@@ -102,20 +105,34 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
             }
         });
 
-        DoubleProperty fixedCellSizeProperty = getTableView().fixedCellSizeProperty();
-        if (fixedCellSizeProperty != null) {
-            registerChangeListener(fixedCellSizeProperty, e -> {
+        setupTreeTableViewListeners();
+    }
+
+    private void setupTreeTableViewListeners() {
+        TableView<T> tableView = getSkinnable().getTableView();
+        if (tableView == null) {
+            getSkinnable().tableViewProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    getSkinnable().tableViewProperty().removeListener(this);
+                    setupTreeTableViewListeners();
+                }
+            });
+        } else {
+            DoubleProperty fixedCellSizeProperty = tableView.fixedCellSizeProperty();
+            if (fixedCellSizeProperty != null) {
+                registerChangeListener(fixedCellSizeProperty, e -> {
+                    fixedCellSize = fixedCellSizeProperty.get();
+                    fixedCellSizeEnabled = fixedCellSize > 0;
+                });
                 fixedCellSize = fixedCellSizeProperty.get();
                 fixedCellSizeEnabled = fixedCellSize > 0;
-            });
-            fixedCellSize = fixedCellSizeProperty.get();
-            fixedCellSizeEnabled = fixedCellSize > 0;
 
-            // JDK-8144500:
-            // When in fixed cell size mode, we must listen to the width of the virtual flow, so
-            // that when it changes, we can appropriately add / remove cells that may or may not
-            // be required (because we remove all cells that are not visible).
-            registerChangeListener(getVirtualFlow().widthProperty(), e -> control.requestLayout());
+                // JDK-8144500:
+                // When in fixed cell size mode, we must listen to the width of the virtual flow, so
+                // that when it changes, we can appropriately add / remove cells that may or may not
+                // be required (because we remove all cells that are not visible).
+                registerChangeListener(getVirtualFlow().widthProperty(), e -> tableView.requestLayout());
+            }
         }
     }
 
@@ -205,7 +222,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
 
     /** {@inheritDoc} */
     @Override protected ObservableList<TableColumn<T, ?>> getVisibleLeafColumns() {
-        return getTableView().getVisibleLeafColumns();
+        return getTableView() == null ? FXCollections.emptyObservableList() : getTableView().getVisibleLeafColumns();
     }
 
     /** {@inheritDoc} */
@@ -224,7 +241,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
 
     private void updateTableViewSkin() {
         TableView<T> tableView = getSkinnable().getTableView();
-        if (tableView.getSkin() instanceof TableViewSkin) {
+        if (tableView != null && tableView.getSkin() instanceof TableViewSkin) {
             tableViewSkin = (TableViewSkin)tableView.getSkin();
         }
     }

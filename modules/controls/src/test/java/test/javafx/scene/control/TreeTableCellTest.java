@@ -25,13 +25,9 @@
 
 package test.javafx.scene.control;
 
+import javafx.scene.control.skin.TreeTableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import javafx.beans.InvalidationListener;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableCellShim;
@@ -614,5 +610,10 @@ public class TreeTableCellTest {
         }
 
         sl.dispose();
+    }
+
+    @Test public void test_jdk_8151524() {
+        TreeTableCell cell = new TreeTableCell();
+        cell.setSkin(new TreeTableCellSkin(cell));
     }
 }

@@ -95,6 +95,8 @@ module javafx.graphics {
         javafx.controls,
         javafx.swing,
         javafx.web;
+    exports com.sun.javafx.scene.layout to
+        javafx.web;
     exports com.sun.javafx.scene.text to
         javafx.controls,
         javafx.web;
@@ -118,6 +120,8 @@ module javafx.graphics {
     exports com.sun.javafx.util to
         javafx.controls,
         javafx.fxml,
+        javafx.media,
+        javafx.swing,
         javafx.web;
     exports com.sun.prism to
         javafx.media,

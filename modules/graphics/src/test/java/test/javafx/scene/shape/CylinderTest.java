@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.shape;
 
+import com.sun.javafx.scene.NodeHelper;
 import javafx.geometry.BoundingBox;
 import javafx.scene.shape.Cylinder;
 import static org.junit.Assert.*;
@@ -44,12 +45,12 @@ public class CylinderTest {
     @Test
     public void testImpl_computeGeomBoundsOnNegDimension() {
         Cylinder cylinder = new Cylinder(10, -10);
-        cylinder.impl_updatePeer(); // should not throw NPE
+        NodeHelper.updatePeer(cylinder); // should not throw NPE
         assertTrue(cylinder.getBoundsInLocal().isEmpty());
         assertEquals(cylinder.getHeight(), -10, 0.00001);
 
         cylinder = new Cylinder(-10, 10);
-        cylinder.impl_updatePeer(); // should not throw NPE
+        NodeHelper.updatePeer(cylinder); // should not throw NPE
         assertTrue(cylinder.getBoundsInLocal().isEmpty());
         assertEquals(cylinder.getRadius(), -10, 0.00001);
     }
@@ -57,15 +58,15 @@ public class CylinderTest {
     @Test
     public void testImpl_computeGeomBoundsOnDegeneratedShape() {
         Cylinder cylinder = new Cylinder(0, 0);
-        cylinder.impl_updatePeer(); // should not throw NPE
+        NodeHelper.updatePeer(cylinder); // should not throw NPE
         assertEquals(cylinder.getBoundsInLocal(), new BoundingBox(0, 0, 0, 0, 0, 0));
 
         cylinder = new Cylinder(10, 0);
-        cylinder.impl_updatePeer(); // should not throw NPE
+        NodeHelper.updatePeer(cylinder); // should not throw NPE
         assertEquals(cylinder.getBoundsInLocal(), new BoundingBox(-10.0, 0, -10.0, 20, 0, 20));
 
         cylinder = new Cylinder(0, 10);
-        cylinder.impl_updatePeer(); // should not throw NPE
+        NodeHelper.updatePeer(cylinder); // should not throw NPE
         assertEquals(cylinder.getBoundsInLocal(), new BoundingBox(0, -5.0, 0, 0, 10, 0));
     }
 }

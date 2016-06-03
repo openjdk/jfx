@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.Parent;
 
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 
 
 public class MockResizable extends Parent {
@@ -68,7 +69,7 @@ public class MockResizable extends Parent {
         this.height = height;
         impl_layoutBoundsChanged();
         impl_geomChanged();
-        impl_markDirty(DirtyBits.NODE_GEOMETRY);
+        NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
         requestLayout();
     }
     @Override public double getBaselineOffset() {

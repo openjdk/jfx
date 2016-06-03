@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.NodeHelper;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
@@ -156,7 +157,7 @@ public class ParentTest {
         // try removing node from the end of the observableArrayList
         ParentShim.getChildren(g).remove(rect6);
         toolkit.fireTestPulse();
-        final NGGroup peer = g.impl_getPeer();
+        final NGGroup peer = NodeHelper.getPeer(g);
         assertEquals(5, ParentShim.getChildren(g).size());
         assertEquals(5, peer.getChildren().size());
 
@@ -191,7 +192,7 @@ public class ParentTest {
         ParentShim.getChildren(g).set(1, rect3);
         toolkit.fireTestPulse();
         assertEquals(2, ParentShim.getChildren(g).size());
-        assertEquals(2, ((NGGroup)g.impl_getPeer()).getChildren().size());
+        assertEquals(2, ((NGGroup)NodeHelper.getPeer(g)).getChildren().size());
     }
 
     @Test
@@ -212,7 +213,7 @@ public class ParentTest {
 
         toolkit.fireTestPulse();
         assertEquals(2, ParentShim.getChildren(g).size());
-        assertEquals(2, ((NGGroup)g.impl_getPeer()).getChildren().size());
+        assertEquals(2, ((NGGroup)NodeHelper.getPeer(g)).getChildren().size());
     }
 
     @Test
@@ -238,7 +239,7 @@ public class ParentTest {
         ParentShim.getChildren(g).add(rect6);
         toolkit.fireTestPulse();
         assertEquals(6, ParentShim.getChildren(g).size());
-        assertEquals(6, ((NGGroup)g.impl_getPeer()).getChildren().size());
+        assertEquals(6, ((NGGroup)NodeHelper.getPeer(g)).getChildren().size());
     }
 
     @Test
@@ -264,7 +265,7 @@ public class ParentTest {
         ParentShim.getChildren(g).add(rect6);
         toolkit.fireTestPulse();
         assertEquals(5, ParentShim.getChildren(g).size());
-        assertEquals(5, ((NGGroup)g.impl_getPeer()).getChildren().size());
+        assertEquals(5, ((NGGroup)NodeHelper.getPeer(g)).getChildren().size());
     }
 
     @Test

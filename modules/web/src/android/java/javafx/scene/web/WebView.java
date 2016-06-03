@@ -24,6 +24,7 @@
  */
 package javafx.scene.web;
 
+import com.sun.java.scene.web.WebViewHelper;
 import com.sun.webkit.WebPage;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.EnumConverter;
@@ -31,6 +32,7 @@ import javafx.css.converter.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.scene.DirtyBits;
 import javafx.css.Styleable;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGWebView;
 import com.sun.javafx.tk.TKPulseListener;
@@ -76,6 +78,19 @@ import javafx.scene.text.FontSmoothingType;
  * FX thread.
  */
 final public class WebView extends Parent {
+    static {
+        WebViewHelper.setWebViewAccessor(new WebViewHelper.WebViewAccessor() {
+            @Override
+                public NGNode doCreatePeer(Node node) {
+                return ((WebView) node).doCreatePeer();
+            }
+
+            @Override
+                public void doUpdatePeer(Node node) {
+                ((WebView) node).doUpdatePeer();
+            }
+            });
+    }
 
     private static final Map<Object, Integer> idMap = new HashMap<Object, Integer>();
 
@@ -293,7 +308,7 @@ final public class WebView extends Parent {
         if ((width != this.width.get()) || (height != this.height.get())) {
             this.width.set(width);
             this.height.set(height);
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
             impl_geomChanged();
         }
     }
@@ -959,10 +974,10 @@ final public class WebView extends Parent {
             if (page.isDirty()) {
                 Scene.impl_setAllowPGAccess(true);
 
-                final NGWebView peer = impl_getPeer();
+                final NGWebView peer = NodeHelper.getPeer(this);
                 peer.update(); // creates new render queues
                 if (page.isRepaintPending()) {
-                    impl_markDirty(DirtyBits.WEBVIEW_VIEW);
+                    NodeHelper.markDirty(this, DirtyBits.WEBVIEW_VIEW);
                 }
                 Scene.impl_setAllowPGAccess(false);
             }
@@ -1031,17 +1046,15 @@ final public class WebView extends Parent {
 
     // Node stuff
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGWebView();
     }
 
     private NGWebView getNGWebView() {
-        return (NGWebView)impl_getPeer();
+        return (NGWebView)NodeHelper.getPeer(this);
     }
 
     /**
@@ -1066,22 +1079,19 @@ final public class WebView extends Parent {
         return true;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_updatePeer() {
-        super.impl_updatePeer();
-        final NGWebView peer = impl_getPeer();
+    private void doUpdatePeer() {
+        final NGWebView peer = NodeHelper.getPeer(this);
 
-        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
             peer.setPage(page);
         }
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
             peer.resize((float)getWidth(), (float)getHeight());
         }
-        if (impl_isDirty(DirtyBits.WEBVIEW_VIEW)) {
+        if (NodeHelper.isDirty(this, DirtyBits.WEBVIEW_VIEW)) {
             peer.requestRender();
         }
     }

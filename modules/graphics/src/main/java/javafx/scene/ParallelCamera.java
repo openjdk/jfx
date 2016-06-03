@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.scene.ParallelCameraHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGParallelCamera;
 
@@ -47,6 +48,25 @@ import com.sun.javafx.sg.prism.NGParallelCamera;
  * @since JavaFX 2.0
  */
 public class ParallelCamera extends Camera {
+    static {
+        ParallelCameraHelper.setParallelCameraAccessor(new ParallelCameraHelper.ParallelCameraAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((ParallelCamera) node).doCreatePeer();
+            }
+        });
+    }
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        ParallelCameraHelper.initHelper(this);
+    }
+
+    /**
+     * Creates an empty instance of ParallelCamera.
+     */
+    public ParallelCamera() {
+    }
 
     @Override
     Camera copy() {
@@ -56,13 +76,10 @@ public class ParallelCamera extends Camera {
         return c;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         final NGParallelCamera peer = new NGParallelCamera();
         peer.setNearClip((float) getNearClip());
         peer.setFarClip((float) getFarClip());

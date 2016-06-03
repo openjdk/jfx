@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.sg.prism.NGEllipse;
 import com.sun.javafx.sg.prism.NGNode;
 import test.com.sun.javafx.test.TestHelper;
 import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Ellipse;
 import org.junit.Test;
@@ -36,6 +37,7 @@ import org.junit.Test;
 import static test.com.sun.javafx.test.TestHelper.assertSimilar;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import test.com.sun.javafx.scene.shape.StubEllipseHelper;
 
 
 public class EllipseTest {
@@ -104,7 +106,20 @@ public class EllipseTest {
         assertFalse(s.isEmpty());
     }
 
-    public class StubEllipse extends Ellipse {
+    public static final class StubEllipse extends Ellipse {
+        static {
+            StubEllipseHelper.setStubEllipseAccessor(new StubEllipseHelper.StubEllipseAccessor() {
+                @Override
+                public NGNode doCreatePeer(Node node) {
+                    return ((StubEllipse) node).doCreatePeer();
+                }
+            });
+        }
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubEllipseHelper.initHelper(this);
+        }
         public StubEllipse() {
             super();
         }
@@ -117,13 +132,12 @@ public class EllipseTest {
             super(centerX, centerY, radiusX, radiusY);
         }
 
-        @Override
-        protected NGNode impl_createPeer() {
+        private NGNode doCreatePeer() {
             return new StubNGEllipse();
         }
     }
 
-    public class StubNGEllipse extends NGEllipse {
+    public static final class StubNGEllipse extends NGEllipse {
         private float centerX;
         private float centerY;
         private float radiusX;

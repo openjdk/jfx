@@ -25,34 +25,23 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Shape;
 
 /**
  * Used to access internal methods of Shape.
  */
-public abstract class ShapeHelper {
+public abstract class ShapeHelper extends NodeHelper {
     private static ShapeAccessor shapeAccessor;
 
     static {
         Utils.forceInit(Shape.class);
-    }
-
-    protected ShapeHelper() {
-    }
-
-    // TODO: This method will eventually be moved to Node once all the
-    // impl_XXX encapsulation work is done
-    private static ShapeHelper getHelper(Shape shape) {
-        return shapeAccessor.getHelper(shape);
-    }
-
-    // TODO: This method will eventually be moved to Node once all the
-    // impl_XXX encapsulation work is done
-    protected static void setHelper(Shape shape, ShapeHelper shapeHelper) {
-        shapeAccessor.setHelper(shape, shapeHelper);
     }
 
     /*
@@ -62,20 +51,32 @@ public abstract class ShapeHelper {
      */
 
     public static Paint cssGetFillInitialValue(Shape shape) {
-        return getHelper(shape).cssGetFillInitialValueImpl(shape);
+        return ((ShapeHelper) getHelper(shape)).cssGetFillInitialValueImpl(shape);
     }
 
     public static Paint cssGetStrokeInitialValue(Shape shape) {
-        return getHelper(shape).cssGetStrokeInitialValueImpl(shape);
+        return ((ShapeHelper) getHelper(shape)).cssGetStrokeInitialValueImpl(shape);
     }
 
     public static com.sun.javafx.geom.Shape configShape(Shape shape) {
-        return getHelper(shape).configShapeImpl(shape);
+        return ((ShapeHelper) getHelper(shape)).configShapeImpl(shape);
     }
 
     /*
      * Methods that will be overridden by subclasses
      */
+
+    @Override
+    protected void updatePeerImpl(Node node) {
+        super.updatePeerImpl(node);
+        shapeAccessor.doUpdatePeer(node);
+    }
+
+    @Override
+    protected void markDirtyImpl(Node node, DirtyBits dirtyBit) {
+        shapeAccessor.doMarkDirty(node, dirtyBit);
+        super.markDirtyImpl(node, dirtyBit);
+    }
 
     protected Paint cssGetFillInitialValueImpl(Shape shape) {
         return shapeAccessor.doCssGetFillInitialValue(shape);
@@ -112,8 +113,8 @@ public abstract class ShapeHelper {
     }
 
     public interface ShapeAccessor {
-        ShapeHelper getHelper(Shape shape);
-        void setHelper(Shape shape, ShapeHelper shapeHelper);
+        void doUpdatePeer(Node node);
+        void doMarkDirty(Node node, DirtyBits dirtyBit);
         Paint doCssGetFillInitialValue(Shape shape);
         Paint doCssGetStrokeInitialValue(Shape shape);
         NGShape.Mode getMode(Shape shape);

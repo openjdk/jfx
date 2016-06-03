@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.AmbientLightHelper;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGAmbientLight;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.paint.Color;
@@ -36,6 +39,20 @@ import javafx.scene.paint.Color;
  * @since JavaFX 8.0
  */
 public class AmbientLight extends LightBase {
+    static {
+        AmbientLightHelper.setAmbientLightAccessor(new AmbientLightHelper.AmbientLightAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((AmbientLight) node).doCreatePeer();
+            }
+        });
+    }
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        AmbientLightHelper.initHelper(this);
+    }
+
     /**
      * Creates a new instance of {@code AmbientLight} class with a default Color.WHITE light source.
      */
@@ -52,13 +69,10 @@ public class AmbientLight extends LightBase {
         super(color);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGAmbientLight();
     }
 }

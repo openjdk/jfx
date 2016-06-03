@@ -27,11 +27,13 @@ package javafx.scene.shape;
 
 import com.sun.javafx.geom.CubicCurve2D;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.CubicCurveHelper;
 import com.sun.javafx.sg.prism.NGCubicCurve;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
+import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 
 
@@ -63,6 +65,16 @@ public class CubicCurve extends Shape {
     static {
         CubicCurveHelper.setCubicCurveAccessor(new CubicCurveHelper.CubicCurveAccessor() {
             @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((CubicCurve) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((CubicCurve) node).doUpdatePeer();
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((CubicCurve) shape).doConfigShape();
             }
@@ -77,11 +89,15 @@ public class CubicCurve extends Shape {
      */
     private DoubleProperty startX;
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        CubicCurveHelper.initHelper(this);
+    }
+
     /**
      * Creates an empty instance of CubicCurve.
      */
     public CubicCurve() {
-        CubicCurveHelper.initHelper(this);
     }
 
     /**
@@ -107,7 +123,6 @@ public class CubicCurve extends Shape {
         setControlY2(controlY2);
         setEndX(endX);
         setEndY(endY);
-        CubicCurveHelper.initHelper(this);
     }
 
     public final void setStartX(double value) {
@@ -126,7 +141,7 @@ public class CubicCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -167,7 +182,7 @@ public class CubicCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -209,7 +224,7 @@ public class CubicCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -251,7 +266,7 @@ public class CubicCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -293,7 +308,7 @@ public class CubicCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -335,7 +350,7 @@ public class CubicCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -376,7 +391,7 @@ public class CubicCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -417,7 +432,7 @@ public class CubicCurve extends Shape {
 
                 @Override
                 public void invalidated() {
-                    impl_markDirty(DirtyBits.NODE_GEOMETRY);
+                    NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
                 }
 
@@ -450,25 +465,19 @@ public class CubicCurve extends Shape {
         return shape;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         return new NGCubicCurve();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
-            final NGCubicCurve peer = impl_getPeer();
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
+            final NGCubicCurve peer = NodeHelper.getPeer(this);
             peer.updateCubicCurve((float)getStartX(),
                 (float)getStartY(),
                 (float)getEndX(),

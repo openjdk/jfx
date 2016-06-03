@@ -33,6 +33,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.prism.Graphics;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Blend.Mode;
@@ -196,7 +197,7 @@ public class NGGroup extends NGNode {
     public void setViewOrderChildren(List<Node> sortedChildren) {
         viewOrderChildren.clear();
         for (Node child : sortedChildren) {
-            NGNode childPeer = child.impl_getPeer();
+            NGNode childPeer = NodeHelper.getPeer(child);
             viewOrderChildren.add(childPeer);
         }
 

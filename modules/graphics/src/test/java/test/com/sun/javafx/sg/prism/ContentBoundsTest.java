@@ -34,6 +34,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import org.junit.Test;
@@ -112,7 +113,7 @@ public class ContentBoundsTest {
                 getValidatedPGNode(child);
             }
         }
-        NGNode pgn = n.impl_getPeer();
+        NGNode pgn = NodeHelper.getPeer(n);
         // Eeek, this is gross! I have to use reflection to invoke this
         // method so that bounds are updated...
         try {
@@ -122,7 +123,7 @@ public class ContentBoundsTest {
         } catch (Exception e) {
             throw new RuntimeException("Failed to update bounds", e);
         }
-        n.impl_updatePeer();
+        NodeHelper.updatePeer(n);
         return pgn;
     }
 

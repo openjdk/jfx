@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.shape;
 
+import com.sun.javafx.scene.NodeHelper;
 import javafx.geometry.BoundingBox;
 import javafx.scene.shape.Sphere;
 import org.junit.Test;
@@ -37,7 +38,7 @@ public class SphereTest {
     @Test
     public void testImpl_computeGeomBoundsOnNegDimension() {
         Sphere sphere = new Sphere(-10);
-        sphere.impl_updatePeer(); // should not throw NPE
+        NodeHelper.updatePeer(sphere); // should not throw NPE
         assertTrue(sphere.getBoundsInLocal().isEmpty());
         assertEquals(sphere.getRadius(), -10, 0.00001);
     }
@@ -45,7 +46,7 @@ public class SphereTest {
     @Test
     public void testImpl_computeGeomBoundsOnDegeneratedShape() {
         Sphere sphere = new Sphere(0);
-        sphere.impl_updatePeer(); // should not throw NPE
+        NodeHelper.updatePeer(sphere); // should not throw NPE
         assertEquals(sphere.getBoundsInLocal(), new BoundingBox(0, 0, 0, 0, 0, 0));
     }
 }

@@ -26,6 +26,7 @@
 package test.javafx.scene;
 
 import com.sun.javafx.runtime.SystemProperties;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -734,7 +735,7 @@ public class SceneTest {
         // verify owner was removed
         cam.setNearClip(50);
         Toolkit.getToolkit().firePulse();
-        ngCamera = scene.getCamera().impl_getPeer();
+        ngCamera = NodeHelper.getPeer(scene.getCamera());
         assertEquals(40, oldCam.getNearClip(), 0.00001);
         assertEquals(0.1, ngCamera.getNearClip(), 0.00001);
     }

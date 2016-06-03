@@ -74,6 +74,8 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.embed.swing.SwingNodeHelper;
+import com.sun.javafx.scene.NodeHelper;
 import sun.awt.UngrabEvent;
 import sun.swing.JLightweightFrame;
 import sun.swing.LightweightContent;
@@ -120,6 +122,21 @@ import sun.swing.LightweightContent;
  * @since JavaFX 8.0
  */
 public class SwingNode extends Node {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        SwingNodeHelper.setSwingNodeAccessor(new SwingNodeHelper.SwingNodeAccessor() {
+            @Override
+            public NGNode doCreatePeer(Node node) {
+                return ((SwingNode) node).doCreatePeer();
+            }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((SwingNode) node).doUpdatePeer();
+            }
+        });
+    }
 
     private double fxWidth;
     private double fxHeight;
@@ -143,6 +160,11 @@ public class SwingNode extends Node {
     private boolean grabbed; // lwframe initiated grab
 
     private volatile int scale = 1;
+
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        SwingNodeHelper.initHelper(this);
+    }
 
     /**
      * Constructs a new instance of {@code SwingNode}.
@@ -346,7 +368,7 @@ public class SwingNode extends Node {
     void repaintDirtyRegion(final int dirtyX, final int dirtyY, final int dirtyWidth, final int dirtyHeight) {
         Runnable r = () -> {
             peer.repaintDirtyRegion(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
-            impl_markDirty(DirtyBits.NODE_CONTENTS);
+            NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
         };
         SwingFXUtils.runOnFxThread(() -> {
             if (peer != null) {
@@ -378,7 +400,7 @@ public class SwingNode extends Node {
             this.fxWidth = width;
             this.fxHeight = height;
             impl_geomChanged();
-            impl_markDirty(DirtyBits.NODE_GEOMETRY);
+            NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
             SwingFXUtils.runOnEDT(() -> {
                 if (lwFrame != null) {
                     locateLwFrame();
@@ -528,13 +550,10 @@ public class SwingNode extends Node {
         window.showingProperty().removeListener(windowVisibleListener);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected NGNode impl_createPeer() {
+    private NGNode doCreatePeer() {
         peer = new NGExternalNode();
         peer.setLock(paintLock);
         for (Runnable request : peerRequests) {
@@ -568,20 +587,15 @@ public class SwingNode extends Node {
         return peer;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_updatePeer() {
-        super.impl_updatePeer();
-
-        if (impl_isDirty(DirtyBits.NODE_VISIBLE)
-                || impl_isDirty(DirtyBits.NODE_BOUNDS)) {
+    private void doUpdatePeer() {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_VISIBLE)
+                || NodeHelper.isDirty(this, DirtyBits.NODE_BOUNDS)) {
             locateLwFrame(); // initialize location
         }
-        if (impl_isDirty(DirtyBits.NODE_CONTENTS)) {
+        if (NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
             peer.markContentDirty();
         }
     }

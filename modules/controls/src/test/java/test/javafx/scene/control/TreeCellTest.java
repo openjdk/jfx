@@ -26,10 +26,7 @@
 package test.javafx.scene.control;
 
 import javafx.beans.InvalidationListener;
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.MultipleSelectionModelBaseShim;
@@ -37,6 +34,7 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.control.skin.TreeCellSkin;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -726,5 +724,10 @@ public class TreeCellTest {
         @Override protected TreeItem<String> getModelItem(int index) {
             return index == 0 ? root : root.getChildren().get(index - 1);
         }
+    }
+
+    @Test public void test_jdk_8151524() {
+        TreeCell cell = new TreeCell();
+        cell.setSkin(new TreeCellSkin(cell));
     }
 }

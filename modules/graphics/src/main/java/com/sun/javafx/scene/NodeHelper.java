@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,20 +26,82 @@
 package com.sun.javafx.scene;
 
 import com.sun.glass.ui.Accessible;
+import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.util.Utils;
 import javafx.scene.Node;
 import javafx.scene.SubScene;
 
 /**
  * Used to access internal methods of Node.
  */
-public class NodeHelper {
+public abstract class NodeHelper {
     private static NodeAccessor nodeAccessor;
 
     static {
-        forceInit(Node.class);
+        Utils.forceInit(Node.class);
     }
 
-    private NodeHelper() {
+    protected NodeHelper() {
+    }
+
+    protected static NodeHelper getHelper(Node node) {
+        return nodeAccessor.getHelper(node);
+    }
+
+    protected static void setHelper(Node node, NodeHelper nodeHelper) {
+        nodeAccessor.setHelper(node, nodeHelper);
+    }
+
+    /*
+     * Static helper methods for cases where the implementation is done in an
+     * instance method that is overridden by subclasses.
+     * These methods exist in the base class only.
+     */
+
+    public static NGNode createPeer(Node node) {
+        return getHelper(node).createPeerImpl(node);
+    }
+
+    public static void markDirty(Node node, DirtyBits dirtyBit) {
+        getHelper(node).markDirtyImpl(node, dirtyBit);
+    }
+
+    public static void updatePeer(Node node) {
+        getHelper(node).updatePeerImpl(node);
+    }
+
+    /*
+     * Methods that will be overridden by subclasses
+     */
+
+    protected abstract NGNode createPeerImpl(Node node);
+
+    protected void markDirtyImpl(Node node, DirtyBits dirtyBit) {
+        nodeAccessor.doMarkDirty(node, dirtyBit);
+    }
+
+    protected void updatePeerImpl(Node node) {
+        nodeAccessor.doUpdatePeer(node);
+    }
+
+    /*
+     * Methods used by Node (base) class only
+     */
+
+    public static boolean isDirty(Node node, DirtyBits dirtyBit) {
+        return nodeAccessor.isDirty(node, dirtyBit);
+    }
+
+    public static boolean isDirtyEmpty(Node node) {
+        return nodeAccessor.isDirtyEmpty(node);
+    }
+
+    public static void syncPeer(Node node) {
+        nodeAccessor.syncPeer(node);
+    }
+
+    public static <P extends NGNode> P getPeer(Node node) {
+        return nodeAccessor.getPeer(node);
     }
 
     public static void layoutNodeForPrinting(Node node) {
@@ -75,6 +137,14 @@ public class NodeHelper {
     }
 
     public interface NodeAccessor {
+        NodeHelper getHelper(Node node);
+        void setHelper(Node node, NodeHelper nodeHelper);
+        void doMarkDirty(Node node, DirtyBits dirtyBit);
+        void doUpdatePeer(Node node);
+        boolean isDirty(Node node, DirtyBits dirtyBit);
+        boolean isDirtyEmpty(Node node);
+        void syncPeer(Node node);
+        <P extends NGNode> P getPeer(Node node);
         void layoutNodeForPrinting(Node node);
         boolean isDerivedDepthTest(Node node);
         SubScene getSubScene(Node node);
@@ -82,12 +152,4 @@ public class NodeHelper {
         Accessible getAccessible(Node node);
     }
 
-    private static void forceInit(final Class<?> classToInit) {
-        try {
-            Class.forName(classToInit.getName(), true,
-                          classToInit.getClassLoader());
-        } catch (final ClassNotFoundException e) {
-            throw new AssertionError(e);  // Can't happen
-        }
-    }
 }
