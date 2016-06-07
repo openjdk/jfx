@@ -25,6 +25,8 @@
 
 package test.javafx.scene.bounds;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRectangle;
 import javafx.beans.property.FloatProperty;
@@ -33,6 +35,7 @@ import javafx.scene.Node;
 
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.NodeHelper;
 import test.com.sun.javafx.scene.bounds.PerfNodeHelper;
 
 /**
@@ -47,6 +50,22 @@ public class PerfNode extends Node {
             @Override
             public NGNode doCreatePeer(Node node) {
                 return ((PerfNode) node).doCreatePeer();
+            }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((PerfNode) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((PerfNode) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((PerfNode) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -80,7 +99,7 @@ public class PerfNode extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(PerfNode.this);
                 }
             };
         }
@@ -102,7 +121,7 @@ public class PerfNode extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(PerfNode.this);
                 }
             };
         }
@@ -132,7 +151,7 @@ public class PerfNode extends Node {
     }
 
     protected void impl_storeWidth(FloatProperty model, float value) {
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
     }
 
     private FloatProperty height;
@@ -159,19 +178,24 @@ public class PerfNode extends Node {
     }
 
     protected void impl_storeHeight(FloatProperty model, float value) {
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
     }
 
     int geomComputeCount = 0;
 
-    public com.sun.javafx.geom.BaseBounds impl_computeGeomBounds(com.sun.javafx.geom.BaseBounds bounds, com.sun.javafx.geom.transform.BaseTransform tx) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private BaseBounds doComputeGeomBounds(com.sun.javafx.geom.BaseBounds bounds, com.sun.javafx.geom.transform.BaseTransform tx) {
         geomComputeCount++;
         bounds = bounds.deriveWithNewBounds(0, 0, 0, 100, 100, 0);
         return bounds;
     }
 
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private boolean doComputeContains(double localX, double localY) {
         // Stub
         return false;
     }
@@ -180,8 +204,10 @@ public class PerfNode extends Node {
         return new NGRectangle();
     }
 
-    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return null;
     }
 }

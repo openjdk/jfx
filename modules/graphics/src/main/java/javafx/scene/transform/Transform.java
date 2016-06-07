@@ -37,6 +37,7 @@ import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.scene.transform.TransformUtils;
 import java.lang.ref.SoftReference;
@@ -2068,7 +2069,7 @@ public abstract class Transform implements Cloneable, EventTarget {
         inverseCache = null;
         final Iterator iterator = nodes.iterator();
         while (iterator.hasNext()) {
-            ((Node) iterator.next()).impl_transformsChanged();
+            NodeHelper.transformsChanged(((Node) iterator.next()));
         }
 
         if (type2D != null) {

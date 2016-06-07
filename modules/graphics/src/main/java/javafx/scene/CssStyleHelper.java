@@ -574,7 +574,7 @@ final class CssStyleHelper {
         final StyleMap styleMap = getStyleMap(node);
         if (styleMap == null) {
             cacheContainer = null;
-            node.impl_reapplyCSS();
+            node.reapplyCSS();
             return;
         }
 
@@ -591,7 +591,7 @@ final class CssStyleHelper {
             // Shared cache was blown away by StyleManager.
             // Therefore, this CssStyleHelper is no good.
             cacheContainer = null;
-            node.impl_reapplyCSS();
+            node.reapplyCSS();
             return;
 
         }
@@ -1997,7 +1997,7 @@ final class CssStyleHelper {
 
 
     /**
-     * Called from Node impl_getMatchingStyles
+     * Called from Node NodeHelper.getMatchingStyles
      * @param styleable
      * @param styleableProperty
      * @return

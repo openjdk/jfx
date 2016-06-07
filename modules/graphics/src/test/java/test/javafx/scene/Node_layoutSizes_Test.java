@@ -25,8 +25,10 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.shape.RectangleHelper;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import javafx.scene.shape.Rectangle;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -53,11 +55,8 @@ public class Node_layoutSizes_Test {
      * layout bounds from which we're gathering this information.
      */
     @Test public void Node_prefWidth_BasedOnLayoutBounds2() {
-        Rectangle node = new Rectangle(10, 10, 100, 100) {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, 50, 50);
-            }
-        };
+        SpecialRect node = new SpecialRect(10, 10, 100, 100);
+        node.setTestBB(0, 0, 50, 50);
         assertEquals(50, node.prefWidth(-1), 0);
         assertEquals(50, node.prefWidth(5), 0);
     }
@@ -66,11 +65,8 @@ public class Node_layoutSizes_Test {
      * If the layout bounds has a NaN, it shouldn't leak out through node.prefWidth
      */
     @Test public void Node_prefWidth_BasedOnLayoutBounds_CleansUpAfterBadBounds() {
-        Rectangle node = new Rectangle(10, 10, 100, 100) {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, Double.NaN, 50);
-            }
-        };
+        SpecialRect node = new SpecialRect(10, 10, 100, 100);
+        node.setTestBB(0, 0, Double.NaN, 50);
         assertEquals(0, node.prefWidth(-1), 0);
         assertEquals(0, node.prefWidth(5), 0);
     }
@@ -79,11 +75,8 @@ public class Node_layoutSizes_Test {
      * If the layout bounds has a negative value, it shouldn't leak out through node.prefWidth
      */
     @Test public void Node_prefWidth_BasedOnLayoutBounds_CleansUpAfterBadBounds2() {
-        Rectangle node = new Rectangle(10, 10, 100, 100) {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, -10, 50);
-            }
-        };
+        SpecialRect node = new SpecialRect(10, 10, 100, 100);
+        node.setTestBB(0, 0, -10, 50);
         assertEquals(0, node.prefWidth(-1), 0);
         assertEquals(0, node.prefWidth(5), 0);
     }
@@ -104,11 +97,8 @@ public class Node_layoutSizes_Test {
      * layout bounds from which we're gathering this information.
      */
     @Test public void Node_prefHeight_BasedOnLayoutBounds2() {
-        Rectangle node = new Rectangle(10, 10, 100, 100) {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, 50, 50);
-            }
-        };
+        SpecialRect node = new SpecialRect(10, 10, 100, 100);
+        node.setTestBB(0, 0, 50, 50);
         assertEquals(50, node.prefHeight(-1), 0);
         assertEquals(50, node.prefHeight(5), 0);
     }
@@ -117,11 +107,8 @@ public class Node_layoutSizes_Test {
      * If the layout bounds has a NaN, it shouldn't leak out through node.prefHeight
      */
     @Test public void Node_prefHeight_BasedOnLayoutBounds_CleansUpAfterBadBounds() {
-        Rectangle node = new Rectangle(10, 10, 100, 100) {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, 50, Double.NaN);
-            }
-        };
+        SpecialRect node = new SpecialRect(10, 10, 100, 100);
+        node.setTestBB(0, 0, 50, Double.NaN);
         assertEquals(0, node.prefHeight(-1), 0);
         assertEquals(0, node.prefHeight(5), 0);
     }
@@ -130,11 +117,8 @@ public class Node_layoutSizes_Test {
      * If the layout bounds has a negative value, it shouldn't leak out through node.prefHeight
      */
     @Test public void Node_prefHeight_BasedOnLayoutBounds_CleansUpAfterBadBounds2() {
-        Rectangle node = new Rectangle(10, 10, 100, 100) {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, 50, -10);
-            }
-        };
+        SpecialRect node = new SpecialRect(10, 10, 100, 100);
+        node.setTestBB(0, 0, 50, -10);
         assertEquals(0, node.prefHeight(-1), 0);
         assertEquals(0, node.prefHeight(5), 0);
     }
@@ -202,4 +186,51 @@ public class Node_layoutSizes_Test {
         assertEquals(500, node.maxHeight(-1), 0);
         assertEquals(500, node.maxHeight(5), 0);
     }
+
+    //
+    // A specialized rect that return a user hardcoded computeLayoutBounds
+    //
+    protected class SpecialRect extends Rectangle {
+
+        BoundingBox testBB;
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            SpecialRectHelper.initHelper(this);
+        }
+
+        public SpecialRect(double x, double y, double width, double height) {
+        }
+
+        void setTestBB(double x, double y, double width, double height) {
+            testBB = new BoundingBox(x, y, width, height);
+        }
+
+        private Bounds doComputeLayoutBounds() {
+            return testBB;
+        }
+    }
+
+    static final class SpecialRectHelper extends RectangleHelper {
+
+        private static final SpecialRectHelper theInstance;
+
+        static {
+            theInstance = new SpecialRectHelper();
+        }
+
+        private static SpecialRectHelper getInstance() {
+            return theInstance;
+        }
+
+        public static void initHelper(SpecialRect cssBridge) {
+            setHelper(cssBridge, getInstance());
+        }
+
+        @Override
+        protected Bounds computeLayoutBoundsImpl(Node node) {
+            return ((SpecialRect) node).doComputeLayoutBounds();
+        }
+    }
+
 }

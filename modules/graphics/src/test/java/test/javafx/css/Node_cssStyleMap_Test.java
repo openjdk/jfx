@@ -28,6 +28,7 @@ package test.javafx.css;
 import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.css.converter.FontConverter;
 import javafx.css.converter.SizeConverter;
 
@@ -148,7 +149,7 @@ public class Node_cssStyleMap_Test {
 
         rect.applyCss();
 
-        Map<StyleableProperty<?>, List<Style>> map = rect.impl_findStyles(null);
+        Map<StyleableProperty<?>, List<Style>> map = NodeHelper.findStyles(rect, null);
         assert (map != null && !map.isEmpty());
 
         checkFoundStyle(rect.fillProperty(), map, declsNoState);
@@ -158,7 +159,7 @@ public class Node_cssStyleMap_Test {
         rect.setDisable(true);
         rect.applyCss();
 
-        map = rect.impl_findStyles(null);
+        map = NodeHelper.findStyles(rect, null);
         assert (map != null && !map.isEmpty());
 
         checkFoundStyle(rect.fillProperty(), map, declsDisabledState);
@@ -199,7 +200,7 @@ public class Node_cssStyleMap_Test {
         root.applyCss();
 
         // Even though root and group have no styles, the styles for rect should still be found
-        Map<StyleableProperty<?>, List<Style>> map = root.impl_findStyles(null);
+        Map<StyleableProperty<?>, List<Style>> map = NodeHelper.findStyles(root, null);
         assert (map != null && !map.isEmpty());
 
         checkFoundStyle(rect.fillProperty(), map, declsNoState);
@@ -263,7 +264,7 @@ public class Node_cssStyleMap_Test {
 
         text.applyCss();
 
-        Map<StyleableProperty<?>, List<Style>> map = text.impl_findStyles(null);
+        Map<StyleableProperty<?>, List<Style>> map = NodeHelper.findStyles(text, null);
         assert (map != null && !map.isEmpty());
 
         checkFoundStyle(text.fontProperty(), map, textDecls);
@@ -329,7 +330,7 @@ public class Node_cssStyleMap_Test {
         assert(nExpected > 0);
 
         for(CssMetaData cssMetaData : text.getCssMetaData()) {
-            List<Style> styles = Node.impl_getMatchingStyles(cssMetaData, text);
+            List<Style> styles = NodeHelper.getMatchingStyles(cssMetaData, text);
             if (styles != null && !styles.isEmpty()) {
                 assertTrue(expectedStyles.containsAll(styles));
                 assertTrue(styles.containsAll(expectedStyles));

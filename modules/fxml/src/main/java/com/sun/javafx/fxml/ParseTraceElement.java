@@ -27,11 +27,10 @@ package com.sun.javafx.fxml;
 
 import java.net.URL;
 
-/**
+/*
  * An element in a parse trace, as returned by
  * {@link javafx.fxml.FXMLLoader#impl_getParseTrace()}.
  *
- * @treatAsPrivate
  * @since JavaFX 2.1
  */
 public class ParseTraceElement {

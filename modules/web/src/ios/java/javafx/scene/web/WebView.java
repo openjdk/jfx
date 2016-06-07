@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,8 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.java.scene.web.WebViewHelper;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;
@@ -55,7 +57,6 @@ import javafx.css.Styleable;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.text.FontSmoothingType;
 
 /**
@@ -82,7 +83,28 @@ final public class WebView extends Parent {
                 public void doUpdatePeer(Node node) {
                 ((WebView) node).doUpdatePeer();
             }
-            });
+
+            @Override
+            public void doTransformsChanged(Node node) {
+                ((WebView) node).doTransformsChanged();
+            }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((WebView) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((WebView) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public void doPickNodeLocal(Node node, PickRay localPickRay, PickResultChooser result) {
+                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            }
+        });
     }
 
     private static final boolean DEFAULT_CONTEXT_MENU_ENABLED = true;
@@ -268,7 +290,7 @@ final public class WebView extends Parent {
 
             @Override
             public void changed(ObservableValue<? extends Bounds> observable, Bounds oldValue, Bounds newValue) {
-                WebView.this.impl_transformsChanged();
+                NodeHelper.transformsChanged(WebView.this);
             }
         };
 
@@ -332,7 +354,7 @@ final public class WebView extends Parent {
         this.width.set(width);
         this.height.set(height);
         NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
         _setWidth(handle, width);
         _setHeight(handle, height);
     }
@@ -1005,22 +1027,13 @@ final public class WebView extends Parent {
 
         if (reallyVisible) {
             if (NodeHelper.isDirty(this, DirtyBits.WEBVIEW_VIEW)) {
-                Scene.impl_setAllowPGAccess(true);
+                SceneHelper.setAllowPGAccess(true);
                 //getPGWebView().update(); // creates new render queues
-                Scene.impl_setAllowPGAccess(false);
+                SceneHelper.setAllowPGAccess(false);
             }
         } else {
             _setVisible(handle, false);
         }
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
-        impl_intersects(pickRay, result);
     }
 
     @Override protected ObservableList<Node> getChildren() {
@@ -1037,23 +1050,19 @@ final public class WebView extends Parent {
         return null; // iOS doesn't need this method.
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         bounds.deriveWithNewBounds(0, 0, 0, (float) getWidth(), (float)getHeight(), 0);
         tx.transform(bounds, bounds);
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         // Note: Local bounds contain test is already done by the caller. (Node.contains()).
         return true;
     }
@@ -1075,17 +1084,17 @@ final public class WebView extends Parent {
     private static Affine3D calculateNodeToSceneTransform(Node node) {
         final Affine3D transform = new Affine3D();
         do {
-            transform.preConcatenate(node.impl_getLeafTransform());
+            transform.preConcatenate(NodeHelper.getLeafTransform(node));
             node = node.getParent();
         } while (node != null);
 
         return transform;
     }
 
-    @Deprecated
-    @Override public void impl_transformsChanged() {
-        super.impl_transformsChanged();
-
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private void doTransformsChanged() {
         Affine3D trans = calculateNodeToSceneTransform(this);
         _setTransform(handle,
                 trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),

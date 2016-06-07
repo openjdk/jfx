@@ -23,56 +23,59 @@
  * questions.
  */
 
-package com.sun.javafx.scene;
+package test.com.sun.javafx.scene.bounds;
 
-import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import javafx.geometry.Bounds;
-import javafx.scene.Group;
 import javafx.scene.Node;
+import test.javafx.scene.bounds.ResizablePerfNode;
 
-/**
- * Used to access internal methods of Group.
- */
-public class GroupHelper extends ParentHelper {
-
-    private static final GroupHelper theInstance;
-    private static GroupAccessor groupAccessor;
+public class ResizablePerfNodeHelper extends PerfNodeHelper {
+    private static final ResizablePerfNodeHelper theInstance;
+    private static ResizablePerfNodeAccessor resizablePerfNodeAccessor;
 
     static {
-        theInstance = new GroupHelper();
-        Utils.forceInit(Group.class);
+        theInstance = new ResizablePerfNodeHelper();
+        Utils.forceInit(ResizablePerfNode.class);
     }
 
-    private static GroupHelper getInstance() {
+    private static ResizablePerfNodeHelper getInstance() {
         return theInstance;
     }
 
-    public static void initHelper(Group group) {
-        setHelper(group, getInstance());
+    public static void initHelper(ResizablePerfNode resizablePerfNode) {
+        setHelper(resizablePerfNode, getInstance());
     }
 
-    @Override
-    protected NGNode createPeerImpl(Node node) {
-        return super.createPeerImpl(node);
+
+    public static void superNotifyLayoutBoundsChanged(Node node) {
+        ((ResizablePerfNodeHelper) getHelper(node)).superNotifyLayoutBoundsChangedImpl(node);
+    }
+
+    void superNotifyLayoutBoundsChangedImpl(Node node) {
+        super.notifyLayoutBoundsChangedImpl(node);
     }
 
     @Override
     protected Bounds computeLayoutBoundsImpl(Node node) {
-        groupAccessor.doComputeLayoutBounds(node);
-        return super.computeLayoutBoundsImpl(node);
+        return resizablePerfNodeAccessor.doComputeLayoutBounds(node);
     }
 
-    public static void setGroupAccessor(final GroupAccessor newAccessor) {
-        if (groupAccessor != null) {
+    protected void notifyLayoutBoundsChangedImpl(Node node) {
+        resizablePerfNodeAccessor.doNotifyLayoutBoundsChanged(node);
+    }
+
+    public static void setResizablePerfNodeAccessor(final ResizablePerfNodeAccessor newAccessor) {
+        if (resizablePerfNodeAccessor != null) {
             throw new IllegalStateException();
         }
 
-        groupAccessor = newAccessor;
+        resizablePerfNodeAccessor = newAccessor;
     }
 
-    public interface GroupAccessor {
+    public interface ResizablePerfNodeAccessor {
         Bounds doComputeLayoutBounds(Node node);
+        void doNotifyLayoutBoundsChanged(Node node);
     }
 
 }

@@ -51,6 +51,7 @@ import javafx.scene.layout.Region;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.charts.Legend;
+import com.sun.javafx.scene.NodeHelper;
 
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableObjectProperty;
@@ -310,7 +311,7 @@ public abstract class Chart extends Region {
      * is visible and in a scene.
      */
     protected final boolean shouldAnimate(){
-        return getAnimated() && impl_isTreeVisible() && getScene() != null;
+        return getAnimated() && NodeHelper.isTreeVisible(this) && getScene() != null;
     }
 
     /**

@@ -25,11 +25,16 @@
 
 package com.sun.javafx.scene;
 
+import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
+import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 
@@ -56,6 +61,14 @@ public class ParentHelper extends NodeHelper {
         setHelper(parent, getInstance());
     }
 
+    public static void superProcessCSS(Node node) {
+        ((ParentHelper) getHelper(node)).superProcessCSSImpl(node);
+    }
+
+    public static List<String> getAllParentStylesheets(Parent parent) {
+        return ((ParentHelper) getHelper(parent)).getAllParentStylesheetsImpl(parent);
+    }
+
     @Override
     protected NGNode createPeerImpl(Node node) {
         return parentAccessor.doCreatePeer(node);
@@ -65,6 +78,41 @@ public class ParentHelper extends NodeHelper {
     protected void updatePeerImpl(Node node) {
         super.updatePeerImpl(node);
         parentAccessor.doUpdatePeer(node);
+    }
+
+    @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return parentAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
+    @Override
+    protected boolean computeContainsImpl(Node node, double localX, double localY) {
+        return parentAccessor.doComputeContains(node, localX, localY);
+    }
+
+    void superProcessCSSImpl(Node node) {
+        super.processCSSImpl(node);
+    }
+
+    @Override
+    protected void processCSSImpl(Node node) {
+        parentAccessor.doProcessCSS(node);
+    }
+
+    protected List<String> getAllParentStylesheetsImpl(Parent parent) {
+        return parentAccessor.doGetAllParentStylesheets(parent);
+    }
+
+    @Override
+    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+        return parentAccessor.doProcessMXNode(node, alg, ctx);
+    }
+
+    @Override
+    protected void pickNodeLocalImpl(Node node, PickRay localPickRay,
+            PickResultChooser result) {
+        parentAccessor.doPickNodeLocal(node, localPickRay, result);
     }
 
     public static boolean pickChildrenNode(Parent parent, PickRay pickRay,
@@ -91,9 +139,15 @@ public class ParentHelper extends NodeHelper {
     public interface ParentAccessor {
         NGNode doCreatePeer(Node node);
         void doUpdatePeer(Node node);
+        boolean doComputeContains(Node node, double localX, double localY);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
+        void doProcessCSS(Node node);
+        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
+        void doPickNodeLocal(Node node, PickRay localPickRay, PickResultChooser result);
         boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result);
         void setTraversalEngine(Parent parent, ParentTraversalEngine value);
         ParentTraversalEngine getTraversalEngine(Parent parent);
+        List<String> doGetAllParentStylesheets(Parent parent);
     }
 
 }

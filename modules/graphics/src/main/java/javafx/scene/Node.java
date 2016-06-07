@@ -418,6 +418,48 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
+            public BaseTransform getLeafTransform(Node node) {
+                return node.getLeafTransform();
+            }
+
+            @Override
+            public Bounds doComputeLayoutBounds(Node node) {
+                return node.doComputeLayoutBounds();
+            }
+
+            @Override
+            public void doTransformsChanged(Node node) {
+                node.doTransformsChanged();
+            }
+
+            @Override
+            public void doPickNodeLocal(Node node, PickRay localPickRay,
+                    PickResultChooser result) {
+                node.doPickNodeLocal(localPickRay, result);
+            }
+
+            @Override
+            public boolean doComputeIntersects(Node node, PickRay pickRay,
+                    PickResultChooser pickResult) {
+                return node.doComputeIntersects(pickRay, pickResult);
+            }
+
+            @Override
+            public void doGeomChanged(Node node) {
+                node.doGeomChanged();
+            }
+
+            @Override
+            public void doNotifyLayoutBoundsChanged(Node node) {
+                node.doNotifyLayoutBoundsChanged();
+            }
+
+            @Override
+            public void doProcessCSS(Node node) {
+                node.doProcessCSS();
+            }
+
+            @Override
             public boolean isDirty(Node node, DirtyBits dirtyBit) {
                 return node.isDirty(dirtyBit);
             }
@@ -433,8 +475,65 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
+            public void layoutBoundsChanged(Node node) {
+                node.layoutBoundsChanged();
+            }
+
+            @Override
             public <P extends NGNode> P getPeer(Node node) {
                 return node.getPeer();
+            }
+
+            @Override
+            public void setShowMnemonics(Node node, boolean value) {
+                node.setShowMnemonics(value);
+            }
+
+            @Override
+            public boolean isShowMnemonics(Node node) {
+                return node.isShowMnemonics();
+            }
+
+            @Override
+            public BooleanProperty showMnemonicsProperty(Node node) {
+                return node.showMnemonicsProperty();
+            }
+
+            @Override
+            public boolean traverse(Node node, Direction direction) {
+                return node.traverse(direction);
+            }
+
+            @Override
+            public double getPivotX(Node node) {
+                return node.getPivotX();
+            }
+
+            @Override
+            public double getPivotY(Node node) {
+                return node.getPivotY();
+            }
+
+            @Override
+            public double getPivotZ(Node node) {
+                return node.getPivotZ();
+            }
+
+            @Override
+            public void pickNode(Node node,PickRay pickRay,
+                    PickResultChooser result) {
+                node.pickNode(pickRay, result);
+            }
+
+            @Override
+            public boolean intersects(Node node, PickRay pickRay,
+                    PickResultChooser pickResult) {
+                return node.intersects(pickRay, pickResult);
+            }
+
+            @Override
+            public double intersectsBounds(Node node, PickRay pickRay) {
+                return node.intersectsBounds(pickRay);
             }
 
             @Override
@@ -460,6 +559,33 @@ public abstract class Node implements EventTarget, Styleable {
             @Override
             public Accessible getAccessible(Node node) {
                 return node.getAccessible();
+            }
+
+            @Override
+            public void reapplyCSS(Node node) {
+                node.reapplyCSS();
+            }
+
+            @Override
+            public boolean isTreeVisible(Node node) {
+                return node.isTreeVisible();
+            }
+
+            @Override
+            public BooleanExpression treeVisibleProperty(Node node) {
+                return node.treeVisibleProperty();
+            }
+
+            @Override
+            public List<Style> getMatchingStyles(CssMetaData cssMetaData,
+                    Styleable styleable) {
+                return Node.getMatchingStyles(cssMetaData, styleable);
+            }
+
+            @Override
+            public Map<StyleableProperty<?>, List<Style>> findStyles(Node node,
+                    Map<StyleableProperty<?>, List<Style>> styleMap) {
+                return node.findStyles(styleMap);
             }
         });
     }
@@ -798,7 +924,7 @@ public abstract class Node implements EventTarget, Styleable {
                 protected void invalidated() {
                     if (oldParent != null) {
                         oldParent.disabledProperty().removeListener(parentDisabledChangedListener);
-                        oldParent.impl_treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
+                        oldParent.treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) oldParent).localToSceneTransformProperty().removeListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -809,7 +935,7 @@ public abstract class Node implements EventTarget, Styleable {
                     final Parent newParent = get();
                     if (newParent != null) {
                         newParent.disabledProperty().addListener(parentDisabledChangedListener);
-                        newParent.impl_treeVisibleProperty().addListener(parentTreeVisibleChangedListener);
+                        newParent.treeVisibleProperty().addListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) newParent).localToSceneTransformProperty().addListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -820,10 +946,10 @@ public abstract class Node implements EventTarget, Styleable {
                         // to be done from Parent.children's onChanged method.
                         // See the comments there, also.
                         //
-                        impl_reapplyCSS();
+                        reapplyCSS();
                     } else {
                         // RT-31168: reset CssFlag to clean so css will be reapplied if the node is added back later.
-                        // If flag is REAPPLY, then impl_reapplyCSS() will just return and the call to
+                        // If flag is REAPPLY, then reapplyCSS() will just return and the call to
                         // notifyParentsOfInvalidatedCSS() will be skipped thus leaving the node un-styled.
                         cssFlag = CssFlags.CLEAN;
                     }
@@ -914,7 +1040,7 @@ public abstract class Node implements EventTarget, Styleable {
             focusSetDirty(newScene);
         }
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
-        if (sceneChanged && reapplyCSS) impl_reapplyCSS();
+        if (sceneChanged && reapplyCSS) reapplyCSS();
 
         if (sceneChanged && !isDirtyEmpty()) {
             //Note: no need to remove from scene's dirty list
@@ -1050,7 +1176,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 protected void invalidated() {
-                    impl_reapplyCSS();
+                    reapplyCSS();
                     if (PrismSettings.printRenderGraph) {
                         NodeHelper.markDirty(Node.this, DirtyBits.DEBUG);
                     }
@@ -1083,7 +1209,7 @@ public abstract class Node implements EventTarget, Styleable {
     private ObservableList<String> styleClass = new TrackableObservableList<String>() {
         @Override
         protected void onChanged(Change<String> c) {
-            impl_reapplyCSS();
+            reapplyCSS();
         }
 
         @Override
@@ -1168,7 +1294,7 @@ public abstract class Node implements EventTarget, Styleable {
                 protected void invalidated() {
                     // If the style has changed, then styles of this node
                     // and child nodes might be affected.
-                    impl_reapplyCSS();
+                    reapplyCSS();
                 }
 
                 @Override
@@ -1213,7 +1339,7 @@ public abstract class Node implements EventTarget, Styleable {
                 protected void invalidated() {
                     if (oldValue != get()) {
                         NodeHelper.markDirty(Node.this, DirtyBits.NODE_VISIBLE);
-                        impl_geomChanged();
+                        NodeHelper.geomChanged(Node.this);
                         updateTreeVisible(false);
                         if (getParent() != null) {
                             // notify the parent of the potential change in visibility
@@ -1859,7 +1985,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (this.cssFlag != CssFlags.CLEAN) {
             // The dirty bit isn't checked but we must ensure it is cleared.
             // The cssFlag is set to clean in either Node.processCSS or
-            // Node.impl_processCSS(boolean)
+            // NodeHelper.processCSS
 
             // Don't clear the dirty bit in case it will cause problems
             // with a full CSS pass on the scene.
@@ -2547,7 +2673,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 protected void invalidated() {
-                    impl_transformsChanged();
+                    NodeHelper.transformsChanged(Node.this);
                     final Parent p = getParent();
 
                     // Propagate layout if this change isn't triggered by its parent
@@ -2621,7 +2747,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 protected void invalidated() {
-                    impl_transformsChanged();
+                    NodeHelper.transformsChanged(Node.this);
                     final Parent p = getParent();
 
                     // Propagate layout if this change isn't triggered by its parent
@@ -3298,7 +3424,7 @@ public abstract class Node implements EventTarget, Styleable {
     private LazyBoundsProperty layoutBounds = new LazyBoundsProperty() {
         @Override
         protected Bounds computeBounds() {
-            return impl_computeLayoutBounds();
+            return NodeHelper.computeLayoutBounds(Node.this);
         }
 
         @Override
@@ -3377,7 +3503,7 @@ public abstract class Node implements EventTarget, Styleable {
      *  functions essentially populate the supplied bounds2D with the
      *  appropriate bounds information, leveraging cached bounds if possible.
      *
-     *  There is a single impl_computeGeomBounds function which is abstract.
+     *  There is a single NodeHelper.computeGeomBoundsImpl function which is abstract.
      *  This must be implemented in each subclass, and is responsible for
      *  computing the actual geometric bounds for the Node. For example, Parent
      *  is written such that this function is the union of the transformed
@@ -3441,13 +3567,10 @@ public abstract class Node implements EventTarget, Styleable {
      */
     boolean boundsChanged;
 
-    /**
+    /*
      * Returns geometric bounds, but may be over-ridden by a subclass.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected Bounds impl_computeLayoutBounds() {
+    private Bounds doComputeLayoutBounds() {
         BaseBounds tempBounds = TempState.getInstance().bounds;
         tempBounds = getGeomBounds(tempBounds,
                                    BaseTransform.IDENTITY_TRANSFORM);
@@ -3459,20 +3582,16 @@ public abstract class Node implements EventTarget, Styleable {
                                tempBounds.getDepth());
     }
 
-    /**
+    /*
      * Subclasses may customize the layoutBounds by means of overriding the
-     * impl_computeLayoutBounds method. If the layout bounds need to be
+     * NodeHelper.computeLayoutBoundsImpl method. If the layout bounds need to be
      * recomputed, the subclass must notify the Node implementation of this
      * fact so that appropriate notifications and internal state can be
-     * kept in sync. Subclasses must call impl_layoutBoundsChanged to
+     * kept in sync. Subclasses must call NodeHelper.layoutBoundsChanged to
      * let Node know that the layout bounds are invalid and need to be
      * recomputed.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected final void impl_layoutBoundsChanged() {
+    final void layoutBoundsChanged() {
         if (!layoutBounds.valid) {
             return;
         }
@@ -3481,7 +3600,7 @@ public abstract class Node implements EventTarget, Styleable {
             // if either the scale or rotate convenience variables are used,
             // then we need a valid pivot point. Since the layoutBounds
             // affects the pivot we need to invalidate the transform
-            impl_transformsChanged();
+            NodeHelper.transformsChanged(this);
         }
     }
 
@@ -3624,7 +3743,7 @@ public abstract class Node implements EventTarget, Styleable {
                 & ~(BaseTransform.TYPE_UNIFORM_SCALE | BaseTransform.TYPE_TRANSLATION
                 | BaseTransform.TYPE_FLIP | BaseTransform.TYPE_QUADRANT_ROTATION)) != 0) {
             // this is a non-uniform scale / non-quadrant rotate / skew transform
-            return impl_computeGeomBounds(bounds, tx);
+            return NodeHelper.computeGeomBounds(this, bounds, tx);
         } else {
             // 3D transformations and
             // selected 2D transformations (unifrom transform, flip, quadrant rotation).
@@ -3638,21 +3757,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Computes the geometric bounds for this Node. This method is abstract
-     * and must be implemented by each Node subclass.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public abstract BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx);
-
-    /**
      * If necessary, recomputes the cached geom bounds. If the bounds are not
      * invalid, then this method is a no-op.
      */
     void updateGeomBounds() {
         if (geomBoundsInvalid) {
-            geomBounds = impl_computeGeomBounds(geomBounds, BaseTransform.IDENTITY_TRANSFORM);
+            geomBounds = NodeHelper.computeGeomBounds(this, geomBounds, BaseTransform.IDENTITY_TRANSFORM);
             geomBoundsInvalid = false;
         }
     }
@@ -3721,13 +3831,6 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected abstract boolean impl_computeContains(double localX, double localY);
-
     /*
      *                   Bounds Invalidation And Notification
      *
@@ -3742,13 +3845,13 @@ public abstract class Node implements EventTarget, Styleable {
      *  normal bounds invalidation occurs.
      *
      *  When a node's geometry changes (for example, if the width of a
-     *  Rectangle is changed) then the Node must call impl_geomChanged().
+     *  Rectangle is changed) then the Node must call NodeHelper.geomChanged().
      *  Invoking this function will eventually clear all cached bounds and
      *  notify to each parent up the tree that their bounds may have changed.
      *
      *  After invalidating geomBounds (and after kicking off layout bounds
-     *  notification), impl_geomChanged calls localBoundsChanged(). It should
-     *  be noted that impl_geomChanged should only be called when the geometry
+     *  notification), NodeHelper.geomChanged calls localBoundsChanged(). It should
+     *  be noted that NodeHelper.geomChanged should only be called when the geometry
      *  of the node has changed such that it may result in the geom bounds
      *  actually changing.
      *
@@ -3760,7 +3863,7 @@ public abstract class Node implements EventTarget, Styleable {
      *  no need to notify the parent of the bounds change because the parent's
      *  bounds do not include invisible nodes. If the node is visible, then
      *  it must tell the parent that this child node's bounds have changed.
-     *  It is up to the parent to eventually invoke its own impl_geomChanged
+     *  It is up to the parent to eventually invoke its own NodeHelper.geomChanged
      *  function. If instead of a parent this node has a clipParent, then the
      *  clipParent's localBoundsChanged() is called instead.
      *
@@ -3788,10 +3891,10 @@ public abstract class Node implements EventTarget, Styleable {
      *  bounds. This is both useful and provides a very nice performance
      *  optimization for regions and controls. In this case, subclasses
      *  need some way to interpose themselves such that a call to
-     *  impl_geomChanged() *does not* invalidate the layout bounds.
+     *  NodeHelper.geomChanged() *does not* invalidate the layout bounds.
      *
      *  This interposition happens by providing the
-     *  impl_notifyLayoutBoundsChanged function. The default implementation
+     *  NodeHelper.notifyLayoutBoundsChanged function. The default implementation
      *  simply invalidates boundsInLocal. Subclasses (such as Region and
      *  Control) can override this function so that it does not invalidate
      *  the layout bounds.
@@ -3806,41 +3909,39 @@ public abstract class Node implements EventTarget, Styleable {
      *  have changed.
      */
 
-    /**
+    /*
      * Invoked by subclasses whenever their geometric bounds have changed.
      * Because the default layout bounds is based on the node geometry, this
-     * function will invoke impl_notifyLayoutBoundsChanged. The default
-     * implementation of impl_notifyLayoutBoundsChanged() will simply invalidate
+     * function will invoke NodeHelper.notifyLayoutBoundsChanged. The default
+     * implementation of NodeHelper.notifyLayoutBoundsChanged() will simply invalidate
      * layoutBounds. Resizable subclasses will want to override this function
      * in most cases to be a no-op.
-     * <p>
+     *
      * This function will also invalidate the cached geom bounds, and then
      * invoke localBoundsChanged() which will eventually end up invoking a
      * chain of functions up the tree to ensure that each parent of this
      * Node is notified that its bounds may have also changed.
-     * <p>
+     *
      * This function should be treated as though it were final. It is not
      * intended to be overridden by subclasses.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected void impl_geomChanged() {
+    private void doGeomChanged() {
         if (geomBoundsInvalid) {
             // GeomBoundsInvalid is false when node geometry changed and
             // the untransformed node bounds haven't been recalculated yet.
             // Most of the time, the recalculation of layout and transformed
             // node bounds don't require validation of untransformed bounds
             // and so we can not skip the following notifications.
-            impl_notifyLayoutBoundsChanged();
+            NodeHelper.notifyLayoutBoundsChanged(this);
             transformedBoundsChanged();
             return;
         }
         geomBounds.makeEmpty();
         geomBoundsInvalid = true;
         NodeHelper.markDirty(this, DirtyBits.NODE_BOUNDS);
-        impl_notifyLayoutBoundsChanged();
+        NodeHelper.notifyLayoutBoundsChanged(this);
         localBoundsChanged();
     }
 
@@ -3877,19 +3978,17 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /**
-     * Invoked by impl_geomChanged(). Since layoutBounds is by default based
+    /*
+     * Invoked by geomChanged(). Since layoutBounds is by default based
      * on the geometric bounds, the default implementation of this function will
      * invalidate the layoutBounds. Resizable Node subclasses generally base
      * layoutBounds on the width/height instead of the geometric bounds, and so
      * will generally want to override this function to be a no-op.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected void impl_notifyLayoutBoundsChanged() {
-        impl_layoutBoundsChanged();
+    private void doNotifyLayoutBoundsChanged() {
+        layoutBoundsChanged();
         // notify the parent
         // Group instanceof check a little hoaky, but it allows us to disable
         // unnecessary layout for the case of a non-resizable within a group
@@ -3939,23 +4038,20 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public boolean contains(double localX, double localY) {
         if (containsBounds(localX, localY)) {
-            return (isPickOnBounds() || impl_computeContains(localX, localY));
+            return (isPickOnBounds() || NodeHelper.computeContains(this, localX, localY));
         }
         return false;
     }
 
-    /**
+    /*
      * This method only does the contains check based on the bounds, clip and
      * effect of this node, excluding its shape (or geometry).
      *
      * Returns true if the given point (specified in the local
      * coordinate space of this {@code Node}) is contained within the bounds,
      * clip and effect of this node.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected boolean containsBounds(double localX, double localY) {
+    private boolean containsBounds(double localX, double localY) {
         final TempState tempState = TempState.getInstance();
         BaseBounds tempBounds = tempState.bounds;
 
@@ -4750,24 +4846,20 @@ public abstract class Node implements EventTarget, Styleable {
         return tx;
     }
 
-    /**
+    /*
      * Currently used only by PathTransition
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public final BaseTransform impl_getLeafTransform() {
+    final BaseTransform getLeafTransform() {
         return getLocalToParentTransform(TempState.getInstance().leafTx);
     }
 
-    /**
+    /*
      * Invoked whenever the transforms[] ObservableList changes, or by the transforms
      * in that ObservableList whenever they are changed.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public void impl_transformsChanged() {
+    private void doTransformsChanged() {
         if (!transformDirty) {
             NodeHelper.markDirty(this, DirtyBits.NODE_TRANSFORM);
             transformDirty = true;
@@ -4777,32 +4869,17 @@ public abstract class Node implements EventTarget, Styleable {
         invalidateLocalToSceneTransform();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final double impl_getPivotX() {
+    final double getPivotX() {
         final Bounds bounds = getLayoutBounds();
         return bounds.getMinX() + bounds.getWidth()/2;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final double impl_getPivotY() {
+    final double getPivotY() {
         final Bounds bounds = getLayoutBounds();
         return bounds.getMinY() + bounds.getHeight()/2;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final double impl_getPivotZ() {
+    final double getPivotZ() {
         final Bounds bounds = getLayoutBounds();
         return bounds.getMinZ() + bounds.getDepth()/2;
     }
@@ -4824,7 +4901,7 @@ public abstract class Node implements EventTarget, Styleable {
                     // (must be the last transformation)
                     mirroringCenter = sceneValue.getWidth() / 2;
                     if (mirroringCenter == 0.0) {
-                        mirroringCenter = impl_getPivotX();
+                        mirroringCenter = getPivotX();
                     }
 
                     localToParentTx = localToParentTx.deriveWithTranslation(
@@ -4836,15 +4913,15 @@ public abstract class Node implements EventTarget, Styleable {
                 } else {
                     // mirror later
                     mirror = true;
-                    mirroringCenter = impl_getPivotX();
+                    mirroringCenter = getPivotX();
                 }
             }
 
             if (getScaleX() != 1 || getScaleY() != 1 || getScaleZ() != 1 || getRotate() != 0) {
                 // recompute pivotX, pivotY and pivotZ
-                double pivotX = impl_getPivotX();
-                double pivotY = impl_getPivotY();
-                double pivotZ = impl_getPivotZ();
+                double pivotX = getPivotX();
+                double pivotY = getPivotY();
+                double pivotZ = getPivotZ();
 
                 localToParentTx = localToParentTx.deriveWithTranslation(
                         getTranslateX() + getLayoutX() + pivotX,
@@ -4864,7 +4941,7 @@ public abstract class Node implements EventTarget, Styleable {
                         getTranslateZ());
             }
 
-            if (impl_hasTransforms()) {
+            if (hasTransforms()) {
                 for (Transform t : getTransforms()) {
                     localToParentTx = TransformHelper.derive(t, localToParentTx);
                 }
@@ -4946,27 +5023,23 @@ public abstract class Node implements EventTarget, Styleable {
         localToParentTx.transform(pt, pt);
     }
 
-    /**
+    /*
      * Finds a top-most child node that contains the given local coordinates.
      *
      * The result argument is used for storing the picking result.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    protected void impl_pickNodeLocal(PickRay localPickRay, PickResultChooser result) {
-        impl_intersects(localPickRay, result);
+    private void doPickNodeLocal(PickRay localPickRay, PickResultChooser result) {
+        intersects(localPickRay, result);
     }
 
-    /**
+    /*
      * Finds a top-most child node that intersects the given ray.
      *
      * The result argument is used for storing the picking result.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public final void impl_pickNode(PickRay pickRay, PickResultChooser result) {
+    final void pickNode(PickRay pickRay, PickResultChooser result) {
 
         // In some conditions we can omit picking this node or subgraph
         if (!isVisible() || isDisable() || isMouseTransparent()) {
@@ -4990,7 +5063,7 @@ public abstract class Node implements EventTarget, Styleable {
             // Delegate to a function which can be overridden by subclasses which
             // actually does the pick. The implementation is markedly different
             // for leaf nodes vs. parent nodes vs. region nodes.
-            impl_pickNodeLocal(pickRay, result);
+            NodeHelper.pickNodeLocal(this, pickRay, result);
         } catch (NoninvertibleTransformException e) {
             // in this case we just don't pick anything
         }
@@ -4999,7 +5072,7 @@ public abstract class Node implements EventTarget, Styleable {
         pickRay.setDirection(dx, dy, dz);
     }
 
-    /**
+    /*
      * Returns {@code true} if the given ray (start, dir), specified in the
      * local coordinate space of this {@code Node}, intersects the
      * shape of this {@code Node}. Note that this method does not take visibility
@@ -5011,13 +5084,9 @@ public abstract class Node implements EventTarget, Styleable {
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected final boolean impl_intersects(PickRay pickRay, PickResultChooser pickResult) {
-        double boundsDistance = impl_intersectsBounds(pickRay);
+    final boolean intersects(PickRay pickRay, PickResultChooser pickResult) {
+        double boundsDistance = intersectsBounds(pickRay);
         if (!Double.isNaN(boundsDistance)) {
             if (isPickOnBounds()) {
                 if (pickResult != null) {
@@ -5025,24 +5094,20 @@ public abstract class Node implements EventTarget, Styleable {
                 }
                 return true;
             } else {
-                return impl_computeIntersects(pickRay, pickResult);
+                return NodeHelper.computeIntersects(this, pickRay, pickResult);
             }
         }
         return false;
     }
 
-    /**
+    /*
      * Computes the intersection of the pickRay with this node.
      * The pickResult argument is updated if the found intersection
      * is closer than the passed one. On the other hand, the return value
      * specifies whether the intersection exists, regardless of its comparison
      * with the given pickResult.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected boolean impl_computeIntersects(PickRay pickRay, PickResultChooser pickResult) {
+    private boolean doComputeIntersects(PickRay pickRay, PickResultChooser pickResult) {
         double origZ = pickRay.getOriginNoClone().z;
         double dirZ = pickRay.getDirectionNoClone().z;
         // Handle the case where pickRay is almost parallel to the Z-plane
@@ -5065,7 +5130,7 @@ public abstract class Node implements EventTarget, Styleable {
         return false;
     }
 
-    /**
+    /*
      * Computes the intersection of the pickRay with the bounds of this node.
      * The return value is the distance between the camera and the intersection
      * point, measured in pickRay direction magnitudes. If there is
@@ -5074,11 +5139,8 @@ public abstract class Node implements EventTarget, Styleable {
      * @param pickRay The pick ray
      * @return Distance of the intersection point, a NaN if there
      *         is no intersection
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    protected final double impl_intersectsBounds(PickRay pickRay) {
+    final double intersectsBounds(PickRay pickRay) {
 
         final Vec3d dir = pickRay.getDirectionNoClone();
         double tmin, tmax;
@@ -5229,7 +5291,7 @@ public abstract class Node implements EventTarget, Styleable {
             } catch (NoninvertibleTransformException e) {
                 hitClip = false;
             }
-            hitClip = hitClip && clip.impl_intersects(pickRay, null);
+            hitClip = hitClip && clip.intersects(pickRay, null);
             pickRay.setOrigin(originX, originY, originZ);
             pickRay.setDirection(dirX, dirY, dirZ);
 
@@ -5629,12 +5691,7 @@ public abstract class Node implements EventTarget, Styleable {
         return nodeTransformation;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public boolean impl_hasTransforms() {
+    private boolean hasTransforms() {
         return (nodeTransformation != null)
                 && nodeTransformation.hasTransforms();
     }
@@ -5892,7 +5949,7 @@ public abstract class Node implements EventTarget, Styleable {
                 translateX = new StyleableDoubleProperty(DEFAULT_TRANSLATE_X) {
                     @Override
                     public void invalidated() {
-                        impl_transformsChanged();
+                        NodeHelper.transformsChanged(Node.this);
                     }
 
                     @Override
@@ -5923,7 +5980,7 @@ public abstract class Node implements EventTarget, Styleable {
                 translateY = new StyleableDoubleProperty(DEFAULT_TRANSLATE_Y) {
                     @Override
                     public void invalidated() {
-                        impl_transformsChanged();
+                        NodeHelper.transformsChanged(Node.this);
                     }
 
                     @Override
@@ -5954,7 +6011,7 @@ public abstract class Node implements EventTarget, Styleable {
                 translateZ = new StyleableDoubleProperty(DEFAULT_TRANSLATE_Z) {
                     @Override
                     public void invalidated() {
-                        impl_transformsChanged();
+                        NodeHelper.transformsChanged(Node.this);
                     }
 
                     @Override
@@ -5985,7 +6042,7 @@ public abstract class Node implements EventTarget, Styleable {
                 scaleX = new StyleableDoubleProperty(DEFAULT_SCALE_X) {
                     @Override
                     public void invalidated() {
-                        impl_transformsChanged();
+                        NodeHelper.transformsChanged(Node.this);
                     }
 
                     @Override
@@ -6016,7 +6073,7 @@ public abstract class Node implements EventTarget, Styleable {
                 scaleY = new StyleableDoubleProperty(DEFAULT_SCALE_Y) {
                     @Override
                     public void invalidated() {
-                        impl_transformsChanged();
+                        NodeHelper.transformsChanged(Node.this);
                     }
 
                     @Override
@@ -6047,7 +6104,7 @@ public abstract class Node implements EventTarget, Styleable {
                 scaleZ = new StyleableDoubleProperty(DEFAULT_SCALE_Z) {
                     @Override
                     public void invalidated() {
-                        impl_transformsChanged();
+                        NodeHelper.transformsChanged(Node.this);
                     }
 
                     @Override
@@ -6078,7 +6135,7 @@ public abstract class Node implements EventTarget, Styleable {
                 rotate = new StyleableDoubleProperty(DEFAULT_ROTATE) {
                     @Override
                     public void invalidated() {
-                        impl_transformsChanged();
+                        NodeHelper.transformsChanged(Node.this);
                     }
 
                     @Override
@@ -6111,7 +6168,7 @@ public abstract class Node implements EventTarget, Styleable {
                                            DEFAULT_ROTATION_AXIS) {
                     @Override
                     protected void invalidated() {
-                        impl_transformsChanged();
+                        NodeHelper.transformsChanged(Node.this);
                     }
 
                     @Override
@@ -6142,7 +6199,7 @@ public abstract class Node implements EventTarget, Styleable {
                             }
                         }
 
-                        impl_transformsChanged();
+                        NodeHelper.transformsChanged(Node.this);
                     }
                 };
             }
@@ -6335,7 +6392,7 @@ public abstract class Node implements EventTarget, Styleable {
             nodeResolvedOrientationInvalidated();
         } else {
             // mirroring changed
-            impl_transformsChanged();
+            NodeHelper.transformsChanged(this);
         }
     }
 
@@ -6355,7 +6412,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         // mirroring changed
-        impl_transformsChanged();
+        NodeHelper.transformsChanged(this);
 
         if (resolvedNodeOrientation != oldResolvedNodeOrientation) {
             nodeResolvedOrientationChanged();
@@ -8052,12 +8109,8 @@ public abstract class Node implements EventTarget, Styleable {
      * node need not actually have the focus, nor need it be focusTraversable.
      * However, the node must be part of a scene, otherwise this request
      * is ignored.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public final boolean impl_traverse(Direction dir) {
+    final boolean traverse(Direction dir) {
         if (getScene() == null) {
             return false;
         }
@@ -8153,12 +8206,12 @@ public abstract class Node implements EventTarget, Styleable {
                     clipParent != null ? clipParent :
                     getSubScene() != null ? getSubScene() : null;
         if (isTreeVisible) {
-            isTreeVisible = parentNode == null || parentNode.impl_isTreeVisible();
+            isTreeVisible = parentNode == null || parentNode.isTreeVisible();
         }
         // When the parent has changed to visible and we have unsynchornized visibility,
         // we have to synchronize, because the rendering will now pass throught the newly-visible parent
         // Otherwise an invisible Node might get rendered
-        if (parentChanged && parentNode != null && parentNode.impl_isTreeVisible()
+        if (parentChanged && parentNode != null && parentNode.isTreeVisible()
                 && isDirty(DirtyBits.NODE_VISIBLE)) {
             addToSceneDirtyList();
         }
@@ -8179,7 +8232,7 @@ public abstract class Node implements EventTarget, Styleable {
             if (treeVisible && !isDirtyEmpty()) {
                 addToSceneDirtyList();
             }
-            ((TreeVisiblePropertyReadOnly)impl_treeVisibleProperty()).invalidate();
+            ((TreeVisiblePropertyReadOnly) treeVisibleProperty()).invalidate();
             if (Node.this instanceof SubScene) {
                 Node subSceneRoot = ((SubScene)Node.this).getRoot();
                 if (subSceneRoot != null) {
@@ -8191,21 +8244,11 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final boolean impl_isTreeVisible() {
-        return impl_treeVisibleProperty().get();
+    final boolean isTreeVisible() {
+        return treeVisibleProperty().get();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected final BooleanExpression impl_treeVisibleProperty() {
+    final BooleanExpression treeVisibleProperty() {
         if (treeVisibleRO == null) {
             treeVisibleRO = new TreeVisiblePropertyReadOnly();
         }
@@ -8265,7 +8308,7 @@ public abstract class Node implements EventTarget, Styleable {
     private void updateCanReceiveFocus() {
         setCanReceiveFocus(getScene() != null
           && !isDisabled()
-          && impl_isTreeVisible());
+          && isTreeVisible());
     }
 
     // for indenting messages based on scene-graph depth
@@ -8279,44 +8322,22 @@ public abstract class Node implements EventTarget, Styleable {
         return indent;
     }
 
-
-
-
-    /**
+    /*
      * Should we underline the mnemonic character?
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    private BooleanProperty impl_showMnemonics;
+    private BooleanProperty showMnemonics;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void impl_setShowMnemonics(boolean value) {
-        impl_showMnemonicsProperty().set(value);
+    final void setShowMnemonics(boolean value) {
+        showMnemonicsProperty().set(value);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final boolean impl_isShowMnemonics() {
-        return impl_showMnemonics == null ? false : impl_showMnemonics.get();
+    final boolean isShowMnemonics() {
+        return showMnemonics == null ? false : showMnemonics.get();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final BooleanProperty impl_showMnemonicsProperty() {
-        if (impl_showMnemonics == null) {
-            impl_showMnemonics = new BooleanPropertyBase(false) {
+    final BooleanProperty showMnemonicsProperty() {
+        if (showMnemonics == null) {
+            showMnemonics = new BooleanPropertyBase(false) {
 
                 @Override
                 protected void invalidated() {
@@ -8334,7 +8355,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         }
-        return impl_showMnemonics;
+        return showMnemonics;
     }
 
 
@@ -8647,7 +8668,6 @@ public abstract class Node implements EventTarget, Styleable {
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
 
@@ -8942,24 +8962,16 @@ public abstract class Node implements EventTarget, Styleable {
         return getClassCssMetaData();
     }
 
-    /**
+    /*
      * @return  The Styles that match this CSS property for the given Node. The
      * list is sorted by descending specificity.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
-     @Deprecated // SB-dependency: RT-21096 has been filed to track this
-    public static List<Style> impl_getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
+    // SB-dependency: RT-21096 has been filed to track this
+    static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
          return CssStyleHelper.getMatchingStyles(styleable, cssMetaData);
     }
 
-     /**
-      * RT-17293
-      * @treatAsPrivate implementation detail
-      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-      */
-     @Deprecated // SB-dependency: RT-21096 has been filed to track this
-     public final ObservableMap<StyleableProperty<?>, List<Style>> impl_getStyleMap() {
+    final ObservableMap<StyleableProperty<?>, List<Style>> getStyleMap() {
          ObservableMap<StyleableProperty<?>, List<Style>> map =
                  (ObservableMap<StyleableProperty<?>, List<Style>>)getProperties().get("STYLEMAP");
          Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(map, this);
@@ -8970,18 +8982,16 @@ public abstract class Node implements EventTarget, Styleable {
          return FXCollections.<StyleableProperty<?>, List<Style>>emptyObservableMap();
      }
 
-     /**
+     /*
       * RT-17293
-      * @treatAsPrivate implementation detail
-      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
-     @Deprecated // SB-dependency: RT-21096 has been filed to track this
-     public final void impl_setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
+     // SB-dependency: RT-21096 has been filed to track this
+     final void setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
          if (styleMap != null) getProperties().put("STYLEMAP", styleMap);
          else getProperties().remove("STYLEMAP");
      }
 
-    /**
+    /*
      * Find CSS styles that were used to style this Node in its current pseudo-class state. The map will contain the styles from this node and,
      * if the node is a Parent, its children. The node corresponding to an entry in the Map can be obtained by casting a StyleableProperty key to a
      * javafx.beans.property.Property and calling getBean(). The List contains only those styles used to style the property and will contain
@@ -8989,12 +8999,9 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @param styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
      * @return The Map populated with matching styles.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated // SB-dependency: RT-21096 has been filed to track this
-    public Map<StyleableProperty<?>,List<Style>> impl_findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
+    // SB-dependency: RT-21096 has been filed to track this
+    Map<StyleableProperty<?>,List<Style>> findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
 
         Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(styleMap, this);
         return (ret != null) ? ret : Collections.<StyleableProperty<?>, List<Style>>emptyMap();
@@ -9021,7 +9028,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (getScene() == null) return;
         // Don't bother doing anything if the cssFlag is not CLEAN.
         // If the flag indicates a DIRTY_BRANCH, the flag needs to be changed
-        // to UPDATE to ensure that impl_processCSS is called on the node.
+        // to UPDATE to ensure that NodeHelper.processCSS is called on the node.
         if (cssFlag == CssFlags.CLEAN || cssFlag == CssFlags.DIRTY_BRANCH) {
             cssFlag = CssFlags.UPDATE;
             notifyParentsOfInvalidatedCSS();
@@ -9114,12 +9121,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void impl_reapplyCSS() {
+    final void reapplyCSS() {
 
         if (getScene() == null) return;
 
@@ -9144,7 +9146,7 @@ public abstract class Node implements EventTarget, Styleable {
         // for deferred action.
         //
         if (getParent() != null && getParent().isPerformingLayout()) {
-            impl_processCSS();
+            NodeHelper.processCSS(this);
         } else {
             notifyParentsOfInvalidatedCSS();
         }
@@ -9185,7 +9187,7 @@ public abstract class Node implements EventTarget, Styleable {
                     // since the new styles may have an effect on the children's styles calculated values.
                     (oldStyleHelper != styleHelper) ||
                     // If our parent is null, then we're the root of a scene or sub-scene, most likely,
-                    // and we'll visit children because elsewhere the code depends on root.impl_reapplyCSS()
+                    // and we'll visit children because elsewhere the code depends on root.reapplyCSS()
                     // to force css to be reapplied (whether it needs to be or not).
                     (getParent() == null) ||
                     // If our parent's cssFlag is other than clean, then the parent may have just had
@@ -9242,7 +9244,7 @@ public abstract class Node implements EventTarget, Styleable {
             case REAPPLY:
             case UPDATE:
             default:
-                impl_processCSS();
+                NodeHelper.processCSS(this);
         }
     }
 
@@ -9333,20 +9335,18 @@ public abstract class Node implements EventTarget, Styleable {
 
     }
 
-    /**
+    /*
      * If invoked, will update styles from here on down. This method should not be called directly. If
-     * overridden, the overriding method must at some point call {@code super.impl_processCSS()} to ensure that
+     * overridden, the overriding method must at some point call {@code super.processCSSImpl} to ensure that
      * this Node's CSS state is properly updated.
      *
      * Note that the difference between this method and {@link #applyCss()} is that this method
      * updates styles for this node on down; whereas, {@code applyCss()} looks for the top-most ancestor that needs
      * CSS update and apply styles from that node on down.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated // SB-dependency: RT-21206 has been filed to track this
-    protected void impl_processCSS() {
+    private void doProcessCSS() {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
@@ -9497,18 +9497,6 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private static final BoundsAccessor boundsAccessor = (bounds, tx, node) -> node.getGeomBounds(bounds, tx);
-
-    /**
-     * This method is used by Scene-graph JMX bean to obtain the Scene-graph structure.
-     *
-     * @param alg current algorithm to process this node
-     * @param ctx current context
-     * @return the algorithm specific result for this node
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public abstract Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
 
     /**
      * The accessible role for this {@code Node}.

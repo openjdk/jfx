@@ -113,7 +113,7 @@ public class SVGPath extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(SVGPath.this, DirtyBits.SHAPE_FILLRULE);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(SVGPath.this);
                 }
 
                 @Override
@@ -154,7 +154,7 @@ public class SVGPath extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(SVGPath.this, DirtyBits.NODE_CONTENTS);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(SVGPath.this);
                     path2d = null;
                 }
 

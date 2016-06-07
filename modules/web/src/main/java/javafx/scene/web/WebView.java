@@ -310,7 +310,7 @@ final public class WebView extends Parent {
             this.width.set(width);
             this.height.set(height);
             NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(this);
         }
     }
 
@@ -971,7 +971,7 @@ final public class WebView extends Parent {
 
         boolean iconified = (window instanceof Stage) ? ((Stage)window).isIconified() : false;
 
-        return impl_isTreeVisible()
+        return NodeHelper.isTreeVisible(this)
                && window.isShowing()
                && window.getWidth() > 0
                && window.getHeight() > 0
@@ -1249,13 +1249,11 @@ final public class WebView extends Parent {
         setInputMethodRequests(getInputMethodClient());
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
-        impl_intersects(pickRay, result);
+    private void doPickNodeLocal(PickRay pickRay, PickResultChooser result) {
+        NodeHelper.intersects(this, pickRay, result);
     }
 
     @Override protected ObservableList<Node> getChildren() {
@@ -1271,23 +1269,25 @@ final public class WebView extends Parent {
         return new NGWebView();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         bounds.deriveWithNewBounds(0, 0, 0, (float) getWidth(), (float)getHeight(), 0);
         tx.transform(bounds, bounds);
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected boolean impl_computeContains(double localX, double localY) {
+    private void doTransformsChanged() {
+    }
+
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private boolean doComputeContains(double localX, double localY) {
         // Note: Local bounds contain test is already done by the caller. (Node.contains()).
         return true;
     }
@@ -1319,6 +1319,28 @@ final public class WebView extends Parent {
             @Override
             public void doUpdatePeer(Node node) {
                 ((WebView) node).doUpdatePeer();
+            }
+
+            @Override
+            public void doTransformsChanged(Node node) {
+                ((WebView) node).doTransformsChanged();
+            }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((WebView) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((WebView) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public void doPickNodeLocal(Node node, PickRay localPickRay,
+                    PickResultChooser result) {
+                ((WebView) node).doPickNodeLocal(localPickRay, result);
             }
         });
 

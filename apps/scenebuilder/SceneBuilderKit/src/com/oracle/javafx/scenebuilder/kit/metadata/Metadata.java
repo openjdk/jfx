@@ -5810,13 +5810,6 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("focusModel"));
         hiddenProperties.add(new PropertyName("graphicsContext2D"));
         hiddenProperties.add(new PropertyName("hover"));
-        hiddenProperties.add(new PropertyName("impl_caretBias"));
-        hiddenProperties.add(new PropertyName("impl_caretPosition"));
-        hiddenProperties.add(new PropertyName("impl_caretShape"));
-        hiddenProperties.add(new PropertyName("impl_selectionEnd"));
-        hiddenProperties.add(new PropertyName("impl_selectionShape"));
-        hiddenProperties.add(new PropertyName("impl_selectionStart"));
-        hiddenProperties.add(new PropertyName("impl_traversalEngine"));
         hiddenProperties.add(new PropertyName("inputMethodRequests"));
         hiddenProperties.add(new PropertyName("localToParentTransform"));
         hiddenProperties.add(new PropertyName("localToSceneTransform"));

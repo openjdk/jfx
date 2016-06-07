@@ -57,7 +57,7 @@ import static org.junit.Assert.*;
 public class TransformTest {
 
     public static void assertTx(Node n, BaseTransform trans) {
-        Assert.assertEquals(trans, n.impl_getLeafTransform());
+        Assert.assertEquals(trans, NodeHelper.getLeafTransform(n));
     }
 
 

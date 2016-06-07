@@ -134,7 +134,7 @@ public class SceneUtils {
 //
 //        // compute the intersection
 //        final PickResultChooser result = new PickResultChooser();
-//        impl_computeIntersects(pickRay, result);
+//        NodeHelper.computeIntersects(this, pickRay, result);
 //        if (result.getIntersectedNode() == n) {
 //            return result.getIntersectedPoint();
 //        }

@@ -26,8 +26,24 @@
 package com.sun.javafx.scene;
 
 import com.sun.glass.ui.Accessible;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
+import java.util.List;
+import java.util.Map;
+import javafx.beans.binding.BooleanExpression;
+import javafx.beans.property.BooleanProperty;
+import javafx.css.CssMetaData;
+import javafx.css.Style;
+import javafx.css.Styleable;
+import javafx.css.StyleableProperty;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.SubScene;
 
@@ -70,11 +86,69 @@ public abstract class NodeHelper {
         getHelper(node).updatePeerImpl(node);
     }
 
+    public static Bounds computeLayoutBounds(Node node) {
+        return getHelper(node).computeLayoutBoundsImpl(node);
+    }
+
+    /*
+     * Computes the geometric bounds for this Node. This method is abstract
+     * and must be implemented by each Node subclass.
+     */
+    public static BaseBounds computeGeomBounds(Node node,
+            BaseBounds bounds, BaseTransform tx) {
+        return getHelper(node).computeGeomBoundsImpl(node, bounds, tx);
+    }
+
+    public static void transformsChanged(Node node) {
+        getHelper(node).transformsChangedImpl(node);
+    }
+
+    public static boolean computeContains(Node node, double localX, double localY) {
+        return getHelper(node).computeContainsImpl(node, localX, localY);
+    }
+
+    public static void pickNodeLocal(Node node, PickRay localPickRay,
+            PickResultChooser result) {
+        getHelper(node).pickNodeLocalImpl(node, localPickRay, result);
+    }
+
+    public static boolean computeIntersects(Node node, PickRay pickRay,
+            PickResultChooser pickResult) {
+        return getHelper(node).computeIntersectsImpl(node, pickRay, pickResult);
+    }
+
+    public static void geomChanged(Node node) {
+        getHelper(node).geomChangedImpl(node);
+    }
+
+    public static void notifyLayoutBoundsChanged(Node node) {
+        getHelper(node).notifyLayoutBoundsChangedImpl(node);
+    }
+
+    public static void processCSS(Node node) {
+        getHelper(node).processCSSImpl(node);
+    }
+
+    /*
+     * This method is used by Scene-graph JMX bean to obtain the Scene-graph structure.
+     *
+     * @param alg current algorithm to process this node
+     * @param ctx current context
+     * @return the algorithm specific result for this node
+     */
+    public static Object processMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+        return getHelper(node).processMXNodeImpl(node, alg, ctx);
+    }
+
     /*
      * Methods that will be overridden by subclasses
      */
 
     protected abstract NGNode createPeerImpl(Node node);
+    protected abstract boolean computeContainsImpl(Node node, double localX, double localY);
+    protected abstract BaseBounds computeGeomBoundsImpl(Node node,
+            BaseBounds bounds, BaseTransform tx);
+    protected abstract Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
 
     protected void markDirtyImpl(Node node, DirtyBits dirtyBit) {
         nodeAccessor.doMarkDirty(node, dirtyBit);
@@ -82,6 +156,36 @@ public abstract class NodeHelper {
 
     protected void updatePeerImpl(Node node) {
         nodeAccessor.doUpdatePeer(node);
+    }
+
+    protected Bounds computeLayoutBoundsImpl(Node node) {
+        return nodeAccessor.doComputeLayoutBounds(node);
+    }
+
+    protected void transformsChangedImpl(Node node) {
+        nodeAccessor.doTransformsChanged(node);
+    }
+
+    protected void pickNodeLocalImpl(Node node, PickRay localPickRay,
+            PickResultChooser result) {
+        nodeAccessor.doPickNodeLocal(node, localPickRay, result);
+    }
+
+    protected boolean computeIntersectsImpl(Node node, PickRay pickRay,
+            PickResultChooser pickResult) {
+        return nodeAccessor.doComputeIntersects(node, pickRay, pickResult);
+    }
+
+    protected void geomChangedImpl(Node node) {
+        nodeAccessor.doGeomChanged(node);
+    }
+
+    protected void notifyLayoutBoundsChangedImpl(Node node) {
+        nodeAccessor.doNotifyLayoutBoundsChanged(node);
+    }
+
+    protected void processCSSImpl(Node node) {
+        nodeAccessor.doProcessCSS(node);
     }
 
     /*
@@ -104,21 +208,91 @@ public abstract class NodeHelper {
         return nodeAccessor.getPeer(node);
     }
 
+    public static BaseTransform getLeafTransform(Node node) {
+        return nodeAccessor.getLeafTransform(node);
+    }
+
+    public static void layoutBoundsChanged(Node node) {
+        nodeAccessor.layoutBoundsChanged(node);
+    }
+
+    public static void setShowMnemonics(Node node, boolean value) {
+        nodeAccessor.setShowMnemonics(node, value);
+    }
+
+    public static boolean isShowMnemonics(Node node) {
+        return nodeAccessor.isShowMnemonics(node);
+    }
+
+    public static BooleanProperty showMnemonicsProperty(Node node) {
+        return nodeAccessor.showMnemonicsProperty(node);
+    }
+
+    public static boolean traverse(Node node, Direction direction) {
+        return nodeAccessor.traverse(node, direction);
+    }
+
+    public static double getPivotX(Node node) {
+        return nodeAccessor.getPivotX(node);
+    }
+
+    public static double getPivotY(Node node) {
+        return nodeAccessor.getPivotY(node);
+    }
+
+    public static double getPivotZ(Node node) {
+        return nodeAccessor.getPivotZ(node);
+    }
+
+    public static void pickNode(Node node, PickRay pickRay,
+            PickResultChooser result) {
+        nodeAccessor.pickNode(node, pickRay, result);
+    }
+
+    public static boolean intersects(Node node, PickRay pickRay,
+            PickResultChooser pickResult) {
+        return nodeAccessor.intersects(node, pickRay, pickResult);
+    }
+
+    public static double intersectsBounds(Node node, PickRay pickRay) {
+        return nodeAccessor.intersectsBounds(node, pickRay);
+    }
+
     public static void layoutNodeForPrinting(Node node) {
         nodeAccessor.layoutNodeForPrinting(node);
     }
 
     public static boolean isDerivedDepthTest(Node node) {
         return nodeAccessor.isDerivedDepthTest(node);
-    };
+    }
 
     public static SubScene getSubScene(Node node) {
         return nodeAccessor.getSubScene(node);
-    };
+    }
 
     public static Accessible getAccessible(Node node) {
         return nodeAccessor.getAccessible(node);
-    };
+    }
+
+    public static void reapplyCSS(Node node) {
+        nodeAccessor.reapplyCSS(node);
+    }
+
+    public static boolean isTreeVisible(Node node) {
+        return nodeAccessor.isTreeVisible(node);
+    }
+
+    public static BooleanExpression treeVisibleProperty(Node node) {
+        return nodeAccessor.treeVisibleProperty(node);
+    }
+
+    public static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
+        return nodeAccessor.getMatchingStyles(cssMetaData, styleable);
+    }
+
+    public static Map<StyleableProperty<?>,List<Style>> findStyles(Node node, Map<StyleableProperty<?>,List<Style>> styleMap) {
+        return nodeAccessor.findStyles(node, styleMap);
+    }
 
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
@@ -141,15 +315,42 @@ public abstract class NodeHelper {
         void setHelper(Node node, NodeHelper nodeHelper);
         void doMarkDirty(Node node, DirtyBits dirtyBit);
         void doUpdatePeer(Node node);
+        BaseTransform getLeafTransform(Node node);
+        Bounds doComputeLayoutBounds(Node node);
+        void doTransformsChanged(Node node);
+        void doPickNodeLocal(Node node, PickRay localPickRay,
+                PickResultChooser result);
+        boolean doComputeIntersects(Node node, PickRay pickRay,
+                PickResultChooser pickResult);
+        void doGeomChanged(Node node);
+        void doNotifyLayoutBoundsChanged(Node node);
+        void doProcessCSS(Node node);
         boolean isDirty(Node node, DirtyBits dirtyBit);
         boolean isDirtyEmpty(Node node);
         void syncPeer(Node node);
         <P extends NGNode> P getPeer(Node node);
+        void layoutBoundsChanged(Node node);
+        void setShowMnemonics(Node node, boolean value);
+        boolean isShowMnemonics(Node node);
+        BooleanProperty showMnemonicsProperty(Node node);
+        boolean traverse(Node node, Direction direction);
+        double getPivotX(Node node);
+        double getPivotY(Node node);
+        double getPivotZ(Node node);
+        void pickNode(Node node, PickRay pickRay, PickResultChooser result);
+        boolean intersects(Node node, PickRay pickRay, PickResultChooser pickResult);
+        double intersectsBounds(Node node, PickRay pickRay);
         void layoutNodeForPrinting(Node node);
         boolean isDerivedDepthTest(Node node);
         SubScene getSubScene(Node node);
         void setLabeledBy(Node node, Node labeledBy);
         Accessible getAccessible(Node node);
+        void reapplyCSS(Node node);
+        boolean isTreeVisible(Node node);
+        BooleanExpression treeVisibleProperty(Node node);
+        List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable);
+        Map<StyleableProperty<?>,List<Style>> findStyles(Node node,
+                Map<StyleableProperty<?>,List<Style>> styleMap);
     }
 
 }

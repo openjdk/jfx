@@ -27,6 +27,7 @@ package com.sun.javafx.scene.shape;
 
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Path;
@@ -65,6 +66,15 @@ public class PathHelper extends ShapeHelper {
     }
 
     @Override
+    protected Bounds computeLayoutBoundsImpl(Node node) {
+        Bounds bounds = pathAccessor.doComputeLayoutBounds(node);
+        if (bounds != null) {
+            return bounds;
+        }
+        return super.computeLayoutBoundsImpl(node);
+    }
+
+    @Override
     protected Paint cssGetFillInitialValueImpl(Shape shape) {
         return pathAccessor.doCssGetFillInitialValue(shape);
     }
@@ -90,6 +100,7 @@ public class PathHelper extends ShapeHelper {
     public interface PathAccessor {
         NGNode doCreatePeer(Node node);
         void doUpdatePeer(Node node);
+        Bounds doComputeLayoutBounds(Node node);
         Paint doCssGetFillInitialValue(Shape shape);
         Paint doCssGetStrokeInitialValue(Shape shape);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);

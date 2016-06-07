@@ -59,6 +59,22 @@ public class TestNodeBase extends Node {
             public NGNode doCreatePeer(Node node) {
                 return ((TestNodeBase) node).doCreatePeer();
             }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((TestNodeBase) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((TestNodeBase) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((TestNodeBase) node).doProcessMXNode(alg, ctx);
+            }
         });
     }
 
@@ -66,13 +82,14 @@ public class TestNodeBase extends Node {
         TestNodeBaseHelper.initHelper(this);
     }
 
-    @Override
-    protected boolean impl_computeContains(double d, double d1) {
+    private boolean doComputeContains(double d, double d1) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bb, BaseTransform bt) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private BaseBounds doComputeGeomBounds(BaseBounds bb, BaseTransform bt) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -257,8 +274,10 @@ public class TestNodeBase extends Node {
         return getClassCssMetaData();
     }
 
-    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return alg.processLeafNode(this, ctx);
     }
 }

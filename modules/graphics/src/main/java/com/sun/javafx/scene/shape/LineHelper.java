@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Node;
@@ -63,6 +65,13 @@ public class LineHelper extends ShapeHelper {
         super.updatePeerImpl(node);
         lineAccessor.doUpdatePeer(node);
     }
+
+    @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return lineAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
     @Override
     protected Paint cssGetFillInitialValueImpl(Shape shape) {
         return lineAccessor.doCssGetFillInitialValue(shape);
@@ -89,6 +98,7 @@ public class LineHelper extends ShapeHelper {
     public interface LineAccessor {
         NGNode doCreatePeer(Node node);
         void doUpdatePeer(Node node);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         Paint doCssGetFillInitialValue(Shape shape);
         Paint doCssGetStrokeInitialValue(Shape shape);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);

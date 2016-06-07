@@ -66,6 +66,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 
 
@@ -795,7 +796,7 @@ public class Window implements EventTarget {
                 // window is already showing. For not yet shown windows, the update is
                 // performed in doVisibleChanging()
                 if (isShowing()) {
-                    newScene.getRoot().impl_reapplyCSS();
+                    NodeHelper.reapplyCSS(newScene.getRoot());
 
                     if (!widthExplicit || !heightExplicit) {
                         SceneHelper.preferredSize(getScene());
@@ -1192,7 +1193,7 @@ public class Window implements EventTarget {
      */
     private void doVisibleChanging(boolean visible) {
         if (visible && (getScene() != null)) {
-            getScene().getRoot().impl_reapplyCSS();
+            NodeHelper.reapplyCSS(getScene().getRoot());
         }
     }
 

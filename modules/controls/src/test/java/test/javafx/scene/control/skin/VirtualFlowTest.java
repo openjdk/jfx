@@ -117,7 +117,6 @@ public class VirtualFlowTest {
     }
 
     private void pulse() {
-//        flow.impl_processCSS(true);
         flow.layout();
     }
 

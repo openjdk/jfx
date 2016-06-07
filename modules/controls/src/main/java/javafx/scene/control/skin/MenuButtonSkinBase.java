@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import com.sun.javafx.scene.control.LabeledImpl;
@@ -186,7 +187,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             }
 
             if (popup.isShowing()) {
-                Utils.addMnemonics(popup, getSkinnable().getScene(), getSkinnable().impl_isShowMnemonics());
+                Utils.addMnemonics(popup, getSkinnable().getScene(), NodeHelper.isShowMnemonics(getSkinnable()));
             } else {
                 // we wrap this in a runLater so that mnemonics are not removed
                 // before all key events are fired (because KEY_PRESSED might have

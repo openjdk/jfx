@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,42 @@
  * questions.
  */
 
-package com.oracle.javafx.jmx.json;
+package com.sun.javafx.scene.layout;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import com.sun.javafx.util.Utils;
+import javafx.scene.layout.Pane;
 
-final class ImmutableJSONDocument extends JSONDocument {
+/*
+ * Used to access internal methods of Pane.
+ */
+public class PaneHelper extends RegionHelper {
 
-    public ImmutableJSONDocument(Type type) {
-        super(type);
+    private static final PaneHelper theInstance;
+    private static PaneAccessor paneAccessor;
+
+    static {
+        theInstance = new PaneHelper();
+        Utils.forceInit(Pane.class);
     }
 
-    @Override
-    public List<Object> array() {
-        return Collections.emptyList();
+    private static PaneHelper getInstance() {
+        return theInstance;
     }
 
-    @Override
-    public Map<String, Object> object() {
-        return Collections.emptyMap();
+    public static void initHelper(Pane pane) {
+        setHelper(pane, getInstance());
+    }
+
+
+    public static void setPaneAccessor(final PaneAccessor newAccessor) {
+        if (paneAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        paneAccessor = newAccessor;
+    }
+
+    public interface PaneAccessor {
     }
 
 }

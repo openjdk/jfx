@@ -66,6 +66,22 @@ public class Cylinder extends Shape3D {
                 ((Cylinder) node).doUpdatePeer();
             }
 
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Cylinder) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Cylinder) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public boolean doComputeIntersects(Node node, PickRay pickRay,
+                    PickResultChooser pickResult) {
+                return ((Cylinder) node).doComputeIntersects(pickRay, pickResult);
+            }
         });
     }
     static final int DEFAULT_DIVISIONS = 64;
@@ -138,7 +154,7 @@ public class Cylinder extends Shape3D {
                     NodeHelper.markDirty(Cylinder.this, DirtyBits.MESH_GEOM);
                     manager.invalidateCylinderMesh(key);
                     key = 0;
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Cylinder.this);
                 }
             };
         }
@@ -168,7 +184,7 @@ public class Cylinder extends Shape3D {
                     NodeHelper.markDirty(Cylinder.this, DirtyBits.MESH_GEOM);
                     manager.invalidateCylinderMesh(key);
                     key = 0;
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Cylinder.this);
                 }
             };
         }
@@ -212,13 +228,10 @@ public class Cylinder extends Shape3D {
         return new NGCylinder();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         final float h = (float) getHeight();
         final float r = (float) getRadius();
 
@@ -233,26 +246,20 @@ public class Cylinder extends Shape3D {
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         double w = getRadius();
         double hh = getHeight()*.5f;
         return -w <= localX && localX <= w &&
                 -hh <= localY && localY <= hh;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeIntersects(PickRay pickRay, PickResultChooser pickResult) {
+    private boolean doComputeIntersects(PickRay pickRay, PickResultChooser pickResult) {
 
         final boolean exactPicking = divisions < DEFAULT_DIVISIONS && mesh != null;
 

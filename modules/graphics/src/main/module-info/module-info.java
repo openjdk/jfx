@@ -96,6 +96,7 @@ module javafx.graphics {
         javafx.swing,
         javafx.web;
     exports com.sun.javafx.scene.layout to
+        javafx.controls,
         javafx.web;
     exports com.sun.javafx.scene.text to
         javafx.controls,

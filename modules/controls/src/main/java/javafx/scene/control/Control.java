@@ -50,6 +50,8 @@ import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.ControlHelper;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableStringProperty;
 import javafx.css.converter.StringConverter;
@@ -81,6 +83,13 @@ import sun.util.logging.PlatformLogger.Level;
 public abstract class Control extends Region implements Skinnable {
 
     static {
+        ControlHelper.setControlAccessor(new ControlHelper.ControlAccessor() {
+            @Override
+            public void doProcessCSS(Node node) {
+                ((Control) node).doProcessCSS();
+            }
+        });
+
         // Ensures that the default application user agent stylesheet is loaded
         if (Application.getUserAgentStylesheet() == null) {
             PlatformImpl.setDefaultPlatformUserAgentStylesheet();
@@ -291,12 +300,12 @@ public abstract class Control extends Region implements Skinnable {
             // next time they are requested.
             styleableProperties = null;
 
-            // calling impl_reapplyCSS() as the styleable properties may now
+            // calling NodeHelper.reapplyCSS() as the styleable properties may now
             // be different, as we will now be able to return styleable properties
-            // belonging to the skin. If impl_reapplyCSS() is not called, the
+            // belonging to the skin. If NodeHelper.reapplyCSS() is not called, the
             // getCssMetaData() method is never called, so the
             // skin properties are never exposed.
-            impl_reapplyCSS();
+            NodeHelper.reapplyCSS(Control.this);
 
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();
@@ -406,6 +415,10 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        ControlHelper.initHelper(this);
+    }
     /**
      *  Create a new Control.
      */
@@ -862,21 +875,19 @@ public abstract class Control extends Region implements Skinnable {
         return getClassCssMetaData();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected void impl_processCSS() {
+    private void doProcessCSS() {
 
-        super.impl_processCSS();
+        ControlHelper.superProcessCSS(this);
 
         if (getSkin() == null) {
             // try to create default skin
             final Skin<?> defaultSkin = createDefaultSkin();
             if (defaultSkin != null) {
                 skinProperty().set(defaultSkin);
-                super.impl_processCSS();
+                ControlHelper.superProcessCSS(this);
             } else {
                 final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                                    " and createDefaultSkin() returned null.";

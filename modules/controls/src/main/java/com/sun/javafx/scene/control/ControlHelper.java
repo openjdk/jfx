@@ -23,56 +23,56 @@
  * questions.
  */
 
-package com.sun.javafx.scene;
+package com.sun.javafx.scene.control;
 
-import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.scene.layout.RegionHelper;
 import com.sun.javafx.util.Utils;
-import javafx.geometry.Bounds;
-import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.control.Control;
 
-/**
- * Used to access internal methods of Group.
+/*
+ * Used to access internal methods of Control.
  */
-public class GroupHelper extends ParentHelper {
-
-    private static final GroupHelper theInstance;
-    private static GroupAccessor groupAccessor;
+public class ControlHelper extends RegionHelper {
+    private static final ControlHelper theInstance;
+    private static ControlAccessor controlAccessor;
 
     static {
-        theInstance = new GroupHelper();
-        Utils.forceInit(Group.class);
+        theInstance = new ControlHelper();
+        Utils.forceInit(Control.class);
     }
 
-    private static GroupHelper getInstance() {
+    private static ControlHelper getInstance() {
         return theInstance;
     }
 
-    public static void initHelper(Group group) {
-        setHelper(group, getInstance());
+    public static void initHelper(Control control) {
+        setHelper(control, getInstance());
     }
 
-    @Override
-    protected NGNode createPeerImpl(Node node) {
-        return super.createPeerImpl(node);
+    public static void superProcessCSS(Node node) {
+        ((ControlHelper) getHelper(node)).superProcessCSSImpl(node);
     }
 
-    @Override
-    protected Bounds computeLayoutBoundsImpl(Node node) {
-        groupAccessor.doComputeLayoutBounds(node);
-        return super.computeLayoutBoundsImpl(node);
+    void superProcessCSSImpl(Node node) {
+        super.processCSSImpl(node);
     }
 
-    public static void setGroupAccessor(final GroupAccessor newAccessor) {
-        if (groupAccessor != null) {
+    protected void processCSSImpl(Node node) {
+        controlAccessor.doProcessCSS(node);
+    }
+
+
+    public static void setControlAccessor(final ControlAccessor newAccessor) {
+        if (controlAccessor != null) {
             throw new IllegalStateException();
         }
 
-        groupAccessor = newAccessor;
+        controlAccessor = newAccessor;
     }
 
-    public interface GroupAccessor {
-        Bounds doComputeLayoutBounds(Node node);
+    public interface ControlAccessor {
+        void doProcessCSS(Node node);
     }
 
 }

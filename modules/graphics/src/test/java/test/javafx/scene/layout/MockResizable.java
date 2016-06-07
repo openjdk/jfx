@@ -31,9 +31,26 @@ import javafx.scene.Parent;
 
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
+import javafx.scene.Node;
+import test.com.sun.javafx.scene.layout.MockResizableHelper;
 
 
 public class MockResizable extends Parent {
+    static {
+         // This is used by classes in different packages to get access to
+         // private and package private methods.
+        MockResizableHelper.setMockResizableAccessor(new MockResizableHelper.MockResizableAccessor() {
+            @Override
+            public Bounds doComputeLayoutBounds(Node node) {
+                return ((MockResizable) node).doComputeLayoutBounds();
+            }
+            @Override
+            public void doNotifyLayoutBoundsChanged(Node node) {
+                ((MockResizable) node).doNotifyLayoutBoundsChanged();
+            }
+        });
+    }
+
     private double minWidth = 0;
     private double minHeight = 0;
     private double prefWidth;
@@ -43,6 +60,10 @@ public class MockResizable extends Parent {
     private double width;
     private double height;
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        MockResizableHelper.initHelper(this);
+    }
     public MockResizable(double prefWidth, double prefHeight) {
         this.prefWidth = prefWidth;
         this.prefHeight = prefHeight;
@@ -67,26 +88,20 @@ public class MockResizable extends Parent {
     @Override public void resize(double width, double height) {
         this.width = width;
         this.height = height;
-        impl_layoutBoundsChanged();
-        impl_geomChanged();
+        NodeHelper.layoutBoundsChanged(this);
+        NodeHelper.geomChanged(this);
         NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
         requestLayout();
     }
     @Override public double getBaselineOffset() {
         return Math.max(0, prefHeight - 10);
     }
-    /**
-     * The layout bounds of this region: {@code 0, 0  width x height}
-     */
-    @Override protected Bounds impl_computeLayoutBounds() {
+
+    private Bounds doComputeLayoutBounds() {
         return new BoundingBox(0, 0, 0, width, height, 0);
     }
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected void impl_notifyLayoutBoundsChanged() {
+
+    private void doNotifyLayoutBoundsChanged() {
         // change in geometric bounds does not necessarily change layoutBounds
     }
     @Override public double minWidth(double height) {

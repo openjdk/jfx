@@ -69,6 +69,7 @@ import java.util.List;
 
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.util.StringConverter;
 
 /**
@@ -203,7 +204,7 @@ public abstract class TextInputControl extends Control {
                 public void applyStyle(StyleOrigin newOrigin, Font value) {
 
                     //
-                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call impl_reapplyCSS
+                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
                     //
                     try {
                         // super.applyStyle calls set which might throw if value is bound.
@@ -234,7 +235,7 @@ public abstract class TextInputControl extends Control {
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
                     if(fontSetByCss == false) {
-                        TextInputControl.this.impl_reapplyCSS();
+                        NodeHelper.reapplyCSS(TextInputControl.this);
                     }
                 }
 

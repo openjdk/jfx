@@ -31,6 +31,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.*;
@@ -49,6 +50,22 @@ public  class CSSNode extends Node {
             @Override
             public NGNode doCreatePeer(Node node) {
                 return ((CSSNode) node).doCreatePeer();
+            }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((CSSNode) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((CSSNode) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((CSSNode) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -152,7 +169,7 @@ public  class CSSNode extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CSSNode.this);
                 }
 
                 @Override
@@ -194,7 +211,7 @@ public  class CSSNode extends Node {
 
                 @Override
                 protected void invalidated() {
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CSSNode.this);
                 }
             };
         }
@@ -236,8 +253,10 @@ public  class CSSNode extends Node {
     public boolean processCalled = false;
     public boolean applyCalled = false;
 
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         if (bounds != null) {
             bounds = bounds.deriveWithNewBounds(0, 0, 0,
                     getContentSize() + getPadding() + getPadding(), getContentSize() + getPadding() + getPadding(), 0);
@@ -245,8 +264,10 @@ public  class CSSNode extends Node {
         return bounds;
     }
 
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private boolean doComputeContains(double localX, double localY) {
         // TODO: Missing code.
         return false;
     }
@@ -330,11 +351,10 @@ public  class CSSNode extends Node {
         return getClassCssMetaData();
     }
 
-    /**
-     * @treatAsPrivate Implementation detail
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return null;
     }
 }

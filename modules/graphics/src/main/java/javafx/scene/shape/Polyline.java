@@ -73,6 +73,12 @@ public  class Polyline extends Shape {
             }
 
             @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Polyline) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
             public Paint doCssGetFillInitialValue(Shape shape) {
                 return ((Polyline) shape).doCssGetFillInitialValue();
             }
@@ -129,7 +135,7 @@ public  class Polyline extends Shape {
         @Override
         protected void onChanged(Change<Double> c) {
             NodeHelper.markDirty(Polyline.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Polyline.this);
         }
     };
 
@@ -147,12 +153,10 @@ public  class Polyline extends Shape {
         return new NGPolyline();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         if (getMode() == NGShape.Mode.EMPTY || getPoints().size() <= 1) {
             return bounds.makeEmpty();
         }

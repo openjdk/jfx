@@ -105,6 +105,11 @@ public class Path extends Shape {
             }
 
             @Override
+            public Bounds doComputeLayoutBounds(Node node) {
+                return ((Path) node).doComputeLayoutBounds();
+            }
+
+            @Override
             public Paint doCssGetFillInitialValue(Shape shape) {
                 return ((Path) shape).doCssGetFillInitialValue();
             }
@@ -166,7 +171,7 @@ public class Path extends Shape {
     void markPathDirty() {
         path2d = null;
         NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
     }
 
     /**
@@ -196,7 +201,7 @@ public class Path extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Path.this, DirtyBits.NODE_CONTENTS);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Path.this);
                 }
 
                 @Override
@@ -256,7 +261,7 @@ public class Path extends Shape {
             }
 
             NodeHelper.markDirty(Path.this, DirtyBits.NODE_CONTENTS);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Path.this);
         }
     };
 
@@ -290,15 +295,9 @@ public class Path extends Shape {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    protected Bounds impl_computeLayoutBounds() {
+    private Bounds doComputeLayoutBounds() {
        if (isPathValid) {
-           return super.impl_computeLayoutBounds();
+           return null; // Helper will need to call its super's compute layout bounds
        }
        return new BoundingBox(0, 0, -1, -1); //create empty bounds
     }

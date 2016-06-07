@@ -25,6 +25,8 @@
 
 package test.com.sun.javafx.scene;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
@@ -62,8 +64,21 @@ public class StubParentHelper extends ParentHelper {
         return stubParentAccessor.doCreatePeer(node);
     }
 
+    @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return stubParentAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
+    @Override
+    protected boolean computeContainsImpl(Node node, double localX, double localY) {
+        return stubParentAccessor.doComputeContains(node, localX, localY);
+    }
+
     public interface StubParentAccessor {
         NGNode doCreatePeer(Node node);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
+        boolean doComputeContains(Node node, double localX, double localY);
     }
 
 }

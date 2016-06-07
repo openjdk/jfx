@@ -662,12 +662,28 @@ public class StructureTest {
                 public NGNode doCreatePeer(Node node) {
                     return ((StubNode) node).doCreatePeer();
                 }
+                @Override
+                public BaseBounds doComputeGeomBounds(Node node,
+                        BaseBounds bounds, BaseTransform tx) {
+                    return ((StubNode) node).doComputeGeomBounds(bounds, tx);
+                }
+                @Override
+                public boolean doComputeContains(Node node, double localX, double localY) {
+                    return ((StubNode) node).doComputeContains(localX, localY);
+                }
+                @Override
+                public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                    return ((StubNode) node).doProcessMXNode(alg, ctx);
+                }
             });
         }
 
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubNodeHelper.initHelper(this);
+        }
         public StubNode() {
             super();
-            StubNodeHelper.initHelper(this);
         }
 
         // * Returning null causes crashes so return a NGGroup.
@@ -675,19 +691,22 @@ public class StructureTest {
             return new NGGroup();
         }
 
-        @Override
-        public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+        private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
             return bounds;
         }
 
-        @Override
-        public boolean impl_computeContains(double localX, double localY) {
+        /*
+         * Note: This method MUST only be called via its accessor method.
+         */
+        private boolean doComputeContains(double localX, double localY) {
             // TODO: Missing code.
             return false;
         }
 
-        @Override
-        public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+        /*
+         * Note: This method MUST only be called via its accessor method.
+         */
+        private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
             return null;
         }
     }
@@ -699,12 +718,26 @@ public class StructureTest {
                 public NGNode doCreatePeer(Node node) {
                     return ((StubParent) node).doCreatePeer();
                 }
+
+                @Override
+                public BaseBounds doComputeGeomBounds(Node node,
+                        BaseBounds bounds, BaseTransform tx) {
+                    return ((StubParent) node).doComputeGeomBounds(bounds, tx);
+                }
+
+                @Override
+                public boolean doComputeContains(Node node, double localX, double localY) {
+                    return ((StubParent) node).doComputeContains(localX, localY);
+                }
             });
         }
 
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            StubParentHelper.initHelper(this);
+        }
         public StubParent() {
             super();
-            StubParentHelper.initHelper(this);
         }
 
         // * Returning null causes crashes so return a PGGroup.
@@ -712,13 +745,14 @@ public class StructureTest {
             return new NGGroup();
         }
 
-        @Override
-        public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+        private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
             return bounds;
         }
 
-        @Override
-        public boolean impl_computeContains(double localX, double localY) {
+        /*
+         * Note: This method MUST only be called via its accessor method.
+         */
+        private boolean doComputeContains(double localX, double localY) {
             // TODO: Missing code.
             return false;
         }

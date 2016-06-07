@@ -25,6 +25,8 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
@@ -741,9 +743,9 @@ final public class StyleManager {
                 //
                 // tell parent it needs to reapply css
                 // No harm is done if parent is in a scene that has had
-                // impl_reapplyCSS called on the root.
+                // NodeHelper.reapplyCSS called on the root.
                 //
-                parent.impl_reapplyCSS();
+                NodeHelper.reapplyCSS(parent);
             }
         }
     }
@@ -1510,7 +1512,7 @@ final public class StyleManager {
             }
         }
 
-        for (Parent root : parents) root.impl_reapplyCSS();
+        for (Parent root : parents) NodeHelper.reapplyCSS(root);
     }
 
     private List<StylesheetContainer> processStylesheets(List<String> stylesheets, Parent parent) {
@@ -1579,7 +1581,7 @@ final public class StyleManager {
             return Collections.<StylesheetContainer>emptyList();
         }
 
-        final List<String> parentStylesheets = parent.impl_getAllParentStylesheets();
+        final List<String> parentStylesheets = ParentHelper.getAllParentStylesheets(parent);
 
         if (parentStylesheets == null || parentStylesheets.isEmpty()) {
             return Collections.<StylesheetContainer>emptyList();

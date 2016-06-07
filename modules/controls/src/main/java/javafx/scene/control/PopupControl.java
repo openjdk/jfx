@@ -49,10 +49,13 @@ import com.sun.javafx.application.PlatformImpl;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
 import javafx.css.Styleable;
 import javafx.css.StyleableStringProperty;
 import javafx.css.converter.StringConverter;
 import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.layout.PaneHelper;
 import com.sun.javafx.stage.PopupWindowHelper;
 import javafx.css.StyleableProperty;
 import javafx.stage.Window;
@@ -270,12 +273,12 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 bridge.getChildren().clear();
             }
 
-            // calling impl_reapplyCSS() as the styleable properties may now
+            // calling NodeHelper.reapplyCSS() as the styleable properties may now
             // be different, as we will now be able to return styleable properties
-            // belonging to the skin. If impl_reapplyCSS() is not called, the
+            // belonging to the skin. If NodeHelper.reapplyCSS() is not called, the
             // getCssMetaData() method is never called, so the
             // skin properties are never exposed.
-            bridge.impl_reapplyCSS();
+            NodeHelper.reapplyCSS(bridge);
 
             // DEBUG: Log that we've changed the skin
             final PlatformLogger logger = Logging.getControlsLogger();
@@ -1108,6 +1111,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
         private final PopupControl popupControl = PopupControl.this;
 
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            CSSBridgeHelper.initHelper(this);
+        }
+
         /**
          * Requests a layout pass to be performed before the next scene is
          * rendered. This is batched up asynchronously to happen once per
@@ -1136,45 +1144,34 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             return PopupControl.this.getStyleableParent();
         }
 
-        /**
-         * @treatAsPrivate implementation detail
-         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-         */
-        @Deprecated
-        protected void setSkinClassName(String skinClassName) { /* no-op - retain for binary compatibility */ }
-
         @Override
         public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
             return PopupControl.this.getCssMetaData();
         }
 
-        /**
-         * @treatAsPrivate implementation detail
-         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+        /*
+         * Note: This method MUST only be called via its accessor method.
          */
-        @Deprecated
-        @Override public List<String> impl_getAllParentStylesheets() {
+        private List<String> doGetAllParentStylesheets() {
             Styleable styleable = getStyleableParent();
             if (styleable instanceof Parent) {
-                return ((Parent)styleable).impl_getAllParentStylesheets();
+                return ParentHelper.getAllParentStylesheets((Parent)styleable);
             }
             return null;
         }
 
-        /**
-         * @treatAsPrivate implementation detail
-         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+        /*
+         * Note: This method MUST only be called via its accessor method.
          */
-        @Deprecated
-        @Override protected void impl_processCSS() {
-            super.impl_processCSS();
+        private void doProcessCSS() {
+            CSSBridgeHelper.superProcessCSS(this);
 
             if (getSkin() == null) {
                 // try to create default skin
                 final Skin<?> defaultSkin = createDefaultSkin();
                 if (defaultSkin != null) {
                     skinProperty().set(defaultSkin);
-                    super.impl_processCSS();
+                    CSSBridgeHelper.superProcessCSS(this);
                 } else {
                     final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                             " and createDefaultSkin() returned null.";
@@ -1188,6 +1185,43 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             }
         }
 
+    }
+
+    /*
+     * Used to access internal methods of CSSBridge.
+     */
+    static final class CSSBridgeHelper extends PaneHelper {
+        private static final CSSBridgeHelper theInstance;
+
+        static {
+            theInstance = new CSSBridgeHelper();
+        }
+
+        private static CSSBridgeHelper getInstance() {
+            return theInstance;
+        }
+
+        public static void initHelper(CSSBridge cssBridge) {
+            setHelper(cssBridge, getInstance());
+        }
+
+        public static void superProcessCSS(Node node) {
+            ((CSSBridgeHelper) getHelper(node)).superProcessCSSImpl(node);
+        }
+
+        void superProcessCSSImpl(Node node) {
+            super.processCSSImpl(node);
+        }
+
+        @Override
+        protected void processCSSImpl(Node node) {
+            ((CSSBridge) node).doProcessCSS();
+        }
+
+        @Override
+        protected List<String> getAllParentStylesheetsImpl(Parent parent) {
+            return ((CSSBridge) parent).doGetAllParentStylesheets();
+        }
     }
 
 }

@@ -71,6 +71,12 @@ public  class Polygon extends Shape {
             }
 
             @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Polygon) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Polygon) shape).doConfigShape();
             }
@@ -111,7 +117,7 @@ public  class Polygon extends Shape {
         @Override
         protected void onChanged(Change<Double> c) {
             NodeHelper.markDirty(Polygon.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Polygon.this);
         }
     };
 
@@ -128,12 +134,10 @@ public  class Polygon extends Shape {
         return new NGPolygon();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         if (getMode() == NGShape.Mode.EMPTY || getPoints().size() <= 1) {
             return bounds.makeEmpty();
         }

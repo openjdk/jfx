@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.CustomColorDialog;
 import com.sun.javafx.scene.control.skin.Utils;
@@ -430,7 +431,7 @@ class ColorPalette extends Region {
                         if (isCustom && contextMenu != null) {
                             if (!contextMenu.isShowing()) {
                                 contextMenu.show(ColorSquare.this, Side.RIGHT, 0, 0);
-                                Utils.addMnemonics(contextMenu, ColorSquare.this.getScene(), colorPicker.impl_isShowMnemonics());
+                                Utils.addMnemonics(contextMenu, ColorSquare.this.getScene(), NodeHelper.isShowMnemonics(colorPicker));
                             } else {
                                 contextMenu.hide();
                                 Utils.removeMnemonics(contextMenu, ColorSquare.this.getScene());

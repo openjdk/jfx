@@ -74,6 +74,22 @@ public abstract class Shape3D extends Node {
             public void doUpdatePeer(Node node) {
                 ((Shape3D) node).doUpdatePeer();
             }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Shape3D) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Shape3D) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((Shape3D) node).doProcessMXNode(alg, ctx);
+            }
         });
     }
 
@@ -136,7 +152,7 @@ public abstract class Shape3D extends Node {
                         MaterialHelper.dirtyProperty(newMaterial).addListener(weakMaterialChangeListener);
                     }
                     NodeHelper.markDirty(Shape3D.this, DirtyBits.MATERIAL);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Shape3D.this);
                     old = newMaterial;
                 }
             };
@@ -205,24 +221,18 @@ public abstract class Shape3D extends Node {
         return cullFace;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         // TODO: 3D - Evaluate this logic
         return new BoxBounds(0, 0, 0, 0, 0, 0);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         return false;
     }
 
@@ -244,13 +254,10 @@ public abstract class Shape3D extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

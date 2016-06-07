@@ -51,6 +51,7 @@ import javafx.css.StyleableProperty;
 import com.sun.javafx.jmx.HighlightRegion;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.TKPulseListener;
@@ -384,7 +385,7 @@ public class SGMXBeanImpl implements SGMXBean, MXNodeAlgorithm {
         if (sgRoot == null) {
             return;
         }
-        jsceneGraphs[windowId] = (JSONDocument)sgRoot.impl_processMXNode(this,
+        jsceneGraphs[windowId] = (JSONDocument) NodeHelper.processMXNode(sgRoot, this,
             new MXNodeAlgorithmContext(nodeMap.size()));
     }
 
@@ -491,7 +492,7 @@ public class SGMXBeanImpl implements SGMXBean, MXNodeAlgorithm {
         d.set("children", childrenDoc);
 
         for (int i = 0; i < children.size(); i++) {
-            childrenDoc.set(i, (JSONDocument)children.get(i).impl_processMXNode(this, ctx));
+            childrenDoc.set(i, (JSONDocument)NodeHelper.processMXNode(children.get(i), this, ctx));
         }
         return d;
     }

@@ -25,6 +25,10 @@
 
 package com.sun.javafx.scene.canvas;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
@@ -62,6 +66,21 @@ public class CanvasHelper extends NodeHelper {
         canvasAccessor.doUpdatePeer(node);
     }
 
+    @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return canvasAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
+    @Override
+    protected boolean computeContainsImpl(Node node, double localX, double localY) {
+        return canvasAccessor.doComputeContains(node, localX, localY);
+    }
+
+    @Override
+    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+        return canvasAccessor.doProcessMXNode(node, alg, ctx);
+    }
     public static void setCanvasAccessor(final CanvasAccessor newAccessor) {
         if (canvasAccessor != null) {
             throw new IllegalStateException();
@@ -73,6 +92,9 @@ public class CanvasHelper extends NodeHelper {
     public interface CanvasAccessor {
         NGNode doCreatePeer(Node node);
         void doUpdatePeer(Node node);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
+        boolean doComputeContains(Node node, double localX, double localY);
+        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
     }
 
 }

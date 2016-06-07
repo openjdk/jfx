@@ -23,56 +23,51 @@
  * questions.
  */
 
-package com.sun.javafx.scene;
+package test.com.sun.javafx.scene.layout;
 
-import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.util.Utils;
 import javafx.geometry.Bounds;
-import javafx.scene.Group;
 import javafx.scene.Node;
+import test.javafx.scene.layout.MockResizable;
 
-/**
- * Used to access internal methods of Group.
- */
-public class GroupHelper extends ParentHelper {
-
-    private static final GroupHelper theInstance;
-    private static GroupAccessor groupAccessor;
+public class MockResizableHelper extends ParentHelper {
+    private static final MockResizableHelper theInstance;
+    private static MockResizableAccessor mockResizableAccessor;
 
     static {
-        theInstance = new GroupHelper();
-        Utils.forceInit(Group.class);
+        theInstance = new MockResizableHelper();
+        Utils.forceInit(MockResizable.class);
     }
 
-    private static GroupHelper getInstance() {
+    private static MockResizableHelper getInstance() {
         return theInstance;
     }
 
-    public static void initHelper(Group group) {
-        setHelper(group, getInstance());
-    }
-
-    @Override
-    protected NGNode createPeerImpl(Node node) {
-        return super.createPeerImpl(node);
+    public static void initHelper(MockResizable mockResizable) {
+        setHelper(mockResizable, getInstance());
     }
 
     @Override
     protected Bounds computeLayoutBoundsImpl(Node node) {
-        groupAccessor.doComputeLayoutBounds(node);
-        return super.computeLayoutBoundsImpl(node);
+        return mockResizableAccessor.doComputeLayoutBounds(node);
     }
 
-    public static void setGroupAccessor(final GroupAccessor newAccessor) {
-        if (groupAccessor != null) {
+    @Override
+    protected void notifyLayoutBoundsChangedImpl(Node node) {
+        mockResizableAccessor.doNotifyLayoutBoundsChanged(node);
+    }
+    public static void setMockResizableAccessor(final MockResizableAccessor newAccessor) {
+        if (mockResizableAccessor != null) {
             throw new IllegalStateException();
         }
 
-        groupAccessor = newAccessor;
+        mockResizableAccessor = newAccessor;
     }
 
-    public interface GroupAccessor {
+    public interface MockResizableAccessor {
         Bounds doComputeLayoutBounds(Node node);
+        void doNotifyLayoutBoundsChanged(Node node);
     }
 
 }

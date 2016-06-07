@@ -102,7 +102,7 @@ public class Label extends Labeled {
      **************************************************************************/
 
     private ChangeListener<Boolean> mnemonicStateListener = (observable, oldValue, newValue) -> {
-        Label.this.impl_showMnemonicsProperty().setValue(newValue);
+        NodeHelper.showMnemonicsProperty(Label.this).setValue(newValue);
     };
 
     /**
@@ -117,15 +117,15 @@ public class Label extends Labeled {
                 @Override protected void invalidated() {
                     if (oldValue != null) {
                         NodeHelper.getNodeAccessor().setLabeledBy(oldValue, null);
-                        oldValue.impl_showMnemonicsProperty().removeListener(mnemonicStateListener);
+                        NodeHelper.showMnemonicsProperty(oldValue).removeListener(mnemonicStateListener);
                     }
                     final Node node = get();
                     if (node != null) {
                         NodeHelper.getNodeAccessor().setLabeledBy(node, Label.this);
-                        node.impl_showMnemonicsProperty().addListener(mnemonicStateListener);
-                        impl_setShowMnemonics(node.impl_isShowMnemonics());
+                        NodeHelper.showMnemonicsProperty(node).addListener(mnemonicStateListener);
+                        NodeHelper.setShowMnemonics(Label.this, NodeHelper.isShowMnemonics(node));
                     } else {
-                        impl_setShowMnemonics(false);
+                        NodeHelper.setShowMnemonics(Label.this, false);
                     }
                     oldValue = node;
                 }

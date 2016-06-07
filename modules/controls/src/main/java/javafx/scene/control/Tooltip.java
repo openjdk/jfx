@@ -28,6 +28,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.stage.PopupWindowHelper;
 
 import javafx.css.SimpleStyleableBooleanProperty;
@@ -268,7 +269,7 @@ public class Tooltip extends PopupControl {
         private boolean fontSetByCss = false;
 
         @Override public void applyStyle(StyleOrigin newOrigin, Font value) {
-            // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call impl_reapplyCSS
+            // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
             try {
                 // super.applyStyle calls set which might throw if value is bound.
                 // Have to make sure fontSetByCss is reset.
@@ -294,7 +295,7 @@ public class Tooltip extends PopupControl {
             // css might need to be reapplied since font size affects
             // calculated values for styles with relative values
             if(fontSetByCss == false) {
-                Tooltip.this.bridge.impl_reapplyCSS();
+                NodeHelper.reapplyCSS(Tooltip.this.bridge);
             }
         }
 

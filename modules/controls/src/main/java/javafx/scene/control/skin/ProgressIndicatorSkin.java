@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -275,7 +276,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             // create spinner
             spinner = new IndeterminateSpinner(spinEnabled.get(), progressColor.get());
             getChildren().setAll(spinner);
-            if (control.impl_isTreeVisible()) {
+            if (NodeHelper.isTreeVisible(control)) {
                 if (indeterminateTransition != null) {
                     indeterminateTransition.play();
                 }

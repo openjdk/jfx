@@ -25,6 +25,10 @@
 
 package com.sun.javafx.embed.swing;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
@@ -63,6 +67,22 @@ public class SwingNodeHelper extends NodeHelper {
         swingNodeAccessor.doUpdatePeer(node);
     }
 
+    @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return swingNodeAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
+    @Override
+    protected boolean computeContainsImpl(Node node, double localX, double localY) {
+        return swingNodeAccessor.doComputeContains(node, localX, localY);
+    }
+
+    @Override
+    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+        return swingNodeAccessor.doProcessMXNode(node, alg, ctx);
+    }
+
     public static void setSwingNodeAccessor(final SwingNodeAccessor newAccessor) {
         if (swingNodeAccessor != null) {
             throw new IllegalStateException();
@@ -74,6 +94,9 @@ public class SwingNodeHelper extends NodeHelper {
     public interface SwingNodeAccessor {
         NGNode doCreatePeer(Node node);
         void doUpdatePeer(Node node);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
+        boolean doComputeContains(Node node, double localX, double localY);
+        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
     }
 
 }

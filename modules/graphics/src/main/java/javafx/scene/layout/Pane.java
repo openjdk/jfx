@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.scene.layout.PaneHelper;
 import javafx.beans.DefaultProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
@@ -95,6 +96,10 @@ import javafx.scene.Node;
  */
 @DefaultProperty("children")
 public class Pane extends Region {
+    static {
+        PaneHelper.setPaneAccessor(new PaneHelper.PaneAccessor() {
+        });
+    }
 
     static void setConstraint(Node node, Object key, Object value) {
         if (value == null) {
@@ -117,6 +122,10 @@ public class Pane extends Region {
         return null;
     }
 
+    {
+        // To initialize the class helper at the begining each constructor of this class
+        PaneHelper.initHelper(this);
+    }
     /**
      * Creates a Pane layout.
      */

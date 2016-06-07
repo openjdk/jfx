@@ -115,6 +115,27 @@ public class Text extends Shape {
             }
 
             @Override
+            public Bounds doComputeLayoutBounds(Node node) {
+                return ((Text) node).doComputeLayoutBounds();
+            }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Text) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Text) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public void doGeomChanged(Node node) {
+                ((Text) node).doGeomChanged();
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Text) shape).doConfigShape();
             }
@@ -207,7 +228,7 @@ public class Text extends Shape {
              */
             textSpan = null;
 
-            /* Relies on impl_geomChanged() to request text flow to relayout */
+            /* Relies on NodeHelper.geomChanged(this) to request text flow to relayout */
         } else {
             TextLayout layout = getTextLayout();
             String string = getTextInternal();
@@ -219,7 +240,7 @@ public class Text extends Shape {
 
     private void needsTextLayout() {
         textRuns = null;
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
         NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
     }
 
@@ -295,7 +316,7 @@ public class Text extends Shape {
          * extra work is necessary. Other times the layout is caused by changes
          * in the text flow object (wrapping width and text alignment for example).
          * In the second case the dirty bits must be set here using
-         * impl_geomChanged() and NodeHelper.markDirty(). Note that impl_geomChanged()
+         * NodeHelper.geomChanged(this) and NodeHelper.markDirty(). Note that NodeHelper.geomChanged(this)
          * causes another (undesired) layout request in the parent.
          * In general this is not a problem because shapes are not resizable and
          * region objects do not propagate layout changes to the parent.
@@ -303,7 +324,7 @@ public class Text extends Shape {
          * layoutChildren(). See TextFlow#requestLayout() for information how
          * text flow deals with this situation.
          */
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
         NodeHelper.markDirty(this, DirtyBits.NODE_CONTENTS);
     }
 
@@ -456,7 +477,7 @@ public class Text extends Shape {
                 @Override public Object getBean() { return Text.this; }
                 @Override public String getName() { return "x"; }
                 @Override public void invalidated() {
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Text.this);
                 }
             };
         }
@@ -484,7 +505,7 @@ public class Text extends Shape {
                 @Override public Object getBean() { return Text.this; }
                 @Override public String getName() { return "y"; }
                 @Override public void invalidated() {
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Text.this);
                 }
             };
         }
@@ -593,7 +614,7 @@ public class Text extends Shape {
                        if (layout.setBoundsType(type)) {
                            needsTextLayout();
                        } else {
-                           impl_geomChanged();
+                           NodeHelper.geomChanged(Text.this);
                        }
                    }
             };
@@ -630,7 +651,7 @@ public class Text extends Shape {
                         if (layout.setWrapWidth((float)get())) {
                             needsTextLayout();
                         } else {
-                            impl_geomChanged();
+                            NodeHelper.geomChanged(Text.this);
                         }
                     }
                 }
@@ -776,22 +797,17 @@ public class Text extends Shape {
                 }
                 @Override public void invalidated() {
                     NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Text.this);
                 }
             };
         }
         return fontSmoothingType;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected final void impl_geomChanged() {
-        super.impl_geomChanged();
+    private void doGeomChanged() {
         if (attributes != null) {
             if (attributes.caretBinding != null) {
                 attributes.caretBinding.invalidate();
@@ -1055,14 +1071,7 @@ public class Text extends Shape {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    protected final Bounds impl_computeLayoutBounds() {
+    private Bounds doComputeLayoutBounds() {
         if (isSpan()) {
             BaseBounds bounds = getSpanBounds();
             double width = bounds.getWidth();
@@ -1074,7 +1083,7 @@ public class Text extends Shape {
             /* In Node the layout bounds is computed based in the geom
              * bounds and in Shape the geom bounds is computed based
              * on the shape (generated here in #configShape()) */
-            return super.impl_computeLayoutBounds();
+            return TextHelper.superComputeLayoutBounds(this);
         }
         BaseBounds bounds = getLogicalBounds();
         double x = bounds.getMinX() + getX();
@@ -1086,18 +1095,14 @@ public class Text extends Shape {
         return new BoundingBox(x, y, width, height);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public final BaseBounds impl_computeGeomBounds(BaseBounds bounds,
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds,
                                                    BaseTransform tx) {
         if (isSpan()) {
             if (ShapeHelper.getMode(this) != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
-                return super.impl_computeGeomBounds(bounds, tx);
+                return TextHelper.superComputeGeomBounds(this, bounds, tx);
             }
             TextLayout layout = getTextLayout();
             bounds = layout.getBounds(getTextSpan(), bounds);
@@ -1110,7 +1115,7 @@ public class Text extends Shape {
             return tx.transform(bounds, bounds);
         }
 
-        if (getBoundsType() == TextBoundsType.VISUAL) {
+       if (getBoundsType() == TextBoundsType.VISUAL) {
             if (getTextInternal().length() == 0 || ShapeHelper.getMode(this) == NGShape.Mode.EMPTY) {
                 return bounds.makeEmpty();
             }
@@ -1125,7 +1130,7 @@ public class Text extends Shape {
                 return tx.transform(bounds, bounds);
             } else {
                 /* Let the super class compute the bounds using shape */
-                return super.impl_computeGeomBounds(bounds, tx);
+                return TextHelper.superComputeGeomBounds(this, bounds, tx);
             }
         }
 
@@ -1154,9 +1159,8 @@ public class Text extends Shape {
 
         /* handle stroked text */
         if (ShapeHelper.getMode(this) != NGShape.Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
-            bounds =
-                super.impl_computeGeomBounds(bounds,
-                                             BaseTransform.IDENTITY_TRANSFORM);
+            bounds = TextHelper.superComputeGeomBounds(this, bounds,
+                    BaseTransform.IDENTITY_TRANSFORM);
         } else {
             TextLayout layout = getTextLayout();
             bounds = layout.getBounds(null, bounds);
@@ -1169,14 +1173,10 @@ public class Text extends Shape {
         return tx.transform(bounds, bounds);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended
-     * for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected final boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         /* Used for spans, regular text uses bounds based picking */
         double x = localX + getSpanBounds().getMinX();
         double y = localY + getSpanBounds().getMinY();
@@ -1450,7 +1450,7 @@ public class Text extends Shape {
     /*
      * Note: This method MUST only be called via its accessor method.
      */
-    private final void doUpdatePeer() {
+    private void doUpdatePeer() {
         updatePGText();
     }
 
@@ -1498,7 +1498,7 @@ public class Text extends Shape {
                         return StyleableProperties.TEXT_ORIGIN;
                     }
                     @Override public void invalidated() {
-                        impl_geomChanged();
+                        NodeHelper.geomChanged(Text.this);
                     }
                 };
             }
@@ -1522,7 +1522,7 @@ public class Text extends Shape {
                     @Override public void invalidated() {
                         NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
                         if (getBoundsType() == TextBoundsType.VISUAL) {
-                            impl_geomChanged();
+                            NodeHelper.geomChanged(Text.this);
                         }
                     }
                 };
@@ -1547,7 +1547,7 @@ public class Text extends Shape {
                     @Override public void invalidated() {
                         NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
                         if (getBoundsType() == TextBoundsType.VISUAL) {
-                            impl_geomChanged();
+                            NodeHelper.geomChanged(Text.this);
                         }
                     }
                 };

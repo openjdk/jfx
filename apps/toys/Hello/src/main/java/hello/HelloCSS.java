@@ -172,9 +172,6 @@ public class HelloCSS extends Application {
             super(100, 100);
         }
 
-        @Override public void impl_processCSS() {
-            super.impl_processCSS();
-        }
         StyleablePropertyFactory<TestNode> factory = new StyleablePropertyFactory<>(Rectangle.getClassCssMetaData());
         StyleableProperty<Duration> myDuration = factory.createStyleableDurationProperty(this, "myDuration", "-my-duration", (s) -> s.myDuration, Duration.millis(1000));
 

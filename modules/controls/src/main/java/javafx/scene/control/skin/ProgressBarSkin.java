@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -297,7 +298,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         // width might have changed so recreate our animation if needed
         if (isIndeterminate) {
             createIndeterminateTimeline();
-            if (getSkinnable().impl_isTreeVisible()) {
+            if (NodeHelper.isTreeVisible(getSkinnable())) {
                 indeterminateTransition.play();
             }
 

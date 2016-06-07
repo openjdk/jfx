@@ -158,6 +158,33 @@ public class Region extends Parent {
             public void doUpdatePeer(Node node) {
                 ((Region) node).doUpdatePeer();
             }
+
+            @Override
+            public Bounds doComputeLayoutBounds(Node node) {
+                return ((Region) node).doComputeLayoutBounds();
+            }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Region) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Region) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public void doNotifyLayoutBoundsChanged(Node node) {
+                ((Region) node).doNotifyLayoutBoundsChanged();
+            }
+
+            @Override
+            public void doPickNodeLocal(Node node, PickRay localPickRay,
+                    PickResultChooser result) {
+                ((Region) node).doPickNodeLocal(localPickRay, result);
+            }
         });
     }
 
@@ -683,7 +710,7 @@ public class Region extends Parent {
                 if (old == null || b == null || !old.getOutsets().equals(b.getOutsets())) {
                     // We have determined that the outsets of these two different background
                     // objects is different, and therefore the bounds have changed.
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Region.this);
                     insets.fireValueChanged();
                 }
 
@@ -740,7 +767,7 @@ public class Region extends Parent {
                 if (old == null || b == null || !old.getOutsets().equals(b.getOutsets())) {
                     // We have determined that the outsets of these two different border
                     // objects is different, and therefore the bounds have changed.
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Region.this);
                 }
                 if (old == null || b == null || !old.getInsets().equals(b.getInsets())) {
                     insets.fireValueChanged();
@@ -971,8 +998,8 @@ public class Region extends Parent {
             _width = value;
             cornersValid = false;
             boundingBox = null;
-            impl_layoutBoundsChanged();
-            impl_geomChanged();
+            NodeHelper.layoutBoundsChanged(this);
+            NodeHelper.geomChanged(this);
             NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
             setNeedsLayout(true);
             requestParentLayout();
@@ -1030,11 +1057,11 @@ public class Region extends Parent {
             // is now going to recompute the height eagerly. The cost of excessive and
             // unnecessary bounds changes, however, is relatively high.
             boundingBox = null;
-            // Note: although impl_geomChanged will usually also invalidate the
+            // Note: although NodeHelper.geomChanged will usually also invalidate the
             // layout bounds, that is not the case for Regions, and both must
             // be called separately.
-            impl_geomChanged();
-            impl_layoutBoundsChanged();
+            NodeHelper.geomChanged(this);
+            NodeHelper.layoutBoundsChanged(this);
             // We use "NODE_GEOMETRY" to mean that the bounds have changed and
             // need to be sync'd with the render tree
             NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
@@ -1349,7 +1376,7 @@ public class Region extends Parent {
         }
 
         @Override public void run() {
-            impl_geomChanged();
+            NodeHelper.geomChanged(Region.this);
             NodeHelper.markDirty(Region.this, DirtyBits.REGION_SHAPE);
         }
     };
@@ -1376,7 +1403,7 @@ public class Region extends Parent {
                     return StyleableProperties.SCALE_SHAPE;
                 }
                 @Override public void invalidated() {
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Region.this);
                     NodeHelper.markDirty(Region.this, DirtyBits.REGION_SHAPE);
                 }
             };
@@ -1405,7 +1432,7 @@ public class Region extends Parent {
                     return StyleableProperties.POSITION_SHAPE;
                 }
                 @Override public void invalidated() {
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Region.this);
                     NodeHelper.markDirty(Region.this, DirtyBits.REGION_SHAPE);
                 }
             };
@@ -2757,12 +2784,10 @@ public class Region extends Parent {
         return shape.contains((float)resX, (float)resY);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         // NOTE: This method only gets called if a quick check of bounds has already
         // occurred, so there is no need to test against bound again. We know that the
         // point (localX, localY) falls within the bounds of this node, now we need
@@ -3126,15 +3151,14 @@ public class Region extends Parent {
 
     /**
      * Some skins relying on this
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
-         double boundsDistance = impl_intersectsBounds(pickRay);
+    private void doPickNodeLocal(PickRay pickRay, PickResultChooser result) {
+         double boundsDistance = NodeHelper.intersectsBounds(this, pickRay);
 
         if (!Double.isNaN(boundsDistance) && ParentHelper.pickChildrenNode(this, pickRay, result)) {
-            impl_intersects(pickRay, result);
+            NodeHelper.intersects(this, pickRay, result);
         }
     }
 
@@ -3142,12 +3166,8 @@ public class Region extends Parent {
 
     /**
      * The layout bounds of this region: {@code 0, 0  width x height}
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    @Override protected final Bounds impl_computeLayoutBounds() {
+    private Bounds doComputeLayoutBounds() {
         if (boundingBox == null) {
             // we reuse the bounding box if the width and height haven't changed.
             boundingBox = new BoundingBox(0, 0, 0, getWidth(), getHeight(), 0);
@@ -3155,12 +3175,10 @@ public class Region extends Parent {
         return boundingBox;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override final protected void impl_notifyLayoutBoundsChanged() {
+    private void doNotifyLayoutBoundsChanged() {
         // override Node's default behavior of having a geometric bounds change
         // trigger a change in layoutBounds. For Resizable nodes, layoutBounds
         // is unrelated to geometric bounds.
@@ -3219,12 +3237,10 @@ public class Region extends Parent {
                 bbox[2], bbox[3], 0.0f);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         // Unlike Group, a Region has its own intrinsic geometric bounds, even if it has no children.
         // The bounds of the Region must take into account any backgrounds and borders and how
         // they are used to draw the Region. The geom bounds must always take into account
@@ -3268,12 +3284,12 @@ public class Region extends Parent {
             bx2 += Math.max(backgroundOutsets.getRight(), borderOutsets.getRight());
             by2 += Math.max(backgroundOutsets.getBottom(), borderOutsets.getBottom());
         }
-        // NOTE: Okay to call impl_computeGeomBounds with tx even in the 3D case
-        // since Parent.impl_computeGeomBounds does handle 3D correctly.
-        BaseBounds cb = super.impl_computeGeomBounds(bounds, tx);
+        // NOTE: Okay to call RegionHelper.superComputeGeomBounds with tx even in the 3D case
+        // since Parent's computeGeomBounds does handle 3D correctly.
+        BaseBounds cb = RegionHelper.superComputeGeomBounds(this, bounds, tx);
         /*
          * This is a work around for RT-7680. Parent returns invalid bounds from
-         * impl_computeGeomBounds when it has no children or if all its children
+         * computeGeomBoundsImpl when it has no children or if all its children
          * have invalid bounds. If RT-7680 were fixed, then we could omit this
          * first branch of the if and only use the else since the correct value
          * would be computed.

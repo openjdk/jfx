@@ -25,6 +25,10 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
@@ -78,6 +82,22 @@ public abstract class ShapeHelper extends NodeHelper {
         super.markDirtyImpl(node, dirtyBit);
     }
 
+    @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return shapeAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
+    @Override
+    protected boolean computeContainsImpl(Node node, double localX, double localY) {
+        return shapeAccessor.doComputeContains(node, localX, localY);
+    }
+
+    @Override
+    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+        return shapeAccessor.doProcessMXNode(node, alg, ctx);
+    }
+
     protected Paint cssGetFillInitialValueImpl(Shape shape) {
         return shapeAccessor.doCssGetFillInitialValue(shape);
     }
@@ -115,6 +135,9 @@ public abstract class ShapeHelper extends NodeHelper {
     public interface ShapeAccessor {
         void doUpdatePeer(Node node);
         void doMarkDirty(Node node, DirtyBits dirtyBit);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
+        boolean doComputeContains(Node node, double localX, double localY);
+        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
         Paint doCssGetFillInitialValue(Shape shape);
         Paint doCssGetStrokeInitialValue(Shape shape);
         NGShape.Mode getMode(Shape shape);

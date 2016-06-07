@@ -99,7 +99,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     }
 
     private void traverse(Event event, Node node, Direction dir) {
-        if (node.impl_traverse(dir)) {
+        if (NodeHelper.traverse(node, dir)) {
             event.consume();
         }
     }
@@ -281,11 +281,11 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
             Mnemonic mnemonic = mnemonicsList.get(i);
             Node currentNode = mnemonic.getNode();
 
-            if (firstMnemonics == null && (currentNode.impl_isTreeVisible() && !currentNode.isDisabled())) {
+            if (firstMnemonics == null && (NodeHelper.isTreeVisible(currentNode) && !currentNode.isDisabled())) {
                 firstMnemonics = mnemonic;
             }
 
-            if (currentNode.impl_isTreeVisible() && (currentNode.isFocusTraversable() && !currentNode.isDisabled())) {
+            if (NodeHelper.isTreeVisible(currentNode) && (currentNode.isFocusTraversable() && !currentNode.isDisabled())) {
                 if (firstNode == null) {
                     firstNode = currentNode;
                 } else {
@@ -390,7 +390,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                 if (mnemonicsList != null) {
                     for (int i = 0 ; i < mnemonicsList.size() ; i++) {
                         Node currentNode = (Node)mnemonicsList.get(i).getNode();
-                        currentNode.impl_setShowMnemonics(mnemonicsDisplayEnabled);
+                        NodeHelper.setShowMnemonics(currentNode, mnemonicsDisplayEnabled);
                     }
                 }
             }
