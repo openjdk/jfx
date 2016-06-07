@@ -29,7 +29,6 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.util.HashMap;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -209,7 +208,6 @@ public class Window implements EventTarget {
      * @return A list containing all windows that are currently showing.
      * @since 9
      */
-    @ReturnsUnmodifiableCollection
     public static ObservableList<Window> getWindows() {
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {

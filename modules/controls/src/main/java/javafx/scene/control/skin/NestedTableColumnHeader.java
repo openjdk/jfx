@@ -25,7 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.WeakListChangeListener;
@@ -268,7 +267,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      * Returns an unmodifiable list of the {@link TableColumnHeader} instances
      * that are children of this NestedTableColumnHeader.
      */
-    @ReturnsUnmodifiableCollection
     public final ObservableList<TableColumnHeader> getColumnHeaders() {
         if (columnHeaders == null) {
             columnHeaders = FXCollections.<TableColumnHeader>observableArrayList();

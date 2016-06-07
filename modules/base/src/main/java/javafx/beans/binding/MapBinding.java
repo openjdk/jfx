@@ -27,7 +27,6 @@ package javafx.beans.binding;
 
 import com.sun.javafx.binding.BindingHelperObserver;
 import com.sun.javafx.binding.MapExpressionHelper;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -225,7 +224,6 @@ public abstract class MapBinding<K, V> extends MapExpression<K, V> implements Bi
      * @return an empty {@code ObservableList}
      */
     @Override
-    @ReturnsUnmodifiableCollection
     public ObservableList<?> getDependencies() {
         return FXCollections.emptyObservableList();
     }

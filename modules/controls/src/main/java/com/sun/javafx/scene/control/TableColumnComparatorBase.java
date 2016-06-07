@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,7 +47,6 @@ public abstract class TableColumnComparatorBase<S,T> implements Comparator<S> {
         this.columns = new ArrayList<TableColumnBase>(columns);
     }
 
-    @ReturnsUnmodifiableCollection
     public List<? extends TableColumnBase> getColumns() {
         return Collections.unmodifiableList(columns);
     }

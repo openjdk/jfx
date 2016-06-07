@@ -27,7 +27,6 @@ package javafx.beans.binding;
 
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 
 /**
  * A {@code Binding} calculates a value that depends on one or more sources. The
@@ -84,7 +83,6 @@ public interface Binding<T> extends ObservableValue<T> {
      *
      * @return an unmodifiable {@code} ObservableList of the dependencies
      */
-    @ReturnsUnmodifiableCollection
     ObservableList<?> getDependencies();
 
     /**

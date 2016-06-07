@@ -28,7 +28,6 @@ package javafx.beans.binding;
 import javafx.beans.value.ObservableFloatValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.value.ObservableValue;
 
 /**
@@ -106,7 +105,6 @@ public abstract class FloatExpression extends NumberExpressionBase implements
                     }
 
                     @Override
-                    @ReturnsUnmodifiableCollection
                     public ObservableList<ObservableFloatValue> getDependencies() {
                         return FXCollections.singletonObservableList(value);
                     }
@@ -164,7 +162,6 @@ public abstract class FloatExpression extends NumberExpressionBase implements
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<ObservableValue<T>> getDependencies() {
                 return FXCollections.singletonObservableList(value);
             }

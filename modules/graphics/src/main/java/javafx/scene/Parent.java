@@ -40,7 +40,6 @@ import com.sun.javafx.util.TempState;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.VetoableListDecorator;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.css.Selector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
@@ -669,7 +668,6 @@ public abstract class Parent extends Node {
      *
      * @return read-only access to this parent's children ObservableList
      */
-    @ReturnsUnmodifiableCollection
     public ObservableList<Node> getChildrenUnmodifiable() {
         return unmodifiableChildren;
     }
@@ -680,7 +678,6 @@ public abstract class Parent extends Node {
      * @param <E> the type of the children nodes
      * @return list of all managed children in this parent
      */
-    @ReturnsUnmodifiableCollection
     protected <E extends Node> List<E> getManagedChildren() {
         if (unmodifiableManagedChildren == null) {
             unmodifiableManagedChildren = new ArrayList<Node>();

@@ -29,7 +29,6 @@ import javafx.beans.value.ObservableDoubleValue;
 import javafx.beans.value.ObservableNumberValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.value.ObservableValue;
 
 /**
@@ -107,7 +106,6 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
                     }
 
                     @Override
-                    @ReturnsUnmodifiableCollection
                     public ObservableList<ObservableDoubleValue> getDependencies() {
                         return FXCollections.singletonObservableList(value);
                     }
@@ -165,7 +163,6 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<ObservableValue<T>> getDependencies() {
                 return FXCollections.singletonObservableList(value);
             }

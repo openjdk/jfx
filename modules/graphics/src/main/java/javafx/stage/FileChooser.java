@@ -40,7 +40,6 @@ import javafx.collections.ObservableList;
 import com.sun.glass.ui.CommonDialogs;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.Toolkit;
 
@@ -162,7 +161,6 @@ public final class FileChooser {
          *
          * @return the file name extensions
          */
-        @ReturnsUnmodifiableCollection
         public List<String> getExtensions() {
             return extensions;
         }
@@ -367,7 +365,6 @@ public final class FileChooser {
      * @param ownerWindow the owner window of the displayed file dialog
      * @return the selected files or {@code null} if no file has been selected
      */
-    @ReturnsUnmodifiableCollection
     public List<File> showOpenMultipleDialog(final Window ownerWindow) {
         final List<File> selectedFiles =
                 showDialog(ownerWindow, FileChooserType.OPEN_MULTIPLE);

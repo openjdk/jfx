@@ -27,7 +27,6 @@ package javafx.scene.paint;
 
 import java.util.List;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.scene.paint.GradientUtils;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.NamedArg;
@@ -179,7 +178,6 @@ public final class RadialGradient extends Paint {
      *
      * @defaultValue empty
      */
-    @ReturnsUnmodifiableCollection
     public final List<Stop> getStops() {
         return stops;
     }

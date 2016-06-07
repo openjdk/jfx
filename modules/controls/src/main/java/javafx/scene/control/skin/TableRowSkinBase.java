@@ -31,7 +31,6 @@ import java.lang.ref.WeakReference;
 import java.util.*;
 
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -227,7 +226,6 @@ public abstract class TableRowSkinBase<T,
     /**
      * Returns an unmodifiable list containing the currently visible leaf columns.
      */
-    @ReturnsUnmodifiableCollection
     protected abstract ObservableList<? extends TableColumnBase/*<T,?>*/> getVisibleLeafColumns();
 
 

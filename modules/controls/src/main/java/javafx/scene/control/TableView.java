@@ -74,7 +74,6 @@ import javafx.util.Callback;
 
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.css.converter.SizeConverter;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
@@ -1485,7 +1484,6 @@ public class TableView<S> extends Control {
     /**
      * Returns an unmodifiable list containing the currently visible leaf columns.
      */
-    @ReturnsUnmodifiableCollection
     public ObservableList<TableColumn<S,?>> getVisibleLeafColumns() {
         return unmodifiableVisibleLeafColumns;
     }

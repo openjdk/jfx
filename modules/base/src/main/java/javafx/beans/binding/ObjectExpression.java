@@ -30,7 +30,6 @@ import javafx.beans.value.ObservableObjectValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import java.util.Locale;
 
 /**
@@ -87,7 +86,6 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
                     }
 
                     @Override
-                    @ReturnsUnmodifiableCollection
                     public ObservableList<ObservableObjectValue<T>> getDependencies() {
                         return FXCollections.singletonObservableList(value);
                     }

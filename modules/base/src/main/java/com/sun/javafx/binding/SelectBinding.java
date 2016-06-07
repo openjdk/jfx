@@ -42,7 +42,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.property.JavaBeanAccessHelper;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
@@ -103,7 +102,6 @@ public class SelectBinding {
 
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             return helper.getDependencies();
         }
@@ -154,7 +152,6 @@ public class SelectBinding {
         }
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             return helper.getDependencies();
         }
@@ -205,7 +202,6 @@ public class SelectBinding {
         }
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             return helper.getDependencies();
         }
@@ -256,7 +252,6 @@ public class SelectBinding {
         }
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             return helper.getDependencies();
         }
@@ -307,7 +302,6 @@ public class SelectBinding {
         }
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             return helper.getDependencies();
         }
@@ -358,7 +352,6 @@ public class SelectBinding {
         }
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             return helper.getDependencies();
         }
@@ -405,7 +398,6 @@ public class SelectBinding {
         }
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             return helper.getDependencies();
         }
@@ -546,7 +538,6 @@ public class SelectBinding {
             }
         }
 
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             if (dependencies == null) {
                 dependencies = FXCollections.observableArrayList();
