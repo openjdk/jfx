@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control;
 
 import com.sun.javafx.scene.layout.RegionHelper;
 import com.sun.javafx.util.Utils;
+import javafx.beans.property.StringProperty;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 
@@ -54,6 +55,10 @@ public class ControlHelper extends RegionHelper {
         ((ControlHelper) getHelper(node)).superProcessCSSImpl(node);
     }
 
+    public static StringProperty skinClassNameProperty(Control control) {
+        return controlAccessor.skinClassNameProperty(control);
+    }
+
     void superProcessCSSImpl(Node node) {
         super.processCSSImpl(node);
     }
@@ -73,6 +78,7 @@ public class ControlHelper extends RegionHelper {
 
     public interface ControlAccessor {
         void doProcessCSS(Node node);
+        StringProperty skinClassNameProperty(Control control);
     }
 
 }

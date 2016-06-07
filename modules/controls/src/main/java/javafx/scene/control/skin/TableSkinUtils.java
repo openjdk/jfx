@@ -25,6 +25,7 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.TreeTableViewBackingList;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.BooleanProperty;
@@ -143,7 +144,7 @@ class TableSkinUtils {
             maxWidth = Math.max(maxWidth, tc.getWidth());
         }
 
-        tc.impl_setWidth(maxWidth);
+        TableColumnBaseHelper.setWidth(tc, maxWidth);
     }
 
 
@@ -218,7 +219,7 @@ class TableSkinUtils {
             maxWidth = Math.max(maxWidth, tc.getWidth());
         }
 
-        tc.impl_setWidth(maxWidth);
+        TableColumnBaseHelper.setWidth(tc, maxWidth);
     }
 
     public static ObjectProperty<Callback<ResizeFeaturesBase,Boolean>> columnResizePolicyProperty(TableViewSkinBase<?,?,?,?,?> tableSkin) {

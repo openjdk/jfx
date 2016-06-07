@@ -89,10 +89,6 @@ public class TextAreaTest {
         assertEquals(TextArea.DEFAULT_PREF_ROW_COUNT, 10);
     }
 
-    @Test public void checkDefaultParagraphCapacity() {
-        assertEquals(TextArea.DEFAULT_PARAGRAPH_CAPACITY, 32);
-    }
-
     @Test public void checkDefaultWrapText() {
         assertFalse(txtArea.isWrapText());
     }

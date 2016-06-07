@@ -184,8 +184,7 @@ final public class WebEngine {
 
     private Debugger debugger = new DebuggerImpl();
 
-    @Deprecated
-    public Debugger impl_getDebugger(){
+    Debugger getDebugger(){
         return debugger;
     }
 

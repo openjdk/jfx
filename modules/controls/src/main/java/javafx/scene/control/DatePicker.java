@@ -475,6 +475,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

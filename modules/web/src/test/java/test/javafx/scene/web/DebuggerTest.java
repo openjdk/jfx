@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.scene.web.Debugger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javafx.scene.web.WebEngineShim;
 import javafx.util.Callback;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -40,7 +41,7 @@ public class DebuggerTest extends TestBase {
     @Test
     public void testSimpleMessageExchange() {
         submit(() -> {
-            Debugger debugger = getEngine().impl_getDebugger();
+            Debugger debugger = WebEngineShim.getDebugger(getEngine());
 
             final List<String> callbackMessages = new ArrayList<String>();
             debugger.setMessageCallback(message -> {
@@ -59,7 +60,7 @@ public class DebuggerTest extends TestBase {
     @Test
     public void testEnabledProperty() {
         submit(() -> {
-            Debugger debugger = getEngine().impl_getDebugger();
+            Debugger debugger = WebEngineShim.getDebugger(getEngine());
 
             assertEquals(false, debugger.isEnabled());
 
@@ -82,7 +83,7 @@ public class DebuggerTest extends TestBase {
     @Test
     public void testMessageCallbackProperty() {
         submit(() -> {
-            Debugger debugger = getEngine().impl_getDebugger();
+            Debugger debugger = WebEngineShim.getDebugger(getEngine());
             Callback<String,Void> callback = new Callback<String,Void>() {
                 public Void call(String message) {
                     return null;
@@ -102,7 +103,7 @@ public class DebuggerTest extends TestBase {
     @Test
     public void testSendMessageIllegalStateException() {
         submit(() -> {
-            Debugger debugger = getEngine().impl_getDebugger();
+            Debugger debugger = WebEngineShim.getDebugger(getEngine());
             try {
                 debugger.sendMessage("foo");
                 fail("IllegalStateException expected but not thrown");
@@ -113,7 +114,7 @@ public class DebuggerTest extends TestBase {
     @Test
     public void testSendMessageNullPointerException() {
         submit(() -> {
-            Debugger debugger = getEngine().impl_getDebugger();
+            Debugger debugger = WebEngineShim.getDebugger(getEngine());
             debugger.setEnabled(true);
             try {
                 debugger.sendMessage(null);
@@ -124,7 +125,7 @@ public class DebuggerTest extends TestBase {
 
     @Test
     public void testThreadCheck() {
-        Debugger debugger = getEngine().impl_getDebugger();
+        Debugger debugger = WebEngineShim.getDebugger(getEngine());
 
         try {
             debugger.isEnabled();
@@ -159,7 +160,7 @@ public class DebuggerTest extends TestBase {
     @After
     public void disableDebug() {
         submit(() -> {
-            getEngine().impl_getDebugger().setEnabled(false);
+            WebEngineShim.getDebugger(getEngine()).setEnabled(false);
         });
     }
 }

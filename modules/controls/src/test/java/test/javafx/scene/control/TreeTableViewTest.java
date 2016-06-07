@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import static com.sun.xml.internal.fastinfoset.alphabet.BuiltInRestrictedAlphabets.table;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
@@ -2722,7 +2723,7 @@ public class TreeTableViewTest {
         StageLoader sl = new StageLoader(table);
 
         // resize the last column
-        last.impl_setWidth(400);
+        TableColumnBaseHelper.setWidth(last, 400);
         assertEquals(400, last.getWidth(), 0.0);
 
         // hide the first column

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2667,11 +2667,8 @@ public final class MediaPlayer {
      * finished with it or a massive memory leak will occur.
      *
      * @return the current frame to be used for rendering, or null if not in a render cycle
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public VideoDataBuffer impl_getLatestFrame() {
+    VideoDataBuffer getLatestFrame() {
         synchronized (renderLock) {
             if (null != currentRenderFrame) {
                 currentRenderFrame.holdFrame();

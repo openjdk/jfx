@@ -27,6 +27,7 @@ package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -393,7 +394,7 @@ public class TableColumnHeader extends Region {
             double width = getNestedColumnHeader().prefWidth(height);
 
             if (getTableColumn() != null) {
-                getTableColumn().impl_setWidth(width);
+                TableColumnBaseHelper.setWidth(getTableColumn(), width);
             }
 
             return width;

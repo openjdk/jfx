@@ -29,7 +29,7 @@ import java.net.URL;
 
 /*
  * An element in a parse trace, as returned by
- * {@link javafx.fxml.FXMLLoader#impl_getParseTrace()}.
+ * {@link javafx.fxml.FXMLLoader#getParseTrace()}.
  *
  * @since JavaFX 2.1
  */

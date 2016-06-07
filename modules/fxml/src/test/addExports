@@ -10,5 +10,6 @@
 -XaddExports:javafx.graphics/com.sun.prism=ALL-UNNAMED
 -XaddExports:javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED
 #
+-XaddExports:javafx.fxml/com.sun.javafx.fxml=ALL-UNNAMED
 -XaddExports:javafx.fxml/com.sun.javafx.fxml.builder=ALL-UNNAMED
 -XaddExports:javafx.fxml/com.sun.javafx.fxml.expression=ALL-UNNAMED

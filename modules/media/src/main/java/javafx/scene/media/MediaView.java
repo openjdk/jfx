@@ -1002,33 +1002,22 @@ public class MediaView extends Node {
     private int decodedFrameCount;
     private int renderedFrameCount;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_perfReset() {
+    void perfReset() {
         decodedFrameCount = 0;
         renderedFrameCount = 0;
     }
 
     /**
      * @return number of frames that have been submitted for rendering
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public int impl_perfGetDecodedFrameCount() {
+    int perfGetDecodedFrameCount() {
         return decodedFrameCount;
     }
 
     /**
      * @return number of frames that have been rendered
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public int impl_perfGetRenderedFrameCount() {
+    int perfGetRenderedFrameCount() {
         return renderedFrameCount;
     }
 

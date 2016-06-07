@@ -82,6 +82,7 @@ import com.sun.javafx.fxml.expression.Expression;
 import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
 import static com.sun.javafx.FXPermissions.MODIFY_FXML_CLASS_LOADER_PERMISSION;
+import com.sun.javafx.fxml.FXMLLoaderHelper;
 import java.net.MalformedURLException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -306,7 +307,7 @@ public class FXMLLoader {
                     throw constructLoadException("Cannot bind to builder property.");
                 }
 
-                if (!impl_isStaticLoad()) {
+                if (!isStaticLoad()) {
                     value = value.substring(BINDING_EXPRESSION_PREFIX.length(),
                             value.length() - 1);
                     expression = Expression.valueOf(value);
@@ -1143,7 +1144,7 @@ public class FXMLLoader {
                         FXMLLoader.this.location.toExternalForm()));
             }
             fxmlLoader.setClassLoader(cl);
-            fxmlLoader.impl_setStaticLoad(staticLoad);
+            fxmlLoader.setStaticLoad(staticLoad);
 
             Object value = fxmlLoader.loadImpl(callerClass);
 
@@ -2045,6 +2046,13 @@ public class FXMLLoader {
                 return System.getProperty("javafx.version");
             }
         });
+
+        FXMLLoaderHelper.setFXMLLoaderAccessor(new FXMLLoaderHelper.FXMLLoaderAccessor() {
+            @Override
+            public void setStaticLoad(FXMLLoader fxmlLoader, boolean staticLoad) {
+                fxmlLoader.setStaticLoad(staticLoad);
+            }
+        });
     }
 
     /**
@@ -2353,26 +2361,20 @@ public class FXMLLoader {
         clearImports();
     }
 
-    /**
+    /*
      * Returns the static load flag.
-     *
-     * @treatAsPrivate
-     * @deprecated
      */
-    public boolean impl_isStaticLoad() {
+    boolean isStaticLoad() {
         // SB-dependency: RT-21226 has been filed to track this
         return staticLoad;
     }
 
-    /**
+    /*
      * Sets the static load flag.
      *
      * @param staticLoad
-     *
-     * @treatAsPrivate
-     * @deprecated
      */
-    public void impl_setStaticLoad(boolean staticLoad) {
+    void setStaticLoad(boolean staticLoad) {
         // SB-dependency: RT-21226 has been filed to track this
         this.staticLoad = staticLoad;
     }
@@ -2613,7 +2615,7 @@ public class FXMLLoader {
 
             if (loader.current != null) {
                 messageBuilder.append(":");
-                messageBuilder.append(loader.impl_getLineNumber());
+                messageBuilder.append(loader.getLineNumber());
             }
 
             messageBuilder.append("\n");
@@ -2623,30 +2625,21 @@ public class FXMLLoader {
 
     /**
      * Returns the current line number.
-     *
-     * @treatAsPrivate
-     * @deprecated
-     * @since JavaFX 2.2
      */
-    public int impl_getLineNumber() {
+    int getLineNumber() {
         return xmlStreamReader.getLocation().getLineNumber();
     }
 
     /**
      * Returns the current parse trace.
-     *
-     * @treatAsPrivate
-     * @deprecated
-     * @since JavaFX 2.1
      */
-    // SB-dependency: RT-21475 has been filed to track this
-    public ParseTraceElement[] impl_getParseTrace() {
+    ParseTraceElement[] getParseTrace() {
         ParseTraceElement[] parseTrace = new ParseTraceElement[loaders.size()];
 
         int i = 0;
         for (FXMLLoader loader : loaders) {
             parseTrace[i++] = new ParseTraceElement(loader.location, (loader.current != null) ?
-                loader.impl_getLineNumber() : -1);
+                loader.getLineNumber() : -1);
         }
 
         return parseTrace;

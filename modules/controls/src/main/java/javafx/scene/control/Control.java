@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,6 +87,10 @@ public abstract class Control extends Region implements Skinnable {
             @Override
             public void doProcessCSS(Node node) {
                 ((Control) node).doProcessCSS();
+            }
+            @Override
+            public StringProperty skinClassNameProperty(Control control) {
+                return control.skinClassNameProperty();
             }
         });
 
@@ -655,11 +659,7 @@ public abstract class Control extends Region implements Skinnable {
     private String currentSkinClassName = null;
     private StringProperty skinClassName;
 
-    /**
-     * @treatAsPrivate
-     * @since JavaFX 2.1
-     */
-    @Deprecated protected StringProperty skinClassNameProperty() {
+    StringProperty skinClassNameProperty() {
         if (skinClassName == null) {
             skinClassName = new StyleableStringProperty() {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,22 +23,37 @@
  * questions.
  */
 
-module javafx.controls {
-    requires public javafx.base;
-    requires public javafx.graphics;
+package com.sun.javafx.fxml;
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.skin;
+import com.sun.javafx.util.Utils;
+import javafx.fxml.FXMLLoader;
 
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+/**
+ * Used to access internal FXMLLoader methods.
+ */
+public class FXMLLoaderHelper {
+    private static FXMLLoaderAccessor fxmlLoaderAccessor;
+
+    static {
+        Utils.forceInit(FXMLLoader.class);
+    }
+
+    private FXMLLoaderHelper() {
+    }
+
+    public static void setStaticLoad(FXMLLoader fxmlLoader, boolean staticLoad) {
+        fxmlLoaderAccessor.setStaticLoad(fxmlLoader, staticLoad);
+    }
+
+    public static void setFXMLLoaderAccessor(final FXMLLoaderAccessor newAccessor) {
+        if (fxmlLoaderAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        fxmlLoaderAccessor = newAccessor;
+    }
+
+    public interface FXMLLoaderAccessor {
+        void setStaticLoad(FXMLLoader fxmlLoader, boolean staticLoad);
+    }
 }
