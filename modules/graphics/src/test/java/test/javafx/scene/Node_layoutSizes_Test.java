@@ -223,8 +223,8 @@ public class Node_layoutSizes_Test {
             return theInstance;
         }
 
-        public static void initHelper(SpecialRect cssBridge) {
-            setHelper(cssBridge, getInstance());
+        public static void initHelper(SpecialRect specialRect) {
+            setHelper(specialRect, getInstance());
         }
 
         @Override
