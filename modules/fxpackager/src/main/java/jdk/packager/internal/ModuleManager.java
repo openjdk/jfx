@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.packager;
+package jdk.packager.internal;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,13 +38,13 @@ import java.util.zip.ZipInputStream;
 
 
 public final class ModuleManager {
-    private List<String> FFolders = new ArrayList();
+    private List<String> folders = new ArrayList();
 
     public enum SearchType {UnnamedJar, ModularJar, Jmod, ExplodedModule}
 
-    public ModuleManager(String Folders) {
+    public ModuleManager(String folders) {
         super();
-        String lfolders = Folders.replaceAll("^\"|\"$", "");
+        String lfolders = folders.replaceAll("^\"|\"$", "");
         List<Path> paths = new ArrayList();
 
         for (String folder : Arrays.asList(lfolders.split(File.pathSeparator))) {
@@ -62,7 +62,7 @@ public final class ModuleManager {
 
     private void initialize(List<Path> Paths) {
         for (Path path : Paths) {
-            FFolders.add(path.toString().replaceAll("^\"|\"$", ""));
+            folders.add(path.toString().replaceAll("^\"|\"$", ""));
         }
     }
 
@@ -74,7 +74,7 @@ public final class ModuleManager {
     public List<Module> getModules(EnumSet<SearchType> Search) {
         List<Module> result = new ArrayList();
 
-        for (String folder : FFolders) {
+        for (String folder : folders) {
             result.addAll(getAllModulesInDirectory(folder, Search));
         }
 

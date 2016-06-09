@@ -33,7 +33,7 @@ public final class Bundler {
      */
     @Deprecated
     public enum BundleType {
-        NONE, IMAGE, INSTALLER, ALL, JNLP
+        NONE, IMAGE, INSTALLER, ALL, JNLP, NATIVE
     }
 
 }

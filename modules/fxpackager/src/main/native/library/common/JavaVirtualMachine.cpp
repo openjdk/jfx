@@ -380,8 +380,8 @@ bool JavaVirtualMachine::StartJVM() {
 #ifdef DEBUG
     if (package.Debugging() == dsJava) {
         options.AppendValue(_T("-Xdebug"), _T(""));
-        options.AppendValue(_T("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=localhost:8000"), _T(""));
-        platform.ShowMessage(_T("localhost:8000"));
+        options.AppendValue(_T("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=localhost:5005"), _T(""));
+        platform.ShowMessage(_T("localhost:5005"));
     }
 #endif //DEBUG
 
@@ -404,8 +404,9 @@ bool JavaVirtualMachine::StartJVM() {
     }
 
     TString mainClassName = package.GetMainClassName();
+    TString mainModule = package.GetMainModule();
 
-    if (mainClassName.empty() == true) {
+    if (mainClassName.empty() == true && mainModule.empty() == true) {
         Messages& messages = Messages::GetInstance();
         platform.ShowMessage(messages.GetMessage(NO_MAIN_CLASS_SPECIFIED));
         return false;
@@ -478,7 +479,14 @@ bool JavaVirtualMachine::StartJVM() {
     if (package.HasSplashScreen() == true) {
         options.AppendValue(TString(_T("-splash:")) + package.GetSplashScreenFileName(), _T(""));
     }
-    options.AppendValue(Helpers::ConvertJavaPathToId(mainClassName), _T(""));
+
+    if (mainModule.empty() == true) {
+        options.AppendValue(Helpers::ConvertJavaPathToId(mainClassName), _T(""));
+    }
+    else {
+        options.AppendValue(_T("-m"));
+        options.AppendValue(mainModule);
+    }
 
 #ifdef MAC
     // Mac adds a ProcessSerialNumber to args when launched from .app

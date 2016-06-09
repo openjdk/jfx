@@ -37,6 +37,9 @@ import java.util.ResourceBundle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import jdk.packager.internal.JLinkBundlerHelper;
+
+
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 /**
@@ -61,10 +64,20 @@ public abstract class AbstractImageBundler extends AbstractBundler {
             }
         }
 
-        if (MAIN_JAR.fetchFrom(p) == null) {
-            throw new ConfigException(
-                    I18N.getString("error.no-application-jar"),
-                    I18N.getString("error.no-application-jar.advice"));
+        boolean hasMainJar = MAIN_JAR.fetchFrom(p) != null;
+        boolean hasMainModule = JLinkBundlerHelper.MAIN_MODULE.fetchFrom(p) != null;
+
+        if (!hasMainJar && !hasMainModule) {
+            if (!hasMainJar) {
+                throw new ConfigException(
+                        I18N.getString("error.no-application-jar"),
+                        I18N.getString("error.no-application-jar.advice"));
+            }
+            else {
+                throw new ConfigException(
+                        I18N.getString("error.no-main-module"),
+                        I18N.getString("error.no-main-module.advice"));
+            }
         }
 
         if (ENABLE_APP_CDS.fetchFrom(p)) {
@@ -121,6 +134,4 @@ public abstract class AbstractImageBundler extends AbstractBundler {
             }
         }
     }
-
-
 }

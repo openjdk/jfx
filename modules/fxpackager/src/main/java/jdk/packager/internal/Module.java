@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.packager;
+package jdk.packager.internal;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,27 +36,16 @@ import java.util.zip.ZipInputStream;
 
 
 public final class Module {
-    private String FFileName;
-    private ModuleType FModuleType;
+    private String filename;
+    private ModuleType moduleType;
 
-    private enum JarType {Unknown, UnnamedJar, ModularJar}
-
-
+    public enum JarType {All, UnnamedJar, ModularJar}
     public enum ModuleType {Unknown, UnnamedJar, ModularJar, Jmod, ExplodedModule}
 
     public Module(File AFile) {
         super();
-        FFileName = AFile.getPath();
-        FModuleType = getModuleType(AFile);
-    }
-
-    public String getFileName() {
-        return FFileName;
-    }
-
-    public String getModulePath() {
-        File file = new File(getFileName());
-        return file.getParent();
+        filename = AFile.getPath();
+        moduleType = getModuleType(AFile);
     }
 
     public String getModuleName() {
@@ -64,23 +53,12 @@ public final class Module {
         return getFileWithoutExtension(file.getName());
     }
 
-    public ModuleType getModuleType() {
-        return FModuleType;
+    public String getFileName() {
+        return filename;
     }
 
-    public List<Module> getRequiredModules() {
-        List<Module> result = new ArrayList();
-
-        List<String> files = new ArrayList();
-        files.add(getFileName());
-        Collection<String> detectedModules = JDepHelper.calculateModules(files, null);
-
-        for (String filename : detectedModules) {
-            Module module = new Module(new File(filename));
-            result.add(module);
-        }
-
-        return result;
+    public ModuleType getModuleType() {
+        return moduleType;
     }
 
     private static ModuleType getModuleType(File AFile) {
@@ -114,7 +92,7 @@ public final class Module {
     }
 
     private static JarType isModularJar(String FileName) {
-        JarType result = JarType.Unknown;
+        JarType result = JarType.All;
         List<String> classNames = new ArrayList<String>();
 
         try {

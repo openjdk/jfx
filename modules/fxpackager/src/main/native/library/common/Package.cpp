@@ -86,6 +86,9 @@ void Package::Initialize() {
     FBootFields->FMainJar = FilePath::IncludeTrailingSeparater(GetPackageAppDirectory()) +
                             FilePath::FixPathForPlatform(FBootFields->FMainJar);
 
+    // Main Module.
+    config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[CONFIG_MAINMODULE_KEY], FBootFields->FMainModule);
+
     // Classpath.
     // 1. If the provided class path contains main jar then only use provided class path.
     // 2. If class path provided by config file is empty then add main jar.
@@ -574,6 +577,11 @@ TString Package::GetModulePath() {
 TString Package::GetMainJar() {
     assert(FBootFields != NULL);
     return FBootFields->FMainJar;
+}
+
+TString Package::GetMainModule() {
+    assert(FBootFields != NULL);
+    return FBootFields->FMainModule;
 }
 
 TString Package::GetMainClassName() {

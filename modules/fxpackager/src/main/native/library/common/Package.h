@@ -60,6 +60,7 @@ public:
     TString FClassPath;
     TString FModulePath;
     TString FMainJar;
+    TString FMainModule;
     TString FMainClassName;
     bool FIsRuntimeBundled;
     TString FJVMRuntimeDirectory;
@@ -117,6 +118,7 @@ public:
     OrderedMap<TString, TString> GetJVMUserArgOverrides();
     void SetJVMUserArgOverrides(OrderedMap<TString, TString> Value);
     OrderedMap<TString, TString> GetJVMUserArgs();
+    TString GetMainModule();
 
     std::list<TString> GetArgs();
 

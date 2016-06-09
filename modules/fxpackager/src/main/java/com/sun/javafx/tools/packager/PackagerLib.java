@@ -314,26 +314,41 @@ public class PackagerLib {
 
         try {
             BundleParams bp = deployParams.getBundleParams();
-            if (bp != null) {
-                if (deployParams.getBundleType().equals(BundleType.ALL) && deployParams.getTargetFormat() == null) {
-                    // generate everything.
+            if (bp != null && deployParams.getTargetFormat() == null) {
+                switch(deployParams.getBundleType()) {
+                    case NATIVE: {
+                        // Generate disk images.
+                        generateNativeBundles(new File(deployParams.outdir, "bundles"),
+                                              bp.getBundleParamsAsMap(),
+                                              BundleType.IMAGE.toString(),
+                                              deployParams.getTargetFormat());
 
-                    // generate JNLP in the main directory
-                    generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), BundleType.JNLP.toString(), "jnlp");
-                    // generate the rest in .../bundles
+                        //TODO generate installers referencing disk image
+                        // For now just generate all images.
+                        generateNativeBundles(new File(deployParams.outdir, "bundles"),
+                                              bp.getBundleParamsAsMap(),
+                                              BundleType.INSTALLER.toString(),
+                                              deployParams.getTargetFormat());
+                        break;
+                    }
 
-                    // generate disk images
-                    generateNativeBundles(new File(deployParams.outdir, "bundles"), bp.getBundleParamsAsMap(), BundleType.IMAGE.toString(), deployParams.getTargetFormat());
+                    case JNLP:
+                    case NONE: {
+                        // Old school default.  Just generate JNLP.
+                        generateNativeBundles(deployParams.outdir,
+                                              bp.getBundleParamsAsMap(),
+                                              BundleType.JNLP.toString(),
+                                              "jnlp");
+                        break;
+                    }
 
-                    //TODO generate installers referencing disk image
-                    // for now just generate all images
-                    generateNativeBundles(new File(deployParams.outdir, "bundles"), bp.getBundleParamsAsMap(), BundleType.INSTALLER.toString(), deployParams.getTargetFormat());
-                } else if (deployParams.getBundleType().equals(BundleType.NONE) && deployParams.getTargetFormat() == null) {
-                    // old school default.  Just generate JNLP.
-                    generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), BundleType.JNLP.toString(), "jnlp");
-                } else {
-                    // a specefic output format, just generate that.
-                    generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType().toString(), deployParams.getTargetFormat());
+                    default: {
+                        // A specefic output format, just generate that.
+                        generateNativeBundles(deployParams.outdir,
+                                              bp.getBundleParamsAsMap(),
+                                              deployParams.getBundleType().toString(),
+                                              deployParams.getTargetFormat());
+                    }
                 }
             }
         } catch (PackagerException ex) {

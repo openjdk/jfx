@@ -29,7 +29,6 @@ import com.oracle.tools.packager.AbstractImageBundler;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
-import com.oracle.tools.packager.JLinkBundlerHelper;
 import com.oracle.tools.packager.JreUtils;
 import com.oracle.tools.packager.JreUtils.Rule;
 import com.oracle.tools.packager.Log;
@@ -39,6 +38,8 @@ import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 import jdk.packager.builders.linux.LinuxAppImageBuilder;
+
+import jdk.packager.internal.JLinkBundlerHelper;
 
 import java.io.File;
 import java.io.IOException;
@@ -194,6 +195,10 @@ public class LinuxAppBundler extends AbstractImageBundler {
 
             return rootDirectory;
         } catch (IOException ex) {
+            Log.info("Exception: "+ex);
+            Log.debug(ex);
+            return null;
+        } catch (Exception ex) {
             Log.info("Exception: "+ex);
             Log.debug(ex);
             return null;

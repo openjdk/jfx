@@ -36,7 +36,9 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import static com.oracle.tools.packager.JLinkBundlerHelper.*;
+
+import jdk.packager.internal.JLinkBundlerHelper;
+
 
 public class BundleParams {
 
@@ -169,33 +171,32 @@ public class BundleParams {
     }
 
     public void setAddModules(Set<String> addModules) {
-        putUnlessNullOrEmpty(ADD_MODULES.getID(), addModules);
+        putUnlessNullOrEmpty(JLinkBundlerHelper.ADD_MODULES.getID(), addModules);
     }
 
     public void setLimitModules(Set<String> limitModules)  {
-        putUnlessNullOrEmpty(LIMIT_MODULES.getID(), limitModules);
+        putUnlessNullOrEmpty(JLinkBundlerHelper.LIMIT_MODULES.getID(), limitModules);
     }
 
-    public void setDetectModules(Boolean detectModules) {
-        putUnlessNull(DETECT_MODULES.getID(), detectModules);
+    public void setStripNativeCommands(boolean value) {
+        putUnlessNull(JLinkBundlerHelper.STRIP_NATIVE_COMMANDS.getID(), value);
     }
 
-    public void setDetectJreModules(Boolean value) {
-        putUnlessNull(DETECT_JRE_MODULES.getID(), value);
+    public void setDetectMods(boolean value) {
+        putUnlessNull(JLinkBundlerHelper.DETECT_MODS.getID(), value);
     }
 
-    public void setStripExecutables(Boolean value) {
-        putUnlessNull(STRIP_NATIVE_COMMANDS.getID(), value);
+    public void setSrcDir(File value) {
+        //putUnlessNull(JDK_MODULE_PATH.getID(), appModulePath); //TODO remove?
     }
 
-    public void setJdkModulePath(String appModulePath) {
-        putUnlessNull(JDK_MODULE_PATH.getID(), appModulePath);
+    public void setModulePath(String value) {
+        putUnlessNull(JLinkBundlerHelper.MODULE_PATH.getID(), value);
     }
 
-    public void setModulePath(String linkModulePath) {
-        putUnlessNull(MODULE_PATH.getID(), linkModulePath);
+    public void setMainModule(String value) {
+        putUnlessNull(JLinkBundlerHelper.MAIN_MODULE.getID(), value);
     }
-
 
     public String getApplicationID() {
         return fetchParam(IDENTIFIER);

@@ -193,10 +193,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             for (String s : app.getLimitModule()) {
                 deployParams.addLimitModule(s);
             }
-            deployParams.setDetectModules(app.getDetectModules());
-            deployParams.setDetectJreModules(app.getDetectJreModules());
-            deployParams.setJdkModulePath(app.getJdkModulePath());
-            deployParams.setStripExecutables(app.getStripExecutables());
+            deployParams.setStripNativeCommands(app.getStripExecutables());
         }
 
         if (appInfo != null) {

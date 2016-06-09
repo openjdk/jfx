@@ -26,10 +26,11 @@
 package jdk.packager.builders;
 
 
-import com.oracle.tools.packager.JLinkBundlerHelper;
+import jdk.packager.internal.JLinkBundlerHelper;
 import com.oracle.tools.packager.RelativeFileSet;
 
 import com.oracle.tools.packager.Log;
+import jdk.packager.internal.Module;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -50,6 +51,7 @@ import java.util.Set;
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.StandardBundlerParam.ARGUMENTS;
 import static com.oracle.tools.packager.StandardBundlerParam.USER_JVM_OPTIONS;
+import java.util.ArrayList;
 
 
 public abstract class AbstractAppImageBuilder {
@@ -63,10 +65,12 @@ public abstract class AbstractAppImageBuilder {
 
     private Map<String, Object> properties;
     private Path root;
+    protected List<String> excludeFileList = new ArrayList<>();
 
     public AbstractAppImageBuilder(Map<String, Object> properties, Path root) throws IOException {
         this.properties = properties;
         this.root = root;
+        excludeFileList.add(".*\\.diz");
     }
 
     public abstract InputStream getResourceAsStream(String name);
@@ -81,7 +85,17 @@ public abstract class AbstractAppImageBuilder {
     }
 
     public String getExcludeFileList() {
-        return "*diz";
+        String result = "";
+
+        for (String item : excludeFileList) {
+            if (!result.isEmpty()) {
+                result += ",";
+            }
+
+            result += item;
+        }
+
+        return result;
     }
 
     protected InputStream locateResource(String publicName, String category,
@@ -158,22 +172,51 @@ public abstract class AbstractAppImageBuilder {
 
         boolean appCDEnabled = UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params);
         String appCDSCacheMode = APP_CDS_CACHE_MODE.fetchFrom(params);
+        File mainJar = JLinkBundlerHelper.getMainJar(params);
+        Module.ModuleType mainJarType = Module.ModuleType.Unknown;
+
+        if (mainJar != null) {
+            mainJarType = new Module(mainJar).getModuleType();
+        }
+
+        String mainModule = JLinkBundlerHelper.MAIN_MODULE.fetchFrom(params);
 
         PrintStream out = new PrintStream(cfgFileName);
 
         out.println("[Application]");
         out.println("app.name=" + APP_NAME.fetchFrom(params));
-        out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
         out.println("app.version=" + VERSION.fetchFrom(params));
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
-        out.println("app.mainclass=" +
-                MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
-        out.println("app.classpath=" +
-                String.join(File.pathSeparator, CLASSPATH.fetchFrom(params).split("[ :;]")));
-        out.println("app.modulepath=" +
-                String.join(File.pathSeparator, JLinkBundlerHelper.JDK_MODULE_PATH.fetchFrom(params)));
         out.println("app.runtime=" + runtimeLocation);
         out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));
+        out.println("app.classpath=" + String.join(File.pathSeparator, CLASSPATH.fetchFrom(params).split("[ :;]")));
+
+        // The main app is required to be a jar, modular or unnamed.
+        if (mainJarType == Module.ModuleType.Unknown || mainJarType == Module.ModuleType.ModularJar) {
+            if (mainModule != null) {
+                out.println("app.mainmodule=" + mainModule);
+            }
+        }
+        else {
+            String mainClass = JLinkBundlerHelper.getMainClass(params);
+
+            if (mainJar != null && mainClass != null) {
+                // If the app is contained in an unnamed jar then launch it the old
+                // fashioned way and the main class string must be of the format com/foo/Main
+                out.println("app.mainclass=" + mainClass.replaceAll("\\.", "/"));
+                out.println("app.mainjar=" + mainJar);
+            }
+        }
+
+        Integer port = JLinkBundlerHelper.DEBUG_PORT.fetchFrom(params);
+
+        if (port != null) {
+            out.println("app.debug=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=localhost:" + port);
+        }
+
+        //TODO this is a little tricky now with a modular JDK.
+        //out.println("app.java.version=" + );
+
         if (appCDEnabled) {
             out.println("app.appcds.cache=" + appCDSCacheMode.split("\\+")[0]);
         }
