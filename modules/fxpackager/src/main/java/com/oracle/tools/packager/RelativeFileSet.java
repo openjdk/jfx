@@ -43,7 +43,7 @@ public class RelativeFileSet {
     private String arch;
 
     private File basedir;
-    Set<String> files = new LinkedHashSet<>();
+    private Set<String> files = new LinkedHashSet<>();
 
     public RelativeFileSet(RelativeFileSet copy) {
         type = copy.type;

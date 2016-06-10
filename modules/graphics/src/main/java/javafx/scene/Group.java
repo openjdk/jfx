@@ -80,6 +80,10 @@ public  class Group extends Parent {
          // This is used by classes in different packages to get access to
          // private and package private methods.
         GroupHelper.setGroupAccessor(new GroupHelper.GroupAccessor() {
+            @Override
+            public Bounds doComputeLayoutBounds(Node node) {
+                return ((Group) node).doComputeLayoutBounds();
+            }
         });
     }
 
@@ -165,16 +169,12 @@ public  class Group extends Parent {
         return super.getChildren();
     }
 
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected Bounds impl_computeLayoutBounds() {
+    private Bounds doComputeLayoutBounds() {
         layout(); // Needs to done prematurely, as we otherwise don't know the bounds of the children
-        return super.impl_computeLayoutBounds();
+        return null; // helper only requires this node to call layout().
     }
 
     /**

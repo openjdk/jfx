@@ -62,7 +62,6 @@ import com.sun.javafx.binding.SelectBinding;
 import com.sun.javafx.binding.StringConstant;
 import com.sun.javafx.binding.StringFormatter;
 import com.sun.javafx.collections.ImmutableObservableList;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.collections.ObservableArray;
 import javafx.collections.ObservableFloatArray;
 import javafx.collections.ObservableIntegerArray;
@@ -143,7 +142,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
                             FXCollections.emptyObservableList()
@@ -184,7 +182,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
                             FXCollections.emptyObservableList()
@@ -225,7 +222,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
                             FXCollections.emptyObservableList()
@@ -266,7 +262,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
                             FXCollections.emptyObservableList()
@@ -307,7 +302,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
                             FXCollections.emptyObservableList()
@@ -348,7 +342,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
                             FXCollections.emptyObservableList()
@@ -389,7 +382,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return  ((dependencies == null) || (dependencies.length == 0))?
                             FXCollections.emptyObservableList()
@@ -1130,7 +1122,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return FXCollections.singletonObservableList(value);
                 }
@@ -1152,7 +1143,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return FXCollections.singletonObservableList(value);
                 }
@@ -1174,7 +1164,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return FXCollections.singletonObservableList(value);
                 }
@@ -1196,7 +1185,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return FXCollections.singletonObservableList(value);
                 }
@@ -1230,7 +1218,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1254,7 +1241,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1278,7 +1264,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1302,7 +1287,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1491,7 +1475,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1515,7 +1498,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1539,7 +1521,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1563,7 +1544,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1752,7 +1732,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1776,7 +1755,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1800,7 +1778,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -1824,7 +1801,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2013,7 +1989,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2037,7 +2012,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2061,7 +2035,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2085,7 +2058,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2274,7 +2246,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2298,7 +2269,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2322,7 +2292,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2346,7 +2315,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2713,7 +2681,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2737,7 +2704,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2761,7 +2727,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -2785,7 +2750,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -3152,7 +3116,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -3176,7 +3139,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -3200,7 +3162,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -3224,7 +3185,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -3575,7 +3535,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -3599,7 +3558,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -3623,7 +3581,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -3647,7 +3604,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -3999,7 +3955,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -4023,7 +3978,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -4047,7 +4001,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -4071,7 +4024,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -4260,7 +4212,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -4284,7 +4235,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -4308,7 +4258,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -4332,7 +4281,6 @@ public final class Bindings {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
                     return (dependencies.length == 1)?
                             FXCollections.singletonObservableList(dependencies[0])
@@ -4527,7 +4475,6 @@ public final class Bindings {
         }
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<?> getDependencies() {
             return new ImmutableObservableList<>(op1, op2);
         }
@@ -4607,7 +4554,6 @@ public final class Bindings {
         }
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<?> getDependencies() {
             return new ImmutableObservableList<>(op1, op2);
         }
@@ -4692,7 +4638,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -4732,7 +4677,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<ObservableBooleanValue>(op1, op2);
             }
@@ -4773,7 +4717,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<ObservableBooleanValue>(op1, op2);
             }
@@ -4901,7 +4844,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return (dependencies.length == 1)?
                         FXCollections.singletonObservableList(dependencies[0])
@@ -4994,7 +4936,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return (dependencies.length == 1)?
                         FXCollections.singletonObservableList(dependencies[0])
@@ -5087,7 +5028,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return (dependencies.length == 1)?
                         FXCollections.singletonObservableList(dependencies[0])
@@ -5180,7 +5120,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return (dependencies.length == 1)?
                         FXCollections.singletonObservableList(dependencies[0])
@@ -5274,7 +5213,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return (dependencies.length == 1)?
                         FXCollections.singletonObservableList(dependencies[0])
@@ -5433,7 +5371,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return (dependencies.length == 1)?
                         FXCollections.singletonObservableList(dependencies[0])
@@ -5603,7 +5540,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -5645,7 +5581,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -5687,7 +5622,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -5721,7 +5655,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return (dependencies.length == 1)?
                         FXCollections.singletonObservableList(dependencies[0])
@@ -5805,7 +5738,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return (dependencies.length == 1)?
                         FXCollections.singletonObservableList(dependencies[0])
@@ -5897,7 +5829,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -5936,7 +5867,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -5979,7 +5909,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6019,7 +5948,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6059,7 +5987,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6108,7 +6035,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6169,7 +6095,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, index);
             }
@@ -6222,7 +6147,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6286,7 +6210,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, index);
             }
@@ -6339,7 +6262,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6403,7 +6325,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, index);
             }
@@ -6456,7 +6377,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6520,7 +6440,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, index);
             }
@@ -6573,7 +6492,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6637,7 +6555,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, index);
             }
@@ -6690,7 +6607,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6754,7 +6670,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, index);
             }
@@ -6802,7 +6717,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6861,7 +6775,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, index);
             }
@@ -6904,7 +6817,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6944,7 +6856,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -6984,7 +6895,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7025,7 +6935,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7073,7 +6982,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7132,7 +7040,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<>(op, index);
             }
@@ -7180,7 +7087,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7239,7 +7145,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<>(op, index);
             }
@@ -7284,7 +7189,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7325,7 +7229,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7366,7 +7269,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7415,7 +7317,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7464,7 +7365,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, key);
             }
@@ -7518,7 +7418,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7572,7 +7471,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, key);
             }
@@ -7626,7 +7524,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7680,7 +7577,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, key);
             }
@@ -7734,7 +7630,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7788,7 +7683,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, key);
             }
@@ -7842,7 +7736,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -7896,7 +7789,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, key);
             }
@@ -7950,7 +7842,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -8004,7 +7895,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, key);
             }
@@ -8053,7 +7943,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(op);
             }
@@ -8102,7 +7991,6 @@ public final class Bindings {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return new ImmutableObservableList<Observable>(op, key);
             }

@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.oracle.tools.packager;
+package jdk.packager.internal;
 
 
 import java.io.ByteArrayOutputStream;
@@ -42,6 +42,9 @@ import java.util.stream.Collectors;
 
 import com.sun.tools.jdeps.Main;
 import java.io.PrintWriter;
+import java.util.Collection;
+
+import com.oracle.tools.packager.Log;
 
 
 public final class JDepHelper {
@@ -52,32 +55,42 @@ public final class JDepHelper {
         return com.sun.tools.jdeps.Main.run(args, out);
     }
 
-    public static Set<String> calculateModules(List<String> Files, List<Path> modulePath) {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-             PrintWriter writer = new PrintWriter(baos)) {
+    public static Set<String> calculateModules(Collection<String> Files, List<Path> modulePath) {
+        Set<String> result = null;
 
-            List<String> arguments = new ArrayList<>();
-            arguments.add("-s");
+        if (!Files.isEmpty()) {
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                PrintWriter writer = new PrintWriter(baos)) {
 
-            if (modulePath != null || !modulePath.isEmpty()) {
-                arguments.add("-modulepath");
-                arguments.add(ListOfPathToString(modulePath));
+                List<String> arguments = new ArrayList<>();
+                arguments.add("-s");
+
+                // TODO Uncomment out once JDK-8151729 is fixed
+                /*if (modulePath != null || !modulePath.isEmpty()) {
+                    arguments.add("-modulepath");
+                    arguments.add(ListOfPathToString(modulePath));
+                }*/
+
+                arguments.addAll(Files);
+
+                execute(arguments.toArray(new String[arguments.size()]), writer);
+
+                // Output format is multiple lines of "this.jar -> that.module.name"
+                // we only care about what is to the right of the arrow.
+                result = Arrays.stream(baos.toString().split("\\s*\\S+\\s+->\\s+"))
+                                       .map(String::trim)
+                                       .filter(s -> !s.isEmpty() && !arguments.contains(s) && !"not found".equals(s))
+                                       .collect(Collectors.toSet());
+            } catch (IOException exception) {
+                Log.verbose(exception);
             }
-
-            arguments.addAll(Files);
-
-            execute(arguments.toArray(new String[arguments.size()]), writer);
-
-            // output format is multiple lines of "this.jar -> that.module.name"
-            // we only care about what is to the right of the arrow
-            return Arrays.stream(baos.toString().split("\\s*\\S+\\s+->\\s+"))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty() && !arguments.contains(s) && !"not found".equals(s))
-                    .collect(Collectors.toSet());
-        } catch (IOException ioe) {
-            Log.verbose(ioe);
-            return new LinkedHashSet();
         }
+
+        if (result == null) {
+            result = new LinkedHashSet();
+        }
+
+        return result;
     }
 
     private static String ListOfPathToString(List<Path> Value) {

@@ -25,6 +25,10 @@
 
 package com.sun.javafx.scene;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import javafx.scene.LightBase;
@@ -68,6 +72,22 @@ public class LightBaseHelper extends NodeHelper {
         lightBaseAccessor.doMarkDirty(node, dirtyBit);
     }
 
+    @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return lightBaseAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
+    @Override
+    protected boolean computeContainsImpl(Node node, double localX, double localY) {
+        return lightBaseAccessor.doComputeContains(node, localX, localY);
+    }
+
+    @Override
+    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+        return lightBaseAccessor.doProcessMXNode(node, alg, ctx);
+    }
+
     public static void setLightBaseAccessor(final LightBaseAccessor newAccessor) {
         if (lightBaseAccessor != null) {
             throw new IllegalStateException();
@@ -79,6 +99,9 @@ public class LightBaseHelper extends NodeHelper {
     public interface LightBaseAccessor {
         void doMarkDirty(Node node, DirtyBits dirtyBit);
         void doUpdatePeer(Node node);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
+        boolean doComputeContains(Node node, double localX, double localY);
+        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
     }
 
 }

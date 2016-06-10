@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,20 +23,42 @@
  * questions.
  */
 
-package com.sun.javafx.beans.annotations;
+package com.sun.javafx.scene.layout;
 
-import static java.lang.annotation.ElementType.FIELD;
-import static java.lang.annotation.RetentionPolicy.SOURCE;
+import com.sun.javafx.util.Utils;
+import javafx.scene.layout.Pane;
 
-import java.lang.annotation.*;
-
-/**
- * Indicates that a field is a "delegate": public methods of the type of such
- * field are present in the type containing the field, and their implementation
- * simply delegates to the field.
- *
+/*
+ * Used to access internal methods of Pane.
  */
-@Target(FIELD)
-@Retention(SOURCE)
-public @interface Delegate {
+public class PaneHelper extends RegionHelper {
+
+    private static final PaneHelper theInstance;
+    private static PaneAccessor paneAccessor;
+
+    static {
+        theInstance = new PaneHelper();
+        Utils.forceInit(Pane.class);
+    }
+
+    private static PaneHelper getInstance() {
+        return theInstance;
+    }
+
+    public static void initHelper(Pane pane) {
+        setHelper(pane, getInstance());
+    }
+
+
+    public static void setPaneAccessor(final PaneAccessor newAccessor) {
+        if (paneAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        paneAccessor = newAccessor;
+    }
+
+    public interface PaneAccessor {
+    }
+
 }

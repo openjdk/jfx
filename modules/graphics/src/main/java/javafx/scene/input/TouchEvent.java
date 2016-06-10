@@ -25,11 +25,9 @@
 
 package javafx.scene.input;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.NamedArg;
-import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
@@ -287,7 +285,6 @@ public final class TouchEvent extends InputEvent {
      * method can be used.
      * @return All current touch points in an unmodifiable list
      */
-    @ReturnsUnmodifiableCollection
     public List<TouchPoint> getTouchPoints() {
         return touchPoints;
     }

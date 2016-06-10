@@ -59,7 +59,6 @@ import com.sun.javafx.collections.ObservableSequentialListWrapper;
 import com.sun.javafx.collections.SetAdapterChange;
 import com.sun.javafx.collections.SortableList;
 import com.sun.javafx.collections.SourceAdapterChange;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import java.util.RandomAccess;
 import javafx.beans.Observable;
 import javafx.collections.ListChangeListener.Change;
@@ -183,7 +182,6 @@ public class FXCollections {
      * @param map an ObservableMap that is to be monitored by this interface
      * @return a newly created UnmodifiableObservableMap
      */
-    @ReturnsUnmodifiableCollection
     public static <K, V> ObservableMap<K, V> unmodifiableObservableMap(ObservableMap<K, V> map) {
         if (map == null) {
             throw new NullPointerException();
@@ -230,7 +228,6 @@ public class FXCollections {
      * @since JavaFX 8.0
      */
     @SuppressWarnings("unchecked")
-    @ReturnsUnmodifiableCollection
     public static <K, V> ObservableMap<K, V> emptyObservableMap() {
         return EMPTY_OBSERVABLE_MAP;
     }
@@ -379,7 +376,6 @@ public class FXCollections {
      * @return an ObserableList wrapper that is unmodifiable
      * @see Collections#unmodifiableList(java.util.List)
      */
-    @ReturnsUnmodifiableCollection
     public static<E> ObservableList<E> unmodifiableObservableList(ObservableList<E> list) {
         if (list == null) {
             throw new NullPointerException();
@@ -423,7 +419,6 @@ public class FXCollections {
      * @see Collections#emptyList()
      */
     @SuppressWarnings("unchecked")
-    @ReturnsUnmodifiableCollection
     public static<E> ObservableList<E> emptyObservableList() {
         return EMPTY_OBSERVABLE_LIST;
     }
@@ -434,7 +429,6 @@ public class FXCollections {
      * @return a singleton observable list
      * @see Collections#singletonList(java.lang.Object)
      */
-    @ReturnsUnmodifiableCollection
     public static<E> ObservableList<E> singletonObservableList(E e) {
         return new SingletonObservableList<E>(e);
     }
@@ -446,7 +440,6 @@ public class FXCollections {
      * @see Collections#unmodifiableSet(java.util.Set)
      * @since JavaFX 8.0
      */
-    @ReturnsUnmodifiableCollection
     public static<E> ObservableSet<E> unmodifiableObservableSet(ObservableSet<E> set) {
         if (set == null) {
             throw new NullPointerException();
@@ -492,7 +485,6 @@ public class FXCollections {
      * @since JavaFX 8.0
      */
     @SuppressWarnings("unchecked")
-    @ReturnsUnmodifiableCollection
     public static<E> ObservableSet<E> emptyObservableSet() {
         return EMPTY_OBSERVABLE_SET;
     }

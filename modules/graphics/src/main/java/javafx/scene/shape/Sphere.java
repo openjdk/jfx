@@ -65,6 +65,23 @@ public class Sphere extends Shape3D {
             public void doUpdatePeer(Node node) {
                 ((Sphere) node).doUpdatePeer();
             }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Sphere) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Sphere) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public boolean doComputeIntersects(Node node, PickRay pickRay,
+                    PickResultChooser pickResult) {
+                return ((Sphere) node).doComputeIntersects(pickRay, pickResult);
+            }
         });
     }
 
@@ -132,7 +149,7 @@ public class Sphere extends Shape3D {
                     NodeHelper.markDirty(Sphere.this, DirtyBits.MESH_GEOM);
                     manager.invalidateSphereMesh(key);
                     key = 0;
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Sphere.this);
                 }
             };
         }
@@ -175,13 +192,10 @@ public class Sphere extends Shape3D {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         final float r = (float) getRadius();
 
         if (r < 0) {
@@ -193,25 +207,19 @@ public class Sphere extends Shape3D {
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         double r = getRadius();
         double n2 = localX * localX + localY * localY;
         return n2 <= r * r;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeIntersects(PickRay pickRay, PickResultChooser pickResult) {
+    private boolean doComputeIntersects(PickRay pickRay, PickResultChooser pickResult) {
 
         final boolean exactPicking = divisions < DEFAULT_DIVISIONS && mesh != null;
 

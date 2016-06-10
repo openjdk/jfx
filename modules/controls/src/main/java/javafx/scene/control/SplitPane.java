@@ -41,8 +41,6 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -335,7 +333,7 @@ public class SplitPane extends Control {
      *
      * @return the list of dividers.
      */
-    @ReturnsUnmodifiableCollection public ObservableList<Divider> getDividers() {
+    public ObservableList<Divider> getDividers() {
         return unmodifiableDividers;
     }
 

@@ -572,7 +572,7 @@ public class Scene implements EventTarget {
         if (sceneRoot.cssFlag != CssFlags.CLEAN) {
             // The dirty bit isn't checked but we must ensure it is cleared.
             // The cssFlag is set to clean in either Node.processCSS or
-            // Node.impl_processCSS(boolean)
+            // NodeHelper.processCSS
             sceneRoot.clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
             sceneRoot.processCSS();
         }
@@ -954,7 +954,7 @@ public class Scene implements EventTarget {
                     final Parent _root = getRoot();
                     //TODO - use a better method to update mirroring
                     if (_root.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                        _root.impl_transformsChanged();
+                        NodeHelper.transformsChanged(_root);
                     }
                     if (_root.isResizable()) {
                         resizeRootOnSceneSizeChange(get() - _root.getLayoutX() - _root.getTranslateX(), _root.getLayoutBounds().getHeight());
@@ -1619,7 +1619,7 @@ public class Scene implements EventTarget {
                 }
                 break; // no point in resetting more than once...
             }
-            getRoot().impl_reapplyCSS();
+            getRoot().reapplyCSS();
         }
     };
 
@@ -1675,7 +1675,7 @@ public class Scene implements EventTarget {
             userAgentStylesheet = new SimpleObjectProperty<String>(Scene.this, "userAgentStylesheet", null) {
                 @Override protected void invalidated() {
                     StyleManager.getInstance().forget(Scene.this);
-                    getRoot().impl_reapplyCSS();
+                    getRoot().reapplyCSS();
                 }
             };
         }
@@ -4007,7 +4007,7 @@ public class Scene implements EventTarget {
 
         private PickResult pickNode(PickRay pickRay) {
             PickResultChooser r = new PickResultChooser();
-            Scene.this.getRoot().impl_pickNode(pickRay, r);
+            Scene.this.getRoot().pickNode(pickRay, r);
             return r.toPickResult();
         }
     }

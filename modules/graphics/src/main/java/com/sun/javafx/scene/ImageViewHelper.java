@@ -25,6 +25,10 @@
 
 package com.sun.javafx.scene;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import static com.sun.javafx.scene.NodeHelper.setHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
@@ -63,6 +67,22 @@ public class ImageViewHelper extends NodeHelper {
         imageViewAccessor.doUpdatePeer(node);
     }
 
+    @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return imageViewAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
+    @Override
+    protected boolean computeContainsImpl(Node node, double localX, double localY) {
+        return imageViewAccessor.doComputeContains(node, localX, localY);
+    }
+
+    @Override
+    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+        return imageViewAccessor.doProcessMXNode(node, alg, ctx);
+    }
+
     public static void setImageViewAccessor(final ImageViewAccessor newAccessor) {
         if (imageViewAccessor != null) {
             throw new IllegalStateException();
@@ -74,6 +94,9 @@ public class ImageViewHelper extends NodeHelper {
     public interface ImageViewAccessor {
         NGNode doCreatePeer(Node node);
         void doUpdatePeer(Node node);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
+        boolean doComputeContains(Node node, double localX, double localY);
+        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
     }
 
 }

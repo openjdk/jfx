@@ -142,7 +142,7 @@ public class CubicCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CubicCurve.this);
                 }
 
                 @Override
@@ -183,7 +183,7 @@ public class CubicCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CubicCurve.this);
                 }
 
                 @Override
@@ -225,7 +225,7 @@ public class CubicCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CubicCurve.this);
                 }
 
                 @Override
@@ -267,7 +267,7 @@ public class CubicCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CubicCurve.this);
                 }
 
                 @Override
@@ -309,7 +309,7 @@ public class CubicCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CubicCurve.this);
                 }
 
                 @Override
@@ -351,7 +351,7 @@ public class CubicCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CubicCurve.this);
                 }
 
                 @Override
@@ -392,7 +392,7 @@ public class CubicCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CubicCurve.this);
                 }
 
                 @Override
@@ -433,7 +433,7 @@ public class CubicCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(CubicCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(CubicCurve.this);
                 }
 
                 @Override

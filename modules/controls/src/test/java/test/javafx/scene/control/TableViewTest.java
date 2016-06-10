@@ -36,6 +36,7 @@ import java.util.function.Supplier;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import javafx.beans.InvalidationListener;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
@@ -1955,7 +1956,7 @@ public class TableViewTest {
         StageLoader sl = new StageLoader(table);
 
         // resize the last column
-        last.impl_setWidth(400);
+        TableColumnBaseHelper.setWidth(last, 400);
         assertEquals(400, last.getWidth(), 0.0);
 
         // hide the first column
@@ -3344,7 +3345,7 @@ public class TableViewTest {
             // sneak some hidden columns in there
             column = new TableColumn<>("h" + i);
             column.setVisible( false );
-            column.impl_setWidth(50);
+            TableColumnBaseHelper.setWidth(column, 50);
             column.setResizable(false);
             table.getColumns().add( column );
         }
@@ -3465,7 +3466,7 @@ public class TableViewTest {
             // sneak some hidden columns in there
             column = new TableColumn<>("h" + i);
             column.setVisible( false );
-            column.impl_setWidth(50);
+            TableColumnBaseHelper.setWidth(column, 50);
             column.setResizable(false);
             table.getColumns().add( column );
         }

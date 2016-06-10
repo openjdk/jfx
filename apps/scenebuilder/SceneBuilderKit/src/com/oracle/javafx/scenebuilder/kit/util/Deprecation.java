@@ -86,22 +86,26 @@ public class Deprecation {
     // Deprecated stuff in Node
 //    // RT-21247 : Promote impl_getAllParentStylesheets to public API
     public static Group createGroupWithNullParentStylesheets() {
+        System.err.println("Error: impl_getAllParentStylesheets is no longer publicly accessible");
         return new Group() {
-            @Override
-            public List<String> impl_getAllParentStylesheets() {
-                return null;
-            }
+//            @Override
+//            public List<String> impl_getAllParentStylesheets() {
+//                return null;
+//            }
         };
     }
 
 //    // RT-21096 : Promote impl_getStyleMap / impl_setStyleMap to public API
     public static void setStyleMap(Node node, ObservableMap<StyleableProperty<?>, List<javafx.css.Style>> map) {
-        node.impl_setStyleMap(map);
+        // node.impl_setStyleMap(map);
+        System.err.println("Error: impl_setStyleMap is no longer publicly accessible");
     }
 
 //    // RT-21096 : Promote impl_getStyleMap / impl_setStyleMap to public API
     public static Map<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
-        return node.impl_findStyles(null);
+//        return node.impl_findStyles(null);
+        System.err.println("Error: findStyles is no longer publicly accessible");
+        return null;
     }
 
     public static void reapplyCSS(Parent parent, String stylesheetPath) {
@@ -131,7 +135,9 @@ public class Deprecation {
 
     @SuppressWarnings("rawtypes")
     public static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
-        return Node.impl_getMatchingStyles(cssMetaData, styleable);
+//        return Node.impl_getMatchingStyles(cssMetaData, styleable);
+        System.err.println("Error: impl_getMatchingStyles is no longer publicly accessible");
+        return null;
     }
 
     // Deprecated stuff in Parent
@@ -139,7 +145,8 @@ public class Deprecation {
     // Deprecated stuff in FXMLLoader
     // RT-21226 : Promote setStaticLoad to public API
     public static void setStaticLoad(FXMLLoader loader, boolean staticLoad) {
-        loader.impl_setStaticLoad(staticLoad);
+//        loader.impl_setStaticLoad(staticLoad);
+        System.err.println("Error: impl_setStaticLoad is no longer publicly accessible");
     }
 
     // RT-20184 : FX should provide a Parent.pick() routine

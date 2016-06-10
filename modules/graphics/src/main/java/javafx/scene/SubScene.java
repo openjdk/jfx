@@ -33,7 +33,6 @@ import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.*;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
 import javafx.scene.input.PickResult;
@@ -50,7 +49,6 @@ import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.SubSceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGCamera;
@@ -115,6 +113,33 @@ public class SubScene extends Node {
             @Override
             public void doUpdatePeer(Node node) {
                 ((SubScene) node).doUpdatePeer();
+            }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((SubScene) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((SubScene) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public void doProcessCSS(Node node) {
+                ((SubScene) node).doProcessCSS();
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((SubScene) node).doProcessMXNode(alg, ctx);
+            }
+
+            @Override
+            public void doPickNodeLocal(Node node, PickRay localPickRay,
+                    PickResultChooser result) {
+                ((SubScene) node).doPickNodeLocal(localPickRay, result);
             }
 
             @Override
@@ -289,7 +314,7 @@ public class SubScene extends Node {
                     }
 
                     // disabled and isTreeVisible properties are inherrited
-                    _value.setTreeVisible(impl_isTreeVisible());
+                    _value.setTreeVisible(isTreeVisible());
                     _value.setDisabled(isDisabled());
 
                     if (oldRoot != null) {
@@ -434,13 +459,13 @@ public class SubScene extends Node {
                     final Parent _root = getRoot();
                     //TODO - use a better method to update mirroring
                     if (_root.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                        _root.impl_transformsChanged();
+                        NodeHelper.transformsChanged(_root);
                     }
                     if (_root.isResizable()) {
                         _root.resize(get() - _root.getLayoutX() - _root.getTranslateX(), _root.getLayoutBounds().getHeight());
                     }
                     markDirty(SubSceneDirtyBits.SIZE_DIRTY);
-                    SubScene.this.impl_geomChanged();
+                    NodeHelper.geomChanged(SubScene.this);
 
                     getEffectiveCamera().setViewWidth(get());
                 }
@@ -485,7 +510,7 @@ public class SubScene extends Node {
                         _root.resize(_root.getLayoutBounds().getWidth(), get() - _root.getLayoutY() - _root.getTranslateY());
                     }
                     markDirty(SubSceneDirtyBits.SIZE_DIRTY);
-                    SubScene.this.impl_geomChanged();
+                    NodeHelper.geomChanged(SubScene.this);
 
                     getEffectiveCamera().setViewHeight(get());
                 }
@@ -600,19 +625,17 @@ public class SubScene extends Node {
     /***********************************************************************
      *                         CSS                                         *
      **********************************************************************/
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated @Override
-    protected void impl_processCSS() {
+    private void doProcessCSS() {
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) { return; }
 
         if (getRoot().cssFlag == CssFlags.CLEAN) {
             getRoot().cssFlag = cssFlag;
         }
-        super.impl_processCSS();
+        SubSceneHelper.superProcessCSS(this);
         getRoot().processCSS();
     }
 
@@ -638,7 +661,7 @@ public class SubScene extends Node {
             userAgentStylesheet = new SimpleObjectProperty<String>(SubScene.this, "userAgentStylesheet", null) {
                 @Override protected void invalidated() {
                     StyleManager.getInstance().forget(SubScene.this);
-                    impl_reapplyCSS();
+                    reapplyCSS();
                 }
             };
         }
@@ -694,12 +717,10 @@ public class SubScene extends Node {
         return new NGSubScene(depthBuffer, aa && Toolkit.getToolkit().isMSAASupported());
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         int w = (int)Math.ceil(width.get());
         int h = (int)Math.ceil(height.get());
         bounds = bounds.deriveWithNewBounds(0.0f, 0.0f, 0.0f,
@@ -788,16 +809,14 @@ public class SubScene extends Node {
      *                           Picking                                   *
      **********************************************************************/
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         if (subSceneComputeContains(localX, localY)) {
             return true;
         } else {
-            return getRoot().impl_computeContains(localX, localY);
+            return NodeHelper.computeContains(getRoot(), localX, localY);
         }
     }
 
@@ -829,7 +848,7 @@ public class SubScene extends Node {
         final PickResultChooser result = new PickResultChooser();
         final PickRay pickRay = getEffectiveCamera().computePickRay(localX, localY, new PickRay());
         pickRay.getDirectionNoClone().normalize();
-        getRoot().impl_pickNode(pickRay, result);
+        getRoot().pickNode(pickRay, result);
         return result.toPickResult();
     }
 
@@ -837,12 +856,11 @@ public class SubScene extends Node {
      * Finds a top-most child node that contains the given local coordinates.
      *
      * Returns the picked node, null if no such node was found.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated @Override
-    protected void impl_pickNodeLocal(PickRay localPickRay, PickResultChooser result) {
-        final double boundsDistance = impl_intersectsBounds(localPickRay);
+    private void doPickNodeLocal(PickRay localPickRay, PickResultChooser result) {
+        final double boundsDistance = intersectsBounds(localPickRay);
         if (!Double.isNaN(boundsDistance) && result.isCloser(boundsDistance)) {
             final Point3D intersectPt = PickResultChooser.computePoint(
                     localPickRay, boundsDistance);
@@ -857,12 +875,10 @@ public class SubScene extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

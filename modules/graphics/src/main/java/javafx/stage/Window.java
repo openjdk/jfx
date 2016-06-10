@@ -29,7 +29,6 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.util.HashMap;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -67,6 +66,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 
 
@@ -209,7 +209,6 @@ public class Window implements EventTarget {
      * @return A list containing all windows that are currently showing.
      * @since 9
      */
-    @ReturnsUnmodifiableCollection
     public static ObservableList<Window> getWindows() {
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
@@ -797,7 +796,7 @@ public class Window implements EventTarget {
                 // window is already showing. For not yet shown windows, the update is
                 // performed in doVisibleChanging()
                 if (isShowing()) {
-                    newScene.getRoot().impl_reapplyCSS();
+                    NodeHelper.reapplyCSS(newScene.getRoot());
 
                     if (!widthExplicit || !heightExplicit) {
                         SceneHelper.preferredSize(getScene());
@@ -1194,7 +1193,7 @@ public class Window implements EventTarget {
      */
     private void doVisibleChanging(boolean visible) {
         if (visible && (getScene() != null)) {
-            getScene().getRoot().impl_reapplyCSS();
+            NodeHelper.reapplyCSS(getScene().getRoot());
         }
     }
 

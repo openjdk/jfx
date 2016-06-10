@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,11 +30,12 @@ import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.DirtyBits;
 import javafx.css.Styleable;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.NGWebView;
+import com.sun.javafx.sg.prism.web.NGWebView;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;
@@ -59,9 +60,10 @@ import javafx.css.StyleableProperty;
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.input.PickResultChooser;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.text.FontSmoothingType;
@@ -89,7 +91,28 @@ final public class WebView extends Parent {
                 public void doUpdatePeer(Node node) {
                 ((WebView) node).doUpdatePeer();
             }
-            });
+
+            @Override
+            public void doTransformsChanged(Node node) {
+                ((WebView) node).doTransformsChanged();
+            }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((WebView) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((WebView) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public void doPickNodeLocal(Node node, PickRay localPickRay, PickResultChooser result) {
+                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            }
+        });
     }
 
     private static final Map<Object, Integer> idMap = new HashMap<Object, Integer>();
@@ -309,7 +332,7 @@ final public class WebView extends Parent {
             this.width.set(width);
             this.height.set(height);
             NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(this);
         }
     }
 
@@ -972,14 +995,14 @@ final public class WebView extends Parent {
         if (reallyVisible) {
             page.setVisible(true);
             if (page.isDirty()) {
-                Scene.impl_setAllowPGAccess(true);
+                SceneHelper.setAllowPGAccess(true);
 
                 final NGWebView peer = NodeHelper.getPeer(this);
                 peer.update(); // creates new render queues
                 if (page.isRepaintPending()) {
                     NodeHelper.markDirty(this, DirtyBits.WEBVIEW_VIEW);
                 }
-                Scene.impl_setAllowPGAccess(false);
+                SceneHelper.setAllowPGAccess(false);
             }
         } else {
             page.dropRenderFrames();
@@ -1030,16 +1053,6 @@ final public class WebView extends Parent {
         return tms.toArray(new TransferMode[0]);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-//    @Deprecated
-//    @Override
-//    protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
-//        impl_intersects(pickRay, result);
-//    }
-
     @Override protected ObservableList<Node> getChildren() {
         return super.getChildren();
     }
@@ -1057,24 +1070,25 @@ final public class WebView extends Parent {
         return (NGWebView)NodeHelper.getPeer(this);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         bounds.deriveWithNewBounds(0, 0, 0, (float) getWidth(), (float)getHeight(), 0);
         tx.transform(bounds, bounds);
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected boolean impl_computeContains(double localX, double localY) {
+    private void doTransformsChanged() {
+    }
+
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private boolean doComputeContains(double localX, double localY) {
         // Note: Local bounds contain test is already done by the caller. (Node.contains()).
         return true;
     }

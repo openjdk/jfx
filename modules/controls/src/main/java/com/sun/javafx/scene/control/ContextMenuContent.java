@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.animation.Animation.Status;
@@ -280,8 +281,8 @@ public class ContextMenuContent extends Region {
             getProperties().put(Menu.class, item.getParentMenu());
         }
 
-        // RT-36513 made this applyCss(). Modified by RT-36995 to impl_reapplyCSS()
-        impl_reapplyCSS();
+        // RT-36513 made this applyCss(). Modified by RT-36995 to NodeHelper.reapplyCSS()
+        NodeHelper.reapplyCSS(this);
     }
 
     private void disposeVisualItems() {

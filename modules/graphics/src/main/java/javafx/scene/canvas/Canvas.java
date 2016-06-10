@@ -85,6 +85,22 @@ public class Canvas extends Node {
             public void doUpdatePeer(Node node) {
                 ((Canvas) node).doUpdatePeer();
             }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Canvas) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Canvas) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((Canvas) node).doProcessMXNode(alg, ctx);
+            }
         });
     }
     static final int DEFAULT_VAL_BUF_SIZE = 1024;
@@ -181,7 +197,7 @@ public class Canvas extends Node {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Canvas.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Canvas.this);
                     if (theContext != null) {
                         theContext.updateDimensions();
                     }
@@ -224,7 +240,7 @@ public class Canvas extends Node {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Canvas.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Canvas.this);
                     if (theContext != null) {
                         theContext.updateDimensions();
                     }
@@ -271,13 +287,10 @@ public class Canvas extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         double w = getWidth();
         double h = getHeight();
         return (w > 0 && h > 0 &&
@@ -285,25 +298,19 @@ public class Canvas extends Node {
                 localX <  w && localY <  h);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         bounds = new RectBounds(0f, 0f, (float) getWidth(), (float) getHeight());
         bounds = tx.transform(bounds, bounds);
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg,
+    private Object doProcessMXNode(MXNodeAlgorithm alg,
                                      MXNodeAlgorithmContext ctx) {
         return alg.processLeafNode(this, ctx);
     }

@@ -25,13 +25,8 @@
 
 package javafx.scene.web;
 
-import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.web.Debugger;
 import com.sun.javafx.scene.web.Printable;
-import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.webkit.*;
@@ -40,9 +35,7 @@ import com.sun.javafx.webkit.prism.PrismInvoker;
 import com.sun.javafx.webkit.prism.theme.PrismRenderer;
 import com.sun.javafx.webkit.theme.RenderThemeImpl;
 import com.sun.javafx.webkit.theme.Renderer;
-import com.sun.prism.Graphics;
 import com.sun.webkit.*;
-import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.network.URLs;
 import com.sun.webkit.network.Util;
@@ -1476,7 +1469,7 @@ final public class WebEngine {
     }
 
 
-    /**
+    /*
      * Returns the debugger associated with this web engine.
      * The debugger is an object that can be used to debug
      * the web page currently loaded into the web engine.
@@ -1487,13 +1480,8 @@ final public class WebEngine {
      * is always called on the JavaFX Application Thread.
      * @return the debugger associated with this web engine.
      *         The return value cannot be {@code null}.
-     * @treatAsPrivate This is an internal API that can be changed or
-     *                 removed in the future.
-     * @deprecated This is an internal API that can be changed or
-     *             removed in the future.
      */
-    @Deprecated
-    public Debugger impl_getDebugger() {
+    Debugger getDebugger() {
         return debugger;
     }
 

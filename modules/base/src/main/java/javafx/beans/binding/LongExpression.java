@@ -28,7 +28,6 @@ package javafx.beans.binding;
 import javafx.beans.value.ObservableLongValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.value.ObservableValue;
 
 /**
@@ -103,7 +102,6 @@ public abstract class LongExpression extends NumberExpressionBase implements
                     }
 
                     @Override
-                    @ReturnsUnmodifiableCollection
                     public ObservableList<ObservableLongValue> getDependencies() {
                         return FXCollections.singletonObservableList(value);
                     }
@@ -161,7 +159,6 @@ public abstract class LongExpression extends NumberExpressionBase implements
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<ObservableValue<T>> getDependencies() {
                 return FXCollections.singletonObservableList(value);
             }

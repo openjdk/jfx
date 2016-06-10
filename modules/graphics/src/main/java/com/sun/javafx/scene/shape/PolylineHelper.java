@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Node;
@@ -65,6 +67,12 @@ public class PolylineHelper extends ShapeHelper {
     }
 
     @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return polylineAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
+    @Override
     protected Paint cssGetFillInitialValueImpl(Shape shape) {
         return polylineAccessor.doCssGetFillInitialValue(shape);
     }
@@ -90,6 +98,7 @@ public class PolylineHelper extends ShapeHelper {
     public interface PolylineAccessor {
         NGNode doCreatePeer(Node node);
         void doUpdatePeer(Node node);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         Paint doCssGetFillInitialValue(Shape shape);
         Paint doCssGetStrokeInitialValue(Shape shape);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);

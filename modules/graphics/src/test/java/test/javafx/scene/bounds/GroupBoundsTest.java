@@ -25,6 +25,7 @@
 
 package test.javafx.scene.bounds;
 
+import com.sun.javafx.scene.NodeHelper;
 import static test.com.sun.javafx.test.TestHelper.assertBoundsEqual;
 import static test.com.sun.javafx.test.TestHelper.assertGroupBounds;
 import static test.com.sun.javafx.test.TestHelper.box;
@@ -468,15 +469,15 @@ public class GroupBoundsTest {
         }
     }
 
-    // here is a special test for impl_getPivotX and impl_getPivotY
+    // here is a special test for getPivotX and getPivotY
     @Test
     public void testPivotXAndPivotY() {
         Rectangle rect = new Rectangle(100, 100);
-        assertEquals(50.0f, (float) rect.impl_getPivotX());
-        assertEquals(50.0f, (float) rect.impl_getPivotY());
+        assertEquals(50.0f, (float) NodeHelper.getPivotX(rect));
+        assertEquals(50.0f, (float) NodeHelper.getPivotY(rect));
         rect.setWidth(70.0f);
-        assertEquals(35.0f, (float) rect.impl_getPivotX());
-        assertEquals(50.0f, (float) rect.impl_getPivotY());
+        assertEquals(35.0f, (float) NodeHelper.getPivotX(rect));
+        assertEquals(50.0f, (float) NodeHelper.getPivotY(rect));
     }
 
     /***************************************************************************

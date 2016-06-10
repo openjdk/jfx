@@ -48,6 +48,22 @@ public class TestNode extends Node {
             public NGNode doCreatePeer(Node node) {
                 return ((TestNode) node).doCreatePeer();
             }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((TestNode) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((TestNode) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((TestNode) node).doProcessMXNode(alg, ctx);
+            }
         });
     }
 
@@ -84,13 +100,17 @@ public class TestNode extends Node {
         return new Point3D(x + offsetInScene, y + offsetInScene, z);
     }
 
-    @Override
-    protected boolean impl_computeContains(double f, double f1) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private boolean doComputeContains(double f, double f1) {
         return false;
     }
 
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bd, BaseTransform bt) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private BaseBounds doComputeGeomBounds(BaseBounds bd, BaseTransform bt) {
         return null;
     }
 
@@ -98,8 +118,10 @@ public class TestNode extends Node {
         return new NGGroup();
     }
 
-    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return null;
     }
 }

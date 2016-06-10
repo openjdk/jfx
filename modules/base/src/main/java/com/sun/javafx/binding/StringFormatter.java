@@ -35,7 +35,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 
 public abstract class StringFormatter extends StringBinding {
 
@@ -86,7 +85,6 @@ public abstract class StringFormatter extends StringBinding {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<ObservableValue<?>> getDependencies() {
                     return FXCollections.<ObservableValue<?>> singletonObservableList(observableValue);
                 }
@@ -130,7 +128,6 @@ public abstract class StringFormatter extends StringBinding {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<ObservableValue<?>> getDependencies() {
                 return FXCollections.unmodifiableObservableList(FXCollections
                         .observableArrayList(extractDependencies(args)));
@@ -162,7 +159,6 @@ public abstract class StringFormatter extends StringBinding {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<ObservableValue<?>> getDependencies() {
                 return FXCollections.unmodifiableObservableList(FXCollections
                         .observableArrayList(extractDependencies(args)));
@@ -197,7 +193,6 @@ public abstract class StringFormatter extends StringBinding {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<ObservableValue<?>> getDependencies() {
                 return FXCollections.unmodifiableObservableList(FXCollections
                         .observableArrayList(extractDependencies(args)));

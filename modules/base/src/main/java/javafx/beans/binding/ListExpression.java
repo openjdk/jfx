@@ -26,7 +26,6 @@
 package javafx.beans.binding;
 
 import com.sun.javafx.binding.StringFormatter;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.value.ObservableIntegerValue;
@@ -99,7 +98,6 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<ObservableListValue<E>> getDependencies() {
                 return FXCollections.singletonObservableList(value);
             }

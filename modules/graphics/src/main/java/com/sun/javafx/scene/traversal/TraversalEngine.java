@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.traversal;
 
 import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
@@ -204,7 +205,7 @@ public abstract class TraversalEngine{
         private void addFocusableChildrenToList(List<Node> list, Parent parent) {
             List<Node> parentsNodes = parent.getChildrenUnmodifiable();
             for (Node n : parentsNodes) {
-                if (n.isFocusTraversable() && !n.isFocused() && n.impl_isTreeVisible() && !n.isDisabled()) {
+                if (n.isFocusTraversable() && !n.isFocused() && NodeHelper.isTreeVisible(n) && !n.isDisabled()) {
                     list.add(n);
                 }
                 if (n instanceof Parent) {

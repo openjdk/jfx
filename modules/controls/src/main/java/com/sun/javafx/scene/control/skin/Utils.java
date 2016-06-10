@@ -30,6 +30,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.tk.Toolkit;
@@ -666,7 +667,7 @@ public class Utils {
                         KeyCombination mnemonicKeyCombo = bindings.getMnemonicKeyCombination();
                         Mnemonic myMnemonic = new Mnemonic(cmContent.getLabelAt(i), mnemonicKeyCombo);
                         scene.addMnemonic(myMnemonic);
-                        cmContent.getLabelAt(i).impl_setShowMnemonics(initialState);
+                        NodeHelper.setShowMnemonics(cmContent.getLabelAt(i), initialState);
                     }
                 }
             }

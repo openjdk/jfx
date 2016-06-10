@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.shape;
 
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Node;
@@ -64,6 +66,12 @@ public class CircleHelper extends ShapeHelper {
     }
 
     @Override
+    protected BaseBounds computeGeomBoundsImpl(Node node, BaseBounds bounds,
+            BaseTransform tx) {
+        return circleAccessor.doComputeGeomBounds(node, bounds, tx);
+    }
+
+    @Override
     protected  com.sun.javafx.geom.Shape configShapeImpl(Shape shape) {
         return circleAccessor.doConfigShape(shape);
     }
@@ -79,6 +87,7 @@ public class CircleHelper extends ShapeHelper {
     public interface CircleAccessor {
         NGNode doCreatePeer(Node node);
         void doUpdatePeer(Node node);
+        BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         com.sun.javafx.geom.Shape doConfigShape(Shape shape);
     }
 

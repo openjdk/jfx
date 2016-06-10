@@ -312,12 +312,9 @@ public class Separator extends Control {
     }
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
      * @since JavaFX 8.0
      */
-    @Deprecated
     @Override protected List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }

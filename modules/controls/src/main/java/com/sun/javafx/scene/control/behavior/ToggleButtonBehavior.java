@@ -34,6 +34,7 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import com.sun.javafx.scene.control.inputmap.InputMap;
+import javafx.scene.input.KeyEvent;
 
 import static com.sun.javafx.scene.control.inputmap.InputMap.*;
 import static javafx.scene.input.KeyCode.*;
@@ -44,10 +45,10 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         super(button);
 
         ObservableList<Mapping<?>> mappings = FXCollections.observableArrayList(
-            new KeyMapping(RIGHT, e -> traverse("ToggleNext-Right")),
-            new KeyMapping(LEFT, e -> traverse("TogglePrevious-Left")),
-            new KeyMapping(DOWN, e -> traverse("ToggleNext-Down")),
-            new KeyMapping(UP, e -> traverse("TogglePrevious-Up"))
+            new KeyMapping(RIGHT, e -> traverse(e, "ToggleNext-Right")),
+            new KeyMapping(LEFT, e -> traverse(e, "TogglePrevious-Left")),
+            new KeyMapping(DOWN, e -> traverse(e, "ToggleNext-Down")),
+            new KeyMapping(UP, e -> traverse(e, "TogglePrevious-Up"))
         );
 
         // we disable auto-consuming, so that unconsumed events work their way
@@ -90,7 +91,7 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         return i;
     }
 
-    private void traverse(String name) {
+    private void traverse(KeyEvent e, String name) {
         ToggleButton toggleButton = getNode();
         final ToggleGroup toggleGroup = toggleButton.getToggleGroup();
         // A ToggleButton does not have to be in a group.
@@ -118,6 +119,7 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
                 Toggle toggle = toggles.get(nextToggleIndex);
                 toggleGroup.selectToggle(toggle);
                 ((Control)toggle).requestFocus();
+                e.consume();
             }
         } else {
             int prevToggleIndex = previousToggleIndex(toggles, currentToggleIdx);
@@ -129,6 +131,7 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
                 Toggle toggle = toggles.get(prevToggleIndex);
                 toggleGroup.selectToggle(toggle);
                 ((Control)toggle).requestFocus();
+                e.consume();
             }
         }
     }

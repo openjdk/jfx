@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.InsetsConverter;
@@ -330,7 +331,7 @@ public abstract class Labeled extends Control {
                 public void applyStyle(StyleOrigin newOrigin, Font value) {
 
                     //
-                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call impl_reapplyCSS
+                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
                     //
                     try {
                         // super.applyStyle calls set which might throw if value is bound.
@@ -360,7 +361,7 @@ public abstract class Labeled extends Control {
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
                     if(fontSetByCss == false) {
-                        Labeled.this.impl_reapplyCSS();
+                        NodeHelper.reapplyCSS(Labeled.this);
                     }
                 }
 

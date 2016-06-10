@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -135,7 +136,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             private Node selectPrev(int from, TraversalContext context) {
                 for (int i = from; i >= 0; --i) {
                     Node n = box.getChildren().get(i);
-                    if (n.isDisabled() || !n.impl_isTreeVisible()) continue;
+                    if (n.isDisabled() || !NodeHelper.isTreeVisible(n)) continue;
                     if (n instanceof Parent) {
                         Node selected = context.selectLastInParent((Parent)n);
                         if (selected != null) return selected;
@@ -150,7 +151,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             private Node selectNext(int from, TraversalContext context) {
                 for (int i = from, max = box.getChildren().size(); i < max; ++i) {
                     Node n = box.getChildren().get(i);
-                    if (n.isDisabled() || !n.impl_isTreeVisible()) continue;
+                    if (n.isDisabled() || !NodeHelper.isTreeVisible(n)) continue;
                     if (n.isFocusTraversable()) {
                         return n;
                     }

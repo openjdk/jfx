@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.NodeHelper;
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import static org.junit.Assert.assertEquals;
@@ -171,40 +172,40 @@ public class LabelTest {
     @Test public void showMnemonicsHasNoListenersOnTextFieldByDefault() {
         // This is a sanity check test, so the following tests make sense
         TextField textField = new TextField();
-        assertEquals(0, getListenerCount(textField.impl_showMnemonicsProperty()));
+        assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
     }
 
     @Test public void settingLabelForShouldAddListenerToShowMnemonics() {
         TextField textField = new TextField();
         label.setLabelFor(textField);
-        assertEquals(1, getListenerCount(textField.impl_showMnemonicsProperty()));
+        assertEquals(1, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
     }
 
     @Test public void settingLabelForShouldAddListenerToShowMnemonics_SetThroughProperty() {
         TextField textField = new TextField();
         label.labelForProperty().set(textField);
-        assertEquals(1, getListenerCount(textField.impl_showMnemonicsProperty()));
+        assertEquals(1, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
     }
 
     @Test public void settingLabelForShouldAddListenerToShowMnemonics_WhenBound() {
         TextField textField = new TextField();
         ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(textField);
         label.labelForProperty().bind(other);
-        assertEquals(1, getListenerCount(textField.impl_showMnemonicsProperty()));
+        assertEquals(1, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
     }
 
     @Test public void clearingLabelForShouldRemoveListenerFromShowMnemonics() {
         TextField textField = new TextField();
         label.setLabelFor(textField);
         label.setLabelFor(null);
-        assertEquals(0, getListenerCount(textField.impl_showMnemonicsProperty()));
+        assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
     }
 
     @Test public void clearingLabelForShouldRemoveListenerFromShowMnemonics_SetThroughProperty() {
         TextField textField = new TextField();
         label.labelForProperty().set(textField);
         label.labelForProperty().set(null);
-        assertEquals(0, getListenerCount(textField.impl_showMnemonicsProperty()));
+        assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
     }
 
     @Test public void clearingLabelForShouldRemoveListenerFromShowMnemonics_WhenBound() {
@@ -212,7 +213,7 @@ public class LabelTest {
         ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(textField);
         label.labelForProperty().bind(other);
         other.set(null);
-        assertEquals(0, getListenerCount(textField.impl_showMnemonicsProperty()));
+        assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
     }
 
     @Test public void swappingLabelForShouldAddAndRemoveListenerFromShowMnemonics() {
@@ -220,8 +221,8 @@ public class LabelTest {
         TextField b = new TextField();
         label.setLabelFor(a);
         label.setLabelFor(b);
-        assertEquals(0, getListenerCount(a.impl_showMnemonicsProperty()));
-        assertEquals(1, getListenerCount(b.impl_showMnemonicsProperty()));
+        assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(a)));
+        assertEquals(1, getListenerCount(NodeHelper.showMnemonicsProperty(b)));
     }
 
     @Test public void swappingLabelForShouldAddAndRemoveListenerFromShowMnemonics_SetThroughProperty() {
@@ -229,8 +230,8 @@ public class LabelTest {
         TextField b = new TextField();
         label.labelForProperty().set(a);
         label.labelForProperty().set(b);
-        assertEquals(0, getListenerCount(a.impl_showMnemonicsProperty()));
-        assertEquals(1, getListenerCount(b.impl_showMnemonicsProperty()));
+        assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(a)));
+        assertEquals(1, getListenerCount(NodeHelper.showMnemonicsProperty(b)));
     }
 
     @Test public void swappingLabelForShouldAddAndRemoveListenerFromShowMnemonics_WhenBound() {
@@ -239,34 +240,34 @@ public class LabelTest {
         ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(a);
         label.labelForProperty().bind(other);
         other.set(b);
-        assertEquals(0, getListenerCount(a.impl_showMnemonicsProperty()));
-        assertEquals(1, getListenerCount(b.impl_showMnemonicsProperty()));
+        assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(a)));
+        assertEquals(1, getListenerCount(NodeHelper.showMnemonicsProperty(b)));
     }
 
     @Test public void changingShowMnemonicsOnLabelForUpdatesStateForLabel() {
         TextField textField = new TextField();
         label.setLabelFor(textField);
-        assertFalse(textField.impl_isShowMnemonics());
-        assertFalse(label.impl_isShowMnemonics());
-        textField.impl_setShowMnemonics(true);
-        assertTrue(textField.impl_isShowMnemonics());
-        assertTrue(label.impl_isShowMnemonics());
+        assertFalse(NodeHelper.isShowMnemonics(textField));
+        assertFalse(NodeHelper.isShowMnemonics(label));
+        NodeHelper.setShowMnemonics(textField, true);
+        assertTrue(NodeHelper.isShowMnemonics(textField));
+        assertTrue(NodeHelper.isShowMnemonics(label));
     }
 
     @Test public void showMnemonicsOfLabelIsUpdatedWhenLabelForIsSet() {
         TextField textField = new TextField();
-        textField.impl_setShowMnemonics(true);
+        NodeHelper.setShowMnemonics(textField, true);
         label.setLabelFor(textField);
-        assertTrue(textField.impl_isShowMnemonics());
-        assertTrue(label.impl_isShowMnemonics());
+        assertTrue(NodeHelper.isShowMnemonics(textField));
+        assertTrue(NodeHelper.isShowMnemonics(label));
     }
 
     @Test public void showMnemonicsOfLabelIsSetToFalseWhenLabelForIsCleared() {
         TextField textField = new TextField();
-        textField.impl_setShowMnemonics(true);
+        NodeHelper.setShowMnemonics(textField, true);
         label.setLabelFor(textField);
         label.setLabelFor(null);
-        assertTrue(textField.impl_isShowMnemonics());
-        assertFalse(label.impl_isShowMnemonics());
+        assertTrue(NodeHelper.isShowMnemonics(textField));
+        assertFalse(NodeHelper.isShowMnemonics(label));
     }
 }

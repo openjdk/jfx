@@ -37,7 +37,6 @@ import javafx.collections.MapChangeListener.Change;
 import javafx.collections.ObservableMap;
 import javafx.collections.WeakMapChangeListener;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 
 /**
  * ObservableMap wrapper that does not allow changes to the underlying container.
@@ -110,7 +109,6 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
         return backingMap.get(key);
     }
 
-    @Override @ReturnsUnmodifiableCollection
     public Set<K> keySet() {
         if (keyset == null) {
             keyset = Collections.unmodifiableSet(backingMap.keySet());
@@ -118,7 +116,6 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
         return keyset;
     }
 
-    @Override @ReturnsUnmodifiableCollection
     public Collection<V> values() {
         if (values == null) {
             values = Collections.unmodifiableCollection(backingMap.values());
@@ -126,7 +123,6 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
         return values;
     }
 
-    @Override @ReturnsUnmodifiableCollection
     public Set<Entry<K,V>> entrySet() {
         if (entryset == null) {
             entryset = Collections.unmodifiableMap(backingMap).entrySet();

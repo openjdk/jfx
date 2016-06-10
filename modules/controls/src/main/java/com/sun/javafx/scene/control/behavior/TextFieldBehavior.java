@@ -50,6 +50,7 @@ import com.sun.javafx.geom.transform.Affine3D;
 
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.stage.WindowHelper;
 
 /**
@@ -162,7 +163,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     static Affine3D calculateNodeToSceneTransform(Node node) {
         final Affine3D transform = new Affine3D();
         do {
-            transform.preConcatenate(node.impl_getLeafTransform());
+            transform.preConcatenate(NodeHelper.getLeafTransform(node));
             node = node.getParent();
         } while (node != null);
 

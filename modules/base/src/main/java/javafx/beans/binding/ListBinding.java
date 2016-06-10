@@ -27,7 +27,6 @@ package javafx.beans.binding;
 
 import com.sun.javafx.binding.BindingHelperObserver;
 import com.sun.javafx.binding.ListExpressionHelper;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -222,7 +221,6 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
      * @return an empty {@code ObservableList}
      */
     @Override
-    @ReturnsUnmodifiableCollection
     public ObservableList<?> getDependencies() {
         return FXCollections.emptyObservableList();
     }

@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.scene.Node;
@@ -63,13 +64,13 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
      **************************************************************************/
 
     Runnable defaultButtonRunnable = () -> {
-        if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
+        if (getSkinnable().getScene() != null && NodeHelper.isTreeVisible(getSkinnable()) && !getSkinnable().isDisabled()) {
             getSkinnable().fire();
         }
     };
 
     Runnable cancelButtonRunnable = () -> {
-        if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
+        if (getSkinnable().getScene() != null && NodeHelper.isTreeVisible(getSkinnable()) && !getSkinnable().isDisabled()) {
             getSkinnable().fire();
         }
     };

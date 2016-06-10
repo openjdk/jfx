@@ -59,6 +59,7 @@ public class Main {
     private static boolean verbose = false;
     private static boolean packageAsJar = false;
     private static boolean genJNLP = false;
+    private static boolean genPackages = false;
     private static boolean css2Bin = false;
     private static boolean signJar = false;
     private static boolean makeAll = false;
@@ -193,6 +194,7 @@ public class Main {
                             createJarParams.setCss2bin(false);
                         } else if (arg.equalsIgnoreCase("-runtimeVersion")) {
                             createJarParams.setFxVersion(nextArg(args, i++));
+                            System.out.println("-runtimeVersion is deprecated");
                         } else if (arg.equalsIgnoreCase("-verbose") || arg.equalsIgnoreCase("-v")) {
                             createJarParams.setVerbose(true);
                             verbose = true;
@@ -333,6 +335,7 @@ public class Main {
                             deployParams.setOutfile(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-srcdir")) {
                             srcdir = new File(nextArg(args, i++));
+                            deployParams.srcdir = srcdir;
                         } else if (arg.equalsIgnoreCase("-srcfiles")) {
                             addResources(deployParams, srcdir, nextArg(args, i++));
                             srcfilesSet = true;
@@ -344,30 +347,14 @@ public class Main {
                             deployParams.addModules.add(nextArg(args, i++));
                         } else if (arg.equals("-limitmods")) {
                             deployParams.limitModules.add(nextArg(args, i++));
-                        } else if (arg.equals("-detectmods")) {
-                            deployParams.detectModules = true;
-                        } else if (arg.equals("-detectjremods")) {
-                            deployParams.detectJreModules = true;
-                        } else if (arg.equals("-stripexecutables")) {
-                            deployParams.stripExecutables = true;
-                        } else if (arg.equals("-modulepath")) {
-                            if (deployParams.modulePath == null) {
-                                deployParams.modulePath = nextArg(args, i++);
-                            } else {
-                                deployParams.modulePath =
-                                        deployParams.modulePath
-                                        + File.pathSeparator
-                                        + nextArg(args, i++);
-                            }
-                        } else if (arg.equals("-jdkmodulepath")) {
-                            if (deployParams.jdkModulePath == null) {
-                                deployParams.jdkModulePath = nextArg(args, i++);
-                            } else {
-                                deployParams.jdkModulePath =
-                                        deployParams.jdkModulePath
-                                        + File.pathSeparator
-                                        + nextArg(args, i++);
-                            }
+                        } else if (arg.equals("-strip-native-commands")) {
+                            deployParams.setStripNativeCommands(Boolean.valueOf(nextArg(args, i++)));
+                        } else if (arg.equals("-Xdetectmods")) {
+                            deployParams.setDetectMods(true);
+                        } else if (arg.equals("-modulepath") || arg.equals("-mp")) {
+                            deployParams.modulePath = nextArg(args, i++);
+                        } else if (arg.equals("-m")) {
+                            deployParams.setMainModule(nextArg(args, i++));
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
@@ -375,17 +362,18 @@ public class Main {
                     if (templateInFile != null) {
                         deployParams.addTemplate(templateInFile, templateOutFile);
                     }
-                    if (srcdir != null && !srcdir.isDirectory()) {
-                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());
+
+                    if (deployParams.validateForJNLP()) {
+                        genJNLP = true;
                     }
+
+                    if (deployParams.validateForBundle()) {
+                        genPackages = true;
+                    }
+
                     if (!srcfilesSet) {
-                        //using "." as default dir is confusing. Require explicit list of inputs
-                        if (srcdir == null) {
-                            throw new PackagerException("ERR_MissingArgument", "-srcfiles (-srcdir)");
-                        }
                         addResources(deployParams, srcdir, ".");
                     }
-                    genJNLP = true;
                 } else if (args[0].equalsIgnoreCase("-createbss")) {
                     boolean srcfilesSet = false;
                     for (int i = 1; i < args.length; i++) {
@@ -502,6 +490,11 @@ public class Main {
                     packager.packageAsJar(createJarParams);
                 }
                 if (genJNLP) {
+                    deployParams.validate();
+                    packager.generateDeploymentPackages(deployParams);
+                }
+                if (genPackages) {
+                    deployParams.setBundleType(BundleType.NATIVE);
                     deployParams.validate();
                     packager.generateDeploymentPackages(deployParams);
                 }

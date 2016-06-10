@@ -279,7 +279,7 @@ public class TextFlow extends Pane {
 
     @Override public void requestLayout() {
         /* The geometry of text nodes can be changed during layout children.
-         * For that reason it has to call impl_geomChanged() causing
+         * For that reason it has to call NodeHelper.geomChanged(this) causing
          * requestLayout() to happen during layoutChildren().
          * The inLayout flag prevents this call to cause any extra work.
          */

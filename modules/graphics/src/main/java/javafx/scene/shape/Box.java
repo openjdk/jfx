@@ -63,6 +63,23 @@ public class Box extends Shape3D {
             public void doUpdatePeer(Node node) {
                 ((Box) node).doUpdatePeer();
             }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Box) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Box) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public boolean doComputeIntersects(Node node, PickRay pickRay,
+                    PickResultChooser pickResult) {
+                return ((Box) node).doComputeIntersects(pickRay, pickResult);
+            }
         });
     }
 
@@ -116,7 +133,7 @@ public class Box extends Shape3D {
                     NodeHelper.markDirty(Box.this, DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
                     key = 0;
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Box.this);
                 }
             };
         }
@@ -146,7 +163,7 @@ public class Box extends Shape3D {
                     NodeHelper.markDirty(Box.this, DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
                     key = 0;
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Box.this);
                 }
             };
         }
@@ -176,7 +193,7 @@ public class Box extends Shape3D {
                     NodeHelper.markDirty(Box.this, DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
                     key = 0;
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Box.this);
                 }
             };
         }
@@ -212,13 +229,10 @@ public class Box extends Shape3D {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         final float w = (float) getWidth();
         final float h = (float) getHeight();
         final float d = (float) getDepth();
@@ -236,26 +250,20 @@ public class Box extends Shape3D {
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         double w = getWidth();
         double h = getHeight();
         return -w <= localX && localX <= w &&
                 -h <= localY && localY <= h;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeIntersects(PickRay pickRay, PickResultChooser pickResult) {
+    private boolean doComputeIntersects(PickRay pickRay, PickResultChooser pickResult) {
 
         final double w = getWidth();
         final double h = getHeight();

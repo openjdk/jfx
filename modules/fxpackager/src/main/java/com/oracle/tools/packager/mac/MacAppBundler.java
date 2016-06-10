@@ -29,12 +29,13 @@ import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.EnumeratedBundlerParam;
 import com.oracle.tools.packager.IOUtils;
-import com.oracle.tools.packager.JLinkBundlerHelper;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import jdk.packager.builders.mac.MacAppImageBuilder;
+
+import jdk.packager.internal.JLinkBundlerHelper;
 
 import java.io.File;
 import java.io.IOException;
@@ -347,6 +348,10 @@ public class MacAppBundler extends AbstractImageBundler {
             Log.info(ex.toString());
             Log.verbose(ex);
             return null;
+        } catch (Exception ex) {
+            Log.info("Exception: "+ex);
+            Log.debug(ex);
+            return null;
         }
     }
 
@@ -391,7 +396,6 @@ public class MacAppBundler extends AbstractImageBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
-                // APP_RESOURCES_LIST, // ??
                 ARGUMENTS,
                 BUNDLE_ID_SIGNING_PREFIX,
                 CLASSPATH,
@@ -403,7 +407,6 @@ public class MacAppBundler extends AbstractImageBundler {
                 MAC_CF_BUNDLE_IDENTIFIER,
                 MAC_CF_BUNDLE_NAME,
                 MAC_CF_BUNDLE_VERSION,
-//                MAC_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
                 PREFERENCES_ID,

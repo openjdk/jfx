@@ -42,6 +42,18 @@ public class MockNode extends Node {
             public NGNode doCreatePeer(Node node) {
                 return ((MockNode) node).doCreatePeer();
             }
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((MockNode) node).doComputeGeomBounds(bounds, tx);
+            }
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((MockNode) node).doComputeContains(localX, localY);
+            }
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((MockNode) node).doProcessMXNode(alg, ctx);            }
         });
     }
 
@@ -54,7 +66,7 @@ public class MockNode extends Node {
     }
 
     private NGNode doCreatePeer() { return null; }
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) { return null; }
-    protected boolean impl_computeContains(double localX, double localY) { return false; }
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) { return null; }
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) { return null; }
+    private boolean doComputeContains(double localX, double localY) { return false; }
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) { return null; }
 }

@@ -135,6 +135,22 @@ public class SwingNode extends Node {
             public void doUpdatePeer(Node node) {
                 ((SwingNode) node).doUpdatePeer();
             }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((SwingNode) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((SwingNode) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((SwingNode) node).doProcessMXNode(alg, ctx);
+            }
         });
     }
 
@@ -399,7 +415,7 @@ public class SwingNode extends Node {
         if (width != this.fxWidth || height != this.fxHeight) {
             this.fxWidth = width;
             this.fxHeight = height;
-            impl_geomChanged();
+            NodeHelper.geomChanged(this);
             NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
             SwingFXUtils.runOnEDT(() -> {
                 if (lwFrame != null) {
@@ -471,13 +487,10 @@ public class SwingNode extends Node {
         return swingMinHeight / getPlatformScaleY();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         return true;
     }
 
@@ -580,7 +593,7 @@ public class SwingNode extends Node {
             }
         });
 
-        impl_treeVisibleProperty().addListener((observable, oldValue, newValue) -> {
+        NodeHelper.treeVisibleProperty(this).addListener((observable, oldValue, newValue) -> {
             setLwFrameVisible(newValue);
         });
 
@@ -694,25 +707,19 @@ public class SwingNode extends Node {
         });
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         bounds.deriveWithNewBounds(0, 0, 0, (float)fxWidth, (float)fxHeight, 0);
         tx.transform(bounds, bounds);
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return alg.processLeafNode(this, ctx);
     }
 
@@ -780,7 +787,7 @@ public class SwingNode extends Node {
             SwingFXUtils.runOnFxThread(() -> {
                 SwingNode.this.swingPrefWidth = width;
                 SwingNode.this.swingPrefHeight = height;
-                SwingNode.this.impl_notifyLayoutBoundsChanged();
+                NodeHelper.notifyLayoutBoundsChanged(SwingNode.this);
             });
         }
         @Override
@@ -788,7 +795,7 @@ public class SwingNode extends Node {
             SwingFXUtils.runOnFxThread(() -> {
                 SwingNode.this.swingMaxWidth = width;
                 SwingNode.this.swingMaxHeight = height;
-                SwingNode.this.impl_notifyLayoutBoundsChanged();
+                NodeHelper.notifyLayoutBoundsChanged(SwingNode.this);
             });
         }
         @Override
@@ -796,7 +803,7 @@ public class SwingNode extends Node {
             SwingFXUtils.runOnFxThread(() -> {
                 SwingNode.this.swingMinWidth = width;
                 SwingNode.this.swingMinHeight = height;
-                SwingNode.this.impl_notifyLayoutBoundsChanged();
+                NodeHelper.notifyLayoutBoundsChanged(SwingNode.this);
             });
         }
 

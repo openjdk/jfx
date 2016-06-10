@@ -30,7 +30,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.binding.StringFormatter;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.value.ObservableValue;
 
 /**
@@ -93,7 +92,6 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
                     }
 
                     @Override
-                    @ReturnsUnmodifiableCollection
                     public ObservableList<ObservableBooleanValue> getDependencies() {
                         return FXCollections.singletonObservableList(value);
                     }
@@ -140,7 +138,6 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<ObservableValue<Boolean>> getDependencies() {
                 return FXCollections.singletonObservableList(value);
             }

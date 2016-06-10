@@ -30,7 +30,6 @@ import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 
 import com.sun.javafx.binding.BindingHelperObserver;
 import com.sun.javafx.binding.ExpressionHelper;
@@ -138,7 +137,6 @@ public abstract class BooleanBinding extends BooleanExpression implements
      * @return an empty {@code ObservableList}
      */
     @Override
-    @ReturnsUnmodifiableCollection
     public ObservableList<?> getDependencies() {
         return FXCollections.emptyObservableList();
     }

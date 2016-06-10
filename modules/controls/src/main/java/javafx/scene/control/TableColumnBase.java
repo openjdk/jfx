@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,7 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.event.EventHandlerManager;
+import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import java.util.HashMap;
 
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -99,6 +100,17 @@ import com.sun.javafx.scene.control.skin.Utils;
  */
 @IDProperty("id")
 public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
+    static {
+        TableColumnBaseHelper.setTableColumnBaseAccessor(
+                new TableColumnBaseHelper.TableColumnBaseAccessor() {
+
+                    @Override
+                    public void setWidth(TableColumnBase tableColumnBase, double width) {
+                        tableColumnBase.doSetWidth(width);
+                    }
+
+                });
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -415,7 +427,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
                         setMinWidth(0.0F);
                     }
 
-                    impl_setWidth(getWidth());
+                    doSetWidth(getWidth());
                 }
             };
         }
@@ -432,7 +444,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final double getPrefWidth() { return prefWidth.get(); }
     private final DoubleProperty prefWidth = new SimpleDoubleProperty(this, "prefWidth", DEFAULT_WIDTH) {
         @Override protected void invalidated() {
-            impl_setWidth(getPrefWidth());
+            doSetWidth(getPrefWidth());
         }
     };
 
@@ -448,7 +460,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final double getMaxWidth() { return maxWidth.get(); }
     private DoubleProperty maxWidth = new SimpleDoubleProperty(this, "maxWidth", DEFAULT_MAX_WIDTH) {
         @Override protected void invalidated() {
-            impl_setWidth(getWidth());
+            doSetWidth(getWidth());
         }
     };
 
@@ -753,12 +765,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_setWidth(double width) {
+    void doSetWidth(double width) {
         setWidth(Utils.boundedSize(width, getMinWidth(), getMaxWidth()));
     }
 

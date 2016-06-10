@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.NodeHelper;
 import javafx.scene.Node;
 import javafx.scene.control.PopupControl;
 
@@ -104,27 +105,27 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
                     switch (((KeyEvent)event).getCode()) {
                       case TAB :
                           if (((KeyEvent)event).isShiftDown()) {
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.PREVIOUS);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.PREVIOUS);
                           }
                           else {
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.NEXT);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.NEXT);
                           }
                           event.consume();
                           break;
                       case UP :
-                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.UP);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.UP);
                           event.consume();
                           break;
                       case DOWN :
-                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.DOWN);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.DOWN);
                           event.consume();
                           break;
                       case LEFT :
-                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT);
                           event.consume();
                           break;
                       case RIGHT :
-                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT);
                           event.consume();
                           break;
                       case ENTER :
@@ -164,26 +165,26 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
                           break;
                       case LEFT :
                           if (obj instanceof Node) {
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT);
                               event.consume();
                           }
                           else if (obj instanceof Scene) {
                               Node node = ((Scene)obj).getFocusOwner();
                               if (node != null) {
-                                  node.impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
+                                  NodeHelper.traverse(node, com.sun.javafx.scene.traversal.Direction.LEFT);
                                   event.consume();
                               }
                           }
                           break;
                       case RIGHT :
                           if (obj instanceof Node) {
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT);
                               event.consume();
                           }
                           else if (obj instanceof Scene) {
                               Node node = ((Scene)obj).getFocusOwner();
                               if (node != null) {
-                                  node.impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
+                                  NodeHelper.traverse(node, com.sun.javafx.scene.traversal.Direction.RIGHT);
                                   event.consume();
                               }
                           }

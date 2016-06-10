@@ -155,6 +155,21 @@ public class ImageView extends Node {
                 ((ImageView) node).doUpdatePeer();
             }
 
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+            BaseBounds bounds, BaseTransform tx) {
+                return ((ImageView) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((ImageView) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((ImageView) node).doProcessMXNode(alg, ctx);
+            }
         });
     }
 
@@ -242,7 +257,7 @@ public class ImageView extends Node {
                     }
                     if (dimensionChanged) {
                         invalidateWidthHeight();
-                        impl_geomChanged();
+                        NodeHelper.geomChanged(ImageView.this);
                     }
                     NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_CONTENTS);
                 }
@@ -308,7 +323,7 @@ public class ImageView extends Node {
         public void invalidated(Observable valueModel) {
             invalidateWidthHeight();
             NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_CONTENTS);
-            impl_geomChanged();
+            NodeHelper.geomChanged(ImageView.this);
         }
     };
     /**
@@ -334,7 +349,7 @@ public class ImageView extends Node {
                 @Override
                 protected void invalidated() {
                     NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(ImageView.this);
                 }
 
                 @Override
@@ -374,7 +389,7 @@ public class ImageView extends Node {
                 @Override
                 protected void invalidated() {
                     NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(ImageView.this);
                 }
 
                 @Override
@@ -421,7 +436,7 @@ public class ImageView extends Node {
                 protected void invalidated() {
                     invalidateWidthHeight();
                     NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_VIEWPORT);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(ImageView.this);
                 }
 
                 @Override
@@ -469,7 +484,7 @@ public class ImageView extends Node {
                 protected void invalidated() {
                     invalidateWidthHeight();
                     NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_VIEWPORT);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(ImageView.this);
                 }
 
                 @Override
@@ -534,7 +549,7 @@ public class ImageView extends Node {
                 protected void invalidated() {
                     invalidateWidthHeight();
                     NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_VIEWPORT);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(ImageView.this);
                 }
 
                 @Override
@@ -638,7 +653,7 @@ public class ImageView extends Node {
                 protected void invalidated() {
                     invalidateWidthHeight();
                     NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_VIEWPORT);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(ImageView.this);
                 }
 
                 @Override
@@ -658,11 +673,11 @@ public class ImageView extends Node {
     // Need to track changes to image width and image height and recompute
     // bounds when changed.
     // imageWidth = bind image.width on replace {
-    // impl_geomChanged();
+    // NodeHelper.geomChanged(ImageView.this);
     // }
     //
     // imageHeight = bind image.height on replace {
-    // impl_geomChanged();
+    // NodeHelper.geomChanged(ImageView.this);
     // }
 
     private double destWidth, destHeight;
@@ -674,12 +689,10 @@ public class ImageView extends Node {
         return new NGImageView();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         recomputeWidthHeight();
 
         bounds = bounds.deriveWithNewBounds((float)getX(), (float)getY(), 0.0f,
@@ -731,7 +744,7 @@ public class ImageView extends Node {
             }
         }
 
-        // Store these values for use later in impl_computeContains() to support
+        // Store these values for use later in doComputeContains() to support
         // Node.contains().
         destWidth = w;
         destHeight = h;
@@ -739,12 +752,10 @@ public class ImageView extends Node {
         validWH = true;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         if (getImage() == null) {
             return false;
         }
@@ -778,9 +789,9 @@ public class ImageView extends Node {
             viewHeight = vh;
         }
 
-        // desWidth Note and destHeight are computed by impl_computeGeomBounds()
+        // desWidth Note and destHeight are computed by NodeHelper.computeGeomBounds()
         // via a call from Node.contains() before calling
-        // impl_computeContains().
+        // doComputeContains().
         // Transform into image's coordinate system.
         dx = vminx + dx * viewWidth / destWidth;
         dy = vminy + dy * viewHeight / destHeight;
@@ -893,12 +904,10 @@ public class ImageView extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return alg.processLeafNode(this, ctx);
     }
 }

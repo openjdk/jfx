@@ -211,6 +211,7 @@ void Helpers::LoadOldConfigFile(TString FileName, IniFile* Container) {
 
         // Application Section
         AppendToIni(propertyFile, Container, keys[CONFIG_MAINJAR_KEY]);
+        AppendToIni(propertyFile, Container, keys[CONFIG_MAINMODULE_KEY]);
         AppendToIni(propertyFile, Container, keys[CONFIG_MAINCLASSNAME_KEY]);
         AppendToIni(propertyFile, Container, keys[CONFIG_CLASSPATH_KEY]);
         AppendToIni(propertyFile, Container, keys[APP_NAME_KEY]);

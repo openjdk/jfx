@@ -26,7 +26,6 @@
 package javafx.beans.binding;
 
 import com.sun.javafx.binding.StringFormatter;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -128,7 +127,6 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
             }
 
             @Override
-            @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
                 return FXCollections.singletonObservableList(value);
             }

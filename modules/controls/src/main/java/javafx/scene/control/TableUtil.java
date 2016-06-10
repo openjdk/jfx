@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -376,13 +376,13 @@ class TableUtil {
             double newWidth = column.getWidth() + delta;
 
             if (newWidth > column.getMaxWidth()) {
-                column.impl_setWidth(column.getMaxWidth());
+                column.doSetWidth(column.getMaxWidth());
                 return newWidth - column.getMaxWidth();
             } else if (newWidth < column.getMinWidth()) {
-                column.impl_setWidth(column.getMinWidth());
+                column.doSetWidth(column.getMinWidth());
                 return newWidth - column.getMinWidth();
             } else {
-                column.impl_setWidth(newWidth);
+                column.doSetWidth(newWidth);
                 return 0.0F;
             }
         }

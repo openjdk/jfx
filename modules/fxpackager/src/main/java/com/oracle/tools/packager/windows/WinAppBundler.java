@@ -29,13 +29,14 @@ import com.oracle.tools.packager.AbstractImageBundler;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
-import com.oracle.tools.packager.JLinkBundlerHelper;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import jdk.packager.builders.windows.WindowsAppImageBuilder;
+
+import jdk.packager.internal.JLinkBundlerHelper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -182,6 +183,10 @@ public class WinAppBundler extends AbstractImageBundler {
         } catch (IOException ex) {
             Log.info(ex.toString());
             Log.verbose(ex);
+            return null;
+        } catch (Exception ex) {
+            Log.info("Exception: "+ex);
+            Log.debug(ex);
             return null;
         }
     }

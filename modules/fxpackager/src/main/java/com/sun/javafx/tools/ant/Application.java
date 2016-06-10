@@ -63,9 +63,7 @@ public class Application extends DataType implements Cloneable {
 
     public List<Argument> addModule = new LinkedList<Argument>();
     public List<Argument> limitModule = new LinkedList<Argument>();
-    String jdkModulePath;
-    boolean detectModules;
-    boolean detectJreModules;
+    String modulepath;
     boolean stripExecutables;
 
     public void setVersion(String v) {
@@ -245,49 +243,17 @@ public class Application extends DataType implements Cloneable {
     }
 
     /**
-     * Whether or not the bundler should attempt to detect and add used modules
-     */
-    public boolean getDetectModules() {
-        return detectModules;
-    }
-
-    /**
-     * Whether or not the bundler should attempt to detect and add used modules
-     * @ant.not-required default is false
-     */
-    public void setDetectModules(boolean Value) {
-        this.detectModules = Value;
-    }
-
-    /**
-     * Whether or not the bundler should attempt to detect and add used JRE modules
-     */
-    public boolean getDetectJreModules() {
-        return detectJreModules;
-    }
-
-    /**
-     * Whether or not the bundler should attempt to detect and add used JRE modules
-     * @ant.not-required default is false
-     */
-    public void setDetectJreModules(boolean Value) {
-        this.detectJreModules = Value;
-    }
-
-    /**
-     * Module path within the running applicaiton
-     */
-    public String getJdkModulePath() {
-        return jdkModulePath;
-    }
-
-    /**
-     * Module path within the running applicaiton
      *
-     * @ant.not-required default is $PACKAGEPATH/modules
      */
-    public void setJdkModulePath(String Value) {
-        this.jdkModulePath = Value;
+    public String getModulePath() {
+        return modulepath;
+    }
+
+    /**
+     *
+     */
+    public void setModulePath(String Value) {
+        this.modulepath = Value;
     }
 
     /**

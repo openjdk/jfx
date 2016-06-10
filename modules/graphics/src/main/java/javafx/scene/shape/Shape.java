@@ -133,6 +133,22 @@ public abstract class Shape extends Node {
             }
 
             @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Shape) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Shape) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((Shape) node).doProcessMXNode(alg, ctx);
+            }
+
+            @Override
             public Paint doCssGetFillInitialValue(Shape shape) {
                 return shape.doCssGetFillInitialValue();
             }
@@ -391,7 +407,7 @@ public abstract class Shape extends Node {
             mode = newMode;
 
             NodeHelper.markDirty(this, DirtyBits.SHAPE_MODE);
-            impl_geomChanged();
+            NodeHelper.geomChanged(this);
         }
     }
 
@@ -480,7 +496,7 @@ public abstract class Shape extends Node {
         public void invalidated(Observable valueModel) {
             NodeHelper.markDirty(Shape.this, DirtyBits.SHAPE_FILL);
             NodeHelper.markDirty(Shape.this, DirtyBits.SHAPE_STROKE);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Shape.this);
             checkModeChanged();
         }
     };
@@ -890,24 +906,18 @@ public abstract class Shape extends Node {
         return getClassCssMetaData();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds,
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds,
                                              BaseTransform tx) {
         return computeShapeBounds(bounds, tx, ShapeHelper.configShape(this));
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         return computeShapeContains(localX, localY, ShapeHelper.configShape(this));
     }
 
@@ -1515,18 +1525,15 @@ public abstract class Shape extends Node {
             if (propertyCssKey != StyleableProperties.STROKE_DASH_OFFSET) {
                 // all stroke attributes change geometry except for the
                 // stroke dash offset
-                impl_geomChanged();
+                NodeHelper.geomChanged(Shape.this);
             }
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return alg.processLeafNode(this, ctx);
     }
 
@@ -1716,7 +1723,7 @@ public abstract class Shape extends Node {
 
         do {
             cumulativeTransformation.preConcatenate(
-                    node.impl_getLeafTransform());
+                    NodeHelper.getLeafTransform(node));
             node = node.getParent();
         } while (node != null);
 

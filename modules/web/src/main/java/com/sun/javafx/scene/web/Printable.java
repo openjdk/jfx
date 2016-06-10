@@ -43,6 +43,22 @@ public final class Printable extends Node {
             public NGNode doCreatePeer(Node node) {
                 return ((Printable) node).doCreatePeer();
             }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Printable) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Printable) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((Printable) node).doProcessMXNode(alg, ctx);
+            }
         });
     }
 
@@ -59,15 +75,24 @@ public final class Printable extends Node {
         return peer;
     }
 
-    @Override public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return null;
     }
 
-    @Override public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         return bounds;
     }
 
-    @Override protected boolean impl_computeContains(double d, double d1) {
+    /*
+     * Note: This method MUST only be called via its accessor method.
+     */
+    private boolean doComputeContains(double d, double d1) {
         return false;
     }
 

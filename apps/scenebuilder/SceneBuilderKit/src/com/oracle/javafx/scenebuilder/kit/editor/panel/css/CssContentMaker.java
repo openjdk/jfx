@@ -363,7 +363,7 @@ public class CssContentMaker {
     protected static List<Style> removeUserAgentStyles(List<Style> allStyles) {
         // With SB 2, we apply explicitly Modena/Caspian theme css on user scene graph.
         // The rules that appear with an AUTHOR origin has already been considered as USER_AGENT.
-        // So when an internal css method (such as impl_getMatchingStyles()) is called,
+        // So when an internal css method (such as getMatchingStyles()) is called,
         // we need here to remove all USER_AGENT styles, to avoid doublons.
         List<Style> matchingStyles = new ArrayList<>();
         for (Style style : allStyles) {

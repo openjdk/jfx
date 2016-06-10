@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 
@@ -1743,7 +1742,6 @@ public class TreeTableView<S> extends Control {
     /**
      * Returns an unmodifiable list containing the currently visible leaf columns.
      */
-    @ReturnsUnmodifiableCollection
     public ObservableList<TreeTableColumn<S,?>> getVisibleLeafColumns() {
         return unmodifiableVisibleLeafColumns;
     }
@@ -2002,6 +2000,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * {@inheritDoc}
+     * @since JavaFX 8.0
      */
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {

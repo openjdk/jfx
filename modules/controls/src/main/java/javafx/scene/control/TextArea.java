@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -430,11 +430,7 @@ public class TextArea extends TextInputControl {
      */
     public static final int DEFAULT_PREF_ROW_COUNT = 10;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    public static final int DEFAULT_PARAGRAPH_CAPACITY = 32;
+    private static final int DEFAULT_PARAGRAPH_CAPACITY = 32;
 
     /**
      * Creates a {@code TextArea} with empty text content.

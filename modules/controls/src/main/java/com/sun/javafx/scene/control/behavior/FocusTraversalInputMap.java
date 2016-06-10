@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.traversal.Direction;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
@@ -83,10 +84,10 @@ public class FocusTraversalInputMap<N extends Node> {
     /**
      * Called by any of the BehaviorBase traverse methods to actually effect a
      * traversal of the focus. The default behavior of this method is to simply
-     * call impl_traverse on the given node, passing the given direction. A
+     * traverse on the given node, passing the given direction. A
      * subclass may override this method.
      *
-     * @param node The node to call impl_traverse on
+     * @param node The node to traverse on
      * @param dir The direction to traverse
      */
     public static void traverse(final Node node, final Direction dir) {
@@ -94,7 +95,7 @@ public class FocusTraversalInputMap<N extends Node> {
             throw new IllegalArgumentException("Attempting to traverse on a null Node. " +
                     "Most probably a KeyEvent has been fired with a null target specified.");
         }
-        node.impl_traverse(dir);
+        NodeHelper.traverse(node, dir);
     }
 
     /**

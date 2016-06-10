@@ -25,6 +25,7 @@
 
 package javafx.scene.chart;
 
+import com.sun.javafx.scene.NodeHelper;
 import javafx.css.Styleable;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -437,7 +438,7 @@ public abstract class Axis<T> extends Region {
      * @return true if animations should happen
      */
     protected final boolean shouldAnimate(){
-        return getAnimated() && impl_isTreeVisible() && getScene() != null;
+        return getAnimated() && NodeHelper.isTreeVisible(this) && getScene() != null;
     }
 
     /**
@@ -654,7 +655,7 @@ public abstract class Axis<T> extends Region {
                 // auto range
                 range = autoRange(length);
                 // set current range to new range
-                setRange(range, getAnimated() && !isFirstPass && impl_isTreeVisible() && rangeInvalid);
+                setRange(range, getAnimated() && !isFirstPass && NodeHelper.isTreeVisible(this) && rangeInvalid);
             } else {
                 range = getRange();
             }

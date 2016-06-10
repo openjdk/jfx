@@ -25,7 +25,6 @@
 
 package test.javafx.binding;
 
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import test.javafx.beans.InvalidationListenerMock;
 import javafx.beans.Observable;
 import javafx.beans.binding.ListBinding;
@@ -280,7 +279,6 @@ public class ListBindingTest {
             return value;
         }
 
-        @Override @ReturnsUnmodifiableCollection
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;

@@ -25,12 +25,15 @@
 
 package com.oracle.tools.packager;
 
+import jdk.packager.internal.JLinkBundlerHelper;
+
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -230,9 +233,17 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (s, p) -> {
                         for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(p)) {
                             File appResourcesRoot = rfs.getBaseDirectory();
-                            File f = new File(appResourcesRoot, s);
-                            if (f.exists()) {
-                                return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Collections.singletonList(f)));
+                            File mainJarFile = new File(appResourcesRoot, s);
+                            if (mainJarFile.exists()) {
+                                return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Collections.singletonList(mainJarFile)));
+                            }
+                            else {
+                                List<Path> modulePath = JLinkBundlerHelper.MODULE_PATH.fetchFrom(p);
+                                Path modularJarPath = JLinkBundlerHelper.findModulePath(modulePath, s);
+
+                                if (modularJarPath != null && Files.exists(modularJarPath)) {
+                                    return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Collections.singletonList(modularJarPath.toFile())));
+                                }
                             }
                         }
                         throw new IllegalArgumentException(
@@ -653,8 +664,9 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
         boolean hasMainJarClassPath = params.containsKey(CLASSPATH.getID());
         boolean hasPreloader = params.containsKey(PRELOADER_CLASS.getID());
+        boolean haMainModule = params.containsKey(JLinkBundlerHelper.MAIN_MODULE.getID());
 
-        if (hasMainClass && hasMainJar && hasMainJarClassPath) {
+        if (hasMainClass && hasMainJar && hasMainJarClassPath || haMainModule) {
             return;
         }
         // it's a pair.  The [0] is the srcdir [1] is the file relative to sourcedir
@@ -667,7 +679,9 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             }
         } else if (hasMainJarClassPath) {
             for (String s : CLASSPATH.fetchFrom(params).split("\\s+")) {
-                filesToCheck.add(new String[] {APP_RESOURCES.fetchFrom(params).getBaseDirectory().toString(), s});
+                if (APP_RESOURCES.fetchFrom(params) != null) {
+                    filesToCheck.add(new String[] {APP_RESOURCES.fetchFrom(params).getBaseDirectory().toString(), s});
+                }
             }
         } else {
             List<RelativeFileSet> rfsl = APP_RESOURCES_LIST.fetchFrom(params);
@@ -754,12 +768,14 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
         boolean hasMainJarClassPath = params.containsKey(CLASSPATH.getID());
+        boolean haMainModule = params.containsKey(JLinkBundlerHelper.MAIN_MODULE.getID());
 
-        if (hasMainClass && hasMainJar && hasMainJarClassPath) {
+        if (hasMainClass && hasMainJar && hasMainJarClassPath || haMainModule) {
             return;
         }
 
         extractMainClassInfoFromAppResources(params);
+
         if (!params.containsKey(MAIN_CLASS.getID())) {
             if (hasMainJar) {
                 throw new ConfigException(

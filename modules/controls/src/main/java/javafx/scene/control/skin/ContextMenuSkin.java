@@ -31,6 +31,7 @@ import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
@@ -66,6 +67,14 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
 
     private final Region root;
     private TwoLevelFocusPopupBehavior tlFocus;
+
+    // used to handle the situation where CSS is applied to the popup
+    // after it is displayed, and we need to modify the position of the
+    // popup to account for this.
+    private double prefHeight;
+    private double shiftY;
+    private double prefWidth;
+    private double shiftX;
 
 
 
@@ -108,6 +117,13 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
     public ContextMenuSkin(final ContextMenu control) {
         this.popupMenu = control;
 
+        popupMenu.addEventHandler(Menu.ON_SHOWING, new EventHandler<Event>() {
+            @Override public void handle(Event event) {
+                prefHeight = root.prefHeight(-1);
+                prefWidth = root.prefWidth(-1);
+            }
+        });
+
         // When a contextMenu is shown, requestFocus on its content to enable
         // keyboard navigation.
         popupMenu.addEventHandler(Menu.ON_SHOWN, new EventHandler<Event>() {
@@ -122,6 +138,8 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
                 }
 
                 root.addEventHandler(KeyEvent.KEY_PRESSED, keyListener);
+
+                performPopupShifts();
             }
         });
         popupMenu.addEventHandler(Menu.ON_HIDDEN, new EventHandler<Event>() {
@@ -185,5 +203,35 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
         root.idProperty().unbind();
         root.styleProperty().unbind();
         if (tlFocus != null) tlFocus.dispose();
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Private Implementation                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    private void performPopupShifts() {
+        final ContextMenu contextMenu = getSkinnable();
+        final Node ownerNode = contextMenu.getOwnerNode();
+        if (ownerNode == null) return;
+
+        final Bounds ownerBounds = ownerNode.localToScreen(ownerNode.getLayoutBounds());
+
+        // shifting vertically
+        final double rootPrefHeight = root.prefHeight(-1);
+        shiftY = prefHeight - rootPrefHeight;
+        if (shiftY > 0 && (contextMenu.getY() + rootPrefHeight) < ownerBounds.getMinY()) {
+            contextMenu.setY(contextMenu.getY() + shiftY);
+        }
+
+        // shifting horizontally
+        final double rootPrefWidth = root.prefWidth(-1);
+        shiftX = prefWidth - rootPrefWidth;
+        if (shiftX > 0 && (contextMenu.getX() + rootPrefWidth) < ownerBounds.getMinX()) {
+            contextMenu.setX(contextMenu.getX() + shiftX);
+        }
     }
 }

@@ -72,6 +72,12 @@ public class Line extends Shape {
             }
 
             @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Line) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
             public Paint doCssGetFillInitialValue(Shape shape) {
                 return ((Line) shape).doCssGetFillInitialValue();
             }
@@ -131,7 +137,7 @@ public class Line extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Line.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Line.this);
                 }
 
                 @Override
@@ -168,7 +174,7 @@ public class Line extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Line.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Line.this);
                 }
 
                 @Override
@@ -205,7 +211,7 @@ public class Line extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(Line.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Line.this);
         }
 
         @Override
@@ -243,7 +249,7 @@ public class Line extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(Line.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Line.this);
         }
 
         @Override
@@ -276,13 +282,10 @@ public class Line extends Shape {
         return new NGLine();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
 
         // Since line's only draw with strokes, if the mode is FILL or EMPTY
         // then we simply return empty bounds

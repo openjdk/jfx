@@ -140,7 +140,7 @@ public class Arc extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Arc.this);
                 }
 
                 @Override
@@ -181,7 +181,7 @@ public class Arc extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Arc.this);
                 }
 
                 @Override
@@ -209,7 +209,7 @@ public class Arc extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Arc.this);
         }
 
         @Override
@@ -246,7 +246,7 @@ public class Arc extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Arc.this);
         }
 
         @Override
@@ -296,7 +296,7 @@ public class Arc extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Arc.this);
                 }
 
                 @Override
@@ -323,7 +323,7 @@ public class Arc extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Arc.this);
         }
 
         @Override
@@ -376,7 +376,7 @@ public class Arc extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Arc.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Arc.this);
                 }
 
                 @Override

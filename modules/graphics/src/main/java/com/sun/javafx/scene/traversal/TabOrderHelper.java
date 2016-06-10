@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.traversal;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
@@ -66,7 +67,7 @@ final class TabOrderHelper {
     }
 
     private static boolean isDisabledOrInvisible(Node prevNode) {
-        return prevNode.isDisabled() || !prevNode.impl_isTreeVisible();
+        return prevNode.isDisabled() || !NodeHelper.isTreeVisible(prevNode);
     }
 
     public static Node findPreviousFocusablePeer(Node node, Parent root) {

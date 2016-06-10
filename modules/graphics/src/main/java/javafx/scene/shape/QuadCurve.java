@@ -134,7 +134,7 @@ public  class QuadCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(QuadCurve.this);
                 }
 
                 @Override
@@ -176,7 +176,7 @@ public  class QuadCurve extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(QuadCurve.this);
                 }
 
                 @Override
@@ -204,7 +204,7 @@ public  class QuadCurve extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(QuadCurve.this);
         }
 
         @Override
@@ -241,7 +241,7 @@ public  class QuadCurve extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(QuadCurve.this);
         }
 
         @Override
@@ -294,7 +294,7 @@ public  class QuadCurve extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(QuadCurve.this);
         }
 
         @Override
@@ -336,7 +336,7 @@ public  class QuadCurve extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(QuadCurve.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(QuadCurve.this);
         }
 
         @Override

@@ -40,7 +40,6 @@ import com.sun.javafx.util.TempState;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.VetoableListDecorator;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.css.Selector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
@@ -113,6 +112,33 @@ public abstract class Parent extends Node {
             }
 
             @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Parent) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((Parent) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public void doProcessCSS(Node node) {
+                ((Parent) node).doProcessCSS();
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((Parent) node).doProcessMXNode(alg, ctx);
+            }
+
+            @Override
+            public void doPickNodeLocal(Node node, PickRay localPickRay,
+                    PickResultChooser result) {
+                ((Parent) node).doPickNodeLocal(localPickRay, result);
+            }
+
+            @Override
             public boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result) {
                 return parent.pickChildrenNode(pickRay, result);
             }
@@ -125,6 +151,11 @@ public abstract class Parent extends Node {
             @Override
             public ParentTraversalEngine getTraversalEngine(Parent parent) {
                 return parent.getTraversalEngine();
+            }
+
+            @Override
+            public List<String> doGetAllParentStylesheets(Parent parent) {
+                return parent.doGetAllParentStylesheets();
             }
         });
     }
@@ -411,7 +442,7 @@ public abstract class Parent extends Node {
             // Note that the styles of a child do not affect the parent or
             // its siblings. Thus, it is only necessary to reapply css to
             // the Node just added and not to this parent and all of its
-            // children. So the following call to impl_reapplyCSS was moved
+            // children. So the following call to reapplyCSS was moved
             // to Node.parentProperty. The original comment and code were
             // purposely left here as documentation should there be any
             // question about how the code used to work and why the change
@@ -419,7 +450,7 @@ public abstract class Parent extends Node {
             //
             // if children have changed then I need to reapply
             // CSS from this node on down
-//                impl_reapplyCSS();
+//                reapplyCSS();
             //
 
             // request layout if a Group subclass has overridden doLayout OR
@@ -431,7 +462,7 @@ public abstract class Parent extends Node {
             }
 
             if (geomChanged) {
-                impl_geomChanged();
+                NodeHelper.geomChanged(Parent.this);
             }
 
             // Note the starting index at which we need to update the
@@ -570,7 +601,7 @@ public abstract class Parent extends Node {
             if (removed == null) {
                 removed = new ArrayList<Node>();
             }
-            if (removed.size() + removedLength > REMOVED_CHILDREN_THRESHOLD || !impl_isTreeVisible()) {
+            if (removed.size() + removedLength > REMOVED_CHILDREN_THRESHOLD || !isTreeVisible()) {
                 //do not populate too many children in removed list
                 removedChildrenOptimizationDisabled = true;
             }
@@ -669,7 +700,6 @@ public abstract class Parent extends Node {
      *
      * @return read-only access to this parent's children ObservableList
      */
-    @ReturnsUnmodifiableCollection
     public ObservableList<Node> getChildrenUnmodifiable() {
         return unmodifiableChildren;
     }
@@ -680,7 +710,6 @@ public abstract class Parent extends Node {
      * @param <E> the type of the children nodes
      * @return list of all managed children in this parent
      */
-    @ReturnsUnmodifiableCollection
     protected <E extends Node> List<E> getManagedChildren() {
         if (unmodifiableManagedChildren == null) {
             unmodifiableManagedChildren = new ArrayList<Node>();
@@ -793,7 +822,7 @@ public abstract class Parent extends Node {
     boolean pickChildrenNode(PickRay pickRay, PickResultChooser result) {
         List<Node> orderedChildren = getOrderedChildren();
         for (int i = orderedChildren.size() - 1; i >= 0; i--) {
-            orderedChildren.get(i).impl_pickNode(pickRay, result);
+            orderedChildren.get(i).pickNode(pickRay, result);
             if (result.isClosed()) {
                 return false;
             }
@@ -801,13 +830,11 @@ public abstract class Parent extends Node {
         return true;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
-         double boundsDistance = impl_intersectsBounds(pickRay);
+    private void doPickNodeLocal(PickRay pickRay, PickResultChooser result) {
+         double boundsDistance = intersectsBounds(pickRay);
 
         if (!Double.isNaN(boundsDistance) && pickChildrenNode(pickRay, result)) {
             if (isPickOnBounds()) {
@@ -1269,7 +1296,7 @@ public abstract class Parent extends Node {
             if (scene != null) {
 
                 // Notify the StyleManager if stylesheets change. This Parent's
-                // styleManager will get recreated in impl_processCSS.
+                // styleManager will get recreated in NodeHelper.processCSS.
                 StyleManager.getInstance().stylesheetsChanged(Parent.this, c);
 
                 // RT-9784 - if stylesheet is removed, reset styled properties to
@@ -1282,7 +1309,7 @@ public abstract class Parent extends Node {
                     break; // no point in resetting more than once...
                 }
 
-                impl_reapplyCSS();
+                reapplyCSS();
             }
         }
     };
@@ -1299,7 +1326,7 @@ public abstract class Parent extends Node {
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
 
-    /**
+    /*
      * This method recurses up the parent chain until parent is null. As the
      * stack unwinds, if the Parent has stylesheets, they are added to the
      * list.
@@ -1307,11 +1334,10 @@ public abstract class Parent extends Node {
      * It is possible to override this method to stop the recursion. This allows
      * a Parent to have a set of stylesheets distinct from its Parent.
      *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated // SB-dependency: RT-21247 has been filed to track this
-    public /* Do not make this final! */ List<String> impl_getAllParentStylesheets() {
+     // SB-dependency: RT-21247 has been filed to track this
+    private List<String> doGetAllParentStylesheets() {
 
         List<String> list = null;
         final Parent myParent = getParent();
@@ -1323,7 +1349,7 @@ public abstract class Parent extends Node {
             // stylesheets further down the tree (closer to the leaf) have
             // a higer ordinal in the cascade.
             //
-            list = myParent.impl_getAllParentStylesheets();
+            list = ParentHelper.getAllParentStylesheets(myParent);
         }
 
         if (stylesheets != null && stylesheets.isEmpty() == false) {
@@ -1339,17 +1365,15 @@ public abstract class Parent extends Node {
 
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override protected void impl_processCSS() {
+    private void doProcessCSS() {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
 
-        // RT-29254 - If DIRTY_BRANCH, pass control to Node#processCSS. This avoids calling impl_processCSS on
+        // RT-29254 - If DIRTY_BRANCH, pass control to Node#processCSS. This avoids calling NodeHelper.processCSS on
         // this node and all of its children when css doesn't need updated, recalculated, or reapplied.
         if (cssFlag == CssFlags.DIRTY_BRANCH) {
             super.processCSS();
@@ -1357,7 +1381,7 @@ public abstract class Parent extends Node {
         }
 
         // Let the super implementation handle CSS for this node
-        super.impl_processCSS();
+        ParentHelper.superProcessCSS(this);
 
         // avoid the following call to children.toArray if there are no children
         if (children.isEmpty()) return;
@@ -1388,7 +1412,7 @@ public abstract class Parent extends Node {
             if(CssFlags.UPDATE.compareTo(child.cssFlag) > 0) {
                 child.cssFlag = CssFlags.UPDATE;
             }
-            child.impl_processCSS();
+            NodeHelper.processCSS(child);
         }
     }
 
@@ -1478,12 +1502,7 @@ public abstract class Parent extends Node {
     private Node near;
     private Node far;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         // If we have no children, our bounds are invalid
         if (children.isEmpty()) {
             return bounds.makeEmpty();
@@ -1863,7 +1882,7 @@ public abstract class Parent extends Node {
         // go ahead and indicate that the geom has changed for this parent,
         // even though once we figure it all out it may be that the bounds
         // have not changed
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
     }
 
     /**
@@ -1876,16 +1895,13 @@ public abstract class Parent extends Node {
             childExcluded(node);
         }
 
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         final Point2D tempPt = TempState.getInstance().point;
         for (int i=0, max=children.size(); i<max; i++) {
             final Node node = children.get(i);
@@ -1903,12 +1919,10 @@ public abstract class Parent extends Node {
         return false;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return alg.processContainerNode(this, ctx);
     }
 

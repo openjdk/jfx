@@ -1245,13 +1245,8 @@ final public class WebEngine {
      * is always called on the JavaFX Application Thread.
      * @return the debugger associated with this web engine.
      *         The return value cannot be {@code null}.
-     * @treatAsPrivate This is an internal API that can be changed or
-     *                 removed in the future.
-     * @deprecated This is an internal API that can be changed or
-     *             removed in the future.
      */
-    @Deprecated
-    public Debugger impl_getDebugger() {
+    Debugger getDebugger() {
         return debugger;
     }
 

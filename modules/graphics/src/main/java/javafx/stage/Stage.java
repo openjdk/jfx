@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
@@ -40,19 +39,17 @@ import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
 
-import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
-import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
+import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -245,7 +242,7 @@ public class Stage extends Window {
      * @throws IllegalStateException if this constructor is called on a thread
      * other than the JavaFX Application Thread.
      */
-    public Stage(@Default("javafx.stage.StageStyle.DECORATED") StageStyle style) {
+    public Stage(@NamedArg(value="style", defaultValue="DECORATED") StageStyle style) {
         super();
 
         Toolkit.getToolkit().checkFxUserThread();

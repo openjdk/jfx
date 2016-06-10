@@ -31,7 +31,9 @@ import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.mac.MacResources;
+
 import jdk.packager.builders.AbstractAppImageBuilder;
+import jdk.packager.internal.JLinkBundlerHelper;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -518,7 +520,15 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
                 //TODO parameters should provide set of values for IDEs
                 MAC_CATEGORY.fetchFrom(params));
 
-        data.put("DEPLOY_MAIN_JAR_NAME", MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
+        boolean hasMainJar = MAIN_JAR.fetchFrom(params) != null;
+        boolean hasMainModule = JLinkBundlerHelper.MAIN_MODULE.fetchFrom(params) != null;
+
+        if (hasMainJar) {
+            data.put("DEPLOY_MAIN_JAR_NAME", MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
+        }
+        else if (hasMainModule) {
+            //TODO??
+        }
 
         data.put("DEPLOY_PREFERENCES_ID", PREFERENCES_ID.fetchFrom(params).toLowerCase());
 
@@ -713,7 +723,6 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
                 data, VERBOSE.fetchFrom(params),
                 DROP_IN_RESOURCES_ROOT.fetchFrom(params)));
         w.close();
-
     }
 
     private void writePkgInfo(File file) throws IOException {

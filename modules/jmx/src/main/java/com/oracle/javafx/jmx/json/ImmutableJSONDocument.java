@@ -29,9 +29,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-/**
- * @treatAsPrivate
- */
 final class ImmutableJSONDocument extends JSONDocument {
 
     public ImmutableJSONDocument(Type type) {

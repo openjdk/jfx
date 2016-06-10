@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.GroupHelper;
 import javafx.collections.ObservableList;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -461,11 +462,8 @@ public class GroupTest {
      * If the layout bounds has a NaN, it shouldn't leak out through node.prefWidth
      */
     @Test public void Node_prefWidth_BasedOnLayoutBounds_CleansUpAfterBadBounds() {
-        Group node = new Group() {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, Double.NaN, 50);
-            }
-        };
+        SpecialGroup node = new SpecialGroup();
+        node.setTestBB(0, 0, Double.NaN, 50);
         assertEquals(0, node.prefWidth(-1), 0);
         assertEquals(0, node.prefWidth(5), 0);
     }
@@ -474,11 +472,8 @@ public class GroupTest {
      * If the layout bounds has a negative value, it shouldn't leak out through node.prefWidth
      */
     @Test public void Node_prefWidth_BasedOnLayoutBounds_CleansUpAfterBadBounds2() {
-        Group node = new Group() {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, -10, 50);
-            }
-        };
+        SpecialGroup node = new SpecialGroup();
+        node.setTestBB(0, 0, -10, 50);
         assertEquals(0, node.prefWidth(-1), 0);
         assertEquals(0, node.prefWidth(5), 0);
     }
@@ -487,11 +482,8 @@ public class GroupTest {
      * If the layout bounds has a NaN, it shouldn't leak out through node.prefHeight
      */
     @Test public void Node_prefHeight_BasedOnLayoutBounds_CleansUpAfterBadBounds() {
-        Group node = new Group() {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, 50, Double.NaN);
-            }
-        };
+        SpecialGroup node = new SpecialGroup();
+        node.setTestBB(0, 0, 50, Double.NaN);
         assertEquals(0, node.prefHeight(-1), 0);
         assertEquals(0, node.prefHeight(5), 0);
     }
@@ -500,11 +492,8 @@ public class GroupTest {
      * If the layout bounds has a negative value, it shouldn't leak out through node.prefHeight
      */
     @Test public void Node_prefHeight_BasedOnLayoutBounds_CleansUpAfterBadBounds2() {
-        Group node = new Group() {
-            @Override protected Bounds impl_computeLayoutBounds() {
-                return new BoundingBox(0, 0, 50, -10);
-            }
-        };
+        SpecialGroup node = new SpecialGroup();
+        node.setTestBB(0, 0, 50, -10);
         assertEquals(0, node.prefHeight(-1), 0);
         assertEquals(0, node.prefHeight(5), 0);
     }
@@ -769,5 +758,45 @@ public class GroupTest {
         assertEquals(200, group.minHeight(-1), 1e-100);
         assertEquals(100, group.maxWidth(-1), 1e-100);
         assertEquals(200, group.maxHeight(-1), 1e-100);
+    }
+
+    protected class SpecialGroup extends Group {
+        BoundingBox testBB;
+
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            SpecialGroupHelper.initHelper(this);
+        }
+        public SpecialGroup() {
+        }
+
+        void setTestBB(double x, double y, double width, double height) {
+            testBB = new BoundingBox(x, y, width, height);
+        }
+
+        private Bounds doComputeLayoutBounds() {
+            return testBB;
+        }
+    }
+
+    static final class SpecialGroupHelper extends GroupHelper {
+        private static final SpecialGroupHelper theInstance;
+
+        static {
+            theInstance = new SpecialGroupHelper();
+        }
+
+        private static SpecialGroupHelper getInstance() {
+            return theInstance;
+        }
+
+        public static void initHelper(SpecialGroup specialGroup) {
+            setHelper(specialGroup, getInstance());
+        }
+
+        @Override
+        protected Bounds computeLayoutBoundsImpl(Node node) {
+            return ((SpecialGroup) node).doComputeLayoutBounds();
+        }
     }
 }

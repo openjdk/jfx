@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit;
 
+import com.sun.javafx.scene.NodeHelper;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -101,7 +102,7 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
     }
 
     @Override public void transferFocus(boolean forward) {
-        accessor.getView().impl_traverse(forward ? Direction.NEXT : Direction.PREVIOUS);
+        NodeHelper.traverse(accessor.getView(), forward ? Direction.NEXT : Direction.PREVIOUS);
     }
 
     @Override public WCRectangle getScreenBounds(boolean available) {

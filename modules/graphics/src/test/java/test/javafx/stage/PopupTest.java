@@ -25,6 +25,7 @@
 
 package test.javafx.stage;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.WindowHelper;
 import test.com.sun.javafx.pgstub.StubPopupStage;
@@ -55,6 +56,7 @@ import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.scene.Node;
 import javafx.scene.ParentShim;
 import javafx.stage.Popup;
 import javafx.stage.PopupWindow;
@@ -63,6 +65,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import static org.junit.Assert.*;
+import test.com.sun.javafx.stage.PopupRootHelper;
 
 public class PopupTest {
 
@@ -132,7 +135,17 @@ public class PopupTest {
         assertEquals(20, peer.y, 1e-100);
     }
 
-    private static final class PopupRoot extends Parent {
+    public static final class PopupRoot extends Parent {
+        static {
+            PopupRootHelper.setPopupRootAccessor(
+                    new PopupRootHelper.PopupRootAccessor() {
+                @Override
+                public Bounds doComputeLayoutBounds(Node node) {
+                    return ((PopupRoot) node).doComputeLayoutBounds();
+                }
+            });
+        }
+
         private final Rectangle geomBoundsRect;
 
         private double layoutBoundsX;
@@ -140,6 +153,10 @@ public class PopupTest {
         private double layoutBoundsWidth;
         private double layoutBoundsHeight;
 
+        {
+            // To initialize the class helper at the begining each constructor of this class
+            PopupRootHelper.initHelper(this);
+        }
         public PopupRoot() {
             geomBoundsRect = new Rectangle(0, 0, 100, 100);
             layoutBoundsWidth = 100;
@@ -165,11 +182,10 @@ public class PopupTest {
             layoutBoundsWidth = width;
             layoutBoundsHeight = height;
 
-            impl_layoutBoundsChanged();
+            NodeHelper.layoutBoundsChanged(this);
         }
 
-        @Override
-        protected Bounds impl_computeLayoutBounds() {
+        private Bounds doComputeLayoutBounds() {
             return new BoundingBox(layoutBoundsX, layoutBoundsY,
                                    layoutBoundsWidth, layoutBoundsHeight);
         }

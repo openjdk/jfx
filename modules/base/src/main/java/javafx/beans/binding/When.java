@@ -46,7 +46,6 @@ import com.sun.javafx.binding.FloatConstant;
 import com.sun.javafx.binding.IntegerConstant;
 import com.sun.javafx.binding.Logging;
 import com.sun.javafx.binding.LongConstant;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 
 /**
  * Starting point for a binding that calculates a ternary expression.
@@ -142,7 +141,6 @@ public class When {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<ObservableValue<?>> getDependencies() {
                     return FXCollections.unmodifiableObservableList(
                             FXCollections.<ObservableValue<?>> observableArrayList(condition, thenValue, otherwiseValue));
@@ -172,7 +170,6 @@ public class When {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<ObservableValue<?>> getDependencies() {
                     return FXCollections.unmodifiableObservableList(
                             FXCollections.<ObservableValue<?>> observableArrayList(condition, thenValue, otherwiseValue));
@@ -202,7 +199,6 @@ public class When {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<ObservableValue<?>> getDependencies() {
                     return FXCollections.unmodifiableObservableList(
                             FXCollections.<ObservableValue<?>> observableArrayList(condition, thenValue, otherwiseValue));
@@ -232,7 +228,6 @@ public class When {
                 }
 
                 @Override
-                @ReturnsUnmodifiableCollection
                 public ObservableList<ObservableValue<?>> getDependencies() {
                     return FXCollections.unmodifiableObservableList(
                             FXCollections.<ObservableValue<?>> observableArrayList(condition, thenValue, otherwiseValue));
@@ -457,7 +452,6 @@ public class When {
         }
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             assert condition != null;
             final ObservableList<ObservableValue<?>> seq = FXCollections.<ObservableValue<?>> observableArrayList(condition);
@@ -629,7 +623,6 @@ public class When {
 
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             assert condition != null;
             final ObservableList<ObservableValue<?>> seq = FXCollections.<ObservableValue<?>> observableArrayList(condition);
@@ -798,7 +791,6 @@ public class When {
 
 
         @Override
-        @ReturnsUnmodifiableCollection
         public ObservableList<ObservableValue<?>> getDependencies() {
             assert condition != null;
             final ObservableList<ObservableValue<?>> seq = FXCollections.<ObservableValue<?>> observableArrayList(condition);

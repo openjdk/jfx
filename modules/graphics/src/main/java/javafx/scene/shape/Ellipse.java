@@ -70,6 +70,12 @@ public class Ellipse extends Shape {
             }
 
             @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((Ellipse) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
             public com.sun.javafx.geom.Shape doConfigShape(Shape shape) {
                 return ((Ellipse) shape).doConfigShape();
             }
@@ -142,7 +148,7 @@ public class Ellipse extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Ellipse.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Ellipse.this);
                 }
 
                 @Override
@@ -183,7 +189,7 @@ public class Ellipse extends Shape {
                 @Override
                 public void invalidated() {
                     NodeHelper.markDirty(Ellipse.this, DirtyBits.NODE_GEOMETRY);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(Ellipse.this);
                 }
 
                 @Override
@@ -210,7 +216,7 @@ public class Ellipse extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(Ellipse.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Ellipse.this);
         }
 
         @Override
@@ -246,7 +252,7 @@ public class Ellipse extends Shape {
         @Override
         public void invalidated() {
             NodeHelper.markDirty(Ellipse.this, DirtyBits.NODE_GEOMETRY);
-            impl_geomChanged();
+            NodeHelper.geomChanged(Ellipse.this);
         }
 
         @Override
@@ -295,13 +301,10 @@ public class Ellipse extends Shape {
         return StrokeLineJoin.BEVEL;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         // if there is no fill or stroke, then there are no bounds. The bounds
         // must be marked empty in this case to distinguish it from 0,0,0,0
         // which would actually contribute to the bounds of a group.

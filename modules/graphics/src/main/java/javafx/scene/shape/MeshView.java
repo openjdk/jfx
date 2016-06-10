@@ -63,6 +63,22 @@ public class MeshView extends Shape3D {
                 ((MeshView) node).doUpdatePeer();
             }
 
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((MeshView) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((MeshView) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public boolean doComputeIntersects(Node node, PickRay pickRay,
+                    PickResultChooser pickResult) {
+                return ((MeshView) node).doComputeIntersects(pickRay, pickResult);
+            }
         });
     }
 
@@ -109,7 +125,7 @@ public class MeshView extends Shape3D {
                         (observable, oldValue, newValue) -> {
                             if (newValue) {
                                 NodeHelper.markDirty(MeshView.this, DirtyBits.MESH_GEOM);
-                                impl_geomChanged();
+                                NodeHelper.geomChanged(MeshView.this);
                             }
                         };
                 private final WeakChangeListener<Boolean> weakMeshChangeListener =
@@ -126,7 +142,7 @@ public class MeshView extends Shape3D {
                     }
                     NodeHelper.markDirty(MeshView.this, DirtyBits.MESH);
                     NodeHelper.markDirty(MeshView.this, DirtyBits.MESH_GEOM);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(MeshView.this);
                     old = newMesh;
                 }
             };
@@ -154,13 +170,10 @@ public class MeshView extends Shape3D {
         return new NGMeshView();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         if (getMesh() != null) {
             bounds = getMesh().computeBounds(bounds);
             bounds = tx.transform(bounds, bounds);
@@ -170,23 +183,17 @@ public class MeshView extends Shape3D {
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Override
-    @Deprecated
-    protected boolean impl_computeIntersects(PickRay pickRay, PickResultChooser pickResult) {
+    private boolean doComputeIntersects(PickRay pickRay, PickResultChooser pickResult) {
         return MeshHelper.computeIntersects(getMesh(), pickRay, pickResult, this, getCullFace(), true);
     }
 

@@ -44,6 +44,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import jdk.packager.internal.JLinkBundlerHelper;
+
 import static com.oracle.tools.packager.jnlp.JNLPBundler.*;
 
 public class DeployParams extends CommonParams {
@@ -75,13 +77,13 @@ public class DeployParams extends CommonParams {
     List<String> arguments; //unnamed arguments
 
     // Java 9 modules support
-    Set<String> addModules = new LinkedHashSet<>();
-    Set<String> limitModules = new LinkedHashSet<>();
-    boolean detectModules = false;
-    boolean detectJreModules = false;
-    boolean stripExecutables = false;
-    String modulePath;
-    String jdkModulePath;
+    Set<String> addModules = null;
+    Set<String> limitModules = null;
+    Boolean stripNativeCommands = null;
+    Boolean detectmods = null;
+    String modulePath = null;
+    String mainModule = null;
+    File srcdir;
 
     int width;
     int height;
@@ -251,10 +253,18 @@ public class DeployParams extends CommonParams {
     }
 
     public void addAddModule(String module) {
+        if (addModules == null) {
+            addModules = new LinkedHashSet<>();
+        }
+
         addModules.add(module);
     }
 
     public void addLimitModule(String module) {
+        if (limitModules == null) {
+            limitModules = new LinkedHashSet<>();
+        }
+
         limitModules.add(module);
     }
 
@@ -262,20 +272,16 @@ public class DeployParams extends CommonParams {
         this.modulePath = value;
     }
 
-    public void setJdkModulePath(String value) {
-        this.jdkModulePath = value;
+    public void setMainModule(String value) {
+        this.mainModule = value;
     }
 
-    public void setDetectModules(boolean value) {
-        this.detectModules = value;
+    public void setStripNativeCommands(boolean value) {
+        this.stripNativeCommands = value;
     }
 
-    public void setDetectJreModules(boolean value) {
-        this.detectJreModules = value;
-    }
-
-    public void setStripExecutables(boolean value) {
-        this.stripExecutables = value;
+    public void setDetectMods(boolean value) {
+        this.detectmods = value;
     }
 
     public void setDescription(String description) {
@@ -486,9 +492,45 @@ public class DeployParams extends CommonParams {
         if (resources.isEmpty()) {
             throw new PackagerException("ERR_MissingAppResources");
         }
-        if (applicationClass == null) {
+        if (applicationClass == null && mainModule == null) { //TODO better error here for mainmodule
             throw new PackagerException("ERR_MissingArgument", "-appclass");
         }
+    }
+
+    public boolean validateForJNLP() {
+        boolean result = false;
+
+        // Success
+        if (applicationClass != null && !applicationClass.isEmpty() &&
+            (getBundleType() == BundleType.JNLP || getBundleType() == BundleType.ALL)) {
+            result = true;
+        }
+
+        // Failed
+        if ((mainModule != null && !mainModule.isEmpty()) ||
+            (addModules != null && !addModules.isEmpty()) ||
+            (limitModules != null && !limitModules.isEmpty()) |
+            (modulePath != null && !modulePath.isEmpty()) ||
+            getBundleType() == BundleType.INSTALLER ||
+            getBundleType() == BundleType.NATIVE ||
+            getBundleType() == BundleType.IMAGE) {
+
+            result = false;
+        }
+
+        return result;
+    }
+
+    public boolean validateForBundle() {
+        boolean result = false;
+
+        // Success
+        if (((applicationClass != null && !applicationClass.isEmpty()) ||
+            !mainModule.isEmpty())) {
+            result = true;
+        }
+
+        return result;
     }
 
     //could be icon or splash
@@ -561,12 +603,11 @@ public class DeployParams extends CommonParams {
             StandardBundlerParam.JVM_OPTIONS.getID(),
             StandardBundlerParam.USER_JVM_OPTIONS.getID(),
             StandardBundlerParam.ARGUMENTS.getID(),
-            //StandardBundlerParam.MODULE_NAME.getID(),
             JLinkBundlerHelper.MODULE_PATH.getID(),
-            JLinkBundlerHelper.JDK_MODULE_PATH.getID(),
             JLinkBundlerHelper.ADD_MODULES.getID(),
             JLinkBundlerHelper.LIMIT_MODULES.getID(),
-            JLinkBundlerHelper.STRIP_NATIVE_COMMANDS.getID()
+            JLinkBundlerHelper.STRIP_NATIVE_COMMANDS.getID(),
+            JLinkBundlerHelper.DETECT_MODS.getID()
     ));
 
     @SuppressWarnings("unchecked")
@@ -647,13 +688,31 @@ public class DeployParams extends CommonParams {
         bundleParams.setJvmUserArgs(jvmUserArgs);
         bundleParams.setArguments(arguments);
 
-        bundleParams.setAddModules(addModules);
-        bundleParams.setLimitModules(limitModules);
-        bundleParams.setDetectModules(detectModules);
-        bundleParams.setDetectJreModules(detectJreModules);
-        bundleParams.setStripExecutables(stripExecutables);
-        bundleParams.setJdkModulePath(jdkModulePath);
-        bundleParams.setModulePath(modulePath);
+        if (addModules != null && !addModules.isEmpty()) {
+            bundleParams.setAddModules(addModules);
+        }
+
+        if (limitModules != null && !limitModules.isEmpty()) {
+            bundleParams.setLimitModules(limitModules);
+        }
+
+        if (stripNativeCommands != null) {
+            bundleParams.setStripNativeCommands(stripNativeCommands);
+        }
+
+        bundleParams.setSrcDir(srcdir);
+
+        if (modulePath != null && !modulePath.isEmpty()) {
+            bundleParams.setModulePath(modulePath);
+        }
+
+        if (mainModule != null && !mainModule.isEmpty()) {
+            bundleParams.setMainModule(mainModule);
+        }
+
+        if (detectmods != null) {
+            bundleParams.setDetectMods(detectmods);
+        }
 
         File appIcon = null;
         List<Map<String, ? super Object>> bundlerIcons = new ArrayList<>();

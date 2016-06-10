@@ -103,6 +103,27 @@ public class MediaView extends Node {
             public void doUpdatePeer(Node node) {
                 ((MediaView) node).doUpdatePeer();
             }
+
+            @Override
+            public void doTransformsChanged(Node node) {
+                ((MediaView) node).doTransformsChanged();
+            }
+
+            @Override
+            public BaseBounds doComputeGeomBounds(Node node,
+                    BaseBounds bounds, BaseTransform tx) {
+                return ((MediaView) node).doComputeGeomBounds(bounds, tx);
+            }
+
+            @Override
+            public boolean doComputeContains(Node node, double localX, double localY) {
+                return ((MediaView) node).doComputeContains(localX, localY);
+            }
+
+            @Override
+            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+                return ((MediaView) node).doProcessMXNode(alg, ctx);
+            }
         });
     }
 
@@ -133,7 +154,7 @@ public class MediaView extends Node {
     /** Listener which causes the geometry to be updated when the media dimension changes. */
     private InvalidationListener mediaDimensionListener = value -> {
         NodeHelper.markDirty(this, DirtyBits.NODE_VIEWPORT);
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
     };
 
     /** Listener for decoded frame rate. */
@@ -238,7 +259,7 @@ public class MediaView extends Node {
     private static Affine3D calculateNodeToSceneTransform(Node node) {
         final Affine3D transform = new Affine3D();
         do {
-            transform.preConcatenate(node.impl_getLeafTransform());
+            transform.preConcatenate(NodeHelper.getLeafTransform(node));
             node = node.getParent();
         } while (node != null);
 
@@ -270,14 +291,11 @@ public class MediaView extends Node {
         updateOverlayTransformDirectly();
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     *
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public void impl_transformsChanged() {
-        super.impl_transformsChanged();
+    private void doTransformsChanged() {
         if (HostUtils.isIOS()) {
             updateOverlayTransform();
         }
@@ -309,7 +327,7 @@ public class MediaView extends Node {
         if (HostUtils.isIOS()) {
             createListeners();
             parentProperty().addListener(parentListener);
-            impl_treeVisibleProperty().addListener(treeVisibleListener);
+            NodeHelper.treeVisibleProperty(this).addListener(treeVisibleListener);
             opacityProperty().addListener(opacityListener);
         }
     }
@@ -398,7 +416,7 @@ public class MediaView extends Node {
                         }
                     }
                     NodeHelper.markDirty(MediaView.this, DirtyBits.MEDIAVIEW_MEDIA);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(MediaView.this);
                     oldValue = newValue;
                 }
                 @Override
@@ -495,7 +513,7 @@ public class MediaView extends Node {
                     }
                     else {
                         NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_VIEWPORT);
-                        impl_geomChanged();
+                        NodeHelper.geomChanged(MediaView.this);
                     }
                 }
 
@@ -596,7 +614,7 @@ public class MediaView extends Node {
                     }
                     else {
                         NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_GEOMETRY);
-                        impl_geomChanged();
+                        NodeHelper.geomChanged(MediaView.this);
                     }
                 }
 
@@ -646,7 +664,7 @@ public class MediaView extends Node {
                     }
                     else {
                         NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_GEOMETRY);
-                        impl_geomChanged();
+                        NodeHelper.geomChanged(MediaView.this);
                     }
                 }
 
@@ -703,7 +721,7 @@ public class MediaView extends Node {
                     }
                     else {
                         NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_VIEWPORT);
-                        impl_geomChanged();
+                        NodeHelper.geomChanged(MediaView.this);
                     }
                 }
 
@@ -760,7 +778,7 @@ public class MediaView extends Node {
                     }
                     else {
                         NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_VIEWPORT);
-                        impl_geomChanged();
+                        NodeHelper.geomChanged(MediaView.this);
                     }
                 }
 
@@ -812,7 +830,7 @@ public class MediaView extends Node {
                 @Override
                 protected void invalidated() {
                     NodeHelper.markDirty(MediaView.this, DirtyBits.NODE_VIEWPORT);
-                    impl_geomChanged();
+                    NodeHelper.geomChanged(MediaView.this);
                 }
 
                 @Override
@@ -837,12 +855,12 @@ public class MediaView extends Node {
         }
 
         NodeHelper.markDirty(this, DirtyBits.MEDIAVIEW_MEDIA);
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
     }
 
     void notifyMediaSizeChange() {
         NodeHelper.markDirty(this, DirtyBits.NODE_VIEWPORT);
-        impl_geomChanged();
+        NodeHelper.geomChanged(this);
     }
 
     void notifyMediaFrameUpdated() {
@@ -860,13 +878,10 @@ public class MediaView extends Node {
         return peer;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+    private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) {
 
         // need to figure out the width/height to use for computing bounds
         Media media = (getMediaPlayer() == null) ? null : getMediaPlayer().getMedia();
@@ -925,13 +940,10 @@ public class MediaView extends Node {
         return bounds;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    @Override
-    protected boolean impl_computeContains(double localX, double localY) {
+    private boolean doComputeContains(double localX, double localY) {
         // Currently this is simply a local bounds test which is already tested
         // by the caller (Node.contains()).
         return true;
@@ -990,33 +1002,22 @@ public class MediaView extends Node {
     private int decodedFrameCount;
     private int renderedFrameCount;
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public void impl_perfReset() {
+    void perfReset() {
         decodedFrameCount = 0;
         renderedFrameCount = 0;
     }
 
     /**
      * @return number of frames that have been submitted for rendering
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public int impl_perfGetDecodedFrameCount() {
+    int perfGetDecodedFrameCount() {
         return decodedFrameCount;
     }
 
     /**
      * @return number of frames that have been rendered
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public int impl_perfGetRenderedFrameCount() {
+    int perfGetRenderedFrameCount() {
         return renderedFrameCount;
     }
 
@@ -1032,12 +1033,10 @@ public class MediaView extends Node {
         }
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+    /*
+     * Note: This method MUST only be called via its accessor method.
      */
-    @Deprecated
-    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return alg.processLeafNode(this, ctx);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,17 +23,40 @@
  * questions.
  */
 
-package com.sun.javafx.collections.annotations;
+package com.sun.javafx.scene.control;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+import com.sun.javafx.util.Utils;
+import javafx.scene.control.TableColumnBase;
 
-/**
- * This annotation is to be used for methods that return unmodifiable
- * collections.
+/*
+ * Used to access internal TableColumnBase methods.
  */
-@Target(value={java.lang.annotation.ElementType.METHOD})
-@Retention(value=java.lang.annotation.RetentionPolicy.SOURCE)
-public @interface ReturnsUnmodifiableCollection {
+public class TableColumnBaseHelper {
 
+    private static TableColumnBaseAccessor tableColumnBaseAccessor;
+
+    static {
+        Utils.forceInit(TableColumnBase.class);
+    }
+
+    private TableColumnBaseHelper() {
+    }
+
+    public static void setWidth(TableColumnBase tableColumnBase, double width) {
+        tableColumnBaseAccessor.setWidth(tableColumnBase, width);
+    }
+
+    public static void setTableColumnBaseAccessor(final TableColumnBaseAccessor newAccessor) {
+        if (tableColumnBaseAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        tableColumnBaseAccessor = newAccessor;
+    }
+
+    public interface TableColumnBaseAccessor {
+
+        void setWidth(TableColumnBase tableColumnBase, double width);
+
+    }
 }
