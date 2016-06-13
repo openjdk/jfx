@@ -82,6 +82,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      */
     static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
 
+    public static String DISABLE_FORWARD_TO_PARENT = "TextInputControlBehavior.disableForwardToParent";
+
     /**************************************************************************
      * Fields                                                                 *
      *************************************************************************/
@@ -621,6 +623,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     protected void cancelEdit(KeyEvent event) { forwardToParent(event);} // not autoconsumed
 
     protected void forwardToParent(KeyEvent event) {
+        // fix for JDK-8145515
+        if (getNode().getProperties().containsKey(DISABLE_FORWARD_TO_PARENT)) {
+            return;
+        }
+
         if (getNode().getParent() != null) {
             getNode().getParent().fireEvent(event);
         }
