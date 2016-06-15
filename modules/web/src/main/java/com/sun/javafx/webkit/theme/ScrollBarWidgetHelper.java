@@ -25,14 +25,14 @@
 
 package com.sun.javafx.webkit.theme;
 
-import com.sun.javafx.scene.layout.RegionHelper;
+import com.sun.javafx.scene.control.ControlHelper;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Node;
 
 /**
  * Used to access internal methods of ScrollBarWidget.
  */
-public class ScrollBarWidgetHelper extends RegionHelper {
+public class ScrollBarWidgetHelper extends ControlHelper {
     private static final ScrollBarWidgetHelper theInstance;
     private static ScrollBarWidgetAccessor scrollBarWidgetAccessor;
 
