@@ -610,6 +610,15 @@ public class Cell<T> extends Labeled {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override protected void layoutChildren() {
+        if (itemDirty) {
+            updateItem(getItem(), isEmpty());
+            itemDirty = false;
+        }
+        super.layoutChildren();
+    }
+
 
 
     /***************************************************************************
@@ -681,7 +690,12 @@ public class Cell<T> extends Labeled {
      */
     public void updateSelected(boolean selected) {
         if (selected && isEmpty()) return;
+        boolean wasSelected = isSelected();
         setSelected(selected);
+
+        if (wasSelected != selected) {
+            markCellDirty();
+        }
     }
 
     /**
@@ -708,6 +722,23 @@ public class Cell<T> extends Labeled {
      */
     protected boolean isItemChanged(T oldItem, T newItem) {
         return oldItem != null ? !oldItem.equals(newItem) : newItem != null;
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Private Implementation                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    // itemDirty and markCellDirty introduced as a solution for JDK-8145588.
+    // In the fullness of time, a more fully developed solution can be developed
+    // that offers a public API around this lazy-dirty impl.
+    private boolean itemDirty = false;
+    private final void markCellDirty() {
+        itemDirty = true;
+        requestLayout();
     }
 
 
