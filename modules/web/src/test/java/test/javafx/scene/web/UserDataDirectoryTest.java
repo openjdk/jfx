@@ -98,7 +98,6 @@ public class UserDataDirectoryTest extends TestBase {
     public static void afterClass() throws IOException {
         preLockedLock.release();
         preLockedRaf.close();
-        sleep(500); // Give WebKit some time to close SQLite files
         for (File dir : DIRS) {
             deleteRecursively(dir);
         }
@@ -568,8 +567,11 @@ public class UserDataDirectoryTest extends TestBase {
                 deleteRecursively(f);
             }
         }
+
         if (!file.delete()) {
-            throw new IOException(String.format("Error deleting [%s]", file));
+            // If WebKit takes time to close the file, better
+            // delete it during VM shutdown.
+            file.deleteOnExit();
         }
     }
 

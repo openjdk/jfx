@@ -64,6 +64,7 @@ import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * This is a the SkinBase for ContextMenu based controls so that the CSS parts
@@ -612,9 +613,14 @@ public class ContextMenuContent extends Region {
         });
     }
 
+    private Optional<Node> getFocusedNode() {
+        final List<Node> children = itemsContainer.getChildren();
+        final boolean validIndex = currentFocusedIndex >= 0 && currentFocusedIndex < children.size();
+        return validIndex ? Optional.of(children.get(currentFocusedIndex)) : Optional.empty();
+    }
+
     private void processLeftKey(KeyEvent ke) {
-        if (currentFocusedIndex != -1) {
-            Node n = itemsContainer.getChildren().get(currentFocusedIndex);
+        getFocusedNode().ifPresent(n -> {
             if (n instanceof MenuItemContainer) {
                 MenuItem item = ((MenuItemContainer)n).item;
                 if (item instanceof Menu) {
@@ -627,12 +633,11 @@ public class ContextMenuContent extends Region {
                     }
                 }
             }
-        }
+        });
     }
 
     private void processRightKey(KeyEvent ke) {
-        if (currentFocusedIndex != -1) {
-            Node n = itemsContainer.getChildren().get(currentFocusedIndex);
+        getFocusedNode().ifPresent(n -> {
             if (n instanceof MenuItemContainer) {
                 MenuItem item = ((MenuItemContainer)n).item;
                 if (item instanceof Menu) {
@@ -651,7 +656,7 @@ public class ContextMenuContent extends Region {
                     ke.consume();
                 }
             }
-        }
+        });
     }
 
     private void showMenu(Menu menu) {
@@ -669,8 +674,7 @@ public class ContextMenuContent extends Region {
     }
 
     private void selectMenuItem() {
-        if (currentFocusedIndex != -1) {
-            Node n = itemsContainer.getChildren().get(currentFocusedIndex);
+        getFocusedNode().ifPresent(n -> {
             if (n instanceof MenuItemContainer) {
                 MenuItem item = ((MenuItemContainer)n).item;
                 if (item instanceof Menu) {
@@ -685,7 +689,7 @@ public class ContextMenuContent extends Region {
                     ((MenuItemContainer)n).doSelect();
                 }
             }
-        }
+        });
     }
     /*
      * Find the index of the next MenuItemContainer in the itemsContainer children.
@@ -894,6 +898,14 @@ public class ContextMenuContent extends Region {
         // on hidden submenus
         disposeContextMenu(submenu);
         submenu = null;
+
+        // Fix for JDK-8158679 - we put the focus on the menu, and then back
+        // on the menu item, so that screen readers can properly speak out
+        // the menu item.
+        getFocusedNode().ifPresent(n -> {
+            requestFocus();
+            n.requestFocus();
+        });
     }
 
     private void hideAllMenus(MenuItem item) {
