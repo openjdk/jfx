@@ -2,6 +2,7 @@
 
 package com.sun.webkit.dom;
 
+import org.w3c.dom.DOMException;
 import org.w3c.dom.html.HTMLAnchorElement;
 
 public class HTMLAnchorElementImpl extends HTMLElementImpl implements HTMLAnchorElement {
@@ -204,6 +205,11 @@ public class HTMLAnchorElementImpl extends HTMLElementImpl implements HTMLAnchor
         return getTextImpl(getPeer());
     }
     native static String getTextImpl(long peer);
+
+    public void setText(String value) throws DOMException {
+        setTextImpl(getPeer(), value);
+    }
+    native static void setTextImpl(long peer, String value);
 
 }
 

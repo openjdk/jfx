@@ -65,6 +65,16 @@ public class HTMLAreaElementImpl extends HTMLElementImpl implements HTMLAreaElem
     }
     native static void setPingImpl(long peer, String value);
 
+    public String getRel() {
+        return getRelImpl(getPeer());
+    }
+    native static String getRelImpl(long peer);
+
+    public void setRel(String value) {
+        setRelImpl(getPeer(), value);
+    }
+    native static void setRelImpl(long peer, String value);
+
     public String getShape() {
         return getShapeImpl(getPeer());
     }

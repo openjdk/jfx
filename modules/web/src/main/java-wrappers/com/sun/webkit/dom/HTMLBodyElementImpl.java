@@ -76,6 +76,96 @@ public class HTMLBodyElementImpl extends HTMLElementImpl implements HTMLBodyElem
     }
     native static void setVLinkImpl(long peer, String value);
 
+    public EventListener getOnblur() {
+        return EventListenerImpl.getImpl(getOnblurImpl(getPeer()));
+    }
+    native static long getOnblurImpl(long peer);
+
+    public void setOnblur(EventListener value) {
+        setOnblurImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnblurImpl(long peer, long value);
+
+    public EventListener getOnerror() {
+        return EventListenerImpl.getImpl(getOnerrorImpl(getPeer()));
+    }
+    native static long getOnerrorImpl(long peer);
+
+    public void setOnerror(EventListener value) {
+        setOnerrorImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnerrorImpl(long peer, long value);
+
+    public EventListener getOnfocus() {
+        return EventListenerImpl.getImpl(getOnfocusImpl(getPeer()));
+    }
+    native static long getOnfocusImpl(long peer);
+
+    public void setOnfocus(EventListener value) {
+        setOnfocusImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnfocusImpl(long peer, long value);
+
+    public EventListener getOnfocusin() {
+        return EventListenerImpl.getImpl(getOnfocusinImpl(getPeer()));
+    }
+    native static long getOnfocusinImpl(long peer);
+
+    public void setOnfocusin(EventListener value) {
+        setOnfocusinImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnfocusinImpl(long peer, long value);
+
+    public EventListener getOnfocusout() {
+        return EventListenerImpl.getImpl(getOnfocusoutImpl(getPeer()));
+    }
+    native static long getOnfocusoutImpl(long peer);
+
+    public void setOnfocusout(EventListener value) {
+        setOnfocusoutImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnfocusoutImpl(long peer, long value);
+
+    public EventListener getOnload() {
+        return EventListenerImpl.getImpl(getOnloadImpl(getPeer()));
+    }
+    native static long getOnloadImpl(long peer);
+
+    public void setOnload(EventListener value) {
+        setOnloadImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnloadImpl(long peer, long value);
+
+    public EventListener getOnresize() {
+        return EventListenerImpl.getImpl(getOnresizeImpl(getPeer()));
+    }
+    native static long getOnresizeImpl(long peer);
+
+    public void setOnresize(EventListener value) {
+        setOnresizeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnresizeImpl(long peer, long value);
+
+    public EventListener getOnscroll() {
+        return EventListenerImpl.getImpl(getOnscrollImpl(getPeer()));
+    }
+    native static long getOnscrollImpl(long peer);
+
+    public void setOnscroll(EventListener value) {
+        setOnscrollImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnscrollImpl(long peer, long value);
+
+    public EventListener getOnselectionchange() {
+        return EventListenerImpl.getImpl(getOnselectionchangeImpl(getPeer()));
+    }
+    native static long getOnselectionchangeImpl(long peer);
+
+    public void setOnselectionchange(EventListener value) {
+        setOnselectionchangeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnselectionchangeImpl(long peer, long value);
+
     public EventListener getOnbeforeunload() {
         return EventListenerImpl.getImpl(getOnbeforeunloadImpl(getPeer()));
     }
@@ -126,6 +216,26 @@ public class HTMLBodyElementImpl extends HTMLElementImpl implements HTMLBodyElem
     }
     native static void setOnonlineImpl(long peer, long value);
 
+    public EventListener getOnpagehide() {
+        return EventListenerImpl.getImpl(getOnpagehideImpl(getPeer()));
+    }
+    native static long getOnpagehideImpl(long peer);
+
+    public void setOnpagehide(EventListener value) {
+        setOnpagehideImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnpagehideImpl(long peer, long value);
+
+    public EventListener getOnpageshow() {
+        return EventListenerImpl.getImpl(getOnpageshowImpl(getPeer()));
+    }
+    native static long getOnpageshowImpl(long peer);
+
+    public void setOnpageshow(EventListener value) {
+        setOnpageshowImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnpageshowImpl(long peer, long value);
+
     public EventListener getOnpopstate() {
         return EventListenerImpl.getImpl(getOnpopstateImpl(getPeer()));
     }
@@ -135,16 +245,6 @@ public class HTMLBodyElementImpl extends HTMLElementImpl implements HTMLBodyElem
         setOnpopstateImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
     native static void setOnpopstateImpl(long peer, long value);
-
-    public EventListener getOnresize() {
-        return EventListenerImpl.getImpl(getOnresizeImpl(getPeer()));
-    }
-    native static long getOnresizeImpl(long peer);
-
-    public void setOnresize(EventListener value) {
-        setOnresizeImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnresizeImpl(long peer, long value);
 
     public EventListener getOnstorage() {
         return EventListenerImpl.getImpl(getOnstorageImpl(getPeer()));
@@ -165,46 +265,6 @@ public class HTMLBodyElementImpl extends HTMLElementImpl implements HTMLBodyElem
         setOnunloadImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
     native static void setOnunloadImpl(long peer, long value);
-
-    public EventListener getOnblur() {
-        return EventListenerImpl.getImpl(getOnblurImpl(getPeer()));
-    }
-    native static long getOnblurImpl(long peer);
-
-    public void setOnblur(EventListener value) {
-        setOnblurImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnblurImpl(long peer, long value);
-
-    public EventListener getOnerror() {
-        return EventListenerImpl.getImpl(getOnerrorImpl(getPeer()));
-    }
-    native static long getOnerrorImpl(long peer);
-
-    public void setOnerror(EventListener value) {
-        setOnerrorImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnerrorImpl(long peer, long value);
-
-    public EventListener getOnfocus() {
-        return EventListenerImpl.getImpl(getOnfocusImpl(getPeer()));
-    }
-    native static long getOnfocusImpl(long peer);
-
-    public void setOnfocus(EventListener value) {
-        setOnfocusImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnfocusImpl(long peer, long value);
-
-    public EventListener getOnload() {
-        return EventListenerImpl.getImpl(getOnloadImpl(getPeer()));
-    }
-    native static long getOnloadImpl(long peer);
-
-    public void setOnload(EventListener value) {
-        setOnloadImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnloadImpl(long peer, long value);
 
 }
 

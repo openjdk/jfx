@@ -283,6 +283,96 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static double getDevicePixelRatioImpl(long peer);
 
+    public EventListener getOnresize() {
+        return EventListenerImpl.getImpl(getOnresizeImpl(getPeer()));
+    }
+    native static long getOnresizeImpl(long peer);
+
+    public void setOnresize(EventListener value) {
+        setOnresizeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnresizeImpl(long peer, long value);
+
+    public EventListener getOnanimationend() {
+        return EventListenerImpl.getImpl(getOnanimationendImpl(getPeer()));
+    }
+    native static long getOnanimationendImpl(long peer);
+
+    public void setOnanimationend(EventListener value) {
+        setOnanimationendImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnanimationendImpl(long peer, long value);
+
+    public EventListener getOnanimationiteration() {
+        return EventListenerImpl.getImpl(getOnanimationiterationImpl(getPeer()));
+    }
+    native static long getOnanimationiterationImpl(long peer);
+
+    public void setOnanimationiteration(EventListener value) {
+        setOnanimationiterationImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnanimationiterationImpl(long peer, long value);
+
+    public EventListener getOnanimationstart() {
+        return EventListenerImpl.getImpl(getOnanimationstartImpl(getPeer()));
+    }
+    native static long getOnanimationstartImpl(long peer);
+
+    public void setOnanimationstart(EventListener value) {
+        setOnanimationstartImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnanimationstartImpl(long peer, long value);
+
+    public EventListener getOntransitionend() {
+        return EventListenerImpl.getImpl(getOntransitionendImpl(getPeer()));
+    }
+    native static long getOntransitionendImpl(long peer);
+
+    public void setOntransitionend(EventListener value) {
+        setOntransitionendImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOntransitionendImpl(long peer, long value);
+
+    public EventListener getOnwebkitanimationend() {
+        return EventListenerImpl.getImpl(getOnwebkitanimationendImpl(getPeer()));
+    }
+    native static long getOnwebkitanimationendImpl(long peer);
+
+    public void setOnwebkitanimationend(EventListener value) {
+        setOnwebkitanimationendImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnwebkitanimationendImpl(long peer, long value);
+
+    public EventListener getOnwebkitanimationiteration() {
+        return EventListenerImpl.getImpl(getOnwebkitanimationiterationImpl(getPeer()));
+    }
+    native static long getOnwebkitanimationiterationImpl(long peer);
+
+    public void setOnwebkitanimationiteration(EventListener value) {
+        setOnwebkitanimationiterationImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnwebkitanimationiterationImpl(long peer, long value);
+
+    public EventListener getOnwebkitanimationstart() {
+        return EventListenerImpl.getImpl(getOnwebkitanimationstartImpl(getPeer()));
+    }
+    native static long getOnwebkitanimationstartImpl(long peer);
+
+    public void setOnwebkitanimationstart(EventListener value) {
+        setOnwebkitanimationstartImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnwebkitanimationstartImpl(long peer, long value);
+
+    public EventListener getOnwebkittransitionend() {
+        return EventListenerImpl.getImpl(getOnwebkittransitionendImpl(getPeer()));
+    }
+    native static long getOnwebkittransitionendImpl(long peer);
+
+    public void setOnwebkittransitionend(EventListener value) {
+        setOnwebkittransitionendImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnwebkittransitionendImpl(long peer, long value);
+
     public EventListener getOnabort() {
         return EventListenerImpl.getImpl(getOnabortImpl(getPeer()));
     }
@@ -292,16 +382,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         setOnabortImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
     native static void setOnabortImpl(long peer, long value);
-
-    public EventListener getOnbeforeunload() {
-        return EventListenerImpl.getImpl(getOnbeforeunloadImpl(getPeer()));
-    }
-    native static long getOnbeforeunloadImpl(long peer);
-
-    public void setOnbeforeunload(EventListener value) {
-        setOnbeforeunloadImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnbeforeunloadImpl(long peer, long value);
 
     public EventListener getOnblur() {
         return EventListenerImpl.getImpl(getOnblurImpl(getPeer()));
@@ -493,16 +573,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOnfocusImpl(long peer, long value);
 
-    public EventListener getOnhashchange() {
-        return EventListenerImpl.getImpl(getOnhashchangeImpl(getPeer()));
-    }
-    native static long getOnhashchangeImpl(long peer);
-
-    public void setOnhashchange(EventListener value) {
-        setOnhashchangeImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnhashchangeImpl(long peer, long value);
-
     public EventListener getOninput() {
         return EventListenerImpl.getImpl(getOninputImpl(getPeer()));
     }
@@ -593,16 +663,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOnloadstartImpl(long peer, long value);
 
-    public EventListener getOnmessage() {
-        return EventListenerImpl.getImpl(getOnmessageImpl(getPeer()));
-    }
-    native static long getOnmessageImpl(long peer);
-
-    public void setOnmessage(EventListener value) {
-        setOnmessageImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnmessageImpl(long peer, long value);
-
     public EventListener getOnmousedown() {
         return EventListenerImpl.getImpl(getOnmousedownImpl(getPeer()));
     }
@@ -683,46 +743,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOnmousewheelImpl(long peer, long value);
 
-    public EventListener getOnoffline() {
-        return EventListenerImpl.getImpl(getOnofflineImpl(getPeer()));
-    }
-    native static long getOnofflineImpl(long peer);
-
-    public void setOnoffline(EventListener value) {
-        setOnofflineImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnofflineImpl(long peer, long value);
-
-    public EventListener getOnonline() {
-        return EventListenerImpl.getImpl(getOnonlineImpl(getPeer()));
-    }
-    native static long getOnonlineImpl(long peer);
-
-    public void setOnonline(EventListener value) {
-        setOnonlineImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnonlineImpl(long peer, long value);
-
-    public EventListener getOnpagehide() {
-        return EventListenerImpl.getImpl(getOnpagehideImpl(getPeer()));
-    }
-    native static long getOnpagehideImpl(long peer);
-
-    public void setOnpagehide(EventListener value) {
-        setOnpagehideImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnpagehideImpl(long peer, long value);
-
-    public EventListener getOnpageshow() {
-        return EventListenerImpl.getImpl(getOnpageshowImpl(getPeer()));
-    }
-    native static long getOnpageshowImpl(long peer);
-
-    public void setOnpageshow(EventListener value) {
-        setOnpageshowImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnpageshowImpl(long peer, long value);
-
     public EventListener getOnpause() {
         return EventListenerImpl.getImpl(getOnpauseImpl(getPeer()));
     }
@@ -753,16 +773,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOnplayingImpl(long peer, long value);
 
-    public EventListener getOnpopstate() {
-        return EventListenerImpl.getImpl(getOnpopstateImpl(getPeer()));
-    }
-    native static long getOnpopstateImpl(long peer);
-
-    public void setOnpopstate(EventListener value) {
-        setOnpopstateImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnpopstateImpl(long peer, long value);
-
     public EventListener getOnprogress() {
         return EventListenerImpl.getImpl(getOnprogressImpl(getPeer()));
     }
@@ -783,15 +793,15 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOnratechangeImpl(long peer, long value);
 
-    public EventListener getOnresize() {
-        return EventListenerImpl.getImpl(getOnresizeImpl(getPeer()));
+    public EventListener getOnreset() {
+        return EventListenerImpl.getImpl(getOnresetImpl(getPeer()));
     }
-    native static long getOnresizeImpl(long peer);
+    native static long getOnresetImpl(long peer);
 
-    public void setOnresize(EventListener value) {
-        setOnresizeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnreset(EventListener value) {
+        setOnresetImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnresizeImpl(long peer, long value);
+    native static void setOnresetImpl(long peer, long value);
 
     public EventListener getOnscroll() {
         return EventListenerImpl.getImpl(getOnscrollImpl(getPeer()));
@@ -843,16 +853,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOnstalledImpl(long peer, long value);
 
-    public EventListener getOnstorage() {
-        return EventListenerImpl.getImpl(getOnstorageImpl(getPeer()));
-    }
-    native static long getOnstorageImpl(long peer);
-
-    public void setOnstorage(EventListener value) {
-        setOnstorageImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnstorageImpl(long peer, long value);
-
     public EventListener getOnsubmit() {
         return EventListenerImpl.getImpl(getOnsubmitImpl(getPeer()));
     }
@@ -883,16 +883,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOntimeupdateImpl(long peer, long value);
 
-    public EventListener getOnunload() {
-        return EventListenerImpl.getImpl(getOnunloadImpl(getPeer()));
-    }
-    native static long getOnunloadImpl(long peer);
-
-    public void setOnunload(EventListener value) {
-        setOnunloadImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnunloadImpl(long peer, long value);
-
     public EventListener getOnvolumechange() {
         return EventListenerImpl.getImpl(getOnvolumechangeImpl(getPeer()));
     }
@@ -913,26 +903,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOnwaitingImpl(long peer, long value);
 
-    public EventListener getOnwheel() {
-        return EventListenerImpl.getImpl(getOnwheelImpl(getPeer()));
-    }
-    native static long getOnwheelImpl(long peer);
-
-    public void setOnwheel(EventListener value) {
-        setOnwheelImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnwheelImpl(long peer, long value);
-
-    public EventListener getOnreset() {
-        return EventListenerImpl.getImpl(getOnresetImpl(getPeer()));
-    }
-    native static long getOnresetImpl(long peer);
-
-    public void setOnreset(EventListener value) {
-        setOnresetImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnresetImpl(long peer, long value);
-
     public EventListener getOnsearch() {
         return EventListenerImpl.getImpl(getOnsearchImpl(getPeer()));
     }
@@ -943,55 +913,115 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     }
     native static void setOnsearchImpl(long peer, long value);
 
-    public EventListener getOnwebkitanimationend() {
-        return EventListenerImpl.getImpl(getOnwebkitanimationendImpl(getPeer()));
+    public EventListener getOnwheel() {
+        return EventListenerImpl.getImpl(getOnwheelImpl(getPeer()));
     }
-    native static long getOnwebkitanimationendImpl(long peer);
+    native static long getOnwheelImpl(long peer);
 
-    public void setOnwebkitanimationend(EventListener value) {
-        setOnwebkitanimationendImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnwheel(EventListener value) {
+        setOnwheelImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwebkitanimationendImpl(long peer, long value);
+    native static void setOnwheelImpl(long peer, long value);
 
-    public EventListener getOnwebkitanimationiteration() {
-        return EventListenerImpl.getImpl(getOnwebkitanimationiterationImpl(getPeer()));
+    public EventListener getOnbeforeunload() {
+        return EventListenerImpl.getImpl(getOnbeforeunloadImpl(getPeer()));
     }
-    native static long getOnwebkitanimationiterationImpl(long peer);
+    native static long getOnbeforeunloadImpl(long peer);
 
-    public void setOnwebkitanimationiteration(EventListener value) {
-        setOnwebkitanimationiterationImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnbeforeunload(EventListener value) {
+        setOnbeforeunloadImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwebkitanimationiterationImpl(long peer, long value);
+    native static void setOnbeforeunloadImpl(long peer, long value);
 
-    public EventListener getOnwebkitanimationstart() {
-        return EventListenerImpl.getImpl(getOnwebkitanimationstartImpl(getPeer()));
+    public EventListener getOnhashchange() {
+        return EventListenerImpl.getImpl(getOnhashchangeImpl(getPeer()));
     }
-    native static long getOnwebkitanimationstartImpl(long peer);
+    native static long getOnhashchangeImpl(long peer);
 
-    public void setOnwebkitanimationstart(EventListener value) {
-        setOnwebkitanimationstartImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnhashchange(EventListener value) {
+        setOnhashchangeImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwebkitanimationstartImpl(long peer, long value);
+    native static void setOnhashchangeImpl(long peer, long value);
 
-    public EventListener getOnwebkittransitionend() {
-        return EventListenerImpl.getImpl(getOnwebkittransitionendImpl(getPeer()));
+    public EventListener getOnmessage() {
+        return EventListenerImpl.getImpl(getOnmessageImpl(getPeer()));
     }
-    native static long getOnwebkittransitionendImpl(long peer);
+    native static long getOnmessageImpl(long peer);
 
-    public void setOnwebkittransitionend(EventListener value) {
-        setOnwebkittransitionendImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnmessage(EventListener value) {
+        setOnmessageImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwebkittransitionendImpl(long peer, long value);
+    native static void setOnmessageImpl(long peer, long value);
 
-    public EventListener getOntransitionend() {
-        return EventListenerImpl.getImpl(getOntransitionendImpl(getPeer()));
+    public EventListener getOnoffline() {
+        return EventListenerImpl.getImpl(getOnofflineImpl(getPeer()));
     }
-    native static long getOntransitionendImpl(long peer);
+    native static long getOnofflineImpl(long peer);
 
-    public void setOntransitionend(EventListener value) {
-        setOntransitionendImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnoffline(EventListener value) {
+        setOnofflineImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOntransitionendImpl(long peer, long value);
+    native static void setOnofflineImpl(long peer, long value);
+
+    public EventListener getOnonline() {
+        return EventListenerImpl.getImpl(getOnonlineImpl(getPeer()));
+    }
+    native static long getOnonlineImpl(long peer);
+
+    public void setOnonline(EventListener value) {
+        setOnonlineImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnonlineImpl(long peer, long value);
+
+    public EventListener getOnpagehide() {
+        return EventListenerImpl.getImpl(getOnpagehideImpl(getPeer()));
+    }
+    native static long getOnpagehideImpl(long peer);
+
+    public void setOnpagehide(EventListener value) {
+        setOnpagehideImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnpagehideImpl(long peer, long value);
+
+    public EventListener getOnpageshow() {
+        return EventListenerImpl.getImpl(getOnpageshowImpl(getPeer()));
+    }
+    native static long getOnpageshowImpl(long peer);
+
+    public void setOnpageshow(EventListener value) {
+        setOnpageshowImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnpageshowImpl(long peer, long value);
+
+    public EventListener getOnpopstate() {
+        return EventListenerImpl.getImpl(getOnpopstateImpl(getPeer()));
+    }
+    native static long getOnpopstateImpl(long peer);
+
+    public void setOnpopstate(EventListener value) {
+        setOnpopstateImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnpopstateImpl(long peer, long value);
+
+    public EventListener getOnstorage() {
+        return EventListenerImpl.getImpl(getOnstorageImpl(getPeer()));
+    }
+    native static long getOnstorageImpl(long peer);
+
+    public void setOnstorage(EventListener value) {
+        setOnstorageImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnstorageImpl(long peer, long value);
+
+    public EventListener getOnunload() {
+        return EventListenerImpl.getImpl(getOnunloadImpl(getPeer()));
+    }
+    native static long getOnunloadImpl(long peer);
+
+    public void setOnunload(EventListener value) {
+        setOnunloadImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnunloadImpl(long peer, long value);
 
 
 //functions
@@ -1220,13 +1250,13 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         , boolean useCapture);
 
 
-    public boolean dispatchEvent(Event evt) throws DOMException
+    public boolean dispatchEvent(Event event) throws DOMException
     {
         return dispatchEventImpl(getPeer()
-            , EventImpl.getPeer(evt));
+            , EventImpl.getPeer(event));
     }
     native static boolean dispatchEventImpl(long peer
-        , long evt);
+        , long event);
 
 
     public void captureEvents()

@@ -4,6 +4,7 @@ package com.sun.webkit.dom;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Node;
+import org.w3c.dom.html.HTMLElement;
 
 public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
     HTMLOptionsCollectionImpl(long peer) {
@@ -45,6 +46,30 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
     }
     native static long namedItemImpl(long peer
         , String name);
+
+
+    public void add(HTMLElement element
+        , HTMLElement before) throws DOMException
+    {
+        addImpl(getPeer()
+            , HTMLElementImpl.getPeer(element)
+            , HTMLElementImpl.getPeer(before));
+    }
+    native static void addImpl(long peer
+        , long element
+        , long before);
+
+
+    public void addEx(HTMLElement element
+        , int index) throws DOMException
+    {
+        addExImpl(getPeer()
+            , HTMLElementImpl.getPeer(element)
+            , index);
+    }
+    native static void addExImpl(long peer
+        , long element
+        , int index);
 
 
 }

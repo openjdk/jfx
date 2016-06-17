@@ -4,7 +4,6 @@ package com.sun.webkit.dom;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Element;
-import org.w3c.dom.html.HTMLCollection;
 import org.w3c.dom.html.HTMLElement;
 
 public class HTMLElementImpl extends ElementImpl implements HTMLElement {
@@ -108,16 +107,6 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
     }
     native static void setAccessKeyImpl(long peer, String value);
 
-    public String getInnerHTML() {
-        return getInnerHTMLImpl(getPeer());
-    }
-    native static String getInnerHTMLImpl(long peer);
-
-    public void setInnerHTML(String value) throws DOMException {
-        setInnerHTMLImpl(getPeer(), value);
-    }
-    native static void setInnerHTMLImpl(long peer, String value);
-
     public String getInnerText() {
         return getInnerTextImpl(getPeer());
     }
@@ -128,16 +117,6 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
     }
     native static void setInnerTextImpl(long peer, String value);
 
-    public String getOuterHTML() {
-        return getOuterHTMLImpl(getPeer());
-    }
-    native static String getOuterHTMLImpl(long peer);
-
-    public void setOuterHTML(String value) throws DOMException {
-        setOuterHTMLImpl(getPeer(), value);
-    }
-    native static void setOuterHTMLImpl(long peer, String value);
-
     public String getOuterText() {
         return getOuterTextImpl(getPeer());
     }
@@ -147,11 +126,6 @@ public class HTMLElementImpl extends ElementImpl implements HTMLElement {
         setOuterTextImpl(getPeer(), value);
     }
     native static void setOuterTextImpl(long peer, String value);
-
-    public HTMLCollection getChildren() {
-        return HTMLCollectionImpl.getImpl(getChildrenImpl(getPeer()));
-    }
-    native static long getChildrenImpl(long peer);
 
     public String getContentEditable() {
         return getContentEditableImpl(getPeer());

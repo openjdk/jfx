@@ -186,7 +186,6 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
                return new DocumentImpl(peer);
         case DOCUMENT_TYPE_NODE: return new DocumentTypeImpl(peer);
         case DOCUMENT_FRAGMENT_NODE: return new DocumentFragmentImpl(peer);
-        case NOTATION_NODE: return new NotationImpl(peer);
         }
         return new NodeImpl(peer);
     }

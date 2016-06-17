@@ -4,7 +4,6 @@ package com.sun.webkit.dom;
 
 import org.w3c.dom.DOMException;
 import org.w3c.dom.NodeList;
-import org.w3c.dom.html.HTMLElement;
 import org.w3c.dom.html.HTMLFormElement;
 import org.w3c.dom.html.HTMLInputElement;
 
@@ -173,11 +172,6 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
         setIndeterminateImpl(getPeer(), value);
     }
     native static void setIndeterminateImpl(long peer, boolean value);
-
-    public HTMLElement getList() {
-        return HTMLElementImpl.getImpl(getListImpl(getPeer()));
-    }
-    native static long getListImpl(long peer);
 
     public String getMax() {
         return getMaxImpl(getPeer());

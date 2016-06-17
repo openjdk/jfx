@@ -114,6 +114,11 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static long getStyleSheetsImpl(long peer);
 
+    public String getContentType() {
+        return getContentTypeImpl(getPeer());
+    }
+    native static String getContentTypeImpl(long peer);
+
     public String getTitle() {
         return getTitleImpl(getPeer());
     }
@@ -234,6 +239,11 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static void setSelectedStylesheetSetImpl(long peer, String value);
 
+    public Element getActiveElement() {
+        return ElementImpl.getImpl(getActiveElementImpl(getPeer()));
+    }
+    native static long getActiveElementImpl(long peer);
+
     public String getCompatMode() {
         return getCompatModeImpl(getPeer());
     }
@@ -264,6 +274,121 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static long getWebkitFullscreenElementImpl(long peer);
 
+    public String getVisibilityState() {
+        return getVisibilityStateImpl(getPeer());
+    }
+    native static String getVisibilityStateImpl(long peer);
+
+    public boolean getHidden() {
+        return getHiddenImpl(getPeer());
+    }
+    native static boolean getHiddenImpl(long peer);
+
+    public HTMLScriptElement getCurrentScript() {
+        return HTMLScriptElementImpl.getImpl(getCurrentScriptImpl(getPeer()));
+    }
+    native static long getCurrentScriptImpl(long peer);
+
+    public String getOrigin() {
+        return getOriginImpl(getPeer());
+    }
+    native static String getOriginImpl(long peer);
+
+    public Element getScrollingElement() {
+        return ElementImpl.getImpl(getScrollingElementImpl(getPeer()));
+    }
+    native static long getScrollingElementImpl(long peer);
+
+    public EventListener getOnbeforecopy() {
+        return EventListenerImpl.getImpl(getOnbeforecopyImpl(getPeer()));
+    }
+    native static long getOnbeforecopyImpl(long peer);
+
+    public void setOnbeforecopy(EventListener value) {
+        setOnbeforecopyImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnbeforecopyImpl(long peer, long value);
+
+    public EventListener getOnbeforecut() {
+        return EventListenerImpl.getImpl(getOnbeforecutImpl(getPeer()));
+    }
+    native static long getOnbeforecutImpl(long peer);
+
+    public void setOnbeforecut(EventListener value) {
+        setOnbeforecutImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnbeforecutImpl(long peer, long value);
+
+    public EventListener getOnbeforepaste() {
+        return EventListenerImpl.getImpl(getOnbeforepasteImpl(getPeer()));
+    }
+    native static long getOnbeforepasteImpl(long peer);
+
+    public void setOnbeforepaste(EventListener value) {
+        setOnbeforepasteImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnbeforepasteImpl(long peer, long value);
+
+    public EventListener getOncopy() {
+        return EventListenerImpl.getImpl(getOncopyImpl(getPeer()));
+    }
+    native static long getOncopyImpl(long peer);
+
+    public void setOncopy(EventListener value) {
+        setOncopyImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOncopyImpl(long peer, long value);
+
+    public EventListener getOncut() {
+        return EventListenerImpl.getImpl(getOncutImpl(getPeer()));
+    }
+    native static long getOncutImpl(long peer);
+
+    public void setOncut(EventListener value) {
+        setOncutImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOncutImpl(long peer, long value);
+
+    public EventListener getOnpaste() {
+        return EventListenerImpl.getImpl(getOnpasteImpl(getPeer()));
+    }
+    native static long getOnpasteImpl(long peer);
+
+    public void setOnpaste(EventListener value) {
+        setOnpasteImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnpasteImpl(long peer, long value);
+
+    public EventListener getOnselectstart() {
+        return EventListenerImpl.getImpl(getOnselectstartImpl(getPeer()));
+    }
+    native static long getOnselectstartImpl(long peer);
+
+    public void setOnselectstart(EventListener value) {
+        setOnselectstartImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnselectstartImpl(long peer, long value);
+
+    public EventListener getOnselectionchange() {
+        return EventListenerImpl.getImpl(getOnselectionchangeImpl(getPeer()));
+    }
+    native static long getOnselectionchangeImpl(long peer);
+
+    public void setOnselectionchange(EventListener value) {
+        setOnselectionchangeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnselectionchangeImpl(long peer, long value);
+
+    public EventListener getOnreadystatechange() {
+        return EventListenerImpl.getImpl(getOnreadystatechangeImpl(getPeer()));
+    }
+    native static long getOnreadystatechangeImpl(long peer);
+
+    public void setOnreadystatechange(EventListener value) {
+        setOnreadystatechangeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnreadystatechangeImpl(long peer, long value);
+
     public EventListener getOnabort() {
         return EventListenerImpl.getImpl(getOnabortImpl(getPeer()));
     }
@@ -283,6 +408,26 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         setOnblurImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
     native static void setOnblurImpl(long peer, long value);
+
+    public EventListener getOncanplay() {
+        return EventListenerImpl.getImpl(getOncanplayImpl(getPeer()));
+    }
+    native static long getOncanplayImpl(long peer);
+
+    public void setOncanplay(EventListener value) {
+        setOncanplayImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOncanplayImpl(long peer, long value);
+
+    public EventListener getOncanplaythrough() {
+        return EventListenerImpl.getImpl(getOncanplaythroughImpl(getPeer()));
+    }
+    native static long getOncanplaythroughImpl(long peer);
+
+    public void setOncanplaythrough(EventListener value) {
+        setOncanplaythroughImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOncanplaythroughImpl(long peer, long value);
 
     public EventListener getOnchange() {
         return EventListenerImpl.getImpl(getOnchangeImpl(getPeer()));
@@ -394,6 +539,36 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static void setOndropImpl(long peer, long value);
 
+    public EventListener getOndurationchange() {
+        return EventListenerImpl.getImpl(getOndurationchangeImpl(getPeer()));
+    }
+    native static long getOndurationchangeImpl(long peer);
+
+    public void setOndurationchange(EventListener value) {
+        setOndurationchangeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOndurationchangeImpl(long peer, long value);
+
+    public EventListener getOnemptied() {
+        return EventListenerImpl.getImpl(getOnemptiedImpl(getPeer()));
+    }
+    native static long getOnemptiedImpl(long peer);
+
+    public void setOnemptied(EventListener value) {
+        setOnemptiedImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnemptiedImpl(long peer, long value);
+
+    public EventListener getOnended() {
+        return EventListenerImpl.getImpl(getOnendedImpl(getPeer()));
+    }
+    native static long getOnendedImpl(long peer);
+
+    public void setOnended(EventListener value) {
+        setOnendedImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnendedImpl(long peer, long value);
+
     public EventListener getOnerror() {
         return EventListenerImpl.getImpl(getOnerrorImpl(getPeer()));
     }
@@ -473,6 +648,36 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         setOnloadImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
     native static void setOnloadImpl(long peer, long value);
+
+    public EventListener getOnloadeddata() {
+        return EventListenerImpl.getImpl(getOnloadeddataImpl(getPeer()));
+    }
+    native static long getOnloadeddataImpl(long peer);
+
+    public void setOnloadeddata(EventListener value) {
+        setOnloadeddataImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnloadeddataImpl(long peer, long value);
+
+    public EventListener getOnloadedmetadata() {
+        return EventListenerImpl.getImpl(getOnloadedmetadataImpl(getPeer()));
+    }
+    native static long getOnloadedmetadataImpl(long peer);
+
+    public void setOnloadedmetadata(EventListener value) {
+        setOnloadedmetadataImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnloadedmetadataImpl(long peer, long value);
+
+    public EventListener getOnloadstart() {
+        return EventListenerImpl.getImpl(getOnloadstartImpl(getPeer()));
+    }
+    native static long getOnloadstartImpl(long peer);
+
+    public void setOnloadstart(EventListener value) {
+        setOnloadstartImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnloadstartImpl(long peer, long value);
 
     public EventListener getOnmousedown() {
         return EventListenerImpl.getImpl(getOnmousedownImpl(getPeer()));
@@ -554,115 +759,55 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static void setOnmousewheelImpl(long peer, long value);
 
-    public EventListener getOnreadystatechange() {
-        return EventListenerImpl.getImpl(getOnreadystatechangeImpl(getPeer()));
+    public EventListener getOnpause() {
+        return EventListenerImpl.getImpl(getOnpauseImpl(getPeer()));
     }
-    native static long getOnreadystatechangeImpl(long peer);
+    native static long getOnpauseImpl(long peer);
 
-    public void setOnreadystatechange(EventListener value) {
-        setOnreadystatechangeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnpause(EventListener value) {
+        setOnpauseImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnreadystatechangeImpl(long peer, long value);
+    native static void setOnpauseImpl(long peer, long value);
 
-    public EventListener getOnscroll() {
-        return EventListenerImpl.getImpl(getOnscrollImpl(getPeer()));
+    public EventListener getOnplay() {
+        return EventListenerImpl.getImpl(getOnplayImpl(getPeer()));
     }
-    native static long getOnscrollImpl(long peer);
+    native static long getOnplayImpl(long peer);
 
-    public void setOnscroll(EventListener value) {
-        setOnscrollImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnplay(EventListener value) {
+        setOnplayImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnscrollImpl(long peer, long value);
+    native static void setOnplayImpl(long peer, long value);
 
-    public EventListener getOnselect() {
-        return EventListenerImpl.getImpl(getOnselectImpl(getPeer()));
+    public EventListener getOnplaying() {
+        return EventListenerImpl.getImpl(getOnplayingImpl(getPeer()));
     }
-    native static long getOnselectImpl(long peer);
+    native static long getOnplayingImpl(long peer);
 
-    public void setOnselect(EventListener value) {
-        setOnselectImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnplaying(EventListener value) {
+        setOnplayingImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnselectImpl(long peer, long value);
+    native static void setOnplayingImpl(long peer, long value);
 
-    public EventListener getOnsubmit() {
-        return EventListenerImpl.getImpl(getOnsubmitImpl(getPeer()));
+    public EventListener getOnprogress() {
+        return EventListenerImpl.getImpl(getOnprogressImpl(getPeer()));
     }
-    native static long getOnsubmitImpl(long peer);
+    native static long getOnprogressImpl(long peer);
 
-    public void setOnsubmit(EventListener value) {
-        setOnsubmitImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnprogress(EventListener value) {
+        setOnprogressImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnsubmitImpl(long peer, long value);
+    native static void setOnprogressImpl(long peer, long value);
 
-    public EventListener getOnwheel() {
-        return EventListenerImpl.getImpl(getOnwheelImpl(getPeer()));
+    public EventListener getOnratechange() {
+        return EventListenerImpl.getImpl(getOnratechangeImpl(getPeer()));
     }
-    native static long getOnwheelImpl(long peer);
+    native static long getOnratechangeImpl(long peer);
 
-    public void setOnwheel(EventListener value) {
-        setOnwheelImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnratechange(EventListener value) {
+        setOnratechangeImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnwheelImpl(long peer, long value);
-
-    public EventListener getOnbeforecut() {
-        return EventListenerImpl.getImpl(getOnbeforecutImpl(getPeer()));
-    }
-    native static long getOnbeforecutImpl(long peer);
-
-    public void setOnbeforecut(EventListener value) {
-        setOnbeforecutImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnbeforecutImpl(long peer, long value);
-
-    public EventListener getOncut() {
-        return EventListenerImpl.getImpl(getOncutImpl(getPeer()));
-    }
-    native static long getOncutImpl(long peer);
-
-    public void setOncut(EventListener value) {
-        setOncutImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOncutImpl(long peer, long value);
-
-    public EventListener getOnbeforecopy() {
-        return EventListenerImpl.getImpl(getOnbeforecopyImpl(getPeer()));
-    }
-    native static long getOnbeforecopyImpl(long peer);
-
-    public void setOnbeforecopy(EventListener value) {
-        setOnbeforecopyImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnbeforecopyImpl(long peer, long value);
-
-    public EventListener getOncopy() {
-        return EventListenerImpl.getImpl(getOncopyImpl(getPeer()));
-    }
-    native static long getOncopyImpl(long peer);
-
-    public void setOncopy(EventListener value) {
-        setOncopyImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOncopyImpl(long peer, long value);
-
-    public EventListener getOnbeforepaste() {
-        return EventListenerImpl.getImpl(getOnbeforepasteImpl(getPeer()));
-    }
-    native static long getOnbeforepasteImpl(long peer);
-
-    public void setOnbeforepaste(EventListener value) {
-        setOnbeforepasteImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnbeforepasteImpl(long peer, long value);
-
-    public EventListener getOnpaste() {
-        return EventListenerImpl.getImpl(getOnpasteImpl(getPeer()));
-    }
-    native static long getOnpasteImpl(long peer);
-
-    public void setOnpaste(EventListener value) {
-        setOnpasteImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnpasteImpl(long peer, long value);
+    native static void setOnratechangeImpl(long peer, long value);
 
     public EventListener getOnreset() {
         return EventListenerImpl.getImpl(getOnresetImpl(getPeer()));
@@ -674,6 +819,106 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static void setOnresetImpl(long peer, long value);
 
+    public EventListener getOnscroll() {
+        return EventListenerImpl.getImpl(getOnscrollImpl(getPeer()));
+    }
+    native static long getOnscrollImpl(long peer);
+
+    public void setOnscroll(EventListener value) {
+        setOnscrollImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnscrollImpl(long peer, long value);
+
+    public EventListener getOnseeked() {
+        return EventListenerImpl.getImpl(getOnseekedImpl(getPeer()));
+    }
+    native static long getOnseekedImpl(long peer);
+
+    public void setOnseeked(EventListener value) {
+        setOnseekedImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnseekedImpl(long peer, long value);
+
+    public EventListener getOnseeking() {
+        return EventListenerImpl.getImpl(getOnseekingImpl(getPeer()));
+    }
+    native static long getOnseekingImpl(long peer);
+
+    public void setOnseeking(EventListener value) {
+        setOnseekingImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnseekingImpl(long peer, long value);
+
+    public EventListener getOnselect() {
+        return EventListenerImpl.getImpl(getOnselectImpl(getPeer()));
+    }
+    native static long getOnselectImpl(long peer);
+
+    public void setOnselect(EventListener value) {
+        setOnselectImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnselectImpl(long peer, long value);
+
+    public EventListener getOnstalled() {
+        return EventListenerImpl.getImpl(getOnstalledImpl(getPeer()));
+    }
+    native static long getOnstalledImpl(long peer);
+
+    public void setOnstalled(EventListener value) {
+        setOnstalledImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnstalledImpl(long peer, long value);
+
+    public EventListener getOnsubmit() {
+        return EventListenerImpl.getImpl(getOnsubmitImpl(getPeer()));
+    }
+    native static long getOnsubmitImpl(long peer);
+
+    public void setOnsubmit(EventListener value) {
+        setOnsubmitImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnsubmitImpl(long peer, long value);
+
+    public EventListener getOnsuspend() {
+        return EventListenerImpl.getImpl(getOnsuspendImpl(getPeer()));
+    }
+    native static long getOnsuspendImpl(long peer);
+
+    public void setOnsuspend(EventListener value) {
+        setOnsuspendImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnsuspendImpl(long peer, long value);
+
+    public EventListener getOntimeupdate() {
+        return EventListenerImpl.getImpl(getOntimeupdateImpl(getPeer()));
+    }
+    native static long getOntimeupdateImpl(long peer);
+
+    public void setOntimeupdate(EventListener value) {
+        setOntimeupdateImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOntimeupdateImpl(long peer, long value);
+
+    public EventListener getOnvolumechange() {
+        return EventListenerImpl.getImpl(getOnvolumechangeImpl(getPeer()));
+    }
+    native static long getOnvolumechangeImpl(long peer);
+
+    public void setOnvolumechange(EventListener value) {
+        setOnvolumechangeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnvolumechangeImpl(long peer, long value);
+
+    public EventListener getOnwaiting() {
+        return EventListenerImpl.getImpl(getOnwaitingImpl(getPeer()));
+    }
+    native static long getOnwaitingImpl(long peer);
+
+    public void setOnwaiting(EventListener value) {
+        setOnwaitingImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnwaitingImpl(long peer, long value);
+
     public EventListener getOnsearch() {
         return EventListenerImpl.getImpl(getOnsearchImpl(getPeer()));
     }
@@ -684,65 +929,35 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static void setOnsearchImpl(long peer, long value);
 
-    public EventListener getOnselectstart() {
-        return EventListenerImpl.getImpl(getOnselectstartImpl(getPeer()));
+    public EventListener getOnwheel() {
+        return EventListenerImpl.getImpl(getOnwheelImpl(getPeer()));
     }
-    native static long getOnselectstartImpl(long peer);
+    native static long getOnwheelImpl(long peer);
 
-    public void setOnselectstart(EventListener value) {
-        setOnselectstartImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public void setOnwheel(EventListener value) {
+        setOnwheelImpl(getPeer(), EventListenerImpl.getPeer(value));
     }
-    native static void setOnselectstartImpl(long peer, long value);
+    native static void setOnwheelImpl(long peer, long value);
 
-    public EventListener getOnselectionchange() {
-        return EventListenerImpl.getImpl(getOnselectionchangeImpl(getPeer()));
+    public HTMLCollection getChildren() {
+        return HTMLCollectionImpl.getImpl(getChildrenImpl(getPeer()));
     }
-    native static long getOnselectionchangeImpl(long peer);
+    native static long getChildrenImpl(long peer);
 
-    public void setOnselectionchange(EventListener value) {
-        setOnselectionchangeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public Element getFirstElementChild() {
+        return ElementImpl.getImpl(getFirstElementChildImpl(getPeer()));
     }
-    native static void setOnselectionchangeImpl(long peer, long value);
+    native static long getFirstElementChildImpl(long peer);
 
-    public EventListener getOnwebkitfullscreenchange() {
-        return EventListenerImpl.getImpl(getOnwebkitfullscreenchangeImpl(getPeer()));
+    public Element getLastElementChild() {
+        return ElementImpl.getImpl(getLastElementChildImpl(getPeer()));
     }
-    native static long getOnwebkitfullscreenchangeImpl(long peer);
+    native static long getLastElementChildImpl(long peer);
 
-    public void setOnwebkitfullscreenchange(EventListener value) {
-        setOnwebkitfullscreenchangeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    public int getChildElementCount() {
+        return getChildElementCountImpl(getPeer());
     }
-    native static void setOnwebkitfullscreenchangeImpl(long peer, long value);
-
-    public EventListener getOnwebkitfullscreenerror() {
-        return EventListenerImpl.getImpl(getOnwebkitfullscreenerrorImpl(getPeer()));
-    }
-    native static long getOnwebkitfullscreenerrorImpl(long peer);
-
-    public void setOnwebkitfullscreenerror(EventListener value) {
-        setOnwebkitfullscreenerrorImpl(getPeer(), EventListenerImpl.getPeer(value));
-    }
-    native static void setOnwebkitfullscreenerrorImpl(long peer, long value);
-
-    public String getVisibilityState() {
-        return getVisibilityStateImpl(getPeer());
-    }
-    native static String getVisibilityStateImpl(long peer);
-
-    public boolean getHidden() {
-        return getHiddenImpl(getPeer());
-    }
-    native static boolean getHiddenImpl(long peer);
-
-    public HTMLScriptElement getCurrentScript() {
-        return HTMLScriptElementImpl.getImpl(getCurrentScriptImpl(getPeer()));
-    }
-    native static long getCurrentScriptImpl(long peer);
-
-    public String getOrigin() {
-        return getOriginImpl(getPeer());
-    }
-    native static String getOriginImpl(long peer);
+    native static int getChildElementCountImpl(long peer);
 
 
 //functions
@@ -874,15 +1089,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     native static long getElementsByTagNameNSImpl(long peer
         , String namespaceURI
         , String localName);
-
-
-    public Element getElementById(String elementId)
-    {
-        return ElementImpl.getImpl(getElementByIdImpl(getPeer()
-            , elementId));
-    }
-    native static long getElementByIdImpl(long peer
-        , String elementId);
 
 
     public Node adoptNode(Node source) throws DOMException
@@ -1100,13 +1306,43 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     native static long createCSSStyleDeclarationImpl(long peer);
 
 
-    public NodeList getElementsByClassName(String tagname)
+    public NodeList getElementsByClassName(String classNames)
     {
         return NodeListImpl.getImpl(getElementsByClassNameImpl(getPeer()
-            , tagname));
+            , classNames));
     }
     native static long getElementsByClassNameImpl(long peer
-        , String tagname);
+        , String classNames);
+
+
+    public boolean hasFocus()
+    {
+        return hasFocusImpl(getPeer());
+    }
+    native static boolean hasFocusImpl(long peer);
+
+
+    public void webkitCancelFullScreen()
+    {
+        webkitCancelFullScreenImpl(getPeer());
+    }
+    native static void webkitCancelFullScreenImpl(long peer);
+
+
+    public void webkitExitFullscreen()
+    {
+        webkitExitFullscreenImpl(getPeer());
+    }
+    native static void webkitExitFullscreenImpl(long peer);
+
+
+    public Element getElementById(String elementId)
+    {
+        return ElementImpl.getImpl(getElementByIdImpl(getPeer()
+            , elementId));
+    }
+    native static long getElementByIdImpl(long peer
+        , String elementId);
 
 
     public Element querySelector(String selectors) throws DOMException
@@ -1125,20 +1361,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static long querySelectorAllImpl(long peer
         , String selectors);
-
-
-    public void webkitCancelFullScreen()
-    {
-        webkitCancelFullScreenImpl(getPeer());
-    }
-    native static void webkitCancelFullScreenImpl(long peer);
-
-
-    public void webkitExitFullscreen()
-    {
-        webkitExitFullscreenImpl(getPeer());
-    }
-    native static void webkitExitFullscreenImpl(long peer);
 
 
 

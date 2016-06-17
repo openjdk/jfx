@@ -2,7 +2,6 @@
 
 package com.sun.webkit.dom;
 
-import org.w3c.dom.Element;
 import org.w3c.dom.html.HTMLCollection;
 import org.w3c.dom.html.HTMLDocument;
 
@@ -66,11 +65,6 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
         return getCompatModeImpl(getPeer());
     }
     native static String getCompatModeImpl(long peer);
-
-    public Element getActiveElement() {
-        return ElementImpl.getImpl(getActiveElementImpl(getPeer()));
-    }
-    native static long getActiveElementImpl(long peer);
 
     public String getBgColor() {
         return getBgColorImpl(getPeer());
@@ -175,13 +169,6 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
         releaseEventsImpl(getPeer());
     }
     native static void releaseEventsImpl(long peer);
-
-
-    public boolean hasFocus()
-    {
-        return hasFocusImpl(getPeer());
-    }
-    native static boolean hasFocusImpl(long peer);
 
 
 }

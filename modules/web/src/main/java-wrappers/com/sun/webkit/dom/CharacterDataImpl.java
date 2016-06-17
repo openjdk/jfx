@@ -4,6 +4,7 @@ package com.sun.webkit.dom;
 
 import org.w3c.dom.CharacterData;
 import org.w3c.dom.DOMException;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 public class CharacterDataImpl extends NodeImpl implements CharacterData {
@@ -31,6 +32,16 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
         return getLengthImpl(getPeer());
     }
     native static int getLengthImpl(long peer);
+
+    public Element getPreviousElementSibling() {
+        return ElementImpl.getImpl(getPreviousElementSiblingImpl(getPeer()));
+    }
+    native static long getPreviousElementSiblingImpl(long peer);
+
+    public Element getNextElementSibling() {
+        return ElementImpl.getImpl(getNextElementSiblingImpl(getPeer()));
+    }
+    native static long getNextElementSiblingImpl(long peer);
 
 
 //functions
