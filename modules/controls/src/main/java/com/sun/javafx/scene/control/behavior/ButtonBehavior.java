@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.beans.Observable;
 import javafx.scene.control.ButtonBase;
 import com.sun.javafx.scene.control.inputmap.InputMap;
@@ -32,6 +34,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 import static com.sun.javafx.scene.control.inputmap.InputMap.*;
+import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.SPACE;
 
 /**
@@ -78,7 +81,11 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
             new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
             new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
             new MouseMapping(MouseEvent.MOUSE_ENTERED, this::mouseEntered),
-            new MouseMapping(MouseEvent.MOUSE_EXITED, this::mouseExited)
+            new MouseMapping(MouseEvent.MOUSE_EXITED, this::mouseExited),
+
+            // on non-Mac OS platforms, we support pressing the ENTER key to activate the button
+            new KeyMapping(new KeyBinding(ENTER, KeyEvent.KEY_PRESSED), this::keyPressed, event -> PlatformUtil.isMac()),
+            new KeyMapping(new KeyBinding(ENTER, KeyEvent.KEY_RELEASED), this::keyReleased, event -> PlatformUtil.isMac())
         );
 
         // Button also cares about focus

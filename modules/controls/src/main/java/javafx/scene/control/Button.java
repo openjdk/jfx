@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,9 +38,24 @@ import javafx.scene.control.skin.ButtonSkin;
  * <p>A simple button control.  The button control can contain
  * text and/or a graphic.  A button control has three different modes</p>
  * <ul>
- * <li> Normal: A normal push button. </li>
- * <li> Default: A default Button is the button that receives a keyboard VK_ENTER press, if no other node in the scene consumes it.</li>
- * <li> Cancel: A Cancel Button is the button that receives a keyboard VK_ESC press, if no other node in the scene consumes it.</li>
+ *   <li><strong>Normal:</strong> A normal push button. </li>
+ *   <li><strong>Default:</strong> The default button is rendered differently to make it apparent to users that it should
+ *   be the default choice should they be unclear as to what should be selected. The behavior of the default button differs
+ *   depending on the platform in which it is presented:
+ *      <ul>
+ *          <li><strong>Windows / Linux:</strong>  A default Button receives {@link javafx.scene.input.KeyCode#ENTER ENTER}
+ *          key presses when it has focus. When the default button does not have focus, and focus is on another Button
+ *          control, the ENTER key press will be received by the other, non-default Button. When focus is elsewhere in
+ *          the user interface, and not on any Button, the ENTER key press will be received by the default button, if
+ *          one is specified, and if no other node in the scene consumes it first.</li>
+ *          <li><strong>Mac OS X:</strong> A default Button is the only Button in the user interface that responds to the
+ *          ENTER key press. If focus is on another non-default Button and ENTER is pressed, the event is only received
+ *          by the default Button. On macOS, the only way to fire a non-default Button is through the
+ *          {@link javafx.scene.input.KeyCode#SPACE SPACE} key.</li>
+ *      </ul>
+ *   </li>
+ *   <li><strong>Cancel:</strong> A Cancel Button is the button that receives a keyboard VK_ESC press, if no other node in
+ *      the scene consumes it.</li>
  * </ul>
  *
  * <p>When a button is pressed and released a {@link ActionEvent} is sent.
