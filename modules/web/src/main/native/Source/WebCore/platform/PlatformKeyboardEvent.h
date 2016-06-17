@@ -168,7 +168,7 @@ namespace WebCore {
 #if PLATFORM(JAVA)
         PlatformKeyboardEvent(jint type, jstring text, jstring keyIdentifier,
                               jint windowsVirtualKeyCode, jboolean shift,
-                              jboolean ctrl, jboolean alt, jboolean meta);
+                              jboolean ctrl, jboolean alt, jboolean meta, jdouble timestamp);
 #endif
 
     protected:

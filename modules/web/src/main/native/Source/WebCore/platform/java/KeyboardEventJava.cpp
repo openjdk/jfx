@@ -37,14 +37,15 @@ PlatformKeyboardEvent::PlatformKeyboardEvent(
     jboolean shiftKey,
     jboolean ctrlKey,
     jboolean altKey,
-    jboolean metaKey)
+    jboolean metaKey,
+    jdouble timestamp)
 : PlatformEvent(
     toPlatformKeyboardEventType(type),
     shiftKey,
     ctrlKey,
     altKey,
     metaKey,
-    0.0)
+    timestamp)
 , m_autoRepeat(false)
 , m_windowsVirtualKeyCode(windowsVirtualKeyCode)
 , m_nativeVirtualKeyCode(0)

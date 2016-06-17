@@ -1530,13 +1530,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkProcessFocusEvent
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessKeyEvent
     (JNIEnv* env, jobject self, jlong pPage,
      jint type, jstring text, jstring keyIdentifier, jint windowsVirtualKeyCode,
-     jboolean shift, jboolean ctrl, jboolean alt, jboolean meta)
+     jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jdouble timestamp)
 {
     WebPage* webPage = WebPage::webPageFromJLong(pPage);
 
     PlatformKeyboardEvent event(type, text, keyIdentifier,
                                 windowsVirtualKeyCode,
-                                shift, ctrl, alt, meta);
+                                shift, ctrl, alt, meta, timestamp);
 
     return bool_to_jbool(webPage->processKeyEvent(event));
 }
@@ -1546,7 +1546,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
      jint id, jint button, jint clickCount,
      jint x, jint y, jint screenX, jint screenY,
      jboolean shift, jboolean ctrl, jboolean alt, jboolean meta,
-     jboolean popupTrigger, jfloat timestamp)
+     jboolean popupTrigger, jdouble timestamp)
 {
     Page* page = WebPage::pageFromJLong(pPage);
     Frame* frame = (Frame*)&page->mainFrame();
@@ -1624,7 +1624,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseWheelEvent
      jint x, jint y, jint screenX, jint screenY,
      jfloat deltaX, jfloat deltaY,
      jboolean shift, jboolean ctrl, jboolean alt, jboolean meta,
-     jfloat timestamp)
+     jdouble timestamp)
 {
     Page* page = WebPage::pageFromJLong(pPage);
     Frame* frame = (Frame*)&page->mainFrame();

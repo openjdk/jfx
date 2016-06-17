@@ -768,7 +768,7 @@ public final class WebPage {
                                       ke.getKeyIdentifier(),
                                       ke.getWindowsVirtualKeyCode(),
                                       ke.isShiftDown(), ke.isCtrlDown(),
-                                      ke.isAltDown(), ke.isMetaDown());
+                                      ke.isAltDown(), ke.isMetaDown(), ke.getWhen() / 1000.0);
         } finally {
             unlockPage();
         }
@@ -790,7 +790,7 @@ public final class WebPage {
                                         me.getButton(), me.getClickCount(),
                                         me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
                                         me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(), me.isPopupTrigger(),
-                                        me.getWhen() / 1000.0f);
+                                        me.getWhen() / 1000.0);
         } finally {
             unlockPage();
         }
@@ -808,7 +808,7 @@ public final class WebPage {
                                              me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
                                              me.getDeltaX(), me.getDeltaY(),
                                              me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(),
-                                             me.getWhen() / 1000.0f);
+                                             me.getWhen() / 1000.0);
         } finally {
             unlockPage();
         }
@@ -2520,17 +2520,17 @@ public final class WebPage {
                                               String keyIdentifier,
                                               int windowsVirtualKeyCode,
                                               boolean shift, boolean ctrl,
-                                              boolean alt, boolean meta);
+                                              boolean alt, boolean meta, double when);
     private native boolean twkProcessMouseEvent(long pPage, int id,
                                                 int button, int clickCount,
                                                 int x, int y, int sx, int sy,
                                                 boolean shift, boolean control, boolean alt, boolean meta,
-                                                boolean popupTrigger, float when);
+                                                boolean popupTrigger, double when);
     private native boolean twkProcessMouseWheelEvent(long pPage,
                                                      int x, int y, int sx, int sy,
                                                      float dx, float dy,
                                                      boolean shift, boolean control, boolean alt, boolean meta,
-                                                     float when);
+                                                     double when);
     private native boolean twkProcessInputTextChange(long pPage, String committed, String composed,
                                                      int[] attributes, int caretPosition);
     private native boolean twkProcessCaretPositionChange(long pPage, int caretPosition);

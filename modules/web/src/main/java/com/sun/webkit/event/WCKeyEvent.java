@@ -51,6 +51,7 @@ public final class WCKeyEvent {
 
 
     private final int type;
+    private final long when;
     private final String text;
     private final String keyIdentifier;
     private final int windowsVirtualKeyCode;
@@ -62,7 +63,7 @@ public final class WCKeyEvent {
 
     public WCKeyEvent(int type, String text, String keyIdentifier,
                       int windowsVirtualKeyCode, boolean shift, boolean ctrl,
-                      boolean alt, boolean meta)
+                      boolean alt, boolean meta, long when)
     {
         this.type = type;
         this.text = text;
@@ -72,10 +73,12 @@ public final class WCKeyEvent {
         this.ctrl = ctrl;
         this.alt = alt;
         this.meta = meta;
+        this.when = when;
     }
 
 
     public int getType() { return type; }
+    public long getWhen() { return when; }
     public String getText() { return text; }
     public String getKeyIdentifier() { return keyIdentifier; }
     public int getWindowsVirtualKeyCode() { return windowsVirtualKeyCode; }

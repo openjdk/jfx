@@ -355,7 +355,8 @@ final class EventSender {
                 isSet(modifiers, SHIFT),
                 isSet(modifiers, CTRL),
                 isSet(modifiers, ALT),
-                isSet(modifiers, META)
+                isSet(modifiers, META),
+                getEventTime()
         ));
     }
 
