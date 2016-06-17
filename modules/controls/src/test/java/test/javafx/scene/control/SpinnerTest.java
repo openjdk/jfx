@@ -1298,4 +1298,44 @@ public class SpinnerTest {
         spinner.getValueFactory().setValue(null);
         assertNull(spinner.getValue());
     }
+
+    @Test public void test_jdk_8150946_testCommit_valid() {
+        Spinner<Double> spinner = new Spinner<>(-100, 100, 0, 0.5);
+        spinner.setEditable(true);
+        assertEquals(0.0, spinner.getValue());
+        spinner.getEditor().setText("2.5");
+        spinner.commitValue();
+        assertEquals(2.5, spinner.getValue());
+    }
+
+    @Test public void test_jdk_8150946_testCommit_invalid_outOfRange() {
+        Spinner<Double> spinner = new Spinner<>(-100, 100, 0, 0.5);
+        spinner.setEditable(true);
+        assertEquals(0.0, spinner.getValue());
+        spinner.getEditor().setText("2500");
+        spinner.commitValue();
+        assertEquals(100.0, spinner.getValue());
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void test_jdk_8150946_testCommit_invalid_wrongType() {
+        Spinner<Double> spinner = new Spinner<>(-100, 100, 0, 0.5);
+        spinner.setEditable(true);
+        assertEquals(0.0, spinner.getValue());
+        spinner.getEditor().setText("Hello, World!");
+        spinner.commitValue();
+        assertEquals(0.0, spinner.getValue());
+    }
+
+    @Test public void test_jdk_8150946_testCancel() {
+        Spinner<Double> spinner = new Spinner<>(-100, 100, 2.5, 0.5);
+        spinner.setEditable(true);
+        assertEquals(2.5, spinner.getValue());
+        assertEquals("2.5", spinner.getEditor().getText());
+        spinner.getEditor().setText("3.5");
+        assertEquals(2.5, spinner.getValue());
+        spinner.cancelEdit();
+        assertEquals(2.5, spinner.getValue());
+        assertEquals("2.5", spinner.getEditor().getText());
+    }
 }

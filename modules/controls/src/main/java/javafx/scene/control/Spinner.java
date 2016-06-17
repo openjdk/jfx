@@ -131,15 +131,7 @@ public class Spinner<T> extends Control {
         setAccessibleRole(AccessibleRole.SPINNER);
 
         getEditor().setOnAction(action -> {
-            String text = getEditor().getText();
-            SpinnerValueFactory<T> valueFactory = getValueFactory();
-            if (valueFactory != null) {
-                StringConverter<T> converter = valueFactory.getConverter();
-                if (converter != null) {
-                    T value = converter.fromString(text);
-                    valueFactory.setValue(value);
-                }
-            }
+            commitValue();
         });
 
         getEditor().editableProperty().bind(editableProperty());
@@ -156,6 +148,12 @@ public class Spinner<T> extends Control {
             }
         });
         // End of fix for RT-29885
+
+        focusedProperty().addListener(o -> {
+            if (!isFocused()) {
+                commitValue();
+            }
+        });
     }
 
     /**
@@ -391,7 +389,7 @@ public class Spinner<T> extends Control {
         if (valueFactory == null) {
             throw new IllegalStateException("Can't increment Spinner with a null SpinnerValueFactory");
         }
-        commitEditorText();
+        commitValue();
         valueFactory.increment(steps);
     }
 
@@ -424,13 +422,49 @@ public class Spinner<T> extends Control {
         if (valueFactory == null) {
             throw new IllegalStateException("Can't decrement Spinner with a null SpinnerValueFactory");
         }
-        commitEditorText();
+        commitValue();
         valueFactory.decrement(steps);
     }
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new SpinnerSkin<>(this);
+    }
+
+    /**
+     * If the Spinner is {@link #editableProperty() editable}, calling this method will attempt to
+     * commit the current text and convert it to a {@link #valueProperty() value}.
+     * @since 9
+     */
+    public final void commitValue() {
+        if (!isEditable()) return;
+        String text = getEditor().getText();
+        SpinnerValueFactory<T> valueFactory = getValueFactory();
+        if (valueFactory != null) {
+            StringConverter<T> converter = valueFactory.getConverter();
+            if (converter != null) {
+                T value = converter.fromString(text);
+                valueFactory.setValue(value);
+            }
+        }
+    }
+
+    /**
+     * If the Spinner is {@link #editableProperty() editable}, calling this method will attempt to
+     * replace the editor text with the last committed {@link #valueProperty() value}.
+     * @since 9
+     */
+    public final void cancelEdit() {
+        if (!isEditable()) return;
+        final T committedValue = getValue();
+        SpinnerValueFactory<T> valueFactory = getValueFactory();
+        if (valueFactory != null) {
+            StringConverter<T> converter = valueFactory.getConverter();
+            if (converter != null) {
+                String valueString = converter.toString(committedValue);
+                getEditor().setText(valueString);
+            }
+        }
     }
 
 
@@ -641,18 +675,6 @@ public class Spinner<T> extends Control {
         return value;
     }
 
-    private void commitEditorText() {
-        if (!isEditable()) return;
-        String text = getEditor().getText();
-        SpinnerValueFactory<T> valueFactory = getValueFactory();
-        if (valueFactory != null) {
-            StringConverter<T> converter = valueFactory.getConverter();
-            if (converter != null) {
-                T value = converter.fromString(text);
-                valueFactory.setValue(value);
-            }
-        }
-    }
 
 
     /***************************************************************************

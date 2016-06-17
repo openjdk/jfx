@@ -138,11 +138,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             if (getEditor() != null) {
                 // Fix for the regression noted in a comment in RT-29885.
                 ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
-
-                // JDK-8120120 (aka RT-21454) and JDK-8136838
-                if (!hasFocus) {
-                    setTextFromTextFieldIntoComboBoxValue();
-                }
             }
         });
 
