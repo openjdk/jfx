@@ -39,6 +39,27 @@ JNIEXPORT void JNICALL JNI_OnUnLoad(JavaVM* vm, void* reserved)
     jvm = 0;
 }
 
+#if OS(WINDOWS)
+#include <Windows.h>
+#include <math.h>
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+{
+    if (fdwReason == DLL_PROCESS_ATTACH) {
+#if defined(_MSC_VER) && _MSC_VER >= 1800 && _MSC_VER < 1900 && defined(_M_X64) || defined(__x86_64__)
+        // The VS2013 runtime has a bug where it mis-detects AVX-capable processors
+        // if the feature has been disabled in firmware. This causes us to crash
+        // in some of the math functions. For now, we disable those optimizations
+        // because Microsoft is not going to fix the problem in VS2013.
+        // FIXME: Remove this workaround when we switch to VS2015+.
+        _set_FMA3_enable(0);
+#endif
+    }
+
+    return TRUE;
+}
+#endif
+
 #ifdef __cplusplus
 }
 #endif
