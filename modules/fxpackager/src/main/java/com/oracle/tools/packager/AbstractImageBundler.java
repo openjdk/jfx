@@ -65,7 +65,7 @@ public abstract class AbstractImageBundler extends AbstractBundler {
         }
 
         boolean hasMainJar = MAIN_JAR.fetchFrom(p) != null;
-        boolean hasMainModule = JLinkBundlerHelper.MAIN_MODULE.fetchFrom(p) != null;
+        boolean hasMainModule = JLinkBundlerHelper.MODULE.fetchFrom(p) != null;
 
         if (!hasMainJar && !hasMainModule) {
             if (!hasMainJar) {

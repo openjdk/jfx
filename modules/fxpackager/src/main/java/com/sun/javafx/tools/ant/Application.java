@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Properties;
 import com.sun.javafx.tools.packager.HtmlParam;
 import com.sun.javafx.tools.packager.Param;
+//import java.nio.file.Path;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.types.DataType;
 import org.apache.tools.ant.types.Reference;
@@ -50,6 +51,7 @@ import org.apache.tools.ant.types.Reference;
  */
 public class Application extends DataType implements Cloneable {
     String mainClass = null;
+    String module = null;
     String preloaderClass = null;
     String name = null;
     List<Param> parameters = new LinkedList<Param>();
@@ -60,11 +62,6 @@ public class Application extends DataType implements Cloneable {
     boolean embeddedIntoSwing = false;
     String version = null;
     Boolean daemon = null;
-
-    public List<Argument> addModule = new LinkedList<Argument>();
-    public List<Argument> limitModule = new LinkedList<Argument>();
-    String modulepath;
-    boolean stripExecutables;
 
     public void setVersion(String v) {
         version = v;
@@ -106,10 +103,14 @@ public class Application extends DataType implements Cloneable {
     }
 
     public class Argument {
-        String value;
+        private String value;
 
-        public void addText(String v) {
-            value = getProject().replaceProperties(v);
+        public void addText(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return this.value;
         }
     }
 
@@ -168,6 +169,24 @@ public class Application extends DataType implements Cloneable {
     }
 
     /**
+     * Module containing the application class.
+     *
+     * @ant.not-required Default is to not bundle as a modular application.
+     */
+    public String getModule() {
+        return this.module;
+    }
+
+    /**
+     * Module containing the application class.
+     *
+     * @ant.not-required Default is to not bundle as a modular application.
+     */
+    public void setModule(String value) {
+        this.module = value;
+    }
+
+    /**
      * Preloader class to be used.
      *
      * @ant.not-required Default is preloader shipped in JavaFX Runtime.
@@ -185,92 +204,6 @@ public class Application extends DataType implements Cloneable {
         daemon = b;
     }
 
-
-    /**
-     * "addModule" declaration for the application's runtime.
-     *
-     * Modules can be specified per-element, or comma/colon/semi-colon/space separated
-     *
-     * @ant.not-required Default is to bundle the whole platform
-     */
-    public Argument createAddModule() {
-        Argument a = new Argument();
-        addModule.add(a);
-        return a;
-    }
-
-    /**
-     * "addModule" declaration for the application's runtime
-     *
-     * @ant.not-required Default is to bundle the whole platform
-     */
-    List<String> getAddModule() {
-        List<String> lst = new LinkedList();
-        for(Argument a: arguments) {
-            for (String s : a.value.split("[:;,\\s]+")) {
-                lst.add(s);
-            }
-        }
-        return lst;
-    }
-
-    /**
-     * "limitModule" declaration for the application's runtime.
-     *
-     * Modules can be specified per-element, or comma/colon/semi-colon/space separated
-     *
-     * @ant.not-required Default is to bundle the whole platform
-     */
-    public Argument createLimitModule() {
-        Argument a = new Argument();
-        addModule.add(a);
-        return a;
-    }
-
-    /**
-     * "limitModule" declaration for the application's runtime
-     *
-     * @ant.not-required Default is to bundle the whole platform
-     */
-    List<String> getLimitModule() {
-        List<String> lst = new LinkedList();
-        for(Argument a: arguments) {
-            for (String s : a.value.split("[:;,\\s]+")) {
-                lst.add(s);
-            }
-        }
-        return lst;
-    }
-
-    /**
-     *
-     */
-    public String getModulePath() {
-        return modulepath;
-    }
-
-    /**
-     *
-     */
-    public void setModulePath(String Value) {
-        this.modulepath = Value;
-    }
-
-    /**
-     * Whether or not the bundler should attempt to detect and add used modules
-     */
-    public boolean getStripExecutables() {
-        return stripExecutables;
-    }
-
-    /**
-     * Whether or not the bundler should attempt to detect and add used modules
-     * @ant.not-required default is false
-     */
-    public void setStripExecutables(boolean Value) {
-        this.stripExecutables = Value;
-    }
-
     //return instance that actually has data. Could be referenced object ...
     public Application get() {
         return isReference() ?
@@ -285,6 +218,6 @@ public class Application extends DataType implements Cloneable {
 
     @Override
     public String toString() {
-        return "Application[id="+id+", mainClass="+mainClass+"]";
+        return "Application[id=" + id + ", mainClass=" + mainClass + "]";
     }
 }

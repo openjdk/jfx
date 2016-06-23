@@ -183,7 +183,7 @@ public class BundleParams {
     }
 
     public void setDetectMods(boolean value) {
-        putUnlessNull(JLinkBundlerHelper.DETECT_MODS.getID(), value);
+        putUnlessNull(JLinkBundlerHelper.DETECT_MODULES.getID(), value);
     }
 
     public void setSrcDir(File value) {
@@ -195,7 +195,11 @@ public class BundleParams {
     }
 
     public void setMainModule(String value) {
-        putUnlessNull(JLinkBundlerHelper.MAIN_MODULE.getID(), value);
+        putUnlessNull(JLinkBundlerHelper.MODULE.getID(), value);
+    }
+
+    public void setDebugPort(String value) {
+        putUnlessNull(JLinkBundlerHelper.DEBUG_PORT.getID(), value);
     }
 
     public String getApplicationID() {

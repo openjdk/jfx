@@ -86,7 +86,7 @@ public class JLinkBundlerHelper {
             new StandardBundlerParam<>(
                     I18N.getString("param.module-path.name"),
                     I18N.getString("param.module-path.description"),
-                    "modulepath",
+                    "module-path",
                     (Class<List<Path>>) (Object)List.class,
                     p -> new ArrayList(),
                     (s, p) -> Arrays.asList(s.split("[;:]")).stream()
@@ -94,11 +94,11 @@ public class JLinkBundlerHelper {
                         .collect(Collectors.toList()));
 
     @SuppressWarnings("unchecked")
-    public static final BundlerParamInfo<String> MAIN_MODULE =
+    public static final BundlerParamInfo<String> MODULE =
             new StandardBundlerParam<>(
                     I18N.getString("param.main.module.name"),
                     I18N.getString("param.main.module.description"),
-                    "m",
+                    "module",
                     String.class,
                     p -> null,
                     (s, p) -> {
@@ -110,7 +110,7 @@ public class JLinkBundlerHelper {
             new StandardBundlerParam<>(
                     I18N.getString("param.add-modules.name"),
                     I18N.getString("param.add-modules.description"),
-                    "addmods",
+                    "add-modules",
                     (Class<Set<String>>) (Object) Set.class,
                     p -> new LinkedHashSet(),
                     (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+"))));
@@ -120,7 +120,7 @@ public class JLinkBundlerHelper {
             new StandardBundlerParam<>(
                     I18N.getString("param.limit-modules.name"),
                     I18N.getString("param.limit-modules.description"),
-                    "limitmods",
+                    "limit-modules",
                     (Class<Set<String>>) (Object) Set.class,
                     p -> new LinkedHashSet(),
                     (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+"))));
@@ -136,11 +136,11 @@ public class JLinkBundlerHelper {
                     (s, p) -> Boolean.valueOf(s));
 
     @SuppressWarnings("unchecked")
-    public static final BundlerParamInfo<Boolean> DETECT_MODS =
+    public static final BundlerParamInfo<Boolean> DETECT_MODULES =
             new StandardBundlerParam<>(
                     I18N.getString("param.detect-modules.name"),
                     I18N.getString("param.detect-modules.description"),
-                    "Xdetectmods",
+                    "detect-modules",
                     Boolean.class,
                     p -> Boolean.FALSE,
                     (s, p) -> Boolean.valueOf(s));
@@ -178,7 +178,7 @@ public class JLinkBundlerHelper {
             new StandardBundlerParam<>(
                     I18N.getString("param.main.module.name"),
                     I18N.getString("param.main.module.description"),
-                    "Xdebug",
+                    "-Xdebug",
                     Integer.class,
                     p -> null,
                     (s, p) -> {
@@ -232,7 +232,7 @@ public class JLinkBundlerHelper {
             result = MAIN_CLASS.fetchFrom(params);
         }
         else {
-            String mainModule = MAIN_MODULE.fetchFrom(params);
+            String mainModule = MODULE.fetchFrom(params);
 
             if (mainModule != null) {
                 int index = mainModule.indexOf("/");
@@ -248,7 +248,7 @@ public class JLinkBundlerHelper {
 
     public static String getMainModule(Map<String, ? super Object> params) {
         String result = "";
-        String mainModule = MAIN_MODULE.fetchFrom(params);
+        String mainModule = MODULE.fetchFrom(params);
 
         if (mainModule != null) {
             int index = mainModule.indexOf("/");
@@ -273,7 +273,7 @@ public class JLinkBundlerHelper {
         Path outputDir = imageBuilder.getRoot();
         String excludeFileList = imageBuilder.getExcludeFileList();
         Set<String> jars = getResourceFileJarList(params, Module.JarType.UnnamedJar);
-        Path jdkModulePath = setupDefaultModulePathIfNecessary(params, modulePath);
+        setupDefaultModulePathIfNecessary(modulePath);
         File mainJar = getMainJar(params);
         Module.ModuleType mainJarType = Module.ModuleType.Unknown;
 
@@ -284,7 +284,7 @@ public class JLinkBundlerHelper {
         //--------------------------------------------------------------------
         // Modules
 
-        boolean detectModules = DETECT_MODS.fetchFrom(params);
+        boolean detectModules = DETECT_MODULES.fetchFrom(params);
 
         // The default for an unnamed jar is ALL_DEFAULT with the
         // non-redistributable modules removed.
@@ -311,6 +311,7 @@ public class JLinkBundlerHelper {
 
         // Bundle with minimum dependencies that unnamed jars depend on.
         if (detectModules && !jars.isEmpty()) {
+            Log.info(String.format(I18N.getString("using.experimental.feature"), "--" + DETECT_MODULES.getID()));
             Collection<String> detectedModules = JDepHelper.calculateModules(jars, modulePath);
 
             if (!detectedModules.isEmpty()) {
@@ -349,7 +350,7 @@ public class JLinkBundlerHelper {
         return result;
     }
 
-    private static Path setupDefaultModulePathIfNecessary(Map<String, ? super Object> params, List<Path> modulePath) {
+    private static Path setupDefaultModulePathIfNecessary(List<Path> modulePath) {
         Path result = null;
         Path userDefinedJdkModulePath = findModulePath(modulePath, "java.base.jmod");
 
@@ -463,7 +464,7 @@ public class JLinkBundlerHelper {
         // The token for "all modules on the module path"
         private static final String ALL_MODULE_PATH = "ALL-MODULE-PATH";
 
-        public static final String ALL_RUNTIME = "X-ALL-RUNTIME";
+        public static final String ALL_RUNTIME = "ALL-RUNTIME";
 
         private final Set<String> modules = new HashSet<>();
 

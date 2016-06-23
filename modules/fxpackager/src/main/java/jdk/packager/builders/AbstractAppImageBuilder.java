@@ -179,7 +179,7 @@ public abstract class AbstractAppImageBuilder {
             mainJarType = new Module(mainJar).getModuleType();
         }
 
-        String mainModule = JLinkBundlerHelper.MAIN_MODULE.fetchFrom(params);
+        String mainModule = JLinkBundlerHelper.MODULE.fetchFrom(params);
 
         PrintStream out = new PrintStream(cfgFileName);
 
@@ -194,28 +194,27 @@ public abstract class AbstractAppImageBuilder {
         // The main app is required to be a jar, modular or unnamed.
         if (mainJarType == Module.ModuleType.Unknown || mainJarType == Module.ModuleType.ModularJar) {
             if (mainModule != null) {
-                out.println("app.mainmodule=" + mainModule);
+                out.println("app.mainmodule=" + mainModule); // TODO get app class from main module mainifest.
             }
         }
         else {
             String mainClass = JLinkBundlerHelper.getMainClass(params);
 
             if (mainJar != null && mainClass != null) {
-                // If the app is contained in an unnamed jar then launch it the old
-                // fashioned way and the main class string must be of the format com/foo/Main
+                // If the app is contained in an unnamed jar then launch it the
+                // legacy way and the main class string must be of the format com/foo/Main
                 out.println("app.mainclass=" + mainClass.replaceAll("\\.", "/"));
                 out.println("app.mainjar=" + mainJar);
             }
         }
+
+        out.println("packager.java.version=" + System.getProperty("java.version"));
 
         Integer port = JLinkBundlerHelper.DEBUG_PORT.fetchFrom(params);
 
         if (port != null) {
             out.println("app.debug=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=localhost:" + port);
         }
-
-        //TODO this is a little tricky now with a modular JDK.
-        //out.println("app.java.version=" + );
 
         if (appCDEnabled) {
             out.println("app.appcds.cache=" + appCDSCacheMode.split("\\+")[0]);

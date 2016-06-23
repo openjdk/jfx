@@ -82,7 +82,8 @@ public class DeployParams extends CommonParams {
     Boolean stripNativeCommands = null;
     Boolean detectmods = null;
     String modulePath = null;
-    String mainModule = null;
+    String module = null;
+    String debugPort = null;
     File srcdir;
 
     int width;
@@ -272,15 +273,19 @@ public class DeployParams extends CommonParams {
         this.modulePath = value;
     }
 
-    public void setMainModule(String value) {
-        this.mainModule = value;
+    public void setModule(String value) {
+        this.module = value;
+    }
+
+    public void setDebugPort(String value) {
+        this.debugPort = value;
     }
 
     public void setStripNativeCommands(boolean value) {
         this.stripNativeCommands = value;
     }
 
-    public void setDetectMods(boolean value) {
+    public void setDetectModules(boolean value) {
         this.detectmods = value;
     }
 
@@ -492,7 +497,7 @@ public class DeployParams extends CommonParams {
         if (resources.isEmpty()) {
             throw new PackagerException("ERR_MissingAppResources");
         }
-        if (applicationClass == null && mainModule == null) { //TODO better error here for mainmodule
+        if (applicationClass == null && module == null) { //TODO better error here for mainmodule
             throw new PackagerException("ERR_MissingArgument", "-appclass");
         }
     }
@@ -507,7 +512,7 @@ public class DeployParams extends CommonParams {
         }
 
         // Failed
-        if ((mainModule != null && !mainModule.isEmpty()) ||
+        if ((module != null && !module.isEmpty()) ||
             (addModules != null && !addModules.isEmpty()) ||
             (limitModules != null && !limitModules.isEmpty()) |
             (modulePath != null && !modulePath.isEmpty()) ||
@@ -526,7 +531,7 @@ public class DeployParams extends CommonParams {
 
         // Success
         if (((applicationClass != null && !applicationClass.isEmpty()) ||
-            !mainModule.isEmpty())) {
+            !module.isEmpty())) {
             result = true;
         }
 
@@ -607,7 +612,7 @@ public class DeployParams extends CommonParams {
             JLinkBundlerHelper.ADD_MODULES.getID(),
             JLinkBundlerHelper.LIMIT_MODULES.getID(),
             JLinkBundlerHelper.STRIP_NATIVE_COMMANDS.getID(),
-            JLinkBundlerHelper.DETECT_MODS.getID()
+            JLinkBundlerHelper.DETECT_MODULES.getID()
     ));
 
     @SuppressWarnings("unchecked")
@@ -706,8 +711,12 @@ public class DeployParams extends CommonParams {
             bundleParams.setModulePath(modulePath);
         }
 
-        if (mainModule != null && !mainModule.isEmpty()) {
-            bundleParams.setMainModule(mainModule);
+        if (module != null && !module.isEmpty()) {
+            bundleParams.setMainModule(module);
+        }
+
+        if (debugPort != null && !debugPort.isEmpty()) {
+            bundleParams.setDebugPort(debugPort);
         }
 
         if (detectmods != null) {
