@@ -350,7 +350,15 @@ static jint SUBPIXEL_POSITIONS_Y;
 static jint SUBPIXEL_MASK_X;
 static jint SUBPIXEL_MASK_Y;
 //static jint MAX_AA_ALPHA;
-static jbyte *alphaMap;
+
+// We keep 2 alpha maps around which map from the number of sub-pixel
+// samples to a byte-based alpha value from 0 to 255.  We only ever
+// use 2 different sub-pixel sample counts in practice (depending on
+// AA vs. non-AA rendering), so these 2 should satisfy all of our needs.
+static jbyte *alphaMap = NULL;
+static jint alphaMax;
+static jbyte *altAlphaMap = NULL;
+static jint altAlphaMax;
 
 static void setMaxAlpha(jint maxalpha);
 
@@ -608,9 +616,39 @@ void Renderer_produceAlphas(Renderer *pRenderer, AlphaConsumer *pAC) {
 
 //@Override
 static void setMaxAlpha(jint maxalpha) {
-    jint i;
+    jint i, altMax;
+    jbyte *altMap;
 
+    // Attempt to reuse either alphaMap or altAlphaMap.
+    // In practice, we should not get here if alphaMap is the right size
+    // due to checks above in our calling chain, but we check for that
+    // condition for completeness.
+    // Also in practice, we only ever have 2 values for maxalpha, but we
+    // protect against running into a 3rd value for maxalpha just in case.
+    if (alphaMap != NULL) {
+        if (maxalpha == alphaMax) {
+            return;
+        }
+        // We will either free the alt values and calculate a new map,
+        // or we will swap them to the main alpha* variables.  In either
+        // case, the main alpha* variables will become the new alt values.
+        altMap = altAlphaMap;
+        altMax = altAlphaMax;
+        altAlphaMap = alphaMap;
+        altAlphaMax = alphaMax;
+        if (altMap != NULL) {
+            if (maxalpha == altMax) {
+                alphaMap = altMap;
+                alphaMax = altMax;
+                return;
+            }
+            free(altMap);
+        }
+        alphaMap = NULL;
+    }
+    // assert alphaMap == NULL
     alphaMap = malloc(maxalpha+1);
+    alphaMax = maxalpha;
     for (i = 0; i <= maxalpha; i++) {
         alphaMap[i] = (jbyte) ((i*255 + maxalpha/2)/maxalpha);
     }
