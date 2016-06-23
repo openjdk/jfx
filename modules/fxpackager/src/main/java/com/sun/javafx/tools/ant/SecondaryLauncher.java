@@ -38,12 +38,14 @@ import java.util.List;
 import java.util.Map;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import jdk.packager.internal.JLinkBundlerHelper;
 
 
 public class SecondaryLauncher extends DataType implements DynamicAttribute {
 
     File icon;
     private String mainClass;
+    private String module = null;
     private String name;
     private String version;
     private String title;
@@ -76,7 +78,13 @@ public class SecondaryLauncher extends DataType implements DynamicAttribute {
     public Map<String, ? super Object> createLauncherMap() {
         Map<String, ? super Object> bundleParams = new HashMap<>();
 
-        putUnlessNull(bundleParams, MAIN_CLASS.getID(), mainClass);
+        if (module == null) {
+            putUnlessNull(bundleParams, MAIN_CLASS.getID(), mainClass);
+        }
+        else if (module == null && mainClass != null) {
+            putUnlessNull(bundleParams, JLinkBundlerHelper.MODULE.getID(), module + "/" + mainClass);
+        }
+
 //??        putUnlessNull(bundleParams, Preloader, preloaderClass);
 //??        putUnlessNull(bundleParams, AppId, id);
         putUnlessNull(bundleParams, APP_NAME.getID(), name);
@@ -186,14 +194,20 @@ public class SecondaryLauncher extends DataType implements DynamicAttribute {
         return t;
     }
 
-
-
     public String getMainClass() {
         return mainClass;
     }
 
-    public void setMainClass(String mainClass) {
-        this.mainClass = mainClass;
+    public void setMainClass(String value) {
+        this.mainClass = value;
+    }
+
+    public String getModule() {
+        return module;
+    }
+
+    public void setModule(String value) {
+        this.module = value;
     }
 
     public String getName() {

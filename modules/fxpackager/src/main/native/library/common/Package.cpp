@@ -190,6 +190,13 @@ void Package::Initialize() {
         }
     }
 
+    // Debug
+    TString debug;
+    if (config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[CONFIG_APP_DEBUG], debug) == true) {
+        FBootFields->FArgs.push_back(debug);
+    }
+
+
     MergeJVMDefaultsWithOverrides();
 }
 

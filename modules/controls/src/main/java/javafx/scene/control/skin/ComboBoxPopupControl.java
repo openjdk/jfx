@@ -28,6 +28,7 @@ package javafx.scene.control.skin;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
@@ -137,11 +138,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             if (getEditor() != null) {
                 // Fix for the regression noted in a comment in RT-29885.
                 ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
-
-                // JDK-8120120 (aka RT-21454) and JDK-8136838
-                if (!hasFocus) {
-                    setTextFromTextFieldIntoComboBoxValue();
-                }
             }
         });
 
@@ -280,6 +276,11 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             textField.setFocusTraversable(false);
             textField.promptTextProperty().bind(comboBoxBase.promptTextProperty());
             textField.tooltipProperty().bind(comboBoxBase.tooltipProperty());
+
+            // Fix for JDK-8145515 - in short the ComboBox was firing the event down to
+            // the TextField, and then the TextField was firing it back up to the
+            // ComboBox, resulting in stack overflows.
+            textField.getProperties().put(TextInputControlBehavior.DISABLE_FORWARD_TO_PARENT, true);
 
             // Fix for RT-21406: ComboBox do not show initial text value
             initialTextFieldValue = textField.getText();
@@ -541,12 +542,15 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         // When the user hits the enter or F4 keys, we respond before
         // ever giving the event to the TextField.
         if (ke.getCode() == KeyCode.ENTER) {
+            if (ke.isConsumed()) {
+                return;
+            }
             setTextFromTextFieldIntoComboBoxValue();
 
             if (doConsume && comboBoxBase.getOnAction() != null) {
                 ke.consume();
             } else {
-                forwardToParent(ke);
+                textField.fireEvent(ke);
             }
         } else if (ke.getCode() == KeyCode.F4) {
             if (ke.getEventType() == KeyEvent.KEY_RELEASED) {
@@ -561,12 +565,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             // the stack overflows. So, here we consume these two
             // events and stop them from going any further.
             if (doConsume) ke.consume();
-        }
-    }
-
-    private void forwardToParent(KeyEvent event) {
-        if (comboBoxBase.getParent() != null) {
-            comboBoxBase.getParent().fireEvent(event);
         }
     }
 

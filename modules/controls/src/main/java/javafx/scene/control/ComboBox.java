@@ -276,6 +276,12 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 }
             }
         });
+
+        focusedProperty().addListener(o -> {
+            if (!isFocused()) {
+                commitValue();
+            }
+        });
     }
 
 
@@ -426,6 +432,36 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new ComboBoxListViewSkin<T>(this);
+    }
+
+    /**
+     * If the ComboBox is {@link #editableProperty() editable}, calling this method will attempt to
+     * commit the current text and convert it to a {@link #valueProperty() value}.
+     * @since 9
+     */
+    public final void commitValue() {
+        if (!isEditable()) return;
+        String text = getEditor().getText();
+        StringConverter<T> converter = getConverter();
+        if (converter != null) {
+            T value = converter.fromString(text);
+            setValue(value);
+        }
+    }
+
+    /**
+     * If the ComboBox is {@link #editableProperty() editable}, calling this method will attempt to
+     * replace the editor text with the last committed {@link #valueProperty() value}.
+     * @since 9
+     */
+    public final void cancelEdit() {
+        if (!isEditable()) return;
+        final T committedValue = getValue();
+        StringConverter<T> converter = getConverter();
+        if (converter != null) {
+            String valueString = converter.toString(committedValue);
+            getEditor().setText(valueString);
+        }
     }
 
 

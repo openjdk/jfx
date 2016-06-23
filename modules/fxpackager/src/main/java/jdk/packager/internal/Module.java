@@ -61,6 +61,12 @@ public final class Module {
         return moduleType;
     }
 
+    public String getVersion() {
+        String result = "";
+        //TODO implement JDK-8149975
+        return result;
+    }
+
     private static ModuleType getModuleType(File AFile) {
         ModuleType result = ModuleType.Unknown;
         String filename = AFile.getAbsolutePath();

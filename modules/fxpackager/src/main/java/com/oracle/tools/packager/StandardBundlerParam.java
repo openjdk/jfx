@@ -664,11 +664,12 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
         boolean hasMainJarClassPath = params.containsKey(CLASSPATH.getID());
         boolean hasPreloader = params.containsKey(PRELOADER_CLASS.getID());
-        boolean haMainModule = params.containsKey(JLinkBundlerHelper.MAIN_MODULE.getID());
+        boolean hasModule = params.containsKey(JLinkBundlerHelper.MODULE.getID());
 
-        if (hasMainClass && hasMainJar && hasMainJarClassPath || haMainModule) {
+        if (hasMainClass && hasMainJar && hasMainJarClassPath || hasModule) {
             return;
         }
+
         // it's a pair.  The [0] is the srcdir [1] is the file relative to sourcedir
         List<String[]> filesToCheck = new ArrayList<>();
 
@@ -768,9 +769,9 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
         boolean hasMainJarClassPath = params.containsKey(CLASSPATH.getID());
-        boolean haMainModule = params.containsKey(JLinkBundlerHelper.MAIN_MODULE.getID());
+        boolean hasModule = params.containsKey(JLinkBundlerHelper.MODULE.getID());
 
-        if (hasMainClass && hasMainJar && hasMainJarClassPath || haMainModule) {
+        if (hasMainClass && hasMainJar && hasMainJarClassPath || hasModule) {
             return;
         }
 

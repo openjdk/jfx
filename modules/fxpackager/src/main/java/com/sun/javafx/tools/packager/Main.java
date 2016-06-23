@@ -35,6 +35,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.*;
+import jdk.packager.internal.JLinkBundlerHelper;
 
 
 public class Main {
@@ -343,18 +344,34 @@ public class Main {
                             addArgument(deployParams, nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-nosign")) {
                             deployParams.setSignBundle(false);
-                        } else if (arg.equals("-addmods")) {
+                        } else if (arg.equals(ADD_MODULES)) {
                             deployParams.addModules.add(nextArg(args, i++));
-                        } else if (arg.equals("-limitmods")) {
+                        } else if (arg.startsWith(ADD_MODULES + "=")) {
+                            deployParams.addModules.add(arg.replace(ADD_MODULES + "=", ""));
+                        } else if (arg.equals(LIMIT_MODULES)) {
                             deployParams.limitModules.add(nextArg(args, i++));
-                        } else if (arg.equals("-strip-native-commands")) {
+                        } else if (arg.startsWith(LIMIT_MODULES + "=")) {
+                            deployParams.limitModules.add(arg.replace(LIMIT_MODULES + "=", ""));
+                        } else if (arg.equals(STRIP_NATIVE_COMMANDS)) {
                             deployParams.setStripNativeCommands(Boolean.valueOf(nextArg(args, i++)));
-                        } else if (arg.equals("-Xdetectmods")) {
-                            deployParams.setDetectMods(true);
-                        } else if (arg.equals("-modulepath") || arg.equals("-mp")) {
+                        } else if (arg.equals(STRIP_NATIVE_COMMANDS + "=")) {
+                            deployParams.setStripNativeCommands(Boolean.valueOf(arg.replace(STRIP_NATIVE_COMMANDS + "=", "")));
+                        } else if (arg.equals(DETECT_MODULES)) {
+                            deployParams.setDetectModules(true);
+                        } else if (arg.equals(MODULE_PATH) || arg.equals(P)) {
                             deployParams.modulePath = nextArg(args, i++);
-                        } else if (arg.equals("-m")) {
-                            deployParams.setMainModule(nextArg(args, i++));
+                        } else if (arg.equals(MODULE_PATH + "=")) {
+                            deployParams.modulePath = arg.replace(MODULE_PATH + "=", "");
+                        } else if (arg.equals(P + "=")) {
+                            deployParams.modulePath = arg.replace(P + "=", "");
+                        } else if (arg.equals(MODULE) || arg.equals(M)) {
+                            deployParams.setModule(nextArg(args, i++));
+                        } else if (arg.equals(MODULE + "=")) {
+                            deployParams.setModule(arg.replace(MODULE + "=", ""));
+                        } else if (arg.equals(M + "=")) {
+                            deployParams.setModule(arg.replace(M + "=", ""));
+                        } else if (arg.equals("-Xdebug")) {
+                            deployParams.setDebugPort(nextArg(args, i++));
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
@@ -536,6 +553,15 @@ public class Main {
             }
         }
     }
+
+    private static final String MODULE = "--" + JLinkBundlerHelper.MODULE.getID();
+    private static final String M = "-m";
+    private static final String MODULE_PATH = "--" + JLinkBundlerHelper.MODULE_PATH.getID();
+    private static final String P = "-p";
+    private static final String ADD_MODULES = "--" + JLinkBundlerHelper.ADD_MODULES.getID();
+    private static final String LIMIT_MODULES = "--" + JLinkBundlerHelper.LIMIT_MODULES.getID();
+    private static final String STRIP_NATIVE_COMMANDS = "--" + JLinkBundlerHelper.STRIP_NATIVE_COMMANDS.getID();
+    private static final String DETECT_MODULES = "--" + JLinkBundlerHelper.DETECT_MODULES.getID();
 
     public static void showBundlerHelp(String bundlerName, boolean verbose) {
         //TODO I18N

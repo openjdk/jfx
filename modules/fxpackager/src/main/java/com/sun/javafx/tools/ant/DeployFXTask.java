@@ -108,7 +108,6 @@ public class DeployFXTask extends Task implements DynamicAttribute {
     private Resources resources = null;
     private Preferences prefs = null;
     private String codebase = null;
-    private String modulePath = null;
 
     //container to embed application into
     //could be either string id or js code. If it is string id then it needs to
@@ -136,10 +135,6 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         codebase = str;
     }
 
-    public void setModulePath(String value) {
-        modulePath = value;
-    }
-
     public DeployFXTask() {
         packager = new PackagerLib();
         deployParams = new DeployParams();
@@ -152,7 +147,6 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         deployParams.setOfflineAllowed(offlineAllowed);
         deployParams.setVerbose(verbose);
         deployParams.setCodebase(codebase);
-        deployParams.setModulePath(modulePath);
         deployParams.setSignBundle(signBundle);
 
         if (width != null) {
@@ -173,7 +167,21 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         }
 
         if (app != null) {
-            deployParams.setApplicationClass(app.get().mainClass);
+            if (app.getModule() == null) {
+                deployParams.setApplicationClass(app.get().mainClass);
+            }
+            else {
+                nativeBundles = BundleType.NATIVE;
+                int index = app.getModule().indexOf("/");
+
+                if (index > 0) {
+                    deployParams.setModule(app.getModule());
+                }
+                else {
+                    deployParams.setModule(app.getModule() + "/" + app.get().mainClass);
+                }
+            }
+
             deployParams.setPreloader(app.get().preloaderClass);
             deployParams.setAppId(app.get().id);
             deployParams.setAppName(app.get().name);
@@ -181,19 +189,34 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             deployParams.setArguments(app.get().getArguments());
             deployParams.setHtmlParams(app.get().htmlParameters);
             deployParams.setFallback(app.get().fallbackApp);
-            deployParams.setSwingAppWithEmbeddedJavaFX(
-                    app.get().embeddedIntoSwing);
+            deployParams.setSwingAppWithEmbeddedJavaFX(app.get().embeddedIntoSwing);
             deployParams.setVersion(app.get().version);
             deployParams.setId(app.get().id);
             deployParams.setServiceHint(app.get().daemon);
 
-            for (String s : app.getAddModule()) {
-                deployParams.addAddModule(s);
+            if (runtime != null) {
+                for (String s : runtime.getAddModules()) {
+                    deployParams.addAddModule(s);
+                }
+
+                for (String s : runtime.getLimitModules()) {
+                    deployParams.addLimitModule(s);
+                }
+
+                deployParams.setModulePath(runtime.getModulePath());
+
+                Boolean stripNativeCommands = runtime.getStripNativeCommands();
+
+                if (stripNativeCommands != null) {
+                    deployParams.setStripNativeCommands(stripNativeCommands);
+                }
+
+                Boolean detectModules = runtime.getDetectModules();
+
+                if (detectModules != null) {
+                    deployParams.setDetectModules(detectModules);
+                }
             }
-            for (String s : app.getLimitModule()) {
-                deployParams.addLimitModule(s);
-            }
-            deployParams.setStripNativeCommands(app.getStripExecutables());
         }
 
         if (appInfo != null) {
@@ -547,6 +570,12 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         return sl;
     }
 
+    private Runtime runtime = null;
+
+    public Runtime createRuntime() {
+        runtime = new Runtime();
+        return runtime;
+    }
 
     @Override
     public void setDynamicAttribute(String name, String value) throws BuildException {

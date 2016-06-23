@@ -291,6 +291,11 @@ static NSWindow *s_grabWindow = nil;
     {
         [self->owner addChildWindow:self->nsWindow ordered:NSWindowAbove];
     }
+    // Make sure we synchronize scale factors which could have changed while
+    // we were not visible without invoking the overrides we watch.
+    if ([self->nsWindow screen]) {
+        [self->view notifyScaleFactorChanged:GetScreenScaleFactor([self->nsWindow screen])];
+    }
 }
 
 - (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate

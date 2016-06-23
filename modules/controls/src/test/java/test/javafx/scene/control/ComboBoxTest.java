@@ -1942,4 +1942,40 @@ public class ComboBoxTest {
         assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
         assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
     }
+
+    @Test public void test_jdk_8150946_testCommit_valid() {
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setEditable(true);
+        assertEquals(null, comboBox.getValue());
+        comboBox.getEditor().setText("ABC");
+        comboBox.commitValue();
+        assertEquals("ABC", comboBox.getValue());
+    }
+
+    @Test public void test_jdk_8150946_testCancel_toNull() {
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setEditable(true);
+        assertNull(comboBox.getValue());
+        assertEquals("", comboBox.getEditor().getText());
+        comboBox.getEditor().setText("ABC");
+        assertNull(comboBox.getValue());
+        comboBox.cancelEdit();
+        assertNull(comboBox.getValue());
+        assertNull(comboBox.getEditor().getText());
+    }
+
+    @Test public void test_jdk_8150946_testCancel_toNonNull() {
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setEditable(true);
+        comboBox.getEditor().setText("ABC");
+        comboBox.commitValue();
+        assertEquals("ABC", comboBox.getValue());
+        assertEquals("ABC", comboBox.getEditor().getText());
+        comboBox.getEditor().setText("DEF");
+        assertEquals("DEF", comboBox.getEditor().getText());
+        assertEquals("ABC", comboBox.getValue());
+        comboBox.cancelEdit();
+        assertEquals("ABC", comboBox.getValue());
+        assertEquals("ABC", comboBox.getEditor().getText());
+    }
 }

@@ -143,6 +143,7 @@ typedef pid_t TProcessID;
 #define CONFIG_SPLASH_KEY         _T("CONFIG_SPLASH_KEY")
 #define CONFIG_APP_ID_KEY         _T("CONFIG_APP_ID_KEY")
 #define CONFIG_APP_MEMORY         _T("CONFIG_APP_MEMORY")
+#define CONFIG_APP_DEBUG          _T("CONFIG_APP_DEBUG")
 
 #define JVM_RUNTIME_KEY           _T("JVM_RUNTIME_KEY")
 #define PACKAGER_APP_DATA_DIR     _T("CONFIG_APP_IDENTIFIER")

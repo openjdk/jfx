@@ -149,14 +149,24 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
          *    . Accelerators,
          *    . Navigation.
          * But we have now split the handling between capturing and bubbling phases.
-         * In the capturing phase we handle mnemonics and accelerators, and in the bubbling
-         * phase we handle navigation. See dispatchCapturingEvent for the other half of this
-         * impl.
+         * In the capturing phase we handle mnemonics, and in the bubbling
+         * phase we handle accelerators and navigation. See dispatchCapturingEvent for
+         * the other half of this impl.
          */
         if (!(event instanceof KeyEvent)) return event;
-        if (event.getEventType() == KeyEvent.KEY_PRESSED && !event.isConsumed()) {
-            processTraversal(event);
+        final boolean keyPressedEvent = event.getEventType() == KeyEvent.KEY_PRESSED;
+        final KeyEvent keyEvent = (KeyEvent)event;
+
+        if (keyPressedEvent) {
+            if (!event.isConsumed()) {
+                processAccelerators(keyEvent);
+            }
+
+            if (!event.isConsumed()) {
+                processTraversal(event);
+            }
         }
+
         return event;
     }
 
@@ -168,9 +178,9 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
          *    . Accelerators,
          *    . Navigation.
          * But we have now split the handling between capturing and bubbling phases.
-         * In the capturing phase we handle mnemonics and accelerators, and in the bubbling
-         * phase we handle navigation. See dispatchBubblingEvent for the other half of this
-         * impl.
+         * In the capturing phase we handle mnemonics, and in the bubbling
+         * phase we handle accelerators and navigation. See dispatchBubblingEvent for
+         * the other half of this impl.
          */
         if (!(event instanceof KeyEvent)) return event;
         final boolean keyPressedEvent = event.getEventType() == KeyEvent.KEY_PRESSED;
@@ -185,10 +195,6 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                 }
             } else if (keyEvent.isAltDown() || isMnemonicsDisplayEnabled()) {
                 processMnemonics(keyEvent);
-            }
-
-            if (keyPressedEvent && !event.isConsumed()) {
-                processAccelerators(keyEvent);
             }
         }
 
