@@ -420,6 +420,24 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
+    // JDK-8158926
+    public @Test void testJavaCharToJSString() {
+        final WebEngine web = getEngine();
+
+        submit(() -> {
+            bind("charType", 'a');
+            Object ch = web.executeScript("charType");
+            assertTrue(ch instanceof Character);
+            assertEquals('a', ch);
+            Object str = web.executeScript("charType + 'b' + 'c'");
+            assertTrue(str instanceof String);
+            assertEquals("abc", str);
+            Object val = web.executeScript("charType.valueOf();");
+            assertTrue(val instanceof Integer);
+            assertEquals(97, val);
+        });
+    }
+
     public @Test void testBridgeExplicitOverloading() throws InterruptedException {
         final WebEngine web = getEngine();
 

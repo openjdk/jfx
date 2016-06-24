@@ -84,8 +84,8 @@ void JavaInstance::virtualEnd()
 Class* JavaInstance::getClass() const
 {
     if (!m_class) {
-        jobject acc  = accessControlContext();
-        m_class = new JavaClass (m_instance->instance(), rootObject(), acc);
+        jobject acc = accessControlContext();
+        m_class = new JavaClass(m_instance->instance(), rootObject(), acc);
     }
     return m_class;
 }
@@ -168,10 +168,6 @@ JSValue JavaInstance::numberValue(ExecState*) const
     }
 
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
-
-    if (!aClass)
-        return jsUndefined();
-
     if (aClass->isCharacterClass())
         return numberValueForCharacter(obj);
     if (aClass->isBooleanClass())
@@ -236,10 +232,6 @@ const ClassInfo JavaRuntimeMethod::s_info = { "JavaRuntimeMethod", &RuntimeMetho
 JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
 {
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
-
-    if (!aClass)
-        return jsUndefined();
-
     Method *method = aClass->methodNamed(propertyName, this);
     return JavaRuntimeMethod::create(exec, exec->lexicalGlobalObject(), propertyName.publicName(), method);
 }
@@ -251,7 +243,6 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     if (!asObject(runtimeMethod)->inherits(&JavaRuntimeMethod::s_info))
         exec->vm().throwException(exec, createTypeError(exec, "Attempt to invoke non-Java method on Java object."));
 
-    int count = exec->argumentCount();
 #if 0
     const MethodList& methodList = *runtimeMethod->methods();
     size_t numMethods = methodList.size();
@@ -279,8 +270,13 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     }
 
     const JavaMethod* jMethod = static_cast<const JavaMethod*>(method);
-
+    // Since we can't convert java.lang.Character to any JS primitive, we have
+    // to handle valueOf method call.
     jobject obj = m_instance->instance();
+    JavaClass* aClass = static_cast<JavaClass*>(getClass());
+    if (aClass->isCharacterClass() && jMethod->name() == "valueOf")
+        return numberValueForCharacter(obj);
+
     // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
     JLObject jlinstance(obj, true);
 
@@ -291,6 +287,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
 
     LOG(LiveConnect, "JavaInstance::invokeMethod call %s %s on %p", String(jMethod->name().impl()).utf8().data(), jMethod->signature(), m_instance->instance());
 
+    const int count = exec->argumentCount();
     if (jMethod->numParameters() != count) {
         LOG(LiveConnect, "JavaInstance::invokeMethod unable to find an appropriate method with specified signature");
         return jsUndefined();
@@ -429,9 +426,6 @@ JSValue JavaInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint)
         return numberValue(exec);
 
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
-    if (!aClass)
-        return jsUndefined();
-
     if (aClass->isStringClass())
         return stringValue(exec);
 
@@ -446,8 +440,6 @@ JSValue JavaInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint)
 
     if (aClass->isNumberClass())
         return numberValueForNumber(m_instance->instance());
-    if (aClass->isCharacterClass())
-        return numberValueForCharacter(m_instance->instance());
     if (aClass->isBooleanClass())
         return booleanValue();
     return valueOf(exec);
