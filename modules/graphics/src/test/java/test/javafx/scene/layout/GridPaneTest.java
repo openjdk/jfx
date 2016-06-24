@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import test.javafx.scene.layout.MockNode;
-import test.javafx.scene.layout.MockBiased;
-import test.javafx.scene.layout.MockRegion;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -47,7 +44,6 @@ import javafx.scene.layout.RowConstraints;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -116,6 +112,130 @@ public class GridPaneTest {
         assertEquals(300, child1_1.getLayoutBounds().getHeight(), 1e-100);
     }
 
+    @Test public void testGridPaneGetColumnAndRow() {
+        // populate 4x5 grid
+        Rectangle child0_0 = new Rectangle(100, 100);
+        gridpane.add(child0_0, 0, 0);
+        Rectangle child2_1 = new Rectangle(100, 100);
+        gridpane.add(child2_1, 2, 1);
+        Rectangle child3_2 = new Rectangle(100, 100);
+        gridpane.add(child3_2, 3, 2);
+        Rectangle child4_X = new Rectangle(100, 100);
+        gridpane.addRow(4, child4_X);
+
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertEquals(4, gridpane.getColumnCount());
+        assertEquals(5, gridpane.getRowCount());
+    }
+
+    @Test public void testGridPaneGetColumnAndRow2() {
+        // populate 4x3 grid
+        Rectangle child0_0 = new Rectangle(100, 100);
+        gridpane.add(child0_0, 0, 0);
+        Rectangle child2_1 = new Rectangle(100, 100);
+        gridpane.add(child2_1, 2, 1);
+        Rectangle child3_2 = new Rectangle(100, 100);
+        gridpane.add(child3_2, 3, 2);
+        Rectangle child4_X = new Rectangle(100, 100);
+        child4_X.setManaged(false);
+        gridpane.addRow(4, child4_X);
+
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertEquals(4, gridpane.getColumnCount());
+        assertEquals(3, gridpane.getRowCount());
+    }
+
+    @Test public void testGridPaneGetColumnAndRow3() {
+        // populate 4x3 grid
+        Rectangle child0_0 = new Rectangle(100, 100);
+        GridPane.setConstraints(child0_0, 0, 0);
+        Rectangle child2_1 = new Rectangle(100, 100);
+        GridPane.setConstraints(child2_1, 2, 1);
+        Rectangle child3_2 = new Rectangle(100, 100);
+        GridPane.setConstraints(child3_2, 3, 2);
+
+        ParentShim.getChildren(gridpane).addAll(child0_0, child2_1, child3_2);
+
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertEquals(4, gridpane.getColumnCount());
+        assertEquals(3, gridpane.getRowCount());
+    }
+
+    @Test public void testGridPaneGetColumnAndRow4() {
+        // populate 4x6 grid
+        Rectangle child0_0 = new Rectangle(100, 100);
+        GridPane.setConstraints(child0_0, 0, 0);
+        Rectangle child2_1 = new Rectangle(100, 100);
+        GridPane.setConstraints(child2_1, 2, 1);
+        Rectangle child3_2 = new Rectangle(100, 100);
+        GridPane.setConstraints(child3_2, 3, 2);
+        Rectangle child5_X = new Rectangle(100, 100);
+        gridpane.addRow(5, child5_X);
+
+        ParentShim.getChildren(gridpane).addAll(child0_0, child2_1, child3_2);
+
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertEquals(4, gridpane.getColumnCount());
+        assertEquals(6, gridpane.getRowCount());
+    }
+
+    @Test public void testGridPaneGetCellBounds() {
+
+        // populate 2x2 grid   pref size = 200 x 200
+        MockResizable child0_0 = new MockResizable(100, 100);
+        GridPane.setConstraints(child0_0, 0, 0);
+        MockResizable child1_1 = new MockResizable(100, 100);
+        GridPane.setConstraints(child1_1, 1, 1);
+
+        ParentShim.getChildren(gridpane).addAll(child0_0, child1_1);
+
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertEquals(0, gridpane.getCellBounds(0, 0).getMinX(), 1e-100);
+        assertEquals(0, gridpane.getCellBounds(0, 0).getMinY(), 1e-100);
+        assertEquals(100, gridpane.getCellBounds(0, 0).getMaxX(), 1e-100);
+        assertEquals(100, gridpane.getCellBounds(0, 0).getMaxY(), 1e-100);
+        assertEquals(100, gridpane.getCellBounds(1, 1).getMinX(), 1e-100);
+        assertEquals(100, gridpane.getCellBounds(1, 1).getMinY(), 1e-100);
+        assertEquals(200, gridpane.getCellBounds(1, 1).getMaxX(), 1e-100);
+        assertEquals(200, gridpane.getCellBounds(1, 1).getMaxY(), 1e-100);
+    }
+
+    @Test public void testGridPaneGetCellBounds2() {
+
+        // populate 2x2 grid   pref size = 200 x 400
+        MockResizable child0_0 = new MockResizable(100, 100);
+        GridPane.setConstraints(child0_0, 0, 0);
+        Rectangle child1_0 = new Rectangle(100, 200);
+        GridPane.setConstraints(child1_0, 1, 0);
+        Rectangle child0_1 = new Rectangle(100, 200);
+        GridPane.setConstraints(child0_1, 0, 1);
+        MockResizable child1_1 = new MockResizable(100, 100);
+        GridPane.setConstraints(child1_1, 1, 1);
+
+        ParentShim.getChildren(gridpane).addAll(child0_0, child1_0, child0_1, child1_1);
+
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertEquals(0, gridpane.getCellBounds(0, 0).getMinX(), 1e-100);
+        assertEquals(0, gridpane.getCellBounds(0, 0).getMinY(), 1e-100);
+        assertEquals(100, gridpane.getCellBounds(0, 0).getMaxX(), 1e-100);
+        assertEquals(200, gridpane.getCellBounds(0, 0).getMaxY(), 1e-100);
+        assertEquals(100, gridpane.getCellBounds(1, 1).getMinX(), 1e-100);
+        assertEquals(200, gridpane.getCellBounds(1, 1).getMinY(), 1e-100);
+        assertEquals(200, gridpane.getCellBounds(1, 1).getMaxX(), 1e-100);
+        assertEquals(400, gridpane.getCellBounds(1, 1).getMaxY(), 1e-100);
+    }
 
     @Test public void testGridPaneAlignmentTopLeft() {
         gridpane.setAlignment(Pos.TOP_LEFT);
