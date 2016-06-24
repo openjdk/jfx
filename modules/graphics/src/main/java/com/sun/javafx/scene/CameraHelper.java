@@ -59,7 +59,7 @@ public class CameraHelper extends NodeHelper {
 
     @Override
     protected NGNode createPeerImpl(Node node) {
-        throw new UnsupportedOperationException("Application should not extend Camera class directly.");
+        throw new UnsupportedOperationException("Applications should not extend the Camera class directly.");
     }
 
     @Override

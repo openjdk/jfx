@@ -57,7 +57,7 @@ public class LightBaseHelper extends NodeHelper {
 
     @Override
     protected NGNode createPeerImpl(Node node) {
-        throw new UnsupportedOperationException("Application should not extend LightBase class directly.");
+        throw new UnsupportedOperationException("Applications should not extend the LightBase class directly.");
     }
 
     @Override
