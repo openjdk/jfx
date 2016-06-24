@@ -49,6 +49,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.List;
+import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.Image;
@@ -95,8 +96,16 @@ public final class UIClientImpl implements UIClient {
     }
 
     private void dispatchWebEvent(final EventHandler handler, final WebEvent ev) {
+        final boolean canStartNestedEventLoop = Toolkit.getToolkit().canStartNestedEventLoop();
+
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            handler.handle(ev);
+            // If canStartNestedEventLoop is false, then we are in a pulse.
+            // So we need to call the event handler from a runLater()
+            if (canStartNestedEventLoop) {
+                handler.handle(ev);
+            } else {
+                Platform.runLater(() -> handler.handle(ev));
+            }
             return null;
         }, getAccessContext());
     }
