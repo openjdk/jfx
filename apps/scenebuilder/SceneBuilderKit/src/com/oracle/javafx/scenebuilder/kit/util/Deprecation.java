@@ -146,7 +146,7 @@ public class Deprecation {
     // RT-21226 : Promote setStaticLoad to public API
     public static void setStaticLoad(FXMLLoader loader, boolean staticLoad) {
 //        loader.impl_setStaticLoad(staticLoad);
-        System.err.println("Error: impl_setStaticLoad is no longer publicly accessible");
+        // System.err.println("Error: impl_setStaticLoad is no longer publicly accessible");
     }
 
     // RT-20184 : FX should provide a Parent.pick() routine
