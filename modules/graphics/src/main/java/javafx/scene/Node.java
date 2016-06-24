@@ -215,6 +215,11 @@ import sun.util.logging.PlatformLogger.Level;
  * An application must attach nodes to such a Scene or modify them on the JavaFX
  * Application Thread.
  *
+ * <p>
+ * An application should not extend the Node class directly. Doing so may lead to
+ * an UnsupportedOperationException being thrown.
+ * </p>
+ *
  * <h4>String ID</h4>
  * <p>
  * Each node in the scene graph can be given a unique {@link #idProperty id}. This id is

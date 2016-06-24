@@ -88,6 +88,12 @@ import java.lang.ref.WeakReference;
  * <li>Dashing attributes.
  * </ul>
  * </ul>
+ *
+ * <p>
+ * An application should not extend the Shape class directly. Doing so may lead to
+ * an UnsupportedOperationException being thrown.
+ * </p>
+ *
  * <h4>Interaction with coordinate systems</h4>
  * Most nodes tend to have only integer translations applied to them and
  * quite often they are defined using integer coordinates as well.  For

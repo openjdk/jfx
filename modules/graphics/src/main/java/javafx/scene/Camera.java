@@ -102,6 +102,11 @@ import sun.util.logging.PlatformLogger;
  * coordinate space. Hence the conversion formula mentioned above is not used.
  * </p>
  *
+ * <p>
+ * An application should not extend the Camera class directly. Doing so may lead to
+ * an UnsupportedOperationException being thrown.
+ * </p>
+ *
  * @since JavaFX 2.0
  */
 public abstract class Camera extends Node {
