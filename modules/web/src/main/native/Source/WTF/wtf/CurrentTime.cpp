@@ -307,7 +307,22 @@ double monotonicallyIncreasingTime()
 
     return (mach_absolute_time() * timebaseInfo.numer) / (1.0e9 * timebaseInfo.denom);
 }
+#elif PLATFORM(JAVA) && OS(WINDOWS)
 
+// monotonicallyIncreasingTime() implementation is done by taking reference from glib library
+double monotonicallyIncreasingTime()
+{
+    uint64_t ticks = GetTickCount64();
+    uint32_t ticks32 = timeGetTime();
+    uint32_t ticksAs32Bit = (uint32_t)ticks;
+    if (ticks32 - ticksAs32Bit <= INT_MAX) {
+        ticks += ticks32 - ticksAs32Bit;
+    } else {
+        ticks -= ticksAs32Bit - ticks32;
+    }
+
+    return ticks * 1000;
+}
 #elif PLATFORM(JAVA) && OS(LINUX)
 
 double monotonicallyIncreasingTime()
