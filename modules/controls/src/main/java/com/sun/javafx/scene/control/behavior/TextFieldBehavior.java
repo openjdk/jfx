@@ -180,8 +180,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         EventHandler<ActionEvent> onAction = textField.getOnAction();
         ActionEvent actionEvent = new ActionEvent(textField, null);
 
-        textField.fireEvent(actionEvent);
         textField.commitValue();
+        textField.fireEvent(actionEvent);
 
         if (onAction == null && !actionEvent.isConsumed()) {
             forwardToParent(event);
