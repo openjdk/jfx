@@ -620,7 +620,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1initIDs
 
     if (jWindowNotifyMove == NULL)
     {
-        jWindowNotifyMove = (*env)->GetMethodID(env, jWindowClass, "notifyMove", "(II)V");
+        jWindowNotifyMove = (*env)->GetMethodID(env, jWindowClass, "notifyMove", "(IIZ)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
 

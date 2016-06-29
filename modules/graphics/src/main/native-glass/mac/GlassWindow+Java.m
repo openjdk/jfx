@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,7 +75,9 @@ static NSWindow *s_grabWindow = nil;
         self->lastReportedLocation = frame.origin;
 
         GET_MAIN_JENV;
-        (*env)->CallVoidMethod(env, jWindow, jWindowNotifyMove, (int)frame.origin.x,  (int)frame.origin.y);
+
+        (*env)->CallVoidMethod(env, jWindow, jWindowNotifyMove,
+            (int)frame.origin.x,  (int)frame.origin.y, [self->nsWindow isZoomed]);
         [self _sendJavaWindowMoveToAnotherScreenEventIfNeeded];
     }
 }
@@ -85,7 +87,11 @@ static NSWindow *s_grabWindow = nil;
     if (self->suppressWindowResizeEvent == NO)
     {
         GET_MAIN_JENV;
-        (*env)->CallVoidMethod(env, jWindow, jWindowNotifyResize, type, (int)frame.size.width, (int)frame.size.height);
+        (*env)->CallVoidMethod(env, jWindow, jWindowNotifyResize,
+            [self->nsWindow isZoomed]
+                ? com_sun_glass_events_WindowEvent_MAXIMIZE
+                : type,
+             (int)frame.size.width, (int)frame.size.height);
         [self _sendJavaWindowMoveToAnotherScreenEventIfNeeded];
     }
 }
