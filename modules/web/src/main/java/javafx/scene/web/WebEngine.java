@@ -40,6 +40,7 @@ import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.network.URLs;
 import com.sun.webkit.network.Util;
 import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.*;
 import javafx.concurrent.Worker;
@@ -1192,7 +1193,11 @@ final public class WebEngine {
                     // that is during the pulse event. This makes the timer more
                     // repsonsive, though prolongs the pulse. So far it causes no
                     // problems but nevertheless it should be kept in mind.
-                    Timer.getTimer().notifyTick();
+
+                    // Execute notifyTick in runLater to run outside of pulse so
+                    // that events will run in order and be able to display dialogs
+                    // or call other methods that require a nested event loop.
+                    Platform.runLater(() -> Timer.getTimer().notifyTick());
                 };
 
         private static void start(){
