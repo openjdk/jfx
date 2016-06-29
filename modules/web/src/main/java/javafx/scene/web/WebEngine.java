@@ -236,6 +236,11 @@ webEngine.executeScript("history.back()");
  * a JavaScript object that acts as a proxy for the Java object,
  * in that accessing properties of the {@code JavaRuntimeObject}
  * causes the Java field or method with the same name to be accessed.
+ * <p> Note that the Java objects bound using
+ * {@link netscape.javascript.JSObject#setMember JSObject.setMember}
+ * are implemented using weak references. This means that the Java object
+ * can be garbage collected, causing subsequent accesses to the JavaScript
+ * objects to have no effect.
  *
  * <h4>Calling back to Java from JavaScript</h4>
  *
@@ -251,14 +256,29 @@ public class JavaApplication {
     }
 }
 ...
+JavaApplication javaApp = new JavaApplication();
 JSObject window = (JSObject) webEngine.executeScript("window");
-window.setMember("app", new JavaApplication());
+window.setMember("app", javaApp);
  * </code></pre>
  * You can then refer to the object and the method from your HTML page:
  * <pre><code>
 &lt;a href="" onclick="app.exit()"&gt;Click here to exit application&lt;/a&gt;
  * </code></pre>
  * <p>When a user clicks the link the application is closed.
+ * <p>
+ * Note that in the above example, the application holds a reference
+ * to the {@code JavaApplication} instance. This is required for the callback
+ * from JavaScript to execute the desired method.
+ * <p> In the following example, the application does not hold a reference
+ * to the Java object:
+ * <pre><code>
+ * JSObject window = (JSObject) webEngine.executeScript("window");
+ * window.setMember("app", new JavaApplication());
+ * </code></pre>
+ * <p> In this case, since the property value is a local object, {@code "new JavaApplication()"},
+ * the value may be garbage collected in next GC cycle.
+ * <p>
+ * When a user clicks the link, it does not guarantee to execute the callback method {@code exit}.
  * <p>
  * If there are multiple Java methods with the given name,
  * then the engine selects one matching the number of parameters
