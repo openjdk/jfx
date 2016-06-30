@@ -466,6 +466,9 @@ jthrowable dispatchJNICall(int count, RootObject* rootObject, jobject obj, bool 
         break;
     case JavaTypeArray:
     case JavaTypeObject:
+    // Since we can't convert java.lang.Character to any JS primitive, we have
+    // to treat it as JS foreign object.
+    case JavaTypeChar:
         result.l = r;
         break;
 
@@ -475,10 +478,6 @@ jthrowable dispatchJNICall(int count, RootObject* rootObject, jobject obj, bool 
 
     case JavaTypeByte:
         result.b = callJNIMethod<jbyte>(r, "byteValue", "()B");
-        break;
-
-    case JavaTypeChar:
-        result.c = callJNIMethod<jchar>(r, "charValue", "()C");
         break;
 
     case JavaTypeShort:

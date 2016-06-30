@@ -39,6 +39,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -1977,5 +1978,21 @@ public class ComboBoxTest {
         comboBox.cancelEdit();
         assertEquals("ABC", comboBox.getValue());
         assertEquals("ABC", comboBox.getEditor().getText());
+    }
+
+    @Test public void test_jdk_8160493() {
+        AtomicInteger count = new AtomicInteger();
+        comboBox.valueProperty().addListener(o -> count.incrementAndGet());
+        assertEquals(0, count.get());
+
+        comboBox.getItems().addAll("Apple", "Orange", "Banana");
+        sm.select(1);
+        assertTrue(sm.isSelected(1));
+        assertEquals(1, count.get());
+        assertEquals("Orange", comboBox.getValue());
+
+        comboBox.setValue("New Value");
+        assertEquals(2, count.get());
+        assertEquals("New Value", comboBox.getValue());
     }
 }

@@ -542,14 +542,14 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         // When the user hits the enter or F4 keys, we respond before
         // ever giving the event to the TextField.
         if (ke.getCode() == KeyCode.ENTER) {
-            if (ke.isConsumed()) {
+            if (ke.isConsumed() || ke.getEventType() != KeyEvent.KEY_RELEASED) {
                 return;
             }
             setTextFromTextFieldIntoComboBoxValue();
 
             if (doConsume && comboBoxBase.getOnAction() != null) {
                 ke.consume();
-            } else {
+            } else if (textField != null) {
                 textField.fireEvent(ke);
             }
         } else if (ke.getCode() == KeyCode.F4) {

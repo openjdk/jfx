@@ -246,8 +246,15 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             int index = getItems().indexOf(t1);
 
             if (index == -1) {
-                sm.clearSelection();
-                sm.setSelectedItem(t1);
+                Runnable r = () -> {
+                    sm.setSelectedIndex(-1);
+                    sm.setSelectedItem(t1);
+                };
+                if (sm instanceof ComboBoxSelectionModel) {
+                    ((ComboBoxSelectionModel)sm).doAtomic(r);
+                } else {
+                    r.run();
+                }
             } else {
                 // we must compare the value here with the currently selected
                 // item. If they are different, we overwrite the selection
@@ -526,6 +533,13 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     static class ComboBoxSelectionModel<T> extends SingleSelectionModel<T> {
         private final ComboBox<T> comboBox;
 
+        private boolean atomic = false;
+        private void doAtomic(Runnable r) {
+            atomic = true;
+            r.run();
+            atomic = false;
+        }
+
         public ComboBoxSelectionModel(final ComboBox<T> cb) {
             if (cb == null) {
                 throw new NullPointerException("ComboBox can not be null");
@@ -536,6 +550,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             selectedIndexProperty().addListener(valueModel -> {
                 // we used to lazily retrieve the selected item, but now we just
                 // do it when the selection changes.
+                if (atomic) return;
                 setSelectedItem(getModelItem(getSelectedIndex()));
             });
 

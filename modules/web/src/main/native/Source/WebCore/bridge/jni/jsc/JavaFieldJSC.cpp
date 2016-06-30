@@ -94,6 +94,9 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
     switch (m_type) {
     case JavaTypeArray:
     case JavaTypeObject:
+    // Since we can't convert java.lang.Character to any JS primitive, we have
+    // to treat it as JS foreign object.
+    case JavaTypeChar:
         {
             jobject anObject = callJNIMethod<jobject>(jfield, "get", "(Ljava/lang/Object;)Ljava/lang/Object;", jinstance);
             if (!anObject)
@@ -114,10 +117,6 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
 
     case JavaTypeByte:
         jsresult = jsNumber(callJNIMethod<jbyte>(jfield, "getByte", "(Ljava/lang/Object;)B", jinstance));
-        break;
-
-    case JavaTypeChar:
-        jsresult = jsNumber(callJNIMethod<jchar>(jfield, "getChar", "(Ljava/lang/Object;)C", jinstance));
         break;
 
     case JavaTypeShort:

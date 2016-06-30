@@ -75,6 +75,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         };
 
         // comboBox-specific mappings for key and mouse input
+        KeyMapping enterPressed, enterReleased;
         addDefaultMapping(inputMap,
             new KeyMapping(F4, KEY_RELEASED, togglePopup),
             new KeyMapping(new KeyBinding(UP).alt(), togglePopup),
@@ -83,8 +84,8 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             new KeyMapping(SPACE, KEY_PRESSED, this::keyPressed),
             new KeyMapping(SPACE, KEY_RELEASED, this::keyReleased),
 
-            new KeyMapping(ENTER, KEY_PRESSED, this::keyPressed),
-            new KeyMapping(ENTER, KEY_RELEASED, this::keyReleased),
+            enterPressed = new KeyMapping(ENTER, KEY_PRESSED, this::keyPressed),
+            enterReleased = new KeyMapping(ENTER, KEY_RELEASED, this::keyReleased),
 
             // The following keys are forwarded to the parent container
             new KeyMapping(ESCAPE, KEY_PRESSED, this::cancelEdit),
@@ -95,6 +96,10 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             new MouseMapping(MouseEvent.MOUSE_ENTERED, this::mouseEntered),
             new MouseMapping(MouseEvent.MOUSE_EXITED, this::mouseExited)
         );
+
+        // we don't want to consume events on enter press - let them carry on through
+        enterPressed.setAutoConsume(false);
+        enterReleased.setAutoConsume(false);
 
         // ComboBoxBase also cares about focus
         comboBox.focusedProperty().addListener(this::focusChanged);

@@ -40,7 +40,7 @@ import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.LocalDateTimeStringConverter;
 import javafx.util.converter.LocalDateTimeStringConverterShim;
 
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Ignore;
 import org.junit.runner.RunWith;
@@ -55,6 +55,12 @@ public class LocalDateTimeStringConverterTest {
 
     private static final DateTimeFormatter aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy HH mm ss");
     private static final DateTimeFormatter aParser = DateTimeFormatter.ofPattern("yyyy MM dd hh mm ss a");
+
+    @BeforeClass
+    public static void initDefaultLocale() {
+        // Tests require that default locale is en_US
+        Locale.setDefault(Locale.US);
+    }
 
     @Parameterized.Parameters public static Collection implementations() {
         return Arrays.asList(new Object[][] {
@@ -88,9 +94,6 @@ public class LocalDateTimeStringConverterTest {
         this.validDateTime = validDateTime;
         this.formatter = formatter;
         this.parser = parser;
-    }
-
-    @Before public void setup() {
     }
 
     /*********************************************************************

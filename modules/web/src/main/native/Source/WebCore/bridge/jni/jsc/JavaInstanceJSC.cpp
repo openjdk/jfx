@@ -354,6 +354,9 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     case JavaTypeArray:
       /* ... fall through ... */
     case JavaTypeObject:
+    // Since we can't convert java.lang.Character to any JS primitive, we have
+    // to treat it as JS foreign object.
+    case JavaTypeChar:
         {
             JNIEnv* env = getJNIEnv();
             resultValue = toJS(exec, WebCore::Java_Object_to_JSValue(env, toRef(exec), rootObject, result.l, accessControlContext()));
@@ -369,12 +372,6 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     case JavaTypeByte:
         {
             resultValue = jsNumber(result.b);
-        }
-        break;
-
-    case JavaTypeChar:
-        {
-            resultValue = jsNumber(result.c);
         }
         break;
 
