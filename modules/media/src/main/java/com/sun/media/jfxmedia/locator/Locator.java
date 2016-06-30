@@ -68,6 +68,10 @@ public class Locator {
      */
     private static final long CONNECTION_RETRY_INTERVAL = 1000L;
     /**
+     * Timeout in milliseconds to wait for connection (5 min).
+     */
+    private static final int CONNECTION_TIMEOUT = 300000;
+    /**
      * The content type of the media content.
      */
     protected String contentType = DEFAULT_CONTENT_TYPE;
@@ -134,6 +138,9 @@ public class Locator {
         LocatorConnection locatorConnection = new LocatorConnection();
         HttpURLConnection connection = (HttpURLConnection) uri.toURL().openConnection();
         connection.setRequestMethod(requestMethod);
+        // Set timeouts, otherwise we can wait forever.
+        connection.setConnectTimeout(CONNECTION_TIMEOUT);
+        connection.setReadTimeout(CONNECTION_TIMEOUT);
 
         // Set request headers.
         synchronized (propertyLock) {
