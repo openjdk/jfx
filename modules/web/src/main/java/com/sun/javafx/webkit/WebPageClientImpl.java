@@ -83,6 +83,7 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
 
     private Tooltip  tooltip;
     private boolean  isTooltipRegistered = false;
+    private String oldTooltipText = "";
     @Override public void setTooltip(final String tooltipText) {
         WebView view = accessor.getView();
         if (tooltipText != null) {
@@ -90,7 +91,12 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
                 tooltip = new Tooltip(tooltipText);
             } else {
                 tooltip.setText(tooltipText);
+                if (!oldTooltipText.equals(tooltipText)) {
+                    Tooltip.uninstall(view, tooltip);
+                    isTooltipRegistered = false;
+                }
             }
+            oldTooltipText = tooltipText;
             if (!isTooltipRegistered) {
                 Tooltip.install(view, tooltip);
                 isTooltipRegistered = true;
