@@ -36,6 +36,11 @@ import java.util.logging.Logger;
 
 final class FileSystem {
 
+    // File type should match native FileMetadata Type
+    private static final int TYPE_UNKNOWN = 0;
+    private static final int TYPE_FILE = 1;
+    private static final int TYPE_DIRECTORY = 2;
+
     private final static Logger logger =
             Logger.getLogger(FileSystem.class.getName());
 
@@ -59,6 +64,28 @@ final class FileSystem {
                     + "size of file [%s]", path), ex);
         }
         return -1;
+    }
+
+    private static boolean fwkGetFileMetadata(String path, long[] metadataArray) {
+        try {
+            File file = new File(path);
+            if (file.exists()) {
+                metadataArray[0] = file.lastModified();
+                metadataArray[1] = file.length();
+                if (file.isDirectory()) {
+                    metadataArray[2] = TYPE_DIRECTORY;
+                } else if (file.isFile()) {
+                    metadataArray[2] = TYPE_FILE;
+                } else {
+                    metadataArray[2] = TYPE_UNKNOWN;
+                }
+                return true;
+            }
+        } catch (SecurityException ex) {
+            logger.log(Level.FINE, format("Error determining "
+                    + "Metadata for file [%s]", path), ex);
+        }
+        return false;
     }
 
     private static String fwkPathByAppendingComponent(String path,

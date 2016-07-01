@@ -72,10 +72,15 @@ bool getFileSize(const String& path, long long& result)
     }
 }
 
-bool getFileModificationTime(const String&, time_t& result)
+bool getFileModificationTime(const String& path, time_t& result)
 {
-    notImplemented();
-    return false;
+    FileMetadata metadata;
+    if (getFileMetadata(path, metadata)) {
+        result = metadata.modificationTime;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool getFileCreationTime(const String&, time_t& result)
@@ -137,7 +142,30 @@ String directoryName(String const &)
 
 bool getFileMetadata(const String& path, FileMetadata& metadata)
 {
-    notImplemented();
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    static jmethodID mid = env->GetStaticMethodID(
+            GetFileSystemClass(env),
+            "fwkGetFileMetadata",
+            "(Ljava/lang/String;[J)Z");
+    ASSERT(mid);
+
+    JLocalRef<jlongArray> lArray(env->NewLongArray(3));
+
+    jboolean result = env->CallStaticBooleanMethod(
+            GetFileSystemClass(env),
+            mid,
+            (jstring)path.toJavaString(env), (jlongArray)lArray);
+    CheckAndClearException(env);
+
+    if (result) {
+        jlong* metadataResults = env->GetLongArrayElements(lArray, 0);
+        metadata.modificationTime = metadataResults[0] / 1000.0;
+        metadata.length = metadataResults[1];
+        metadata.type = static_cast<FileMetadata::Type>(metadataResults[2]);
+        env->ReleaseLongArrayElements(lArray, metadataResults, 0);
+        return true;
+    }
     return false;
 }
 
