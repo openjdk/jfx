@@ -132,6 +132,11 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
         return getNode().getVisibleLeafColumn(index);
     }
 
+    /** {@inheritDoc} */
+    @Override protected boolean isControlEditable() {
+        return getNode().isEditable();
+    }
+
     /** {@inheritDoc}  */
     @Override protected void editCell(int row, TableColumnBase tc) {
         getNode().edit(row, (TableColumn)tc);

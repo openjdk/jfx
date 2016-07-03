@@ -135,6 +135,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         // create a map for TableView(Base)-specific mappings
         tableViewInputMap = createInputMap();
 
+        KeyMapping enterKeyActivateMapping, escapeKeyCancelEditMapping;
         addDefaultMapping(tableViewInputMap,
                 new KeyMapping(TAB, FocusTraversalInputMap::traverseNext),
                 new KeyMapping(new KeyBinding(TAB).shift(), FocusTraversalInputMap::traversePrevious),
@@ -204,13 +205,16 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow()),
                 new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow()),
 
-                new KeyMapping(ENTER, e -> activate()),
-                new KeyMapping(SPACE, e -> activate()),
-                new KeyMapping(F2, e -> activate()),
-                new KeyMapping(ESCAPE, e -> cancelEdit()),
+                enterKeyActivateMapping = new KeyMapping(ENTER, this::activate),
+                new KeyMapping(SPACE, this::activate),
+                new KeyMapping(F2, this::activate),
+                escapeKeyCancelEditMapping = new KeyMapping(ESCAPE, this::cancelEdit),
 
                 new InputMap.MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed)
         );
+
+        enterKeyActivateMapping.setAutoConsume(false);
+        escapeKeyCancelEditMapping.setAutoConsume(false);
 
         // create OS-specific child mappings
         // --- mac OS
@@ -305,6 +309,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      * the underlying control.
      */
     protected abstract TableColumnBase getVisibleLeafColumn(int index);
+
+    /**
+     * Returns true if the control (i.e. TableView / TreeTableView) is editable
+     */
+    protected abstract boolean isControlEditable();
 
     /**
      * Begins the edit process in the underlying control for the given row/column
@@ -859,11 +868,14 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         setAnchor(row, tc);
     }
 
-    protected void cancelEdit() {
-        editCell(-1, null);
+    protected void cancelEdit(KeyEvent e) {
+        if (isControlEditable()) {
+            editCell(-1, null);
+            e.consume();
+        }
     }
 
-    protected void activate() {
+    protected void activate(KeyEvent e) {
         TableSelectionModel sm = getSelectionModel();
         if (sm == null) return;
 
@@ -874,9 +886,13 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         sm.select(cell.getRow(), cell.getTableColumn());
         setAnchor(cell);
 
+        // check if we are editable
+        boolean isEditable = isControlEditable() && cell.getTableColumn().isEditable();
+
         // edit this row also
-        if (cell.getRow() >= 0) {
+        if (isEditable && cell.getRow() >= 0) {
             editCell(cell.getRow(), cell.getTableColumn());
+            e.consume();
         }
     }
 
