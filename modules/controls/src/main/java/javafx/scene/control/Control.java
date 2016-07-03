@@ -878,25 +878,36 @@ public abstract class Control extends Region implements Skinnable {
     /*
      * Note: This method MUST only be called via its accessor method.
      */
+    private boolean skinCreationLocked = false;
     private void doProcessCSS() {
 
         ControlHelper.superProcessCSS(this);
 
         if (getSkin() == null) {
-            // try to create default skin
-            final Skin<?> defaultSkin = createDefaultSkin();
-            if (defaultSkin != null) {
-                skinProperty().set(defaultSkin);
-                ControlHelper.superProcessCSS(this);
-            } else {
-                final String msg = "The -fx-skin property has not been defined in CSS for " + this +
-                                   " and createDefaultSkin() returned null.";
-                final List<CssParser.ParseError> errors = StyleManager.getErrors();
-                if (errors != null) {
-                    CssParser.ParseError error = new CssParser.ParseError(msg);
-                    errors.add(error); // RT-19884
+            if (skinCreationLocked) {
+                return;
+            }
+
+            try {
+                skinCreationLocked = true;
+
+                // try to create default skin
+                final Skin<?> defaultSkin = createDefaultSkin();
+                if (defaultSkin != null) {
+                    skinProperty().set(defaultSkin);
+                    ControlHelper.superProcessCSS(this);
+                } else {
+                    final String msg = "The -fx-skin property has not been defined in CSS for " + this +
+                            " and createDefaultSkin() returned null.";
+                    final List<CssParser.ParseError> errors = StyleManager.getErrors();
+                    if (errors != null) {
+                        CssParser.ParseError error = new CssParser.ParseError(msg);
+                        errors.add(error); // RT-19884
+                    }
+                    Logging.getControlsLogger().severe(msg);
                 }
-                Logging.getControlsLogger().severe(msg);
+            } finally {
+                skinCreationLocked = false;
             }
         }
     }
