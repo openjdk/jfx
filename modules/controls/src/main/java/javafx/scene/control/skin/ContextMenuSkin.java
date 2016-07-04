@@ -130,7 +130,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
             @Override public void handle(Event event) {
                 Node cmContent = popupMenu.getSkin().getNode();
                 if (cmContent != null) {
-                    cmContent.requestFocus();
+//                    cmContent.requestFocus();
                     if (cmContent instanceof ContextMenuContent) {
                         Node accMenu = ((ContextMenuContent)cmContent).getItemsContainer();
                         accMenu.notifyAccessibleAttributeChanged(AccessibleAttribute.VISIBLE);

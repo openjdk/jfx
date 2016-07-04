@@ -33,9 +33,11 @@ import com.sun.javafx.scene.control.skin.Utils;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
+import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
@@ -144,19 +146,6 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
                 ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
             }
         });
-
-//        If setOnAction() is overridden the code below causes the popup to show and hide.
-//        control.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-//                @Override public void handle(ActionEvent e) {
-//                    if (!popup.isVisible()) {
-//                        show();
-//                    }
-//                    else {
-//                        hide();
-//                    }
-//
-//                }
-//            });
 
         // Register listeners
         registerChangeListener(control.showingProperty(), e -> {
@@ -286,22 +275,27 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     private void show() {
         if (!popup.isShowing()) {
             popup.show(getSkinnable(), getSkinnable().getPopupSide(), 0, 0);
-
-//            if (getSkinnable().isOpenVertically()) {
-//                // FIXME ugly hack - need to work out why we need '12' for
-//                // MenuButton/SplitMenuButton, but not for Menus
-//                double indent = getSkinnable().getStyleClass().contains("menu") ? 0 : 12;
-//                popup.show(getSkinnable(), Side.BOTTOM, indent, 0);
-//            } else {
-//                popup.show(getSkinnable(), Side.RIGHT, 0, 12);
-//            }
         }
     }
 
     private void hide() {
         if (popup.isShowing()) {
             popup.hide();
-//            popup.getAnchor().requestFocus();
+        }
+    }
+
+    boolean requestFocusOnFirstMenuItem = false;
+    void requestFocusOnFirstMenuItem() {
+        this.requestFocusOnFirstMenuItem = true;
+    }
+
+    void putFocusOnFirstMenuItem() {
+        Skin<?> popupSkin = popup.getSkin();
+        if (popupSkin instanceof ContextMenuSkin) {
+            Node node = popupSkin.getNode();
+            if (node instanceof ContextMenuContent) {
+                ((ContextMenuContent)node).requestFocusOnIndex(0);
+            }
         }
     }
 

@@ -26,7 +26,6 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
-import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.MenuButton;
 
@@ -94,8 +93,15 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
 
         // request focus on content when the popup is shown
         popup.setOnShown(event -> {
-            ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
-            if (cmContent != null) cmContent.requestFocus();
+            if (requestFocusOnFirstMenuItem) {
+                requestFocusOnFirstMenuItem();
+                requestFocusOnFirstMenuItem = false;
+            } else {
+                ContextMenuContent cmContent = (ContextMenuContent) popup.getSkin().getNode();
+                if (cmContent != null) {
+                    cmContent.requestFocus();
+                }
+            }
         });
 
         if (control.getOnAction() == null) {

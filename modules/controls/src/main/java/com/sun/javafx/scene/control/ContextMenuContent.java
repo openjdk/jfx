@@ -28,12 +28,12 @@ package com.sun.javafx.scene.control;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
+import com.sun.javafx.scene.traversal.Direction;
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -461,18 +461,6 @@ public class ContextMenuContent extends Region {
     private double ty;
 
     private void initialize() {
-        // keyboard navigation support. Initially focus goes to this ContextMenu,
-        // but when the user first hits the up or down arrow keys, the focus
-        // is transferred to the first or last item respectively. Once this
-        // happens, it is up to the menu items to navigate between themselves.
-        contextMenu.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                // initialize the focused index for keyboard navigation.
-                currentFocusedIndex = -1;
-                requestFocus();
-            }
-        });
-
         // RT-19624 calling requestFocus inside layout was casuing repeated layouts.
         contextMenu.addEventHandler(Menu.ON_SHOWN, event -> {
             for (Node child : itemsContainer.getChildren()) {
@@ -530,12 +518,12 @@ public class ContextMenuContent extends Region {
                         break;
                     case DOWN:
                         // move to the next sibling
-                        moveToNextSibling();
+                        move(Direction.NEXT);
                         ke.consume();
                         break;
                     case UP:
                         // move to previous sibling
-                        moveToPreviousSibling();
+                        move(Direction.PREVIOUS);
                         ke.consume();
                         break;
                     case SPACE:
@@ -691,81 +679,40 @@ public class ContextMenuContent extends Region {
             }
         });
     }
-    /*
-     * Find the index of the next MenuItemContainer in the itemsContainer children.
-     */
-    private int findNext(int from) {
-        for (int i = from; i < itemsContainer.getChildren().size(); i++) {
+
+    private void move(Direction dir) {
+        int startIndex = currentFocusedIndex != -1 ? currentFocusedIndex : itemsContainer.getChildren().size();
+        requestFocusOnIndex(findSibling(dir, startIndex));
+    }
+
+    private int findSibling(final Direction dir, final int startIndex) {
+        final int childCount = itemsContainer.getChildren().size();
+        int i = startIndex;
+        do {
+            if (dir.isForward() && i >= childCount - 1) {
+                // loop to zero
+                i = 0;
+            } else if (!dir.isForward() && i == 0) {
+                // loop to end
+                i = childCount - 1;
+            } else {
+                i += (dir.isForward() ? 1 : -1);
+            }
+
             Node n = itemsContainer.getChildren().get(i);
             if (n instanceof MenuItemContainer && n.isVisible()) {
                 return i;
             }
-        }
-        // find from top
-        for (int i = 0; i < from; i++) {
-            Node n = itemsContainer.getChildren().get(i);
-            if (n instanceof MenuItemContainer && n.isVisible()) {
-                return i;
-            }
-        }
-        return -1; // should not happen
-    }
-
-    private void moveToNextSibling() {
-        // If focusedIndex is -1 then start from 0th menu item.
-        // Note that this will cycle through such that when you move to last item,
-        // it will move to 1st item on the next Down key press.
-        if (currentFocusedIndex != -1) {
-            currentFocusedIndex = findNext(currentFocusedIndex + 1);
-        } else if (currentFocusedIndex == -1 || currentFocusedIndex == (itemsContainer.getChildren().size() - 1)) {
-            currentFocusedIndex = findNext(0);
-        }
-
-        // request focus on the next sibling which currentFocusIndex points to
-        if (currentFocusedIndex != -1) {
-            Node n = itemsContainer.getChildren().get(currentFocusedIndex);
-            selectedBackground = ((MenuItemContainer)n);
-            n.requestFocus();
-            ensureFocusedMenuItemIsVisible(n);
-        }
-    }
-
-    /*
-     * Find the index the previous MenuItemContaner in the itemsContainer children.
-     */
-    private int findPrevious(int from) {
-        for (int i = from; i >= 0; i--) {
-            Node n = itemsContainer.getChildren().get(i);
-            if (n instanceof MenuItemContainer && n.isVisible()) {
-                return(i);
-            }
-        }
-        for (int i = itemsContainer.getChildren().size() - 1 ; i > from; i--) {
-            Node n = itemsContainer.getChildren().get(i);
-            if (n instanceof MenuItemContainer && n.isVisible()) {
-                return(i);
-            }
-        }
+        } while (i != startIndex);
         return -1;
     }
 
-     private void moveToPreviousSibling() {
-        // If focusedIndex is -1 then start from the last menu item to go up.
-        // Note that this will cycle through such that when you move to first item,
-        // it will move to last item on the next Up key press.
-        if (currentFocusedIndex != -1) {
-            currentFocusedIndex = findPrevious(currentFocusedIndex - 1);
-        } else if(currentFocusedIndex == -1 || currentFocusedIndex == 0) {
-            currentFocusedIndex = findPrevious(itemsContainer.getChildren().size() - 1);
-        }
-
-        // request focus on the previous sibling which currentFocusIndex points to
-        if (currentFocusedIndex != -1) {
-            Node n = itemsContainer.getChildren().get(currentFocusedIndex);
-            selectedBackground = ((MenuItemContainer)n);
-            n.requestFocus();
-            ensureFocusedMenuItemIsVisible(n);
-        }
+    public void requestFocusOnIndex(int index) {
+        currentFocusedIndex = index;
+        Node n = itemsContainer.getChildren().get(index);
+        selectedBackground = ((MenuItemContainer)n);
+        n.requestFocus();
+        ensureFocusedMenuItemIsVisible(n);
     }
 
     /*
