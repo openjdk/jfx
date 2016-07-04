@@ -5376,4 +5376,17 @@ public class TableViewTest {
         assertEquals("Header should shrink to initial size.", initialHeight, row.getHeight(), 0.01);
         sl.dispose();
     }
+
+    @Test public void test_jdk_8160771() {
+        TableView table = new TableView();
+        TableColumn first = new TableColumn("First Name");
+        table.getColumns().add(first);
+        table.getVisibleLeafColumns().addListener((ListChangeListener) c -> {
+            c.next();
+            assertTrue(c.wasAdded());
+            assertSame(table, ((TableColumn) c.getAddedSubList().get(0)).getTableView());
+        });
+        TableColumn last = new TableColumn("Last Name");
+        table.getColumns().add(0, last);
+    }
 }

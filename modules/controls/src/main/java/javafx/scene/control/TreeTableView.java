@@ -695,10 +695,6 @@ public class TreeTableView<S> extends Control {
             }
             c.reset();
 
-            // We don't maintain a bind for leafColumns, we simply call this update
-            // function behind the scenes in the appropriate places.
-            updateVisibleLeafColumns();
-
             // Fix for RT-15194: Need to remove removed columns from the
             // sortOrder list.
             List<TreeTableColumn<S,?>> toRemove = new ArrayList<TreeTableColumn<S,?>>();
@@ -735,6 +731,10 @@ public class TreeTableView<S> extends Control {
                         weakColumnSortTypeObserver,
                         weakColumnComparatorObserver);
             }
+
+            // We don't maintain a bind for leafColumns, we simply call this update
+            // function behind the scenes in the appropriate places.
+            updateVisibleLeafColumns();
 
             sortOrder.removeAll(toRemove);
 
