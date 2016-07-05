@@ -27,10 +27,10 @@ static JLString getJavaString(const TextRun& run)
     bool allowTabs = run.allowTabs();
     String ret = run.is8Bit()
         ? String(allowTabs
-                ? String(run.characters8())
+                ? run.string()
                 : FontCascade::normalizeSpaces(run.characters8(), length))
         : String(allowTabs
-                ? String(run.characters16())
+                ? run.string()
                 : FontCascade::normalizeSpaces(run.characters16(), length));
     return ret.toJavaString(WebCore_GetJavaEnv());
 }
