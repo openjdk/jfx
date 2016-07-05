@@ -1865,6 +1865,7 @@
                _Java_com_sun_webkit_WebPage_twkLoad
                _Java_com_sun_webkit_WebPage_twkIsLoading
                _Java_com_sun_webkit_WebPage_twkOpen
+               _Java_com_sun_webkit_WebPage_twkOverridePreference
                _Java_com_sun_webkit_WebPage_twkPostPaint
                _Java_com_sun_webkit_WebPage_twkPrePaint
                _Java_com_sun_webkit_WebPage_twkPrint

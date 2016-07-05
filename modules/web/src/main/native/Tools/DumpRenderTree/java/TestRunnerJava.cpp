@@ -115,7 +115,14 @@ void TestRunner::notifyDone()
 
 void TestRunner::overridePreference(JSStringRef key, JSStringRef value)
 {
-    // FIXME: implement
+    JNIEnv* env = DumpRenderTree_GetJavaEnv();
+
+    JLString jRelKey(JSStringRef_to_jstring(key, env));
+    JLString jRelValue(JSStringRef_to_jstring(value, env));
+    static jmethodID overridePreferenceMID = env->GetStaticMethodID(getDRTClass(env), "overridePreference", "(Ljava/lang/String;Ljava/lang/String;)V");
+    ASSERT(overridePreferenceMID);
+    env->CallStaticVoidMethod(getDRTClass(env), overridePreferenceMID, (jstring)jRelKey, (jstring)jRelValue);
+    CheckAndClearException(env);
 }
 
 void TestRunner::removeAllVisitedLinks()
