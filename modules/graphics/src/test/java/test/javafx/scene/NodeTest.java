@@ -27,13 +27,11 @@ package test.javafx.scene;
 
 import test.javafx.scene.shape.TestUtils;
 import test.javafx.scene.shape.CircleTest;
-import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
-import test.com.sun.javafx.pgstub.StubStage;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
@@ -64,6 +62,7 @@ import org.junit.rules.ExpectedException;
 import java.lang.reflect.Method;
 import java.util.Comparator;
 import javafx.scene.Group;
+import javafx.scene.GroupShim;
 import javafx.scene.Node;
 import javafx.scene.NodeShim;
 import javafx.scene.ParallelCamera;
@@ -80,7 +79,6 @@ import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
 import static org.junit.Assert.*;
-import org.junit.Ignore;
 /**
  * Tests various aspects of Node.
  *
@@ -1079,6 +1077,94 @@ public class NodeTest {
         syncNode(c);
         assertEquals(2, sg.getChildren().size());
         assertEquals(100.0, sc.getRadius(), 0.01);
+
+    }
+
+    @Test
+    public void testIsTreeVisible() {
+        final Group g = new Group();
+        final Circle c = new CircleTest.StubCircle(50);
+
+        ParentShim.getChildren(g).add(c);
+
+        Scene s = new Scene(g);
+        Stage st = new Stage();
+
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(c));
+        assertFalse(NodeHelper.isTreeShowing(g));
+        assertFalse(NodeHelper.isTreeShowing(c));
+
+        st.show();
+        st.setScene(s);
+
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(c));
+        assertTrue(NodeHelper.isTreeShowing(g));
+        assertTrue(NodeHelper.isTreeShowing(c));
+
+        SceneShim.scenePulseListener_pulse(s);
+
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(c));
+        assertTrue(NodeHelper.isTreeShowing(g));
+        assertTrue(NodeHelper.isTreeShowing(c));
+
+        g.setVisible(false);
+        SceneShim.scenePulseListener_pulse(s);
+
+        assertFalse(NodeHelper.isTreeVisible(g));
+        assertFalse(NodeHelper.isTreeVisible(c));
+        assertFalse(NodeHelper.isTreeShowing(g));
+        assertFalse(NodeHelper.isTreeShowing(c));
+
+        g.setVisible(true);
+        SceneShim.scenePulseListener_pulse(s);
+
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(c));
+        assertTrue(NodeHelper.isTreeShowing(g));
+        assertTrue(NodeHelper.isTreeShowing(c));
+
+        c.setVisible(false);
+        SceneShim.scenePulseListener_pulse(s);
+
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertFalse(NodeHelper.isTreeVisible(c));
+        assertTrue(NodeHelper.isTreeShowing(g));
+        assertFalse(NodeHelper.isTreeShowing(c));
+
+        c.setVisible(true);
+        SceneShim.scenePulseListener_pulse(s);
+
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(c));
+        assertTrue(NodeHelper.isTreeShowing(g));
+        assertTrue(NodeHelper.isTreeShowing(c));
+
+        s.setRoot(new Group());
+        SceneShim.scenePulseListener_pulse(s);
+
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(c));
+        assertFalse(NodeHelper.isTreeShowing(g));
+        assertFalse(NodeHelper.isTreeShowing(c));
+
+        s.setRoot(g);
+        SceneShim.scenePulseListener_pulse(s);
+
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(c));
+        assertTrue(NodeHelper.isTreeShowing(g));
+        assertTrue(NodeHelper.isTreeShowing(c));
+
+        st.hide();
+        SceneShim.scenePulseListener_pulse(s);
+
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(c));
+        assertFalse(NodeHelper.isTreeShowing(g));
+        assertFalse(NodeHelper.isTreeShowing(c));
 
     }
 

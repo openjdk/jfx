@@ -313,9 +313,10 @@ public class SubScene extends Node {
                                 "is already set as root of another scene or subScene");
                     }
 
-                    // disabled and isTreeVisible properties are inherrited
+                    // disabled, isTreeVisible and isTreeShowing properties are inherited
                     _value.setTreeVisible(isTreeVisible());
                     _value.setDisabled(isDisabled());
+                    _value.setTreeShowing(isTreeShowing());
 
                     if (oldRoot != null) {
                         StyleManager.getInstance().forget(SubScene.this);

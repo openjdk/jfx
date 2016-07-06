@@ -276,7 +276,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             // create spinner
             spinner = new IndeterminateSpinner(spinEnabled.get(), progressColor.get());
             getChildren().setAll(spinner);
-            if (NodeHelper.isTreeVisible(control)) {
+            if (NodeHelper.isTreeShowing(control)) {
                 if (indeterminateTransition != null) {
                     indeterminateTransition.play();
                 }

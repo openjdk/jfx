@@ -311,7 +311,7 @@ public abstract class Chart extends Region {
      * is visible and in a scene.
      */
     protected final boolean shouldAnimate(){
-        return getAnimated() && NodeHelper.isTreeVisible(this) && getScene() != null;
+        return getAnimated() && NodeHelper.isTreeShowing(this);
     }
 
     /**

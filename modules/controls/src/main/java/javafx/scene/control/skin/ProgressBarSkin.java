@@ -298,7 +298,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         // width might have changed so recreate our animation if needed
         if (isIndeterminate) {
             createIndeterminateTimeline();
-            if (NodeHelper.isTreeVisible(getSkinnable())) {
+            if (NodeHelper.isTreeShowing(getSkinnable())) {
                 indeterminateTransition.play();
             }
 
