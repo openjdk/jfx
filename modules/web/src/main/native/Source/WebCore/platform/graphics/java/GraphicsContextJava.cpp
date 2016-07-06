@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 #include <math.h>
@@ -261,6 +261,7 @@ void GraphicsContext::clip(const FloatRect& rect)
     if (paintingDisabled())
         return;
 
+    m_state.clipBounds.intersect(rect);
     platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETCLIP_IIII
     << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
@@ -268,8 +269,8 @@ void GraphicsContext::clip(const FloatRect& rect)
 
 IntRect GraphicsContext::clipBounds() const
 {
-    notImplemented(); // tav todo
-    return IntRect();
+    // Transformation has inverse effect on clip bounds.
+    return enclosingIntRect(m_state.transform.inverse().mapRect(m_state.clipBounds));
 }
 
 void GraphicsContext::clipConvexPolygon(size_t numberOfPoints, const FloatPoint* points, bool antialias)
@@ -764,13 +765,15 @@ void GraphicsContext::strokePath(const Path& path)
 
 static void setClipPath(
     GraphicsContext &gc,
+    GraphicsContextState& state,
     const Path& path,
     WindRule wrule,
     bool isOut)
 {
-    if (gc.paintingDisabled())
+    if (gc.paintingDisabled() || path.isEmpty())
         return;
 
+    state.clipBounds.intersect(path.fastBoundingRect());
     gc.platformContext()->rq().freeSpace(16)
     << jint(com_sun_webkit_graphics_GraphicsDecoder_CLIP_PATH)
     << copyPath(path.platformPath())
@@ -787,17 +790,17 @@ void GraphicsContext::canvasClip(const Path& path, WindRule fillRule)
 
 void GraphicsContext::clip(const Path& path, WindRule wrule)
 {
-    setClipPath(*this, path, wrule, false);
+    setClipPath(*this, m_state, path, wrule, false);
 }
 
 void GraphicsContext::clipPath(const Path &path, WindRule wrule)
 {
-    setClipPath(*this, path, wrule, false);
+    setClipPath(*this, m_state, path, wrule, false);
 }
 
 void GraphicsContext::clipOut(const Path& path)
 {
-    setClipPath(*this, path, RULE_EVENODD, true);
+    setClipPath(*this, m_state, path, RULE_EVENODD, true);
 }
 
 void GraphicsContext::clipOut(const FloatRect& rect)

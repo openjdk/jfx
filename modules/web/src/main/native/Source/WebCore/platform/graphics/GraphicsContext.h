@@ -132,7 +132,7 @@ namespace WebCore {
 #if PLATFORM(JAVA)
             , globalAlpha(1)
             , interpolationQuality(InterpolationDefault)
-            , transform()
+            , clipBounds(FloatRect::infiniteRect())
 #endif
         {
         }
@@ -179,6 +179,7 @@ namespace WebCore {
         float globalAlpha;
         InterpolationQuality interpolationQuality;
         AffineTransform transform;
+        FloatRect clipBounds;
 #endif
     };
 
