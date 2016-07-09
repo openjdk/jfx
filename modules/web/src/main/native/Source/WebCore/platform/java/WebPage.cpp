@@ -1235,6 +1235,57 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInFrame
     return JNI_FALSE;
 }
 
+JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
+    (JNIEnv* env, jobject self, jlong pPage, jstring propertyName, jstring propertyValue)
+{
+    Page* page = WebPage::pageFromJLong(pPage);
+    if (!page) {
+        return;
+    }
+
+    Settings& settings = page->settings();
+    String nativePropertyName(env, propertyName);
+    String nativePropertyValue(env, propertyValue);
+
+    if (nativePropertyName == "WebKitTextAreasAreResizable") {
+        settings.setTextAreasAreResizable(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitLoadsImagesAutomatically") {
+        settings.setLoadsImagesAutomatically(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitMinimumFontSize") {
+        settings.setMinimumFontSize(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitMinimumLogicalFontSize") {
+        settings.setMinimumLogicalFontSize(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitAcceleratedCompositingEnabled") {
+        settings.setAcceleratedCompositingEnabled(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitScriptEnabled") {
+        settings.setScriptEnabled(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitJavaScriptCanOpenWindowsAutomatically") {
+        settings.setJavaScriptCanOpenWindowsAutomatically(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitPluginsEnabled") {
+        settings.setPluginsEnabled(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitDefaultFixedFontSize") {
+        settings.setDefaultFixedFontSize(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitContextMenuEnabled") {
+        settings.setContextMenuEnabled(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitUserAgent") {
+        settings.setUserAgent(nativePropertyValue);
+    } else if (nativePropertyName == "WebKitMaximumHTMLParserDOMTreeDepth") {
+        settings.setMaximumHTMLParserDOMTreeDepth(nativePropertyValue.toUInt());
+    } else if (nativePropertyName == "WebKitXSSAuditorEnabled")  {
+        settings.setXSSAuditorEnabled(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitSerifFontFamily") {
+        settings.setSerifFontFamily(nativePropertyValue);
+    } else if (nativePropertyName == "WebKitSansSerifFontFamily") {
+        settings.setSansSerifFontFamily(nativePropertyValue);
+    } else if (nativePropertyName == "WebKitFixedFontFamily") {
+        settings.setFixedFontFamily(nativePropertyValue);
+    } else if (nativePropertyName == "WebKitShowsURLsInToolTips") {
+        settings.setShowsURLsInToolTips(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitCSSRegionsEnabled") {
+        RuntimeEnabledFeatures::sharedFeatures().setCSSRegionsEnabled(nativePropertyValue.toInt());
+    }
+}
+
 JNIEXPORT jfloat JNICALL Java_com_sun_webkit_WebPage_twkGetZoomFactor
     (JNIEnv* env, jobject self, jlong pFrame, jboolean textOnly)
 {

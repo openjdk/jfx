@@ -1887,6 +1887,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WebPage_twkIsJavaScriptEnabled;
                Java_com_sun_webkit_WebPage_twkLoad;
                Java_com_sun_webkit_WebPage_twkOpen;
+               Java_com_sun_webkit_WebPage_twkOverridePreference;
                Java_com_sun_webkit_WebPage_twkIsLoading;
                Java_com_sun_webkit_WebPage_twkPostPaint;
                Java_com_sun_webkit_WebPage_twkPrePaint;

@@ -1399,6 +1399,15 @@ public final class WebPage {
         }
     }
 
+    public void overridePreference(String key, String value) {
+        lockPage();
+        try {
+            twkOverridePreference(getPage(), key, value);
+        } finally {
+            unlockPage();
+        }
+    }
+
     public float getZoomFactor(boolean textOnly) {
         lockPage();
         try {
@@ -2471,6 +2480,7 @@ public final class WebPage {
     private native static Element twkGetOwnerElement(long pFrame);
 
     private native void twkOpen(long pFrame, String url);
+    private native void twkOverridePreference(long pPage, String key, String value);
     private native void twkLoad(long pFrame, String text, String contentType);
     private native boolean twkIsLoading(long pFrame);
     private native void twkStop(long pFrame);

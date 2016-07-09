@@ -48,7 +48,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -76,7 +75,6 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
 import javafx.scene.image.WritableImage;
@@ -139,8 +137,6 @@ import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CameraHelper;
@@ -582,6 +578,16 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
+            public boolean isTreeShowing(Node node) {
+                return node.isTreeShowing();
+            }
+
+            @Override
+            public BooleanExpression treeShowingProperty(Node node) {
+                return node.treeShowingProperty();
+            }
+
+            @Override
             public List<Style> getMatchingStyles(CssMetaData cssMetaData,
                     Styleable styleable) {
                 return Node.getMatchingStyles(cssMetaData, styleable);
@@ -983,6 +989,20 @@ public abstract class Node implements EventTarget, Styleable {
 
     private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
+    private final ChangeListener<Boolean> windowShowingChangedListener
+            = (win, oldVal, newVal) -> updateTreeShowing();
+
+    private final ChangeListener<Window> sceneWindowChangedListener = (scene, oldWindow, newWindow) -> {
+        // Replace the windowShowingListener and call updateTreeShowing()
+        if (oldWindow != null) {
+            oldWindow.showingProperty().removeListener(windowShowingChangedListener);
+        }
+        if (newWindow != null) {
+            newWindow.showingProperty().addListener(windowShowingChangedListener);
+        }
+        updateTreeShowing();
+    };
+
     private SubScene subScene = null;
 
     /**
@@ -1045,6 +1065,16 @@ public abstract class Node implements EventTarget, Styleable {
             focusSetDirty(newScene);
         }
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
+
+        // isTreeShowing needs to take into account of Window's showing
+        if (oldScene != null) {
+            oldScene.windowProperty().removeListener(sceneWindowChangedListener);
+        }
+        if (newScene != null) {
+            newScene.windowProperty().addListener(sceneWindowChangedListener);
+        }
+        updateTreeShowing();
+
         if (sceneChanged && reapplyCSS) reapplyCSS();
 
         if (sceneChanged && !isDirtyEmpty()) {
@@ -8205,6 +8235,78 @@ public abstract class Node implements EventTarget, Styleable {
 
     }
 
+    private boolean isWindowShowing() {
+        Scene s = getScene();
+        if (s == null) return false;
+        Window w = s.getWindow();
+        return w != null && w.isShowing();
+    }
+
+    private void updateTreeShowing() {
+        setTreeShowing(isTreeVisible() && isWindowShowing());
+    }
+
+    private boolean treeShowing;
+    private TreeShowingPropertyReadOnly treeShowingRO;
+
+    final void setTreeShowing(boolean value) {
+        if (treeShowing != value) {
+            treeShowing = value;
+            ((TreeShowingPropertyReadOnly) treeShowingProperty()).invalidate();
+        }
+    }
+
+    final boolean isTreeShowing() {
+        return treeShowingProperty().get();
+    }
+
+    final BooleanExpression treeShowingProperty() {
+        if (treeShowingRO == null) {
+            treeShowingRO = new TreeShowingPropertyReadOnly();
+        }
+        return treeShowingRO;
+    }
+
+    class TreeShowingPropertyReadOnly extends BooleanExpression {
+
+        private ExpressionHelper<Boolean> helper;
+        private boolean valid;
+
+        @Override
+        public void addListener(InvalidationListener listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(InvalidationListener listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        @Override
+        public void addListener(ChangeListener<? super Boolean> listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(ChangeListener<? super Boolean> listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        protected void invalidate() {
+            if (valid) {
+                valid = false;
+                ExpressionHelper.fireValueChangedEvent(helper);
+            }
+        }
+
+        @Override
+        public boolean get() {
+            valid = true;
+            return Node.this.treeShowing;
+        }
+
+    }
+
     private void updateTreeVisible(boolean parentChanged) {
         boolean isTreeVisible = isVisible();
         final Node parentNode = getParent() != null ? getParent() :
@@ -8221,6 +8323,8 @@ public abstract class Node implements EventTarget, Styleable {
             addToSceneDirtyList();
         }
         setTreeVisible(isTreeVisible);
+
+        updateTreeShowing();
     }
 
     private boolean treeVisible;

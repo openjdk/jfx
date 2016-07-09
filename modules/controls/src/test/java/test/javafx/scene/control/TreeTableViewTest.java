@@ -6183,4 +6183,17 @@ public class TreeTableViewTest {
 
         sl.dispose();
     }
+
+    @Test public void test_jdk_8160771() {
+        TreeTableView table = new TreeTableView();
+        TreeTableColumn first = new TreeTableColumn("First Name");
+        table.getColumns().add(first);
+        table.getVisibleLeafColumns().addListener((ListChangeListener) c -> {
+            c.next();
+            assertTrue(c.wasAdded());
+            assertSame(table, ((TreeTableColumn) c.getAddedSubList().get(0)).getTreeTableView());
+        });
+        TreeTableColumn last = new TreeTableColumn("Last Name");
+        table.getColumns().add(0, last);
+    }
 }

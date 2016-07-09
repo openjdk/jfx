@@ -438,7 +438,7 @@ public abstract class Axis<T> extends Region {
      * @return true if animations should happen
      */
     protected final boolean shouldAnimate(){
-        return getAnimated() && NodeHelper.isTreeVisible(this) && getScene() != null;
+        return getAnimated() && NodeHelper.isTreeShowing(this);
     }
 
     /**
@@ -655,7 +655,7 @@ public abstract class Axis<T> extends Region {
                 // auto range
                 range = autoRange(length);
                 // set current range to new range
-                setRange(range, getAnimated() && !isFirstPass && NodeHelper.isTreeVisible(this) && rangeInvalid);
+                setRange(range, getAnimated() && !isFirstPass && NodeHelper.isTreeShowing(this) && rangeInvalid);
             } else {
                 range = getRange();
             }

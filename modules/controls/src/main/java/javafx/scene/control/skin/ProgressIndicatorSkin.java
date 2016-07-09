@@ -132,11 +132,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         // register listeners
         registerChangeListener(control.indeterminateProperty(), e -> initialize());
         registerChangeListener(control.progressProperty(), e -> updateProgress());
-        registerChangeListener(control.visibleProperty(), e -> updateAnimation());
-        registerChangeListener(control.parentProperty(), e -> updateAnimation());
-        registerChangeListener(control.sceneProperty(), e -> updateAnimation());
+        registerChangeListener(NodeHelper.treeShowingProperty(control), e -> updateAnimation());
 
         initialize();
+        updateAnimation();
     }
 
 
@@ -276,7 +275,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             // create spinner
             spinner = new IndeterminateSpinner(spinEnabled.get(), progressColor.get());
             getChildren().setAll(spinner);
-            if (NodeHelper.isTreeVisible(control)) {
+            if (NodeHelper.isTreeShowing(control)) {
                 if (indeterminateTransition != null) {
                     indeterminateTransition.play();
                 }
@@ -323,12 +322,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
     void updateAnimation() {
         ProgressIndicator control = getSkinnable();
-        final boolean isTreeVisible = control.isVisible() &&
-                control.getParent() != null &&
-                control.getScene() != null;
+        final boolean isTreeShowing = NodeHelper.isTreeShowing(control);
         if (indeterminateTransition != null) {
-            pauseTimeline(!isTreeVisible);
-        } else if (isTreeVisible) {
+            pauseTimeline(!isTreeShowing);
+        } else if (isTreeShowing) {
             createIndeterminateTimeline();
         }
     }
@@ -650,6 +647,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         }
 
         private void rebuildTimeline() {
+            if (!NodeHelper.isTreeShowing(control)) {
+                return;
+            }
+
             if (spinEnabled) {
                 if (indeterminateTransition == null) {
                     indeterminateTransition = new Timeline();

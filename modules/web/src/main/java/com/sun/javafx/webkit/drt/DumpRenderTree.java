@@ -252,6 +252,11 @@ public final class DumpRenderTree {
         drt.setWaiting(false);
     }
 
+    private static void overridePreference(String key, String value) {
+        mlog("overridePreference");
+        drt.webPage.overridePreference(key, value);
+    }
+
     private synchronized void setLoaded(boolean loaded) {
         this.loaded = loaded;
         done();
