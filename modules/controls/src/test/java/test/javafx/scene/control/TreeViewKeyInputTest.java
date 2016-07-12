@@ -29,6 +29,8 @@ import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.Group;
+import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
@@ -2536,5 +2538,42 @@ public class TreeViewKeyInputTest {
         }
         assertTrue(fm.isFocused(50 - newSelectedRowCount + 1));
         assertEquals(50, (int) TreeCellBehavior.getAnchor(treeView, -1));
+    }
+
+    @Test public void test_jdk_8160858() {
+        root.getChildren().clear();
+        for (int i = 0; i < 100; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        treeView.setShowRoot(false);
+
+        // create a button to move focus over to
+        Button btn = new Button("Button");
+        ((Group)treeView.getScene().getRoot()).getChildren().add(btn);
+
+        treeView.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertEquals(stageLoader.getStage().getScene().getFocusOwner(), treeView);
+
+        // we expect initially that selection is on -1, and focus is on 0
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+
+        keyboard.doDownArrowPress();
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, fm.getFocusedIndex());
+
+        btn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertEquals(stageLoader.getStage().getScene().getFocusOwner(), btn);
+
+        treeView.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertEquals(stageLoader.getStage().getScene().getFocusOwner(), treeView);
+
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, fm.getFocusedIndex());
     }
 }
