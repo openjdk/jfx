@@ -321,7 +321,7 @@ double monotonicallyIncreasingTime()
         ticks -= ticksAs32Bit - ticks32;
     }
 
-    return ticks * 1000;
+    return ticks / 1000.0;
 }
 #elif PLATFORM(JAVA) && OS(LINUX)
 
