@@ -144,8 +144,10 @@ JSValueRef Java_Object_to_JSValue(
     }
     jclass clString = getStringClass(env);
     if (env->IsInstanceOf(val, clString)) {
-      JSStringRef value = asJSStringRef(env, (jstring) val);
-      return JSValueMakeString(ctx, value);
+        JSStringRef value = asJSStringRef(env, (jstring) val);
+        JSValueRef jsvalue = JSValueMakeString(ctx, value);
+        JSStringRelease(value);
+        return jsvalue;
     }
     jclass clBoolean = getBooleanClass(env);
     if (env->IsInstanceOf(val, clBoolean)) {
