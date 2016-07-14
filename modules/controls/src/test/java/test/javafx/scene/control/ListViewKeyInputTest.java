@@ -25,10 +25,14 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.Group;
+import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
@@ -2335,5 +2339,39 @@ public class ListViewKeyInputTest {
         }
         assertTrue(fm.isFocused(50 - newSelectedRowCount + 1));
         assertEquals(50, (int) ListCellBehavior.getAnchor(listView, -1));
+    }
+
+    @Test public void test_jdk_8160858() {
+        listView.getItems().clear();
+        for (int i = 0; i < 10; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        // create a button to move focus over to
+        Button btn = new Button("Button");
+        ((Group)listView.getScene().getRoot()).getChildren().add(btn);
+
+        listView.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertEquals(stageLoader.getStage().getScene().getFocusOwner(), listView);
+
+        // we expect initially that selection is on -1, and focus is on 0
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+
+        keyboard.doDownArrowPress();
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, fm.getFocusedIndex());
+
+        btn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertEquals(stageLoader.getStage().getScene().getFocusOwner(), btn);
+
+        listView.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertEquals(stageLoader.getStage().getScene().getFocusOwner(), listView);
+
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, fm.getFocusedIndex());
     }
 }

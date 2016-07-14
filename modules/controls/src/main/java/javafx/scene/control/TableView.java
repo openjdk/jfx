@@ -2945,23 +2945,15 @@ public class TableView<S> extends Control {
             // when the items list totally changes, we should clear out
             // the selection
             int newSelectionIndex = -1;
-            int newFocusIndex = -1;
             if (tableView.getItems() != null) {
                 S selectedItem = getSelectedItem();
                 if (selectedItem != null) {
                     newSelectionIndex = tableView.getItems().indexOf(selectedItem);
                 }
-
-                // we put focus onto the first item, if there is at least
-                // one item in the list
-                if (newFocusIndex == -1) {
-                    newFocusIndex = tableView.getItems().size() > 0 ? 0 : -1;
-                }
             }
 
             clearSelection();
             select(newSelectionIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
-            focus(newFocusIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
         }
 
         private TableColumn<S,?> getTableColumn(int pos) {
@@ -3036,11 +3028,7 @@ public class TableView<S> extends Control {
             this.tableView = tableView;
             this.EMPTY_CELL = new TablePosition<>(tableView, -1, null);
 
-            if (tableView.getItems() != null) {
-                this.tableView.getItems().addListener(weakItemsContentListener);
-            }
-
-            this.tableView.itemsProperty().addListener(new InvalidationListener() {
+            itemsObserver = new InvalidationListener() {
                 private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(tableView.getItems());
 
                 @Override public void invalidated(Observable observable) {
@@ -3048,20 +3036,33 @@ public class TableView<S> extends Control {
                     weakItemsRef = new WeakReference<>(tableView.getItems());
                     updateItemsObserver(oldItems, tableView.getItems());
                 }
-            });
+            };
+            this.tableView.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
+            if (tableView.getItems() != null) {
+                this.tableView.getItems().addListener(weakItemsContentListener);
+            }
 
             updateDefaultFocus();
         }
+
+        private final InvalidationListener itemsObserver;
 
         // Listen to changes in the tableview items list, such that when it
         // changes we can update the focused index to refer to the new indices.
         private final ListChangeListener<S> itemsContentListener = c -> {
             c.next();
+
+            if (c.wasReplaced() || c.getAddedSize() == getItemCount()) {
+                updateDefaultFocus();
+                return;
+            }
+
             TablePosition<S,?> focusedCell = getFocusedCell();
             final int focusedIndex = focusedCell.getRow();
             if (focusedIndex == -1 || c.getFrom() > focusedIndex) {
                 return;
             }
+
             c.reset();
             boolean added = false;
             boolean removed = false;

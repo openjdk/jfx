@@ -1576,7 +1576,7 @@ project(":graphics") {
          [fileName: "LinearConvolveShadow", generator: "CompileLinearConvolve", outputs: "-hw"]].each { settings ->
             javaexec {
                 executable = JAVA
-                workingDir = "modules/graphics"
+                workingDir = project.projectDir
                 main = settings.generator
                 classpath = configurations.compile + configurations.antlr3
                 classpath += files("$buildDir/classes/main")
@@ -1625,7 +1625,7 @@ project(":graphics") {
                 description = "Compiles Decora SSE natives for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
                 matches = ".*\\.cc"
                 source file("$buildDir/generated-src/jsl-decora")
-                source file("modules/graphics/src/main/native-decora")
+                source file(project.projectDir.path + "/src/main/native-decora")
                 headers = headerDir
                 params.addAll(variantProperties.ccFlags)
                 output(ccOutput)
@@ -1667,10 +1667,11 @@ project(":graphics") {
         inputFiles.each { file ->
             javaexec {
                 executable = JAVA
-                workingDir = "modules/graphics"
+                workingDir = project.projectDir
                 main = "CompileJSL"
                 classpath = configurations.compile + configurations.antlr3
-                classpath += files("$buildDir/classes/jsl-compilers/prism", "modules/graphics/src/main/jsl-prism") // for the .stg
+                classpath += files("$buildDir/classes/jsl-compilers/prism",
+                    project.projectDir.path + "/src/main/jsl-prism") // for the .stg
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-name", "$file"]
             }
         }
@@ -1773,7 +1774,7 @@ project(":controls") {
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/touch.css"].each { css ->
             javaexec {
                 executable = JAVA
-                workingDir = "modules/controls"
+                workingDir = project.projectDir
                 classpath files("$buildDir/classes/main",
                         project(":graphics").sourceSets.main.output,
                         project(":base").sourceSets.main.output)
@@ -1863,7 +1864,9 @@ project(":fxml") {
     )
 
     dependencies {
-        compile BUILD_SRC, project(":base"), project(":graphics"),
+        compile BUILD_SRC,
+                project(":base"),
+                project(":graphics"),
                 project(":controls")
         testCompile project(":graphics").sourceSets.test.output
     }
@@ -3188,9 +3191,9 @@ compileTargets { t ->
         enabled = COMPILE_SWT
         group = "Basic"
         description = "Creates the javafx-swt.jar for the $t.name target"
-        archiveName = "modules/swt/build/libs/javafx-swt.jar";
+        archiveName = project(":swt").buildDir.path + "/libs/javafx-swt.jar";
         includeEmptyDirs = false
-        from("modules/swt/build/classes/main");
+        from(project(":swt").buildDir.path + "/classes/main");
         include("**/javafx/embed/swt/**")
 
         dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
@@ -3211,8 +3214,8 @@ compileTargets { t ->
         description = "Creates the javafx-mx.jar"
         archiveName = "build/${sdkDirName}/lib/javafx-mx.jar";
         includeEmptyDirs = false
-        from "modules/jmx/build/classes/main"
-        from "modules/jmx/build/resources/main"
+        from project(":jmx").buildDir.path + "/classes/main"
+        from project(":jmx").buildDir.path + "/resources/main"
         dependsOn project(":jmx").assemble
     }
 
@@ -3260,7 +3263,7 @@ compileTargets { t ->
             // FIXME: JIGSAW -- update this for modules
             // Copy over the javapackager man files
             copy {
-                from "modules/fxpackager/build/man"
+                from project(":fxpackager").buildDir.path + "/man"
                 into "build/${sdkDirName}/man"
             }
         }
@@ -3302,8 +3305,8 @@ ext.JFXRT_CP =
         project(":controls").sourceSets.main.output.classesDir,
         project(":fxml").sourceSets.main.output.classesDir,
         project(":swing").sourceSets.main.output.classesDir, //NOTE - used by 3Dviewer
-            "modules/media/build/classes/main",
-            "modules/web/build/classes/main",
+        project(":media").buildDir.path + "/classes/main",
+        project(":web").buildDir.path + "/classes/main",
     )
 
 project(":apps") {
@@ -3594,17 +3597,20 @@ compileTargets { t ->
                     }
 
                     /* FIXME: JIGSAW -- handle this in the module itself
+                    String webbld = project(":web").buildDir.path
+                    String ctrlbld = project(":controls").buildDir.path
                     if (t.name == 'android') {
-                        from ("modules/web/build/classes/android",
-                              "modules/web/build/resources/android",
-                              "modules/controls/build/classes/android",
-                              "modules/controls/build/resources/android")
+                        from ("${webbld}/classes/android",
+                              "${webbld}/resources/android",
+                              "${ctrlbld}/classes/android",
+                              "${ctrlbld}/resources/android")
                     } else if (t.name == 'ios') {
-                        from ("modules/web/build/classes/ios",
-                              "modules/web/build/resources/ios",
+                        from ("${webbld}/classes/ios",
+                              "${webbld}/resources/ios",
                               "modules/extensions/build/classes/ios")
                     } else {
-                        from ("modules/web/build/classes/main", "modules/web/build/resources/main")
+                        from ("${webbld}/classes/main",
+                              "${webbld}resources/main")
                     }
                     */
                 }
@@ -3679,7 +3685,7 @@ compileTargets { t ->
             copy {
                 into "${graphicsProject.buildDir}/${moduleNativeDirName}"
 
-                from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
+                from("${graphicsProject.buildDir}/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
                 def libs = ['font', 'prism', 'prismSW', 'glass', 'iio']
                 if (IS_INCLUDE_ES2) {
                     libs += ['prismES2'];
@@ -3691,11 +3697,11 @@ compileTargets { t ->
                     def variants = targetProperties[lib].containsKey('variants') && !useLipo ? targetProperties[lib].variants : [null]
                     variants.each { variant ->
                         def variantProperties = variant ? targetProperties[lib][variant] : targetProperties[lib]
-                        from ("modules/graphics/build/libs/$lib/$t.name/${library(variantProperties.lib)}")
+                        from ("${graphicsProject.buildDir}/libs/$lib/$t.name/${library(variantProperties.lib)}")
                     }
                 }
                 if (IS_WINDOWS) {
-                    from ("modules/graphics/build/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
+                    from ("${graphicsProject.buildDir}/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
                 }
             }
 
@@ -3708,15 +3714,15 @@ compileTargets { t ->
                 def mediaBuildType = project(":media").ext.buildType
                 if (IS_COMPILE_MEDIA) {
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
-                        from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library(name)}") }
+                        from ("${mediaProject.buildDir}/native/${t.name}/${mediaBuildType}/${library(name)}") }
 
                     if (t.name == "mac") {
                         // OSX media natives
                         [ "jfxmedia_qtkit", "jfxmedia_avf", "glib-lite" ].each { name ->
-                            from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library(name)}") }
+                            from ("${mediaProject.buildDir}/native/${t.name}/${mediaBuildType}/${library(name)}") }
                     } else if (t.name == "linux") {
-                        from("modules/media/build/native/${t.name}/${mediaBuildType}") { include "libavplugin*.so" }
-                    } else from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")
+                        from("${mediaProject.buildDir}/native/${t.name}/${mediaBuildType}") { include "libavplugin*.so" }
+                    } else from ("${mediaProject.buildDir}/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")
                 } else {
                     if (t.name != "android"  && t.name != "dalvik" ) {
                         [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
@@ -3743,7 +3749,7 @@ compileTargets { t ->
                 into "${webProject.buildDir}/${moduleNativeDirName}"
 
                 if (IS_COMPILE_WEBKIT) {
-                    from ("modules/web/build/libs/${t.name}/${library('jfxwebkit')}")
+                    from ("${webProject.buildDir}/libs/${t.name}/${library('jfxwebkit')}")
                 } else {
                     if (t.name != "android" && t.name != "ios" && t.name != "dalvik") {
                         from ("$LIBRARY_STUB/${library('jfxwebkit')}")
@@ -3766,14 +3772,14 @@ compileTargets { t ->
 
             // Copy over the javapackager libs
             copy {
-                from "modules/fxpackager/build/libs"
+                from "${packagerProject.buildDir}/libs"
                 into "${packagerProject.buildDir}/${platformPrefix}module-lib"
             }
 
             // Copy over the javapackager executable
             if (t.name == "win" || t.name == "linux" || t.name == "mac") {
                 copy {
-                    from "modules/fxpackager/build/javapackager"
+                    from "${packagerProject.buildDir}/javapackager"
                     into "${packagerProject.buildDir}/${platformPrefix}module-bin"
                 }
             }

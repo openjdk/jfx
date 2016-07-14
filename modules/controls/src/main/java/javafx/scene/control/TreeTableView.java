@@ -3187,11 +3187,20 @@ public class TreeTableView<S> extends Control {
          **********************************************************************/
 
         private void updateDefaultSelection() {
-            clearSelection();
+            // when the items list totally changes, we should clear out
+            // the selection
+            int newSelectionIndex = -1;
+            TreeItem<S> selectedItem = getSelectedItem();
+            if (selectedItem != null) {
+                newSelectionIndex = treeTableView.getRow(selectedItem);
+            }
 
             // we put focus onto the first item, if there is at least
             // one item in the list
-            int newFocusIndex = getItemCount() > 0 ? 0 : -1;
+            int newFocusIndex = newSelectionIndex != -1 ? newSelectionIndex : treeTableView.getExpandedItemCount() > 0 ? 0 : -1;
+
+            clearSelection();
+            select(newSelectionIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
             focus(newFocusIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
         }
 

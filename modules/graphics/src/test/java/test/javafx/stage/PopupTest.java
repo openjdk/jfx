@@ -34,7 +34,6 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
-import javafx.concurrent.Task;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
@@ -54,7 +53,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
@@ -287,6 +285,51 @@ public class PopupTest {
         assertTrue(p1.isShowing());
         p1.hide();
         assertFalse(p1.isShowing());
+    }
+
+    @Test
+    public void testSwitchSceneOnHide() {
+        Group root = new Group();
+        Rectangle rect = new Rectangle();
+        ParentShim.getChildren(root).add(rect);
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+
+        Popup p1 = new Popup();
+        p1.show(rect, 10, 10);
+        Popup p2 = new Popup();
+        p2.show(p1);
+
+        assertTrue(rect.isVisible());
+        assertTrue(p1.isShowing());
+        assertTrue(p2.isShowing());
+
+        stage.setScene(new Scene(new Group()));
+        assertTrue(rect.isVisible());
+        assertFalse(p1.isShowing());
+        assertFalse(p2.isShowing());
+    }
+
+    @Test
+    public void testVisibleOnHide() {
+        Group root = new Group();
+        Rectangle rect = new Rectangle();
+        ParentShim.getChildren(root).add(rect);
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+
+        Popup p1 = new Popup();
+        p1.show(rect, 10, 10);
+        Popup p2 = new Popup();
+        p2.show(p1);
+
+        assertTrue(rect.isVisible());
+        assertTrue(p1.isShowing());
+        assertTrue(p2.isShowing());
+
+        rect.setVisible(false);
+        assertFalse(p1.isShowing());
+        assertFalse(p2.isShowing());
     }
 
     @Test

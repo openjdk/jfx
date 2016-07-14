@@ -229,10 +229,17 @@ public class TableColumnHeader extends Region {
             new WeakListChangeListener<String>(styleClassListener);
 
     private static final EventHandler<MouseEvent> mousePressedHandler = me -> {
+        TableColumnHeader header = (TableColumnHeader) me.getSource();
+        TableColumnBase tableColumn = header.getTableColumn();
+
+        ContextMenu menu = tableColumn.getContextMenu();
+        if (menu != null && menu.isShowing()) {
+            menu.hide();
+        }
+
         if (me.isConsumed()) return;
         me.consume();
 
-        TableColumnHeader header = (TableColumnHeader) me.getSource();
         header.getTableHeaderRow().columnDragLock = true;
 
         // pass focus to the table, so that the user immediately sees
@@ -263,10 +270,6 @@ public class TableColumnHeader extends Region {
         TableColumnHeader header = (TableColumnHeader) me.getSource();
         header.getTableHeaderRow().columnDragLock = false;
 
-        TableColumnBase tableColumn = header.getTableColumn();
-
-        ContextMenu menu = tableColumn.getContextMenu();
-        if (menu != null && menu.isShowing()) return;
         if (header.getTableHeaderRow().isReordering() && header.isColumnReorderingEnabled()) {
             header.columnReorderingComplete();
         } else if (me.isStillSincePress()) {

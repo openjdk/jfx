@@ -82,7 +82,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      */
     static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
 
-    public static String DISABLE_FORWARD_TO_PARENT = "TextInputControlBehavior.disableForwardToParent";
+    public static final String DISABLE_FORWARD_TO_PARENT = "TextInputControlBehavior.disableForwardToParent";
 
     /**************************************************************************
      * Fields                                                                 *

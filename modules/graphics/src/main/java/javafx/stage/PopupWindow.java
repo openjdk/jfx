@@ -40,7 +40,6 @@ import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -63,6 +62,7 @@ import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.stage.PopupWindowHelper;
 import com.sun.javafx.stage.WindowHelper;
 import javafx.beans.property.ObjectPropertyBase;
@@ -408,9 +408,9 @@ public abstract class PopupWindow extends Window {
 
         this.ownerNode.set(ownerNode);
 
-        // RT-28454 PopupWindow should disappear when owner node is not visible
+        // PopupWindow should disappear when owner node is not visible
         if (ownerNode != null) {
-            ownerNode.visibleProperty().addListener(weakOwnerNodeListener);
+            NodeHelper.treeShowingProperty(ownerNode).addListener(weakOwnerNodeListener);
         }
 
         updateWindow(anchorX, anchorY);
@@ -443,7 +443,7 @@ public abstract class PopupWindow extends Window {
         if (owner instanceof PopupWindow) {
             ((PopupWindow)owner).children.add(this);
         }
-        // RT-28454 PopupWindow should disappear when owner node is not visible
+        // PopupWindow should disappear when owner node is not visible
         if (owner != null) {
             owner.showingProperty().addListener(weakOwnerNodeListener);
         }
@@ -484,9 +484,10 @@ public abstract class PopupWindow extends Window {
         }
         children.clear();
         super.hide();
-        // RT-28454 when popup hides, remove listeners; these are added when the popup shows.
+
+        // When popup hides, remove listeners; these are added when the popup shows.
         if (getOwnerWindow() != null) getOwnerWindow().showingProperty().removeListener(weakOwnerNodeListener);
-        if (getOwnerNode() != null) getOwnerNode().visibleProperty().removeListener(weakOwnerNodeListener);
+        if (getOwnerNode() != null) NodeHelper.treeShowingProperty(getOwnerNode()).removeListener(weakOwnerNodeListener);
     }
 
     /*

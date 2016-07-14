@@ -30,7 +30,9 @@ import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import java.util.List;
 import java.util.function.Function;
@@ -4757,5 +4759,36 @@ public class TreeTableViewKeyInputTest {
         // this causes the NPE, the firePulse() forces it to actually be triggered
         keyboard.doLeftArrowPress();
         Toolkit.getToolkit().firePulse();
+    }
+
+    @Test public void test_jdk_8160858() {
+        // create a button to move focus over to
+        Button btn = new Button("Button");
+        ((Group)tableView.getScene().getRoot()).getChildren().add(btn);
+
+        tableView.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertEquals(stageLoader.getStage().getScene().getFocusOwner(), tableView);
+
+        // we expect initially that selection is on -1, and focus is on 0
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(0, fm.getFocusedIndex());
+
+        keyboard.doDownArrowPress();
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, fm.getFocusedIndex());
+
+        btn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertEquals(stageLoader.getStage().getScene().getFocusOwner(), btn);
+
+        sm.setCellSelectionEnabled(true);
+
+        tableView.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertEquals(stageLoader.getStage().getScene().getFocusOwner(), tableView);
+
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, fm.getFocusedIndex());
     }
 }

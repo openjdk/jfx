@@ -1490,7 +1490,7 @@ public class ListView<T> extends Control {
 
             clearSelection();
             select(newSelectionIndex);
-            focus(newFocusIndex);
+//            focus(newFocusIndex);
         }
     }
 
@@ -1524,10 +1524,7 @@ public class ListView<T> extends Control {
             }
 
             updateItemCount();
-
-            if (itemCount > 0) {
-                focus(0);
-            }
+            updateDefaultFocus();
         }
 
 
@@ -1538,6 +1535,7 @@ public class ListView<T> extends Control {
             if (newList != null) newList.addListener(weakItemsContentListener);
 
             updateItemCount();
+            updateDefaultFocus();
         }
 
         private final InvalidationListener itemsObserver;
@@ -1550,6 +1548,12 @@ public class ListView<T> extends Control {
             while (c.next()) {
                 // looking at the first change
                 int from = c.getFrom();
+
+                if (c.wasReplaced() || c.getAddedSize() == getItemCount()) {
+                    updateDefaultFocus();
+                    return;
+                }
+
                 if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
                     return;
                 }
@@ -1599,6 +1603,26 @@ public class ListView<T> extends Control {
                 List<T> items = listView.getItems();
                 itemCount = items == null ? -1 : items.size();
             }
+        }
+
+        private void updateDefaultFocus() {
+            // when the items list totally changes, we should clear out
+            // the focus
+            int newValueIndex = -1;
+            if (listView.getItems() != null) {
+                T focusedItem = getFocusedItem();
+                if (focusedItem != null) {
+                    newValueIndex = listView.getItems().indexOf(focusedItem);
+                }
+
+                // we put focus onto the first item, if there is at least
+                // one item in the list
+                if (newValueIndex == -1) {
+                    newValueIndex = listView.getItems().size() > 0 ? 0 : -1;
+                }
+            }
+
+            focus(newValueIndex);
         }
     }
 }

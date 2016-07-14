@@ -137,6 +137,13 @@ class TreeUtil {
 
             i = p;
             p = p.getParent();
+
+            // we are at the root, does the root match the given root?
+            // if not, the item does not exist in the current tree.
+            if (p == null && !i.equals(root)) {
+                return -1;
+            }
+
             row++;
         }
 
