@@ -88,6 +88,7 @@
 #include <runtime/JSCJSValue.h>
 #include <JSLock.h>
 #include <API/APICast.h>
+#include <API/JSStringRef.h>
 
 #include "runtime_root.h"
 #if OS(UNIX)
