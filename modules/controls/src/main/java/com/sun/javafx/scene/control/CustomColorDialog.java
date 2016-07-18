@@ -70,6 +70,11 @@ public class CustomColorDialog extends HBox {
     private WebColorField webField = null;
     private Scene customScene;
 
+    // JDK-8161449
+    private String saveBtnText;
+    private boolean showUseBtn = true;
+    private boolean showOpacitySlider = true;
+
     public CustomColorDialog(Window owner) {
         getStyleClass().add("custom-color-dialog");
         if (owner != null) dialog.initOwner(owner);
@@ -77,9 +82,8 @@ public class CustomColorDialog extends HBox {
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.initStyle(StageStyle.UTILITY);
         dialog.setResizable(false);
-        colorRectPane = new ColorRectPane();
-        controlsPane = new ControlsPane();
-        setHgrow(controlsPane, Priority.ALWAYS);
+
+        dialog.addEventHandler(KeyEvent.ANY, keyEventListener);
 
         customScene = new Scene(this);
         final Scene ownerScene = owner.getScene();
@@ -89,19 +93,26 @@ public class CustomColorDialog extends HBox {
             }
             customScene.getStylesheets().addAll(ownerScene.getStylesheets());
         }
-        getChildren().addAll(colorRectPane, controlsPane);
+
+        buildUI();
 
         dialog.setScene(customScene);
-        dialog.addEventHandler(KeyEvent.ANY, keyEventListener);
+    }
+
+    private void buildUI() {
+        colorRectPane = new ColorRectPane();
+        controlsPane = new ControlsPane();
+        setHgrow(controlsPane, Priority.ALWAYS);
+        getChildren().setAll(colorRectPane, controlsPane);
     }
 
     private final EventHandler<KeyEvent> keyEventListener = e -> {
         switch (e.getCode()) {
-            case ESCAPE :
+            case ESCAPE:
                 dialog.setScene(null);
                 dialog.close();
-        default:
-            break;
+            default:
+                break;
         }
     };
 
@@ -133,12 +144,30 @@ public class CustomColorDialog extends HBox {
         this.onSave = onSave;
     }
 
+    // JDK-8161449
+    public void setSaveBtnText(String saveBtnText) {
+        this.saveBtnText = saveBtnText;
+        buildUI();
+    }
+
     public Runnable getOnUse() {
         return onUse;
     }
 
     public void setOnUse(Runnable onUse) {
         this.onUse = onUse;
+    }
+
+    // JDK-8161449
+    public void setShowUseBtn(boolean showUseBtn) {
+        this.showUseBtn = showUseBtn;
+        buildUI();
+    }
+
+    // JDK-8161449
+    public void setShowOpacitySlider(boolean showOpacitySlider) {
+        this.showOpacitySlider = showOpacitySlider;
+        buildUI();
     }
 
     public Runnable getOnCancel() {
@@ -204,7 +233,8 @@ public class CustomColorDialog extends HBox {
         dialog.setY(y);
     }
 
-    @Override public void layoutChildren() {
+    @Override
+    public void layoutChildren() {
         super.layoutChildren();
         if (dialog.getMinWidth() > 0 && dialog.getMinHeight() > 0) {
             // don't recalculate min size once it's set
@@ -231,7 +261,8 @@ public class CustomColorDialog extends HBox {
 
         private boolean changeIsLocal = false;
         private DoubleProperty hue = new SimpleDoubleProperty(-1) {
-            @Override protected void invalidated() {
+            @Override
+            protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
                     updateHSBColor();
@@ -240,7 +271,8 @@ public class CustomColorDialog extends HBox {
             }
         };
         private DoubleProperty sat = new SimpleDoubleProperty(-1) {
-            @Override protected void invalidated() {
+            @Override
+            protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
                     updateHSBColor();
@@ -249,7 +281,8 @@ public class CustomColorDialog extends HBox {
             }
         };
         private DoubleProperty bright = new SimpleDoubleProperty(-1) {
-            @Override protected void invalidated() {
+            @Override
+            protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
                     updateHSBColor();
@@ -258,7 +291,8 @@ public class CustomColorDialog extends HBox {
             }
         };
         private IntegerProperty red = new SimpleIntegerProperty(-1) {
-            @Override protected void invalidated() {
+            @Override
+            protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
                     updateRGBColor();
@@ -268,7 +302,8 @@ public class CustomColorDialog extends HBox {
         };
 
         private IntegerProperty green = new SimpleIntegerProperty(-1) {
-            @Override protected void invalidated() {
+            @Override
+            protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
                     updateRGBColor();
@@ -278,7 +313,8 @@ public class CustomColorDialog extends HBox {
         };
 
         private IntegerProperty blue = new SimpleIntegerProperty(-1) {
-            @Override protected void invalidated() {
+            @Override
+            protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
                     updateRGBColor();
@@ -288,7 +324,8 @@ public class CustomColorDialog extends HBox {
         };
 
         private DoubleProperty alpha = new SimpleDoubleProperty(100) {
-            @Override protected void invalidated() {
+            @Override
+            protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
                     setCustomColor(new Color(
@@ -311,7 +348,7 @@ public class CustomColorDialog extends HBox {
 
         private void updateHSBColor() {
             Color newColor = Color.hsb(hue.get(), clamp(sat.get() / 100),
-                            clamp(bright.get() / 100), clamp(alpha.get() / 100));
+                    clamp(bright.get() / 100), clamp(alpha.get() / 100));
             red.set(doubleToInt(newColor.getRed()));
             green.set(doubleToInt(newColor.getGreen()));
             blue.set(doubleToInt(newColor.getBlue()));
@@ -354,10 +391,12 @@ public class CustomColorDialog extends HBox {
                 public Orientation getContentBias() {
                     return Orientation.VERTICAL;
                 }
+
                 @Override
                 protected double computePrefWidth(double height) {
                     return height;
                 }
+
                 @Override
                 protected double computeMaxWidth(double height) {
                     return height;
@@ -372,7 +411,8 @@ public class CustomColorDialog extends HBox {
                     bind(hue);
                 }
 
-                @Override protected Background computeValue() {
+                @Override
+                protected Background computeValue() {
                     return new Background(new BackgroundFill(
                             Color.hsb(hue.getValue(), 1.0, 1.0),
                             CornerRadii.EMPTY, Insets.EMPTY));
@@ -383,8 +423,8 @@ public class CustomColorDialog extends HBox {
             colorRectOverlayOne.getStyleClass().add("color-rect");
             colorRectOverlayOne.setBackground(new Background(new BackgroundFill(
                     new LinearGradient(0, 0, 1, 0, true, CycleMethod.NO_CYCLE,
-                    new Stop(0, Color.rgb(255, 255, 255, 1)),
-                    new Stop(1, Color.rgb(255, 255, 255, 0))),
+                            new Stop(0, Color.rgb(255, 255, 255, 1)),
+                            new Stop(1, Color.rgb(255, 255, 255, 0))),
                     CornerRadii.EMPTY, Insets.EMPTY)));
 
             EventHandler<MouseEvent> rectMouseHandler = event -> {
@@ -398,7 +438,7 @@ public class CustomColorDialog extends HBox {
             colorRectOverlayTwo.getStyleClass().addAll("color-rect");
             colorRectOverlayTwo.setBackground(new Background(new BackgroundFill(
                     new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
-                    new Stop(0, Color.rgb(0, 0, 0, 0)), new Stop(1, Color.rgb(0, 0, 0, 1))),
+                            new Stop(0, Color.rgb(0, 0, 0, 0)), new Stop(1, Color.rgb(0, 0, 0, 1))),
                     CornerRadii.EMPTY, Insets.EMPTY)));
             colorRectOverlayTwo.setOnMouseDragged(rectMouseHandler);
             colorRectOverlayTwo.setOnMousePressed(rectMouseHandler);
@@ -444,18 +484,19 @@ public class CustomColorDialog extends HBox {
             changeIsLocal = true;
             //Initialize hue, sat, bright, color, red, green and blue
             hue.set(getCurrentColor().getHue());
-            sat.set(getCurrentColor().getSaturation()*100);
-            bright.set(getCurrentColor().getBrightness()*100);
-            alpha.set(getCurrentColor().getOpacity()*100);
+            sat.set(getCurrentColor().getSaturation() * 100);
+            bright.set(getCurrentColor().getBrightness() * 100);
+            alpha.set(getCurrentColor().getOpacity() * 100);
             setCustomColor(Color.hsb(hue.get(), clamp(sat.get() / 100), clamp(bright.get() / 100),
-                    clamp(alpha.get()/100)));
+                    clamp(alpha.get() / 100)));
             red.set(doubleToInt(getCustomColor().getRed()));
             green.set(doubleToInt(getCustomColor().getGreen()));
             blue.set(doubleToInt(getCustomColor().getBlue()));
             changeIsLocal = false;
         }
 
-        @Override protected void layoutChildren() {
+        @Override
+        protected void layoutChildren() {
             super.layoutChildren();
 
             // to maintain default size
@@ -508,7 +549,9 @@ public class CustomColorDialog extends HBox {
                 {
                     bind(currentColorProperty);
                 }
-                @Override protected Background computeValue() {
+
+                @Override
+                protected Background computeValue() {
                     return new Background(new BackgroundFill(currentColorProperty.get(), CornerRadii.EMPTY, Insets.EMPTY));
                 }
             });
@@ -520,7 +563,9 @@ public class CustomColorDialog extends HBox {
                 {
                     bind(customColorProperty);
                 }
-                @Override protected Background computeValue() {
+
+                @Override
+                protected Background computeValue() {
                     return new Background(new BackgroundFill(customColorProperty.get(), CornerRadii.EMPTY, Insets.EMPTY));
                 }
             });
@@ -627,6 +672,11 @@ public class CustomColorDialog extends HBox {
                     row++;
                 }
 
+                // JDK-8161449 - hide the opacity slider
+                if (i == 3 && !showOpacitySlider) {
+                    continue;
+                }
+
                 settingsPane.add(labels[i], 1, row);
                 settingsPane.add(sliders[i], 2, row);
                 settingsPane.add(fields[i], 3, row);
@@ -656,7 +706,7 @@ public class CustomColorDialog extends HBox {
             buttonBox = new HBox();
             buttonBox.setId("buttons-hbox");
 
-            Button saveButton = new Button(Properties.getColorPickerString("Save"));
+            Button saveButton = new Button(saveBtnText != null && !saveBtnText.isEmpty() ? saveBtnText : Properties.getColorPickerString("Save"));
             saveButton.setDefaultButton(true);
             saveButton.setOnAction(t -> {
                 if (onSave != null) {
@@ -682,7 +732,12 @@ public class CustomColorDialog extends HBox {
                 }
                 dialog.hide();
             });
-            buttonBox.getChildren().addAll(saveButton, useButton, cancelButton);
+
+            if (showUseBtn) {
+                buttonBox.getChildren().addAll(saveButton, useButton, cancelButton);
+            } else {
+                buttonBox.getChildren().addAll(saveButton, cancelButton);
+            }
 
             getChildren().addAll(currentAndNewColor, settingsPane, buttonBox);
         }
@@ -728,8 +783,8 @@ public class CustomColorDialog extends HBox {
         double offset;
         Stop[] stops = new Stop[255];
         for (int y = 0; y < 255; y++) {
-            offset = (double)(1 - (1.0 / 255) * y);
-            int h = (int)((y / 255.0) * 360);
+            offset = (double) (1 - (1.0 / 255) * y);
+            int h = (int) ((y / 255.0) * 360);
             stops[y] = new Stop(offset, Color.hsb(h, 1.0, 1.0));
         }
         return new LinearGradient(0f, 1f, 0f, 0f, true, CycleMethod.NO_CYCLE, stops);
