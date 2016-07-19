@@ -97,6 +97,7 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.scene.input.ClipboardHelper;
 import com.sun.javafx.scene.input.TouchPointHelper;
+import java.lang.ref.WeakReference;
 
 /**
  * The JavaFX {@code Scene} class is the container for all content in a scene graph.
@@ -1843,7 +1844,7 @@ public class Scene implements EventTarget {
     private Point2D cursorScenePos;
 
     private static class TouchGesture {
-        EventTarget target;
+        WeakReference<EventTarget> target;
         Point2D sceneCoords;
         Point2D screenCoords;
         boolean finished;
@@ -1920,7 +1921,7 @@ public class Scene implements EventTarget {
         }
 
         if (gesture.target != null && (!gesture.finished || e.isInertia())) {
-            pickedTarget = gesture.target;
+            pickedTarget = gesture.target.get();
         } else {
             pickedTarget = e.getPickResult().getIntersectedNode();
             if (pickedTarget == null) {
@@ -1931,7 +1932,7 @@ public class Scene implements EventTarget {
         if (e.getEventType() == ZoomEvent.ZOOM_STARTED ||
                 e.getEventType() == RotateEvent.ROTATION_STARTED ||
                 e.getEventType() == ScrollEvent.SCROLL_STARTED) {
-            gesture.target = pickedTarget;
+            gesture.target = new WeakReference<>(pickedTarget);
         }
         if (e.getEventType() != ZoomEvent.ZOOM_FINISHED &&
                 e.getEventType() != RotateEvent.ROTATION_FINISHED &&
