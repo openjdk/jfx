@@ -150,6 +150,13 @@ jclass PG_GetWebPageClass(JNIEnv* env)
     return cls;
 }
 
+jclass PG_GetColorChooserClass(JNIEnv* env)
+{
+    static JGClass cls(
+        env->FindClass("com/sun/webkit/ColorChooser"));
+    return cls;
+}
+
 jclass getTimerClass(JNIEnv* env)
 {
     static JGClass timerCls(

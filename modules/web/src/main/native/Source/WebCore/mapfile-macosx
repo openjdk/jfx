@@ -1797,6 +1797,7 @@
                _Java_com_sun_webkit_BackForwardList_bflSetHostObject
                _Java_com_sun_webkit_BackForwardList_bflSetMaximumSize
                _Java_com_sun_webkit_BackForwardList_bflSize
+               _Java_com_sun_webkit_ColorChooser_twkSetSelectedColor
                _Java_com_sun_webkit_ContextMenu_twkHandleItemSelected
                _Java_com_sun_webkit_MainThread_twkScheduleDispatchFunctions
                _Java_com_sun_webkit_PageCache_twkGetCapacity

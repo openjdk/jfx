@@ -39,6 +39,7 @@ jclass PG_GetRefClass(JNIEnv* env);
 jclass PG_GetRenderQueueClass(JNIEnv* env);
 jclass PG_GetTransformClass(JNIEnv* env);
 jclass PG_GetWebPageClass(JNIEnv* env);
+jclass PG_GetColorChooserClass(JNIEnv* env);
 
 jclass getTimerClass(JNIEnv* env);
 

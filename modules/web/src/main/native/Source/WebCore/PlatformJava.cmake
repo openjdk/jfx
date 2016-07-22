@@ -152,6 +152,7 @@ list(APPEND WebCore_SOURCES
     bridge/jni/jsc/JNIUtilityPrivate.cpp
     editing/java/EditorJava.cpp
     platform/java/BridgeUtils.cpp
+    platform/java/ColorChooserJava.cpp
     platform/java/ContextMenuClientJava.cpp
     platform/java/ContextMenuItemJava.cpp
     platform/java/ContextMenuJava.cpp

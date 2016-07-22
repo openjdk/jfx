@@ -5,7 +5,7 @@
 
 #include "ChromeClientJava.h"
 #if ENABLE(INPUT_TYPE_COLOR)
-#include "ColorChooser.h"
+#include "ColorChooserJava.h"
 #endif
 #include "ContextMenu.h"
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
@@ -181,9 +181,9 @@ void ChromeClientJava::chromeDestroyed()
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-std::unique_ptr<ColorChooser> ChromeClientJava::createColorChooser(ColorChooserClient*, const Color&)
+std::unique_ptr<ColorChooser> ChromeClientJava::createColorChooser(ColorChooserClient* client, const Color& initialColor)
 {
-    return nullptr;
+    return std::make_unique<ColorChooserJava>(m_webPage, client, initialColor);
 }
 #endif
 
