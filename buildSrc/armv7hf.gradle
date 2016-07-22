@@ -132,7 +132,7 @@ def lensLFlags = [extraLFlags, "-lpthread", "-ludev", "-ldl", "-lm"].flatten()
 def monocleCFlags = [
         extraCFlags,
         "-Werror",
-        "-I", file("modules/graphics/src/main/native-glass/monocle/")].flatten();
+        "-I", file("${project("graphics").projectDir}/src/main/native-glass/monocle/")].flatten();
 def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 
 def fontCFlags = [extraCFlags].flatten()
@@ -319,21 +319,21 @@ ARMV7HF.glass.lib = "glass"
 
 ARMV7HF.glass.lensport = [:]
 ARMV7HF.glass.lensport.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens/lensport") ]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/lensport") ]
 ARMV7HF.glass.lensport.compiler = compiler
 ARMV7HF.glass.lensport.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB",
-    "-DLENSPORT", "-I", file("modules/graphics/src/main/native-glass/lens/") ].flatten()
+    "-DLENSPORT", "-I", file("${project("graphics").projectDir}/src/main/native-glass/lens/") ].flatten()
 ARMV7HF.glass.lensport.linker = linker
 ARMV7HF.glass.lensport.linkFlags = [lensLFlags].flatten()
 ARMV7HF.glass.lensport.lib = "lens_porting"
 
 ARMV7HF.glass.monocle = [:]
 ARMV7HF.glass.monocle.nativeSource = [
-        file("modules/graphics/src/main/native-glass/monocle"),
-        file("modules/graphics/src/main/native-glass/monocle/dispman"),
-        file("modules/graphics/src/main/native-glass/monocle/mx6"),
-        file("modules/graphics/src/main/native-glass/monocle/linux"),
-        file("modules/graphics/src/main/native-glass/monocle/util") ]
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle"),
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/dispman"),
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/mx6"),
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/linux"),
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/util") ]
 ARMV7HF.glass.monocle.compiler = compiler
 ARMV7HF.glass.monocle.ccFlags = monocleCFlags
 ARMV7HF.glass.monocle.linker = linker
@@ -342,8 +342,8 @@ ARMV7HF.glass.monocle.lib = "glass_monocle"
 
 ARMV7HF.glass.monocle_x11 = [:]
 ARMV7HF.glass.monocle_x11.nativeSource = [
-        file("modules/graphics/src/main/native-glass/monocle/util"),
-        file("modules/graphics/src/main/native-glass/monocle/x11") ]
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/util"),
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/x11") ]
 ARMV7HF.glass.monocle_x11.compiler = compiler
 ARMV7HF.glass.monocle_x11.ccFlags = monocleCFlags
 ARMV7HF.glass.monocle_x11.linker = linker
@@ -359,11 +359,11 @@ ARMV7HF.glass.eglfb = [:]
 // TODO use /eglfb/x11ContainerScreen when using eglfb and EGL_X11_FB_CONTAINER
 // TODO use /headless/headlessScreen when using headless
 ARMV7HF.glass.eglfb.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm"),
-    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c") ]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/fbCursor"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/input/udev"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen/fbdevScreen.c") ]
 ARMV7HF.glass.eglfb.compiler = compiler
 ARMV7HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB"].flatten()
 ARMV7HF.glass.eglfb.linker = linker
@@ -372,11 +372,11 @@ ARMV7HF.glass.eglfb.lib = "glass_lens_eglfb"
 
 ARMV7HF.glass.directfb = [:]
 ARMV7HF.glass.directfb.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm"),
-    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c") ]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/fbCursor"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/input/udev"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen/dfbScreen.c") ]
 ARMV7HF.glass.directfb.compiler = compiler
 ARMV7HF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb", "-DLINUX"].flatten()
 ARMV7HF.glass.directfb.linker = linker
@@ -385,11 +385,11 @@ ARMV7HF.glass.directfb.lib = "glass_lens_dfb"
 
 ARMV7HF.glass.fb = [:]
 ARMV7HF.glass.fb.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm"),
-    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c") ]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/fbCursor"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/input/udev"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen/fbdevScreen.c") ]
 ARMV7HF.glass.fb.compiler = compiler
 ARMV7HF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV7HF.glass.fb.linker = linker
@@ -398,12 +398,12 @@ ARMV7HF.glass.fb.lib = "glass_lens_fb"
 
 ARMV7HF.glass.eglx11 = [:]
 ARMV7HF.glass.eglx11.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm"),
-    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c")]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/fbCursor"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/input/udev"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c")]
+    //file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen")]
 ARMV7HF.glass.eglx11.compiler = compiler
 ARMV7HF.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV7HF.glass.eglx11.linker = linker
@@ -411,7 +411,7 @@ ARMV7HF.glass.eglx11.linkFlags = [lensLFlags].flatten()
 ARMV7HF.glass.eglx11.lib = "glass_lens_eglx11"
 
 ARMV7HF.glass.gtk = [:]
-ARMV7HF.glass.gtk.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
+ARMV7HF.glass.gtk.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/gtk")
 ARMV7HF.glass.gtk.compiler = compiler
 ARMV7HF.glass.gtk.ccFlags = ["-ffast-math", gtkCFlags, "-DLINUX"].flatten()
 ARMV7HF.glass.gtk.linker = linker
@@ -427,7 +427,7 @@ ARMV7HF.decora.lib = "decora_sse"
 
 ARMV7HF.prism = [:]
 ARMV7HF.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
-ARMV7HF.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+ARMV7HF.prism.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 ARMV7HF.prism.compiler = compiler
 ARMV7HF.prism.ccFlags = [extraCFlags].flatten()
 ARMV7HF.prism.linker = linker
@@ -436,7 +436,7 @@ ARMV7HF.prism.lib = "prism_common"
 
 ARMV7HF.prismSW = [:]
 ARMV7HF.prismSW.javahInclude = ["com/sun/pisces/**/*"]
-ARMV7HF.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+ARMV7HF.prismSW.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism-sw")
 ARMV7HF.prismSW.compiler = compiler
 ARMV7HF.prismSW.ccFlags = [extraCFlags].flatten()
 ARMV7HF.prismSW.linker = linker
@@ -446,8 +446,8 @@ ARMV7HF.prismSW.lib = "prism_sw"
 ARMV7HF.iio = [:]
 ARMV7HF.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 ARMV7HF.iio.nativeSource = [
-    file("modules/graphics/src/main/native-iio"),
-    file("modules/graphics/src/main/native-iio/libjpeg7")]
+    file("${project("graphics").projectDir}/src/main/native-iio"),
+    file("${project("graphics").projectDir}/src/main/native-iio/libjpeg7")]
 ARMV7HF.iio.compiler = compiler
 ARMV7HF.iio.ccFlags = iioCFlags
 ARMV7HF.iio.linker = linker
@@ -460,10 +460,10 @@ ARMV7HF.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 ARMV7HF.prismES2.eglfb = [:]
 ARMV7HF.prismES2.eglfb.nativeSource = [
-    file("modules/graphics/src/main/native-prism-es2"),
-    file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/eglWrapper"),
-    file("modules/graphics/src/main/native-prism-es2/eglfb")
+    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/eglWrapper"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/eglfb")
 ]
 ARMV7HF.prismES2.eglfb.compiler = compiler
 ARMV7HF.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", ARMV7HF.glass.lensport.nativeSource ].flatten()
@@ -473,9 +473,9 @@ ARMV7HF.prismES2.eglfb.lib = "prism_es2_eglfb"
 
 ARMV7HF.prismES2.monocle= [:]
 ARMV7HF.prismES2.monocle.nativeSource = [
-    file("modules/graphics/src/main/native-prism-es2"),
-    file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/monocle")
+    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/monocle")
 ]
 ARMV7HF.prismES2.monocle.compiler = compiler
 ARMV7HF.prismES2.monocle.ccFlags = [ es2EglfbCFlags, "-I", ARMV7HF.glass.lensport.nativeSource ].flatten()
@@ -485,9 +485,9 @@ ARMV7HF.prismES2.monocle.lib = "prism_es2_monocle"
 
 ARMV7HF.prismES2.eglx11 = [:]
 ARMV7HF.prismES2.eglx11.nativeSource = [
-    file("modules/graphics/src/main/native-prism-es2"),
-    file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/eglx11")
+    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/eglx11")
 ]
 ARMV7HF.prismES2.eglx11.compiler = compiler
 ARMV7HF.prismES2.eglx11.ccFlags = es2X11CFlags
@@ -500,7 +500,7 @@ ARMV7HF.font = [:]
 ARMV7HF.font.javahInclude = [
     "com/sun/javafx/font/**/*",
     "com/sun/javafx/text/**/*"]
-ARMV7HF.font.nativeSource = [file("modules/graphics/src/main/native-font")]
+ARMV7HF.font.nativeSource = [file("${project("graphics").projectDir}/src/main/native-font")]
 ARMV7HF.font.compiler = compiler
 ARMV7HF.font.ccFlags = fontCFlags
 ARMV7HF.font.linker = linker

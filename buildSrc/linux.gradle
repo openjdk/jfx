@@ -140,7 +140,7 @@ LINUX.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/gtk/*"]
-LINUX.glass.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
+LINUX.glass.nativeSource = file("${project(":graphics").projectDir}/src/main/native-glass/gtk")
 LINUX.glass.compiler = compiler
 LINUX.glass.ccFlags = [ccFlags, "-Werror"].flatten()
 LINUX.glass.linker = linker
@@ -156,7 +156,7 @@ LINUX.decora.lib = "decora_sse"
 
 LINUX.prism = [:]
 LINUX.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
-LINUX.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+LINUX.prism.nativeSource = file("${project(":graphics").projectDir}/src/main/native-prism")
 LINUX.prism.compiler = compiler
 LINUX.prism.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prism.linker = linker
@@ -165,7 +165,7 @@ LINUX.prism.lib = "prism_common"
 
 LINUX.prismSW = [:]
 LINUX.prismSW.javahInclude = ["com/sun/pisces/**/*"]
-LINUX.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+LINUX.prismSW.nativeSource = file("${project(":graphics").projectDir}/src/main/native-prism-sw")
 LINUX.prismSW.compiler = compiler
 LINUX.prismSW.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prismSW.linker = linker
@@ -195,8 +195,8 @@ if (!IS_64) {
 LINUX.iio = [:]
 LINUX.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 LINUX.iio.nativeSource = [
-    file("modules/graphics/src/main/native-iio"),
-    file("modules/graphics/src/main/native-iio/libjpeg7")]
+    file("${project("graphics").projectDir}/src/main/native-iio"),
+    file("${project("graphics").projectDir}/src/main/native-iio/libjpeg7")]
 LINUX.iio.compiler = compiler
 LINUX.iio.ccFlags = [ccFlags].flatten()
 LINUX.iio.linker = linker
@@ -206,9 +206,9 @@ LINUX.iio.lib = "javafx_iio"
 LINUX.prismES2 = [:]
 LINUX.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 LINUX.prismES2.nativeSource = [
-    file("modules/graphics/src/main/native-prism-es2"),
-    file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/x11")
+    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/x11")
 ]
 LINUX.prismES2.compiler = compiler
 LINUX.prismES2.ccFlags = ["-DLINUX", ccFlags].flatten()
@@ -222,7 +222,7 @@ LINUX.font.javahInclude = [
      "com/sun/javafx/font/**/*",
      "com/sun/javafx/text/**/*"]
 LINUX.font.compiler = compiler
-LINUX.font.nativeSource = [file("modules/graphics/src/main/native-font")]
+LINUX.font.nativeSource = [file("${project("graphics").projectDir}/src/main/native-font")]
 LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 LINUX.font.linker = linker
 LINUX.font.linkFlags = [linkFlags].flatten()

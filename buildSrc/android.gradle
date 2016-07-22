@@ -219,18 +219,18 @@ project(":graphics") {
                 def props = project.ext["ANDROID"]
                 copy {
                     from(
-                         "modules/graphics/build/libs/vmlauncher/android/${props.library(props.vmlauncher.lib)}",
-                         "modules/graphics/build/libs/surface/android/${props.library(props.surface.lib)}"
+                         "${project("graphics").buildDir}/libs/vmlauncher/android/${props.library(props.vmlauncher.lib)}",
+                         "${project("graphics").buildDir}/libs/surface/android/${props.library(props.surface.lib)}"
                     )
                     into ("build/android-sdk/dalvik/${props.libDest}")
                 }
                 copy {
-                    from ("modules/graphics/build/libs/${props.jfxdvklib}")
+                    from ("${project("graphics").buildDir}/libs/${props.jfxdvklib}")
                     into ("build/android-sdk/dalvik/lib")
                 }
                 if (compileNativeText) {
                     copy {
-                        from ("modules/graphics/build/libs/fontNativeFreetype/android")
+                        from ("${project("graphics").buildDir}/libs/fontNativeFreetype/android")
                         into ("build/android-sdk/$ANDROID.libDest")
                     }
                 }
@@ -243,19 +243,19 @@ project(":controls") {
     afterEvaluate {
         task compileControlsJavaAndroid(type: JavaCompile, group: "Build", dependsOn: [":graphics:compileJava", ":controls:compileJava"]) {
             description = "Task compiles controls for Android"
-            classpath = files("modules/base/build/classes/main",
-                "modules/graphics/build/classes/main",
-                "modules/controls/build/classes/main"
+            classpath = files("${project("base").buildDir}/classes/main",
+                "${project("graphics").buildDir}/classes/main",
+                "${project("controls").buildDir}/classes/main"
             )
-            destinationDir = file("modules/controls/build/classes/android")
-            dependencyCacheDir = file("modules/controls/build/dependency-cache")
-            source file("modules/controls/src/android/java")
+            destinationDir = file("${project("controls").buildDir}/classes/android")
+            dependencyCacheDir = file("${project("controls").buildDir}/dependency-cache")
+            source file("${project("controls").projectDir}/src/android/java")
         }
 
        task processControlsResourcesAndroid() {
            copy {
-               from ("modules/controls/src/android/resources")
-               into ("modules/controls/build/resources/android")
+               from ("${project("controls").projectDir}/src/android/resources")
+               into ("${project("controls").buildDir}/resources/android")
            }
         }
 
@@ -287,9 +287,9 @@ project(":web") {
                 project(":graphics").sourceSets.main.output.classesDir,
                 project(":base").sourceSets.main.output.classesDir
             )
-            destinationDir = file("modules/web/build/classes/android")
-            dependencyCacheDir = file("modules/web/build/dependency-cache")
-            source file("modules/web/src/android/java")
+            destinationDir = file("${project("web").buildDir}/classes/android")
+            dependencyCacheDir = file("${project("web").buildDir}/dependency-cache")
+            source file("${project("web").projectDir}/src/android/java")
         }
 
         def jarWebJavaAndroid = task("jarWebJavaAndroid",
@@ -308,7 +308,7 @@ project(":web") {
         javahAndroidDvkwebview.dependsOn(compileWebJavaAndroid)
 
         jfxrtAndroid {
-            from "modules/web/build/classes/android"
+            from "${project("web").buildDir}/classes/android"
         }
 
         sdkAndroid  {
@@ -317,12 +317,12 @@ project(":web") {
                 def props = project.ext["ANDROID"]
                 copy {
                     from(
-                         "modules/web/build/libs/dvkwebview/android/${props.library(props.dvkwebview.lib)}"
+                         "${project("web").buildDir}/libs/dvkwebview/android/${props.library(props.dvkwebview.lib)}"
                     )
                     into ("build/android-sdk/dalvik/${props.libDest}")
                 }
                 copy {
-                    from ("modules/web/build/libs/webview/android/${props.library(props.webview.lib)}")
+                    from ("${project("web").buildDir}/libs/webview/android/${props.library(props.webview.lib)}")
                     into ("build/android-sdk/${props.libDest}")
                 }
             }
@@ -394,18 +394,18 @@ def linkFlags = ["--sysroot=$sysroot",
 
 ANDROID.vmlauncher = [:]
 ANDROID.vmlauncher.classpath = files("$sdk/platforms/$sdk_target/android.jar",
-                                     "modules/graphics/build/classes/android")
+                                     "${project("graphics").buildDir}/classes/android")
 
-ANDROID.vmlauncher.javahSource = files("modules/graphics/build/classes/android")
-ANDROID.vmlauncher.javahClasspath = files("modules/graphics/build/classes/android",
+ANDROID.vmlauncher.javahSource = files("${project("graphics").buildDir}/classes/android")
+ANDROID.vmlauncher.javahClasspath = files("${project("graphics").buildDir}/classes/android",
                                           "$sdk/platforms/$sdk_target/android.jar")
 ANDROID.vmlauncher.javahInclude = [
     "com/oracle/dalvik/*"
 ]
 ANDROID.vmlauncher.nativeSource = [
-    file("modules/graphics/src/android/native/VMLauncher.c"),
-    file("modules/graphics/src/android/native/NativePipeReader.c"),
-    file("modules/graphics/src/android/native/DalvikProxySelector.c")
+    file("${project("graphics").projectDir}/src/android/native/VMLauncher.c"),
+    file("${project("graphics").projectDir}/src/android/native/NativePipeReader.c"),
+    file("${project("graphics").projectDir}/src/android/native/DalvikProxySelector.c")
 ]
 ANDROID.vmlauncher.compiler = compiler
 ANDROID.vmlauncher.linker = linker
@@ -420,7 +420,7 @@ ANDROID.surface.javahInclude = [
     "com/sun/glass/ui/android/*"
 ]
 ANDROID.surface.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens/android")
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/android")
 ]
 ANDROID.surface.compiler = compiler
 ANDROID.surface.linker = linker
@@ -430,13 +430,13 @@ ANDROID.surface.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 ANDROID.surface.linkFlags = [linkFlags, "-ldl", "-landroid", "-llog"].flatten()
 
 ANDROID.webview = [:]
-ANDROID.webview.javahSource = files("modules/web/build/classes/android")
-ANDROID.webview.javahClasspath = files("modules/web/build/classes/android")
+ANDROID.webview.javahSource = files("${project("web").buildDir}/classes/android")
+ANDROID.webview.javahClasspath = files("${project("web").buildDir}/classes/android")
 ANDROID.webview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]
 ANDROID.webview.nativeSource = [
-    file("modules/web/src/android/native/native_webview.c")
+    file("${project("web").projectDir}/src/android/native/native_webview.c")
 ]
 ANDROID.webview.compiler = compiler
 ANDROID.webview.linker = linker
@@ -446,13 +446,13 @@ ANDROID.webview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 ANDROID.webview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
 
 ANDROID.dvkwebview = [:]
-ANDROID.dvkwebview.javahSource = files("modules/web/build/classes/android")
-ANDROID.dvkwebview.javahClasspath = files("modules/web/build/classes/android")
+ANDROID.dvkwebview.javahSource = files("${project("web").buildDir}/classes/android")
+ANDROID.dvkwebview.javahClasspath = files("${project("web").buildDir}/classes/android")
 ANDROID.dvkwebview.javahInclude = [
     "com/sun/webkit/NativeWebView.class"
 ]
 ANDROID.dvkwebview.nativeSource = [
-    file("modules/web/src/android/native/android_webview.c")
+    file("${project("web").projectDir}/src/android/native/android_webview.c")
 ]
 ANDROID.dvkwebview.compiler = compiler
 ANDROID.dvkwebview.linker = linker
@@ -471,25 +471,25 @@ ANDROID.glass.javahInclude = [
 
 ANDROID.glass.lensport = [:]
 ANDROID.glass.lensport.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens/lensport"),
-    file("modules/graphics/src/main/native-glass/lens/lensport/initPlatform.c"),
-    file("modules/graphics/src/main/native-glass/lens/lensport/wrapped_functions.c")
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/lensport"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/lensport/initPlatform.c"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/lensport/wrapped_functions.c")
 ]
 ANDROID.glass.lensport.compiler = compiler
 ANDROID.glass.lensport.linker = linker
 ANDROID.glass.lensport.lib = "lens_porting"
 ANDROID.glass.lensport.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags, "-DISEGLFB", "-DLENSPORT",
-    "-I", file("modules/graphics/src/main/native-glass/lens")].flatten()
+    "-I", file("${project("graphics").projectDir}/src/main/native-glass/lens")].flatten()
 ANDROID.glass.lensport.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
 
 ANDROID.glass.eglfb = [:]
 ANDROID.glass.eglfb.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm"),
-    file("modules/graphics/src/main/native-glass/lens/cursor/nullCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/android"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c")
+    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/nullCursor"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/input/android"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen/androidScreen.c")
 ]
 ANDROID.glass.eglfb.compiler = compiler
 ANDROID.glass.eglfb.linker = linker
@@ -500,7 +500,7 @@ ANDROID.glass.eglfb.linkFlags = [linkFlags, "-ldl", "-landroid", "-llog"].flatte
 
 ANDROID.prism = [:]
 ANDROID.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
-ANDROID.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+ANDROID.prism.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 ANDROID.prism.compiler = compiler
 ANDROID.prism.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
@@ -510,7 +510,7 @@ ANDROID.prism.lib = "prism_common"
 
 ANDROID.prismSW = [:]
 ANDROID.prismSW.javahInclude = ["com/sun/pisces/**/*"]
-ANDROID.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+ANDROID.prismSW.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism-sw")
 ANDROID.prismSW.compiler = compiler
 ANDROID.prismSW.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
@@ -529,8 +529,8 @@ ANDROID.decora.lib = "decora_sse"
 ANDROID.iio = [:]
 ANDROID.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 ANDROID.iio.nativeSource = [
-    file("modules/graphics/src/main/native-iio"),
-    file("modules/graphics/src/main/native-iio/libjpeg7")]
+    file("${project("graphics").projectDir}/src/main/native-iio"),
+    file("${project("graphics").projectDir}/src/main/native-iio/libjpeg7")]
 ANDROID.iio.compiler = compiler
 ANDROID.iio.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
@@ -544,9 +544,9 @@ ANDROID.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 ANDROID.prismES2.eglfb = [:]
 ANDROID.prismES2.eglfb.nativeSource = [
-    file("modules/graphics/src/main/native-prism-es2"),
-    file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/eglfb")]
+    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/eglfb")]
 ANDROID.prismES2.eglfb.compiler = compiler
 ANDROID.prismES2.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags, "-DIS_EGLFB"].flatten()
@@ -586,7 +586,7 @@ if (compileNativeText) {
         "com/sun/javafx/font/freetype/OSFreetype.class"
     ]
     ANDROID.fontNativeFreetype.nativeSource = [
-        file("modules/graphics/src/main/native-font/freetype.c")
+        file("${project("graphics").projectDir}/src/main/native-font/freetype.c")
     ]
     ANDROID.fontNativeFreetype.compiler = compiler
     ANDROID.fontNativeFreetype.linker = linker

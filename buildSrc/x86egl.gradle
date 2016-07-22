@@ -119,7 +119,7 @@ def lensLFlags = [extraLFlags, "-lpthread", "-ludev", "-ldl", "-lm"].flatten()
 def monocleCFlags = [
         extraCFlags,
         "-Werror",
-        "-I", file("modules/graphics/src/main/native-glass/monocle/")].flatten();
+        "-I", file("${project("graphics").projectDir}/src/main/native-glass/monocle/")].flatten();
 def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 
 def fontCFlags = [extraCFlags].flatten()
@@ -348,9 +348,9 @@ X86EGL.glass.lib = "glass"
 
 X86EGL.glass.monocle = [:]
 X86EGL.glass.monocle.nativeSource = [
-        file("modules/graphics/src/main/native-glass/monocle"),
-        file("modules/graphics/src/main/native-glass/monocle/linux"),
-        file("modules/graphics/src/main/native-glass/monocle/util") ]
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle"),
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/linux"),
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/util") ]
 X86EGL.glass.monocle.compiler = compiler
 X86EGL.glass.monocle.ccFlags = monocleCFlags
 X86EGL.glass.monocle.linker = linker
@@ -359,8 +359,8 @@ X86EGL.glass.monocle.lib = "glass_monocle"
 
 X86EGL.glass.monocle_x11 = [:]
 X86EGL.glass.monocle_x11.nativeSource = [
-        file("modules/graphics/src/main/native-glass/monocle/util"),
-        file("modules/graphics/src/main/native-glass/monocle/x11") ]
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/util"),
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/x11") ]
 X86EGL.glass.monocle_x11.compiler = compiler
 X86EGL.glass.monocle_x11.ccFlags = monocleCFlags
 X86EGL.glass.monocle_x11.linker = linker
@@ -369,10 +369,10 @@ X86EGL.glass.monocle_x11.lib = "glass_monocle_x11"
 
 X86EGL.glass.lensport = [:]
 X86EGL.glass.lensport.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens/lensport") ]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/lensport") ]
 X86EGL.glass.lensport.compiler = compiler
 X86EGL.glass.lensport.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB",
-    "-DLENSPORT", "-I", file("modules/graphics/src/main/native-glass/lens/") ].flatten()
+    "-DLENSPORT", "-I", file("${project("graphics").projectDir}/src/main/native-glass/lens/") ].flatten()
 X86EGL.glass.lensport.linker = linker
 X86EGL.glass.lensport.linkFlags = [lensLFlags].flatten()
 X86EGL.glass.lensport.lib = "lens_porting"
@@ -385,12 +385,12 @@ X86EGL.glass.eglfb = [:]
 
 // TODO use /headless/headlessScreen when using headless
 X86EGL.glass.eglfb.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm"),
-    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c") ]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/fbCursor"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/input/udev"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c") ]
+    //file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.eglfb.compiler = compiler
 X86EGL.glass.eglfb.ccFlags = [ es2EglfbCFlags, "-I", X86EGL.glass.lensport.nativeSource ].flatten()
 X86EGL.glass.eglfb.linker = linker
@@ -399,13 +399,13 @@ X86EGL.glass.eglfb.lib = "glass_lens_eglfb"
 
 X86EGL.glass.directfb = [:]
 X86EGL.glass.directfb.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm"),
-    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/lensport") ]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/fbCursor"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/input/udev"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen/dfbScreen.c"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/lensport") ]
+    //file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.directfb.compiler = compiler
 X86EGL.glass.directfb.ccFlags = ["-ffast-math", extraCFlags,
         "-I${sdk}/usr/include/directfb", "-DLINUX"].flatten()
@@ -415,13 +415,13 @@ X86EGL.glass.directfb.lib = "glass_lens_dfb"
 
 X86EGL.glass.fb = [:]
 X86EGL.glass.fb.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm"),
-    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
-    file("modules/graphics/src/main/native-glass/lens/lensport") ]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/fbCursor"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/input/udev"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen/fbdevScreen.c"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/lensport") ]
+    //file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.fb.compiler = compiler
 X86EGL.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 X86EGL.glass.fb.linker = linker
@@ -430,12 +430,12 @@ X86EGL.glass.fb.lib = "glass_lens_fb"
 
 X86EGL.glass.eglx11 = [:]
 X86EGL.glass.eglx11.nativeSource = [
-    file("modules/graphics/src/main/native-glass/lens"),
-    file("modules/graphics/src/main/native-glass/lens/wm"),
-    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/udev"),
-    file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c")]
-    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
+    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/fbCursor"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/input/udev"),
+    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c")]
+    //file("${project("graphics").projectDir}/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.eglx11.compiler = compiler
 X86EGL.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 X86EGL.glass.eglx11.linker = linker
@@ -443,7 +443,7 @@ X86EGL.glass.eglx11.linkFlags = [lensLFlags].flatten()
 X86EGL.glass.eglx11.lib = "glass_lens_eglx11"
 
 X86EGL.glass.gtk = [:]
-X86EGL.glass.gtk.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
+X86EGL.glass.gtk.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/gtk")
 X86EGL.glass.gtk.compiler = compiler
 X86EGL.glass.gtk.ccFlags = ["-ffast-math", gtkCFlags, "-DLINUX"].flatten()
 X86EGL.glass.gtk.linker = linker
@@ -459,7 +459,7 @@ X86EGL.decora.lib = "decora_sse"
 
 X86EGL.prism = [:]
 X86EGL.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
-X86EGL.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+X86EGL.prism.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 X86EGL.prism.compiler = compiler
 X86EGL.prism.ccFlags = [extraCFlags].flatten()
 X86EGL.prism.linker = linker
@@ -468,7 +468,7 @@ X86EGL.prism.lib = "prism_common"
 
 X86EGL.prismSW = [:]
 X86EGL.prismSW.javahInclude = ["com/sun/pisces/**/*"]
-X86EGL.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+X86EGL.prismSW.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism-sw")
 X86EGL.prismSW.compiler = compiler
 X86EGL.prismSW.ccFlags = [extraCFlags].flatten()
 X86EGL.prismSW.linker = linker
@@ -478,8 +478,8 @@ X86EGL.prismSW.lib = "prism_sw"
 X86EGL.iio = [:]
 X86EGL.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 X86EGL.iio.nativeSource = [
-    file("modules/graphics/src/main/native-iio"),
-    file("modules/graphics/src/main/native-iio/libjpeg7")]
+    file("${project("graphics").projectDir}/src/main/native-iio"),
+    file("${project("graphics").projectDir}/src/main/native-iio/libjpeg7")]
 X86EGL.iio.compiler = compiler
 X86EGL.iio.ccFlags = iioCFlags
 X86EGL.iio.linker = linker
@@ -492,9 +492,9 @@ X86EGL.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 X86EGL.prismES2.eglfb = [:]
 X86EGL.prismES2.eglfb.nativeSource = [
-    file("modules/graphics/src/main/native-prism-es2"),
-    file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/eglfb")
+    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/eglfb")
 ]
 X86EGL.prismES2.eglfb.compiler = compiler
 X86EGL.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", X86EGL.glass.lensport.nativeSource ].flatten()
@@ -504,9 +504,9 @@ X86EGL.prismES2.eglfb.lib = "prism_es2_eglfb"
 
 X86EGL.prismES2.eglx11 = [:]
 X86EGL.prismES2.eglx11.nativeSource = [
-    file("modules/graphics/src/main/native-prism-es2"),
-    file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/eglx11")
+    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/eglx11")
 ]
 X86EGL.prismES2.eglx11.compiler = compiler
 X86EGL.prismES2.eglx11.ccFlags = es2X11CFlags
@@ -516,9 +516,9 @@ X86EGL.prismES2.eglx11.lib = "prism_es2_eglx11"
 
 X86EGL.prismES2.monocle= [:]
 X86EGL.prismES2.monocle.nativeSource = [
-        file("modules/graphics/src/main/native-prism-es2"),
-        file("modules/graphics/src/main/native-prism-es2/GL"),
-        file("modules/graphics/src/main/native-prism-es2/monocle")
+        file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+        file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+        file("${project("graphics").projectDir}/src/main/native-prism-es2/monocle")
 ]
 X86EGL.prismES2.monocle.compiler = compiler
 X86EGL.prismES2.monocle.ccFlags = [ es2EglfbCFlags, "-I", X86EGL.glass.lensport.nativeSource ].flatten()
@@ -531,7 +531,7 @@ X86EGL.font = [:]
 X86EGL.font.javahInclude = [
     "com/sun/javafx/font/**/*",
     "com/sun/javafx/text/**/*"]
-X86EGL.font.nativeSource = [file("modules/graphics/src/main/native-font")]
+X86EGL.font.nativeSource = [file("${project("graphics").projectDir}/src/main/native-font")]
 X86EGL.font.compiler = compiler
 X86EGL.font.ccFlags = fontCFlags
 X86EGL.font.linker = linker

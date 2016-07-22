@@ -3191,9 +3191,9 @@ compileTargets { t ->
         enabled = COMPILE_SWT
         group = "Basic"
         description = "Creates the javafx-swt.jar for the $t.name target"
-        archiveName = project(":swt").buildDir.path + "/libs/javafx-swt.jar";
+        archiveName = "${project(":swt").buildDir}/libs/javafx-swt.jar";
         includeEmptyDirs = false
-        from(project(":swt").buildDir.path + "/classes/main");
+        from("${project(":swt").buildDir}/classes/main");
         include("**/javafx/embed/swt/**")
 
         dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
@@ -3263,7 +3263,7 @@ compileTargets { t ->
             // FIXME: JIGSAW -- update this for modules
             // Copy over the javapackager man files
             copy {
-                from project(":fxpackager").buildDir.path + "/man"
+                from "${project(":fxpackager").buildDir}/man"
                 into "build/${sdkDirName}/man"
             }
         }
@@ -3305,8 +3305,8 @@ ext.JFXRT_CP =
         project(":controls").sourceSets.main.output.classesDir,
         project(":fxml").sourceSets.main.output.classesDir,
         project(":swing").sourceSets.main.output.classesDir, //NOTE - used by 3Dviewer
-        project(":media").buildDir.path + "/classes/main",
-        project(":web").buildDir.path + "/classes/main",
+        "${project(":media").buildDir}/classes/main",
+        "${project(":web").buildDir}/classes/main",
     )
 
 project(":apps") {

@@ -136,7 +136,7 @@ MAC.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/mac/*"]
-MAC.glass.nativeSource = file("modules/graphics/src/main/native-glass/mac")
+MAC.glass.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/mac")
 MAC.glass.compiler = compiler
 MAC.glass.ccFlags = [ccFlags].flatten()
 MAC.glass.linker = linker
@@ -152,7 +152,7 @@ MAC.decora.lib = "decora_sse"
 
 MAC.prism = [:]
 MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
-MAC.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+MAC.prism.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 MAC.prism.compiler = compiler
 MAC.prism.ccFlags = ["-O3", "-DINLINE=inline", "-c", ccBaseFlags].flatten()
 MAC.prism.linker = linker
@@ -161,7 +161,7 @@ MAC.prism.lib = "prism_common"
 
 MAC.prismSW = [:]
 MAC.prismSW.javahInclude = ["com/sun/pisces/**/*"]
-MAC.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+MAC.prismSW.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism-sw")
 MAC.prismSW.compiler = compiler
 MAC.prismSW.ccFlags = [MAC.prism.ccFlags].flatten()
 MAC.prismSW.linker = linker
@@ -193,8 +193,8 @@ MAC.launcherlibrary.linkFlags = ["-ldl", "-dynamiclib",
 MAC.iio = [:]
 MAC.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 MAC.iio.nativeSource = [
-    file("modules/graphics/src/main/native-iio"),
-    file("modules/graphics/src/main/native-iio/libjpeg7")]
+    file("${project("graphics").projectDir}/src/main/native-iio"),
+    file("${project("graphics").projectDir}/src/main/native-iio/libjpeg7")]
 MAC.iio.compiler = compiler
 MAC.iio.ccFlags = [ccFlags].flatten()
 MAC.iio.linker = linker
@@ -204,9 +204,9 @@ MAC.iio.lib = "javafx_iio"
 MAC.prismES2 = [:]
 MAC.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 MAC.prismES2.nativeSource = [
-    file("modules/graphics/src/main/native-prism-es2"),
-    file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/macosx")
+    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/macosx")
 ]
 MAC.prismES2.compiler = compiler
 MAC.prismES2.ccFlags = ["-DMACOSX", ccFlags].flatten()
@@ -219,7 +219,7 @@ MAC.font = [:]
 MAC.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-MAC.font.nativeSource = [file("modules/graphics/src/main/native-font")]
+MAC.font.nativeSource = [file("${project("graphics").projectDir}/src/main/native-font")]
 MAC.font.compiler = compiler
 MAC.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 MAC.font.linker = linker

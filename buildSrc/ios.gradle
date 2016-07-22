@@ -136,7 +136,7 @@ IOS.glass.javahInclude = [
 IOS.glass.lib = "glass"
 
 IOS.glass.arm = [:]
-IOS.glass.arm.nativeSource = file("modules/graphics/src/main/native-glass/ios")
+IOS.glass.arm.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/ios")
 IOS.glass.arm.compiler = compiler
 IOS.glass.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.glass.arm.linker = linker
@@ -144,7 +144,7 @@ IOS.glass.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneO
 IOS.glass.arm.lib = "glass_${archArm}"
 
 IOS.glass.arm64 = [:]
-IOS.glass.arm64.nativeSource = file("modules/graphics/src/main/native-glass/ios")
+IOS.glass.arm64.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/ios")
 IOS.glass.arm64.compiler = compiler
 IOS.glass.arm64.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm64, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.glass.arm64.linker = linker
@@ -152,7 +152,7 @@ IOS.glass.arm64.linkFlags = ["-arch_only", archArm64, "-syslibroot", sdkPath(iPh
 IOS.glass.arm64.lib = "glass_${archArm64}"
 
 IOS.glass.x86 = [:]
-IOS.glass.x86.nativeSource = file("modules/graphics/src/main/native-glass/ios")
+IOS.glass.x86.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/ios")
 IOS.glass.x86.compiler = compiler
 IOS.glass.x86.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.glass.x86.linker = linker
@@ -160,7 +160,7 @@ IOS.glass.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneS
 IOS.glass.x86.lib = "glass_${archX86}"
 
 IOS.glass.x86_64 = [:]
-IOS.glass.x86_64.nativeSource = file("modules/graphics/src/main/native-glass/ios")
+IOS.glass.x86_64.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/ios")
 IOS.glass.x86_64.compiler = compiler
 IOS.glass.x86_64.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86_64, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.glass.x86_64.linker = linker
@@ -169,13 +169,13 @@ IOS.glass.x86_64.lib = "glass_${archX86_64}"
 
 IOS.extensions = [:]
 IOS.extensions.variants = ["arm", "arm64", "x86", "x86_64"];
-IOS.extensions.javahSource = files("modules/extensions/build/classes/ios")
-IOS.extensions.javahClasspath = files("modules/extensions/build/classes/ios/")
+IOS.extensions.javahSource = files("${project("extensions").buildDir}/classes/ios")
+IOS.extensions.javahClasspath = files("${project("extensions").buildDir}/classes/ios/")
 IOS.extensions.javahInclude = ["com/sun/javafx/ext/device/ios/**/*"]
 IOS.extensions.lib = "extensions_ios"
 
 IOS.extensions.arm = [:]
-IOS.extensions.arm.nativeSource = file("modules/extensions/src/ios/native-device/ios")
+IOS.extensions.arm.nativeSource = file("${project("extensions").projectDir}/src/ios/native-device/ios")
 IOS.extensions.arm.compiler = compiler
 IOS.extensions.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.extensions.arm.linker = linker
@@ -183,7 +183,7 @@ IOS.extensions.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iP
 IOS.extensions.arm.lib = "extensions_ios_${archArm}"
 
 IOS.extensions.arm64 = [:]
-IOS.extensions.arm64.nativeSource = file("modules/extensions/src/ios/native-device/ios")
+IOS.extensions.arm64.nativeSource = file("${project("extensions").projectDir}/src/ios/native-device/ios")
 IOS.extensions.arm64.compiler = compiler
 IOS.extensions.arm64.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm64, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.extensions.arm64.linker = linker
@@ -191,7 +191,7 @@ IOS.extensions.arm64.linkFlags = ["-arch_only", archArm64, "-syslibroot", sdkPat
 IOS.extensions.arm64.lib = "extensions_ios_${archArm64}"
 
 IOS.extensions.x86 = [:]
-IOS.extensions.x86.nativeSource = file("modules/extensions/src/ios/native-device/ios")
+IOS.extensions.x86.nativeSource = file("${project("extensions").projectDir}/src/ios/native-device/ios")
 IOS.extensions.x86.compiler = compiler
 IOS.extensions.x86.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.extensions.x86.linker = linker
@@ -199,7 +199,7 @@ IOS.extensions.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iP
 IOS.extensions.x86.lib = "extensions_ios_${archX86}"
 
 IOS.extensions.x86_64 = [:]
-IOS.extensions.x86_64.nativeSource = file("modules/extensions/src/ios/native-device/ios")
+IOS.extensions.x86_64.nativeSource = file("${project("extensions").projectDir}/src/ios/native-device/ios")
 IOS.extensions.x86_64.compiler = compiler
 IOS.extensions.x86_64.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86_64, "-isysroot", sdkPath(iPhoneSim)].flatten()
 IOS.extensions.x86_64.linker = linker
@@ -230,7 +230,7 @@ IOS.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableS
 IOS.prism.variants = ["arm", "arm64", "x86", "x86_64"];
 
 IOS.prism.arm = [:]
-IOS.prism.arm.nativeSource = file("modules/graphics/src/main/native-prism")
+IOS.prism.arm.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 IOS.prism.arm.compiler = compiler
 IOS.prism.arm.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS), "-DINLINE=inline"].flatten()
 IOS.prism.arm.linker = linker
@@ -238,7 +238,7 @@ IOS.prism.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneO
 IOS.prism.arm.lib = "prism_common_${archArm}"
 
 IOS.prism.arm64 = [:]
-IOS.prism.arm64.nativeSource = file("modules/graphics/src/main/native-prism")
+IOS.prism.arm64.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 IOS.prism.arm64.compiler = compiler
 IOS.prism.arm64.ccFlags = [ccFlags, "-arch", archArm64, "-isysroot", sdkPath(iPhoneOS), "-DINLINE=inline"].flatten()
 IOS.prism.arm64.linker = linker
@@ -246,7 +246,7 @@ IOS.prism.arm64.linkFlags = ["-arch_only", archArm64, "-syslibroot", sdkPath(iPh
 IOS.prism.arm64.lib = "prism_common_${archArm64}"
 
 IOS.prism.x86 = [:]
-IOS.prism.x86.nativeSource = file("modules/graphics/src/main/native-prism")
+IOS.prism.x86.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 IOS.prism.x86.compiler = compiler
 IOS.prism.x86.ccFlags = [ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim), "-DINLINE=inline"].flatten()
 IOS.prism.x86.linker = linker
@@ -254,7 +254,7 @@ IOS.prism.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneS
 IOS.prism.x86.lib = "prism_common_${archX86}"
 
 IOS.prism.x86_64 = [:]
-IOS.prism.x86_64.nativeSource = file("modules/graphics/src/main/native-prism")
+IOS.prism.x86_64.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 IOS.prism.x86_64.compiler = compiler
 IOS.prism.x86_64.ccFlags = [ccFlags, "-arch", archX86_64, "-isysroot", sdkPath(iPhoneSim), "-DINLINE=inline"].flatten()
 IOS.prism.x86_64.linker = linker
@@ -267,7 +267,7 @@ IOS.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 IOS.prismSW.variants = ["arm", "arm64", "x86", "x86_64"];
 
 IOS.prismSW.arm = [:]
-IOS.prismSW.arm.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+IOS.prismSW.arm.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism-sw")
 IOS.prismSW.arm.compiler = compiler
 IOS.prismSW.arm.ccFlags = [IOS.prism.arm.ccFlags].flatten()
 IOS.prismSW.arm.linker = linker
@@ -275,7 +275,7 @@ IOS.prismSW.arm.linkFlags = [IOS.prism.arm.linkFlags].flatten()
 IOS.prismSW.arm.lib = "prism_sw_${archArm}"
 
 IOS.prismSW.arm64 = [:]
-IOS.prismSW.arm64.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+IOS.prismSW.arm64.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism-sw")
 IOS.prismSW.arm64.compiler = compiler
 IOS.prismSW.arm64.ccFlags = [IOS.prism.arm64.ccFlags].flatten()
 IOS.prismSW.arm64.linker = linker
@@ -283,7 +283,7 @@ IOS.prismSW.arm64.linkFlags = [IOS.prism.arm64.linkFlags].flatten()
 IOS.prismSW.arm64.lib = "prism_sw_${archArm64}"
 
 IOS.prismSW.x86 = [:]
-IOS.prismSW.x86.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+IOS.prismSW.x86.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism-sw")
 IOS.prismSW.x86.compiler = compiler
 IOS.prismSW.x86.ccFlags = [IOS.prism.x86.ccFlags].flatten()
 IOS.prismSW.x86.linker = linker
@@ -291,7 +291,7 @@ IOS.prismSW.x86.linkFlags = [IOS.prism.x86.linkFlags].flatten()
 IOS.prismSW.x86.lib = "prism_sw_${archX86}"
 
 IOS.prismSW.x86_64 = [:]
-IOS.prismSW.x86_64.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+IOS.prismSW.x86_64.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism-sw")
 IOS.prismSW.x86_64.compiler = compiler
 IOS.prismSW.x86_64.ccFlags = [IOS.prism.x86_64.ccFlags].flatten()
 IOS.prismSW.x86_64.linker = linker
@@ -305,9 +305,9 @@ IOS.iio.variants = ["arm", "arm64", "x86", "x86_64"];
 
 IOS.iio.arm = [:]
 IOS.iio.arm.nativeSource = [
-    file("modules/graphics/src/main/native-iio"),
-    file("modules/graphics/src/main/native-iio/ios"),
-    file("modules/graphics/src/main/native-iio/libjpeg7")]
+    file("${project("graphics").projectDir}/src/main/native-iio"),
+    file("${project("graphics").projectDir}/src/main/native-iio/ios"),
+    file("${project("graphics").projectDir}/src/main/native-iio/libjpeg7")]
 IOS.iio.arm.compiler = compiler
 IOS.iio.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS), "-ffast-math"].flatten()
 IOS.iio.arm.linker = linker
@@ -345,9 +345,9 @@ IOS.prismES2.variants = ["arm", "arm64", "x86", "x86_64"];
 
 IOS.prismES2.arm = [:]
 IOS.prismES2.arm.nativeSource = [
-    file("modules/graphics/src/main/native-prism-es2"),
-    file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/ios")
+    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
+    file("${project("graphics").projectDir}/src/main/native-prism-es2/ios")
 ]
 IOS.prismES2.arm.compiler = compiler
 IOS.prismES2.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
@@ -388,7 +388,7 @@ IOS.font.javahInclude = [
 IOS.font.variants = ["arm", "arm64", "x86", "x86_64"];
 
 IOS.font.arm = [:]
-IOS.font.arm.nativeSource = [file("modules/graphics/src/main/native-font")]
+IOS.font.arm.nativeSource = [file("${project("graphics").projectDir}/src/main/native-font")]
 IOS.font.arm.compiler = compiler
 IOS.font.arm.ccFlags = ["-DJFXFONT_PLUS", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.font.arm.linker = linker
@@ -464,7 +464,7 @@ IOS.webview.javahInclude = ["javafx/scene/web/*"]
 IOS.webview.variants = ["arm", "arm64", "x86", "x86_64"];
 
 IOS.webview.arm = [:]
-IOS.webview.arm.nativeSource = file("modules/web/src/ios/native")
+IOS.webview.arm.nativeSource = file("${project("web").projectDir}/src/ios/native")
 IOS.webview.arm.compiler = compiler
 IOS.webview.arm.ccFlags = [ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.webview.arm.linker = linker
@@ -472,7 +472,7 @@ IOS.webview.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhon
 IOS.webview.arm.lib = "javafx_ios_webnode_${archArm}"
 
 IOS.webview.arm64 = [:]
-IOS.webview.arm64.nativeSource = file("modules/web/src/ios/native")
+IOS.webview.arm64.nativeSource = file("${project("web").projectDir}/src/ios/native")
 IOS.webview.arm64.compiler = compiler
 IOS.webview.arm64.ccFlags = [ccFlags, "-arch", archArm64, "-isysroot", sdkPath(iPhoneOS)].flatten()
 IOS.webview.arm64.linker = linker
@@ -497,15 +497,15 @@ IOS.webview.x86_64.lib = "javafx_ios_webnode_${archX86_64}"
 
 IOS.media = [:]
 IOS.media.lib = "jfxmedia"
-IOS.media.javahSource = files("modules/media/build/classes/main")
-IOS.media.javahClasspath = files("modules/media/build/classes/main")
+IOS.media.javahSource = files("${project("media").buildDir}/classes/main")
+IOS.media.javahClasspath = files("${project("media").buildDir}/classes/main")
 IOS.media.javahInclude = ["com/sun/media/jfxmediaimpl/*"]
 IOS.media.variants = ["arm", "arm64", "x86", "x86_64"];
 
 IOS.media.arm = [:]
 IOS.media.arm.nativeSource = [
-    file("modules/media/src/main/native/jfxmedia/platform/ios"),
-    file("modules/media/src/main/native/jfxmedia/platform/ios/jni")
+    file("${project("media").projectDir}/src/main/native/jfxmedia/platform/ios"),
+    file("${project("media").projectDir}/src/main/native/jfxmedia/platform/ios/jni")
 ]
 IOS.media.arm.compiler = compiler
 IOS.media.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
