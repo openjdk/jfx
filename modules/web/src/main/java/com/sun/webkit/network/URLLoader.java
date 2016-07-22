@@ -518,10 +518,20 @@ final class URLLoader implements Runnable {
         }
 
         String encoding = c.getContentEncoding();
-        if ("gzip".equalsIgnoreCase(encoding)) {
-            inputStream = new GZIPInputStream(inputStream);
-        } else if ("deflate".equalsIgnoreCase(encoding)) {
-            inputStream = new InflaterInputStream(inputStream);
+        if (inputStream != null) {
+            try {
+                if ("gzip".equalsIgnoreCase(encoding)) {
+                    inputStream = new GZIPInputStream(inputStream);
+                } else if ("deflate".equalsIgnoreCase(encoding)) {
+                    inputStream = new InflaterInputStream(inputStream);
+                }
+            } catch (IOException e) {
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, String.format("Exception caught: [%s], %s",
+                        e.getClass().getSimpleName(),
+                        e.getMessage()));
+                }
+            }
         }
 
         ByteBufferAllocator allocator =
