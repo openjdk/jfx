@@ -15,10 +15,6 @@
 
 using namespace WebCore;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 static Page* getPage(jlong jpage)
 {
     return WebPage::pageFromJLong(jpage);
@@ -90,6 +86,25 @@ static void notifyHistoryItemChangedImpl(HistoryItem* item) {
         CheckAndClearException(env);
     }
 }
+
+// BACKFORWARDLIST METHODS
+static int getSize(BackForwardList* bfl)
+{
+    int size = 0;
+    if (bfl->currentItem())
+        size = bfl->forwardListCount() + bfl->backListCount() + 1;
+    return size;
+}
+
+static HistoryItem* itemAtIndex(BackForwardList* bfl, int index)
+{
+    // Note: WebKit counts from the *current* position
+    return bfl->itemAtIndex(index - bfl->backListCount());
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void notifyHistoryItemDestroyed(const JLObject &host)
 {
@@ -181,16 +196,6 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetChi
     return children;
 }
 
-// BACKFORWARDLIST METHODS
-
-static int getSize(BackForwardList* bfl)
-{
-    int size = 0;
-    if (bfl->currentItem())
-        size = bfl->forwardListCount() + bfl->backListCount() + 1;
-    return size;
-}
-
 // BackForwardList.size()
 JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflSize(JNIEnv* env, jclass z, jlong jpage)
 {
@@ -230,12 +235,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_BackForwardList_bflIsEnabled(JNIE
 {
     BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(jpage));
     return bfl->enabled();
-}
-
-static HistoryItem* itemAtIndex(BackForwardList* bfl, int index)
-{
-    // Note: WebKit counts from the *current* position
-    return bfl->itemAtIndex(index - bfl->backListCount());
 }
 
 // BackForwardList.get()
