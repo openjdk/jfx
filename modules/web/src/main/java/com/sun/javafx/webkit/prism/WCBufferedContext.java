@@ -210,4 +210,11 @@ final class WCBufferedContext extends WCGraphicsPrismContext {
             isInitialized = true;
         }
     }
+
+    @Override public void dispose() {
+        // NOP
+        // BufferedImage context is mainly used by WebKit to draw canvas and
+        // tiled SVG images and it doesn't hold complex layers. Making this
+        // method NOP helps to render tiled SVG images asynchronously.
+    }
 }
