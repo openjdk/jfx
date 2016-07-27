@@ -115,6 +115,11 @@
 
 #AWT_TEST = false
 
+# Specifies whether to run system tests that depend on SWT.
+# This flag is ignored if FULL_TEST is false.
+
+#SWT_TEST = false
+
 # Specifies whether or not the results of the packager tests should be
 # retained.  If not they will be automatically deleted.
 

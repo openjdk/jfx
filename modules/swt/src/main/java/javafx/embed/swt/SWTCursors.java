@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,11 @@
 
 package javafx.embed.swt;
 
+import com.sun.javafx.tk.Toolkit;
+import javafx.scene.image.Image;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Cursor;
+import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.widgets.Display;
 
 import com.sun.javafx.cursor.CursorFrame;
@@ -39,31 +42,21 @@ import com.sun.javafx.cursor.ImageCursorFrame;
  */
 class SWTCursors {
 
-    private static Cursor createCustomCursor(ImageCursorFrame cursorFrame) {
-        /*
-        Toolkit awtToolkit = Toolkit.getDefaultToolkit();
-
-        double imageWidth = cursorFrame.getWidth();
-        double imageHeight = cursorFrame.getHeight();
-        Dimension nativeSize = awtToolkit.getBestCursorSize((int)imageWidth, (int)imageHeight);
-
-        double scaledHotspotX = cursorFrame.getHotspotX() * nativeSize.getWidth() / imageWidth;
-        double scaledHotspotY = cursorFrame.getHotspotY() * nativeSize.getHeight() / imageHeight;
-        Point hotspot = new Point((int)scaledHotspotX, (int)scaledHotspotY);
-
-        final com.sun.javafx.tk.Toolkit fxToolkit =
-                com.sun.javafx.tk.Toolkit.getToolkit();
-        BufferedImage awtImage =
-                (BufferedImage) fxToolkit.toExternalImage(
-                                              cursorFrame.getPlatformImage(),
-                                              BufferedImage.class);
-
-        return awtToolkit.createCustomCursor(awtImage, hotspot, null);
-        */
-        return null;
+    private static Cursor createCustomCursor(Display display, ImageCursorFrame cursorFrame) {
+        // custom cursor, convert image
+        Image image = Toolkit.getImageAccessor().fromPlatformImage(cursorFrame.getPlatformImage());
+        ImageData imageData = SWTFXUtils.fromFXImage(image, null);
+        return new org.eclipse.swt.graphics.Cursor(
+                display, imageData, (int) cursorFrame.getHotspotX(), (int) cursorFrame.getHotspotY());
     }
 
     static Cursor embedCursorToCursor(CursorFrame cursorFrame) {
+        Display display = Display.getCurrent();
+
+        if (display == null) {
+            return  null;
+        }
+
         int id = SWT.CURSOR_ARROW;
         switch (cursorFrame.getCursorType()) {
             case DEFAULT:   id = SWT.CURSOR_ARROW; break;
@@ -88,12 +81,11 @@ class SWTCursors {
             case H_RESIZE:  id = SWT.CURSOR_SIZEWE; break;
             case V_RESIZE:  id = SWT.CURSOR_SIZENS; break;
             case NONE:
+                // TODO: check if SWT.CURSOR_NO would be more appropriate here
                 return null;
             case IMAGE:
-                // RT-27939: custom cursors are not implemented
-                // return createCustomCursor((ImageCursorFrame) cursorFrame);
+                return createCustomCursor(display, (ImageCursorFrame) cursorFrame);
         }
-        Display display = Display.getCurrent();
-        return display != null ? display.getSystemCursor(id) : null;
+        return display.getSystemCursor(id);
     }
 }

@@ -425,6 +425,10 @@ ext.IS_HEADLESS_TEST = Boolean.parseBoolean(HEADLESS_TEST);
 defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
+// Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
+defineProperty("SWT_TEST", "true")
+ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
+
 // Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
 // These tests should be protected with :
 //    assumeTrue(Boolean.getBoolean("unstable.test"));
@@ -1847,6 +1851,22 @@ project(":swt") {
                 include "**/*swt*.jar"
                 includeEmptyDirs = false
                 rename ".*swt.*jar", "swt-debug\\.jar"
+            }
+        }
+    }
+
+    test {
+        if (IS_JIGSAW_TEST) {
+            enabled = false // FIXME: JIGSAW -- support this with modules
+            logger.info("JIGSAW Testing disabled for swt")
+        } else {
+            enabled = IS_FULL_TEST && IS_SWT_TEST
+            if (IS_MAC) {
+                enabled = false
+                logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
+            }
+            if (IS_LINUX) {
+                logger.info("SWT tests may cause 'Gtk-CRITICAL **: IA__gtk_main_quit: assertion 'main_loops != NULL' failed' LINUX (https://bugs.eclipse.org/bugs/show_bug.cgi?id=435066). This happens on shutdown, the tests are not affected.")
             }
         }
     }
