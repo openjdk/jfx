@@ -96,9 +96,7 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         final ToggleGroup toggleGroup = toggleButton.getToggleGroup();
         // A ToggleButton does not have to be in a group.
         if (toggleGroup == null) {
-            // Because we don't auto-consume (see mapping definitions above), we
-            // can simply return here and have the traversal handled by another
-            // appropriate mapping
+            e.consume();
             return;
         }
         ObservableList<Toggle> toggles = toggleGroup.getToggles();

@@ -2439,6 +2439,7 @@ public class Scene implements EventTarget {
 
             if (isDirty(DirtyBits.CURSOR_DIRTY)) {
                 mouseHandler.updateCursor(getCursor());
+                mouseHandler.updateCursorFrame();
             }
 
             clearDirty();

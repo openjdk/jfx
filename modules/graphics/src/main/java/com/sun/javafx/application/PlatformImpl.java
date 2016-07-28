@@ -290,7 +290,8 @@ public class PlatformImpl {
             "com.sun.glass.ui",
             "com.sun.javafx.cursor",
             "com.sun.javafx.embed",
-            "com.sun.javafx.stage"
+            "com.sun.javafx.stage",
+            "com.sun.javafx.tk"
         };
 
         if (DEBUG) {
