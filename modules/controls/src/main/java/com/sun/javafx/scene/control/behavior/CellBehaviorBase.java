@@ -127,14 +127,15 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         // TODO add focus traversal mappings (?)
         // addDefaultMapping(cellInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
 
-        InputMap.MouseMapping pressedMapping, releasedMapping;
+        InputMap.MouseMapping pressedMapping, releasedMapping, mouseDragged;
         addDefaultMapping(
             pressedMapping = new InputMap.MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
             releasedMapping = new InputMap.MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
-            new InputMap.MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged)
+            mouseDragged = new InputMap.MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged)
         );
         pressedMapping.setAutoConsume(false);
         releasedMapping.setAutoConsume(false);
+        mouseDragged.setAutoConsume(false);
     }
 
 
