@@ -66,10 +66,6 @@ void *createPixelFormat(jint *ivalues) {
     attribs[index++] = 0;
 
     NSOpenGLPixelFormat *fmt = [[NSOpenGLPixelFormat alloc] initWithAttributes : attribs];
-    if (fmt == nil) {
-        // should we fallback to defaults or not?
-        fmt = [NSOpenGLView defaultPixelFormat];
-    }
 
     [pool release];
     return fmt;
