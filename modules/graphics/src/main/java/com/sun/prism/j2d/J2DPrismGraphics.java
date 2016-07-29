@@ -228,7 +228,7 @@ public class J2DPrismGraphics
                     x2 = x + w * x2;
                     y2 = y + h * y2;
                 }
-                if (x1 == x2 && y1 == y1) {
+                if (x1 == x2 && y1 == y2) {
                     // Hardware pipelines use an inverse transform of
                     // all zeros to choose colors when the start and end
                     // point are the same so that the first color is
